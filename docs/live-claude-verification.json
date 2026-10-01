@@ -1,0 +1,95 @@
+{
+  "verified_at": "2026-09-30",
+  "provider": "claude",
+  "authentication": "Native CLI reported logged-in; no credentials or account details recorded",
+  "tests": {
+    "read": {
+      "task_id": "task_2a5e7fb9-54c5-4814-bd58-6a1368eb4bff",
+      "status": "completed",
+      "attempt": 1,
+      "model": "claude-sonnet-4-6",
+      "reported_cost_usd": 0.05264904999999999,
+      "report_artifacts": 1,
+      "ambient_mcp_tools_present": false,
+      "observed_tools": [
+        "Read",
+        "StructuredOutput"
+      ]
+    },
+    "resume": {
+      "task_id": "task_1d143df1-8cab-4e1e-ae6a-cd4bbce10dd3",
+      "status": "completed",
+      "attempt": 2,
+      "model": "claude-sonnet-4-6",
+      "reported_cost_usd": 0.0185583,
+      "report_artifacts": 1,
+      "ambient_mcp_tools_present": false,
+      "observed_tools": [
+        "AskUserQuestion",
+        "Read",
+        "StructuredOutput"
+      ],
+      "verified": "Waiting question interrupted; control plane reopened; same native session completed attempt two"
+    },
+    "sandbox": {
+      "task_id": "task_a5f2b5a2-0298-4db5-8cd9-099172feeb94",
+      "status": "completed",
+      "attempt": 1,
+      "model": "claude-sonnet-4-6",
+      "reported_cost_usd": 0.11856905,
+      "report_artifacts": 2,
+      "ambient_mcp_tools_present": false,
+      "observed_tools": [
+        "Bash",
+        "StructuredOutput"
+      ],
+      "verified": [
+        "Worktree write succeeded",
+        "Outside write denied",
+        "Git metadata write denied",
+        "Symlink escape read denied",
+        "Direct network request blocked; local listener received zero hits",
+        "Only five exact fixture commands approved",
+        "Primary repository remained clean"
+      ]
+    },
+    "mcp": {
+      "task_id": "task_701d52f8-963c-42ab-832c-3dcd470673bd",
+      "status": "completed",
+      "model": "claude-sonnet-4-6",
+      "reported_cost_usd": 0.0351239,
+      "transport": "Authenticated stdio MCP proxy to loopback control plane",
+      "verified": [
+        "Worker discovery through MCP",
+        "Native Claude task created through MCP",
+        "Structured result retrieved through MCP",
+        "Report artifacts retrieved through MCP",
+        "Native Read and completion events retrieved through MCP",
+        "Primary fixture repository remained clean"
+      ],
+      "ambient_mcp_tools_present": false
+    },
+    "budget": {
+      "task_id": "task_5bb05e10-4f94-4cac-94fd-5084a8201f24",
+      "status": "failed",
+      "expected_status": "failed",
+      "configured_limit_usd": 0.001,
+      "reported_cost_usd": 0.021294250000000004,
+      "verified": [
+        "Native SDK returned error_max_budget_usd",
+        "Task failed instead of claiming success",
+        "SDK-reported cost retained",
+        "No success result or task.completed event",
+        "Primary fixture remained clean"
+      ],
+      "semantics": "Budget is checked after a response; that response can exceed the configured amount"
+    }
+  },
+  "limits": [
+    "This records reported SDK cost, not independently audited billing; interrupted-turn costs may be missing",
+    "Claude model/API harness remains outside the Bash sandbox",
+    "Sandbox verification uses disposable files and a loopback listener; it does not establish containment of all native tools or all network configurations",
+    "OpenAI/Codex authenticated execution and registered host behavior remain unverified",
+    "Native Claude cost budgets are response-boundary stopping thresholds, not hard billing caps; the $0.001 verification threshold produced about $0.021 reported usage"
+  ]
+}

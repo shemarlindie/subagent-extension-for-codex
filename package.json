@@ -1,0 +1,42 @@
+{
+  "name": "codex-subagent-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Durable Claude delegation for Codex",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "start": "node dist/main.js",
+    "build": "tsc && node scripts/build-ui.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit --target ES2023 --module ESNext --moduleResolution bundler --lib ES2023,DOM,DOM.Iterable --skipLibCheck --strict ui/app.ts",
+    "test": "tsx --test tests/*.test.ts",
+    "mcp": "tsx src/stdio.ts",
+    "demo": "npm run build && node scripts/demo.mjs",
+    "format": "prettier --write src ui tests scripts plugin.json mcp.json package.json tsconfig.json",
+    "pretest": "npm run build"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.0",
+    "@modelcontextprotocol/ext-apps": "^1.0.0",
+    "@modelcontextprotocol/node": "^2.1.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/server": "^2.2.0",
+    "@openai/mcp-extensions": "^0.1.0",
+    "express": "^5.0.0",
+    "ipaddr.js": "^2.5.0",
+    "openai": "^7.25.0",
+    "standardwebhooks": "^1.1.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

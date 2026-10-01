@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Codex subagent extension</title>
+    <style>
+      :root {
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #d8e1ed;
+        background: #0c1016;
+        font-size: 14px;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+        border: 1px solid #303c4c;
+        background: #17212e;
+        border-radius: 7px;
+        color: inherit;
+        padding: 9px 13px;
+      }
+      button:hover {
+        background: #253245;
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .primary {
+        background: #d4e69b;
+        color: #172315;
+        border-color: #d4e69b;
+      }
+      .primary:hover {
+        background: #e3f1bb;
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        background: #0d141e;
+        border: 1px solid #303c4c;
+        border-radius: 6px;
+        padding: 10px;
+        color: inherit;
+      }
+      textarea {
+        resize: vertical;
+        min-height: 100px;
+      }
+      label {
+        display: block;
+        color: #9caec4;
+        font-size: 12px;
+        margin: 14px 0 6px;
+      }
+      header {
+        height: 78px;
+        border-bottom: 1px solid #243040;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 32px;
+      }
+      h1 {
+        font-size: 19px;
+        margin: 0;
+        letter-spacing: -0.5px;
+      }
+      h1 span {
+        font-weight: 400;
+        color: #8290a4;
+        font-size: 12px;
+        margin-left: 13px;
+      }
+      .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .mark {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #93b479;
+        color: #d4e69b;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .connection {
+        font-size: 11px;
+        color: #9daf8b;
+        margin-right: 10px;
+      }
+      .shell {
+        display: grid;
+        grid-template-columns: 330px 1fr;
+        min-height: calc(100vh - 78px);
+      }
+      aside {
+        border-right: 1px solid #243040;
+        padding: 24px 16px;
+      }
+      .eyebrow {
+        letter-spacing: 1.8px;
+        text-transform: uppercase;
+        font-size: 10px;
+        color: #8392a7;
+      }
+      .aside-head {
+        display: flex;
+        justify-content: space-between;
+        margin: 0 10px 18px;
+      }
+      .filters {
+        display: flex;
+        gap: 6px;
+        margin: 10px 8px 20px;
+      }
+      .filters button {
+        font-size: 11px;
+        padding: 6px 9px;
+      }
+      .task-row {
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: 1px solid transparent;
+        padding: 16px 13px;
+        margin-bottom: 5px;
+      }
+      .task-row.selected {
+        background: #162131;
+        border-color: #314358;
+      }
+      .task-row .title {
+        display: block;
+        line-height: 1.5;
+        color: #e2e9f3;
+        margin-bottom: 10px;
+      }
+      .row-meta {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11px;
+        color: #8498b3;
+      }
+      .badge {
+        padding: 3px 7px;
+        border-radius: 4px;
+        background: #213247;
+        color: #9bb4d4;
+        font-size: 10px;
+      }
+      .badge.completed {
+        background: #20352a;
+        color: #9ecfa9;
+      }
+      .badge.running {
+        background: #283728;
+        color: #d4e69b;
+      }
+      .badge.failed,
+      .badge.cancelled {
+        background: #392529;
+        color: #e2a0a0;
+      }
+      .badge.waiting,
+      .badge.interrupted {
+        background: #393322;
+        color: #d9c18b;
+      }
+      .detail {
+        padding: 32px 40px;
+        max-width: 1160px;
+        width: 100%;
+      }
+      .detail-top {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+      .detail h2 {
+        font-size: 26px;
+        font-weight: 500;
+        line-height: 1.4;
+        letter-spacing: -0.7px;
+        margin: 18px 0;
+      }
+      .metadata {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        border-bottom: 1px solid #243040;
+        padding: 8px 0 26px;
+        margin-bottom: 22px;
+      }
+      .metadata span {
+        display: block;
+        color: #75899f;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+      }
+      .metadata div {
+        overflow-wrap: anywhere;
+        color: #aebed1;
+        font-size: 12px;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 24px 0;
+      }
+      .tabs {
+        display: flex;
+        gap: 22px;
+        border-bottom: 1px solid #243040;
+      }
+      .tabs button {
+        border: none;
+        border-radius: 0;
+        background: none;
+        padding: 12px 0;
+        color: #8392a7;
+      }
+      .tabs button.active {
+        color: #d4e69b;
+        border-bottom: 2px solid #d4e69b;
+      }
+      .event {
+        display: grid;
+        grid-template-columns: 65px 1fr;
+        gap: 15px;
+        padding: 16px 0;
+        border-bottom: 1px solid #1b2635;
+      }
+      .event time {
+        font:
+          10px ui-monospace,
+          monospace;
+        color: #677b93;
+      }
+      .event strong {
+        font-size: 12px;
+        font-weight: 500;
+        color: #acbcd1;
+      }
+      .event pre {
+        margin: 7px 0 0;
+        color: #7f95b0;
+        font-size: 11px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        max-height: 180px;
+        overflow: auto;
+      }
+      pre.artifact {
+        font:
+          12px/1.7 ui-monospace,
+          SFMono-Regular,
+          monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: #0a0f16;
+        border: 1px solid #243040;
+        border-radius: 8px;
+        padding: 20px;
+      }
+      .empty {
+        padding: 75px 30px;
+        color: #8093ac;
+        text-align: center;
+      }
+      .empty h2 {
+        color: #d8e1ed;
+        font-size: 23px;
+      }
+      .empty p {
+        line-height: 1.8;
+        max-width: 440px;
+        margin: 15px auto 25px;
+      }
+      .notice {
+        padding: 18px;
+        background: #2b271b;
+        border: 1px solid #665b32;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .notice p {
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      .error {
+        color: #e6a8a8;
+        padding: 8px 0;
+      }
+      .overlay {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: #05080dbd;
+        z-index: 20;
+        padding: 24px;
+      }
+      .dialog {
+        background: #111a27;
+        border: 1px solid #344259;
+        border-radius: 12px;
+        width: 540px;
+        max-width: 100%;
+        padding: 28px;
+        max-height: 92vh;
+        overflow: auto;
+        box-shadow: 0 20px 90px #0008;
+      }
+      .dialog h2 {
+        font-size: 22px;
+        font-weight: 500;
+        margin: 0 0 10px;
+      }
+      .dialog p {
+        color: #8398b3;
+        font-size: 12px;
+        line-height: 1.7;
+      }
+      .dialog footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .statusline {
+        font-size: 11px;
+        color: #6f819b;
+        margin-top: 25px;
+      }
+      .report h3 {
+        font-size: 12px;
+        color: #8fa5c1;
+        margin-top: 28px;
+      }
+      .report p,
+      .report li {
+        font-size: 13px;
+        line-height: 1.8;
+      }
+      .task-id {
+        font:
+          10px ui-monospace,
+          monospace;
+        color: #617791;
+      }
+      a {
+        color: #d4e69b;
+      }
+      #login .dialog {
+        width: 440px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      @media (max-width: 800px) {
+        header {
+          padding: 0 16px;
+        }
+        h1 span {
+          display: none;
+        }
+        .shell {
+          grid-template-columns: 1fr;
+        }
+        aside {
+          border-right: none;
+          border-bottom: 1px solid #243040;
+        }
+        .detail {
+          padding: 24px 20px;
+        }
+        .metadata {
+          grid-template-columns: 1fr 1fr;
+        }
+        .task-row {
+          padding: 10px;
+        }
+        #task-list {
+          max-height: 240px;
+          overflow: auto;
+        }
+        .connection {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .badge.running {
+          animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.65;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <div class="mark">⌘</div>
+        <h1>
+          Codex subagent extension <span>Delegated work, in one place</span>
+        </h1>
+      </div>
+      <div class="toolbar">
+        <span class="connection" id="connection">Connecting…</span
+        ><button id="display" hidden>Expand</button
+        ><button class="primary" id="delegate">＋ Delegate</button>
+      </div>
+    </header>
+    <main class="shell">
+      <aside>
+        <div class="aside-head">
+          <span class="eyebrow">Work queue</span
+          ><span class="eyebrow" id="count">0 TASKS</span>
+        </div>
+        <label for="worker-view">Worker</label>
+        <select id="worker-view">
+          <option value="">All workers</option>
+        </select>
+        <input
+          id="search"
+          aria-label="Search tasks"
+          placeholder="Search tasks…"
+        />
+        <div class="filters">
+          <button data-filter="all">All</button
+          ><button data-filter="active">Active</button
+          ><button data-filter="completed">Completed</button>
+        </div>
+        <div id="task-list"></div>
+        <div class="statusline" id="provider-status"></div>
+      </aside>
+      <section id="detail" class="detail"></section>
+    </main>
+    <div id="modal" class="overlay" hidden></div>
+    <div id="login" class="overlay" hidden>
+      <form class="dialog" id="login-form">
+        <h2>Connect your console</h2>
+        <p>
+          Enter the local console token from
+          <code>.codex-subagent-extension/admin-token</code>. Your browser
+          receives a short-lived session.
+        </p>
+        <label for="token">Console token</label
+        ><input id="token" type="password" required autocomplete="off" />
+        <div id="login-error" class="error" role="alert"></div>
+        <footer><button class="primary">Connect</button></footer>
+      </form>
+    </div>
+    <div
+      id="error"
+      class="error"
+      role="alert"
+      style="position: fixed; bottom: 15px; right: 20px; max-width: 500px"
+    ></div>
+    <script>
+      window.CODEX_SUBAGENT_EXTENSION_ORIGIN = "__API_ORIGIN__";
+    </script>
+    <script type="module">
+      /*__APP__*/
+    </script>
+  </body>
+</html>

@@ -1,0 +1,165 @@
+import { z } from "zod";
+export const roles = [
+  "researcher",
+  "reviewer",
+  "implementer",
+  "debugger",
+  "test_engineer",
+  "refactorer",
+  "security_reviewer",
+] as const;
+export const startSchema = z.object({
+  provider: z.enum(["claude", "codex", "fixture"]).default("claude"),
+  worker_profile: z.enum(roles).default("reviewer"),
+  task: z.string().min(1).max(20000),
+  repository: z.string().default("current"),
+  revision: z.string().default("HEAD"),
+  conversation_id: z.string().optional(),
+  parent_task_id: z.string().optional(),
+  depends_on: z.array(z.string()).max(50).default([]),
+  context: z.array(z.string().max(20000)).max(20).default([]),
+  workspace_strategy: z.literal("worktree").default("worktree"),
+  budget: z
+    .object({
+      max_runtime_minutes: z.number().positive().max(120).default(20),
+      max_cost_usd: z
+        .number()
+        .positive()
+        .max(100)
+        .nullable()
+        .default(5)
+        .describe(
+          "Provider-native cost budget in USD. Claude stops after a response reaches the budget, so a response can exceed it and interrupted usage may be missing. Explicit null disables the budget; unsupported providers reject numeric limits.",
+        ),
+      max_tokens: z.number().int().positive().optional(),
+    })
+    .default({ max_runtime_minutes: 20, max_cost_usd: 5 }),
+});
+export type Start = z.infer<typeof startSchema>;
+export type Status =
+  | "queued"
+  | "starting"
+  | "running"
+  | "waiting"
+  | "interrupted"
+  | "completed"
+  | "failed"
+  | "cancelled";
+export interface Result {
+  summary: string;
+  findings: string[];
+  evidence: string[];
+  changes: string[];
+  tests: string[];
+  recommendations: string[];
+}
+export const resultSchema = {
+  type: "object",
+  properties: Object.fromEntries(
+    [
+      "summary",
+      "findings",
+      "evidence",
+      "changes",
+      "tests",
+      "recommendations",
+    ].map((k) => [
+      k,
+      k === "summary"
+        ? { type: "string" }
+        : { type: "array", items: { type: "string" } },
+    ]),
+  ),
+  required: [
+    "summary",
+    "findings",
+    "evidence",
+    "changes",
+    "tests",
+    "recommendations",
+  ],
+  additionalProperties: false,
+};
+export interface Task extends Start {
+  id: string;
+  owner: string;
+  status: Status;
+  waiting_reason?: string;
+  created_at: string;
+  updated_at: string;
+  started_at?: string;
+  completed_at?: string;
+  workspace?: string;
+  base_commit?: string;
+  session_id?: string;
+  native_turn_id?: string;
+  session_owner?: string;
+  session_state_ref?: string;
+  result?: Result;
+  error?: string;
+  pending_input?: { id: string; tool: string; input: Record<string, unknown> };
+  instructions: string[];
+  attempt: number;
+  runtime_ms: number;
+  cost_usd?: number;
+}
+export interface Event {
+  id: number;
+  task_id: string;
+  type: string;
+  timestamp: string;
+  data: Record<string, unknown>;
+}
+export interface Artifact {
+  id: string;
+  task_id: string;
+  type: string;
+  title: string;
+  content: string;
+  mime_type: string;
+  created_at: string;
+}
+export interface Capabilities {
+  interrupt: boolean;
+  session_continue: boolean;
+  session_state_portable: boolean;
+  interactive_input: boolean;
+  worktree: boolean;
+  cost_budget: boolean;
+  runtime_budget: boolean;
+  token_budget: boolean;
+  subagents: boolean;
+  parallel_subagents: boolean;
+  dynamic_subagents: boolean;
+}
+export interface RunContext {
+  task: Task;
+  signal: AbortSignal;
+  emit: (type: string, data: Record<string, unknown>) => void;
+  session: (id: string, stateRef: string) => void;
+  input: (
+    tool: string,
+    input: Record<string, unknown>,
+    signal?: AbortSignal,
+  ) => Promise<{
+    approved: boolean;
+    input?: Record<string, unknown>;
+    message?: string;
+  }>;
+}
+export interface Provider {
+  id: string;
+  capabilities: Capabilities;
+  run(context: RunContext, prompt: string): Promise<Result>;
+  recover?(task: Task): Promise<void>;
+  close?(): Promise<void>;
+}
+export class UnconfirmedTerminationError extends AggregateError {
+  constructor(
+    errors: unknown[],
+    message = "Worker termination remains unconfirmed",
+  ) {
+    super(errors, message);
+  }
+}
+export const now = () => new Date().toISOString();

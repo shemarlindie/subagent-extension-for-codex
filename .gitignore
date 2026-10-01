@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.codex-subagent-extension/
+.env
+.env.*
+!.env.example
+*.sqlite*
+.DS_Store
