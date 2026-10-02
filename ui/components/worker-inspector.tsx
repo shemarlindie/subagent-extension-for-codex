@@ -27,8 +27,8 @@ export function WorkerInspector() {
       </h2>
       <p>
         {readOnly
-          ? "Inspects an isolated worktree without editing source files."
-          : "Can edit the isolated worktree and request execution permission."}
+          ? "Inspects the selected workspace without editing source files."
+          : "Can edit the selected workspace and request execution permission."}
       </p>
       <button
         className="primary"

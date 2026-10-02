@@ -226,8 +226,15 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
     await until(() => f.store.get(task.id, "owner").status === "waiting");
     const started = f.store.get(task.id, "owner");
     assert.equal(started.repository, b);
+    assert.equal(started.workspace, b);
     assert.equal(
-      (await git(started.workspace!, ["rev-parse", "--git-common-dir"])).trim(),
+      (
+        await git(started.workspace!, [
+          "rev-parse",
+          "--path-format=absolute",
+          "--git-common-dir",
+        ])
+      ).trim(),
       join(b, ".git"),
     );
     await control.stop("owner", task.id, "interrupted");

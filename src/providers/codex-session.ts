@@ -39,7 +39,7 @@ export class CodexSessions {
       session.environment.workspace_directory !== task.workspace
     )
       throw new Error(
-        "Codex session environment does not match the task worktree",
+        "Codex session environment does not match the task workspace",
       );
     return {
       session_id: session.id,
@@ -50,7 +50,7 @@ export class CodexSessions {
   }
   async open(task: Task, signal?: AbortSignal): Promise<CodexSessionRef> {
     if (!task.workspace || !isAbsolute(task.workspace))
-      throw new Error("Codex requires an isolated absolute worktree path");
+      throw new Error("Codex requires an absolute workspace path");
     const sessions = this.client.beta.agents.sessions;
     if (task.session_id)
       return this.check(

@@ -24,7 +24,12 @@ export const startSchema = z.object({
   parent_task_id: z.string().optional(),
   depends_on: z.array(z.string()).max(50).default([]),
   context: z.array(z.string().max(20000)).max(20).default([]),
-  workspace_strategy: z.literal("worktree").default("worktree"),
+  workspace_strategy: z
+    .enum(["worktree", "current_repo"])
+    .default("current_repo")
+    .describe(
+      "worktree creates an isolated checkout at revision; current_repo uses the approved repository directly, including uncommitted files, and requires revision HEAD. Write profiles edit that checkout directly.",
+    ),
   budget: z
     .object({
       max_runtime_minutes: z.number().positive().max(120).default(20),

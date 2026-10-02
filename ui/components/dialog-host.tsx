@@ -87,8 +87,9 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
                   dialog.kind === "workspace" && (
                     <>
                       <p>
-                        The worktree is retained for inspection and session
-                        continuation.
+                        {dialog.task.workspace_strategy === "current_repo"
+                          ? "This task uses the current repository. Worker edits are already present in this checkout."
+                          : "The worktree is retained for inspection and session continuation."}
                       </p>
                       <pre>{dialog.task.workspace ?? "Not created yet"}</pre>
                     </>

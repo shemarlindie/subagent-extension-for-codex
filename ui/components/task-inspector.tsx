@@ -38,8 +38,10 @@ export function TaskInspector() {
           <h1>{task.task}</h1>
           <div className="meta">
             <span>
-              {task.repository.split("/").at(-1)} · {task.revision} · isolated
-              worktree
+              {task.repository.split("/").at(-1)} · {task.revision} ·{" "}
+              {task.workspace_strategy === "current_repo"
+                ? "current repository"
+                : "isolated worktree"}
             </span>
             <span>{task.budget.max_runtime_minutes} min limit</span>
             <span>

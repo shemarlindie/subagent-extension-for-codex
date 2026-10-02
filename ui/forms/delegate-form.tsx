@@ -7,6 +7,7 @@ import {
   DependencyField,
   ProjectField,
   WorkerFields,
+  WorkspaceField,
   type DelegateValues,
 } from "./delegate-fields";
 import { Field } from "./fields";
@@ -25,10 +26,12 @@ export function DelegateForm({
   const preferred =
     dialog.preferredWorker ??
     `${defaults.default_provider}:${defaults.default_worker_profile}`;
+  const strategyDefault = defaults.default_workspace_strategy ?? "current_repo";
   const form = useForm<DelegateValues>({
     defaultValues: {
       repository: dialog.repository ?? "",
-      revision: dialog.revision,
+      revision: strategyDefault === "current_repo" ? "HEAD" : dialog.revision,
+      workspace_strategy: strategyDefault,
       task: "",
       worker: choices.includes(preferred) ? preferred : choices[0],
       runtime: defaults.max_runtime_minutes,
@@ -54,6 +57,13 @@ export function DelegateForm({
       previous.current = repository;
     }
   }, [repository, form, dialog.repository, dialog.revision]);
+  const strategy = useWatch({
+    control: form.control,
+    name: "workspace_strategy",
+  });
+  useEffect(() => {
+    if (strategy === "current_repo") form.setValue("revision", "HEAD");
+  }, [strategy, repository, form]);
   const conversation = useRef(state.conversation).current;
   return (
     <FormProvider {...form}>
@@ -66,7 +76,11 @@ export function DelegateForm({
               task: values.task,
               provider,
               worker_profile,
-              revision: values.revision,
+              revision:
+                values.workspace_strategy === "current_repo"
+                  ? "HEAD"
+                  : values.revision,
+              workspace_strategy: values.workspace_strategy,
               conversation_id: conversation ?? null,
               context: values.context.trim() ? [values.context] : [],
               depends_on: values.deps,
@@ -79,8 +93,10 @@ export function DelegateForm({
         )}
       >
         <p className="form-note">
-          Give the worker a focused outcome and the evidence you expect back.
-          Work starts from a committed revision in a separate worktree.
+          Give the worker a focused outcome and the evidence you expect back.{" "}
+          {strategy === "current_repo"
+            ? "Current repository includes uncommitted changes. Write profiles edit this checkout directly."
+            : "Work starts from a committed revision in a separate worktree."}
         </p>
         <ProjectField
           projects={state.projects}
@@ -98,6 +114,7 @@ export function DelegateForm({
             {...form.register("task", { required: true })}
           />
         </Field>
+        <WorkspaceField />
         <WorkerFields workers={state.workers} />
         <Field id="context" label="Context to include (optional)">
           <textarea

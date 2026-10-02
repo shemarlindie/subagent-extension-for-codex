@@ -43,7 +43,7 @@ export function claudeEnvironment(
 }
 /** Native Bash restrictions; the model/API harness itself is outside this sandbox. */
 export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
-  if (!task.workspace) throw new Error("Task worktree unavailable");
+  if (!task.workspace) throw new Error("Task workspace unavailable");
   const workspace = await realpath(task.workspace);
   const repository = await realpath(task.repository);
   const gitDirectory = await realpath(
@@ -142,7 +142,7 @@ export class ClaudeAgentProvider implements Provider {
       systemPrompt: {
         type: "preset",
         preset: "claude_code",
-        append: `You are an independent ${c.task.worker_profile}. Work only in the provided task worktree. Return structured evidence and results. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Request permission before shell commands. Never modify the primary checkout."}`,
+        append: `You are an independent ${c.task.worker_profile}. Work only in the provided task workspace. Return structured evidence and results. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Request permission before shell commands."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
       },
       hooks: {
         PreToolUse: [

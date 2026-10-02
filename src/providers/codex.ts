@@ -52,8 +52,9 @@ export class CodexAgentProvider implements Provider {
         task: c.task.task,
         worker_profile: c.task.worker_profile,
         workspace: c.task.workspace,
+        workspace_strategy: c.task.workspace_strategy,
         policy:
-          "Allow this native Codex turn to run shell commands in its sandbox. Read-only profiles cannot write the worktree; write profiles can edit it. Git metadata and direct network access are blocked. Shell commands do not have individual approval prompts.",
+          "Allow this native Codex turn to run shell commands in its sandbox. Read-only profiles cannot write the workspace; write profiles can edit it. Git metadata and direct network access are blocked. Shell commands do not have individual approval prompts.",
       },
       c.signal,
     );

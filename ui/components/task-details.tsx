@@ -6,6 +6,10 @@ export function TaskDetails({ task }: { task: Task }) {
     "Task ID": task.id,
     Workspace: task.workspace ?? "Preparing",
     Repository: task.repository,
+    "Workspace strategy":
+      task.workspace_strategy === "current_repo"
+        ? "Current repository"
+        : "Isolated worktree",
     "Base commit": task.base_commit ?? task.revision,
     Session: task.session_id ?? "Not started",
     Dependencies: task.depends_on.join(", ") || "None",

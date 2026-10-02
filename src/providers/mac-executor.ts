@@ -110,7 +110,7 @@ export class MacExecutor {
   async start(task: Task, ref: CodexSessionRef): Promise<ExecutorHandle> {
     if (process.platform !== "darwin")
       throw new Error("This executor requires macOS sandbox-exec");
-    if (!task.workspace) throw new Error("Task worktree unavailable");
+    if (!task.workspace) throw new Error("Task workspace unavailable");
     if (!/^task_[A-Za-z0-9_-]+$/.test(task.id))
       throw new Error("Invalid executor task identity");
     const remote = new URL(ref.remote_url);

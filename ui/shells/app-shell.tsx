@@ -48,8 +48,8 @@ export function AppShell() {
           </div>
           {state.mode === "panel" && (
             <div id="notice" role="status">
-              Tasks run in isolated worktrees. Review returned changes before
-              applying them.
+              Choose an isolated worktree or the current repository when
+              starting a task. Current repository edits apply directly.
             </div>
           )}
           {state.mode === "console" && <LoginForm />}

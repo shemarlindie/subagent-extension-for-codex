@@ -104,6 +104,8 @@ export class Forms {
   ): Request {
     if (kind === "request_agent_task") {
       const defaults = this.c.settings.taskInput(owner, args) as any;
+      const workspaceStrategy = defaults.workspace_strategy as
+        "worktree" | "current_repo";
       const projects = this.c.projects?.list() ?? [
         { repository: this.c.repository, kind: "repository" },
       ];
@@ -123,7 +125,7 @@ export class Forms {
         args,
         status: "pending",
         message:
-          "Delegate work in an isolated Git worktree. Confirm the task, worker and budgets.",
+          "Delegate work in a Git worktree or the current repository. Confirm the workspace, task, worker and budgets.",
         form: OpenAIFormSchema.parse({
           type: "object",
           properties: {
@@ -151,10 +153,31 @@ export class Forms {
               oneOf: workers,
               default: `${defaults.provider}:${defaults.worker_profile}`,
             },
+            workspace_strategy: {
+              type: "string",
+              title: "Workspace",
+              description:
+                "Current repository includes uncommitted changes. Write profiles edit the checkout directly; use HEAD as the revision.",
+              oneOf: [
+                { const: "worktree", title: "Isolated worktree" },
+                {
+                  const: "current_repo",
+                  title: "Current repository (uncommitted changes)",
+                },
+              ],
+              default: workspaceStrategy,
+            },
             revision: {
               type: "string",
-              title: "Committed revision",
-              default: args.revision ?? "HEAD",
+              title: "Revision (HEAD for current repository)",
+              description:
+                workspaceStrategy === "current_repo"
+                  ? "Current repository always uses HEAD. Select an isolated worktree to use another committed revision."
+                  : undefined,
+              default:
+                workspaceStrategy === "current_repo"
+                  ? "HEAD"
+                  : (args.revision ?? "HEAD"),
               minLength: 1,
             },
             max_runtime_minutes: {
@@ -365,7 +388,14 @@ export class Forms {
             task: content.task,
             provider,
             worker_profile,
-            revision: content.revision,
+            revision:
+              content.workspace_strategy === "current_repo"
+                ? "HEAD"
+                : content.revision,
+            workspace_strategy:
+              content.workspace_strategy ??
+              r.args.workspace_strategy ??
+              r.form.properties.workspace_strategy?.default,
             budget: {
               ...((r.args.budget as object) ?? {}),
               max_runtime_minutes: content.max_runtime_minutes,

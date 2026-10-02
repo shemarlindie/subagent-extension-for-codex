@@ -84,7 +84,7 @@ export function definitions(c: Control, owner: string) {
     },
     start_agent_task: {
       description:
-        "Create durable asynchronous work in an isolated Git worktree and open its Activity panel when the host supports MCP Apps. Supply an explicit absolute repository from list_agent_projects; current does not identify the host chat project. Reopen existing work with open_codex_subagent_extension(task_id), never another start call.",
+        "Create durable asynchronous work in the current repository by default, including uncommitted changes, or in a committed-revision worktree when requested; open its Activity panel when the host supports MCP Apps. Supply an explicit absolute repository from list_agent_projects; current does not identify the host chat project. Reopen existing work with open_codex_subagent_extension(task_id), never another start call.",
       schema: startSchema.extend({
         conversation_id: startSchema.shape.conversation_id.nullable(),
         provider: startSchema.shape.provider.removeDefault().optional(),

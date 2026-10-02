@@ -9,6 +9,7 @@ export type DelegateValues = {
   task: string;
   worker: string;
   revision: string;
+  workspace_strategy: "worktree" | "current_repo";
   context: string;
   runtime: number;
   costMode: string;
@@ -54,8 +55,29 @@ export function ProjectField({
     </Field>
   );
 }
+export function WorkspaceField() {
+  const { control } = useFormContext<DelegateValues>();
+  return (
+    <Field id="workspace-strategy" label="Workspace">
+      <FormSelect
+        control={control}
+        name="workspace_strategy"
+        id="workspace-strategy"
+        label="Workspace"
+        options={[
+          { value: "worktree", label: "Isolated worktree" },
+          {
+            value: "current_repo",
+            label: "Current repository (uncommitted changes)",
+          },
+        ]}
+      />
+    </Field>
+  );
+}
 export function WorkerFields({ workers }: { workers: Worker[] }) {
   const { register, control } = useFormContext<DelegateValues>();
+  const strategy = useWatch({ control, name: "workspace_strategy" });
   return (
     <div className="two">
       <div>
@@ -78,6 +100,7 @@ export function WorkerFields({ workers }: { workers: Worker[] }) {
         <Field id="revision" label="Revision">
           <input
             id="revision"
+            readOnly={strategy === "current_repo"}
             required
             {...register("revision", { required: true })}
           />

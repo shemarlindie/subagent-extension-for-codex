@@ -47,7 +47,11 @@ async function setup(
   );
   return { dir, repo, db, store, c };
 }
-const input = (task = "Investigate") => ({ provider: "fixture", task });
+const input = (task = "Investigate") => ({
+  provider: "fixture",
+  task,
+  workspace_strategy: "worktree",
+});
 test("user defaults persist across restart, preserve omitted fields and remain owner-scoped", async () => {
   const { c, db } = await setup();
   c.settings.update("alice", {

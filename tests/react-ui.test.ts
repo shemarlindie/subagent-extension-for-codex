@@ -528,6 +528,7 @@ test("changing projects clears revision and dependencies while retaining the tas
   await screen.findByRole("dialog");
   await selectOption(user, "Project", "/repo/a");
   await user.type(screen.getByLabelText("Task"), "Persistent task");
+  await selectOption(user, "Workspace", "Isolated worktree");
   await user.clear(screen.getByLabelText("Revision"));
   await user.type(screen.getByLabelText("Revision"), "edited-branch");
   await selectOption(
@@ -1066,4 +1067,43 @@ test("permission picker Escape preserves denial and keyboard approval submits th
       true,
     ),
   );
+});
+
+test("current repository selection locks revision to HEAD and submits the checkout strategy", async (t) => {
+  const { transport, user } = await setup(t);
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await screen.findByRole("dialog");
+  const revision = screen.getByLabelText("Revision") as HTMLInputElement;
+  assert.equal(revision.value, "HEAD");
+  assert.equal(revision.readOnly, true);
+  assert.match(
+    screen.getByRole("combobox", { name: "Workspace", exact: true })
+      .textContent ?? "",
+    /Current repository/,
+  );
+  await selectOption(user, "Workspace", "Isolated worktree");
+  assert.equal(revision.readOnly, false);
+  await user.clear(revision);
+  await user.type(revision, "feature-branch");
+  await user.type(screen.getByLabelText("Task"), "Review my uncommitted edits");
+  await selectOption(
+    user,
+    "Workspace",
+    "Current repository (uncommitted changes)",
+  );
+  await waitFor(() => assert.equal(revision.value, "HEAD"));
+  assert.equal(revision.readOnly, true);
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+  const call = transport.calls.find(
+    (call) => call.name === "start_agent_task",
+  )!;
+  assert.equal(call.args.workspace_strategy, "current_repo");
+  assert.equal(call.args.revision, "HEAD");
+  assert.equal(call.args.repository, "/repo/a");
 });

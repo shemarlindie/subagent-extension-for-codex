@@ -31,7 +31,7 @@ export function mcp(
       },
       requestState: { verify: (state) => c.forms.verify(owner, state) },
       instructions:
-        "Use list_agent_projects and list_available_workers before delegation; pass an explicit repository. Tasks run asynchronously in isolated worktrees. Inspect pending_input before submit_agent_input. Changes are returned as artifacts; applying them is a separate action.",
+        "Use list_agent_projects and list_available_workers before delegation; pass an explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input. Worktree changes are returned as artifacts; current_repo write profiles edit the checkout directly.",
     },
   );
   server.registerTool(

@@ -10,6 +10,7 @@ export type Worker = {
 };
 export type Project = { repository: string; name?: string; kind: string };
 export type Defaults = {
+  default_workspace_strategy?: "worktree" | "current_repo";
   default_provider?: string;
   default_worker_profile?: string;
   max_runtime_minutes: number;

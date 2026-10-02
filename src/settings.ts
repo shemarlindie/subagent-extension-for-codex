@@ -20,7 +20,7 @@ const valuesSchema = z.strictObject({
     .enum(roles)
     .meta({ title: "Default worker profile" }),
   default_workspace_strategy: z
-    .literal("worktree")
+    .enum(["worktree", "current_repo"])
     .meta({ title: "Workspace strategy" }),
   max_runtime_minutes: z
     .number()
@@ -97,7 +97,7 @@ export class Settings {
               ? "claude"
               : this.providers()[0],
             default_worker_profile: "reviewer",
-            default_workspace_strategy: "worktree",
+            default_workspace_strategy: "current_repo",
             max_runtime_minutes: 20,
             max_cost_usd: 5,
           },

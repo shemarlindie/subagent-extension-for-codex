@@ -41,6 +41,8 @@ export class Workspaces {
     return actual;
   }
   async create(t: Task) {
+    if (t.workspace_strategy === "current_repo" && t.revision !== "HEAD")
+      throw new Error("Current repository workspace requires revision HEAD");
     t.repository = await this.repository(t.repository);
     t.base_commit = (
       await git(t.repository, [
@@ -50,6 +52,10 @@ export class Workspaces {
         `${t.revision}^{commit}`,
       ])
     ).trim();
+    if (t.workspace_strategy === "current_repo") {
+      t.workspace = t.repository;
+      return;
+    }
     await mkdir(this.root, { recursive: true, mode: 0o700 });
     t.workspace = join(this.root, t.id);
     await git(t.repository, [
