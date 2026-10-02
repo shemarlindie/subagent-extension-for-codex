@@ -74,6 +74,14 @@ async function tool<T = any>(
   args: Record<string, unknown> = {},
 ): Promise<T> {
   if (preview) {
+    if (name === "list_agent_projects")
+      return [
+        {
+          repository: "/demo/project",
+          name: "Demo project",
+          kind: "repository",
+        },
+      ] as T;
     if (name === "list_agent_tasks") return previewTasks as T;
     if (name === "get_agent_events")
       return previewEvents.filter(
@@ -502,6 +510,21 @@ async function delegate() {
     formConversation = conversation;
   const defaults = (await tool("get_agent_settings")).values;
   if (dialog.open || busy || formScope !== scopeVersion) return;
+  const projects = await tool<{ repository: string; kind: string }[]>(
+    "list_agent_projects",
+  );
+  if (dialog.open || busy || formScope !== scopeVersion) return;
+  const projectOptions = projects
+    .filter((p) => p.kind === "repository")
+    .map(
+      (p) =>
+        `<option value="${esc(p.repository)}">${esc(p.repository)}</option>`,
+    )
+    .join("");
+  if (!projectOptions)
+    throw new Error(
+      "Register a repository using the local projects CLI before delegating.",
+    );
   const choices = workers
     .flatMap((w) =>
       w.profiles.map(
@@ -516,10 +539,11 @@ async function delegate() {
     );
   modal(
     "New delegated task",
-    `<p class="form-note">Give the worker a focused outcome and the evidence you expect back. Work starts from a committed revision in a separate worktree.</p><label for="task">Task</label><textarea id="task" required maxlength="20000" placeholder="Review the authentication boundary. Cite findings with file paths and suggest next steps."></textarea><div class="two"><div><label for="worker">Worker</label><select id="worker">${choices}</select></div><div><label for="revision">Revision</label><input id="revision" value="HEAD" required></div></div><label for="context">Context to include (optional)</label><textarea id="context" maxlength="20000" placeholder="Relevant files, constraints, or prior findings. Conversation context is not attached automatically."></textarea><div class="two"><div><label for="runtime">Runtime limit · minutes</label><input id="runtime" type="number" min="0.1" max="120" step="any" value="${esc(defaults.max_runtime_minutes)}" required></div><div><label for="cost-mode">Cost limit</label><select id="cost-mode"><option value="limited">Apply cost budget</option><option value="none">No cost limit</option></select></div></div><label for="cost">Cost budget · USD</label><input id="cost" type="number" min="0.01" max="100" step="0.01" value="${esc(defaults.max_cost_usd ?? 5)}" required><p id="cost-note" class="help"></p><label for="deps">Wait for tasks (optional)</label><select id="deps" multiple>${tasks.map((t) => `<option value="${esc(t.id)}">${esc(t.task.slice(0, 80))}</option>`).join("")}</select>`,
+    `<p class="form-note">Give the worker a focused outcome and the evidence you expect back. Work starts from a committed revision in a separate worktree.</p><label for="repository">Project</label><select id="repository" required><option value="" disabled selected>Choose a project</option>${projectOptions}</select><label for="task">Task</label><textarea id="task" required maxlength="20000" placeholder="Review the authentication boundary. Cite findings with file paths and suggest next steps."></textarea><div class="two"><div><label for="worker">Worker</label><select id="worker">${choices}</select></div><div><label for="revision">Revision</label><input id="revision" value="HEAD" required></div></div><label for="context">Context to include (optional)</label><textarea id="context" maxlength="20000" placeholder="Relevant files, constraints, or prior findings. Conversation context is not attached automatically."></textarea><div class="two"><div><label for="runtime">Runtime limit · minutes</label><input id="runtime" type="number" min="0" max="120" step="any" value="${esc(defaults.max_runtime_minutes)}" required></div><div><label for="cost-mode">Cost limit</label><select id="cost-mode"><option value="limited">Apply cost budget</option><option value="none">No cost limit</option></select></div></div><label for="cost">Cost budget · USD</label><input id="cost" type="number" min="0.01" max="100" step="0.01" value="${esc(defaults.max_cost_usd ?? 5)}" required><p id="cost-note" class="help"></p><label for="deps">Wait for tasks (optional)</label><select id="deps" multiple>${tasks.map((t) => `<option value="${esc(t.id)}">${esc(t.task.slice(0, 80))}</option>`).join("")}</select>`,
     async () => {
       const [provider, worker_profile] = value("worker").split(":");
       const task = await tool<Task>("start_agent_task", {
+        repository: value("repository"),
         task: value("task"),
         provider,
         worker_profile,
@@ -546,13 +570,25 @@ async function delegate() {
     },
     "Start task",
   );
+  const runtime = $("runtime") as HTMLInputElement;
+  const updateRuntime = () =>
+    runtime.setCustomValidity(
+      runtime.value !== "" && !(Number(runtime.value) > 0)
+        ? "Runtime limit must be greater than zero."
+        : "",
+    );
+  runtime.oninput = updateRuntime;
+  updateRuntime();
   const worker = $("worker") as HTMLSelectElement,
     mode = $("cost-mode") as HTMLSelectElement,
     cost = $("cost") as HTMLInputElement;
   const preferred = `${defaults.default_provider}:${defaults.default_worker_profile}`;
   if ([...worker.options].some((o) => o.value === preferred))
     worker.value = preferred;
-  mode.value = defaults.max_cost_usd === null ? "none" : "limited";
+  mode.value =
+    defaults.use_cost_budget === false || defaults.max_cost_usd === null
+      ? "none"
+      : "limited";
   const update = () => {
     const w = workers.find((w) => w.provider === worker.value.split(":")[0]);
     cost.disabled = mode.value === "none";

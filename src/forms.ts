@@ -55,7 +55,10 @@ export class Forms {
     c.store.db.exec(
       "CREATE TABLE IF NOT EXISTS form_requests(id TEXT PRIMARY KEY, owner TEXT NOT NULL, expires INTEGER NOT NULL, body TEXT NOT NULL)",
     );
-    for (const row of c.store.db
+  }
+  /** Recover submissions only after the service has secured its listener. */
+  recover() {
+    for (const row of this.c.store.db
       .prepare("SELECT id,body FROM form_requests")
       .all()) {
       const r: Request = JSON.parse(String(row.body));
@@ -101,6 +104,14 @@ export class Forms {
   ): Request {
     if (kind === "request_agent_task") {
       const defaults = this.c.settings.taskInput(owner, args) as any;
+      const projects = this.c.projects?.list() ?? [
+        { repository: this.c.repository, kind: "repository" },
+      ];
+      const choices = projects.filter((p) => p.kind === "repository");
+      if (!choices.length)
+        throw new Error(
+          "Register a repository with the local projects CLI before opening a task form",
+        );
       const workers = this.c.workers().flatMap((w) =>
         w.profiles.map((profile) => ({
           const: `${w.provider}:${profile}`,
@@ -116,6 +127,17 @@ export class Forms {
         form: OpenAIFormSchema.parse({
           type: "object",
           properties: {
+            repository: {
+              type: "string",
+              title: "Project",
+              oneOf: choices.map((p) => ({
+                const: p.repository,
+                title: p.repository,
+              })),
+              ...(choices.some((p) => p.repository === args.repository)
+                ? { default: args.repository }
+                : {}),
+            },
             task: {
               type: "string",
               title: "Task",
@@ -158,6 +180,7 @@ export class Forms {
             },
           },
           required: [
+            "repository",
             "task",
             "worker",
             "revision",
@@ -297,6 +320,10 @@ export class Forms {
         failed("Form submission is interrupted; inspect task state.")
       );
     }
+    if (kind === "request_agent_task" && !r.form.properties.repository)
+      throw new Error(
+        "This saved form predates explicit project selection. Reopen the task form and select a project.",
+      );
     this.checkInput(owner, r);
     if (!response)
       return inputRequired({
@@ -334,6 +361,7 @@ export class Forms {
           const [provider, worker_profile] = String(content.worker).split(":");
           result = await this.c.start(owner, {
             ...r.args,
+            repository: content.repository,
             task: content.task,
             provider,
             worker_profile,

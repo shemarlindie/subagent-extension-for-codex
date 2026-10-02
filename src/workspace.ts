@@ -17,10 +17,20 @@ export class Workspaces {
   async repository(path: string) {
     const actual = await realpath(path);
     const roots = await Promise.all(
-      this.allowedRoots.map((root) => realpath(root)),
+      this.allowedRoots.map(async (root) => {
+        try {
+          return await realpath(root);
+        } catch (error) {
+          // A removed project must not block other approvals or grant access.
+          const code = (error as NodeJS.ErrnoException).code;
+          if (code === "ENOENT" || code === "ENOTDIR") return undefined;
+          throw error;
+        }
+      }),
     );
     if (
       !roots.some((root) => {
+        if (root === undefined) return false;
         const p = relative(root, actual);
         return !p.startsWith("..") && !isAbsolute(p);
       })

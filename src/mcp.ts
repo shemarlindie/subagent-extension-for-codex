@@ -1,6 +1,10 @@
-import { McpServer, ProtocolError } from "@modelcontextprotocol/server";
+import {
+  McpServer,
+  ProtocolError,
+  type ServerContext,
+} from "@modelcontextprotocol/server";
 import { type Events, EventProtocolError } from "./events/service.js";
-import { definitions } from "./tools.js";
+import { definitions, withConversation } from "./tools.js";
 import { type Control } from "./control.js";
 import { z } from "zod";
 import { settingsCapability } from "./settings.js";
@@ -23,7 +27,7 @@ export function mcp(
       },
       requestState: { verify: (state) => c.forms.verify(owner, state) },
       instructions:
-        "Use list_available_workers before delegation. Tasks run asynchronously in isolated worktrees. Inspect pending_input before submit_agent_input. Changes are returned as artifacts; applying them is a separate action.",
+        "Use list_agent_projects and list_available_workers before delegation; pass an explicit repository. Tasks run asynchronously in isolated worktrees. Inspect pending_input before submit_agent_input. Changes are returned as artifacts; applying them is a separate action.",
     },
   );
   server.registerTool(
@@ -71,6 +75,7 @@ export function mcp(
       {
         description: d.description,
         inputSchema: d.schema,
+        ...("outputSchema" in d ? { outputSchema: d.outputSchema } : {}),
         annotations: {
           readOnlyHint: name.startsWith("get_") || name.startsWith("list_"),
           destructiveHint: name === "cancel_agent_task",
@@ -78,9 +83,11 @@ export function mcp(
         },
         _meta: { ui: { visibility: ["model", "app"] } },
       },
-      async (args: any) => {
+      async (args: any, ctx: ServerContext) => {
         try {
-          const result = await d.run(args);
+          const result = await d.run(
+            withConversation(name, args, ctx.mcpReq._meta),
+          );
           return {
             content: [{ type: "text" as const, text: JSON.stringify(result) }],
             structuredContent: name.endsWith("_agent_settings")
@@ -132,7 +139,9 @@ export function mcp(
       .all(owner)
       .filter((t) => !conversationId || t.conversation_id === conversationId),
   );
-  server.registerTool(panel.name, panel.tool, panel.open);
+  server.registerTool(panel.name, panel.tool, (args, ctx) =>
+    panel.open(withConversation(panel.name, args, ctx.mcpReq._meta)),
+  );
   server.registerResource(panel.title, panel.uri, panel.resource, panel.read);
   return server;
 }

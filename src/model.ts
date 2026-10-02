@@ -12,7 +12,13 @@ export const startSchema = z.object({
   provider: z.enum(["claude", "codex", "fixture"]).default("claude"),
   worker_profile: z.enum(roles).default("reviewer"),
   task: z.string().min(1).max(20000),
-  repository: z.string().default("current"),
+  repository: z
+    .string()
+    .min(1)
+    .default("current")
+    .describe(
+      "Explicit absolute Git repository root approved by list_agent_projects. current is rejected by the packaged service because it does not identify the chat project.",
+    ),
   revision: z.string().default("HEAD"),
   conversation_id: z.string().optional(),
   parent_task_id: z.string().optional(),

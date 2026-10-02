@@ -40,17 +40,43 @@ function consoleHarness(
   const streamOptions: unknown[] = [];
   const streams: { url: string; closed: boolean; close(): void }[] = [];
   const elements = new Map<string, any>();
+  const createElement = (attributes: Record<string, string> = {}) => {
+    let html = "";
+    const element: any = {
+      attributes,
+      value: attributes.value ?? "",
+      textContent: "",
+      hidden: false,
+      options: [],
+      validityMessage: "",
+      setCustomValidity(message: string) {
+        this.validityMessage = message;
+      },
+      focus() {},
+      querySelector(selector: string) {
+        return selector === "form" ? element.form : null;
+      },
+    };
+    Object.defineProperty(element, "innerHTML", {
+      get: () => html,
+      set(markup: string) {
+        html = markup;
+        if (!markup.includes('<form class="dialog">')) return;
+        element.form = { onsubmit: null };
+        for (const match of markup.matchAll(/<(\w+)\b([^>]*)>/g)) {
+          const attrs: Record<string, string> = {};
+          for (const attr of match[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g))
+            attrs[attr[1]] = attr[2] ?? "";
+          if (attrs.id) elements.set(attrs.id, createElement(attrs));
+        }
+      },
+    });
+    return element;
+  };
   const document = {
     hidden: false,
     getElementById(id: string) {
-      if (!elements.has(id))
-        elements.set(id, {
-          value: "",
-          textContent: "",
-          innerHTML: "",
-          hidden: false,
-          options: [],
-        });
+      if (!elements.has(id)) elements.set(id, createElement());
       return elements.get(id);
     },
     querySelectorAll: () => [],
@@ -76,7 +102,11 @@ function consoleHarness(
     async callServerTool(call: ToolCall) {
       calls.push(call);
       const result = await (options.tool?.(call) ?? []);
-      return { structuredContent: { result } };
+      return {
+        structuredContent: call.name.endsWith("_agent_settings")
+          ? result
+          : { result },
+      };
     }
   }
   let bridge!: MockApp;
@@ -98,11 +128,15 @@ function consoleHarness(
     history: { replaceState: () => {} },
     setTimeout,
     clearTimeout: (id: number) => timers.delete(id),
-    fetch: async (url: string, options: unknown) => {
+    fetch: async (url: string, request: any) => {
       assert.equal(embedded, false, "embedded console attempted browser HTTP");
       requests.push(url);
-      requestOptions.push(options);
-      return { status: 200, ok: true, json: async () => ({ result: [] }) };
+      requestOptions.push(request);
+      const result = await (options.tool?.({
+        name: url.split("/").at(-1)!,
+        arguments: JSON.parse(request.body),
+      }) ?? []);
+      return { status: 200, ok: true, json: async () => ({ result }) };
     },
     EventSource: class {
       closed = false;
@@ -148,6 +182,39 @@ function consoleHarness(
     },
   };
 }
+
+test("delegation requires choosing a project and accepts positive fractional runtime defaults", async () => {
+  const h = consoleHarness({
+    tool: ({ name }) =>
+      name === "get_agent_settings"
+        ? { values: { max_runtime_minutes: 0.05, use_cost_budget: false } }
+        : name === "list_agent_projects"
+          ? [{ repository: "/approved/repo", kind: "repository" }]
+          : [],
+  });
+  await flush();
+  h.elements.get("delegate").onclick();
+  await flush();
+  const repository = h.elements.get("repository");
+  assert.ok(repository, "delegation form must render");
+  assert.equal(repository.value, "");
+  assert.ok("required" in repository.attributes);
+  assert.match(
+    h.elements.get("modal").innerHTML,
+    /<option value="" disabled selected>Choose a project<\/option>/,
+  );
+  const runtime = h.elements.get("runtime");
+  assert.equal(runtime.attributes.min, "0");
+  assert.equal(runtime.attributes.step, "any");
+  assert.equal(runtime.value, "0.05");
+  assert.equal(runtime.validityMessage, "");
+  for (const value of ["0", "-1", "0.5", "0.05"]) {
+    runtime.value = value;
+    runtime.oninput();
+    assert.equal(Boolean(runtime.validityMessage), Number(value) <= 0);
+  }
+  await h.bridge.onteardown!();
+});
 
 test("embedded sidebar starts through the host without an opening result", async () => {
   const h = consoleHarness();
@@ -289,3 +356,31 @@ test("standalone console retains authenticated browser HTTP and SSE", async () =
   assert.equal(h.pollTimers(), 0);
   assert.deepEqual(h.calls, []);
 });
+
+for (const embedded of [false, true]) {
+  for (const failure of ["empty", "rejected"] as const) {
+    for (const entrypoint of ["delegate", "empty-delegate"]) {
+      test(`${embedded ? "embedded" : "standalone"} ${entrypoint} displays ${failure} project lookup error`, async () => {
+        const h = consoleHarness({
+          embedded,
+          tool: ({ name }) => {
+            if (name === "get_agent_settings") return { values: {} };
+            if (name === "list_agent_projects" && failure === "rejected")
+              throw new Error("project registry unavailable");
+            return [];
+          },
+        });
+        await flush();
+        h.elements.get(entrypoint).onclick();
+        await flush();
+        assert.match(
+          h.elements.get("error").textContent,
+          failure === "empty"
+            ? /Register a repository/
+            : /project registry unavailable/,
+        );
+        if (embedded) await h.bridge.onteardown!();
+      });
+    }
+  }
+}

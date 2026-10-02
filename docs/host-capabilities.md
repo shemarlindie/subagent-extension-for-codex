@@ -1,0 +1,144 @@
+# Host capabilities and integration decisions
+
+Checked against official documentation and the installed packages on October 2,
+2026. This distinguishes documented capabilities from behavior verified in this
+repository; it is not a claim that every host/version implements every feature.
+
+## Plugin startup and hooks
+
+Codex supports command-based lifecycle hooks, including `SessionStart`, and
+plugin hooks are discovered from `hooks/hooks.json` or the OpenAI extension in
+the root manifest. Users must review and trust plugin hooks. Scripts must exist
+in the execution environment; installation on the web does not deploy them.
+Plugin hook commands receive `PLUGIN_ROOT` and writable `PLUGIN_DATA` variables.
+The portable package keeps `plugin.json`, `mcp.json`, and assets at its root.
+[Official plugin packaging documentation](https://developers.openai.com/plugins/build/plugins).
+
+Hook input contains `session_id` and session `cwd`. Commands run in that working
+directory. This is a supported way for a future trusted hook to capture session
+context, but a hook payload is not automatically supplied to an MCP tool. A
+shared service needs an explicit session binding if it consumes this information;
+one global “current repository” is insufficient for concurrent chats.
+[Official hook input and execution documentation](https://learn.chatgpt.com/docs/hooks).
+
+STDIO MCP configuration supplies a command, arguments, environment, and optional
+launch `cwd`. That launches the configured executable, not a separately managed
+HTTP service. Launch `cwd` is not documented as a per-tool-call project identifier.
+Starting the local service from the packaged STDIO launcher is therefore an
+application responsibility. Disconnecting a client should close its proxy
+without terminating work owned by a shared service.
+[Official MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+
+## Project context and registration
+
+MCP Apps host context describes presentation, locale, device capabilities, and
+the initiating tool; it does not standardize a repository path or Codex project
+ID. Its fields are optional. The installed `@modelcontextprotocol/ext-apps`
+1.7.5 `McpUiHostContext` likewise has no declared repository field, although it
+permits additional properties. No documented, guaranteed per-call active-project
+field was established by this review. Explicit project selection is the reliable
+fallback, and an undocumented extra property must not become an access grant.
+[Official MCP Apps host-context reference](https://apps.extensions.modelcontextprotocol.io/api/interfaces/types.McpUiHostContext.html).
+
+Legacy MCP roots are optional: supporting clients declare the capability and
+servers can request `roots/list`. The protocol does not mandate a project-picker
+interaction or identify which root is active for a particular chat. A root list
+is consequently not a replacement for explicit task project identity or the
+service's own containment validation.
+[MCP 2025-11-25 roots specification](https://modelcontextprotocol.io/specification/2025-11-25/client/roots).
+
+Elicitation can collect a missing repository or an explicit approval, when the
+connected client supports the requested mode. For legacy connections, an empty
+elicitation capability means form support; absent capability does not. Servers
+must not send unsupported modes, and user decline/cancel must be respected.
+This allows a capability-gated registration flow; a model-supplied path alone
+does not establish user consent.
+[MCP elicitation specification](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation).
+
+OpenAI recommends elicitation for missing structured information and explicitly
+states that tool annotations do not replace server authorization or validation.
+Registration should use a direct user action or accepted elicitation and retain
+canonical-path containment checks for all subsequent task requests.
+[Official MCP server guidance](https://developers.openai.com/plugins/build/mcp-server).
+
+## Recent releases and compatibility
+
+The July 28, 2026 MCP release introduces stateless per-request capabilities,
+Multi Round-Trip Requests for user input, and explicit application handles.
+Roots, Sampling, and Logging are deprecated with at least twelve months of
+continued support. New code should not depend on roots being a future universal
+project-context API. Installed legacy SDK behavior and modern v2 behavior must
+be assessed separately; the published latest protocol does not prove a host
+negotiates it.
+[Official MCP release announcement](https://blog.modelcontextprotocol.io/posts/2026-07-28/).
+
+OpenAI's May 28, 2026 plugin update added host style variables and host-context
+theme notifications; May 27 updated approved-tool input delivery. These are
+UI capabilities, not a documented repository binding.
+[Official plugin UI changelog](https://developers.openai.com/plugins/changelog).
+
+The current OpenAI changelog includes CLI 0.160.0 on October 1, 2026, and the
+May 8 desktop 26.506 release added hook trust review. Published release notes
+establish that hooks and elicitation are evolving capabilities, but do not
+verify which runtime a particular installed desktop app uses. Use handshake
+capabilities and direct integration tests rather than product-name assumptions.
+[Official ChatGPT and Codex changelog](https://learn.chatgpt.com/docs/changelog).
+
+## Claude task continuity
+
+The installed Claude SDK declares `cwd` (defaulting to process cwd), `resume`
+(a specific session ID), and `continue` (the most recent conversation in the
+directory). `src/providers/claude.ts` explicitly passes the task workspace as
+`cwd` and its saved session ID as `resume`. Preserve both across continuation;
+selecting another project for a new task must not change an existing task's
+repository or workspace.
+
+Current official sessions guidance says history does not persist filesystem
+state, and cross-directory lookup was introduced in Claude Code 2.1.223.
+The installed SDK bundles 2.1.141, so that newer lookup guarantee cannot be
+assumed here. Resume also requires locally available session data. Using
+`continue: true` in a concurrent service risks selecting a different session;
+explicit IDs and stable workspaces avoid that ambiguity.
+[Official Claude Agent SDK sessions documentation](https://code.claude.com/docs/en/agent-sdk/sessions).
+
+Installed package evidence (`npm ls --depth=0`, package manifests and types):
+
+| Component | Installed version | Relevant evidence |
+| --- | --- | --- |
+| Claude Agent SDK | 0.2.141 | `sdk.d.ts` options; bundled manifest CLI 2.1.141 |
+| MCP SDK v1 | 1.31.0 | `types.js` latest supported handshake version 2025-11-25 |
+| MCP server / node v2 | 2.2.0 / 2.1.0 | Modern 2026-07-28 codec alongside legacy support |
+| MCP Apps | 1.7.5 | `spec.types.d.ts` host context lacks repository identity |
+| OpenAI SDK | 7.25.0 | Installed dependency, not a Codex host-context API |
+| OpenAI MCP extensions | 0.1.0 | Installed extension dependency |
+
+These observations verify local library contracts, not a live desktop handshake,
+hook trust state, or access to another host's filesystem. A local plugin cannot
+make its service available to an unrelated cloud machine merely by installing
+the package.
+
+## Review corrections
+
+The native settings contract requires a read-tool output schema and scalar
+setting fields. Native settings now expose a boolean `use_cost_budget` plus a
+numeric amount, translated to nullable internal task budgets. Both transports
+advertise read/update output schemas. Settings schema checks must inspect field
+definitions as well as the envelope: the SDK's raw read-result parser intentionally
+does not validate native field schemas. See the [official extension specification
+linked by OpenAI](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#structured-settings)
+and [OpenAI extension documentation](https://developers.openai.com/plugins/build/extensions).
+
+`_meta["openai/session"]` is a documented optional anonymized conversation
+identifier. Both transports now use it for panel/task/list correlation when no
+explicit conversation ID is supplied. It is not a repository ID or an authorization
+claim. Metadata absence still works; no active-project access is inferred from it.
+[Official plugin UI reference](https://developers.openai.com/plugins/reference).
+
+Portable skills are discovered from the root `skills/` directory, which is now
+included in the distributable package. Registry installs do not execute package
+lifecycle scripts, so compiled assets and production dependencies must already
+be present in the archive. Public publication additionally needs an approved
+endpoint and complete submission metadata/assets; local package validation and
+protocol tests do not establish universal-directory eligibility.
+[Official packaging documentation](https://developers.openai.com/plugins/build/plugins),
+[submission requirements](https://developers.openai.com/plugins/deploy/submission).

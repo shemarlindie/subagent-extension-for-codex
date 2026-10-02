@@ -141,7 +141,7 @@ async function loadDetail() {
   if (!selected) {
     $("detail").innerHTML =
       '<div class="empty"><span class="eyebrow">Ready when you are</span><h2>A second perspective.<br>A separate workspace.</h2><p>Delegate a review, investigation, or implementation. Each worker gets an isolated worktree and returns inspectable results.</p><button class="primary" id="empty-delegate">Delegate your first task</button></div>';
-    $("empty-delegate").onclick = () => void delegate();
+    $("empty-delegate").onclick = () => void delegate().catch(error);
     return;
   }
   [events, artifacts] = await Promise.all([
@@ -176,7 +176,7 @@ function renderWorker() {
         "",
       )}</div><p>Tasks for this worker appear in the work queue. Runtime limits and provider budget capabilities apply to every task.</p>`;
   $("worker-delegate").onclick = () =>
-    void delegate(`${worker.provider}:${profile}`);
+    void delegate(`${worker.provider}:${profile}`).catch(error);
 }
 async function chooseWorker(id?: string) {
   workerRoute = id;
@@ -361,12 +361,25 @@ async function delegate(preferredWorker?: string) {
     error(e);
     return;
   }
+  const projects = await tool("list_agent_projects");
+  const projectOptions = projects
+    .filter((p: any) => p.kind === "repository")
+    .map(
+      (p: any) =>
+        `<option value="${esc(p.repository)}">${esc(p.repository)}</option>`,
+    )
+    .join("");
+  if (!projectOptions)
+    throw new Error(
+      "Register a repository with the local projects CLI before delegating.",
+    );
   modal(
     "Delegate a task",
-    `<p>Work runs asynchronously in a separate Git worktree.</p><label for="task">What should the worker do?</label><textarea id="task" required placeholder="Independently review the authentication changes…"></textarea><div class="two"><div><label for="worker">Worker</label><select id="worker">${workers.flatMap((w) => w.profiles.map((p: string) => `<option value="${esc(w.provider)}:${esc(p)}">${esc(w.provider)} · ${esc(p.replaceAll("_", " "))}</option>`)).join("")}</select></div><div><label for="revision">Revision</label><input id="revision" value="HEAD" required></div></div><div class="two"><div><label for="runtime">Runtime limit (minutes)</label><input id="runtime" type="number" min="1" max="120" value="20" required></div><div><label for="cost-enabled"><input id="cost-enabled" type="checkbox" checked style="width:auto"> Apply cost limit</label><label for="cost">Cost budget (USD)</label><input id="cost" aria-describedby="cost-note" type="number" min="0.01" max="100" value="5" step="0.01" required><p id="cost-note" hidden>Claude stops after a response reaches the budget. A response can exceed it; interrupted usage may be missing.</p></div></div><label for="deps">Wait for tasks</label><select id="deps" multiple>${tasks.map((t) => `<option value="${esc(t.id)}">${esc(t.task.slice(0, 70))}</option>`).join("")}</select>`,
+    `<p>Work runs asynchronously in a separate Git worktree.</p><label for="repository">Project</label><select id="repository" required><option value="" disabled selected>Choose a project</option>${projectOptions}</select><label for="task">What should the worker do?</label><textarea id="task" required placeholder="Independently review the authentication changes…"></textarea><div class="two"><div><label for="worker">Worker</label><select id="worker">${workers.flatMap((w) => w.profiles.map((p: string) => `<option value="${esc(w.provider)}:${esc(p)}">${esc(w.provider)} · ${esc(p.replaceAll("_", " "))}</option>`)).join("")}</select></div><div><label for="revision">Revision</label><input id="revision" value="HEAD" required></div></div><div class="two"><div><label for="runtime">Runtime limit (minutes)</label><input id="runtime" type="number" min="0" max="120" step="any" value="20" required></div><div><label for="cost-enabled"><input id="cost-enabled" type="checkbox" checked style="width:auto"> Apply cost limit</label><label for="cost">Cost budget (USD)</label><input id="cost" aria-describedby="cost-note" type="number" min="0.01" max="100" value="5" step="0.01" required><p id="cost-note" hidden>Claude stops after a response reaches the budget. A response can exceed it; interrupted usage may be missing.</p></div></div><label for="deps">Wait for tasks</label><select id="deps" multiple>${tasks.map((t) => `<option value="${esc(t.id)}">${esc(t.task.slice(0, 70))}</option>`).join("")}</select>`,
     async () => {
       const [provider, worker_profile] = value("worker").split(":");
       const task = await tool("start_agent_task", {
+        repository: ($("repository") as HTMLSelectElement).value,
         task: value("task"),
         provider,
         worker_profile,
@@ -395,13 +408,21 @@ async function delegate(preferredWorker?: string) {
     `${defaults.default_provider}:${defaults.default_worker_profile}`;
   if ([...worker.options].some((o) => o.value === preferred))
     worker.value = preferred;
-  ($("runtime") as HTMLInputElement).value = String(
-    defaults.max_runtime_minutes,
-  );
+  const runtime = $("runtime") as HTMLInputElement;
+  runtime.value = String(defaults.max_runtime_minutes);
+  const updateRuntime = () =>
+    runtime.setCustomValidity(
+      runtime.value !== "" && !(Number(runtime.value) > 0)
+        ? "Runtime limit must be greater than zero."
+        : "",
+    );
+  runtime.oninput = updateRuntime;
+  updateRuntime();
   const cost = $("cost") as HTMLInputElement;
   const enabled = $("cost-enabled") as HTMLInputElement;
   cost.value = String(defaults.max_cost_usd ?? 5);
-  enabled.checked = defaults.max_cost_usd !== null;
+  enabled.checked =
+    defaults.use_cost_budget !== false && defaults.max_cost_usd !== null;
   const updateCost = () => {
     cost.disabled = !enabled.checked;
     const provider = workers.find(
@@ -571,7 +592,7 @@ async function ready() {
   await refresh();
   live();
 }
-$("delegate").onclick = () => void delegate();
+$("delegate").onclick = () => void delegate().catch(error);
 $("search").oninput = renderList;
 document.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach(
   (b) =>

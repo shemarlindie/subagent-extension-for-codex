@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -131,6 +131,13 @@ test("native host delegation requests user input before starting and retries com
     );
     assert.equal(c.store.all().length, 0);
     const form = requested.result.inputRequests.form;
+    assert.ok(form.params.requestedSchema.required.includes("repository"));
+    const repository =
+      form.params.requestedSchema.properties.repository.oneOf[0].const;
+    const response = {
+      ...accepted,
+      content: { ...accepted.content, repository },
+    };
     assert.equal(form.method, "elicitation/create");
     assert.equal(form.params.requestedSchema.properties.worker.oneOf.length, 7);
     assert.equal(
@@ -138,14 +145,23 @@ test("native host delegation requests user input before starting and retries com
       "fixture:reviewer",
     );
     const state = requested.result.requestState;
+    const missingProject = await rpc(
+      "request_agent_task",
+      args,
+      state,
+      accepted,
+    );
+    assert.ok(missingProject.result.isError);
+    assert.equal(c.store.all().length, 0);
     const [first, second] = await Promise.all([
-      rpc("request_agent_task", args, state, accepted),
-      rpc("request_agent_task", args, state, accepted),
+      rpc("request_agent_task", args, state, response),
+      rpc("request_agent_task", args, state, response),
     ]);
     const task = first.result?.structuredContent.result;
     assert.ok(task?.id, JSON.stringify(first));
     assert.equal(second.result?.structuredContent.result.id, task.id);
     assert.equal(task.conversation_id, "conversation-a");
+    assert.equal(task.repository, await realpath(repository));
     assert.equal(task.budget.max_cost_usd, 1);
     assert.equal(c.store.all().length, 1);
     assert.ok(
@@ -165,6 +181,51 @@ test("native host delegation requests user input before starting and retries com
           content: { ...accepted.content, task: "Different" },
         })
       ).result.isError,
+    );
+    assert.equal(c.store.all().length, 1);
+  } finally {
+    await close();
+  }
+});
+
+test("persisted forms from before project selection reject submission and require reopening", async () => {
+  const { c, rpc, close } = await setup();
+  try {
+    const requested = await rpc("request_agent_task", {});
+    const state = requested.result.requestState;
+    const row = c.store.db.prepare("SELECT id,body FROM form_requests").get()!;
+    const legacy = JSON.parse(String(row.body));
+    delete legacy.form.properties.repository;
+    legacy.form.required = legacy.form.required.filter(
+      (name: string) => name !== "repository",
+    );
+    c.store.db
+      .prepare("UPDATE form_requests SET body=? WHERE id=?")
+      .run(JSON.stringify(legacy), row.id);
+    c.forms = new Forms(c); // Model loading a pending form after upgrading the service.
+    const submitted = await rpc("request_agent_task", {}, state, accepted);
+    assert.ok(submitted.result.isError, JSON.stringify(submitted));
+    assert.match(
+      submitted.result.content[0].text,
+      /Reopen the task form and select a project/,
+    );
+    assert.equal(c.store.all().length, 0);
+    const reopened = await rpc("request_agent_task", {});
+    const schema = reopened.result.inputRequests.form.params.requestedSchema;
+    const repository = schema.properties.repository.oneOf[0].const;
+    const response = {
+      ...accepted,
+      content: { ...accepted.content, repository },
+    };
+    const started = await rpc(
+      "request_agent_task",
+      {},
+      reopened.result.requestState,
+      response,
+    );
+    assert.equal(
+      started.result.structuredContent.result.repository,
+      await realpath(repository),
     );
     assert.equal(c.store.all().length, 1);
   } finally {
@@ -448,7 +509,13 @@ test("host delegation preserves an explicit or default choice to run without a c
     );
     const response = {
       ...accepted,
-      content: { ...accepted.content, use_cost_budget: false },
+      content: {
+        ...accepted.content,
+        use_cost_budget: false,
+        repository:
+          requested.result.inputRequests.form.params.requestedSchema.properties
+            .repository.oneOf[0].const,
+      },
     };
     const started = await rpc(
       "request_agent_task",
@@ -473,7 +540,15 @@ test("host delegation preserves an explicit or default choice to run without a c
       "request_agent_task",
       args,
       inherited.result.requestState,
-      accepted,
+      {
+        ...accepted,
+        content: {
+          ...accepted.content,
+          repository:
+            inherited.result.inputRequests.form.params.requestedSchema
+              .properties.repository.oneOf[0].const,
+        },
+      },
     );
     assert.equal(
       second.result.structuredContent.result.budget.max_cost_usd,

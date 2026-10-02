@@ -24,26 +24,25 @@ npm run build
 CODEX_SUBAGENT_EXTENSION_REPOSITORY=../target-repository npm start
 ```
 
-Run the command from the project root; the target path is relative to that directory. The target must be a Git repository root with at least one commit. This project started as a notes-only directory; use an existing repository or the demo until it is initialized. A task starts from the specified **committed revision**, not uncommitted files. The service creates a detached worktree per task and never automatically merges changes.
+Run the command from the project root; the target path is relative to that directory. The target must be a Git repository root with at least one commit. Use a committed repository or the disposable demo fixture. A task starts from the specified **committed revision**, not uncommitted files. The service creates a detached worktree per task and never automatically merges changes.
 
-The service writes a login token to `.codex-subagent-extension/admin-token` with owner-only permissions. Use it to sign into the local console. The token stays server-side for MCP proxy requests; browsers receive an HttpOnly session cookie valid for one hour. Restarting invalidates browser sessions. Data and worktrees persist.
+The service writes a login token to `<data-directory>/admin-token` with owner-only permissions. Use it to sign into the local console. The token stays server-side for MCP proxy requests; browsers receive an HttpOnly session cookie valid for one hour. Restarting invalidates browser sessions. Data and worktrees persist.
 
 Stop the fixture service before starting Claude on the same port. Provider availability is explicit: fixture workers are disabled by default.
 
 ## Connect Codex
 
-Run the service first. Configure a stdio MCP server with paths to `dist/stdio.js` and the service's data directory. Replace `<checkout-root>` in this example with the full path to your local checkout; the MCP client may start with a different working directory:
+The packaged stdio launcher connects to or starts the local service when enabled. Configure a stdio MCP server with paths to `dist/stdio.js` and the service's data directory. Replace `<checkout-root>` in this example with the full path to your local checkout; the MCP client may start with a different working directory:
 
 ```toml
 [mcp_servers.codex_subagent_extension]
 command = "node"
 args = ["<checkout-root>/dist/stdio.js"]
-
-[mcp_servers.codex_subagent_extension.env]
-CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension"
 ```
 
-The proxy reads the service token locally and forwards requests to the running service. It does not create another scheduler. `CODEX_SUBAGENT_EXTENSION_URL` changes its loopback URL. The portable plugin manifest, MCP configuration, and delegation skill are also included; build the package before configuring it. Installing a plugin does not start the service automatically.
+The proxy and service share the per-user data default. If you set `CODEX_SUBAGENT_EXTENSION_DATA` for the service, set the same absolute value in `[mcp_servers.codex_subagent_extension.env]`.
+
+The proxy reads the service token locally and forwards requests to the running service. It does not create another scheduler. `CODEX_SUBAGENT_EXTENSION_URL` changes its loopback URL. The portable plugin manifest, MCP configuration, and delegation skill are also included; build the package before configuring it. The service starts when the host launches the packaged stdio server; installation alone does not execute it.
 
 For MCP App hosts, connect to the authenticated HTTP endpoint `/mcp`. The delegation panel replaces the previous `app-v3` MCP resource with `ui://codex-subagent-extension/app-v4` over the authenticated MCP bridge, with empty network allowlists. The standalone web console retains its existing routes. The panel uses portable MCP Apps calls; Codex-specific sidebar behavior remains subject to host verification.
 
@@ -66,8 +65,10 @@ A worktree provides code separation. Claude tasks also require the SDK's native 
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `CODEX_SUBAGENT_EXTENSION_REPOSITORY` | current directory | Allowed Git repository root |
-| `CODEX_SUBAGENT_EXTENSION_DATA` | `.codex-subagent-extension` | Persistent SQLite database, worktrees, service lock, token |
+| `CODEX_SUBAGENT_EXTENSION_REPOSITORY` | unset | Explicit legacy repository registration at service startup |
+| `CODEX_SUBAGENT_EXTENSION_DATA` | `~/.local/share/codex-subagent-extension` | Persistent SQLite database, approved roots, worktrees, lock and token; explicit relative overrides resolve from invocation cwd |
+| `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` | `[]` | JSON array of explicitly approved parent directory paths |
+| `CODEX_SUBAGENT_EXTENSION_URL` | discovered local service or port 4317 | Proxy endpoint override; explicit URLs require an already running service |
 | `CODEX_SUBAGENT_EXTENSION_CONCURRENCY` | `3` | Maximum concurrently active tasks (1–20) |
 | `CODEX_SUBAGENT_EXTENSION_TOKEN` | generated locally | Server-side token override |
 | `PORT` | `4317` | Loopback listener port |
@@ -75,7 +76,7 @@ A worktree provides code separation. Claude tasks also require the SDK's native 
 | `CODEX_SUBAGENT_EXTENSION_FIXTURE` | disabled | Set `1` to add fixture workers for testing |
 | `CODEX_SUBAGENT_EXTENSION_PROVIDER` | Claude | Set `fixture` for fixture-only mode |
 
-Review `.codex-subagent-extension/worktrees/<task-id>` or download returned patches before applying them. Cancellation never deletes a worktree. Preserve Claude's local runtime state for resumable sessions. One service may own a data directory at a time.
+Review `<data-directory>/worktrees/<task-id>` or download returned patches before applying them. Cancellation never deletes a worktree. Preserve Claude's local runtime state for resumable sessions. One service may own a data directory at a time.
 
 ## Verification and remaining plan
 
@@ -95,7 +96,7 @@ Plugin packaging and entrypoint metadata follow the [OpenAI plugin packaging doc
 
 The server advertises `extensions["openai/settings"]` with `get_agent_settings` and `update_agent_settings`. Compatible ChatGPT hosts can render its native settings schema and layout. The same tools are available through the local stdio proxy and authenticated HTTP tool API.
 
-Defaults include provider, worker profile, worktree strategy, runtime minutes, and cost budget. The cost limit remains $5 by default; explicit `max_cost_usd: null` means no cost limit. Providers that cannot enforce a numeric limit reject it before starting. The browser and host delegation form expose an Apply cost limit choice; disabling it preserves the runtime limit. Claude omits its native cost ceiling only for that explicit choice. Updates use `{ "set": { "max_runtime_minutes": 10 } }`, preserve omitted fields, and persist per user in SQLite. New tasks inherit these values; explicit task arguments override them, and existing tasks keep their original settings. The console's delegation form reads the current defaults when opened. Unsupported providers, invalid budgets, and unknown settings are rejected before persistence. Approval policy remains enforced by the worker, rather than configurable through these defaults.
+Defaults include provider, worker profile, worktree strategy, runtime minutes, and cost budget. Provider choices include only enabled workers; a saved unavailable provider falls back to the first enabled worker until changed. The cost limit remains $5 by default; explicit `max_cost_usd: null` means no cost limit for task budgets and legacy settings updates. Native settings expose `use_cost_budget` and a numeric `max_cost_usd` because the host settings schema supports scalar fields. Disabling the toggle preserves the amount for later use; enabling it restores the amount. Updating the amount while disabled keeps the limit disabled. Providers that cannot enforce a numeric limit reject it before starting. The browser and host delegation form expose an Apply cost limit choice; disabling it preserves the runtime limit. Claude omits its native cost ceiling only for that explicit choice. Updates use `{ "set": { "max_runtime_minutes": 10 } }`, preserve omitted fields, and persist per user in SQLite. New tasks inherit these values; explicit task arguments override them, and existing tasks keep their original settings. The console's delegation form reads the current defaults when opened. Unsupported providers, invalid budgets, and unknown settings are rejected before persistence. Approval policy remains enforced by the worker, rather than configurable through these defaults.
 
 Native host discovery and tool envelopes are covered by local protocol tests. Actual rendering in ChatGPT remains unverified until host registration.
 
@@ -124,7 +125,7 @@ Keep credentials outside source control. [Self-hosted environments](https://deve
 
 Each native execution turn requires explicit permission before session creation or executor startup. Permission covers shell execution inside the stated sandbox for that turn; individual commands do not have separate approval prompts. Read-only profiles cannot write the worktree. The macOS sandbox protects Git metadata and limits network access to an authenticated local CONNECT proxy for documented executor hosts. Runtime directories must be outside the worktree and Git metadata. Native authenticated proxy compatibility and containment of descendants that escape the process group remain unverified.
 
-The provider persists its session and coordinator turn, uses native SDK streaming and function handlers for questions, validates the selected turn's saved final report, and awaits executor shutdown before returning. Launch reservations, PID, process birth time, user/group identity, session/environment mapping and lifecycle state persist in SQLite outside the worker runtime. Recovery validates a surviving executor against its unique launch marker and saved process identity before signaling its group; startup reservations without a saved PID are recovered only when one matching owned process is found. When local shutdown and remote turn state can both be confirmed, it restores an interrupted task for explicit continuation. Unknown outcomes keep controls locked and defer artifacts. Legacy records without process identity, ambiguous launches, and live groups whose leader has disappeared remain locked. Descendants that escape the process group are not proven terminated. Startup recovery finishes before the HTTP listener opens.
+The provider persists its session and coordinator turn, uses native SDK streaming and function handlers for questions, validates the selected turn's saved final report, and awaits executor shutdown before returning. Launch reservations, PID, process birth time, user/group identity, session/environment mapping and lifecycle state persist in SQLite outside the worker runtime. Recovery validates a surviving executor against its unique launch marker and saved process identity before signaling its group; startup reservations without a saved PID are recovered only when one matching owned process is found. When local shutdown and remote turn state can both be confirmed, it restores an interrupted task for explicit continuation. Unknown outcomes keep controls locked and defer artifacts. Legacy records without process identity, ambiguous launches, and live groups whose leader has disappeared remain locked. Descendants that escape the process group are not proven terminated. The HTTP listener is reserved before recovery; health and API requests return 503 until recovery completes. A bind failure leaves task state unchanged.
 
 All local contract, orchestration, journal and sandbox checks pass. SDK tests inject HTTP responses, and executor lifecycle tests use local test processes. No authenticated Codex model run has been performed. Native Claude verification is recorded separately; native ChatGPT rendering remains unverified.
 
@@ -134,7 +135,7 @@ The HTTP endpoint uses the official MCP 2.0 server SDK for protocol revision `20
 
 Supported webhook events are `agent_task.completed`, `agent_task.failed`, and `agent_task.input_required`. Subscriptions can filter by task, conversation, or provider. This channel carries compact notifications; tool output stays in the authenticated console stream and full results remain retrievable through tools.
 
-Callbacks must use public HTTPS endpoints on port 443. The service verifies a signed, single-use challenge before activating a subscription, resolves DNS for every delivery, blocks non-public addresses, pins the validated address for TLS, and does not follow redirects. Secrets are encrypted in SQLite using `.codex-subagent-extension/events-key`; preserve this file with database backups. Subscriptions, encrypted secrets, and pending deliveries survive service restarts.
+Callbacks must use public HTTPS endpoints on port 443. The service verifies a signed, single-use challenge before activating a subscription, resolves DNS for every delivery, blocks non-public addresses, pins the validated address for TLS, and does not follow redirects. Secrets are encrypted in SQLite using `<data-directory>/events-key`; preserve this file with database backups. Subscriptions, encrypted secrets, and pending deliveries survive service restarts.
 
 Successful deliveries are recorded idempotently. Transient failures retry up to eight attempts with exponential backoff; redirects and permanent client errors are not retried. `410` disables the subscription. Refresh supports signing-key rotation with a five-minute dual-signature window. Granted subscriptions expire within one day by default, or up to seven days when a shorter or longer finite lifetime is requested; requests without expiration receive a finite grant. Events do not expose a replay cursor, so pre-subscription history is not delivered.
 
@@ -156,3 +157,100 @@ CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs budge
 ```
 
 Each scenario uses a temporary Git fixture and a native task budget of at most $0.25. The budget scenario deliberately sets $0.001 and expects a budget failure. Claude checks cost after a response, so that response can exceed the configured amount; this is not a hard billing cap. The sandbox scenario approves only its five exact fixture commands and uses a local listener; unexpected permission requests are denied. Interrupted-turn costs may not be fully captured in the final task record. These checks require a usable Claude login or API key and are excluded from the ordinary test suite.
+
+## Multiple projects and packaged startup
+
+For the current local manual test setup, run:
+
+```sh
+bash scripts/build-and-start.sh
+```
+
+This builds the project, registers this checkout and the sibling
+`../ig-image-splitter` repository, and starts the service in the foreground.
+Both repositories must exist and be Git roots. The script defaults to
+`<checkout-root>/.codex-subagent-extension/live`; configure the same absolute
+`CODEX_SUBAGENT_EXTENSION_DATA` in Codex's MCP environment. Stop the service
+with Ctrl-C. Existing provider, token, port, and data overrides are preserved.
+
+Pass repository paths to replace the two defaults, for example:
+
+```sh
+bash scripts/build-and-start.sh /absolute/path/to/repository
+```
+
+These are development-script defaults; packaged stdio startup uses the per-user
+data default described below.
+
+Build with `npm run build`. `npm run package:plugin` creates an npm tarball
+containing compiled service/proxy code, both HTML panels, the delegation skill and bundled production
+dependencies, including installed native Claude runtime assets. Extract its
+`package/` directory as the plugin root for a local installation. Node 24+ must
+be available on the execution host. Native assets match the build host; build
+on the destination OS/architecture rather than copying a native bundle between
+platforms. Ordinary source checkouts require `npm ci` before building.
+The stdio launcher connects to the authenticated local service or starts it when
+the loopback connection is refused. Startup errors go to `service.log` in the data
+directory. Concurrent launchers share the PID lease; losing processes cannot
+recover tasks or own workers. Client disconnection leaves the service and tasks
+running. Stop the PID recorded in `service.pid` gracefully with SIGTERM when needed.
+An incompatible process on the configured port is rejected, never replaced.
+
+Approve repositories directly on the service host:
+
+```sh
+node dist/projects-cli.js register /absolute/path/to/repository
+node dist/projects-cli.js register /absolute/path/to/another-repository
+node dist/projects-cli.js list
+# Only when you intend to permit repositories throughout this directory:
+node dist/projects-cli.js approve-parent /absolute/path/to/projects
+```
+
+Registration persists in SQLite and becomes available without restarting the
+service. Use `list_agent_projects`, then pass an explicit absolute `repository`
+to `start_agent_task`. Parent approval permits validated Git roots beneath it;
+register individual children to include them in the UI/form selectors. Repository approval covers the registered Git root only, not independent nested
+repositories. Parent approval is the explicit way to authorize descendants. The CLI
+is the user approval boundary; there is no model-callable tool that grants an
+arbitrary requested path access. Canonical paths, symlink containment and Git-root
+validation still apply. Missing/`current` repositories fail with guidance in the
+packaged service. Both panels and HTTP task forms show explicit project choices.
+Existing tasks, continuations, and retries retain their original repository and
+workspace. Project selection for a new task has no global effect on other chats.
+
+All clients must share the same absolute data override to share a service.
+The new default is independent of the installation directory. For compatibility,
+an existing `console.sqlite` under the installation's old
+`.codex-subagent-extension` directory is used in place; that fallback remains
+installation-dependent. Existing explicit data/repository/token/port overrides
+continue to work. Data is not copied automatically: keep the old absolute DATA
+override when upgrading, especially because worktree and session references are
+absolute. Legacy approved repositories must be supplied via the repository env
+or registered explicitly; historical model-supplied task paths are not access grants.
+The development start script accepts repository arguments and
+honors environment overrides instead of hardcoding another project.
+
+Trusted Codex hooks can supply session cwd, but that context is not automatically
+bound to MCP calls. This implementation uses explicit selection and does not
+install a hook. Local stdio cannot reach a cloud host's filesystem, and native
+host rendering/handshake remains unverified. See [host capabilities and current
+official sources](docs/host-capabilities.md) for hook trust, MCP Apps context,
+elicitation, recent protocol changes and Claude session compatibility.
+
+## Extension review limits
+
+The server consumes optional `_meta["openai/session"]` conversation correlation
+for panel opening, task creation and task listing. Explicit `conversation_id`
+arguments take precedence; clients without the hint retain explicit/all-task
+scope. This hint grants no repository or account access. See the [official UI
+reference](https://developers.openai.com/plugins/reference).
+
+The portable local package is not ready for universal-directory submission.
+Public distribution still needs a reachable HTTPS MCP endpoint (or separately
+approved local MCP support), complete listing information and policy links,
+submission-compliant subtitle/color/icons, and a dedicated UI origin. See
+[submission requirements](https://developers.openai.com/plugins/deploy/submission).
+Native rich forms and MCP Events are intentionally HTTP-only. Onboarding,
+mentions, file handlers and deep links remain optional unimplemented extensions.
+Native host rendering and authenticated execution of the packaged service still
+need integration verification beyond the local fixture/protocol tests.

@@ -8,13 +8,13 @@ import { configuredProviders } from "./provider-config.js";
 import { Auth } from "./auth.js";
 import { application } from "./app.js";
 import { Events } from "./events/service.js";
+import { Projects } from "./projects.js";
+import { dataDirectory, installRoot } from "./runtime.js";
 import { lease } from "./lease.js";
 const repository = resolve(
   process.env.CODEX_SUBAGENT_EXTENSION_REPOSITORY ?? process.cwd(),
 );
-const data = resolve(
-  process.env.CODEX_SUBAGENT_EXTENSION_DATA ?? ".codex-subagent-extension",
-);
+const data = dataDirectory();
 mkdirSync(data, { recursive: true, mode: 0o700 });
 const release = lease(data);
 process.once("exit", release);
@@ -36,11 +36,19 @@ if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 20)
   throw new Error("Concurrency must be between 1 and 20");
 const c = new Control(
   store,
-  new Workspaces(join(data, "worktrees"), [repository]),
+  new Workspaces(join(data, "worktrees"), []),
   providers,
   repository,
   concurrency,
 );
+
+c.projects = new Projects(store, c.workspaces);
+if (process.env.CODEX_SUBAGENT_EXTENSION_REPOSITORY)
+  await c.projects.register(repository);
+for (const root of JSON.parse(
+  process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS ?? "[]",
+))
+  await c.projects.register(resolve(root), "parent");
 
 const port = Number(process.env.PORT ?? 4317);
 const origin =
@@ -59,30 +67,52 @@ const app = application(
   c,
   auth,
   origin,
-  resolve("dist/console.html"),
+  join(installRoot, "dist/console.html"),
   events,
-  resolve("dist/codex.html"),
+  join(installRoot, "dist/codex.html"),
 );
-events.start();
-await c.recover();
-const server = app.listen(port, "127.0.0.1", () => {
-  console.error(
-    `Codex subagent extension service: ${origin}\nLogin token file: ${tokenPath}`,
-  );
-});
-server.on("error", (error) => {
-  console.error(error.message);
+// Reserve the listener before recovery can change durable tasks or launch workers.
+app.locals.ready = false;
+const server = app.listen(port, "127.0.0.1");
+try {
+  await new Promise<void>((resolve, reject) => {
+    server.once("listening", resolve);
+    server.once("error", reject);
+  });
+} catch (error) {
   c.store.close();
-  process.exit(1);
-});
-const prune = setInterval(() => auth.prune(), 60000); // Keep lifecycle ownership centralized in this service.
-async function close() {
-  clearInterval(prune);
+  throw error;
+}
+try {
+  await c.recover();
+  events.start();
+  writeFileSync(
+    join(data, "service.json"),
+    JSON.stringify({ origin, pid: process.pid, version: "0.1.0" }),
+    { mode: 0o600 },
+  );
+  app.locals.ready = true;
+} catch (error) {
   server.close();
-  await app.locals.closeMcp();
   await events.close();
   await c.close();
-  process.exit(0);
+  throw error;
+}
+console.error(
+  `Codex subagent extension service: ${origin}\nLogin token file: ${tokenPath}`,
+);
+const prune = setInterval(() => auth.prune(), 60000);
+let closing: Promise<void> | undefined;
+function close() {
+  return (closing ??= (async () => {
+    app.locals.ready = false;
+    clearInterval(prune);
+    server.close();
+    await app.locals.closeMcp();
+    await events.close();
+    await c.close();
+    process.exit(0);
+  })());
 }
 process.on("SIGINT", () => void close());
 process.on("SIGTERM", () => void close());

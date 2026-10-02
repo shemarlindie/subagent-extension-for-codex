@@ -1,4 +1,11 @@
-import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  mkdirSync,
+  rmdirSync,
+  existsSync,
+} from "node:fs";
 import { join } from "node:path";
 /** One service owns a data directory. Restart recovery must never race a live worker. */
 export function lease(data: string) {
@@ -7,7 +14,10 @@ export function lease(data: string) {
     try {
       writeFileSync(file, String(process.pid), { flag: "wx", mode: 0o600 });
       return () => {
-        if (readFileSync(file, "utf8") === String(process.pid))
+        if (
+          existsSync(file) &&
+          readFileSync(file, "utf8") === String(process.pid)
+        )
           unlinkSync(file);
       };
     } catch (error) {
@@ -20,7 +30,20 @@ export function lease(data: string) {
         throw new Error("A live service already owns this data directory");
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== "ESRCH") throw e;
-        unlinkSync(file);
+        const reclaim = join(data, "service-reclaim.lock");
+        try {
+          mkdirSync(reclaim, { mode: 0o700 });
+        } catch {
+          throw new Error(
+            "Another launcher is reclaiming the service lock; retry shortly",
+          );
+        }
+        try {
+          // Recheck after exclusive reclamation: another launcher may already own it.
+          if (readFileSync(file, "utf8") === String(pid)) unlinkSync(file);
+        } finally {
+          rmdirSync(reclaim);
+        }
       }
     }
   }

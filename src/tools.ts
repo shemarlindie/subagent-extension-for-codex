@@ -1,24 +1,59 @@
 import { z } from "zod";
 import { Control } from "./control.js";
 import { startSchema } from "./model.js";
-import { settingsUpdateSchema } from "./settings.js";
+import {
+  settingsUpdateSchema,
+  settingsReadOutputSchema,
+  settingsUpdateOutputSchema,
+} from "./settings.js";
 const taskId = z.object({ task_id: z.string() });
+/** Optional host conversation correlation is a UI scope, never an access grant. */
+export function withConversation(
+  name: string,
+  args: Record<string, unknown>,
+  meta?: Record<string, unknown>,
+) {
+  if (
+    ![
+      "open_codex_subagent_extension",
+      "start_agent_task",
+      "list_agent_tasks",
+    ].includes(name) ||
+    args.conversation_id !== undefined
+  )
+    return args;
+  const session = meta?.["openai/session"];
+  return typeof session === "string" && session.trim() && session.length <= 256
+    ? { ...args, conversation_id: session }
+    : args;
+}
 export function definitions(c: Control, owner: string) {
   return {
+    list_agent_projects: {
+      description:
+        "List persistently approved project roots. Pass an explicit absolute repository to start_agent_task. Register missing roots with the local projects CLI, never by a task argument.",
+      schema: z.strictObject({}),
+      run: () =>
+        c.projects?.list() ?? [
+          { repository: c.repository, name: c.repository, kind: "repository" },
+        ],
+    },
     get_agent_settings: {
       description: "Read persistent user defaults for delegation and budgets.",
       schema: z.strictObject({}),
+      outputSchema: settingsReadOutputSchema,
       run: () => c.settings.read(owner),
     },
     update_agent_settings: {
       description:
         "Update user defaults. Omitted fields and existing tasks stay unchanged.",
       schema: settingsUpdateSchema,
+      outputSchema: settingsUpdateOutputSchema,
       run: (a: any) => c.settings.update(owner, a),
     },
     start_agent_task: {
       description:
-        "Create durable asynchronous work in an isolated Git worktree.",
+        "Create durable asynchronous work in an isolated Git worktree. Supply an explicit absolute repository from list_agent_projects; current does not identify the host chat project.",
       schema: startSchema.extend({
         provider: startSchema.shape.provider.removeDefault().optional(),
         worker_profile: startSchema.shape.worker_profile

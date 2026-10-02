@@ -34,6 +34,7 @@ class Element {
   parent: Element | null = null;
   onclick: (() => unknown) | null = null;
   value = "";
+  validityMessage = "";
   textContent = "";
   hidden = false;
   disabled = false;
@@ -61,8 +62,8 @@ class Element {
         continue;
       }
       const element = new Element(tag, this.document);
-      for (const attribute of attrs.matchAll(/([\w-]+)="([^"]*)"/g))
-        element.setAttribute(attribute[1], attribute[2]);
+      for (const attribute of attrs.matchAll(/([\w-]+)(?:="([^"]*)")?/g))
+        element.setAttribute(attribute[1], attribute[2] ?? "");
       element.parent = stack.at(-1)!;
       element.parent.children.push(element);
       if (!["input", "br", "hr", "img"].includes(tag)) stack.push(element);
@@ -70,7 +71,14 @@ class Element {
   }
   setAttribute(name: string, value: string) {
     this.attributes[name] = value;
+    if (name === "value") this.value = value;
     if (name.startsWith("data-")) this.dataset[name.slice(5)] = value;
+  }
+  get options() {
+    return this.querySelectorAll("option");
+  }
+  setCustomValidity(message: string) {
+    this.validityMessage = message;
   }
   querySelectorAll(selector: string): Element[] {
     const matches = (element: Element) =>
@@ -94,6 +102,10 @@ class Element {
   }
   contains(element: Element | null): boolean {
     return element === this || this.children.some((c) => c.contains(element));
+  }
+  showModal() {
+    assert.equal(this.open, false, "dialog already open");
+    this.open = true;
   }
   focus() {
     this.document.activeElement = this;
@@ -132,12 +144,22 @@ class Document {
     return this.body.querySelectorAll(selector);
   }
 }
-function panelHarness() {
+function panelHarness(
+  options: {
+    projects?: () => Promise<unknown>;
+    runtime?: number;
+  } = {},
+) {
   const document = new Document();
   let task = structuredClone(previewTasks[0]);
   const calls: string[] = [];
   let poll!: () => void;
+  let bridge!: MockApp;
   class MockApp {
+    ontoolresult?: (result: any) => void;
+    constructor() {
+      bridge = this;
+    }
     connect() {
       return Promise.resolve();
     }
@@ -149,20 +171,33 @@ function panelHarness() {
     }
     async callServerTool({ name }: { name: string }) {
       calls.push(name);
+      if (name === "get_agent_settings")
+        return {
+          structuredContent: {
+            values: {
+              default_provider: "claude",
+              default_worker_profile: "reviewer",
+              max_runtime_minutes: options.runtime ?? 20,
+              max_cost_usd: 5,
+            },
+          },
+        };
       return {
         structuredContent: {
           result:
-            name === "list_agent_tasks"
-              ? [task]
-              : name === "list_available_workers"
-                ? [
-                    {
-                      provider: "claude",
-                      profiles: ["reviewer"],
-                      capabilities: {},
-                    },
-                  ]
-                : [],
+            name === "list_agent_projects"
+              ? await (options.projects?.() ?? Promise.resolve([]))
+              : name === "list_agent_tasks"
+                ? [task]
+                : name === "list_available_workers"
+                  ? [
+                      {
+                        provider: "claude",
+                        profiles: ["reviewer"],
+                        capabilities: {},
+                      },
+                    ]
+                  : [],
         },
       };
     }
@@ -181,6 +216,7 @@ function panelHarness() {
   });
   return {
     document,
+    bridge,
     calls,
     poll: () => poll(),
     changeTask() {
@@ -188,6 +224,36 @@ function panelHarness() {
     },
   };
 }
+
+test("native delegation requires a project choice and accepts positive fractional runtime defaults", async () => {
+  const h = panelHarness({
+    projects: async () => [
+      { repository: "/approved/repo", kind: "repository" },
+    ],
+    runtime: 0.05,
+  });
+  await flush();
+  h.document.getElementById("delegate").click();
+  await flush();
+  assert.equal(h.document.getElementById("dialog").open, true);
+  const repository = h.document.getElementById("repository");
+  assert.equal(repository.value, "");
+  assert.ok("required" in repository.attributes);
+  assert.equal(repository.options[0].value, "");
+  assert.ok("disabled" in repository.options[0].attributes);
+  assert.ok("selected" in repository.options[0].attributes);
+  assert.equal(repository.options[1].value, "/approved/repo");
+  const runtime = h.document.getElementById("runtime");
+  assert.equal(runtime.attributes.min, "0");
+  assert.equal(runtime.attributes.step, "any");
+  assert.equal(runtime.value, "0.05");
+  assert.equal(runtime.validityMessage, "");
+  for (const value of ["0", "-1", "0.5", "0.05"]) {
+    runtime.value = value;
+    (runtime as any).oninput();
+    assert.equal(Boolean(runtime.validityMessage), Number(value) <= 0);
+  }
+});
 
 for (const tab of ["changes", "activity"]) {
   test(`${tab} tab survives a list re-render and bubbling clicks`, async () => {
@@ -237,3 +303,27 @@ for (const tab of ["changes", "activity"]) {
     );
   });
 }
+
+test("conversation change during project lookup discards the pending delegation dialog", async () => {
+  let resolve!: (value: unknown) => void;
+  const projects = new Promise((yes) => {
+    resolve = yes;
+  });
+  const h = panelHarness({ projects: () => projects });
+  await flush();
+  h.document.getElementById("delegate").click();
+  await flush();
+  assert.equal(
+    h.calls.filter((name) => name === "list_agent_projects").length,
+    1,
+  );
+  h.bridge.ontoolresult!({
+    structuredContent: { panel_scope: { conversation_id: "another-chat" } },
+  });
+  await flush();
+  resolve([{ repository: "/approved/repo", kind: "repository" }]);
+  await flush();
+  assert.equal(h.document.getElementById("dialog").open, false);
+  assert.equal(h.document.getElementById("dialog").innerHTML, "");
+  assert.equal(h.document.getElementById("error").textContent, "");
+});

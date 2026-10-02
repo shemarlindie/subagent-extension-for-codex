@@ -44,13 +44,24 @@ export function application(
     next();
   });
   app.use(express.json({ limit: "256kb" }));
+  app.use((req, res, next) => {
+    if (app.locals.ready === false && req.path !== "/health") {
+      res.status(503).json({ error: "Service recovery is still in progress" });
+      return;
+    }
+    next();
+  });
   const cookie = (res: express.Response, key: string) =>
     res.setHeader(
       "Set-Cookie",
       `ac_session=${key}; HttpOnly; Path=/; Max-Age=3600; SameSite=${origin.startsWith("https:") ? "None; Secure" : "Strict"}`,
     );
   app.get("/health", (_req, res) =>
-    res.json({ status: "ok", providers: c.workers().map((w) => w.provider) }),
+    res.status(app.locals.ready === false ? 503 : 200).json({
+      service: "codex-subagent-extension",
+      status: app.locals.ready === false ? "starting" : "ok",
+      providers: c.workers().map((w) => w.provider),
+    }),
   );
   app.get(
     [

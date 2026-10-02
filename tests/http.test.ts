@@ -191,6 +191,36 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     assert.equal(scopedOpen._meta?.conversation_id, "conversation-a");
     assert.equal(open._meta?.bootstrap, undefined);
     assert.equal(open._meta?.origin, undefined);
+    const nativeOpen = await client.callTool({
+      name: "open_codex_subagent_extension",
+      arguments: {},
+      _meta: { "openai/session": "conversation-a" },
+    });
+    assert.deepEqual(nativeOpen.structuredContent?.panel_scope, {
+      conversation_id: "conversation-a",
+    });
+    const nativeTasks = await client.callTool({
+      name: "list_agent_tasks",
+      arguments: {},
+      _meta: { "openai/session": "conversation-a" },
+    });
+    assert.deepEqual(
+      (nativeTasks.structuredContent?.result as { id: string }[]).map(
+        (task) => task.id,
+      ),
+      ["current-thread"],
+    );
+    const explicitTasks = await client.callTool({
+      name: "list_agent_tasks",
+      arguments: { conversation_id: "conversation-b" },
+      _meta: { "openai/session": "conversation-a" },
+    });
+    assert.deepEqual(
+      (explicitTasks.structuredContent?.result as { id: string }[]).map(
+        (task) => task.id,
+      ),
+      ["other-thread"],
+    );
     await client.close();
     const stdio = new Client({ name: "stdio-test", version: "1.0.0" });
     try {
@@ -226,6 +256,24 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         const { $schema: _draft, ...shape } = schema as Record<string, unknown>;
         return shape;
       };
+      for (const name of ["get_agent_settings", "update_agent_settings"]) {
+        const httpTool = tools.tools.find((tool) => tool.name === name)!;
+        const stdioTool = inventory.tools.find((tool) => tool.name === name)!;
+        assert.ok(
+          httpTool.outputSchema,
+          `${name} advertises an HTTP output schema`,
+        );
+        assert.ok(
+          stdioTool.outputSchema,
+          `${name} advertises a stdio output schema`,
+        );
+        assert.equal(httpTool.outputSchema.type, "object");
+        assert.ok(httpTool.outputSchema.properties?.values);
+        assert.deepEqual(
+          schemaShape(stdioTool.outputSchema),
+          schemaShape(httpTool.outputSchema),
+        );
+      }
       assert.deepEqual(
         schemaShape(proxyOpener.inputSchema),
         schemaShape(opener.inputSchema),
@@ -271,6 +319,25 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         conversation_id: null,
       });
       assert.equal(unscopedProxyOpen.structuredContent?.tasks, undefined);
+      const nativeProxyOpen = await stdio.callTool({
+        name: "open_codex_subagent_extension",
+        arguments: {},
+        _meta: { "openai/session": "conversation-a" },
+      });
+      assert.deepEqual(nativeProxyOpen.structuredContent?.panel_scope, {
+        conversation_id: "conversation-a",
+      });
+      const nativeProxyTasks = await stdio.callTool({
+        name: "list_agent_tasks",
+        arguments: {},
+        _meta: { "openai/session": "conversation-a" },
+      });
+      assert.deepEqual(
+        (nativeProxyTasks.structuredContent?.result as { id: string }[]).map(
+          (task) => task.id,
+        ),
+        ["current-thread"],
+      );
       const proxyOpen = await stdio.callTool({
         name: "open_codex_subagent_extension",
         arguments: { conversation_id: "conversation-a" },

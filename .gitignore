@@ -6,3 +6,5 @@ dist/
 !.env.example
 *.sqlite*
 .DS_Store
+
+*.tgz

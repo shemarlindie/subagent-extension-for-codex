@@ -2,6 +2,8 @@
 
 Prepared September 30, 2026. Project: current checkout.
 
+October 2 update: this is the historical manual-service setup with explicit legacy data overrides. Fresh packaged installations can start the service through stdio, use a stable per-user data directory, and require explicit project registration/selection. Follow the current [README](../README.md) and [host capability notes](host-capabilities.md) for that workflow; use matching absolute data overrides to retain an existing service.
+
 This is the handoff guide for the implemented MVP. It explains what you need to configure, what you can try yourself, and what the assistant should verify afterward. Complete one stage at a time; you can resume development after any stage without finishing every integration.
 
 ## 1. Current state and recommended order

@@ -4,6 +4,7 @@ import { hostname } from "node:os";
 import { Store } from "./store.js";
 import { Workspaces } from "./workspace.js";
 import { Settings } from "./settings.js";
+import { Projects } from "./projects.js";
 import { Forms } from "./forms.js";
 import {
   startSchema,
@@ -48,6 +49,7 @@ export class Control {
   ownerWorker = hostname();
   settings: Settings;
   forms: Forms;
+  projects?: Projects;
   constructor(
     public store: Store,
     public workspaces: Workspaces,
@@ -59,6 +61,7 @@ export class Control {
     this.forms = new Forms(this);
   }
   async recover() {
+    this.forms.recover();
     for (const t of this.store.all()) {
       if (
         t.provider === "codex" &&
@@ -117,9 +120,11 @@ export class Control {
     this.validateBudgets(req);
     for (const id of req.depends_on) this.store.get(id, owner);
     if (req.parent_task_id) this.store.get(req.parent_task_id, owner);
-    const repository = await this.workspaces.repository(
-      req.repository === "current" ? this.repository : req.repository,
-    );
+    const repository = this.projects
+      ? await this.projects.resolve(req.repository)
+      : await this.workspaces.repository(
+          req.repository === "current" ? this.repository : req.repository,
+        );
     const t: Task = {
       ...req,
       repository,
@@ -202,6 +207,7 @@ export class Control {
     let terminationUnconfirmed = false;
     try {
       this.validateBudgets(t);
+      if (this.projects) await this.projects.resolve(t.repository);
       if (!t.workspace) {
         await this.workspaces.create(t);
         this.store.save(t);
@@ -419,6 +425,7 @@ export class Control {
       throw new Error("Only interrupted tasks can continue");
     if (this.active.has(id)) throw new Error("Task is still finalizing");
     this.validateBudgets(t);
+    if (this.projects) await this.projects.resolve(t.repository);
     if (t.session_id) {
       if (t.session_owner !== this.ownerWorker)
         throw new Error("Session belongs to another worker");
