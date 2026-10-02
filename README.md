@@ -80,11 +80,14 @@ Review `<data-directory>/worktrees/<task-id>` or download returned patches befor
 
 ## Verification and remaining plan
 
+The console and embedded panel share a modular React UI, with separate controller, transport, component, and form layers. See [React UI architecture](docs/react-ui.md) for extension boundaries, fixture preview, self-contained HTML builds, and UI verification.
+
 ```sh
 npm run typecheck
-npm run build
 npm test
 ```
+
+`npm test` builds the project first through its `pretest` script.
 
 The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, and MCP tool/resource calls. Browser verification covers delegation, live completion, interruption, continuation, input submission, and artifacts in fixture mode. See [implementation status](docs/implementation-status.md).
 

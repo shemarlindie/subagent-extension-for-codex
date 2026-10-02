@@ -98,6 +98,10 @@ which is included with validation and fallback. The desktop UI is closed source;
 its layout and metadata delivery require live verification. Research references and final verification will
 be recorded in the companion research report and docs/codex-panel.md.
 
+This is the plan-completion snapshot for app-v5, before the later app-v6 panel
+update and shared React UI. See the [current panel notes](codex-panel.md) and
+[React UI architecture](react-ui.md) for the current implementation.
+
 Implementation completed in the existing checkout. Includes the optional validated
 Codex cwd/thread adapter, shared app-v5 opener/task-creation UI, contextual
 prefills, project/chat indicators and race protections. Full suite: 155/155;

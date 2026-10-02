@@ -1,0 +1,44 @@
+import { projectChoices } from "../core/selectors";
+import { useController, useSnapshot } from "./controller-context";
+import { SelectField } from "./select-field";
+export function ProjectScope() {
+  const controller = useController(),
+    state = useSnapshot();
+  const disabled = !state.connected || !state.scopeKnown || state.busy;
+  return (
+    <div className="context-bar" aria-label="Project context">
+      <SelectField
+        id="project-scope"
+        label="Project scope"
+        value={state.repository ?? ""}
+        disabled={disabled}
+        options={[
+          { value: "", label: "All projects" },
+          ...projectChoices(state).map((project) => ({
+            value: project.repository,
+            label:
+              project.name ??
+              project.repository.split("/").at(-1) ??
+              project.repository,
+          })),
+        ]}
+        onValueChange={(value) =>
+          controller.run(() => controller.changeProject(value || undefined))
+        }
+      />
+      <small id="project-path" title={state.repository}>
+        {state.repository ?? "Choose a project to focus delegated work"}
+      </small>
+      {state.conversation && (
+        <button
+          id="conversation-context"
+          className="quiet"
+          disabled={disabled}
+          onClick={() => controller.run(() => controller.allChats())}
+        >
+          All chats
+        </button>
+      )}
+    </div>
+  );
+}

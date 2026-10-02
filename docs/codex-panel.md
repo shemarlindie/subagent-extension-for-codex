@@ -2,6 +2,8 @@
 
 Original panel implemented October 2, 2026 in an isolated worktree, then applied to the primary repository. The original verification built the primary checkout and passed its 109 tests; that result is historical. This Codex-oriented MCP App still awaits visual and interaction verification in the installed host. The running service was not restarted; configuration and durable task data were not changed. No live workers were started for this verification.
 
+The current shared frontend architecture is documented in [React UI architecture](react-ui.md).
+
 ## Project and chat integration update
 
 The `app-v6` resource is returned by task creation and both openers. Task
