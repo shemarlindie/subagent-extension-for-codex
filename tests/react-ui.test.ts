@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import { JSDOM } from "jsdom";
-import type { Task, Transport, TransportEvents } from "../ui/core/types";
+import type {
+  HostState,
+  Task,
+  Transport,
+  TransportEvents,
+} from "../ui/core/types";
 
 // UI primitives read browser capabilities at module initialization.
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
@@ -79,8 +84,24 @@ class FakeTransport implements Transport {
   projects = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
   messages: string[] = [];
+  host: HostState = {
+    canSend: false,
+    canShare: false,
+    canExpand: true,
+    displayMode: "fullscreen",
+  };
+  expandCalls = 0;
   async connect(events: TransportEvents) {
     this.events = events;
+    events.host(this.host);
+  }
+  async expand() {
+    this.expandCalls++;
+    this.host = {
+      ...this.host,
+      displayMode: this.host.displayMode === "inline" ? "fullscreen" : "inline",
+    };
+    this.events.host(this.host);
   }
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     this.calls.push({ name, args });
@@ -129,9 +150,12 @@ async function setup(
     mode?: "panel" | "console";
     wide?: boolean;
     scoped?: boolean;
+    displayMode?: HostState["displayMode"];
+    start?: boolean;
   } = {},
 ) {
   const transport = new FakeTransport();
+  if (options.displayMode) transport.host.displayMode = options.displayMode;
   configure?.(transport);
   const controller = new Controller(transport, options.mode ?? "panel", {
     hidden: () => false,
@@ -144,7 +168,7 @@ async function setup(
       { panel_scope: { conversation_id: null, repository: "/repo/a" } },
       false,
     );
-  await controller.start();
+  if (options.start !== false) await controller.start();
   function Harness() {
     return createElement(
       ControllerContext.Provider,
@@ -177,6 +201,213 @@ async function selectOption(
     assert.equal(trigger.getAttribute("aria-expanded"), "false"),
   );
 }
+
+test("inline preview expands and collapses while preserving the selected task", async (t) => {
+  const { controller, transport, user } = await setup(
+    t,
+    (transport) => {
+      const second = task("two");
+      second.task = "Review database";
+      transport.tasks.push(second);
+    },
+    { displayMode: "inline" },
+  );
+  await act(() => controller.select("two"));
+  assert.ok(screen.getByText("Review database"));
+  assert.ok(screen.getByText("Running", { exact: true }));
+  assert.equal(screen.queryByRole("button", { name: "New task" }), null);
+  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
+  assert.equal(
+    screen.queryByRole("complementary", { name: "Delegated tasks" }),
+    null,
+  );
+  await user.click(screen.getByRole("button", { name: "Open panel" }));
+  assert.equal(transport.expandCalls, 1);
+  assert.equal(controller.getSnapshot().selected, "two");
+  assert.ok(screen.getByRole("button", { name: "New task" }));
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    "Review database",
+  );
+  await user.click(screen.getByRole("button", { name: "Collapse" }));
+  assert.equal(transport.expandCalls, 2);
+  assert.equal(controller.getSnapshot().selected, "two");
+  assert.ok(screen.getByText("Review database"));
+  assert.ok(screen.getByRole("button", { name: "Open panel" }));
+  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
+});
+
+test("inline host without expansion offers the chat controls fallback", async (t) => {
+  await setup(
+    t,
+    (transport) => {
+      transport.host.canExpand = false;
+    },
+    { displayMode: "inline" },
+  );
+  assert.equal(screen.queryByRole("button", { name: "Open panel" }), null);
+  assert.ok(screen.getByText("Expand this app using the chat controls."));
+  assert.equal(screen.queryByRole("button", { name: "New task" }), null);
+});
+
+test("failed expansion keeps the inline preview and displays the host error", async (t) => {
+  const { controller, transport, user } = await setup(
+    t,
+    (transport) => {
+      transport.expand = async () => {
+        transport.expandCalls++;
+        throw new Error("Panel expansion unavailable");
+      };
+    },
+    { displayMode: "inline" },
+  );
+  await user.click(screen.getByRole("button", { name: "Open panel" }));
+  await screen.findByRole("alert");
+  assert.equal(
+    screen.getByRole("alert").textContent,
+    "Panel expansion unavailable",
+  );
+  assert.equal(transport.expandCalls, 1);
+  assert.equal(controller.getSnapshot().host.displayMode, "inline");
+  assert.ok(screen.getByRole("button", { name: "Open panel" }));
+  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
+});
+
+test("host collapse preserves a delegation draft until scope changes", async (t) => {
+  const { controller, transport, user } = await setup(t);
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  const field = await screen.findByLabelText("Task");
+  await user.type(field, "Preserve this suspended draft");
+  const dialogState = controller.getSnapshot().dialog;
+  await act(() => transport.expand());
+  assert.ok(screen.getByRole("region", { name: "Delegated work preview" }));
+  assert.equal(screen.queryByRole("dialog"), null);
+  assert.ok(controller.getSnapshot().dialog === dialogState);
+  await user.click(screen.getByRole("button", { name: "Open panel" }));
+  await screen.findByRole("dialog");
+  assert.ok(
+    screen.getByLabelText("Task") === field,
+    "Host expansion retains the draft field node",
+  );
+  assert.equal(
+    (field as HTMLTextAreaElement).value,
+    "Preserve this suspended draft",
+  );
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
+  );
+  await act(() => transport.expand());
+  assert.equal(screen.queryByRole("dialog"), null);
+  await act(() => controller.changeProject("/repo/b"));
+  assert.equal(controller.getSnapshot().dialog, undefined);
+  await user.click(screen.getByRole("button", { name: "Open panel" }));
+  assert.equal(screen.queryByRole("dialog"), null);
+  await user.click(screen.getAllByRole("button", { name: "New task" })[0]);
+  await screen.findByRole("dialog");
+  assert.equal(
+    (screen.getByLabelText("Task") as HTMLTextAreaElement).value,
+    "",
+  );
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
+  );
+});
+
+test("console and nonembedded panels retain the full interface in inline mode", async (t) => {
+  await t.test("console", async (t) => {
+    await setup(t, undefined, { mode: "console", displayMode: "inline" });
+    assert.ok(screen.getByRole("button", { name: "＋ Delegate" }));
+    assert.ok(screen.getByRole("region", { name: "Task inspector" }));
+    assert.equal(screen.queryByRole("button", { name: "Open panel" }), null);
+  });
+  await t.test("nonembedded panel", async (t) => {
+    await setup(
+      t,
+      (transport) => {
+        transport.embedded = false;
+      },
+      { displayMode: "inline" },
+    );
+    assert.ok(screen.getByRole("button", { name: "New task" }));
+    assert.ok(screen.getByRole("region", { name: "Task inspector" }));
+    assert.equal(screen.queryByRole("button", { name: "Open panel" }), null);
+  });
+});
+
+test("inline preview renders refresh errors without exposing the full interface", async (t) => {
+  const { controller } = await setup(t, undefined, { displayMode: "inline" });
+  await act(() => controller.report(new Error("Refresh unavailable")));
+  assert.equal(screen.getByRole("alert").textContent, "Refresh unavailable");
+  assert.ok(screen.getByText("Review authentication"));
+  assert.ok(screen.getByRole("button", { name: "Open panel" }));
+  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
+});
+
+test("inline preview summarizes repository scope independently of list filters", async (t) => {
+  const { controller } = await setup(
+    t,
+    (transport) => {
+      const waiting = task("waiting");
+      waiting.task = "Waiting review";
+      waiting.status = "waiting";
+      waiting.pending_input = {
+        id: "request",
+        tool: "AskUserQuestion",
+        input: {},
+      };
+      const stopped = task("stopped");
+      stopped.status = "failed";
+      stopped.waiting_reason = "termination_unconfirmed";
+      const complete = task("complete");
+      complete.status = "completed";
+      transport.tasks.push(
+        waiting,
+        stopped,
+        complete,
+        task("other", "/repo/b"),
+      );
+    },
+    { displayMode: "inline", scoped: true },
+  );
+  await act(() => {
+    controller.setFilter("completed");
+    controller.setSearch("no matching task");
+  });
+  assert.equal(
+    screen.getByRole("status").textContent,
+    "4 tasks · 2 active · 2 needing attention",
+  );
+  assert.ok(screen.getByText("Waiting review"));
+  assert.ok(screen.getByText("Needs input", { exact: true }));
+  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
+});
+
+test("inline preview distinguishes empty tasks from connecting state", async (t) => {
+  await t.test("empty", async (t) => {
+    await setup(
+      t,
+      (transport) => {
+        transport.tasks = [];
+      },
+      { displayMode: "inline" },
+    );
+    assert.equal(
+      screen.getByRole("status").textContent,
+      "0 tasks · 0 active · 0 needing attention",
+    );
+    assert.ok(screen.getByText("No delegated tasks yet."));
+    assert.ok(screen.getByRole("button", { name: "Open panel" }));
+  });
+  await t.test("connecting", async (t) => {
+    await setup(t, undefined, { start: false });
+    assert.ok(screen.getByRole("region", { name: "Delegated work preview" }));
+    assert.equal(screen.getByRole("status").textContent, "Connecting…");
+    assert.equal(screen.queryByText("No delegated tasks yet."), null);
+    assert.equal(screen.queryByRole("button", { name: "New task" }), null);
+  });
+});
 
 test("evidence tabs support keyboard arrows and keep tab focus through refresh", async (t) => {
   const { controller, user } = await setup(t);
@@ -405,7 +636,7 @@ test("handoff sends only after explicit submit and uses the edited message", asy
       canSend: true,
       canShare: false,
       canExpand: false,
-      displayMode: "inline",
+      displayMode: "fullscreen",
     }),
   );
   await user.click(screen.getByRole("button", { name: "Bring to Codex" }));

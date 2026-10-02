@@ -98,6 +98,37 @@ small {
 .connection {
   font-size: 11px;
 }
+.inline-preview {
+  padding: 12px 16px;
+}
+.preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.inline-preview p {
+  margin: 6px 0;
+}
+.preview-scope {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.preview-task {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 4px;
+}
+.preview-task-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.inline-preview .error {
+  overflow-wrap: anywhere;
+}
 .context-bar {
   display: flex;
   align-items: center;

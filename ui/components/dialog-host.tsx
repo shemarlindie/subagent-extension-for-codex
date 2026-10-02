@@ -7,7 +7,7 @@ import { QuestionForm } from "../forms/question-form";
 import { PermissionForm } from "../forms/permission-form";
 import { HandoffForm } from "../forms/handoff-form";
 import { FormFooter } from "../forms/form-footer";
-export function DialogHost() {
+export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   const controller = useController(),
     state = useSnapshot(),
     dialog = state.dialog;
@@ -29,15 +29,16 @@ export function DialogHost() {
               ? dialog.artifact.title
               : "Task workspace";
   return (
+    // Host collapse hides the modal; keeping its contents mounted retains drafts.
     <Dialog.Root
-      open={Boolean(dialog)}
+      open={Boolean(dialog) && !suspended}
       disablePointerDismissal
       onOpenChange={(open, details) => {
         if (state.busy) details.cancel();
         else if (!open) controller.dismiss();
       }}
     >
-      <Dialog.Portal>
+      <Dialog.Portal keepMounted={Boolean(dialog)}>
         <Dialog.Backdrop className="dialog-overlay" />
         <Dialog.Popup
           id="dialog"
@@ -51,10 +52,12 @@ export function DialogHost() {
               : true;
           }}
           finalFocus={() =>
-            openedScope.current === controller.getSnapshot().scopeVersion &&
-            trigger.current?.isConnected
-              ? trigger.current
-              : document.getElementById("delegate")
+            suspended
+              ? document.getElementById("open-panel")
+              : openedScope.current === controller.getSnapshot().scopeVersion &&
+                  trigger.current?.isConnected
+                ? trigger.current
+                : document.getElementById("delegate")
           }
         >
           <Dialog.Title id="dialog-title">{title}</Dialog.Title>

@@ -35,6 +35,8 @@ Keep scope handling centralized. Changing the project or conversation invalidate
 
 The standalone console uses credentialed HTTP requests, token login, and SSE activity refreshes. Its task, worker, and artifact routes continue to use the existing paths. Embedded views use the MCP Apps bridge for tools, theme variables, selection context, display modes, and optional message delivery. Capabilities determine which host actions are available; opening the panel outside a host reports that MCP is required.
 
+The embedded panel renders a compact summary in `inline` mode: project/chat scope, task counts, and the selected task's status. Counts cover the current scope even when the full panel has search or status filters applied. **Open panel** requests `fullscreen` when the host advertises it; the host controls placement. The full interface appears in expanded mode. Collapsing preserves task selection and hides any open dialog while retaining its draft for expansion. Scope changes still discard stale dialogs. The standalone console and fixture preview retain their full layout.
+
 Opening either HTML entrypoint outside an iframe with `?preview=1` selects fixture data; `&theme=dark` selects the dark preview theme. Preview does not connect to the service or execute workers. Unsupported fixture operations fail explicitly. Native host rendering and delivery still require separate host verification.
 
 ![Fixture preview with a selected task and artifact report](images/react-panel-preview.png)

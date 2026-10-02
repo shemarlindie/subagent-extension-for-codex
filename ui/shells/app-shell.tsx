@@ -8,6 +8,7 @@ import { DialogHost } from "../components/dialog-host";
 import { LoginForm } from "../forms/login-form";
 import { useController, useSnapshot } from "../components/controller-context";
 import { WorkerPicker } from "./worker-picker";
+import { InlinePreview } from "../components/inline-preview";
 export function AppShell() {
   const controller = useController(),
     state = useSnapshot();
@@ -15,36 +16,46 @@ export function AppShell() {
     document.body.dataset.selected = String(Boolean(state.selected));
     document.body.dataset.displayMode = state.host.displayMode;
   }, [state.selected, state.host.displayMode]);
+  const compact =
+    state.mode === "panel" &&
+    controller.transport.embedded &&
+    state.host.displayMode === "inline";
   return (
     <>
-      <Header />
-      {state.mode === "panel" && <ProjectScope />}
-      {controller.transport.preview && (
-        <div id="preview" className="banner">
-          Design preview · fixture data · actions never execute workers
-        </div>
+      {compact ? (
+        <InlinePreview />
+      ) : (
+        <>
+          <Header />
+          {state.mode === "panel" && <ProjectScope />}
+          {controller.transport.preview && (
+            <div id="preview" className="banner">
+              Design preview · fixture data · actions never execute workers
+            </div>
+          )}
+          {state.error && (
+            <div id="error" className="banner error" role="alert">
+              {state.error}
+            </div>
+          )}
+          <div className="shell">
+            <aside aria-label="Delegated tasks">
+              {state.mode === "console" && <WorkerPicker />}
+              <TaskFilters />
+              <TaskList />
+            </aside>
+            <TaskInspector />
+          </div>
+          {state.mode === "panel" && (
+            <div id="notice" role="status">
+              Tasks run in isolated worktrees. Review returned changes before
+              applying them.
+            </div>
+          )}
+          {state.mode === "console" && <LoginForm />}
+        </>
       )}
-      {state.error && (
-        <div id="error" className="banner error" role="alert">
-          {state.error}
-        </div>
-      )}
-      <div className="shell">
-        <aside aria-label="Delegated tasks">
-          {state.mode === "console" && <WorkerPicker />}
-          <TaskFilters />
-          <TaskList />
-        </aside>
-        <TaskInspector />
-      </div>
-      {state.mode === "panel" && (
-        <div id="notice" role="status">
-          Tasks run in isolated worktrees. Review returned changes before
-          applying them.
-        </div>
-      )}
-      <DialogHost />
-      {state.mode === "console" && <LoginForm />}
+      <DialogHost suspended={compact} />
     </>
   );
 }
