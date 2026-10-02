@@ -77,14 +77,6 @@ export function application(
     cookie(res, auth.session(auth.owner));
     res.json({ ok: true });
   });
-  app.post("/api/bootstrap", (req, res) => {
-    try {
-      cookie(res, auth.exchange(String(req.body.bootstrap ?? "")));
-      res.json({ ok: true });
-    } catch {
-      res.status(401).json({ error: "Invalid bootstrap" });
-    }
-  });
   app.post("/api/logout", (req, res) => {
     const key = (req.headers.cookie ?? "").match(/ac_session=([^;]+)/)?.[1];
     if (key) auth.sessions.delete(key);
@@ -99,7 +91,7 @@ export function application(
       ? auth.owner
       : undefined;
   const handler = createMcpHandler(() =>
-    mcp(c, auth.owner, auth, origin, htmlPath, events),
+    mcp(c, auth.owner, origin, htmlPath, events),
   );
   const nodeHandler = toNodeHandler(handler);
   app.locals.closeMcp = () => handler.close();

@@ -45,7 +45,9 @@ CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension"
 
 The proxy reads the service token locally and forwards requests to the running service. It does not create another scheduler. `CODEX_SUBAGENT_EXTENSION_URL` changes its loopback URL. The portable plugin manifest, MCP configuration, and delegation skill are also included; build the package before configuring it. Installing a plugin does not start the service automatically.
 
-For a compatible MCP App host, the authenticated Streamable HTTP endpoint is `/mcp`. The `open_codex_subagent_extension` tool attaches `ui://codex-subagent-extension/app` and global/thread entrypoint metadata. Its single-use bootstrap expires after 30 seconds and appears only in application metadata; it never returns a reusable credential in model-visible content. The local Codex stdio path remains fully usable without a custom UI. Registration with ChatGPT and a production origin are not performed by this local MVP.
+For MCP App hosts, connect to the authenticated HTTP endpoint `/mcp`. The `open_codex_subagent_extension` tool exposes `ui://codex-subagent-extension/app-v3` with sidebar and conversation entrypoints. The embedded UI uses the host's authenticated MCP bridge because the desktop sandbox restricts direct HTTP access to the local service. It refreshes activity every three seconds while visible and declares empty network allowlists.
+
+The standalone web console uses token login, HttpOnly session cookies, HTTP tools and live SSE. The stdio proxy provides tools without a custom UI. Installing the plugin does not register a remote ChatGPT connection or deploy a production service.
 
 ## Supported workflows
 
@@ -69,7 +71,7 @@ A worktree provides code separation. Claude tasks also require the SDK's native 
 | `CODEX_SUBAGENT_EXTENSION_CONCURRENCY` | `3` | Maximum concurrently active tasks (1–20) |
 | `CODEX_SUBAGENT_EXTENSION_TOKEN` | generated locally | Server-side token override |
 | `PORT` | `4317` | Loopback listener port |
-| `CODEX_SUBAGENT_EXTENSION_ORIGIN` | `http://127.0.0.1:4317` | Service origin, CORS allowlist, MCP resource CSP/domain |
+| `CODEX_SUBAGENT_EXTENSION_ORIGIN` | `http://127.0.0.1:4317` | Standalone service origin and CORS allowlist |
 | `CODEX_SUBAGENT_EXTENSION_FIXTURE` | disabled | Set `1` to add fixture workers for testing |
 | `CODEX_SUBAGENT_EXTENSION_PROVIDER` | Claude | Set `fixture` for fixture-only mode |
 
@@ -83,7 +85,7 @@ npm run build
 npm test
 ```
 
-The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, bootstrap, and MCP tool/resource calls. Browser verification covers delegation, live completion, interruption, continuation, input submission, and artifacts in fixture mode. See [implementation status](docs/implementation-status.md).
+The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, and MCP tool/resource calls. Browser verification covers delegation, live completion, interruption, continuation, input submission, and artifacts in fixture mode. See [implementation status](docs/implementation-status.md).
 
 Authenticated native Claude read/report execution, input interruption, session continuation after reopening the control plane, SDK cost reporting and the tested Bash restrictions are verified on this machine. Sanitized evidence is in [live verification](docs/live-claude-verification.json). Interrupted-turn cost accounting and full-harness containment remain incomplete. The opt-in Codex provider still needs authenticated verification; recovery of surviving executor process groups is verified locally. Production authentication/deployment remain future work. Native host rendering and event reception also require verification after registration.
 

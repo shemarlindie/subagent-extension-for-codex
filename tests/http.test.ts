@@ -13,16 +13,23 @@ import { FixtureProvider } from "../src/providers/fixture.js";
 import { application } from "../src/app.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-test("single-use bootstrap, scoped session expiry and token comparison", () => {
+test("owner-scoped sessions, expiration, pruning and token comparison", () => {
   const auth = new Auth("private-token");
   assert.equal(auth.matches("private-token"), true);
   assert.equal(auth.matches("wrong"), false);
-  const key = auth.bootstrap("alice");
-  const session = auth.exchange(key);
-  assert.equal(auth.ownerFor(`ac_session=${session}`), "alice");
-  assert.throws(() => auth.exchange(key));
-  auth.sessions.get(session)!.expires = 0;
-  assert.equal(auth.ownerFor(`ac_session=${session}`), undefined);
+  assert.equal(auth.matches("private-taken"), false);
+  const alice = auth.session("alice");
+  const bob = auth.session("bob");
+  assert.equal(auth.ownerFor(`other=value; ac_session=${alice}`), "alice");
+  assert.equal(auth.ownerFor(`ac_session=${bob}; other=value`), "bob");
+  assert.equal(auth.ownerFor(undefined), undefined);
+  assert.equal(auth.ownerFor("ac_session=unknown"), undefined);
+  auth.sessions.get(alice)!.expires = 0;
+  assert.equal(auth.ownerFor(`ac_session=${alice}`), undefined);
+  auth.prune();
+  assert.equal(auth.sessions.has(alice), false);
+  assert.equal(auth.sessions.has(bob), true);
+  assert.equal(auth.ownerFor(`ac_session=${bob}`), "bob");
 });
 test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async () => {
   const dir = await mkdtemp(join(tmpdir(), "ac-http-"));
@@ -100,30 +107,32 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       arguments: {},
     });
     assert.equal(workers.isError, undefined);
+    const opener = tools.tools.find(
+      (t) => t.name === "open_codex_subagent_extension",
+    )!;
     const ui = await client.readResource({
-      uri: "ui://codex-subagent-extension/app",
+      uri: (opener._meta as any).ui.resourceUri,
     });
     assert.equal(ui.contents[0].mimeType, "text/html;profile=mcp-app");
-    assert.ok((ui.contents[0] as any)._meta.ui.csp.connectDomains.length);
+    assert.deepEqual((ui.contents[0] as any)._meta.ui.csp, {
+      connectDomains: [],
+      resourceDomains: [],
+    });
+    assert.deepEqual((ui.contents[0] as any)._meta["openai/widgetCSP"], {
+      connect_domains: [],
+      resource_domains: [],
+    });
+    assert.deepEqual(
+      (tools.tools.find((t) => t.name === "list_agent_tasks")!._meta as any).ui
+        .visibility,
+      ["model", "app"],
+    );
     const open = await client.callTool({
       name: "open_codex_subagent_extension",
       arguments: {},
     });
-    assert.ok(open._meta?.bootstrap);
-    assert.equal(
-      JSON.stringify(open.content).includes(String(open._meta?.bootstrap)),
-      false,
-    );
-    assert.equal(
-      (await post("/api/bootstrap", { bootstrap: open._meta?.bootstrap }))
-        .status,
-      200,
-    );
-    assert.equal(
-      (await post("/api/bootstrap", { bootstrap: open._meta?.bootstrap }))
-        .status,
-      401,
-    );
+    assert.equal(open._meta?.bootstrap, undefined);
+    assert.equal(open._meta?.origin, undefined);
     await client.close();
     const stdio = new Client({ name: "stdio-test", version: "1.0.0" });
     await stdio.connect(
@@ -351,12 +360,32 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
         (w: any) => w.provider === "fixture",
       ),
     );
+    const opener = tools.json.result.tools.find(
+      (t: any) => t.name === "open_codex_subagent_extension",
+    );
+    assert.ok(opener?._meta?.ui?.resourceUri);
+    assert.deepEqual(
+      tools.json.result.tools.find((t: any) => t.name === "list_agent_tasks")
+        ._meta.ui.visibility,
+      ["model", "app"],
+    );
     const resource = await rpc("resources/read", {
-      uri: "ui://codex-subagent-extension/app",
+      uri: opener._meta.ui.resourceUri,
     });
     assert.equal(
       resource.json.result.contents[0].mimeType,
       "text/html;profile=mcp-app",
+    );
+    assert.deepEqual(resource.json.result.contents[0]._meta.ui.csp, {
+      connectDomains: [],
+      resourceDomains: [],
+    });
+    assert.deepEqual(
+      resource.json.result.contents[0]._meta["openai/widgetCSP"],
+      {
+        connect_domains: [],
+        resource_domains: [],
+      },
     );
     const delivery = {
       mode: "webhook",

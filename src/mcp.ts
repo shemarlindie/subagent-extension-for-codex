@@ -4,13 +4,11 @@ import { type Events, EventProtocolError } from "./events/service.js";
 import { readFile } from "node:fs/promises";
 import { definitions } from "./tools.js";
 import { type Control } from "./control.js";
-import { type Auth } from "./auth.js";
 import { z } from "zod";
 import { settingsCapability } from "./settings.js";
 export function mcp(
   c: Control,
   owner: string,
-  auth: Auth,
   origin: string,
   htmlPath: string,
   events?: Events,
@@ -78,6 +76,7 @@ export function mcp(
           destructiveHint: name === "cancel_agent_task",
           openWorldHint: name === "start_agent_task",
         },
+        _meta: { ui: { visibility: ["model", "app"] } },
       },
       async (args: any) => {
         try {
@@ -128,12 +127,23 @@ export function mcp(
         },
       );
     }
-  const uri = "ui://codex-subagent-extension/app";
+  // Bump this URI when the widget metadata changes so hosts don't keep a
+  // previously cached CSP for the old resource.
+  const uri = "ui://codex-subagent-extension/app-v3";
+  const resourceMeta = {
+    ui: {
+      csp: { connectDomains: [], resourceDomains: [] },
+    },
+    "openai/widgetCSP": {
+      connect_domains: [],
+      resource_domains: [],
+    },
+  };
   server.registerTool(
     "open_codex_subagent_extension",
     {
       description:
-        "Open the extension interface with a short-lived browser bootstrap.",
+        "Open the extension interface using the host's authenticated MCP connection.",
       inputSchema: z.object({ conversation_id: z.string().optional() }),
       _meta: {
         ui: { resourceUri: uri },
@@ -152,8 +162,6 @@ export function mcp(
           ),
       },
       _meta: {
-        bootstrap: auth.bootstrap(owner),
-        origin,
         conversation_id: args.conversation_id,
       },
     }),
@@ -164,12 +172,7 @@ export function mcp(
     {
       description: "Task console",
       mimeType: RESOURCE_MIME_TYPE,
-      _meta: {
-        ui: {
-          domain: origin,
-          csp: { connectDomains: [origin], resourceDomains: [] },
-        },
-      },
+      _meta: resourceMeta,
     },
     async () => ({
       contents: [
@@ -180,12 +183,7 @@ export function mcp(
             "__API_ORIGIN__",
             origin,
           ),
-          _meta: {
-            ui: {
-              domain: origin,
-              csp: { connectDomains: [origin], resourceDomains: [] },
-            },
-          },
+          _meta: resourceMeta,
         },
       ],
     }),

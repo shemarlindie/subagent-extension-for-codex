@@ -14,10 +14,10 @@ Source: the project-root Capability and Architecture Brief v9, with the user's r
 | Provider-neutral operations | Provider interface and MCP tools shared with HTTP UI dispatch | Verified locally |
 | Runtime budgets and capability gating | Timer and accumulated runtime, native cost ceiling, unsupported token limits rejected | Runtime verified; native SDK cost reporting observed (interrupted-turn accounting remains incomplete) |
 | Reports, structured results, diffs | SDK schema, durable artifacts, Git patches, console views/downloads | Verified locally |
-| Secure browser session and live SSE | Owner-scoped session, opaque one-use metadata bootstrap, HttpOnly cookies, origin/CSRF checks, cursor replay | Verified locally |
-| Portable MCP App and global/thread metadata | UI resource, app bridge, model-context updates, entrypoint metadata, protocol tests | Server verified; ChatGPT host registration pending |
+| Secure standalone browser session and live SSE | Token login, owner-scoped session, HttpOnly cookies, origin/CSRF checks, cursor replay | Verified locally |
+| Portable MCP App and global/thread metadata | UI resource, authenticated app bridge, visible activity polling, model-context updates, entrypoint metadata, protocol tests | Server verified; user confirmed native sidebar startup on October 2, 2026; remaining host workflows unverified |
 | Deep links and display mode | Stable task routes; portable fullscreen request in embedded host | Standalone route verified; host rendering pending |
-| Production UI origin/CSP | Explicit configurable origin and narrowly scoped resource metadata | Local origin only; production deployment pending |
+| Production UI origin/CSP | Embedded UI uses the host bridge with empty network allowlists; configurable origin applies to the standalone console | Local sidebar startup confirmed; production deployment pending |
 | MCP Events host subscriptions | MCP 2.0 discovery, event methods, encrypted subscription storage, callback verification, signed outbox, retries, filtering, revocation and rotation tests | Implemented and verified locally; ChatGPT delivery pending |
 | Codex worker | `src/providers/codex-session.ts` native Agents API session boundary; real SDK transport contract tests for create/resume/stream/cancel | Native provider and explicit service configuration implemented; surviving process-group recovery verified locally; authenticated verification pending |
 | Plugin settings | Official extension capability and settings schema/layout; persistent owner-scoped read/update tools; task defaults and UI form integration | Verified locally; native ChatGPT rendering pending |

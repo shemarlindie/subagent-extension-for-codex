@@ -26,12 +26,17 @@ let tasks: Task[] = [],
   events: Event[] = [],
   artifacts: Artifact[] = [],
   workers: any[] = [],
-  stream: EventSource | undefined;
+  stream: EventSource | undefined,
+  pollTimer: ReturnType<typeof setTimeout> | undefined,
+  pollGeneration = 0,
+  disposed = false;
 function error(e: unknown) {
   $("error").textContent = String(e);
   setTimeout(() => ($("error").textContent = ""), 8000);
 }
 async function api(path: string, body?: unknown) {
+  if (embedded)
+    throw new Error("Use the host connection for embedded requests.");
   const r = await fetch(origin + path, {
     credentials: "include",
     method: body === undefined ? "GET" : "POST",
@@ -53,6 +58,7 @@ async function api(path: string, body?: unknown) {
   return b;
 }
 async function tool(name: string, args: unknown = {}) {
+  if (disposed) throw new Error("The console has closed.");
   if (embedded) {
     const r = await bridge.callServerTool({
       name,
@@ -67,6 +73,7 @@ async function tool(name: string, args: unknown = {}) {
 }
 async function refresh() {
   tasks = await tool("list_agent_tasks", { conversation_id: conversation });
+  if (disposed) return;
   renderList();
   if (selected && !tasks.some((t) => t.id === selected)) selected = undefined;
   if (!selected && !workerRoute && tasks.length) {
@@ -141,6 +148,7 @@ async function loadDetail() {
     tool("get_agent_events", { task_id: selected }),
     tool("get_agent_artifacts", { task_id: selected }),
   ]);
+  if (disposed) return;
   renderDetail();
 }
 function renderWorker() {
@@ -494,7 +502,34 @@ function answer(t: Task) {
   );
 }
 function live() {
+  if (disposed) return;
   stream?.close();
+  clearTimeout(pollTimer);
+  const generation = ++pollGeneration;
+  if (embedded) {
+    // The host owns MCP authentication. Browser HTTP/SSE cannot reach the
+    // loopback service from a sandboxed MCP App.
+    $("connection").textContent = "● Connected";
+    const poll = async () => {
+      if (disposed || generation !== pollGeneration) return;
+      try {
+        if (!document.hidden) {
+          await refresh();
+          if (disposed) return;
+          $("connection").textContent = "● Connected";
+        }
+      } catch (e) {
+        if (disposed) return;
+        $("connection").textContent = "Reconnecting…";
+        error(e);
+      } finally {
+        if (generation === pollGeneration)
+          pollTimer = setTimeout(() => void poll(), 3000);
+      }
+    };
+    pollTimer = setTimeout(() => void poll(), 3000);
+    return;
+  }
   stream = new EventSource(origin + "/api/events", { withCredentials: true });
   stream.onopen = () => ($("connection").textContent = "● Live");
   stream.onerror = () => ($("connection").textContent = "Reconnecting…");
@@ -505,8 +540,10 @@ function live() {
   });
 }
 async function ready() {
+  if (disposed) return;
   $("error").textContent = "";
   workers = await tool("list_available_workers");
+  if (disposed) return;
   const picker = $("worker-view") as HTMLSelectElement;
   picker.innerHTML =
     '<option value="">All workers</option>' +
@@ -561,14 +598,41 @@ if (embedded) {
   $("display").hidden = false;
   $("display").onclick = () =>
     void bridge.requestDisplayMode({ mode: "fullscreen" }).catch(error);
-  bridge.ontoolresult = async (r) => {
+  let connected = false;
+  bridge.ontoolresult = (r) => {
+    if (disposed) return;
+    if (!Array.isArray((r.structuredContent as any)?.tasks)) return;
     const meta = r._meta as any;
-    if (meta?.bootstrap) {
-      conversation = meta.conversation_id;
-      await api("/api/bootstrap", { bootstrap: meta.bootstrap });
-      $("login").hidden = true;
-      await ready();
-    }
+    // Apply scope before the first read when the result arrives during connect.
+    // Later notifications also update the scope without exchanging credentials.
+    conversation = meta?.conversation_id;
+    if (connected) void ready().catch(connectionError);
   };
-  void bridge.connect().catch(error);
+  bridge.onteardown = async () => {
+    // Pending startup and reads may resolve after the host closes the frame.
+    // They must not start another polling loop or issue subsequent tool calls.
+    disposed = true;
+    connected = false;
+    ++pollGeneration;
+    clearTimeout(pollTimer);
+    stream?.close();
+    return {};
+  };
+  const connectionError = (e: unknown) => {
+    if (disposed) return;
+    $("connection").textContent = "Connection failed";
+    error(e);
+  };
+  void bridge
+    .connect()
+    .then(async () => {
+      if (disposed) return;
+      if (!bridge.getHostCapabilities()?.serverTools)
+        throw new Error("This host does not support the console's MCP tools.");
+      connected = true;
+      $("login").hidden = true;
+      // Sidebar hosts need not deliver an opening tool-result notification.
+      await ready();
+    })
+    .catch(connectionError);
 } else void ready().catch(error);

@@ -1,7 +1,6 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 export class Auth {
   sessions = new Map<string, { owner: string; expires: number }>();
-  bootstraps = new Map<string, { owner: string; expires: number }>();
   constructor(
     public token: string,
     public owner = "local",
@@ -10,18 +9,6 @@ export class Auth {
     const a = Buffer.from(input),
       b = Buffer.from(this.token);
     return a.length === b.length && timingSafeEqual(a, b);
-  }
-  bootstrap(owner: string) {
-    const key = randomBytes(32).toString("base64url");
-    this.bootstraps.set(key, { owner, expires: Date.now() + 30000 });
-    return key;
-  }
-  exchange(key: string) {
-    const b = this.bootstraps.get(key);
-    this.bootstraps.delete(key);
-    if (!b || b.expires < Date.now())
-      throw new Error("Bootstrap expired or already used");
-    return this.session(b.owner);
   }
   session(owner: string) {
     const key = randomBytes(32).toString("base64url");
@@ -38,7 +25,7 @@ export class Auth {
     return s && s.expires > Date.now() ? s.owner : undefined;
   }
   prune() {
-    for (const m of [this.sessions, this.bootstraps])
-      for (const [key, s] of m) if (s.expires < Date.now()) m.delete(key);
+    for (const [key, s] of this.sessions)
+      if (s.expires < Date.now()) this.sessions.delete(key);
   }
 }
