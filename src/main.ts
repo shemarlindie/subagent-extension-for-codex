@@ -55,7 +55,14 @@ try {
   writeFileSync(keyPath, eventKey, { mode: 0o600, flag: "wx" });
 }
 const events = new Events(c.store, eventKey);
-const app = application(c, auth, origin, resolve("dist/console.html"), events);
+const app = application(
+  c,
+  auth,
+  origin,
+  resolve("dist/console.html"),
+  events,
+  resolve("dist/codex.html"),
+);
 events.start();
 await c.recover();
 const server = app.listen(port, "127.0.0.1", () => {

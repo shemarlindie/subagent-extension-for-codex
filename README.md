@@ -45,9 +45,9 @@ CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension"
 
 The proxy reads the service token locally and forwards requests to the running service. It does not create another scheduler. `CODEX_SUBAGENT_EXTENSION_URL` changes its loopback URL. The portable plugin manifest, MCP configuration, and delegation skill are also included; build the package before configuring it. Installing a plugin does not start the service automatically.
 
-For MCP App hosts, connect to the authenticated HTTP endpoint `/mcp`. The `open_codex_subagent_extension` tool exposes `ui://codex-subagent-extension/app-v3` with sidebar and conversation entrypoints. The embedded UI uses the host's authenticated MCP bridge because the desktop sandbox restricts direct HTTP access to the local service. It refreshes activity every three seconds while visible and declares empty network allowlists.
+For MCP App hosts, connect to the authenticated HTTP endpoint `/mcp`. The delegation panel replaces the previous `app-v3` MCP resource with `ui://codex-subagent-extension/app-v4` over the authenticated MCP bridge, with empty network allowlists. The standalone web console retains its existing routes. The panel uses portable MCP Apps calls; Codex-specific sidebar behavior remains subject to host verification.
 
-The standalone web console uses token login, HttpOnly session cookies, HTTP tools and live SSE. The stdio proxy provides tools without a custom UI. Installing the plugin does not register a remote ChatGPT connection or deploy a production service.
+The standalone web console uses token login, HttpOnly session cookies, HTTP tools and live SSE. The stdio proxy provides tools and the separate `app-v4` delegation panel through the portable MCP Apps bridge. HTTP and stdio share the panel's schemas, resources, and global/thread entrypoint metadata. Reload the MCP connection after rebuilding so the host discovers updated tool metadata. Actual panel placement is controlled by the host; declaring both entrypoints does not redirect sidebar clicks into the active chat. Existing task tools remain available. Installing the plugin does not register a remote ChatGPT connection or deploy a production service.
 
 ## Supported workflows
 

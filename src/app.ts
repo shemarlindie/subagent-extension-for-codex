@@ -14,6 +14,7 @@ export function application(
   origin: string,
   htmlPath: string,
   events?: Events,
+  nativeHtmlPath = htmlPath,
 ) {
   const app = express();
   const allowed = new Set([origin]);
@@ -91,7 +92,7 @@ export function application(
       ? auth.owner
       : undefined;
   const handler = createMcpHandler(() =>
-    mcp(c, auth.owner, origin, htmlPath, events),
+    mcp(c, auth.owner, origin, htmlPath, events, nativeHtmlPath),
   );
   const nodeHandler = toNodeHandler(handler);
   app.locals.closeMcp = () => handler.close();

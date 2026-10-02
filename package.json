@@ -11,7 +11,7 @@
     "dev": "tsx src/main.ts",
     "start": "node dist/main.js",
     "build": "tsc && node scripts/build-ui.mjs",
-    "typecheck": "tsc --noEmit && tsc --noEmit --target ES2023 --module ESNext --moduleResolution bundler --lib ES2023,DOM,DOM.Iterable --skipLibCheck --strict ui/app.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit --target ES2023 --module ESNext --moduleResolution bundler --lib ES2023,DOM,DOM.Iterable --skipLibCheck --strict ui/app.ts ui/codex.ts",
     "test": "tsx --test tests/*.test.ts",
     "mcp": "tsx src/stdio.ts",
     "demo": "npm run build && node scripts/demo.mjs",

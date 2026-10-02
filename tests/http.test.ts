@@ -39,12 +39,31 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     new Map([["fixture", new FixtureProvider()]]),
     dir,
   );
+  const seedTask = (id: string, owner: string, conversation_id?: string) => {
+    c.store.save({
+      ...startSchema.parse({ task: "Panel task", conversation_id }),
+      id,
+      owner,
+      status: "completed",
+      created_at: now(),
+      updated_at: now(),
+      attempt: 0,
+      runtime_ms: 0,
+      instructions: [],
+    });
+  };
+  seedTask("current-thread", "local", "conversation-a");
+  seedTask("other-thread", "local", "conversation-b");
+  seedTask("unscoped", "local");
+  seedTask("private-task", "other-owner", "conversation-a");
   const auth = new Auth("private-token");
   const server = application(
     c,
     auth,
     "http://127.0.0.1:4317",
     resolve("dist/console.html"),
+    undefined,
+    resolve("dist/codex.html"),
   ).listen(0, "127.0.0.1");
   await new Promise<void>((r) => server.once("listening", r));
   const address = server.address() as { port: number };
@@ -110,10 +129,26 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     const opener = tools.tools.find(
       (t) => t.name === "open_codex_subagent_extension",
     )!;
+    assert.equal(
+      (opener._meta as any).ui.resourceUri,
+      "ui://codex-subagent-extension/app-v4",
+    );
+    assert.deepEqual(opener._meta?.["openai/ui"], {
+      entrypoints: [{ type: "global" }, { type: "thread" }],
+    });
     const ui = await client.readResource({
       uri: (opener._meta as any).ui.resourceUri,
     });
+    assert.equal(ui.contents[0].uri, "ui://codex-subagent-extension/app-v4");
     assert.equal(ui.contents[0].mimeType, "text/html;profile=mcp-app");
+    assert.ok("text" in ui.contents[0]);
+    assert.match(ui.contents[0].text, /<title>Delegated work<\/title>/);
+    const standalone = await fetch(base + "/");
+    assert.equal(standalone.status, 200);
+    assert.match(
+      await standalone.text(),
+      /<title>Codex subagent extension<\/title>/,
+    );
     assert.deepEqual((ui.contents[0] as any)._meta.ui.csp, {
       connectDomains: [],
       resourceDomains: [],
@@ -131,35 +166,131 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       name: "open_codex_subagent_extension",
       arguments: {},
     });
+    assert.deepEqual(open.structuredContent?.panel_scope, {
+      conversation_id: null,
+    });
+    assert.deepEqual(
+      (open.structuredContent?.tasks as { id: string }[])
+        .map((task) => task.id)
+        .sort(),
+      ["current-thread", "other-thread", "unscoped"],
+    );
+    const scopedOpen = await client.callTool({
+      name: "open_codex_subagent_extension",
+      arguments: { conversation_id: "conversation-a" },
+    });
+    assert.deepEqual(scopedOpen.structuredContent?.panel_scope, {
+      conversation_id: "conversation-a",
+    });
+    assert.deepEqual(
+      (scopedOpen.structuredContent?.tasks as { id: string }[]).map(
+        (task) => task.id,
+      ),
+      ["current-thread"],
+    );
+    assert.equal(scopedOpen._meta?.conversation_id, "conversation-a");
     assert.equal(open._meta?.bootstrap, undefined);
     assert.equal(open._meta?.origin, undefined);
     await client.close();
     const stdio = new Client({ name: "stdio-test", version: "1.0.0" });
-    await stdio.connect(
-      new StdioClientTransport({
-        command: process.execPath,
-        args: [resolve("dist/stdio.js")],
-        env: {
-          ...Object.fromEntries(
-            Object.entries(process.env).filter(
-              (e): e is [string, string] => typeof e[1] === "string",
+    try {
+      await stdio.connect(
+        new StdioClientTransport({
+          command: process.execPath,
+          args: [resolve("dist/stdio.js")],
+          env: {
+            ...Object.fromEntries(
+              Object.entries(process.env).filter(
+                (e): e is [string, string] => typeof e[1] === "string",
+              ),
             ),
-          ),
-          CODEX_SUBAGENT_EXTENSION_URL: base,
-          CODEX_SUBAGENT_EXTENSION_TOKEN: "private-token",
-        },
-        stderr: "pipe",
-      }),
-    );
-    const inventory = await stdio.listTools();
-    assert.ok(inventory.tools.some((t) => t.name === "continue_agent_task"));
-    const proxyWorkers = await stdio.callTool({
-      name: "list_available_workers",
-      arguments: {},
-    });
-    assert.equal(proxyWorkers.isError, false);
-    assert.ok(JSON.stringify(proxyWorkers.content).includes("fixture"));
-    await stdio.close();
+            CODEX_SUBAGENT_EXTENSION_URL: base,
+            CODEX_SUBAGENT_EXTENSION_TOKEN: "private-token",
+          },
+          stderr: "pipe",
+        }),
+      );
+      const inventory = await stdio.listTools();
+      assert.ok(inventory.tools.some((t) => t.name === "continue_agent_task"));
+      const proxyOpener = inventory.tools.find(
+        (tool) => tool.name === "open_codex_subagent_extension",
+      )!;
+      assert.ok(proxyOpener);
+      assert.equal(
+        (proxyOpener._meta as any).ui.resourceUri,
+        "ui://codex-subagent-extension/app-v4",
+      );
+      assert.deepEqual(proxyOpener._meta, opener._meta);
+      // The SDKs emit different JSON Schema draft identifiers for the same contract.
+      const schemaShape = (schema: unknown) => {
+        const { $schema: _draft, ...shape } = schema as Record<string, unknown>;
+        return shape;
+      };
+      assert.deepEqual(
+        schemaShape(proxyOpener.inputSchema),
+        schemaShape(opener.inputSchema),
+      );
+      assert.deepEqual(
+        schemaShape(proxyOpener.outputSchema),
+        schemaShape(opener.outputSchema),
+      );
+      assert.deepEqual(proxyOpener.annotations, opener.annotations);
+      assert.equal(proxyOpener.description, opener.description);
+      assert.equal(proxyOpener.annotations?.readOnlyHint, true);
+      assert.deepEqual(
+        (
+          inventory.tools.find((tool) => tool.name === "list_agent_tasks")!
+            ._meta as any
+        ).ui.visibility,
+        ["model", "app"],
+      );
+      const proxyUi = await stdio.readResource({
+        uri: (proxyOpener._meta as any).ui.resourceUri,
+      });
+      assert.equal(
+        proxyUi.contents[0].uri,
+        "ui://codex-subagent-extension/app-v4",
+      );
+      assert.equal(proxyUi.contents[0].mimeType, "text/html;profile=mcp-app");
+      assert.ok("text" in proxyUi.contents[0]);
+      assert.match(proxyUi.contents[0].text, /<title>Delegated work<\/title>/);
+      assert.deepEqual((proxyUi.contents[0] as any)._meta.ui.csp, {
+        connectDomains: [],
+        resourceDomains: [],
+      });
+      assert.deepEqual((proxyUi.contents[0] as any)._meta["openai/widgetCSP"], {
+        connect_domains: [],
+        resource_domains: [],
+      });
+      assert.deepEqual(proxyUi.contents, ui.contents);
+      const unscopedProxyOpen = await stdio.callTool({
+        name: "open_codex_subagent_extension",
+        arguments: {},
+      });
+      assert.deepEqual(unscopedProxyOpen.structuredContent?.panel_scope, {
+        conversation_id: null,
+      });
+      assert.equal(unscopedProxyOpen.structuredContent?.tasks, undefined);
+      const proxyOpen = await stdio.callTool({
+        name: "open_codex_subagent_extension",
+        arguments: { conversation_id: "conversation-a" },
+      });
+      assert.deepEqual(proxyOpen.structuredContent?.panel_scope, {
+        conversation_id: "conversation-a",
+      });
+      assert.equal(
+        proxyOpen.structuredContent?.conversation_id,
+        "conversation-a",
+      );
+      const proxyWorkers = await stdio.callTool({
+        name: "list_available_workers",
+        arguments: {},
+      });
+      assert.equal(proxyWorkers.isError, false);
+      assert.ok(JSON.stringify(proxyWorkers.content).includes("fixture"));
+    } finally {
+      await stdio.close();
+    }
   } finally {
     await new Promise<void>((r) => server.close(() => r()));
     await c.close();

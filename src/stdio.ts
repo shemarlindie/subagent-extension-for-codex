@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { definitions } from "./tools.js";
 import { type Control } from "./control.js";
 import { settingsCapability } from "./settings.js";
+import { delegationPanel } from "./panel.js";
 const token =
   process.env.CODEX_SUBAGENT_EXTENSION_TOKEN ??
   readFileSync(
@@ -31,7 +32,16 @@ const server = new McpServer(
 for (const [name, d] of Object.entries(definitions({} as Control, "local")))
   server.registerTool(
     name,
-    { description: d.description, inputSchema: d.schema },
+    {
+      description: d.description,
+      inputSchema: d.schema,
+      annotations: {
+        readOnlyHint: name.startsWith("get_") || name.startsWith("list_"),
+        destructiveHint: name === "cancel_agent_task",
+        openWorldHint: name === "start_agent_task",
+      },
+      _meta: { ui: { visibility: ["model", "app"] } },
+    },
     async (args: any) => {
       try {
         const response = await fetch(`${origin}/api/tools/${name}`, {
@@ -68,4 +78,9 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
       }
     },
   );
+const panel = delegationPanel(
+  resolve(dirname(fileURLToPath(import.meta.url)), "../dist/codex.html"),
+);
+server.registerTool(panel.name, panel.tool, panel.open);
+server.registerResource(panel.title, panel.uri, panel.resource, panel.read);
 await server.connect(new StdioServerTransport());
