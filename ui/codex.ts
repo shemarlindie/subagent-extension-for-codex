@@ -45,6 +45,13 @@ let events: Event[] = [],
   generation = 0,
   scopeVersion = 0,
   detailSignature = "";
+type Project = { repository: string; name?: string; kind: string };
+let projects: Project[] = [],
+  repository: string | undefined,
+  revision = "HEAD",
+  scopeKnown = false,
+  explicitSelection = false,
+  browsingTasks = false;
 const dialog = $("dialog") as HTMLDialogElement;
 const button = (id: string) => $(id) as HTMLButtonElement;
 const value = (id: string) => ($(id) as HTMLInputElement).value;
@@ -74,6 +81,14 @@ async function tool<T = any>(
   args: Record<string, unknown> = {},
 ): Promise<T> {
   if (preview) {
+    if (name === "get_agent_panel_context")
+      return {
+        panel_scope: {
+          conversation_id: null,
+          repository: "/demo/project",
+          revision: "HEAD",
+        },
+      } as T;
     if (name === "list_agent_projects")
       return [
         {
@@ -130,6 +145,7 @@ function renderList() {
   const search = value("search").toLowerCase();
   const visible = tasks.filter(
     (t) =>
+      (!repository || t.repository === repository) &&
       (!search ||
         `${t.task} ${t.worker_profile} ${t.id}`
           .toLowerCase()
@@ -152,6 +168,7 @@ function renderList() {
   $("scope").textContent = conversation
     ? "This conversation"
     : "All conversations";
+  renderContext();
   $("count").textContent = String(visible.length);
   if ($("task-list").dataset.signature === signature) return;
   $("task-list").dataset.signature = signature;
@@ -168,27 +185,80 @@ function renderList() {
     .querySelectorAll<HTMLButtonElement>("[data-task]")
     .forEach((b) => (b.onclick = act(() => select(b.dataset.task!))));
 }
+function renderContext() {
+  const picker = $("project-scope") as HTMLSelectElement;
+  const options = projects.filter((p) => p.kind === "repository");
+  if (repository && !options.some((p) => p.repository === repository))
+    options.unshift({ repository, kind: "repository" });
+  const markup =
+    '<option value="">All projects</option>' +
+    options
+      .map(
+        (p) =>
+          `<option value="${esc(p.repository)}">${esc(p.name ?? p.repository.split("/").at(-1))}</option>`,
+      )
+      .join("");
+  // Retain native option nodes during polling so keyboard selection stays stable.
+  if (picker.dataset.options !== markup) {
+    picker.innerHTML = markup;
+    picker.dataset.options = markup;
+  }
+  if (picker.value !== (repository ?? "")) picker.value = repository ?? "";
+  picker.disabled = !connected || !scopeKnown || busy;
+  $("project-path").textContent =
+    repository ?? "Choose a project to focus delegated work";
+  $("project-path").title = repository ?? "";
+  button("conversation-context").hidden = !conversation;
+  button("conversation-context").disabled = !connected || !scopeKnown || busy;
+}
 async function refresh() {
   if (!connected || refreshing) return;
   refreshing = true;
   const currentGeneration = generation;
   try {
+    if (!scopeKnown) {
+      // An unscoped app starts in the global view. A host launch result can
+      // supply an explicit chat scope; ambient metadata must not hide history.
+      const context = await tool("get_agent_panel_context", {
+        conversation_id: null,
+      });
+      if (currentGeneration !== generation) return;
+      applyScope(context);
+      return;
+    }
+    // Local registration can change while the panel is open.
+    const nextProjects = await tool<Project[]>("list_agent_projects");
+    if (currentGeneration !== generation) return;
+    projects = nextProjects;
     if (!workers.length) {
       workers = await tool<Worker[]>("list_available_workers");
       button("delegate").disabled = busy;
     }
-    const next = await tool<Task[]>(
-      "list_agent_tasks",
-      conversation ? { conversation_id: conversation } : {},
-    );
+    const next = await tool<Task[]>("list_agent_tasks", {
+      conversation_id: conversation ?? null,
+      ...(repository ? { repository } : {}),
+    });
     if (currentGeneration !== generation) return;
-    tasks = next;
+    tasks = next.filter(
+      (t) =>
+        (!conversation || t.conversation_id === conversation) &&
+        (!repository || t.repository === repository),
+    );
     if (selected && !tasks.some((t) => t.id === selected)) {
       selected = undefined;
+      explicitSelection = false;
       generation++;
     }
-    if (!selected && tasks.length && window.innerWidth > 640) {
-      selected = tasks.find((t) => t.pending_input)?.id ?? tasks[0].id;
+    if (
+      !selected &&
+      !browsingTasks &&
+      tasks.length &&
+      (window.innerWidth > 640 || conversation || repository)
+    ) {
+      selected =
+        tasks.find((t) => t.pending_input)?.id ??
+        tasks.find((t) => !terminal(t))?.id ??
+        tasks[0].id;
       tab = tasks.find((t) => t.id === selected)?.result
         ? "result"
         : "activity";
@@ -200,14 +270,19 @@ async function refresh() {
       : "Connected · refreshes every 5s";
     clearError();
   } catch (e) {
+    if (currentGeneration !== generation) return;
     $("connection").textContent = "Connection interrupted";
     throw e;
   } finally {
     refreshing = false;
+    if (currentGeneration !== generation && connected && !busy)
+      void refresh().catch(error);
   }
 }
 async function select(id: string) {
   selected = id;
+  explicitSelection = true;
+  browsingTasks = false;
   generation++;
   events = [];
   artifacts = [];
@@ -228,6 +303,10 @@ async function shareSelection(artifactId?: string) {
     structuredContent: {
       selected_task: selected ?? null,
       selected_artifact: artifactId ?? null,
+      conversation_id: conversation ?? null,
+      repository:
+        tasks.find((t) => t.id === selected)?.repository ?? repository ?? null,
+      revision: tasks.find((t) => t.id === selected)?.revision ?? revision,
     },
   });
 }
@@ -305,7 +384,7 @@ function renderDetail() {
   const can = workers.find((w) => w.provider === t.provider)?.capabilities;
   const controls = !terminal(t) && !locked(t) && !busy;
   $("detail").innerHTML =
-    `<button id="back" class="back quiet">← Tasks</button><div class="eyebrow"><span class="dot ${t.status}"></span>${esc(label(t))}<span> / ${esc(t.provider)} · ${esc(t.worker_profile.replaceAll("_", " "))}</span></div><h1>${esc(t.task)}</h1><div class="meta"><span>${esc(t.revision)} · isolated worktree</span><span>${t.budget.max_runtime_minutes} min limit</span><span>${t.budget.max_cost_usd === null ? "No cost limit" : `$${t.budget.max_cost_usd} budget`}</span></div>${locked(t) ? '<div class="callout attention"><strong>Worker shutdown needs investigation</strong><p>Termination is unconfirmed. Controls are locked. Bring this task to Codex to inspect the worker before continuing.</p></div>' : t.pending_input ? `<div class="callout attention"><strong>${t.pending_input.tool === "AskUserQuestion" ? "Claude has a question" : "Permission needed"}</strong><p>${esc(t.pending_input.tool === "AskUserQuestion" ? "Review the worker’s question and respond to this request." : (t.pending_input.input.description ?? t.pending_input.tool))}</p><button id="respond" class="primary" ${busy ? "disabled" : ""}>Review request</button></div>` : ""}${t.error && !locked(t) ? `<div class="callout attention">${esc(t.error)}</div>` : ""}<div class="actions">${controls ? `<button data-action="steer">Steer</button>${can?.interrupt && t.status !== "interrupted" ? '<button data-action="interrupt">Interrupt</button>' : ""}${t.status === "interrupted" && can?.session_continue ? '<button data-action="continue">Continue</button>' : ""}<button data-action="cancel">Cancel task</button>` : ""}${["failed", "cancelled"].includes(t.status) && !locked(t) ? `<button data-action="retry" ${busy ? "disabled" : ""}>New attempt</button>` : ""}<button id="handoff">${!preview && app.getHostCapabilities()?.message?.text ? "Bring to Codex" : "Prepare handoff"}</button></div><nav class="tabs" role="tablist" aria-label="Task evidence">${["result", "changes", "activity"].map((k) => `<button id="tab-${k}" role="tab" aria-controls="panel" aria-selected="${tab === k}" data-tab="${k}">${k === "result" ? "Result" : k === "changes" ? `Artifacts (${artifacts.length})` : `Activity (${events.length})`}</button>`).join("")}</nav><div id="panel" role="tabpanel" aria-labelledby="tab-${tab}"></div><details><summary>Task details</summary><dl class="facts">${Object.entries(
+    `<button id="back" class="back quiet">← Tasks</button><div class="eyebrow"><span class="dot ${t.status}"></span>${esc(label(t))}<span> / ${esc(t.provider)} · ${esc(t.worker_profile.replaceAll("_", " "))}</span></div><h1>${esc(t.task)}</h1><div class="meta"><span>${esc(t.repository.split("/").at(-1))} · ${esc(t.revision)} · isolated worktree</span><span>${t.budget.max_runtime_minutes} min limit</span><span>${t.budget.max_cost_usd === null ? "No cost limit" : `$${t.budget.max_cost_usd} budget`}</span></div>${locked(t) ? '<div class="callout attention"><strong>Worker shutdown needs investigation</strong><p>Termination is unconfirmed. Controls are locked. Bring this task to Codex to inspect the worker before continuing.</p></div>' : t.pending_input ? `<div class="callout attention"><strong>${t.pending_input.tool === "AskUserQuestion" ? "Claude has a question" : "Permission needed"}</strong><p>${esc(t.pending_input.tool === "AskUserQuestion" ? "Review the worker’s question and respond to this request." : (t.pending_input.input.description ?? t.pending_input.tool))}</p><button id="respond" class="primary" ${busy ? "disabled" : ""}>Review request</button></div>` : ""}${t.error && !locked(t) ? `<div class="callout attention">${esc(t.error)}</div>` : ""}<div class="actions">${controls ? `<button data-action="steer">Steer</button>${can?.interrupt && t.status !== "interrupted" ? '<button data-action="interrupt">Interrupt</button>' : ""}${t.status === "interrupted" && can?.session_continue ? '<button data-action="continue">Continue</button>' : ""}<button data-action="cancel">Cancel task</button>` : ""}${["failed", "cancelled"].includes(t.status) && !locked(t) ? `<button data-action="retry" ${busy ? "disabled" : ""}>New attempt</button>` : ""}<button id="handoff">${!preview && app.getHostCapabilities()?.message?.text ? "Bring to Codex" : "Prepare handoff"}</button></div><nav class="tabs" role="tablist" aria-label="Task evidence">${["result", "changes", "activity"].map((k) => `<button id="tab-${k}" role="tab" aria-controls="panel" aria-selected="${tab === k}" data-tab="${k}">${k === "result" ? "Result" : k === "changes" ? `Artifacts (${artifacts.length})` : `Activity (${events.length})`}</button>`).join("")}</nav><div id="panel" role="tabpanel" aria-labelledby="tab-${tab}"></div><details><summary>Task details</summary><dl class="facts">${Object.entries(
       {
         "Task ID": t.id,
         Workspace: t.workspace ?? "Preparing",
@@ -325,6 +404,9 @@ function renderDetail() {
       .join("")}</dl></details>`;
   $("back").onclick = () => {
     selected = undefined;
+    explicitSelection = false;
+    // Polling must preserve the user's choice to browse the narrow task list.
+    browsingTasks = true;
     generation++;
     detailSignature = "";
     renderList();
@@ -470,7 +552,7 @@ function modal(
     // Keep mutations and messages bound to the scope reviewed in this form.
     if (formScope !== scopeVersion) {
       $("form-error").textContent =
-        "The conversation changed. Close this form and reopen it in the current scope.";
+        "The project or conversation changed. Close this form and reopen it in the current scope.";
       button("submit").disabled = true;
       return;
     }
@@ -479,6 +561,7 @@ function modal(
     button("dismiss").disabled = true;
     button("delegate").disabled = true;
     dialog.oncancel = (e) => e.preventDefault();
+    renderContext();
     renderDetail();
     let succeeded = false;
     try {
@@ -486,7 +569,7 @@ function modal(
       // A dispatched operation cannot be undone by a later host scope change.
       if (formScope !== scopeVersion)
         throw new Error(
-          "The conversation changed while this request was in progress. Inspect its outcome in the original scope before retrying.",
+          "The project or conversation changed while this request was in progress. Inspect its outcome in the original scope before retrying.",
         );
       succeeded = true;
       dialog.close();
@@ -498,6 +581,7 @@ function modal(
       button("dismiss").disabled = false;
       button("delegate").disabled = !connected;
       dialog.oncancel = null;
+      renderContext();
       renderDetail();
     }
     if (succeeded) await refresh().catch(error);
@@ -510,21 +594,36 @@ async function delegate() {
     formConversation = conversation;
   const defaults = (await tool("get_agent_settings")).values;
   if (dialog.open || busy || formScope !== scopeVersion) return;
-  const projects = await tool<{ repository: string; kind: string }[]>(
-    "list_agent_projects",
-  );
+  const choicesProjects = await tool<Project[]>("list_agent_projects");
   if (dialog.open || busy || formScope !== scopeVersion) return;
-  const projectOptions = projects
+  projects = choicesProjects;
+  const projectOptions = choicesProjects
     .filter((p) => p.kind === "repository")
     .map(
       (p) =>
         `<option value="${esc(p.repository)}">${esc(p.repository)}</option>`,
     )
     .join("");
-  if (!projectOptions)
+  const parentApproved = choicesProjects.some((p) => p.kind === "parent");
+  if (!projectOptions && !parentApproved)
     throw new Error(
       "Register a repository using the local projects CLI before delegating.",
     );
+  const sourceTask = explicitSelection
+    ? tasks.find((t) => t.id === selected)
+    : undefined;
+  const defaultRepository =
+    repository ??
+    sourceTask?.repository ??
+    (choicesProjects.filter((p) => p.kind === "repository").length === 1
+      ? choicesProjects.find((p) => p.kind === "repository")!.repository
+      : undefined);
+  const defaultRevision = repository
+    ? revision
+    : (sourceTask?.revision ?? "HEAD");
+  const projectField = parentApproved
+    ? `<input id="repository" list="approved-projects" required value="${esc(defaultRepository ?? "")}" placeholder="/absolute/path/to/repository"><datalist id="approved-projects">${projectOptions}</datalist><p class="help">Use a registered Git root or a Git repository inside an approved parent.</p>`
+    : `<select id="repository" required><option value="" disabled selected>Choose a project</option>${projectOptions}</select>`;
   const choices = workers
     .flatMap((w) =>
       w.profiles.map(
@@ -539,7 +638,7 @@ async function delegate() {
     );
   modal(
     "New delegated task",
-    `<p class="form-note">Give the worker a focused outcome and the evidence you expect back. Work starts from a committed revision in a separate worktree.</p><label for="repository">Project</label><select id="repository" required><option value="" disabled selected>Choose a project</option>${projectOptions}</select><label for="task">Task</label><textarea id="task" required maxlength="20000" placeholder="Review the authentication boundary. Cite findings with file paths and suggest next steps."></textarea><div class="two"><div><label for="worker">Worker</label><select id="worker">${choices}</select></div><div><label for="revision">Revision</label><input id="revision" value="HEAD" required></div></div><label for="context">Context to include (optional)</label><textarea id="context" maxlength="20000" placeholder="Relevant files, constraints, or prior findings. Conversation context is not attached automatically."></textarea><div class="two"><div><label for="runtime">Runtime limit · minutes</label><input id="runtime" type="number" min="0" max="120" step="any" value="${esc(defaults.max_runtime_minutes)}" required></div><div><label for="cost-mode">Cost limit</label><select id="cost-mode"><option value="limited">Apply cost budget</option><option value="none">No cost limit</option></select></div></div><label for="cost">Cost budget · USD</label><input id="cost" type="number" min="0.01" max="100" step="0.01" value="${esc(defaults.max_cost_usd ?? 5)}" required><p id="cost-note" class="help"></p><label for="deps">Wait for tasks (optional)</label><select id="deps" multiple>${tasks.map((t) => `<option value="${esc(t.id)}">${esc(t.task.slice(0, 80))}</option>`).join("")}</select>`,
+    `<p class="form-note">Give the worker a focused outcome and the evidence you expect back. Work starts from a committed revision in a separate worktree.</p><label for="repository">Project</label>${projectField}<label for="task">Task</label><textarea id="task" required maxlength="20000" placeholder="Review the authentication boundary. Cite findings with file paths and suggest next steps."></textarea><div class="two"><div><label for="worker">Worker</label><select id="worker">${choices}</select></div><div><label for="revision">Revision</label><input id="revision" value="${esc(defaultRevision)}" required></div></div><label for="context">Context to include (optional)</label><textarea id="context" maxlength="20000" placeholder="Relevant files, constraints, or prior findings. Conversation context is not attached automatically."></textarea><div class="two"><div><label for="runtime">Runtime limit · minutes</label><input id="runtime" type="number" min="0" max="120" step="any" value="${esc(defaults.max_runtime_minutes)}" required></div><div><label for="cost-mode">Cost limit</label><select id="cost-mode"><option value="limited">Apply cost budget</option><option value="none">No cost limit</option></select></div></div><label for="cost">Cost budget · USD</label><input id="cost" type="number" min="0.01" max="100" step="0.01" value="${esc(defaults.max_cost_usd ?? 5)}" required><p id="cost-note" class="help"></p><label for="deps">Wait for tasks (optional)</label><select id="deps" multiple>${tasks.map((t) => `<option value="${esc(t.id)}">${esc(t.task.slice(0, 80))}</option>`).join("")}</select>`,
     async () => {
       const [provider, worker_profile] = value("worker").split(":");
       const task = await tool<Task>("start_agent_task", {
@@ -548,7 +647,7 @@ async function delegate() {
         provider,
         worker_profile,
         revision: value("revision"),
-        ...(formConversation ? { conversation_id: formConversation } : {}),
+        conversation_id: formConversation ?? null,
         context: value("context").trim() ? [value("context")] : [],
         depends_on: [...($("deps") as HTMLSelectElement).selectedOptions].map(
           (o) => o.value,
@@ -562,6 +661,10 @@ async function delegate() {
       if (formScope !== scopeVersion) return;
       tasks = [task, ...tasks.filter((t) => t.id !== task.id)];
       selected = task.id;
+      explicitSelection = true;
+      browsingTasks = false;
+      repository = task.repository;
+      revision = task.revision;
       generation++;
       events = [];
       artifacts = [];
@@ -570,6 +673,32 @@ async function delegate() {
     },
     "Start task",
   );
+  const projectInput = $("repository") as HTMLInputElement | HTMLSelectElement;
+  if (
+    defaultRepository &&
+    (parentApproved ||
+      [...(projectInput as HTMLSelectElement).options].some(
+        (o) => o.value === defaultRepository,
+      ))
+  )
+    projectInput.value = defaultRepository;
+  const updateDependencies = () => {
+    $("deps").innerHTML = tasks
+      .filter((t) => t.repository === projectInput.value)
+      .map(
+        (t) =>
+          `<option value="${esc(t.id)}">${esc(t.task.slice(0, 80))}</option>`,
+      )
+      .join("");
+  };
+  projectInput.onchange = () => {
+    ($("revision") as HTMLInputElement).value =
+      projectInput.value === defaultRepository ? defaultRevision : "HEAD";
+    updateDependencies();
+  };
+  updateDependencies();
+  // With project context resolved, place the cursor in the task description.
+  if (projectInput.value) $("task").focus();
   const runtime = $("runtime") as HTMLInputElement;
   const updateRuntime = () =>
     runtime.setCustomValidity(
@@ -651,6 +780,8 @@ async function control(action: string, t: Task) {
       );
       if (action === "retry" && formScope === scopeVersion) {
         selected = next.id;
+        explicitSelection = true;
+        browsingTasks = false;
         tasks = [next, ...tasks.filter((t) => t.id !== next.id)];
         generation++;
         tab = "activity";
@@ -737,7 +868,7 @@ function respond(t: Task) {
 }
 function handoff(t: Task) {
   const canSend = !preview && Boolean(app.getHostCapabilities()?.message?.text);
-  const message = `Review delegated task ${t.id} (${t.provider}, ${t.status}).\nRetrieve current state with get_agent_task, full results with get_agent_result, and reports/patches with get_agent_artifacts using task_id=${JSON.stringify(t.id)}. Inspect the evidence before proposing next steps or applying changes.\n\nTask excerpt: ${t.task.slice(0, 1500)}\nSummary excerpt: ${t.result?.summary.slice(0, 2500) ?? "No result yet."}`;
+  const message = `Review delegated task ${t.id} (${t.provider}, ${t.status}).\nRetrieve current state with get_agent_task, full results with get_agent_result, and reports/patches with get_agent_artifacts using task_id=${JSON.stringify(t.id)}. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${t.repository}\nRevision: ${t.revision}\nTask excerpt: ${t.task.slice(0, 1500)}\nSummary excerpt: ${t.result?.summary.slice(0, 2500) ?? "No result yet."}`;
   modal(
     "Bring task to Codex",
     `<p class="form-note">${canSend ? "Review or edit the message before sending it to this conversation." : "This host has not advertised message delivery. Select and copy this message into Codex."}</p><label for="handoff-message">Message</label><textarea id="handoff-message" rows="12" required>${esc(message)}</textarea>`,
@@ -757,6 +888,7 @@ function handoff(t: Task) {
 }
 function hostContext() {
   const ctx = app.getHostContext();
+  document.body.dataset.displayMode = ctx?.displayMode ?? "inline";
   if (ctx?.theme) applyDocumentTheme(ctx.theme);
   if (ctx?.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
   const mode = ctx?.displayMode === "fullscreen" ? "inline" : "fullscreen";
@@ -767,13 +899,18 @@ function hostContext() {
 $("delegate").onclick = act(delegate);
 $("refresh").onclick = act(refresh);
 $("search").oninput = renderList;
+function setFilter(next: string) {
+  filter = next;
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-filter]")
+    .forEach((b) =>
+      b.setAttribute("aria-pressed", String(b.dataset.filter === filter)),
+    );
+}
 document.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach(
   (b) =>
     (b.onclick = () => {
-      filter = b.dataset.filter!;
-      document
-        .querySelectorAll<HTMLButtonElement>("[data-filter]")
-        .forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      setFilter(b.dataset.filter!);
       renderList();
     }),
 );
@@ -786,10 +923,27 @@ $("expand").onclick = act(async () => {
   });
 });
 app.onhostcontextchanged = () => hostContext();
-app.ontoolresult = (r) => {
-  // Only opener results carry this marker; ordinary tool output cannot reset scope.
-  const data = r.structuredContent as Record<string, unknown> | undefined;
-  const scope = data?.panel_scope as { conversation_id?: unknown } | undefined;
+function invalidateScope() {
+  scopeVersion++;
+  generation++;
+  tasks = [];
+  selected = undefined;
+  explicitSelection = false;
+  browsingTasks = false;
+  events = [];
+  artifacts = [];
+  detailSignature = "";
+  if (dialog.open) {
+    if (!busy) dialog.close();
+    else {
+      $("form-error").textContent =
+        "The project or conversation changed while a request is in progress. Inspect its original outcome before retrying.";
+      button("submit").disabled = true;
+    }
+  }
+}
+function applyScope(data: Record<string, any> | undefined) {
+  const scope = data?.panel_scope;
   if (
     !scope ||
     !(
@@ -798,29 +952,71 @@ app.ontoolresult = (r) => {
     )
   )
     return;
-  const next = scope.conversation_id ?? undefined;
-  if (conversation !== next) {
-    conversation = next;
-    scopeVersion++;
-    generation++;
-    tasks = [];
-    selected = undefined;
-    events = [];
-    artifacts = [];
-    detailSignature = "";
-    if (dialog.open) {
-      if (!busy) dialog.close();
-      else {
-        $("form-error").textContent =
-          "The conversation changed while a request is in progress. Inspect its outcome before retrying.";
-        button("submit").disabled = true;
-      }
-    }
-    renderList();
-    renderDetail();
+  if (scope.repository !== undefined && typeof scope.repository !== "string")
+    return;
+  const nextConversation = scope.conversation_id ?? undefined;
+  const nextRepository = scope.repository;
+  const changed =
+    !scopeKnown ||
+    conversation !== nextConversation ||
+    repository !== nextRepository ||
+    revision !== (scope.revision ?? "HEAD");
+  scopeKnown = true;
+  if (changed) {
+    conversation = nextConversation;
+    repository = nextRepository;
+    revision = scope.revision ?? "HEAD";
+    invalidateScope();
   }
+  if (Array.isArray(data?.tasks)) {
+    tasks = data.tasks.filter(
+      (t: Task) =>
+        (!conversation || t.conversation_id === conversation) &&
+        (!repository || t.repository === repository),
+    );
+  }
+  const target = data?.panel_selection;
+  if (typeof target?.task_id === "string") {
+    if (selected !== target.task_id) {
+      generation++;
+      events = [];
+      artifacts = [];
+      detailSignature = "";
+    }
+    selected = target.task_id;
+    explicitSelection = true;
+    browsingTasks = false;
+    tab = target.tab === "result" ? "result" : "activity";
+    setFilter("all");
+    ($("search") as HTMLInputElement).value = "";
+  }
+  renderList();
+  renderDetail();
   if (connected) void refresh().catch(error);
-};
+}
+app.ontoolresult = (r) =>
+  applyScope(r.structuredContent as Record<string, any> | undefined);
+$("conversation-context").onclick = act(async () => {
+  if (busy || !conversation) return;
+  conversation = undefined;
+  invalidateScope();
+  setFilter("all");
+  ($("search") as HTMLInputElement).value = "";
+  renderList();
+  renderDetail();
+  await refresh();
+  void shareSelection().catch(error);
+});
+$("project-scope").onchange = act(async () => {
+  if (busy) return;
+  repository = value("project-scope") || undefined;
+  revision = "HEAD";
+  invalidateScope();
+  renderList();
+  renderDetail();
+  await refresh();
+  void shareSelection().catch(error);
+});
 async function start() {
   if (preview) {
     $("preview").hidden = false;

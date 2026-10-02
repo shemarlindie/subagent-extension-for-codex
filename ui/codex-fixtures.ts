@@ -3,7 +3,7 @@ const base = {
   owner: "preview",
   provider: "claude" as const,
   worker_profile: "reviewer" as const,
-  repository: "current",
+  repository: "/demo/project",
   revision: "HEAD",
   depends_on: [],
   context: [],

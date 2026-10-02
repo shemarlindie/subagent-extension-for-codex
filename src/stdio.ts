@@ -6,14 +6,17 @@ import { fileURLToPath } from "node:url";
 import { definitions, withConversation } from "./tools.js";
 import { type Control } from "./control.js";
 import { settingsCapability } from "./settings.js";
-import { delegationPanel } from "./panel.js";
+import { delegationPanel, panelUri } from "./panel.js";
+import { taskPanelContext } from "./panel-context.js";
+import type { Task } from "./model.js";
+import { codexContextCapability } from "./host-context.js";
 const { token, origin } = await connectService();
 const server = new McpServer(
   { name: "codex-subagent-extension", version: "0.1.0" },
   {
     instructions:
       "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Missing projects require registration with the local projects CLI.",
-    capabilities: { extensions: settingsCapability },
+    capabilities: { ...codexContextCapability, extensions: settingsCapability },
   },
 );
 for (const [name, d] of Object.entries(definitions({} as Control, "local")))
@@ -28,7 +31,15 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
         destructiveHint: name === "cancel_agent_task",
         openWorldHint: name === "start_agent_task",
       },
-      _meta: { ui: { visibility: ["model", "app"] } },
+      _meta: {
+        ui: {
+          visibility: ["model", "app"],
+          ...(name === "start_agent_task" ? { resourceUri: panelUri } : {}),
+        },
+        ...(name === "start_agent_task"
+          ? { "openai/ui": { preferredModelDisplayMode: "inline" } }
+          : {}),
+      },
     },
     async (args: any, extra: { _meta?: Record<string, unknown> }) => {
       try {
@@ -51,7 +62,15 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
             ? {
                 structuredContent: name.endsWith("_agent_settings")
                   ? body.result
-                  : body,
+                  : {
+                      ...body,
+                      ...(name === "start_agent_task"
+                        ? {
+                            ...taskPanelContext(body.result as Task),
+                            tasks: [body.result],
+                          }
+                        : {}),
+                    },
               }
             : {}),
         };
@@ -70,9 +89,47 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
   );
 const panel = delegationPanel(
   resolve(dirname(fileURLToPath(import.meta.url)), "../dist/codex.html"),
+  undefined,
+  async (args) => {
+    const response = await fetch(
+      `${origin}/api/tools/get_agent_panel_context`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "X-Codex-Subagent-Extension": "1",
+        },
+        body: JSON.stringify(args),
+        signal: AbortSignal.timeout(30000),
+        redirect: "error",
+      },
+    );
+    const body = await response.json();
+    if (!response.ok)
+      throw new Error(body.error ?? "Panel context unavailable");
+    return body.result;
+  },
 );
-server.registerTool(panel.name, panel.tool, (args, extra) =>
-  panel.open(withConversation(panel.name, args, extra._meta)),
-);
+server.registerTool(panel.name, panel.tool, async (args, extra) => {
+  try {
+    return await panel.open(withConversation(panel.name, args, extra._meta));
+  } catch (error) {
+    return {
+      isError: true,
+      content: [{ type: "text" as const, text: String(error) }],
+    };
+  }
+});
 server.registerResource(panel.title, panel.uri, panel.resource, panel.read);
+server.registerTool(panel.global.name, panel.global.tool, async () => {
+  try {
+    return await panel.global.open();
+  } catch (error) {
+    return {
+      isError: true,
+      content: [{ type: "text" as const, text: String(error) }],
+    };
+  }
+});
 await server.connect(new StdioServerTransport());

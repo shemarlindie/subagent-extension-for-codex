@@ -44,9 +44,9 @@ The proxy and service share the per-user data default. If you set `CODEX_SUBAGEN
 
 The proxy reads the service token locally and forwards requests to the running service. It does not create another scheduler. `CODEX_SUBAGENT_EXTENSION_URL` changes its loopback URL. The portable plugin manifest, MCP configuration, and delegation skill are also included; build the package before configuring it. The service starts when the host launches the packaged stdio server; installation alone does not execute it.
 
-For MCP App hosts, connect to the authenticated HTTP endpoint `/mcp`. The delegation panel replaces the previous `app-v3` MCP resource with `ui://codex-subagent-extension/app-v4` over the authenticated MCP bridge, with empty network allowlists. The standalone web console retains its existing routes. The panel uses portable MCP Apps calls; Codex-specific sidebar behavior remains subject to host verification.
+For MCP App hosts, connect to the authenticated HTTP endpoint `/mcp`. The delegation panel uses the MCP resource `ui://codex-subagent-extension/app-v6` over the authenticated MCP bridge, with empty network allowlists. The standalone web console retains its existing routes. The panel uses portable MCP Apps calls; Codex-specific sidebar behavior remains subject to host verification.
 
-The standalone web console uses token login, HttpOnly session cookies, HTTP tools and live SSE. The stdio proxy provides tools and the separate `app-v4` delegation panel through the portable MCP Apps bridge. HTTP and stdio share the panel's schemas, resources, and global/thread entrypoint metadata. Reload the MCP connection after rebuilding so the host discovers updated tool metadata. Actual panel placement is controlled by the host; declaring both entrypoints does not redirect sidebar clicks into the active chat. Existing task tools remain available. Installing the plugin does not register a remote ChatGPT connection or deploy a production service.
+The standalone web console uses token login, HttpOnly session cookies, HTTP tools and live SSE. The stdio proxy provides tools and the separate `app-v6` delegation panel through the portable MCP Apps bridge. HTTP and stdio share the panel's schemas, resources, and separate global/thread openers. Panel HTML is read from `dist` on each resource request, so rebuilt UI changes can appear without a service restart. Server code changes require a service restart; reload the MCP connection to discover changed opener metadata and resource URIs. Actual panel placement is controlled by the host. Existing task tools remain available. Installing the plugin does not register a remote ChatGPT connection or deploy a production service.
 
 ## Supported workflows
 
@@ -231,18 +231,47 @@ The development start script accepts repository arguments and
 honors environment overrides instead of hardcoding another project.
 
 Trusted Codex hooks can supply session cwd, but that context is not automatically
-bound to MCP calls. This implementation uses explicit selection and does not
-install a hook. Local stdio cannot reach a cloud host's filesystem, and native
+bound to MCP calls. This implementation uses validated optional directory hints and explicit selection;
+it does not install a hook. Local stdio cannot reach a cloud host's filesystem, and native
 host rendering/handshake remains unverified. See [host capabilities and current
 official sources](docs/host-capabilities.md) for hook trust, MCP Apps context,
 elicitation, recent protocol changes and Claude session compatibility.
 
+## Project and chat awareness
+
+Starting a task returns the panel with the new task selected on Activity. The
+thread opener `open_codex_subagent_extension` accepts `repository`, `revision`,
+and `task_id` and advertises only a thread entrypoint. An owned `task_id` uses
+that task's scope rather than ambient chat or directory metadata; explicit
+conflicting arguments are rejected. Other launches preserve explicit or host
+chat context. The app-only `open_codex_subagent_extension_global` opens all
+chats and all projects. Unscoped panels explicitly request a null conversation;
+scoped panels offer **All chats**, retaining the repository/revision filter.
+`get_agent_panel_context`
+resolves validated defaults from host metadata or the latest task in the same
+chat. New task prefills known project/revision and user worker/budget defaults.
+A visible project picker filters tasks, and chat/project scope changes discard
+stale reads and unsent forms. The project registry refreshes during polling and manual refresh while preserving
+drafts and stable options. Parent-approved repositories can be entered by
+absolute path. Global history never silently supplies the next task's project.
+
+The [saved implementation plan](docs/project-thread-integration-plan.md) and
+[research report](docs/project-thread-integration-research.md) compare current
+and legacy docs, public Codex core/app-server contracts, and alternative
+integrations. The desktop UI is closed source. Native placement remains a
+host-controlled behavior; metadata and browser fixture checks do not prove it.
+
 ## Extension review limits
 
-The server consumes optional `_meta["openai/session"]` conversation correlation
-for panel opening, task creation and task listing. Explicit `conversation_id`
-arguments take precedence; clients without the hint retain explicit/all-task
-scope. This hint grants no repository or account access. See the [official UI
+The server consumes optional `_meta["openai/session"]` or source-backed
+`_meta.threadId` conversation correlation for panel opening, task creation and
+task listing. Explicit `conversation_id`
+arguments take precedence. For task creation, `conversation_id: null` opts out
+of host conversation correlation and is persisted as an absent Task conversation
+ID; clients without the hint retain explicit/all-task scope. These hints grant no repository or account access. Both transports opt in to
+`codex/sandbox-state-meta` and validate its local `sandboxCwd` directory hint
+against registered projects. Public CLI/core source does not establish desktop
+UI behavior. See the [official UI
 reference](https://developers.openai.com/plugins/reference).
 
 The portable local package is not ready for universal-directory submission.

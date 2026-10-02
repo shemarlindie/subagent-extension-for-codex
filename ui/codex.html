@@ -114,6 +114,31 @@
       .connection {
         font-size: 11px;
       }
+      .context-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+      .context-bar select {
+        width: auto;
+        max-width: 45%;
+        padding: 5px 8px;
+      }
+      #project-path {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      body[data-display-mode="fullscreen"] .shell {
+        min-height: calc(100vh - 130px);
+      }
+      #conversation-context {
+        white-space: nowrap;
+      }
       .shell {
         display: grid;
         grid-template-columns: 245px minmax(0, 1fr);
@@ -480,6 +505,13 @@
       ><button id="expand" class="quiet" hidden>Expand</button
       ><button id="delegate" class="primary" disabled>New task</button>
     </header>
+    <div class="context-bar" aria-label="Project context">
+      <select id="project-scope" aria-label="Project scope">
+        <option value="">All projects</option>
+      </select>
+      <small id="project-path">Choose a project to focus delegated work</small>
+      <button id="conversation-context" class="quiet" hidden>All chats</button>
+    </div>
     <div id="preview" class="banner" hidden>
       Design preview · fixture data · actions never execute workers
     </div>

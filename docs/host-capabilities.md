@@ -4,6 +4,44 @@ Checked against official documentation and the installed packages on October 2,
 2026. This distinguishes documented capabilities from behavior verified in this
 repository; it is not a claim that every host/version implements every feature.
 
+## Project and chat adapter update
+
+The later [integration research](project-thread-integration-research.md) pins the
+public Codex source to `c5d242fa` and the released `rust-v0.160.0`. That source
+supplies `_meta.threadId` and supports opt-in `codex/sandbox-state-meta` through
+server `capabilities.experimental`. Its `sandboxCwd` field is a file URI for the
+execution directory. This is a concrete, optional version-specific adapter,
+distinct from the portable MCP Apps context discussed below. The desktop UI is
+closed source; public CLI/core/app-server code does not prove desktop behavior.
+
+Both transports now advertise that capability and consume only the directory
+hint, resolve its Git root and validate it against approved projects. Explicit
+repository/task arguments take precedence; missing, remote, malformed or
+unapproved hints fall back to explicit selection or same-chat history. Optional
+`threadId` is used after explicit conversation and documented `openai/session`
+correlation. Permission metadata is neither retained nor treated as an access
+grant. Native metadata delivery still needs a live target-host check.
+
+The `app-v6` panel is attached to successful task creation as well as the opener,
+with repository/revision/chat scope and immediate task selection on Activity.
+The model-visible `open_codex_subagent_extension` advertises only the thread
+entrypoint and accepts repository/revision/task ID. An owned task ID supplies
+its own scope instead of ambient chat/directory metadata; explicit conflicts
+still reject. Other launches preserve explicit or host chat context. The separate app-only `open_codex_subagent_extension_global`
+advertises the global entrypoint and always opens all chats and all projects.
+Unscoped panel bootstrap explicitly requests a null conversation; **All chats**
+expands a scoped panel's chat filter while retaining repository/revision.
+Task creation accepts `conversation_id: null` to opt out of host chat correlation
+and normalizes it to an absent persisted Task conversation ID. The stdio opener
+fetches resolved context from the service and requires its availability.
+The context reader recovers only same-chat history defaults. Global history never
+silently supplies a project. The project registry refreshes on polling and manual
+refresh while preserving drafts and stable options. Panel HTML is read from
+`dist` per resource request, so UI rebuilds can appear without a service restart.
+Server code changes require a service restart; reload the MCP connection to
+discover changed opener metadata and resource URIs. Inline model preference and
+resource display modes are hints, not forced native placement.
+
 ## Plugin startup and hooks
 
 Codex supports command-based lifecycle hooks, including `SessionStart`, and

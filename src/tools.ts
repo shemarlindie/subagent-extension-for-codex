@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Control } from "./control.js";
 import { startSchema } from "./model.js";
+import { panelContextInput, resolvePanelContext } from "./panel-context.js";
 import {
   settingsUpdateSchema,
   settingsReadOutputSchema,
@@ -14,21 +15,51 @@ export function withConversation(
   meta?: Record<string, unknown>,
 ) {
   if (
+    ["open_codex_subagent_extension", "get_agent_panel_context"].includes(
+      name,
+    ) &&
+    args.conversation_id !== null &&
+    args.task_id === undefined &&
+    args.host_directory === undefined
+  ) {
+    const state = meta?.["codex/sandbox-state-meta"] as
+      { sandboxCwd?: unknown } | undefined;
+    if (
+      typeof state?.sandboxCwd === "string" &&
+      state.sandboxCwd.length <= 4096
+    )
+      args = { ...args, host_directory: state.sandboxCwd };
+  }
+  // A selected task supplies its own scope; ambient chat hints cannot constrain it.
+  if (
     ![
       "open_codex_subagent_extension",
       "start_agent_task",
       "list_agent_tasks",
+      "get_agent_panel_context",
     ].includes(name) ||
-    args.conversation_id !== undefined
+    args.conversation_id !== undefined ||
+    (["open_codex_subagent_extension", "get_agent_panel_context"].includes(
+      name,
+    ) &&
+      args.task_id !== undefined)
   )
     return args;
-  const session = meta?.["openai/session"];
+  // Codex core adds threadId; ChatGPT documents its anonymized session field.
+  // Both are optional correlation hints, never filesystem/ownership authority.
+  const session = meta?.["openai/session"] ?? meta?.threadId;
   return typeof session === "string" && session.trim() && session.length <= 256
     ? { ...args, conversation_id: session }
     : args;
 }
 export function definitions(c: Control, owner: string) {
   return {
+    get_agent_panel_context: {
+      description:
+        "Resolve panel repository/revision defaults from explicit approved context or the latest task in this conversation. task_id selects an owned task. null conversation_id explicitly requests all conversations. This never registers a project or starts work.",
+      schema: panelContextInput,
+      run: (a: any) => resolvePanelContext(c, owner, a),
+    },
     list_agent_projects: {
       description:
         "List persistently approved project roots. Pass an explicit absolute repository to start_agent_task. Register missing roots with the local projects CLI, never by a task argument.",
@@ -53,8 +84,9 @@ export function definitions(c: Control, owner: string) {
     },
     start_agent_task: {
       description:
-        "Create durable asynchronous work in an isolated Git worktree. Supply an explicit absolute repository from list_agent_projects; current does not identify the host chat project.",
+        "Create durable asynchronous work in an isolated Git worktree and open its Activity panel when the host supports MCP Apps. Supply an explicit absolute repository from list_agent_projects; current does not identify the host chat project. Reopen existing work with open_codex_subagent_extension(task_id), never another start call.",
       schema: startSchema.extend({
+        conversation_id: startSchema.shape.conversation_id.nullable(),
         provider: startSchema.shape.provider.removeDefault().optional(),
         worker_profile: startSchema.shape.worker_profile
           .removeDefault()
@@ -76,7 +108,12 @@ export function definitions(c: Control, owner: string) {
           })
           .optional(),
       }),
-      run: (a: any) => c.start(owner, a),
+      // Null opts out of host correlation; persisted tasks keep the optional string contract.
+      run: (a: any) =>
+        c.start(owner, {
+          ...a,
+          conversation_id: a.conversation_id ?? undefined,
+        }),
     },
     get_agent_task: {
       description: "Inspect task state and pending input.",
@@ -84,14 +121,19 @@ export function definitions(c: Control, owner: string) {
       run: (a: any) => c.store.get(a.task_id, owner),
     },
     list_agent_tasks: {
-      description: "List owned tasks, optionally scoped to a conversation.",
-      schema: z.object({ conversation_id: z.string().optional() }),
+      description:
+        "List owned tasks, optionally scoped to a conversation and repository. null conversation_id explicitly requests all conversations.",
+      schema: z.object({
+        conversation_id: z.string().nullable().optional(),
+        repository: z.string().optional(),
+      }),
       run: (a: any) =>
         c.store
           .all(owner)
           .filter(
             (t) =>
-              !a.conversation_id || t.conversation_id === a.conversation_id,
+              (!a.conversation_id || t.conversation_id === a.conversation_id) &&
+              (!a.repository || t.repository === a.repository),
           ),
     },
     list_available_workers: {

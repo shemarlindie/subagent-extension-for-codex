@@ -8,7 +8,10 @@ import { definitions, withConversation } from "./tools.js";
 import { type Control } from "./control.js";
 import { z } from "zod";
 import { settingsCapability } from "./settings.js";
-import { delegationPanel } from "./panel.js";
+import { delegationPanel, panelUri } from "./panel.js";
+import { resolvePanelContext, taskPanelContext } from "./panel-context.js";
+import type { Task } from "./model.js";
+import { codexContextCapability } from "./host-context.js";
 export function mcp(
   c: Control,
   owner: string,
@@ -21,6 +24,7 @@ export function mcp(
     { name: "codex-subagent-extension", version: "0.1.0" },
     {
       capabilities: {
+        ...codexContextCapability,
         tools: {},
         extensions: settingsCapability,
         ...(events ? { events: {} } : {}),
@@ -81,7 +85,15 @@ export function mcp(
           destructiveHint: name === "cancel_agent_task",
           openWorldHint: name === "start_agent_task",
         },
-        _meta: { ui: { visibility: ["model", "app"] } },
+        _meta: {
+          ui: {
+            visibility: ["model", "app"],
+            ...(name === "start_agent_task" ? { resourceUri: panelUri } : {}),
+          },
+          ...(name === "start_agent_task"
+            ? { "openai/ui": { preferredModelDisplayMode: "inline" } }
+            : {}),
+        },
       },
       async (args: any, ctx: ServerContext) => {
         try {
@@ -92,7 +104,12 @@ export function mcp(
             content: [{ type: "text" as const, text: JSON.stringify(result) }],
             structuredContent: name.endsWith("_agent_settings")
               ? result
-              : { result },
+              : {
+                  result,
+                  ...(name === "start_agent_task"
+                    ? { ...taskPanelContext(result as Task), tasks: [result] }
+                    : {}),
+                },
           };
         } catch (error) {
           return {
@@ -134,14 +151,36 @@ export function mcp(
         },
       );
     }
-  const panel = delegationPanel(nativeHtmlPath, (conversationId) =>
-    c.store
-      .all(owner)
-      .filter((t) => !conversationId || t.conversation_id === conversationId),
+  const panel = delegationPanel(
+    nativeHtmlPath,
+    (conversationId) =>
+      c.store
+        .all(owner)
+        .filter((t) => !conversationId || t.conversation_id === conversationId),
+    (args) => resolvePanelContext(c, owner, args),
   );
-  server.registerTool(panel.name, panel.tool, (args, ctx) =>
-    panel.open(withConversation(panel.name, args, ctx.mcpReq._meta)),
-  );
+  server.registerTool(panel.name, panel.tool, async (args, ctx) => {
+    try {
+      return await panel.open(
+        withConversation(panel.name, args, ctx.mcpReq._meta),
+      );
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: "text" as const, text: String(error) }],
+      };
+    }
+  });
   server.registerResource(panel.title, panel.uri, panel.resource, panel.read);
+  server.registerTool(panel.global.name, panel.global.tool, async () => {
+    try {
+      return await panel.global.open();
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: "text" as const, text: String(error) }],
+      };
+    }
+  });
   return server;
 }
