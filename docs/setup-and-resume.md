@@ -71,7 +71,7 @@ Optional orientation: `npm run demo` starts fixture workers with a sample reposi
 
 ### A2. Make Claude authentication available
 
-If a supported native Claude Code login is already available on the service host, try it first; an `ANTHROPIC_API_KEY` is not mandatory when supported native login is available. Otherwise, configure supported Claude authentication as described in the README before starting the service.
+The service uses whatever Claude Code credentials are configured on the service host. If none are configured, set them up as described in the README before starting the service.
 
 Keep authentication in the service account/environment. Do not place provider credentials in task instructions, MCP tool arguments, browser code, this guide, or source files. The assistant should inspect authentication availability without printing credential values or account details.
 

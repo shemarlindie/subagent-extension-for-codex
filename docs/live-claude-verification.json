@@ -1,7 +1,8 @@
 {
   "verified_at": "2026-09-30",
   "provider": "claude",
-  "authentication": "Native CLI reported logged-in; no credentials or account details recorded",
+  "authentication": "Configured Claude Code credentials; no credentials or account details recorded",
+  "configuration": "Recorded with Claude Code settings disabled and strict MCP configuration. Since October 3, 2026, tasks load Claude Code settings, MCP servers and skills, so ambient_mcp_tools_present describes the earlier configuration only.",
   "tests": {
     "read": {
       "task_id": "task_2a5e7fb9-54c5-4814-bd58-6a1368eb4bff",
