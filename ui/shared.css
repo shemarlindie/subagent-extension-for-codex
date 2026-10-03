@@ -238,6 +238,41 @@ form .select-trigger {
   }
 }
 
+.activity-timeline {
+  position: relative;
+}
+.activity-viewport {
+  max-height: min(65dvh, 640px);
+  overflow-y: auto;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
+  padding: 0 8px 4px 2px;
+}
+.activity-viewport:focus-visible {
+  outline: 2px solid var(--accent, #8caeeb);
+  outline-offset: 2px;
+}
+.activity-scroll-top {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line, #263348);
+  border-radius: 50%;
+  background: var(--surface, #172334);
+  color: var(--text, var(--fg, #dce7f5));
+  box-shadow: 0 4px 12px #0003;
+  cursor: pointer;
+}
+.activity-scroll-top:focus-visible {
+  outline: 2px solid var(--accent, #8caeeb);
+  outline-offset: 2px;
+}
 .activity-current {
   display: flex;
   align-items: center;

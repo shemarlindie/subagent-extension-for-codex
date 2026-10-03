@@ -7,6 +7,7 @@ import {
   type ActivityGroup,
 } from "../core/activity-timeline";
 import { EVENT_TAIL_SIZE } from "../core/event-history";
+import { useActivityScroll } from "./use-activity-scroll";
 import {
   ActivityContent,
   ActivityValue,
@@ -254,6 +255,7 @@ function GroupCard({ group }: { group: ActivityGroup }) {
           : undefined;
   return (
     <article
+      data-activity-id={group.id}
       className={`activity-group activity-${group.kind}${group.state === "failed" ? " activity-error" : ""}`}
     >
       <div className="activity-group-heading">
@@ -328,25 +330,61 @@ function GroupCard({ group }: { group: ActivityGroup }) {
   );
 }
 export function EventList({ events, task }: { events: Event[]; task?: Task }) {
-  const groups = groupActivity(events),
+  const groups = groupActivity(events).sort(
+      (a, b) => b.events.at(-1)!.id - a.events.at(-1)!.id,
+    ),
     current = currentActivityStatus(events, task);
+  const { viewportRef, pinned, onScroll, scrollToTop } =
+    useActivityScroll(events);
   return (
     <section className="activity-timeline" aria-label="Worker activity">
-      <div className="activity-current" role="status">
-        <span
-          className={`activity-dot activity-dot-${current.state}`}
-          aria-hidden="true"
-        />
-        <span>{current.text}</span>
+      <div
+        ref={viewportRef}
+        className="activity-viewport"
+        onScroll={onScroll}
+        tabIndex={0}
+        role="region"
+        aria-label="Activity history"
+      >
+        <div className="activity-current" role="status">
+          <span
+            className={`activity-dot activity-dot-${current.state}`}
+            aria-hidden="true"
+          />
+          <span>{current.text}</span>
+        </div>
+        {events.length === EVENT_TAIL_SIZE && (
+          <p className="help">
+            Showing the most recent {EVENT_TAIL_SIZE} events.
+          </p>
+        )}
+        {groups.map((group) => (
+          <GroupCard key={group.id} group={group} />
+        ))}
       </div>
-      {events.length === EVENT_TAIL_SIZE && (
-        <p className="help">
-          Showing the most recent {EVENT_TAIL_SIZE} events.
-        </p>
+      {!pinned && (
+        <button
+          type="button"
+          className="activity-scroll-top"
+          aria-label="Scroll to latest activity"
+          title="Scroll to latest activity"
+          onClick={scrollToTop}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 12 6-6 6 6M12 6v12" />
+          </svg>
+        </button>
       )}
-      {groups.map((group) => (
-        <GroupCard key={group.id} group={group} />
-      ))}
     </section>
   );
 }

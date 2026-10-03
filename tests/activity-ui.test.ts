@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import { JSDOM } from "jsdom";
 import type { Event as ActivityEvent } from "../ui/core/types";
 
@@ -56,6 +56,289 @@ function markup(events: ActivityEvent[]) {
   const html = renderToStaticMarkup(createElement(EventList, { events }));
   return new JSDOM(html).window.document;
 }
+
+// Model real document flow: each activity occupies 100px after the status row.
+// Reordering or prepending DOM nodes changes their measured position automatically.
+function mockActivityGeometry(t: TestContext) {
+  t.mock.method(
+    HTMLElement.prototype,
+    "getBoundingClientRect",
+    function (this: HTMLElement) {
+      let top = 100;
+      let height = 300;
+      if (this.matches("[data-activity-id]")) {
+        const viewport = this.closest(".activity-viewport") as HTMLElement;
+        const groups = Array.from(
+          viewport.querySelectorAll("[data-activity-id]"),
+        );
+        top += 40 + groups.indexOf(this) * 100 - viewport.scrollTop;
+        height = 100;
+      }
+      return {
+        top,
+        bottom: top + height,
+        left: 0,
+        right: 400,
+        width: 400,
+        height,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      };
+    },
+  );
+}
+
+function activityMessages(prefix: string, count = 4) {
+  return Array.from({ length: count }, (_, i) =>
+    event(
+      "agent.message",
+      { text: `${prefix} message ${i}` },
+      `${prefix}-${i}`,
+    ),
+  );
+}
+
+test("latest group is first and fresh progress moves an older tool to the top without resetting inspection", (t) => {
+  t.after(cleanup);
+  const started = event(
+    "tool.started",
+    { id: "latest-order-read", name: "Read", input: { file_path: "a.ts" } },
+    "latest-order-start",
+  );
+  const newer = event(
+    "agent.message",
+    { text: "Newer message" },
+    "latest-order-message",
+  );
+  const view = render(
+    createElement(GroupedEventList, { events: [started, newer] }),
+  );
+  const groups = () =>
+    Array.from(view.container.querySelectorAll(".activity-group"));
+  assert.match(groups()[0].textContent ?? "", /Newer message/);
+  const tool = groups()[1];
+  const debug = view.getByRole("button", { name: "Debug activity: Read" });
+  fireEvent.click(debug);
+  const raw = tool.querySelector("details.activity-raw") as HTMLDetailsElement;
+  act(() => {
+    raw.open = true;
+    raw.dispatchEvent(new dom.window.Event("toggle"));
+  });
+  const progress = event(
+    "claude.activity",
+    {
+      type: "tool_progress",
+      tool_use_id: "latest-order-read",
+      tool_name: "Read",
+      elapsed_time_seconds: 2,
+    },
+    "latest-order-progress",
+  );
+  view.rerender(
+    createElement(GroupedEventList, { events: [started, newer, progress] }),
+  );
+  assert.equal(groups()[0], tool, "The updated group moves without remounting");
+  assert.ok(
+    Array.from(tool.querySelectorAll("details.activity-raw")).includes(raw),
+    "The original response inspector survives newly prepended debug events",
+  );
+  assert.equal(raw.open, true);
+  assert.ok(raw.querySelector("pre"));
+  assert.equal(debug.getAttribute("aria-expanded"), "true");
+});
+
+test("pinned updates stay at zero and manually returning within the 48px buffer repins", (t) => {
+  t.after(cleanup);
+  mockActivityGeometry(t);
+  const initial = activityMessages("pin-buffer");
+  const view = render(createElement(GroupedEventList, { events: initial }));
+  const viewport = view.getByRole("region", { name: "Activity history" });
+  const fab = () =>
+    view.queryByRole("button", { name: "Scroll to latest activity" });
+  assert.equal(viewport.scrollTop, 0);
+  assert.equal(fab(), null);
+  viewport.scrollTop = 30;
+  const next = [...initial, ...activityMessages("pin-buffer-next", 1)];
+  view.rerender(createElement(GroupedEventList, { events: next }));
+  assert.equal(
+    viewport.scrollTop,
+    0,
+    "Pinned updates undo browser scroll anchoring",
+  );
+  viewport.scrollTop = 49;
+  fireEvent.scroll(viewport);
+  assert.ok(fab(), "Beyond the buffer, the reader controls scrolling");
+  viewport.scrollTop = 48;
+  fireEvent.scroll(viewport);
+  assert.equal(fab(), null, "The edge of the buffer repins");
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: [...next, ...activityMessages("pin-buffer-last", 1)],
+    }),
+  );
+  assert.equal(viewport.scrollTop, 0);
+});
+
+test("scroll to latest FAB returns to zero and keeps subsequent activity pinned", (t) => {
+  t.after(cleanup);
+  mockActivityGeometry(t);
+  const initial = activityMessages("fab-pin");
+  const view = render(createElement(GroupedEventList, { events: initial }));
+  const viewport = view.getByRole("region", { name: "Activity history" });
+  viewport.scrollTop = 240;
+  fireEvent.scroll(viewport);
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to latest activity" }),
+  );
+  assert.equal(viewport.scrollTop, 0);
+  assert.ok(
+    document.activeElement === viewport,
+    "Focus returns to the activity region when the FAB disappears",
+  );
+  assert.equal(
+    view.queryByRole("button", { name: "Scroll to latest activity" }),
+    null,
+  );
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: [...initial, ...activityMessages("fab-pin-next", 1)],
+    }),
+  );
+  assert.equal(viewport.scrollTop, 0);
+});
+
+test("new activity preserves the visible reader anchor while unpinned", (t) => {
+  t.after(cleanup);
+  mockActivityGeometry(t);
+  const initial = activityMessages("reader-anchor");
+  const view = render(createElement(GroupedEventList, { events: initial }));
+  const viewport = view.getByRole("region", { name: "Activity history" });
+  viewport.scrollTop = 175;
+  fireEvent.scroll(viewport);
+  const anchor =
+    view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
+  const before = anchor.getBoundingClientRect().top;
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: [...initial, ...activityMessages("reader-anchor-next", 1)],
+    }),
+  );
+  assert.equal(anchor.getBoundingClientRect().top, before);
+  assert.equal(
+    viewport.scrollTop,
+    275,
+    "Compensate for the prepended 100px group",
+  );
+  assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
+});
+
+test("new groups animate in and movement animations respect reduced motion", (t) => {
+  t.after(cleanup);
+  mockActivityGeometry(t);
+  const previousAnimate = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "animate",
+  );
+  const previousMatchMedia = Object.getOwnPropertyDescriptor(
+    window,
+    "matchMedia",
+  );
+  let reducedMotion = false;
+  let cancellations = 0;
+  const calls: {
+    element: HTMLElement;
+    frames: Keyframe[];
+    options: KeyframeAnimationOptions;
+  }[] = [];
+  Object.defineProperty(HTMLElement.prototype, "animate", {
+    configurable: true,
+    value(
+      this: HTMLElement,
+      frames: Keyframe[],
+      options: KeyframeAnimationOptions,
+    ) {
+      calls.push({ element: this, frames, options });
+      return {
+        cancel() {
+          cancellations++;
+        },
+      };
+    },
+  });
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({ matches: reducedMotion }),
+  });
+  t.after(() => {
+    if (previousAnimate)
+      Object.defineProperty(HTMLElement.prototype, "animate", previousAnimate);
+    else delete (HTMLElement.prototype as any).animate;
+    if (previousMatchMedia)
+      Object.defineProperty(window, "matchMedia", previousMatchMedia);
+    else delete (window as any).matchMedia;
+  });
+  const initial = activityMessages("animation", 2);
+  const view = render(createElement(GroupedEventList, { events: [] }));
+  const viewport = view.getByRole("region", { name: "Activity history" });
+  Object.defineProperty(viewport, "clientHeight", {
+    configurable: true,
+    value: 300,
+  });
+  view.rerender(createElement(GroupedEventList, { events: initial }));
+  assert.equal(
+    calls.length,
+    2,
+    "First activity arriving in an empty feed animates",
+  );
+  calls.length = 0;
+  viewport.scrollTop = 30;
+  fireEvent.scroll(viewport);
+  const next = [...initial, ...activityMessages("animation-next", 1)];
+  view.rerender(createElement(GroupedEventList, { events: next }));
+  const newest = view.container.querySelector(".activity-group");
+  const entrance = calls.find((call) => call.element === newest);
+  assert.ok(
+    entrance,
+    "A newly inserted visible group receives an entrance animation",
+  );
+  assert.equal(entrance.frames[0].opacity, 0);
+  assert.equal(entrance.frames[1].opacity, 1);
+  assert.equal(entrance.frames[1].transform, "translateY(0)");
+  assert.ok(Number(entrance.options.duration) > 0);
+  const retainedMovement = calls.find((call) => call.element !== newest);
+  assert.ok(
+    retainedMovement,
+    "Existing visible groups animate to their new positions",
+  );
+  assert.equal(retainedMovement.frames[0].transform, "translateY(-130px)");
+  assert.equal(retainedMovement.frames[0].opacity, 1);
+  const cancelledBeforeScroll = cancellations;
+  fireEvent.scroll(viewport);
+  assert.equal(
+    cancellations,
+    cancelledBeforeScroll,
+    "Restoring the top must not cancel new animations",
+  );
+  viewport.scrollTop = 80;
+  fireEvent.scroll(viewport);
+  assert.ok(
+    cancellations > cancelledBeforeScroll,
+    "Manual scrolling can interrupt movement animations",
+  );
+  reducedMotion = true;
+  const callCount = calls.length;
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: [...next, ...activityMessages("animation-reduced", 1)],
+    }),
+  );
+  assert.equal(
+    calls.length,
+    callCount,
+    "Reduced motion suppresses entrance and movement animations",
+  );
+});
 
 const families = [
   ["system", "init", "Claude connected"],
