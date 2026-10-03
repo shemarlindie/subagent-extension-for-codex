@@ -26,9 +26,19 @@ npm start
 
 Run the command from the project root. Settings come from the shell or an optional `.env`; see [Local development](docs/development.md). Add target repositories with **Add project**, or let a chat's project be added when a task starts from it. A target must be a Git repository root with at least one commit. Use a committed repository or the disposable demo fixture. By default, a task runs directly in the approved repository with `workspace_strategy: "current_repo"` and `revision: "HEAD"`, including staged, unstaged, and untracked files. Set `workspace_strategy: "worktree"` to start from a specified **committed revision** in a detached worktree; the service never automatically merges worktree changes. The browser and host delegation forms offer the same Workspace choice. Review profiles remain read-only; write profiles edit the current checkout directly, so preserve unrelated user changes. Choose a worktree for isolated or parallel edits. Current-repo tasks receive a starting diff for review, and their diff artifacts include pre-existing changes as well as any worker edits. The checkout stays live during execution; changes made by another task or by the user can also appear in those diffs.
 
-The service writes a login token to `<data-directory>/admin-token` with owner-only permissions. Use it to sign into the local console. The token stays server-side for MCP proxy requests; browsers receive an HttpOnly session cookie valid for one hour. Restarting invalidates browser sessions. Data and worktrees persist.
-
 Stop the fixture service before starting Claude on the same port. Provider availability is explicit: fixture workers are disabled by default.
+
+### Admin token
+
+The service listens only on loopback, but loopback is not private: other local processes and users can connect to the port, and any web page open in your browser can send it requests. Because the API starts workers that edit repositories and run commands, every API request must present a secret that only your account can read.
+
+On first start, the service generates a random token and writes it to `<data-directory>/admin-token` with owner-only permissions. Each start re-applies owner-only permissions to that file and the data directory. `CODEX_SUBAGENT_EXTENSION_TOKEN` overrides it and must be at least 32 characters unless `CODEX_SUBAGENT_EXTENSION_PROVIDER=fixture`. The token persists across restarts, so MCP configuration keeps working. It is used in three places:
+
+- **Console login.** Sign in once with the token; the browser receives an HttpOnly session cookie valid for one hour and keeps only that cookie, not the token. Restarting the service invalidates browser sessions; data and worktrees persist.
+- **Stdio MCP proxy.** `dist/stdio.js` reads the file and adds the token to each forwarded request, so the MCP client never handles it.
+- **Panel dev host.** The Vite proxy adds the token server-side; see [Local development](docs/development.md#panel-dev-host).
+
+Treat the token as a credential: do not paste it into a chat or commit it.
 
 ## Connect Codex
 
@@ -42,11 +52,11 @@ args = ["<checkout-root>/dist/stdio.js"]
 
 The proxy and service share the per-user data default. If you set `CODEX_SUBAGENT_EXTENSION_DATA` for the service, set the same absolute value in `[mcp_servers.codex_subagent_extension.env]`.
 
-The proxy reads the service token locally and forwards requests to the running service. It does not create another scheduler. `CODEX_SUBAGENT_EXTENSION_URL` changes its loopback URL. The portable plugin manifest, MCP configuration, and delegation skill are also included; build the package before configuring it. The service starts when the host launches the packaged stdio server; installation alone does not execute it.
+The proxy forwards requests to the running service using its [admin token](#admin-token); it does not create another scheduler. `CODEX_SUBAGENT_EXTENSION_URL` changes its loopback URL. The portable plugin manifest, MCP configuration, and delegation skill are also included; build the package before configuring it. The service starts when the host launches the packaged stdio server; installation alone does not execute it.
 
 For MCP App hosts, connect to the authenticated HTTP endpoint `/mcp`. The delegation panel uses the MCP resource `ui://codex-subagent-extension/app-v6` over the authenticated MCP bridge, with empty network allowlists. The standalone web console retains its existing routes. The panel uses portable MCP Apps calls; Codex-specific sidebar behavior remains subject to host verification.
 
-The standalone web console uses token login, HttpOnly session cookies, HTTP tools and live SSE. The stdio proxy provides tools and the separate `app-v6` delegation panel through the portable MCP Apps bridge. HTTP and stdio share the panel's schemas, resources, and separate global/thread openers. Panel HTML is read from `dist` on each resource request, so rebuilt UI changes can appear without a service restart. Server code changes require a service restart; reload the MCP connection to discover changed opener metadata and resource URIs. Actual panel placement is controlled by the host. Existing task tools remain available. Installing the plugin does not register a remote ChatGPT connection or deploy a production service.
+The standalone web console uses [token login](#admin-token), HTTP tools and live SSE. The stdio proxy provides tools and the separate `app-v6` delegation panel through the portable MCP Apps bridge. HTTP and stdio share the panel's schemas, resources, and separate global/thread openers. Panel HTML is read from `dist` on each resource request, so rebuilt UI changes can appear without a service restart. Server code changes require a service restart; reload the MCP connection to discover changed opener metadata and resource URIs. Actual panel placement is controlled by the host. Existing task tools remain available. Installing the plugin does not register a remote ChatGPT connection or deploy a production service.
 
 ## Supported workflows
 
@@ -73,7 +83,7 @@ A worktree provides code separation, not operating-system containment. With defa
 | `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` | `[]`                                      | JSON array of explicitly approved parent directory paths                                                                       |
 | `CODEX_SUBAGENT_EXTENSION_URL`           | discovered local service or port 4317     | Proxy endpoint override; explicit URLs require an already running service                                                      |
 | `CODEX_SUBAGENT_EXTENSION_CONCURRENCY`   | `3`                                       | Maximum concurrently active tasks (1–20)                                                                                       |
-| `CODEX_SUBAGENT_EXTENSION_TOKEN`         | generated locally                         | Server-side token override                                                                                                     |
+| `CODEX_SUBAGENT_EXTENSION_TOKEN`         | generated locally                         | Server-side token override; at least 32 characters except in fixture mode                                                      |
 | `PORT`                                   | `4317`                                    | Loopback listener port                                                                                                         |
 | `CODEX_SUBAGENT_EXTENSION_ORIGIN`        | `http://127.0.0.1:4317`                   | Standalone service origin and CORS allowlist                                                                                   |
 | `CODEX_SUBAGENT_EXTENSION_FIXTURE`       | disabled                                  | Set `1` to add fixture workers for testing                                                                                     |

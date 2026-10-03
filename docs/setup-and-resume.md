@@ -101,7 +101,7 @@ Open `http://127.0.0.1:4317` and enter that file's contents in the login form. O
 pbcopy < .codex-subagent-extension/live/admin-token
 ```
 
-Treat this as a service credential. Do not paste it into a chat. Browser sessions last one hour and are invalidated by a service restart; the token, database, and worktrees persist. A second service cannot own the same data directory.
+Treat this as a service credential and do not paste it into a chat; the README's [Admin token](../README.md#admin-token) section explains why it exists and how sessions behave. A second service cannot own the same data directory.
 
 From a second terminal, the non-sensitive health check is:
 
@@ -125,7 +125,7 @@ CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension/live"
 CODEX_SUBAGENT_EXTENSION_URL = "http://127.0.0.1:4317"
 ```
 
-If the desktop client cannot find `node`, run `command -v node` in your terminal and use the resulting absolute executable path as `command`. The data path must match the running service. The proxy reads `admin-token` locally and forwards requests to that one service; it does not launch another scheduler. Do not add provider keys to this MCP configuration.
+If the desktop client cannot find `node`, run `command -v node` in your terminal and use the resulting absolute executable path as `command`. The data path must match the running service, because the proxy authenticates with that directory's `admin-token`. Do not add provider keys to this MCP configuration.
 
 Reload/restart the Codex client or MCP connection as required by your installed client, then open a chat that can access the configured tools. Use this discovery prompt:
 

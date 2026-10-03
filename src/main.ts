@@ -1,5 +1,5 @@
 import { resolve, join } from "node:path";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { Store } from "./core/store.js";
 import { Control } from "./core/control.js";
@@ -11,19 +11,14 @@ import { Events } from "./events/service.js";
 import { Projects } from "./core/projects.js";
 import { dataDirectory, installRoot } from "./service/runtime.js";
 import { lease } from "./service/lease.js";
+import { adminToken } from "./service/token.js";
 const data = dataDirectory();
 mkdirSync(data, { recursive: true, mode: 0o700 });
+// mkdirSync's mode applies only on creation; tighten an existing directory too.
+chmodSync(data, 0o700);
 const release = lease(data);
 process.once("exit", release);
-const tokenPath = join(data, "admin-token");
-let token = process.env.CODEX_SUBAGENT_EXTENSION_TOKEN;
-try {
-  token ??= readFileSync(tokenPath, "utf8").trim();
-} catch {}
-if (!token) {
-  token = randomBytes(32).toString("base64url");
-  writeFileSync(tokenPath, token, { mode: 0o600 });
-}
+const token = adminToken(data);
 const store = new Store(join(data, "console.sqlite"));
 const providers = configuredProviders(store, data);
 const concurrency = Number(
@@ -93,8 +88,12 @@ try {
   await c.close();
   throw error;
 }
+const tokenSource =
+  process.env.CODEX_SUBAGENT_EXTENSION_TOKEN === undefined
+    ? `file: ${join(data, "admin-token")}`
+    : "from CODEX_SUBAGENT_EXTENSION_TOKEN";
 console.error(
-  `Codex subagent extension service: ${origin}\nLogin token file: ${tokenPath}`,
+  `Codex subagent extension service: ${origin}\nLogin token ${tokenSource}`,
 );
 const prune = setInterval(() => auth.prune(), 60000);
 let closing: Promise<void> | undefined;
