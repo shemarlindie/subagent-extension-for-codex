@@ -36,7 +36,6 @@ export function claudeEnvironment(
     "CLAUDE_CONFIG_DIR",
     "ANTHROPIC_API_KEY",
     "ANTHROPIC_AUTH_TOKEN",
-    "CLAUDE_CODE_OAUTH_TOKEN",
   ];
   return Object.fromEntries(
     allowed.flatMap((name) =>
@@ -93,6 +92,12 @@ const output = z.strictObject({
   recommendations: z.array(z.string()),
 });
 const readTools = ["Read", "Glob", "Grep"];
+/** Tools without workspace paths that run after approval; entries ending in `*` match by prefix. */
+const approvalTools = ["Bash", "Skill", "mcp__*"];
+const approvalTool = (tool: string) =>
+  approvalTools.some((entry) =>
+    entry.endsWith("*") ? tool.startsWith(entry.slice(0, -1)) : tool === entry,
+  );
 export class ClaudeAgentProvider implements Provider {
   id = "claude";
   capabilities = {
@@ -143,7 +148,9 @@ export class ClaudeAgentProvider implements Provider {
         env: claudeEnvironment(),
         abortController,
         persistSession: false,
-        settingSources: [],
+        settingSources: ["user", "project", "local"],
+        // Model listing must not run the user's settings-file hooks on every refresh.
+        settings: { disableAllHooks: true },
         strictMcpConfig: true,
         mcpServers: {},
         tools: [],
@@ -200,9 +207,7 @@ export class ClaudeAgentProvider implements Provider {
       abortController,
       persistSession: true,
       resume: c.task.session_id,
-      settingSources: [],
-      strictMcpConfig: true,
-      mcpServers: {},
+      settingSources: ["user", "project", "local"],
       permissionMode: nativeMode,
       ...(nativeMode === "bypassPermissions"
         ? { allowDangerouslySkipPermissions: true }
@@ -211,9 +216,10 @@ export class ClaudeAgentProvider implements Provider {
         ...readTools,
         ...(readOnly ? [] : ["Edit", "Write", "Bash"]),
         "AskUserQuestion",
+        "Skill",
       ],
       allowedTools: [],
-      disallowedTools: ["Agent", "Task", "Skill"],
+      disallowedTools: ["Agent", "Task"],
       ...(c.task.budget.max_cost_usd === null
         ? {}
         : {
@@ -245,7 +251,9 @@ export class ClaudeAgentProvider implements Provider {
                   return output.strict().safeParse(params).success
                     ? {}
                     : deny("Invalid structured report");
-                if (tool === "Bash")
+                // Skills are allowed in every profile; the tools they call are checked individually.
+                if (tool === "Skill") return {};
+                if (approvalTool(tool))
                   return readOnly ? deny("Read-only worker profile") : {};
                 if (
                   !readTools.includes(tool) &&
@@ -294,13 +302,19 @@ export class ClaudeAgentProvider implements Provider {
             ? { behavior: "allow", updatedInput: { ...input, ...answer.input } }
             : { behavior: "deny", message: answer.message ?? "User declined" };
         }
-        if (readOnly && !readTools.includes(tool))
+        if (readOnly && !readTools.includes(tool) && tool !== "Skill")
           return { behavior: "deny", message: "Read-only worker profile" };
-        if (tool === "Bash") {
+        // Calls not already approved by settings or the permission mode ask the task's approver.
+        if (approvalTool(tool)) {
           const answer = await c.input(tool, input, signal);
           return answer.approved
             ? { behavior: "allow", updatedInput: input }
-            : { behavior: "deny", message: answer.message ?? "Command denied" };
+            : {
+                behavior: "deny",
+                message:
+                  answer.message ??
+                  (tool === "Bash" ? "Command denied" : "Tool call denied"),
+              };
         }
         if (!readTools.includes(tool) && !["Write", "Edit"].includes(tool))
           return { behavior: "deny", message: "Tool not permitted" };

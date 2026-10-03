@@ -92,7 +92,8 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   assert.equal(first, second);
   assert.equal(launches, 1);
   assert.deepEqual(options!.tools, []);
-  assert.deepEqual(options!.settingSources, []);
+  assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
+  assert.deepEqual(options!.settings, { disableAllHooks: true });
   assert.equal(options!.persistSession, false);
   assert.equal(options!.strictMcpConfig, true);
   const next = discoveryPrompt![Symbol.asyncIterator]().next();
@@ -195,9 +196,9 @@ test("Claude SDK query uses native harness, resume, structured output, remaining
   assert.ok(
     options!.tools instanceof Array && !options!.tools.includes("Bash"),
   );
-  assert.deepEqual(options!.settingSources, []);
-  assert.equal(options!.strictMcpConfig, true);
-  assert.deepEqual(options!.mcpServers, {});
+  assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
+  assert.equal(options!.strictMcpConfig, undefined);
+  assert.ok(!options!.disallowedTools!.includes("Skill"));
   assert.equal(options!.permissionMode, "plan");
   assert.equal(options!.allowDangerouslySkipPermissions, undefined);
   assert.ok(sessions.length);
@@ -256,6 +257,8 @@ test("Claude mandatory hook denies outside paths, symlink escapes, Git metadata 
   assert.equal(await check("Bash", { command: "pwd" }), "deny");
   assert.equal(await check("Write", { file_path: "a.ts" }), "deny");
   assert.equal(await check("Agent", {}), "deny");
+  assert.equal(await check("mcp__server__tool", {}), "deny");
+  assert.equal(await check("Skill", { skill: "review" }), undefined);
   assert.equal(await check("Read", { file_path: "a.ts" }), undefined);
 });
 test("Claude forwards the selected model and effort and omits inherited native settings", async () => {
@@ -326,6 +329,14 @@ test("write-profile shell commands require human decision and cannot use edited 
   });
   assert.equal(approved.behavior, "allow");
   assert.deepEqual((approved as any).updatedInput, command);
+  // MCP tools follow the same approval routing as shell commands.
+  const tool = { query: "status" };
+  const mcp = await options!.canUseTool!("mcp__server__tool", tool, {
+    signal: c.signal,
+    toolUseID: "tool",
+  });
+  assert.equal(mcp.behavior, "allow");
+  assert.deepEqual((mcp as any).updatedInput, tool);
 });
 test("Claude forwards each native permission mode and reserves bypass opt-in for bypassPermissions", async () => {
   const { c, workspace } = await context();
@@ -530,6 +541,12 @@ test("Claude runtime environment excludes service and other-provider credentials
     NODE_OPTIONS: "--require /untrusted.js",
     HTTPS_PROXY: "http://synthetic-proxy-credential@example.invalid",
   });
+  assert.deepEqual(Object.keys(env).sort(), [
+    "ANTHROPIC_API_KEY",
+    "CLAUDE_CONFIG_DIR",
+    "HOME",
+    "PATH",
+  ]);
   let spawned: Record<string, string | undefined> | undefined;
   await assert.rejects(async () => {
     const stream = query({
