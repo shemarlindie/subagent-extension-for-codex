@@ -335,18 +335,22 @@ export class Control {
       t.session_owner = this.ownerWorker;
       this.store.save(t);
       this.store.event(t, "task.started", { attempt: t.attempt });
-      const remaining = t.budget.max_runtime_minutes * 60000 - t.runtime_ms;
+      const remaining =
+        t.budget.max_runtime_minutes === null
+          ? Infinity
+          : t.budget.max_runtime_minutes * 60000 - t.runtime_ms;
       if (remaining <= 0) throw new Error("Runtime budget exhausted");
       if (
         t.budget.max_cost_usd !== null &&
         (t.cost_usd ?? 0) >= t.budget.max_cost_usd
       )
         throw new Error("Cost budget exhausted");
-      timer = setTimeout(() => {
-        t.status = "failed";
-        t.error = "Runtime budget exhausted";
-        a.abort.abort(new Error(t.error));
-      }, remaining);
+      if (remaining !== Infinity)
+        timer = setTimeout(() => {
+          t.status = "failed";
+          t.error = "Runtime budget exhausted";
+          a.abort.abort(new Error(t.error));
+        }, remaining);
       const provider = this.providers.get(t.provider)!;
       const deps = t.depends_on.map((id) => this.store.get(id, t.owner));
       const workspaceContext =

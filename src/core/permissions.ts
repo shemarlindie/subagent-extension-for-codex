@@ -42,7 +42,7 @@ export const claudeOverrideDefaults: ClaudeOverrides = {
 };
 export const claudeOverrideLabels: Record<string, Record<string, string>> = {
   claude_sandbox: {
-    user_config: "Your Claude settings",
+    user_config: "Your Claude Code settings",
     extension: "Extension sandbox",
     extension_locked: "Extension sandbox with locked network",
   },
@@ -119,7 +119,7 @@ export function resolveClaudePermission(
     return { mode: "plan" as const, source: "task_profile" as const };
   return { mode: "inherit" as const, source: "user_config" as const };
 }
-/** Whether a model-selected mode could allow more than the user-approved baseline. "inherit" defers to Claude settings, so its authority is unknown. */
+/** Whether a model-selected mode could allow more than the user-approved baseline. "inherit" defers to Claude Code settings, so its authority is unknown. */
 export function exceedsPermission(
   requested: z.infer<typeof permissionModeSchema>,
   baseline: z.infer<typeof permissionModeSchema>,
@@ -131,7 +131,7 @@ export function exceedsPermission(
     return permissionRank[requested] > permissionRank.dontAsk;
   return permissionRank[requested] > permissionRank[baseline];
 }
-/** The native mode a stored task runs with; undefined leaves it to the user's Claude settings. */
+/** The native mode a stored task runs with; undefined leaves it to the user's Claude Code settings. */
 export function taskClaudeMode(task: {
   permission_mode?: z.infer<typeof permissionModeSchema>;
   approval_mode?: string;

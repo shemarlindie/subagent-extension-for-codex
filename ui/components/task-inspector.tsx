@@ -45,7 +45,11 @@ export function TaskInspector() {
                 ? "current repository"
                 : "isolated worktree"}
             </span>
-            <span>{task.budget.max_runtime_minutes} min limit</span>
+            <span>
+              {task.budget.max_runtime_minutes === null
+                ? "No runtime limit"
+                : `${task.budget.max_runtime_minutes} min limit`}
+            </span>
             <span>
               {task.budget.max_cost_usd === null
                 ? "No cost limit"

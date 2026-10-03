@@ -322,7 +322,12 @@ export class Forms {
               title: "Runtime budget (minutes)",
               minimum: 0.01,
               maximum: 120,
-              default: defaults.budget.max_runtime_minutes,
+              default: defaults.budget.max_runtime_minutes ?? 20,
+            },
+            use_runtime_budget: {
+              type: "boolean",
+              title: "Apply a runtime limit",
+              default: defaults.budget.max_runtime_minutes !== null,
             },
             max_cost_usd: {
               type: "number",
@@ -578,7 +583,11 @@ export class Forms {
                 r.form.properties.workspace_strategy?.default,
               budget: {
                 ...((r.args.budget as object) ?? {}),
-                max_runtime_minutes: content.max_runtime_minutes,
+                max_runtime_minutes:
+                  (content.use_runtime_budget ??
+                    r.form.properties.use_runtime_budget?.default) === false
+                    ? null
+                    : content.max_runtime_minutes,
                 max_cost_usd:
                   (content.use_cost_budget ??
                     r.form.properties.use_cost_budget?.default) === false

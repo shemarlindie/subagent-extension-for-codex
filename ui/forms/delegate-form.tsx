@@ -41,7 +41,12 @@ export function DelegateForm({
       model: "",
       reasoning_effort: "default",
       worker: choices.includes(preferred) ? preferred : choices[0],
-      runtime: defaults.max_runtime_minutes,
+      runtimeMode:
+        defaults.use_runtime_budget === false ||
+        defaults.max_runtime_minutes === null
+          ? "none"
+          : "limited",
+      runtime: defaults.max_runtime_minutes ?? 20,
       costMode:
         defaults.use_cost_budget === false || defaults.max_cost_usd === null
           ? "none"
@@ -100,7 +105,8 @@ export function DelegateForm({
               context: values.context.trim() ? [values.context] : [],
               depends_on: values.deps,
               budget: {
-                max_runtime_minutes: values.runtime,
+                max_runtime_minutes:
+                  values.runtimeMode === "none" ? null : values.runtime,
                 max_cost_usd: values.costMode === "none" ? null : values.cost,
               },
             });

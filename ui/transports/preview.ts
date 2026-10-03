@@ -89,9 +89,10 @@ export class PreviewTransport implements Transport {
           default_provider: "claude",
           default_worker_profile: "reviewer",
           default_workspace_strategy: "current_repo",
-          max_runtime_minutes: 20,
           use_cost_budget: true,
           max_cost_usd: 5,
+          use_runtime_budget: true,
+          max_runtime_minutes: 20,
           ...Object.fromEntries(
             previewScopes.flatMap(([key]) => [
               [`${key}_model`, key === "claude_default" ? "sonnet" : ""],
@@ -117,12 +118,6 @@ export class PreviewTransport implements Transport {
               title: "Workspace strategy",
               enum: ["current_repo", "worktree"],
             },
-            max_runtime_minutes: {
-              type: "number",
-              title: "Default runtime budget (minutes)",
-              minimum: 0.01,
-              maximum: 120,
-            },
             use_cost_budget: {
               type: "boolean",
               title: "Apply a default cost limit",
@@ -132,6 +127,16 @@ export class PreviewTransport implements Transport {
               title: "Default cost budget (USD)",
               minimum: 0.01,
               maximum: 100,
+            },
+            use_runtime_budget: {
+              type: "boolean",
+              title: "Apply a default runtime limit",
+            },
+            max_runtime_minutes: {
+              type: "number",
+              title: "Default runtime budget (minutes)",
+              minimum: 0.01,
+              maximum: 120,
             },
             ...Object.fromEntries(
               previewScopes.flatMap(([key, title]) => [
@@ -163,9 +168,10 @@ export class PreviewTransport implements Transport {
               "default_provider",
               "default_worker_profile",
               "default_workspace_strategy",
-              "max_runtime_minutes",
               "use_cost_budget",
               "max_cost_usd",
+              "use_runtime_budget",
+              "max_runtime_minutes",
             ].map((property) => ({ kind: "property", property })),
           },
           ...previewScopes.map(([key, title]) => ({

@@ -98,7 +98,7 @@ const valuesSchema = z.strictObject({
   claude_sandbox: claudeSandboxSchema.meta({
     title: "Claude Bash sandbox",
     description:
-      "user_config applies the sandbox settings from your Claude Code configuration. extension adds the extension's sandbox: workspace-only writes, no home or sibling reads, no network. extension_locked also ignores network domains allowed by Claude settings files.",
+      "user_config applies the sandbox settings from your Claude Code configuration. extension adds the extension's sandbox: workspace-only writes, no home or sibling reads, no network. extension_locked also ignores network domains allowed by Claude Code settings files.",
   }),
   claude_environment: claudeEnvironmentSchema.meta({
     title: "Claude environment",
@@ -139,11 +139,9 @@ const valuesSchema = z.strictObject({
   default_workspace_strategy: z
     .enum(["worktree", "current_repo"])
     .meta({ title: "Workspace strategy" }),
-  max_runtime_minutes: z
-    .number()
-    .positive()
-    .max(120)
-    .meta({ title: "Default runtime budget (minutes)" }),
+  max_runtime_minutes: z.number().positive().max(120).nullable().meta({
+    title: "Default runtime budget (minutes; null means no limit)",
+  }),
   max_cost_usd: z
     .number()
     .positive()
@@ -156,9 +154,18 @@ const costAmount = z
   .positive()
   .max(100)
   .meta({ title: "Default cost budget (USD)" });
+const runtimeAmount = z
+  .number()
+  .positive()
+  .max(120)
+  .meta({ title: "Default runtime budget (minutes)" });
 const hostValuesSchema = valuesSchema
   .omit({ default_approval_mode: true })
   .extend({
+    max_runtime_minutes: runtimeAmount,
+    use_runtime_budget: z
+      .boolean()
+      .meta({ title: "Apply a default runtime limit" }),
     max_cost_usd: costAmount,
     use_cost_budget: z.boolean().meta({ title: "Apply a default cost limit" }),
   });
@@ -194,6 +201,7 @@ const storedValuesSchema = valuesSchema.extend({
     >;
   }),
   cost_budget_amount: costAmount.optional(),
+  runtime_budget_amount: runtimeAmount.optional(),
 });
 // Use this project's Zod instance for transport schemas; the extension SDK may
 // install a different Zod version. Validate layout with its schema when reading.
@@ -218,7 +226,7 @@ export const settingsUpdateOutputSchema = z.object({
 });
 export const settingsUpdateSchema = z.strictObject({
   set: valuesSchema
-    .extend({ use_cost_budget: z.boolean() })
+    .extend({ use_cost_budget: z.boolean(), use_runtime_budget: z.boolean() })
     .partial()
     .refine((v) => Object.keys(v).length > 0, "Set at least one setting")
     .meta({ minProperties: 1 }),
@@ -278,7 +286,8 @@ export class Settings {
     return storedValuesSchema.parse(body);
   }
   values(owner: string): SettingsValues {
-    const { cost_budget_amount, ...values } = this.saved(owner);
+    const { cost_budget_amount, runtime_budget_amount, ...values } =
+      this.saved(owner);
     const available = this.providers();
     // A saved provider can disappear when the service configuration changes.
     if (!available.includes(values.default_provider))
@@ -288,10 +297,14 @@ export class Settings {
     return values;
   }
   private hostValues(owner: string) {
-    const { cost_budget_amount, ...values } = this.saved(owner);
+    const { cost_budget_amount, runtime_budget_amount, ...values } =
+      this.saved(owner);
     const { default_approval_mode, ...visible } = this.values(owner);
     return {
       ...visible,
+      use_runtime_budget: values.max_runtime_minutes !== null,
+      max_runtime_minutes:
+        values.max_runtime_minutes ?? runtime_budget_amount ?? 20,
       use_cost_budget: values.max_cost_usd !== null,
       max_cost_usd: values.max_cost_usd ?? cost_budget_amount ?? 5,
     };
@@ -389,9 +402,10 @@ export class Settings {
                 "auto_register_chat_project",
                 "claude_permission_mode",
                 "default_approval_decider",
-                "max_runtime_minutes",
                 "use_cost_budget",
                 "max_cost_usd",
+                "use_runtime_budget",
+                "max_runtime_minutes",
               ].map((property) => ({ kind: "property", property })),
               {
                 kind: "tool",
@@ -458,7 +472,7 @@ export class Settings {
       throw new Error("Provider is not enabled");
     // Synchronous read/merge/write preserves omitted fields across concurrent requests.
     const previous = this.saved(owner);
-    const { use_cost_budget, ...fields } = set;
+    const { use_cost_budget, use_runtime_budget, ...fields } = set;
     // Older clients can still send the retired policy setting. Translate explicit
     // updates without overriding a native mode supplied in the same request.
     if (fields.default_approval_mode !== undefined) {
@@ -484,11 +498,29 @@ export class Settings {
         : use_cost_budget
           ? amount
           : null;
+    const runtimeAmountValue =
+      fields.max_runtime_minutes ??
+      previous.max_runtime_minutes ??
+      previous.runtime_budget_amount ??
+      20;
+    const max_runtime_minutes =
+      use_runtime_budget === undefined
+        ? fields.max_runtime_minutes === undefined
+          ? previous.max_runtime_minutes
+          : fields.max_runtime_minutes === null ||
+              previous.max_runtime_minutes === null
+            ? null
+            : fields.max_runtime_minutes
+        : use_runtime_budget
+          ? runtimeAmountValue
+          : null;
     const values = storedValuesSchema.parse({
       ...previous,
       ...fields,
       max_cost_usd,
       cost_budget_amount: amount,
+      max_runtime_minutes,
+      runtime_budget_amount: runtimeAmountValue,
     });
     this.store.db
       .prepare(

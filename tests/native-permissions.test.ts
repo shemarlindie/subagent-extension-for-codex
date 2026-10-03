@@ -22,7 +22,7 @@ import {
   claudeOverrideDefaults,
 } from "../src/core/permissions.js";
 
-test("native permission resolution follows task, setting, then profile or the user's Claude settings", () => {
+test("native permission resolution follows task, setting, then profile or the user's Claude Code settings", () => {
   const task = { worker_profile: "implementer" };
   assert.deepEqual(resolveClaudePermission(task, "inherit"), {
     mode: "inherit",
@@ -46,7 +46,7 @@ test("native permission resolution follows task, setting, then profile or the us
   );
 });
 
-test("model-selected modes cannot exceed a known baseline or the unknown authority of Claude settings", () => {
+test("model-selected modes cannot exceed a known baseline or the unknown authority of Claude Code settings", () => {
   assert.equal(exceedsPermission("inherit", "inherit"), false);
   for (const mode of ["plan", "dontAsk"] as const)
     assert.equal(exceedsPermission(mode, "inherit"), false, mode);

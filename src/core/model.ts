@@ -97,7 +97,15 @@ export const startSchema = z.object({
     ),
   budget: z
     .object({
-      max_runtime_minutes: z.number().positive().max(120).default(20),
+      max_runtime_minutes: z
+        .number()
+        .positive()
+        .max(120)
+        .nullable()
+        .default(20)
+        .describe(
+          "Runtime budget in minutes. Explicit null disables the limit.",
+        ),
       max_cost_usd: z
         .number()
         .positive()

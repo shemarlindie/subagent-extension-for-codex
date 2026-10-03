@@ -131,7 +131,7 @@ async function setup(t: TestContext) {
   return { c, base, dir, rpc, post, request };
 }
 
-test("HTTP MCP inherits the user's Claude settings regardless of host or argument permission metadata", async (t) => {
+test("HTTP MCP inherits the user's Claude Code settings regardless of host or argument permission metadata", async (t) => {
   const { c, rpc, request } = await setup(t);
   const started = await rpc("start_agent_task", request, parentMeta);
   assert.equal(started.result.isError, undefined, JSON.stringify(started));
@@ -185,7 +185,7 @@ test("cookie-authenticated user tasks resolve inherit by profile and ignore perm
   }
 });
 
-test("host delegation forms resolve inherit to the user's Claude settings on submission", async (t) => {
+test("host delegation forms resolve inherit to the user's Claude Code settings on submission", async (t) => {
   const { c, dir, rpc, request } = await setup(t);
   const args = { ...request, permission_mode: "inherit" };
   const initial = await rpc("request_agent_task", args, parentMeta);

@@ -21,6 +21,7 @@ export type DelegateValues = {
   revision: string;
   workspace_strategy: "worktree" | "current_repo";
   context: string;
+  runtimeMode: string;
   runtime: number;
   costMode: string;
   cost: number;
@@ -147,81 +148,98 @@ export function BudgetFields({ workers }: { workers: Worker[] }) {
       control,
       formState: { errors },
     } = useFormContext<DelegateValues>(),
-    [worker, mode] = useWatch({ control, name: ["worker", "costMode"] });
+    [worker, mode, runtimeMode] = useWatch({
+      control,
+      name: ["worker", "costMode", "runtimeMode"],
+    });
   const provider = workers.find(
     (item) => item.provider === worker.split(":")[0],
   );
   return (
     <>
       <div className="two">
-        <div>
-          <Field id="runtime" label="Runtime limit · minutes">
-            <input
-              id="runtime"
-              type="number"
-              min="0"
-              max="120"
-              step="any"
-              required
-              aria-describedby="budget-error"
-              {...register("runtime", {
-                valueAsNumber: true,
-                validate: (value) =>
-                  (Number.isFinite(value) && value > 0 && value <= 120) ||
-                  "Runtime limit must be greater than zero and at most 120 minutes.",
-              })}
-            />
-          </Field>
-        </div>
-        <div>
-          <Field id="cost-mode" label="Cost limit">
-            <FormSelect
-              control={control}
-              name="costMode"
-              id="cost-mode"
-              label="Cost limit"
-              options={[
-                { value: "limited", label: "Apply cost budget" },
-                { value: "none", label: "No cost limit" },
-              ]}
-              rules={{
-                validate: (value) =>
-                  value === "none" ||
-                  Boolean(provider?.capabilities.cost_budget) ||
-                  "This worker cannot enforce a cost budget. Choose No cost limit.",
-              }}
-            />
-          </Field>
-        </div>
+        <Field id="cost-mode" label="Cost limit">
+          <FormSelect
+            control={control}
+            name="costMode"
+            id="cost-mode"
+            label="Cost limit"
+            options={[
+              { value: "limited", label: "Apply cost budget" },
+              { value: "none", label: "No cost limit" },
+            ]}
+            rules={{
+              validate: (value) =>
+                value === "none" ||
+                Boolean(provider?.capabilities.cost_budget) ||
+                "This worker cannot enforce a cost budget. Choose No cost limit.",
+            }}
+          />
+        </Field>
+        <Field id="cost" label="Cost budget · USD">
+          <input
+            id="cost"
+            type="number"
+            min="0.01"
+            max="100"
+            step="0.01"
+            disabled={mode === "none"}
+            required={mode !== "none"}
+            aria-describedby="cost-note budget-error"
+            {...register("cost", {
+              valueAsNumber: true,
+              validate: (value) =>
+                mode === "none" ||
+                (Number.isFinite(value) && value > 0 && value <= 100) ||
+                "Cost budget must be greater than zero and at most $100.",
+            })}
+          />
+        </Field>
       </div>
-      <Field id="cost" label="Cost budget · USD">
-        <input
-          id="cost"
-          type="number"
-          min="0.01"
-          max="100"
-          step="0.01"
-          disabled={mode === "none"}
-          required={mode !== "none"}
-          aria-describedby="cost-note budget-error"
-          {...register("cost", {
-            valueAsNumber: true,
-            validate: (value) =>
-              mode === "none" ||
-              (Number.isFinite(value) && value > 0 && value <= 100) ||
-              "Cost budget must be greater than zero and at most $100.",
-          })}
-        />
-      </Field>
       <p id="cost-note" className="help">
         {mode === "none"
-          ? "Only the runtime limit applies."
+          ? runtimeMode === "none"
+            ? "No cost or runtime limit applies."
+            : "Only the runtime limit applies."
           : provider?.provider === "claude"
             ? "Claude checks cost after a response. The budget may be exceeded; interrupted usage may be missing."
             : provider?.capabilities.cost_budget
               ? "Provider cost budget applies."
               : "This provider requires No cost limit."}
       </p>
+      <div className="two">
+        <Field id="runtime-mode" label="Runtime limit">
+          <FormSelect
+            control={control}
+            name="runtimeMode"
+            id="runtime-mode"
+            label="Runtime limit"
+            options={[
+              { value: "limited", label: "Apply runtime budget" },
+              { value: "none", label: "No runtime limit" },
+            ]}
+          />
+        </Field>
+        <Field id="runtime" label="Runtime limit · minutes">
+          <input
+            id="runtime"
+            type="number"
+            min="0"
+            max="120"
+            step="any"
+            disabled={runtimeMode === "none"}
+            required={runtimeMode !== "none"}
+            aria-describedby="budget-error"
+            {...register("runtime", {
+              valueAsNumber: true,
+              validate: (value) =>
+                runtimeMode === "none" ||
+                (Number.isFinite(value) && value > 0 && value <= 120) ||
+                "Runtime limit must be greater than zero and at most 120 minutes.",
+            })}
+          />
+        </Field>
+      </div>
       <div id="budget-error" className="form-error" role="alert">
         {errors.runtime?.message ?? errors.cost?.message}
       </div>

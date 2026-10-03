@@ -34,7 +34,8 @@ export type Defaults = {
   default_workspace_strategy?: "worktree" | "current_repo";
   default_provider?: string;
   default_worker_profile?: string;
-  max_runtime_minutes: number;
+  max_runtime_minutes: number | null;
+  use_runtime_budget?: boolean;
   max_cost_usd: number | null;
   use_cost_budget?: boolean;
 };
