@@ -207,6 +207,445 @@ async function enterTask(user: any, description: string) {
   await user.type(screen.getByLabelText("Description"), description);
 }
 
+function configureModelDefaults(
+  transport: FakeTransport,
+  defaults: Record<string, string>,
+  models?: {
+    value: string;
+    displayName: string;
+    description: string;
+    supportsEffort?: boolean;
+    supportedEffortLevels?: string[];
+  }[],
+) {
+  const original = transport.tool.bind(transport);
+  transport.tool = async <T>(name: string, args = {}) => {
+    const result = await original<any>(name, args);
+    if (name === "get_agent_settings")
+      return { ...result, values: { ...result.values, ...defaults } } as T;
+    if (name === "list_available_workers")
+      return result.map((worker: any) => ({
+        ...worker,
+        profiles: ["reviewer", "researcher"],
+        ...(models ? { models } : {}),
+      })) as T;
+    return result as T;
+  };
+}
+
+test("settings dialog renders host schema groups and saves only changed fields", async (t) => {
+  const { transport, user } = await setup(t, (transport) => {
+    const original = transport.tool.bind(transport);
+    transport.tool = async <T>(name: string, args = {}) => {
+      if (name === "update_agent_settings") {
+        transport.calls.push({ name, args });
+        return { values: {} } as T;
+      }
+      const result = await original<any>(name, args);
+      return (
+        name === "get_agent_settings"
+          ? {
+              values: {
+                ...result.values,
+                use_cost_budget: false,
+                max_cost_usd: 5,
+                default_model: "",
+              },
+              schema: {
+                type: "object",
+                properties: {
+                  max_runtime_minutes: {
+                    type: "number",
+                    title: "Runtime minutes",
+                    minimum: 1,
+                  },
+                  use_cost_budget: { type: "boolean", title: "Use cost limit" },
+                  max_cost_usd: { type: "number", title: "Cost USD" },
+                  default_model: {
+                    type: "string",
+                    title: "Model",
+                    enum: ["", "model-a"],
+                  },
+                },
+              },
+              layout: [
+                {
+                  kind: "group",
+                  title: "Budgets",
+                  items: [
+                    { kind: "property", property: "max_runtime_minutes" },
+                    { kind: "property", property: "use_cost_budget" },
+                    { kind: "tool", tool: "open", title: "Open" },
+                  ],
+                },
+              ],
+            }
+          : result
+      ) as T;
+    };
+  });
+  await user.click(screen.getByRole("button", { name: "Settings" }));
+  await screen.findByRole("dialog");
+  assert.ok(screen.getByRole("button", { name: "Close" }));
+  assert.ok(screen.getByRole("button", { name: /^Budgets/ }));
+  assert.equal(screen.queryByRole("button", { name: "Open" }), null);
+  const save = screen.getByRole("button", { name: "Save settings" });
+  assert.equal((save as HTMLButtonElement).disabled, true);
+  await selectOption(user, "Use cost limit", "On");
+  await user.click(screen.getByRole("button", { name: /^Other settings/ }));
+  await selectOption(user, "Model", "model-a");
+  // One edit in each group.
+  assert.equal(
+    screen.getAllByText("1 changed", { selector: ".settings-group-badge" })
+      .length,
+    2,
+  );
+  await user.click(screen.getByRole("button", { name: "Save 2 changes" }));
+  await waitFor(() => assert.equal(screen.queryByRole("dialog"), null));
+  assert.deepEqual(
+    transport.calls.find((call) => call.name === "update_agent_settings")!.args,
+    { set: { use_cost_budget: true, default_model: "model-a" } },
+  );
+});
+
+test("settings dialog labels discovered models and summarizes collapsed groups", async (t) => {
+  const { user } = await setup(t, (transport) => {
+    const original = transport.tool.bind(transport);
+    transport.tool = async <T>(name: string, args = {}) => {
+      const result = await original<any>(name, args);
+      if (name === "list_available_workers")
+        return result.map((worker: any) => ({
+          ...worker,
+          models: [
+            {
+              value: "model-a",
+              displayName: "Model A",
+              description: "Fast model",
+            },
+          ],
+        })) as T;
+      if (name === "get_agent_settings")
+        return {
+          values: {
+            ...result.values,
+            max_runtime_minutes: 20,
+            default_model: "model-a",
+            default_reasoning_effort: "default",
+          },
+          schema: {
+            type: "object",
+            properties: {
+              max_runtime_minutes: { type: "number", title: "Runtime" },
+              default_model: {
+                type: "string",
+                title: "Default model",
+                enum: ["", "model-a"],
+              },
+              default_reasoning_effort: {
+                type: "string",
+                title: "Reasoning effort",
+                enum: ["default", "high"],
+              },
+            },
+          },
+          layout: [
+            {
+              kind: "group",
+              title: "Budgets",
+              items: [{ kind: "property", property: "max_runtime_minutes" }],
+            },
+            {
+              kind: "group",
+              title: "Models",
+              items: [
+                { kind: "property", property: "default_model" },
+                { kind: "property", property: "default_reasoning_effort" },
+              ],
+            },
+          ],
+        } as T;
+      return result as T;
+    };
+  });
+  await user.click(screen.getByRole("button", { name: "Settings" }));
+  await screen.findByRole("dialog");
+  // Collapsed groups summarize current values with display names and Inherit.
+  const models = screen.getByRole("button", { name: /^Models/ });
+  assert.equal(models.getAttribute("aria-expanded"), "false");
+  assert.equal(
+    models.querySelector(".settings-group-summary")?.textContent,
+    "Model A · Inherit",
+  );
+  await user.click(models);
+  const trigger = screen.getByRole("combobox", {
+    name: "Default model",
+    exact: true,
+  });
+  assert.equal(trigger.textContent, "Model A");
+  await user.click(trigger);
+  // Menu options show the description as secondary text.
+  const option = await screen.findByRole("option", { name: /Model A/ });
+  assert.equal(
+    option.querySelector(".select-item-description")?.textContent,
+    "Fast model",
+  );
+  assert.ok(await screen.findByRole("option", { name: "Inherit" }));
+  await user.keyboard("{Escape}");
+});
+
+test("discovered model metadata offers suggestions and rejects unsupported inherited effort until corrected", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    configureModelDefaults(
+      transport,
+      {
+        default_model: "limited-model",
+        default_reasoning_effort: "high",
+      },
+      [
+        {
+          value: "limited-model",
+          displayName: "Limited model",
+          description: "SDK model",
+          supportedEffortLevels: ["low"],
+        },
+      ],
+    ),
+  );
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await screen.findByRole("dialog");
+  const model = screen.getByLabelText("Model") as HTMLInputElement;
+  assert.equal(model.placeholder, "limited-model");
+  await user.click(model);
+  const suggestion = await screen.findByRole("option", {
+    name: /Limited model/,
+  });
+  assert.match(suggestion.textContent ?? "", /limited-model/);
+  assert.match(suggestion.textContent ?? "", /SDK model/);
+  await user.keyboard("{Escape}");
+  await enterTask(user, "Check discovered metadata");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await screen.findByText(
+    /Choose a reasoning effort supported by claude model limited-model: low/,
+  );
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
+  );
+  await selectOption(user, "Reasoning effort", "low");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+  assert.equal(
+    transport.calls.find((call) => call.name === "start_agent_task")!.args
+      .reasoning_effort,
+    "low",
+  );
+});
+
+test("runtime default model metadata blocks unsupported effort and permits native default reasoning", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    configureModelDefaults(transport, {}, [
+      {
+        value: "default",
+        displayName: "Runtime default",
+        description: "",
+        supportsEffort: false,
+      },
+    ]),
+  );
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await screen.findByRole("dialog");
+  await enterTask(user, "Check native default metadata");
+  assert.equal((screen.getByLabelText("Model") as HTMLInputElement).value, "");
+  await selectOption(user, "Reasoning effort", "high (unsupported by claude)");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await screen.findByText(
+    /Choose a reasoning effort supported by claude model default/,
+  );
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
+  );
+  await selectOption(
+    user,
+    "Reasoning effort",
+    "Use default (provider runtime)",
+  );
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+  const call = transport.calls.find(
+    (call) => call.name === "start_agent_task",
+  )!;
+  assert.equal(call.args.model, "");
+  assert.equal(call.args.reasoning_effort, "default");
+});
+
+test("unknown model metadata keeps generic reasoning choices and accepts custom model IDs", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    configureModelDefaults(transport, {}, [
+      {
+        value: "no-effort",
+        displayName: "No effort",
+        description: "",
+        supportsEffort: false,
+      },
+    ]),
+  );
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await screen.findByRole("dialog");
+  await enterTask(user, "Use custom model ID");
+  await user.type(screen.getByLabelText("Model"), "custom-model");
+  assert.ok(screen.getByText(/Reasoning support for this model is unknown/));
+  await selectOption(user, "Reasoning effort", "high");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+  const call = transport.calls.find(
+    (call) => call.name === "start_agent_task",
+  )!;
+  assert.equal(call.args.model, "custom-model");
+  assert.equal(call.args.reasoning_effort, "high");
+});
+
+test("model selection retains unsupported Codex effort on Claude and blocks submission until corrected", async (t) => {
+  const { transport, user } = await setup(t);
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await screen.findByRole("dialog");
+  await enterTask(user, "Investigate effort selection");
+  await selectOption(user, "Worker", "codex · reviewer");
+  await selectOption(user, "Reasoning effort", "none");
+  await selectOption(user, "Worker", "claude · reviewer");
+  assert.match(
+    screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
+      "",
+    /none \(unsupported by claude\)/,
+  );
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await screen.findByText(/Choose a reasoning effort supported by claude/);
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
+  );
+  await selectOption(user, "Reasoning effort", "high");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+  assert.equal(
+    transport.calls.find((call) => call.name === "start_agent_task")!.args
+      .reasoning_effort,
+    "high",
+  );
+});
+
+test("model selection rejects unsupported inherited Claude effort and accepts an explicit supported override", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    configureModelDefaults(transport, { default_reasoning_effort: "none" }),
+  );
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await screen.findByRole("dialog");
+  await enterTask(user, "Investigate inherited effort");
+  assert.match(
+    screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
+      "",
+    /Use default \(none\)/,
+  );
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await screen.findByText(/Choose a reasoning effort supported by claude/);
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
+  );
+  await selectOption(user, "Reasoning effort", "medium");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+  assert.equal(
+    transport.calls.find((call) => call.name === "start_agent_task")!.args
+      .reasoning_effort,
+    "medium",
+  );
+});
+
+test("model selection updates role and provider defaults while preserving explicit drafts", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    configureModelDefaults(transport, {
+      default_model: "global-model",
+      default_reasoning_effort: "low",
+      claude_default_model: "claude-model",
+      claude_default_reasoning_effort: "medium",
+      reviewer_default_model: "review-model",
+      reviewer_default_reasoning_effort: "max",
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await screen.findByRole("dialog");
+  const field = screen.getByLabelText("Model") as HTMLInputElement;
+  assert.equal(field.placeholder, "review-model");
+  assert.match(
+    screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
+      "",
+    /Use default \(max\)/,
+  );
+  await user.type(field, "explicit-model");
+  await selectOption(user, "Worker", "claude · researcher");
+  assert.equal(field.placeholder, "claude-model");
+  assert.equal(field.value, "explicit-model");
+  assert.match(
+    screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
+      "",
+    /Use default \(medium\)/,
+  );
+  await selectOption(user, "Worker", "codex · researcher");
+  assert.equal(field.placeholder, "global-model");
+  assert.match(
+    screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
+      "",
+    /Use default \(low\)/,
+  );
+  await selectOption(user, "Reasoning effort", "high");
+  await selectOption(user, "Worker", "claude · reviewer");
+  assert.equal(field.placeholder, "review-model");
+  assert.equal(field.value, "explicit-model");
+  assert.equal(
+    screen.getByRole("combobox", { name: "Reasoning effort" }).textContent,
+    "high",
+  );
+  await enterTask(user, "Preserve explicit selections");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+  const call = transport.calls.find(
+    (call) => call.name === "start_agent_task",
+  )!;
+  assert.equal(call.args.model, "explicit-model");
+  assert.equal(call.args.reasoning_effort, "high");
+});
+
 test("description toggles literally, survives refresh, and resets for another task", async (t) => {
   const literal =
     '<img src=x onerror="window.injected=true">\nFull worker instructions.';
@@ -576,6 +1015,8 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   );
   await enterTask(user, "Investigate failing tests");
   await selectOption(user, "Worker", "codex · reviewer");
+  await user.type(screen.getByLabelText("Model"), "selected-model");
+  await selectOption(user, "Reasoning effort", "high");
   await selectOption(user, "Cost limit", "Apply cost budget");
   await user.click(screen.getByRole("button", { name: "Start task" }));
   await screen.findByText(
@@ -602,6 +1043,8 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   });
   assert.equal(call.args.conversation_id, null);
   assert.equal(call.args.provider, "codex");
+  assert.equal(call.args.model, "selected-model");
+  assert.equal(call.args.reasoning_effort, "high");
 });
 
 test("changing projects clears revision and dependencies while retaining the task draft", async (t) => {

@@ -1,6 +1,7 @@
 import {
   query,
   type Options,
+  type SDKUserMessage,
   type SDKMessage,
   type SandboxSettings,
 } from "@anthropic-ai/claude-agent-sdk";
@@ -9,6 +10,7 @@ import { join, resolve, relative, isAbsolute, dirname } from "node:path";
 import { realpath, readdir, access } from "node:fs/promises";
 import {
   type Provider,
+  type ModelChoice,
   type Task,
   type RunContext,
   type Result,
@@ -105,7 +107,74 @@ export class ClaudeAgentProvider implements Provider {
     parallel_subagents: false,
     dynamic_subagents: false,
   };
+  private catalog?: { expires: number; models: ModelChoice[] };
+  private catalogRequest?: Promise<ModelChoice[]>;
+  private catalogFailure?: { expires: number; error: unknown };
   constructor(private launch: typeof query = query) {}
+  models(): Promise<ModelChoice[]> {
+    if (this.catalog && this.catalog.expires > Date.now())
+      return Promise.resolve(this.catalog.models);
+    if (this.catalogRequest) return this.catalogRequest;
+    if (this.catalogFailure && this.catalogFailure.expires > Date.now())
+      return Promise.reject(this.catalogFailure.error);
+    const request = this.discoverModels();
+    this.catalogRequest = request;
+    void request
+      .finally(() => {
+        this.catalogRequest = undefined;
+      })
+      .catch(() => {});
+    return request;
+  }
+  private async discoverModels(): Promise<ModelChoice[]> {
+    const abortController = new AbortController();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    // Initialize the native harness without submitting a user turn or granting tools.
+    const prompt = (async function* (): AsyncGenerator<SDKUserMessage> {
+      await pending;
+    })();
+    const session = this.launch({
+      prompt,
+      options: {
+        env: claudeEnvironment(),
+        abortController,
+        persistSession: false,
+        settingSources: [],
+        strictMcpConfig: true,
+        mcpServers: {},
+        tools: [],
+        permissionMode: "default",
+        canUseTool: async () => ({
+          behavior: "deny",
+          message: "Model discovery cannot execute tools",
+        }),
+      },
+    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          abortController.abort();
+          reject(new Error("Claude model discovery timed out"));
+        }, 10000);
+      });
+      const models = await Promise.race([session.supportedModels(), timeout]);
+      this.catalog = { models, expires: Date.now() + 5 * 60 * 1000 };
+      this.catalogFailure = undefined;
+      return models;
+    } catch (error) {
+      // Polling must not repeatedly launch a failing harness.
+      this.catalogFailure = { expires: Date.now() + 30000, error };
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      release();
+      session.close();
+    }
+  }
   async run(c: RunContext, prompt: string): Promise<Result> {
     const sandbox = await claudeSandbox(c.task);
     const abortController = new AbortController();
@@ -117,6 +186,10 @@ export class ClaudeAgentProvider implements Provider {
     );
     const options: Options = {
       cwd: c.task.workspace,
+      ...(c.task.model ? { model: c.task.model } : {}),
+      ...(c.task.reasoning_effort && c.task.reasoning_effort !== "default"
+        ? { effort: c.task.reasoning_effort as Options["effort"] }
+        : {}),
       env: claudeEnvironment(),
       sandbox,
       abortController,

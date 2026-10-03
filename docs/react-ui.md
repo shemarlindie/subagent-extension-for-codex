@@ -39,6 +39,10 @@ The embedded panel renders a compact summary in `inline` mode: project/chat scop
 
 Delegation forms collect the full request as the description without a manual title field. The service generates a title from the description's first line or sentence, up to 120 characters. Task rows and the inline preview show the concise title. The inspector shows the full description in a disclosure that starts collapsed.
 
+**Settings** opens a dialog built from `get_agent_settings`, for hosts that do not render native plugin settings. Groups follow the returned layout and collapse to a one-line summary; only the first starts open. A badge counts unsaved edits per group, and saving sends only changed fields through `update_agent_settings`. Dialog titles and footers stay visible while long forms scroll.
+
+Model selection shows each discovered model's display name with its description as secondary text. The delegation Model field remains free text, so custom IDs and aliases still work.
+
 Opening either HTML entrypoint outside an iframe with `?preview=1` selects fixture data; `&theme=dark` selects the dark preview theme. Preview does not connect to the service or execute workers. Unsupported fixture operations fail explicitly. Native host rendering and delivery still require separate host verification.
 
 ![Fixture preview with a selected task and artifact report](images/react-panel-preview.png)

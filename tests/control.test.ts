@@ -53,6 +53,141 @@ const input = (description = "Investigate") => ({
   description,
   workspace_strategy: "worktree",
 });
+test("worker discovery exposes SDK metadata and falls back when discovery fails", async () => {
+  const provider: Provider = new FixtureProvider();
+  const models = [
+    {
+      value: "known-model",
+      displayName: "Known",
+      description: "",
+      supportsEffort: true,
+      supportedEffortLevels: ["low", "high"],
+    },
+  ];
+  provider.models = async () => models;
+  const { c } = await setup(provider);
+  try {
+    const workers = await c.availableWorkers();
+    assert.deepEqual((workers[0] as any).models, models);
+    assert.equal(workers[0].provider, "fixture");
+    provider.models = async () => {
+      throw new Error("unavailable");
+    };
+    const fallback = (await c.availableWorkers())[0] as any;
+    assert.equal(fallback.models, undefined);
+    assert.match(fallback.model_discovery_error, /Model discovery unavailable/);
+    assert.deepEqual(fallback.profiles, workers[0].profiles);
+    assert.deepEqual(fallback.capabilities, workers[0].capabilities);
+  } finally {
+    await c.close();
+  }
+});
+
+test("known model effort metadata rejects invalid work before queueing while unknown metadata permits execution", async () => {
+  const provider: Provider = new FixtureProvider();
+  provider.models = async () => [
+    {
+      value: "default",
+      displayName: "Runtime default",
+      description: "",
+      supportsEffort: false,
+    },
+    {
+      value: "no-effort",
+      displayName: "No effort",
+      description: "",
+      supportsEffort: false,
+    },
+    {
+      value: "limited-effort",
+      displayName: "Limited effort",
+      description: "",
+      supportedEffortLevels: ["low"],
+    },
+    { value: "unknown-effort", displayName: "Unknown effort", description: "" },
+  ];
+  const { c, store } = await setup(provider);
+  try {
+    await assert.rejects(
+      c.start("alice", { ...input(), reasoning_effort: "high" }),
+      /does not support reasoning effort high/,
+    );
+    assert.equal(store.all().length, 0);
+    for (const model of ["no-effort", "limited-effort"]) {
+      await assert.rejects(
+        c.start("alice", { ...input(), model, reasoning_effort: "high" }),
+        /does not support reasoning effort high/,
+      );
+      assert.equal(store.all().length, 0);
+    }
+    for (const model of ["unknown-effort", "custom-model"]) {
+      const task = await c.start("alice", {
+        ...input(),
+        model,
+        reasoning_effort: "high",
+      });
+      await until(() => store.get(task.id, "alice").status === "completed");
+      assert.equal(task.model, model);
+    }
+    const supported = await c.start("alice", {
+      ...input(),
+      model: "limited-effort",
+      reasoning_effort: "low",
+    });
+    await until(() => store.get(supported.id, "alice").status === "completed");
+    provider.models = async () => {
+      throw new Error("Discovery unavailable");
+    };
+    const unavailable = await c.start("alice", {
+      ...input(),
+      model: "custom-model",
+      reasoning_effort: "high",
+    });
+    await until(
+      () => store.get(unavailable.id, "alice").status === "completed",
+    );
+  } finally {
+    await c.close();
+  }
+});
+test("Claude rejects unsupported direct and inherited effort before persisting or running work", async () => {
+  const provider = new FixtureProvider();
+  provider.id = "claude";
+  let calls = 0;
+  const run = provider.run.bind(provider);
+  provider.run = async (...args) => {
+    calls++;
+    return run(...args);
+  };
+  const { c, store } = await setup(provider);
+  try {
+    for (const reasoning_effort of ["none", "minimal"]) {
+      await assert.rejects(
+        c.start("alice", { ...input(), provider: "claude", reasoning_effort }),
+        /Claude reasoning effort/,
+      );
+      c.settings.update("alice", {
+        set: { default_reasoning_effort: reasoning_effort },
+      });
+      await assert.rejects(
+        c.start("alice", { ...input(), provider: "claude" }),
+        /Claude reasoning effort/,
+      );
+      assert.equal(store.all().length, 0);
+      assert.equal(calls, 0);
+    }
+    const task = await c.start("alice", {
+      ...input(),
+      provider: "claude",
+      reasoning_effort: "high",
+    });
+    await until(() => store.get(task.id, "alice").status === "completed");
+    assert.equal(task.reasoning_effort, "high");
+    assert.equal(calls, 1);
+  } finally {
+    await c.close();
+  }
+});
 test("task titles stay separate from trimmed worker instructions", async () => {
   const provider = new FixtureProvider();
   const original = provider.run.bind(provider);

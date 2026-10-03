@@ -4,6 +4,8 @@ import type { Task } from "../core/types";
 export function TaskDetails({ task }: { task: Task }) {
   const facts = {
     "Task ID": task.id,
+    Model: task.model || "Provider runtime default",
+    "Reasoning effort": task.reasoning_effort || "Provider runtime default",
     Workspace: task.workspace ?? "Preparing",
     Repository: task.repository,
     "Workspace strategy":

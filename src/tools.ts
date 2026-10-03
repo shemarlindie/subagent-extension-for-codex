@@ -73,7 +73,7 @@ export function definitions(c: Control, owner: string) {
       description: "Read persistent user defaults for delegation and budgets.",
       schema: z.strictObject({}),
       outputSchema: settingsReadOutputSchema,
-      run: () => c.settings.read(owner),
+      run: async () => c.settings.read(owner, await c.availableWorkers()),
     },
     update_agent_settings: {
       description:
@@ -140,7 +140,7 @@ export function definitions(c: Control, owner: string) {
       description:
         "Discover installed providers, profiles, and supported capabilities.",
       schema: z.object({}),
-      run: () => c.workers(),
+      run: () => c.availableWorkers(),
     },
     interrupt_agent_task: {
       description:

@@ -1,7 +1,12 @@
 import type { Ref } from "react";
 import { Select } from "@base-ui/react/select";
 import { Chevron } from "./chevron";
-export type SelectOption = { value: string; label: string };
+export type SelectOption = {
+  value: string;
+  label: string;
+  /** Secondary text shown under the label in the menu only. */
+  description?: string;
+};
 export type SelectFieldProps = {
   id: string;
   label: string;
@@ -61,7 +66,14 @@ function SelectOptions({ options }: { options: SelectOption[] }) {
                   value={option.value}
                   className="select-item"
                 >
-                  <Select.ItemText>{option.label}</Select.ItemText>
+                  <span className="select-item-text">
+                    <Select.ItemText>{option.label}</Select.ItemText>
+                    {option.description && (
+                      <span className="select-item-description">
+                        {option.description}
+                      </span>
+                    )}
+                  </span>
                   <Select.ItemIndicator
                     className="select-check"
                     aria-hidden="true"

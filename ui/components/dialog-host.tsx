@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { useController, useSnapshot } from "./controller-context";
+import { SettingsForm } from "../forms/settings-form";
 import { DelegateForm } from "../forms/delegate-form";
 import { ControlForm, controlTitle } from "../forms/control-form";
 import { QuestionForm } from "../forms/question-form";
@@ -15,19 +16,21 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
     openedScope = useRef(0);
   const title = !dialog
     ? ""
-    : dialog.kind === "delegate"
-      ? "New delegated task"
-      : dialog.kind === "control"
-        ? controlTitle(dialog.action)
-        : dialog.kind === "respond"
-          ? dialog.task.pending_input?.tool === "AskUserQuestion"
-            ? "Respond to worker"
-            : "Review permission request"
-          : dialog.kind === "handoff"
-            ? "Bring task to Codex"
-            : dialog.kind === "artifact"
-              ? dialog.artifact.title
-              : "Task workspace";
+    : dialog.kind === "settings"
+      ? "Plugin settings"
+      : dialog.kind === "delegate"
+        ? "New delegated task"
+        : dialog.kind === "control"
+          ? controlTitle(dialog.action)
+          : dialog.kind === "respond"
+            ? dialog.task.pending_input?.tool === "AskUserQuestion"
+              ? "Respond to worker"
+              : "Review permission request"
+            : dialog.kind === "handoff"
+              ? "Bring task to Codex"
+              : dialog.kind === "artifact"
+                ? dialog.artifact.title
+                : "Task workspace";
   return (
     // Host collapse hides the modal; keeping its contents mounted retains drafts.
     <Dialog.Root
@@ -60,8 +63,20 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
                 : document.getElementById("delegate")
           }
         >
-          <Dialog.Title id="dialog-title">{title}</Dialog.Title>
-          {dialog?.kind === "delegate" ? (
+          <div className="dialog-heading">
+            <Dialog.Title id="dialog-title">{title}</Dialog.Title>
+            <Dialog.Close
+              type="button"
+              className="dialog-close quiet"
+              aria-label="Close"
+              disabled={state.busy}
+            >
+              ×
+            </Dialog.Close>
+          </div>
+          {dialog?.kind === "settings" ? (
+            <SettingsForm dialog={dialog} />
+          ) : dialog?.kind === "delegate" ? (
             <DelegateForm dialog={dialog} />
           ) : dialog?.kind === "control" ? (
             <ControlForm dialog={dialog} />

@@ -97,15 +97,24 @@ Plugin packaging and entrypoint metadata follow the [OpenAI plugin packaging doc
 
 ## Plugin settings
 
-The server advertises `extensions["openai/settings"]` with `get_agent_settings` and `update_agent_settings`. Compatible ChatGPT hosts can render its native settings schema and layout. The same tools are available through the local stdio proxy and authenticated HTTP tool API.
+The server advertises `extensions["openai/settings"]` with `get_agent_settings` and `update_agent_settings`, and repeats it under `experimental` for hosts on MCP `2025-11-25` or earlier. Compatible ChatGPT hosts can render its native settings schema and layout. Number fields use inclusive minimums, and the layout includes an **Open delegated work** button that opens the panel. The same tools are available through the local stdio proxy and authenticated HTTP tool API.
 
-Defaults include provider, worker profile, workspace strategy (`current_repo` by default, with `worktree` available), runtime minutes, and cost budget. Provider choices include only enabled workers; a saved unavailable provider falls back to the first enabled worker until changed. The cost limit remains $5 by default; explicit `max_cost_usd: null` means no cost limit for task budgets and legacy settings updates. Native settings expose `use_cost_budget` and a numeric `max_cost_usd` because the host settings schema supports scalar fields. Disabling the toggle preserves the amount for later use; enabling it restores the amount. Updating the amount while disabled keeps the limit disabled. Providers that cannot enforce a numeric limit reject it before starting. The browser and host delegation form expose an Apply cost limit choice; disabling it preserves the runtime limit. Claude omits its native cost ceiling only for that explicit choice. Updates use `{ "set": { "max_runtime_minutes": 10 } }`, preserve omitted fields, and persist per user in SQLite. New tasks inherit these values; explicit task arguments override them, and existing tasks keep their original settings. The console's delegation form reads the current defaults when opened. Unsupported providers, invalid budgets, and unknown settings are rejected before persistence. Approval policy remains enforced by the worker, rather than configurable through these defaults.
+Defaults include provider, worker profile, workspace strategy (`current_repo` by default, with `worktree` available), runtime minutes, and cost budget. Provider choices include only enabled workers; a saved unavailable provider falls back to the first enabled worker until changed. Codex is not yet a settings option: it has no provider choice or model and reasoning defaults, and tasks select it explicitly. On a Codex-only service, settings fall back to Claude. The cost limit remains $5 by default; explicit `max_cost_usd: null` means no cost limit for task budgets and legacy settings updates. Native settings expose `use_cost_budget` and a numeric `max_cost_usd` because the host settings schema supports scalar fields. Disabling the toggle preserves the amount for later use; enabling it restores the amount. Updating the amount while disabled keeps the limit disabled. Providers that cannot enforce a numeric limit reject it before starting. The browser and host delegation form expose an Apply cost limit choice; disabling it preserves the runtime limit. Claude omits its native cost ceiling only for that explicit choice. Updates use `{ "set": { "max_runtime_minutes": 10 } }`, preserve omitted fields, and persist per user in SQLite. New tasks inherit these values; explicit task arguments override them, and existing tasks keep their original settings. The console's delegation form reads the current defaults when opened. Unsupported providers, invalid budgets, and unknown settings are rejected before persistence. Approval policy remains enforced by the worker, rather than configurable through these defaults.
 
-Native host discovery and tool envelopes are covered by local protocol tests. Actual rendering in ChatGPT remains unverified until host registration.
+Open the installed plugin's details page in a host that supports native plugin settings.
+The host renders the groups and controls returned by `get_agent_settings`. Hosts that do not
+render native settings, including Codex, can use **Settings** in the expanded panel; it renders
+the same schema and layout and saves only changed fields. Both HTTP and the packaged stdio plugin advertise this capability.
+Model dropdowns use discovered catalogs, and provider reasoning dropdowns use metadata for
+the selected configured model. Global and role efforts remain broad because they apply across providers. Saved custom choices remain available if the catalog changes. Changing a
+model takes effect in reasoning choices on the next settings read. Custom IDs can still be set
+with `update_agent_settings`. Without discovery, model controls remain text fields and reasoning
+support is reported as unknown. Native host discovery and tool envelopes are covered by local
+protocol tests; actual host rendering requires a connected plugin and host support.
 
 ## Host forms
 
-Compatible HTTP MCP hosts can call `request_agent_task` to ask the user to confirm the full request description, worker, committed revision, and budgets before starting work. Browser and native host forms have no manual title field; the service generates the title from the submitted description. `request_agent_input` presents the exact pending worker question or permission request. Question forms support titled choices and multiple selections. Shell permissions default to deny; cancellation leaves worker input pending and never grants permission.
+Compatible HTTP MCP hosts can call `request_agent_task` to ask the user to confirm the full request description, worker, committed revision, and budgets before starting work. Browser and native host forms have no manual title field; the service generates the title from the submitted description. The host form lists discovered models as choices, titled with each model's name and description (prefixed with the provider when several are enabled), plus **Use configured default** and any requested custom model. Its description names providers without a model list; their workers use the configured default. Without discovery it keeps a free-text model field. Other custom model IDs remain available through `start_agent_task`, the panel and settings. `request_agent_input` presents the exact pending worker question or permission request. Question forms support titled choices and multiple selections. Shell permissions default to deny; cancellation leaves worker input pending and never grants permission.
 
 `start_agent_task` requires `description` (1–20,000 characters), containing the full request; whitespace-only values are rejected. The title is generated from the description's first line or sentence, up to 120 characters. An optional `title` (1–120 characters) remains an API compatibility override. Workers receive the full description as instructions. Task lists and headings show the title, and the inspector keeps the description collapsed until expanded. `request_agent_task` can omit the description to let the user fill it in. The previous `task` field is no longer supported for new requests. On database open, legacy persisted `task` records migrate automatically to full descriptions and generated titles, preserving existing descriptions and titles.
 
@@ -296,3 +305,30 @@ Native rich forms and MCP Events are intentionally HTTP-only. Onboarding,
 mentions, file handlers and deep links remain optional unimplemented extensions.
 Native host rendering and authenticated execution of the packaged service still
 need integration verification beyond the local fixture/protocol tests.
+
+### Model and reasoning defaults
+
+The native extension settings editor persists model and reasoning defaults per user.
+Use `default_model` and `default_reasoning_effort` for global defaults,
+`claude_default_model` / `claude_default_reasoning_effort` (or `codex`, `fixture`)
+for provider defaults, and `reviewer_default_model` / `reviewer_default_reasoning_effort`
+(or any worker profile such as `researcher` or `implementer`) for role defaults.
+
+Both task creation forms accept a model ID or provider alias and a reasoning effort.
+The `start_agent_task` tool accepts these as `model` and `reasoning_effort`.
+Each setting resolves independently: task override → role → provider → global → provider runtime default.
+Blank model fields and `default` reasoning inherit. Configured defaults resolve when a task
+is created; runtime fallbacks remain provider-managed. Role defaults apply across providers,
+so use a model appropriate for the task's provider or enter a task override.
+Model availability depends on the provider and account. Claude supports `low`, `medium`, `high`,
+`xhigh`, and `max`; Codex also accepts `none` and `minimal`. Unsupported Claude effort is rejected
+before queuing. When no model is configured, Claude uses its runtime default and Codex uses
+`CODEX_SUBAGENT_EXTENSION_CODEX_MODEL`.
+
+Claude model suggestions come from the Agent SDK's `supportedModels()` metadata,
+including per-model `supportsEffort` and `supportedEffortLevels`. Discovery initializes
+a tool-free session without submitting a task, caches successful results for five minutes,
+and retries failures after thirty seconds. Known unsupported reasoning choices are rejected
+before queuing; missing model or effort metadata remains unknown and is validated by the
+provider at execution. Custom model IDs remain supported. The OpenAI provider still uses
+SDK-level reasoning choices because its model-list endpoint lacks effort metadata.

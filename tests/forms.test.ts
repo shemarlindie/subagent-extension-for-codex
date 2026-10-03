@@ -11,9 +11,12 @@ import { FixtureProvider } from "../src/providers/fixture.js";
 import { Forms } from "../src/forms.js";
 import { application } from "../src/app.js";
 import { Auth } from "../src/auth.js";
-import type { Provider } from "../src/model.js";
+import type { ModelChoice, Provider } from "../src/model.js";
 
-async function setup(provider: Provider = new FixtureProvider()) {
+async function setup(
+  provider: Provider = new FixtureProvider(),
+  extra: Provider[] = [],
+) {
   const dir = await mkdtemp(join(tmpdir(), "ac-forms-"));
   execFileSync("git", ["init", "-q", dir]);
   await writeFile(join(dir, "README.md"), "hello\n");
@@ -32,7 +35,7 @@ async function setup(provider: Provider = new FixtureProvider()) {
   const c = new Control(
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
-    new Map([[provider.id, provider]]),
+    new Map([provider, ...extra].map((p) => [p.id, p])),
     dir,
   );
   const app = application(
@@ -126,6 +129,8 @@ test("native host delegation requests user input before starting and retries com
       conversation_id: "conversation-a",
       title: "  Suggested title  ",
       description: "  Suggested full instructions  ",
+      model: "suggested-model",
+      reasoning_effort: "low",
     };
     const requested = await rpc("request_agent_task", args);
     assert.equal(
@@ -137,6 +142,8 @@ test("native host delegation requests user input before starting and retries com
     const form = requested.result.inputRequests.form;
     assert.ok(form.params.requestedSchema.required.includes("repository"));
     const schema = form.params.requestedSchema;
+    assert.equal(schema.properties.model.default, "suggested-model");
+    assert.equal(schema.properties.reasoning_effort.default, "low");
     assert.ok(!schema.required.includes("title"));
     assert.ok(!("title" in schema.properties));
     assert.ok(schema.required.includes("description"));
@@ -153,6 +160,8 @@ test("native host delegation requests user input before starting and retries com
       content: {
         ...accepted.content,
         repository,
+        model: "accepted-model",
+        reasoning_effort: "high",
         description:
           "Edited complete instructions [input]\nKeep all details and evidence.",
       },
@@ -188,6 +197,9 @@ test("native host delegation requests user input before starting and retries com
     assert.equal(c.store.get(task.id, "local").description, task.description);
     assert.equal(task.repository, await realpath(repository));
     assert.equal(task.budget.max_cost_usd, 1);
+    assert.equal(task.model, "accepted-model");
+    assert.equal(task.reasoning_effort, "high");
+    assert.equal(c.store.get(task.id, "local").model, "accepted-model");
     assert.equal(c.store.all().length, 1);
     assert.ok(
       (
@@ -211,6 +223,115 @@ test("native host delegation requests user input before starting and retries com
       ).result.isError,
     );
     assert.equal(c.store.all().length, 1);
+  } finally {
+    await close();
+  }
+});
+
+function withModels(models: () => Promise<ModelChoice[]>): Provider {
+  const provider = new FixtureProvider();
+  return Object.assign(provider, { models });
+}
+
+test("host delegation offers discovered models as readable choices and keeps a custom request", async () => {
+  const { c, rpc, close } = await setup(
+    withModels(async () => [
+      {
+        value: "sonnet",
+        displayName: "Sonnet 5.5",
+        description: "Most efficient for simpler tasks",
+        supportedEffortLevels: ["low", "medium", "high"],
+      },
+      { value: "haiku", displayName: "Haiku 4.5", description: "" },
+    ]),
+  );
+  try {
+    const args = { model: "custom-model" };
+    const requested = await rpc("request_agent_task", args);
+    const model =
+      requested.result.inputRequests.form.params.requestedSchema.properties
+        .model;
+    assert.deepEqual(model.oneOf, [
+      { const: "", title: "Use configured default" },
+      {
+        const: "sonnet",
+        title: "Sonnet 5.5 — Most efficient for simpler tasks",
+      },
+      { const: "haiku", title: "Haiku 4.5" },
+      { const: "custom-model", title: "custom-model (custom)" },
+    ]);
+    assert.equal(model.default, "custom-model");
+    assert.ok(model.description.length < 160);
+    const repository =
+      requested.result.inputRequests.form.params.requestedSchema.properties
+        .repository.oneOf[0].const;
+    const unlisted = await rpc(
+      "request_agent_task",
+      args,
+      requested.result.requestState,
+      {
+        ...accepted,
+        content: { ...accepted.content, repository, model: "unlisted" },
+      },
+    );
+    assert.ok(
+      unlisted.result?.isError ?? unlisted.error,
+      JSON.stringify(unlisted),
+    );
+    assert.equal(c.store.all().length, 0);
+    const started = await rpc(
+      "request_agent_task",
+      args,
+      requested.result.requestState,
+      {
+        ...accepted,
+        content: { ...accepted.content, repository, model: "sonnet" },
+      },
+    );
+    const task = started.result?.structuredContent.result;
+    assert.ok(task?.id, JSON.stringify(started));
+    assert.equal(task.model, "sonnet");
+    await until(() => c.store.get(task.id, "local").status !== "queued");
+  } finally {
+    await close();
+  }
+});
+
+test("host delegation names providers and flags workers without a model list", async () => {
+  const claude = Object.assign(
+    withModels(async () => [
+      { value: "sonnet", displayName: "Sonnet 5.5", description: "" },
+    ]),
+    { id: "claude" },
+  );
+  const { rpc, close } = await setup(claude, [new FixtureProvider()]);
+  try {
+    const requested = await rpc("request_agent_task", {});
+    const model =
+      requested.result.inputRequests.form.params.requestedSchema.properties
+        .model;
+    assert.deepEqual(model.oneOf[1], {
+      const: "sonnet",
+      title: "claude · Sonnet 5.5",
+    });
+    assert.match(model.description, /No model list for fixture/);
+  } finally {
+    await close();
+  }
+});
+
+test("host delegation keeps a free-text model field when discovery fails", async () => {
+  const { rpc, close } = await setup(
+    withModels(() => Promise.reject(new Error("offline"))),
+  );
+  try {
+    const requested = await rpc("request_agent_task", {});
+    const model =
+      requested.result.inputRequests.form.params.requestedSchema.properties
+        .model;
+    assert.equal("oneOf" in model, false);
+    assert.equal(model.maxLength, 200);
+    assert.equal(model.default, "");
   } finally {
     await close();
   }

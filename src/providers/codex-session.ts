@@ -60,7 +60,10 @@ export class CodexSessions {
     const session = await sessions.create(
       {
         agent: {
-          model: this.model,
+          model: task.model || this.model,
+          ...(task.reasoning_effort && task.reasoning_effort !== "default"
+            ? { reasoning: { effort: task.reasoning_effort } }
+            : {}),
           instructions: `You are an independent ${task.worker_profile}. Work only in the task workspace. Return structured findings, evidence, changes, tests and recommendations.`,
           multi_agent: { enabled: false },
           text: { format: { type: "json_schema", schema: resultSchema } },

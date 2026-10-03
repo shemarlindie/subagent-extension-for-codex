@@ -1,6 +1,12 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useController, useSnapshot } from "../components/controller-context";
-export function FormFooter({ label }: { label: string }) {
+export function FormFooter({
+  label,
+  disabled = false,
+}: {
+  label: string;
+  disabled?: boolean;
+}) {
   const controller = useController(),
     state = useSnapshot(),
     stale = state.dialog?.scope !== state.scopeVersion;
@@ -18,7 +24,11 @@ export function FormFooter({ label }: { label: string }) {
         >
           Cancel
         </Dialog.Close>
-        <button id="submit" className="primary" disabled={state.busy || stale}>
+        <button
+          id="submit"
+          className="primary"
+          disabled={state.busy || stale || disabled}
+        >
           {state.busy ? "Working…" : label}
         </button>
       </footer>

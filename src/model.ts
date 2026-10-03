@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { reasoningLevels } from "./reasoning.js";
 export const roles = [
   "researcher",
   "reviewer",
@@ -8,9 +9,20 @@ export const roles = [
   "refactorer",
   "security_reviewer",
 ] as const;
+export { reasoningLevels } from "./reasoning.js";
+export const modelNameSchema = z.string().trim().max(200);
+export const reasoningSchema = z.enum(["default", ...reasoningLevels]);
 export const startSchema = z.object({
   provider: z.enum(["claude", "codex", "fixture"]).default("claude"),
   worker_profile: z.enum(roles).default("reviewer"),
+  model: modelNameSchema
+    .optional()
+    .describe(
+      "Model ID or provider alias. Blank inherits configured defaults.",
+    ),
+  reasoning_effort: reasoningSchema
+    .optional()
+    .describe("Reasoning effort; default inherits configured defaults."),
   title: z
     .string()
     .min(1)
@@ -172,9 +184,17 @@ export interface RunContext {
     message?: string;
   }>;
 }
+export interface ModelChoice {
+  value: string;
+  displayName: string;
+  description: string;
+  supportsEffort?: boolean;
+  supportedEffortLevels?: (typeof reasoningLevels)[number][];
+}
 export interface Provider {
   id: string;
   capabilities: Capabilities;
+  models?(): Promise<ModelChoice[]>;
   run(context: RunContext, prompt: string): Promise<Result>;
   recover?(task: Task): Promise<void>;
   close?(): Promise<void>;

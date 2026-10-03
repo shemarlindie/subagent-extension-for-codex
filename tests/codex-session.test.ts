@@ -158,6 +158,25 @@ test("session continuation verifies owner and workspace and never creates a repl
   await assert.rejects(runtime.open(continued), /does not match/);
   assert.ok(calls.every((r) => r.method === "GET"));
 });
+test("Codex forwards task model and reasoning while inheriting the runtime model by default", async () => {
+  for (const selection of [
+    { model: "selected-model", reasoning_effort: "high" as const },
+    { reasoning_effort: "none" as const },
+    { reasoning_effort: "default" as const },
+    {},
+  ]) {
+    const { runtime, calls } = setup();
+    await runtime.open({ ...task, ...selection });
+    const agent = calls[0].body.agent;
+    assert.equal(
+      agent.model,
+      "model" in selection ? selection.model : "configured-model",
+    );
+    if (selection.reasoning_effort && selection.reasoning_effort !== "default")
+      assert.deepEqual(agent.reasoning, { effort: selection.reasoning_effort });
+    else assert.equal(Object.hasOwn(agent, "reasoning"), false);
+  }
+});
 test("native turn helper subscribes before input and ends after coordinator completion plus idle", async () => {
   const { runtime, calls } = setup();
   const stream = await runtime.turn(

@@ -10,6 +10,7 @@ import { panelContextInput, type PanelContextInput } from "./panel-context.js";
 
 // Bump the URI when resource metadata changes to invalidate host caches.
 export const panelUri = "ui://codex-subagent-extension/app-v6";
+export const globalPanelToolName = "open_codex_subagent_extension_global";
 const entrypoints = {
   entrypoints: [{ type: "thread" }],
   preferredModelDisplayMode: "inline",
@@ -107,7 +108,7 @@ export function delegationPanel(
     // Global and thread entrypoints both launch with empty arguments. Give
     // global launches their own tool so ambient chat/cwd hints cannot scope it.
     global: {
-      name: "open_codex_subagent_extension_global",
+      name: globalPanelToolName,
       tool: {
         ...panel.tool,
         description:

@@ -1,13 +1,17 @@
 import { useFormContext, useWatch } from "react-hook-form";
-import type { Project, Task, Worker } from "../core/types";
+import { reasoningLevels } from "../../src/reasoning";
+import type { Defaults, Project, Task, Worker } from "../core/types";
 import { profileLabel } from "../core/selectors";
 import { Field } from "./fields";
 import { FormSelect } from "./form-select";
 import { ProjectAutocomplete } from "./project-autocomplete";
+import { ModelAutocomplete } from "./model-autocomplete";
 export type DelegateValues = {
   repository: string;
   description: string;
   worker: string;
+  model: string;
+  reasoning_effort: string;
   revision: string;
   workspace_strategy: "worktree" | "current_repo";
   context: string;
@@ -213,5 +217,93 @@ export function DependencyField({ tasks }: { tasks: Task[] }) {
           .map((task) => ({ value: task.id, label: task.title }))}
       />
     </Field>
+  );
+}
+
+export function ModelFields({
+  defaults,
+  workers,
+}: {
+  defaults: Defaults;
+  workers: Worker[];
+}) {
+  const { control } = useFormContext<DelegateValues>();
+  const [worker, selectedModel] = useWatch({
+    control,
+    name: ["worker", "model"],
+  });
+  const [provider, role] = worker.split(":");
+  const model =
+    defaults[`${role}_default_model`] ||
+    defaults[`${provider}_default_model`] ||
+    defaults.default_model;
+  const reasoning = [
+    defaults[`${role}_default_reasoning_effort`],
+    defaults[`${provider}_default_reasoning_effort`],
+    defaults.default_reasoning_effort,
+  ].find((value) => value && value !== "default");
+  const workerInfo = workers.find((item) => item.provider === provider);
+  const metadata = workerInfo?.models?.find(
+    (item) => item.value === (selectedModel.trim() || model || "default"),
+  );
+  const supported =
+    metadata?.supportsEffort === false
+      ? []
+      : (metadata?.supportedEffortLevels ??
+        reasoningLevels.filter(
+          (level) =>
+            provider !== "claude" || !["none", "minimal"].includes(level),
+        ));
+  return (
+    <>
+      <Field id="model" label="Model">
+        <ModelAutocomplete
+          models={workerInfo?.models ?? []}
+          placeholder={model || "Provider runtime default"}
+          describedBy="model-help"
+        />
+        <p id="model-help" className="help">
+          Leave blank to inherit {model || "the provider runtime default"}.
+          Choose a discovered model or enter a model ID or provider alias.
+          {workerInfo?.model_discovery_error &&
+            ` ${workerInfo.model_discovery_error}`}
+          {(!metadata ||
+            (metadata.supportsEffort !== false &&
+              metadata.supportedEffortLevels === undefined)) &&
+            " Reasoning support for this model is unknown."}
+        </p>
+      </Field>
+      <Field id="reasoning-effort" label="Reasoning effort">
+        <FormSelect
+          control={control}
+          name="reasoning_effort"
+          id="reasoning-effort"
+          label="Reasoning effort"
+          rules={{
+            validate: (value) => {
+              const resolved = value === "default" ? reasoning : value;
+              return (
+                !resolved ||
+                supported.some((level) => level === resolved) ||
+                `Choose a reasoning effort supported by ${provider}${metadata ? ` model ${metadata.value}` : ""}: ${supported.length ? supported.join(", ") : "use the provider runtime default"}.`
+              );
+            },
+          }}
+          options={[
+            {
+              value: "default",
+              label: `Use default (${reasoning || "provider runtime"})`,
+            },
+            // Stable options preserve the draft when switching providers or correcting an effort.
+            ...reasoningLevels.map((level) => ({
+              value: level,
+              label: supported.some((item) => item === level)
+                ? level
+                : `${level} (unsupported by ${provider})`,
+            })),
+          ]}
+        />
+      </Field>
+    </>
   );
 }

@@ -155,6 +155,10 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       ],
       {},
     );
+    assert.deepEqual(
+      client.getServerCapabilities()?.experimental?.["openai/settings"],
+      { readTool: "get_agent_settings", updateTool: "update_agent_settings" },
+    );
     const tools = await client.listTools();
     assert.ok(tools.tools.some((t) => t.name === "start_agent_task"));
     assert.ok(
@@ -458,6 +462,57 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         ],
         {},
       );
+      assert.deepEqual(
+        (stdio.getServerCapabilities() as any)?.extensions?.["openai/settings"],
+        { readTool: "get_agent_settings", updateTool: "update_agent_settings" },
+      );
+      assert.deepEqual(
+        stdio.getServerCapabilities()?.experimental?.["openai/settings"],
+        { readTool: "get_agent_settings", updateTool: "update_agent_settings" },
+      );
+      const nativeSettings = await stdio.callTool({
+        name: "get_agent_settings",
+        arguments: {},
+      });
+      assert.ok(!nativeSettings.isError);
+      assert.equal(
+        (nativeSettings.structuredContent as any).schema.type,
+        "object",
+      );
+      assert.ok(
+        Array.isArray((nativeSettings.structuredContent as any).layout),
+      );
+      assert.equal(
+        (nativeSettings.structuredContent as any).values.default_model,
+        "",
+      );
+      const nativeUpdated = await stdio.callTool({
+        name: "update_agent_settings",
+        arguments: {
+          set: {
+            default_model: "native-proxy-model",
+            reviewer_default_reasoning_effort: "high",
+          },
+        },
+      });
+      assert.ok(!nativeUpdated.isError);
+      assert.equal(
+        (nativeUpdated.structuredContent as any).values.default_model,
+        "native-proxy-model",
+      );
+      assert.equal(
+        (nativeUpdated.structuredContent as any).values
+          .reviewer_default_reasoning_effort,
+        "high",
+      );
+      const nativeReadback = await stdio.callTool({
+        name: "get_agent_settings",
+        arguments: {},
+      });
+      assert.equal(
+        (nativeReadback.structuredContent as any).values.default_model,
+        "native-proxy-model",
+      );
       const inventory = await stdio.listTools();
       assert.ok(inventory.tools.some((t) => t.name === "continue_agent_task"));
       const proxyOpener = inventory.tools.find(
@@ -733,10 +788,20 @@ test("SSE requires authentication and replays owned events in global cursor orde
 test("MCP 2.0 discovers events and serves tools/resources on the same authenticated endpoint", async () => {
   const { Events } = await import("../src/events/service.js");
   const dir = await mkdtemp(join(tmpdir(), "ac-modern-"));
+  const provider = Object.assign(new FixtureProvider(), {
+    models: async () => [
+      {
+        value: "default",
+        displayName: "Fixture model",
+        description: "Test catalog",
+        supportedEffortLevels: ["low"],
+      },
+    ],
+  });
   const c = new Control(
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
-    new Map([["fixture", new FixtureProvider()]]),
+    new Map([["fixture", provider]]),
     dir,
   );
   const events = new Events(
@@ -831,6 +896,16 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
       "fixture",
     );
     assert.equal(settings.json.result.structuredContent.schema.type, "object");
+    assert.deepEqual(
+      settings.json.result.structuredContent.schema.properties
+        .fixture_default_model.enum,
+      ["", "default"],
+    );
+    assert.deepEqual(
+      settings.json.result.structuredContent.schema.properties
+        .fixture_default_reasoning_effort.enum,
+      ["default", "low"],
+    );
     assert.equal(
       settings.json.result.structuredContent.layout[0].kind,
       "group",

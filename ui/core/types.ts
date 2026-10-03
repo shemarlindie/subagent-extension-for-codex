@@ -1,4 +1,10 @@
-import type { Artifact, Capabilities, Event, Task } from "../../src/model";
+import type {
+  Artifact,
+  Capabilities,
+  Event,
+  Task,
+  ModelChoice,
+} from "../../src/model";
 export type { Artifact, Event, Task };
 export type Mode = "panel" | "console";
 export type Tab = "result" | "activity" | "changes";
@@ -6,16 +12,45 @@ export type Filter = "all" | "active" | "attention" | "completed";
 export type Worker = {
   provider: string;
   profiles: string[];
+  models?: ModelChoice[];
+  model_discovery_error?: string;
   capabilities: Partial<Capabilities>;
 };
 export type Project = { repository: string; name?: string; kind: string };
 export type Defaults = {
+  default_model?: string;
+  default_reasoning_effort?: string;
+  [key: `${string}_default_model`]: string | undefined;
+  [key: `${string}_default_reasoning_effort`]: string | undefined;
   default_workspace_strategy?: "worktree" | "current_repo";
   default_provider?: string;
   default_worker_profile?: string;
   max_runtime_minutes: number;
   max_cost_usd: number | null;
   use_cost_budget?: boolean;
+};
+export type SettingsDocument = {
+  values: Record<string, string | number | boolean>;
+  schema: {
+    properties?: Record<
+      string,
+      {
+        type: "string" | "number" | "integer" | "boolean";
+        title?: string;
+        description?: string;
+        enum?: string[];
+        maxLength?: number;
+        minimum?: number;
+        maximum?: number;
+      }
+    >;
+    required?: string[];
+  };
+  layout?: {
+    kind: string;
+    title: string;
+    items: { kind: string; property?: string }[];
+  }[];
 };
 export type PanelData = {
   panel_scope?: {
@@ -58,6 +93,7 @@ export type Question = {
   multiSelect?: boolean;
 };
 export type DialogState =
+  | { kind: "settings"; settings: SettingsDocument; scope: number }
   | {
       kind: "delegate";
       defaults: Defaults;

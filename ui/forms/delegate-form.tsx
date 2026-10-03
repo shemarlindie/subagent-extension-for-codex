@@ -4,6 +4,7 @@ import type { DialogState, Task } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
 import {
   BudgetFields,
+  ModelFields,
   DependencyField,
   ProjectField,
   WorkerFields,
@@ -33,6 +34,8 @@ export function DelegateForm({
       revision: strategyDefault === "current_repo" ? "HEAD" : dialog.revision,
       workspace_strategy: strategyDefault,
       description: "",
+      model: "",
+      reasoning_effort: "default",
       worker: choices.includes(preferred) ? preferred : choices[0],
       runtime: defaults.max_runtime_minutes,
       costMode:
@@ -76,6 +79,8 @@ export function DelegateForm({
               description: values.description,
               provider,
               worker_profile,
+              model: values.model,
+              reasoning_effort: values.reasoning_effort,
               revision:
                 values.workspace_strategy === "current_repo"
                   ? "HEAD"
@@ -117,6 +122,7 @@ export function DelegateForm({
         </Field>
         <WorkspaceField />
         <WorkerFields workers={state.workers} />
+        <ModelFields defaults={defaults} workers={state.workers} />
         <Field id="context" label="Context to include (optional)">
           <textarea
             id="context"

@@ -191,7 +191,7 @@ Installed package evidence (`npm ls --depth=0`, package manifests and types):
 
 | Component | Installed version | Relevant evidence |
 | --- | --- | --- |
-| Claude Agent SDK | 0.2.141 | `sdk.d.ts` options; bundled manifest CLI 2.1.141 |
+| Claude Agent SDK | 0.3.288 | `sdk.d.ts` options; bundled manifest CLI 2.1.288 |
 | MCP SDK v1 | 1.31.0 | `types.js` latest supported handshake version 2025-11-25 |
 | MCP server / node v2 | 2.2.0 / 2.1.0 | Modern 2026-07-28 codec alongside legacy support |
 | MCP Apps | 1.7.5 | `spec.types.d.ts` host context lacks repository identity |

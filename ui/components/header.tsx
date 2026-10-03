@@ -44,6 +44,14 @@ export function Header() {
           </button>
         )}
         <button
+          id="settings"
+          className="quiet"
+          disabled={!state.connected || state.busy}
+          onClick={() => controller.run(() => controller.settings())}
+        >
+          Settings
+        </button>
+        <button
           id="delegate"
           className="primary"
           disabled={!state.connected || state.busy}

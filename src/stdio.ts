@@ -5,7 +5,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { definitions, withConversation } from "./tools.js";
 import { type Control } from "./control.js";
-import { settingsCapability } from "./settings.js";
+import { withSettingsCapability } from "./settings.js";
 import { delegationPanel, panelUri } from "./panel.js";
 import { taskPanelContext } from "./panel-context.js";
 import type { Task } from "./model.js";
@@ -16,7 +16,7 @@ const server = new McpServer(
   {
     instructions:
       "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Missing projects require registration with the local projects CLI.",
-    capabilities: { ...codexContextCapability, extensions: settingsCapability },
+    capabilities: withSettingsCapability(codexContextCapability),
   },
 );
 for (const [name, d] of Object.entries(definitions({} as Control, "local")))

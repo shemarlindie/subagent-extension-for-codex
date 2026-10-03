@@ -7,7 +7,7 @@ import { type Events, EventProtocolError } from "./events/service.js";
 import { definitions, withConversation } from "./tools.js";
 import { type Control } from "./control.js";
 import { z } from "zod";
-import { settingsCapability } from "./settings.js";
+import { withSettingsCapability } from "./settings.js";
 import { delegationPanel, panelUri } from "./panel.js";
 import { resolvePanelContext, taskPanelContext } from "./panel-context.js";
 import type { Task } from "./model.js";
@@ -24,9 +24,8 @@ export function mcp(
     { name: "codex-subagent-extension", version: "0.1.0" },
     {
       capabilities: {
-        ...codexContextCapability,
+        ...withSettingsCapability(codexContextCapability),
         tools: {},
-        extensions: settingsCapability,
         ...(events ? { events: {} } : {}),
       },
       requestState: { verify: (state) => c.forms.verify(owner, state) },

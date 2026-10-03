@@ -53,6 +53,94 @@ async function context() {
   };
   return { c, events, sessions, workspace };
 }
+test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async (t) => {
+  let time = 1000;
+  t.mock.method(Date, "now", () => time);
+  let launches = 0;
+  let closes = 0;
+  let resolve!: (models: any[]) => void;
+  const pending = new Promise<any[]>((r) => {
+    resolve = r;
+  });
+  let discoveryPrompt: AsyncIterable<any> | undefined;
+  let options: Options | undefined;
+  const models = [
+    {
+      value: "discovered-model",
+      displayName: "Discovered model",
+      description: "SDK metadata",
+    },
+  ];
+  const provider = new ClaudeAgentProvider((args) => {
+    launches++;
+    discoveryPrompt = args.prompt as AsyncIterable<any>;
+    options = args.options;
+    return {
+      supportedModels: () => pending,
+      close: () => {
+        closes++;
+      },
+    } as unknown as Query;
+  });
+  const first = provider.models();
+  const second = provider.models();
+  assert.equal(first, second);
+  assert.equal(launches, 1);
+  assert.deepEqual(options!.tools, []);
+  assert.deepEqual(options!.settingSources, []);
+  assert.equal(options!.persistSession, false);
+  assert.equal(options!.strictMcpConfig, true);
+  const next = discoveryPrompt![Symbol.asyncIterator]().next();
+  let emitted = false;
+  void next.then(() => {
+    emitted = true;
+  });
+  await Promise.resolve();
+  assert.equal(emitted, false);
+  resolve(models);
+  assert.deepEqual(await first, models);
+  assert.deepEqual(await next, { done: true, value: undefined });
+  assert.equal(closes, 1);
+  assert.equal((await provider.models())[0].supportsEffort, undefined);
+  assert.equal((await provider.models())[0].supportedEffortLevels, undefined);
+  time += 5 * 60 * 1000 - 1;
+  await provider.models();
+  assert.equal(launches, 1);
+  time++;
+  await provider.models();
+  assert.equal(launches, 2);
+  assert.equal(closes, 2);
+});
+
+test("failed Claude model discovery closes the query and retries after a short cooldown", async (t) => {
+  let time = 1000;
+  t.mock.method(Date, "now", () => time);
+  let attempts = 0;
+  let closes = 0;
+  const provider = new ClaudeAgentProvider(() => {
+    const attempt = ++attempts;
+    return {
+      supportedModels: async () => {
+        if (attempt === 1) throw new Error("SDK discovery failed");
+        return [
+          { value: "retried-model", displayName: "Retried", description: "" },
+        ];
+      },
+      close: () => {
+        closes++;
+      },
+    } as unknown as Query;
+  });
+  await assert.rejects(provider.models(), /SDK discovery failed/);
+  assert.equal(closes, 1);
+  await assert.rejects(provider.models(), /SDK discovery failed/);
+  assert.equal(attempts, 1);
+  assert.equal(closes, 1);
+  time += 30000;
+  assert.equal((await provider.models())[0].value, "retried-model");
+  assert.equal(attempts, 2);
+  assert.equal(closes, 2);
+});
 test("Claude SDK query uses native harness, resume, structured output, remaining budget and profile restrictions", async () => {
   const { c, events, sessions } = await context();
   let options: Options | undefined;
@@ -162,6 +250,38 @@ test("Claude mandatory hook denies outside paths, symlink escapes, Git metadata 
   assert.equal(await check("Write", { file_path: "a.ts" }), "deny");
   assert.equal(await check("Agent", {}), "deny");
   assert.equal(await check("Read", { file_path: "a.ts" }), undefined);
+});
+test("Claude forwards the selected model and effort and omits inherited native settings", async () => {
+  const { c } = await context();
+  let options: Options | undefined;
+  const provider = new ClaudeAgentProvider((args) => {
+    options = args.options;
+    return Object.assign(
+      (async function* () {
+        yield {
+          type: "result",
+          subtype: "success",
+          structured_output: result,
+          total_cost_usd: 0,
+          usage: {},
+        };
+      })(),
+      { close: () => {} },
+    ) as unknown as Query;
+  });
+  c.task.model = "selected-model";
+  c.task.reasoning_effort = "high";
+  await provider.run(c, "Review");
+  assert.equal(options!.model, "selected-model");
+  assert.equal(options!.effort, "high");
+  delete c.task.model;
+  c.task.reasoning_effort = "default";
+  await provider.run(c, "Review");
+  assert.equal(Object.hasOwn(options!, "model"), false);
+  assert.equal(Object.hasOwn(options!, "effort"), false);
+  delete c.task.reasoning_effort;
+  await provider.run(c, "Review");
+  assert.equal(Object.hasOwn(options!, "effort"), false);
 });
 test("write-profile shell commands require human decision and cannot use edited approval payloads", async () => {
   const { c } = await context();

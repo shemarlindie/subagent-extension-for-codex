@@ -7,6 +7,7 @@ import type {
   PanelData,
   Project,
   Snapshot,
+  SettingsDocument,
   Task,
   Transport,
   Worker,
@@ -407,6 +408,21 @@ export class Controller {
     });
     await this.refresh();
     await this.share();
+  }
+  async settings() {
+    if (this.state.dialog || this.state.busy) return;
+    const scope = this.state.scopeVersion;
+    const settings = await this.tool<SettingsDocument>("get_agent_settings");
+    if (this.disposed || scope !== this.state.scopeVersion || this.state.dialog)
+      return;
+    if (!settings.schema?.properties)
+      throw new Error(
+        "Settings are unavailable in this preview or service version.",
+      );
+    this.patch({
+      dialog: { kind: "settings", settings, scope },
+      formError: "",
+    });
   }
   async delegate(preferredWorker?: string) {
     if (this.state.dialog || this.state.busy) return;

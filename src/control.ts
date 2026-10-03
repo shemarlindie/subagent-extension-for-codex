@@ -116,6 +116,23 @@ export class Control {
       ],
     }));
   }
+  async availableWorkers() {
+    return Promise.all(
+      this.workers().map(async (worker) => {
+        const provider = this.providers.get(worker.provider)!;
+        if (!provider.models) return worker;
+        try {
+          return { ...worker, models: await provider.models() };
+        } catch {
+          return {
+            ...worker,
+            model_discovery_error:
+              "Model discovery unavailable; enter a model ID or retry later.",
+          };
+        }
+      }),
+    );
+  }
   async start(owner: string, input: unknown) {
     const parsed = startSchema.parse(this.settings.taskInput(owner, input));
     const req = {
@@ -128,6 +145,35 @@ export class Control {
     };
     if (!req.title) throw new Error("Task title is required");
     if (!req.description) throw new Error("Task description is required");
+    if (
+      req.provider === "claude" &&
+      req.reasoning_effort &&
+      ["none", "minimal"].includes(req.reasoning_effort)
+    )
+      throw new Error(
+        "Claude reasoning effort must be low, medium, high, xhigh or max",
+      );
+    const provider = this.providers.get(req.provider);
+    if (
+      provider?.models &&
+      req.reasoning_effort &&
+      req.reasoning_effort !== "default"
+    ) {
+      // Unknown or unavailable metadata leaves final validation to the provider.
+      const models = await provider.models().catch(() => []);
+      const model = models.find(
+        (item) => item.value === (req.model || "default"),
+      );
+      if (
+        model &&
+        (model.supportsEffort === false ||
+          (model.supportedEffortLevels !== undefined &&
+            !model.supportedEffortLevels.includes(req.reasoning_effort)))
+      )
+        throw new Error(
+          `Model ${model.value} does not support reasoning effort ${req.reasoning_effort}`,
+        );
+    }
     this.validateBudgets(req);
     if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD")
       throw new Error("Current repository workspace requires revision HEAD");

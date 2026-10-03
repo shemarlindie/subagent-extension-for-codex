@@ -12,9 +12,73 @@ import {
   type OpenAIForm,
 } from "@openai/mcp-extensions/server";
 import { type Control } from "./control.js";
-import { type Task } from "./model.js";
+import { type Task, reasoningLevels } from "./model.js";
 
 type Kind = "request_agent_task" | "request_agent_input";
+
+/**
+ * Discovered models become choices; host forms cannot combine a choice list
+ * with free text. Without discovery, the field stays free text.
+ */
+function modelField(
+  workers: Awaited<ReturnType<Control["availableWorkers"]>>,
+  requested: unknown,
+) {
+  const catalogs = workers.flatMap((worker) =>
+    "models" in worker && worker.models.length
+      ? [{ provider: worker.provider, models: worker.models }]
+      : [],
+  );
+  const saved = typeof requested === "string" ? requested.trim() : "";
+  if (!catalogs.length)
+    return {
+      type: "string",
+      title: "Model",
+      description:
+        "Blank uses configured defaults. Enter a model ID or provider alias.",
+      maxLength: 200,
+      default: saved,
+    };
+  // Name the provider whenever a choice could be paired with another worker.
+  const prefix = workers.length > 1;
+  const uncataloged = workers
+    .filter((worker) => !catalogs.some((c) => c.provider === worker.provider))
+    .map((worker) => worker.provider);
+  const choices = [
+    { const: "", title: "Use configured default" },
+    ...catalogs.flatMap(({ provider, models }) =>
+      models.map((model) => ({
+        const: model.value,
+        title: [
+          prefix ? `${provider} · ${model.displayName}` : model.displayName,
+          model.description,
+        ]
+          .filter(Boolean)
+          .join(" — "),
+      })),
+    ),
+  ].filter(
+    (choice, index, all) =>
+      all.findIndex((other) => other.const === choice.const) === index,
+  );
+  // Keep a requested custom ID selectable even when the catalog omits it.
+  if (saved && !choices.some((choice) => choice.const === saved))
+    choices.push({ const: saved, title: `${saved} (custom)` });
+  return {
+    type: "string",
+    title: "Model",
+    description: [
+      "Choose a model for the selected worker's provider. Unsupported reasoning efforts are rejected when the task starts.",
+      uncataloged.length
+        ? `No model list for ${uncataloged.join(", ")}; use the configured default.`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    oneOf: choices,
+    default: saved,
+  };
+}
 interface Request {
   kind: Kind;
   args: Record<string, unknown>;
@@ -97,11 +161,11 @@ export class Forms {
     if (task.pending_input?.id !== r.request_id)
       throw new Error("Input request is stale");
   }
-  private build(
+  private async build(
     owner: string,
     kind: Kind,
     args: Record<string, unknown>,
-  ): Request {
+  ): Promise<Request> {
     if (kind === "request_agent_task") {
       const defaults = this.c.settings.taskInput(owner, args) as any;
       const workspaceStrategy = defaults.workspace_strategy as
@@ -116,7 +180,8 @@ export class Forms {
         throw new Error(
           "Register a repository with the local projects CLI before opening a task form",
         );
-      const workers = this.c.workers().flatMap((w) =>
+      const availableWorkers = await this.c.availableWorkers();
+      const workers = availableWorkers.flatMap((w) =>
         w.profiles.map((profile) => ({
           const: `${w.provider}:${profile}`,
           title: `${w.provider} · ${profile.replaceAll("_", " ")}`,
@@ -155,6 +220,13 @@ export class Forms {
               title: "Worker",
               oneOf: workers,
               default: `${defaults.provider}:${defaults.worker_profile}`,
+            },
+            model: modelField(availableWorkers, args.model),
+            reasoning_effort: {
+              type: "string",
+              title: "Reasoning effort",
+              enum: ["default", ...reasoningLevels],
+              default: args.reasoning_effort ?? "default",
             },
             workspace_strategy: {
               type: "string",
@@ -314,7 +386,7 @@ export class Forms {
         Object.keys(ctx.mcpReq.inputResponses).length
       )
         throw new Error("Form responses require request state");
-      r = this.build(owner, kind, args);
+      r = await this.build(owner, kind, args);
       this.c.store.db
         .prepare("DELETE FROM form_requests WHERE expires<=?")
         .run(this.now());
@@ -398,6 +470,9 @@ export class Forms {
             description: content.description,
             provider,
             worker_profile,
+            model: content.model ?? r.args.model,
+            reasoning_effort:
+              content.reasoning_effort ?? r.args.reasoning_effort,
             revision:
               content.workspace_strategy === "current_repo"
                 ? "HEAD"
