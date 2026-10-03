@@ -56,10 +56,14 @@ export function createWebhookPost(
             "Content-Length": String(Buffer.byteLength(body)),
           },
           servername: host,
-          lookup: ((_host, options, cb: any) =>
+          lookup: ((_host, options, cb) =>
             options.all
               ? cb(null, [address])
-              : cb(null, address.address, address.family)) as LookupFunction,
+              : cb(
+                  null,
+                  address.address,
+                  address.family,
+                )) satisfies LookupFunction,
         },
         (res) => {
           let text = "";

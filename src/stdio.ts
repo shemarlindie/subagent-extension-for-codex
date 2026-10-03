@@ -3,7 +3,12 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { connectService } from "./service/launcher.js";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { definitions, withConversation, isUserTool } from "./server/tools.js";
+import {
+  definitions,
+  withConversation,
+  isUserTool,
+  type AnyTool,
+} from "./server/tools.js";
 import { type Control } from "./core/control.js";
 import { withSettingsCapability } from "./core/settings.js";
 import { delegationPanel, panelUri } from "./panel/panel.js";
@@ -124,13 +129,15 @@ server.registerTool(
     }
   },
 );
-for (const [name, d] of Object.entries(definitions({} as Control, "local")))
+// Definitions supply schemas only; the proxy forwards calls to the service.
+const tools: Record<string, AnyTool> = definitions({} as Control, "local");
+for (const [name, d] of Object.entries(tools))
   server.registerTool(
     name,
     {
       description: d.description,
       inputSchema: d.schema,
-      ...("outputSchema" in d ? { outputSchema: d.outputSchema } : {}),
+      ...(d.outputSchema ? { outputSchema: d.outputSchema } : {}),
       annotations: {
         readOnlyHint: name.startsWith("get_") || name.startsWith("list_"),
         destructiveHint: name === "cancel_agent_task",
@@ -146,7 +153,7 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
           : {}),
       },
     },
-    async (args: any, extra: { _meta?: Record<string, unknown> }) => {
+    async (args, extra: { _meta?: Record<string, unknown> }) => {
       try {
         const response = await fetch(
           `${origin}/api/${isUserTool(name) ? "user-tools" : "tools"}/${name}`,

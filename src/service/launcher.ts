@@ -79,7 +79,10 @@ export async function connectService() {
   } catch (error) {
     // Only a refused connection authorizes starting a process. Never replace a live service.
     if (!(error instanceof ServiceStartingError)) {
-      if (explicit || (error as any).cause?.code !== "ECONNREFUSED")
+      if (
+        explicit ||
+        (error as { cause?: { code?: string } }).cause?.code !== "ECONNREFUSED"
+      )
         throw error;
       needsLaunch = true;
     }

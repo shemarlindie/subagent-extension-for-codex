@@ -208,7 +208,7 @@ export class Forms {
       };
     }
     if (kind === "request_agent_task") {
-      const defaults = this.c.settings.taskInput(owner, args) as any;
+      const defaults = this.c.settings.taskInput(owner, args);
       const workspaceStrategy = defaults.workspace_strategy as
         "worktree" | "current_repo";
       const description =
@@ -392,7 +392,12 @@ export class Forms {
       });
       return r;
     }
-    const questions = Array.isArray(pending.input.questions)
+    // Worker-supplied question payloads; every field is read defensively.
+    const questions: {
+      question?: unknown;
+      options?: unknown;
+      multiSelect?: unknown;
+    }[] = Array.isArray(pending.input.questions)
       ? pending.input.questions
       : [{ question: pending.input.question ?? "Your response" }];
     if (!questions.length || questions.length > 20)
@@ -404,7 +409,7 @@ export class Forms {
     const properties = Object.fromEntries(
       questions.map((q, i) => {
         const options = Array.isArray(q.options)
-          ? q.options.map((o: any) => ({
+          ? q.options.map((o: { label?: unknown; description?: unknown }) => ({
               const: String(o.label),
               title: String(o.label),
               ...(o.description ? { description: String(o.description) } : {}),

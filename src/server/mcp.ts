@@ -4,7 +4,12 @@ import {
   type ServerContext,
 } from "@modelcontextprotocol/server";
 import { type Events, EventProtocolError } from "../events/service.js";
-import { definitions, withConversation, isUserTool } from "./tools.js";
+import {
+  definitions,
+  withConversation,
+  isUserTool,
+  type AnyTool,
+} from "./tools.js";
 import { type Control } from "../core/control.js";
 import { z } from "zod";
 import { withSettingsCapability } from "../core/settings.js";
@@ -108,13 +113,14 @@ export function mcp(
       }
     },
   );
-  for (const [name, d] of Object.entries(definitions(c, owner)))
+  const tools: Record<string, AnyTool> = definitions(c, owner);
+  for (const [name, d] of Object.entries(tools))
     server.registerTool(
       name,
       {
         description: d.description,
         inputSchema: d.schema,
-        ...("outputSchema" in d ? { outputSchema: d.outputSchema } : {}),
+        ...(d.outputSchema ? { outputSchema: d.outputSchema } : {}),
         annotations: {
           readOnlyHint: name.startsWith("get_") || name.startsWith("list_"),
           destructiveHint: name === "cancel_agent_task",
@@ -130,10 +136,15 @@ export function mcp(
             : {}),
         },
       },
-      async (args: any, ctx: ServerContext) => {
+      async (args, ctx: ServerContext) => {
         try {
-          const current = definitions(c, owner, "parent", ctx.mcpReq._meta);
-          const result = await current[name as keyof typeof current].run(
+          const current: Record<string, AnyTool> = definitions(
+            c,
+            owner,
+            "parent",
+            ctx.mcpReq._meta,
+          );
+          const result = await current[name].run(
             withConversation(name, args, ctx.mcpReq._meta),
           );
           return {

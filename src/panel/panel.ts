@@ -24,10 +24,18 @@ const resourceMeta = {
   "openai/widgetCSP": { connect_domains: [], resource_domains: [] },
 };
 
+type PanelContext = {
+  panel_scope: {
+    conversation_id: string | null;
+    repository?: string;
+    revision?: string;
+  };
+} & Record<string, unknown>;
+
 export function delegationPanel(
   htmlPath: string,
   initialTasks?: (conversationId?: string) => Task[],
-  context?: (args: PanelContextInput) => Promise<Record<string, any>>,
+  context?: (args: PanelContextInput) => Promise<PanelContext>,
 ) {
   const panel = {
     name: "open_codex_subagent_extension",
