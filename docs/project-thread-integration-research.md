@@ -54,7 +54,9 @@ The [extension overview](https://developers.openai.com/plugins/build/extensions)
 describes sidebar apps, conversation panels, settings, file handlers, deep links,
 and model/app context. It links to the public extension specification and SDK.
 The page primarily documents ChatGPT surfaces; installed desktop support still
-needs observation.
+needs observation for individual capabilities. The target here is Codex inside
+the ChatGPT desktop app, where the user has confirmed the thread panel works.
+Do not treat ChatGPT documentation as automatically excluding that Codex surface.
 
 ## What the UI extensions actually expose
 
@@ -84,8 +86,12 @@ The installed `@openai/mcp-extensions` **0.1.0** matches these
   optional `arguments`.
 - Tool `preferredModelDisplayMode` accepts `inline` or `fullscreen`.
 - Resource `preferredDisplayMode` and `availableDisplayModes` accept
-  `inline`, `fullscreen`, and `pip` in the SDK. Public host specifications and
-  older guidance differ about PiP availability; check actual capabilities.
+  `inline`, `fullscreen`, and `pip` in the SDK. The current developer reference
+  explicitly lists all three and describes requesting PiP, while the linked
+  extension specification explicitly excludes PiP in ChatGPT. This is a current
+  source conflict, not an established difference between Codex and ChatGPT or
+  proof that PiP is unavailable. Check actual host capabilities and the returned
+  mode. See the [display-mode evidence](host-capabilities.md#display-modes-and-native-extension-surfaces).
 
 Local evidence: `node_modules/@openai/mcp-extensions/dist/server/ui.d.ts` and
 `dist/app/model-context.d.ts`. A global quick action has static arguments; it

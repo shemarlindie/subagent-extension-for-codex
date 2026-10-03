@@ -4,6 +4,54 @@ Checked against official documentation and the installed packages on October 2,
 2026. This distinguishes documented capabilities from behavior verified in this
 repository; it is not a claim that every host/version implements every feature.
 
+## Display modes and native extension surfaces
+
+Rechecked October 2, 2026 against the official OpenAI developer documentation
+and its linked OpenAI extension specification and SDK. In this project, the
+target host is **Codex inside the ChatGPT desktop app**. The user has confirmed
+that the thread-specific delegation panel is present and works there. This
+confirms that surface in their installation, not every mode or bridge feature.
+
+| Mode | Presentation | Current documentation evidence |
+| --- | --- | --- |
+| `inline` | A compact widget in the conversation | Listed by the developer reference and extension specification |
+| `fullscreen` | An expanded app view; native entrypoints use this mode | Listed by both sources; the mode name does not determine desktop pane geometry |
+| `pip` | A persistent picture-in-picture widget alongside the conversation | Listed by the developer reference, UI guide and SDK, but explicitly excluded by the linked extension specification |
+
+The [developer reference](https://developers.openai.com/plugins/reference#component-resource-_meta-fields)
+lists all three as supported values of resource
+`_meta["openai/ui"].availableDisplayModes`. Its
+[presentation request example](https://developers.openai.com/plugins/reference#request-another-presentation-mode)
+also describes requesting inline, picture-in-picture or fullscreen, with a
+possible fullscreen fallback for PiP on mobile. The
+[UI implementation guide](https://developers.openai.com/plugins/build/chatgpt-ui#picture-in-picture)
+and [UI guidelines](https://developers.openai.com/plugins/concepts/ui-guidelines#picture-in-picture-pip)
+describe PiP workflows. This is more than a value accepted by SDK types.
+
+However, the linked
+[extension specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#display-modes)
+still explicitly limits ChatGPT to inline/fullscreen and excludes PiP. The
+[SDK resource schema](https://github.com/openai/mcp-extensions/blob/main/typescript/src/server/ui.ts)
+accepts all three, while tool `preferredModelDisplayMode` accepts only inline
+and fullscreen. These sources conflict; neither a categorical claim that
+ChatGPT cannot use PiP nor a guarantee that every ChatGPT/Codex installation
+supports it is justified. No separate Codex mode-support matrix was found in
+the checked developer pages. Do not invent a Codex exclusion from the ChatGPT
+wording. Check the actual host's `availableDisplayModes` and returned mode when
+requesting a change.
+
+The current extension advertises and implements inline/fullscreen only. PiP is
+not implemented or verified here. Its compact inline summary is part of the
+extension's widget, distinct from the host's right pinned summary.
+
+The [extension guide](https://developers.openai.com/plugins/build/extensions)
+documents global/sidebar, thread/conversation and file entrypoints, settings,
+composer mentions, forms and onboarding. The SDK additionally accepts a settings
+entrypoint. None of the checked docs exposes a custom section or action in the
+right pinned summary. Thread entrypoints and display-mode preferences cannot
+request that placement. This is a documentation finding, not proof that an
+undocumented or future host API cannot exist.
+
 ## Project and chat adapter update
 
 The later [integration research](project-thread-integration-research.md) pins the

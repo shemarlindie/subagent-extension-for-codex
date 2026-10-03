@@ -1,8 +1,27 @@
 # Embedded Codex delegation panel
 
-Original panel implemented October 2, 2026 in an isolated worktree, then applied to the primary repository. The original verification built the primary checkout and passed its 109 tests; that result is historical. This Codex-oriented MCP App still awaits visual and interaction verification in the installed host. The running service was not restarted; configuration and durable task data were not changed. No live workers were started for this verification.
+Original panel implemented October 2, 2026 in an isolated worktree, then applied to the primary repository. The original verification built the primary checkout and passed its 109 tests; that result is historical. The running service was not restarted; configuration and durable task data were not changed. No live workers were started for that verification.
 
 The current shared frontend architecture is documented in [React UI architecture](react-ui.md).
+
+## Current host confirmation and display-mode evidence
+
+The target is Codex inside the ChatGPT desktop app. On October 2, 2026, the
+user confirmed that the thread-specific panel is present and works. Earlier
+unverified-host statements below record historical implementation checks;
+they do not override that confirmation. Other bridge features and modes need
+their own evidence.
+
+The extension implements inline/fullscreen. The official developer reference
+also documents PiP, but the linked extension specification explicitly excludes
+it in ChatGPT. Do not present PiP as categorically unsupported or assume a
+separate Codex restriction. The source comparison and runtime fallback guidance
+are in [host capabilities](host-capabilities.md#display-modes-and-native-extension-surfaces).
+
+The user specifically requested a launcher section in the host's **right pinned
+summary**, separate from the repository Changes section. No extension point for
+that card was found in the checked official developer docs. The working thread
+entrypoint and the extension's own inline summary are separate surfaces.
 
 ## Project and chat integration update
 
@@ -49,9 +68,10 @@ that the desktop delivers these fields. See the
 
 Tools prefer inline model presentation; the resource declares inline/fullscreen.
 The thread entrypoint is the supported adjacent-chat affordance, while the host
-owns physical placement. No automatic fullscreen request is made. Native
-placement, entrypoint directory metadata, and authenticated live widget behavior
-still require loading the rebuilt connection in the target desktop. Restarting
+owns physical placement. The current inline widget offers **Open panel**, which
+requests fullscreen only when advertised by the host; no automatic request is
+made. The user's working thread panel is confirmed above. Entry-point metadata
+changes and additional bridge behaviors need separate host checks. Restarting
 a service with active work needs operational care; this work does not restart it.
 
 Fixture browser checks covered 440px light and 1040px dark layouts, project path
@@ -106,7 +126,7 @@ Optional context sharing runs separately from inspection: rejection or slow host
 
 All panel reads and writes use the portable MCP Apps bridge. No direct fetch, cookie, SSE, credential entry, provider API or public endpoint is required in the panel. The stdio resource permits no external connections/assets. It polls through the bridge every five seconds while visible and not submitting. Unchanged details are not rerendered, open forms survive polling, and detail disclosure/focus/artifact scroll positions are retained. Activity uses cursor paging and displays the most recent 200 events; full history remains available through `get_agent_events`.
 
-The official [UI documentation](https://developers.openai.com/plugins/build/chatgpt-ui) and [metadata reference](https://developers.openai.com/plugins/reference) informed the portable resource/bridge approach. ChatGPT's `window.openai`, global/thread entrypoints, rich forms and settings surfaces are not treated as Codex contracts.
+The official [UI documentation](https://developers.openai.com/plugins/build/chatgpt-ui) and [metadata reference](https://developers.openai.com/plugins/reference) informed the portable resource/bridge approach. This historical implementation used portable calls and capability detection for optional features. Codex inside ChatGPT must not be assumed to lack ChatGPT extension surfaces; current host confirmation and display-mode evidence are recorded above.
 
 ### Load later without replacing the active service
 

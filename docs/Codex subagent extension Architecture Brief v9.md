@@ -578,10 +578,10 @@ fullscreen
   detailed task, artifact, or console view
 
 pip
-  optional running-task monitor
+  possible future running-task monitor, subject to host support
 ```
 
-Picture-in-picture can be useful for a running task that should remain visible while the user continues working elsewhere.
+Picture-in-picture can be useful for a running task that should remain visible while the user continues working elsewhere. The current extension implements inline/fullscreen only. As rechecked October 2, 2026, the official developer reference documents PiP, while its linked OpenAI extension specification explicitly excludes it in ChatGPT. Treat this as conflicting documentation, not a guaranteed host feature or a Codex-specific exclusion. Check the host's advertised modes and the returned mode before using it. See [display-mode evidence](host-capabilities.md#display-modes-and-native-extension-surfaces).
 
 The same task state should back all presentation modes.
 

@@ -264,6 +264,14 @@ and legacy docs, public Codex core/app-server contracts, and alternative
 integrations. The desktop UI is closed source. Native placement remains a
 host-controlled behavior; metadata and browser fixture checks do not prove it.
 
+The target is Codex inside the ChatGPT desktop app; the user has confirmed its
+thread-specific panel works. The extension implements inline/fullscreen. The
+official developer reference also documents PiP, while the linked extension
+specification excludes it, so PiP availability needs a host capability check.
+The [display-mode and native-surface notes](docs/host-capabilities.md#display-modes-and-native-extension-surfaces)
+record the conflicting sources and the absence of a documented extension point
+for the host's right pinned summary.
+
 ## Extension review limits
 
 The server consumes optional `_meta["openai/session"]` or source-backed
