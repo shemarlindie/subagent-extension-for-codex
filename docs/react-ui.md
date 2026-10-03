@@ -43,6 +43,8 @@ Delegation forms collect the full request as the description without a manual ti
 
 Model selection shows each discovered model's display name with its description as secondary text. The delegation Model field remains free text, so custom IDs and aliases still work.
 
+The activity timeline groups tool lifecycles and streamed responses. Consecutive artifact creations within one task show a count and their titles; thinking-token updates show **Thinking…**. Other consecutive updates with the same event kind and summary share a row with an event count. Messages, failures, input requests, lifecycle transitions, and events without summaries keep separate rows. Routine status updates continue to share a row showing the latest status. Each row's debug button exposes every original event; grouping changes presentation only.
+
 Opening either HTML entrypoint outside an iframe with `?preview=1` selects fixture data; `&theme=dark` selects the dark preview theme. Preview does not connect to the service or execute workers. Unsupported fixture operations fail explicitly. Native host rendering and delivery still require separate host verification.
 
 ![Fixture preview with a selected task and artifact report](images/react-panel-preview.png)

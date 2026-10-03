@@ -156,6 +156,61 @@ test("latest group is first and fresh progress moves an older tool to the top wi
   assert.equal(debug.getAttribute("aria-expanded"), "true");
 });
 
+test("artifact counts update without closing debug or remounting raw inspectors", async (t) => {
+  t.after(cleanup);
+  const events = [1, 2, 3].map((index) =>
+    event(
+      "artifact.created",
+      { title: `Artifact ${index}` },
+      `count-artifact-${index}`,
+    ),
+  );
+  const view = render(
+    createElement(GroupedEventList, { events: events.slice(0, 1) }),
+  );
+  const debug = view.getByRole("button", {
+    name: "Debug activity: Created an artifact",
+  });
+  fireEvent.click(debug);
+  const panel = document.getElementById(debug.getAttribute("aria-controls")!)!;
+  const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
+  await act(async () => {
+    raw.open = true;
+    raw.dispatchEvent(new dom.window.Event("toggle"));
+  });
+  await waitFor(() =>
+    assert.equal(
+      raw.querySelector("pre")?.textContent,
+      JSON.stringify(events[0].data, null, 2),
+    ),
+  );
+  for (const count of [2, 3]) {
+    view.rerender(
+      createElement(GroupedEventList, { events: events.slice(0, count) }),
+    );
+    assert.equal(
+      view.getByRole("button", {
+        name: `Debug activity: Created ${count} artifacts`,
+      }),
+      debug,
+    );
+    assert.equal(debug.getAttribute("aria-expanded"), "true");
+    assert.equal(debug.getAttribute("title"), `Inspect ${count} raw responses`);
+    assert.equal(panel.hidden, false);
+    const inspectors = Array.from(
+      panel.querySelectorAll("details.activity-raw"),
+    );
+    assert.equal(inspectors.length, count);
+    assert.ok(inspectors.includes(raw));
+    assert.equal(raw.open, true);
+    assert.equal(
+      raw.querySelector("pre")?.textContent,
+      JSON.stringify(events[0].data, null, 2),
+    );
+    assert.equal(view.container.querySelectorAll(".activity-group").length, 1);
+  }
+});
+
 test("pinned updates stay at zero and manually returning within the 48px buffer repins", (t) => {
   t.after(cleanup);
   mockActivityGeometry(t);

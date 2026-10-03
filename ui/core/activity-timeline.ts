@@ -73,16 +73,22 @@ const boundaries = new Set([
   "task.started",
   "task.continued",
 ]);
+const thinking = new Set([
+  "thinking_tokens",
+  "thinking.tokens",
+  "agent.thinking_tokens",
+]);
 function statusTitle(e: Event) {
   const key = activityKind(e),
     d = e.data;
+  if (thinking.has(key)) return "Thinking…";
   if (key === "status")
     return d.compact_result === "failed"
       ? "Context compaction failed"
       : d.status === "compacting"
         ? "Compacting context"
         : d.status === "requesting"
-          ? "Thinking"
+          ? "Thinking…"
           : "Working";
   if (key === "api_retry")
     return `Retrying request${typeof d.attempt === "number" ? ` · attempt ${d.attempt}` : ""}`;
@@ -104,8 +110,35 @@ function statusTitle(e: Event) {
   if (key === "files_persisted") return "Files saved";
   if (key === "plugin_install") return "Updating plugins";
   if (key === "task.queued") return "Queued";
+  if (key === "task.started") return "Task started";
+  if (key === "task.continued") return "Task continued";
   if (["agent.started", "init"].includes(key)) return "Claude connected";
   return "Working";
+}
+function thinkingSignal(e: Event) {
+  const key = activityKind(e);
+  return (
+    !activityFailed(e) &&
+    (thinking.has(key) || (key === "status" && e.data.status === "requesting"))
+  );
+}
+function onlyThinkingSignals(group: ActivityGroup) {
+  return group.events.length > 0 && group.events.every(thinkingSignal);
+}
+function hasThinkingContent(e: Event) {
+  const hasThinkingBlock = (value: unknown): boolean => {
+    if (Array.isArray(value)) return value.some(hasThinkingBlock);
+    const block = object(value);
+    return (
+      block.type === "thinking" ||
+      block.type === "thinking_delta" ||
+      (Array.isArray(block.content) && hasThinkingBlock(block.content))
+    );
+  };
+  const rawMessage = object(object(e.data.raw_response).message);
+  return (
+    hasThinkingBlock(e.data.content) || hasThinkingBlock(rawMessage.content)
+  );
 }
 function toolTitle(events: Event[]) {
   const start = events.find((e) => e.type === "tool.started");
@@ -171,7 +204,14 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     return group;
   };
   let adjacentStatus: ActivityGroup | undefined;
+  let adjacentEvent: ActivityGroup | undefined;
+  let adjacentThinking: ActivityGroup | undefined;
   for (const e of [...events].sort((a, b) => a.id - b.id)) {
+    const previousEvent = adjacentEvent;
+    const previousThinking = adjacentThinking;
+    // Even an event absorbed into a tool or message interrupts consecutive updates.
+    adjacentEvent = undefined;
+    adjacentThinking = undefined;
     const d = e.data,
       key = activityKind(e);
     if (!quiet.has(key) || activityFailed(e)) adjacentStatus = undefined;
@@ -271,19 +311,37 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         nativeId = string(object(raw.message).id ?? raw.uuid);
       const id = nativeId ? `${e.task_id}:${nativeId}` : undefined;
       const existing = id ? messages.get(id) : undefined;
+      let group: ActivityGroup;
       if (existing) {
+        group = existing;
         existing.events.push(e);
         existing.kind = "message";
         existing.state = "completed";
         existing.title = d.role === "user" ? "You" : "Assistant";
       } else {
-        const group = add(
+        group = add(
           e,
           "message",
           d.role === "user" ? "You" : "Assistant",
           "completed",
         );
         if (id) messages.set(id, group);
+      }
+      // A requesting/thinking marker immediately before an assistant message is
+      // redundant when that message already contains its own thinking disclosure.
+      // Keep the marker in the message's debug events so it remains inspectable.
+      if (
+        d.role !== "user" &&
+        hasThinkingContent(e) &&
+        previousThinking?.events[0].task_id === e.task_id &&
+        onlyThinkingSignals(previousThinking)
+      ) {
+        const previousIndex = groups.indexOf(previousThinking);
+        if (previousIndex >= 0 && previousThinking !== group) {
+          group.events.push(...previousThinking.events);
+          group.events.sort((a, b) => a.id - b.id);
+          groups.splice(previousIndex, 1);
+        }
       }
       continue;
     }
@@ -292,11 +350,15 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       // Only adjacent housekeeping bursts combine; messages remain in sequence.
       if (
         previous?.kind === "status" &&
-        previous.events[0].task_id === e.task_id
+        previous.events[0].task_id === e.task_id &&
+        !boundaries.has(key) &&
+        !previous.events.some((event) => boundaries.has(activityKind(event)))
       ) {
         previous.events.push(e);
         previous.title = statusTitle(e);
       } else adjacentStatus = add(e, "status", statusTitle(e));
+      if (adjacentStatus && onlyThinkingSignals(adjacentStatus))
+        adjacentThinking = adjacentStatus;
       continue;
     }
     const group = add(
@@ -310,7 +372,11 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
           ? "Turn completed"
           : key === "task.completed"
             ? "Task completed"
-            : sentence(key),
+            : key === "artifact.created"
+              ? "Created an artifact"
+              : thinking.has(key)
+                ? "Thinking…"
+                : sentence(key),
       activityFailed(e) ? "failed" : "info",
     );
     group.summary =
@@ -326,6 +392,48 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
           d.result,
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
+    if (!activityFailed(e)) {
+      if (key === "artifact.created") group.summary = string(d.title);
+      if (thinking.has(key)) group.summary = undefined;
+    }
+    // Generic updates need matching readable summaries; SDK messages and actionable
+    // transitions retain their own rows. Every raw event remains inspectable.
+    if (
+      !activityFailed(e) &&
+      !boundaries.has(key) &&
+      key !== "assistant" &&
+      key !== "user" &&
+      key !== "agent.input_required" &&
+      key !== "agent.input_submitted"
+    ) {
+      if (
+        previousEvent &&
+        previousEvent.events[0].task_id === e.task_id &&
+        activityKind(previousEvent.events[0]) === key &&
+        (key === "artifact.created" ||
+          thinking.has(key) ||
+          (group.summary !== undefined &&
+            previousEvent.summary === group.summary))
+      ) {
+        groups.pop();
+        previousEvent.events.push(e);
+        const count = previousEvent.events.length;
+        previousEvent.title =
+          key === "artifact.created"
+            ? `Created ${count} artifacts`
+            : thinking.has(key)
+              ? "Thinking…"
+              : `${sentence(key)} · ${count} events`;
+        if (key === "artifact.created")
+          previousEvent.summary =
+            previousEvent.events
+              .map((event) => string(event.data.title))
+              .filter(Boolean)
+              .join(" · ") || undefined;
+        adjacentEvent = previousEvent;
+      } else adjacentEvent = group;
+      if (onlyThinkingSignals(adjacentEvent)) adjacentThinking = adjacentEvent;
+    }
   }
   return groups;
 }
@@ -360,8 +468,11 @@ export function currentActivityStatus(
     .filter((g) => g.state === "running")
     .sort((a, b) => a.events.at(-1)!.id - b.events.at(-1)!.id)
     .at(-1);
-  const latest = sorted.findLast((e) =>
-    [
+  const latest = sorted.findLast((e) => {
+    const kind = activityKind(e);
+    // Routine thinking updates must not hide live work or an earlier status change.
+    if (active && thinking.has(kind) && !activityFailed(e)) return false;
+    return [
       "task.failed",
       "task.completed",
       "task.cancelled",
@@ -376,8 +487,9 @@ export function currentActivityStatus(
       "api_retry",
       "session_state_changed",
       "rate_limit_event",
-    ].includes(activityKind(e)),
-  );
+      ...thinking,
+    ].includes(kind);
+  });
   if (latest && (!active || latest.id > active.events.at(-1)!.id)) {
     const kind = activityKind(latest);
     if (kind === "agent.input_required")
