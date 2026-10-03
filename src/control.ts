@@ -6,6 +6,7 @@ import { Workspaces } from "./workspace.js";
 import { Settings } from "./settings.js";
 import { Projects } from "./projects.js";
 import { Forms } from "./forms.js";
+import { generateTaskTitle } from "./task-title.js";
 import {
   startSchema,
   UnconfirmedTerminationError,
@@ -119,7 +120,10 @@ export class Control {
     const parsed = startSchema.parse(this.settings.taskInput(owner, input));
     const req = {
       ...parsed,
-      title: parsed.title.trim(),
+      title:
+        parsed.title === undefined
+          ? generateTaskTitle(parsed.description)
+          : parsed.title.trim(),
       description: parsed.description.trim(),
     };
     if (!req.title) throw new Error("Task title is required");

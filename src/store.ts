@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { type Task, type Event, type Artifact, now } from "./model.js";
+import { generateTaskTitle } from "./task-title.js";
 export class Store {
   db: DatabaseSync;
   bus = new EventEmitter();
@@ -16,6 +17,40 @@ export class Store {
     CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL REFERENCES tasks(id),type TEXT NOT NULL,timestamp TEXT NOT NULL,data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY,task_id TEXT NOT NULL REFERENCES tasks(id),body TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS events_task ON events(task_id,id);`);
+    this.migrateTaskDescriptions();
+  }
+  private migrateTaskDescriptions() {
+    // Older versions stored the full request in `task`. Repair JSON bodies in
+    // place, preserving task identity, timestamps, events and execution state.
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const update = this.db.prepare("UPDATE tasks SET body=? WHERE id=?");
+      for (const row of this.db.prepare("SELECT id, body FROM tasks").all()) {
+        const body = JSON.parse(String(row.body));
+        const original = JSON.stringify(body);
+        const hasDescription =
+          typeof body.description === "string" && body.description.trim();
+        const hasTitle = typeof body.title === "string" && body.title.trim();
+        if (!hasDescription) {
+          if (typeof body.task === "string" && body.task.trim())
+            body.description = body.task;
+          else if (hasTitle) {
+            body.description = body.title;
+            body.title = generateTaskTitle(body.description);
+          }
+        }
+        if (typeof body.description === "string" && body.description.trim()) {
+          if (!hasTitle) body.title = generateTaskTitle(body.description);
+          delete body.task;
+        }
+        if (JSON.stringify(body) !== original)
+          update.run(JSON.stringify(body), row.id);
+      }
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
   save(t: Task) {
     t.updated_at = now();

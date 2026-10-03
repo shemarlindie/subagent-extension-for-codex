@@ -37,7 +37,7 @@ The standalone console uses credentialed HTTP requests, token login, and SSE act
 
 The embedded panel renders a compact summary in `inline` mode: project/chat scope, task counts, and the selected task's status. Counts cover the current scope even when the full panel has search or status filters applied. **Open panel** requests `fullscreen` when the host advertises it; the host controls placement. The full interface appears in expanded mode. Collapsing preserves task selection and hides any open dialog while retaining its draft for expansion. Scope changes still discard stale dialogs. The standalone console and fixture preview retain their full layout.
 
-Task rows and the inline preview show the concise title. The inspector shows the full description in a disclosure that starts collapsed.
+Delegation forms collect the full request as the description without a manual title field. The service generates a title from the description's first line or sentence, up to 120 characters. Task rows and the inline preview show the concise title. The inspector shows the full description in a disclosure that starts collapsed.
 
 Opening either HTML entrypoint outside an iframe with `?preview=1` selects fixture data; `&theme=dark` selects the dark preview theme. Preview does not connect to the service or execute workers. Unsupported fixture operations fail explicitly. Native host rendering and delivery still require separate host verification.
 

@@ -6,7 +6,6 @@ import { FormSelect } from "./form-select";
 import { ProjectAutocomplete } from "./project-autocomplete";
 export type DelegateValues = {
   repository: string;
-  title: string;
   description: string;
   worker: string;
   revision: string;

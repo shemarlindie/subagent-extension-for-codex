@@ -203,12 +203,8 @@ async function selectOption(
   );
 }
 
-async function enterTask(user: any, title: string) {
-  await user.type(screen.getByLabelText("Task title"), title);
-  await user.type(
-    screen.getByLabelText("Description"),
-    `Full details for ${title}.`,
-  );
+async function enterTask(user: any, description: string) {
+  await user.type(screen.getByLabelText("Description"), description);
 }
 
 test("description toggles literally, survives refresh, and resets for another task", async (t) => {
@@ -255,7 +251,7 @@ test("description toggles literally, survives refresh, and resets for another ta
   assert.ok(screen.getByText("Second instructions"));
 });
 
-test("delegation submits separate title and description and search matches description", async (t) => {
+test("delegation submits the full request without a title and search matches description", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
     transport.tasks[0].description = "Inspect the unique zebra boundary.";
     transport.tasks.push({
@@ -272,7 +268,10 @@ test("delegation submits separate title and description and search matches descr
   assert.equal(screen.queryByRole("button", { name: /^Other task/ }), null);
   await act(() => controller.setSearch(""));
   await user.click(screen.getByRole("button", { name: "New task" }));
-  await enterTask(user, "Short summary");
+  assert.equal(screen.queryByLabelText("Task title"), null);
+  const request =
+    "Review authentication.\nInclude all edge cases and report the evidence.";
+  await enterTask(user, request);
   await user.click(screen.getByRole("button", { name: "Start task" }));
   await waitFor(() =>
     assert.equal(
@@ -283,8 +282,8 @@ test("delegation submits separate title and description and search matches descr
   const submitted = transport.calls.find(
     (call) => call.name === "start_agent_task",
   )!.args;
-  assert.equal(submitted.title, "Short summary");
-  assert.equal(submitted.description, "Full details for Short summary.");
+  assert.ok(!("title" in submitted));
+  assert.equal(submitted.description, request);
   assert.ok(!("task" in submitted));
 });
 
@@ -362,7 +361,7 @@ test("failed expansion keeps the inline preview and displays the host error", as
 test("host collapse preserves a delegation draft until scope changes", async (t) => {
   const { controller, transport, user } = await setup(t);
   await user.click(screen.getByRole("button", { name: "New task" }));
-  const field = await screen.findByLabelText("Task title");
+  const field = await screen.findByLabelText("Description");
   await user.type(field, "Preserve this suspended draft");
   const dialogState = controller.getSnapshot().dialog;
   await act(() => transport.expand());
@@ -372,11 +371,11 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   await screen.findByRole("dialog");
   assert.ok(
-    screen.getByLabelText("Task title") === field,
+    screen.getByLabelText("Description") === field,
     "Host expansion retains the draft field node",
   );
   assert.equal(
-    (field as HTMLInputElement).value,
+    (field as HTMLTextAreaElement).value,
     "Preserve this suspended draft",
   );
   assert.equal(
@@ -392,7 +391,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   await user.click(screen.getAllByRole("button", { name: "New task" })[0]);
   await screen.findByRole("dialog");
   assert.equal(
-    (screen.getByLabelText("Task title") as HTMLInputElement).value,
+    (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
     "",
   );
   assert.equal(
@@ -534,7 +533,7 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
   const { controller, transport, user } = await setup(t);
   const trigger = screen.getByRole("button", { name: "New task" });
   await user.click(trigger);
-  const field = await screen.findByLabelText("Task title");
+  const field = await screen.findByLabelText("Description");
   await waitFor(() =>
     assert.ok(
       document.activeElement === field,
@@ -548,10 +547,10 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
   ];
   await act(() => controller.refresh());
   assert.ok(
-    screen.getByLabelText("Task title") === field,
+    screen.getByLabelText("Description") === field,
     "Polling should retain the task field",
   );
-  assert.equal((field as HTMLInputElement).value, "Keep this draft");
+  assert.equal((field as HTMLTextAreaElement).value, "Keep this draft");
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => assert.ok(screen.queryByRole("dialog") === null));
   await waitFor(() =>
@@ -629,7 +628,7 @@ test("changing projects clears revision and dependencies while retaining the tas
     "HEAD",
   );
   assert.equal(
-    (screen.getByLabelText("Task title") as HTMLInputElement).value,
+    (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
     "Persistent task",
   );
   assert.match(
@@ -916,7 +915,7 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   );
   assert.ok(screen.getByRole("dialog") === dialog);
   assert.equal(
-    (screen.getByLabelText("Task title") as HTMLInputElement).value,
+    (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
     "Keyboard worker selection",
   );
   await user.click(screen.getByRole("button", { name: "Start task" }));

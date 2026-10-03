@@ -104,7 +104,6 @@ async function setup(provider: Provider = new FixtureProvider()) {
 const accepted = {
   action: "accept",
   content: {
-    title: "Review [input]",
     description: "Review [input]",
     worker: "fixture:reviewer",
     revision: "HEAD",
@@ -138,15 +137,13 @@ test("native host delegation requests user input before starting and retries com
     const form = requested.result.inputRequests.form;
     assert.ok(form.params.requestedSchema.required.includes("repository"));
     const schema = form.params.requestedSchema;
-    assert.ok(schema.required.includes("title"));
+    assert.ok(!schema.required.includes("title"));
+    assert.ok(!("title" in schema.properties));
     assert.ok(schema.required.includes("description"));
-    assert.equal(schema.properties.title.default, "Suggested title");
     assert.equal(
       schema.properties.description.default,
       "Suggested full instructions",
     );
-    assert.equal(schema.properties.title.minLength, 1);
-    assert.equal(schema.properties.title.maxLength, 120);
     assert.equal(schema.properties.description.minLength, 1);
     assert.equal(schema.properties.description.maxLength, 20000);
     const repository =
@@ -156,8 +153,8 @@ test("native host delegation requests user input before starting and retries com
       content: {
         ...accepted.content,
         repository,
-        title: "Edited short title",
-        description: "Edited complete instructions [input]",
+        description:
+          "Edited complete instructions [input]\nKeep all details and evidence.",
       },
     };
     assert.equal(form.method, "elicitation/create");
@@ -183,8 +180,11 @@ test("native host delegation requests user input before starting and retries com
     assert.ok(task?.id, JSON.stringify(first));
     assert.equal(second.result?.structuredContent.result.id, task.id);
     assert.equal(task.conversation_id, "conversation-a");
-    assert.equal(task.title, "Edited short title");
-    assert.equal(task.description, "Edited complete instructions [input]");
+    assert.equal(task.title, "Edited complete instructions [input]");
+    assert.equal(
+      task.description,
+      "Edited complete instructions [input]\nKeep all details and evidence.",
+    );
     assert.equal(c.store.get(task.id, "local").description, task.description);
     assert.equal(task.repository, await realpath(repository));
     assert.equal(task.budget.max_cost_usd, 1);
@@ -205,7 +205,6 @@ test("native host delegation requests user input before starting and retries com
           ...accepted,
           content: {
             ...accepted.content,
-            title: "Different",
             description: "Different",
           },
         })
@@ -256,6 +255,86 @@ test("persisted forms from before project selection reject submission and requir
       started.result.structuredContent.result.repository,
       await realpath(repository),
     );
+    assert.equal(c.store.all().length, 1);
+  } finally {
+    await close();
+  }
+});
+
+test("persisted task-only forms require reopening before changing pending state", async () => {
+  const { c, rpc, close } = await setup();
+  try {
+    const requested = await rpc("request_agent_task", {});
+    const state = requested.result.requestState;
+    const schema = requested.result.inputRequests.form.params.requestedSchema;
+    const repository = schema.properties.repository.oneOf[0].const;
+    const row = c.store.db.prepare("SELECT id,body FROM form_requests").get()!;
+    const legacy = JSON.parse(String(row.body));
+    legacy.form.properties.task = legacy.form.properties.description;
+    delete legacy.form.properties.description;
+    legacy.form.required = legacy.form.required.map((name: string) =>
+      name === "description" ? "task" : name,
+    );
+    const body = JSON.stringify(legacy);
+    c.store.db
+      .prepare("UPDATE form_requests SET body=? WHERE id=?")
+      .run(body, row.id);
+    c.forms = new Forms(c);
+    const { description, ...fields } = accepted.content;
+    const submitted = await rpc("request_agent_task", {}, state, {
+      action: "accept",
+      content: { ...fields, repository, task: description },
+    });
+    assert.ok(submitted.result.isError, JSON.stringify(submitted));
+    assert.match(submitted.result.content[0].text, /Reopen the task form/);
+    assert.equal(c.store.all().length, 0);
+    const persisted = c.store.db
+      .prepare("SELECT body FROM form_requests WHERE id=?")
+      .get(row.id)!;
+    assert.equal(persisted.body, body);
+    assert.equal(JSON.parse(String(persisted.body)).status, "pending");
+  } finally {
+    await close();
+  }
+});
+
+test("persisted title and description forms preserve the accepted title after reload", async () => {
+  const { c, rpc, close } = await setup();
+  try {
+    const requested = await rpc("request_agent_task", {});
+    const state = requested.result.requestState;
+    const schema = requested.result.inputRequests.form.params.requestedSchema;
+    const repository = schema.properties.repository.oneOf[0].const;
+    const row = c.store.db.prepare("SELECT id,body FROM form_requests").get()!;
+    const legacy = JSON.parse(String(row.body));
+    legacy.form.properties.title = {
+      type: "string",
+      title: "Title",
+      minLength: 1,
+      maxLength: 120,
+    };
+    legacy.form.required.push("title");
+    c.store.db
+      .prepare("UPDATE form_requests SET body=? WHERE id=?")
+      .run(JSON.stringify(legacy), row.id);
+    c.forms = new Forms(c);
+    const description =
+      "Review all permissions [input]\nPreserve every detail.";
+    const submitted = await rpc("request_agent_task", {}, state, {
+      action: "accept",
+      content: {
+        ...accepted.content,
+        repository,
+        title: "Legacy custom heading",
+        description,
+      },
+    });
+    const task = submitted.result?.structuredContent?.result;
+    assert.ok(task?.id, JSON.stringify(submitted));
+    assert.equal(task.title, "Legacy custom heading");
+    assert.equal(task.description, description);
+    assert.equal(c.store.get(task.id, "local").title, "Legacy custom heading");
+    assert.equal(c.store.get(task.id, "local").description, description);
     assert.equal(c.store.all().length, 1);
   } finally {
     await close();

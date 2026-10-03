@@ -15,7 +15,10 @@ export const startSchema = z.object({
     .string()
     .min(1)
     .max(120)
-    .describe("A short summary of the task, shown in task lists and headings."),
+    .optional()
+    .describe(
+      "Optional short title; generated from the full description when omitted.",
+    ),
   description: z
     .string()
     .min(1)
@@ -101,6 +104,7 @@ export const resultSchema = {
   additionalProperties: false,
 };
 export interface Task extends Start {
+  title: string;
   id: string;
   owner: string;
   status: Status;

@@ -281,7 +281,6 @@ test("task form offers current repository and submits its selected strategy", as
             action: "accept",
             content: {
               repository: s.repo,
-              title: "Review edits",
               description: "Review edits",
               worker: "fixture:reviewer",
               revision: "HEAD",
@@ -327,7 +326,6 @@ test("host task form defaults current repository to HEAD and forces HEAD on subm
             action: "accept",
             content: {
               repository: s.repo,
-              title: "Review edits",
               description: "Review edits",
               worker: "fixture:reviewer",
               revision: "feature-branch",

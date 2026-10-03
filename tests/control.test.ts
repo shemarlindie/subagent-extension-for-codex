@@ -82,6 +82,34 @@ test("task titles stay separate from trimmed worker instructions", async () => {
   }
 });
 
+test("missing titles are generated while workers receive the full request", async () => {
+  const provider = new FixtureProvider();
+  const original = provider.run.bind(provider);
+  let received: string | undefined;
+  provider.run = async (ctx, prompt) => {
+    received = prompt;
+    return original(ctx, prompt);
+  };
+  const { c, store } = await setup(provider);
+  try {
+    const description =
+      "Review authentication.\nInclude every edge case and report the evidence.";
+    const task = await c.start("alice", {
+      ...input(),
+      title: undefined,
+      description,
+    });
+    await until(() => store.get(task.id, "alice").status === "completed");
+    assert.equal(task.title, "Review authentication.");
+    assert.equal(task.description, description);
+    assert.equal(received, description);
+    assert.equal(store.get(task.id, "alice").title, task.title);
+    assert.equal(store.get(task.id, "alice").description, description);
+  } finally {
+    await c.close();
+  }
+});
+
 test("invalid title or description cannot persist or execute a task", async () => {
   const provider = new FixtureProvider();
   let runs = 0;
@@ -92,7 +120,6 @@ test("invalid title or description cannot persist or execute a task", async () =
   const { c, store } = await setup(provider);
   try {
     const cases = [
-      { title: undefined },
       { description: undefined },
       { title: "" },
       { description: "" },

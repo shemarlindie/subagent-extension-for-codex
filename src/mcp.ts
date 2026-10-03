@@ -38,7 +38,7 @@ export function mcp(
     "request_agent_task",
     {
       description:
-        "Ask the user to choose a short task title, full description, worker and budgets using a host form, then delegate asynchronously. Use start_agent_task for clients without forms.",
+        "Ask the user for the full request as the description, worker and budgets using a host form, then delegate asynchronously with an automatically generated title. Use start_agent_task for clients without forms.",
       inputSchema: definitions(c, owner).start_agent_task.schema.extend({
         title: z.string().max(120).optional(),
         description: z.string().max(20000).optional(),

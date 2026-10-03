@@ -127,7 +127,7 @@ export class Forms {
         args,
         status: "pending",
         message:
-          "Delegate work in a Git worktree or the current repository. Give the task a short title, then provide its full description and confirm the workspace, worker and budgets.",
+          "Delegate work in a Git worktree or the current repository. Provide the full request as the description; a task title is generated automatically. Confirm the workspace, worker and budgets.",
         form: OpenAIFormSchema.parse({
           type: "object",
           properties: {
@@ -140,16 +140,6 @@ export class Forms {
               })),
               ...(choices.some((p) => p.repository === args.repository)
                 ? { default: args.repository }
-                : {}),
-            },
-            title: {
-              type: "string",
-              title: "Task title",
-              description: "A short summary shown in task lists and headings.",
-              minLength: 1,
-              maxLength: 120,
-              ...(typeof args.title === "string" && args.title.trim()
-                ? { default: args.title.trim() }
                 : {}),
             },
             description: {
@@ -217,7 +207,6 @@ export class Forms {
           },
           required: [
             "repository",
-            "title",
             "description",
             "worker",
             "revision",
@@ -361,6 +350,11 @@ export class Forms {
       throw new Error(
         "This saved form predates explicit project selection. Reopen the task form and select a project.",
       );
+    // Task-body migration cannot repair a pending form's older input schema.
+    if (kind === "request_agent_task" && !r.form.properties.description)
+      throw new Error(
+        "This saved form predates full task descriptions. Reopen the task form and provide the full request as the description.",
+      );
     this.checkInput(owner, r);
     if (!response)
       return inputRequired({
@@ -399,6 +393,7 @@ export class Forms {
           result = await this.c.start(owner, {
             ...r.args,
             repository: content.repository,
+            // Honor saved title fields; new forms generate from the edited description.
             title: content.title,
             description: content.description,
             provider,

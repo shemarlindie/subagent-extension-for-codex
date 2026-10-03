@@ -32,7 +32,6 @@ export function DelegateForm({
       repository: dialog.repository ?? "",
       revision: strategyDefault === "current_repo" ? "HEAD" : dialog.revision,
       workspace_strategy: strategyDefault,
-      title: "",
       description: "",
       worker: choices.includes(preferred) ? preferred : choices[0],
       runtime: defaults.max_runtime_minutes,
@@ -74,7 +73,6 @@ export function DelegateForm({
             const [provider, worker_profile] = values.worker.split(":");
             return controller.tool<Task>("start_agent_task", {
               repository: values.repository,
-              title: values.title,
               description: values.description,
               provider,
               worker_profile,
@@ -95,8 +93,8 @@ export function DelegateForm({
         )}
       >
         <p className="form-note">
-          Give the task a short title, then describe the outcome and evidence
-          you expect back.{" "}
+          Provide the full request, including the outcome and evidence you
+          expect back. A task title is generated from the description.{" "}
           {strategy === "current_repo"
             ? "Current repository includes uncommitted changes. Write profiles edit this checkout directly."
             : "Work starts from a committed revision in a separate worktree."}
@@ -108,15 +106,6 @@ export function DelegateForm({
             state.projects.some((project) => project.kind === "parent")
           }
         />
-        <Field id="task-title" label="Task title">
-          <input
-            id="task-title"
-            required
-            maxLength={120}
-            placeholder="Review authentication boundaries"
-            {...form.register("title", { required: true })}
-          />
-        </Field>
         <Field id="description" label="Description">
           <textarea
             id="description"
