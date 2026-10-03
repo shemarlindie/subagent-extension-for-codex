@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "tsx src/main.ts",
     "start": "node dist/main.js",
-    "build": "tsc && node scripts/build-ui.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc && node scripts/build-ui.mjs",
     "typecheck": "tsc --noEmit && tsc -p ui/tsconfig.json",
     "test": "tsx --tsconfig ui/tsconfig.json --test tests/*.test.ts",
     "mcp": "node dist/stdio.js",
