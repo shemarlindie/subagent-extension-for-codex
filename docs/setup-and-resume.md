@@ -258,7 +258,7 @@ Run `npm run typecheck` and `npm test` when establishing a new development basel
 - Verify discovery and execution through the **actual installed Codex client**, not only the previously tested SDK client/proxy harness.
 - Retrieve task state, native activity, structured result, artifacts, and session references; verify the primary checkout's baseline remains unchanged.
 - Investigate setup/UI errors and fix them with relevant regression checks where necessary.
-- Reproduce a native Claude scenario only if a changed environment, regression, or unresolved issue justifies it. The opt-in script supports `read`, `resume`, `sandbox`, `mcp`, and `budget`; see README for commands and cost semantics. Its sandbox scenario approves only five exact disposable commands. Its budget scenario intentionally expects failure.
+- Reproduce a native Claude scenario only if a changed environment, regression, or unresolved issue justifies it. The opt-in script supports `read`, `resume`, `sandbox`, `mcp`, `budget`, and `parity`; see README for commands and cost semantics. Its sandbox scenario enables the extension sandbox and approves only five exact disposable commands. Its parity scenario checks project skills, MCP servers, subagents and hooks under default settings. Its budget scenario intentionally expects failure.
 - Record installed-client evidence separately from existing headless evidence. Keep fixture results clearly identified.
 
 ### After Stage B
@@ -292,7 +292,7 @@ At each completed stage, update the implementation audit and evidence with dates
 | MCP service unavailable | Verify `/health`, loopback URL, port, and desktop client's Node path |
 | Browser authentication fails | Copy token from the matching data directory; sign in again after restart/session expiration; use the configured origin |
 | Invalid repository/revision | Confirm repository root and committed revision; uncommitted-only content is not a task source |
-| Claude fails authentication/sandbox startup | Record sanitized task error and native CLI/SDK/platform versions; do not enable unsandboxed fallback |
+| Claude fails authentication/sandbox startup | Record sanitized task error and native CLI/SDK/platform versions; with `claude_sandbox` set to an extension mode, do not enable unsandboxed fallback |
 | Codex missing from worker list | Check explicit opt-in/provider mode and whether the service was restarted with its configuration |
 | Codex rejects budgets | Disable cost limit explicitly and omit token limit; keep a runtime limit |
 | Codex startup/authentication fails | Check distinct keys, exact scopes/ownership, model availability, absolute CLI path, and `exec-server` support |

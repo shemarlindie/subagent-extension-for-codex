@@ -9,14 +9,14 @@ import { Workspaces } from "../dist/core/workspace.js";
 import { ClaudeAgentProvider } from "../dist/providers/claude.js";
 if (process.env.CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY !== "1") {
   console.error(
-    "Set CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25. A response can exceed the budget before work stops.",
+    "Set CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, or $0.50 for parity. A response can exceed the budget before work stops.",
   );
   process.exit(1);
 }
 const scenario = process.argv[2] ?? "read";
 assert.ok(
-  ["read", "resume", "sandbox", "mcp", "budget"].includes(scenario),
-  "Choose read, resume, sandbox, mcp, or budget",
+  ["read", "resume", "sandbox", "mcp", "budget", "parity"].includes(scenario),
+  "Choose read, resume, sandbox, mcp, budget, or parity",
 );
 const root = await realpath(
   await mkdtemp(join(tmpdir(), "codex-subagent-extension-native-proof-")),
@@ -28,6 +28,66 @@ await writeFile(
   join(repo, "README.md"),
   "# Native verification\n\nThe verification marker is COBALT-27.\n",
 );
+if (scenario === "parity") {
+  // Project-scoped Claude Code configuration, loaded the same way the CLI does.
+  const { fileURLToPath } = await import("node:url");
+  const sdk = (path) =>
+    fileURLToPath(
+      new URL(
+        `../node_modules/@modelcontextprotocol/sdk/dist/esm/server/${path}`,
+        import.meta.url,
+      ),
+    );
+  await writeFile(
+    join(root, "fixture-mcp.mjs"),
+    `import { McpServer } from ${JSON.stringify(sdk("mcp.js"))};
+import { StdioServerTransport } from ${JSON.stringify(sdk("stdio.js"))};
+const server = new McpServer({ name: "fixture", version: "1" });
+server.registerTool("fixture_marker", { description: "Return the fixture MCP marker" }, async () => ({
+  content: [{ type: "text", text: "SAFFRON-63" }],
+}));
+await server.connect(new StdioServerTransport());
+`,
+  );
+  await writeFile(
+    join(repo, ".mcp.json"),
+    JSON.stringify({
+      mcpServers: {
+        fixture: {
+          command: process.execPath,
+          args: [join(root, "fixture-mcp.mjs")],
+        },
+      },
+    }),
+  );
+  await mkdir(join(repo, ".claude", "skills", "marker-skill"), {
+    recursive: true,
+  });
+  await writeFile(
+    join(repo, ".claude", "skills", "marker-skill", "SKILL.md"),
+    "---\nname: marker-skill\ndescription: Reveals the fixture skill marker.\n---\n\nThe skill marker is VERMILION-41.\n",
+  );
+  await writeFile(
+    join(repo, ".claude", "settings.json"),
+    JSON.stringify({
+      enableAllProjectMcpServers: true,
+      hooks: {
+        PreToolUse: [
+          {
+            matcher: "Read",
+            hooks: [
+              {
+                type: "command",
+                command: `/usr/bin/touch ${JSON.stringify(join(root, "hook-fired"))}`,
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  execFileSync("git", ["-C", repo, "add", ".mcp.json", ".claude"]);
+}
 execFileSync("git", ["-C", repo, "add", "README.md"]);
 execFileSync("git", [
   "-C",
@@ -378,6 +438,99 @@ if (scenario === "read") {
   } finally {
     await control.close();
   }
+} else if (scenario === "parity") {
+  const { access } = await import("node:fs/promises");
+  const task = await control.start("verification", {
+    provider: "claude",
+    worker_profile: "implementer",
+    title: "Use project tools",
+    description:
+      "Do exactly these steps and nothing else: 1. Invoke the marker-skill skill with the Skill tool and note its marker. 2. Call the fixture_marker tool of the fixture MCP server and note its marker. 3. Use the Agent tool to start one subagent that reads README.md with the Read tool and returns its verification marker. Report all three markers in your structured findings. Do not edit files or run shell commands.",
+    budget: { max_runtime_minutes: 3, max_cost_usd: 0.5 },
+  });
+  console.log(
+    JSON.stringify({
+      phase: "started",
+      root,
+      task_id: task.id,
+      permission_mode: task.permission_mode,
+      claude_policy: task.claude_policy,
+    }),
+  );
+  const expected = (tool) =>
+    ["Skill", "Agent", "Task", "Read", "Glob", "Grep"].includes(tool) ||
+    tool.startsWith("mcp__fixture__");
+  const approvals = [];
+  try {
+    const deadline = Date.now() + 185000;
+    let ended;
+    while (Date.now() < deadline) {
+      const current = store.get(task.id, "verification");
+      if (current.pending_input) {
+        const { id, tool } = current.pending_input;
+        const allow = expected(tool);
+        approvals.push({ tool, approved: allow });
+        control.input(
+          "verification",
+          task.id,
+          id,
+          allow,
+          undefined,
+          allow ? undefined : "Only the fixture steps are approved",
+        );
+      }
+      if (
+        ["completed", "failed", "cancelled", "interrupted"].includes(
+          current.status,
+        )
+      ) {
+        ended = current;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    assert.ok(ended, "Native parity verification timed out");
+    assert.equal(ended.status, "completed", ended.error);
+    const started = store
+      .events(task.id, "verification")
+      .filter((e) => e.type === "tool.started")
+      .map((e) => e.data.name);
+    const findings = ended.result.findings.join(" ");
+    const observed = {
+      skill_tool: started.includes("Skill"),
+      skill_marker: findings.includes("VERMILION-41"),
+      mcp_tool: started.some((name) => name.startsWith("mcp__fixture__")),
+      mcp_marker: findings.includes("SAFFRON-63"),
+      subagent_tool: started.some((name) => ["Agent", "Task"].includes(name)),
+      subagent_marker: findings.includes("COBALT-27"),
+      project_hook_fired: await access(join(root, "hook-fired")).then(
+        () => true,
+        () => false,
+      ),
+    };
+    console.log(
+      JSON.stringify({ phase: "observed", ...observed, approvals, started }),
+    );
+    for (const [check, passed] of Object.entries(observed))
+      assert.ok(passed, check);
+    assert.equal(
+      execFileSync("git", ["-C", repo, "status", "--porcelain"], {
+        encoding: "utf8",
+      }),
+      "",
+    );
+    console.log(
+      JSON.stringify({
+        phase: "verified",
+        ...observed,
+        structured_result: true,
+        cost_usd: ended.cost_usd,
+        primary_clean: true,
+      }),
+    );
+  } finally {
+    await control.close();
+  }
 } else {
   const { createServer } = await import("node:http");
   const { readFile, symlink, access } = await import("node:fs/promises");
@@ -396,9 +549,17 @@ if (scenario === "read") {
     "/bin/cat escape.txt",
     `/usr/bin/curl --noproxy '*' --connect-timeout 2 --max-time 3 http://127.0.0.1:${port}`,
   ];
+  // The sandbox is opt-in; default parity leaves Bash to the user's settings.
+  control.settings.update("verification", {
+    set: { claude_sandbox: "extension", claude_path_guard: "on" },
+  });
   const task = await control.start("verification", {
     provider: "claude",
     worker_profile: "test_engineer",
+    // Fixture writes stay out of the primary checkout.
+    workspace_strategy: "worktree",
+    // Ask for every command so only the exact fixture commands are approved.
+    permission_mode: "default",
     title: "Verify scoped command permissions",
     description:
       "Run each of these exact Bash commands once, sequentially. Do not change, combine or retry the commands; do not use other tools. Expected permission failures are evidence, not errors in this verification. Report which commands succeeded or were blocked in your structured tests and evidence. Commands: " +

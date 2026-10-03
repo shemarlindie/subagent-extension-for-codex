@@ -213,7 +213,7 @@ test("Claude SDK query uses native harness, resume, structured output, remaining
   assert.ok(events.find((e) => e.type === "tool.started"));
   assert.ok(closed);
 });
-test("Claude mandatory hook denies outside paths, symlink escapes, Git metadata and disallowed tools", async () => {
+test("Claude read-only profile bundle denies outside paths, symlink escapes, Git metadata and disallowed tools", async () => {
   const { c, workspace } = await context();
   await symlink(tmpdir(), join(workspace, "escape"));
   let options: Options | undefined;
@@ -545,7 +545,7 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
   assert.equal(Object.hasOwn(options!, "maxBudgetUsd"), false);
 });
 
-test("Claude runtime environment excludes service and other-provider credentials at the real SDK spawn boundary", async () => {
+test("filtered Claude environment excludes service and other-provider credentials at the real SDK spawn boundary", async () => {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
   const env = claudeEnvironment(
     {
@@ -608,7 +608,7 @@ test("Claude runtime environment excludes service and other-provider credentials
     );
 });
 
-test("Claude SDK serializes mandatory native Bash sandbox restrictions without enabling automatic or unsandboxed execution", async () => {
+test("Claude SDK serializes the extension Bash sandbox without enabling automatic or unsandboxed execution", async () => {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
   const { c, workspace } = await context();
   const sandbox = await claudeSandbox(c.task);
@@ -872,4 +872,32 @@ test("Claude extension sandbox modes add the sandbox and lock network domains at
   });
   const noSubagents = await runWithPolicy({ ...parity, subagents: false });
   assert.deepEqual(noSubagents.options.disallowedTools, ["Agent", "Task"]);
+});
+
+test("Claude tasks without stored restrictions run with CLI parity defaults", async () => {
+  const { c } = await context();
+  c.task.worker_profile = "implementer";
+  c.task.permission_mode = "inherit";
+  let options: Options | undefined;
+  await new ClaudeAgentProvider((args) => {
+    options = args.options;
+    return Object.assign(
+      (async function* () {
+        yield {
+          type: "result",
+          subtype: "success",
+          structured_output: result,
+          total_cost_usd: 0,
+          usage: {},
+        };
+      })(),
+      { close: () => {} },
+    ) as unknown as Query;
+  }).run(c, "Implement");
+  assert.equal(options!.sandbox, undefined);
+  assert.equal(Object.hasOwn(options!, "permissionMode"), false);
+  assert.deepEqual(options!.tools, { type: "preset", preset: "claude_code" });
+  assert.deepEqual(options!.disallowedTools, []);
+  assert.equal(options!.env!.PATH, process.env.PATH);
+  assert.equal(new ClaudeAgentProvider().capabilities.subagents, true);
 });

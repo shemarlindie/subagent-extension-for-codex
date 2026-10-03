@@ -10,7 +10,8 @@ Source: the [Capability and Architecture Brief v9](architecture-brief-v9.md), wi
 | Worktree isolation | Git worktree creation; committed/untracked patch tests; primary checkout unchanged | Verified locally |
 | Interrupt, continue, steer, cancel, retry | Lifecycle tests and browser fixture workflow | Fixture workflow verified; native Claude interruption/input/continuation verified |
 | Session location and worker affinity | Persisted transcript reference, worker check, state existence check | Verified with native session continuation after reopening the control plane |
-| Human input and permissions | Native `canUseTool`, mandatory tool hook, stale request tests, browser answer form | Verified with SDK contract and fixture |
+| Human input and permissions | Native `canUseTool` approval routing, structured-output hook, stale request tests, browser answer form | Verified with SDK contract and fixture |
+| Claude session restrictions | User-only settings for the extension Bash sandbox, environment filtering, restricted tools, workspace path guard and subagents; profile bundles for read-only profiles; per-task snapshot | Verified with SDK option and hook tests; extension sandbox and CLI parity verified live |
 | Provider-neutral operations | Provider interface and MCP tools shared with HTTP UI dispatch | Verified locally |
 | Runtime budgets and capability gating | Timer and accumulated runtime, native cost ceiling, unsupported token limits rejected | Runtime verified; native SDK cost reporting observed (interrupted-turn accounting remains incomplete) |
 | Reports, structured results, diffs | SDK schema, durable artifacts, Git patches, console views/downloads | Verified locally |
@@ -23,10 +24,10 @@ Source: the [Capability and Architecture Brief v9](architecture-brief-v9.md), wi
 | Plugin settings | Official extension capability and settings schema/layout; persistent owner-scoped read/update tools; task defaults and UI form integration | Verified locally; native ChatGPT rendering pending |
 | Host rich forms | Native MCP multi-round-trip delegation/question/permission tools; durable opaque state, exact request binding, validation, cancellation, and retry tests | Verified via local HTTP; actual ChatGPT rendering pending |
 
-Known boundaries: one local user/service, Claude model/API harness outside the native Bash sandbox; Bash fixture restrictions verified; full-harness containment unverified, no service OAuth or public deployment, no automatic merge, no native subagents, and no token-budget support. Runtime session files must be preserved alongside worktrees. SDK costs missing from interrupted turns cannot be accounted for exactly by this service.
+Known boundaries: one local user/service. By default a Claude task has the same authority as the user's Claude Code CLI: no extension sandbox, all tools and subagents, the user's permission mode, and repository `.claude/settings.json` files applied. The optional extension sandbox covers Bash only; the model/API harness stays outside it, and full-harness containment is unverified. No service OAuth or public deployment, no automatic merge, and no token-budget support. Runtime session files must be preserved alongside worktrees. SDK costs missing from interrupted turns cannot be accounted for exactly by this service.
 
 Authenticated Claude tasks were verified with the configured Claude Code credentials, without reading or copying credential values or account details. See [live verification evidence](live-claude-verification.json).
 
-Budget enforcement happens at response boundaries, so a response can exceed the configured amount; it is not a hard billing cap. Live evidence was recorded before delegated tasks loaded Claude Code settings, MCP servers and skills.
+Budget enforcement happens at response boundaries, so a response can exceed the configured amount; it is not a hard billing cap. The read, sandbox and parity scenarios were rerun on October 3, 2026 under the CLI parity defaults. Parity covered a project skill, a project MCP server, a subagent and a project hook. The resume, MCP transport and budget evidence predates loading Claude Code settings.
 
 Use `npm run typecheck` and `npm test` for current validation.

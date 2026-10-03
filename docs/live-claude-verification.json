@@ -1,20 +1,93 @@
 {
-  "verified_at": "2026-09-30",
+  "verified_at": "2026-10-03",
   "provider": "claude",
   "authentication": "Configured Claude Code credentials; no credentials or account details recorded",
-  "configuration": "Recorded with Claude Code settings disabled and strict MCP configuration. Since October 3, 2026, tasks load Claude Code settings, MCP servers and skills, so ambient_mcp_tools_present describes the earlier configuration only.",
+  "configuration": "Claude CLI parity defaults: user, project and local Claude Code settings; no extension sandbox unless enabled; inherited environment minus extension secrets; all tools and subagents for write profiles; read-only profiles restricted with the path guard and plan mode. Claude Agent SDK 0.3.288, Claude Code 2.1.285, macOS 27.0.1.",
   "tests": {
-    "read": {
-      "task_id": "task_2a5e7fb9-54c5-4814-bd58-6a1368eb4bff",
+    "parity": {
+      "task_id": "task_a267cc42-5b72-4776-803e-91891e4e8f74",
       "status": "completed",
-      "attempt": 1,
-      "model": "claude-sonnet-4-6",
-      "reported_cost_usd": 0.05264904999999999,
+      "worker_profile": "implementer",
+      "permission_mode": "inherit",
+      "claude_policy": {
+        "sandbox": "user_config",
+        "environment": "inherit",
+        "tools": "all",
+        "path_guard": false,
+        "subagents": true
+      },
+      "model": "claude-sonnet-5-5",
+      "reported_cost_usd": 0.2452948,
       "report_artifacts": 1,
-      "ambient_mcp_tools_present": false,
       "observed_tools": [
+        "Skill",
+        "ToolSearch",
+        "mcp__fixture__fixture_marker",
+        "Agent",
         "Read",
         "StructuredOutput"
+      ],
+      "approvals_requested": [
+        "mcp__fixture__fixture_marker"
+      ],
+      "verified": [
+        "Project skill invoked through the Skill tool and its marker reported",
+        "Project .mcp.json stdio server loaded; its tool call was routed to the approver, approved and its marker reported",
+        "Subagent started with the Agent tool read README.md and returned its marker",
+        "Project settings PreToolUse hook fired",
+        "Structured result accepted with subagents enabled",
+        "No permissionMode passed; the user's Claude Code settings chose the mode",
+        "Primary fixture repository remained clean"
+      ]
+    },
+    "read": {
+      "task_id": "task_f0cf46fb-c1a9-41ef-a2d2-49a430dd51ca",
+      "status": "completed",
+      "attempt": 1,
+      "worker_profile": "reviewer",
+      "permission_mode": "plan",
+      "claude_policy": {
+        "sandbox": "user_config",
+        "environment": "inherit",
+        "tools": "restricted",
+        "path_guard": true,
+        "subagents": true
+      },
+      "model": "claude-sonnet-5-5",
+      "reported_cost_usd": 0.0844414,
+      "report_artifacts": 1,
+      "verified": "Read-only profile bundle (restricted tools, path guard, plan) completed a native Read and structured report; primary fixture clean"
+    },
+    "sandbox": {
+      "task_id": "task_23f97229-dd7f-4e1e-a0d7-d447b66ec143",
+      "status": "completed",
+      "attempt": 1,
+      "worker_profile": "test_engineer",
+      "permission_mode": "default",
+      "claude_policy": {
+        "sandbox": "extension",
+        "environment": "inherit",
+        "tools": "all",
+        "path_guard": true,
+        "subagents": true
+      },
+      "workspace_strategy": "worktree",
+      "model": "claude-sonnet-5-5",
+      "reported_cost_usd": 0.126796,
+      "report_artifacts": 2,
+      "observed_tools": [
+        "Bash",
+        "StructuredOutput"
+      ],
+      "verified": [
+        "Extension sandbox enabled through claude_sandbox: extension",
+        "Worktree write succeeded",
+        "Outside write denied",
+        "Git metadata write denied",
+        "Symlink escape read denied",
+        "Direct network request blocked; local listener received zero hits",
+        "Only five exact fixture commands approved",
+        "Primary repository remained clean"
       ]
     },
     "resume": {
@@ -24,35 +97,14 @@
       "model": "claude-sonnet-4-6",
       "reported_cost_usd": 0.0185583,
       "report_artifacts": 1,
-      "ambient_mcp_tools_present": false,
       "observed_tools": [
         "AskUserQuestion",
         "Read",
         "StructuredOutput"
       ],
-      "verified": "Waiting question interrupted; control plane reopened; same native session completed attempt two"
-    },
-    "sandbox": {
-      "task_id": "task_a5f2b5a2-0298-4db5-8cd9-099172feeb94",
-      "status": "completed",
-      "attempt": 1,
-      "model": "claude-sonnet-4-6",
-      "reported_cost_usd": 0.11856905,
-      "report_artifacts": 2,
-      "ambient_mcp_tools_present": false,
-      "observed_tools": [
-        "Bash",
-        "StructuredOutput"
-      ],
-      "verified": [
-        "Worktree write succeeded",
-        "Outside write denied",
-        "Git metadata write denied",
-        "Symlink escape read denied",
-        "Direct network request blocked; local listener received zero hits",
-        "Only five exact fixture commands approved",
-        "Primary repository remained clean"
-      ]
+      "verified": "Waiting question interrupted; control plane reopened; same native session completed attempt two",
+      "verified_at": "2026-09-30",
+      "configuration": "Recorded on 2026-09-30, before tasks loaded Claude Code settings, MCP servers and skills"
     },
     "mcp": {
       "task_id": "task_701d52f8-963c-42ab-832c-3dcd470673bd",
@@ -68,7 +120,8 @@
         "Native Read and completion events retrieved through MCP",
         "Primary fixture repository remained clean"
       ],
-      "ambient_mcp_tools_present": false
+      "verified_at": "2026-09-30",
+      "configuration": "Recorded on 2026-09-30, before tasks loaded Claude Code settings, MCP servers and skills"
     },
     "budget": {
       "task_id": "task_5bb05e10-4f94-4cac-94fd-5084a8201f24",
@@ -83,12 +136,15 @@
         "No success result or task.completed event",
         "Primary fixture remained clean"
       ],
-      "semantics": "Budget is checked after a response; that response can exceed the configured amount"
+      "semantics": "Budget is checked after a response; that response can exceed the configured amount",
+      "verified_at": "2026-09-30",
+      "configuration": "Recorded on 2026-09-30, before tasks loaded Claude Code settings, MCP servers and skills"
     }
   },
   "limits": [
     "This records reported SDK cost, not independently audited billing; interrupted-turn costs may be missing",
-    "Claude model/API harness remains outside the Bash sandbox",
+    "Claude model/API harness remains outside the Bash sandbox, and the extension sandbox applies only when enabled",
+    "Under parity defaults a delegated task has the authority of the user's Claude Code CLI; approval routing and the user's permission rules are the safety net",
     "Sandbox verification uses disposable files and a loopback listener; it does not establish containment of all native tools or all network configurations",
     "OpenAI/Codex authenticated execution and registered host behavior remain unverified",
     "Native Claude cost budgets are response-boundary stopping thresholds, not hard billing caps; the $0.001 verification threshold produced about $0.021 reported usage"

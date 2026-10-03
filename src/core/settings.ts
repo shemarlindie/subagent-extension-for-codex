@@ -108,7 +108,7 @@ const valuesSchema = z.strictObject({
   claude_tools: claudeToolsSchema.meta({
     title: "Claude tools",
     description:
-      "all offers every Claude Code tool. restricted offers only file, search, Bash, question, skill and MCP tools, and only read tools to read-only work. profile restricts read-only worker profiles.",
+      "all offers every Claude Code tool. restricted offers only file, search, Bash, question, skill and MCP tools, and only the read, question and skill tools to read-only work. profile restricts read-only worker profiles.",
   }),
   claude_path_guard: claudePathGuardSchema.meta({
     title: "Claude workspace path guard",
