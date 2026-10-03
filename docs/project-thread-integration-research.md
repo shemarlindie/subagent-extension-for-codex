@@ -63,14 +63,14 @@ Do not treat ChatGPT documentation as automatically excluding that Codex surface
 The [extension specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md)
 establishes these boundaries:
 
-| Surface | Supported behavior | Consequence |
-| --- | --- | --- |
-| Global entrypoint | Accepts `{}`; opens the global app | Sidebar navigation is not an active-repository argument |
-| Thread entrypoint | Accepts `{}`; separate app instance per thread | Adjacent conversation tab is supported; automatic repo arguments are not |
-| Model context | `openai/modelContext` restores the app's attached context | It is not access to conversation history or host project metadata |
-| Deep link | Global entrypoint URL with encoded app-relative `path`; delivered as `openai/deepLink.url` | Useful for a task route; no specified adjacent-thread deep link |
-| Messages | Optional `openai/message.target` is `active` or `new`; send is immediate | It does not specify cwd, project, title, or a returned native thread ID |
-| Display mode | Entry points use fullscreen; resource preference is a hint | Check physical placement on the target desktop |
+| Surface           | Supported behavior                                                                         | Consequence                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Global entrypoint | Accepts `{}`; opens the global app                                                         | Sidebar navigation is not an active-repository argument                  |
+| Thread entrypoint | Accepts `{}`; separate app instance per thread                                             | Adjacent conversation tab is supported; automatic repo arguments are not |
+| Model context     | `openai/modelContext` restores the app's attached context                                  | It is not access to conversation history or host project metadata        |
+| Deep link         | Global entrypoint URL with encoded app-relative `path`; delivered as `openai/deepLink.url` | Useful for a task route; no specified adjacent-thread deep link          |
+| Messages          | Optional `openai/message.target` is `active` or `new`; send is immediate                   | It does not specify cwd, project, title, or a returned native thread ID  |
+| Display mode      | Entry points use fullscreen; resource preference is a hint                                 | Check physical placement on the target desktop                           |
 
 These imply that task selection must be our own data contract. Do not interpret
 model context as a transcript API or pass a global last-used project into every
@@ -177,15 +177,15 @@ must cover both HTTP and stdio, entrypoint calls, and UI-originated calls.
 
 These options are engineering recommendations based on the evidence above.
 
-| Option | What it can deliver | Remaining cost or limit |
-| --- | --- | --- |
-| Explicit MCP panel context | Exact project/revision/task selection from a model or user action | First use needs context supplied by the host model or user |
-| Same-chat task defaults | New task prefilled from the latest owned task in that conversation | First task has no history; task history is not the host's active repo |
-| Codex metadata adapters | Thread correlation and optional approved cwd mapping | Version-dependent; widget calls and static entrypoints need live proof |
-| Trusted lifecycle hook | A session/call-scoped cwd registration channel | Requires trust, secure explicit correlation, concurrency and expiry handling |
-| Native browser panel helper | Guaranteed requested right-side placement through host tooling | Browser app uses standalone transport; authentication cannot appear in URL |
-| Global app deep links | Reopen a specific delegated task | Global navigation may move away from the main chat |
-| Own app-server client UI | Complete control over project selection, thread creation, and streaming | A larger product; does not grant control over native desktop window state |
+| Option                      | What it can deliver                                                     | Remaining cost or limit                                                      |
+| --------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Explicit MCP panel context  | Exact project/revision/task selection from a model or user action       | First use needs context supplied by the host model or user                   |
+| Same-chat task defaults     | New task prefilled from the latest owned task in that conversation      | First task has no history; task history is not the host's active repo        |
+| Codex metadata adapters     | Thread correlation and optional approved cwd mapping                    | Version-dependent; widget calls and static entrypoints need live proof       |
+| Trusted lifecycle hook      | A session/call-scoped cwd registration channel                          | Requires trust, secure explicit correlation, concurrency and expiry handling |
+| Native browser panel helper | Guaranteed requested right-side placement through host tooling          | Browser app uses standalone transport; authentication cannot appear in URL   |
+| Global app deep links       | Reopen a specific delegated task                                        | Global navigation may move away from the main chat                           |
+| Own app-server client UI    | Complete control over project selection, thread creation, and streaming | A larger product; does not grant control over native desktop window state    |
 
 ### Trusted hooks
 

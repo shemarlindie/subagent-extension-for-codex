@@ -10,10 +10,10 @@ This is the handoff guide for the implemented MVP. It explains what you need to 
 
 The local Claude MVP is implemented and has passed authenticated native execution checks. The remaining gates are installation in your actual Codex client, authenticated Codex worker execution, and verification of the embedded console in a registered host.
 
-| Stage | Your part | Assistant's next part | Needed for |
-| --- | --- | --- | --- |
-| A: local Claude | Choose a committed Git repository, start the service, connect its MCP proxy in Codex, try one task | Verify the installed client path and investigate any workflow failures | Recommended first usable workflow |
-| B: Codex workers | Configure separate OpenAI application/executor keys, an available model, and the native CLI path | Run authenticated Codex execution, lifecycle, proxy, and sandbox checks | Codex as a worker provider |
+| Stage               | Your part                                                                                                    | Assistant's next part                                                                             | Needed for                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| A: local Claude     | Choose a committed Git repository, start the service, connect its MCP proxy in Codex, try one task           | Verify the installed client path and investigate any workflow failures                            | Recommended first usable workflow                |
+| B: Codex workers    | Configure separate OpenAI application/executor keys, an available model, and the native CLI path             | Run authenticated Codex execution, lifecycle, proxy, and sandbox checks                           | Codex as a worker provider                       |
 | C: embedded console | Choose the intended host and HTTPS origin; provide account/registration access or perform account-only steps | Prepare the appropriate deployment/authentication integration, then verify the host UI and events | Sidebar/panel console and native host extensions |
 
 **You do not need OpenAI worker keys or a public origin to use Claude through the local Codex MCP connection.** Codex acts as the client in Stage A; Codex becomes an execution provider in Stage B.
@@ -28,13 +28,13 @@ Existing evidence:
 
 ## 2. References and how to use them
 
-| Document | Purpose |
-| --- | --- |
-| [README](../README.md) | Runtime commands, configuration, supported workflows, and extension details |
-| [Implementation status](implementation-status.md) | Requirement audit and known boundaries |
-| [Native Claude evidence](live-claude-verification.json) | Sanitized outcomes of completed authenticated checks |
-| [Claude verification script](../scripts/verify-live-claude.mjs) | Opt-in reproduction using disposable fixtures |
-| [Capability and Architecture Brief v9](architecture-brief-v9.md) | Capability and design reference, including work beyond the local MVP |
+| Document                                                         | Purpose                                                                     |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [README](../README.md)                                           | Runtime commands, configuration, supported workflows, and extension details |
+| [Implementation status](implementation-status.md)                | Requirement audit and known boundaries                                      |
+| [Native Claude evidence](live-claude-verification.json)          | Sanitized outcomes of completed authenticated checks                        |
+| [Claude verification script](../scripts/verify-live-claude.mjs)  | Opt-in reproduction using disposable fixtures                               |
+| [Capability and Architecture Brief v9](architecture-brief-v9.md) | Capability and design reference, including work beyond the local MVP        |
 
 The brief contains project notes, not an instruction to execute every proposed feature. This guide records the setup/handoff requested by the user. In a new thread, use the user's current instructions to determine scope.
 
@@ -167,10 +167,10 @@ This is independent of Stage C. The implemented Codex provider requires **macOS*
 
 Use your OpenAI account/project controls. Current permission names and ownership requirements come from the [official self-hosted sandbox authentication documentation](https://developers.openai.com/api/docs/guides/agents-api/environments/self-hosted); recheck that page if resuming later.
 
-| Service variable | Credential purpose | Setup |
-| --- | --- | --- |
-| `OPENAI_API_KEY` | Application session management and inference | Grant `api.agents.read`, `api.agents.write`, and `api.responses.write` |
-| `OPENAI_EXECUTOR_API_KEY` | Environment connection only | Create a separate environment key through the platform's Agents tab; set other permissions to None |
+| Service variable          | Credential purpose                           | Setup                                                                                              |
+| ------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`          | Application session management and inference | Grant `api.agents.read`, `api.agents.write`, and `api.responses.write`                             |
+| `OPENAI_EXECUTOR_API_KEY` | Environment connection only                  | Create a separate environment key through the platform's Agents tab; set other permissions to None |
 
 The keys must belong to the same organization, project, and user/service-account identity that owns the session. They must be different values. The service validates presence and inequality; it cannot establish their actual scopes from configuration alone. Vault permissions are not needed for this implementation's current workflow.
 
@@ -284,20 +284,20 @@ At each completed stage, update the implementation audit and evidence with dates
 
 ## 7. Troubleshooting and preserving state
 
-| Symptom | What to check or send back |
-| --- | --- |
-| Address already in use | Identify the service using port 4317; gracefully stop the demo/old service before replacement, or use another port and update origin plus MCP URL consistently |
-| Data directory already owned | One service per data directory; inspect the existing process before changing a lock |
-| MCP proxy cannot find token | Start the real service first; match `CODEX_SUBAGENT_EXTENSION_DATA`; distinguish demo token override from live generated token |
-| MCP service unavailable | Verify `/health`, loopback URL, port, and desktop client's Node path |
-| Browser authentication fails | Copy token from the matching data directory; sign in again after restart/session expiration; use the configured origin |
-| Invalid repository/revision | Confirm repository root and committed revision; uncommitted-only content is not a task source |
-| Claude fails authentication/sandbox startup | Record sanitized task error and native CLI/SDK/platform versions; with `claude_sandbox` set to an extension mode, do not enable unsandboxed fallback |
-| Codex missing from worker list | Check explicit opt-in/provider mode and whether the service was restarted with its configuration |
-| Codex rejects budgets | Disable cost limit explicitly and omit token limit; keep a runtime limit |
-| Codex startup/authentication fails | Check distinct keys, exact scopes/ownership, model availability, absolute CLI path, and `exec-server` support |
-| Task remains waiting with controls locked | Record task ID and waiting reason; ask the assistant to investigate termination/submission uncertainty rather than forcing a retry |
-| Host UI/forms/events absent | Separate transport discovery from registered-host support; record host/version, registration state, and the failing capability |
+| Symptom                                     | What to check or send back                                                                                                                                     |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Address already in use                      | Identify the service using port 4317; gracefully stop the demo/old service before replacement, or use another port and update origin plus MCP URL consistently |
+| Data directory already owned                | One service per data directory; inspect the existing process before changing a lock                                                                            |
+| MCP proxy cannot find token                 | Start the real service first; match `CODEX_SUBAGENT_EXTENSION_DATA`; distinguish demo token override from live generated token                                 |
+| MCP service unavailable                     | Verify `/health`, loopback URL, port, and desktop client's Node path                                                                                           |
+| Browser authentication fails                | Copy token from the matching data directory; sign in again after restart/session expiration; use the configured origin                                         |
+| Invalid repository/revision                 | Confirm repository root and committed revision; uncommitted-only content is not a task source                                                                  |
+| Claude fails authentication/sandbox startup | Record sanitized task error and native CLI/SDK/platform versions; with `claude_sandbox` set to an extension mode, do not enable unsandboxed fallback           |
+| Codex missing from worker list              | Check explicit opt-in/provider mode and whether the service was restarted with its configuration                                                               |
+| Codex rejects budgets                       | Disable cost limit explicitly and omit token limit; keep a runtime limit                                                                                       |
+| Codex startup/authentication fails          | Check distinct keys, exact scopes/ownership, model availability, absolute CLI path, and `exec-server` support                                                  |
+| Task remains waiting with controls locked   | Record task ID and waiting reason; ask the assistant to investigate termination/submission uncertainty rather than forcing a retry                             |
+| Host UI/forms/events absent                 | Separate transport discovery from registered-host support; record host/version, registration state, and the failing capability                                 |
 
 When reporting an issue, include the stage, action, expected behavior, actual behavior, task ID, and sanitized error. Redact tokens, API keys, connection URLs containing credentials, and private content before sharing logs.
 

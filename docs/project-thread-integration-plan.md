@@ -23,15 +23,15 @@ declare inline/fullscreen and prefer inline for model invocations. The host
 decides the physical location and may ignore hints. The thread entrypoint is the
 supported conversation-adjacent affordance, not a forced right-side placement API.
 
-| Real option | Benefit | Tradeoff | Decision |
-| --- | --- | --- | --- |
-| Attach existing panel resource to task creation and supply task/project scope | One call starts work and renders the selected task; works with current tools | Native placement still requires host verification | Implement |
-| Explicit opener repository/revision/task, plus latest task within the same chat | Reliable project defaults without global state or private APIs | First use needs model-supplied context or user selection | Implement |
-| Optional source-backed Codex directory adapter | Can resolve approved project on first use from sandboxCwd file URI | Opt-in experimental capability and version-specific host delivery | Implement with validation/fallback |
-| Trusted SessionStart hook and explicit session binding | Can capture actual cwd before the first delegation | Hook trust/setup required; hook ID and anonymized MCP session are not proven equivalent | Document future option |
-| Separate client built on Codex app-server | Full control of thread/cwd/layout/events within that client | Not an extension point into the existing desktop layout | Document alternative |
-| Local browser panel via Codex open_in_codex helper | Explicit right placement from a skill when the desktop tool is available | Different surface, service/auth and lifecycle concerns | Document fallback |
-| Scrape desktop state, guess extra host fields, use a global last directory | Superficially automatic | Concurrent-chat races, unsupported contracts, wrong-repository risk | Reject |
+| Real option                                                                     | Benefit                                                                      | Tradeoff                                                                                | Decision                           |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------- |
+| Attach existing panel resource to task creation and supply task/project scope   | One call starts work and renders the selected task; works with current tools | Native placement still requires host verification                                       | Implement                          |
+| Explicit opener repository/revision/task, plus latest task within the same chat | Reliable project defaults without global state or private APIs               | First use needs model-supplied context or user selection                                | Implement                          |
+| Optional source-backed Codex directory adapter                                  | Can resolve approved project on first use from sandboxCwd file URI           | Opt-in experimental capability and version-specific host delivery                       | Implement with validation/fallback |
+| Trusted SessionStart hook and explicit session binding                          | Can capture actual cwd before the first delegation                           | Hook trust/setup required; hook ID and anonymized MCP session are not proven equivalent | Document future option             |
+| Separate client built on Codex app-server                                       | Full control of thread/cwd/layout/events within that client                  | Not an extension point into the existing desktop layout                                 | Document alternative               |
+| Local browser panel via Codex open_in_codex helper                              | Explicit right placement from a skill when the desktop tool is available     | Different surface, service/auth and lifecycle concerns                                  | Document fallback                  |
+| Scrape desktop state, guess extra host fields, use a global last directory      | Superficially automatic                                                      | Concurrent-chat races, unsupported contracts, wrong-repository risk                     | Reject                             |
 
 Codex [app-server](https://learn.chatgpt.com/docs/app-server) supports `thread/start`
 cwd and `thread/list` cwd filters for clients using that protocol. This does not

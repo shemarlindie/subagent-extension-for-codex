@@ -27,9 +27,7 @@
         "Read",
         "StructuredOutput"
       ],
-      "approvals_requested": [
-        "mcp__fixture__fixture_marker"
-      ],
+      "approvals_requested": ["mcp__fixture__fixture_marker"],
       "verified": [
         "Project skill invoked through the Skill tool and its marker reported",
         "Project .mcp.json stdio server loaded; its tool call was routed to the approver, approved and its marker reported",
@@ -75,10 +73,7 @@
       "model": "claude-sonnet-5-5",
       "reported_cost_usd": 0.126796,
       "report_artifacts": 2,
-      "observed_tools": [
-        "Bash",
-        "StructuredOutput"
-      ],
+      "observed_tools": ["Bash", "StructuredOutput"],
       "verified": [
         "Extension sandbox enabled through claude_sandbox: extension",
         "Worktree write succeeded",
@@ -97,11 +92,7 @@
       "model": "claude-sonnet-4-6",
       "reported_cost_usd": 0.0185583,
       "report_artifacts": 1,
-      "observed_tools": [
-        "AskUserQuestion",
-        "Read",
-        "StructuredOutput"
-      ],
+      "observed_tools": ["AskUserQuestion", "Read", "StructuredOutput"],
       "verified": "Waiting question interrupted; control plane reopened; same native session completed attempt two",
       "verified_at": "2026-09-30",
       "configuration": "Recorded on 2026-09-30, before tasks loaded Claude Code settings, MCP servers and skills"

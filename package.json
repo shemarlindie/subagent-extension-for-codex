@@ -16,12 +16,13 @@
     "test": "tsx --tsconfig ui/tsconfig.json --test tests/*.test.ts",
     "mcp": "node dist/stdio.js",
     "demo": "npm run build && node scripts/demo.mjs",
-    "format": "prettier --write src ui tests scripts plugin.json mcp.json package.json tsconfig.json",
-    "pretest": "npm run build",
+    "format": "prettier --write .",
+    "pretest": "npm run format:check && npm run build",
     "projects": "node --env-file-if-exists=.env dist/projects-cli.js",
     "prepack": "npm run build",
     "package:plugin": "npm pack",
-    "dev:ui": "vite"
+    "dev:ui": "vite",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.288",
