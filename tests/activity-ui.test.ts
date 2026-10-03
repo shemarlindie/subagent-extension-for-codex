@@ -52,6 +52,14 @@ function event(
     data,
   };
 }
+// assert.equal(element, null) diffs the whole jsdom object graph on failure,
+// which never finishes and starves waitFor's timeout.
+function assertAbsent(element: Element | null, message = "Unexpected element") {
+  assert.ok(
+    element === null,
+    `${message}: ${element?.outerHTML.slice(0, 200)}`,
+  );
+}
 function markup(events: ActivityEvent[]) {
   const html = renderToStaticMarkup(createElement(EventList, { events }));
   return new JSDOM(html).window.document;
@@ -157,7 +165,7 @@ test("pinned updates stay at zero and manually returning within the 48px buffer 
   const fab = () =>
     view.queryByRole("button", { name: "Scroll to latest activity" });
   assert.equal(viewport.scrollTop, 0);
-  assert.equal(fab(), null);
+  assertAbsent(fab());
   viewport.scrollTop = 30;
   const next = [...initial, ...activityMessages("pin-buffer-next", 1)];
   view.rerender(createElement(GroupedEventList, { events: next }));
@@ -171,7 +179,7 @@ test("pinned updates stay at zero and manually returning within the 48px buffer 
   assert.ok(fab(), "Beyond the buffer, the reader controls scrolling");
   viewport.scrollTop = 48;
   fireEvent.scroll(viewport);
-  assert.equal(fab(), null, "The edge of the buffer repins");
+  assertAbsent(fab(), "The edge of the buffer repins");
   view.rerender(
     createElement(GroupedEventList, {
       events: [...next, ...activityMessages("pin-buffer-last", 1)],
@@ -196,9 +204,8 @@ test("scroll to latest FAB returns to zero and keeps subsequent activity pinned"
     document.activeElement === viewport,
     "Focus returns to the activity region when the FAB disappears",
   );
-  assert.equal(
+  assertAbsent(
     view.queryByRole("button", { name: "Scroll to latest activity" }),
-    null,
   );
   view.rerender(
     createElement(GroupedEventList, {
@@ -395,7 +402,7 @@ for (const [type, subtype, title] of families) {
       "Raw response",
     );
     assert.equal(disclosure?.hasAttribute("open"), false);
-    assert.equal(disclosure?.querySelector("pre"), null);
+    assertAbsent(disclosure?.querySelector("pre") ?? null);
     assert.ok(!doc.body.textContent?.includes("raw-only-id"));
   });
 }
@@ -470,7 +477,7 @@ test("mixed content, tool inputs and tool results are readable and HTML stays li
   ])
     assert.ok(text.includes(snippet), snippet);
   assert.ok(!text.includes("hidden-signature"));
-  assert.equal(doc.querySelector("script"), null);
+  assertAbsent(doc.querySelector("script"));
   assert.equal(doc.querySelectorAll("details.activity-raw").length, 6);
 });
 
@@ -569,7 +576,7 @@ test("opening raw response shows the original full JSON and preserves disclosure
     "details.activity-raw",
   ) as HTMLDetailsElement;
   assert.equal(details.open, false);
-  assert.equal(details.querySelector("pre"), null);
+  assertAbsent(details.querySelector("pre"));
   await act(async () => {
     details.open = true;
     details.dispatchEvent(new dom.window.Event("toggle"));
@@ -587,12 +594,12 @@ test("opening raw response shows the original full JSON and preserves disclosure
     details.querySelector("pre")?.textContent,
     JSON.stringify(raw, null, 2),
   );
-  assert.equal(view.container.querySelector("script"), null);
+  assertAbsent(view.container.querySelector("script"));
   await act(async () => {
     details.open = false;
     details.dispatchEvent(new dom.window.Event("toggle"));
   });
-  await waitFor(() => assert.equal(details.querySelector("pre"), null));
+  await waitFor(() => assertAbsent(details.querySelector("pre")));
 });
 
 test("legacy events expose their entire data when no original SDK response exists", async (t) => {
@@ -1009,10 +1016,9 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
   assert.ok(panel.classList.contains("activity-debug-panel"));
   assert.equal(panel.hidden, true);
-  assert.equal(view.queryByText("Raw response", { selector: "summary" }), null);
-  assert.equal(
+  assertAbsent(view.queryByText("Raw response", { selector: "summary" }));
+  assertAbsent(
     panel.querySelector(".event"),
-    null,
     "Individual debug events mount only after first activation",
   );
   const outside = view.container.cloneNode(true) as HTMLElement;
@@ -1025,16 +1031,15 @@ test("a compact accessible debug toggle hides inspection until opened and preser
     ),
   );
   toggle.focus();
-  assert.equal(
-    document.activeElement,
-    toggle,
+  assert.ok(
+    document.activeElement === toggle,
     "Native debug button participates in keyboard focus",
   );
   await userEvent.setup({ document: dom.window.document }).keyboard("{Enter}");
   assert.equal(panel.hidden, false);
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
-  assert.equal(raw.querySelector("pre"), null);
+  assertAbsent(raw.querySelector("pre"));
   await act(async () => {
     raw.open = true;
     raw.dispatchEvent(new dom.window.Event("toggle"));
@@ -1046,9 +1051,9 @@ test("a compact accessible debug toggle hides inspection until opened and preser
     ),
   );
   view.rerender(createElement(GroupedEventList, { events: [{ ...activity }] }));
-  assert.equal(
-    view.getByRole("button", { name: "Debug activity: Assistant" }),
-    toggle,
+  assert.ok(
+    view.getByRole("button", { name: "Debug activity: Assistant" }) === toggle,
+    "Debug toggle keeps its identity",
   );
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   assert.equal(raw.open, true);
@@ -1217,7 +1222,7 @@ test("tool result image previews and individual responses mount on first debug a
   const toggle = view.getByRole("button", { name: "Debug activity: Read" });
   const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
   assert.equal(panel.hidden, true);
-  assert.equal(view.container.querySelector("img.activity-image"), null);
+  assertAbsent(view.container.querySelector("img.activity-image"));
   assert.equal(
     view.container.querySelectorAll("details.activity-raw").length,
     0,
@@ -1283,7 +1288,7 @@ for (const [name, wrap] of [
     const doc = contentMarkup(content);
     assert.equal(doc.querySelector(".muted")?.textContent, nestedContentNotice);
     assert.ok(!doc.body.textContent?.includes("Hidden deep text"));
-    assert.equal(doc.querySelector("pre"), null);
+    assertAbsent(doc.querySelector("pre"));
   });
 }
 
@@ -1332,7 +1337,7 @@ test("cyclic content and metadata stop at the nesting limit", () => {
 test("empty content objects and undefined-only fields do not add field-list spacing", () => {
   for (const content of [{}, { unused: undefined }, { type: "future_block" }]) {
     const doc = contentMarkup(content);
-    assert.equal(doc.querySelector("dl"), null);
+    assertAbsent(doc.querySelector("dl"));
   }
 });
 

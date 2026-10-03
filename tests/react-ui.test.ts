@@ -55,6 +55,15 @@ const { ControllerContext } =
   await import("../ui/components/controller-context");
 const { AppShell } = await import("../ui/shells/app-shell");
 
+// assert.equal(element, null) diffs the whole jsdom object graph on failure,
+// which never finishes and starves waitFor's timeout.
+function assertAbsent(element: Element | null) {
+  assert.ok(
+    element === null,
+    `Unexpected element: ${element?.outerHTML.slice(0, 200)}`,
+  );
+}
+
 function task(id = "one", repository = "/repo/a"): Task {
   return {
     id,
@@ -257,7 +266,7 @@ test("settings dialog renders host schema groups and saves only changed fields",
                   max_runtime_minutes: {
                     type: "number",
                     title: "Runtime minutes",
-                    minimum: 1,
+                    minimum: 0.01,
                   },
                   use_cost_budget: { type: "boolean", title: "Use cost limit" },
                   max_cost_usd: { type: "number", title: "Cost USD" },
@@ -288,7 +297,7 @@ test("settings dialog renders host schema groups and saves only changed fields",
   await screen.findByRole("dialog");
   assert.ok(screen.getByRole("button", { name: "Close" }));
   assert.ok(screen.getByRole("button", { name: /^Budgets/ }));
-  assert.equal(screen.queryByRole("button", { name: "Open" }), null);
+  assertAbsent(screen.queryByRole("button", { name: "Open" }));
   const save = screen.getByRole("button", { name: "Save settings" });
   assert.equal((save as HTMLButtonElement).disabled, true);
   await selectOption(user, "Use cost limit", "On");
@@ -301,7 +310,7 @@ test("settings dialog renders host schema groups and saves only changed fields",
     2,
   );
   await user.click(screen.getByRole("button", { name: "Save 2 changes" }));
-  await waitFor(() => assert.equal(screen.queryByRole("dialog"), null));
+  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
   assert.deepEqual(
     transport.calls.find((call) => call.name === "update_agent_settings")!.args,
     { set: { use_cost_budget: true, default_model: "model-a" } },
@@ -668,15 +677,15 @@ test("description toggles literally, survives refresh, and resets for another ta
     .closest(".task-description")!
     .querySelector(".task-description-content")!;
   assert.equal(panel.textContent, literal);
-  assert.equal(panel.querySelector("img"), null);
+  assertAbsent(panel.querySelector("img"));
   transport.tasks[0] = {
     ...transport.tasks[0],
     description: literal + " Updated.",
   };
   await act(() => controller.refresh());
-  assert.equal(
-    screen.getByRole("button", { name: "Description", exact: true }),
-    toggle,
+  assert.ok(
+    screen.getByRole("button", { name: "Description", exact: true }) === toggle,
+    "Refresh retains the description toggle node",
   );
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   assert.equal(panel.textContent, literal + " Updated.");
@@ -704,10 +713,10 @@ test("delegation submits the full request without a title and search matches des
     "ZEBRA",
   );
   assert.ok(screen.getByRole("button", { name: /^Review authentication/ }));
-  assert.equal(screen.queryByRole("button", { name: /^Other task/ }), null);
+  assertAbsent(screen.queryByRole("button", { name: /^Other task/ }));
   await act(() => controller.setSearch(""));
   await user.click(screen.getByRole("button", { name: "New task" }));
-  assert.equal(screen.queryByLabelText("Task title"), null);
+  assertAbsent(screen.queryByLabelText("Task title"));
   const request =
     "Review authentication.\nInclude all edge cases and report the evidence.";
   await enterTask(user, request);
@@ -739,11 +748,10 @@ test("inline preview expands and collapses while preserving the selected task", 
   await act(() => controller.select("two"));
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByText("Running", { exact: true }));
-  assert.equal(screen.queryByRole("button", { name: "New task" }), null);
-  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
-  assert.equal(
+  assertAbsent(screen.queryByRole("button", { name: "New task" }));
+  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
+  assertAbsent(
     screen.queryByRole("complementary", { name: "Delegated tasks" }),
-    null,
   );
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   assert.equal(transport.expandCalls, 1);
@@ -758,7 +766,7 @@ test("inline preview expands and collapses while preserving the selected task", 
   assert.equal(controller.getSnapshot().selected, "two");
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
-  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
+  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
 });
 
 test("inline host without expansion offers the chat controls fallback", async (t) => {
@@ -769,9 +777,9 @@ test("inline host without expansion offers the chat controls fallback", async (t
     },
     { displayMode: "inline" },
   );
-  assert.equal(screen.queryByRole("button", { name: "Open panel" }), null);
+  assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   assert.ok(screen.getByText("Expand this app using the chat controls."));
-  assert.equal(screen.queryByRole("button", { name: "New task" }), null);
+  assertAbsent(screen.queryByRole("button", { name: "New task" }));
 });
 
 test("failed expansion keeps the inline preview and displays the host error", async (t) => {
@@ -794,7 +802,7 @@ test("failed expansion keeps the inline preview and displays the host error", as
   assert.equal(transport.expandCalls, 1);
   assert.equal(controller.getSnapshot().host.displayMode, "inline");
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
-  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
+  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
 });
 
 test("host collapse preserves a delegation draft until scope changes", async (t) => {
@@ -805,7 +813,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   const dialogState = controller.getSnapshot().dialog;
   await act(() => transport.expand());
   assert.ok(screen.getByRole("region", { name: "Delegated work preview" }));
-  assert.equal(screen.queryByRole("dialog"), null);
+  assertAbsent(screen.queryByRole("dialog"));
   assert.ok(controller.getSnapshot().dialog === dialogState);
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   await screen.findByRole("dialog");
@@ -822,11 +830,11 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
     0,
   );
   await act(() => transport.expand());
-  assert.equal(screen.queryByRole("dialog"), null);
+  assertAbsent(screen.queryByRole("dialog"));
   await act(() => controller.changeProject("/repo/b"));
   assert.equal(controller.getSnapshot().dialog, undefined);
   await user.click(screen.getByRole("button", { name: "Open panel" }));
-  assert.equal(screen.queryByRole("dialog"), null);
+  assertAbsent(screen.queryByRole("dialog"));
   await user.click(screen.getAllByRole("button", { name: "New task" })[0]);
   await screen.findByRole("dialog");
   assert.equal(
@@ -844,7 +852,7 @@ test("console and nonembedded panels retain the full interface in inline mode", 
     await setup(t, undefined, { mode: "console", displayMode: "inline" });
     assert.ok(screen.getByRole("button", { name: "＋ Delegate" }));
     assert.ok(screen.getByRole("region", { name: "Task inspector" }));
-    assert.equal(screen.queryByRole("button", { name: "Open panel" }), null);
+    assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   });
   await t.test("nonembedded panel", async (t) => {
     await setup(
@@ -856,7 +864,7 @@ test("console and nonembedded panels retain the full interface in inline mode", 
     );
     assert.ok(screen.getByRole("button", { name: "New task" }));
     assert.ok(screen.getByRole("region", { name: "Task inspector" }));
-    assert.equal(screen.queryByRole("button", { name: "Open panel" }), null);
+    assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   });
 });
 
@@ -866,7 +874,7 @@ test("inline preview renders refresh errors without exposing the full interface"
   assert.equal(screen.getByRole("alert").textContent, "Refresh unavailable");
   assert.ok(screen.getByText("Review authentication"));
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
-  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
+  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
 });
 
 test("inline preview summarizes repository scope independently of list filters", async (t) => {
@@ -905,7 +913,7 @@ test("inline preview summarizes repository scope independently of list filters",
   );
   assert.ok(screen.getByText("Waiting review"));
   assert.ok(screen.getByText("Needs input", { exact: true }));
-  assert.equal(screen.queryByRole("region", { name: "Task inspector" }), null);
+  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
 });
 
 test("inline preview distinguishes empty tasks from connecting state", async (t) => {
@@ -928,8 +936,8 @@ test("inline preview distinguishes empty tasks from connecting state", async (t)
     await setup(t, undefined, { start: false });
     assert.ok(screen.getByRole("region", { name: "Delegated work preview" }));
     assert.equal(screen.getByRole("status").textContent, "Connecting…");
-    assert.equal(screen.queryByText("No delegated tasks yet."), null);
-    assert.equal(screen.queryByRole("button", { name: "New task" }), null);
+    assertAbsent(screen.queryByText("No delegated tasks yet."));
+    assertAbsent(screen.queryByRole("button", { name: "New task" }));
   });
 });
 
