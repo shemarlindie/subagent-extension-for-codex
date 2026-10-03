@@ -7,6 +7,8 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
 const root = import.meta.dirname;
+// Same optional .env as npm run dev/start; shell variables take precedence.
+if (existsSync(join(root, ".env"))) process.loadEnvFile(join(root, ".env"));
 
 // Mirrors dataDirectory() and connectService(). The origin is read at startup
 // (restart Vite if the service moves); the token is read per request.

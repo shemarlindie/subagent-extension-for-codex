@@ -95,13 +95,6 @@ export async function connectService() {
       env: {
         ...process.env,
         CODEX_SUBAGENT_EXTENSION_DATA: data,
-        ...(process.env.CODEX_SUBAGENT_EXTENSION_REPOSITORY
-          ? {
-              CODEX_SUBAGENT_EXTENSION_REPOSITORY: resolve(
-                process.env.CODEX_SUBAGENT_EXTENSION_REPOSITORY,
-              ),
-            }
-          : {}),
         ...(process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS
           ? {
               CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS: JSON.stringify(

@@ -28,15 +28,19 @@ try {
   execFileSync("git", ["-C", repo, "add", "README.md"]);
   execFileSync("git", ["-C", repo, "commit", "-qm", "Demo fixture"]);
 }
+const env = {
+  ...process.env,
+  CODEX_SUBAGENT_EXTENSION_DATA: resolve(".codex-subagent-extension/demo"),
+  CODEX_SUBAGENT_EXTENSION_PROVIDER: "fixture",
+  CODEX_SUBAGENT_EXTENSION_TOKEN: "local-demo-only",
+};
+execFileSync(process.execPath, ["dist/projects-cli.js", "register", repo], {
+  env,
+  stdio: "ignore",
+});
 const child = spawn(process.execPath, ["dist/main.js"], {
   stdio: "inherit",
-  env: {
-    ...process.env,
-    CODEX_SUBAGENT_EXTENSION_REPOSITORY: repo,
-    CODEX_SUBAGENT_EXTENSION_DATA: resolve(".codex-subagent-extension/demo"),
-    CODEX_SUBAGENT_EXTENSION_PROVIDER: "fixture",
-    CODEX_SUBAGENT_EXTENSION_TOKEN: "local-demo-only",
-  },
+  env,
 });
 console.error(
   "Demo login token: local-demo-only (fixture mode; no model calls)",

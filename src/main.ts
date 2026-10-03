@@ -11,9 +11,6 @@ import { Events } from "./events/service.js";
 import { Projects } from "./core/projects.js";
 import { dataDirectory, installRoot } from "./service/runtime.js";
 import { lease } from "./service/lease.js";
-const repository = resolve(
-  process.env.CODEX_SUBAGENT_EXTENSION_REPOSITORY ?? process.cwd(),
-);
 const data = dataDirectory();
 mkdirSync(data, { recursive: true, mode: 0o700 });
 const release = lease(data);
@@ -38,13 +35,11 @@ const c = new Control(
   store,
   new Workspaces(join(data, "worktrees"), []),
   providers,
-  repository,
+  process.cwd(),
   concurrency,
 );
 
 c.projects = new Projects(store, c.workspaces);
-if (process.env.CODEX_SUBAGENT_EXTENSION_REPOSITORY)
-  await c.projects.register(repository);
 for (const root of JSON.parse(
   process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS ?? "[]",
 ))
