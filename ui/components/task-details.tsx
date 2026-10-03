@@ -3,8 +3,8 @@ import { approvalLabels } from "../../src/core/model";
 import {
   permissionLabels,
   approvalDecider,
-  legacyClaudeMode,
-  readOnlyProfile,
+  taskClaudeMode,
+  claudeOverrideLabels,
 } from "../../src/core/permissions";
 import { Chevron } from "./chevron";
 import type { Task } from "../core/types";
@@ -14,14 +14,21 @@ export function TaskDetails({ task }: { task: Task }) {
     ...(task.provider === "claude"
       ? {
           "Permission mode":
-            permissionLabels[
-              task.permission_mode ??
-                legacyClaudeMode(task.approval_mode) ??
-                (readOnlyProfile(task.worker_profile) ? "plan" : "acceptEdits")
-            ],
+            permissionLabels[taskClaudeMode(task) ?? "inherit"],
           "Permission source": task.permission_source ?? "Provider default",
           "Approval decision maker":
             approvalDecider(task) === "parent_agent" ? "Parent agent" : "User",
+          ...(task.claude_policy
+            ? {
+                "Session restrictions": [
+                  `Sandbox: ${claudeOverrideLabels.claude_sandbox[task.claude_policy.sandbox]}`,
+                  `Environment: ${claudeOverrideLabels.claude_environment[task.claude_policy.environment]}`,
+                  `Tools: ${claudeOverrideLabels.claude_tools[task.claude_policy.tools]}`,
+                  `Path guard: ${task.claude_policy.path_guard ? "On" : "Off"}`,
+                  `Subagents: ${task.claude_policy.subagents ? "On" : "Off"}`,
+                ].join(" · "),
+              }
+            : {}),
         }
       : { "Approval mode": approvalLabels[task.approval_mode ?? "ask_user"] }),
     Model: task.model || "Provider runtime default",

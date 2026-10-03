@@ -9,6 +9,7 @@ import {
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
 } from "../src/core/settings.js";
+import { claudeOverrideDefaults } from "../src/core/permissions.js";
 
 async function fixture(t: TestContext) {
   const dir = await mkdtemp(join(tmpdir(), "settings-test-"));
@@ -604,5 +605,61 @@ test("Codex defaults are not offered and legacy Codex values are ignored", async
   assert.equal(
     f.settings.taskInput("bob", { provider: "codex" }).provider,
     "codex",
+  );
+});
+
+test("Claude session restrictions are scalar user-only settings with stored defaults", async (t) => {
+  const f = await fixture(t);
+  f.saveLegacy("alice");
+  const keys = [
+    "claude_sandbox",
+    "claude_environment",
+    "claude_tools",
+    "claude_path_guard",
+    "claude_subagents",
+  ] as const;
+  const before = f.settings.values("alice");
+  assert.deepEqual(
+    Object.fromEntries(keys.map((key) => [key, before[key]])),
+    claudeOverrideDefaults,
+  );
+  const read = f.settings.read("alice");
+  for (const key of keys) {
+    const field = read.schema.properties![key];
+    assert.ok(["string", "boolean"].includes(field.type), key);
+    assert.equal(Object.hasOwn(field, "default"), false, key);
+  }
+  assert.deepEqual(
+    read.layout?.find((group) => group.title === "Claude session restrictions")
+      ?.items,
+    keys.map((property) => ({ kind: "property", property })),
+  );
+  for (const set of [
+    { claude_sandbox: "user_config" },
+    { claude_environment: "inherit" },
+    { claude_tools: "all" },
+    { claude_path_guard: "off" },
+    { claude_subagents: true },
+  ])
+    assert.throws(
+      () => f.settings.update("alice", { set }, "parent"),
+      /user decision/,
+    );
+  assert.deepEqual(f.settings.values("alice"), before);
+  f.settings.update("alice", {
+    set: {
+      claude_sandbox: "extension_locked",
+      claude_tools: "profile",
+      claude_subagents: true,
+    },
+  });
+  f.reopen();
+  const after = f.settings.values("alice");
+  assert.equal(after.claude_sandbox, "extension_locked");
+  assert.equal(after.claude_tools, "profile");
+  assert.equal(after.claude_subagents, true);
+  assert.equal(after.max_runtime_minutes, 14);
+  assert.throws(() =>
+    f.settings.update("alice", { set: { claude_tools: "none" } }),
   );
 });

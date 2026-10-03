@@ -1,11 +1,8 @@
 import {
-  type ParentPermissions,
   resolveClaudePermission,
-  permissionRank,
-  closestClaudeMode,
-  readOnlyProfile,
-  legacyClaudeMode,
+  exceedsPermission,
   approvalDecider,
+  resolveClaudePolicy,
 } from "./permissions.js";
 import { randomUUID } from "node:crypto";
 import { access } from "node:fs/promises";
@@ -148,7 +145,6 @@ export class Control {
     owner: string,
     input: unknown,
     authority: InputAuthority = "user",
-    parentPermissions?: ParentPermissions,
   ) {
     const parsed = startSchema.parse(this.settings.taskInput(owner, input));
     if (
@@ -159,40 +155,22 @@ export class Control {
     )
       throw new Error("Task approval mode exceeds the user-approved default");
     let resolved: ReturnType<typeof resolveClaudePermission> | undefined;
+    let claudePolicy: ReturnType<typeof resolveClaudePolicy> | undefined;
     if (parsed.provider === "claude") {
-      if (parsed.parent_task_id) {
-        const parent = this.store.get(parsed.parent_task_id, owner);
-        if (parent.provider === "claude") {
-          const delegated = readOnlyProfile(parent.worker_profile)
-            ? "plan"
-            : parent.permission_mode && parent.permission_mode !== "inherit"
-              ? parent.permission_mode
-              : legacyClaudeMode(parent.approval_mode);
-          const host = closestClaudeMode(parentPermissions);
-          // A referenced older task cannot broaden the actual host parent's authority.
-          const mode =
-            delegated &&
-            host &&
-            permissionRank[host] < permissionRank[delegated]
-              ? host
-              : (delegated ?? host);
-          parentPermissions = { provider: "claude", permission_mode: mode };
-        }
-      }
       const defaults = this.settings.values(owner);
+      // Restrictions are fixed when the task starts; later settings changes don't apply.
+      claudePolicy = resolveClaudePolicy(defaults, parsed.worker_profile);
       const baseline = resolveClaudePermission(
         { worker_profile: parsed.worker_profile },
         defaults.claude_permission_mode,
-        parentPermissions,
       );
       resolved = resolveClaudePermission(
         parsed,
         defaults.claude_permission_mode,
-        parentPermissions,
       );
       if (
         authority !== "user" &&
-        permissionRank[resolved.mode] > permissionRank[baseline.mode]
+        exceedsPermission(resolved.mode, baseline.mode)
       )
         throw new Error(
           "Task permission mode exceeds the user-approved native mode",
@@ -209,7 +187,11 @@ export class Control {
     const req = {
       ...parsed,
       ...(resolved
-        ? { permission_mode: resolved.mode, permission_source: resolved.source }
+        ? {
+            permission_mode: resolved.mode,
+            permission_source: resolved.source,
+            claude_policy: claudePolicy,
+          }
         : {}),
       title:
         parsed.title === undefined

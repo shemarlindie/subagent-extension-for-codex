@@ -16,142 +16,50 @@ import {
 } from "../src/core/model.js";
 import {
   claudePermissionModes,
-  parentPermissionsFromMeta,
-  closestClaudeMode,
   resolveClaudePermission,
+  exceedsPermission,
+  resolveClaudePolicy,
+  claudeOverrideDefaults,
 } from "../src/core/permissions.js";
 
-test("native permission resolution follows task, setting, parent, then profile", () => {
+test("native permission resolution follows task, setting, then profile or the user's Claude settings", () => {
   const task = { worker_profile: "implementer" };
   assert.deepEqual(resolveClaudePermission(task, "inherit"), {
-    mode: "acceptEdits",
-    source: "task_profile",
+    mode: "inherit",
+    source: "user_config",
   });
   assert.deepEqual(
     resolveClaudePermission({ worker_profile: "reviewer" }, "inherit"),
     { mode: "plan", source: "task_profile" },
   );
-  const parent = {
-    provider: "claude" as const,
-    permission_mode: "auto" as const,
-  };
-  assert.deepEqual(resolveClaudePermission(task, "inherit", parent), {
-    mode: "auto",
-    source: "parent",
-  });
   assert.deepEqual(
-    resolveClaudePermission(
-      { worker_profile: "researcher" },
-      "inherit",
-      parent,
-    ),
-    { mode: "plan", source: "parent" },
+    resolveClaudePermission({ worker_profile: "reviewer" }, "acceptEdits"),
+    { mode: "acceptEdits", source: "setting" },
   );
-  assert.deepEqual(resolveClaudePermission(task, "dontAsk", parent), {
+  assert.deepEqual(resolveClaudePermission(task, "dontAsk"), {
     mode: "dontAsk",
     source: "setting",
   });
   assert.deepEqual(
-    resolveClaudePermission(
-      { ...task, permission_mode: "default" },
-      "dontAsk",
-      parent,
-    ),
+    resolveClaudePermission({ ...task, permission_mode: "default" }, "dontAsk"),
     { mode: "default", source: "task" },
   );
 });
 
-test("validated parent metadata maps host permissions to the closest native mode", () => {
-  const host = (sandbox: string, approval: string) =>
-    parentPermissionsFromMeta({
-      "codex/sandbox-state-meta": {
-        sandboxPolicy: { type: sandbox },
-        approvalPolicy: approval,
-      },
-    });
-  assert.equal(closestClaudeMode(host("read-only", "never")), "plan");
-  assert.equal(
-    closestClaudeMode(host("workspace-write", "on-request")),
-    "acceptEdits",
-  );
-  assert.equal(
-    closestClaudeMode(host("workspace-write", "auto-review")),
-    "auto",
-  );
-  assert.equal(
-    closestClaudeMode(host("danger-full-access", "never")),
-    "bypassPermissions",
-  );
-  assert.equal(
-    closestClaudeMode(host("workspace-write", "untrusted")),
+test("model-selected modes cannot exceed a known baseline or the unknown authority of Claude settings", () => {
+  assert.equal(exceedsPermission("inherit", "inherit"), false);
+  for (const mode of ["plan", "dontAsk"] as const)
+    assert.equal(exceedsPermission(mode, "inherit"), false, mode);
+  for (const mode of [
     "default",
-  );
-  assert.equal(closestClaudeMode(host("read-only", "unknown-policy")), "plan");
-  assert.equal(host("invalid", "invalid"), undefined);
-  assert.equal(
-    parentPermissionsFromMeta({ permission_mode: "bypassPermissions" }),
-    undefined,
-  );
-  assert.equal(
-    parentPermissionsFromMeta({
-      "codex-subagent-extension/parent-permissions": {
-        provider: "claude",
-        permission_mode: "invalid",
-      },
-    }),
-    undefined,
-  );
-  assert.equal(
-    closestClaudeMode(
-      parentPermissionsFromMeta({
-        "codex-subagent-extension/parent-permissions": {
-          provider: "claude",
-          permission_mode: "dontAsk",
-        },
-      }),
-    ),
-    "dontAsk",
-  );
-});
-
-test("custom parent metadata cannot shadow more restrictive Codex host metadata", () => {
-  for (const custom of [
-    { provider: "claude", permission_mode: "bypassPermissions" },
-    { provider: "claude" },
-  ]) {
-    for (const [sandbox, approval, expected] of [
-      ["read-only", "never", "plan"],
-      ["workspace-write", "untrusted", "default"],
-    ]) {
-      assert.equal(
-        closestClaudeMode(
-          parentPermissionsFromMeta({
-            "codex-subagent-extension/parent-permissions": custom,
-            "codex/sandbox-state-meta": {
-              sandboxPolicy: { type: sandbox },
-              approvalPolicy: approval,
-            },
-          }),
-        ),
-        expected,
-      );
-    }
-  }
-  assert.equal(
-    closestClaudeMode(
-      parentPermissionsFromMeta({
-        "codex-subagent-extension/parent-permissions": {
-          provider: "claude",
-          permission_mode: "dontAsk",
-        },
-        "codex/sandbox-state-meta": {
-          sandboxPolicy: { type: "workspace-write" },
-          approvalPolicy: "never",
-        },
-      }),
-    ),
-    "dontAsk",
-  );
+    "acceptEdits",
+    "auto",
+    "bypassPermissions",
+  ] as const)
+    assert.equal(exceedsPermission(mode, "inherit"), true, mode);
+  assert.equal(exceedsPermission("inherit", "bypassPermissions"), true);
+  assert.equal(exceedsPermission("default", "acceptEdits"), false);
+  assert.equal(exceedsPermission("auto", "acceptEdits"), true);
 });
 
 async function setup(t: TestContext, provider = new FixtureProvider()) {
@@ -267,14 +175,8 @@ test("task arguments cannot spoof parent permissions and resolved source is stor
     },
     "parent",
   );
-  assert.equal(task.permission_mode, "acceptEdits");
-  assert.equal(task.permission_source, "task_profile");
-  const inherited = await c.start("alice", request, "parent", {
-    provider: "claude",
-    permission_mode: "default",
-  });
-  assert.equal(store.get(inherited.id, "alice").permission_mode, "default");
-  assert.equal(store.get(inherited.id, "alice").permission_source, "parent");
+  assert.equal(task.permission_mode, "inherit");
+  assert.equal(store.get(task.id, "alice").permission_source, "user_config");
   assert.equal(
     Object.hasOwn(
       startSchema.parse({
@@ -305,12 +207,24 @@ test("parent cannot increase native permissions or grant itself decision authori
     ),
     /user authorization/,
   );
+  await assert.rejects(
+    c.start("alice", { ...request, permission_mode: "acceptEdits" }, "parent"),
+    /exceeds the user-approved native mode/,
+  );
   const restricted = await c.start(
     "alice",
     { ...request, permission_mode: "dontAsk" },
     "parent",
   );
   assert.equal(restricted.permission_mode, "dontAsk");
+  await assert.rejects(
+    c.start(
+      "alice",
+      { ...request, worker_profile: "reviewer", permission_mode: "dontAsk" },
+      "parent",
+    ),
+    /exceeds the user-approved native mode/,
+  );
   c.settings.update("alice", {
     set: {
       claude_permission_mode: "bypassPermissions",
@@ -326,11 +240,11 @@ test("parent cannot increase native permissions or grant itself decision authori
   assert.equal(approved.approval_decider, "parent_agent");
 });
 
-test("parent task inheritance requires ownership and settings override parent mode", async (t) => {
+test("parent task references require ownership and do not pass on the parent's mode", async (t) => {
   const { c } = await setup(t);
   const parent = await c.start("alice", {
     ...request,
-    permission_mode: "default",
+    permission_mode: "bypassPermissions",
   });
   await assert.rejects(
     c.start("bob", { ...request, parent_task_id: parent.id }, "parent"),
@@ -340,8 +254,8 @@ test("parent task inheritance requires ownership and settings override parent mo
     { ...request, parent_task_id: parent.id },
     "parent",
   );
-  assert.equal(child.permission_mode, "default");
-  assert.equal(child.permission_source, "parent");
+  assert.equal(child.permission_mode, "inherit");
+  assert.equal(child.permission_source, "user_config");
   c.settings.update("alice", { set: { claude_permission_mode: "dontAsk" } });
   const overridden = await c.start(
     "alice",
@@ -350,63 +264,6 @@ test("parent task inheritance requires ownership and settings override parent mo
   );
   assert.equal(overridden.permission_mode, "dontAsk");
   assert.equal(overridden.permission_source, "setting");
-});
-
-test("referencing a permissive parent task cannot exceed actual host or read-only parent authority", async (t) => {
-  const { c } = await setup(t);
-  assert.equal(c.settings.values("alice").claude_permission_mode, "inherit");
-  const permissive = await c.start("alice", {
-    ...request,
-    permission_mode: "bypassPermissions",
-  });
-  const host = {
-    provider: "codex" as const,
-    sandbox_mode: "read-only" as const,
-    approval_policy: "never" as const,
-  };
-  const restrictedByHost = await c.start(
-    "alice",
-    { ...request, parent_task_id: permissive.id },
-    "parent",
-    host,
-  );
-  assert.equal(restrictedByHost.permission_mode, "plan");
-  assert.equal(restrictedByHost.permission_source, "parent");
-  await assert.rejects(
-    c.start(
-      "alice",
-      {
-        ...request,
-        parent_task_id: permissive.id,
-        permission_mode: "acceptEdits",
-      },
-      "parent",
-      host,
-    ),
-    /exceeds the user-approved native mode/,
-  );
-  const reviewer = await c.start("alice", {
-    ...request,
-    worker_profile: "reviewer",
-    permission_mode: "bypassPermissions",
-  });
-  const restrictedByProfile = await c.start(
-    "alice",
-    { ...request, parent_task_id: reviewer.id },
-    "parent",
-  );
-  assert.equal(restrictedByProfile.permission_mode, "plan");
-  assert.equal(restrictedByProfile.permission_source, "parent");
-  c.settings.update("alice", {
-    set: { claude_permission_mode: "acceptEdits" },
-  });
-  const userOverride = await c.start(
-    "alice",
-    { ...request, parent_task_id: reviewer.id },
-    "parent",
-  );
-  assert.equal(userOverride.permission_mode, "acceptEdits");
-  assert.equal(userOverride.permission_source, "setting");
 });
 
 class PromptProvider extends FixtureProvider {
@@ -556,4 +413,81 @@ test("native unresolved approvals honor user or parent decision settings indepen
     JSON.parse(store.get(delegated.id, "alice").result!.summary).approved,
     false,
   );
+});
+
+test("Claude tasks snapshot session restrictions from settings and ignore task arguments", async (t) => {
+  const { c, store } = await setup(t);
+  c.settings.update("alice", {
+    set: {
+      claude_sandbox: "extension_locked",
+      claude_environment: "filtered",
+      claude_subagents: false,
+    },
+  });
+  // A model-supplied policy cannot widen the user's settings.
+  const write = await c.start(
+    "alice",
+    {
+      ...request,
+      claude_policy: {
+        sandbox: "user_config",
+        environment: "inherit",
+        tools: "all",
+        path_guard: false,
+        subagents: true,
+      },
+    },
+    "parent",
+  );
+  assert.deepEqual(store.get(write.id, "alice").claude_policy, {
+    sandbox: "extension_locked",
+    environment: "filtered",
+    tools: "all",
+    path_guard: false,
+    subagents: false,
+  });
+  const review = await c.start("alice", {
+    ...request,
+    worker_profile: "reviewer",
+  });
+  assert.equal(review.claude_policy?.tools, "restricted");
+  assert.equal(review.claude_policy?.path_guard, true);
+  // A later settings change does not alter started tasks.
+  c.settings.update("alice", { set: { claude_tools: "restricted" } });
+  assert.equal(store.get(write.id, "alice").claude_policy?.tools, "all");
+  const bob = await c.start("bob", request);
+  assert.deepEqual(
+    bob.claude_policy,
+    resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+  );
+});
+
+test("profile restriction values restrict read-only profiles and explicit values apply to all", () => {
+  const profile = {
+    ...claudeOverrideDefaults,
+    claude_tools: "profile",
+    claude_path_guard: "profile",
+  } as const;
+  for (const role of ["researcher", "reviewer", "security_reviewer"])
+    assert.deepEqual(
+      [
+        resolveClaudePolicy(profile, role).tools,
+        resolveClaudePolicy(profile, role).path_guard,
+      ],
+      ["restricted", true],
+    );
+  for (const role of ["implementer", "debugger", "test_engineer", "refactorer"])
+    assert.deepEqual(
+      [
+        resolveClaudePolicy(profile, role).tools,
+        resolveClaudePolicy(profile, role).path_guard,
+      ],
+      ["all", false],
+    );
+  const loosened = resolveClaudePolicy(
+    { ...profile, claude_tools: "all", claude_path_guard: "off" },
+    "reviewer",
+  );
+  assert.equal(loosened.tools, "all");
+  assert.equal(loosened.path_guard, false);
 });

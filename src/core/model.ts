@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { reasoningLevels } from "./reasoning.js";
-import { permissionModeSchema, approvalDeciderSchema } from "./permissions.js";
+import {
+  permissionModeSchema,
+  approvalDeciderSchema,
+  type ClaudePolicy,
+} from "./permissions.js";
 export const roles = [
   "researcher",
   "reviewer",
@@ -38,7 +42,7 @@ export const startSchema = z.object({
   permission_mode: permissionModeSchema
     .optional()
     .describe(
-      "Claude native SDK permission mode; inherit resolves parent context or task-appropriate defaults. User settings can override.",
+      "Claude native SDK permission mode; inherit uses the user's Claude Code settings, or plan for read-only profiles. User settings can override.",
     ),
   approval_decider: approvalDeciderSchema
     .optional()
@@ -154,7 +158,11 @@ export const resultSchema = {
 };
 export interface Task extends Start {
   title: string;
-  permission_source?: "task" | "setting" | "parent" | "task_profile";
+  // "parent" appears only on tasks stored before parent-mode inheritance was removed.
+  permission_source?:
+    "task" | "setting" | "task_profile" | "user_config" | "parent";
+  /** Claude session restrictions resolved from settings when the task starts. */
+  claude_policy?: ClaudePolicy;
   id: string;
   owner: string;
   status: Status;

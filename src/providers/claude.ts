@@ -1,4 +1,10 @@
-import { legacyClaudeMode, readOnlyProfile } from "../core/permissions.js";
+import {
+  taskClaudeMode,
+  readOnlyProfile,
+  resolveClaudePolicy,
+  claudeOverrideDefaults,
+  type ClaudePolicy,
+} from "../core/permissions.js";
 import {
   query,
   type Options,
@@ -7,7 +13,14 @@ import {
   type SandboxSettings,
 } from "@anthropic-ai/claude-agent-sdk";
 import { homedir } from "node:os";
-import { join, resolve, relative, isAbsolute, dirname } from "node:path";
+import {
+  join,
+  resolve,
+  relative,
+  isAbsolute,
+  dirname,
+  basename,
+} from "node:path";
 import { realpath, readdir, access } from "node:fs/promises";
 import {
   type Provider,
@@ -19,10 +32,23 @@ import {
 } from "../core/model.js";
 import { z } from "zod";
 import { git } from "../core/workspace.js";
-/** Only Claude authentication and basic process settings reach the native harness. */
+// The extension's own credentials never reach delegated sessions. Claude
+// credentials come from the user's configuration, not a subscription token.
+const privateVariable = (name: string) =>
+  name.startsWith("CODEX_SUBAGENT_EXTENSION_") ||
+  name.startsWith("OPENAI_") ||
+  name === "CLAUDE_CODE_OAUTH_TOKEN";
+/** The service environment for the native harness, or only Claude authentication and basic process settings when filtered. */
 export function claudeEnvironment(
   source: NodeJS.ProcessEnv = process.env,
+  mode: ClaudePolicy["environment"] = "filtered",
 ): NodeJS.ProcessEnv {
+  if (mode === "inherit")
+    return Object.fromEntries(
+      Object.entries(source).filter(
+        ([name, value]) => value !== undefined && !privateVariable(name),
+      ),
+    );
   const allowed = [
     "PATH",
     "HOME",
@@ -92,6 +118,33 @@ const output = z.strictObject({
   recommendations: z.array(z.string()),
 });
 const readTools = ["Read", "Glob", "Grep"];
+const writeTools = ["Edit", "Write"];
+/** File tools whose target the path guard checks. */
+const pathTools = [...readTools, ...writeTools, "NotebookEdit"];
+const toolPath = (input: Record<string, unknown>, workspace: string) =>
+  String(input.file_path ?? input.notebook_path ?? input.path ?? workspace);
+/** Whether a path stays inside the workspace and out of Git metadata, following symlinks. */
+async function inWorkspace(workspace: string, path: string) {
+  const target = resolve(workspace, path);
+  let actual: string;
+  try {
+    actual = await realpath(target);
+  } catch {
+    // New files: resolve the parent to prevent symlink escape.
+    try {
+      actual = join(await realpath(dirname(target)), basename(target));
+    } catch {
+      return false;
+    }
+  }
+  const rel = relative(await realpath(workspace), actual);
+  return !(
+    rel.startsWith("..") ||
+    isAbsolute(rel) ||
+    rel === ".git" ||
+    rel.startsWith(".git/")
+  );
+}
 /** Tools without workspace paths that run after approval; entries ending in `*` match by prefix. */
 const approvalTools = ["Bash", "Skill", "mcp__*"];
 const approvalTool = (tool: string) =>
@@ -109,8 +162,9 @@ export class ClaudeAgentProvider implements Provider {
     cost_budget: true,
     runtime_budget: true,
     token_budget: false,
-    subagents: false,
-    parallel_subagents: false,
+    // Settings can turn subagents off per user.
+    subagents: true,
+    parallel_subagents: true,
     dynamic_subagents: false,
   };
   private catalog?: { expires: number; models: ModelChoice[] };
@@ -184,42 +238,75 @@ export class ClaudeAgentProvider implements Provider {
     }
   }
   async run(c: RunContext, prompt: string): Promise<Result> {
-    const sandbox = await claudeSandbox(c.task);
+    // Tasks created before session restrictions were configurable use the defaults.
+    const policy =
+      c.task.claude_policy ??
+      resolveClaudePolicy(claudeOverrideDefaults, c.task.worker_profile);
+    const workspace = c.task.workspace!;
     const abortController = new AbortController();
     const abort = () => abortController.abort();
     c.signal.addEventListener("abort", abort, { once: true });
     if (c.signal.aborted) abort();
-    const nativeMode =
-      c.task.permission_mode && c.task.permission_mode !== "inherit"
-        ? c.task.permission_mode
-        : (legacyClaudeMode(c.task.approval_mode) ??
-          (readOnlyProfile(c.task.worker_profile) ? "plan" : "acceptEdits"));
+    // Without a mode, the user's Claude Code settings choose it.
+    const nativeMode = taskClaudeMode(c.task);
+    const restricted = policy.tools === "restricted";
     const readOnly =
-      readOnlyProfile(c.task.worker_profile) || nativeMode === "plan";
+      restricted &&
+      (readOnlyProfile(c.task.worker_profile) || nativeMode === "plan");
+    const guarded = (tool: string) =>
+      policy.path_guard && pathTools.includes(tool);
+    // The restricted set offers file, search, approval-routed and question tools only.
+    const restrictedDenial = (tool: string) =>
+      !restricted ||
+      tool === "AskUserQuestion" ||
+      tool === "Skill" ||
+      readTools.includes(tool)
+        ? undefined
+        : readOnly
+          ? "Read-only worker profile"
+          : approvalTool(tool) || writeTools.includes(tool)
+            ? undefined
+            : "Tool not permitted";
+    const sandbox =
+      policy.sandbox === "user_config"
+        ? {}
+        : {
+            sandbox: await claudeSandbox(c.task),
+            ...(policy.sandbox === "extension_locked"
+              ? {
+                  // Policy-tier lock: settings files cannot add network domains.
+                  managedSettings: {
+                    sandbox: { network: { allowManagedDomainsOnly: true } },
+                  },
+                }
+              : {}),
+          };
     const options: Options = {
-      cwd: c.task.workspace,
+      cwd: workspace,
       ...(c.task.model ? { model: c.task.model } : {}),
       ...(c.task.reasoning_effort && c.task.reasoning_effort !== "default"
         ? { effort: c.task.reasoning_effort as Options["effort"] }
         : {}),
-      env: claudeEnvironment(),
-      sandbox,
+      env: claudeEnvironment(process.env, policy.environment),
+      ...sandbox,
       abortController,
       persistSession: true,
       resume: c.task.session_id,
       settingSources: ["user", "project", "local"],
-      permissionMode: nativeMode,
+      ...(nativeMode ? { permissionMode: nativeMode } : {}),
       ...(nativeMode === "bypassPermissions"
         ? { allowDangerouslySkipPermissions: true }
         : {}),
-      tools: [
-        ...readTools,
-        ...(readOnly ? [] : ["Edit", "Write", "Bash"]),
-        "AskUserQuestion",
-        "Skill",
-      ],
+      tools: restricted
+        ? [
+            ...readTools,
+            ...(readOnly ? [] : [...writeTools, "Bash"]),
+            "AskUserQuestion",
+            "Skill",
+          ]
+        : { type: "preset", preset: "claude_code" },
       allowedTools: [],
-      disallowedTools: ["Agent", "Task"],
+      disallowedTools: policy.subagents ? [] : ["Agent", "Task"],
       ...(c.task.budget.max_cost_usd === null
         ? {}
         : {
@@ -239,7 +326,6 @@ export class ClaudeAgentProvider implements Provider {
                 if (input.hook_event_name !== "PreToolUse") return {};
                 const tool = input.tool_name;
                 const params = input.tool_input as Record<string, unknown>;
-                if (tool === "AskUserQuestion") return {};
                 const deny = (reason: string) => ({
                   hookSpecificOutput: {
                     hookEventName: "PreToolUse" as const,
@@ -251,38 +337,13 @@ export class ClaudeAgentProvider implements Provider {
                   return output.strict().safeParse(params).success
                     ? {}
                     : deny("Invalid structured report");
-                // Skills are allowed in every profile; the tools they call are checked individually.
-                if (tool === "Skill") return {};
-                if (approvalTool(tool))
-                  return readOnly ? deny("Read-only worker profile") : {};
+                // Enabled restrictions deny before settings rules or modes can approve.
+                // Skills stay available; the tools they call are checked individually.
+                const denial = restrictedDenial(tool);
+                if (denial) return deny(denial);
                 if (
-                  !readTools.includes(tool) &&
-                  (readOnly || !["Write", "Edit"].includes(tool))
-                )
-                  return deny("Tool not permitted");
-                const target = resolve(
-                  c.task.workspace!,
-                  String(params.file_path ?? params.path ?? c.task.workspace),
-                );
-                let actual: string;
-                try {
-                  actual = await realpath(target);
-                } catch {
-                  try {
-                    actual = join(
-                      await realpath(resolve(target, "..")),
-                      target.split("/").at(-1)!,
-                    );
-                  } catch {
-                    return deny("Cannot verify path");
-                  }
-                }
-                const rel = relative(await realpath(c.task.workspace!), actual);
-                if (
-                  rel.startsWith("..") ||
-                  isAbsolute(rel) ||
-                  rel === ".git" ||
-                  rel.startsWith(".git/")
+                  guarded(tool) &&
+                  !(await inWorkspace(workspace, toolPath(params, workspace)))
                 )
                   return deny("Path outside task workspace or Git metadata");
                 return {};
@@ -302,49 +363,29 @@ export class ClaudeAgentProvider implements Provider {
             ? { behavior: "allow", updatedInput: { ...input, ...answer.input } }
             : { behavior: "deny", message: answer.message ?? "User declined" };
         }
-        if (readOnly && !readTools.includes(tool) && tool !== "Skill")
-          return { behavior: "deny", message: "Read-only worker profile" };
+        const denial = restrictedDenial(tool);
+        if (denial) return { behavior: "deny", message: denial };
+        if (guarded(tool)) {
+          if (!(await inWorkspace(workspace, toolPath(input, workspace))))
+            return { behavior: "deny", message: "Path outside task workspace" };
+          // Guarded reads stay inside the workspace, so they need no prompt.
+          if (readTools.includes(tool))
+            return { behavior: "allow", updatedInput: input };
+        }
         // Calls not already approved by settings or the permission mode ask the task's approver.
-        if (approvalTool(tool)) {
-          const answer = await c.input(tool, input, signal);
-          return answer.approved
-            ? { behavior: "allow", updatedInput: input }
-            : {
-                behavior: "deny",
-                message:
-                  answer.message ??
-                  (tool === "Bash" ? "Command denied" : "Tool call denied"),
-              };
-        }
-        if (!readTools.includes(tool) && !["Write", "Edit"].includes(tool))
-          return { behavior: "deny", message: "Tool not permitted" };
-        const path = String(input.file_path ?? input.path ?? c.task.workspace);
-        let actual: string;
-        try {
-          actual = await realpath(resolve(c.task.workspace!, path));
-        } catch {
-          // New files: resolve parent to prevent symlink escape.
-          const target = resolve(c.task.workspace!, path);
-          actual = join(
-            await realpath(resolve(target, "..")),
-            target.split("/").at(-1)!,
-          );
-        }
-        const rel = relative(await realpath(c.task.workspace!), actual);
-        if (
-          rel.startsWith("..") ||
-          isAbsolute(rel) ||
-          rel === ".git" ||
-          rel.startsWith(".git/")
-        )
-          return { behavior: "deny", message: "Path outside task workspace" };
-        if (["Write", "Edit"].includes(tool)) {
-          const answer = await c.input(tool, input, signal);
-          return answer.approved
-            ? { behavior: "allow", updatedInput: input }
-            : { behavior: "deny", message: answer.message ?? "Edit denied" };
-        }
-        return { behavior: "allow", updatedInput: input };
+        const answer = await c.input(tool, input, signal);
+        return answer.approved
+          ? { behavior: "allow", updatedInput: input }
+          : {
+              behavior: "deny",
+              message:
+                answer.message ??
+                (tool === "Bash"
+                  ? "Command denied"
+                  : writeTools.includes(tool)
+                    ? "Edit denied"
+                    : "Tool call denied"),
+            };
       },
     };
     const stream = this.launch({ prompt, options });

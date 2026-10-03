@@ -356,7 +356,7 @@ export function ApprovalField() {
         />
         <p className="help">
           {claude
-            ? "Claude native SDK mode. Inherit uses parent context or a mode appropriate for the task; settings can override it."
+            ? "Claude native SDK mode. Inherit uses your Claude Code settings, or plan for read-only profiles; settings can override it."
             : "Native permission mode selection is available for Claude."}
         </p>
       </Field>

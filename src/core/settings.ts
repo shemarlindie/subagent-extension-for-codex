@@ -3,6 +3,12 @@ import {
   approvalDeciderSchema,
   legacyClaudeMode,
   approvalDecider,
+  claudeSandboxSchema,
+  claudeEnvironmentSchema,
+  claudeToolsSchema,
+  claudePathGuardSchema,
+  claudeOverrideDefaults,
+  type ClaudeOverrides,
 } from "./permissions.js";
 import { z } from "zod";
 import {
@@ -87,7 +93,32 @@ const valuesSchema = z.strictObject({
   claude_permission_mode: permissionModeSchema.meta({
     title: "Claude permission mode",
     description:
-      "Inherit the closest native mode from the parent, or use plan for review tasks and acceptEdits for write tasks. An explicit setting overrides inheritance. Native auto uses the SDK classifier.",
+      "Inherit uses the default mode from your Claude Code settings, and plan for read-only worker profiles. An explicit setting applies to every task. Native auto uses the SDK classifier.",
+  }),
+  claude_sandbox: claudeSandboxSchema.meta({
+    title: "Claude Bash sandbox",
+    description:
+      "user_config applies the sandbox settings from your Claude Code configuration. extension adds the extension's sandbox: workspace-only writes, no home or sibling reads, no network. extension_locked also ignores network domains allowed by Claude settings files.",
+  }),
+  claude_environment: claudeEnvironmentSchema.meta({
+    title: "Claude environment",
+    description:
+      "inherit passes the service environment except the extension's own secrets. filtered passes only basic process variables and Claude credentials.",
+  }),
+  claude_tools: claudeToolsSchema.meta({
+    title: "Claude tools",
+    description:
+      "all offers every Claude Code tool. restricted offers only file, search, Bash, question, skill and MCP tools, and only read tools to read-only work. profile restricts read-only worker profiles.",
+  }),
+  claude_path_guard: claudePathGuardSchema.meta({
+    title: "Claude workspace path guard",
+    description:
+      "When on, file tools may only touch the task workspace and never Git metadata. profile turns it on for read-only worker profiles.",
+  }),
+  claude_subagents: z.boolean().meta({
+    title: "Allow Claude subagents",
+    description:
+      "Let delegated Claude sessions start their own subagents with the Agent tool.",
   }),
   default_approval_decider: approvalDeciderSchema.meta({
     title: "Approval decision maker",
@@ -136,6 +167,19 @@ const storedValuesSchema = valuesSchema.extend({
   auto_register_chat_project: z.boolean().default(true),
   claude_permission_mode: permissionModeSchema.default("inherit"),
   default_approval_decider: approvalDeciderSchema.default("user"),
+  claude_sandbox: claudeSandboxSchema.default(
+    claudeOverrideDefaults.claude_sandbox,
+  ),
+  claude_environment: claudeEnvironmentSchema.default(
+    claudeOverrideDefaults.claude_environment,
+  ),
+  claude_tools: claudeToolsSchema.default(claudeOverrideDefaults.claude_tools),
+  claude_path_guard: claudePathGuardSchema.default(
+    claudeOverrideDefaults.claude_path_guard,
+  ),
+  claude_subagents: z
+    .boolean()
+    .default(claudeOverrideDefaults.claude_subagents),
   default_approval_mode: approvalModeSchema.default("ask_user"),
   ...(Object.fromEntries(
     Object.entries(modelSettingsShape).map(([key, schema]) => [
@@ -360,6 +404,13 @@ export class Settings {
           },
           {
             kind: "group",
+            title: "Claude session restrictions",
+            items: (
+              Object.keys(claudeOverrideDefaults) as (keyof ClaudeOverrides)[]
+            ).map((property) => ({ kind: "property", property })),
+          },
+          {
+            kind: "group",
             title: "Global model defaults",
             items: ["default_model", "default_reasoning_effort"].map(
               (property) => ({ kind: "property", property }),
@@ -391,6 +442,15 @@ export class Settings {
         set.default_approval_decider !== undefined)
     )
       throw new Error("Approval settings require a user decision in settings");
+    if (
+      authority !== "user" &&
+      Object.keys(claudeOverrideDefaults).some(
+        (key) => set[key as keyof ClaudeOverrides] !== undefined,
+      )
+    )
+      throw new Error(
+        "Claude session restrictions require a user decision in settings",
+      );
     if (
       set.default_provider &&
       !this.providers().includes(set.default_provider)

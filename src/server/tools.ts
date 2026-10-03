@@ -1,4 +1,3 @@
-import { type ParentPermissions } from "../core/permissions.js";
 import { z } from "zod";
 import {
   autoRegisterChatProject,
@@ -66,7 +65,6 @@ export function definitions(
   c: Control,
   owner: string,
   authority: InputAuthority = "parent",
-  parentPermissions?: ParentPermissions,
   hostMeta?: Record<string, unknown>,
 ) {
   const tools = {
@@ -137,7 +135,6 @@ export function definitions(
           owner,
           { ...a, conversation_id: a.conversation_id ?? undefined },
           authority,
-          parentPermissions,
         );
       },
     },
@@ -268,7 +265,6 @@ export function definitions(
           owner,
           { ...a, conversation_id: a.conversation_id ?? undefined },
           "user",
-          parentPermissions,
         );
       },
     },
@@ -309,12 +305,11 @@ export async function callTool(
   name: string,
   args: unknown,
   authority: InputAuthority = "parent",
-  parentPermissions?: ParentPermissions,
   hostMeta?: Record<string, unknown>,
 ) {
   if (isUserTool(name) && authority !== "user")
     throw new Error("User tools require a user interface");
-  const defs = definitions(c, owner, authority, parentPermissions, hostMeta);
+  const defs = definitions(c, owner, authority, hostMeta);
   if (!(name in defs)) throw new Error("Unknown tool");
   const d = defs[name as keyof typeof defs];
   return d.run(d.schema.parse(args ?? {}) as any);

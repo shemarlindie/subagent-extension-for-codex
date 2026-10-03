@@ -131,14 +131,14 @@ async function setup(t: TestContext) {
   return { c, base, dir, rpc, post, request };
 }
 
-test("HTTP MCP carries host permission metadata separately from model task arguments", async (t) => {
+test("HTTP MCP inherits the user's Claude settings regardless of host or argument permission metadata", async (t) => {
   const { c, rpc, request } = await setup(t);
   const started = await rpc("start_agent_task", request, parentMeta);
   assert.equal(started.result.isError, undefined, JSON.stringify(started));
   const task = started.result.structuredContent.result;
-  assert.equal(task.permission_mode, "default");
-  assert.equal(task.permission_source, "parent");
-  assert.equal(c.store.get(task.id, "local").permission_mode, "default");
+  assert.equal(task.permission_mode, "inherit");
+  assert.equal(task.permission_source, "user_config");
+  assert.equal(c.store.get(task.id, "local").permission_mode, "inherit");
   const spoofed = await rpc("start_agent_task", {
     ...request,
     parent_permissions: {
@@ -150,21 +150,21 @@ test("HTTP MCP carries host permission metadata separately from model task argum
   assert.equal(spoofed.result.isError, undefined, JSON.stringify(spoofed));
   assert.equal(
     spoofed.result.structuredContent.result.permission_mode,
-    "acceptEdits",
+    "inherit",
   );
   assert.equal(
     spoofed.result.structuredContent.result.permission_source,
-    "task_profile",
+    "user_config",
   );
 });
 
-test("cookie-authenticated user tasks use task profile fallback and cannot inject trusted metadata headers", async (t) => {
+test("cookie-authenticated user tasks resolve inherit by profile and ignore permission headers", async (t) => {
   const { post, request } = await setup(t);
   const login = await post("/api/login", { token: "test-token" });
   const cookie = login.headers.get("set-cookie")!.split(";")[0];
-  for (const [worker_profile, expected] of [
-    ["reviewer", "plan"],
-    ["implementer", "acceptEdits"],
+  for (const [worker_profile, expected, source] of [
+    ["reviewer", "plan", "task_profile"],
+    ["implementer", "inherit", "user_config"],
   ]) {
     const res = await post(
       "/api/user-tools/start_user_agent_task",
@@ -181,11 +181,11 @@ test("cookie-authenticated user tasks use task profile fallback and cannot injec
     assert.equal(res.status, 200);
     const { result } = await res.json();
     assert.equal(result.permission_mode, expected);
-    assert.equal(result.permission_source, "task_profile");
+    assert.equal(result.permission_source, source);
   }
 });
 
-test("host delegation forms preserve initial parent permission metadata across later submission", async (t) => {
+test("host delegation forms resolve inherit to the user's Claude settings on submission", async (t) => {
   const { c, dir, rpc, request } = await setup(t);
   const args = { ...request, permission_mode: "inherit" };
   const initial = await rpc("request_agent_task", args, parentMeta);
@@ -196,14 +196,6 @@ test("host delegation forms preserve initial parent permission metadata across l
   );
   assert.equal(c.store.all().length, 0);
   const state = initial.result.requestState;
-  const stored = JSON.parse(
-    String(c.store.db.prepare("SELECT body FROM form_requests").get()!.body),
-  );
-  assert.deepEqual(stored.parent_permissions, {
-    provider: "codex",
-    sandbox_mode: "workspace-write",
-    approval_policy: "untrusted",
-  });
   const submission = await rpc("request_agent_task", args, {}, state, {
     action: "accept",
     content: {
@@ -223,9 +215,9 @@ test("host delegation forms preserve initial parent permission metadata across l
     JSON.stringify(submission),
   );
   const task = submission.result.structuredContent.result;
-  assert.equal(task.permission_mode, "default");
-  assert.equal(task.permission_source, "parent");
-  assert.equal(c.store.get(task.id, "local").permission_source, "parent");
+  assert.equal(task.permission_mode, "inherit");
+  assert.equal(task.permission_source, "user_config");
+  assert.equal(c.store.get(task.id, "local").permission_source, "user_config");
 });
 
 test("saved delegation forms without native fields preserve explicit legacy permission choices", async (t) => {
@@ -294,7 +286,7 @@ test("saved delegation forms without native fields preserve explicit legacy perm
   }
 });
 
-test("stdio proxy forwards parent metadata through the bearer-authenticated HTTP boundary", async (t) => {
+test("stdio proxy starts tasks through the bearer-authenticated HTTP boundary without host permission inheritance", async (t) => {
   const { base, c, request } = await setup(t);
   const client = new Client({ name: "permission-stdio-test", version: "1" });
   try {
@@ -322,9 +314,9 @@ test("stdio proxy forwards parent metadata through the bearer-authenticated HTTP
     });
     assert.equal(response.isError, false, JSON.stringify(response));
     const task = (response.structuredContent as any).result;
-    assert.equal(task.permission_mode, "default");
-    assert.equal(task.permission_source, "parent");
-    assert.equal(c.store.get(task.id, "local").permission_mode, "default");
+    assert.equal(task.permission_mode, "inherit");
+    assert.equal(task.permission_source, "user_config");
+    assert.equal(c.store.get(task.id, "local").permission_mode, "inherit");
   } finally {
     await client.close();
   }

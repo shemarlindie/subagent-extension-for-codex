@@ -1,4 +1,3 @@
-import { parentPermissionsFromMeta } from "../core/permissions.js";
 import {
   McpServer,
   ProtocolError,
@@ -133,13 +132,7 @@ export function mcp(
       },
       async (args: any, ctx: ServerContext) => {
         try {
-          const current = definitions(
-            c,
-            owner,
-            "parent",
-            parentPermissionsFromMeta(ctx.mcpReq._meta),
-            ctx.mcpReq._meta,
-          );
+          const current = definitions(c, owner, "parent", ctx.mcpReq._meta);
           const result = await current[name as keyof typeof current].run(
             withConversation(name, args, ctx.mcpReq._meta),
           );

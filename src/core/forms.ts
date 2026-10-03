@@ -1,9 +1,4 @@
-import {
-  permissionModeSchema,
-  permissionLabels,
-  parentPermissionsFromMeta,
-  type ParentPermissions,
-} from "./permissions.js";
+import { permissionModeSchema, permissionLabels } from "./permissions.js";
 import { createHash, randomBytes } from "node:crypto";
 import {
   inputRequired,
@@ -90,7 +85,6 @@ function modelField(
 interface Request {
   kind: Kind;
   args: Record<string, unknown>;
-  parent_permissions?: ParentPermissions;
   form: OpenAIForm;
   message: string;
   task_id?: string;
@@ -281,7 +275,7 @@ export class Forms {
                     type: "string",
                     title: "Claude permission mode",
                     description:
-                      "Claude native SDK mode. Other workers use their existing permissions. Inherit uses parent context or task-appropriate defaults.",
+                      "Claude native SDK mode. Other workers use their existing permissions. Inherit uses your Claude Code settings, or plan for read-only profiles.",
                     oneOf: permissionModeSchema.options.map((mode) => ({
                       const: mode,
                       title: permissionLabels[mode],
@@ -465,8 +459,6 @@ export class Forms {
           ? await hostProjectCandidate(stateMeta.sandboxCwd)
           : undefined;
       r = await this.build(owner, kind, args, repositoryHint);
-      if (kind === "request_agent_task")
-        r.parent_permissions = parentPermissionsFromMeta(ctx.mcpReq._meta);
       this.c.store.db
         .prepare("DELETE FROM form_requests WHERE expires<=?")
         .run(this.now());
@@ -595,7 +587,6 @@ export class Forms {
               },
             },
             "user",
-            r.parent_permissions,
           );
         } else {
           const answers = Object.fromEntries(

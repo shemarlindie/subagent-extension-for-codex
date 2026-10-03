@@ -1,4 +1,3 @@
-import { parentPermissionsFromMeta } from "./core/permissions.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { connectService } from "./service/launcher.js";
@@ -149,7 +148,6 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
     },
     async (args: any, extra: { _meta?: Record<string, unknown> }) => {
       try {
-        const parentPermissions = parentPermissionsFromMeta(extra._meta);
         const response = await fetch(
           `${origin}/api/${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
           {
@@ -163,12 +161,6 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
                     "X-Codex-Host-Directory": encodeURIComponent(
                       hostDirectoryFromMeta(extra._meta)!,
                     ),
-                  }
-                : {}),
-              ...(parentPermissions
-                ? {
-                    "X-Codex-Parent-Permissions":
-                      JSON.stringify(parentPermissions),
                   }
                 : {}),
             },

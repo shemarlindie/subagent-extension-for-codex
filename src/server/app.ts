@@ -1,4 +1,3 @@
-import { parentPermissionsFromMeta } from "../core/permissions.js";
 import express from "express";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { toNodeHandler } from "@modelcontextprotocol/node";
@@ -159,13 +158,6 @@ export function application(
         userRoute || (!bearer(req) && auth.ownerFor(req.headers.cookie))
           ? "user"
           : "parent",
-        bearer(req) && req.headers["x-codex-parent-permissions"]
-          ? parentPermissionsFromMeta({
-              "codex-subagent-extension/parent-permissions": JSON.parse(
-                String(req.headers["x-codex-parent-permissions"]),
-              ),
-            })
-          : undefined,
         bearer(req)
           ? hostDirectoryMeta(req.headers["x-codex-host-directory"])
           : undefined,

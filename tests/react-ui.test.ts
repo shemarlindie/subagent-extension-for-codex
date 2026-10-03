@@ -1652,7 +1652,7 @@ test("delegation defaults to inherited native permissions and separately selects
   assert.equal(
     screen.getByRole("combobox", { name: "Permission mode", exact: true })
       .textContent,
-    "Inherit from parent or task",
+    "Your Claude Code settings",
   );
   await selectOption(user, "Permission mode", "Accept edits");
   await selectOption(user, "Approval decision maker", "Parent agent");

@@ -2,7 +2,10 @@ import { useForm, useWatch } from "react-hook-form";
 import { Collapsible } from "@base-ui/react/collapsible";
 import type { DialogState, SettingsDocument } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
-import { permissionLabels } from "../../src/core/permissions";
+import {
+  permissionLabels,
+  claudeOverrideLabels,
+} from "../../src/core/permissions";
 import type { ModelChoice } from "../../src/core/model";
 import { Chevron } from "../components/chevron";
 import { Field } from "./fields";
@@ -33,6 +36,8 @@ type Models = Map<string, ModelChoice>;
 function display(name: string, value: string, models: Models) {
   if (name === "claude_permission_mode")
     return permissionLabels[value as keyof typeof permissionLabels] ?? value;
+  if (claudeOverrideLabels[name]?.[value])
+    return claudeOverrideLabels[name][value];
   if (name === "default_approval_decider")
     return value === "parent_agent" ? "Parent agent" : "User";
   if (value === "" || (name.endsWith("_effort") && value === "default"))

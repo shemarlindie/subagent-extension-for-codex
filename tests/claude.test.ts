@@ -341,6 +341,14 @@ test("write-profile shell commands require human decision and cannot use edited 
 test("Claude forwards each native permission mode and reserves bypass opt-in for bypassPermissions", async () => {
   const { c, workspace } = await context();
   c.task.worker_profile = "implementer";
+  // Restrictions enabled in settings apply in every native mode.
+  c.task.claude_policy = {
+    sandbox: "extension",
+    environment: "filtered",
+    tools: "restricted",
+    path_guard: true,
+    subagents: false,
+  };
   let options: Options | undefined;
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
@@ -408,6 +416,9 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
       "deny",
     );
   }
+  c.task.permission_mode = "inherit";
+  await provider.run(c, "Implement");
+  assert.equal(Object.hasOwn(options!, "permissionMode"), false);
   c.task.worker_profile = "reviewer";
   c.task.permission_mode = "bypassPermissions";
   await provider.run(c, "Review");
@@ -694,4 +705,160 @@ test("native StructuredOutput accepts only the result contract while other repor
     (await permission("mcp__unconfigured__report", result)).behavior,
     "deny",
   );
+});
+
+async function runWithPolicy(
+  policy: NonNullable<Task["claude_policy"]>,
+  worker_profile: Task["worker_profile"] = "implementer",
+) {
+  const ctx = await context();
+  ctx.c.task.worker_profile = worker_profile;
+  ctx.c.task.permission_mode = "default";
+  ctx.c.task.claude_policy = policy;
+  const asked: string[] = [];
+  ctx.c.input = async (tool) => {
+    asked.push(tool);
+    return { approved: true };
+  };
+  let options: Options | undefined;
+  const provider = new ClaudeAgentProvider((args) => {
+    options = args.options;
+    return Object.assign(
+      (async function* () {
+        yield {
+          type: "result",
+          subtype: "success",
+          structured_output: result,
+          total_cost_usd: 0,
+          usage: {},
+        };
+      })(),
+      { close: () => {} },
+    ) as unknown as Query;
+  });
+  await provider.run(ctx.c, "Work");
+  const hook = options!.hooks!.PreToolUse![0].hooks[0];
+  const check = async (tool: string, input: object) =>
+    (
+      (await hook(
+        {
+          hook_event_name: "PreToolUse",
+          tool_name: tool,
+          tool_input: input,
+          session_id: "x",
+          transcript_path: "x",
+          cwd: ctx.workspace,
+          tool_use_id: "x",
+        },
+        "x",
+        { signal: ctx.c.signal },
+      )) as any
+    ).hookSpecificOutput?.permissionDecision;
+  const decide = async (tool: string, input: Record<string, unknown>) =>
+    (
+      await options!.canUseTool!(tool, input, {
+        signal: ctx.c.signal,
+        toolUseID: "x",
+      } as any)
+    ).behavior;
+  return { ...ctx, options: options!, check, decide, asked };
+}
+const parity = {
+  sandbox: "user_config",
+  environment: "inherit",
+  tools: "all",
+  path_guard: false,
+  subagents: true,
+} as const;
+
+test("Claude parity policy leaves sandbox, tools and paths to the user's configuration and routes prompts to the approver", async (t) => {
+  t.mock.property(process, "env", {
+    ...process.env,
+    USER_TOOLCHAIN_HOME: "/synthetic/toolchain",
+    CODEX_SUBAGENT_EXTENSION_TOKEN: "synthetic-service-token",
+    OPENAI_API_KEY: "synthetic-app-key",
+    CLAUDE_CODE_OAUTH_TOKEN: "synthetic-subscription-token",
+  });
+  const { options, check, decide, asked } = await runWithPolicy(parity);
+  assert.equal(options.sandbox, undefined);
+  assert.equal(options.managedSettings, undefined);
+  assert.deepEqual(options.tools, { type: "preset", preset: "claude_code" });
+  assert.deepEqual(options.disallowedTools, []);
+  assert.equal(options.env!.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
+  for (const name of [
+    "CODEX_SUBAGENT_EXTENSION_TOKEN",
+    "OPENAI_API_KEY",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+  ])
+    assert.equal(options.env![name], undefined, name);
+  for (const [tool, input] of [
+    ["WebFetch", { url: "https://example.com" }],
+    ["Agent", { prompt: "Look" }],
+    ["NotebookEdit", { notebook_path: join(tmpdir(), "x.ipynb") }],
+    ["Read", { file_path: join(tmpdir(), "outside") }],
+  ] as const) {
+    assert.equal(await check(tool, input), undefined, tool);
+    assert.equal(await decide(tool, input), "allow", tool);
+  }
+  // Without a path guard, outside reads are not auto-approved.
+  assert.deepEqual(asked, ["WebFetch", "Agent", "NotebookEdit", "Read"]);
+  assert.equal(await check("StructuredOutput", { summary: "x" }), "deny");
+});
+
+test("Claude path guard and restricted tools apply independently when enabled", async () => {
+  const guarded = await runWithPolicy({ ...parity, path_guard: true });
+  assert.equal(await guarded.check("WebFetch", { url: "x" }), undefined);
+  assert.equal(
+    await guarded.check("NotebookEdit", {
+      notebook_path: join(tmpdir(), "x.ipynb"),
+    }),
+    "deny",
+  );
+  assert.equal(
+    await guarded.decide("Read", { file_path: join(tmpdir(), "outside") }),
+    "deny",
+  );
+  assert.equal(await guarded.decide("Read", { file_path: "a.ts" }), "allow");
+  assert.equal(
+    await guarded.decide("Write", { file_path: join(guarded.workspace, "b") }),
+    "allow",
+  );
+  assert.deepEqual(guarded.asked, ["Write"]);
+
+  const restricted = await runWithPolicy({ ...parity, tools: "restricted" });
+  assert.ok(
+    Array.isArray(restricted.options.tools) &&
+      restricted.options.tools.includes("Bash") &&
+      !restricted.options.tools.includes("WebFetch"),
+  );
+  assert.equal(await restricted.check("WebFetch", { url: "x" }), "deny");
+  assert.equal(await restricted.decide("WebFetch", { url: "x" }), "deny");
+  assert.equal(await restricted.check("mcp__server__tool", {}), undefined);
+  assert.equal(
+    await restricted.check("Read", { file_path: join(tmpdir(), "outside") }),
+    undefined,
+  );
+
+  const loosenedReviewer = await runWithPolicy(parity, "reviewer");
+  assert.equal(
+    await loosenedReviewer.check("Bash", { command: "pwd" }),
+    undefined,
+  );
+  assert.deepEqual(loosenedReviewer.options.disallowedTools, []);
+});
+
+test("Claude extension sandbox modes add the sandbox and lock network domains at the policy tier", async () => {
+  const extension = await runWithPolicy({ ...parity, sandbox: "extension" });
+  assert.equal(extension.options.sandbox?.enabled, true);
+  assert.equal(extension.options.managedSettings, undefined);
+  const locked = await runWithPolicy({
+    ...parity,
+    sandbox: "extension_locked",
+  });
+  assert.equal(locked.options.sandbox?.failIfUnavailable, true);
+  assert.deepEqual(locked.options.managedSettings, {
+    sandbox: { network: { allowManagedDomainsOnly: true } },
+  });
+  const noSubagents = await runWithPolicy({ ...parity, subagents: false });
+  assert.deepEqual(noSubagents.options.disallowedTools, ["Agent", "Task"]);
 });
