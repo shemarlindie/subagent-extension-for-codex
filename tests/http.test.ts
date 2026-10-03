@@ -1,6 +1,6 @@
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { startSchema, now } from "../src/core/model.js";
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtemp, realpath } from "node:fs/promises";
 import { execFileSync } from "node:child_process";

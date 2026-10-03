@@ -83,18 +83,18 @@ Review `<data-directory>/worktrees/<task-id>` or download returned patches befor
 
 ## Project layout
 
-| Path                                                 | Contents                                                                                                       |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `src/main.ts`, `src/stdio.ts`, `src/projects-cli.ts` | Entry points: HTTP service, stdio MCP proxy, and project registration CLI.                                     |
-| `src/core/`                                          | Task model, control plane, SQLite store, worktrees, projects, settings, and host forms.                        |
-| `src/server/`                                        | Express application, authentication, HTTP MCP endpoint, and tool definitions.                                  |
-| `src/panel/`                                         | MCP App panel resource, panel context, and host project/thread context.                                        |
-| `src/service/`                                       | Install paths, data directory, single-instance lease, and the stdio launcher that starts the service.          |
-| `src/providers/`, `src/events/`                      | Claude, Codex, and fixture providers with their configuration; webhook and MCP event delivery.                 |
-| `ui/`                                                | Shared React UI: `entries/`, `templates/`, `styles/`, plus controller, transport, component, and form modules. |
-| `ui/dev/`, `vite.config.ts`                          | Panel dev host: mock MCP Apps host and Vite server for `npm run dev:ui`.                                       |
-| `.env.example`                                       | Local development settings template; copy to `.env`.                                                           |
-| `tests/`, `scripts/`, `skills/`, `docs/`             | Test suite, build/demo/verification scripts, the delegation skill, and design and status notes.                |
+| Path                                                 | Contents                                                                                                               |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `src/main.ts`, `src/stdio.ts`, `src/projects-cli.ts` | Entry points: HTTP service, stdio MCP proxy, and project registration CLI.                                             |
+| `src/core/`                                          | Task model, control plane, SQLite store, worktrees, projects, settings, and host forms.                                |
+| `src/server/`                                        | Express application, authentication, HTTP MCP endpoint, and tool definitions.                                          |
+| `src/panel/`                                         | MCP App panel resource, panel context, and host project/thread context.                                                |
+| `src/service/`                                       | Install paths, data directory, single-instance lease, and the stdio launcher that starts the service.                  |
+| `src/providers/`, `src/events/`                      | Claude, Codex, and fixture providers with their configuration; webhook and MCP event delivery.                         |
+| `ui/`                                                | Shared React UI: `entries/`, `templates/`, `styles/`, plus controller, transport, component, and form modules.         |
+| `ui/dev/`, `vite.config.ts`                          | Panel dev host: mock MCP Apps host and Vite server for `npm run dev:ui`.                                               |
+| `.env.example`                                       | Local development settings template; copy to `.env`.                                                                   |
+| `tests/`, `scripts/`, `skills/`, `docs/`             | Vitest suite (`vitest.config.ts`), build/demo/verification scripts, the delegation skill, and design and status notes. |
 
 ## Verification and remaining plan
 

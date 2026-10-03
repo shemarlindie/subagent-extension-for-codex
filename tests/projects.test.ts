@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import {
   mkdtemp,
@@ -18,13 +18,13 @@ import { Control } from "../src/core/control.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
 import { callTool, isUserTool } from "../src/server/tools.js";
 
-async function fixture(t: import("node:test").TestContext) {
+async function fixture(t: import("vitest").TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "projects-test-")));
   const db = join(dir, "registry.sqlite");
   const store = new Store(db);
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
   const projects = new Projects(store, workspaces);
-  t.after(async () => {
+  t.onTestFinished(async () => {
     if (store.db.isOpen) store.close();
     await rm(dir, { recursive: true, force: true });
   });

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test, vi } from "vitest";
 import { Controller } from "../ui/core/controller";
 import type {
   Defaults,
@@ -112,7 +112,7 @@ function setup(mode: "panel" | "console" = "panel", wide = false) {
 test("panel bootstrap explicitly requests global scope; host scope skips bootstrap and filters results", async (t) => {
   for (const explicit of [false, true]) {
     const { controller, transport } = setup();
-    t.after(() => controller.dispose());
+    t.onTestFinished(() => controller.dispose());
     transport.tasks = [
       task("a", "/repo/a", "chat-a"),
       task("b", "/repo/a", "chat-b"),
@@ -151,7 +151,7 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
 
 test("a project switch rejects an old list response and refreshes the current scope", async (t) => {
   const { controller, transport } = setup();
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   await controller.start();
   const gate = deferred<Task[]>();
   transport.handler = (name, args) =>
@@ -175,7 +175,7 @@ test("a project switch rejects an old list response and refreshes the current sc
 
 test("delayed detail from a previous selection cannot replace current events or artifacts", async (t) => {
   const { controller, transport } = setup();
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a"), task("b")];
   await controller.start();
   const gate = deferred<Event[]>();
@@ -204,7 +204,7 @@ test("delayed detail from a previous selection cannot replace current events or 
 
 test("refresh preserves dialog identity and reviewed defaults while discovering new projects", async (t) => {
   const { controller, transport } = setup();
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   await controller.start();
   await controller.delegate();
   const dialog = controller.getSnapshot().dialog;
@@ -223,7 +223,7 @@ test("refresh preserves dialog identity and reviewed defaults while discovering 
 
 test("delegation project lookup discarded when conversation changes", async (t) => {
   const { controller, transport } = setup();
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   await controller.start();
   const gate = deferred<typeof transport.projects>();
   transport.handler = (name) =>
@@ -241,7 +241,7 @@ test("delegation project lookup discarded when conversation changes", async (t) 
 
 test("in-flight mutation never selects its returned task after the host changes scope", async (t) => {
   const { controller, transport } = setup();
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   await controller.start();
   await controller.delegate();
   const original = controller.getSnapshot().dialog;
@@ -268,7 +268,7 @@ test("in-flight mutation never selects its returned task after the host changes 
 
 test("approved parent roots allow delegation in a scoped subrepository; console still requires repositories", async (t) => {
   const { controller, transport } = setup();
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   transport.projects = [{ repository: "/repo", kind: "parent" }];
   controller.applyScope(
     {
@@ -289,7 +289,7 @@ test("approved parent roots allow delegation in a scoped subrepository; console 
     assert.equal(dialog.revision, "feature");
   }
   const consoleSetup = setup("console");
-  t.after(() => consoleSetup.controller.dispose());
+  t.onTestFinished(() => consoleSetup.controller.dispose());
   consoleSetup.transport.projects = transport.projects;
   await consoleSetup.controller.start();
   await assert.rejects(consoleSetup.controller.delegate(), /Add a project/);
@@ -297,7 +297,7 @@ test("approved parent roots allow delegation in a scoped subrepository; console 
 
 test("automatic global history does not prefill delegation, while an intentional selection does", async (t) => {
   const { controller, transport } = setup("panel", true);
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("history", "/history")];
   transport.projects = [
     { repository: "/repo/a", kind: "repository" },
@@ -322,7 +322,7 @@ test("automatic global history does not prefill delegation, while an intentional
 
 test("event pagination follows the server cursor and retains the latest 200 events", async (t) => {
   const { controller, transport } = setup();
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a")];
   await controller.start();
   const events = Array.from({ length: 1005 }, (_, i) => ({
@@ -362,7 +362,7 @@ test("Back keeps scoped narrow panels on the task list through refresh", async (
     { conversation_id: null, repository: "/repo/a" },
   ]) {
     const { controller, transport } = setup();
-    t.after(() => controller.dispose());
+    t.onTestFinished(() => controller.dispose());
     transport.tasks = [task("a", "/repo/a", "chat")];
     controller.applyScope({ panel_scope: scope }, false);
     await controller.start();
@@ -376,10 +376,11 @@ test("Back keeps scoped narrow panels on the task list through refresh", async (
 
 for (const phase of ["connect", "read", "poll"] as const) {
   test(`host teardown during ${phase} stops further reads and polling`, async (t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    t.onTestFinished(() => vi.useRealTimers());
     const { controller, transport } = setup("console");
     transport.preview = false;
-    t.after(() => controller.dispose());
+    t.onTestFinished(() => controller.dispose());
     const gate = deferred<void>();
     if (phase === "connect") transport.connectGate = gate.promise;
     if (phase === "read")
@@ -393,7 +394,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
       await starting;
       transport.handler = (name) =>
         name === "list_agent_tasks" ? gate.promise.then(() => []) : undefined;
-      t.mock.timers.tick(3000);
+      vi.advanceTimersByTime(3000);
       await flush();
     }
     transport.events.teardown();
@@ -401,7 +402,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
     gate.resolve();
     await starting;
     await flush();
-    t.mock.timers.tick(30000);
+    vi.advanceTimersByTime(30000);
     await flush();
     assert.equal(transport.calls.length, calls);
     assert.equal(transport.watches, phase === "poll" ? 1 : 0);
@@ -411,62 +412,65 @@ for (const phase of ["connect", "read", "poll"] as const) {
 }
 
 test("embedded polling skips hidden panels and waits for a pending refresh", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  t.onTestFinished(() => vi.useRealTimers());
   const { controller, transport, environment } = setup("console");
   transport.preview = false;
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   await controller.start();
   let hidden = true;
   environment.hidden = () => hidden;
   const initial = transport.calls.length;
-  t.mock.timers.tick(3000);
+  vi.advanceTimersByTime(3000);
   await flush();
   assert.equal(transport.calls.length, initial);
   hidden = false;
   const gate = deferred<Task[]>();
   transport.handler = (name) =>
     name === "list_agent_tasks" ? gate.promise : undefined;
-  t.mock.timers.tick(3000);
+  vi.advanceTimersByTime(3000);
   await flush();
   const pending = transport.calls.length;
   assert.equal(pending, initial + 1);
-  t.mock.timers.tick(30000);
+  vi.advanceTimersByTime(30000);
   await flush();
   assert.equal(transport.calls.length, pending);
   gate.resolve([]);
   await flush();
-  t.mock.timers.tick(3000);
+  vi.advanceTimersByTime(3000);
   await flush();
   assert.equal(transport.calls.length, pending + 1);
 });
 
 test("embedded polling reports tool failures then retries successfully", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  t.onTestFinished(() => vi.useRealTimers());
   const { controller, transport } = setup("console");
   transport.preview = false;
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   await controller.start();
   let fails = true;
   transport.handler = (name) =>
     name === "list_agent_tasks" && fails
       ? Promise.reject(new Error("Host temporarily unavailable"))
       : undefined;
-  t.mock.timers.tick(3000);
+  vi.advanceTimersByTime(3000);
   await flush();
   assert.equal(controller.getSnapshot().connection, "Reconnecting…");
   assert.match(controller.getSnapshot().error, /temporarily unavailable/);
   fails = false;
-  t.mock.timers.tick(3000);
+  vi.advanceTimersByTime(3000);
   await flush();
   assert.equal(controller.getSnapshot().connection, "● Connected");
   assert.equal(controller.getSnapshot().error, "");
 });
 
 test("embedded startup schedules a retry when its first read fails", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  t.onTestFinished(() => vi.useRealTimers());
   const { controller, transport } = setup();
   transport.preview = false;
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   let fails = true;
   transport.handler = (name) =>
     name === "list_agent_tasks" && fails
@@ -482,7 +486,7 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
   const previousReads = transport.calls.filter(
     (call) => call.name === "list_agent_tasks",
   ).length;
-  t.mock.timers.tick(5000);
+  vi.advanceTimersByTime(5000);
   await flush();
 
   assert.equal(
@@ -498,7 +502,7 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
 
 test("All chats preserves repository and discards a delayed conversation response", async (t) => {
   const { controller, transport } = setup();
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   controller.applyScope(
     {
       panel_scope: {
@@ -551,7 +555,7 @@ test("All chats preserves repository and discards a delayed conversation respons
 
 test("unrelated tool output leaves scope, selection and the open form intact", async (t) => {
   const { controller, transport } = setup();
-  t.after(() => controller.dispose());
+  t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a", "/repo/a", "chat")];
   controller.applyScope(
     { panel_scope: { conversation_id: "chat", repository: "/repo/a" } },
@@ -570,7 +574,7 @@ test("unrelated tool output leaves scope, selection and the open form intact", a
 test("New task offers the chat project only when auto-add is on and adds it before starting", async (t) => {
   for (const auto of [false, true]) {
     const { controller, transport } = setup();
-    t.after(() => controller.dispose());
+    t.onTestFinished(() => controller.dispose());
     controller.applyScope(
       {
         panel_scope: { conversation_id: "chat-a" },

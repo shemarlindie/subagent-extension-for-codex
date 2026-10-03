@@ -1,4 +1,4 @@
-import { test, type TestContext } from "node:test";
+import { test, type TestContext } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
@@ -54,7 +54,7 @@ async function setup(t: TestContext) {
   const server = app.listen(0, "127.0.0.1");
   await new Promise<void>((done) => server.once("listening", done));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  t.after(async () => {
+  t.onTestFinished(async () => {
     await app.locals.closeMcp();
     server.closeAllConnections();
     await new Promise<void>((done) => server.close(() => done()));

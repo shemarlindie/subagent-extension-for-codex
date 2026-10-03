@@ -144,7 +144,7 @@ npm run typecheck
 npm test
 ```
 
-`npm test` runs `npm run format:check` and the build first through `pretest`.
+Tests run with Vitest (`vitest.config.ts`). `npm test` runs `npm run format:check` and the build first through `pretest`; `npm run test:watch` reruns affected tests on save without those steps, so run `npm run build` first when a test reads `dist/`.
 Fix formatting failures with `npm run format`. The suite is described in the
 [README](../README.md#verification-and-remaining-plan) and
 [React UI architecture](react-ui.md#build-and-verification). Opt-in checks

@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { CodexExecutors } from "../src/providers/codex-executors.js";
 import { startSchema, type Task } from "../src/core/model.js";

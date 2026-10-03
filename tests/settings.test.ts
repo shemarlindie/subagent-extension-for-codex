@@ -1,4 +1,4 @@
-import { test, type TestContext } from "node:test";
+import { test, type TestContext } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -17,7 +17,7 @@ async function fixture(t: TestContext) {
   let store = new Store(path);
   let providers = ["fixture"];
   let settings = new Settings(store, () => providers);
-  t.after(async () => {
+  t.onTestFinished(async () => {
     if (store.db.isOpen) store.close();
     await rm(dir, { recursive: true, force: true });
   });

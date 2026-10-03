@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test, { type TestContext } from "node:test";
+import { describe, test, type TestContext } from "vitest";
 import { JSDOM } from "jsdom";
 import type {
   HostState,
@@ -220,7 +220,7 @@ async function setup(
     );
   }
   render(createElement(Harness));
-  t.after(() => {
+  t.onTestFinished(() => {
     cleanup();
     controller.dispose();
   });
@@ -880,14 +880,14 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   );
 });
 
-test("console and nonembedded panels retain the full interface in inline mode", async (t) => {
-  await t.test("console", async (t) => {
+describe("console and nonembedded panels retain the full interface in inline mode", () => {
+  test("console", async (t) => {
     await setup(t, undefined, { mode: "console", displayMode: "inline" });
     assert.ok(screen.getByRole("button", { name: "＋ Delegate" }));
     assert.ok(screen.getByRole("region", { name: "Task inspector" }));
     assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   });
-  await t.test("nonembedded panel", async (t) => {
+  test("nonembedded panel", async (t) => {
     await setup(
       t,
       (transport) => {
@@ -949,8 +949,8 @@ test("inline preview summarizes repository scope independently of list filters",
   assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
 });
 
-test("inline preview distinguishes empty tasks from connecting state", async (t) => {
-  await t.test("empty", async (t) => {
+describe("inline preview distinguishes empty tasks from connecting state", () => {
+  test("empty", async (t) => {
     await setup(
       t,
       (transport) => {
@@ -965,7 +965,7 @@ test("inline preview distinguishes empty tasks from connecting state", async (t)
     assert.ok(screen.getByText("No delegated tasks yet."));
     assert.ok(screen.getByRole("button", { name: "Open panel" }));
   });
-  await t.test("connecting", async (t) => {
+  test("connecting", async (t) => {
     await setup(t, undefined, { start: false });
     assert.ok(screen.getByRole("region", { name: "Delegated work preview" }));
     assert.equal(screen.getByRole("status").textContent, "Connecting…");

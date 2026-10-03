@@ -1,4 +1,4 @@
-import { test, type TestContext } from "node:test";
+import { test, type TestContext } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -89,7 +89,7 @@ async function setup(t: TestContext, provider = new FixtureProvider()) {
     repo,
     1,
   );
-  t.after(async () => {
+  t.onTestFinished(async () => {
     await c.close();
     await rm(dir, { recursive: true, force: true });
   });

@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { mkdtemp, mkdir, realpath, readdir, rm } from "node:fs/promises";
@@ -23,7 +23,7 @@ test(
     const dir = await realpath(
       await mkdtemp(join(tmpdir(), "review-lifecycle-")),
     );
-    t.after(() => rm(dir, { recursive: true, force: true }));
+    t.onTestFinished(() => rm(dir, { recursive: true, force: true }));
     const repository = join(dir, "repository");
     const data = join(dir, "data");
     await mkdir(repository);
@@ -91,7 +91,7 @@ test(
 
     const reservation = createServer();
     await new Promise<void>((done) => reservation.listen(0, "127.0.0.1", done));
-    t.after(
+    t.onTestFinished(
       () =>
         new Promise<void>((done, reject) =>
           reservation.close((error) => (error ? reject(error) : done())),

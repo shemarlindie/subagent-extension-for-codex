@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test, { type TestContext } from "node:test";
+import { test, vi } from "vitest";
 import { JSDOM } from "jsdom";
 import type { Event as ActivityEvent } from "../ui/core/types";
 
@@ -67,10 +67,8 @@ function markup(events: ActivityEvent[]) {
 
 // Model real document flow: each activity occupies 100px after the status row.
 // Reordering or prepending DOM nodes changes their measured position automatically.
-function mockActivityGeometry(t: TestContext) {
-  t.mock.method(
-    HTMLElement.prototype,
-    "getBoundingClientRect",
+function mockActivityGeometry() {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
       let top = 100;
       let height = 300;
@@ -108,7 +106,7 @@ function activityMessages(prefix: string, count = 4) {
 }
 
 test("latest group is first and fresh progress moves an older tool to the top without resetting inspection", (t) => {
-  t.after(cleanup);
+  t.onTestFinished(cleanup);
   const started = event(
     "tool.started",
     { id: "latest-order-read", name: "Read", input: { file_path: "a.ts" } },
@@ -157,7 +155,7 @@ test("latest group is first and fresh progress moves an older tool to the top wi
 });
 
 test("artifact counts update without closing debug or remounting raw inspectors", async (t) => {
-  t.after(cleanup);
+  t.onTestFinished(cleanup);
   const events = [1, 2, 3].map((index) =>
     event(
       "artifact.created",
@@ -212,8 +210,8 @@ test("artifact counts update without closing debug or remounting raw inspectors"
 });
 
 test("pinned updates stay at zero and manually returning within the 48px buffer repins", (t) => {
-  t.after(cleanup);
-  mockActivityGeometry(t);
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
   const initial = activityMessages("pin-buffer");
   const view = render(createElement(GroupedEventList, { events: initial }));
   const viewport = view.getByRole("region", { name: "Activity history" });
@@ -244,8 +242,8 @@ test("pinned updates stay at zero and manually returning within the 48px buffer 
 });
 
 test("scroll to latest FAB returns to zero and keeps subsequent activity pinned", (t) => {
-  t.after(cleanup);
-  mockActivityGeometry(t);
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
   const initial = activityMessages("fab-pin");
   const view = render(createElement(GroupedEventList, { events: initial }));
   const viewport = view.getByRole("region", { name: "Activity history" });
@@ -271,8 +269,8 @@ test("scroll to latest FAB returns to zero and keeps subsequent activity pinned"
 });
 
 test("new activity preserves the visible reader anchor while unpinned", (t) => {
-  t.after(cleanup);
-  mockActivityGeometry(t);
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
   const initial = activityMessages("reader-anchor");
   const view = render(createElement(GroupedEventList, { events: initial }));
   const viewport = view.getByRole("region", { name: "Activity history" });
@@ -296,8 +294,8 @@ test("new activity preserves the visible reader anchor while unpinned", (t) => {
 });
 
 test("new activity preserves a reader scroll before its scroll event fires", (t) => {
-  t.after(cleanup);
-  mockActivityGeometry(t);
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
   const initial = activityMessages("reader-scroll-race");
   const view = render(createElement(GroupedEventList, { events: initial }));
   const viewport = view.getByRole("region", { name: "Activity history" });
@@ -318,8 +316,8 @@ test("new activity preserves a reader scroll before its scroll event fires", (t)
 });
 
 test("new groups animate in and movement animations respect reduced motion", (t) => {
-  t.after(cleanup);
-  mockActivityGeometry(t);
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
   const previousAnimate = Object.getOwnPropertyDescriptor(
     HTMLElement.prototype,
     "animate",
@@ -354,7 +352,7 @@ test("new groups animate in and movement animations respect reduced motion", (t)
     configurable: true,
     value: () => ({ matches: reducedMotion }),
   });
-  t.after(() => {
+  t.onTestFinished(() => {
     if (previousAnimate)
       Object.defineProperty(HTMLElement.prototype, "animate", previousAnimate);
     else delete (HTMLElement.prototype as any).animate;
@@ -639,7 +637,7 @@ test("failures are distinguished for results, tool errors and denied permissions
 });
 
 test("opening raw response shows the original full JSON and preserves disclosure through refresh", async (t) => {
-  t.after(cleanup);
+  t.onTestFinished(cleanup);
   const raw = {
     type: "assistant",
     uuid: "raw-message-id",
@@ -680,7 +678,7 @@ test("opening raw response shows the original full JSON and preserves disclosure
 });
 
 test("legacy events expose their entire data when no original SDK response exists", async (t) => {
-  t.after(cleanup);
+  t.onTestFinished(cleanup);
   const data = {
     text: "Legacy event",
     enabled: false,
@@ -855,7 +853,7 @@ test("unsupported image sources present readable metadata without embedding unsa
 });
 
 test("grouped tool activity retains individual raw inspections while progress refreshes", async (t) => {
-  t.after(cleanup);
+  t.onTestFinished(cleanup);
   const rawStart = {
     type: "assistant",
     uuid: "start-wire",
@@ -1067,7 +1065,7 @@ test("final SDK message replaces provisional stream fragments in the main conver
 });
 
 test("a compact accessible debug toggle hides inspection until opened and preserves raw state", async (t) => {
-  t.after(cleanup);
+  t.onTestFinished(cleanup);
   const activity = event(
     "agent.message",
     {
@@ -1269,7 +1267,7 @@ test("cancelled and stopped grouped operations never display Done badges", () =>
 });
 
 test("tool result image previews and individual responses mount on first debug activation", (t) => {
-  t.after(cleanup);
+  t.onTestFinished(cleanup);
   const events = [
     event(
       "tool.started",

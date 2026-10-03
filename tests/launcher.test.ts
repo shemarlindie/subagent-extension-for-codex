@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { mkdtemp, writeFile, readFile, rm, access } from "node:fs/promises";
@@ -24,18 +24,18 @@ async function connect(env: NodeJS.ProcessEnv) {
     { env: { ...clean, ...env }, timeout: 20000 },
   );
 }
-async function data(t: import("node:test").TestContext) {
+async function data(t: import("vitest").TestContext) {
   const dir = await mkdtemp(join(tmpdir(), "launcher-test-"));
-  t.after(() => rm(dir, { recursive: true, force: true }));
+  t.onTestFinished(() => rm(dir, { recursive: true, force: true }));
   return dir;
 }
 async function fake(
-  t: import("node:test").TestContext,
+  t: import("vitest").TestContext,
   handler: Parameters<typeof createServer>[0],
 ) {
   const server = createServer(handler);
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  t.after(
+  t.onTestFinished(
     () =>
       new Promise<void>((done, reject) =>
         server.close((error) => (error ? reject(error) : done())),
@@ -181,7 +181,7 @@ test(
     const port = (reservation.address() as import("node:net").AddressInfo).port;
     await new Promise<void>((done) => reservation.close(() => done()));
     let pid: number | undefined;
-    t.after(async () => {
+    t.onTestFinished(async () => {
       try {
         pid ??= Number(await readFile(join(dir, "service.pid"), "utf8"));
       } catch {}

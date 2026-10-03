@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test, { type TestContext } from "node:test";
+import { test, type TestContext } from "vitest";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, mkdir, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -20,7 +20,7 @@ async function fixture(t: TestContext) {
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
   const control = new Control(store, workspaces, new Map(), dir);
   control.projects = new Projects(store, workspaces);
-  t.after(async () => {
+  t.onTestFinished(async () => {
     await control.close();
     await rm(dir, { recursive: true, force: true });
   });

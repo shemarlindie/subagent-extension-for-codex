@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -234,7 +234,7 @@ for (const subtype of [
 test("run emits result accounting exactly once for success and failure", async (t) => {
   const workspace = await mkdtemp(join(tmpdir(), "claude-activity-"));
   execFileSync("git", ["init", "-q", workspace]);
-  t.after(() => rm(workspace, { recursive: true, force: true }));
+  t.onTestFinished(() => rm(workspace, { recursive: true, force: true }));
   for (const failed of [false, true]) {
     const { events, context } = recorder();
     context.task = {

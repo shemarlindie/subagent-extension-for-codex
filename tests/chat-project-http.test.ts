@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test, { type TestContext } from "node:test";
+import { test, type TestContext } from "vitest";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -41,7 +41,7 @@ async function fixture(t: TestContext) {
     server.once("error", reject);
   });
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  t.after(async () => {
+  t.onTestFinished(async () => {
     await app.locals.closeMcp();
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -162,7 +162,7 @@ test("MCP get_current_agent_project reports the thread root without registering 
   const f = await fixture(t);
   const repository = await f.repo("mcp-project");
   const client = new Client({ name: "chat-project-test", version: "1.0.0" });
-  t.after(() => client.close());
+  t.onTestFinished(() => client.close());
   await client.connect(
     new StreamableHTTPClientTransport(new URL(f.base + "/mcp"), {
       requestInit: { headers: { Authorization: "Bearer project-test-token" } },
@@ -215,7 +215,7 @@ test("stdio project registration elicits user approval before granting access", 
     { name: "project-form-test", version: "1.0.0" },
     { capabilities: { elicitation: { form: {} } } },
   );
-  t.after(() => client.close());
+  t.onTestFinished(() => client.close());
   let requests = 0;
   client.setRequestHandler(ElicitRequestSchema, async (request) => {
     requests++;

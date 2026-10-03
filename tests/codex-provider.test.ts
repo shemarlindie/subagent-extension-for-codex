@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import type { AgentSessionEvent } from "openai/resources/beta/agents/agents";
 import type { AgentSessionStreamParams } from "openai/lib/agents/agent-session-stream";

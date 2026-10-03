@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { browseProject } from "../src/core/project-picker.js";
 
 test("native folder picker uses a fixed script and preserves folder-name spaces", async () => {

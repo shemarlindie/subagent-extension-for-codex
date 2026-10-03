@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test, vi } from "vitest";
 import { ConsoleTransport } from "../ui/transports/console";
 import { HostTransport } from "../ui/transports/host";
 import type { TransportEvents } from "../ui/core/types";
@@ -118,7 +118,8 @@ test("console authentication failure requests login and server failures retain t
 });
 
 test("console SSE coalesces activity refreshes and disposal cancels pending refreshes", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  t.onTestFinished(() => vi.useRealTimers());
   const streams: FakeStream[] = [];
   const urls: string[] = [];
   const transport = new ConsoleTransport(
@@ -139,17 +140,17 @@ test("console SSE coalesces activity refreshes and disposal cancels pending refr
   streams[0].onerror?.();
   assert.deepEqual(observed.statuses, ["● Live", "Reconnecting…"]);
   streams[0].activity?.();
-  t.mock.timers.tick(50);
+  vi.advanceTimersByTime(50);
   streams[0].activity?.();
-  t.mock.timers.tick(99);
+  vi.advanceTimersByTime(99);
   assert.equal(observed.counts().refreshes, 0);
-  t.mock.timers.tick(1);
+  vi.advanceTimersByTime(1);
   assert.equal(observed.counts().refreshes, 1);
   transport.watch();
   assert.equal(streams[0].closes, 1);
   streams[1].activity?.();
   transport.dispose();
-  t.mock.timers.tick(1000);
+  vi.advanceTimersByTime(1000);
   assert.equal(streams[1].closes, 1);
   assert.equal(observed.counts().refreshes, 1);
   transport.watch();

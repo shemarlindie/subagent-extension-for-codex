@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test, vi } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtemp, writeFile, symlink, realpath } from "node:fs/promises";
 import { join } from "node:path";
@@ -60,12 +60,9 @@ async function context() {
 }
 test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async (t) => {
   let time = 1000;
-  t.mock.method(Date, "now", () => time);
-  t.mock.property(process, "env", {
-    ...process.env,
-    CLAUDE_CODE_USE_BEDROCK: "1",
-    CODEX_SUBAGENT_EXTENSION_TOKEN: "synthetic-service-token",
-  });
+  vi.spyOn(Date, "now").mockImplementation(() => time);
+  vi.stubEnv("CLAUDE_CODE_USE_BEDROCK", "1");
+  vi.stubEnv("CODEX_SUBAGENT_EXTENSION_TOKEN", "synthetic-service-token");
   let launches = 0;
   let closes = 0;
   let resolve!: (models: any[]) => void;
@@ -128,7 +125,7 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
 
 test("failed Claude model discovery closes the query and retries after a short cooldown", async (t) => {
   let time = 1000;
-  t.mock.method(Date, "now", () => time);
+  vi.spyOn(Date, "now").mockImplementation(() => time);
   let attempts = 0;
   let closes = 0;
   const provider = new ClaudeAgentProvider(() => {
@@ -783,13 +780,10 @@ const parity = {
 } as const;
 
 test("Claude parity policy leaves sandbox, tools and paths to the user's configuration and routes prompts to the approver", async (t) => {
-  t.mock.property(process, "env", {
-    ...process.env,
-    USER_TOOLCHAIN_HOME: "/synthetic/toolchain",
-    CODEX_SUBAGENT_EXTENSION_TOKEN: "synthetic-service-token",
-    OPENAI_API_KEY: "synthetic-app-key",
-    CLAUDE_CODE_OAUTH_TOKEN: "synthetic-subscription-token",
-  });
+  vi.stubEnv("USER_TOOLCHAIN_HOME", "/synthetic/toolchain");
+  vi.stubEnv("CODEX_SUBAGENT_EXTENSION_TOKEN", "synthetic-service-token");
+  vi.stubEnv("OPENAI_API_KEY", "synthetic-app-key");
+  vi.stubEnv("CLAUDE_CODE_OAUTH_TOKEN", "synthetic-subscription-token");
   const { options, check, decide, asked } = await runWithPolicy(parity);
   assert.equal(options.sandbox, undefined);
   assert.equal(options.managedSettings, undefined);

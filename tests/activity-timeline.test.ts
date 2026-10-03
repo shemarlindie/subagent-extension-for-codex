@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { startSchema, type Event, type Task } from "../src/core/model.js";
 import {
   groupActivity,
