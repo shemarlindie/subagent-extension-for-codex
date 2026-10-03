@@ -10,6 +10,7 @@ export function useActivityScroll(events: Event[]) {
   const [pinned, setPinned] = useState(true);
   const positions = useRef(new Map<string, Position>());
   const anchor = useRef<Position | undefined>(undefined);
+  const rememberedScrollTop = useRef(0);
   const animations = useRef<Animation[]>([]);
   const mounted = useRef(false);
   const restoredScrollTop = useRef<number | undefined>(undefined);
@@ -30,6 +31,7 @@ export function useActivityScroll(events: Event[]) {
       });
     }
     positions.current = next;
+    rememberedScrollTop.current = viewport.scrollTop;
     anchor.current = [...next.values()].find((position) => position.bottom > 0);
   }
 
@@ -54,7 +56,8 @@ export function useActivityScroll(events: Event[]) {
     setPinned(true);
     const viewport = viewportRef.current;
     if (viewport) {
-      if (viewport.scrollTop !== 0) restoredScrollTop.current = 0;
+      // Replace any stale correction marker so only this jump's scroll event is ignored.
+      restoredScrollTop.current = viewport.scrollTop !== 0 ? 0 : undefined;
       viewport.scrollTop = 0;
       viewport.focus({ preventScroll: true });
     }
@@ -69,6 +72,11 @@ export function useActivityScroll(events: Event[]) {
     animations.current = [];
     const previous = positions.current;
     const previousScrollTop = viewport.scrollTop;
+    // A reader scroll can land before its scroll event; never pull it back to the top.
+    if (pinnedRef.current && previousScrollTop > TOP_BUFFER) {
+      pinnedRef.current = false;
+      setPinned(false);
+    }
     if (pinnedRef.current) viewport.scrollTop = 0;
     else {
       // Fall back to another visible group when the event tail drops the anchor.
@@ -78,10 +86,12 @@ export function useActivityScroll(events: Event[]) {
             (position) => position.bottom > 0 && position.element.isConnected,
           );
       if (retained) {
+        // Measure against the reader's current offset, including unhandled scrolls.
+        const scrolled = previousScrollTop - rememberedScrollTop.current;
         viewport.scrollTop +=
           retained.element.getBoundingClientRect().top -
           viewport.getBoundingClientRect().top -
-          retained.top;
+          (retained.top - scrolled);
       }
     }
     if (viewport.scrollTop !== previousScrollTop)

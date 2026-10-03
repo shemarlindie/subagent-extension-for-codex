@@ -12,14 +12,16 @@ import { InlinePreview } from "../components/inline-preview";
 export function AppShell() {
   const controller = useController(),
     state = useSnapshot();
-  useEffect(() => {
-    document.body.dataset.selected = String(Boolean(state.selected));
-    document.body.dataset.displayMode = state.host.displayMode;
-  }, [state.selected, state.host.displayMode]);
   const compact =
     state.mode === "panel" &&
     controller.transport.embedded &&
     state.host.displayMode === "inline";
+  const expandedPanel = state.mode === "panel" && !compact;
+  useEffect(() => {
+    document.body.dataset.selected = String(Boolean(state.selected));
+    document.body.dataset.displayMode = state.host.displayMode;
+    document.body.dataset.expandedPanel = String(expandedPanel);
+  }, [state.selected, state.host.displayMode, expandedPanel]);
   return (
     <>
       {compact ? (

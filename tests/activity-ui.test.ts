@@ -240,6 +240,28 @@ test("new activity preserves the visible reader anchor while unpinned", (t) => {
   assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
 });
 
+test("new activity preserves a reader scroll before its scroll event fires", (t) => {
+  t.after(cleanup);
+  mockActivityGeometry(t);
+  const initial = activityMessages("reader-scroll-race");
+  const view = render(createElement(GroupedEventList, { events: initial }));
+  const viewport = view.getByRole("region", { name: "Activity history" });
+  viewport.scrollTop = 175;
+  const anchor =
+    view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
+  const before = anchor.getBoundingClientRect().top;
+
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: [...initial, ...activityMessages("reader-scroll-race-next", 1)],
+    }),
+  );
+
+  assert.equal(anchor.getBoundingClientRect().top, before);
+  assert.equal(viewport.scrollTop, 275);
+  assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
+});
+
 test("new groups animate in and movement animations respect reduced motion", (t) => {
   t.after(cleanup);
   mockActivityGeometry(t);

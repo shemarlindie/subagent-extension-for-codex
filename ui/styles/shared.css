@@ -283,6 +283,7 @@ form .select-trigger {
   max-height: min(65dvh, 640px);
   overflow-y: auto;
   overflow-anchor: none;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding: 0 8px 4px 2px;
 }

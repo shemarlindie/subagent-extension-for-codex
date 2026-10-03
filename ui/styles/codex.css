@@ -148,9 +148,6 @@ small {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-body[data-display-mode="fullscreen"] .shell {
-  min-height: calc(100vh - 130px);
-}
 #conversation-context {
   white-space: nowrap;
 }
@@ -447,6 +444,36 @@ footer {
   color: var(--muted);
   padding: 9px 18px;
   border-top: 1px solid var(--line);
+}
+/* The expanded panel fits its viewport; the task list and inspector scroll on their own. */
+body[data-expanded-panel="true"] {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+body[data-expanded-panel="true"] #root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+body[data-expanded-panel="true"] .shell {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+body[data-expanded-panel="true"] aside {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+body[data-expanded-panel="true"] #task-list {
+  flex: 1;
+}
+body[data-expanded-panel="true"] #task-list,
+body[data-expanded-panel="true"] .detail {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 @media (max-width: 640px) {
   .shell {
