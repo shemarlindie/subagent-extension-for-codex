@@ -260,10 +260,6 @@ export class ClaudeAgentProvider implements Provider {
         }
         this.normalize(c, m);
         if (m.type === "result") {
-          c.emit("agent.completed", {
-            cost_usd: m.total_cost_usd,
-            usage: m.usage,
-          });
           if (m.subtype !== "success" || m.is_error)
             throw new Error(
               `Claude result: ${m.subtype}${"errors" in m ? ": " + m.errors.join("; ") : ""}`,
@@ -304,21 +300,47 @@ export class ClaudeAgentProvider implements Provider {
     return join(root, workspace.replace(/[^a-zA-Z0-9]/g, "-"), `${id}.jsonl`);
   }
   normalize(c: RunContext, m: SDKMessage) {
-    if (m.type === "assistant") {
-      for (const b of m.message.content) {
-        if (b.type === "text") c.emit("agent.message", { text: b.text });
-        else if (b.type === "tool_use")
-          c.emit("tool.started", { id: b.id, name: b.name, input: b.input });
+    // Keep the complete wire response on every derived activity, including
+    // unknown SDK variants, so normalization never discards diagnostic context.
+    const emit = (type: string, data: Record<string, unknown>) =>
+      c.emit(type, { ...data, raw_response: m });
+    if (m.type === "assistant" || m.type === "user") {
+      const content = m.message.content;
+      if (typeof content === "string") {
+        emit(m.type === "assistant" ? "agent.message" : "agent.content", {
+          role: m.type,
+          content,
+          text: content,
+        });
+      } else {
+        for (const b of content) {
+          if (b.type === "text")
+            emit(m.type === "assistant" ? "agent.message" : "agent.content", {
+              role: m.type,
+              text: b.text,
+              content: b,
+            });
+          else if (b.type === "tool_use")
+            emit("tool.started", { id: b.id, name: b.name, input: b.input });
+          else if (b.type === "tool_result")
+            emit("tool.completed", {
+              id: b.tool_use_id,
+              error: b.is_error,
+              content: b.content,
+            });
+          else emit("agent.content", { role: m.type, content: b });
+        }
+        if (!content.length || ("error" in m && m.error))
+          emit("claude.activity", { ...m });
       }
-    } else if (m.type === "user" && Array.isArray(m.message.content)) {
-      for (const b of m.message.content)
-        if (b.type === "tool_result")
-          c.emit("tool.completed", {
-            id: b.tool_use_id,
-            error: b.is_error,
-            content: b.content,
-          });
     } else if (m.type === "system" && m.subtype === "init")
-      c.emit("agent.started", { model: m.model, tools: m.tools });
+      emit("agent.started", { model: m.model, tools: m.tools });
+    else if (m.type === "result")
+      emit("agent.completed", {
+        ...m,
+        cost_usd: m.total_cost_usd,
+        usage: m.usage,
+      });
+    else emit("claude.activity", { ...m });
   }
 }

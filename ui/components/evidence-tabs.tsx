@@ -30,7 +30,7 @@ export function EvidenceTabs({ task }: { task: Task }) {
         <ArtifactList />
       </Tabs.Panel>
       <Tabs.Panel value="activity">
-        <EventList events={state.events} />
+        <EventList events={state.events} task={task} />
       </Tabs.Panel>
     </Tabs.Root>
   );

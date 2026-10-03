@@ -91,6 +91,185 @@ export const previewEvents: Event[] = [
     data: { text: "Read session validation and task ownership checks." },
   },
 ];
+// Synthetic wire responses exercise the same activity views as a live connection.
+previewEvents.push(
+  ...[
+    {
+      type: "system",
+      subtype: "api_retry",
+      attempt: 1,
+      max_retries: 3,
+      retry_delay_ms: 1000,
+      error: "rate_limit",
+    },
+    {
+      type: "system",
+      subtype: "notification",
+      text: "Session validation review is complete.",
+      priority: "low",
+    },
+    {
+      type: "system",
+      subtype: "compact_boundary",
+      compact_metadata: {
+        trigger: "auto",
+        pre_tokens: 42000,
+        post_tokens: 8000,
+      },
+    },
+  ].map((response, index): Event => ({
+    id: index + 3,
+    task_id: "preview-review",
+    type: "claude.activity",
+    timestamp: base.updated_at,
+    data: {
+      ...response,
+      raw_response: {
+        ...response,
+        uuid: `preview-${index}`,
+        session_id: "preview-session",
+      },
+    },
+  })),
+  {
+    id: 6,
+    task_id: "preview-review",
+    type: "agent.content",
+    timestamp: base.updated_at,
+    data: {
+      role: "assistant",
+      content: {
+        type: "thinking",
+        thinking:
+          "Checking how the UI handles an expired session before reporting the findings.",
+      },
+      raw_response: {
+        type: "assistant",
+        uuid: "preview-thinking",
+        message: {
+          content: [
+            {
+              type: "thinking",
+              thinking:
+                "Checking how the UI handles an expired session before reporting the findings.",
+              signature: "synthetic-signature",
+            },
+          ],
+        },
+      },
+    },
+  },
+);
+const timelineExamples: [string, string, Record<string, unknown>][] = [
+  [
+    "preview-review",
+    "tool.started",
+    { id: "preview-read", name: "Read", input: { file_path: "src/auth.ts" } },
+  ],
+  [
+    "preview-review",
+    "claude.activity",
+    {
+      type: "tool_progress",
+      tool_use_id: "preview-read",
+      tool_name: "Read",
+      elapsed_time_seconds: 1,
+    },
+  ],
+  [
+    "preview-review",
+    "tool.completed",
+    {
+      id: "preview-read",
+      error: false,
+      content: [
+        {
+          type: "text",
+          text: "Read 86 lines from src/auth.ts. Session expiry is checked before task lookup.",
+        },
+      ],
+    },
+  ],
+  [
+    "preview-review",
+    "claude.activity",
+    {
+      type: "system",
+      subtype: "hook_started",
+      hook_id: "preview-hook",
+      hook_name: "Validate workspace",
+      hook_event: "PreToolUse",
+    },
+  ],
+  [
+    "preview-review",
+    "claude.activity",
+    {
+      type: "system",
+      subtype: "hook_response",
+      hook_id: "preview-hook",
+      hook_name: "Validate workspace",
+      outcome: "success",
+      output: "Workspace boundary verified",
+      exit_code: 0,
+    },
+  ],
+  [
+    "preview-running",
+    "agent.started",
+    { model: "Claude", tools: ["Read", "Grep"] },
+  ],
+  [
+    "preview-running",
+    "agent.message",
+    { text: "I’m tracing how task refresh handles session expiry." },
+  ],
+  [
+    "preview-running",
+    "tool.started",
+    {
+      id: "preview-grep",
+      name: "Grep",
+      input: { pattern: "session|refresh", path: "ui/core" },
+    },
+  ],
+  [
+    "preview-running",
+    "claude.activity",
+    {
+      type: "tool_progress",
+      tool_use_id: "preview-grep",
+      tool_name: "Grep",
+      elapsed_time_seconds: 2,
+    },
+  ],
+  [
+    "preview-running",
+    "claude.activity",
+    {
+      type: "tool_progress",
+      tool_use_id: "preview-grep",
+      tool_name: "Grep",
+      elapsed_time_seconds: 4,
+    },
+  ],
+];
+previewEvents.push(
+  ...timelineExamples.map(([task_id, type, data], index): Event => ({
+    id: index + 7,
+    task_id,
+    type,
+    timestamp: base.updated_at,
+    data: {
+      ...data,
+      raw_response: {
+        ...data,
+        uuid: `timeline-${index}`,
+        session_id: "preview-session",
+      },
+    },
+  })),
+);
 export const previewArtifacts: Artifact[] = [
   {
     id: "preview-report",

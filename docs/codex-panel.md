@@ -63,6 +63,14 @@ and [wide preview](images/project-thread-panel-wide.png) are saved evidence.
 The earlier implementation/verification notes below describe prior versions.
 The final validation result for this update is recorded at the end of this file.
 
+## Activity timeline
+
+Claude activity preserves every SDK response, including content blocks, streaming events, system updates, hooks, background tasks, rate limits, and unknown future variants. The chronological timeline combines tool starts, progress and results into one row, groups hook and background-task lifecycles by their IDs, assembles streamed responses, and collapses adjacent routine status updates. Messages and failure reasons remain visible; cancelled and stopped operations are distinguished from successful completion. The current-status line uses authoritative task state and distinguishes working, waiting, idle, and failed provider updates.
+
+A small debug icon beside each row’s timestamp opens individual events with readable content, labeled metadata, and a **Raw response** inspector for the original SDK message. Debug controls support keyboard navigation and announce their expanded state. Event details mount on first use and stay mounted to preserve open inspectors through refreshes and closing/reopening the debug panel. Raw JSON renders only when its own inspector is open. Thinking has a separate disclosure; supported inline images render in place, while encoded payloads remain available in raw JSON.
+
+The panel retains the most recent 200 events; full stored history is available through `get_agent_events`. Open inspectors persist while their timeline row remains in the retained tail. Older stored events expose their saved data; messages discarded by the previous adapter cannot be recovered.
+
 ## Historical app-v4 implementation
 
 These notes describe the earlier app-v4 implementation and its checks. For

@@ -168,3 +168,208 @@ form .select-trigger {
   color: var(--warn, #e6a8a8);
   font-size: 12px;
 }
+
+/* Activity uses the same readable content and inspectors in both hosts. */
+.activity-body {
+  min-width: 0;
+}
+.activity-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.activity-body p {
+  margin: 8px 0;
+}
+.activity-fields {
+  margin: 8px 0;
+  font-size: 12px;
+}
+.activity-fields > div {
+  display: grid;
+  grid-template-columns: minmax(80px, 140px) minmax(0, 1fr);
+  gap: 12px;
+  margin: 6px 0;
+}
+.activity-fields dt {
+  color: var(--muted, #8392a7);
+}
+.activity-fields dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.activity-fields .activity-fields > div {
+  display: block;
+}
+.activity-values {
+  margin: 0;
+  padding-left: 18px;
+}
+.activity-values li + li {
+  margin-top: 6px;
+}
+.activity-raw,
+.activity-thinking {
+  margin-top: 10px;
+}
+.activity-body summary {
+  cursor: pointer;
+  color: var(--muted, #8392a7);
+  font-size: 12px;
+}
+.activity-raw pre {
+  max-height: 360px;
+  overflow: auto;
+}
+.activity-image {
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+}
+.activity-error {
+  border-left: 2px solid var(--danger, #f87171);
+  padding-left: 8px;
+}
+@media (max-width: 480px) {
+  .activity-fields > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+.activity-current {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  background: var(--surface, #172334);
+  border: 1px solid var(--line, #263348);
+  border-radius: 8px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.activity-dot {
+  display: inline-block;
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted, #8392a7);
+}
+.activity-dot-running {
+  background: var(--accent, #8caeeb);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--accent, #8caeeb) 15%, transparent);
+}
+.activity-dot-completed {
+  background: #62a17b;
+}
+.activity-dot-failed {
+  background: var(--danger, #f87171);
+}
+.activity-group {
+  padding: 12px 0 12px 14px;
+  margin-left: 3px;
+  border-left: 1px solid var(--line, #263348);
+}
+.activity-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+.activity-group-heading strong {
+  font-weight: 500;
+}
+.activity-group-heading time {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.activity-group-heading .activity-dot {
+  margin-left: -18px;
+}
+.activity-badge {
+  font-size: 10px;
+  color: var(--muted, #8392a7);
+}
+.activity-group-summary {
+  margin: 5px 0 0;
+  color: var(--muted, #8392a7);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-debug-panel > .event {
+  padding: 10px 0;
+}
+.activity-message {
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+.activity-status {
+  color: var(--muted, #8392a7);
+}
+.activity-group.activity-error {
+  border-left-color: var(--danger, #f87171);
+}
+@media (max-width: 480px) {
+  .activity-debug-panel > .event {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+}
+
+.activity-event .activity-group-summary,
+.activity-error .activity-group-summary {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: inherit;
+}
+
+/* Debug controls stay secondary while remaining discoverable and keyboard accessible. */
+.activity-group-heading .activity-debug-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted, #8392a7);
+  opacity: 0.5;
+  cursor: pointer;
+}
+.activity-debug-toggle:hover,
+.activity-debug-toggle:focus-visible,
+.activity-debug-toggle[aria-expanded="true"] {
+  opacity: 1;
+  background: var(--surface, #172334);
+}
+.activity-debug-toggle:focus-visible {
+  outline: 2px solid var(--accent, #8caeeb);
+  outline-offset: 2px;
+}
+.activity-debug-panel {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--line, #263348);
+  border-radius: 6px;
+}
+.activity-debug-caption {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted, #8392a7);
+}
+@media (hover: none) {
+  .activity-group-heading .activity-debug-toggle {
+    opacity: 0.75;
+  }
+}
