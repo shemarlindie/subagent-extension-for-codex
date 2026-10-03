@@ -2,7 +2,11 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 import type { AgentSessionEvent } from "openai/resources/beta/agents/agents";
 import type { AgentSessionStreamParams } from "openai/lib/agents/agent-session-stream";
-import { startSchema, type RunContext } from "../src/core/model.js";
+import {
+  startSchema,
+  UnconfirmedTerminationError,
+  type RunContext,
+} from "../src/core/model.js";
 import { CodexAgentProvider } from "../src/providers/codex.js";
 import { CodexExecutors } from "../src/providers/codex-executors.js";
 import type { CodexSessions } from "../src/providers/codex-session.js";
@@ -246,6 +250,27 @@ test("unconfirmed remote termination is reported while local shutdown still runs
   await f.pool.close();
 });
 
+test("a failed executor shutdown reports the turn's error alongside its own", async () => {
+  const f = setup(async function* () {
+    yield created;
+    throw new Error("stream disconnected");
+  });
+  const shutdown = new Error("stop failed");
+  const stop = f.pool.stop.bind(f.pool);
+  f.pool.stop = async (task, sessionRef) => {
+    await stop(task, sessionRef);
+    throw shutdown;
+  };
+  await assert.rejects(f.provider.run(f.c, "Review"), (error) => {
+    assert.ok(error instanceof UnconfirmedTerminationError);
+    assert.match(error.message, /executor shutdown unconfirmed/);
+    assert.equal(error.errors.length, 2);
+    assert.match(String(error.errors[0]), /stream disconnected/);
+    assert.equal(error.errors[1], shutdown);
+    return true;
+  });
+  await f.pool.close();
+});
 test("native recovery checks local shutdown before confirming the saved coordinator turn", async () => {
   const f = setup();
   f.c.task.session_id = ref.session_id;

@@ -71,6 +71,7 @@ export class CodexAgentProvider implements Provider {
     let submitted = false;
     let turnId: string | undefined;
     let terminal = false;
+    let failure: unknown[] = [];
     try {
       return await this.executors.run(c.task, ref, async (executor) => {
         const local = new AbortController();
@@ -158,6 +159,7 @@ export class CodexAgentProvider implements Provider {
         }
       });
     } catch (error) {
+      failure = [error];
       if (submitted) {
         try {
           if (turnId) await this.sessions.cancelAndWait(c.task, turnId);
@@ -165,6 +167,7 @@ export class CodexAgentProvider implements Provider {
             await this.sessions.cancel(c.task, AbortSignal.timeout(10000));
             throw new Error(
               "No coordinator turn was observed; remote termination remains unconfirmed",
+              { cause: error },
             );
           }
         } catch (termination) {
@@ -179,8 +182,11 @@ export class CodexAgentProvider implements Provider {
       try {
         await this.executors.stop(c.task, ref);
       } catch (error) {
+        // Unconfirmed shutdown must surface even when the turn also failed;
+        // the turn's error stays in the aggregate.
+        // eslint-disable-next-line no-unsafe-finally
         throw new UnconfirmedTerminationError(
-          [error],
+          [...failure, error],
           "Codex executor shutdown unconfirmed",
         );
       }
