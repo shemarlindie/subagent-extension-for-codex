@@ -9,7 +9,12 @@ import {
   claudeEnvironment,
   claudeSandbox,
 } from "../src/providers/claude.js";
-import { startSchema, now, type Task, type RunContext } from "../src/model.js";
+import {
+  startSchema,
+  now,
+  type Task,
+  type RunContext,
+} from "../src/core/model.js";
 import { type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
 const result = {
   summary: "Reviewed",

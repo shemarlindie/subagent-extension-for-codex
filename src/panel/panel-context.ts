@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { Control } from "./control.js";
-import type { Task } from "./model.js";
+import type { Control } from "../core/control.js";
+import type { Task } from "../core/model.js";
 import { withHostRepository } from "./host-context.js";
 
 export const panelContextInput = z.object({

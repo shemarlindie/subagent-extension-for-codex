@@ -1,4 +1,4 @@
-import type { Result } from "../../src/model";
+import type { Result } from "../../src/core/model";
 const sections = [
   "findings",
   "evidence",

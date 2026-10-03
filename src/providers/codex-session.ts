@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { isAbsolute } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
-import { type Task, resultSchema } from "../model.js";
+import { type Task, resultSchema } from "../core/model.js";
 import type {
   AgentSession,
   AgentSessionInputParam,

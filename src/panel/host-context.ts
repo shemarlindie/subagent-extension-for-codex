@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { isAbsolute } from "node:path";
-import type { Control } from "./control.js";
-import { git } from "./workspace.js";
+import type { Control } from "../core/control.js";
+import { git } from "../core/workspace.js";
 
 // Version-specific Codex adapter, verified in the public rust-v0.160.0 source.
 // Opting in supplies permission metadata too; consume only the directory hint.

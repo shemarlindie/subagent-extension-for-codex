@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { generateTaskTitle } from "../src/task-title.js";
+import { generateTaskTitle } from "../src/core/task-title.js";
 
 test("generated titles summarize the first request line and normalize whitespace", () => {
   assert.equal(

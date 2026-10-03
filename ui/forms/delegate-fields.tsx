@@ -1,5 +1,5 @@
 import { useFormContext, useWatch } from "react-hook-form";
-import { reasoningLevels } from "../../src/reasoning";
+import { reasoningLevels } from "../../src/core/reasoning";
 import type { Defaults, Project, Task, Worker } from "../core/types";
 import { profileLabel } from "../core/selectors";
 import { Field } from "./fields";

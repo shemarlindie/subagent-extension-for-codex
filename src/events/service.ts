@@ -6,8 +6,8 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { z } from "zod";
-import type { Store } from "../store.js";
-import { type Event } from "../model.js";
+import type { Store } from "../core/store.js";
+import { type Event } from "../core/model.js";
 import {
   callbackUrl,
   validSecret,

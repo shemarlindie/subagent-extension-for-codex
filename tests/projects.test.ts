@@ -11,10 +11,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
-import { Store } from "../src/store.js";
-import { Projects } from "../src/projects.js";
-import { Workspaces, git } from "../src/workspace.js";
-import { Control } from "../src/control.js";
+import { Store } from "../src/core/store.js";
+import { Projects } from "../src/core/projects.js";
+import { Workspaces, git } from "../src/core/workspace.js";
+import { Control } from "../src/core/control.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
 
 async function fixture(t: import("node:test").TestContext) {

@@ -5,14 +5,17 @@ import { mkdtemp, mkdir, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { Control } from "../src/control.js";
-import { Store } from "../src/store.js";
-import { Workspaces } from "../src/workspace.js";
-import { Projects } from "../src/projects.js";
-import { startSchema, type Task } from "../src/model.js";
-import { resolvePanelContext, taskPanelContext } from "../src/panel-context.js";
-import { withHostRepository } from "../src/host-context.js";
-import { withConversation } from "../src/tools.js";
+import { Control } from "../src/core/control.js";
+import { Store } from "../src/core/store.js";
+import { Workspaces } from "../src/core/workspace.js";
+import { Projects } from "../src/core/projects.js";
+import { startSchema, type Task } from "../src/core/model.js";
+import {
+  resolvePanelContext,
+  taskPanelContext,
+} from "../src/panel/panel-context.js";
+import { withHostRepository } from "../src/panel/host-context.js";
+import { withConversation } from "../src/server/tools.js";
 
 async function fixture(t: TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "panel-context-")));

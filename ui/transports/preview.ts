@@ -3,7 +3,7 @@ import {
   previewTasks,
   previewEvents,
   previewArtifacts,
-} from "../codex-fixtures";
+} from "./preview-fixtures";
 import type { Transport, TransportEvents } from "../core/types";
 const previewModels = [
   {

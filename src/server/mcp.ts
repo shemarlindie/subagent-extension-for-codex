@@ -3,15 +3,18 @@ import {
   ProtocolError,
   type ServerContext,
 } from "@modelcontextprotocol/server";
-import { type Events, EventProtocolError } from "./events/service.js";
+import { type Events, EventProtocolError } from "../events/service.js";
 import { definitions, withConversation } from "./tools.js";
-import { type Control } from "./control.js";
+import { type Control } from "../core/control.js";
 import { z } from "zod";
-import { withSettingsCapability } from "./settings.js";
-import { delegationPanel, panelUri } from "./panel.js";
-import { resolvePanelContext, taskPanelContext } from "./panel-context.js";
-import type { Task } from "./model.js";
-import { codexContextCapability } from "./host-context.js";
+import { withSettingsCapability } from "../core/settings.js";
+import { delegationPanel, panelUri } from "../panel/panel.js";
+import {
+  resolvePanelContext,
+  taskPanelContext,
+} from "../panel/panel-context.js";
+import type { Task } from "../core/model.js";
+import { codexContextCapability } from "../panel/host-context.js";
 export function mcp(
   c: Control,
   owner: string,

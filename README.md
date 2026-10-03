@@ -2,7 +2,7 @@
 
 A local MVP for Codex to delegate Claude coding tasks through MCP. Claude executes through the Claude Agent SDK and native Claude Code harness. One service owns the durable task database and creates worktrees for isolated tasks; MCP clients never become workers.
 
-For manual setup, staged verification, and continuing in a new thread, see [Setup and resume guide](SETUP-AND-RESUME.md).
+For manual setup, staged verification, and continuing in a new thread, see [Setup and resume guide](docs/setup-and-resume.md).
 
 ## Try the console
 
@@ -63,20 +63,33 @@ A worktree provides code separation. Claude tasks also require the SDK's native 
 
 ## Configuration
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `CODEX_SUBAGENT_EXTENSION_REPOSITORY` | unset | Explicit legacy repository registration at service startup |
-| `CODEX_SUBAGENT_EXTENSION_DATA` | `~/.local/share/codex-subagent-extension` | Persistent SQLite database, approved roots, worktrees, lock and token; explicit relative overrides resolve from invocation cwd |
-| `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` | `[]` | JSON array of explicitly approved parent directory paths |
-| `CODEX_SUBAGENT_EXTENSION_URL` | discovered local service or port 4317 | Proxy endpoint override; explicit URLs require an already running service |
-| `CODEX_SUBAGENT_EXTENSION_CONCURRENCY` | `3` | Maximum concurrently active tasks (1–20) |
-| `CODEX_SUBAGENT_EXTENSION_TOKEN` | generated locally | Server-side token override |
-| `PORT` | `4317` | Loopback listener port |
-| `CODEX_SUBAGENT_EXTENSION_ORIGIN` | `http://127.0.0.1:4317` | Standalone service origin and CORS allowlist |
-| `CODEX_SUBAGENT_EXTENSION_FIXTURE` | disabled | Set `1` to add fixture workers for testing |
-| `CODEX_SUBAGENT_EXTENSION_PROVIDER` | Claude | Set `fixture` for fixture-only mode |
+| Variable                                 | Default                                   | Meaning                                                                                                                        |
+| ---------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `CODEX_SUBAGENT_EXTENSION_REPOSITORY`    | unset                                     | Explicit legacy repository registration at service startup                                                                     |
+| `CODEX_SUBAGENT_EXTENSION_DATA`          | `~/.local/share/codex-subagent-extension` | Persistent SQLite database, approved roots, worktrees, lock and token; explicit relative overrides resolve from invocation cwd |
+| `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` | `[]`                                      | JSON array of explicitly approved parent directory paths                                                                       |
+| `CODEX_SUBAGENT_EXTENSION_URL`           | discovered local service or port 4317     | Proxy endpoint override; explicit URLs require an already running service                                                      |
+| `CODEX_SUBAGENT_EXTENSION_CONCURRENCY`   | `3`                                       | Maximum concurrently active tasks (1–20)                                                                                       |
+| `CODEX_SUBAGENT_EXTENSION_TOKEN`         | generated locally                         | Server-side token override                                                                                                     |
+| `PORT`                                   | `4317`                                    | Loopback listener port                                                                                                         |
+| `CODEX_SUBAGENT_EXTENSION_ORIGIN`        | `http://127.0.0.1:4317`                   | Standalone service origin and CORS allowlist                                                                                   |
+| `CODEX_SUBAGENT_EXTENSION_FIXTURE`       | disabled                                  | Set `1` to add fixture workers for testing                                                                                     |
+| `CODEX_SUBAGENT_EXTENSION_PROVIDER`      | Claude                                    | Set `fixture` for fixture-only mode                                                                                            |
 
 Review `<data-directory>/worktrees/<task-id>` or download returned patches before applying worktree changes. Current-repo tasks use the approved repository itself, and any worker edits are already present there. Cancellation never deletes a worktree. Preserve Claude's local runtime state for resumable sessions. One service may own a data directory at a time.
+
+## Project layout
+
+| Path                                                 | Contents                                                                                                       |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `src/main.ts`, `src/stdio.ts`, `src/projects-cli.ts` | Entry points: HTTP service, stdio MCP proxy, and project registration CLI.                                     |
+| `src/core/`                                          | Task model, control plane, SQLite store, worktrees, projects, settings, and host forms.                        |
+| `src/server/`                                        | Express application, authentication, HTTP MCP endpoint, and tool definitions.                                  |
+| `src/panel/`                                         | MCP App panel resource, panel context, and host project/thread context.                                        |
+| `src/service/`                                       | Install paths, data directory, single-instance lease, and the stdio launcher that starts the service.          |
+| `src/providers/`, `src/events/`                      | Claude, Codex, and fixture providers with their configuration; webhook and MCP event delivery.                 |
+| `ui/`                                                | Shared React UI: `entries/`, `templates/`, `styles/`, plus controller, transport, component, and form modules. |
+| `tests/`, `scripts/`, `skills/`, `docs/`             | Test suite, build/demo/verification scripts, the delegation skill, and design and status notes.                |
 
 ## Verification and remaining plan
 
@@ -126,14 +139,14 @@ Forms are exposed on the HTTP MCP endpoint. Clients without elicitation support,
 
 The native provider uses the official OpenAI SDK and [Agents API](https://developers.openai.com/api/docs/guides/agents-api/overview), with a self-hosted `codex exec-server`. It is disabled by default and requires macOS. To opt in, configure these environment variables before starting the service:
 
-| Variable | Value |
-| --- | --- |
-| `CODEX_SUBAGENT_EXTENSION_CODEX` | `1` adds Codex alongside Claude |
-| `CODEX_SUBAGENT_EXTENSION_PROVIDER` | Optional `codex` selects Codex only; `fixture` always keeps live providers disabled |
-| `CODEX_SUBAGENT_EXTENSION_CODEX_MODEL` | An explicit model available to your API account |
-| `CODEX_SUBAGENT_EXTENSION_CODEX_EXECUTABLE` | Absolute native CLI path, available from `command -v codex` |
-| `OPENAI_API_KEY` | Application key for session management and inference |
-| `OPENAI_EXECUTOR_API_KEY` | A separate key restricted to environment connections |
+| Variable                                    | Value                                                                               |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `CODEX_SUBAGENT_EXTENSION_CODEX`            | `1` adds Codex alongside Claude                                                     |
+| `CODEX_SUBAGENT_EXTENSION_PROVIDER`         | Optional `codex` selects Codex only; `fixture` always keeps live providers disabled |
+| `CODEX_SUBAGENT_EXTENSION_CODEX_MODEL`      | An explicit model available to your API account                                     |
+| `CODEX_SUBAGENT_EXTENSION_CODEX_EXECUTABLE` | Absolute native CLI path, available from `command -v codex`                         |
+| `OPENAI_API_KEY`                            | Application key for session management and inference                                |
+| `OPENAI_EXECUTOR_API_KEY`                   | A separate key restricted to environment connections                                |
 
 Keep credentials outside source control. [Self-hosted environments](https://developers.openai.com/api/docs/guides/agents-api/environments/self-hosted) require the application key to stay outside the worker environment. Configuration rejects identical keys, but their actual permission scopes must be configured in your account. Select **No cost limit** for Codex; this adapter rejects cost and token limits it cannot enforce. Runtime limits remain active.
 
@@ -154,7 +167,6 @@ Callbacks must use public HTTPS endpoints on port 443. The service verifies a si
 Successful deliveries are recorded idempotently. Transient failures retry up to eight attempts with exponential backoff; redirects and permanent client errors are not retried. `410` disables the subscription. Refresh supports signing-key rotation with a five-minute dual-signature window. Granted subscriptions expire within one day by default, or up to seven days when a shorter or longer finite lifetime is requested; requests without expiration receive a finite grant. Events do not expose a replay cursor, so pre-subscription history is not delivered.
 
 These methods and their delivery behavior are verified locally against the [OpenAI MCP Events protocol](https://developers.openai.com/plugins/build/mcp-events). Actual ChatGPT subscription delivery remains a separate host verification gate requiring registration and a reachable authenticated endpoint. No callback was contacted during development tests.
-
 
 The task detail offers **Copy for Codex** in the standalone console and **Send to conversation** when embedded. Review or edit the message before submitting. It includes the task identity, short task/result excerpts and references to tools for retrieving full evidence; it does not apply patches. Embedded message delivery depends on host support and has not yet been verified in a registered host.
 

@@ -2,7 +2,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { Collapsible } from "@base-ui/react/collapsible";
 import type { DialogState, SettingsDocument } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
-import type { ModelChoice } from "../../src/model";
+import type { ModelChoice } from "../../src/core/model";
 import { Chevron } from "../components/chevron";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";

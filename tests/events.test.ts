@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { Webhook } from "standardwebhooks";
-import { Store } from "../src/store.js";
+import { Store } from "../src/core/store.js";
 import { Events, EventProtocolError } from "../src/events/service.js";
 import {
   callbackUrl,
@@ -13,7 +13,7 @@ import {
   validSecret,
   type WebhookPost,
 } from "../src/events/webhook.js";
-import { startSchema, now, type Task } from "../src/model.js";
+import { startSchema, now, type Task } from "../src/core/model.js";
 const secret = "whsec_" + Buffer.alloc(32, 7).toString("base64");
 const request = (args: Record<string, string> = {}) => ({
   name: "agent_task.completed",

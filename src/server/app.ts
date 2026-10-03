@@ -1,12 +1,12 @@
 import express from "express";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { toNodeHandler } from "@modelcontextprotocol/node";
-import { type Control } from "./control.js";
+import { type Control } from "../core/control.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
 import { callTool } from "./tools.js";
-import { type Event } from "./model.js";
-import { type Events } from "./events/service.js";
+import { type Event } from "../core/model.js";
+import { type Events } from "../events/service.js";
 import { readFile } from "node:fs/promises";
 export function application(
   c: Control,

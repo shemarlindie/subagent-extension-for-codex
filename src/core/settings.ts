@@ -15,7 +15,7 @@ import { type Store } from "./store.js";
 const settingsProviders = ["claude", "fixture"] as const;
 const scopeTitle = (scope: string) =>
   scope[0].toUpperCase() + scope.slice(1).replaceAll("_", " ");
-import { globalPanelToolName } from "./panel.js";
+import { globalPanelToolName } from "../panel/panel.js";
 
 export const settingsCapability = {
   [OPENAI_SETTINGS_CAPABILITY_KEY]: {

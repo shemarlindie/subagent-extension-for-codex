@@ -12,11 +12,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
-import { Control } from "../src/control.js";
-import { Store } from "../src/store.js";
-import { Workspaces } from "../src/workspace.js";
+import { Control } from "../src/core/control.js";
+import { Store } from "../src/core/store.js";
+import { Workspaces } from "../src/core/workspace.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
-import { startSchema, type Task } from "../src/model.js";
+import { startSchema, type Task } from "../src/core/model.js";
 import type { ServerContext } from "@modelcontextprotocol/server";
 import { ClaudeAgentProvider } from "../src/providers/claude.js";
 import type { Options, Query } from "@anthropic-ai/claude-agent-sdk";
@@ -241,7 +241,7 @@ test("current repository settings persist, are owner-scoped, and allow task over
     });
     assert.equal(inherited.workspace_strategy, "worktree");
     assert.equal(overridden.workspace_strategy, "current_repo");
-    const { Settings } = await import("../src/settings.js");
+    const { Settings } = await import("../src/core/settings.js");
     assert.equal(
       new Settings(s.c.store, () => ["fixture"]).values("alice")
         .default_workspace_strategy,

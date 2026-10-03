@@ -7,11 +7,11 @@ import { join } from "node:path";
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
-import { Store } from "../src/store.js";
-import { Projects } from "../src/projects.js";
-import { Workspaces } from "../src/workspace.js";
-import { startSchema, type Task } from "../src/model.js";
-import { Control } from "../src/control.js";
+import { Store } from "../src/core/store.js";
+import { Projects } from "../src/core/projects.js";
+import { Workspaces } from "../src/core/workspace.js";
+import { startSchema, type Task } from "../src/core/model.js";
+import { Control } from "../src/core/control.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
 
 const exec = promisify(execFile);

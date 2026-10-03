@@ -3,9 +3,9 @@ import { mkdtemp, mkdir, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
-import { Control } from "../dist/control.js";
-import { Store } from "../dist/store.js";
-import { Workspaces } from "../dist/workspace.js";
+import { Control } from "../dist/core/control.js";
+import { Store } from "../dist/core/store.js";
+import { Workspaces } from "../dist/core/workspace.js";
 import { ClaudeAgentProvider } from "../dist/providers/claude.js";
 if (process.env.CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY !== "1") {
   console.error(
@@ -209,8 +209,8 @@ if (scenario === "read") {
     else if (!control.stopped) await control.close();
   }
 } else if (scenario === "mcp") {
-  const { application } = await import("../dist/app.js");
-  const { Auth } = await import("../dist/auth.js");
+  const { application } = await import("../dist/server/app.js");
+  const { Auth } = await import("../dist/server/auth.js");
   const { randomBytes } = await import("node:crypto");
   const { fileURLToPath } = await import("node:url");
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");

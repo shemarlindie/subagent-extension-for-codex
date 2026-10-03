@@ -1,12 +1,15 @@
 import { z } from "zod";
-import { Control } from "./control.js";
-import { startSchema } from "./model.js";
-import { panelContextInput, resolvePanelContext } from "./panel-context.js";
+import { Control } from "../core/control.js";
+import { startSchema } from "../core/model.js";
+import {
+  panelContextInput,
+  resolvePanelContext,
+} from "../panel/panel-context.js";
 import {
   settingsUpdateSchema,
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
-} from "./settings.js";
+} from "../core/settings.js";
 const taskId = z.object({ task_id: z.string() });
 /** Optional host conversation correlation is a UI scope, never an access grant. */
 export function withConversation(

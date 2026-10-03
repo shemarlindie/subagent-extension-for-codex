@@ -1,16 +1,16 @@
 import { resolve, join } from "node:path";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
-import { Store } from "./store.js";
-import { Control } from "./control.js";
-import { Workspaces } from "./workspace.js";
-import { configuredProviders } from "./provider-config.js";
-import { Auth } from "./auth.js";
-import { application } from "./app.js";
+import { Store } from "./core/store.js";
+import { Control } from "./core/control.js";
+import { Workspaces } from "./core/workspace.js";
+import { configuredProviders } from "./providers/config.js";
+import { Auth } from "./server/auth.js";
+import { application } from "./server/app.js";
 import { Events } from "./events/service.js";
-import { Projects } from "./projects.js";
-import { dataDirectory, installRoot } from "./runtime.js";
-import { lease } from "./lease.js";
+import { Projects } from "./core/projects.js";
+import { dataDirectory, installRoot } from "./service/runtime.js";
+import { lease } from "./service/lease.js";
 const repository = resolve(
   process.env.CODEX_SUBAGENT_EXTENSION_REPOSITORY ?? process.cwd(),
 );

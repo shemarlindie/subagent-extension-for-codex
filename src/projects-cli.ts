@@ -1,9 +1,9 @@
 import { mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { Store } from "./store.js";
-import { Workspaces } from "./workspace.js";
-import { Projects } from "./projects.js";
-import { dataDirectory } from "./runtime.js";
+import { Store } from "./core/store.js";
+import { Workspaces } from "./core/workspace.js";
+import { Projects } from "./core/projects.js";
+import { dataDirectory } from "./service/runtime.js";
 const data = dataDirectory();
 mkdirSync(data, { recursive: true, mode: 0o700 });
 const store = new Store(join(data, "console.sqlite"));

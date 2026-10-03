@@ -2,8 +2,18 @@ import { build, transform } from "esbuild";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 await mkdir("dist", { recursive: true });
 for (const [entry, template, stylesheet, output] of [
-  ["ui/app.ts", "ui/console.html", "ui/console.css", "dist/console.html"],
-  ["ui/codex.ts", "ui/codex.html", "ui/codex.css", "dist/codex.html"],
+  [
+    "ui/entries/console.ts",
+    "ui/templates/console.html",
+    "ui/styles/console.css",
+    "dist/console.html",
+  ],
+  [
+    "ui/entries/panel.ts",
+    "ui/templates/codex.html",
+    "ui/styles/codex.css",
+    "dist/codex.html",
+  ],
 ]) {
   const result = await build({
     entryPoints: [entry],
@@ -18,7 +28,7 @@ for (const [entry, template, stylesheet, output] of [
   const css =
     (await readFile(stylesheet, "utf8")) +
     "\n" +
-    (await readFile("ui/shared.css", "utf8"));
+    (await readFile("ui/styles/shared.css", "utf8"));
   const html = (await readFile(template, "utf8"))
     .replace("/*__CSS__*/", () => css)
     .replace("/*__APP__*/", () =>

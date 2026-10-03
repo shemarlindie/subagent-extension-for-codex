@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { AgentSessionEvent } from "openai/resources/beta/agents/agents";
 import type { AgentSessionStreamParams } from "openai/lib/agents/agent-session-stream";
-import { startSchema, type RunContext } from "../src/model.js";
+import { startSchema, type RunContext } from "../src/core/model.js";
 import { CodexAgentProvider } from "../src/providers/codex.js";
 import { CodexExecutors } from "../src/providers/codex-executors.js";
 import type { CodexSessions } from "../src/providers/codex-session.js";

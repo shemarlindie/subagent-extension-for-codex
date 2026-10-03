@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { type Provider, type RunContext, type Result } from "../model.js";
+import { type Provider, type RunContext, type Result } from "../core/model.js";
 export class FixtureProvider implements Provider {
   id = "fixture";
   capabilities = {

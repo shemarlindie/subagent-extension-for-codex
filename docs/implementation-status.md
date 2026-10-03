@@ -1,6 +1,6 @@
 # MVP implementation audit
 
-Source: the project-root Capability and Architecture Brief v9, with the user's request for an MVP. The MVP implements the headless Claude delegation phase and a local portable console. It does not claim completion of every production and later-provider phase in the brief.
+Source: the [Capability and Architecture Brief v9](architecture-brief-v9.md), with the user's request for an MVP. The MVP implements the headless Claude delegation phase and a local portable console. It does not claim completion of every production and later-provider phase in the brief.
 
 | Requirement | Current evidence | Status |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ Known boundaries: one local user/service, Claude model/API harness outside the n
 
 The native CLI reported a usable local login. Authenticated Claude tasks were verified without reading or copying credential values or account details. See [live verification evidence](live-claude-verification.json).
 
-Earlier local verification: 23 tests passed, TypeScript checks pass for server and UI, and the production build succeeds. The built stdio proxy was exercised against the authenticated HTTP service. Generated patches passed `git apply --check` against the primary repository. Browser fixture evidence is saved in `docs/console-preview.png`.
+Earlier local verification: 23 tests passed, TypeScript checks pass for server and UI, and the production build succeeds. The built stdio proxy was exercised against the authenticated HTTP service. Generated patches passed `git apply --check` against the primary repository. Browser fixture evidence is saved in `docs/images/console-preview.png`.
 
 MCP Events implementation adds the official MCP 2.0 HTTP transport while retaining legacy tool clients. Modern discovery, event operations, tools, and UI resources were exercised on one authenticated endpoint. Subscriptions and delivery queues persist; production callbacks validate public DNS addresses and pin connections for TLS. Host registration and actual ChatGPT reception remain unverified.
 

@@ -1,4 +1,4 @@
-import type { Task } from "../model.js";
+import type { Task } from "../core/model.js";
 import type { CodexSessionRef } from "./codex-session.js";
 import type { ExecutorHandle } from "./mac-executor.js";
 

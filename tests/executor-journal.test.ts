@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { Store } from "../src/store.js";
+import { Store } from "../src/core/store.js";
 import {
   startSchema,
   type Task,
   UnconfirmedTerminationError,
-} from "../src/model.js";
+} from "../src/core/model.js";
 import { ExecutorJournal } from "../src/providers/executor-journal.js";
 import { MacExecutor } from "../src/providers/mac-executor.js";
 import { execFileSync } from "node:child_process";

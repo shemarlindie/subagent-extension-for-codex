@@ -1,15 +1,15 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { connectService } from "./launcher.js";
+import { connectService } from "./service/launcher.js";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { definitions, withConversation } from "./tools.js";
-import { type Control } from "./control.js";
-import { withSettingsCapability } from "./settings.js";
-import { delegationPanel, panelUri } from "./panel.js";
-import { taskPanelContext } from "./panel-context.js";
-import type { Task } from "./model.js";
-import { codexContextCapability } from "./host-context.js";
+import { definitions, withConversation } from "./server/tools.js";
+import { type Control } from "./core/control.js";
+import { withSettingsCapability } from "./core/settings.js";
+import { delegationPanel, panelUri } from "./panel/panel.js";
+import { taskPanelContext } from "./panel/panel-context.js";
+import type { Task } from "./core/model.js";
+import { codexContextCapability } from "./panel/host-context.js";
 const { token, origin } = await connectService();
 const server = new McpServer(
   { name: "codex-subagent-extension", version: "0.1.0" },

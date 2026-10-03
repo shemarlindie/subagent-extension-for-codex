@@ -1,5 +1,5 @@
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { startSchema, now } from "../src/model.js";
+import { startSchema, now } from "../src/core/model.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, realpath } from "node:fs/promises";
@@ -7,12 +7,12 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { Auth } from "../src/auth.js";
-import { Store } from "../src/store.js";
-import { Control } from "../src/control.js";
-import { Workspaces } from "../src/workspace.js";
+import { Auth } from "../src/server/auth.js";
+import { Store } from "../src/core/store.js";
+import { Control } from "../src/core/control.js";
+import { Workspaces } from "../src/core/workspace.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
-import { application } from "../src/app.js";
+import { application } from "../src/server/app.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 test("owner-scoped sessions, expiration, pruning and token comparison", () => {

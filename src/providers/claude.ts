@@ -15,9 +15,9 @@ import {
   type RunContext,
   type Result,
   resultSchema,
-} from "../model.js";
+} from "../core/model.js";
 import { z } from "zod";
-import { git } from "../workspace.js";
+import { git } from "../core/workspace.js";
 /** Only Claude authentication and basic process settings reach the native harness. */
 export function claudeEnvironment(
   source: NodeJS.ProcessEnv = process.env,

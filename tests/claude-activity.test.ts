@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Query, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { ClaudeAgentProvider } from "../src/providers/claude.js";
-import { startSchema, type RunContext, type Task } from "../src/model.js";
+import { startSchema, type RunContext, type Task } from "../src/core/model.js";
 
 function recorder() {
   const events: { type: string; data: Record<string, unknown> }[] = [];

@@ -1,4 +1,4 @@
-import type { Task, Event, Artifact } from "../src/model";
+import type { Task, Event, Artifact } from "../../src/core/model";
 const base = {
   owner: "preview",
   provider: "claude" as const,

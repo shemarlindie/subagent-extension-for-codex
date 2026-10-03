@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { lease } from "../src/lease.js";
+import { lease } from "../src/service/lease.js";
 test("service lock validates a live PID and prevents concurrent recovery", async () => {
   const dir = await mkdtemp(join(tmpdir(), "ac-lease-"));
   const release = lease(dir);

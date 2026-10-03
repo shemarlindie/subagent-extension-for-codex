@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store } from "../src/store.js";
-import { configuredProviders } from "../src/provider-config.js";
+import { Store } from "../src/core/store.js";
+import { configuredProviders } from "../src/providers/config.js";
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), "ac-provider-config-"));
   return { dir, store: new Store(join(dir, "db.sqlite")) };

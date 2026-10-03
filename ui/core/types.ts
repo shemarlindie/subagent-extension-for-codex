@@ -4,7 +4,7 @@ import type {
   Event,
   Task,
   ModelChoice,
-} from "../../src/model";
+} from "../../src/core/model";
 export type { Artifact, Event, Task };
 export type Mode = "panel" | "console";
 export type Tab = "result" | "activity" | "changes";

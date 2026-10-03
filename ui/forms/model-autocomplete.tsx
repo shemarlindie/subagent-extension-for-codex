@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useController, useFormContext } from "react-hook-form";
-import type { ModelChoice } from "../../src/model";
+import type { ModelChoice } from "../../src/core/model";
 import type { DelegateValues } from "./delegate-fields";
 function matches(model: ModelChoice, query: string) {
   const text = query.trim().toLowerCase();

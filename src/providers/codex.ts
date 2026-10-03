@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { Provider, RunContext } from "../model.js";
-import { UnconfirmedTerminationError } from "../model.js";
+import type { Provider, RunContext } from "../core/model.js";
+import { UnconfirmedTerminationError } from "../core/model.js";
 import { CodexExecutors } from "./codex-executors.js";
 import type { CodexSessions } from "./codex-session.js";
 

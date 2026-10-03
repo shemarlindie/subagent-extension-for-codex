@@ -4,11 +4,11 @@ import { mkdtemp, mkdir, writeFile, readFile, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
-import { Store } from "../src/store.js";
-import { Workspaces } from "../src/workspace.js";
-import { Control } from "../src/control.js";
+import { Store } from "../src/core/store.js";
+import { Workspaces } from "../src/core/workspace.js";
+import { Control } from "../src/core/control.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
-import type { Provider, RunContext, Result } from "../src/model.js";
+import type { Provider, RunContext, Result } from "../src/core/model.js";
 const pause = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 async function until(fn: () => boolean) {
   for (let i = 0; i < 300; i++) {
@@ -288,7 +288,7 @@ test("user defaults persist across restart, preserve omitted fields and remain o
   );
   await c.close();
   const reopened = new Store(db);
-  const { Settings } = await import("../src/settings.js");
+  const { Settings } = await import("../src/core/settings.js");
   const settings = new Settings(reopened, () => ["fixture"]);
   assert.equal(settings.values("alice").default_worker_profile, "implementer");
   assert.equal(settings.values("alice").max_cost_usd, 2);
@@ -296,7 +296,7 @@ test("user defaults persist across restart, preserve omitted fields and remain o
 });
 test("task tools honor defaults and explicit overrides without changing existing tasks", async () => {
   const { c } = await setup();
-  const { callTool } = await import("../src/tools.js");
+  const { callTool } = await import("../src/server/tools.js");
   c.settings.update("alice", {
     set: {
       max_runtime_minutes: 9,
@@ -621,7 +621,7 @@ test("no cost limit persists in settings and explicit task limits override it", 
   assert.equal(c.settings.values("bob").max_cost_usd, 5);
   await c.close();
   const store = new Store(db);
-  const { Settings } = await import("../src/settings.js");
+  const { Settings } = await import("../src/core/settings.js");
   assert.equal(
     new Settings(store, () => ["fixture"]).values("alice").max_cost_usd,
     null,
@@ -648,7 +648,7 @@ test("continuation revalidates provider budget support before changing an interr
 });
 
 test("unconfirmed termination locks task controls, defers artifacts and survives service recovery", async () => {
-  const { UnconfirmedTerminationError } = await import("../src/model.js");
+  const { UnconfirmedTerminationError } = await import("../src/core/model.js");
   class UncertainProvider extends FixtureProvider {
     async run(c: RunContext): Promise<Result> {
       await writeFile(

@@ -5,7 +5,7 @@ import type {
 import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
-import type { Task } from "./model.js";
+import type { Task } from "../core/model.js";
 import { panelContextInput, type PanelContextInput } from "./panel-context.js";
 
 // Bump the URI when resource metadata changes to invalidate host caches.

@@ -1,8 +1,8 @@
 import { randomUUID, createHash } from "node:crypto";
 import { z } from "zod";
-import type { Store } from "../store.js";
-import type { Task } from "../model.js";
-import { UnconfirmedTerminationError } from "../model.js";
+import type { Store } from "../core/store.js";
+import type { Task } from "../core/model.js";
+import { UnconfirmedTerminationError } from "../core/model.js";
 import type { CodexSessionRef } from "./codex-session.js";
 
 const recordSchema = z.strictObject({

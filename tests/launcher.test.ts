@@ -6,9 +6,9 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { dataDirectory } from "../src/runtime.js";
+import { dataDirectory, installRoot } from "../src/service/runtime.js";
 const exec = promisify(execFile);
-const launcher = new URL("../dist/launcher.js", import.meta.url).href;
+const launcher = new URL("../dist/service/launcher.js", import.meta.url).href;
 async function connect(env: NodeJS.ProcessEnv) {
   const clean = { ...process.env };
   for (const key of Object.keys(clean))
@@ -53,6 +53,15 @@ test("data directory override is independent of packaged installation directory"
     dataDirectory({ CODEX_SUBAGENT_EXTENSION_DATA: "relative-agent-data" }),
     resolve("relative-agent-data"),
   );
+});
+
+// The runtime module sits two levels below the package root in both src/ and dist/.
+test("install root resolves to the package root from source and build output", async () => {
+  const built = await import(
+    new URL("../dist/service/runtime.js", import.meta.url).href
+  );
+  assert.equal(installRoot, resolve("."));
+  assert.equal(built.installRoot, resolve("."));
 });
 
 test("launcher discovers service metadata and token without starting another service", async (t) => {

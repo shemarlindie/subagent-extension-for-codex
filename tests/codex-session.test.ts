@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import OpenAI from "openai";
 import { createHash } from "node:crypto";
 import { CodexSessions } from "../src/providers/codex-session.js";
-import { startSchema, type Task } from "../src/model.js";
+import { startSchema, type Task } from "../src/core/model.js";
 
 const task: Task = {
   ...startSchema.parse({

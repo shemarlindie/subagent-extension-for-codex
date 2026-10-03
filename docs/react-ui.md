@@ -1,6 +1,6 @@
 # React UI architecture
 
-The standalone console and embedded delegation panel share one React application. Their entrypoints remain `ui/app.ts` (console) and `ui/codex.ts` (panel); `ui/bootstrap.tsx` selects a transport, creates a controller, and mounts the shell. Service APIs, MCP resources, standalone routes, and fixture preview remain the integration boundaries.
+The standalone console and embedded delegation panel share one React application. Their entrypoints remain `ui/entries/console.ts` (console) and `ui/entries/panel.ts` (panel); `ui/bootstrap.tsx` selects a transport, creates a controller, and mounts the shell. Service APIs, MCP resources, standalone routes, and fixture preview remain the integration boundaries.
 
 ## Module boundaries
 
@@ -15,7 +15,7 @@ The standalone console and embedded delegation panel share one React application
 | `ui/forms/`                                                                     | Form drafts, validation, and explicit submission; reusable fields and footer live beside the forms.                 |
 | `ui/shells/`                                                                    | Page composition and console-specific worker navigation.                                                            |
 | `ui/components/controller-context.tsx`                                          | Controller access and React subscriptions through `useSyncExternalStore`.                                           |
-| `ui/shared.css`, `ui/console.css`, `ui/codex.css`                               | Shared component styling and mode-specific layout/theme rules.                                                      |
+| `ui/styles/shared.css`, `ui/styles/console.css`, `ui/styles/codex.css`          | Shared component styling and mode-specific layout/theme rules.                                                      |
 
 The controller owns durable UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access.
 
@@ -24,7 +24,7 @@ Use Base UI (`@base-ui/react`) primitives for dialogs, tabs, single and multiple
 ## Extending the UI
 
 - Add a component when a section has a clear responsibility, reused presentation, or an independent interaction. Compose these sections in the inspector or shell; avoid moving networking or scope bookkeeping into JSX.
-- Reuse the selection fields for new dropdowns and the existing project autocomplete for editable project suggestions. Keep primitive styling in `ui/shared.css`; define surface colors through CSS variables in `ui/console.css` and `ui/codex.css`.
+- Reuse the selection fields for new dropdowns and the existing project autocomplete for editable project suggestions. Keep primitive styling in `ui/styles/shared.css`; define surface colors through CSS variables in `ui/styles/console.css` and `ui/styles/codex.css`.
 - Add a form for a new user-reviewed operation. Share fields and footers, declare its typed dialog variant, and wire it into `DialogHost`. Submit through `controller.submit` to retain busy/error handling and the scope captured when the dialog opened. Send messages or execute tools only after the user submits.
 - Add a selector for a pure calculation shared across views. Keep transport calls and mutation outside selectors.
 - Add a transport when the connection mechanism changes. Implement `Transport` and deliver `TransportEvents`; select it in bootstrap. Rendering and forms should not branch on HTTP versus MCP tool envelopes.
