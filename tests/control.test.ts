@@ -47,11 +47,70 @@ async function setup(
   );
   return { dir, repo, db, store, c };
 }
-const input = (task = "Investigate") => ({
+const input = (description = "Investigate") => ({
   provider: "fixture",
-  task,
+  title: "Investigate task",
+  description,
   workspace_strategy: "worktree",
 });
+test("task titles stay separate from trimmed worker instructions", async () => {
+  const provider = new FixtureProvider();
+  const original = provider.run.bind(provider);
+  let received: string | undefined;
+  provider.run = async (ctx, prompt) => {
+    received = prompt;
+    return original(ctx, prompt);
+  };
+  const { c, store } = await setup(provider);
+  try {
+    const task = await c.start("alice", {
+      ...input(),
+      title: "  Concise heading  ",
+      description: "  Full instructions\nwith detailed evidence.  ",
+    });
+    await until(() => store.get(task.id, "alice").status === "completed");
+    assert.equal(task.title, "Concise heading");
+    assert.equal(
+      task.description,
+      "Full instructions\nwith detailed evidence.",
+    );
+    assert.equal(received, task.description);
+    assert.equal(store.get(task.id, "alice").title, task.title);
+    assert.equal(store.get(task.id, "alice").description, task.description);
+  } finally {
+    await c.close();
+  }
+});
+
+test("invalid title or description cannot persist or execute a task", async () => {
+  const provider = new FixtureProvider();
+  let runs = 0;
+  provider.run = async () => {
+    runs++;
+    throw new Error("Unexpected execution");
+  };
+  const { c, store } = await setup(provider);
+  try {
+    const cases = [
+      { title: undefined },
+      { description: undefined },
+      { title: "" },
+      { description: "" },
+      { title: " \n\t " },
+      { description: " \n\t " },
+      { title: "x".repeat(121) },
+      { description: "x".repeat(20001) },
+    ];
+    for (const invalid of cases) {
+      await assert.rejects(c.start("alice", { ...input(), ...invalid }));
+      assert.equal(store.all().length, 0);
+    }
+    assert.equal(runs, 0);
+  } finally {
+    await c.close();
+  }
+});
+
 test("user defaults persist across restart, preserve omitted fields and remain owner-scoped", async () => {
   const { c, db } = await setup();
   c.settings.update("alice", {
@@ -84,7 +143,8 @@ test("task tools honor defaults and explicit overrides without changing existing
     },
   });
   const task: any = await callTool(c, "alice", "start_agent_task", {
-    task: "Test default merge",
+    title: "Test default merge",
+    description: "Test default merge",
     budget: { max_cost_usd: 1 },
   });
   assert.equal(task.provider, "fixture");
@@ -94,7 +154,8 @@ test("task tools honor defaults and explicit overrides without changing existing
   c.settings.update("alice", { set: { max_runtime_minutes: 7 } });
   assert.equal(c.store.get(task.id, "alice").budget.max_runtime_minutes, 9);
   const other: any = await callTool(c, "bob", "start_agent_task", {
-    task: "Other owner defaults",
+    title: "Other owner defaults",
+    description: "Other owner defaults",
   });
   assert.equal(other.worker_profile, "reviewer");
   assert.equal(other.budget.max_runtime_minutes, 20);
@@ -242,7 +303,11 @@ test("unsupported budgets and providers fail before starting work", async () => 
     /token budgets/,
   );
   await assert.rejects(
-    c.start("alice", { provider: "claude", task: "test" }),
+    c.start("alice", {
+      provider: "claude",
+      title: "test",
+      description: "test",
+    }),
     /not enabled/,
   );
   await c.close();
@@ -487,7 +552,8 @@ test("Codex recovery locks unknown execution and permits explicit continuation o
   try {
     const task = await c.start("alice", {
       provider: "codex",
-      task: "Recover",
+      title: "Recover",
+      description: "Recover",
       budget: { max_cost_usd: null },
     });
     task.status = "running";

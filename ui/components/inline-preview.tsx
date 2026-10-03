@@ -58,8 +58,8 @@ export function InlinePreview() {
           </p>
           {task ? (
             <div className="preview-task">
-              <p className="preview-task-title" title={task.task}>
-                {task.task}
+              <p className="preview-task-title" title={task.title}>
+                {task.title}
               </p>
               <small>
                 <TaskStatus task={task} />

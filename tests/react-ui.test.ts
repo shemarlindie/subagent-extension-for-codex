@@ -62,7 +62,8 @@ function task(id = "one", repository = "/repo/a"): Task {
     revision: "feature",
     provider: "claude",
     worker_profile: "reviewer",
-    task: "Review authentication",
+    title: "Review authentication",
+    description: "Review authentication and report relevant findings.",
     depends_on: [],
     context: [],
     workspace_strategy: "worktree",
@@ -202,12 +203,97 @@ async function selectOption(
   );
 }
 
+async function enterTask(user: any, title: string) {
+  await user.type(screen.getByLabelText("Task title"), title);
+  await user.type(
+    screen.getByLabelText("Description"),
+    `Full details for ${title}.`,
+  );
+}
+
+test("description toggles literally, survives refresh, and resets for another task", async (t) => {
+  const literal =
+    '<img src=x onerror="window.injected=true">\nFull worker instructions.';
+  const { controller, transport, user } = await setup(t, (transport) => {
+    transport.tasks[0].description = literal;
+    transport.tasks.push({
+      ...task("two"),
+      title: "Second task",
+      description: "Second instructions",
+    });
+  });
+  const toggle = screen.getByRole("button", {
+    name: "Description",
+    exact: true,
+  });
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  await user.click(toggle);
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  const panel = toggle
+    .closest(".task-description")!
+    .querySelector(".task-description-content")!;
+  assert.equal(panel.textContent, literal);
+  assert.equal(panel.querySelector("img"), null);
+  transport.tasks[0] = {
+    ...transport.tasks[0],
+    description: literal + " Updated.",
+  };
+  await act(() => controller.refresh());
+  assert.equal(
+    screen.getByRole("button", { name: "Description", exact: true }),
+    toggle,
+  );
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  assert.equal(panel.textContent, literal + " Updated.");
+  await user.click(toggle);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  await user.click(toggle);
+  await act(() => controller.select("two"));
+  const next = screen.getByRole("button", { name: "Description", exact: true });
+  assert.equal(next.getAttribute("aria-expanded"), "false");
+  await user.click(next);
+  assert.ok(screen.getByText("Second instructions"));
+});
+
+test("delegation submits separate title and description and search matches description", async (t) => {
+  const { controller, transport, user } = await setup(t, (transport) => {
+    transport.tasks[0].description = "Inspect the unique zebra boundary.";
+    transport.tasks.push({
+      ...task("two"),
+      title: "Other task",
+      description: "Unrelated instructions",
+    });
+  });
+  await user.type(
+    screen.getByRole("searchbox", { name: "Search tasks" }),
+    "ZEBRA",
+  );
+  assert.ok(screen.getByRole("button", { name: /^Review authentication/ }));
+  assert.equal(screen.queryByRole("button", { name: /^Other task/ }), null);
+  await act(() => controller.setSearch(""));
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await enterTask(user, "Short summary");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+  const submitted = transport.calls.find(
+    (call) => call.name === "start_agent_task",
+  )!.args;
+  assert.equal(submitted.title, "Short summary");
+  assert.equal(submitted.description, "Full details for Short summary.");
+  assert.ok(!("task" in submitted));
+});
+
 test("inline preview expands and collapses while preserving the selected task", async (t) => {
   const { controller, transport, user } = await setup(
     t,
     (transport) => {
       const second = task("two");
-      second.task = "Review database";
+      second.title = "Review database";
       transport.tasks.push(second);
     },
     { displayMode: "inline" },
@@ -276,7 +362,7 @@ test("failed expansion keeps the inline preview and displays the host error", as
 test("host collapse preserves a delegation draft until scope changes", async (t) => {
   const { controller, transport, user } = await setup(t);
   await user.click(screen.getByRole("button", { name: "New task" }));
-  const field = await screen.findByLabelText("Task");
+  const field = await screen.findByLabelText("Task title");
   await user.type(field, "Preserve this suspended draft");
   const dialogState = controller.getSnapshot().dialog;
   await act(() => transport.expand());
@@ -286,11 +372,11 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   await screen.findByRole("dialog");
   assert.ok(
-    screen.getByLabelText("Task") === field,
+    screen.getByLabelText("Task title") === field,
     "Host expansion retains the draft field node",
   );
   assert.equal(
-    (field as HTMLTextAreaElement).value,
+    (field as HTMLInputElement).value,
     "Preserve this suspended draft",
   );
   assert.equal(
@@ -306,7 +392,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   await user.click(screen.getAllByRole("button", { name: "New task" })[0]);
   await screen.findByRole("dialog");
   assert.equal(
-    (screen.getByLabelText("Task") as HTMLTextAreaElement).value,
+    (screen.getByLabelText("Task title") as HTMLInputElement).value,
     "",
   );
   assert.equal(
@@ -350,7 +436,7 @@ test("inline preview summarizes repository scope independently of list filters",
     t,
     (transport) => {
       const waiting = task("waiting");
-      waiting.task = "Waiting review";
+      waiting.title = "Waiting review";
       waiting.status = "waiting";
       waiting.pending_input = {
         id: "request",
@@ -448,7 +534,7 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
   const { controller, transport, user } = await setup(t);
   const trigger = screen.getByRole("button", { name: "New task" });
   await user.click(trigger);
-  const field = await screen.findByLabelText("Task");
+  const field = await screen.findByLabelText("Task title");
   await waitFor(() =>
     assert.ok(
       document.activeElement === field,
@@ -462,10 +548,10 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
   ];
   await act(() => controller.refresh());
   assert.ok(
-    screen.getByLabelText("Task") === field,
+    screen.getByLabelText("Task title") === field,
     "Polling should retain the task field",
   );
-  assert.equal((field as HTMLTextAreaElement).value, "Keep this draft");
+  assert.equal((field as HTMLInputElement).value, "Keep this draft");
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => assert.ok(screen.queryByRole("dialog") === null));
   await waitFor(() =>
@@ -489,7 +575,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
       .value,
     "0.5",
   );
-  await user.type(screen.getByLabelText("Task"), "Investigate failing tests");
+  await enterTask(user, "Investigate failing tests");
   await selectOption(user, "Worker", "codex · reviewer");
   await selectOption(user, "Cost limit", "Apply cost budget");
   await user.click(screen.getByRole("button", { name: "Start task" }));
@@ -527,7 +613,7 @@ test("changing projects clears revision and dependencies while retaining the tas
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   await selectOption(user, "Project", "/repo/a");
-  await user.type(screen.getByLabelText("Task"), "Persistent task");
+  await enterTask(user, "Persistent task");
   await selectOption(user, "Workspace", "Isolated worktree");
   await user.clear(screen.getByLabelText("Revision"));
   await user.type(screen.getByLabelText("Revision"), "edited-branch");
@@ -543,7 +629,7 @@ test("changing projects clears revision and dependencies while retaining the tas
     "HEAD",
   );
   assert.equal(
-    (screen.getByLabelText("Task") as HTMLTextAreaElement).value,
+    (screen.getByLabelText("Task title") as HTMLInputElement).value,
     "Persistent task",
   );
   assert.match(
@@ -659,7 +745,7 @@ test("handoff sends only after explicit submit and uses the edited message", asy
 test("task and result text render literally without HTML interpretation", async (t) => {
   const injection = '<img src=x onerror="window.injected=true">';
   const { user } = await setup(t, (transport) => {
-    transport.tasks[0].task = injection;
+    transport.tasks[0].title = injection;
     transport.tasks[0].result = {
       summary: "<script>window.injected=true</script>",
       findings: [injection],
@@ -708,7 +794,7 @@ test("console delegation requires choosing a project even with a sole registered
     screen.getByRole("combobox", { name: "Project", exact: true }).textContent,
     "Choose a project",
   );
-  await user.type(screen.getByLabelText("Task"), "Explicit project choice");
+  await enterTask(user, "Explicit project choice");
   await user.click(screen.getByRole("button", { name: "Start task" }));
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
@@ -796,7 +882,7 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   const { user, transport } = await setup(t);
   await user.click(screen.getByRole("button", { name: "New task" }));
   const dialog = await screen.findByRole("dialog");
-  await user.type(screen.getByLabelText("Task"), "Keyboard worker selection");
+  await enterTask(user, "Keyboard worker selection");
   const worker = screen.getByRole("combobox", { name: "Worker", exact: true });
   await user.click(worker);
   await waitFor(() =>
@@ -830,7 +916,7 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   );
   assert.ok(screen.getByRole("dialog") === dialog);
   assert.equal(
-    (screen.getByLabelText("Task") as HTMLTextAreaElement).value,
+    (screen.getByLabelText("Task title") as HTMLInputElement).value,
     "Keyboard worker selection",
   );
   await user.click(screen.getByRole("button", { name: "Start task" }));
@@ -846,12 +932,12 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
 test("dependency multiselect retains multiple choices until explicit submission", async (t) => {
   const { user, transport } = await setup(t, (transport) => {
     const second = task("two");
-    second.task = "Review database";
+    second.title = "Review database";
     transport.tasks.push(second);
   });
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
-  await user.type(screen.getByLabelText("Task"), "Wait for both reviews");
+  await enterTask(user, "Wait for both reviews");
   const dependencies = screen.getByRole("combobox", {
     name: "Wait for tasks (optional)",
   });
@@ -890,7 +976,7 @@ test("approved parent project suggestions allow an unlisted nested repository pa
   await user.type(project, "/approved/new/nested-repo");
   await user.keyboard("{Escape}");
   assert.ok(screen.getByRole("dialog"));
-  await user.type(screen.getByLabelText("Task"), "Review nested repository");
+  await enterTask(user, "Review nested repository");
   await user.click(screen.getByRole("button", { name: "Start task" }));
   await waitFor(() =>
     assert.equal(
@@ -949,7 +1035,7 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   const { transport, user } = await setup(t);
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
-  await user.type(screen.getByLabelText("Task"), "Budget validation");
+  await enterTask(user, "Budget validation");
   const runtime = screen.getByLabelText("Runtime limit · minutes");
   await user.clear(runtime);
   await user.type(runtime, "0");
@@ -1002,7 +1088,7 @@ test("console worker picker routes and seeds the delegation worker", async (t) =
     /codex · reviewer/,
   );
   await selectOption(user, "Project", "/repo/a");
-  await user.type(screen.getByLabelText("Task"), "Use selected worker");
+  await enterTask(user, "Use selected worker");
   await user.click(screen.getByRole("button", { name: "Start task" }));
   await waitFor(() =>
     assert.equal(
@@ -1085,7 +1171,7 @@ test("current repository selection locks revision to HEAD and submits the checko
   assert.equal(revision.readOnly, false);
   await user.clear(revision);
   await user.type(revision, "feature-branch");
-  await user.type(screen.getByLabelText("Task"), "Review my uncommitted edits");
+  await enterTask(user, "Review my uncommitted edits");
   await selectOption(
     user,
     "Workspace",

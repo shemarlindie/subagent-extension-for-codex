@@ -26,7 +26,11 @@ const request = (args: Record<string, string> = {}) => ({
   cursor: null,
 });
 const make = (id = "task-a", owner = "alice"): Task => ({
-  ...startSchema.parse({ task: "Review", conversation_id: "chat-a" }),
+  ...startSchema.parse({
+    title: "Review",
+    description: "Review",
+    conversation_id: "chat-a",
+  }),
   id,
   owner,
   status: "completed",

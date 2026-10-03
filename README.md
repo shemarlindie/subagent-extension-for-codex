@@ -105,7 +105,9 @@ Native host discovery and tool envelopes are covered by local protocol tests. Ac
 
 ## Host forms
 
-Compatible HTTP MCP hosts can call `request_agent_task` to ask the user to confirm a task, worker, committed revision, and budgets before starting work. `request_agent_input` presents the exact pending worker question or permission request. Question forms support titled choices and multiple selections. Shell permissions default to deny; cancellation leaves worker input pending and never grants permission.
+Compatible HTTP MCP hosts can call `request_agent_task` to ask the user to confirm a concise task title, full description, worker, committed revision, and budgets before starting work. `request_agent_input` presents the exact pending worker question or permission request. Question forms support titled choices and multiple selections. Shell permissions default to deny; cancellation leaves worker input pending and never grants permission.
+
+`start_agent_task` requires `title` (1–120 characters) and `description` (1–20,000 characters); whitespace-only values are rejected. Workers receive the full description as instructions. Task lists and headings show the title, and the inspector keeps the description collapsed until expanded. `request_agent_task` can omit these fields to let the user fill them in. The previous `task` field is no longer supported.
 
 These tools use MCP's `input_required` multi-round-trip flow, as required by the [OpenAI Extensions documentation](https://developers.openai.com/plugins/build/extensions). Hosts return the opaque `requestState` alongside bare `inputResponses.form`. State is persisted, bound to the authenticated owner and original arguments, and expires after ten minutes. Repeated identical submissions return the original outcome; changed arguments, invalid answers, expired state, and stale worker-input IDs are rejected. If the service stops during submission, recovery refuses to repeat the operation; inspect the task list before creating another request.
 

@@ -62,7 +62,8 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
   ) => {
     c.store.save({
       ...startSchema.parse({
-        task: "Panel task",
+        title: "Panel task",
+        description: "Panel task",
         conversation_id,
         repository,
         revision: "HEAD",
@@ -293,7 +294,8 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       const started = await transportClient.callTool({
         name: "start_agent_task",
         arguments: {
-          task: "Global review [input]",
+          title: "Global review [input]",
+          description: "Global review [input]",
           provider: "fixture",
           repository: dir,
           conversation_id: null,
@@ -409,7 +411,8 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     const started = await client.callTool({
       name: "start_agent_task",
       arguments: {
-        task: "Review [input]",
+        title: "Review [input]",
+        description: "Review [input]",
         provider: "fixture",
         repository: dir,
       },
@@ -626,7 +629,8 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       const proxyStarted = await stdio.callTool({
         name: "start_agent_task",
         arguments: {
-          task: "Review [input]",
+          title: "Review [input]",
+          description: "Review [input]",
           provider: "fixture",
           repository: dir,
         },
@@ -678,7 +682,7 @@ test("SSE requires authentication and replays owned events in global cursor orde
   await new Promise<void>((r) => server.once("listening", r));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   const make = (id: string, owner: string) => ({
-    ...startSchema.parse({ task: "test" }),
+    ...startSchema.parse({ title: "test", description: "test" }),
     id,
     owner,
     status: "queued" as const,

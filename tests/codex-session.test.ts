@@ -6,7 +6,10 @@ import { CodexSessions } from "../src/providers/codex-session.js";
 import { startSchema, type Task } from "../src/model.js";
 
 const task: Task = {
-  ...startSchema.parse({ task: "Review changes" }),
+  ...startSchema.parse({
+    title: "Review changes",
+    description: "Review changes",
+  }),
   id: "task-one",
   owner: "alice",
   workspace: "/worktrees/task-one",

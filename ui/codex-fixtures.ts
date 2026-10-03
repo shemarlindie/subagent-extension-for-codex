@@ -19,7 +19,9 @@ export const previewTasks: Task[] = [
   {
     ...base,
     id: "preview-review",
-    task: "Review authentication boundaries",
+    title: "Review authentication boundaries",
+    description:
+      "Review the authentication boundary. Identify risky paths, cite evidence with file paths, and recommend concrete next steps.",
     status: "completed",
     workspace: "/fixture/worktrees/preview-review",
     result: {
@@ -39,7 +41,9 @@ export const previewTasks: Task[] = [
   {
     ...base,
     id: "preview-input",
-    task: "Investigate the session expiry regression",
+    title: "Investigate session expiry regression",
+    description:
+      "Trace the session expiry regression and identify the first incorrect state transition.",
     worker_profile: "debugger",
     status: "waiting",
     waiting_reason: "waiting_for_permission",
@@ -55,21 +59,27 @@ export const previewTasks: Task[] = [
   {
     ...base,
     id: "preview-running",
-    task: "Trace task refresh behavior",
+    title: "Trace task refresh behavior",
+    description:
+      "Follow task refresh from the event stream to the inspector and identify stale-state risks.",
     worker_profile: "researcher",
     status: "running",
   },
   {
     ...base,
     id: "preview-interrupted",
-    task: "Tighten the task inspector layout",
+    title: "Tighten the task inspector layout",
+    description:
+      "Improve the task inspector layout while preserving keyboard navigation and narrow-panel behavior.",
     worker_profile: "implementer",
     status: "interrupted",
   },
   {
     ...base,
     id: "preview-locked",
-    task: "Inspect an uncertain shutdown",
+    title: "Inspect an uncertain shutdown",
+    description:
+      "Determine whether the interrupted worker has stopped before allowing another attempt.",
     status: "waiting",
     waiting_reason: "termination_unconfirmed",
     error: "Worker termination is unconfirmed; controls remain locked.",

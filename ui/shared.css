@@ -162,6 +162,35 @@ form .select-trigger {
 .task-details-trigger[data-panel-open] svg {
   transform: rotate(0);
 }
+.task-description {
+  margin: 0 0 10px;
+}
+.task-description-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 3px 0;
+  background: transparent;
+  font-size: 11px;
+  color: var(--muted, #8fa5c1);
+}
+.task-description-trigger svg {
+  transform: rotate(-90deg);
+}
+.task-description-trigger[data-panel-open] svg {
+  transform: rotate(0);
+}
+.task-description-content {
+  max-height: 280px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #263348);
+  border-radius: 6px;
+  background: var(--surface, #172334);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 .form-error,
 .dialog .form-error {

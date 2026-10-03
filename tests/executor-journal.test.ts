@@ -20,7 +20,8 @@ async function setup() {
   const task: Task = {
     ...startSchema.parse({
       provider: "codex",
-      task: "Review",
+      title: "Review",
+      description: "Review",
       budget: { max_cost_usd: null },
     }),
     id: "task_one",
@@ -188,16 +189,14 @@ test(
       assert.ok(saved.process?.started);
       assert.ok(!JSON.stringify(saved).includes("opaque=private"));
       if (phase === "starting") {
-        f.store.db
-          .prepare("UPDATE codex_executors SET body=?")
-          .run(
-            JSON.stringify({
-              ...saved,
-              phase,
-              pid: undefined,
-              process: undefined,
-            }),
-          );
+        f.store.db.prepare("UPDATE codex_executors SET body=?").run(
+          JSON.stringify({
+            ...saved,
+            phase,
+            pid: undefined,
+            process: undefined,
+          }),
+        );
       }
       f.store.close();
       const store = new Store(f.db);

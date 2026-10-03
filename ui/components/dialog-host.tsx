@@ -48,7 +48,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
             trigger.current = document.activeElement as HTMLElement | null;
             openedScope.current = dialog?.scope ?? 0;
             return dialog?.kind === "delegate" && dialog.repository
-              ? document.getElementById("task")
+              ? document.getElementById("task-title")
               : true;
           }}
           finalFocus={() =>

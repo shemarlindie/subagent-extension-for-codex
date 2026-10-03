@@ -11,7 +11,16 @@ export const roles = [
 export const startSchema = z.object({
   provider: z.enum(["claude", "codex", "fixture"]).default("claude"),
   worker_profile: z.enum(roles).default("reviewer"),
-  task: z.string().min(1).max(20000),
+  title: z
+    .string()
+    .min(1)
+    .max(120)
+    .describe("A short summary of the task, shown in task lists and headings."),
+  description: z
+    .string()
+    .min(1)
+    .max(20000)
+    .describe("The full task instructions and details for the worker."),
   repository: z
     .string()
     .min(1)
@@ -114,6 +123,7 @@ export interface Task extends Start {
   runtime_ms: number;
   cost_usd?: number;
 }
+
 export interface Event {
   id: number;
   task_id: string;

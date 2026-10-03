@@ -74,7 +74,8 @@ test("native budget toggles preserve the numeric amount across edits and restart
   assert.equal(disabled.values.max_cost_usd, 7);
   assert.equal(f.settings.values("alice").max_cost_usd, null);
   assert.equal(
-    f.settings.taskInput("alice", { task: "Review" }).budget.max_cost_usd,
+    f.settings.taskInput("alice", { title: "Review", description: "Review" })
+      .budget.max_cost_usd,
     null,
   );
   // A host resubmits the amount when another setting changes; the disabled toggle must win.
@@ -116,7 +117,8 @@ test("removed providers fall back on effective reads without rewriting saved def
   f.reopen();
   assert.equal(f.settings.read("alice").values.default_provider, "fixture");
   assert.equal(
-    f.settings.taskInput("alice", { task: "Review" }).provider,
+    f.settings.taskInput("alice", { title: "Review", description: "Review" })
+      .provider,
     "fixture",
   );
   assert.deepEqual(

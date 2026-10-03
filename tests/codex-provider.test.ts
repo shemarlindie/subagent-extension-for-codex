@@ -104,7 +104,8 @@ function setup(
     task: {
       ...startSchema.parse({
         provider: "codex",
-        task: "Review",
+        title: "Review",
+        description: "Review",
         budget: { max_cost_usd: null },
       }),
       id: "task_one",
@@ -144,6 +145,24 @@ test("native Codex provider persists session before execution and stops before r
   assert.equal(f.log.at(-1), "stop");
   assert.equal(f.c.task.native_turn_id, "turn_one");
   await f.pool.close();
+});
+test("execution approval discloses the full description alongside its concise title", async () => {
+  const f = setup();
+  f.c.task.title = "Review authentication";
+  f.c.task.description =
+    "Inspect token expiry and report the exact failing transition.";
+  f.c.input = async (tool, input) => {
+    assert.equal(tool, "CodexExecution");
+    assert.equal(input.title, f.c.task.title);
+    assert.equal(input.description, f.c.task.description);
+    assert.equal(input.workspace, f.c.task.workspace);
+    return { approved: true };
+  };
+  try {
+    assert.deepEqual(await f.provider.run(f.c, f.c.task.description), result);
+  } finally {
+    await f.pool.close();
+  }
 });
 test("native execution denial and unsupported budgets cannot create sessions or executors", async () => {
   const f = setup();

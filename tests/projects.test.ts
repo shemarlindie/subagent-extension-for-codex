@@ -212,7 +212,8 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
     await assert.rejects(
       control.start("owner", {
         provider: "fixture",
-        task: "ambiguous",
+        title: "ambiguous",
+        description: "ambiguous",
         repository: "current",
       }),
       /explicit repository path/,
@@ -220,7 +221,8 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
     assert.equal(f.store.all().length, 0);
     const task = await control.start("owner", {
       provider: "fixture",
-      task: "Review [input]",
+      title: "Review [input]",
+      description: "Review [input]",
       repository: b,
     });
     await until(() => f.store.get(task.id, "owner").status === "waiting");

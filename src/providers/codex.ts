@@ -46,10 +46,12 @@ export class CodexAgentProvider implements Provider {
         "Codex cannot enforce cost or token limits; explicitly disable the cost limit",
       );
     c.signal.throwIfAborted();
+    // Disclose the full instructions before authorizing the execution turn.
     const permission = await c.input(
       "CodexExecution",
       {
-        task: c.task.task,
+        title: c.task.title,
+        description: c.task.description,
         worker_profile: c.task.worker_profile,
         workspace: c.task.workspace,
         workspace_strategy: c.task.workspace_strategy,

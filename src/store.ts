@@ -31,7 +31,7 @@ export class Store {
         ? this.db.prepare("SELECT body FROM tasks WHERE owner=?").all(owner)
         : this.db.prepare("SELECT body FROM tasks").all()
     )
-      .map((r) => JSON.parse(String(r.body)))
+      .map((r) => JSON.parse(String(r.body)) as Task)
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
   }
   get(id: string, owner: string): Task {
@@ -39,7 +39,7 @@ export class Store {
       .prepare("SELECT body FROM tasks WHERE id=? AND owner=?")
       .get(id, owner);
     if (!row) throw new Error("Task not found");
-    return JSON.parse(String(row.body));
+    return JSON.parse(String(row.body)) as Task;
   }
   event(t: Task, type: string, data: Record<string, unknown> = {}): Event {
     const timestamp = now();

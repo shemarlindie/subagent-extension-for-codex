@@ -18,7 +18,7 @@ export function TaskRow({
       aria-current={selected}
       onClick={onSelect}
     >
-      <span className="row-title">{task.task}</span>
+      <span className="row-title">{task.title}</span>
       <span className="row-meta">
         <TaskStatus task={task} /> · {profileLabel(task.worker_profile)}
       </span>

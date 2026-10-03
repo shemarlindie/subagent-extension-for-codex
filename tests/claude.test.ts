@@ -24,7 +24,11 @@ async function context() {
   execFileSync("git", ["init", "-q", workspace]);
   await writeFile(join(workspace, "a.ts"), "test");
   const task: Task = {
-    ...startSchema.parse({ task: "Review", worker_profile: "reviewer" }),
+    ...startSchema.parse({
+      title: "Review",
+      description: "Review",
+      worker_profile: "reviewer",
+    }),
     repository: workspace,
     id: "task-test",
     owner: "alice",

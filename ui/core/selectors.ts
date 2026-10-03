@@ -20,7 +20,7 @@ export function visibleTasks(state: Snapshot) {
       (!state.workerRoute ||
         `${task.provider}.${task.worker_profile}` === state.workerRoute) &&
       (!search ||
-        `${task.task} ${task.worker_profile} ${task.id}`
+        `${task.title} ${task.description} ${task.worker_profile} ${task.id}`
           .toLowerCase()
           .includes(search)) &&
       (state.filter === "all" ||

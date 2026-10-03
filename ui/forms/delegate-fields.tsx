@@ -6,7 +6,8 @@ import { FormSelect } from "./form-select";
 import { ProjectAutocomplete } from "./project-autocomplete";
 export type DelegateValues = {
   repository: string;
-  task: string;
+  title: string;
+  description: string;
   worker: string;
   revision: string;
   workspace_strategy: "worktree" | "current_repo";
@@ -210,7 +211,7 @@ export function DependencyField({ tasks }: { tasks: Task[] }) {
         placeholder="No dependencies"
         options={tasks
           .filter((task) => task.repository === repository)
-          .map((task) => ({ value: task.id, label: task.task.slice(0, 80) }))}
+          .map((task) => ({ value: task.id, label: task.title }))}
       />
     </Field>
   );

@@ -116,7 +116,14 @@ export class Control {
     }));
   }
   async start(owner: string, input: unknown) {
-    const req = startSchema.parse(this.settings.taskInput(owner, input));
+    const parsed = startSchema.parse(this.settings.taskInput(owner, input));
+    const req = {
+      ...parsed,
+      title: parsed.title.trim(),
+      description: parsed.description.trim(),
+    };
+    if (!req.title) throw new Error("Task title is required");
+    if (!req.description) throw new Error("Task description is required");
     this.validateBudgets(req);
     if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD")
       throw new Error("Current repository workspace requires revision HEAD");
@@ -244,7 +251,7 @@ export class Control {
             ].join("\n\n")
           : "";
       const prompt = [
-        t.task,
+        t.description,
         ...(workspaceContext ? [workspaceContext] : []),
         ...t.context,
         ...deps.map(

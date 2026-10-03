@@ -6,6 +6,7 @@ import { TaskNotices } from "./task-notices";
 import { TaskDetails } from "./task-details";
 import { EvidenceTabs } from "./evidence-tabs";
 import { WorkerInspector } from "./worker-inspector";
+import { TaskDescription } from "./task-description";
 export function TaskInspector() {
   const controller = useController(),
     state = useSnapshot(),
@@ -35,7 +36,8 @@ export function TaskInspector() {
               / {task.provider} · {profileLabel(task.worker_profile)}
             </span>
           </div>
-          <h1>{task.task}</h1>
+          <h1>{task.title}</h1>
+          <TaskDescription task={task} />
           <div className="meta">
             <span>
               {task.repository.split("/").at(-1)} · {task.revision} ·{" "}

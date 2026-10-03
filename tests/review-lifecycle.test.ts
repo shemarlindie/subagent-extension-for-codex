@@ -49,7 +49,7 @@ test(
     );
     const formBody = JSON.stringify({
       kind: "request_agent_task",
-      args: { task: "Review" },
+      args: { title: "Review", description: "Review" },
       form: { fields: [] },
       message: "Choose task",
       status: "processing",
@@ -67,7 +67,8 @@ test(
       const task: Task = {
         ...startSchema.parse({
           provider: "fixture",
-          task: "Review [input]",
+          title: "Review [input]",
+          description: "Review [input]",
           repository,
         }),
         id: `task_collision_${status}`,

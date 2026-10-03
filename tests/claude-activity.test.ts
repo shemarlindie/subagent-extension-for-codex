@@ -238,7 +238,11 @@ test("run emits result accounting exactly once for success and failure", async (
   for (const failed of [false, true]) {
     const { events, context } = recorder();
     context.task = {
-      ...startSchema.parse({ task: "Review", worker_profile: "reviewer" }),
+      ...startSchema.parse({
+        title: "Review",
+        description: "Review",
+        worker_profile: "reviewer",
+      }),
       repository: workspace,
       workspace,
       id: "task",

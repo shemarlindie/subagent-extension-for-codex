@@ -52,7 +52,9 @@ if (scenario === "read") {
   const task = await control.start("verification", {
     provider: "claude",
     worker_profile: "reviewer",
-    task: "Read README.md using the native Read tool. Report the exact verification marker in your structured findings and evidence. Do not ask questions, run commands or edit files.",
+    title: "Read the verification marker",
+    description:
+      "Read README.md using the native Read tool. Report the exact verification marker in your structured findings and evidence. Do not ask questions, run commands or edit files.",
     budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
   });
   console.log(JSON.stringify({ phase: "started", root, task_id: task.id }));
@@ -116,7 +118,9 @@ if (scenario === "read") {
   const task = await control.start("verification", {
     provider: "claude",
     worker_profile: "reviewer",
-    task: "Before reading anything, use the native AskUserQuestion tool to ask: May I inspect README now? Offer Proceed and Wait. Wait for the user response before inspecting README. Afterwards report its exact verification marker in structured findings.",
+    title: "Ask before reading README",
+    description:
+      "Before reading anything, use the native AskUserQuestion tool to ask: May I inspect README now? Offer Proceed and Wait. Wait for the user response before inspecting README. Afterwards report its exact verification marker in structured findings.",
     budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
   });
   console.log(JSON.stringify({ phase: "started", root, task_id: task.id }));
@@ -251,7 +255,9 @@ if (scenario === "read") {
     const task = await call("start_agent_task", {
       provider: "claude",
       worker_profile: "reviewer",
-      task: "Read README.md with the native Read tool. Include its exact verification marker in your structured findings. Do not ask questions, edit files or run commands.",
+      title: "Read the verification marker",
+      description:
+        "Read README.md with the native Read tool. Include its exact verification marker in your structured findings. Do not ask questions, edit files or run commands.",
       budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
     });
     console.log(
@@ -314,7 +320,9 @@ if (scenario === "read") {
   const task = await control.start("verification", {
     provider: "claude",
     worker_profile: "reviewer",
-    task: "Read README.md using Read and report its exact marker in structured findings. Do not ask questions, edit files or run shell commands.",
+    title: "Read the verification marker",
+    description:
+      "Read README.md using Read and report its exact marker in structured findings. Do not ask questions, edit files or run shell commands.",
     budget: { max_runtime_minutes: 1, max_cost_usd: limit },
   });
   console.log(
@@ -391,7 +399,8 @@ if (scenario === "read") {
   const task = await control.start("verification", {
     provider: "claude",
     worker_profile: "test_engineer",
-    task:
+    title: "Verify scoped command permissions",
+    description:
       "Run each of these exact Bash commands once, sequentially. Do not change, combine or retry the commands; do not use other tools. Expected permission failures are evidence, not errors in this verification. Report which commands succeeded or were blocked in your structured tests and evidence. Commands: " +
       JSON.stringify(commands),
     budget: { max_runtime_minutes: 2, max_cost_usd: 0.25 },

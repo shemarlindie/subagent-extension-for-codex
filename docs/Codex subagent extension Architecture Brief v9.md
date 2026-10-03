@@ -766,9 +766,10 @@ Example:
 ```text
 start_agent_task(
   provider = "claude",
-  role = "reviewer",
-  task = "Independently review the permissions migration.",
-  repository = "current",
+  worker_profile = "reviewer",
+  title = "Review the permissions migration",
+  description = "Independently review the permissions migration. Cite evidence and recommend concrete next steps.",
+  repository = "/absolute/path/to/approved/repository",
   revision = "feature/permissions",
   context = ["diff", "tests"],
   depends_on = ["task_impl_17"],
@@ -834,7 +835,8 @@ A higher-level delegation primitive can map onto the task API.
 ```text
 delegate(
   worker = "claude.reviewer",
-  task = "Independently inspect the payment retry changes.",
+  title = "Review the payment retry changes",
+  description = "Independently inspect the payment retry changes and cite evidence.",
   context = ["commit", "tests"],
   mode = "async"
 )

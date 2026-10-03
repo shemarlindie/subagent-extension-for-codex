@@ -3,6 +3,7 @@ import type { DialogState, Task } from "../core/types";
 import { useController } from "../components/controller-context";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
+import { TaskDescription } from "../components/task-description";
 export function controlTitle(action: string) {
   return (
     (
@@ -80,7 +81,10 @@ export function ControlForm({
           />
         </Field>
       ) : (
-        <p>{task.task}</p>
+        <>
+          <p>{task.title}</p>
+          <TaskDescription task={task} />
+        </>
       )}
       <FormFooter label={labels[action]} />
     </form>

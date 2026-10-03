@@ -37,7 +37,11 @@ async function fixture(t: TestContext) {
     overrides: Partial<Task> = {},
   ) => {
     const task: Task = {
-      ...startSchema.parse({ task: "Review", repository }),
+      ...startSchema.parse({
+        title: "Review",
+        description: "Review",
+        repository,
+      }),
       id,
       owner: "alice",
       status: "running",

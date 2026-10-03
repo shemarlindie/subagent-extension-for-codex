@@ -104,7 +104,8 @@ async function setup(provider: Provider = new FixtureProvider()) {
 const accepted = {
   action: "accept",
   content: {
-    task: "Review [input]",
+    title: "Review [input]",
+    description: "Review [input]",
     worker: "fixture:reviewer",
     revision: "HEAD",
     max_runtime_minutes: 2,
@@ -122,7 +123,11 @@ async function until(fn: () => boolean) {
 test("native host delegation requests user input before starting and retries complete idempotently", async () => {
   const { c, rpc, close } = await setup();
   try {
-    const args = { conversation_id: "conversation-a" };
+    const args = {
+      conversation_id: "conversation-a",
+      title: "  Suggested title  ",
+      description: "  Suggested full instructions  ",
+    };
     const requested = await rpc("request_agent_task", args);
     assert.equal(
       requested.result?.resultType,
@@ -132,11 +137,28 @@ test("native host delegation requests user input before starting and retries com
     assert.equal(c.store.all().length, 0);
     const form = requested.result.inputRequests.form;
     assert.ok(form.params.requestedSchema.required.includes("repository"));
+    const schema = form.params.requestedSchema;
+    assert.ok(schema.required.includes("title"));
+    assert.ok(schema.required.includes("description"));
+    assert.equal(schema.properties.title.default, "Suggested title");
+    assert.equal(
+      schema.properties.description.default,
+      "Suggested full instructions",
+    );
+    assert.equal(schema.properties.title.minLength, 1);
+    assert.equal(schema.properties.title.maxLength, 120);
+    assert.equal(schema.properties.description.minLength, 1);
+    assert.equal(schema.properties.description.maxLength, 20000);
     const repository =
       form.params.requestedSchema.properties.repository.oneOf[0].const;
     const response = {
       ...accepted,
-      content: { ...accepted.content, repository },
+      content: {
+        ...accepted.content,
+        repository,
+        title: "Edited short title",
+        description: "Edited complete instructions [input]",
+      },
     };
     assert.equal(form.method, "elicitation/create");
     assert.equal(form.params.requestedSchema.properties.worker.oneOf.length, 7);
@@ -161,6 +183,9 @@ test("native host delegation requests user input before starting and retries com
     assert.ok(task?.id, JSON.stringify(first));
     assert.equal(second.result?.structuredContent.result.id, task.id);
     assert.equal(task.conversation_id, "conversation-a");
+    assert.equal(task.title, "Edited short title");
+    assert.equal(task.description, "Edited complete instructions [input]");
+    assert.equal(c.store.get(task.id, "local").description, task.description);
     assert.equal(task.repository, await realpath(repository));
     assert.equal(task.budget.max_cost_usd, 1);
     assert.equal(c.store.all().length, 1);
@@ -178,7 +203,11 @@ test("native host delegation requests user input before starting and retries com
       (
         await rpc("request_agent_task", args, state, {
           ...accepted,
-          content: { ...accepted.content, task: "Different" },
+          content: {
+            ...accepted.content,
+            title: "Different",
+            description: "Different",
+          },
         })
       ).result.isError,
     );
@@ -293,7 +322,8 @@ test("worker question forms bind the exact input ID and reject stale answers", a
   try {
     const task = await c.start("local", {
       provider: "fixture",
-      task: "Need decision [input]",
+      title: "Need decision [input]",
+      description: "Need decision [input]",
     });
     await until(() => !!c.store.get(task.id, "local").pending_input);
     const args = { task_id: task.id };
@@ -366,7 +396,8 @@ test("shell permission forms default to deny, preserve original commands, and ne
   try {
     const task = await c.start("local", {
       provider: "fixture",
-      task: "Inspect workspace",
+      title: "Inspect workspace",
+      description: "Inspect workspace",
       worker_profile: "implementer",
     });
     await until(() => !!c.store.get(task.id, "local").pending_input);
@@ -440,7 +471,8 @@ test("rich question forms preserve titled choices and multiple selections for na
   try {
     const task = await c.start("local", {
       provider: "fixture",
-      task: "Choose approach",
+      title: "Choose approach",
+      description: "Choose approach",
     });
     await until(() => !!c.store.get(task.id, "local").pending_input);
     const args = { task_id: task.id };
@@ -581,7 +613,8 @@ test("Codex execution forms disclose whole-turn authority and bind approval to t
   try {
     const task = await c.start("local", {
       provider: "fixture",
-      task: "Run a Codex turn",
+      title: "Run a Codex turn",
+      description: "Run a Codex turn",
       worker_profile: "implementer",
     });
     await until(() => !!c.store.get(task.id, "local").pending_input);

@@ -24,7 +24,11 @@ function sdk(id: number, subtype: string, data: Record<string, unknown> = {}) {
 }
 function task(status: Task["status"]): Task {
   return {
-    ...startSchema.parse({ task: "Review", worker_profile: "reviewer" }),
+    ...startSchema.parse({
+      title: "Review",
+      description: "Review",
+      worker_profile: "reviewer",
+    }),
     id: "host-task",
     owner: "owner",
     repository: "/repo",

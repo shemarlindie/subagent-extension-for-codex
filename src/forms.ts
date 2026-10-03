@@ -106,6 +106,8 @@ export class Forms {
       const defaults = this.c.settings.taskInput(owner, args) as any;
       const workspaceStrategy = defaults.workspace_strategy as
         "worktree" | "current_repo";
+      const description =
+        typeof args.description === "string" ? args.description.trim() : "";
       const projects = this.c.projects?.list() ?? [
         { repository: this.c.repository, kind: "repository" },
       ];
@@ -125,7 +127,7 @@ export class Forms {
         args,
         status: "pending",
         message:
-          "Delegate work in a Git worktree or the current repository. Confirm the workspace, task, worker and budgets.",
+          "Delegate work in a Git worktree or the current repository. Give the task a short title, then provide its full description and confirm the workspace, worker and budgets.",
         form: OpenAIFormSchema.parse({
           type: "object",
           properties: {
@@ -140,12 +142,23 @@ export class Forms {
                 ? { default: args.repository }
                 : {}),
             },
-            task: {
+            title: {
               type: "string",
-              title: "Task",
+              title: "Task title",
+              description: "A short summary shown in task lists and headings.",
+              minLength: 1,
+              maxLength: 120,
+              ...(typeof args.title === "string" && args.title.trim()
+                ? { default: args.title.trim() }
+                : {}),
+            },
+            description: {
+              type: "string",
+              title: "Description",
+              description: "Full instructions and details for the worker.",
               minLength: 1,
               maxLength: 20000,
-              ...(args.task ? { default: args.task } : {}),
+              ...(description ? { default: description } : {}),
             },
             worker: {
               type: "string",
@@ -204,7 +217,8 @@ export class Forms {
           },
           required: [
             "repository",
-            "task",
+            "title",
+            "description",
             "worker",
             "revision",
             "max_runtime_minutes",
@@ -258,7 +272,7 @@ export class Forms {
     r.questions = questions.map((q) => String(q.question));
     if (new Set(r.questions).size !== r.questions.length)
       throw new Error("Duplicate worker questions; respond in the console");
-    r.message = `Answer the worker's questions for task: ${task.task}`;
+    r.message = `Answer the worker's questions for task: ${task.title}`;
     const properties = Object.fromEntries(
       questions.map((q, i) => {
         const options = Array.isArray(q.options)
@@ -385,7 +399,8 @@ export class Forms {
           result = await this.c.start(owner, {
             ...r.args,
             repository: content.repository,
-            task: content.task,
+            title: content.title,
+            description: content.description,
             provider,
             worker_profile,
             revision:

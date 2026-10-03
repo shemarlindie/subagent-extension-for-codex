@@ -4,7 +4,7 @@ import { useController, useSnapshot } from "../components/controller-context";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 export function handoffMessage(task: Task) {
-  return `Review delegated task ${task.id} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task, full results with get_agent_result, and reports/patches with get_agent_artifacts using task_id=${JSON.stringify(task.id)}. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\nTask excerpt: ${task.task.slice(0, 1500)}${task.task.length > 1500 ? "… (truncated)" : ""}\nSummary excerpt: ${task.result?.summary.slice(0, 2500) ?? "No result yet."}${(task.result?.summary.length ?? 0) > 2500 ? "… (truncated)" : ""}`;
+  return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task, full results with get_agent_result, and reports/patches with get_agent_artifacts using task_id=${JSON.stringify(task.id)}. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\nDescription excerpt: ${task.description.slice(0, 1500)}${task.description.length > 1500 ? "… (truncated)" : ""}\nSummary excerpt: ${task.result?.summary.slice(0, 2500) ?? "No result yet."}${(task.result?.summary.length ?? 0) > 2500 ? "… (truncated)" : ""}`;
 }
 export function HandoffForm({ task }: { task: Task }) {
   const controller = useController(),

@@ -32,7 +32,8 @@ export function DelegateForm({
       repository: dialog.repository ?? "",
       revision: strategyDefault === "current_repo" ? "HEAD" : dialog.revision,
       workspace_strategy: strategyDefault,
-      task: "",
+      title: "",
+      description: "",
       worker: choices.includes(preferred) ? preferred : choices[0],
       runtime: defaults.max_runtime_minutes,
       costMode:
@@ -73,7 +74,8 @@ export function DelegateForm({
             const [provider, worker_profile] = values.worker.split(":");
             return controller.tool<Task>("start_agent_task", {
               repository: values.repository,
-              task: values.task,
+              title: values.title,
+              description: values.description,
               provider,
               worker_profile,
               revision:
@@ -93,7 +95,8 @@ export function DelegateForm({
         )}
       >
         <p className="form-note">
-          Give the worker a focused outcome and the evidence you expect back.{" "}
+          Give the task a short title, then describe the outcome and evidence
+          you expect back.{" "}
           {strategy === "current_repo"
             ? "Current repository includes uncommitted changes. Write profiles edit this checkout directly."
             : "Work starts from a committed revision in a separate worktree."}
@@ -105,13 +108,22 @@ export function DelegateForm({
             state.projects.some((project) => project.kind === "parent")
           }
         />
-        <Field id="task" label="Task">
+        <Field id="task-title" label="Task title">
+          <input
+            id="task-title"
+            required
+            maxLength={120}
+            placeholder="Review authentication boundaries"
+            {...form.register("title", { required: true })}
+          />
+        </Field>
+        <Field id="description" label="Description">
           <textarea
-            id="task"
+            id="description"
             required
             maxLength={20000}
             placeholder="Review the authentication boundary. Cite findings with file paths and suggest next steps."
-            {...form.register("task", { required: true })}
+            {...form.register("description", { required: true })}
           />
         </Field>
         <WorkspaceField />
