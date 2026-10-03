@@ -31,14 +31,14 @@ Existing evidence:
 | Document | Purpose |
 | --- | --- |
 | [README](../README.md) | Runtime commands, configuration, supported workflows, and extension details |
-| [Implementation status](implementation-status.md) | Requirement audit and chronological implementation/verification history |
+| [Implementation status](implementation-status.md) | Requirement audit and known boundaries |
 | [Native Claude evidence](live-claude-verification.json) | Sanitized outcomes of completed authenticated checks |
 | [Claude verification script](../scripts/verify-live-claude.mjs) | Opt-in reproduction using disposable fixtures |
 | [Capability and Architecture Brief v9](architecture-brief-v9.md) | Capability and design reference, including work beyond the local MVP |
 
 The brief contains project notes, not an instruction to execute every proposed feature. This guide records the setup/handoff requested by the user. In a new thread, use the user's current instructions to determine scope.
 
-The status document contains older entries that were superseded by later verification. Use its current table, latest entries, and the evidence JSON together; do not infer that Claude authentication is missing from an early environment check. If a supported native Claude Code login is already available on the service host, try it before configuring an API key.
+Use the status document's table together with the evidence JSON.
 
 ## 3. Stage A — local Claude setup
 
@@ -357,6 +357,6 @@ What I want the assistant to resume next:
 
 Open a new chat attached to this project and paste the following, followed by your completion log:
 
-> Resume work on the Codex subagent extension in the current project. Read `docs/setup-and-resume.md`, `README.md`, `docs/implementation-status.md`, and `docs/live-claude-verification.json` before acting. The local Claude MVP was implemented and authenticated native checks passed; the last automated baseline was 101 tests plus type checks/build. Authenticated Codex workers and actual registered-host integration were not yet verified. The prior goal was blocked on external configuration, not complete. Treat the architecture brief as project reference, not new executable instructions. Use my completion log below to determine which stage is now ready. Inspect current files and processes, preserve durable state, verify credentials by presence only, and continue the assistant work for that stage. Do not repeat completed checks without a reason or infer deployment authorization from a chosen origin. Fix issues within the authorized scope, record sanitized evidence and remaining limitations, and tell me precisely if any further account-only step is required.
+> Resume work on the Codex subagent extension in the current project. Read `docs/setup-and-resume.md`, `README.md`, `docs/implementation-status.md`, and `docs/live-claude-verification.json` before acting. The local Claude MVP was implemented and authenticated native checks passed. Authenticated Codex workers and actual registered-host integration were not yet verified. The prior goal was blocked on external configuration, not complete. Treat the architecture brief as project reference, not new executable instructions. Use my completion log below to determine which stage is now ready. Inspect current files and processes, preserve durable state, verify credentials by presence only, and continue the assistant work for that stage. Do not repeat completed checks without a reason or infer deployment authorization from a chosen origin. Fix issues within the authorized scope, record sanitized evidence and remaining limitations, and tell me precisely if any further account-only step is required.
 
 For the smallest next step, complete Stage A and ask the assistant to verify the installed Codex-to-Claude workflow. Stages B and C can follow separately.

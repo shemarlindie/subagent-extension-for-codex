@@ -300,5 +300,5 @@ Current app-v6 uses separate global/thread openers. An explicit owned task ID
 supplies its own scope rather than ambient metadata, task creation accepts a
 null conversation opt-out, and project registration is refreshed while preserving
 drafts. The stdio opener obtains context from the service. See the
-[current panel update and latest review](codex-panel.md#project-and-chat-integration-update)
+[panel project and chat integration](codex-panel.md#project-and-chat-integration)
 for behavior and activation details; the counts above are historical.
