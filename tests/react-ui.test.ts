@@ -234,11 +234,9 @@ async function selectOption(
   option: string,
   multiple = false,
 ) {
-  const trigger = screen.getByRole("combobox", { name: label, exact: true });
+  const trigger = screen.getByRole("combobox", { name: label });
   await user.click(trigger);
-  await user.click(
-    await screen.findByRole("option", { name: option, exact: true }),
-  );
+  await user.click(await screen.findByRole("option", { name: option }));
   if (multiple) await user.keyboard("{Escape}");
   await waitFor(() =>
     assert.equal(trigger.getAttribute("aria-expanded"), "false"),
@@ -421,7 +419,6 @@ test("settings dialog labels discovered models and summarizes collapsed groups",
   await user.click(models);
   const trigger = screen.getByRole("combobox", {
     name: "Default model",
-    exact: true,
   });
   assert.equal(trigger.textContent, "Model A");
   await user.click(trigger);
@@ -701,7 +698,6 @@ test("description toggles literally, survives refresh, and resets for another ta
   });
   const toggle = screen.getByRole("button", {
     name: "Description",
-    exact: true,
   });
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   await user.click(toggle);
@@ -717,7 +713,7 @@ test("description toggles literally, survives refresh, and resets for another ta
   };
   await act(() => controller.refresh());
   assert.ok(
-    screen.getByRole("button", { name: "Description", exact: true }) === toggle,
+    screen.getByRole("button", { name: "Description" }) === toggle,
     "Refresh retains the description toggle node",
   );
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
@@ -726,7 +722,7 @@ test("description toggles literally, survives refresh, and resets for another ta
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   await user.click(toggle);
   await act(() => controller.select("two"));
-  const next = screen.getByRole("button", { name: "Description", exact: true });
+  const next = screen.getByRole("button", { name: "Description" });
   assert.equal(next.getAttribute("aria-expanded"), "false");
   await user.click(next);
   assert.ok(screen.getByText("Second instructions"));
@@ -1046,7 +1042,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   assert.equal(
-    screen.getByRole("combobox", { name: "Project", exact: true }).textContent,
+    screen.getByRole("combobox", { name: "Project" }).textContent,
     "/repo/a",
   );
   assert.equal(
@@ -1185,7 +1181,7 @@ test("permission review makes no decision until the user clicks Deny", async (t)
     transport.calls.filter((call) => call.name === "submit_agent_input").length,
     0,
   );
-  await user.click(screen.getByRole("button", { name: "Deny", exact: true }));
+  await user.click(screen.getByRole("button", { name: "Deny" }));
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "submit_agent_input")
@@ -1275,7 +1271,7 @@ test("console delegation requires choosing a project even with a sole registered
   await user.click(screen.getByRole("button", { name: "＋ Delegate" }));
   await screen.findByRole("dialog");
   assert.equal(
-    screen.getByRole("combobox", { name: "Project", exact: true }).textContent,
+    screen.getByRole("combobox", { name: "Project" }).textContent,
     "Choose a project",
   );
   await enterTask(user, "Explicit project choice");
@@ -1322,8 +1318,7 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
   await user.keyboard("{End}");
   await waitFor(() =>
     assert.ok(
-      document.activeElement ===
-        screen.getByRole("option", { name: "a", exact: true }),
+      document.activeElement === screen.getByRole("option", { name: "a" }),
       "Project option should receive focus",
     ),
   );
@@ -1343,8 +1338,7 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
   await user.click(picker);
   await waitFor(() =>
     assert.ok(
-      document.activeElement ===
-        screen.getByRole("option", { name: "a", exact: true }),
+      document.activeElement === screen.getByRole("option", { name: "a" }),
       "Project option should receive focus",
     ),
   );
@@ -1367,19 +1361,19 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   await user.click(screen.getByRole("button", { name: "New task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Keyboard worker selection");
-  const worker = screen.getByRole("combobox", { name: "Worker", exact: true });
+  const worker = screen.getByRole("combobox", { name: "Worker" });
   await user.click(worker);
   await waitFor(() =>
     assert.ok(
       document.activeElement ===
-        screen.getByRole("option", { name: "claude · reviewer", exact: true }),
+        screen.getByRole("option", { name: "claude · reviewer" }),
     ),
   );
   await user.keyboard("{End}");
   await waitFor(() =>
     assert.ok(
       document.activeElement ===
-        screen.getByRole("option", { name: "codex · reviewer", exact: true }),
+        screen.getByRole("option", { name: "codex · reviewer" }),
     ),
   );
   await user.keyboard("{Enter}");
@@ -1391,7 +1385,7 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   await waitFor(() =>
     assert.ok(
       document.activeElement ===
-        screen.getByRole("option", { name: "codex · reviewer", exact: true }),
+        screen.getByRole("option", { name: "codex · reviewer" }),
     ),
   );
   await user.keyboard("{Escape}");
@@ -1454,7 +1448,6 @@ test("approved parent project suggestions allow an unlisted nested repository pa
   await screen.findByRole("dialog");
   const project = screen.getByRole("combobox", {
     name: "Project",
-    exact: true,
   });
   await user.clear(project);
   await user.type(project, "/approved/new/nested-repo");
@@ -1567,8 +1560,7 @@ test("console worker picker routes and seeds the delegation worker", async (t) =
   );
   await screen.findByRole("dialog");
   assert.match(
-    screen.getByRole("combobox", { name: "Worker", exact: true }).textContent ??
-      "",
+    screen.getByRole("combobox", { name: "Worker" }).textContent ?? "",
     /codex · reviewer/,
   );
   await selectOption(user, "Project", "/repo/a");
@@ -1614,8 +1606,7 @@ test("current repository selection locks revision to HEAD and submits the checko
   assert.equal(revision.value, "HEAD");
   assert.equal(revision.readOnly, true);
   assert.match(
-    screen.getByRole("combobox", { name: "Workspace", exact: true })
-      .textContent ?? "",
+    screen.getByRole("combobox", { name: "Workspace" }).textContent ?? "",
     /Current repository/,
   );
   await selectOption(user, "Workspace", "Isolated worktree");
@@ -1650,8 +1641,7 @@ test("delegation defaults to inherited native permissions and separately selects
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   assert.equal(
-    screen.getByRole("combobox", { name: "Permission mode", exact: true })
-      .textContent,
+    screen.getByRole("combobox", { name: "Permission mode" }).textContent,
     "Your Claude Code settings",
   );
   await selectOption(user, "Permission mode", "Accept edits");
@@ -1678,9 +1668,7 @@ test("global UI adds a manually entered project only after explicit submission a
     (transport) => configureProjectRegistration(transport),
     { mode: "console" },
   );
-  await user.click(
-    screen.getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
   await user.type(
     within(dialog).getByLabelText("Repository path"),
@@ -1692,9 +1680,7 @@ test("global UI adds a manually entered project only after explicit submission a
     ).length,
     0,
   );
-  await user.click(
-    within(dialog).getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(within(dialog).getByRole("button", { name: "Add project" }));
   await waitFor(() =>
     assert.equal(controller.getSnapshot().repository, "/repo/new-project"),
   );
@@ -1718,9 +1704,7 @@ test("browsing a folder fills the project draft without granting access", async 
       configureProjectRegistration(transport, { picked: "/repo/picked" }),
     { mode: "console" },
   );
-  await user.click(
-    screen.getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   await waitFor(() =>
@@ -1736,9 +1720,7 @@ test("browsing a folder fills the project draft without granting access", async 
     ).length,
     0,
   );
-  await user.click(
-    within(dialog).getByRole("button", { name: "Cancel", exact: true }),
-  );
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
   assert.equal(
     transport.calls.filter(
@@ -1754,9 +1736,7 @@ test("cancelling the native picker preserves the manual project path", async (t)
     (transport) => configureProjectRegistration(transport),
     { mode: "console" },
   );
-  await user.click(
-    screen.getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
   const path = within(dialog).getByLabelText(
     "Repository path",
@@ -1786,17 +1766,13 @@ test("project registration errors preserve the draft and do not change the selec
       }),
     { mode: "console" },
   );
-  await user.click(
-    screen.getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
   await user.type(
     within(dialog).getByLabelText("Repository path"),
     "/repo/invalid/src",
   );
-  await user.click(
-    within(dialog).getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(within(dialog).getByRole("button", { name: "Add project" }));
   await screen.findByText("Use repository root");
   assert.equal(
     (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
@@ -1821,7 +1797,7 @@ test("permission cancellation keeps the request pending and approval includes th
     screen.getByLabelText("Message (optional)"),
     "Draft decision",
   );
-  await user.click(screen.getByRole("button", { name: "Cancel", exact: true }));
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
   assert.equal(
     transport.calls.filter((call) => call.name === "submit_agent_input").length,
@@ -1860,9 +1836,7 @@ test("a chat project hint prefills registration without registering it automatic
       panel_project_candidate: { repository: "/repo/chat-project" },
     }),
   );
-  await user.click(
-    screen.getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
   assert.equal(
     (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
@@ -1875,9 +1849,7 @@ test("a chat project hint prefills registration without registering it automatic
     ).length,
     0,
   );
-  await user.click(
-    within(dialog).getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(within(dialog).getByRole("button", { name: "Add project" }));
   await waitFor(() =>
     assert.equal(controller.getSnapshot().repository, "/repo/chat-project"),
   );
@@ -1892,17 +1864,13 @@ test("folder picker failure keeps manual entry available", async (t) => {
       }),
     { mode: "console" },
   );
-  await user.click(
-    screen.getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   await within(dialog).findByText("Native folder picker unavailable");
   const path = within(dialog).getByLabelText("Repository path");
   await user.type(path, "/repo/manual-fallback");
-  await user.click(
-    within(dialog).getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(within(dialog).getByRole("button", { name: "Add project" }));
   await waitFor(() =>
     assert.equal(
       transport.calls.find(
@@ -1935,9 +1903,7 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
     },
     { mode: "console" },
   );
-  await user.click(
-    screen.getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(screen.getByRole("button", { name: "Add project" }));
   const firstDialog = await screen.findByRole("dialog");
   await user.click(
     within(firstDialog).getByRole("button", { name: "Browse…" }),
@@ -1946,9 +1912,7 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
     controller.applyScope({ panel_scope: { conversation_id: "new-chat" } }),
   );
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
-  await user.click(
-    screen.getByRole("button", { name: "Add project", exact: true }),
-  );
+  await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
   const path = within(dialog).getByLabelText(
     "Repository path",
@@ -1984,8 +1948,8 @@ test("browsing a project inside delegation preserves the draft and starts only a
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   await waitFor(() =>
     assert.match(
-      within(dialog).getByRole("combobox", { name: "Project", exact: true })
-        .textContent ?? "",
+      within(dialog).getByRole("combobox", { name: "Project" }).textContent ??
+        "",
       /canonical/,
     ),
   );
@@ -1996,8 +1960,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
   );
   assert.equal((runtime as HTMLInputElement).value, "12.5");
   assert.match(
-    within(dialog).getByRole("combobox", { name: "Worker", exact: true })
-      .textContent ?? "",
+    within(dialog).getByRole("combobox", { name: "Worker" }).textContent ?? "",
     /codex/,
   );
   assert.equal(
@@ -2045,8 +2008,7 @@ test("task project registration failure preserves the selected project and draft
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   await within(dialog).findByText("Use repository root");
   assert.equal(
-    within(dialog).getByRole("combobox", { name: "Project", exact: true })
-      .textContent,
+    within(dialog).getByRole("combobox", { name: "Project" }).textContent,
     "/repo/a",
   );
   assert.equal(
@@ -2078,8 +2040,7 @@ test("cancelling the task project picker preserves selection and task draft with
     ),
   );
   assert.equal(
-    within(dialog).getByRole("combobox", { name: "Project", exact: true })
-      .textContent,
+    within(dialog).getByRole("combobox", { name: "Project" }).textContent,
     "/repo/a",
   );
   assert.equal(

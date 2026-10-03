@@ -119,7 +119,9 @@ test("console authentication failure requests login and server failures retain t
 
 test("console SSE coalesces activity refreshes and disposal cancels pending refreshes", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  t.onTestFinished(() => vi.useRealTimers());
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
   const streams: FakeStream[] = [];
   const urls: string[] = [];
   const transport = new ConsoleTransport(

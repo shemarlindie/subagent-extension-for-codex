@@ -266,7 +266,8 @@ test("MCP advertises app-only aliases and enforces approval policy for model-fac
       arguments: start,
     });
     assert.notEqual(started.isError, true);
-    const id = (started.structuredContent?.result as { id: string }).id;
+    const id = (started.structuredContent as { result: { id: string } }).result
+      .id;
     const approval = await pending(id);
     const blocked = await client.callTool({
       name: "submit_agent_input",
@@ -293,8 +294,9 @@ test("MCP advertises app-only aliases and enforces approval policy for model-fac
       name: "start_agent_task",
       arguments: start,
     });
-    const delegatedId = (delegated.structuredContent?.result as { id: string })
-      .id;
+    const delegatedId = (
+      delegated.structuredContent as { result: { id: string } }
+    ).result.id;
     const allowed = await client.callTool({
       name: "submit_agent_input",
       arguments: await pending(delegatedId),

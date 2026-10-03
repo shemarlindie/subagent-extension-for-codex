@@ -317,6 +317,7 @@ function task(status: Task["status"]): Task {
       worker_profile: "reviewer",
     }),
     id: "host-task",
+    title: "Review",
     owner: "owner",
     repository: "/repo",
     status,

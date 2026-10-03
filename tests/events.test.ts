@@ -32,6 +32,7 @@ const make = (id = "task-a", owner = "alice"): Task => ({
     conversation_id: "chat-a",
   }),
   id,
+  title: "Review",
   owner,
   status: "completed",
   created_at: now(),

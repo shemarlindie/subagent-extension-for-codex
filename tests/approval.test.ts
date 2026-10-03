@@ -10,6 +10,7 @@ import { Control } from "../src/core/control.js";
 import {
   approvalModes,
   type Result,
+  type Task,
   type RunContext,
 } from "../src/core/model.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
@@ -86,7 +87,12 @@ async function setup(provider = new PermissionProvider()) {
 test("ask_user blocks parent approval and accepts an owner user decision", async () => {
   const { c, store, cleanup } = await setup();
   try {
-    const task = await callTool(c, "alice", "start_agent_task", request);
+    const task = (await callTool(
+      c,
+      "alice",
+      "start_agent_task",
+      request,
+    )) as Task;
     await until(() => !!store.get(task.id, "alice").pending_input);
     const pending = store.get(task.id, "alice").pending_input!;
     const response = {
@@ -124,7 +130,12 @@ test("parent_agent permits parent decisions only after user configuration", asyn
       { set: { default_approval_mode: "parent_agent" } },
       "user",
     );
-    const task = await callTool(c, "alice", "start_agent_task", request);
+    const task = (await callTool(
+      c,
+      "alice",
+      "start_agent_task",
+      request,
+    )) as Task;
     assert.equal(task.approval_mode, "parent_agent");
     await until(() => !!store.get(task.id, "alice").pending_input);
     await callTool(c, "alice", "submit_agent_input", {
@@ -209,7 +220,12 @@ for (const mode of approvalModes) {
         { set: { default_approval_mode: mode } },
         "user",
       );
-      const task = await callTool(c, "alice", "start_agent_task", request);
+      const task = (await callTool(
+        c,
+        "alice",
+        "start_agent_task",
+        request,
+      )) as Task;
       assert.equal(task.approval_mode, mode);
       if (mode === "auto_approve" || mode === "deny") {
         await until(() => store.get(task.id, "alice").status === "completed");
@@ -325,10 +341,10 @@ test("parents can restrict approval authority but cannot escalate any saved mode
           );
           assert.equal(store.all().length, count);
         } else {
-          const task = await callTool(c, "alice", "start_agent_task", {
+          const task = (await callTool(c, "alice", "start_agent_task", {
             ...request,
             approval_mode,
-          });
+          })) as Task;
           assert.equal(task.approval_mode, approval_mode);
           if (approval_mode === "deny" || approval_mode === "auto_approve") {
             await until(

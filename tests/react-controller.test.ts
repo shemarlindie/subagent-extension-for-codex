@@ -377,7 +377,9 @@ test("Back keeps scoped narrow panels on the task list through refresh", async (
 for (const phase of ["connect", "read", "poll"] as const) {
   test(`host teardown during ${phase} stops further reads and polling`, async (t) => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    t.onTestFinished(() => vi.useRealTimers());
+    t.onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const { controller, transport } = setup("console");
     transport.preview = false;
     t.onTestFinished(() => controller.dispose());
@@ -413,7 +415,9 @@ for (const phase of ["connect", "read", "poll"] as const) {
 
 test("embedded polling skips hidden panels and waits for a pending refresh", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  t.onTestFinished(() => vi.useRealTimers());
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
   const { controller, transport, environment } = setup("console");
   transport.preview = false;
   t.onTestFinished(() => controller.dispose());
@@ -444,7 +448,9 @@ test("embedded polling skips hidden panels and waits for a pending refresh", asy
 
 test("embedded polling reports tool failures then retries successfully", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  t.onTestFinished(() => vi.useRealTimers());
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
   const { controller, transport } = setup("console");
   transport.preview = false;
   t.onTestFinished(() => controller.dispose());
@@ -467,7 +473,9 @@ test("embedded polling reports tool failures then retries successfully", async (
 
 test("embedded startup schedules a retry when its first read fails", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  t.onTestFinished(() => vi.useRealTimers());
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
   const { controller, transport } = setup();
   transport.preview = false;
   t.onTestFinished(() => controller.dispose());

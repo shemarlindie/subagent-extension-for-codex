@@ -72,6 +72,7 @@ test(
           repository,
         }),
         id: `task_collision_${status}`,
+        title: "Review [input]",
         owner: "owner",
         status,
         created_at: timestamp,

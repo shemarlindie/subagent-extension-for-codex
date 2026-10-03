@@ -13,7 +13,9 @@ import { Projects } from "../src/core/projects.js";
 import { pathToFileURL } from "node:url";
 import { application } from "../src/server/app.js";
 import { Auth } from "../src/server/auth.js";
-import type { ModelChoice, Provider } from "../src/core/model.js";
+import type { ModelChoice, Provider, RunContext } from "../src/core/model.js";
+
+type InputDecision = Awaited<ReturnType<RunContext["input"]>>;
 
 async function setup(
   provider: Provider = new FixtureProvider(),
@@ -581,7 +583,7 @@ test("worker question forms bind the exact input ID and reject stale answers", a
 
 test("shell permission forms default to deny, preserve original commands, and never grant on cancellation", async () => {
   const provider: Provider = new FixtureProvider();
-  let decision: any;
+  let decision: InputDecision | undefined;
   provider.run = async (ctx) => {
     decision = await ctx.input("Bash", {
       command: "git status",
@@ -635,8 +637,9 @@ test("shell permission forms default to deny, preserve original commands, and ne
       content: { decision: "deny" },
     });
     await until(() => !!decision);
-    assert.equal(decision.approved, false);
-    assert.equal(decision.input, undefined);
+    const resolved: InputDecision = decision!;
+    assert.equal(resolved.approved, false);
+    assert.equal(resolved.input, undefined);
   } finally {
     await close();
   }
@@ -644,7 +647,7 @@ test("shell permission forms default to deny, preserve original commands, and ne
 
 test("rich question forms preserve titled choices and multiple selections for native worker answers", async () => {
   const provider: Provider = new FixtureProvider();
-  let decision: any;
+  let decision: InputDecision | undefined;
   provider.run = async (ctx) => {
     decision = await ctx.input("AskUserQuestion", {
       questions: [
@@ -706,8 +709,9 @@ test("rich question forms preserve titled choices and multiple selections for na
     );
     assert.ok(!answered.result.isError, JSON.stringify(answered));
     await until(() => !!decision);
-    assert.equal(decision.approved, true);
-    assert.deepEqual(decision.input.answers, {
+    const resolved: InputDecision = decision!;
+    assert.equal(resolved.approved, true);
+    assert.deepEqual(resolved.input!.answers, {
       "Compatibility strategy?": "Adapter",
       "Which checks?": "Unit tests, Integration tests",
     });
@@ -797,7 +801,7 @@ test("host delegation preserves an explicit or default choice to run without a c
 
 test("Codex execution forms disclose whole-turn authority and bind approval to the pending request", async () => {
   const provider: Provider = new FixtureProvider();
-  let decision: any;
+  let decision: InputDecision | undefined;
   const policy = {
     workspace: "/isolated/worktree",
     policy: "Shell commands execute within the sandbox",
@@ -842,8 +846,9 @@ test("Codex execution forms disclose whole-turn authority and bind approval to t
     );
     assert.ok(!submitted.result.isError, JSON.stringify(submitted));
     await until(() => !!decision);
-    assert.equal(decision.approved, true);
-    assert.equal(decision.input, undefined);
+    const resolved: InputDecision = decision!;
+    assert.equal(resolved.approved, true);
+    assert.equal(resolved.input, undefined);
   } finally {
     await close();
   }

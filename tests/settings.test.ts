@@ -4,6 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Store } from "../src/core/store.js";
+import type { ModelChoice } from "../src/core/model.js";
 import {
   Settings,
   settingsReadOutputSchema,
@@ -159,7 +160,7 @@ test("native model controls scope discovered models and derive reasoning choices
     },
   });
   const persisted = f.stored();
-  const catalogs = [
+  const catalogs: { provider: string; models?: ModelChoice[] }[] = [
     {
       provider: "claude",
       models: [
@@ -204,9 +205,17 @@ test("native model controls scope discovered models and derive reasoning choices
     "default",
     "custom-saved-model",
   ]);
-  assert.ok(fields.default_reasoning_effort.enum!.includes("none"));
-  assert.ok(fields.default_reasoning_effort.enum!.includes("max"));
-  assert.ok(fields.reviewer_default_reasoning_effort.enum!.includes("none"));
+  assert.ok(
+    (fields.default_reasoning_effort.enum as unknown[]).includes("none"),
+  );
+  assert.ok(
+    (fields.default_reasoning_effort.enum as unknown[]).includes("max"),
+  );
+  assert.ok(
+    (fields.reviewer_default_reasoning_effort.enum as unknown[]).includes(
+      "none",
+    ),
+  );
   assert.deepEqual(fields.claude_default_reasoning_effort.enum, [
     "default",
     "low",
@@ -261,7 +270,9 @@ test("native settings preserve custom models and unknown metadata while disablin
     },
   ]);
   assert.ok(
-    unknown.schema.properties!.default_model.enum!.includes("custom-model"),
+    (unknown.schema.properties!.default_model.enum as unknown[]).includes(
+      "custom-model",
+    ),
   );
   assert.match(
     String(
@@ -270,9 +281,10 @@ test("native settings preserve custom models and unknown metadata while disablin
     /support is unknown/,
   );
   assert.ok(
-    unknown.schema.properties!.fixture_default_reasoning_effort.enum!.includes(
-      "none",
-    ),
+    (
+      unknown.schema.properties!.fixture_default_reasoning_effort
+        .enum as unknown[]
+    ).includes("none"),
   );
   f.settings.update("alice", {
     set: { default_model: "", fixture_default_model: "" },
@@ -292,7 +304,9 @@ test("native settings preserve custom models and unknown metadata while disablin
     },
   ]);
   assert.ok(
-    disabled.schema.properties!.default_reasoning_effort.enum!.includes("high"),
+    (
+      disabled.schema.properties!.default_reasoning_effort.enum as unknown[]
+    ).includes("high"),
   );
   assert.deepEqual(
     disabled.schema.properties!.fixture_default_reasoning_effort.enum,

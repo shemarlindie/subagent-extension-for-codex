@@ -1,6 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
+import { createServer, type RequestListener } from "node:http";
 import { mkdtemp, writeFile, readFile, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -29,10 +29,7 @@ async function data(t: import("vitest").TestContext) {
   t.onTestFinished(() => rm(dir, { recursive: true, force: true }));
   return dir;
 }
-async function fake(
-  t: import("vitest").TestContext,
-  handler: Parameters<typeof createServer>[0],
-) {
+async function fake(t: import("vitest").TestContext, handler: RequestListener) {
   const server = createServer(handler);
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   t.onTestFinished(

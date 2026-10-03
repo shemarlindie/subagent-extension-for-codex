@@ -15,6 +15,19 @@ import { FixtureProvider } from "../src/providers/fixture.js";
 import { application } from "../src/server/app.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { ModelChoice } from "../src/core/model.js";
+
+// Panel tools return loosely shaped structured content; tests narrow each field.
+const panel = (response: object) =>
+  (response as { structuredContent?: unknown }).structuredContent as
+    | {
+        panel_scope?: unknown;
+        panel_selection?: unknown;
+        tasks?: unknown;
+        result?: unknown;
+        conversation_id?: unknown;
+      }
+    | undefined;
 test("owner-scoped sessions, expiration, pruning and token comparison", () => {
   const auth = new Auth("private-token");
   assert.equal(auth.matches("private-token"), true);
@@ -69,6 +82,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         revision: "HEAD",
       }),
       id,
+      title: "Panel task",
       owner,
       status: "completed",
       created_at: now(),
@@ -228,13 +242,11 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       name: "open_codex_subagent_extension",
       arguments: {},
     });
-    assert.deepEqual(open.structuredContent?.panel_scope, {
+    assert.deepEqual(panel(open)?.panel_scope, {
       conversation_id: null,
     });
     assert.deepEqual(
-      (open.structuredContent?.tasks as { id: string }[])
-        .map((task) => task.id)
-        .sort(),
+      (panel(open)?.tasks as { id: string }[]).map((task) => task.id).sort(),
       ["current-thread", "other-project", "other-thread", "unscoped"],
     );
     const globalOpener = tools.tools.find(
@@ -276,7 +288,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
           );
           const context =
             name === "get_agent_panel_context"
-              ? (selected.structuredContent?.result as any)
+              ? (panel(selected)?.result as any)
               : selected.structuredContent;
           assert.deepEqual(context?.panel_scope, {
             conversation_id: task.conversation_id ?? null,
@@ -310,18 +322,18 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         _meta: ambientMeta,
       });
       assert.notEqual(started.isError, true);
-      const task = started.structuredContent?.result as {
+      const task = panel(started)?.result as {
         id: string;
         conversation_id?: string;
       };
       assert.equal(task.conversation_id, undefined);
       assert.equal(c.store.get(task.id, "local").conversation_id, undefined);
-      assert.deepEqual(started.structuredContent?.panel_scope, {
+      assert.deepEqual(panel(started)?.panel_scope, {
         conversation_id: null,
         repository: dir,
         revision: "HEAD",
       });
-      assert.deepEqual(started.structuredContent?.panel_selection, {
+      assert.deepEqual(panel(started)?.panel_selection, {
         task_id: task.id,
         tab: "activity",
       });
@@ -332,11 +344,11 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       _meta: ambientMeta,
     });
     assert.equal(globalOpen.isError, undefined);
-    assert.deepEqual(globalOpen.structuredContent?.panel_scope, {
+    assert.deepEqual(panel(globalOpen)?.panel_scope, {
       conversation_id: null,
     });
     assert.deepEqual(
-      (globalOpen.structuredContent?.tasks as { id: string }[])
+      (panel(globalOpen)?.tasks as { id: string }[])
         .map((task) => task.id)
         .sort(),
       ["current-thread", "other-project", "other-thread", "unscoped"],
@@ -346,26 +358,21 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       arguments: { conversation_id: null },
       _meta: ambientMeta,
     });
-    assert.deepEqual(
-      (globalContext.structuredContent?.result as any).panel_scope,
-      {
-        conversation_id: null,
-      },
-    );
+    assert.deepEqual((panel(globalContext)?.result as any).panel_scope, {
+      conversation_id: null,
+    });
     await checkSelectedTaskContext(client);
     const scopedOpen = await client.callTool({
       name: "open_codex_subagent_extension",
       arguments: { conversation_id: "conversation-a" },
     });
-    assert.deepEqual(scopedOpen.structuredContent?.panel_scope, {
+    assert.deepEqual(panel(scopedOpen)?.panel_scope, {
       conversation_id: "conversation-a",
       repository: dir,
       revision: "HEAD",
     });
     assert.deepEqual(
-      (scopedOpen.structuredContent?.tasks as { id: string }[]).map(
-        (task) => task.id,
-      ),
+      (panel(scopedOpen)?.tasks as { id: string }[]).map((task) => task.id),
       ["current-thread"],
     );
     assert.equal(scopedOpen._meta?.conversation_id, "conversation-a");
@@ -376,7 +383,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       arguments: {},
       _meta: { "openai/session": "conversation-a" },
     });
-    assert.deepEqual(nativeOpen.structuredContent?.panel_scope, {
+    assert.deepEqual(panel(nativeOpen)?.panel_scope, {
       conversation_id: "conversation-a",
       repository: dir,
       revision: "HEAD",
@@ -387,9 +394,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       _meta: { "openai/session": "conversation-a" },
     });
     assert.deepEqual(
-      (nativeTasks.structuredContent?.result as { id: string }[]).map(
-        (task) => task.id,
-      ),
+      (panel(nativeTasks)?.result as { id: string }[]).map((task) => task.id),
       ["current-thread"],
     );
     const explicitTasks = await client.callTool({
@@ -398,9 +403,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       _meta: { "openai/session": "conversation-a" },
     });
     assert.deepEqual(
-      (explicitTasks.structuredContent?.result as { id: string }[]).map(
-        (task) => task.id,
-      ),
+      (panel(explicitTasks)?.result as { id: string }[]).map((task) => task.id),
       ["other-thread"],
     );
     const fromDirectory = await client.callTool({
@@ -410,7 +413,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         "codex/sandbox-state-meta": { sandboxCwd: pathToFileURL(dir).href },
       },
     });
-    assert.deepEqual(fromDirectory.structuredContent?.panel_scope, {
+    assert.deepEqual(panel(fromDirectory)?.panel_scope, {
       conversation_id: "first-use",
       repository: dir,
       revision: "HEAD",
@@ -426,19 +429,17 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       _meta: { threadId: "http-start" },
     });
     assert.equal(started.isError, undefined);
-    const startedTask = started.structuredContent?.result as { id: string };
-    assert.deepEqual(started.structuredContent?.panel_scope, {
+    const startedTask = panel(started)?.result as { id: string };
+    assert.deepEqual(panel(started)?.panel_scope, {
       conversation_id: "http-start",
       repository: dir,
       revision: "HEAD",
     });
-    assert.deepEqual(started.structuredContent?.panel_selection, {
+    assert.deepEqual(panel(started)?.panel_selection, {
       task_id: startedTask.id,
       tab: "activity",
     });
-    assert.deepEqual(started.structuredContent?.tasks, [
-      started.structuredContent?.result,
-    ]);
+    assert.deepEqual(panel(started)?.tasks, [panel(started)?.result]);
     await checkGlobalCreation(client);
     await client.close();
     const stdio = new Client({ name: "stdio-test", version: "1.0.0" });
@@ -616,36 +617,35 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         name: "open_codex_subagent_extension",
         arguments: {},
       });
-      assert.deepEqual(unscopedProxyOpen.structuredContent?.panel_scope, {
+      assert.deepEqual(panel(unscopedProxyOpen)?.panel_scope, {
         conversation_id: null,
       });
-      assert.equal(unscopedProxyOpen.structuredContent?.tasks, undefined);
+      assert.equal(panel(unscopedProxyOpen)?.tasks, undefined);
       const globalProxyOpen = await stdio.callTool({
         name: globalOpener.name,
         arguments: {},
         _meta: ambientMeta,
       });
       assert.equal(globalProxyOpen.isError, undefined);
-      assert.deepEqual(globalProxyOpen.structuredContent?.panel_scope, {
+      assert.deepEqual(panel(globalProxyOpen)?.panel_scope, {
         conversation_id: null,
       });
-      assert.equal(globalProxyOpen.structuredContent?.tasks, undefined);
+      assert.equal(panel(globalProxyOpen)?.tasks, undefined);
       const globalProxyContext = await stdio.callTool({
         name: "get_agent_panel_context",
         arguments: { conversation_id: null },
         _meta: ambientMeta,
       });
-      assert.deepEqual(
-        (globalProxyContext.structuredContent?.result as any).panel_scope,
-        { conversation_id: null },
-      );
+      assert.deepEqual((panel(globalProxyContext)?.result as any).panel_scope, {
+        conversation_id: null,
+      });
       await checkSelectedTaskContext(stdio);
       const nativeProxyOpen = await stdio.callTool({
         name: "open_codex_subagent_extension",
         arguments: {},
         _meta: { "openai/session": "conversation-a" },
       });
-      assert.deepEqual(nativeProxyOpen.structuredContent?.panel_scope, {
+      assert.deepEqual(panel(nativeProxyOpen)?.panel_scope, {
         conversation_id: "conversation-a",
         repository: dir,
         revision: "HEAD",
@@ -656,7 +656,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         _meta: { "openai/session": "conversation-a" },
       });
       assert.deepEqual(
-        (nativeProxyTasks.structuredContent?.result as { id: string }[]).map(
+        (panel(nativeProxyTasks)?.result as { id: string }[]).map(
           (task) => task.id,
         ),
         ["current-thread"],
@@ -665,15 +665,12 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         name: "open_codex_subagent_extension",
         arguments: { conversation_id: "conversation-a" },
       });
-      assert.deepEqual(proxyOpen.structuredContent?.panel_scope, {
+      assert.deepEqual(panel(proxyOpen)?.panel_scope, {
         conversation_id: "conversation-a",
         repository: dir,
         revision: "HEAD",
       });
-      assert.equal(
-        proxyOpen.structuredContent?.conversation_id,
-        "conversation-a",
-      );
+      assert.equal(panel(proxyOpen)?.conversation_id, "conversation-a");
       const proxyWorkers = await stdio.callTool({
         name: "list_available_workers",
         arguments: {},
@@ -685,7 +682,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
           "codex/sandbox-state-meta": { sandboxCwd: pathToFileURL(dir).href },
         },
       });
-      assert.deepEqual(proxyFromDirectory.structuredContent?.panel_scope, {
+      assert.deepEqual(panel(proxyFromDirectory)?.panel_scope, {
         conversation_id: "proxy-first-use",
         repository: dir,
         revision: "HEAD",
@@ -701,20 +698,20 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         _meta: { "openai/session": "stdio-start", threadId: "ignored-thread" },
       });
       assert.equal(proxyStarted.isError, false);
-      const proxyTask = proxyStarted.structuredContent?.result as {
+      const proxyTask = panel(proxyStarted)?.result as {
         id: string;
       };
-      assert.deepEqual(proxyStarted.structuredContent?.panel_scope, {
+      assert.deepEqual(panel(proxyStarted)?.panel_scope, {
         conversation_id: "stdio-start",
         repository: dir,
         revision: "HEAD",
       });
-      assert.deepEqual(proxyStarted.structuredContent?.panel_selection, {
+      assert.deepEqual(panel(proxyStarted)?.panel_selection, {
         task_id: proxyTask.id,
         tab: "activity",
       });
-      assert.deepEqual(proxyStarted.structuredContent?.tasks, [
-        proxyStarted.structuredContent?.result,
+      assert.deepEqual(panel(proxyStarted)?.tasks, [
+        panel(proxyStarted)?.result,
       ]);
       await checkGlobalCreation(stdio);
       assert.equal(proxyWorkers.isError, false);
@@ -748,6 +745,7 @@ test("SSE requires authentication and replays owned events in global cursor orde
   const make = (id: string, owner: string) => ({
     ...startSchema.parse({ title: "test", description: "test" }),
     id,
+    title: "test",
     owner,
     status: "queued" as const,
     created_at: now(),
@@ -798,7 +796,7 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
   const { Events } = await import("../src/events/service.js");
   const dir = await mkdtemp(join(tmpdir(), "ac-modern-"));
   const provider = Object.assign(new FixtureProvider(), {
-    models: async () => [
+    models: async (): Promise<ModelChoice[]> => [
       {
         value: "default",
         displayName: "Fixture model",

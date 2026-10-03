@@ -25,6 +25,7 @@ async function setup() {
       budget: { max_cost_usd: null },
     }),
     id: "task_one",
+    title: "Review",
     owner: "alice",
     workspace: dir,
     session_id: "sess_one",

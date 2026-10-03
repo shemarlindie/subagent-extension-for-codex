@@ -171,7 +171,6 @@ test(
       gitDirectory: join(dir, "git"),
       executable,
       readOnly: true,
-      addresses: [],
     });
     const output = await exec(
       "/usr/bin/sandbox-exec",

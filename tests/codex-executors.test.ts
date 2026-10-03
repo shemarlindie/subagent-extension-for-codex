@@ -7,6 +7,7 @@ import type { ExecutorHandle } from "../src/providers/mac-executor.js";
 const task: Task = {
   ...startSchema.parse({ title: "Review", description: "Review" }),
   id: "task_one",
+  title: "Review",
   owner: "alice",
   workspace: "/worktree/one",
   session_id: "sess_one",

@@ -8,7 +8,12 @@ import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
 import { Control } from "../src/core/control.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
-import type { Provider, RunContext, Result } from "../src/core/model.js";
+import type {
+  ModelChoice,
+  Provider,
+  RunContext,
+  Result,
+} from "../src/core/model.js";
 const pause = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 async function until(fn: () => boolean) {
   for (let i = 0; i < 300; i++) {
@@ -55,7 +60,7 @@ const input = (description = "Investigate") => ({
 });
 test("worker discovery exposes SDK metadata and falls back when discovery fails", async () => {
   const provider: Provider = new FixtureProvider();
-  const models = [
+  const models: ModelChoice[] = [
     {
       value: "known-model",
       displayName: "Known",

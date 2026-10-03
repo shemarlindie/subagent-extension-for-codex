@@ -11,6 +11,7 @@ const task: Task = {
     description: "Review changes",
   }),
   id: "task-one",
+  title: "Review changes",
   owner: "alice",
   workspace: "/worktrees/task-one",
   status: "running",

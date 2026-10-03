@@ -109,6 +109,7 @@ function setup(
         budget: { max_cost_usd: null },
       }),
       id: "task_one",
+      title: "Review",
       owner: "alice",
       workspace: "/worktree",
       attempt: 1,

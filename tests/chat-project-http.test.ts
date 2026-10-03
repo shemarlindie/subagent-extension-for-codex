@@ -195,7 +195,8 @@ test("MCP get_current_agent_project reports the thread root without registering 
     _meta,
   });
   assert.notEqual(result.isError, true);
-  const current = result.structuredContent?.result as Record<string, unknown>;
+  const current = (result.structuredContent as { result?: unknown } | undefined)
+    ?.result as Record<string, unknown>;
   assert.equal(current.repository, repository);
   assert.equal(current.registered, false);
   assert.equal(current.auto_register_on_task_start, true);
@@ -260,10 +261,13 @@ test("stdio project registration elicits user approval before granting access", 
   });
   assert.notEqual(result.isError, true, JSON.stringify(result));
   assert.equal(requests, 1);
-  assert.deepEqual(result.structuredContent?.result, {
-    repository,
-    kind: "repository",
-  });
+  assert.deepEqual(
+    (result.structuredContent as { result?: unknown } | undefined)?.result,
+    {
+      repository,
+      kind: "repository",
+    },
+  );
   assert.equal(await f.c.projects!.resolve(repository), repository);
   assert.equal(f.c.store.all().length, 0);
 });

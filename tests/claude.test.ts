@@ -36,6 +36,7 @@ async function context() {
     }),
     repository: workspace,
     id: "task-test",
+    title: "Review",
     owner: "alice",
     status: "running",
     created_at: now(),
@@ -322,8 +323,9 @@ test("write-profile shell commands require human decision and cannot use edited 
   const denied = await options!.canUseTool!("Bash", command, {
     signal: c.signal,
     toolUseID: "tool",
+    requestId: "request",
   });
-  assert.equal(denied.behavior, "deny");
+  assert.equal(denied!.behavior, "deny");
   c.input = async () => ({
     approved: true,
     input: { command: "other command" },
@@ -331,16 +333,18 @@ test("write-profile shell commands require human decision and cannot use edited 
   const approved = await options!.canUseTool!("Bash", command, {
     signal: c.signal,
     toolUseID: "tool",
+    requestId: "request",
   });
-  assert.equal(approved.behavior, "allow");
+  assert.equal(approved!.behavior, "allow");
   assert.deepEqual((approved as any).updatedInput, command);
   // MCP tools follow the same approval routing as shell commands.
   const tool = { query: "status" };
   const mcp = await options!.canUseTool!("mcp__server__tool", tool, {
     signal: c.signal,
     toolUseID: "tool",
+    requestId: "request",
   });
-  assert.equal(mcp.behavior, "allow");
+  assert.equal(mcp!.behavior, "allow");
   assert.deepEqual((mcp as any).updatedInput, tool);
 });
 test("Claude forwards each native permission mode and reserves bypass opt-in for bypassPermissions", async () => {
@@ -433,13 +437,11 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
       !options!.tools.includes("Bash"),
   );
   assert.equal(
-    (
-      await options!.canUseTool!(
-        "Write",
-        { file_path: "a.ts" },
-        { signal: c.signal, toolUseID: "write" },
-      )
-    ).behavior,
+    (await options!.canUseTool!(
+      "Write",
+      { file_path: "a.ts" },
+      { signal: c.signal, toolUseID: "write", requestId: "request" },
+    ))!.behavior,
     "deny",
   );
 });
@@ -468,12 +470,11 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
   for (const tool of ["Edit", "Write"]) {
     const input = { file_path: "a.ts", content: "approved contents" };
     assert.equal(
-      (
-        await options!.canUseTool!(tool, input, {
-          signal: c.signal,
-          toolUseID: "edit",
-        })
-      ).behavior,
+      (await options!.canUseTool!(tool, input, {
+        signal: c.signal,
+        toolUseID: "edit",
+        requestId: "request",
+      }))!.behavior,
       "deny",
     );
     let requested: unknown;
@@ -487,9 +488,10 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
     const allowed = await options!.canUseTool!(tool, input, {
       signal: c.signal,
       toolUseID: "edit",
+      requestId: "request",
     });
     assert.deepEqual(requested, { name: tool, payload: input });
-    assert.equal(allowed.behavior, "allow");
+    assert.equal(allowed!.behavior, "allow");
     assert.deepEqual((allowed as any).updatedInput, input);
     c.input = async () => ({ approved: false });
   }
@@ -689,10 +691,11 @@ test("native StructuredOutput accepts only the result contract while other repor
     options!.canUseTool!(name, input as Record<string, unknown>, {
       signal: c.signal,
       toolUseID: "x",
+      requestId: "request",
     });
   assert.deepEqual(await check("StructuredOutput", result), {});
   assert.equal(
-    (await permission("StructuredOutput", result)).behavior,
+    (await permission("StructuredOutput", result))!.behavior,
     "allow",
   );
   for (const invalid of [
@@ -705,12 +708,12 @@ test("native StructuredOutput accepts only the result contract while other repor
       "deny",
     );
     assert.equal(
-      (await permission("StructuredOutput", invalid)).behavior,
+      (await permission("StructuredOutput", invalid))!.behavior,
       "deny",
     );
   }
   assert.equal(
-    (await permission("mcp__unconfigured__report", result)).behavior,
+    (await permission("mcp__unconfigured__report", result))!.behavior,
     "deny",
   );
 });
@@ -763,12 +766,11 @@ async function runWithPolicy(
       )) as any
     ).hookSpecificOutput?.permissionDecision;
   const decide = async (tool: string, input: Record<string, unknown>) =>
-    (
-      await options!.canUseTool!(tool, input, {
-        signal: ctx.c.signal,
-        toolUseID: "x",
-      } as any)
-    ).behavior;
+    (await options!.canUseTool!(tool, input, {
+      signal: ctx.c.signal,
+      toolUseID: "x",
+      requestId: "request",
+    }))!.behavior;
   return { ...ctx, options: options!, check, decide, asked };
 }
 const parity = {

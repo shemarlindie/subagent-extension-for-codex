@@ -13,7 +13,7 @@ function recorder() {
   const context = {
     emit: (type: string, data: Record<string, unknown>) =>
       events.push({ type, data }),
-  } as RunContext;
+  } as unknown as RunContext;
   const normalize = (message: Record<string, unknown>) => {
     new ClaudeAgentProvider().normalize(context, message as SDKMessage);
     return events;

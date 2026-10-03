@@ -74,6 +74,7 @@ function task(repository: string, revision = "HEAD"): Task {
       workspace_strategy: "current_repo",
     }),
     id: "test-task",
+    title: "Review edits",
     owner: "alice",
     status: "queued",
     instructions: [],
