@@ -193,6 +193,7 @@ export class ClaudeAgentProvider implements Provider {
       release = resolve;
     });
     // Initialize the native harness without submitting a user turn or granting tools.
+    // eslint-disable-next-line require-yield -- an open prompt stream that never sends a turn
     const prompt = (async function* (): AsyncGenerator<SDKUserMessage> {
       await pending;
     })();

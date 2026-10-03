@@ -144,8 +144,8 @@ npm run typecheck
 npm test
 ```
 
-Tests run with Vitest (`vitest.config.ts`). `npm test` runs `npm run format:check` and the build first through `pretest`; `npm run test:watch` reruns affected tests on save without those steps, so run `npm run build` first when a test reads `dist/`.
-Fix formatting failures with `npm run format`. The suite is described in the
+Tests run with Vitest (`vitest.config.ts`). `npm test` runs `npm run format:check`, `npm run lint`, and the build first through `pretest`; `npm run test:watch` reruns affected tests on save without those steps, so run `npm run build` first when a test reads `dist/`.
+Fix formatting failures with `npm run format`. Linting (`eslint.config.js`) checks code quality only: TypeScript recommended rules, React hook rules in `ui/`, and no explicit `any` outside `tests/`. `npm run typecheck` also covers the tests and Vite configs. The suite is described in the
 [README](../README.md#verification-and-remaining-plan) and
 [React UI architecture](react-ui.md#build-and-verification). Opt-in checks
 against real Claude make model calls; see
@@ -159,4 +159,4 @@ against real Claude make model calls; see
 | Dev host live mode logs 401                   | Vite and the service use different data directories, so the token does not match      |
 | Codex shows different tasks than the dev host | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                           |
 | Service exits on start                        | Another service owns the data directory, or the port is taken (for example, the demo) |
-| `npm test` fails before running tests         | Formatting; run `npm run format`                                                      |
+| `npm test` fails before running tests         | Formatting (`npm run format`) or lint (`npm run lint`)                                |

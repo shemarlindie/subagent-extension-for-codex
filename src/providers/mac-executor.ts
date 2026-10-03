@@ -230,7 +230,9 @@ export class MacExecutor {
       try {
         if (cleanup) await cleanup.stop();
         if (launchedPID && !(await waitForGroupExit(launchedPID)))
-          throw new Error("Executor process group remains alive");
+          throw new Error("Executor process group remains alive", {
+            cause: error,
+          });
         this.journal.stopped(task, reservation.launch_id);
       } catch (termination) {
         throw new UnconfirmedTerminationError(

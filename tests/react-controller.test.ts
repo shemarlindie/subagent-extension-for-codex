@@ -240,7 +240,7 @@ test("delegation project lookup discarded when conversation changes", async (t) 
 });
 
 test("in-flight mutation never selects its returned task after the host changes scope", async (t) => {
-  const { controller, transport } = setup();
+  const { controller } = setup();
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   await controller.delegate();

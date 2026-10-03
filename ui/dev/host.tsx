@@ -257,11 +257,16 @@ function Host() {
       void next.close();
       void client?.then((connection) => connection.close());
     };
+    // sessionKey covers every setting fixed at initialization; the rest is
+    // pushed as host context below, so other changes must not relaunch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionKey]);
 
   const { theme, displayMode, styles } = settings;
   useEffect(() => {
     bridge?.setHostContext(hostContext(settings));
+    // Only these settings are part of the host context.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bridge, theme, displayMode, styles]);
 
   const inline = displayMode === "inline";

@@ -59,7 +59,7 @@ async function context() {
   };
   return { c, events, sessions, workspace };
 }
-test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async (t) => {
+test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async () => {
   let time = 1000;
   vi.spyOn(Date, "now").mockImplementation(() => time);
   vi.stubEnv("CLAUDE_CODE_USE_BEDROCK", "1");
@@ -124,7 +124,7 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   assert.equal(closes, 2);
 });
 
-test("failed Claude model discovery closes the query and retries after a short cooldown", async (t) => {
+test("failed Claude model discovery closes the query and retries after a short cooldown", async () => {
   let time = 1000;
   vi.spyOn(Date, "now").mockImplementation(() => time);
   let attempts = 0;
@@ -582,6 +582,7 @@ test("filtered Claude environment excludes service and other-provider credential
     });
     try {
       for await (const _ of stream) {
+        // Drain the stream.
       }
     } finally {
       stream.close();
@@ -626,6 +627,7 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
     });
     try {
       for await (const _ of stream) {
+        // Drain the stream.
       }
     } finally {
       stream.close();
@@ -781,7 +783,7 @@ const parity = {
   subagents: true,
 } as const;
 
-test("Claude parity policy leaves sandbox, tools and paths to the user's configuration and routes prompts to the approver", async (t) => {
+test("Claude parity policy leaves sandbox, tools and paths to the user's configuration and routes prompts to the approver", async () => {
   vi.stubEnv("USER_TOOLCHAIN_HOME", "/synthetic/toolchain");
   vi.stubEnv("CODEX_SUBAGENT_EXTENSION_TOKEN", "synthetic-service-token");
   vi.stubEnv("OPENAI_API_KEY", "synthetic-app-key");

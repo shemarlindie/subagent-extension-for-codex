@@ -21,7 +21,6 @@ import {
   type Start,
   type Task,
   type Provider,
-  type Result,
   now,
 } from "./model.js";
 /** Cancel a queued input without letting later requests bypass its predecessor. */

@@ -94,6 +94,7 @@ Review `<data-directory>/worktrees/<task-id>` or download returned patches befor
 | `ui/`                                                | Shared React UI: `entries/`, `templates/`, `styles/`, plus controller, transport, component, and form modules.         |
 | `ui/dev/`, `vite.config.ts`                          | Panel dev host: mock MCP Apps host and Vite server for `npm run dev:ui`.                                               |
 | `.env.example`                                       | Local development settings template; copy to `.env`.                                                                   |
+| `eslint.config.js`, `tsconfig.test.json`             | Lint rules, and typechecking for tests and the Vite configs.                                                           |
 | `tests/`, `scripts/`, `skills/`, `docs/`             | Vitest suite (`vitest.config.ts`), build/demo/verification scripts, the delegation skill, and design and status notes. |
 
 ## Verification and remaining plan

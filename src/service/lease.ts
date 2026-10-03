@@ -24,10 +24,14 @@ export function lease(data: string) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       const pid = Number(readFileSync(file, "utf8"));
       if (!Number.isSafeInteger(pid) || pid <= 0)
-        throw new Error("Invalid service lock; inspect before removing");
+        throw new Error("Invalid service lock; inspect before removing", {
+          cause: error,
+        });
       try {
         process.kill(pid, 0);
-        throw new Error("A live service already owns this data directory");
+        throw new Error("A live service already owns this data directory", {
+          cause: error,
+        });
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== "ESRCH") throw e;
         const reclaim = join(data, "service-reclaim.lock");
