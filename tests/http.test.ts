@@ -157,7 +157,10 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     );
     assert.deepEqual(
       client.getServerCapabilities()?.experimental?.["openai/settings"],
-      { readTool: "get_agent_settings", updateTool: "update_agent_settings" },
+      {
+        readTool: "get_agent_settings",
+        updateTool: "update_user_agent_settings",
+      },
     );
     const tools = await client.listTools();
     assert.ok(tools.tools.some((t) => t.name === "start_agent_task"));
@@ -464,11 +467,17 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       );
       assert.deepEqual(
         (stdio.getServerCapabilities() as any)?.extensions?.["openai/settings"],
-        { readTool: "get_agent_settings", updateTool: "update_agent_settings" },
+        {
+          readTool: "get_agent_settings",
+          updateTool: "update_user_agent_settings",
+        },
       );
       assert.deepEqual(
         stdio.getServerCapabilities()?.experimental?.["openai/settings"],
-        { readTool: "get_agent_settings", updateTool: "update_agent_settings" },
+        {
+          readTool: "get_agent_settings",
+          updateTool: "update_user_agent_settings",
+        },
       );
       const nativeSettings = await stdio.callTool({
         name: "get_agent_settings",
@@ -879,7 +888,7 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
       discovery.json.result.capabilities.extensions["openai/settings"],
       {
         readTool: "get_agent_settings",
-        updateTool: "update_agent_settings",
+        updateTool: "update_user_agent_settings",
       },
     );
     assert.ok(discovery.json.result.supportedVersions.includes("2026-07-28"));

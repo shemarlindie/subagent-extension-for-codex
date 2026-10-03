@@ -1,9 +1,17 @@
+import {
+  permissionModeSchema,
+  approvalDeciderSchema,
+  legacyClaudeMode,
+  approvalDecider,
+} from "./permissions.js";
 import { z } from "zod";
 import {
   OpenAISettingsReadResultSchema,
   OPENAI_SETTINGS_CAPABILITY_KEY,
 } from "@openai/mcp-extensions/server";
 import {
+  approvalModeSchema,
+  type InputAuthority,
   roles,
   modelNameSchema,
   reasoningSchema,
@@ -20,7 +28,7 @@ import { globalPanelToolName } from "../panel/panel.js";
 export const settingsCapability = {
   [OPENAI_SETTINGS_CAPABILITY_KEY]: {
     readTool: "get_agent_settings",
-    updateTool: "update_agent_settings",
+    updateTool: "update_user_agent_settings",
   },
 };
 // Hosts on MCP 2025-11-25 or earlier may read only the legacy location.
@@ -71,6 +79,21 @@ const modelSettingsShape = {
 };
 const valuesSchema = z.strictObject({
   ...modelSettingsShape,
+  claude_permission_mode: permissionModeSchema.meta({
+    title: "Claude permission mode",
+    description:
+      "Inherit the closest native mode from the parent, or use plan for review tasks and acceptEdits for write tasks. An explicit setting overrides inheritance. Native auto uses the SDK classifier.",
+  }),
+  default_approval_decider: approvalDeciderSchema.meta({
+    title: "Approval decision maker",
+    description:
+      "Who answers permission prompts that the native SDK leaves unresolved: the user or the parent agent.",
+  }),
+  default_approval_mode: approvalModeSchema.meta({
+    title: "Approval mode",
+    description:
+      "Ask user, delegate decisions to the parent agent, auto-approve within the sandbox, or deny execution requests. Read-only profiles and sandbox limits remain enforced.",
+  }),
   default_provider: z
     .enum(settingsProviders)
     .meta({ title: "Default provider" }),
@@ -97,12 +120,17 @@ const costAmount = z
   .positive()
   .max(100)
   .meta({ title: "Default cost budget (USD)" });
-const hostValuesSchema = valuesSchema.extend({
-  max_cost_usd: costAmount,
-  use_cost_budget: z.boolean().meta({ title: "Apply a default cost limit" }),
-});
+const hostValuesSchema = valuesSchema
+  .omit({ default_approval_mode: true })
+  .extend({
+    max_cost_usd: costAmount,
+    use_cost_budget: z.boolean().meta({ title: "Apply a default cost limit" }),
+  });
 // Fill missing fields in older settings rows without adding JSON Schema defaults to host fields.
 const storedValuesSchema = valuesSchema.extend({
+  claude_permission_mode: permissionModeSchema.default("inherit"),
+  default_approval_decider: approvalDeciderSchema.default("user"),
+  default_approval_mode: approvalModeSchema.default("ask_user"),
   ...(Object.fromEntries(
     Object.entries(modelSettingsShape).map(([key, schema]) => [
       key,
@@ -185,6 +213,18 @@ export class Settings {
     delete body.codex_default_reasoning_effort;
     if (body.default_provider === "codex")
       body.default_provider = this.providers()[0];
+    if (
+      body.claude_permission_mode === undefined &&
+      body.default_approval_mode &&
+      body.default_approval_mode !== "ask_user"
+    )
+      body.claude_permission_mode =
+        legacyClaudeMode(body.default_approval_mode) ?? "inherit";
+    if (
+      body.default_approval_decider === undefined &&
+      body.default_approval_mode === "parent_agent"
+    )
+      body.default_approval_decider = "parent_agent";
     return storedValuesSchema.parse(body);
   }
   values(owner: string): SettingsValues {
@@ -199,8 +239,9 @@ export class Settings {
   }
   private hostValues(owner: string) {
     const { cost_budget_amount, ...values } = this.saved(owner);
+    const { default_approval_mode, ...visible } = this.values(owner);
     return {
-      ...this.values(owner),
+      ...visible,
       use_cost_budget: values.max_cost_usd !== null,
       max_cost_usd: values.max_cost_usd ?? cost_budget_amount ?? 5,
     };
@@ -295,6 +336,8 @@ export class Settings {
                 "default_provider",
                 "default_worker_profile",
                 "default_workspace_strategy",
+                "claude_permission_mode",
+                "default_approval_decider",
                 "max_runtime_minutes",
                 "use_cost_budget",
                 "max_cost_usd",
@@ -328,8 +371,15 @@ export class Settings {
       }),
     );
   }
-  update(owner: string, input: unknown) {
+  update(owner: string, input: unknown, authority: InputAuthority = "user") {
     const { set } = settingsUpdateSchema.parse(input);
+    if (
+      authority !== "user" &&
+      (set.default_approval_mode !== undefined ||
+        set.claude_permission_mode !== undefined ||
+        set.default_approval_decider !== undefined)
+    )
+      throw new Error("Approval settings require a user decision in settings");
     if (
       set.default_provider &&
       !this.providers().includes(set.default_provider)
@@ -338,6 +388,16 @@ export class Settings {
     // Synchronous read/merge/write preserves omitted fields across concurrent requests.
     const previous = this.saved(owner);
     const { use_cost_budget, ...fields } = set;
+    // Older clients can still send the retired policy setting. Translate explicit
+    // updates without overriding a native mode supplied in the same request.
+    if (fields.default_approval_mode !== undefined) {
+      fields.claude_permission_mode ??=
+        legacyClaudeMode(fields.default_approval_mode) ?? "inherit";
+      fields.default_approval_decider ??=
+        fields.default_approval_mode === "parent_agent"
+          ? "parent_agent"
+          : "user";
+    }
     const amount =
       fields.max_cost_usd ??
       previous.max_cost_usd ??
@@ -393,6 +453,18 @@ export class Settings {
       ...args,
       model: typeof model === "string" ? model.trim() : undefined,
       reasoning_effort: reasoning,
+      permission_mode:
+        args.permission_mode ??
+        (provider === "claude" && args.approval_mode !== undefined
+          ? legacyClaudeMode(String(args.approval_mode))
+          : undefined) ??
+        "inherit",
+      approval_decider:
+        args.approval_decider ??
+        (args.approval_mode !== undefined
+          ? approvalDecider({ approval_mode: String(args.approval_mode) })
+          : defaults.default_approval_decider),
+      approval_mode: args.approval_mode ?? defaults.default_approval_mode,
       provider: args.provider ?? defaults.default_provider,
       worker_profile: args.worker_profile ?? defaults.default_worker_profile,
       workspace_strategy:

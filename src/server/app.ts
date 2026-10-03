@@ -1,10 +1,11 @@
+import { parentPermissionsFromMeta } from "../core/permissions.js";
 import express from "express";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { type Control } from "../core/control.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
-import { callTool } from "./tools.js";
+import { callTool, isUserTool } from "./tools.js";
 import { type Event } from "../core/model.js";
 import { type Events } from "../events/service.js";
 import { readFile } from "node:fs/promises";
@@ -130,13 +131,28 @@ export function application(
     }
     next();
   });
-  app.post("/api/tools/:name", async (req, res) => {
+  app.post(["/api/tools/:name", "/api/user-tools/:name"], async (req, res) => {
     try {
+      // The raw token is an administrator credential. MCP hosts must enforce
+      // app-only tool visibility; console users authenticate with a session cookie.
+      const userRoute = req.path.startsWith("/api/user-tools/");
+      if (userRoute && !isUserTool(String(req.params.name)))
+        throw new Error("Unknown user tool");
       const result = await callTool(
         c,
         res.locals.owner,
         String(req.params.name),
         req.body,
+        userRoute || (!bearer(req) && auth.ownerFor(req.headers.cookie))
+          ? "user"
+          : "parent",
+        bearer(req) && req.headers["x-codex-parent-permissions"]
+          ? parentPermissionsFromMeta({
+              "codex-subagent-extension/parent-permissions": JSON.parse(
+                String(req.headers["x-codex-parent-permissions"]),
+              ),
+            })
+          : undefined,
       );
       res.json({ result });
     } catch (e) {

@@ -1137,7 +1137,7 @@ test("worker question accepts a custom answer with no preset selection", async (
   );
 });
 
-test("permission review defaults to denial and submits that choice explicitly", async (t) => {
+test("permission review makes no decision until the user clicks Deny", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
       id: "permission",
@@ -1147,11 +1147,12 @@ test("permission review defaults to denial and submits that choice explicitly", 
   });
   await user.click(screen.getByRole("button", { name: "Review request" }));
   await screen.findByRole("dialog");
+  assert.equal(screen.queryByRole("combobox", { name: "Decision" }), null);
   assert.equal(
-    screen.getByRole("combobox", { name: "Decision" }).textContent,
-    "Deny",
+    transport.calls.filter((call) => call.name === "submit_agent_input").length,
+    0,
   );
-  await user.click(screen.getByRole("button", { name: "Submit decision" }));
+  await user.click(screen.getByRole("button", { name: "Deny", exact: true }));
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "submit_agent_input")
@@ -1549,7 +1550,7 @@ test("console worker picker routes and seeds the delegation worker", async (t) =
   );
 });
 
-test("permission picker Escape preserves denial and keyboard approval submits the selected decision", async (t) => {
+test("permission buttons allow explicit approval without a dropdown", async (t) => {
   const { user, transport } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
       id: "permission",
@@ -1558,44 +1559,11 @@ test("permission picker Escape preserves denial and keyboard approval submits th
     };
   });
   await user.click(screen.getByRole("button", { name: "Review request" }));
-  const dialog = await screen.findByRole("dialog");
-  const decision = screen.getByRole("combobox", { name: "Decision" });
-  await user.click(decision);
-  await waitFor(() =>
-    assert.ok(
-      document.activeElement ===
-        screen.getByRole("option", { name: "Deny", exact: true }),
-    ),
+  await screen.findByRole("dialog");
+  assert.equal(screen.queryByRole("combobox", { name: "Decision" }), null);
+  await user.click(
+    screen.getByRole("button", { name: "Approve this execution turn" }),
   );
-  await user.keyboard("{Escape}");
-  await waitFor(() =>
-    assert.equal(decision.getAttribute("aria-expanded"), "false"),
-  );
-  assert.ok(screen.getByRole("dialog") === dialog);
-  assert.equal(decision.textContent, "Deny");
-  await user.click(decision);
-  await waitFor(() =>
-    assert.ok(
-      document.activeElement ===
-        screen.getByRole("option", { name: "Deny", exact: true }),
-    ),
-  );
-  await user.keyboard("{End}");
-  await waitFor(() =>
-    assert.ok(
-      document.activeElement ===
-        screen.getByRole("option", {
-          name: "Approve this execution turn",
-          exact: true,
-        }),
-    ),
-  );
-  await user.keyboard("{Enter}");
-  await waitFor(() =>
-    assert.equal(decision.getAttribute("aria-expanded"), "false"),
-  );
-  assert.equal(decision.textContent, "Approve this execution turn");
-  await user.click(screen.getByRole("button", { name: "Submit decision" }));
   await waitFor(() =>
     assert.equal(
       transport.calls.find((call) => call.name === "submit_agent_input")?.args
@@ -1642,4 +1610,74 @@ test("current repository selection locks revision to HEAD and submits the checko
   assert.equal(call.args.workspace_strategy, "current_repo");
   assert.equal(call.args.revision, "HEAD");
   assert.equal(call.args.repository, "/repo/a");
+});
+
+test("delegation defaults to inherited native permissions and separately selects the approval decision maker", async (t) => {
+  const { user, transport } = await setup(t);
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await screen.findByRole("dialog");
+  assert.equal(
+    screen.getByRole("combobox", { name: "Permission mode", exact: true })
+      .textContent,
+    "Inherit from parent or task",
+  );
+  await selectOption(user, "Permission mode", "Accept edits");
+  await selectOption(user, "Approval decision maker", "Parent agent");
+  await enterTask(user, "Review authentication with parent approvals");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.find((call) => call.name === "start_agent_task")?.args
+        .approval_decider,
+      "parent_agent",
+    ),
+  );
+  assert.equal(
+    transport.calls.find((call) => call.name === "start_agent_task")?.args
+      .permission_mode,
+    "acceptEdits",
+  );
+});
+
+test("permission cancellation keeps the request pending and approval includes the optional message", async (t) => {
+  const { user, transport } = await setup(t, (transport) => {
+    transport.tasks[0].pending_input = {
+      id: "message-request",
+      tool: "Bash",
+      input: { command: "pwd" },
+    };
+  });
+  await user.click(screen.getByRole("button", { name: "Review request" }));
+  await screen.findByRole("dialog");
+  await user.type(
+    screen.getByLabelText("Message (optional)"),
+    "Draft decision",
+  );
+  await user.click(screen.getByRole("button", { name: "Cancel", exact: true }));
+  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  assert.equal(
+    transport.calls.filter((call) => call.name === "submit_agent_input").length,
+    0,
+  );
+  assert.equal(transport.tasks[0].pending_input?.id, "message-request");
+  await user.click(screen.getByRole("button", { name: "Review request" }));
+  await screen.findByRole("dialog");
+  await user.type(
+    screen.getByLabelText("Message (optional)"),
+    "Only run this command",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Approve this request once" }),
+  );
+  await waitFor(() =>
+    assert.deepEqual(
+      transport.calls.find((call) => call.name === "submit_agent_input")?.args,
+      {
+        task_id: "one",
+        request_id: "message-request",
+        approved: true,
+        message: "Only run this command",
+      },
+    ),
+  );
 });

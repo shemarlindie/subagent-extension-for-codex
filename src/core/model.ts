@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { reasoningLevels } from "./reasoning.js";
+import { permissionModeSchema, approvalDeciderSchema } from "./permissions.js";
 export const roles = [
   "researcher",
   "reviewer",
@@ -12,7 +13,43 @@ export const roles = [
 export { reasoningLevels } from "./reasoning.js";
 export const modelNameSchema = z.string().trim().max(200);
 export const reasoningSchema = z.enum(["default", ...reasoningLevels]);
+export const approvalModes = [
+  "ask_user",
+  "parent_agent",
+  "auto_approve",
+  "deny",
+] as const;
+export type ApprovalMode = (typeof approvalModes)[number];
+export const approvalModeSchema = z.enum(approvalModes);
+export const approvalLabels: Record<ApprovalMode, string> = {
+  ask_user: "Ask user",
+  parent_agent: "Parent agent",
+  auto_approve: "Auto-approve in sandbox",
+  deny: "Deny execution requests",
+};
+export const approvalRank: Record<ApprovalMode, number> = {
+  deny: 0,
+  ask_user: 1,
+  parent_agent: 2,
+  auto_approve: 3,
+};
+export type InputAuthority = "user" | "parent";
 export const startSchema = z.object({
+  permission_mode: permissionModeSchema
+    .optional()
+    .describe(
+      "Claude native SDK permission mode; inherit resolves parent context or task-appropriate defaults. User settings can override.",
+    ),
+  approval_decider: approvalDeciderSchema
+    .optional()
+    .describe(
+      "Who answers unresolved permission requests: user or parent_agent. This is independent of the native permission mode.",
+    ),
+  approval_mode: approvalModeSchema
+    .optional()
+    .describe(
+      "Legacy approval policy. For Claude, use permission_mode and approval_decider; explicit legacy values map to native settings. Model calls cannot increase approval authority.",
+    ),
   provider: z.enum(["claude", "codex", "fixture"]).default("claude"),
   worker_profile: z.enum(roles).default("reviewer"),
   model: modelNameSchema
@@ -117,6 +154,7 @@ export const resultSchema = {
 };
 export interface Task extends Start {
   title: string;
+  permission_source?: "task" | "setting" | "parent" | "task_profile";
   id: string;
   owner: string;
   status: Status;

@@ -1,10 +1,11 @@
+import { parentPermissionsFromMeta } from "../core/permissions.js";
 import {
   McpServer,
   ProtocolError,
   type ServerContext,
 } from "@modelcontextprotocol/server";
 import { type Events, EventProtocolError } from "../events/service.js";
-import { definitions, withConversation } from "./tools.js";
+import { definitions, withConversation, isUserTool } from "./tools.js";
 import { type Control } from "../core/control.js";
 import { z } from "zod";
 import { withSettingsCapability } from "../core/settings.js";
@@ -33,7 +34,7 @@ export function mcp(
       },
       requestState: { verify: (state) => c.forms.verify(owner, state) },
       instructions:
-        "Use list_agent_projects and list_available_workers before delegation; pass an explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input. Worktree changes are returned as artifacts; current_repo write profiles edit the checkout directly.",
+        "Use list_agent_projects and list_available_workers before delegation; pass an explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input; Claude permission decisions require approval_decider parent_agent. Use request_agent_input or user buttons for permissions routed to the user. Worktree changes are returned as artifacts; current_repo write profiles edit the checkout directly.",
     },
   );
   server.registerTool(
@@ -62,7 +63,7 @@ export function mcp(
     "request_agent_input",
     {
       description:
-        "Present a task's pending question or permission request in a host form. The response is bound to that exact pending request. Use submit_agent_input for clients without forms.",
+        "Present a task's pending question or permission request in a host form. The response is bound to that exact pending request. User buttons are also available; submit_agent_input can decide Claude permissions only when approval_decider is parent_agent.",
       inputSchema: z.strictObject({ task_id: z.string() }),
     },
     async (args, ctx) => {
@@ -90,7 +91,7 @@ export function mcp(
         },
         _meta: {
           ui: {
-            visibility: ["model", "app"],
+            visibility: isUserTool(name) ? ["app"] : ["model", "app"],
             ...(name === "start_agent_task" ? { resourceUri: panelUri } : {}),
           },
           ...(name === "start_agent_task"
@@ -100,7 +101,13 @@ export function mcp(
       },
       async (args: any, ctx: ServerContext) => {
         try {
-          const result = await d.run(
+          const current = definitions(
+            c,
+            owner,
+            "parent",
+            parentPermissionsFromMeta(ctx.mcpReq._meta),
+          );
+          const result = await current[name as keyof typeof current].run(
             withConversation(name, args, ctx.mcpReq._meta),
           );
           return {

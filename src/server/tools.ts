@@ -1,6 +1,7 @@
+import { type ParentPermissions } from "../core/permissions.js";
 import { z } from "zod";
 import { Control } from "../core/control.js";
-import { startSchema } from "../core/model.js";
+import { type InputAuthority, startSchema } from "../core/model.js";
 import {
   panelContextInput,
   resolvePanelContext,
@@ -38,6 +39,7 @@ export function withConversation(
     ![
       "open_codex_subagent_extension",
       "start_agent_task",
+      "start_user_agent_task",
       "list_agent_tasks",
       "get_agent_panel_context",
     ].includes(name) ||
@@ -55,8 +57,13 @@ export function withConversation(
     ? { ...args, conversation_id: session }
     : args;
 }
-export function definitions(c: Control, owner: string) {
-  return {
+export function definitions(
+  c: Control,
+  owner: string,
+  authority: InputAuthority = "parent",
+  parentPermissions?: ParentPermissions,
+) {
+  const tools = {
     get_agent_panel_context: {
       description:
         "Resolve panel repository/revision defaults from explicit approved context or the latest task in this conversation. task_id selects an owned task. null conversation_id explicitly requests all conversations. This never registers a project or starts work.",
@@ -80,10 +87,10 @@ export function definitions(c: Control, owner: string) {
     },
     update_agent_settings: {
       description:
-        "Update user defaults. Omitted fields and existing tasks stay unchanged.",
+        "Update non-approval user defaults. Native permission mode and approval decision maker changes require the user settings interface. Omitted fields and existing tasks stay unchanged.",
       schema: settingsUpdateSchema,
       outputSchema: settingsUpdateOutputSchema,
-      run: (a: any) => c.settings.update(owner, a),
+      run: (a: any) => c.settings.update(owner, a, authority),
     },
     start_agent_task: {
       description:
@@ -113,10 +120,15 @@ export function definitions(c: Control, owner: string) {
       }),
       // Null opts out of host correlation; persisted tasks keep the optional string contract.
       run: (a: any) =>
-        c.start(owner, {
-          ...a,
-          conversation_id: a.conversation_id ?? undefined,
-        }),
+        c.start(
+          owner,
+          {
+            ...a,
+            conversation_id: a.conversation_id ?? undefined,
+          },
+          authority,
+          parentPermissions,
+        ),
     },
     get_agent_task: {
       description: "Inspect task state and pending input.",
@@ -175,7 +187,7 @@ export function definitions(c: Control, owner: string) {
     },
     submit_agent_input: {
       description:
-        "Respond to a specific pending permission or question. Request ID prevents stale approvals.",
+        "Respond to a pending question, or decide execution permission when approval_decider is parent_agent for Claude (or approval_mode is parent_agent for legacy workers). Ask-user permissions require user buttons or request_agent_input. Request ID prevents stale approvals.",
       schema: taskId.extend({
         request_id: z.string(),
         approved: z.boolean(),
@@ -183,7 +195,15 @@ export function definitions(c: Control, owner: string) {
         message: z.string().max(20000).optional(),
       }),
       run: (a: any) =>
-        c.input(owner, a.task_id, a.request_id, a.approved, a.input, a.message),
+        c.input(
+          owner,
+          a.task_id,
+          a.request_id,
+          a.approved,
+          a.input,
+          a.message,
+          authority,
+        ),
     },
     get_agent_result: {
       description: "Retrieve structured results when available.",
@@ -207,14 +227,60 @@ export function definitions(c: Control, owner: string) {
       run: (a: any) => c.store.events(a.task_id, owner, a.after),
     },
   };
+  return {
+    ...tools,
+    start_user_agent_task: {
+      ...tools.start_agent_task,
+      description:
+        "User interface only: create a task with the user-selected native permission mode.",
+      run: (a: any) =>
+        c.start(
+          owner,
+          { ...a, conversation_id: a.conversation_id ?? undefined },
+          "user",
+          parentPermissions,
+        ),
+    },
+    submit_user_agent_input: {
+      ...tools.submit_agent_input,
+      description:
+        "User interface only: submit the user decision for the exact pending request.",
+      run: (a: any) =>
+        c.input(
+          owner,
+          a.task_id,
+          a.request_id,
+          a.approved,
+          a.input,
+          a.message,
+          "user",
+        ),
+    },
+    update_user_agent_settings: {
+      ...tools.update_agent_settings,
+      description:
+        "User interface only: save delegation defaults, including native permission mode and approval decision maker.",
+      run: (a: any) => c.settings.update(owner, a, "user"),
+    },
+  };
 }
+export const isUserTool = (name: string) =>
+  [
+    "start_user_agent_task",
+    "submit_user_agent_input",
+    "update_user_agent_settings",
+  ].includes(name);
 export async function callTool(
   c: Control,
   owner: string,
   name: string,
   args: unknown,
+  authority: InputAuthority = "parent",
+  parentPermissions?: ParentPermissions,
 ) {
-  const defs = definitions(c, owner);
+  if (isUserTool(name) && authority !== "user")
+    throw new Error("User tools require a user interface");
+  const defs = definitions(c, owner, authority, parentPermissions);
   if (!(name in defs)) throw new Error("Unknown tool");
   const d = defs[name as keyof typeof defs];
   return d.run(d.schema.parse(args ?? {}) as any);

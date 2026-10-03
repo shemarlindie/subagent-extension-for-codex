@@ -18,6 +18,9 @@ export type Worker = {
 };
 export type Project = { repository: string; name?: string; kind: string };
 export type Defaults = {
+  claude_permission_mode?: import("../../src/core/model").Start["permission_mode"];
+  default_approval_decider?: "user" | "parent_agent";
+  default_approval_mode?: import("../../src/core/model").ApprovalMode;
   default_model?: string;
   default_reasoning_effort?: string;
   [key: `${string}_default_model`]: string | undefined;

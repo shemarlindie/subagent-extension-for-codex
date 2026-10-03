@@ -1,9 +1,29 @@
 import { Collapsible } from "@base-ui/react/collapsible";
+import { approvalLabels } from "../../src/core/model";
+import {
+  permissionLabels,
+  approvalDecider,
+  legacyClaudeMode,
+  readOnlyProfile,
+} from "../../src/core/permissions";
 import { Chevron } from "./chevron";
 import type { Task } from "../core/types";
 export function TaskDetails({ task }: { task: Task }) {
   const facts = {
     "Task ID": task.id,
+    ...(task.provider === "claude"
+      ? {
+          "Permission mode":
+            permissionLabels[
+              task.permission_mode ??
+                legacyClaudeMode(task.approval_mode) ??
+                (readOnlyProfile(task.worker_profile) ? "plan" : "acceptEdits")
+            ],
+          "Permission source": task.permission_source ?? "Provider default",
+          "Approval decision maker":
+            approvalDecider(task) === "parent_agent" ? "Parent agent" : "User",
+        }
+      : { "Approval mode": approvalLabels[task.approval_mode ?? "ask_user"] }),
     Model: task.model || "Provider runtime default",
     "Reasoning effort": task.reasoning_effort || "Provider runtime default",
     Workspace: task.workspace ?? "Preparing",

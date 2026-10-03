@@ -4,7 +4,8 @@ import type { Control } from "../core/control.js";
 import { git } from "../core/workspace.js";
 
 // Version-specific Codex adapter, verified in the public rust-v0.160.0 source.
-// Opting in supplies permission metadata too; consume only the directory hint.
+// Panel context consumes the directory hint. Native permission inheritance
+// separately validates the host permission metadata in core/permissions.ts.
 export const codexContextCapability = {
   experimental: { "codex/sandbox-state-meta": {} },
 };

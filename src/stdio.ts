@@ -1,9 +1,10 @@
+import { parentPermissionsFromMeta } from "./core/permissions.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { connectService } from "./service/launcher.js";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { definitions, withConversation } from "./server/tools.js";
+import { definitions, withConversation, isUserTool } from "./server/tools.js";
 import { type Control } from "./core/control.js";
 import { withSettingsCapability } from "./core/settings.js";
 import { delegationPanel, panelUri } from "./panel/panel.js";
@@ -33,7 +34,7 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
       },
       _meta: {
         ui: {
-          visibility: ["model", "app"],
+          visibility: isUserTool(name) ? ["app"] : ["model", "app"],
           ...(name === "start_agent_task" ? { resourceUri: panelUri } : {}),
         },
         ...(name === "start_agent_task"
@@ -43,17 +44,27 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
     },
     async (args: any, extra: { _meta?: Record<string, unknown> }) => {
       try {
-        const response = await fetch(`${origin}/api/tools/${name}`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            "X-Codex-Subagent-Extension": "1",
+        const parentPermissions = parentPermissionsFromMeta(extra._meta);
+        const response = await fetch(
+          `${origin}/api/${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              "X-Codex-Subagent-Extension": "1",
+              ...(parentPermissions
+                ? {
+                    "X-Codex-Parent-Permissions":
+                      JSON.stringify(parentPermissions),
+                  }
+                : {}),
+            },
+            body: JSON.stringify(withConversation(name, args, extra._meta)),
+            signal: AbortSignal.timeout(30000),
+            redirect: "error",
           },
-          body: JSON.stringify(withConversation(name, args, extra._meta)),
-          signal: AbortSignal.timeout(30000),
-          redirect: "error",
-        });
+        );
         const body = await response.json();
         return {
           isError: !response.ok,

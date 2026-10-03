@@ -3,6 +3,7 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 import type { DialogState, Task } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
 import {
+  ApprovalField,
   BudgetFields,
   ModelFields,
   DependencyField,
@@ -30,6 +31,8 @@ export function DelegateForm({
   const strategyDefault = defaults.default_workspace_strategy ?? "current_repo";
   const form = useForm<DelegateValues>({
     defaultValues: {
+      permission_mode: "inherit",
+      approval_decider: defaults.default_approval_decider ?? "user",
       repository: dialog.repository ?? "",
       revision: strategyDefault === "current_repo" ? "HEAD" : dialog.revision,
       workspace_strategy: strategyDefault,
@@ -75,6 +78,11 @@ export function DelegateForm({
           controller.submit(() => {
             const [provider, worker_profile] = values.worker.split(":");
             return controller.tool<Task>("start_agent_task", {
+              permission_mode:
+                provider === "claude" ? values.permission_mode : "inherit",
+              ...(provider === "claude"
+                ? { approval_decider: values.approval_decider }
+                : {}),
               repository: values.repository,
               description: values.description,
               provider,
@@ -121,6 +129,7 @@ export function DelegateForm({
           />
         </Field>
         <WorkspaceField />
+        <ApprovalField />
         <WorkerFields workers={state.workers} />
         <ModelFields defaults={defaults} workers={state.workers} />
         <Field id="context" label="Context to include (optional)">

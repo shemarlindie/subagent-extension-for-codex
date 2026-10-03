@@ -1,4 +1,8 @@
 import { useFormContext, useWatch } from "react-hook-form";
+import {
+  permissionLabels,
+  permissionModeSchema,
+} from "../../src/core/permissions";
 import { reasoningLevels } from "../../src/core/reasoning";
 import type { Defaults, Project, Task, Worker } from "../core/types";
 import { profileLabel } from "../core/selectors";
@@ -7,6 +11,8 @@ import { FormSelect } from "./form-select";
 import { ProjectAutocomplete } from "./project-autocomplete";
 import { ModelAutocomplete } from "./model-autocomplete";
 export type DelegateValues = {
+  permission_mode: keyof typeof permissionLabels;
+  approval_decider: "user" | "parent_agent";
   repository: string;
   description: string;
   worker: string;
@@ -304,6 +310,51 @@ export function ModelFields({
           ]}
         />
       </Field>
+    </>
+  );
+}
+
+export function ApprovalField() {
+  const { control } = useFormContext<DelegateValues>();
+  const worker = useWatch({ control, name: "worker" });
+  const claude = worker?.split(":")[0] === "claude";
+  return (
+    <>
+      <Field id="permission-mode" label="Permission mode">
+        <FormSelect
+          control={control}
+          name="permission_mode"
+          id="permission-mode"
+          label="Permission mode"
+          disabled={!claude}
+          options={permissionModeSchema.options.map((value) => ({
+            value,
+            label: permissionLabels[value],
+          }))}
+        />
+        <p className="help">
+          {claude
+            ? "Claude native SDK mode. Inherit uses parent context or a mode appropriate for the task; settings can override it."
+            : "Native permission mode selection is available for Claude."}
+        </p>
+      </Field>
+      {claude && (
+        <Field id="approval-decider" label="Approval decision maker">
+          <FormSelect
+            control={control}
+            name="approval_decider"
+            id="approval-decider"
+            label="Approval decision maker"
+            options={[
+              { value: "user", label: "User" },
+              { value: "parent_agent", label: "Parent agent" },
+            ]}
+          />
+          <p className="help">
+            Who answers permission requests that the SDK leaves unresolved.
+          </p>
+        </Field>
+      )}
     </>
   );
 }

@@ -1,56 +1,63 @@
 import { useForm } from "react-hook-form";
+import { Dialog } from "@base-ui/react/dialog";
 import type { Task } from "../core/types";
-import { useController } from "../components/controller-context";
+import { useController, useSnapshot } from "../components/controller-context";
 import { Field } from "./fields";
-import { FormSelect } from "./form-select";
-import { FormFooter } from "./form-footer";
 export function PermissionForm({ task }: { task: Task }) {
   const controller = useController(),
+    state = useSnapshot(),
     request = task.pending_input!;
-  const { register, control, handleSubmit } = useForm({
-    defaultValues: { decision: "deny", response: "" },
+  const { register, handleSubmit } = useForm({
+    defaultValues: { response: "" },
   });
+  const disabled = state.busy || state.dialog?.scope !== state.scopeVersion;
+  const decide = (approved: boolean) =>
+    handleSubmit((values) =>
+      controller.submit(async () => {
+        await controller.tool("submit_agent_input", {
+          task_id: task.id,
+          request_id: request.id,
+          approved,
+          message: values.response,
+        });
+      }),
+    );
   return (
-    <form
-      onSubmit={handleSubmit((values) =>
-        controller.submit(async () => {
-          await controller.tool("submit_agent_input", {
-            task_id: task.id,
-            request_id: request.id,
-            approved: values.decision === "approve",
-            message: values.response,
-          });
-        }),
-      )}
-    >
+    <form onSubmit={(event) => event.preventDefault()}>
       <p className="form-note">
         {request.tool === "CodexExecution"
           ? "Approval covers the entire execution turn, including shell commands."
           : "Review the full request before allowing the worker to proceed."}
       </p>
       <pre>{JSON.stringify(request.input, null, 2)}</pre>
-      <Field id="decision" label="Decision">
-        <FormSelect
-          control={control}
-          name="decision"
-          id="decision"
-          label="Decision"
-          options={[
-            { value: "deny", label: "Deny" },
-            {
-              value: "approve",
-              label:
-                request.tool === "CodexExecution"
-                  ? "Approve this execution turn"
-                  : "Approve this request once",
-            },
-          ]}
-        />
-      </Field>
       <Field id="response" label="Message (optional)">
         <textarea id="response" maxLength={20000} {...register("response")} />
       </Field>
-      <FormFooter label="Submit decision" />
+      <div id="form-error" className="form-error error" role="alert">
+        {state.formError}
+      </div>
+      <footer>
+        <Dialog.Close
+          type="button"
+          disabled={state.busy}
+          onClick={() => controller.dismiss()}
+        >
+          Cancel
+        </Dialog.Close>
+        <button type="button" disabled={disabled} onClick={decide(false)}>
+          Deny
+        </button>
+        <button
+          type="button"
+          className="primary"
+          disabled={disabled}
+          onClick={decide(true)}
+        >
+          {request.tool === "CodexExecution"
+            ? "Approve this execution turn"
+            : "Approve this request once"}
+        </button>
+      </footer>
     </form>
   );
 }

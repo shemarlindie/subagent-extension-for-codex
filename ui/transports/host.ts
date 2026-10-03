@@ -66,7 +66,15 @@ export class HostTransport implements Transport {
   }
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     if (this.disposed) throw new Error("The console has closed.");
-    const result = await this.app.callServerTool({ name, arguments: args });
+    const userTools: Record<string, string> = {
+      start_agent_task: "start_user_agent_task",
+      submit_agent_input: "submit_user_agent_input",
+      update_agent_settings: "update_user_agent_settings",
+    };
+    const result = await this.app.callServerTool({
+      name: userTools[name] ?? name,
+      arguments: args,
+    });
     if (result.isError)
       throw new Error(
         result.content

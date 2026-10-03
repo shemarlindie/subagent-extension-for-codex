@@ -198,6 +198,8 @@ test("Claude SDK query uses native harness, resume, structured output, remaining
   assert.deepEqual(options!.settingSources, []);
   assert.equal(options!.strictMcpConfig, true);
   assert.deepEqual(options!.mcpServers, {});
+  assert.equal(options!.permissionMode, "plan");
+  assert.equal(options!.allowDangerouslySkipPermissions, undefined);
   assert.ok(sessions.length);
   assert.ok(events.find((e) => e.type === "tool.started"));
   assert.ok(closed);
@@ -324,6 +326,146 @@ test("write-profile shell commands require human decision and cannot use edited 
   });
   assert.equal(approved.behavior, "allow");
   assert.deepEqual((approved as any).updatedInput, command);
+});
+test("Claude forwards each native permission mode and reserves bypass opt-in for bypassPermissions", async () => {
+  const { c, workspace } = await context();
+  c.task.worker_profile = "implementer";
+  let options: Options | undefined;
+  const provider = new ClaudeAgentProvider((args) => {
+    options = args.options;
+    return Object.assign(
+      (async function* () {
+        yield {
+          type: "result",
+          subtype: "success",
+          structured_output: result,
+          total_cost_usd: 0,
+          usage: {},
+        };
+      })(),
+      { close: () => {} },
+    ) as unknown as Query;
+  });
+  for (const mode of [
+    "default",
+    "acceptEdits",
+    "plan",
+    "dontAsk",
+    "auto",
+    "bypassPermissions",
+  ] as const) {
+    c.task.permission_mode = mode;
+    await provider.run(c, "Implement");
+    assert.equal(options!.permissionMode, mode);
+    assert.equal(
+      options!.allowDangerouslySkipPermissions,
+      mode === "bypassPermissions" ? true : undefined,
+    );
+    const hook = options!.hooks!.PreToolUse![0].hooks[0];
+    const decision = await hook(
+      {
+        hook_event_name: "PreToolUse",
+        tool_name: "Bash",
+        tool_input: { command: "pwd" },
+        session_id: "x",
+        transcript_path: "x",
+        cwd: workspace,
+        tool_use_id: "x",
+      },
+      "x",
+      { signal: c.signal },
+    );
+    assert.equal(
+      (decision as any).hookSpecificOutput?.permissionDecision,
+      mode === "plan" ? "deny" : undefined,
+    );
+    const outside = await hook(
+      {
+        hook_event_name: "PreToolUse",
+        tool_name: "Write",
+        tool_input: { file_path: join(tmpdir(), "forbidden") },
+        session_id: "x",
+        transcript_path: "x",
+        cwd: workspace,
+        tool_use_id: "x",
+      },
+      "x",
+      { signal: c.signal },
+    );
+    assert.equal(
+      (outside as any).hookSpecificOutput?.permissionDecision,
+      "deny",
+    );
+  }
+  c.task.worker_profile = "reviewer";
+  c.task.permission_mode = "bypassPermissions";
+  await provider.run(c, "Review");
+  assert.ok(
+    options!.tools instanceof Array &&
+      !options!.tools.includes("Write") &&
+      !options!.tools.includes("Bash"),
+  );
+  assert.equal(
+    (
+      await options!.canUseTool!(
+        "Write",
+        { file_path: "a.ts" },
+        { signal: c.signal, toolUseID: "write" },
+      )
+    ).behavior,
+    "deny",
+  );
+});
+
+test("unresolved SDK edits ask the configured decision maker and preserve the original input", async () => {
+  const { c } = await context();
+  c.task.worker_profile = "implementer";
+  c.task.permission_mode = "default";
+  let options: Options | undefined;
+  const provider = new ClaudeAgentProvider((args) => {
+    options = args.options;
+    return Object.assign(
+      (async function* () {
+        yield {
+          type: "result",
+          subtype: "success",
+          structured_output: result,
+          total_cost_usd: 0,
+          usage: {},
+        };
+      })(),
+      { close: () => {} },
+    ) as unknown as Query;
+  });
+  await provider.run(c, "Implement");
+  for (const tool of ["Edit", "Write"]) {
+    const input = { file_path: "a.ts", content: "approved contents" };
+    assert.equal(
+      (
+        await options!.canUseTool!(tool, input, {
+          signal: c.signal,
+          toolUseID: "edit",
+        })
+      ).behavior,
+      "deny",
+    );
+    let requested: unknown;
+    c.input = async (name, payload) => {
+      requested = { name, payload };
+      return {
+        approved: true,
+        input: { file_path: "/tmp/another-file", content: "substitution" },
+      };
+    };
+    const allowed = await options!.canUseTool!(tool, input, {
+      signal: c.signal,
+      toolUseID: "edit",
+    });
+    assert.deepEqual(requested, { name: tool, payload: input });
+    assert.equal(allowed.behavior, "allow");
+    assert.deepEqual((allowed as any).updatedInput, input);
+    c.input = async () => ({ approved: false });
+  }
 });
 test("Claude failed result accounts for cost and never reports task success", async () => {
   const { c, events } = await context();

@@ -1,3 +1,12 @@
+import {
+  type ParentPermissions,
+  resolveClaudePermission,
+  permissionRank,
+  closestClaudeMode,
+  readOnlyProfile,
+  legacyClaudeMode,
+  approvalDecider,
+} from "./permissions.js";
 import { randomUUID } from "node:crypto";
 import { access } from "node:fs/promises";
 import { hostname } from "node:os";
@@ -9,6 +18,8 @@ import { Forms } from "./forms.js";
 import { generateTaskTitle } from "./task-title.js";
 import {
   startSchema,
+  approvalRank,
+  type InputAuthority,
   UnconfirmedTerminationError,
   type Start,
   type Task,
@@ -133,10 +144,73 @@ export class Control {
       }),
     );
   }
-  async start(owner: string, input: unknown) {
+  async start(
+    owner: string,
+    input: unknown,
+    authority: InputAuthority = "user",
+    parentPermissions?: ParentPermissions,
+  ) {
     const parsed = startSchema.parse(this.settings.taskInput(owner, input));
+    if (
+      parsed.provider !== "claude" &&
+      authority !== "user" &&
+      approvalRank[parsed.approval_mode ?? "ask_user"] >
+        approvalRank[this.settings.values(owner).default_approval_mode]
+    )
+      throw new Error("Task approval mode exceeds the user-approved default");
+    let resolved: ReturnType<typeof resolveClaudePermission> | undefined;
+    if (parsed.provider === "claude") {
+      if (parsed.parent_task_id) {
+        const parent = this.store.get(parsed.parent_task_id, owner);
+        if (parent.provider === "claude") {
+          const delegated = readOnlyProfile(parent.worker_profile)
+            ? "plan"
+            : parent.permission_mode && parent.permission_mode !== "inherit"
+              ? parent.permission_mode
+              : legacyClaudeMode(parent.approval_mode);
+          const host = closestClaudeMode(parentPermissions);
+          // A referenced older task cannot broaden the actual host parent's authority.
+          const mode =
+            delegated &&
+            host &&
+            permissionRank[host] < permissionRank[delegated]
+              ? host
+              : (delegated ?? host);
+          parentPermissions = { provider: "claude", permission_mode: mode };
+        }
+      }
+      const defaults = this.settings.values(owner);
+      const baseline = resolveClaudePermission(
+        { worker_profile: parsed.worker_profile },
+        defaults.claude_permission_mode,
+        parentPermissions,
+      );
+      resolved = resolveClaudePermission(
+        parsed,
+        defaults.claude_permission_mode,
+        parentPermissions,
+      );
+      if (
+        authority !== "user" &&
+        permissionRank[resolved.mode] > permissionRank[baseline.mode]
+      )
+        throw new Error(
+          "Task permission mode exceeds the user-approved native mode",
+        );
+      if (
+        authority !== "user" &&
+        parsed.approval_decider === "parent_agent" &&
+        defaults.default_approval_decider !== "parent_agent"
+      )
+        throw new Error(
+          "Parent approval requires user authorization in settings",
+        );
+    }
     const req = {
       ...parsed,
+      ...(resolved
+        ? { permission_mode: resolved.mode, permission_source: resolved.source }
+        : {}),
       title:
         parsed.title === undefined
           ? generateTaskTitle(parsed.description)
@@ -334,6 +408,27 @@ export class Control {
             this.store.save(t);
           },
           input: async (tool, input, signal) => {
+            if (t.provider !== "claude" && tool !== "AskUserQuestion") {
+              if (a.abort.signal.aborted || signal?.aborted)
+                throw new Error("Input interrupted");
+              const mode = t.approval_mode ?? "ask_user";
+              if (mode === "auto_approve" || mode === "deny") {
+                const approved = mode === "auto_approve";
+                this.store.event(t, "agent.permission_decided", {
+                  tool,
+                  input,
+                  approval_mode: mode,
+                  approved,
+                  authority: "policy",
+                });
+                return {
+                  approved,
+                  message: approved
+                    ? undefined
+                    : "Execution denied by task approval mode",
+                };
+              }
+            }
             const previous = a.inputTail ?? Promise.resolve();
             let release!: () => void;
             const released = new Promise<void>(
@@ -538,12 +633,28 @@ export class Control {
     approved: boolean,
     input?: Record<string, unknown>,
     message?: string,
+    authority: InputAuthority = "user",
   ) {
     const t = this.store.get(id, owner);
     if (t.pending_input?.id !== requestId)
       throw new Error("Input request is stale");
+    if (
+      t.pending_input.tool !== "AskUserQuestion" &&
+      authority !== "user" &&
+      (t.provider === "claude"
+        ? approvalDecider(t) !== "parent_agent"
+        : t.approval_mode !== "parent_agent")
+    )
+      throw new Error(
+        "This permission requires user approval; use the approval buttons or request_agent_input",
+      );
     const a = this.active.get(id);
     if (!a?.resolveInput) throw new Error("No active input request");
+    this.store.event(t, "agent.input_decision", {
+      request_id: requestId,
+      approved,
+      authority,
+    });
     a.resolveInput({ approved, input, message });
     return this.store.get(id, owner);
   }

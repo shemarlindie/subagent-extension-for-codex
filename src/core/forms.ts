@@ -1,3 +1,9 @@
+import {
+  permissionModeSchema,
+  permissionLabels,
+  parentPermissionsFromMeta,
+  type ParentPermissions,
+} from "./permissions.js";
 import { createHash, randomBytes } from "node:crypto";
 import {
   inputRequired,
@@ -82,6 +88,7 @@ function modelField(
 interface Request {
   kind: Kind;
   args: Record<string, unknown>;
+  parent_permissions?: ParentPermissions;
   form: OpenAIForm;
   message: string;
   task_id?: string;
@@ -228,6 +235,27 @@ export class Forms {
               enum: ["default", ...reasoningLevels],
               default: args.reasoning_effort ?? "default",
             },
+            ...(availableWorkers.some((worker) => worker.provider === "claude")
+              ? {
+                  permission_mode: {
+                    type: "string",
+                    title: "Claude permission mode",
+                    description:
+                      "Claude native SDK mode. Other workers use their existing permissions. Inherit uses parent context or task-appropriate defaults.",
+                    oneOf: permissionModeSchema.options.map((mode) => ({
+                      const: mode,
+                      title: permissionLabels[mode],
+                    })),
+                    default: defaults.permission_mode,
+                  },
+                  approval_decider: {
+                    type: "string",
+                    title: "Approval decision maker",
+                    enum: ["user", "parent_agent"],
+                    default: defaults.approval_decider,
+                  },
+                }
+              : {}),
             workspace_strategy: {
               type: "string",
               title: "Workspace",
@@ -387,6 +415,8 @@ export class Forms {
       )
         throw new Error("Form responses require request state");
       r = await this.build(owner, kind, args);
+      if (kind === "request_agent_task")
+        r.parent_permissions = parentPermissionsFromMeta(ctx.mcpReq._meta);
       this.c.store.db
         .prepare("DELETE FROM form_requests WHERE expires<=?")
         .run(this.now());
@@ -462,35 +492,51 @@ export class Forms {
         let result: Task;
         if (kind === "request_agent_task") {
           const [provider, worker_profile] = String(content.worker).split(":");
-          result = await this.c.start(owner, {
-            ...r.args,
-            repository: content.repository,
-            // Honor saved title fields; new forms generate from the edited description.
-            title: content.title,
-            description: content.description,
-            provider,
-            worker_profile,
-            model: content.model ?? r.args.model,
-            reasoning_effort:
-              content.reasoning_effort ?? r.args.reasoning_effort,
-            revision:
-              content.workspace_strategy === "current_repo"
-                ? "HEAD"
-                : content.revision,
-            workspace_strategy:
-              content.workspace_strategy ??
-              r.args.workspace_strategy ??
-              r.form.properties.workspace_strategy?.default,
-            budget: {
-              ...((r.args.budget as object) ?? {}),
-              max_runtime_minutes: content.max_runtime_minutes,
-              max_cost_usd:
-                (content.use_cost_budget ??
-                  r.form.properties.use_cost_budget?.default) === false
-                  ? null
-                  : content.max_cost_usd,
+          result = await this.c.start(
+            owner,
+            {
+              ...r.args,
+              // Older saved forms have no native fields; leave legacy translation to Settings.
+              permission_mode:
+                provider === "claude"
+                  ? (content.permission_mode ??
+                    r.form.properties.permission_mode?.default ??
+                    r.args.permission_mode)
+                  : "inherit",
+              approval_decider:
+                content.approval_decider ??
+                r.form.properties.approval_decider?.default ??
+                r.args.approval_decider,
+              repository: content.repository,
+              // Honor saved title fields; new forms generate from the edited description.
+              title: content.title,
+              description: content.description,
+              provider,
+              worker_profile,
+              model: content.model ?? r.args.model,
+              reasoning_effort:
+                content.reasoning_effort ?? r.args.reasoning_effort,
+              revision:
+                content.workspace_strategy === "current_repo"
+                  ? "HEAD"
+                  : content.revision,
+              workspace_strategy:
+                content.workspace_strategy ??
+                r.args.workspace_strategy ??
+                r.form.properties.workspace_strategy?.default,
+              budget: {
+                ...((r.args.budget as object) ?? {}),
+                max_runtime_minutes: content.max_runtime_minutes,
+                max_cost_usd:
+                  (content.use_cost_budget ??
+                    r.form.properties.use_cost_budget?.default) === false
+                    ? null
+                    : content.max_cost_usd,
+              },
             },
-          });
+            "user",
+            r.parent_permissions,
+          );
         } else {
           const answers = Object.fromEntries(
             (r.questions ?? []).map((question, i) => [

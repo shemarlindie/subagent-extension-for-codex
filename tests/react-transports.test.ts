@@ -310,3 +310,53 @@ test("host teardown during connect does not query host capabilities afterward", 
   assert.equal(observed.counts().teardowns, 1);
   assert.deepEqual(observed.hosts, []);
 });
+
+test("host routes user actions through app-only aliases and preserves settings envelopes", async () => {
+  const fake = hostApp();
+  const transport = new HostTransport(fake.app as any);
+  try {
+    const taskArgs = {
+      description: "Review changes",
+      approval_mode: "parent_agent",
+    };
+    const task = { id: "created", approval_mode: "parent_agent" };
+    fake.respond({
+      structuredContent: {
+        result: task,
+        panel_scope: { conversation_id: null },
+      },
+    });
+    assert.deepEqual(await transport.tool("start_agent_task", taskArgs), task);
+    const decision = {
+      task_id: "created",
+      request_id: "request",
+      approved: true,
+      message: "Proceed",
+    };
+    fake.respond({
+      structuredContent: { result: { id: "created", status: "running" } },
+    });
+    assert.deepEqual(await transport.tool("submit_agent_input", decision), {
+      id: "created",
+      status: "running",
+    });
+    const settingsArgs = { set: { default_approval_mode: "parent_agent" } };
+    const settings = {
+      values: { default_approval_mode: "parent_agent" },
+      schema: { type: "object" },
+      layout: [],
+    };
+    fake.respond({ structuredContent: settings });
+    assert.deepEqual(
+      await transport.tool("update_agent_settings", settingsArgs),
+      settings,
+    );
+    assert.deepEqual(fake.calls, [
+      { name: "start_user_agent_task", arguments: taskArgs },
+      { name: "submit_user_agent_input", arguments: decision },
+      { name: "update_user_agent_settings", arguments: settingsArgs },
+    ]);
+  } finally {
+    transport.dispose();
+  }
+});

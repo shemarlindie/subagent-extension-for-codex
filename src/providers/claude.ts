@@ -1,3 +1,4 @@
+import { legacyClaudeMode, readOnlyProfile } from "../core/permissions.js";
 import {
   query,
   type Options,
@@ -181,9 +182,13 @@ export class ClaudeAgentProvider implements Provider {
     const abort = () => abortController.abort();
     c.signal.addEventListener("abort", abort, { once: true });
     if (c.signal.aborted) abort();
-    const readOnly = ["researcher", "reviewer", "security_reviewer"].includes(
-      c.task.worker_profile,
-    );
+    const nativeMode =
+      c.task.permission_mode && c.task.permission_mode !== "inherit"
+        ? c.task.permission_mode
+        : (legacyClaudeMode(c.task.approval_mode) ??
+          (readOnlyProfile(c.task.worker_profile) ? "plan" : "acceptEdits"));
+    const readOnly =
+      readOnlyProfile(c.task.worker_profile) || nativeMode === "plan";
     const options: Options = {
       cwd: c.task.workspace,
       ...(c.task.model ? { model: c.task.model } : {}),
@@ -198,7 +203,10 @@ export class ClaudeAgentProvider implements Provider {
       settingSources: [],
       strictMcpConfig: true,
       mcpServers: {},
-      permissionMode: "default",
+      permissionMode: nativeMode,
+      ...(nativeMode === "bypassPermissions"
+        ? { allowDangerouslySkipPermissions: true }
+        : {}),
       tools: [
         ...readTools,
         ...(readOnly ? [] : ["Edit", "Write", "Bash"]),
@@ -215,7 +223,7 @@ export class ClaudeAgentProvider implements Provider {
       systemPrompt: {
         type: "preset",
         preset: "claude_code",
-        append: `You are an independent ${c.task.worker_profile}. Work only in the provided task workspace. Return structured evidence and results. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Request permission before shell commands."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
+        append: `You are an independent ${c.task.worker_profile}. Work only in the provided task workspace. Return structured evidence and results. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Follow the configured native permission mode for tool execution."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
       },
       hooks: {
         PreToolUse: [
@@ -238,16 +246,7 @@ export class ClaudeAgentProvider implements Provider {
                     ? {}
                     : deny("Invalid structured report");
                 if (tool === "Bash")
-                  return readOnly
-                    ? deny("Read-only worker profile")
-                    : {
-                        hookSpecificOutput: {
-                          hookEventName: "PreToolUse" as const,
-                          permissionDecision: "ask" as const,
-                          permissionDecisionReason:
-                            "Every shell command requires user approval",
-                        },
-                      };
+                  return readOnly ? deny("Read-only worker profile") : {};
                 if (
                   !readTools.includes(tool) &&
                   (readOnly || !["Write", "Edit"].includes(tool))
@@ -317,9 +316,20 @@ export class ClaudeAgentProvider implements Provider {
             target.split("/").at(-1)!,
           );
         }
-        const rel = relative(c.task.workspace!, actual);
-        if (rel.startsWith("..") || isAbsolute(rel) || rel === ".git")
+        const rel = relative(await realpath(c.task.workspace!), actual);
+        if (
+          rel.startsWith("..") ||
+          isAbsolute(rel) ||
+          rel === ".git" ||
+          rel.startsWith(".git/")
+        )
           return { behavior: "deny", message: "Path outside task workspace" };
+        if (["Write", "Edit"].includes(tool)) {
+          const answer = await c.input(tool, input, signal);
+          return answer.approved
+            ? { behavior: "allow", updatedInput: input }
+            : { behavior: "deny", message: answer.message ?? "Edit denied" };
+        }
         return { behavior: "allow", updatedInput: input };
       },
     };
