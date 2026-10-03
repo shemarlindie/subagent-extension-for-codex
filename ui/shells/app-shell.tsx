@@ -48,12 +48,6 @@ export function AppShell() {
             </aside>
             <TaskInspector />
           </div>
-          {state.mode === "panel" && (
-            <div id="notice" role="status">
-              Choose an isolated worktree or the current repository when
-              starting a task. Current repository edits apply directly.
-            </div>
-          )}
           {state.mode === "console" && <LoginForm />}
         </>
       )}

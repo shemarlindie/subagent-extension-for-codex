@@ -439,12 +439,6 @@ footer {
 .back {
   display: none;
 }
-#notice {
-  font-size: 11px;
-  color: var(--muted);
-  padding: 9px 18px;
-  border-top: 1px solid var(--line);
-}
 /* The expanded panel fits its viewport; the task list and inspector scroll on their own. */
 body[data-expanded-panel="true"] {
   height: 100vh;
