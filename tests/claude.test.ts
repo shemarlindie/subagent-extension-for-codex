@@ -61,6 +61,11 @@ async function context() {
 test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async (t) => {
   let time = 1000;
   t.mock.method(Date, "now", () => time);
+  t.mock.property(process, "env", {
+    ...process.env,
+    CLAUDE_CODE_USE_BEDROCK: "1",
+    CODEX_SUBAGENT_EXTENSION_TOKEN: "synthetic-service-token",
+  });
   let launches = 0;
   let closes = 0;
   let resolve!: (models: any[]) => void;
@@ -96,6 +101,9 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   assert.deepEqual(options!.settings, { disableAllHooks: true });
   assert.equal(options!.persistSession, false);
   assert.equal(options!.strictMcpConfig, true);
+  // Discovery uses the default task environment, not the filtered allowlist.
+  assert.equal(options!.env!.CLAUDE_CODE_USE_BEDROCK, "1");
+  assert.equal(options!.env!.CODEX_SUBAGENT_EXTENSION_TOKEN, undefined);
   const next = discoveryPrompt![Symbol.asyncIterator]().next();
   let emitted = false;
   void next.then(() => {
@@ -539,19 +547,22 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
 
 test("Claude runtime environment excludes service and other-provider credentials at the real SDK spawn boundary", async () => {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
-  const env = claudeEnvironment({
-    PATH: process.env.PATH,
-    HOME: process.env.HOME,
-    ANTHROPIC_API_KEY: "synthetic-claude-key",
-    CLAUDE_CONFIG_DIR: "/synthetic/claude-state",
-    OPENAI_API_KEY: "synthetic-app-key",
-    OPENAI_EXECUTOR_API_KEY: "synthetic-executor-key",
-    CODEX_SUBAGENT_EXTENSION_TOKEN: "synthetic-service-token",
-    SSH_AUTH_SOCK: "/synthetic/ssh-agent",
-    AWS_SECRET_ACCESS_KEY: "synthetic-cloud-key",
-    NODE_OPTIONS: "--require /untrusted.js",
-    HTTPS_PROXY: "http://synthetic-proxy-credential@example.invalid",
-  });
+  const env = claudeEnvironment(
+    {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      ANTHROPIC_API_KEY: "synthetic-claude-key",
+      CLAUDE_CONFIG_DIR: "/synthetic/claude-state",
+      OPENAI_API_KEY: "synthetic-app-key",
+      OPENAI_EXECUTOR_API_KEY: "synthetic-executor-key",
+      CODEX_SUBAGENT_EXTENSION_TOKEN: "synthetic-service-token",
+      SSH_AUTH_SOCK: "/synthetic/ssh-agent",
+      AWS_SECRET_ACCESS_KEY: "synthetic-cloud-key",
+      NODE_OPTIONS: "--require /untrusted.js",
+      HTTPS_PROXY: "http://synthetic-proxy-credential@example.invalid",
+    },
+    "filtered",
+  );
   assert.deepEqual(Object.keys(env).sort(), [
     "ANTHROPIC_API_KEY",
     "CLAUDE_CONFIG_DIR",

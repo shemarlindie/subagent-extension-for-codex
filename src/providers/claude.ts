@@ -40,8 +40,8 @@ const privateVariable = (name: string) =>
   name === "CLAUDE_CODE_OAUTH_TOKEN";
 /** The service environment for the native harness, or only Claude authentication and basic process settings when filtered. */
 export function claudeEnvironment(
-  source: NodeJS.ProcessEnv = process.env,
-  mode: ClaudePolicy["environment"] = "filtered",
+  source: NodeJS.ProcessEnv,
+  mode: ClaudePolicy["environment"],
 ): NodeJS.ProcessEnv {
   if (mode === "inherit")
     return Object.fromEntries(
@@ -199,7 +199,11 @@ export class ClaudeAgentProvider implements Provider {
     const session = this.launch({
       prompt,
       options: {
-        env: claudeEnvironment(),
+        // Match the default task environment so discovery sees the same provider configuration.
+        env: claudeEnvironment(
+          process.env,
+          claudeOverrideDefaults.claude_environment,
+        ),
         abortController,
         persistSession: false,
         settingSources: ["user", "project", "local"],
