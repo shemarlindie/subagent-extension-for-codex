@@ -160,10 +160,12 @@ aside {
   min-width: 0;
   background: var(--color-background-secondary, var(--surface));
   border-right: 1px solid var(--line);
-  padding: 12px 8px;
+  /* No side padding: children inset themselves so #task-list's scrollbar can reach the edge. */
+  padding: 12px 0;
 }
 .search {
-  width: 100%;
+  width: calc(100% - 16px);
+  margin: 0 8px;
   background: transparent;
   border: 1px solid var(--line);
   padding: 7px 10px;
@@ -172,7 +174,7 @@ aside {
 .filters {
   display: flex;
   gap: 2px;
-  margin: 10px 0;
+  margin: 10px 8px;
 }
 .filters button {
   flex: 1;
@@ -187,9 +189,12 @@ aside {
 .list-label {
   display: flex;
   justify-content: space-between;
-  padding: 9px 8px;
+  padding: 9px 16px;
   color: var(--muted);
   font-size: 11px;
+}
+#task-list {
+  padding: 0 8px;
 }
 .row {
   display: block;
