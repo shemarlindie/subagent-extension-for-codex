@@ -51,15 +51,12 @@ Opening either HTML entrypoint outside an iframe with `?preview=1` selects fixtu
 
 ![Fixture preview showing project selection and a pending permission request](images/react-project-picker.png)
 
+## Panel dev host
+
+`npm run dev:ui` runs the panel inside a mock MCP Apps host with hot reload, against fixtures or the live service. See [Local development](development.md#panel-dev-host).
+
 ## Build and verification
 
-`scripts/build-ui.mjs` bundles each entrypoint with esbuild, the automatic JSX runtime, minification, and `process.env.NODE_ENV="production"`. It embeds JavaScript and CSS into `dist/console.html` and `dist/codex.html`, preserving self-contained HTML delivery without runtime CDN requests. The build also parses the final embedded module to catch template replacement corruption. Edit source files, then rebuild; generated HTML is not the source of truth.
-
-```sh
-npm run typecheck
-npm test
-```
-
-`npm test` builds the project first through its `pretest` script.
+`scripts/build-ui.mjs` bundles each entrypoint with esbuild, the automatic JSX runtime, minification, and `process.env.NODE_ENV="production"`. It embeds JavaScript and CSS into `dist/console.html` and `dist/codex.html`, preserving self-contained HTML delivery without runtime CDN requests. The build also parses the final embedded module to catch template replacement corruption. Edit source files, then rebuild; generated HTML is not the source of truth. Run `npm run typecheck` and `npm test` as described in [Local development](development.md#checks).
 
 Typechecking covers both server TypeScript and the browser/TSX configuration in `ui/tsconfig.json`. The test suite includes controller scope/race/lifecycle checks, HTTP and host transport contracts, and React Testing Library/user-event interactions in jsdom. React interaction tests cover keyboard tabs, dialog focus restoration, draft preservation through refresh, budgets, worker input, explicit handoff submission, and literal text rendering. Existing HTTP/MCP and generated-panel checks remain relevant. Automated DOM/protocol checks do not establish actual browser layout or native host placement; verify those separately for changes affecting them.

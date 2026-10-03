@@ -21,10 +21,10 @@ Claude tasks run through the Claude Agent SDK and use whatever Claude Code crede
 
 ```sh
 npm run build
-CODEX_SUBAGENT_EXTENSION_REPOSITORY=../target-repository npm start
+npm start
 ```
 
-Run the command from the project root; the target path is relative to that directory. The target must be a Git repository root with at least one commit. Use a committed repository or the disposable demo fixture. By default, a task runs directly in the approved repository with `workspace_strategy: "current_repo"` and `revision: "HEAD"`, including staged, unstaged, and untracked files. Set `workspace_strategy: "worktree"` to start from a specified **committed revision** in a detached worktree; the service never automatically merges worktree changes. The browser and host delegation forms offer the same Workspace choice. Review profiles remain read-only; write profiles edit the current checkout directly, so preserve unrelated user changes. Choose a worktree for isolated or parallel edits. Current-repo tasks receive a starting diff for review, and their diff artifacts include pre-existing changes as well as any worker edits. The checkout stays live during execution; changes made by another task or by the user can also appear in those diffs.
+Run the command from the project root. Settings come from the shell or an optional `.env`; see [Local development](docs/development.md). Add target repositories with **Add project**, or let a chat's project be added when a task starts from it. A target must be a Git repository root with at least one commit. Use a committed repository or the disposable demo fixture. By default, a task runs directly in the approved repository with `workspace_strategy: "current_repo"` and `revision: "HEAD"`, including staged, unstaged, and untracked files. Set `workspace_strategy: "worktree"` to start from a specified **committed revision** in a detached worktree; the service never automatically merges worktree changes. The browser and host delegation forms offer the same Workspace choice. Review profiles remain read-only; write profiles edit the current checkout directly, so preserve unrelated user changes. Choose a worktree for isolated or parallel edits. Current-repo tasks receive a starting diff for review, and their diff artifacts include pre-existing changes as well as any worker edits. The checkout stays live during execution; changes made by another task or by the user can also appear in those diffs.
 
 The service writes a login token to `<data-directory>/admin-token` with owner-only permissions. Use it to sign into the local console. The token stays server-side for MCP proxy requests; browsers receive an HttpOnly session cookie valid for one hour. Restarting invalidates browser sessions. Data and worktrees persist.
 
@@ -59,13 +59,16 @@ The standalone web console uses token login, HttpOnly session cookies, HTTP tool
 - Runtime limits across turns and SDK-native per-turn cost ceilings reduced by observed prior cost. Costs incurred during forcibly interrupted turns may not be reported by the SDK; this is not a billing guarantee. Token limits are unsupported. Claude tasks can start native subagents unless `claude_subagents` is off.
 - Authenticated SSE replay and short-lived browser sessions; all task mutations go through the same tool dispatch as MCP.
 
+The task detail offers **Copy for Codex** in the standalone console and **Send to conversation** when embedded. Review or edit the message before submitting. It includes the task identity, short task/result excerpts and references to tools for retrieving full evidence; it does not apply patches. Embedded message delivery depends on host support and has not yet been verified in a registered host.
+
+Worker links such as `/workers/claude.reviewer` show that profile's available capabilities and tasks. Use the sidebar worker picker or **Delegate to this worker** to select a profile for a new task.
+
 A worktree provides code separation, not operating-system containment. With default settings, a Claude task in the `current_repo` workspace can do anything your Claude Code CLI can. The safety net is approval routing plus your Claude Code permission rules and sandbox settings. With `default_approval_decider: parent_agent`, the parent agent answers those prompts, so consider enabling restrictions first. Committed `.claude/settings.json` files in a delegated repository apply just as they do in the CLI, including hooks, permission rules, MCP servers and sandbox exclusions. Enable the extension sandbox and other restrictions under [Claude session restrictions](#claude-session-restrictions) when you need them. The model/API harness is always outside the Bash sandbox. The extension sandbox's Bash enforcement has been verified against disposable fixture writes, Git metadata, a symlink escape and a loopback listener; full-harness containment remains unverified. The service is a single-user, loopback-only application with ownership checks in the control plane. Remote multi-user OAuth, container/network policies, and public hosting require separate deployment work. Do not expose this service directly to the public Internet.
 
 ## Configuration
 
 | Variable                                 | Default                                   | Meaning                                                                                                                        |
 | ---------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `CODEX_SUBAGENT_EXTENSION_REPOSITORY`    | unset                                     | Explicit legacy repository registration at service startup                                                                     |
 | `CODEX_SUBAGENT_EXTENSION_DATA`          | `~/.local/share/codex-subagent-extension` | Persistent SQLite database, approved roots, worktrees, lock and token; explicit relative overrides resolve from invocation cwd |
 | `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` | `[]`                                      | JSON array of explicitly approved parent directory paths                                                                       |
 | `CODEX_SUBAGENT_EXTENSION_URL`           | discovered local service or port 4317     | Proxy endpoint override; explicit URLs require an already running service                                                      |
@@ -89,24 +92,34 @@ Review `<data-directory>/worktrees/<task-id>` or download returned patches befor
 | `src/service/`                                       | Install paths, data directory, single-instance lease, and the stdio launcher that starts the service.          |
 | `src/providers/`, `src/events/`                      | Claude, Codex, and fixture providers with their configuration; webhook and MCP event delivery.                 |
 | `ui/`                                                | Shared React UI: `entries/`, `templates/`, `styles/`, plus controller, transport, component, and form modules. |
+| `ui/dev/`, `vite.config.ts`                          | Panel dev host: mock MCP Apps host and Vite server for `npm run dev:ui`.                                       |
+| `.env.example`                                       | Local development settings template; copy to `.env`.                                                           |
 | `tests/`, `scripts/`, `skills/`, `docs/`             | Test suite, build/demo/verification scripts, the delegation skill, and design and status notes.                |
 
 ## Verification and remaining plan
 
-The console and embedded panel share a modular React UI, with separate controller, transport, component, and form layers. See [React UI architecture](docs/react-ui.md) for extension boundaries, fixture preview, self-contained HTML builds, and UI verification.
-
-```sh
-npm run typecheck
-npm test
-```
-
-`npm test` builds the project first through its `pretest` script.
+The console and embedded panel share a modular React UI, with separate controller, transport, component, and form layers. See [React UI architecture](docs/react-ui.md) for extension boundaries, fixture preview, self-contained HTML builds, and UI verification. [Local development](docs/development.md) covers setup, the service, the `npm run dev:ui` panel dev host with hot reload, what needs a rebuild or restart, and the `npm run typecheck` and `npm test` checks.
 
 The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, and MCP tool/resource calls. Browser verification covers delegation, live completion, interruption, continuation, input submission, and artifacts in fixture mode. See [implementation status](docs/implementation-status.md).
 
 Authenticated native Claude read/report execution, input interruption, session continuation after reopening the control plane, SDK cost reporting, the opt-in extension Bash sandbox and CLI parity (project skills, MCP servers, subagents and hooks) are verified on this machine. Sanitized evidence is in [live verification](docs/live-claude-verification.json). Interrupted-turn cost accounting and full-harness containment remain incomplete. The opt-in Codex provider still needs authenticated verification; recovery of surviving executor process groups is verified locally. Production authentication/deployment remain future work. Native host rendering and event reception also require verification after registration.
 
 Plugin packaging and entrypoint metadata follow the [OpenAI plugin packaging documentation](https://developers.openai.com/plugins/build/plugins) and [Plugin Extensions documentation](https://developers.openai.com/plugins/build/extensions). The brief is the design reference, not a runtime instruction source.
+
+### Live Claude checks
+
+To reproduce authenticated Claude checks after building, explicitly opt into model calls:
+
+```sh
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs read
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs resume
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs sandbox
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs mcp
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs budget
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs parity
+```
+
+Each scenario uses a temporary Git fixture and a native task budget of at most $0.25, or $0.50 for parity. The budget scenario deliberately sets $0.001 and expects a budget failure. Claude checks cost after a response, so that response can exceed the configured amount; this is not a hard billing cap. The sandbox scenario enables the extension sandbox, approves only its five exact fixture commands and uses a local listener; unexpected permission requests are denied. The parity scenario uses default settings, a budget of $0.50, and project-local fixtures: a skill, a `.mcp.json` stdio server and a `PreToolUse` hook. It approves only the fixture tools and checks that a subagent runs. Interrupted-turn costs may not be fully captured in the final task record. These checks require configured Claude Code credentials and are excluded from the ordinary test suite.
 
 ## Plugin settings
 
@@ -204,46 +217,13 @@ Successful deliveries are recorded idempotently. Transient failures retry up to 
 
 These methods and their delivery behavior are verified locally against the [OpenAI MCP Events protocol](https://developers.openai.com/plugins/build/mcp-events). Actual ChatGPT subscription delivery remains a separate host verification gate requiring registration and a reachable authenticated endpoint. No callback was contacted during development tests.
 
-The task detail offers **Copy for Codex** in the standalone console and **Send to conversation** when embedded. Review or edit the message before submitting. It includes the task identity, short task/result excerpts and references to tools for retrieving full evidence; it does not apply patches. Embedded message delivery depends on host support and has not yet been verified in a registered host.
-
-Worker links such as `/workers/claude.reviewer` show that profile's available capabilities and tasks. Use the sidebar worker picker or **Delegate to this worker** to select a profile for a new task.
-
-To reproduce authenticated Claude checks after building, explicitly opt into model calls:
-
-```sh
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs read
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs resume
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs sandbox
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs mcp
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs budget
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs parity
-```
-
-Each scenario uses a temporary Git fixture and a native task budget of at most $0.25, or $0.50 for parity. The budget scenario deliberately sets $0.001 and expects a budget failure. Claude checks cost after a response, so that response can exceed the configured amount; this is not a hard billing cap. The sandbox scenario enables the extension sandbox, approves only its five exact fixture commands and uses a local listener; unexpected permission requests are denied. The parity scenario uses default settings, a budget of $0.50, and project-local fixtures: a skill, a `.mcp.json` stdio server and a `PreToolUse` hook. It approves only the fixture tools and checks that a subagent runs. Interrupted-turn costs may not be fully captured in the final task record. These checks require configured Claude Code credentials and are excluded from the ordinary test suite.
-
 ## Multiple projects and packaged startup
 
-For the current local manual test setup, run:
-
-```sh
-bash scripts/build-and-start.sh
-```
-
-This builds the project, registers this checkout and the sibling
-`../ig-image-splitter` repository, and starts the service in the foreground.
-Both repositories must exist and be Git roots. The script defaults to
-`<checkout-root>/.codex-subagent-extension/live`; configure the same absolute
-`CODEX_SUBAGENT_EXTENSION_DATA` in Codex's MCP environment. Stop the service
-with Ctrl-C. Existing provider, token, port, and data overrides are preserved.
-
-Pass repository paths to replace the two defaults, for example:
-
-```sh
-bash scripts/build-and-start.sh /absolute/path/to/repository
-```
-
-These are development-script defaults; packaged stdio startup uses the per-user
-data default described below.
+For running the service from a checkout, `.env` setup, and the matching Codex
+data directory, see [Local development](docs/development.md). Projects need no
+startup registration: chat projects are added when a task starts from that chat
+(see **Automatically add chat projects** below), and **Add project** or
+`npm run projects` covers the rest.
 
 Build with `npm run build`. `npm run package:plugin` creates an npm tarball
 containing compiled service/proxy code, both HTML panels, the delegation skill and bundled production
@@ -324,13 +304,11 @@ All clients must share the same absolute data override to share a service.
 The new default is independent of the installation directory. For compatibility,
 an existing `console.sqlite` under the installation's old
 `.codex-subagent-extension` directory is used in place; that fallback remains
-installation-dependent. Existing explicit data/repository/token/port overrides
+installation-dependent. Existing explicit data/token/port overrides
 continue to work. Data is not copied automatically: keep the old absolute DATA
 override when upgrading, especially because worktree and session references are
-absolute. Legacy approved repositories must be supplied via the repository env
-or registered explicitly; historical model-supplied task paths are not access grants.
-The development start script accepts repository arguments and
-honors environment overrides instead of hardcoding another project.
+absolute. Legacy approved repositories must be registered explicitly; historical
+model-supplied task paths are not access grants.
 
 Trusted Codex hooks can supply session cwd, but that context is not automatically
 bound to MCP calls. This implementation uses validated optional directory hints and explicit selection;

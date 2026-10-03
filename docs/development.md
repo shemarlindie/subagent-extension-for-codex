@@ -1,0 +1,162 @@
+# Local development
+
+How to run, change, and check this project locally. Run every command from the
+project root. Requires Node.js 24+ and Git.
+
+## Setup
+
+```sh
+npm ci
+cp -n .env.example .env
+```
+
+`.env` is gitignored. `npm run dev`, `npm start`, `npm run projects`, and
+`npm run dev:ui` load it when present; variables already set in the shell take
+precedence. The example keeps data in `.codex-subagent-extension/live`. See the
+[configuration table](../README.md#configuration) for every variable.
+
+**One data directory.** The service, the panel dev host, and Codex must all use
+the same `CODEX_SUBAGENT_EXTENSION_DATA`; it holds the database and the admin
+token they authenticate with. The Codex-launched stdio proxy does not read
+`.env`, so set the same path, made absolute, in Codex's MCP environment:
+
+```toml
+[mcp_servers.codex_subagent_extension]
+command = "node"
+args = ["<checkout-root>/dist/stdio.js"]
+
+[mcp_servers.codex_subagent_extension.env]
+CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension/live"
+```
+
+Projects need no startup registration. A chat's project is added when a task
+starts from that chat, and **Add project** or `npm run projects` covers the
+rest (see [Multiple projects](../README.md#multiple-projects-and-packaged-startup)).
+
+## Run the service
+
+```sh
+npm run build && npm start
+```
+
+`npm start` runs the built `dist/main.js`; `npm run dev` runs `src/main.ts`
+directly with `tsx`. Either way the service runs in the foreground at
+`http://127.0.0.1:4317`; stop it with Ctrl-C. If Codex is open with the plugin
+enabled, its stdio proxy may already have started one; a second service cannot
+own the same data directory.
+
+Check it from another terminal:
+
+```sh
+curl --fail http://127.0.0.1:4317/health
+npm run projects -- list
+```
+
+The standalone console is at `http://127.0.0.1:4317`. Sign in with the contents
+of `<data-directory>/admin-token`, for example
+`pbcopy < .codex-subagent-extension/live/admin-token` on macOS.
+
+## Panel dev host
+
+```sh
+npm run dev:ui
+```
+
+This starts a Vite server at `http://127.0.0.1:5317` with React Fast Refresh and
+CSS hot replacement, for development only; production HTML still comes from
+`scripts/build-ui.mjs`.
+
+The page is a mock MCP Apps host (`ui/dev/host.tsx`). It embeds the panel in an
+iframe through the official `AppBridge`, so the panel runs its real
+`HostTransport`, as it does in Codex. Like Codex, the host calls the launch tool
+and delivers its result to the panel. The toolbar controls:
+
+- **Data**: fixture results (shared with `?preview=1` through
+  `ui/transports/preview-tools.ts`) or the live service. Fixtures need no
+  service; unsupported operations fail explicitly.
+- **Launch**: thread (`open_codex_subagent_extension` with Codex's `threadId`
+  and `codex/sandbox-state-meta` request metadata, editable under **Host**) or
+  global.
+- **Theme**, **Display** (inline or fullscreen; the panel's **Open panel** and
+  **Collapse** requests switch it), and **Width**.
+- **Send messages** and **Update context** host capabilities, and optional host
+  style variables as JSON.
+
+Changing data, launch, capabilities, or host metadata starts a new panel
+session; theme, display mode, width, and styles are pushed as host context
+changes. The bridge log on the right records tool calls, messages, model context
+updates, and display-mode requests.
+
+Live mode connects to the service's `/mcp` endpoint through the Vite proxy at
+`/service`. The proxy adds the admin token server-side and drops the browser
+`Origin` header, so the token never reaches the page. It finds the service the
+same way the stdio launcher does: `CODEX_SUBAGENT_EXTENSION_URL`,
+`CODEX_SUBAGENT_EXTENSION_ORIGIN`, the data directory's `service.json`, then
+`PORT` (default 4317). It reads the token from `CODEX_SUBAGENT_EXTENSION_TOKEN`
+or the data directory's `admin-token`. Start the service first, or restart Vite
+after it moves ports.
+
+Live mode performs real actions: starting a task from the panel runs a worker.
+To work against throwaway data, give both processes the same overrides:
+
+```sh
+CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev PORT=4399 npm run dev
+CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev PORT=4399 npm run dev:ui
+```
+
+Codex's iframe sandbox, CSP, real host styles, and native placement are not
+reproduced, so confirm layout-sensitive changes in Codex before release.
+
+## Codex
+
+With the MCP configuration above, reload the MCP connection in Codex and open
+**Delegated work** from a chat. It should show the same tasks as the dev host in
+live mode.
+
+## Demo
+
+```sh
+npm run demo
+```
+
+Fixture workers and a disposable sample repository in
+`.codex-subagent-extension/demo`; no model calls. Sign in at
+`http://127.0.0.1:4317` with `local-demo-only`. Stop any other service on port
+4317 first.
+
+## What reloads when
+
+| Change                              | To see it                                                         |
+| ----------------------------------- | ----------------------------------------------------------------- |
+| `ui/` in the dev host               | Nothing: Fast Refresh applies it                                  |
+| `ui/` in Codex or the console       | `npm run build`, then reopen the panel or reload the page         |
+| `src/`                              | Restart the service (`npm start` after a build, or `npm run dev`) |
+| Tool metadata or panel resource URI | Restart the service, then reload the MCP connection in Codex      |
+| `.env` or `vite.config.ts`          | Restart the affected processes                                    |
+
+The service reads panel HTML from `dist/` on each resource request, so rebuilt
+UI needs no service restart.
+
+## Checks
+
+```sh
+npm run typecheck
+npm test
+```
+
+`npm test` runs `npm run format:check` and the build first through `pretest`.
+Fix formatting failures with `npm run format`. The suite is described in the
+[README](../README.md#verification-and-remaining-plan) and
+[React UI architecture](react-ui.md#build-and-verification). Opt-in checks
+against real Claude make model calls; see
+[Live Claude checks](../README.md#live-claude-checks).
+
+## Troubleshooting
+
+| Symptom                                       | Cause                                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Dev host live mode logs 502                   | The service is not running, or not on the port Vite resolved at startup               |
+| Dev host live mode logs 401                   | Vite and the service use different data directories, so the token does not match      |
+| Codex shows different tasks than the dev host | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                           |
+| Service exits on start                        | Another service owns the data directory, or the port is taken (for example, the demo) |
+| `npm test` fails before running tests         | Formatting; run `npm run format`                                                      |

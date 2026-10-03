@@ -31,6 +31,7 @@ Existing evidence:
 | Document                                                         | Purpose                                                                     |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | [README](../README.md)                                           | Runtime commands, configuration, supported workflows, and extension details |
+| [Local development](development.md)                              | Current setup, `.env`, panel dev host, reload rules, and checks             |
 | [Implementation status](implementation-status.md)                | Requirement audit and known boundaries                                      |
 | [Native Claude evidence](live-claude-verification.json)          | Sanitized outcomes of completed authenticated checks                        |
 | [Claude verification script](../scripts/verify-live-claude.mjs)  | Opt-in reproduction using disposable fixtures                               |
@@ -77,19 +78,16 @@ Keep authentication in the service account/environment. Do not place provider cr
 
 ### A3. Start the live service
 
-From the project root, set the target and persistent data directory, then start Claude explicitly:
+From the project root (see [Local development](development.md) for the current workflow), copy `.env.example` to `.env` (gitignored); its default keeps data in `.codex-subagent-extension/live`. `npm start` loads `.env` when present, and variables already set in the shell take precedence. Then start Claude explicitly:
 
 ```sh
+cp -n .env.example .env
 unset CODEX_SUBAGENT_EXTENSION_TOKEN CODEX_SUBAGENT_EXTENSION_CODEX CODEX_SUBAGENT_EXTENSION_FIXTURE
 export CODEX_SUBAGENT_EXTENSION_PROVIDER=claude
-export CODEX_SUBAGENT_EXTENSION_REPOSITORY=../target-repository
-export CODEX_SUBAGENT_EXTENSION_DATA=.codex-subagent-extension/live
-export PORT=4317
-export CODEX_SUBAGENT_EXTENSION_ORIGIN=http://127.0.0.1:4317
 npm start
 ```
 
-The target repository path is relative to the project root. The `unset` line clears configuration switches for this terminal; it does not remove stored credentials. Keep this terminal running while using the console. Installing the MCP configuration or plugin does not start the service.
+Projects need no startup registration: add the target repository with **Add project**, or start a task from a chat in that repository to add it automatically. The `unset` line clears configuration switches for this terminal; it does not remove stored credentials. Keep this terminal running while using the console. Installing the MCP configuration or plugin does not start the service.
 
 Expected startup output identifies the console origin and login-token file. The normal configuration creates the token at:
 
@@ -174,7 +172,7 @@ Use your OpenAI account/project controls. Current permission names and ownership
 
 The keys must belong to the same organization, project, and user/service-account identity that owns the session. They must be different values. The service validates presence and inequality; it cannot establish their actual scopes from configuration alone. Vault permissions are not needed for this implementation's current workflow.
 
-Store them in your preferred secret manager or private service environment. **Do not paste them into a thread.** This service does not automatically load `.env`; writing a file alone will not configure `npm start`. If using a private environment file, explicitly load it through your chosen launcher and keep it outside source control. Avoid commands that echo the complete environment.
+Store them in your preferred secret manager or private service environment. **Do not paste them into a thread.** `npm run dev` and `npm start` load a gitignored `.env` from the project root when present, but the Codex-launched stdio proxy does not, so a service it starts will not see those keys. Keep any environment file outside source control. Avoid commands that echo the complete environment.
 
 For a one-session zsh setup, these interactive prompts avoid literal keys in shell history and hide entry:
 
