@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
 import assert from "node:assert/strict";
 import { describe, test, type TestContext } from "vitest";
-import { JSDOM } from "jsdom";
 import type {
   HostState,
   Task,
@@ -9,51 +9,24 @@ import type {
 } from "../ui/core/types";
 
 // UI primitives read browser capabilities at module initialization.
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost/",
-  pretendToBeVisual: true,
-});
-for (const key of [
-  "window",
-  "document",
-  "navigator",
-  "HTMLElement",
-  "Element",
-  "Node",
-  "NodeFilter",
-  "DocumentFragment",
-  "MutationObserver",
-  "CustomEvent",
-  "Event",
-  "MouseEvent",
-  "KeyboardEvent",
-  "HTMLInputElement",
-  "HTMLSelectElement",
-  "HTMLTextAreaElement",
-  "HTMLButtonElement",
-  "HTMLFormElement",
-  "getComputedStyle",
-  "requestAnimationFrame",
-  "cancelAnimationFrame",
-]) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value: (dom.window as any)[key],
-  });
-}
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
   writable: true,
   value: true,
 });
-const { createElement } = await import("react");
-const { act, render, screen, cleanup, waitFor, within } =
-  await import("@testing-library/react");
-const { default: userEvent } = await import("@testing-library/user-event");
-const { Controller } = await import("../ui/core/controller");
-const { ControllerContext } =
-  await import("../ui/components/controller-context");
-const { AppShell } = await import("../ui/shells/app-shell");
+import { createElement } from "react";
+import {
+  act,
+  render,
+  screen,
+  cleanup,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { Controller } from "../ui/core/controller";
+import { ControllerContext } from "../ui/components/controller-context";
+import { AppShell } from "../ui/shells/app-shell";
 
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
 // which never finishes and starves waitFor's timeout.
@@ -224,7 +197,7 @@ async function setup(
     cleanup();
     controller.dispose();
   });
-  const user = userEvent.setup({ document: dom.window.document });
+  const user = userEvent.setup({ document: document });
   return { controller, transport, user };
 }
 
@@ -1242,7 +1215,7 @@ test("task and result text render literally without HTML interpretation", async 
   await user.click(screen.getByRole("tab", { name: "Result" }));
   assert.ok(screen.getByText("<script>window.injected=true</script>"));
   assert.ok(document.querySelector("img, script") === null);
-  assert.equal((dom.window as any).injected, undefined);
+  assert.equal((window as any).injected, undefined);
 });
 
 test("refresh preserves disclosure and inspector scroll, while Back stays on the task list", async (t) => {

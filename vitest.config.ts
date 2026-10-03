@@ -1,5 +1,6 @@
 // Test runner config. Kept separate from vite.config.ts, whose root is the
-// panel dev host. React tests set up their own JSDOM, so the environment is node.
+// panel dev host. Tests run in node; React tests opt into jsdom per file with
+// a `// @vitest-environment jsdom` comment.
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
@@ -8,6 +9,9 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     environment: "node",
+    environmentOptions: {
+      jsdom: { url: "http://localhost/", pretendToBeVisual: true },
+    },
     // Integration tests spawn processes and Git worktrees.
     testTimeout: 60_000,
     hookTimeout: 60_000,

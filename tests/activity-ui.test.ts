@@ -1,42 +1,36 @@
+// @vitest-environment jsdom
 import assert from "node:assert/strict";
 import { test, vi } from "vitest";
-import { JSDOM } from "jsdom";
 import type { Event as ActivityEvent } from "../ui/core/types";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost/",
-});
-for (const key of [
-  "window",
-  "document",
-  "navigator",
-  "HTMLElement",
-  "Element",
-  "Node",
-  "Event",
-  "MutationObserver",
-]) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value: (dom.window as any)[key],
-  });
-}
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
   writable: true,
   value: true,
 });
-const { createElement } = await import("react");
-const { renderToStaticMarkup } = await import("react-dom/server");
-const { render, cleanup, act, waitFor, fireEvent } =
-  await import("@testing-library/react");
-const { EventDetails: EventList, EventList: GroupedEventList } =
-  await import("../ui/components/event-list");
-const { ActivityContent, ActivityValue } =
-  await import("../ui/components/activity-content");
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import {
+  render,
+  cleanup,
+  act,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
+import {
+  EventDetails as EventList,
+  EventList as GroupedEventList,
+} from "../ui/components/event-list";
+import {
+  ActivityContent,
+  ActivityValue,
+} from "../ui/components/activity-content";
 
+function parseHtml(html: string) {
+  return new DOMParser().parseFromString(html, "text/html");
+}
 const eventIds = new Map<string, number>();
-const { default: userEvent } = await import("@testing-library/user-event");
+import userEvent from "@testing-library/user-event";
 
 function event(
   type: string,
@@ -62,7 +56,7 @@ function assertAbsent(element: Element | null, message = "Unexpected element") {
 }
 function markup(events: ActivityEvent[]) {
   const html = renderToStaticMarkup(createElement(EventList, { events }));
-  return new JSDOM(html).window.document;
+  return parseHtml(html);
 }
 
 // Model real document flow: each activity occupies 100px after the status row.
@@ -129,7 +123,7 @@ test("latest group is first and fresh progress moves an older tool to the top wi
   const raw = tool.querySelector("details.activity-raw") as HTMLDetailsElement;
   act(() => {
     raw.open = true;
-    raw.dispatchEvent(new dom.window.Event("toggle"));
+    raw.dispatchEvent(new Event("toggle"));
   });
   const progress = event(
     "claude.activity",
@@ -174,7 +168,7 @@ test("artifact counts update without closing debug or remounting raw inspectors"
   const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
   await act(async () => {
     raw.open = true;
-    raw.dispatchEvent(new dom.window.Event("toggle"));
+    raw.dispatchEvent(new Event("toggle"));
   });
   await waitFor(() =>
     assert.equal(
@@ -654,7 +648,7 @@ test("opening raw response shows the original full JSON and preserves disclosure
   assertAbsent(details.querySelector("pre"));
   await act(async () => {
     details.open = true;
-    details.dispatchEvent(new dom.window.Event("toggle"));
+    details.dispatchEvent(new Event("toggle"));
   });
   await waitFor(() =>
     assert.equal(
@@ -672,7 +666,7 @@ test("opening raw response shows the original full JSON and preserves disclosure
   assertAbsent(view.container.querySelector("script"));
   await act(async () => {
     details.open = false;
-    details.dispatchEvent(new dom.window.Event("toggle"));
+    details.dispatchEvent(new Event("toggle"));
   });
   await waitFor(() => assertAbsent(details.querySelector("pre")));
 });
@@ -693,7 +687,7 @@ test("legacy events expose their entire data when no original SDK response exist
   ) as HTMLDetailsElement;
   await act(async () => {
     details.open = true;
-    details.dispatchEvent(new dom.window.Event("toggle"));
+    details.dispatchEvent(new Event("toggle"));
   });
   await waitFor(() =>
     assert.equal(
@@ -903,7 +897,7 @@ test("grouped tool activity retains individual raw inspections while progress re
   assert.ok(raw, "Grouped events retain per-response raw details");
   await act(async () => {
     raw.open = true;
-    raw.dispatchEvent(new dom.window.Event("toggle"));
+    raw.dispatchEvent(new Event("toggle"));
   });
   await waitFor(() =>
     assert.equal(
@@ -1001,7 +995,7 @@ test("grouped streams accumulate readable blocks and preserve every frame for in
   const html = renderToStaticMarkup(
     createElement(GroupedEventList, { events }),
   );
-  const doc = new JSDOM(html).window.document;
+  const doc = parseHtml(html);
   assert.equal(doc.querySelectorAll(".activity-group").length, 1);
   const content = doc.querySelector(".activity-stream > .activity-body");
   assert.match(content?.textContent ?? "", /Hello world/);
@@ -1055,9 +1049,9 @@ test("final SDK message replaces provisional stream fragments in the main conver
       "final-fold-message",
     ),
   ];
-  const doc = new JSDOM(
+  const doc = parseHtml(
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
-  ).window.document;
+  );
   assert.equal(doc.querySelectorAll(".activity-group").length, 1);
   const content = doc.querySelector(".activity-message > .activity-body");
   assert.equal(content?.textContent, "Final response");
@@ -1110,14 +1104,14 @@ test("a compact accessible debug toggle hides inspection until opened and preser
     document.activeElement === toggle,
     "Native debug button participates in keyboard focus",
   );
-  await userEvent.setup({ document: dom.window.document }).keyboard("{Enter}");
+  await userEvent.setup({ document: document }).keyboard("{Enter}");
   assert.equal(panel.hidden, false);
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
   assertAbsent(raw.querySelector("pre"));
   await act(async () => {
     raw.open = true;
-    raw.dispatchEvent(new dom.window.Event("toggle"));
+    raw.dispatchEvent(new Event("toggle"));
   });
   await waitFor(() =>
     assert.equal(
@@ -1186,9 +1180,9 @@ test("operation failure messages remain visible outside collapsed debug details"
       "visible-tool-failed",
     ),
   ];
-  const doc = new JSDOM(
+  const doc = parseHtml(
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
-  ).window.document;
+  );
   const summaries = Array.from(
     doc.querySelectorAll(".activity-group-summary"),
   ).map((node) => node.textContent);
@@ -1248,9 +1242,9 @@ test("cancelled and stopped grouped operations never display Done badges", () =>
       "killed-task-finish",
     ),
   ];
-  const doc = new JSDOM(
+  const doc = parseHtml(
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
-  ).window.document;
+  );
   assert.equal(doc.querySelectorAll(".activity-group").length, 3);
   assert.equal(doc.querySelectorAll(".activity-badge").length, 0);
   const summaries = Array.from(
@@ -1331,9 +1325,9 @@ function wrapNested(
   return value;
 }
 function contentMarkup(content: unknown) {
-  return new JSDOM(
+  return parseHtml(
     renderToStaticMarkup(createElement(ActivityContent, { content })),
-  ).window.document;
+  );
 }
 
 for (const [name, wrap] of [
@@ -1494,9 +1488,9 @@ test("stream blocks ignore invalid indexes while default and numeric indexes acc
       `validated-stream-index-${i}`,
     ),
   );
-  const doc = new JSDOM(
+  const doc = parseHtml(
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
-  ).window.document;
+  );
   const blocks = Array.from(
     doc.querySelectorAll(".activity-stream > .activity-body p.activity-text"),
     (node) => node.textContent,
