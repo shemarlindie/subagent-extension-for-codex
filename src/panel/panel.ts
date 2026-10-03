@@ -44,6 +44,9 @@ export function delegationPanel(
           repository: z.string().optional(),
           revision: z.string().optional(),
         }),
+        panel_project_candidate: z
+          .object({ repository: z.string(), auto_register: z.boolean() })
+          .optional(),
         panel_selection: z
           .object({ task_id: z.string(), tab: z.enum(["activity", "result"]) })
           .optional(),

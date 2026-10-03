@@ -16,7 +16,13 @@ export type Worker = {
   model_discovery_error?: string;
   capabilities: Partial<Capabilities>;
 };
-export type Project = { repository: string; name?: string; kind: string };
+export type Project = {
+  repository: string;
+  name?: string;
+  kind: string;
+  /** The chat's unregistered project, added when a task starts with it. */
+  pending?: boolean;
+};
 export type Defaults = {
   claude_permission_mode?: import("../../src/core/model").Start["permission_mode"];
   default_approval_decider?: "user" | "parent_agent";
@@ -61,6 +67,7 @@ export type PanelData = {
     repository?: string;
     revision?: string;
   };
+  panel_project_candidate?: { repository: string; auto_register?: boolean };
   panel_selection?: { task_id?: string; tab?: string };
   tasks?: Task[];
 };
@@ -96,6 +103,7 @@ export type Question = {
   multiSelect?: boolean;
 };
 export type DialogState =
+  | { kind: "project"; repository?: string; scope: number }
   | { kind: "settings"; settings: SettingsDocument; scope: number }
   | {
       kind: "delegate";
@@ -122,6 +130,8 @@ export type Snapshot = {
   workerRoute?: string;
   conversation?: string;
   repository?: string;
+  projectCandidate?: string;
+  projectCandidateAuto?: boolean;
   revision: string;
   filter: Filter;
   search: string;

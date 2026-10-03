@@ -4,8 +4,10 @@ import type { DelegateValues } from "./delegate-fields";
 /** Suggestions never restrict a path inside an approved parent; the service validates it. */
 export function ProjectAutocomplete({
   repositories,
+  disabled = false,
 }: {
   repositories: string[];
+  disabled?: boolean;
 }) {
   const { control } = useFormContext<DelegateValues>();
   const { field, fieldState } = useController({
@@ -22,6 +24,7 @@ export function ProjectAutocomplete({
     >
       <Autocomplete.Input
         id="repository"
+        disabled={disabled}
         name={field.name}
         ref={field.ref}
         onBlur={field.onBlur}

@@ -18,9 +18,11 @@ import {
   type OpenAIForm,
 } from "@openai/mcp-extensions/server";
 import { type Control } from "./control.js";
-import { type Task, reasoningLevels } from "./model.js";
+import { reasoningLevels } from "./model.js";
+import { hostProjectCandidate } from "../panel/host-context.js";
 
-type Kind = "request_agent_task" | "request_agent_input";
+type Kind =
+  "request_agent_task" | "request_agent_input" | "request_agent_project";
 
 /**
  * Discovered models become choices; host forms cannot combine a choice list
@@ -136,7 +138,9 @@ export class Forms {
       if (r.status === "processing") {
         r.status = "complete";
         r.result = failed(
-          "Service restarted during form submission. Inspect tasks before starting another request.",
+          r.kind === "request_agent_project"
+            ? "Service restarted during project registration. Inspect registered projects before requesting registration again."
+            : "Service restarted during form submission. Inspect tasks before starting another request.",
         );
         this.save(String(row.id), r);
       }
@@ -172,7 +176,43 @@ export class Forms {
     owner: string,
     kind: Kind,
     args: Record<string, unknown>,
+    repositoryHint?: string,
   ): Promise<Request> {
+    if (kind === "request_agent_project") {
+      if (!this.c.projects)
+        throw new Error("Project registration is unavailable");
+      return {
+        kind,
+        args,
+        status: "pending",
+        message:
+          "Register this local Git repository for delegation? Registration grants workers access to the repository; this does not start a task.",
+        form: OpenAIFormSchema.parse({
+          type: "object",
+          properties: {
+            repository: {
+              type: "string",
+              title: "Repository path",
+              description: "Absolute path to the local Git repository root.",
+              minLength: 1,
+              maxLength: 4096,
+              ...(typeof args.repository === "string"
+                ? { default: args.repository }
+                : repositoryHint
+                  ? { default: repositoryHint }
+                  : {}),
+            },
+            decision: {
+              type: "string",
+              title: "Repository access",
+              enum: ["deny", "allow"],
+              default: "deny",
+            },
+          },
+          required: ["repository", "decision"],
+        }),
+      };
+    }
     if (kind === "request_agent_task") {
       const defaults = this.c.settings.taskInput(owner, args) as any;
       const workspaceStrategy = defaults.workspace_strategy as
@@ -185,7 +225,7 @@ export class Forms {
       const choices = projects.filter((p) => p.kind === "repository");
       if (!choices.length)
         throw new Error(
-          "Register a repository with the local projects CLI before opening a task form",
+          "Add a repository through the project user interface or local projects CLI before opening a task form",
         );
       const availableWorkers = await this.c.availableWorkers();
       const workers = availableWorkers.flatMap((w) =>
@@ -414,7 +454,17 @@ export class Forms {
         Object.keys(ctx.mcpReq.inputResponses).length
       )
         throw new Error("Form responses require request state");
-      r = await this.build(owner, kind, args);
+      const stateMeta = ctx.mcpReq._meta?.["codex/sandbox-state-meta"] as
+        { sandboxCwd?: unknown } | undefined;
+      // Save the hint in the form, keeping original arguments stable on retries.
+      const repositoryHint =
+        kind === "request_agent_project" &&
+        args.repository === undefined &&
+        typeof stateMeta?.sandboxCwd === "string" &&
+        stateMeta.sandboxCwd.length <= 4096
+          ? await hostProjectCandidate(stateMeta.sandboxCwd)
+          : undefined;
+      r = await this.build(owner, kind, args, repositoryHint);
       if (kind === "request_agent_task")
         r.parent_permissions = parentPermissionsFromMeta(ctx.mcpReq._meta);
       this.c.store.db
@@ -445,7 +495,11 @@ export class Forms {
       return (
         this.inFlight.get(id) ??
         r.result ??
-        failed("Form submission is interrupted; inspect task state.")
+        failed(
+          kind === "request_agent_project"
+            ? "Project registration is interrupted; inspect registered projects."
+            : "Form submission is interrupted; inspect task state.",
+        )
       );
     }
     if (kind === "request_agent_task" && !r.form.properties.repository)
@@ -489,8 +543,14 @@ export class Forms {
     this.save(id, r);
     const run = (async () => {
       try {
-        let result: Task;
-        if (kind === "request_agent_task") {
+        let result: unknown;
+        if (kind === "request_agent_project") {
+          // Accepting the form alone never grants access: require explicit allow.
+          result =
+            content.decision === "allow"
+              ? await this.c.projects!.register(String(content.repository))
+              : { cancelled: true };
+        } else if (kind === "request_agent_task") {
           const [provider, worker_profile] = String(content.worker).split(":");
           result = await this.c.start(
             owner,

@@ -286,6 +286,7 @@ test("sandbox directory hints resolve approved Git roots without granting access
       host_directory: pathToFileURL(b).href,
     }),
     {
+      panel_project_candidate: { repository: b, auto_register: true },
       panel_scope: {
         conversation_id: "chat-a",
         repository: a,
@@ -351,6 +352,25 @@ test("host correlation honors explicit values and isolates supported tools", () 
       "file:///explicit",
     );
   }
+});
+
+test("an unregistered chat Git root is an add-project candidate without granting repository access", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("chat-project", false);
+  await mkdir(join(repository, "src"));
+  const context = await resolvePanelContext(f.c, "alice", {
+    conversation_id: "new-chat",
+    host_directory: pathToFileURL(join(repository, "src")).href,
+  });
+  assert.deepEqual(context, {
+    panel_scope: { conversation_id: "new-chat" },
+    panel_project_candidate: { repository, auto_register: true },
+  });
+  assert.deepEqual(f.c.projects!.list(), []);
+  await assert.rejects(
+    f.c.projects!.resolve(repository),
+    /outside allowed roots/,
+  );
 });
 
 test("explicit task panels ignore ambient chat and directory but reject explicit conflicts", async (t) => {

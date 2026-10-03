@@ -71,10 +71,13 @@ export class HostTransport implements Transport {
       submit_agent_input: "submit_user_agent_input",
       update_agent_settings: "update_user_agent_settings",
     };
-    const result = await this.app.callServerTool({
-      name: userTools[name] ?? name,
-      arguments: args,
-    });
+    const result = await this.app.callServerTool(
+      {
+        name: userTools[name] ?? name,
+        arguments: args,
+      },
+      name === "browse_user_agent_project" ? { timeout: 150000 } : undefined,
+    );
     if (result.isError)
       throw new Error(
         result.content

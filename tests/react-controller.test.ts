@@ -292,10 +292,7 @@ test("approved parent roots allow delegation in a scoped subrepository; console 
   t.after(() => consoleSetup.controller.dispose());
   consoleSetup.transport.projects = transport.projects;
   await consoleSetup.controller.start();
-  await assert.rejects(
-    consoleSetup.controller.delegate(),
-    /Register a repository/,
-  );
+  await assert.rejects(consoleSetup.controller.delegate(), /Add a project/);
 });
 
 test("automatic global history does not prefill delegation, while an intentional selection does", async (t) => {
@@ -503,11 +500,22 @@ test("All chats preserves repository and discards a delayed conversation respons
   const { controller, transport } = setup();
   t.after(() => controller.dispose());
   controller.applyScope(
-    { panel_scope: { conversation_id: "chat-a", repository: "/repo/a" } },
+    {
+      panel_scope: {
+        conversation_id: "chat-a",
+        repository: "/repo/a",
+        revision: "feature",
+      },
+      panel_project_candidate: { repository: "/repo/chat-candidate" },
+    },
     false,
   );
   transport.tasks = [task("a", "/repo/a", "chat-a")];
   await controller.start();
+  assert.equal(
+    controller.getSnapshot().projectCandidate,
+    "/repo/chat-candidate",
+  );
   controller.setFilter("attention");
   controller.setSearch("old search");
   const gate = deferred<Task[]>();
@@ -526,6 +534,8 @@ test("All chats preserves repository and discards a delayed conversation respons
   const state = controller.getSnapshot();
   assert.equal(state.conversation, undefined);
   assert.equal(state.repository, "/repo/a");
+  assert.equal(state.revision, "feature");
+  assert.equal(state.projectCandidate, undefined);
   assert.equal(state.filter, "all");
   assert.equal(state.search, "");
   assert.deepEqual(
@@ -555,4 +565,50 @@ test("unrelated tool output leaves scope, selection and the open form intact", a
   assert.equal(after.scopeVersion, before.scopeVersion);
   assert.equal(after.selected, before.selected);
   assert.equal(after.dialog, before.dialog);
+});
+
+test("New task offers the chat project only when auto-add is on and adds it before starting", async (t) => {
+  for (const auto of [false, true]) {
+    const { controller, transport } = setup();
+    t.after(() => controller.dispose());
+    controller.applyScope(
+      {
+        panel_scope: { conversation_id: "chat-a" },
+        panel_project_candidate: {
+          repository: "/repo/chat",
+          auto_register: auto,
+        },
+      },
+      false,
+    );
+    await controller.start();
+    await controller.delegate();
+    const dialog = controller.getSnapshot().dialog;
+    assert.equal(dialog?.kind, "delegate");
+    if (dialog?.kind === "delegate")
+      assert.equal(dialog.repository, auto ? "/repo/chat" : "/repo/a");
+    // A registered project never triggers registration.
+    await controller.addChatProjectForTask("/repo/a");
+    transport.handler = (name) =>
+      name === "list_agent_projects"
+        ? [
+            ...transport.projects,
+            { repository: "/repo/chat", kind: "repository" },
+          ]
+        : name === "register_user_agent_project"
+          ? { repository: "/repo/chat", kind: "repository" }
+          : undefined;
+    await controller.addChatProjectForTask("/repo/chat");
+    const registrations = transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    );
+    assert.deepEqual(
+      registrations.map((call) => call.args),
+      auto ? [{ repository: "/repo/chat" }] : [],
+    );
+    assert.equal(
+      controller.getSnapshot().projectCandidate,
+      auto ? undefined : "/repo/chat",
+    );
+  }
 });

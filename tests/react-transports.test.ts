@@ -158,6 +158,7 @@ test("console SSE coalesces activity refreshes and disposal cancels pending refr
 
 function hostApp() {
   const calls: unknown[] = [];
+  const toolOptions: unknown[] = [];
   let response: unknown = { structuredContent: { result: ["task"] } };
   const app = {
     ontoolresult: undefined as any,
@@ -173,8 +174,9 @@ function hostApp() {
       displayMode: "inline",
       availableDisplayModes: ["inline", "fullscreen"],
     }),
-    callServerTool: async (args: unknown) => {
+    callServerTool: async (args: unknown, options?: unknown) => {
       calls.push(args);
+      toolOptions.push(options);
       return response;
     },
     sendMessage: async (args: unknown) => {
@@ -191,11 +193,32 @@ function hostApp() {
   return {
     app,
     calls,
+    toolOptions,
     respond: (value: unknown) => {
       response = value;
     },
   };
 }
+
+test("host folder browsing allows native interaction time while ordinary tools use default timeout", async () => {
+  const fake = hostApp();
+  const transport = new HostTransport(fake.app as any);
+  fake.respond({ structuredContent: { result: { repository: null } } });
+  assert.deepEqual(await transport.tool("browse_user_agent_project"), {
+    repository: null,
+  });
+  assert.deepEqual(fake.calls[0], {
+    name: "browse_user_agent_project",
+    arguments: {},
+  });
+  assert.deepEqual(fake.toolOptions[0], { timeout: 150000 });
+  await transport.tool("list_agent_projects");
+  await transport.tool("register_user_agent_project", {
+    repository: "/repo/new",
+  });
+  assert.deepEqual(fake.toolOptions.slice(1), [undefined, undefined]);
+  transport.dispose();
+});
 
 test("host preserves structured settings envelopes and unwraps other tools", async () => {
   const fake = hostApp();

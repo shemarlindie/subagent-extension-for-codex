@@ -16,6 +16,7 @@ import { Projects } from "../src/core/projects.js";
 import { Workspaces, git } from "../src/core/workspace.js";
 import { Control } from "../src/core/control.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
+import { callTool, isUserTool } from "../src/server/tools.js";
 
 async function fixture(t: import("node:test").TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "projects-test-")));
@@ -35,6 +36,61 @@ async function fixture(t: import("node:test").TestContext) {
   }
   return { dir, db, store, workspaces, projects, repo };
 }
+
+test("project registration requires user authority and grants live persistent access only after submission", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("new-project");
+  const control = new Control(f.store, f.workspaces, new Map(), f.dir);
+  control.projects = f.projects;
+  const tool = "register_user_agent_project";
+  assert.equal(isUserTool(tool), true);
+  assert.equal(isUserTool("browse_user_agent_project"), true);
+  await assert.rejects(
+    callTool(control, "owner", tool, { repository }),
+    /user interface/i,
+  );
+  await assert.rejects(
+    callTool(control, "owner", "browse_user_agent_project", {}),
+    /user interface/i,
+  );
+  await assert.rejects(f.projects.resolve(repository), /outside allowed roots/);
+  assert.deepEqual(f.projects.list(), []);
+
+  await assert.rejects(
+    callTool(control, "owner", tool, { repository: "relative/path" }, "user"),
+    /absolute/i,
+  );
+  await mkdir(join(repository, "src"));
+  await assert.rejects(
+    callTool(
+      control,
+      "owner",
+      tool,
+      { repository: join(repository, "src") },
+      "user",
+    ),
+    /repository root/i,
+  );
+  assert.deepEqual(f.projects.list(), []);
+
+  assert.deepEqual(
+    await callTool(control, "owner", tool, { repository }, "user"),
+    { repository, kind: "repository" },
+  );
+  assert.equal(await f.projects.resolve(repository), repository);
+  await callTool(control, "owner", tool, { repository }, "user");
+  assert.equal(f.projects.list().length, 1);
+  const reopened = new Store(f.db);
+  try {
+    const registry = new Projects(
+      reopened,
+      new Workspaces(join(f.dir, "reopened-worktrees"), []),
+    );
+    assert.equal(await registry.resolve(repository), repository);
+  } finally {
+    reopened.close();
+  }
+});
 
 test("registration persists and a running registry sees CLI database updates", async (t) => {
   const f = await fixture(t);

@@ -370,6 +370,14 @@ export class Controller {
         revision,
         scopeKnown: true,
       });
+    this.patch({
+      projectCandidate:
+        typeof data?.panel_project_candidate?.repository === "string"
+          ? data.panel_project_candidate.repository
+          : undefined,
+      projectCandidateAuto:
+        data?.panel_project_candidate?.auto_register === true,
+    });
     if (Array.isArray(data?.tasks))
       this.patch({
         tasks: data.tasks.filter(
@@ -403,11 +411,106 @@ export class Controller {
     if (this.state.busy || !this.state.conversation) return;
     this.invalidateScope({
       conversation: undefined,
+      projectCandidate: undefined,
+      projectCandidateAuto: false,
       filter: "all",
       search: "",
     });
     await this.refresh();
     await this.share();
+  }
+  addProject() {
+    if (this.state.dialog || this.state.busy || !this.state.connected) return;
+    this.patch({
+      dialog: {
+        kind: "project",
+        repository: this.state.projectCandidate,
+        scope: this.state.scopeVersion,
+      },
+      formError: "",
+    });
+  }
+  async browseProject() {
+    return this.tool<{ repository: string | null }>(
+      "browse_user_agent_project",
+    );
+  }
+  async browseTaskProject(): Promise<string | undefined> {
+    const dialog = this.state.dialog;
+    if (
+      !dialog ||
+      dialog.kind !== "delegate" ||
+      this.state.busy ||
+      this.disposed ||
+      dialog.scope !== this.state.scopeVersion
+    )
+      return;
+    const active = () =>
+      !this.disposed &&
+      this.state.dialog === dialog &&
+      dialog.scope === this.state.scopeVersion;
+    this.patch({ busy: true, formError: "" });
+    try {
+      const picked = await this.browseProject();
+      // A picker can outlive its chat; only the original draft may register its selection.
+      if (!picked.repository || !active()) return;
+      const registered = await this.tool<{ repository: string }>(
+        "register_user_agent_project",
+        { repository: picked.repository },
+      );
+      if (!active()) return;
+      const projects = await this.tool<Project[]>("list_agent_projects");
+      if (!active()) return;
+      this.patch({ projects });
+      return registered.repository;
+    } catch (error) {
+      if (active())
+        this.patch({
+          formError: error instanceof Error ? error.message : String(error),
+        });
+    } finally {
+      this.patch({ busy: false });
+    }
+  }
+  /** Add the chat project the user chose in New task before its task starts. */
+  async addChatProjectForTask(repository: string) {
+    const state = this.state;
+    if (
+      !state.projectCandidateAuto ||
+      repository !== state.projectCandidate ||
+      state.projects.some((project) => project.repository === repository)
+    )
+      return;
+    await this.tool("register_user_agent_project", { repository });
+    const projects = await this.tool<Project[]>("list_agent_projects");
+    if (!this.disposed)
+      this.patch({
+        projects,
+        projectCandidate: undefined,
+        projectCandidateAuto: false,
+      });
+  }
+  async registerProject(repository: string) {
+    const scope = this.state.scopeVersion;
+    let registered: { repository: string } | undefined;
+    await this.submit(async () => {
+      registered = await this.tool<{ repository: string }>(
+        "register_user_agent_project",
+        { repository },
+      );
+      const projects = await this.tool<Project[]>("list_agent_projects");
+      if (!this.disposed && scope === this.state.scopeVersion)
+        this.patch({ projects });
+    });
+    if (
+      registered &&
+      !this.disposed &&
+      scope === this.state.scopeVersion &&
+      !this.state.dialog
+    ) {
+      this.patch({ projectCandidate: undefined, projectCandidateAuto: false });
+      await this.changeProject(registered.repository);
+    }
   }
   async settings() {
     if (this.state.dialog || this.state.busy) return;

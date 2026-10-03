@@ -80,6 +80,56 @@ test("native settings use scalar field schemas and expose only enabled providers
   assert.equal(result.values.max_cost_usd, 5);
 });
 
+test("automatic chat project registration is an on-by-default, persistent user setting", async (t) => {
+  const f = await fixture(t);
+  const result = f.settings.read("alice");
+  const field = result.schema.properties!.auto_register_chat_project;
+  assert.equal(field.type, "boolean");
+  assert.equal(field.title, "Automatically add chat projects");
+  assert.match(String(field.description), /host directory metadata/);
+  assert.match(String(field.description), /keeps projects already registered/);
+  assert.equal("default" in field, false);
+  assert.equal(result.values.auto_register_chat_project, true);
+  const items = (result.layout as { items: { property?: string }[] }[]).flatMap(
+    (group) => group.items,
+  );
+  assert.ok(
+    items.some((item) => item.property === "auto_register_chat_project"),
+  );
+  f.settings.update("alice", { set: { auto_register_chat_project: false } });
+  f.reopen();
+  assert.equal(f.settings.values("alice").auto_register_chat_project, false);
+  assert.equal(f.settings.values("bob").auto_register_chat_project, true);
+  f.settings.update("alice", { set: { max_runtime_minutes: 9 } });
+  assert.equal(f.settings.values("alice").auto_register_chat_project, false);
+  f.settings.update("alice", { set: { auto_register_chat_project: true } });
+  f.reopen();
+  assert.equal(f.settings.values("alice").auto_register_chat_project, true);
+});
+
+test("automatic chat project registration cannot be changed by parent authority", async (t) => {
+  const f = await fixture(t);
+  f.settings.update("alice", { set: { auto_register_chat_project: true } });
+  const persisted = f.stored();
+  for (const enabled of [false, true]) {
+    assert.throws(
+      () =>
+        f.settings.update(
+          "alice",
+          {
+            set: {
+              auto_register_chat_project: enabled,
+              max_runtime_minutes: 9,
+            },
+          },
+          "parent",
+        ),
+      /requires a user decision/,
+    );
+    assert.deepEqual(f.stored(), persisted);
+  }
+});
+
 test("native settings use only host-supported bounds and add a panel action", async (t) => {
   const { settings } = await fixture(t);
   const result = settings.read("alice");
@@ -367,6 +417,7 @@ test("legacy settings rows inherit runtime model defaults without a rewrite", as
   f.reopen();
   const values = f.settings.read("legacy").values;
   assert.equal(values.default_model, "");
+  assert.equal(values.auto_register_chat_project, true);
   assert.equal(values.default_reasoning_effort, "default");
   assert.equal(values.fixture_default_model, "");
   assert.equal(values.researcher_default_reasoning_effort, "default");

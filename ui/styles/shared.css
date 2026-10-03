@@ -545,3 +545,29 @@ form .select-trigger {
     monospace;
   color: var(--muted, #8fa5c1);
 }
+
+.project-path-entry {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.project-path-entry input {
+  flex: 1;
+  min-width: 0;
+}
+.project-path-entry button {
+  flex-shrink: 0;
+}
+
+.project-selection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.project-selection-control {
+  flex: 1;
+  min-width: 0;
+}
+.project-selection > button {
+  flex-shrink: 0;
+}

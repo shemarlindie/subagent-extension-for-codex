@@ -1,5 +1,10 @@
 import { type ParentPermissions } from "../core/permissions.js";
 import { z } from "zod";
+import {
+  autoRegisterChatProject,
+  currentChatProject,
+} from "../core/chat-project.js";
+import { browseProject } from "../core/project-picker.js";
 import { Control } from "../core/control.js";
 import { type InputAuthority, startSchema } from "../core/model.js";
 import {
@@ -62,22 +67,29 @@ export function definitions(
   owner: string,
   authority: InputAuthority = "parent",
   parentPermissions?: ParentPermissions,
+  hostMeta?: Record<string, unknown>,
 ) {
   const tools = {
     get_agent_panel_context: {
       description:
-        "Resolve panel repository/revision defaults from explicit approved context or the latest task in this conversation. task_id selects an owned task. null conversation_id explicitly requests all conversations. This never registers a project or starts work.",
+        "Resolve panel repository/revision defaults from explicit approved context or the latest task in this conversation. task_id selects an owned task. null conversation_id explicitly requests all conversations. This never registers a project or starts work; for a returned panel_project_candidate, ask the user whether to add it with request_agent_project.",
       schema: panelContextInput,
       run: (a: any) => resolvePanelContext(c, owner, a),
     },
     list_agent_projects: {
       description:
-        "List persistently approved project roots. Pass an explicit absolute repository to start_agent_task. Register missing roots with the local projects CLI, never by a task argument.",
+        "List persistently approved project roots. Never registers. Pass an explicit absolute repository to start_agent_task. If the chat's project is missing, ask the user whether to add it by calling request_agent_project. Task arguments never grant access.",
       schema: z.strictObject({}),
       run: () =>
         c.projects?.list() ?? [
           { repository: c.repository, name: c.repository, kind: "repository" },
         ],
+    },
+    get_current_agent_project: {
+      description:
+        "Resolve the current chat's local Git root from host directory metadata and report whether it is registered. Never registers. When it is unregistered, follow next_step: starting a task for it from this chat adds it if auto_register_on_task_start is true; otherwise ask the user with request_agent_project. Tool arguments cannot grant directory access.",
+      schema: z.strictObject({}),
+      run: () => currentChatProject(c, owner, hostMeta),
     },
     get_agent_settings: {
       description: "Read persistent user defaults for delegation and budgets.",
@@ -87,7 +99,7 @@ export function definitions(
     },
     update_agent_settings: {
       description:
-        "Update non-approval user defaults. Native permission mode and approval decision maker changes require the user settings interface. Omitted fields and existing tasks stay unchanged.",
+        "Update non-approval user defaults. Project auto-registration, native permission mode, and approval decision maker changes require the user settings interface. Omitted fields and existing tasks stay unchanged.",
       schema: settingsUpdateSchema,
       outputSchema: settingsUpdateOutputSchema,
       run: (a: any) => c.settings.update(owner, a, authority),
@@ -119,16 +131,15 @@ export function definitions(
           .optional(),
       }),
       // Null opts out of host correlation; persisted tasks keep the optional string contract.
-      run: (a: any) =>
-        c.start(
+      run: async (a: any) => {
+        await autoRegisterChatProject(c, owner, hostMeta, a.repository);
+        return c.start(
           owner,
-          {
-            ...a,
-            conversation_id: a.conversation_id ?? undefined,
-          },
+          { ...a, conversation_id: a.conversation_id ?? undefined },
           authority,
           parentPermissions,
-        ),
+        );
+      },
     },
     get_agent_task: {
       description: "Inspect task state and pending input.",
@@ -229,17 +240,37 @@ export function definitions(
   };
   return {
     ...tools,
+    register_user_agent_project: {
+      description:
+        "User interface only: approve and persist a Git repository selected by the user. Does not approve its parent or nested repositories.",
+      schema: z.strictObject({ repository: z.string().min(1).max(4096) }),
+      run: async (a: any) => {
+        if (!c.projects)
+          throw new Error(
+            "Project registration is unavailable in this service.",
+          );
+        return c.projects.register(a.repository);
+      },
+    },
+    browse_user_agent_project: {
+      description:
+        "User interface only: open a native folder picker on the local macOS service host. Returns a path or null on cancellation; never registers a project.",
+      schema: z.strictObject({}),
+      run: () => browseProject(),
+    },
     start_user_agent_task: {
       ...tools.start_agent_task,
       description:
         "User interface only: create a task with the user-selected native permission mode.",
-      run: (a: any) =>
-        c.start(
+      run: async (a: any) => {
+        await autoRegisterChatProject(c, owner, hostMeta, a.repository);
+        return c.start(
           owner,
           { ...a, conversation_id: a.conversation_id ?? undefined },
           "user",
           parentPermissions,
-        ),
+        );
+      },
     },
     submit_user_agent_input: {
       ...tools.submit_agent_input,
@@ -266,6 +297,8 @@ export function definitions(
 }
 export const isUserTool = (name: string) =>
   [
+    "register_user_agent_project",
+    "browse_user_agent_project",
     "start_user_agent_task",
     "submit_user_agent_input",
     "update_user_agent_settings",
@@ -277,10 +310,11 @@ export async function callTool(
   args: unknown,
   authority: InputAuthority = "parent",
   parentPermissions?: ParentPermissions,
+  hostMeta?: Record<string, unknown>,
 ) {
   if (isUserTool(name) && authority !== "user")
     throw new Error("User tools require a user interface");
-  const defs = definitions(c, owner, authority, parentPermissions);
+  const defs = definitions(c, owner, authority, parentPermissions, hostMeta);
   if (!(name in defs)) throw new Error("Unknown tool");
   const d = defs[name as keyof typeof defs];
   return d.run(d.schema.parse(args ?? {}) as any);

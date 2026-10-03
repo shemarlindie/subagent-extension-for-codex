@@ -29,6 +29,16 @@ export function ProjectScope() {
       <small id="project-path" title={state.repository}>
         {state.repository ?? "Choose a project to focus delegated work"}
       </small>
+      {state.projectCandidate && (
+        <button
+          className="quiet"
+          disabled={disabled}
+          title={state.projectCandidate}
+          onClick={() => controller.addProject()}
+        >
+          Add chat project
+        </button>
+      )}
       {state.conversation && (
         <button
           id="conversation-context"

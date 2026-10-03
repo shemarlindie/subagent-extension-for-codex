@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Control } from "../core/control.js";
 import type { Task } from "../core/model.js";
-import { withHostRepository } from "./host-context.js";
+import { withHostRepository, hostProjectCandidate } from "./host-context.js";
 
 export const panelContextInput = z.object({
   conversation_id: z.string().min(1).max(256).nullable().optional(),
@@ -67,7 +67,22 @@ export async function resolvePanelContext(
     throw new Error("Task belongs to a different repository");
   if (target && args.revision && args.revision !== target.revision)
     throw new Error("Task uses a different revision");
+  const candidate =
+    !args.repository && !target && args.conversation_id !== null
+      ? await hostProjectCandidate(args.host_directory)
+      : undefined;
   return {
+    ...(candidate && candidate !== repository
+      ? {
+          panel_project_candidate: {
+            repository: candidate,
+            // New task may offer it; starting that task adds it with the user's choice.
+            auto_register:
+              !!c.projects &&
+              c.settings.values(owner).auto_register_chat_project,
+          },
+        }
+      : {}),
     panel_scope: {
       conversation_id: conversationId,
       ...(repository

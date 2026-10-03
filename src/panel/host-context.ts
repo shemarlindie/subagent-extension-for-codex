@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import type { Control } from "../core/control.js";
 import { git } from "../core/workspace.js";
@@ -31,5 +32,19 @@ export async function withHostRepository(
   } catch {
     // Unknown/remote/unapproved directories do not grant access or block the UI.
     return args;
+  }
+}
+
+/** A local Git-root suggestion for review; this does not resolve or grant access. */
+export async function hostProjectCandidate(directory?: string) {
+  if (!directory) return undefined;
+  try {
+    const cwd = fileURLToPath(directory);
+    if (!isAbsolute(cwd)) return undefined;
+    return await realpath(
+      (await git(cwd, ["rev-parse", "--show-toplevel"])).trim(),
+    );
+  } catch {
+    return undefined;
   }
 }

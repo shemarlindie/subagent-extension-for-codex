@@ -47,7 +47,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
 });
 const { createElement } = await import("react");
-const { act, render, screen, cleanup, waitFor } =
+const { act, render, screen, cleanup, waitFor, within } =
   await import("@testing-library/react");
 const { default: userEvent } = await import("@testing-library/user-event");
 const { Controller } = await import("../ui/core/controller");
@@ -152,6 +152,39 @@ class FakeTransport implements Transport {
   }
   watch() {}
   dispose() {}
+}
+
+function configureProjectRegistration(
+  transport: FakeTransport,
+  options: {
+    picked?: string | null;
+    browseError?: string;
+    registerError?: string;
+    canonicalRepository?: string;
+  } = {},
+) {
+  const original = transport.tool.bind(transport);
+  transport.tool = async <T>(
+    name: string,
+    args: Record<string, unknown> = {},
+  ): Promise<T> => {
+    if (name === "browse_user_agent_project") {
+      transport.calls.push({ name, args });
+      if (options.browseError) throw new Error(options.browseError);
+      return { repository: options.picked ?? null } as T;
+    }
+    if (name === "register_user_agent_project") {
+      transport.calls.push({ name, args });
+      if (options.registerError) throw new Error(options.registerError);
+      const project = {
+        repository: options.canonicalRepository ?? String(args.repository),
+        kind: "repository",
+      };
+      transport.projects.push(project);
+      return project as T;
+    }
+    return original<T>(name, args);
+  };
 }
 async function setup(
   t: TestContext,
@@ -1639,6 +1672,141 @@ test("delegation defaults to inherited native permissions and separately selects
   );
 });
 
+test("global UI adds a manually entered project only after explicit submission and selects it", async (t) => {
+  const { controller, transport, user } = await setup(
+    t,
+    (transport) => configureProjectRegistration(transport),
+    { mode: "console" },
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Add project", exact: true }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.type(
+    within(dialog).getByLabelText("Repository path"),
+    "/repo/new-project",
+  );
+  assert.equal(
+    transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    ).length,
+    0,
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: "Add project", exact: true }),
+  );
+  await waitFor(() =>
+    assert.equal(controller.getSnapshot().repository, "/repo/new-project"),
+  );
+  assert.deepEqual(
+    transport.calls.find((call) => call.name === "register_user_agent_project")
+      ?.args,
+    { repository: "/repo/new-project" },
+  );
+  assert.ok(
+    controller
+      .getSnapshot()
+      .projects.some((project) => project.repository === "/repo/new-project"),
+  );
+  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+});
+
+test("browsing a folder fills the project draft without granting access", async (t) => {
+  const { transport, user } = await setup(
+    t,
+    (transport) =>
+      configureProjectRegistration(transport, { picked: "/repo/picked" }),
+    { mode: "console" },
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Add project", exact: true }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+  await waitFor(() =>
+    assert.equal(
+      (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
+        .value,
+      "/repo/picked",
+    ),
+  );
+  assert.equal(
+    transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    ).length,
+    0,
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: "Cancel", exact: true }),
+  );
+  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  assert.equal(
+    transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    ).length,
+    0,
+  );
+});
+
+test("cancelling the native picker preserves the manual project path", async (t) => {
+  const { transport, user } = await setup(
+    t,
+    (transport) => configureProjectRegistration(transport),
+    { mode: "console" },
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Add project", exact: true }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  const path = within(dialog).getByLabelText(
+    "Repository path",
+  ) as HTMLInputElement;
+  await user.type(path, "/repo/manual-draft");
+  await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+  await waitFor(() =>
+    assert.ok(
+      transport.calls.some((call) => call.name === "browse_user_agent_project"),
+    ),
+  );
+  assert.equal(path.value, "/repo/manual-draft");
+  assert.equal(
+    transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    ).length,
+    0,
+  );
+});
+
+test("project registration errors preserve the draft and do not change the selected project", async (t) => {
+  const { controller, transport, user } = await setup(
+    t,
+    (transport) =>
+      configureProjectRegistration(transport, {
+        registerError: "Use repository root",
+      }),
+    { mode: "console" },
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Add project", exact: true }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.type(
+    within(dialog).getByLabelText("Repository path"),
+    "/repo/invalid/src",
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: "Add project", exact: true }),
+  );
+  await screen.findByText("Use repository root");
+  assert.equal(
+    (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
+      .value,
+    "/repo/invalid/src",
+  );
+  assert.equal(controller.getSnapshot().repository, undefined);
+  assert.equal(transport.projects.length, 1);
+});
+
 test("permission cancellation keeps the request pending and approval includes the optional message", async (t) => {
   const { user, transport } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
@@ -1679,5 +1847,297 @@ test("permission cancellation keeps the request pending and approval includes th
         message: "Only run this command",
       },
     ),
+  );
+});
+
+test("a chat project hint prefills registration without registering it automatically", async (t) => {
+  const { controller, transport, user } = await setup(t, (transport) =>
+    configureProjectRegistration(transport),
+  );
+  await act(() =>
+    controller.applyScope({
+      panel_scope: { conversation_id: "chat-project" },
+      panel_project_candidate: { repository: "/repo/chat-project" },
+    }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Add project", exact: true }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  assert.equal(
+    (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
+      .value,
+    "/repo/chat-project",
+  );
+  assert.equal(
+    transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    ).length,
+    0,
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: "Add project", exact: true }),
+  );
+  await waitFor(() =>
+    assert.equal(controller.getSnapshot().repository, "/repo/chat-project"),
+  );
+});
+
+test("folder picker failure keeps manual entry available", async (t) => {
+  const { transport, user } = await setup(
+    t,
+    (transport) =>
+      configureProjectRegistration(transport, {
+        browseError: "Native folder picker unavailable",
+      }),
+    { mode: "console" },
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Add project", exact: true }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+  await within(dialog).findByText("Native folder picker unavailable");
+  const path = within(dialog).getByLabelText("Repository path");
+  await user.type(path, "/repo/manual-fallback");
+  await user.click(
+    within(dialog).getByRole("button", { name: "Add project", exact: true }),
+  );
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.find(
+        (call) => call.name === "register_user_agent_project",
+      )?.args.repository,
+      "/repo/manual-fallback",
+    ),
+  );
+});
+
+test("a delayed native folder selection cannot overwrite a new project dialog after scope changes", async (t) => {
+  let finish!: (result: { repository: string }) => void;
+  const { controller, transport, user } = await setup(
+    t,
+    (transport) => {
+      configureProjectRegistration(transport);
+      const original = transport.tool.bind(transport);
+      transport.tool = async <T>(
+        name: string,
+        args: Record<string, unknown> = {},
+      ): Promise<T> => {
+        if (name === "browse_user_agent_project") {
+          transport.calls.push({ name, args });
+          return new Promise<{ repository: string }>((resolve) => {
+            finish = resolve;
+          }) as Promise<T>;
+        }
+        return original<T>(name, args);
+      };
+    },
+    { mode: "console" },
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Add project", exact: true }),
+  );
+  const firstDialog = await screen.findByRole("dialog");
+  await user.click(
+    within(firstDialog).getByRole("button", { name: "Browse…" }),
+  );
+  await act(() =>
+    controller.applyScope({ panel_scope: { conversation_id: "new-chat" } }),
+  );
+  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  await user.click(
+    screen.getByRole("button", { name: "Add project", exact: true }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  const path = within(dialog).getByLabelText(
+    "Repository path",
+  ) as HTMLInputElement;
+  await user.type(path, "/repo/new-draft");
+  await act(async () => {
+    finish({ repository: "/repo/stale-selection" });
+  });
+  assert.equal(path.value, "/repo/new-draft");
+  assert.equal(
+    transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    ).length,
+    0,
+  );
+});
+
+test("browsing a project inside delegation preserves the draft and starts only after Start task", async (t) => {
+  const { controller, transport, user } = await setup(t, (transport) =>
+    configureProjectRegistration(transport, {
+      picked: "/repo/alias",
+      canonicalRepository: "/repo/canonical",
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  const dialog = await screen.findByRole("dialog");
+  await enterTask(user, "Review this new project with my draft intact");
+  await selectOption(user, "Worker", "codex · reviewer");
+  const runtime = screen.getByLabelText("Runtime limit · minutes");
+  await user.clear(runtime);
+  await user.type(runtime, "12.5");
+  const scope = controller.getSnapshot().repository;
+  await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+  await waitFor(() =>
+    assert.match(
+      within(dialog).getByRole("combobox", { name: "Project", exact: true })
+        .textContent ?? "",
+      /canonical/,
+    ),
+  );
+  assert.equal(controller.getSnapshot().repository, scope);
+  assert.equal(
+    (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
+    "Review this new project with my draft intact",
+  );
+  assert.equal((runtime as HTMLInputElement).value, "12.5");
+  assert.match(
+    within(dialog).getByRole("combobox", { name: "Worker", exact: true })
+      .textContent ?? "",
+    /codex/,
+  );
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
+  );
+  assert.deepEqual(
+    transport.calls.find((call) => call.name === "register_user_agent_project")
+      ?.args,
+    { repository: "/repo/alias" },
+  );
+  await user.click(within(dialog).getByRole("button", { name: "Start task" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+  const started = transport.calls.find(
+    (call) => call.name === "start_agent_task",
+  )!;
+  assert.equal(started.args.repository, "/repo/canonical");
+  assert.equal(
+    started.args.description,
+    "Review this new project with my draft intact",
+  );
+  assert.equal(started.args.provider, "codex");
+  assert.equal(
+    (started.args.budget as { max_runtime_minutes: number })
+      .max_runtime_minutes,
+    12.5,
+  );
+});
+
+test("task project registration failure preserves the selected project and draft", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    configureProjectRegistration(transport, {
+      picked: "/repo/new/src",
+      registerError: "Use repository root",
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  const dialog = await screen.findByRole("dialog");
+  await enterTask(user, "Keep this description after registration failure");
+  await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+  await within(dialog).findByText("Use repository root");
+  assert.equal(
+    within(dialog).getByRole("combobox", { name: "Project", exact: true })
+      .textContent,
+    "/repo/a",
+  );
+  assert.equal(
+    (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
+    "Keep this description after registration failure",
+  );
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
+  );
+});
+
+test("cancelling the task project picker preserves selection and task draft without registering", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    configureProjectRegistration(transport),
+  );
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  const dialog = await screen.findByRole("dialog");
+  await enterTask(user, "Preserve task while browsing");
+  await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+  await waitFor(() =>
+    assert.equal(
+      (
+        within(dialog).getByRole("button", {
+          name: "Browse…",
+        }) as HTMLButtonElement
+      ).disabled,
+      false,
+    ),
+  );
+  assert.equal(
+    within(dialog).getByRole("combobox", { name: "Project", exact: true })
+      .textContent,
+    "/repo/a",
+  );
+  assert.equal(
+    (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
+    "Preserve task while browsing",
+  );
+  assert.equal(
+    transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    ).length,
+    0,
+  );
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
+  );
+});
+
+test("pending task project browsing disables Start and ignores selection after scope changes", async (t) => {
+  let finish!: (result: { repository: string }) => void;
+  const { controller, transport, user } = await setup(t, (transport) => {
+    configureProjectRegistration(transport);
+    const original = transport.tool.bind(transport);
+    transport.tool = async <T>(
+      name: string,
+      args: Record<string, unknown> = {},
+    ): Promise<T> => {
+      if (name === "browse_user_agent_project") {
+        transport.calls.push({ name, args });
+        return new Promise<{ repository: string }>((resolve) => {
+          finish = resolve;
+        }) as Promise<T>;
+      }
+      return original<T>(name, args);
+    };
+  });
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  const dialog = await screen.findByRole("dialog");
+  await enterTask(user, "A pending folder selection");
+  const start = within(dialog).getByRole("button", {
+    name: "Start task",
+  }) as HTMLButtonElement;
+  await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+  assert.equal(start.disabled, true);
+  await act(() =>
+    controller.applyScope({ panel_scope: { conversation_id: "new-chat" } }),
+  );
+  await act(async () => {
+    finish({ repository: "/repo/stale-selection" });
+  });
+  assert.equal(
+    transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    ).length,
+    0,
+  );
+  assert.equal(
+    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    0,
   );
 });

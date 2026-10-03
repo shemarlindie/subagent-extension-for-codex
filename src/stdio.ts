@@ -10,14 +10,119 @@ import { withSettingsCapability } from "./core/settings.js";
 import { delegationPanel, panelUri } from "./panel/panel.js";
 import { taskPanelContext } from "./panel/panel-context.js";
 import type { Task } from "./core/model.js";
+import { z } from "zod";
+import { hostDirectoryFromMeta } from "./core/chat-project.js";
+import { hostProjectCandidate } from "./panel/host-context.js";
 import { codexContextCapability } from "./panel/host-context.js";
 const { token, origin } = await connectService();
 const server = new McpServer(
   { name: "codex-subagent-extension", version: "0.1.0" },
   {
     instructions:
-      "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Missing projects require registration with the local projects CLI.",
+      "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Use get_current_agent_project for host project discovery. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user to confirm registration.",
     capabilities: withSettingsCapability(codexContextCapability),
+  },
+);
+async function serviceTool(name: string, args: Record<string, unknown>) {
+  const response = await fetch(
+    `${origin}/api/${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "X-Codex-Subagent-Extension": "1",
+      },
+      body: JSON.stringify(args),
+      signal: AbortSignal.timeout(30000),
+      redirect: "error",
+    },
+  );
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? "Service request failed");
+  return body.result;
+}
+server.registerTool(
+  "request_agent_project",
+  {
+    description:
+      "Ask the user to approve registering a local Git repository from this chat. Supply its actual absolute path, or omit it to prefill host directory metadata. Continue delegation with the returned repository after approval.",
+    inputSchema: z.strictObject({
+      repository: z.string().min(1).max(4096).optional(),
+    }),
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  async (args, extra) => {
+    try {
+      const capabilities = server.server.getClientCapabilities()?.elicitation;
+      if (
+        !capabilities ||
+        (Object.keys(capabilities).length > 0 && !capabilities.form)
+      )
+        throw new Error(
+          "This host cannot show registration confirmations. Use Add project in the panel, or enable Automatically add chat projects in user settings and start the task from this chat.",
+        );
+      const repository =
+        args.repository ??
+        (await hostProjectCandidate(hostDirectoryFromMeta(extra._meta)));
+      const answer = await server.server.elicitInput(
+        {
+          mode: "form",
+          message:
+            "Approve access to a local Git repository for delegated tasks. Registration covers this Git root only. No task starts until requested separately.",
+          requestedSchema: {
+            type: "object",
+            properties: {
+              repository: {
+                type: "string",
+                title: "Repository path",
+                minLength: 1,
+                maxLength: 4096,
+                ...(repository ? { default: repository } : {}),
+              },
+              decision: {
+                type: "string",
+                title: "Repository access",
+                enum: ["deny", "allow"],
+                default: "deny",
+              },
+            },
+            required: ["repository", "decision"],
+          },
+        },
+        { timeout: 600000 },
+      );
+      if (answer.action !== "accept")
+        return {
+          content: [{ type: "text", text: "Project registration cancelled." }],
+          structuredContent: { result: { cancelled: true } },
+        };
+      const content = z
+        .strictObject({
+          repository: z.string().min(1).max(4096),
+          decision: z.enum(["deny", "allow"]),
+        })
+        .parse(answer.content);
+      const result =
+        content.decision === "allow"
+          ? await serviceTool("register_user_agent_project", {
+              repository: content.repository,
+            })
+          : { cancelled: true };
+      return {
+        content: [{ type: "text", text: JSON.stringify(result) }],
+        structuredContent: { result },
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: String(error) }],
+      };
+    }
   },
 );
 for (const [name, d] of Object.entries(definitions({} as Control, "local")))
@@ -53,6 +158,13 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
               "X-Codex-Subagent-Extension": "1",
+              ...(hostDirectoryFromMeta(extra._meta)
+                ? {
+                    "X-Codex-Host-Directory": encodeURIComponent(
+                      hostDirectoryFromMeta(extra._meta)!,
+                    ),
+                  }
+                : {}),
               ...(parentPermissions
                 ? {
                     "X-Codex-Parent-Permissions":
@@ -61,7 +173,9 @@ for (const [name, d] of Object.entries(definitions({} as Control, "local")))
                 : {}),
             },
             body: JSON.stringify(withConversation(name, args, extra._meta)),
-            signal: AbortSignal.timeout(30000),
+            signal: AbortSignal.timeout(
+              name === "browse_user_agent_project" ? 150000 : 30000,
+            ),
             redirect: "error",
           },
         );

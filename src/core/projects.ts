@@ -3,7 +3,7 @@ import { realpath, stat } from "node:fs/promises";
 import { type Store } from "./store.js";
 import { Workspaces, git } from "./workspace.js";
 
-/** Only the local registration CLI/configuration grants roots, never tool arguments. */
+/** Only explicit user registration (UI/CLI) or configuration grants roots, never task arguments. */
 export class Projects {
   constructor(
     private store: Store,
@@ -54,7 +54,7 @@ export class Projects {
     this.refresh();
     if (path === "current")
       throw new Error(
-        "Host project context is unavailable. Call list_agent_projects and pass an explicit repository path; register missing projects with the local projects CLI.",
+        "Host project context is unavailable. Call list_agent_projects and pass an explicit repository path; add missing projects through the user interface or local projects CLI.",
       );
     if (!isAbsolute(path)) throw new Error("Use an absolute repository path");
     const actual = await realpath(path);

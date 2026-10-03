@@ -44,6 +44,14 @@ export function Header() {
           </button>
         )}
         <button
+          id="add-project"
+          className="quiet"
+          disabled={!state.connected || state.busy}
+          onClick={() => controller.addProject()}
+        >
+          Add project
+        </button>
+        <button
           id="settings"
           className="quiet"
           disabled={!state.connected || state.busy}

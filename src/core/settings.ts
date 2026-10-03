@@ -79,6 +79,11 @@ const modelSettingsShape = {
 };
 const valuesSchema = z.strictObject({
   ...modelSettingsShape,
+  auto_register_chat_project: z.boolean().meta({
+    title: "Automatically add chat projects",
+    description:
+      "When a task is started from a chat for its local Git root, register that root from host directory metadata, never arbitrary task paths. Disabling this keeps projects already registered.",
+  }),
   claude_permission_mode: permissionModeSchema.meta({
     title: "Claude permission mode",
     description:
@@ -128,6 +133,7 @@ const hostValuesSchema = valuesSchema
   });
 // Fill missing fields in older settings rows without adding JSON Schema defaults to host fields.
 const storedValuesSchema = valuesSchema.extend({
+  auto_register_chat_project: z.boolean().default(true),
   claude_permission_mode: permissionModeSchema.default("inherit"),
   default_approval_decider: approvalDeciderSchema.default("user"),
   default_approval_mode: approvalModeSchema.default("ask_user"),
@@ -336,6 +342,7 @@ export class Settings {
                 "default_provider",
                 "default_worker_profile",
                 "default_workspace_strategy",
+                "auto_register_chat_project",
                 "claude_permission_mode",
                 "default_approval_decider",
                 "max_runtime_minutes",
@@ -373,6 +380,10 @@ export class Settings {
   }
   update(owner: string, input: unknown, authority: InputAuthority = "user") {
     const { set } = settingsUpdateSchema.parse(input);
+    if (authority !== "user" && set.auto_register_chat_project !== undefined)
+      throw new Error(
+        "Automatic project registration requires a user decision in settings",
+      );
     if (
       authority !== "user" &&
       (set.default_approval_mode !== undefined ||

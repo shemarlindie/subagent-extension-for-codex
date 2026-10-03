@@ -1,7 +1,6 @@
 # Host capabilities and integration decisions
 
-Checked against official documentation and the installed packages on October 2,
-2026. This distinguishes documented capabilities from behavior verified in this
+Checked against official documentation and the installed packages on October 2, 2026. This distinguishes documented capabilities from behavior verified in this
 repository; it is not a claim that every host/version implements every feature.
 
 ## Display modes and native extension surfaces
@@ -12,11 +11,11 @@ target host is **Codex inside the ChatGPT desktop app**. The user has confirmed
 that the thread-specific delegation panel is present and works there. This
 confirms that surface in their installation, not every mode or bridge feature.
 
-| Mode | Presentation | Current documentation evidence |
-| --- | --- | --- |
-| `inline` | A compact widget in the conversation | Listed by the developer reference and extension specification |
-| `fullscreen` | An expanded app view; native entrypoints use this mode | Listed by both sources; the mode name does not determine desktop pane geometry |
-| `pip` | A persistent picture-in-picture widget alongside the conversation | Listed by the developer reference, UI guide and SDK, but explicitly excluded by the linked extension specification |
+| Mode         | Presentation                                                      | Current documentation evidence                                                                                     |
+| ------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `inline`     | A compact widget in the conversation                              | Listed by the developer reference and extension specification                                                      |
+| `fullscreen` | An expanded app view; native entrypoints use this mode            | Listed by both sources; the mode name does not determine desktop pane geometry                                     |
+| `pip`        | A persistent picture-in-picture widget alongside the conversation | Listed by the developer reference, UI guide and SDK, but explicitly excluded by the linked extension specification |
 
 The [developer reference](https://developers.openai.com/plugins/reference#component-resource-_meta-fields)
 lists all three as supported values of resource
@@ -65,7 +64,10 @@ closed source; public CLI/core/app-server code does not prove desktop behavior.
 Both transports now advertise that capability and consume only the directory
 hint, resolve its Git root and validate it against approved projects. Explicit
 repository/task arguments take precedence; missing, remote, malformed or
-unapproved hints fall back to explicit selection or same-chat history. Optional
+unapproved hints fall back to explicit selection or same-chat history. A valid
+unregistered local Git root is returned as an **Add chat project** suggestion;
+showing or prefilling it never registers it. Leaving the chat with **All chats**
+clears that suggestion while retaining the repository/revision filter. Optional
 `threadId` is used after explicit conversation and documented `openai/session`
 correlation. Permission metadata is neither retained nor treated as an access
 grant. Native metadata delivery still needs a live target-host check.
@@ -147,6 +149,38 @@ Registration should use a direct user action or accepted elicitation and retain
 canonical-path containment checks for all subsequent task requests.
 [Official MCP server guidance](https://developers.openai.com/plugins/build/mcp-server).
 
+The panel now registers repositories through app-only user tools. **Add project**
+accepts an absolute path or a native macOS folder selection followed by explicit
+submission. **Browse…** beside the New task Project selector registers the chosen
+repository immediately, selects it for that draft, and leaves task creation to
+**Start task**. The native dialog opens on the service host, and other platforms
+can use the Add project path field. MCP hosts must enforce app-only tool visibility;
+the generic model-facing API rejects these user tools. Registration retains
+canonical Git-root validation and does not grant parent or nested-repository access.
+The native script has been compiled and its result/error paths tested with an
+injected executor; interactive dialog behavior and target-host delivery remain
+unverified.
+
+The model-visible, read-only `get_current_agent_project` reports the current root
+and whether it is registered, using only original host `_meta["codex/sandbox-state-meta"].sandboxCwd`.
+`request_agent_project` asks the user to confirm registration, optionally prefilling
+an explicit repository or that host root. Its decision defaults to deny; only an
+accepted allow registers the canonical Git root. HTTP uses durable Multi Round-Trip
+Requests; stdio uses legacy SDK form elicitation when the host advertises support.
+Unsupported hosts receive guidance to register through the panel. Cancellation and
+decline never register or start work.
+
+**Automatically add chat projects** (`auto_register_chat_project`) is a persistent,
+user-only setting available in native and panel Settings, defaulting to true.
+It registers the current local host Git root only when a task is started from the
+chat for that root; project listing, context resolution and the panel openers
+remain read-only. Explicit/model `host_directory` and task paths cannot trigger
+this grant, and roots already covered by a grant are not registered again. The
+panel's New task offers the unregistered chat project only while the setting is
+on, and adds it when the user starts a task with it.
+Disabling the policy keeps existing registrations. These implemented flows do not
+establish live desktop metadata delivery or native form rendering.
+
 ## Recent releases and compatibility
 
 The July 28, 2026 MCP release introduces stateless per-request capabilities,
@@ -189,14 +223,14 @@ explicit IDs and stable workspaces avoid that ambiguity.
 
 Installed package evidence (`npm ls --depth=0`, package manifests and types):
 
-| Component | Installed version | Relevant evidence |
-| --- | --- | --- |
-| Claude Agent SDK | 0.3.288 | `sdk.d.ts` options; bundled manifest CLI 2.1.288 |
-| MCP SDK v1 | 1.31.0 | `types.js` latest supported handshake version 2025-11-25 |
-| MCP server / node v2 | 2.2.0 / 2.1.0 | Modern 2026-07-28 codec alongside legacy support |
-| MCP Apps | 1.7.5 | `spec.types.d.ts` host context lacks repository identity |
-| OpenAI SDK | 7.25.0 | Installed dependency, not a Codex host-context API |
-| OpenAI MCP extensions | 0.1.0 | Installed extension dependency |
+| Component             | Installed version | Relevant evidence                                        |
+| --------------------- | ----------------- | -------------------------------------------------------- |
+| Claude Agent SDK      | 0.3.288           | `sdk.d.ts` options; bundled manifest CLI 2.1.288         |
+| MCP SDK v1            | 1.31.0            | `types.js` latest supported handshake version 2025-11-25 |
+| MCP server / node v2  | 2.2.0 / 2.1.0     | Modern 2026-07-28 codec alongside legacy support         |
+| MCP Apps              | 1.7.5             | `spec.types.d.ts` host context lacks repository identity |
+| OpenAI SDK            | 7.25.0            | Installed dependency, not a Codex host-context API       |
+| OpenAI MCP extensions | 0.1.0             | Installed extension dependency                           |
 
 These observations verify local library contracts, not a live desktop handshake,
 hook trust state, or access to another host's filesystem. A local plugin cannot

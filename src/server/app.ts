@@ -9,6 +9,19 @@ import { callTool, isUserTool } from "./tools.js";
 import { type Event } from "../core/model.js";
 import { type Events } from "../events/service.js";
 import { readFile } from "node:fs/promises";
+
+/** Host directory forwarded by the stdio proxy; malformed values are ignored. */
+function hostDirectoryMeta(header: unknown) {
+  if (typeof header !== "string") return undefined;
+  try {
+    return {
+      "codex/sandbox-state-meta": { sandboxCwd: decodeURIComponent(header) },
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 export function application(
   c: Control,
   auth: Auth,
@@ -152,6 +165,9 @@ export function application(
                 String(req.headers["x-codex-parent-permissions"]),
               ),
             })
+          : undefined,
+        bearer(req)
+          ? hostDirectoryMeta(req.headers["x-codex-host-directory"])
           : undefined,
       );
       res.json({ result });

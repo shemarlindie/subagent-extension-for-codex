@@ -29,38 +29,60 @@ export type DelegateValues = {
 export function ProjectField({
   projects,
   allowParent,
+  disabled = false,
+  onBrowse,
 }: {
   projects: Project[];
   allowParent: boolean;
+  disabled?: boolean;
+  onBrowse?: () => void;
 }) {
   const { control } = useFormContext<DelegateValues>(),
     options = projects.filter((project) => project.kind === "repository");
   return (
     <Field id="repository" label="Project">
-      {allowParent ? (
-        <>
-          <ProjectAutocomplete
-            repositories={options.map((project) => project.repository)}
-          />
-          <p className="help">
-            Use a registered Git root or a Git repository inside an approved
-            parent.
-          </p>
-        </>
-      ) : (
-        <FormSelect
-          control={control}
-          name="repository"
-          id="repository"
-          label="Project"
-          required
-          placeholder="Choose a project"
-          rules={{ required: "Choose a project before starting a task." }}
-          options={options.map((project) => ({
-            value: project.repository,
-            label: project.repository,
-          }))}
-        />
+      <div className="project-selection">
+        <div className="project-selection-control">
+          {allowParent ? (
+            <ProjectAutocomplete
+              disabled={disabled}
+              repositories={options.map((project) => project.repository)}
+            />
+          ) : (
+            <FormSelect
+              control={control}
+              name="repository"
+              id="repository"
+              label="Project"
+              required
+              disabled={disabled}
+              placeholder="Choose a project"
+              rules={{ required: "Choose a project before starting a task." }}
+              options={options.map((project) => ({
+                value: project.repository,
+                label: project.pending
+                  ? `${project.repository} (chat project, added when the task starts)`
+                  : project.repository,
+              }))}
+            />
+          )}
+        </div>
+        {onBrowse && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onBrowse}
+            title="Choose and add a repository on the service host"
+          >
+            Browse…
+          </button>
+        )}
+      </div>
+      {allowParent && (
+        <p className="help">
+          Use a registered Git root or a Git repository inside an approved
+          parent.
+        </p>
       )}
     </Field>
   );

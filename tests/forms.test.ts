@@ -9,6 +9,8 @@ import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
 import { Forms } from "../src/core/forms.js";
+import { Projects } from "../src/core/projects.js";
+import { pathToFileURL } from "node:url";
 import { application } from "../src/server/app.js";
 import { Auth } from "../src/server/auth.js";
 import type { ModelChoice, Provider } from "../src/core/model.js";
@@ -53,6 +55,7 @@ async function setup(
     state?: string,
     response?: unknown,
     capabilities: object = { elicitation: { form: {} } },
+    metadata: object = {},
   ) => {
     const result = await fetch(base + "/mcp", {
       method: "POST",
@@ -76,6 +79,7 @@ async function setup(
             ? {}
             : { inputResponses: { form: response } }),
           _meta: {
+            ...metadata,
             "io.modelcontextprotocol/protocolVersion": "2026-07-28",
             "io.modelcontextprotocol/clientInfo": {
               name: "test",
@@ -840,6 +844,200 @@ test("Codex execution forms disclose whole-turn authority and bind approval to t
     await until(() => !!decision);
     assert.equal(decision.approved, true);
     assert.equal(decision.input, undefined);
+  } finally {
+    await close();
+  }
+});
+
+test("project registration form requires explicit allow and replays durably without starting tasks", async () => {
+  const { c, rpc, close } = await setup();
+  c.projects = new Projects(c.store, c.workspaces);
+  const register = c.projects.register.bind(c.projects);
+  let registrations = 0;
+  c.projects.register = async (...args) => {
+    registrations++;
+    return register(...args);
+  };
+  try {
+    const args = { repository: c.repository };
+    const requested = await rpc("request_agent_project", args);
+    const schema = requested.result.inputRequests.form.params.requestedSchema;
+    assert.equal(schema.properties.repository.default, c.repository);
+    assert.equal(schema.properties.repository.maxLength, 4096);
+    assert.equal(schema.properties.decision.default, "deny");
+    assert.deepEqual(c.projects.list(), []);
+    const state = requested.result.requestState;
+    assert.throws(() => c.forms.verify("other-owner", state));
+    const response = {
+      action: "accept",
+      content: { repository: c.repository, decision: "allow" },
+    };
+    const [submitted, concurrent] = await Promise.all([
+      rpc("request_agent_project", args, state, response),
+      rpc("request_agent_project", args, state, response),
+    ]);
+    assert.deepEqual(concurrent, submitted);
+    assert.equal(registrations, 1);
+    assert.equal(
+      submitted.result.structuredContent.result.repository,
+      await realpath(c.repository),
+    );
+    assert.equal(c.projects.list().length, 1);
+    assert.equal(c.store.all().length, 0);
+    c.forms = new Forms(c);
+    assert.deepEqual(
+      await rpc("request_agent_project", args, state, response),
+      submitted,
+    );
+    assert.equal(registrations, 1);
+    assert.ok(
+      (
+        await rpc("request_agent_project", args, state, {
+          ...response,
+          content: { ...response.content, decision: "deny" },
+        })
+      ).result.isError,
+    );
+    assert.ok(
+      (
+        await rpc(
+          "request_agent_project",
+          { repository: "/changed" },
+          state,
+          response,
+        )
+      ).result.isError,
+    );
+    c.forms = new Forms(c, () => Date.now() + 11 * 60000);
+    assert.equal(
+      (await rpc("request_agent_project", args, state, response)).error.code,
+      -32602,
+    );
+  } finally {
+    await close();
+  }
+});
+
+test("project registration cancellation and accepted deny never grant access", async () => {
+  const { c, rpc, close } = await setup();
+  c.projects = new Projects(c.store, c.workspaces);
+  try {
+    for (const response of [
+      { action: "cancel" },
+      { action: "decline" },
+      {
+        action: "accept",
+        content: { repository: c.repository, decision: "deny" },
+      },
+    ]) {
+      const requested = await rpc("request_agent_project", {});
+      const submitted = await rpc(
+        "request_agent_project",
+        {},
+        requested.result.requestState,
+        response,
+      );
+      assert.equal(submitted.result.structuredContent.result.cancelled, true);
+      assert.deepEqual(c.projects.list(), []);
+    }
+    assert.equal(c.store.all().length, 0);
+  } finally {
+    await close();
+  }
+});
+
+test("project registration validates repository roots and does not trust unsolicited responses", async () => {
+  const { c, rpc, close } = await setup();
+  c.projects = new Projects(c.store, c.workspaces);
+  try {
+    const response = {
+      action: "accept",
+      content: { repository: c.repository, decision: "allow" },
+    };
+    assert.ok(
+      (await rpc("request_agent_project", {}, undefined, response)).result
+        .isError,
+    );
+    for (const repository of [
+      "relative/path",
+      join(c.repository, "README.md"),
+      await mkdtemp(join(tmpdir(), "ac-not-git-")),
+    ]) {
+      const requested = await rpc("request_agent_project", {});
+      const submitted = await rpc(
+        "request_agent_project",
+        {},
+        requested.result.requestState,
+        {
+          ...response,
+          content: { ...response.content, repository },
+        },
+      );
+      assert.ok(submitted.result.isError, JSON.stringify(submitted));
+      assert.deepEqual(c.projects.list(), []);
+    }
+    const requested = await rpc("request_agent_project", {});
+    for (const content of [
+      { repository: "", decision: "allow" },
+      { repository: c.repository, decision: "allow", kind: "parent" },
+      { repository: c.repository },
+    ]) {
+      assert.ok(
+        (
+          await rpc(
+            "request_agent_project",
+            {},
+            requested.result.requestState,
+            { action: "accept", content },
+          )
+        ).result.isError,
+      );
+      assert.deepEqual(c.projects.list(), []);
+    }
+    assert.equal(c.store.all().length, 0);
+  } finally {
+    await close();
+  }
+});
+
+test("project registration prefills host metadata without changing continuation arguments", async () => {
+  const { c, rpc, close } = await setup();
+  c.projects = new Projects(c.store, c.workspaces);
+  try {
+    const requested = await rpc(
+      "request_agent_project",
+      {},
+      undefined,
+      undefined,
+      undefined,
+      {
+        "codex/sandbox-state-meta": {
+          sandboxCwd: pathToFileURL(c.repository).href,
+        },
+      },
+    );
+    assert.equal(
+      requested.result.inputRequests.form.params.requestedSchema.properties
+        .repository.default,
+      await realpath(c.repository),
+    );
+    const stored = JSON.parse(
+      String(c.store.db.prepare("SELECT body FROM form_requests").get()!.body),
+    );
+    assert.deepEqual(stored.args, {});
+    assert.deepEqual(c.projects.list(), []);
+    const submitted = await rpc(
+      "request_agent_project",
+      {},
+      requested.result.requestState,
+      {
+        action: "accept",
+        content: { repository: c.repository, decision: "allow" },
+      },
+    );
+    assert.ok(!submitted.result.isError, JSON.stringify(submitted));
+    assert.equal(c.projects.list().length, 1);
+    assert.equal(c.store.all().length, 0);
   } finally {
     await close();
   }

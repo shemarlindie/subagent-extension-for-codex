@@ -12,6 +12,7 @@ import {
   WorkspaceField,
   type DelegateValues,
 } from "./delegate-fields";
+import { taskProjects } from "../core/delegation";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 export function DelegateForm({
@@ -75,8 +76,9 @@ export function DelegateForm({
     <FormProvider {...form}>
       <form
         onSubmit={form.handleSubmit((values) =>
-          controller.submit(() => {
+          controller.submit(async () => {
             const [provider, worker_profile] = values.worker.split(":");
+            await controller.addChatProjectForTask(values.repository);
             return controller.tool<Task>("start_agent_task", {
               permission_mode:
                 provider === "claude" ? values.permission_mode : "inherit",
@@ -113,7 +115,19 @@ export function DelegateForm({
             : "Work starts from a committed revision in a separate worktree."}
         </p>
         <ProjectField
-          projects={state.projects}
+          projects={taskProjects(state)}
+          disabled={state.busy}
+          onBrowse={() =>
+            controller.run(async () => {
+              const repository = await controller.browseTaskProject();
+              // Keep selection in this draft; changing panel scope would discard it.
+              if (repository)
+                form.setValue("repository", repository, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+            })
+          }
           allowParent={
             state.mode === "panel" &&
             state.projects.some((project) => project.kind === "parent")

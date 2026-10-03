@@ -163,8 +163,9 @@ export function SettingsForm({
       })}
     >
       <p className="form-note">
-        Defaults apply to new tasks. Explicit task choices override them, and
-        existing tasks keep their original settings.
+        Settings control project registration and defaults for new tasks.
+        Explicit task choices override task defaults, and existing tasks keep
+        their original settings.
       </p>
       {groups(settings).map((group, index) => {
         const edits = group.keys.filter((key) => changed.includes(key)).length;

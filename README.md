@@ -110,7 +110,7 @@ Plugin packaging and entrypoint metadata follow the [OpenAI plugin packaging doc
 
 ## Plugin settings
 
-The server advertises `extensions["openai/settings"]` with `get_agent_settings` and app-only `update_user_agent_settings`, and repeats it under `experimental` for hosts on MCP `2025-11-25` or earlier. Compatible ChatGPT hosts can render its native settings schema and layout. Number fields use inclusive minimums, and the layout includes an **Open delegated work** button that opens the panel. `get_agent_settings` and `update_agent_settings` are model-visible; `update_agent_settings` can update ordinary defaults but rejects permission and approval-authority settings. App-only `update_user_agent_settings` allows the user to change these defaults. Compatible hosts must enforce app-only tool visibility. Authenticated raw service clients are trusted administrators; this boundary does not cryptographically attest that a human made a request.
+The server advertises `extensions["openai/settings"]` with `get_agent_settings` and app-only `update_user_agent_settings`, and repeats it under `experimental` for hosts on MCP `2025-11-25` or earlier. Compatible ChatGPT hosts can render its native settings schema and layout. Number fields use inclusive minimums, and the layout includes an **Open delegated work** button that opens the panel. `get_agent_settings` and `update_agent_settings` are model-visible; `update_agent_settings` can update ordinary defaults but rejects permission, approval-authority, and automatic project registration settings. App-only `update_user_agent_settings` allows the user to change these defaults. Compatible hosts must enforce app-only tool visibility. Authenticated raw service clients are trusted administrators; this boundary does not cryptographically attest that a human made a request.
 
 Defaults include provider, worker profile, workspace strategy (`current_repo` by default, with `worktree` available), runtime minutes, cost budget, Claude permission mode (`claude_permission_mode: inherit` by default), and approval decision routing (`default_approval_decider: user` by default). Provider choices include only enabled workers; a saved unavailable provider falls back to the first enabled worker until changed. Codex is not yet a settings option: it has no provider choice or model and reasoning defaults, and tasks select it explicitly. On a Codex-only service, settings fall back to Claude. The cost limit remains $5 by default; explicit `max_cost_usd: null` means no cost limit for task budgets and legacy settings updates. Native settings expose `use_cost_budget` and a numeric `max_cost_usd` because the host settings schema supports scalar fields. Disabling the toggle preserves the amount for later use; enabling it restores the amount. Updating the amount while disabled keeps the limit disabled. Providers that cannot enforce a numeric limit reject it before starting. The browser and host delegation form expose an Apply cost limit choice; disabling it preserves the runtime limit. Claude omits its native cost ceiling only for that explicit choice. Updates use `{ "set": { "max_runtime_minutes": 10 } }`, preserve omitted fields, and persist per user in SQLite. New tasks inherit these values; explicit task arguments override them subject to the approval authority rules below, and existing tasks keep their original settings. The console's delegation form reads the current defaults when opened. Unsupported providers, invalid budgets, and unknown settings are rejected before persistence. Worker sandbox and profile restrictions remain enforced in every permission mode.
 
@@ -118,14 +118,14 @@ Defaults include provider, worker profile, workspace strategy (`current_repo` by
 
 Claude tasks accept `permission_mode`, defaulting to `inherit`. Settings saves `claude_permission_mode`, which can override inheritance. The selector supports the extension's `inherit` option and the [Claude Agent SDK’s native permission modes](https://code.claude.com/docs/en/agent-sdk/permissions):
 
-| Mode | Native behavior |
-| --- | --- |
-| `inherit` | Resolve the closest supported mode from settings, validated parent context, or the task’s worker profile. |
-| `default` | Standard SDK permission checks. |
-| `acceptEdits` | Automatically approve file edits. |
-| `plan` | Plan and inspect without ordinary mutating tools. |
-| `dontAsk` | Deny actions that require permission instead of prompting. |
-| `auto` | Let the SDK’s classifier evaluate permission requests. |
+| Mode                | Native behavior                                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `inherit`           | Resolve the closest supported mode from settings, validated parent context, or the task’s worker profile.   |
+| `default`           | Standard SDK permission checks.                                                                             |
+| `acceptEdits`       | Automatically approve file edits.                                                                           |
+| `plan`              | Plan and inspect without ordinary mutating tools.                                                           |
+| `dontAsk`           | Deny actions that require permission instead of prompting.                                                  |
+| `auto`              | Let the SDK’s classifier evaluate permission requests.                                                      |
 | `bypassPermissions` | Skip ordinary SDK approval checks. Mandatory extension sandbox, repository, and profile checks still apply. |
 
 Resolution uses an explicit task override first, then the saved Claude setting, then validated host or delegated-parent native permission context. Without usable parent context, read-only profiles select `plan` and write profiles select `acceptEdits`. The resolved mode is stored in `task.permission_mode`, with `permission_source` recording its origin. The extension does not read global provider configuration to guess the parent’s permissions. Parent context comes from an owned `parent_task_id`, host `_meta["codex/sandbox-state-meta"]`, or an opt-in `_meta["codex-subagent-extension/parent-permissions"]` object with `provider: "claude"` and a native `permission_mode`. Parent context is kept separate from model-visible task arguments and persisted with host forms. A referenced task cannot broaden a read-only host or parent profile. Validated parent sandbox and approval policies map to the closest native mode: read-only to `plan`, workspace-write with on-request approval to `acceptEdits`, untrusted to `default`, auto-review to `auto`, and never to `bypassPermissions`.
@@ -155,7 +155,7 @@ Compatible HTTP MCP hosts can call `request_agent_task` to ask the user to confi
 
 These tools use MCP's `input_required` multi-round-trip flow, as required by the [OpenAI Extensions documentation](https://developers.openai.com/plugins/build/extensions). Hosts return the opaque `requestState` alongside bare `inputResponses.form`. State is persisted, bound to the authenticated owner and original arguments, and expires after ten minutes. Saved forms containing only the legacy `task` field must be reopened to provide a description; saved forms with separate title and description fields still honor their submitted title. Repeated identical submissions return the original outcome; changed arguments, invalid answers, expired state, and stale worker-input IDs are rejected. If the service stops during submission, recovery refuses to repeat the operation; inspect the task list before creating another request.
 
-Forms are exposed on the HTTP MCP endpoint. Clients without elicitation support, including the local stdio proxy, continue using `start_agent_task` and `submit_agent_input` for questions and parent-agent permission decisions. Permission requests routed to the user require the panel's app-only `submit_user_agent_input` route or a supported host form. Protocol tests exercise actual HTTP round trips with fixture workers; native rendering in ChatGPT remains unverified.
+Task and worker-input forms are exposed on the HTTP MCP endpoint. `request_agent_project` uses the durable HTTP flow above or legacy SDK form elicitation over stdio when the host supports it. Without support, use Add project or Browse in the panel; a model-supplied path cannot bypass confirmation. Clients without elicitation support continue using `start_agent_task` and `submit_agent_input` for questions and parent-agent permission decisions. Permission requests routed to the user require the panel's app-only `submit_user_agent_input` route or a supported host form. Protocol tests exercise actual HTTP round trips with fixture workers; native rendering in ChatGPT remains unverified.
 
 ## Codex worker implementation
 
@@ -244,7 +244,42 @@ recover tasks or own workers. Client disconnection leaves the service and tasks
 running. Stop the PID recorded in `service.pid` gracefully with SIGTERM when needed.
 An incompatible process on the configured port is rejected, never replaced.
 
-Approve repositories directly on the service host:
+Use **Add project** in the global task UI or expanded chat panel. Enter an
+absolute Git repository path, or use **Browse…** to open the native folder
+picker on the macOS service host. Selecting a folder only fills the path; click
+**Add project** to approve access. Invalid paths stay in the form with an error,
+and cancellation preserves the path. Other platforms can use manual path entry.
+The **New task** modal also offers **Browse…** beside its Project selector.
+Choosing a folder there registers and selects the repository while preserving
+the task draft; cancellation keeps the previous project. Tasks start only when
+**Start task** is clicked.
+Registration refreshes the project choices without restarting the service.
+The standalone Add project form focuses the new project; New task selects it
+only in the task draft. Existing tasks keep their original repositories.
+From a chat, read-only `get_current_agent_project` reports the current local Git
+root and whether it is registered, using only the original host `_meta["codex/sandbox-state-meta"].sandboxCwd`. If it is
+not registered, call `request_agent_project` to ask the user to approve access.
+Its optional `repository` prefills a known absolute path; otherwise the form
+prefills the host Git root when available. The decision defaults to deny, and
+only an accepted **allow** registers the canonical root. Decline or cancellation
+leaves it unregistered. Registration never starts a task.
+
+**Automatically add chat projects** (`auto_register_chat_project`) is a user-only
+setting in native or panel Settings. It defaults to true. It applies only when a
+task is started from a chat (`start_agent_task`, the panel's Start task, or the
+task form) and the task targets that chat's Git root, supplied by original host
+metadata; an existing grant, including an approved parent, is left as is. Listing
+projects, resolving context and opening panels stay read-only and never register.
+Explicit task paths and `host_directory` arguments never grant access through
+this policy. In the panel, New task offers the unregistered chat project marked
+"added when the task starts"; choosing it and clicking **Start task** adds it.
+When a read-only check finds the chat project missing outside a task start, the
+model should ask the user with `request_agent_project`. Disabling the setting
+keeps registered projects, and **Add chat project** then prefills a detected
+path for user review.
+Host metadata delivery still requires verification in the target desktop host.
+
+You can also approve repositories directly on the service host:
 
 ```sh
 node dist/projects-cli.js register /absolute/path/to/repository
@@ -257,11 +292,15 @@ node dist/projects-cli.js approve-parent /absolute/path/to/projects
 Registration persists in SQLite and becomes available without restarting the
 service. Use `list_agent_projects`, then pass an explicit absolute `repository`
 to `start_agent_task`. Parent approval permits validated Git roots beneath it;
-register individual children to include them in the UI/form selectors. Repository approval covers the registered Git root only, not independent nested
-repositories. Parent approval is the explicit way to authorize descendants. The CLI
-is the user approval boundary; there is no model-callable tool that grants an
-arbitrary requested path access. Canonical paths, symlink containment and Git-root
-validation still apply. Missing/`current` repositories fail with guidance in the
+register individual children to include them in the UI/form selectors.
+Repository approval covers the registered Git root only, not independent nested
+repositories. Parent approval is the explicit way to authorize descendants.
+UI registration, accepted host confirmation, the opt-in host metadata policy,
+and the CLI are the registration boundaries. Direct registration and browsing
+tools are app-only; model-visible `request_agent_project` requires user confirmation.
+MCP hosts must enforce app-only tool visibility, as they do for user permission
+and settings tools. Canonical
+paths, symlink containment and Git-root validation still apply. Missing/`current` repositories fail with guidance in the
 packaged service. Both panels and HTTP task forms show explicit project choices.
 Existing tasks, continuations, and retries retain their original repository and
 workspace. Project selection for a new task has no global effect on other chats.
@@ -326,7 +365,7 @@ arguments take precedence. For task creation, `conversation_id: null` opts out
 of host conversation correlation and is persisted as an absent Task conversation
 ID; clients without the hint retain explicit/all-task scope. These hints grant no repository or account access. Both transports opt in to
 `codex/sandbox-state-meta` and validate its local `sandboxCwd` directory hint
-against registered projects. Public CLI/core source does not establish desktop
+against registered projects, or register the host Git root under the explicit user opt-in described above. Public CLI/core source does not establish desktop
 UI behavior. See the [official UI
 reference](https://developers.openai.com/plugins/reference).
 

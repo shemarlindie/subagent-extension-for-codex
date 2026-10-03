@@ -15,6 +15,7 @@ import {
   taskPanelContext,
 } from "../panel/panel-context.js";
 import type { Task } from "../core/model.js";
+import { autoRegisterChatProject } from "../core/chat-project.js";
 import { codexContextCapability } from "../panel/host-context.js";
 export function mcp(
   c: Control,
@@ -34,7 +35,7 @@ export function mcp(
       },
       requestState: { verify: (state) => c.forms.verify(owner, state) },
       instructions:
-        "Use list_agent_projects and list_available_workers before delegation; pass an explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input; Claude permission decisions require approval_decider parent_agent. Use request_agent_input or user buttons for permissions routed to the user. Worktree changes are returned as artifacts; current_repo write profiles edit the checkout directly.",
+        "Use get_current_agent_project and list_available_workers before delegation. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user, then pass its explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input; Claude permission decisions require approval_decider parent_agent. Use request_agent_input or user buttons for permissions routed to the user. Worktree changes are returned as artifacts; current_repo write profiles edit the checkout directly.",
     },
   );
   server.registerTool(
@@ -50,7 +51,38 @@ export function mcp(
     },
     async (args, ctx) => {
       try {
+        await autoRegisterChatProject(
+          c,
+          owner,
+          ctx.mcpReq._meta,
+          typeof args.repository === "string" ? args.repository : undefined,
+        );
         return await c.forms.handle(owner, "request_agent_task", args, ctx);
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: String(error) }],
+        };
+      }
+    },
+  );
+  server.registerTool(
+    "request_agent_project",
+    {
+      description:
+        "Ask the user to approve registering a local Git repository from this chat. Supply its actual absolute path, or omit it to prefill host directory metadata. Registers only after an accepted user approval; then continue delegation with the returned repository.",
+      inputSchema: z.strictObject({
+        repository: z.string().min(1).max(4096).optional(),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
+    },
+    async (args, ctx) => {
+      try {
+        return await c.forms.handle(owner, "request_agent_project", args, ctx);
       } catch (error) {
         return {
           isError: true,
@@ -106,6 +138,7 @@ export function mcp(
             owner,
             "parent",
             parentPermissionsFromMeta(ctx.mcpReq._meta),
+            ctx.mcpReq._meta,
           );
           const result = await current[name as keyof typeof current].run(
             withConversation(name, args, ctx.mcpReq._meta),
