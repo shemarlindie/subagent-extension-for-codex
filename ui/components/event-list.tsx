@@ -9,7 +9,11 @@ import {
 } from "../core/activity-timeline";
 import { formatDuration } from "../core/duration";
 import { useNow } from "./use-now";
-import { EVENT_TAIL_SIZE } from "../core/event-history";
+import {
+  EVENT_TAIL_SIZE,
+  describeDropped,
+  type DroppedSummary,
+} from "../core/event-history";
 import { useActivityScroll } from "./use-activity-scroll";
 import { Timeline, TimelineDot, TimelineItem } from "./timeline";
 import {
@@ -282,6 +286,17 @@ function thinkingOnly(events: Event[]) {
     })
   );
 }
+// Continues the "Showing the most recent N events" sentence with what was left out.
+function DroppedNote({ summary }: { summary: DroppedSummary }) {
+  const { headline, details } = describeDropped(summary);
+  return (
+    <>
+      {" "}
+      {headline}
+      {details.length > 0 && <span> {details.join(" · ")}.</span>}
+    </>
+  );
+}
 // Only this component ticks, so a running thinking row never re-renders the list.
 function ThinkingClock({ start }: { start: number }) {
   const elapsed = useNow(true) - start;
@@ -438,9 +453,12 @@ export const EventList = memo(function EventList({
   events,
   active,
   running = false,
+  dropped,
 }: {
   events: Event[];
   active?: boolean;
+  /** What fell off the front of `events`, tallied by the event reader. */
+  dropped?: DroppedSummary;
   /** The worker is mid-turn, so a thinking row with nothing after it is still going. */
   running?: boolean;
 }) {
@@ -476,6 +494,9 @@ export const EventList = memo(function EventList({
         {events.length === EVENT_TAIL_SIZE && (
           <p className="help activity-trimmed-note">
             Showing the most recent {EVENT_TAIL_SIZE} events.
+            {dropped && dropped.task_id === events[0].task_id && (
+              <DroppedNote summary={dropped} />
+            )}
           </p>
         )}
       </div>

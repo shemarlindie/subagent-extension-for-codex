@@ -1708,6 +1708,36 @@ test("message debug view shows only the raw response, not a second rendering", a
   cleanup();
 });
 
+test("the trimmed note summarizes dropped events only for the task being shown", (t) => {
+  t.onTestFinished(cleanup);
+  const events = activityMessages("dropped-note", EVENT_TAIL_SIZE);
+  const dropped = {
+    task_id: "task",
+    count: 12,
+    from: "2026-10-02T12:00:00.000Z",
+    to: "2026-10-02T12:01:30.000Z",
+    toolCalls: 5,
+    tools: { Bash: 3, Read: 2 },
+    messages: 4,
+    failures: 1,
+    retries: 0,
+    artifacts: 0,
+  };
+  const note = (summary = dropped) =>
+    render(
+      createElement(GroupedEventList, { events, dropped: summary }),
+    ).container.querySelector(".activity-trimmed-note")!.textContent;
+  assert.match(
+    note()!,
+    /12 earlier events over 1m 30s not shown\. 5 tool calls \(Bash 3, Read 2\) · 4 messages · 1 failure\./,
+  );
+  cleanup();
+  assert.doesNotMatch(
+    note({ ...dropped, task_id: "other" })!,
+    /earlier events/,
+  );
+});
+
 test("a thinking row shows how long the worker thought", (t) => {
   t.onTestFinished(cleanup);
   const at = (second: number, e: ActivityEvent): ActivityEvent => ({

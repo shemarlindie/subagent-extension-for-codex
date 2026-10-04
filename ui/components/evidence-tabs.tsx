@@ -77,6 +77,7 @@ export function EvidenceTabs({ task }: { task: Task }) {
       <Tabs.Panel value="activity" className="activity-panel" keepMounted>
         <EventList
           events={state.events}
+          dropped={state.droppedEvents}
           active={state.tab === "activity"}
           running={task.status === "running" && !task.pending_input}
         />

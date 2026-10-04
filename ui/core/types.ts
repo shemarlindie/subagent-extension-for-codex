@@ -5,6 +5,7 @@ import type {
   Task,
   ModelChoice,
 } from "../../src/core/model";
+import type { DroppedSummary } from "./event-history";
 export type { Artifact, Event, Task };
 export type Mode = "panel" | "console";
 export type Tab = "result" | "activity" | "changes" | "details";
@@ -125,6 +126,8 @@ export type Snapshot = {
   workers: Worker[];
   projects: Project[];
   events: Event[];
+  /** Tally of the selected task's events that fell off the front of `events`. */
+  droppedEvents?: DroppedSummary;
   artifacts: Artifact[];
   selected?: string;
   selectedArtifact?: string;

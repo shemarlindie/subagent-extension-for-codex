@@ -229,12 +229,13 @@ export class Controller {
     const id = this.state.selected,
       generation = this.generation;
     if (!id || this.state.workerRoute || this.disposed) return;
-    const [events, artifacts] = await Promise.all([
+    const [{ events, dropped }, artifacts] = await Promise.all([
       readEventTail(
         id,
         this.state.events,
         (after) => this.tool("get_agent_events", { task_id: id, after }),
         () => !this.disposed && generation === this.generation,
+        this.state.droppedEvents,
       ),
       this.tool<Artifact[]>("get_agent_artifacts", { task_id: id }),
     ]);
@@ -244,7 +245,7 @@ export class Controller {
       generation !== this.generation
     )
       return;
-    this.patch({ events, artifacts });
+    this.patch({ events, droppedEvents: dropped, artifacts });
   }
   async select(id: string) {
     this.explicitSelection = true;
