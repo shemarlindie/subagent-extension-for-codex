@@ -31,11 +31,22 @@ const MODEL = "claude-sonnet-5-5";
 const IMAGE =
   "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAa0lEQVR42u3XMQ0AIAxFQYRVE3LQhBJ0YKBMXSBcwtiBm15+WyPSF32m77b7BgAAAABQArzy0dM9AAAAAEANoMQAAAAA9oASAwAAANgDSgwAAABgDygxAAAAgD2gxAAAAAD2gBIDAAAAfAPY6lJReJDUYR4AAAAASUVORK5CYII=";
 
+/** Registered projects. Thread "dev-thread" has tasks in both. */
+export const previewProjects = [
+  { repository: "/demo/project", name: "Demo project", kind: "repository" },
+  { repository: "/demo/website", name: "Demo website", kind: "repository" },
+];
+/** The dev host's default Thread ID; most tasks belong to it. */
+export const PREVIEW_THREAD = "dev-thread";
+const OTHER_THREAD = "other-thread";
+const WEBSITE = previewProjects[1]!.repository;
+
 const taskBase = {
   owner: "preview",
   provider: "claude" as const,
   worker_profile: "researcher" as const,
-  repository: "/demo/project",
+  conversation_id: PREVIEW_THREAD,
+  repository: previewProjects[0]!.repository,
   revision: "HEAD",
   depends_on: [],
   context: [],
@@ -1237,6 +1248,7 @@ export const previewTasks: Task[] = [
     id: "preview-cancelled",
     title: "Draft the release notes",
     description: "Summarise merged pull requests into release notes.",
+    conversation_id: OTHER_THREAD,
     status: "cancelled",
     ...timestamps(75, 1),
   },
@@ -1246,6 +1258,7 @@ export const previewTasks: Task[] = [
     title: "Review the onboarding copy",
     description: "Read the onboarding screens and suggest clearer wording.",
     worker_profile: "reviewer",
+    conversation_id: OTHER_THREAD,
     status: "queued",
     ...timestamps(80, 0),
   },
@@ -1256,6 +1269,7 @@ export const previewTasks: Task[] = [
     description:
       "Audit keyboard and screen reader behaviour of the settings page.",
     worker_profile: "reviewer",
+    repository: WEBSITE,
     status: "starting",
     ...timestamps(82, 0),
   },
@@ -1265,6 +1279,7 @@ export const previewTasks: Task[] = [
     title: "Catalogue the design assets",
     description:
       "List the assets in assets/ and compare them with the style guide.",
+    repository: WEBSITE,
     status: "completed",
     attempt: 2,
     instructions: ["Also check the vendored icons."],

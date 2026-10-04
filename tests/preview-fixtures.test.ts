@@ -8,7 +8,9 @@ import {
   previewEvents,
   previewArtifacts,
   previewLiveStatus,
+  PREVIEW_THREAD,
 } from "../ui/transports/preview-fixtures";
+import { previewTool } from "../ui/transports/preview-tools";
 import {
   groupActivity,
   activityKind,
@@ -145,4 +147,178 @@ test("each running preview task ends on a different latest activity", () => {
     seen.add(live.text);
   }
   assert.equal(seen.size, Object.keys(expected).length, "states repeat");
+});
+
+type Opened = {
+  panel_scope: {
+    conversation_id: string | null;
+    repository?: string;
+    revision?: string;
+  };
+  panel_project_candidate?: { repository: string; auto_register: boolean };
+  tasks: { conversation_id?: string; repository: string }[];
+};
+const open = (name: string, args: Record<string, unknown> = {}) =>
+  previewTool(name, args) as Opened;
+
+test("a thread launch scopes the panel to the thread and one project", () => {
+  // The latest task in the thread picks the project when the cwd is unregistered.
+  const opened = open("open_codex_subagent_extension", {
+    conversation_id: PREVIEW_THREAD,
+    host_directory: "file:///elsewhere/repo/src",
+  });
+  assert.deepEqual(opened.panel_scope, {
+    conversation_id: PREVIEW_THREAD,
+    repository: "/demo/project",
+    revision: "HEAD",
+  });
+  assert.equal(
+    opened.panel_project_candidate?.repository,
+    "/elsewhere/repo/src",
+  );
+  assert.ok(opened.tasks.length > 0);
+  for (const task of opened.tasks) {
+    assert.equal(task.conversation_id, PREVIEW_THREAD);
+    assert.equal(task.repository, "/demo/project");
+  }
+});
+
+test("a registered thread cwd picks its project over the latest task", () => {
+  const opened = open("open_codex_subagent_extension", {
+    conversation_id: PREVIEW_THREAD,
+    host_directory: "file:///demo/website/assets",
+  });
+  assert.equal(opened.panel_scope.repository, "/demo/website");
+  assert.equal(opened.panel_project_candidate, undefined);
+  assert.ok(opened.tasks.length > 0);
+  assert.ok(opened.tasks.every((task) => task.repository === "/demo/website"));
+  // Plain paths are not file URIs, so the service ignores them.
+  assert.equal(
+    open("open_codex_subagent_extension", {
+      conversation_id: PREVIEW_THREAD,
+      host_directory: "/demo/website",
+    }).panel_scope.repository,
+    "/demo/project",
+  );
+});
+
+test("a global launch shows every conversation and project", () => {
+  const opened = open("open_codex_subagent_extension_global");
+  assert.deepEqual(opened.panel_scope, { conversation_id: null });
+  assert.equal(opened.tasks.length, previewTasks.length);
+  assert.ok(
+    previewTasks.some((task) => task.conversation_id !== PREVIEW_THREAD),
+  );
+  assert.ok(previewTasks.some((task) => task.repository !== "/demo/project"));
+});
+
+test("listing preview tasks filters by conversation and project", () => {
+  const list = (args: Record<string, unknown>) =>
+    previewTool("list_agent_tasks", args) as Opened["tasks"];
+  assert.equal(list({ conversation_id: null }).length, previewTasks.length);
+  const website = list({
+    conversation_id: PREVIEW_THREAD,
+    repository: "/demo/website",
+  });
+  assert.ok(website.length > 0);
+  assert.ok(
+    website.every(
+      (task) =>
+        task.conversation_id === PREVIEW_THREAD &&
+        task.repository === "/demo/website",
+    ),
+  );
+});
+
+test("the chat project candidate follows the auto-add setting", () => {
+  const launch = {
+    conversation_id: PREVIEW_THREAD,
+    host_directory: "file:///repo",
+  };
+  for (const autoRegisterChatProject of [true, false]) {
+    const options = { autoRegisterChatProject };
+    const opened = previewTool(
+      "open_codex_subagent_extension",
+      launch,
+      options,
+    ) as Opened;
+    assert.deepEqual(opened.panel_project_candidate, {
+      repository: "/repo",
+      auto_register: autoRegisterChatProject,
+    });
+    const settings = previewTool("get_agent_settings", {}, options) as {
+      values: Record<string, unknown>;
+    };
+    assert.equal(
+      settings.values.auto_register_chat_project,
+      autoRegisterChatProject,
+    );
+  }
+  // The service defaults to adding chat projects.
+  assert.equal(
+    open("open_codex_subagent_extension", launch).panel_project_candidate
+      ?.auto_register,
+    true,
+  );
+});
+
+test("a cwd with whitespace has no Git root, so nothing is offered", () => {
+  const opened = open("open_codex_subagent_extension", {
+    conversation_id: PREVIEW_THREAD,
+    host_directory: "file:///demo/project%20/demo/project",
+  });
+  assert.equal(opened.panel_project_candidate, undefined);
+  assert.equal(opened.panel_scope.repository, "/demo/project");
+});
+
+test("fixture registration validates the root and the caller keeps it", () => {
+  assert.deepEqual(
+    previewTool("register_user_agent_project", { repository: "/new/repo/" }),
+    { repository: "/new/repo", kind: "repository" },
+  );
+  for (const repository of ["relative/repo", "/demo/project/src", "/a b"])
+    assert.throws(() =>
+      previewTool("register_user_agent_project", { repository }),
+    );
+  // Nothing is remembered until the caller passes it back.
+  const fixed = previewTool("list_agent_projects") as { repository: string }[];
+  assert.ok(!fixed.some((project) => project.repository === "/new/repo"));
+  const options = { addedProjects: ["/new/repo"] };
+  const listed = previewTool("list_agent_projects", {}, options) as {
+    repository: string;
+    name: string;
+  }[];
+  assert.deepEqual(listed.at(-1), {
+    repository: "/new/repo",
+    name: "repo",
+    kind: "repository",
+  });
+  // An added chat project is registered, so the thread scopes to it.
+  const opened = previewTool(
+    "open_codex_subagent_extension",
+    { conversation_id: PREVIEW_THREAD, host_directory: "file:///new/repo/src" },
+    options,
+  ) as Opened;
+  assert.equal(opened.panel_scope.repository, "/new/repo");
+  assert.equal(opened.panel_project_candidate, undefined);
+  // An added project's folders are not roots either.
+  assert.throws(
+    () =>
+      previewTool(
+        "register_user_agent_project",
+        { repository: "/new/repo/src" },
+        options,
+      ),
+    /Use repository root/,
+  );
+});
+
+test("an explicit revision scopes the panel to that revision", () => {
+  const context = (args: Record<string, unknown>) =>
+    (previewTool("get_agent_panel_context", args) as Opened).panel_scope;
+  assert.equal(
+    context({ conversation_id: PREVIEW_THREAD, revision: "v2" }).revision,
+    "v2",
+  );
+  assert.equal(context({ conversation_id: PREVIEW_THREAD }).revision, "HEAD");
 });
