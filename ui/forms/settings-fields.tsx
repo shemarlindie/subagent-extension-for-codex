@@ -8,6 +8,7 @@ import {
 } from "react-hook-form";
 
 import { Button } from "../components/button";
+import { Presence } from "../components/motion";
 import { FormSelect } from "./form-select";
 import {
   helpId,
@@ -202,11 +203,11 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
           control={control}
         />
       </div>
-      {error && (
+      <Presence show={Boolean(error)}>
         <p id={errorId} className="form-error setting-error" role="alert">
-          {error.message}
+          {error?.message}
         </p>
-      )}
+      </Presence>
     </div>
   );
 }

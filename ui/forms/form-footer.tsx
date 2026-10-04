@@ -2,6 +2,7 @@ import { Dialog } from "@base-ui/react/dialog";
 
 import { Button } from "../components/button";
 import { useController, useSnapshot } from "../components/controller-context";
+import { Presence } from "../components/motion";
 
 interface FormFooterProps {
   label: string;
@@ -20,9 +21,11 @@ export function FormFooter({
 
   return (
     <>
-      <div id="form-error" className="form-error error" role="alert">
-        {state.formError}
-      </div>
+      <Presence show={Boolean(state.formError)}>
+        <div id="form-error" className="form-error error" role="alert">
+          {state.formError}
+        </div>
+      </Presence>
       <footer>
         <Dialog.Close
           type="button"

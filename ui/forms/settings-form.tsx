@@ -7,6 +7,7 @@ import { type FieldErrors, useForm, useWatch } from "react-hook-form";
 import { Button } from "../components/button";
 import { Chevron } from "../components/chevron";
 import { useController } from "../components/controller-context";
+import { Presence } from "../components/motion";
 import { reducedMotion } from "../components/motion-utils";
 import { Notice } from "../components/notice";
 import type { DialogState } from "../core/types";
@@ -246,7 +247,7 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
                       ),
                     )}
                     {/* Shown only while something here differs from its default. */}
-                    {differs(resets, form) && (
+                    <Presence show={differs(resets, form)}>
                       <div className="settings-section-footer">
                         <Button
                           variant="text"
@@ -257,7 +258,7 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
                           Reset to defaults
                         </Button>
                       </div>
-                    )}
+                    </Presence>
                   </div>
                 </SettingsContext.Provider>
               </Accordion.Panel>
