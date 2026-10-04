@@ -1,11 +1,15 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { Task } from "../core/types";
 import { locked, pendingQuestions } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
-import { Collapsible } from "@base-ui/react/collapsible";
-import { Presence, useAnimatedHeight } from "./motion";
-import { Icon } from "./icons";
+import { Presence } from "./motion";
 import { Button } from "./button";
+import {
+  CollapsibleNotice,
+  Notice,
+  NoticeText,
+  type NoticeTone,
+} from "./notice";
 import { QuestionForm } from "../forms/question-form";
 export function TaskNotices({ task }: { task: Task }) {
   const controller = useController(),
@@ -20,10 +24,10 @@ export function TaskNotices({ task }: { task: Task }) {
     <>
       <TaskNotice show={isLocked}>
         <strong>Worker shutdown needs investigation</strong>
-        <ClampedText>
+        <NoticeText>
           Termination is unconfirmed. Controls are locked. Bring this task to
           Codex to inspect the worker before continuing.
-        </ClampedText>
+        </NoticeText>
       </TaskNotice>
       <Presence show={Boolean(questions)}>
         {/* Keyed so a new request starts with fresh answers. */}
@@ -31,9 +35,9 @@ export function TaskNotices({ task }: { task: Task }) {
       </Presence>
       <TaskNotice show={Boolean(pending && !questions)}>
         <strong>Permission needed</strong>
-        <ClampedText>
+        <NoticeText>
           {String(pending?.input.description ?? pending?.tool ?? "")}
-        </ClampedText>
+        </NoticeText>
         <Button
           id="respond"
           variant="primary"
@@ -43,8 +47,8 @@ export function TaskNotices({ task }: { task: Task }) {
           Review request
         </Button>
       </TaskNotice>
-      <TaskNotice show={Boolean(error)}>
-        <ClampedText>{error}</ClampedText>
+      <TaskNotice show={Boolean(error)} tone="error">
+        <NoticeText>{error}</NoticeText>
       </TaskNotice>
     </>
   );
@@ -57,8 +61,18 @@ function QuestionNotice({ task }: { task: Task }) {
     questions = pendingQuestions(task),
     request = task.pending_input?.id;
   return (
-    <Collapsible.Root
-      className="callout attention question-notice"
+    <CollapsibleNotice
+      title={
+        questions.length > 1
+          ? `Claude has ${questions.length} questions`
+          : "Claude has a question"
+      }
+      // Folds away once the cards show the questions in full.
+      summary={
+        questions.length > 1 && questions.every((q) => q.header)
+          ? questions.map((q) => q.header).join(" · ")
+          : questions[0].question
+      }
       defaultOpen={!(request && controller.collapsedQuestions.has(request))}
       onOpenChange={(open) => {
         if (!request) return;
@@ -66,84 +80,24 @@ function QuestionNotice({ task }: { task: Task }) {
         else controller.collapsedQuestions.add(request);
       }}
     >
-      <Collapsible.Trigger className="question-notice-trigger">
-        <span className="question-notice-heading">
-          <strong>
-            {questions.length > 1
-              ? `Claude has ${questions.length} questions`
-              : "Claude has a question"}
-          </strong>
-          {/* Folds away once the cards show the questions in full. */}
-          <span className="question-notice-summary">
-            <span>
-              {questions.length > 1 && questions.every((q) => q.header)
-                ? questions.map((q) => q.header).join(" · ")
-                : questions[0].question}
-            </span>
-          </span>
-        </span>
-        <Icon
-          name="chevron-down"
-          square
-          size={12}
-          className="question-notice-caret"
-        />
-      </Collapsible.Trigger>
-      {/* Kept mounted so collapsing keeps the answers chosen so far. */}
-      <Collapsible.Panel className="collapse-panel" keepMounted>
-        <div className="question-notice-body">
-          <QuestionForm task={task} />
-        </div>
-      </Collapsible.Panel>
-    </Collapsible.Root>
+      <QuestionForm task={task} />
+    </CollapsibleNotice>
   );
 }
 
-interface TaskNoticeProps {
+// Notices fold in and out so the evidence below slides instead of jumping.
+function TaskNotice({
+  show,
+  tone,
+  children,
+}: {
   show: boolean;
+  tone?: NoticeTone;
   children: ReactNode;
-}
-
-function TaskNotice({ show, children }: TaskNoticeProps) {
+}) {
   return (
     <Presence show={show}>
-      <div className="callout attention">{children}</div>
+      <Notice tone={tone}>{children}</Notice>
     </Presence>
-  );
-}
-
-// The expanded panel clamps notices so the fixed header leaves room for evidence.
-function ClampedText({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLParagraphElement>(null);
-  const [open, setOpen] = useState(false);
-  const [overflowing, setOverflowing] = useState(false);
-  useAnimatedHeight(ref, open);
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const measure = () =>
-      setOverflowing(element.scrollHeight > element.clientHeight + 1);
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [children, open]);
-  return (
-    <>
-      <p ref={ref} className="callout-text" data-open={open || undefined}>
-        {children}
-      </p>
-      {(overflowing || open) && (
-        <Button
-          variant="ghost"
-          className="callout-more"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-        >
-          {open ? "Show less" : "Show more"}
-        </Button>
-      )}
-    </>
   );
 }

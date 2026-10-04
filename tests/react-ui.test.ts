@@ -1456,26 +1456,31 @@ test("long notices clamp behind Show more and expand on demand", async (t) => {
   // jsdom has no layout, so report clamped notice text as overflowing.
   vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
     function (this: HTMLElement) {
-      return this.matches(".callout-text:not([data-open])") ? 80 : 0;
+      return this.matches(".notice-text:not([data-open])") ? 80 : 0;
     },
   );
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
     function (this: HTMLElement) {
-      return this.matches(".callout-text") ? 36 : 0;
+      return this.matches(".notice-text") ? 36 : 0;
     },
   );
   const { user } = await setup(t, (transport) => {
     transport.tasks[0].error = "Worker stopped unexpectedly. ".repeat(20);
   });
+  // Task errors use the error tone.
+  assert.equal(
+    document.querySelector(".notice")?.getAttribute("data-tone"),
+    "error",
+  );
   const more = screen.getByRole("button", { name: "Show more" });
   assert.equal(more.getAttribute("aria-expanded"), "false");
   await user.click(more);
   const less = screen.getByRole("button", { name: "Show less" });
   assert.equal(less.getAttribute("aria-expanded"), "true");
-  assert.ok(document.querySelector(".callout-text[data-open]"));
+  assert.ok(document.querySelector(".notice-text[data-open]"));
   await user.click(less);
   assert.ok(screen.getByRole("button", { name: "Show more" }));
-  assertAbsent(document.querySelector(".callout-text[data-open]"));
+  assertAbsent(document.querySelector(".notice-text[data-open]"));
 });
 
 test("the inspector stacks when its fixed header would squeeze the evidence", async (t) => {

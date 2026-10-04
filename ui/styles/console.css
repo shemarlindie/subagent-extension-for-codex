@@ -318,14 +318,21 @@ aside {
   max-width: 440px;
   margin: 15px auto 25px;
 }
-.callout {
+.notice {
+  --notice-accent: #665b32;
   padding: 18px;
   background: #2b271b;
-  border: 1px solid #665b32;
+  border: 1px solid var(--notice-accent);
   border-radius: 8px;
   margin: 20px 0;
 }
-.callout p {
+.notice[data-tone="error"] {
+  --notice-accent: var(--danger);
+}
+.notice[data-tone="info"] {
+  --notice-accent: var(--accent);
+}
+.notice p {
   font-size: 12px;
   line-height: 1.6;
 }

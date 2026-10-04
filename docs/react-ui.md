@@ -30,6 +30,8 @@ Motion is short and quiet. Its purpose is to show what changed and to ease layou
 
 Animations that run while the activity timeline measures positions change only opacity, so they never disturb its reading position. Reduced-motion preferences turn every animation off. The Web Animations helpers also skip animation where the API is missing, as in jsdom tests.
 
+Banner messages use `Notice`, `CollapsibleNotice` and `NoticeText` from `ui/components/notice.tsx`. Pass `tone` (`warning`, the default, `error` or `info`) rather than adding a new banner class; the tone only changes the accent color in `.notice[data-tone]`. `NoticeText` clamps long text behind **Show more**.
+
 Icons live in one catalog, `ICONS` in `ui/components/icons.tsx`. Render them with `<Icon name="bug" />` rather than inline `<svg>` markup. To add a glyph, add an entry (path data, optional cropped `viewBox`, size, stroke width). Icons are decorative unless you pass `label`, and `className` and other SVG props pass through. Pass `square` to pad a cropped icon to a square without scaling it.
 
 Use `<Chevron square />` for rotating icons. It pads the short dimension without scaling the artwork, so rotation keeps a stable layout footprint. The default chevron fits its artwork tightly.

@@ -305,17 +305,22 @@ h3 {
   font-size: 11px;
   color: var(--muted);
 }
-.callout {
-  border: 1px solid var(--line);
+/* Notices differ only by tone: the accent colors the left bar and nothing else. */
+.notice {
+  --notice-accent: var(--warn);
+  border-left: 3px solid var(--notice-accent);
   border-radius: var(--radius);
   padding: 12px 14px;
   margin: 16px 0;
   background: var(--surface);
 }
-.callout.attention {
-  border-left: 3px solid var(--warn);
+.notice[data-tone="error"] {
+  --notice-accent: var(--danger);
 }
-.callout p {
+.notice[data-tone="info"] {
+  --notice-accent: var(--accent);
+}
+.notice p {
   margin: 4px 0 10px;
 }
 .tabs {
@@ -435,7 +440,6 @@ pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   background: var(--surface);
-  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 12px;
   max-height: 320px;
@@ -599,7 +603,7 @@ body[data-expanded-panel="true"] .task-header h1 {
 body[data-expanded-panel="true"] .task-description-content {
   max-height: min(280px, 25dvh);
 }
-body[data-expanded-panel="true"] .task-header .callout {
+body[data-expanded-panel="true"] .task-header .notice {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 12px;
@@ -607,32 +611,32 @@ body[data-expanded-panel="true"] .task-header .callout {
   margin: 12px 0;
   padding: 10px 12px;
 }
-body[data-expanded-panel="true"] .task-header .callout.question-notice {
+body[data-expanded-panel="true"] .task-header .notice.notice-collapsible {
   display: block;
   margin: 0 0 12px;
   padding: 0;
 }
-body[data-expanded-panel="true"] .question-notice-trigger {
+body[data-expanded-panel="true"] .notice-trigger {
   padding: 10px 12px;
 }
-body[data-expanded-panel="true"] .question-notice-body {
+body[data-expanded-panel="true"] .notice-body {
   padding: 0 12px 12px;
 }
-body[data-expanded-panel="true"] .task-header .callout > * {
+body[data-expanded-panel="true"] .task-header .notice > * {
   grid-column: 1;
 }
-body[data-expanded-panel="true"] .task-header .callout > .primary {
+body[data-expanded-panel="true"] .task-header .notice > .primary {
   grid-column: 2;
   grid-row: 1 / span 3;
 }
-body[data-expanded-panel="true"] .callout-text {
+body[data-expanded-panel="true"] .notice-text {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
   margin: 2px 0 0;
 }
-body[data-expanded-panel="true"] .callout-text[data-open] {
+body[data-expanded-panel="true"] .notice-text[data-open] {
   display: block;
 }
 body[data-expanded-panel="true"] .task-header .actions {
@@ -685,7 +689,7 @@ body[data-expanded-panel="true"] .activity-panel .activity-scroll-top {
   }
 }
 @media (max-width: 400px) {
-  body[data-expanded-panel="true"] .task-header .callout > .primary {
+  body[data-expanded-panel="true"] .task-header .notice > .primary {
     grid-column: 1;
     grid-row: auto;
     justify-self: start;

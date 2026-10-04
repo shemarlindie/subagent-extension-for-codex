@@ -178,7 +178,7 @@ form .select-trigger {
 .select-value[data-placeholder] {
   color: var(--muted, #8fa5c1);
 }
-.callout-more {
+.notice-more {
   justify-self: start;
   padding: 2px 0;
   border: 0;
@@ -210,7 +210,6 @@ form .select-trigger {
   max-height: 280px;
   overflow: auto;
   padding: 10px 12px;
-  border: 1px solid var(--line, #263348);
   border-radius: 6px;
   background: var(--surface, #172334);
   white-space: pre-wrap;
@@ -569,12 +568,11 @@ form .select-trigger {
   margin-top: 8px;
   padding: 2px 14px;
   background: var(--surface, #172334);
-  border: 1px solid var(--line, #263348);
   border-radius: 10px;
 }
 .activity-message.activity-error > .activity-body,
 .activity-stream.activity-error > .activity-body {
-  border-color: var(--danger, #f87171);
+  border-left: 3px solid var(--danger, #f87171);
 }
 .activity-thinking-only .activity-group-heading strong {
   color: var(--muted, #8392a7);
@@ -693,15 +691,15 @@ form .select-trigger {
   font-size: 18px;
   line-height: 1;
 }
-/* The question notice is one toggle: padding lives on the trigger so the whole box is clickable. */
-.callout.question-notice {
+/* A collapsible notice is one toggle: padding lives on the trigger so the whole box is clickable. */
+.notice.notice-collapsible {
   margin: 0 0 16px;
   padding: 0;
 }
 .task-header .actions {
   margin: 0 0 16px;
 }
-.question-notice-trigger {
+.notice-trigger {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -715,16 +713,16 @@ form .select-trigger {
   text-align: left;
   cursor: pointer;
 }
-.question-notice-trigger:hover {
+.notice-trigger:hover {
   background: color-mix(in srgb, var(--hover, #1e3047) 60%, transparent);
 }
-.question-notice-heading {
+.notice-heading {
   flex: 1;
   min-width: 0;
   display: grid;
 }
 /* The summary folds away as the panel opens, since the cards repeat it in full. */
-.question-notice-summary {
+.notice-summary {
   display: grid;
   grid-template-rows: 1fr;
   overflow: hidden;
@@ -732,7 +730,7 @@ form .select-trigger {
     grid-template-rows var(--motion-base) var(--ease-out),
     opacity var(--motion-base) var(--ease-out);
 }
-.question-notice-summary > span {
+.notice-summary > span {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -740,19 +738,19 @@ form .select-trigger {
   min-height: 0;
   overflow-wrap: anywhere;
 }
-.question-notice-trigger[data-panel-open] .question-notice-summary {
+.notice-trigger[data-panel-open] .notice-summary {
   grid-template-rows: 0fr;
   opacity: 0;
 }
-.question-notice-caret {
+.notice-caret {
   flex: none;
   color: var(--muted, #8fa5c1);
   transition: transform var(--motion-base) var(--ease-out);
 }
-.question-notice-trigger[data-panel-open] .question-notice-caret {
+.notice-trigger[data-panel-open] .notice-caret {
   transform: rotate(180deg);
 }
-.question-notice-body {
+.notice-body {
   padding: 0 14px 14px;
 }
 .question-form .question-error {
