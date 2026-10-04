@@ -1176,8 +1176,11 @@ form .select-trigger {
 }
 .setting-amount input {
   width: 72px;
-  padding: 4px 6px;
+  padding: 4px 4px 4px 6px;
   text-align: right;
+}
+input[type="number"]::-webkit-inner-spin-button {
+  margin-left: 4px;
 }
 .switch {
   flex: none;
