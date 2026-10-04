@@ -12,7 +12,21 @@ import {
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
 } from "../src/core/settings.js";
+import { withHelp } from "../src/core/settings-document.js";
 import { Store } from "../src/core/store.js";
+import { sectionKeys } from "../ui/forms/settings-layout.js";
+
+// A budget as the panel shows it: whether it applies, and its amount
+// (remembered while off).
+function budget(result: ReturnType<Settings["read"]>, key: string) {
+  const row = result.sections
+    .flatMap((section) => section.rows)
+    .find((r) => r.kind === "budget" && r.key === key);
+
+  const value = (result.values as Record<string, unknown>)[key];
+
+  return [value !== null, value ?? (row?.kind === "budget" && row.amount)];
+}
 
 async function fixture(t: TestContext) {
   const dir = await mkdtemp(join(tmpdir(), "settings-test-"));
@@ -65,28 +79,34 @@ async function fixture(t: TestContext) {
   };
 }
 
-test("native settings use scalar field schemas and expose only enabled providers", async (t) => {
+test("settings expose only enabled providers, nullable budgets, and a default per value", async (t) => {
   const { settings } = await fixture(t);
   const result = settings.read("alice");
   assert.deepEqual(settingsReadOutputSchema.parse(result), result);
   assert.equal(result.schema.type, "object");
   const properties = result.schema.properties!;
-  assert.ok(Object.keys(properties).includes("use_cost_budget"));
   assert.deepEqual(properties.default_provider.enum, ["fixture"]);
 
-  for (const [name, field] of Object.entries(properties)) {
-    assert.ok(
-      ["string", "number", "integer", "boolean"].includes(String(field.type)),
-      name,
-    );
+  for (const [name, field] of Object.entries(properties))
+    assert.equal("default" in field, false, `${name} has no schema default`);
 
-    for (const keyword of ["anyOf", "oneOf", "allOf", "$ref", "default"]) {
-      assert.equal(keyword in field, false, `${name} must not use ${keyword}`);
-    }
-  }
-
-  assert.equal(result.values.use_cost_budget, true);
+  // Budgets read as a number or null; the on/off switches are update-only.
+  assert.equal("use_cost_budget" in result.values, false);
   assert.equal(result.values.max_cost_usd, 5);
+
+  assert.deepEqual(
+    Object.keys(result.defaults).sort(),
+    Object.keys(result.values).sort(),
+  );
+
+  const select = result.sections[0].rows.find(
+    (row) => row.kind === "select" && row.key === "default_provider",
+  );
+
+  // The panel gets labels, not just IDs.
+  assert.deepEqual(select?.kind === "select" && select.options, [
+    { value: "fixture", label: "Fixture" },
+  ]);
 });
 
 test("automatic chat project registration is an on-by-default, persistent user setting", async (t) => {
@@ -100,12 +120,10 @@ test("automatic chat project registration is an on-by-default, persistent user s
   assert.equal("default" in field, false);
   assert.equal(result.values.auto_register_chat_project, true);
 
-  const items = (result.layout as { items: { property?: string }[] }[]).flatMap(
-    (group) => group.items,
-  );
-
   assert.ok(
-    items.some((item) => item.property === "auto_register_chat_project"),
+    result.sections.some((section) =>
+      sectionKeys(section).includes("auto_register_chat_project"),
+    ),
   );
 
   f.settings.update("alice", { set: { auto_register_chat_project: false } });
@@ -144,22 +162,131 @@ test("automatic chat project registration cannot be changed by parent authority"
   }
 });
 
-test("native settings use only host-supported bounds and add a panel action", async (t) => {
+test("settings sections have unique IDs and cover every shown value once", async (t) => {
   const { settings } = await fixture(t);
   const result = settings.read("alice");
-  for (const [name, field] of Object.entries(result.schema.properties!))
-    assert.equal("exclusiveMinimum" in field, false, name);
-  assert.equal(result.schema.properties!.max_runtime_minutes.minimum, 0.01);
-  assert.equal(result.schema.properties!.max_cost_usd.minimum, 0.01);
 
-  const items = (
-    result.layout as { items: Record<string, unknown>[] }[]
-  ).flatMap((group) => group.items);
+  const ids = result.sections.map((section) => section.id),
+    listed = result.sections.flatMap(sectionKeys);
+
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(new Set(listed).size, listed.length);
+  assert.deepEqual([...listed].sort(), Object.keys(result.values).sort());
+
+  // Budget rows carry inclusive input bounds and the amount to show when off.
+  const budget = result.sections[0].rows.find(
+    (row) => row.kind === "budget" && row.key === "max_cost_usd",
+  );
 
   assert.deepEqual(
-    items.filter((item) => item.kind === "tool").map((item) => item.tool),
-    ["open_codex_subagent_extension_global"],
+    budget?.kind === "budget" && [
+      budget.toggle,
+      budget.unit,
+      budget.min,
+      budget.max,
+      budget.amount,
+    ],
+    ["use_cost_budget", "USD", 0.01, 100, 5],
   );
+
+  // Agents read the same help in each field's schema description.
+  for (const row of result.sections.flatMap((section) => section.rows))
+    if (row.kind !== "models" && row.help)
+      assert.equal(
+        (result.schema.properties![row.key] as { description?: string })
+          .description,
+        row.help.join(""),
+        row.key,
+      );
+});
+
+test("help links to settings the panel doesn't show become plain text", () => {
+  assert.deepEqual(
+    withHelp(
+      [
+        "Use ",
+        { text: "Global", setting: "default_model" },
+        " or ",
+        { text: "Claude", setting: "claude_default_model" },
+        ".",
+      ],
+      { default_model: {} },
+    ),
+    [
+      "Use ",
+      { text: "Global", setting: "default_model" },
+      " or ",
+      "Claude",
+      ".",
+    ],
+  );
+});
+
+test("each model section's intro links only to the other section's exact settings", async (t) => {
+  const { settings } = await fixture(t);
+  const result = settings.read("alice");
+
+  const sectionOf = (setting: string) =>
+    result.sections.find((s) => sectionKeys(s).includes(setting))?.id;
+
+  const links = (id: string) =>
+    (result.sections.find((s) => s.id === id)!.help ?? [])
+      .filter((part) => typeof part !== "string")
+      .map((link) => [link.text, link.setting, sectionOf(link.setting)]);
+
+  // Each section explains inheritance from its own rows' side.
+  assert.deepEqual(links("models"), [
+    ["worker profile", "reviewer_default_model", "profile-models"],
+    ["Global", "default_model", "models"],
+  ]);
+
+  assert.deepEqual(links("profile-models"), [
+    ["provider", "fixture_default_model", "models"],
+    ["Global", "default_model", "models"],
+  ]);
+
+  // Agents get the whole chain in the schema.
+  assert.match(
+    String(result.schema.properties!.default_model.description),
+    /worker profile, then its provider, then the global default/,
+  );
+});
+
+test("disabled providers' model defaults are hidden but kept, and listed models share one note", async (t) => {
+  const f = await fixture(t);
+  f.setProviders(["fixture", "claude"]);
+  f.settings.update("alice", { set: { claude_default_model: "kept" } });
+
+  // Only the fixture provider is enabled now.
+  f.setProviders(["fixture"]);
+  const hidden = f.settings.read("alice");
+
+  const listed = (result: typeof hidden) =>
+    result.sections.flatMap(sectionKeys);
+
+  for (const key of [
+    "claude_default_model",
+    "claude_default_reasoning_effort",
+  ]) {
+    assert.equal(key in hidden.schema.properties!, false, key);
+    assert.equal(listed(hidden).includes(key), false, key);
+    assert.equal(key in hidden.values, false, key);
+    assert.equal(hidden.schema.required?.includes(key) ?? false, false, key);
+  }
+
+  const models = listed(hidden).filter((key) => key.endsWith("_model"));
+  assert.ok(hidden.schema.properties!.default_model.description);
+
+  assert.deepEqual(
+    new Set(models.map((key) => hidden.schema.properties![key].description)),
+    new Set([hidden.schema.properties!.default_model.description]),
+  );
+
+  // Enabling the provider again shows the saved value.
+  f.setProviders(["fixture", "claude"]);
+  const shown = f.settings.read("alice");
+  assert.ok(listed(shown).includes("claude_default_model"));
+  assert.equal(shown.values.claude_default_model, "kept");
 });
 
 test("native model controls scope discovered models and derive reasoning choices from effective SDK metadata", async (t) => {
@@ -267,26 +394,30 @@ test("native model controls scope discovered models and derive reasoning choices
         `${key} must accept its saved value`,
       );
     assert.equal("default" in field, false);
-    assert.ok(["string", "number", "boolean"].includes(String(field.type)));
   }
 
-  const groups = result.layout as {
-    title: string;
-    items: { property: string }[];
-  }[];
+  const models = result.sections.find((s) => s.id === "models")!,
+    profiles = result.sections.find((s) => s.id === "profile-models")!;
 
-  assert.ok(groups.some((group) => group.title === "Global model defaults"));
+  assert.equal(models.title, "Model defaults");
+  assert.ok(sectionKeys(profiles).includes("reviewer_default_model"));
 
-  assert.ok(
-    groups.some((group) =>
-      group.items.some((item) => item.property === "reviewer_default_model"),
-    ),
+  // Model options carry display names and keep a saved custom ID.
+  const reviewer = profiles.rows.flatMap((row) =>
+    row.kind === "models" ? row.scopes : [],
+  )[1];
+
+  assert.equal(reviewer.label, "Reviewer");
+
+  assert.deepEqual(
+    reviewer.model.options?.map((option) => option.label),
+    ["Inherit", "Claude", "Default", "custom-saved-model"],
   );
 
   assert.deepEqual(f.stored(), persisted);
 });
 
-test("native settings preserve custom models and unknown metadata while disabling effort only when explicitly unsupported", async (t) => {
+test("settings preserve custom models and unknown metadata while disabling effort only when explicitly unsupported", async (t) => {
   const f = await fixture(t);
 
   f.settings.update("alice", {
@@ -362,6 +493,22 @@ test("native settings preserve custom models and unknown metadata while disablin
     ),
     /provider runtime default only/,
   );
+
+  // The saved "high" effort is now unsupported: agents read it in the
+  // description, and the panel gets a flag.
+  assert.match(
+    String(
+      disabled.schema.properties!.fixture_default_reasoning_effort.description,
+    ),
+    /saved effort is not supported/,
+  );
+
+  const fixtureScope = disabled.sections
+    .flatMap((s) => s.rows)
+    .flatMap((row) => (row.kind === "models" ? row.scopes : []))
+    .find((scope) => scope.effort.key === "fixture_default_reasoning_effort");
+
+  assert.equal(fixtureScope?.effort.unsupported, true);
 
   const missing = f.settings.read("alice", [{ provider: "fixture" }]);
 
@@ -574,8 +721,13 @@ test("native budget toggles preserve the numeric amount across edits and restart
   });
 
   assert.deepEqual(settingsUpdateOutputSchema.parse(disabled), disabled);
-  assert.equal(disabled.values.use_cost_budget, false);
-  assert.equal(disabled.values.max_cost_usd, 7);
+  assert.equal(disabled.values.max_cost_usd, null);
+
+  assert.deepEqual(budget(f.settings.read("alice"), "max_cost_usd"), [
+    false,
+    7,
+  ]);
+
   assert.equal(f.settings.values("alice").max_cost_usd, null);
 
   assert.equal(
@@ -594,11 +746,19 @@ test("native budget toggles preserve the numeric amount across edits and restart
   });
 
   f.reopen();
-  assert.equal(f.settings.read("alice").values.max_cost_usd, 11);
-  assert.equal(f.settings.read("alice").values.use_cost_budget, false);
+
+  assert.deepEqual(budget(f.settings.read("alice"), "max_cost_usd"), [
+    false,
+    11,
+  ]);
+
   f.settings.update("alice", { set: { max_cost_usd: 12 } });
-  assert.equal(f.settings.read("alice").values.use_cost_budget, false);
-  assert.equal(f.settings.read("alice").values.max_cost_usd, 12);
+
+  assert.deepEqual(budget(f.settings.read("alice"), "max_cost_usd"), [
+    false,
+    12,
+  ]);
+
   assert.equal(f.settings.values("alice").max_cost_usd, null);
 
   const enabled = f.settings.update("alice", {
@@ -652,8 +812,12 @@ test("legacy null budget updates remain compatible and validation is atomic", as
   const f = await fixture(t);
   f.settings.update("alice", { set: { max_cost_usd: 13 } });
   f.settings.update("alice", { set: { max_cost_usd: null } });
-  assert.equal(f.settings.read("alice").values.use_cost_budget, false);
-  assert.equal(f.settings.read("alice").values.max_cost_usd, 13);
+
+  assert.deepEqual(budget(f.settings.read("alice"), "max_cost_usd"), [
+    false,
+    13,
+  ]);
+
   const original = f.settings.read("alice");
 
   for (const set of [
@@ -687,9 +851,7 @@ test("Codex defaults are not offered and legacy Codex values are ignored", async
   );
 
   assert.equal(
-    (result.layout as { title: string }[]).some((group) =>
-      group.title.startsWith("codex"),
-    ),
+    result.sections.flatMap(sectionKeys).some((key) => key.startsWith("codex")),
     false,
   );
 
@@ -741,14 +903,15 @@ test("Claude session restrictions are scalar user-only settings with stored defa
 
   for (const key of keys) {
     const field = read.schema.properties![key];
-    assert.ok(["string", "boolean"].includes(field.type), key);
+    assert.ok(["string", "boolean"].includes(String(field.type)), key);
     assert.equal(Object.hasOwn(field, "default"), false, key);
   }
 
   assert.deepEqual(
-    read.layout?.find((group) => group.title === "Claude session restrictions")
-      ?.items,
-    keys.map((property) => ({ kind: "property", property })),
+    sectionKeys(
+      read.sections.find((section) => section.id === "restrictions")!,
+    ),
+    keys,
   );
 
   for (const set of [

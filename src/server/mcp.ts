@@ -8,7 +8,6 @@ import { z } from "zod";
 import { autoRegisterChatProject } from "../core/chat-project.js";
 import { type Control } from "../core/control.js";
 import type { Task } from "../core/model.js";
-import { withSettingsCapability } from "../core/settings.js";
 import { EventProtocolError, type Events } from "../events/service.js";
 import { codexContextCapability } from "../panel/host-context.js";
 import { delegationPanel, panelUri } from "../panel/panel.js";
@@ -35,7 +34,7 @@ export function mcp(
     { name: "codex-subagent-extension", version: "0.1.0" },
     {
       capabilities: {
-        ...withSettingsCapability(codexContextCapability),
+        ...codexContextCapability,
         tools: {},
         ...(events ? { events: {} } : {}),
       },

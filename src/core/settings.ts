@@ -1,7 +1,3 @@
-import {
-  OPENAI_SETTINGS_CAPABILITY_KEY,
-  OpenAISettingsReadResultSchema,
-} from "@openai/mcp-extensions/server";
 import { z } from "zod";
 
 import {
@@ -24,6 +20,13 @@ import {
   legacyClaudeMode,
   permissionModeSchema,
 } from "./permissions.js";
+import {
+  modelScope,
+  sectionSchema,
+  settingHelp,
+  settingsSections,
+  unsupportedEffortWarning,
+} from "./settings-document.js";
 import { type Store } from "./store.js";
 
 // Codex defaults are not supported yet; settings cover these providers only.
@@ -32,31 +35,6 @@ const settingsProviders = ["claude", "fixture"] as const;
 const scopeTitle = (scope: string) =>
   scope[0].toUpperCase() + scope.slice(1).replaceAll("_", " ");
 
-import { globalPanelToolName } from "../panel/panel.js";
-
-export const settingsCapability = {
-  [OPENAI_SETTINGS_CAPABILITY_KEY]: {
-    readTool: "get_agent_settings",
-    updateTool: "update_user_agent_settings",
-  },
-};
-
-// Hosts on MCP 2025-11-25 or earlier may read only the legacy location.
-export function withSettingsCapability(capabilities: {
-  experimental?: Record<string, object>;
-}) {
-  return {
-    ...capabilities,
-    experimental: { ...capabilities.experimental, ...settingsCapability },
-    extensions: settingsCapability,
-  };
-}
-
-// Native settings support only inclusive bounds. These sit just above the
-// server's exclusive zero bounds, so fractional saved values stay valid.
-const hostMinimums = { max_runtime_minutes: 0.01, max_cost_usd: 0.01 };
-
-// Scalar properties keep the native settings editor compatible with the host.
 const modelSettingsShape = {
   default_model: modelNameSchema.meta({
     title: "Default model",
@@ -94,93 +72,92 @@ const valuesSchema = z.strictObject({
   ...modelSettingsShape,
   auto_register_chat_project: z.boolean().meta({
     title: "Automatically add chat projects",
-    description:
-      "When a task is started from a chat for its local Git root, register that root from host directory metadata, never arbitrary task paths. Disabling this keeps projects already registered.",
+    description: settingHelp.auto_register_chat_project,
   }),
   claude_permission_mode: permissionModeSchema.meta({
     title: "Claude permission mode",
-    description:
-      "Inherit uses the default mode from your Claude Code settings, and plan for read-only worker profiles. An explicit setting applies to every task. Native auto uses the SDK classifier.",
+    description: settingHelp.claude_permission_mode,
   }),
+  // Restriction titles drop "Claude": their settings group already names it.
   claude_sandbox: claudeSandboxSchema.meta({
-    title: "Claude Bash sandbox",
-    description:
-      "user_config applies the sandbox settings from your Claude Code configuration. extension adds the extension's sandbox: workspace-only writes, no home or sibling reads, no network. extension_locked also ignores network domains allowed by Claude Code settings files.",
+    title: "Bash sandbox",
+    description: settingHelp.claude_sandbox,
   }),
   claude_environment: claudeEnvironmentSchema.meta({
-    title: "Claude environment",
-    description:
-      "inherit passes the service environment except the extension's own secrets. filtered passes only basic process variables and Claude credentials.",
+    title: "Environment",
+    description: settingHelp.claude_environment,
   }),
   claude_tools: claudeToolsSchema.meta({
-    title: "Claude tools",
-    description:
-      "all offers every Claude Code tool. restricted offers only file, search, Bash, question, skill and MCP tools, and only the read, question and skill tools to read-only work. profile restricts read-only worker profiles.",
+    title: "Tools",
+    description: settingHelp.claude_tools,
   }),
   claude_path_guard: claudePathGuardSchema.meta({
-    title: "Claude workspace path guard",
-    description:
-      "When on, file tools may only touch the task workspace and never Git metadata. profile turns it on for read-only worker profiles.",
+    title: "Workspace path guard",
+    description: settingHelp.claude_path_guard,
   }),
   claude_subagents: z.boolean().meta({
-    title: "Allow Claude subagents",
-    description:
-      "Let delegated Claude sessions start their own subagents with the Agent tool.",
+    title: "Allow subagents",
+    description: settingHelp.claude_subagents,
   }),
   default_approval_decider: approvalDeciderSchema.meta({
     title: "Approval decision maker",
-    description:
-      "Who answers permission prompts that the native SDK leaves unresolved: the user or the parent agent.",
+    description: settingHelp.default_approval_decider,
   }),
   default_approval_mode: approvalModeSchema.meta({
     title: "Approval mode",
     description:
       "Ask user, delegate decisions to the parent agent, auto-approve within the sandbox, or deny execution requests. Read-only profiles and sandbox limits remain enforced.",
   }),
-  default_provider: z
-    .enum(settingsProviders)
-    .meta({ title: "Default provider" }),
-  default_worker_profile: z
-    .enum(roles)
-    .meta({ title: "Default worker profile" }),
+  default_provider: z.enum(settingsProviders).meta({ title: "Provider" }),
+  default_worker_profile: z.enum(roles).meta({ title: "Worker profile" }),
   default_workspace_strategy: z
     .enum(["worktree", "current_repo"])
-    .meta({ title: "Workspace strategy" }),
+    .meta({ title: "Workspace" }),
   max_runtime_minutes: z.number().positive().max(120).nullable().meta({
-    title: "Default runtime budget (minutes; null means no limit)",
+    title: "Runtime limit (minutes; null means no limit)",
   }),
   max_cost_usd: z
     .number()
     .positive()
     .max(100)
     .nullable()
-    .meta({ title: "Default cost budget (USD; null means no limit)" }),
+    .meta({ title: "Cost limit (USD; null means no limit)" }),
 });
 
 const costAmount = z
   .number()
   .positive()
   .max(100)
-  .meta({ title: "Default cost budget (USD)" });
+  .meta({ title: "Cost limit (USD)" });
 
 const runtimeAmount = z
   .number()
   .positive()
   .max(120)
-  .meta({ title: "Default runtime budget (minutes)" });
+  .meta({ title: "Runtime limit (minutes)" });
 
-const hostValuesSchema = valuesSchema
+type ProviderModelKey =
+  | `${(typeof settingsProviders)[number]}_default_model`
+  | `${(typeof settingsProviders)[number]}_default_reasoning_effort`;
+
+const providerModelKeys = settingsProviders.flatMap((scope) => [
+  `${scope}_default_model` as const,
+  `${scope}_default_reasoning_effort` as const,
+]);
+
+// Budgets read as a number or null (no limit); updates may still use the
+// `use_*_budget` switches, which keep the amount while a limit is off.
+const panelValuesSchema = valuesSchema
   .omit({ default_approval_mode: true })
-  .extend({
-    max_runtime_minutes: runtimeAmount,
-    use_runtime_budget: z
-      .boolean()
-      .meta({ title: "Apply a default runtime limit" }),
-    max_cost_usd: costAmount,
-    use_cost_budget: z.boolean().meta({ title: "Apply a default cost limit" }),
-  });
+  // The panel omits a disabled provider's model defaults (see `hiddenModelKeys`).
+  .partial(
+    Object.fromEntries(providerModelKeys.map((key) => [key, true])) as Record<
+      ProviderModelKey,
+      true
+    >,
+  );
 
-// Fill missing fields in older settings rows without adding JSON Schema defaults to host fields.
+// Fill missing fields in older settings rows without adding JSON Schema defaults to panel fields.
 const storedValuesSchema = valuesSchema.extend({
   auto_register_chat_project: z.boolean().default(true),
   claude_permission_mode: permissionModeSchema.default("inherit"),
@@ -215,27 +192,24 @@ const storedValuesSchema = valuesSchema.extend({
   runtime_budget_amount: runtimeAmount.optional(),
 });
 
-// Use this project's Zod instance for transport schemas; the extension SDK may
-// install a different Zod version. Validate layout with its schema when reading.
+// The panel's settings document: field schemas, values, and the groups the
+// settings dialog shows, each with a stable ID.
 export const settingsReadOutputSchema = z.object({
+  // Field types, choices, and bounds; agents read this to update settings.
   schema: z.looseObject({
     type: z.literal("object"),
-    properties: z
-      .record(
-        z.string(),
-        z.looseObject({
-          type: z.enum(["boolean", "string", "number", "integer"]),
-        }),
-      )
-      .optional(),
+    properties: z.record(z.string(), z.looseObject({})).optional(),
     required: z.array(z.string()).optional(),
   }),
-  layout: z.array(z.record(z.string(), z.unknown())).optional(),
-  values: hostValuesSchema,
+  values: panelValuesSchema,
+  // What each shown setting resets to.
+  defaults: panelValuesSchema,
+  // What the settings dialog shows, section by section.
+  sections: z.array(sectionSchema),
 });
 
 export const settingsUpdateOutputSchema = z.object({
-  values: hostValuesSchema,
+  values: panelValuesSchema,
 });
 
 export const settingsUpdateSchema = z.strictObject({
@@ -269,22 +243,25 @@ export class Settings {
     );
   }
 
+  // A new user's settings; schema defaults fill in the rest.
+  private initialBody() {
+    return {
+      default_provider: this.providers().includes("claude")
+        ? "claude"
+        : this.providers()[0],
+      default_worker_profile: "reviewer",
+      default_workspace_strategy: "current_repo",
+      max_runtime_minutes: 20,
+      max_cost_usd: 5,
+    };
+  }
+
   private saved(owner: string) {
     const row = this.store.db
       .prepare("SELECT body FROM user_settings WHERE owner=?")
       .get(owner);
 
-    const body = row
-      ? JSON.parse(String(row.body))
-      : {
-          default_provider: this.providers().includes("claude")
-            ? "claude"
-            : this.providers()[0],
-          default_worker_profile: "reviewer",
-          default_workspace_strategy: "current_repo",
-          max_runtime_minutes: 20,
-          max_cost_usd: 5,
-        };
+    const body = row ? JSON.parse(String(row.body)) : this.initialBody();
 
     // Ignore Codex defaults saved before they were removed.
     delete body.codex_default_model;
@@ -321,171 +298,104 @@ export class Settings {
     return values;
   }
 
-  private hostValues(owner: string) {
+  // Values as the panel and agents read them: without the retired approval
+  // mode or a disabled provider's model defaults.
+  private panelValues(values: SettingsValues) {
+    const { default_approval_mode, ...visible } = values;
+    const panel: z.infer<typeof panelValuesSchema> = visible;
+
+    for (const key of this.hiddenModelKeys()) delete panel[key];
+
+    return panel;
+  }
+
+  /** The values a new user starts with, which resets restore. */
+  defaults() {
     const { cost_budget_amount, runtime_budget_amount, ...values } =
-      this.saved(owner);
+      storedValuesSchema.parse(this.initialBody());
 
-    const { default_approval_mode, ...visible } = this.values(owner);
+    return values;
+  }
 
-    return {
-      ...visible,
-      use_runtime_budget: values.max_runtime_minutes !== null,
-      max_runtime_minutes:
-        values.max_runtime_minutes ?? runtime_budget_amount ?? 20,
-      use_cost_budget: values.max_cost_usd !== null,
-      max_cost_usd: values.max_cost_usd ?? cost_budget_amount ?? 5,
-    };
+  // A disabled provider's model defaults stay saved but hidden from the panel
+  // until the provider is enabled again.
+  private hiddenModelKeys() {
+    return providerModelKeys.filter(
+      (key) =>
+        !this.providers().some((provider) => key.startsWith(`${provider}_`)),
+    );
   }
 
   read(
     owner: string,
     catalogs: { provider: string; models?: ModelChoice[] }[] = [],
   ) {
+    const providers = this.providers();
+
     const schema = z.toJSONSchema(
-      hostValuesSchema.extend({
+      panelValuesSchema.extend({
         default_provider: z
-          .enum(this.providers() as [string, ...string[]])
-          .meta({ title: "Default provider" }),
+          .enum(providers as [string, ...string[]])
+          .meta({ title: "Provider" }),
       }),
     );
 
     catalogs = catalogs.filter((catalog) =>
-      this.providers().includes(catalog.provider),
+      providers.includes(catalog.provider),
     );
 
-    const values = this.hostValues(owner);
-    const fields = values as Record<string, unknown>;
-    const properties = schema.properties!;
+    const saved = this.saved(owner),
+      values = this.panelValues(this.values(owner)),
+      properties = schema.properties!;
 
-    for (const [key, minimum] of Object.entries(hostMinimums)) {
-      const field = properties[key] as Record<string, unknown>;
-      delete field.exclusiveMinimum;
-      field.minimum = minimum;
-    }
+    for (const key of this.hiddenModelKeys()) delete properties[key];
 
-    const scopes = ["global", ...this.providers(), ...roles];
+    const scopes = { values, providers, catalogs };
 
-    for (const scope of scopes) {
-      const prefix = scope === "global" ? "default" : `${scope}_default`;
-      const modelKey = `${prefix}_model`;
-      const effortKey = `${prefix}_reasoning_effort`;
-      const providerScope = this.providers().includes(scope);
+    const sections = settingsSections({
+      ...scopes,
+      shown: properties,
+      remembered: {
+        max_cost_usd: saved.max_cost_usd ?? saved.cost_budget_amount ?? 5,
+        max_runtime_minutes:
+          saved.max_runtime_minutes ?? saved.runtime_budget_amount ?? 20,
+      },
+    });
 
-      const choices = catalogs
-        .filter((catalog) => !providerScope || catalog.provider === scope)
-        .flatMap((catalog) => catalog.models ?? []);
+    // Agents read choices and notes from the schema; the panel reads sections,
+    // whose intros explain the same chain from each section's side.
+    const modelNote =
+      "Blank inherits the next default: the task's worker profile, then its provider, then the global default, then the provider's own default. A model chosen for a task overrides these.";
 
-      const modelField = properties[modelKey] as Record<string, unknown>;
+    for (const scope of ["global", ...providers, ...roles]) {
+      const info = modelScope(scope, scopes),
+        modelField = properties[info.modelKey] as Record<string, unknown>,
+        effortField = properties[info.effortKey] as Record<string, unknown>;
 
-      modelField.description =
-        "Blank inherits the next default: role → provider → global → provider runtime. Saved custom model IDs remain available.";
+      modelField.description = modelNote;
+      if (info.modelChoices)
+        modelField.enum = info.modelChoices.map((option) => option.value);
+      effortField.enum = info.effortChoices.map((option) => option.value);
 
-      if (choices.length)
-        modelField.enum = [
-          ...new Set([
-            "",
-            ...choices.map((model) => model.value),
-            String(fields[modelKey]),
-          ]),
-        ];
-      const provider = providerScope ? scope : values.default_provider;
-
-      const effectiveModel = String(
-        fields[modelKey] ||
-          (scope !== "global" && !providerScope
-            ? fields[`${provider}_default_model`]
-            : "") ||
-          (scope !== "global" ? values.default_model : "") ||
-          "default",
-      );
-
-      const metadata = catalogs
-        .find((catalog) => catalog.provider === provider)
-        ?.models?.find((model) => model.value === effectiveModel);
-
-      const effortField = properties[effortKey] as Record<string, unknown>;
-
-      const levels =
-        metadata?.supportsEffort === false
-          ? []
-          : metadata?.supportedEffortLevels;
-
-      effortField.description = `Default inherits the next configured reasoning setting. ${
-        levels === undefined
-          ? "Model-specific effort support is unknown; the provider validates it when work starts."
-          : `Supported efforts for ${provider} model ${effectiveModel}: ${levels.length ? levels.join(", ") : "provider runtime default only"}.`
-      } ${!providerScope ? "This default applies across providers; validate it against the provider used for each task." : ""} ${
-        levels !== undefined &&
-        fields[effortKey] !== "default" &&
-        !levels.some((level) => level === fields[effortKey])
-          ? "The saved effort is not supported by this model; choose another effort or model."
-          : ""
-      }`;
-
-      // Global and role choices apply across providers; only provider fields have a fixed catalog.
-      // Preserve saved values in the schema even if the runtime catalog has changed.
-      if (providerScope && levels !== undefined)
-        effortField.enum = [
-          ...new Set(["default", ...levels, String(fields[effortKey])]),
-        ];
+      effortField.description = [
+        "Inherit uses the next level, like models.",
+        info.levels === undefined
+          ? "Effort support is unknown; the provider checks it when a task starts."
+          : `Supported efforts for ${info.provider} model ${info.effectiveModel}: ${info.levels.length ? info.levels.join(", ") : "provider runtime default only"}.`,
+        !info.providerScope && "Applies to every provider.",
+        info.unsupported && unsupportedEffortWarning,
+      ]
+        .filter(Boolean)
+        .join(" ");
     }
 
     // Defaults are effective values, never JSON Schema defaults.
-    return settingsReadOutputSchema.parse(
-      OpenAISettingsReadResultSchema.parse({
-        schema,
-        layout: [
-          {
-            kind: "group",
-            title: "Delegation defaults",
-            items: [
-              ...[
-                "default_provider",
-                "default_worker_profile",
-                "default_workspace_strategy",
-                "auto_register_chat_project",
-                "claude_permission_mode",
-                "default_approval_decider",
-                "use_cost_budget",
-                "max_cost_usd",
-                "use_runtime_budget",
-                "max_runtime_minutes",
-              ].map((property) => ({ kind: "property", property })),
-              {
-                kind: "tool",
-                tool: globalPanelToolName,
-                title: "Open delegated work",
-                description:
-                  "Review tasks across all projects and conversations.",
-              },
-            ],
-          },
-          {
-            kind: "group",
-            title: "Claude session restrictions",
-            items: (
-              Object.keys(claudeOverrideDefaults) as (keyof ClaudeOverrides)[]
-            ).map((property) => ({ kind: "property", property })),
-          },
-          {
-            kind: "group",
-            title: "Global model defaults",
-            items: ["default_model", "default_reasoning_effort"].map(
-              (property) => ({ kind: "property", property }),
-            ),
-          },
-          ...[...settingsProviders, ...roles].map((scope) => ({
-            kind: "group",
-            title: `${scopeTitle(scope)} defaults`,
-            items: [
-              `${scope}_default_model`,
-              `${scope}_default_reasoning_effort`,
-            ].map((property) => ({ kind: "property", property })),
-          })),
-        ],
-        values,
-      }),
-    );
+    return settingsReadOutputSchema.parse({
+      schema,
+      values,
+      defaults: this.panelValues(this.defaults()),
+      sections,
+    });
   }
 
   update(owner: string, input: unknown, authority: InputAuthority = "user") {
@@ -581,7 +491,7 @@ export class Settings {
       )
       .run(owner, JSON.stringify(values));
 
-    return { values: this.hostValues(owner) };
+    return { values: this.panelValues(this.values(owner)) };
   }
 
   taskInput(owner: string, input: unknown) {

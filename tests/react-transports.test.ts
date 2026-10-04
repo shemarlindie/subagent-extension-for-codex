@@ -437,7 +437,7 @@ test("host routes user actions through app-only aliases and preserves settings e
     const settings = {
       values: { default_approval_mode: "parent_agent" },
       schema: { type: "object" },
-      layout: [],
+      sections: [],
     };
 
     fake.respond({ structuredContent: settings });

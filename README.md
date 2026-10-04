@@ -134,9 +134,9 @@ Each scenario uses a temporary Git fixture and a native task budget of at most $
 
 ## Plugin settings
 
-The server advertises `extensions["openai/settings"]` with `get_agent_settings` and app-only `update_user_agent_settings`, and repeats it under `experimental` for hosts on MCP `2025-11-25` or earlier. Compatible ChatGPT hosts can render its native settings schema and layout. Number fields use inclusive minimums, and the layout includes an **Open delegated work** button that opens the panel. `get_agent_settings` and `update_agent_settings` are model-visible; `update_agent_settings` can update ordinary defaults but rejects permission, approval-authority, and automatic project registration settings. App-only `update_user_agent_settings` allows the user to change these defaults. Compatible hosts must enforce app-only tool visibility. Authenticated raw service clients are trusted administrators; this boundary does not cryptographically attest that a human made a request.
+Settings are edited in the panel: **Settings** in its header opens a dialog built from `get_agent_settings`. The server does not advertise native host settings. `get_agent_settings` and `update_agent_settings` are model-visible; `update_agent_settings` can update ordinary defaults but rejects permission, approval-authority, and automatic project registration settings. App-only `update_user_agent_settings` allows the user to change these defaults. Compatible hosts must enforce app-only tool visibility. Authenticated raw service clients are trusted administrators; this boundary does not cryptographically attest that a human made a request.
 
-Defaults include provider, worker profile, workspace strategy (`current_repo` by default, with `worktree` available), runtime minutes, cost budget, Claude permission mode (`claude_permission_mode: inherit` by default), and approval decision routing (`default_approval_decider: user` by default). Provider choices include only enabled workers; a saved unavailable provider falls back to the first enabled worker until changed. Codex is not yet a settings option: it has no provider choice or model and reasoning defaults, and tasks select it explicitly. On a Codex-only service, settings fall back to Claude. The cost limit remains $5 by default; explicit `max_cost_usd: null` means no cost limit for task budgets and legacy settings updates. Native settings expose `use_cost_budget` and a numeric `max_cost_usd` because the host settings schema supports scalar fields. Disabling the toggle preserves the amount for later use; enabling it restores the amount. Updating the amount while disabled keeps the limit disabled. Providers that cannot enforce a numeric limit reject it before starting. The browser and host delegation form expose an Apply cost limit choice; disabling it preserves the runtime limit. Claude omits its native cost ceiling only for that explicit choice. Updates use `{ "set": { "max_runtime_minutes": 10 } }`, preserve omitted fields, and persist per user in SQLite. New tasks inherit these values; explicit task arguments override them subject to the approval authority rules below, and existing tasks keep their original settings. The console's delegation form reads the current defaults when opened. Unsupported providers, invalid budgets, and unknown settings are rejected before persistence. Claude session restrictions, described below, apply in every permission mode.
+Defaults include provider, worker profile, workspace strategy (`current_repo` by default, with `worktree` available), runtime minutes, cost budget, Claude permission mode (`claude_permission_mode: inherit` by default), and approval decision routing (`default_approval_decider: user` by default). Provider choices include only enabled workers; a saved unavailable provider falls back to the first enabled worker until changed. A disabled provider's model and reasoning defaults are hidden but kept, and reappear when it is enabled again. Codex is not yet a settings option: it has no provider choice or model and reasoning defaults, and tasks select it explicitly. On a Codex-only service, settings fall back to Claude. The cost limit remains $5 by default; explicit `max_cost_usd: null` means no cost limit for task budgets and legacy settings updates. `get_agent_settings` reads each budget as a number or `null` (no limit). Updates can also use `use_cost_budget` and `use_runtime_budget`: disabling one preserves the amount for later use, enabling it restores the amount, and updating the amount while disabled keeps the limit disabled. Providers that cannot enforce a numeric limit reject it before starting. The browser and host delegation form expose an Apply cost limit choice; disabling it preserves the runtime limit. Claude omits its native cost ceiling only for that explicit choice. Updates use `{ "set": { "max_runtime_minutes": 10 } }`, preserve omitted fields, and persist per user in SQLite. New tasks inherit these values; explicit task arguments override them subject to the approval authority rules below, and existing tasks keep their original settings. The console's delegation form reads the current defaults when opened. Unsupported providers, invalid budgets, and unknown settings are rejected before persistence. Claude session restrictions, described below, apply in every permission mode.
 
 ### Claude permissions
 
@@ -174,16 +174,15 @@ These user-only settings add restrictions to delegated Claude sessions. Model-vi
 
 With the extension sandbox, missing sandbox dependencies or unsupported platforms fail instead of running commands unsandboxed. Sandbox list settings in Claude Code settings files, such as excluded commands and allowed domains, still add to the extension policy. Only `extension_locked` stops that, and only for network domains.
 
-Open the installed plugin's details page in a host that supports native plugin settings.
-The host renders the groups and controls returned by `get_agent_settings`. Hosts that do not
-render native settings, including Codex, can use **Settings** in the expanded panel; it renders
-the same schema and layout and saves only changed fields. Both HTTP and the packaged stdio plugin advertise this capability.
+Use **Settings** in the panel header. `get_agent_settings` returns the values, the defaults
+a reset restores, and the sections and rows the dialog shows, with labelled options; the
+dialog renders them as given and saves only changed fields. Its JSON `schema` lists each
+field's type, choices and bounds for agents.
 Model dropdowns use discovered catalogs, and provider reasoning dropdowns use metadata for
 the selected configured model. Global and role efforts remain broad because they apply across providers. Saved custom choices remain available if the catalog changes. Changing a
 model takes effect in reasoning choices on the next settings read. Custom IDs can still be set
 with `update_agent_settings`. Without discovery, model controls remain text fields and reasoning
-support is reported as unknown. Native host discovery and tool envelopes are covered by local
-protocol tests; actual host rendering requires a connected plugin and host support.
+support is reported as unknown.
 
 ## Host forms
 
@@ -273,7 +272,7 @@ only an accepted **allow** registers the canonical root. Decline or cancellation
 leaves it unregistered. Registration never starts a task.
 
 **Automatically add chat projects** (`auto_register_chat_project`) is a user-only
-setting in native or panel Settings. It defaults to true. It applies only when a
+setting in panel Settings. It defaults to true. It applies only when a
 task is started from a chat (`start_agent_task`, the panel's Start task, or the
 task form) and the task targets that chat's Git root, supplied by original host
 metadata; an existing grant, including an approved parent, is left as is. Listing
@@ -387,9 +386,9 @@ need integration verification beyond the local fixture/protocol tests.
 
 ### Model and reasoning defaults
 
-The native extension settings editor persists model and reasoning defaults per user.
+The panel settings editor persists model and reasoning defaults per user.
 Use `default_model` and `default_reasoning_effort` for global defaults,
-`claude_default_model` / `claude_default_reasoning_effort` (or `codex`, `fixture`)
+`claude_default_model` / `claude_default_reasoning_effort` (or `fixture`)
 for provider defaults, and `reviewer_default_model` / `reviewer_default_reasoning_effort`
 (or any worker profile such as `researcher` or `implementer`) for role defaults.
 

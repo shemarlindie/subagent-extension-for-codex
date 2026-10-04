@@ -4,6 +4,7 @@ import type {
   Event,
   ModelChoice,
 } from "../../src/core/model";
+import type { SettingSection } from "../../src/core/settings-document";
 import type { ListedTask } from "../../src/core/task-list";
 import type { DroppedSummary } from "./event-history";
 
@@ -46,28 +47,17 @@ export type Defaults = {
   use_cost_budget?: boolean;
 };
 
+export type SettingValue = string | number | boolean | null;
+
+/**
+ * `get_agent_settings` as the dialog reads it: current values, the defaults a
+ * reset restores, and the sections and rows to show. The JSON `schema` is for
+ * agents; the dialog ignores it.
+ */
 export type SettingsDocument = {
-  values: Record<string, string | number | boolean>;
-  schema: {
-    properties?: Record<
-      string,
-      {
-        type: "string" | "number" | "integer" | "boolean";
-        title?: string;
-        description?: string;
-        enum?: string[];
-        maxLength?: number;
-        minimum?: number;
-        maximum?: number;
-      }
-    >;
-    required?: string[];
-  };
-  layout?: {
-    kind: string;
-    title: string;
-    items: { kind: string; property?: string }[];
-  }[];
+  values: Record<string, SettingValue>;
+  defaults: Record<string, SettingValue>;
+  sections: SettingSection[];
 };
 
 export type PanelData = {

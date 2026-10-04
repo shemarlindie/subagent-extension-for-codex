@@ -193,12 +193,10 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       {},
     );
 
-    assert.deepEqual(
+    // Settings live in the panel only; hosts get no native settings capability.
+    assert.equal(
       client.getServerCapabilities()?.experimental?.["openai/settings"],
-      {
-        readTool: "get_agent_settings",
-        updateTool: "update_user_agent_settings",
-      },
+      undefined,
     );
 
     const tools = await client.listTools();
@@ -559,40 +557,34 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         {},
       );
 
-      assert.deepEqual(
+      assert.equal(
         (stdio.getServerCapabilities() as any)?.extensions?.["openai/settings"],
-        {
-          readTool: "get_agent_settings",
-          updateTool: "update_user_agent_settings",
-        },
+        undefined,
       );
 
-      assert.deepEqual(
+      assert.equal(
         stdio.getServerCapabilities()?.experimental?.["openai/settings"],
-        {
-          readTool: "get_agent_settings",
-          updateTool: "update_user_agent_settings",
-        },
+        undefined,
       );
 
-      const nativeSettings = await stdio.callTool({
+      const settingsRead = await stdio.callTool({
         name: "get_agent_settings",
         arguments: {},
       });
 
-      assert.ok(!nativeSettings.isError);
+      assert.ok(!settingsRead.isError);
 
       assert.equal(
-        (nativeSettings.structuredContent as any).schema.type,
+        (settingsRead.structuredContent as any).schema.type,
         "object",
       );
 
       assert.ok(
-        Array.isArray((nativeSettings.structuredContent as any).layout),
+        Array.isArray((settingsRead.structuredContent as any).sections),
       );
 
       assert.equal(
-        (nativeSettings.structuredContent as any).values.default_model,
+        (settingsRead.structuredContent as any).values.default_model,
         "",
       );
 
@@ -1063,12 +1055,9 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
     assert.ok(discovery.json.result.capabilities.tools);
     assert.ok(discovery.json.result.capabilities.resources);
 
-    assert.deepEqual(
-      discovery.json.result.capabilities.extensions["openai/settings"],
-      {
-        readTool: "get_agent_settings",
-        updateTool: "update_user_agent_settings",
-      },
+    assert.equal(
+      discovery.json.result.capabilities.extensions?.["openai/settings"],
+      undefined,
     );
 
     assert.ok(discovery.json.result.supportedVersions.includes("2026-07-28"));
@@ -1101,10 +1090,7 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
       ["default", "low"],
     );
 
-    assert.equal(
-      settings.json.result.structuredContent.layout[0].kind,
-      "group",
-    );
+    assert.equal(settings.json.result.structuredContent.sections[0].id, "task");
 
     const updated = await rpc("tools/call", {
       name: "update_agent_settings",

@@ -8,7 +8,6 @@ import { z } from "zod";
 import { hostDirectoryFromMeta } from "./core/chat-project.js";
 import { type Control } from "./core/control.js";
 import type { Task } from "./core/model.js";
-import { withSettingsCapability } from "./core/settings.js";
 import { hostProjectCandidate } from "./panel/host-context.js";
 import { codexContextCapability } from "./panel/host-context.js";
 import { delegationPanel, panelUri } from "./panel/panel.js";
@@ -28,7 +27,7 @@ const server = new McpServer(
   {
     instructions:
       "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Use get_current_agent_project for host project discovery. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user to confirm registration.",
-    capabilities: withSettingsCapability(codexContextCapability),
+    capabilities: codexContextCapability,
   },
 );
 

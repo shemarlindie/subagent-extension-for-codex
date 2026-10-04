@@ -171,7 +171,7 @@ Unsupported hosts receive guidance to register through the panel. Cancellation a
 decline never register or start work.
 
 **Automatically add chat projects** (`auto_register_chat_project`) is a persistent,
-user-only setting available in native and panel Settings, defaulting to true.
+user-only setting available in panel Settings, defaulting to true.
 It registers the current local host Git root only when a task is started from the
 chat for that root; project listing, context resolution and the panel openers
 remain read-only. Explicit/model `host_directory` and task paths cannot trigger
@@ -239,14 +239,12 @@ the package.
 
 ## Review corrections
 
-The native settings contract requires a read-tool output schema and scalar
-setting fields. Native settings now expose a boolean `use_cost_budget` plus a
-numeric amount, translated to nullable internal task budgets. Both transports
-advertise read/update output schemas. Settings schema checks must inspect field
-definitions as well as the envelope: the SDK's raw read-result parser intentionally
-does not validate native field schemas. See the [official extension specification
-linked by OpenAI](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#structured-settings)
-and [OpenAI extension documentation](https://developers.openai.com/plugins/build/extensions).
+The server no longer advertises the `openai/settings` extension. No host was
+confirmed to render native settings, and its strict layout format (groups
+without IDs, scalar fields only) constrained the panel's settings dialog, which
+is now the only settings editor. The read and update tools keep their output
+schemas. See the [official extension specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#structured-settings)
+if native settings are reconsidered.
 
 `_meta["openai/session"]` is a documented optional anonymized conversation
 identifier. Both transports now use it for panel/task/list correlation when no

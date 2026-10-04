@@ -115,7 +115,7 @@ const request = {
   workspace_strategy: "current_repo",
 };
 
-test("native settings expose all SDK modes, persist overrides, and require user authority", async (t) => {
+test("settings expose all SDK permission modes, persist overrides, and require user authority", async (t) => {
   const { c, store } = await setup(t);
   const settings = c.settings;
   assert.equal(settings.values("alice").claude_permission_mode, "inherit");

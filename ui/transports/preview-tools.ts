@@ -1,4 +1,5 @@
-import type { Task } from "../../src/core/model";
+import { type ModelChoice, roles, type Task } from "../../src/core/model";
+import { settingsSections } from "../../src/core/settings-document";
 import { listedTask } from "../../src/core/task-list";
 import {
   previewArtifacts,
@@ -7,7 +8,7 @@ import {
   previewTasks,
 } from "./preview-fixtures";
 
-const previewModels = [
+const previewModels: ModelChoice[] = [
   {
     value: "default",
     displayName: "Default (recommended)",
@@ -34,12 +35,32 @@ const previewModels = [
   },
 ];
 
-const previewScopes = [
-  ["default", "Global"],
-  ["claude_default", "Claude"],
-  ["reviewer_default", "Reviewer"],
-  ["implementer_default", "Implementer"],
-];
+// A new user's settings with only Claude enabled, as the service reports them.
+const previewSettingsDefaults = {
+  default_provider: "claude",
+  default_worker_profile: "reviewer",
+  default_workspace_strategy: "current_repo",
+  auto_register_chat_project: true,
+  claude_permission_mode: "inherit",
+  default_approval_decider: "user",
+  claude_sandbox: "user_config",
+  claude_environment: "inherit",
+  claude_tools: "profile",
+  claude_path_guard: "profile",
+  claude_subagents: true,
+  max_cost_usd: 5,
+  max_runtime_minutes: 20,
+  ...Object.fromEntries(
+    [
+      "default",
+      "claude_default",
+      ...roles.map((role) => `${role}_default`),
+    ].flatMap((prefix) => [
+      [`${prefix}_model`, ""],
+      [`${prefix}_reasoning_effort`, "default"],
+    ]),
+  ),
+};
 
 const newestFirst = [...previewTasks].sort((a, b) =>
   b.created_at.localeCompare(a.created_at),
@@ -249,111 +270,27 @@ export function previewTool(
         },
       },
     ],
-    get_agent_settings: {
-      values: {
-        default_provider: "claude",
-        default_worker_profile: "reviewer",
-        default_workspace_strategy: "current_repo",
+    // Built with the service's own section builder, so the preview matches it.
+    get_agent_settings: (() => {
+      const values = {
+        ...previewSettingsDefaults,
         auto_register_chat_project: options.autoRegisterChatProject ?? true,
-        use_cost_budget: true,
-        max_cost_usd: 5,
-        use_runtime_budget: true,
-        max_runtime_minutes: 20,
-        ...Object.fromEntries(
-          previewScopes.flatMap(([key]) => [
-            [`${key}_model`, key === "claude_default" ? "sonnet" : ""],
-            [`${key}_reasoning_effort`, "default"],
-          ]),
-        ),
-      },
-      schema: {
-        type: "object",
-        properties: {
-          default_provider: {
-            type: "string",
-            title: "Default provider",
-            enum: ["claude"],
-          },
-          default_worker_profile: {
-            type: "string",
-            title: "Default worker profile",
-            enum: ["reviewer", "researcher", "implementer", "debugger"],
-          },
-          default_workspace_strategy: {
-            type: "string",
-            title: "Workspace strategy",
-            enum: ["current_repo", "worktree"],
-          },
-          auto_register_chat_project: {
-            type: "boolean",
-            title: "Automatically add chat projects",
-          },
-          use_cost_budget: {
-            type: "boolean",
-            title: "Apply a default cost limit",
-          },
-          max_cost_usd: {
-            type: "number",
-            title: "Default cost budget (USD)",
-            minimum: 0.01,
-            maximum: 100,
-          },
-          use_runtime_budget: {
-            type: "boolean",
-            title: "Apply a default runtime limit",
-          },
-          max_runtime_minutes: {
-            type: "number",
-            title: "Default runtime budget (minutes)",
-            minimum: 0.01,
-            maximum: 120,
-          },
-          ...Object.fromEntries(
-            previewScopes.flatMap(([key, title]) => [
-              [
-                `${key}_model`,
-                {
-                  type: "string",
-                  title: `${title} model`,
-                  enum: ["", ...previewModels.map((model) => model.value)],
-                },
-              ],
-              [
-                `${key}_reasoning_effort`,
-                {
-                  type: "string",
-                  title: `${title} reasoning effort`,
-                  enum: ["default", "low", "medium", "high"],
-                },
-              ],
-            ]),
-          ),
-        },
-      },
-      layout: [
-        {
-          kind: "group",
-          title: "Delegation defaults",
-          items: [
-            "default_provider",
-            "default_worker_profile",
-            "default_workspace_strategy",
-            "auto_register_chat_project",
-            "use_cost_budget",
-            "max_cost_usd",
-            "use_runtime_budget",
-            "max_runtime_minutes",
-          ].map((property) => ({ kind: "property", property })),
-        },
-        ...previewScopes.map(([key, title]) => ({
-          kind: "group",
-          title: `${title} defaults`,
-          items: [`${key}_model`, `${key}_reasoning_effort`].map(
-            (property) => ({ kind: "property", property }),
-          ),
-        })),
-      ],
-    },
+        claude_default_model: "sonnet",
+      };
+
+      return {
+        schema: { type: "object", properties: {} },
+        values,
+        defaults: previewSettingsDefaults,
+        sections: settingsSections({
+          values,
+          providers: ["claude"],
+          catalogs: [{ provider: "claude", models: previewModels }],
+          shown: values,
+          remembered: { max_cost_usd: 5, max_runtime_minutes: 20 },
+        }),
+      };
+    })(),
   };
 
   if (!(name in fixtures))

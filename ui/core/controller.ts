@@ -613,7 +613,7 @@ export class Controller {
     const settings = await this.tool<SettingsDocument>("get_agent_settings");
     if (this.disposed || scope !== this.state.scopeVersion || this.state.dialog)
       return;
-    if (!settings.schema?.properties)
+    if (!Array.isArray(settings.sections))
       throw new Error(
         "Settings are unavailable in this preview or service version.",
       );
@@ -671,8 +671,19 @@ export class Controller {
       this.run(() => this.share(dialog.artifact.id));
   }
 
+  /**
+   * Lets the open form veto closing, such as to confirm discarding edits.
+   * The guard returns false to stay open. Saving closes without asking it.
+   */
+  private dismissGuard?: () => boolean;
+
+  guardDismiss(guard: (() => boolean) | undefined) {
+    this.dismissGuard = guard;
+  }
+
   dismiss() {
-    if (!this.state.busy) this.patch({ dialog: undefined, formError: "" });
+    if (this.state.busy || this.dismissGuard?.() === false) return;
+    this.patch({ dialog: undefined, formError: "" });
   }
 
   /**
