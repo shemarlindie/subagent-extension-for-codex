@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { profileLabel, visibleTasks } from "../core/selectors";
+import { useListMotion } from "./motion";
 import type { Task } from "../core/types";
 import { useController, useSnapshot } from "./controller-context";
 import { TaskStatus } from "./status";
@@ -28,7 +30,9 @@ export function TaskRow({
 export function TaskList() {
   const controller = useController(),
     state = useSnapshot(),
-    tasks = visibleTasks(state);
+    tasks = visibleTasks(state),
+    listRef = useRef<HTMLDivElement>(null);
+  useListMotion(listRef, "data-task", tasks.map((task) => task.id).join());
   return (
     <>
       <div className="list-label">
@@ -41,7 +45,7 @@ export function TaskList() {
             : tasks.length}
         </span>
       </div>
-      <div id="task-list">
+      <div id="task-list" ref={listRef}>
         {!state.connected ? (
           <p className="help">
             {state.connection === "Open through MCP"

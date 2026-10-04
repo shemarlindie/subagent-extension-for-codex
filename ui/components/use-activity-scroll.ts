@@ -6,8 +6,11 @@ import {
   useState,
 } from "react";
 import type { Event } from "../core/types";
+import { MOTION, reducedMotion } from "./motion-utils";
 
 const TOP_BUFFER = 48;
+// How long a smooth return may go without progress before it counts as stopped.
+const GLIDE_STALL = 1500;
 type Position = { element: HTMLElement; top: number; bottom: number };
 
 // The timeline scrolls itself unless a short layout hands scrolling to the inspector.
@@ -41,6 +44,12 @@ export function useActivityScroll(events: Event[], active = true) {
   const animations = useRef<Animation[]>([]);
   const mounted = useRef(false);
   const restoredScrollTop = useRef<number | undefined>(undefined);
+  // Where a smooth return to the latest activity is heading, how far it had left,
+  // and whether it has moved yet (a scroll end before then belongs to an earlier scroll).
+  const glide = useRef<
+    { target: number; distance: number; moved: boolean } | undefined
+  >(undefined);
+  const glideTimer = useRef<number | undefined>(undefined);
 
   function remember() {
     const viewport = viewportRef.current;
@@ -72,15 +81,53 @@ export function useActivityScroll(events: Event[], active = true) {
     restoredScrollTop.current = undefined;
     // The browser also emits scroll after our own anchor correction.
     if (restored !== undefined && Math.abs(top - restored) < 1) return;
+    // A smooth return stays pinned while it closes in; moving away means the reader took over.
+    if (glide.current) {
+      const distance = Math.abs(top - glide.current.target);
+      if (distance < 1) {
+        glide.current = undefined;
+        remember();
+        return;
+      }
+      if (distance <= glide.current.distance + 1) {
+        // A late event from an earlier scroll repeats the start position; only progress counts.
+        if (distance < glide.current.distance - 1) {
+          glide.current.moved = true;
+          awaitGlide();
+        }
+        glide.current.distance = distance;
+        return;
+      }
+      glide.current = undefined;
+    }
+    judge(viewport);
+  });
+
+  // The reader is pinned while within the buffer of the latest activity.
+  function judge(viewport: HTMLElement) {
     for (const animation of animations.current) animation.cancel();
     animations.current = [];
-    const next = offset(viewport, container) <= TOP_BUFFER;
+    const next = offset(viewport, scroller(viewport)) <= TOP_BUFFER;
     pinnedRef.current = next;
     setPinned(next);
     remember();
-  });
+  }
+
+  // A glide that stalls (interrupted without a scroll end) is judged where it stopped.
+  // Each step of progress restarts the wait, so a slow glide is never cut short.
+  function awaitGlide() {
+    const started = glide.current;
+    window.clearTimeout(glideTimer.current);
+    glideTimer.current = window.setTimeout(() => {
+      if (!started || glide.current !== started) return;
+      glide.current = undefined;
+      const viewport = viewportRef.current;
+      if (viewport && activeRef.current) judge(viewport);
+    }, GLIDE_STALL);
+  }
 
   function scrollToTop() {
+    window.clearTimeout(glideTimer.current);
     for (const animation of animations.current) animation.cancel();
     animations.current = [];
     pinnedRef.current = true;
@@ -89,10 +136,24 @@ export function useActivityScroll(events: Event[], active = true) {
     if (viewport) {
       const container = scroller(viewport);
       const target = container.scrollTop - offset(viewport, container);
-      // Replace any stale correction marker so only this jump's scroll event is ignored.
-      restoredScrollTop.current =
-        container.scrollTop !== target ? target : undefined;
-      container.scrollTop = target;
+      const distance = Math.abs(container.scrollTop - target);
+      if (
+        distance >= 1 &&
+        typeof container.scrollTo === "function" &&
+        !reducedMotion(container)
+      ) {
+        // Glide back so the reader sees where the latest activity sits.
+        restoredScrollTop.current = undefined;
+        const started = { target, distance, moved: false };
+        glide.current = started;
+        container.scrollTo({ top: target, behavior: "smooth" });
+        awaitGlide();
+      } else {
+        // Replace any stale correction marker so only this jump's scroll event is ignored.
+        glide.current = undefined;
+        restoredScrollTop.current = distance >= 1 ? target : undefined;
+        container.scrollTop = target;
+      }
       viewport.focus({ preventScroll: true });
     }
     remember();
@@ -114,7 +175,15 @@ export function useActivityScroll(events: Event[], active = true) {
     const previousOffset = offset(viewport, container);
     // A reader scroll can land before its scroll event; never pull it back to the top.
     // Other tabs can move a shared scroller, but the reader did not leave the latest activity.
-    if (pinnedRef.current && !revealed && previousOffset > TOP_BUFFER) {
+    // A smooth return in flight is still pinned; finish it at once instead.
+    const gliding = glide.current !== undefined;
+    glide.current = undefined;
+    if (
+      pinnedRef.current &&
+      !revealed &&
+      !gliding &&
+      previousOffset > TOP_BUFFER
+    ) {
       pinnedRef.current = false;
       setPinned(false);
     }
@@ -142,11 +211,8 @@ export function useActivityScroll(events: Event[], active = true) {
       restoredScrollTop.current = container.scrollTop;
     // Save settled layout before transforms so the next update has a stable baseline.
     remember();
-    const reducedMotion = window.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
     // Rows that changed while hidden appear in place rather than replaying motion.
-    if (!reducedMotion && mounted.current && !revealed) {
+    if (!reducedMotion(viewport) && mounted.current && !revealed) {
       // Move retained rows from their old position and fade newly arrived rows in.
       for (const [id, position] of positions.current) {
         const old = previous.get(id);
@@ -159,7 +225,7 @@ export function useActivityScroll(events: Event[], active = true) {
               { transform: `translateY(${delta}px)`, opacity: old ? 1 : 0 },
               { transform: "translateY(0)", opacity: 1 },
             ],
-            { duration: 220, easing: "ease-out" },
+            { duration: MOTION.slow, easing: MOTION.easing },
           );
           if (animation) animations.current.push(animation);
         }
@@ -177,14 +243,26 @@ export function useActivityScroll(events: Event[], active = true) {
       // Skip unrelated scrollers before measuring styles up the tree.
       if (!viewport || !(event.target instanceof Node)) return;
       if (!event.target.contains(viewport)) return;
-      if (event.target === scroller(viewport)) onScroll();
+      if (event.target !== scroller(viewport)) return;
+      // A glide that stops short of the top (the reader held it) is judged like any scroll.
+      // Other scroll ends are ignored: they also follow our own anchor corrections.
+      if (event.type === "scrollend") {
+        if (!glide.current?.moved) return;
+        glide.current = undefined;
+      }
+      onScroll();
     };
     document.addEventListener("scroll", listener, true);
-    return () => document.removeEventListener("scroll", listener, true);
+    document.addEventListener("scrollend", listener, true);
+    return () => {
+      document.removeEventListener("scroll", listener, true);
+      document.removeEventListener("scrollend", listener, true);
+    };
   }, []);
 
   useLayoutEffect(
     () => () => {
+      window.clearTimeout(glideTimer.current);
       for (const animation of animations.current) animation.cancel();
     },
     [],

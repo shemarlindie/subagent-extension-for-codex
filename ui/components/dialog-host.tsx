@@ -9,12 +9,19 @@ import { QuestionForm } from "../forms/question-form";
 import { PermissionForm } from "../forms/permission-form";
 import { HandoffForm } from "../forms/handoff-form";
 import { FormFooter } from "../forms/form-footer";
+import { useAnimatedHeight } from "./motion";
 export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   const controller = useController(),
     state = useSnapshot(),
-    dialog = state.dialog;
+    // The closing animation keeps showing the last dialog rather than an empty box.
+    lastDialog = useRef(state.dialog);
+  if (state.dialog) lastDialog.current = state.dialog;
+  const dialog = state.dialog ?? lastDialog.current;
   const trigger = useRef<HTMLElement | null>(null),
-    openedScope = useRef(0);
+    openedScope = useRef(0),
+    popup = useRef<HTMLDivElement>(null);
+  // Switching forms or showing an error eases the height instead of snapping it.
+  useAnimatedHeight(popup, `${dialog?.kind}:${state.formError ?? ""}`);
   const title = !dialog
     ? ""
     : dialog.kind === "project"
@@ -37,16 +44,17 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   return (
     // Host collapse hides the modal; keeping its contents mounted retains drafts.
     <Dialog.Root
-      open={Boolean(dialog) && !suspended}
+      open={Boolean(state.dialog) && !suspended}
       disablePointerDismissal
       onOpenChange={(open, details) => {
         if (state.busy) details.cancel();
         else if (!open) controller.dismiss();
       }}
     >
-      <Dialog.Portal keepMounted={Boolean(dialog)}>
+      <Dialog.Portal keepMounted={Boolean(state.dialog)}>
         <Dialog.Backdrop className="dialog-overlay" />
         <Dialog.Popup
+          ref={popup}
           id="dialog"
           className="dialog"
           aria-describedby={undefined}

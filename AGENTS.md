@@ -19,3 +19,4 @@ Check in the browser when a change is large, when seeing it would help, or when 
 - The host's selects ignore `form_input`; set `.value` and dispatch `change`. **Width** sets narrow (360/480) or wide (Fill) layouts. At 360px the short frame stacks the inspector (the whole pane scrolls), so use 480 or Fill for the fixed-header layout.
 - The panel is an iframe: query `document.querySelector('iframe').contentDocument` (`#tab-activity`, `.activity-group`, `.activity-debug-toggle`).
 - Measure layout with `getBoundingClientRect` instead of judging by eye, and use `scrollIntoView` to move the timeline.
+- A hidden browser pane throttles frames, so do not time animations. Sample them instead: get the running animations with `element.getAnimations()`, pause them, set `currentTime`, and measure.

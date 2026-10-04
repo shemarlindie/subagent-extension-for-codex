@@ -1,5 +1,6 @@
 import { locked, terminal } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
+import { MotionContent } from "./motion";
 import { TaskStatus } from "./status";
 
 export function InlinePreview() {
@@ -57,14 +58,18 @@ export function InlinePreview() {
             {attention.length} needing attention
           </p>
           {task ? (
-            <div className="preview-task">
+            <MotionContent
+              as="div"
+              changeKey={task.id}
+              className="preview-task"
+            >
               <p className="preview-task-title" title={task.title}>
                 {task.title}
               </p>
               <small>
                 <TaskStatus task={task} />
               </small>
-            </div>
+            </MotionContent>
           ) : (
             <p className="muted">No delegated tasks yet.</p>
           )}

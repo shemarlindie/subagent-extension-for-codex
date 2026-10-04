@@ -16,6 +16,7 @@ import {
 } from "../core/event-history";
 import { useActivityScroll } from "./use-activity-scroll";
 import { Timeline, TimelineDot, TimelineItem } from "./timeline";
+import { MotionContent, Presence } from "./motion";
 import {
   ActivityContent,
   ActivityValue,
@@ -378,8 +379,14 @@ function GroupCard({
         <TimelineDot />
         {/* One line box so the smaller badge shares the title's baseline. */}
         <span className="activity-group-title">
-          <strong>{title}</strong>
-          {badge && <span className="activity-badge">{badge}</span>}
+          <MotionContent as="strong" changeKey={title}>
+            {title}
+          </MotionContent>
+          {badge && (
+            <MotionContent changeKey={badge} className="activity-badge">
+              {badge}
+            </MotionContent>
+          )}
           {span?.end === null && running && (
             <ThinkingClock start={span.start} />
           )}
@@ -433,16 +440,16 @@ function GroupCard({
       <Collapsible.Panel
         keepMounted
         id={debugId}
-        className="activity-debug-panel"
+        className="activity-debug-panel collapse-panel"
       >
         {debugMounted && (
-          <>
+          <div className="activity-debug-body">
             <p className="activity-debug-caption">
               Debug details · {group.events.length}{" "}
               {group.events.length === 1 ? "event" : "events"}
             </p>
             <EventDetails events={group.events} rawOnly={showsOwnText} />
-          </>
+          </div>
         )}
       </Collapsible.Panel>
     </Collapsible.Root>
@@ -500,7 +507,7 @@ export const EventList = memo(function EventList({
           </p>
         )}
       </div>
-      {!pinned && (
+      <Presence show={!pinned} variant="pop">
         <button
           type="button"
           className="activity-scroll-top"
@@ -522,7 +529,7 @@ export const EventList = memo(function EventList({
             <path d="m6 12 6-6 6 6M12 6v12" />
           </svg>
         </button>
-      )}
+      </Presence>
     </section>
   );
 });

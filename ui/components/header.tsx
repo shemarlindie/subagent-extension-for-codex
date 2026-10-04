@@ -1,4 +1,7 @@
+import { useRef } from "react";
 import { Menu } from "@base-ui/react/menu";
+import { MotionContent } from "./motion";
+import { canAnimate, MOTION } from "./motion-utils";
 import { useController, useSnapshot } from "./controller-context";
 export function Header() {
   const controller = useController(),
@@ -9,7 +12,16 @@ export function Header() {
     canAddProject = !state.conversation,
     expandLabel =
       state.host.displayMode === "fullscreen" ? "Collapse" : "Expand";
-  const refresh = () => controller.run(() => controller.refresh()),
+  // One full turn acknowledges the click, however quickly the refresh returns.
+  const glyph = useRef<HTMLSpanElement>(null);
+  const refresh = () => {
+      if (canAnimate(glyph.current))
+        glyph.current!.animate(
+          [{ transform: "rotate(0)" }, { transform: "rotate(360deg)" }],
+          { duration: 500, easing: MOTION.easing },
+        );
+      controller.run(() => controller.refresh());
+    },
     expand = () =>
       controller.run(async () => {
         await controller.transport.expand?.();
@@ -33,7 +45,9 @@ export function Header() {
       <span className="grow" />
       <div className="toolbar">
         <span id="connection" className="connection muted" role="status">
-          {state.connection}
+          <MotionContent changeKey={state.connection}>
+            {state.connection}
+          </MotionContent>
         </span>
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
@@ -43,7 +57,9 @@ export function Header() {
             aria-label="Refresh tasks"
             onClick={refresh}
           >
-            ↻
+            <span ref={glyph} className="refresh-glyph" aria-hidden="true">
+              ↻
+            </span>
           </button>
           {state.host.canExpand && (
             <button id="expand" className="quiet" onClick={expand}>

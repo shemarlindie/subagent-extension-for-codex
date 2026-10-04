@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Tabs } from "@base-ui/react/tabs";
 import type { Task, Tab } from "../core/types";
 import { useController, useSnapshot } from "./controller-context";
+import { MotionContent } from "./motion";
 import { ResultReport } from "./result-report";
 import { EventList } from "./event-list";
 import { ArtifactList } from "./artifact-list";
@@ -37,6 +38,16 @@ function useActiveTabInView(tab: Tab) {
   }, [tab]);
   return listRef;
 }
+// A changed count rises into place so new evidence is noticed without moving the tabs.
+function TabCount({ value }: { value: number }) {
+  return (
+    <span className="tab-count">
+      <MotionContent changeKey={value} variant="rise">
+        {value}
+      </MotionContent>
+    </span>
+  );
+}
 export function EvidenceTabs({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
@@ -57,10 +68,10 @@ export function EvidenceTabs({ task }: { task: Task }) {
           Result
         </Tabs.Tab>
         <Tabs.Tab value="changes" id="tab-changes">
-          Artifacts <span className="tab-count">{state.artifacts.length}</span>
+          Artifacts <TabCount value={state.artifacts.length} />
         </Tabs.Tab>
         <Tabs.Tab value="activity" id="tab-activity">
-          Activity <span className="tab-count">{state.events.length}</span>
+          Activity <TabCount value={state.events.length} />
         </Tabs.Tab>
         <Tabs.Tab value="details" id="tab-details">
           Details

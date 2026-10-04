@@ -11,6 +11,7 @@ import { TaskNotices } from "./task-notices";
 import { EvidenceTabs } from "./evidence-tabs";
 import { WorkerInspector } from "./worker-inspector";
 import { TaskDescription } from "./task-description";
+import { MotionContent } from "./motion";
 export function TaskInspector() {
   const controller = useController(),
     state = useSnapshot(),
@@ -48,7 +49,7 @@ export function TaskInspector() {
                 ← Tasks
               </button>
               <div className="eyebrow" data-live={live ? "" : undefined}>
-                <TaskStatus task={task} live={live?.state === "running"} />
+                <TaskStatus task={task} />
                 <TaskRuntime task={task} />
                 <span className="eyebrow-worker">
                   / {task.provider} · {profileLabel(task.worker_profile)}
@@ -58,7 +59,9 @@ export function TaskInspector() {
                   {live && (
                     <>
                       <span aria-hidden="true">· </span>
-                      {live.text}
+                      <MotionContent changeKey={live.text}>
+                        {live.text}
+                      </MotionContent>
                     </>
                   )}
                 </span>

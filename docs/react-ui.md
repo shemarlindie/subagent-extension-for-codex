@@ -21,6 +21,15 @@ The controller owns durable UI state and async coordination. Components subscrib
 
 Use Base UI (`@base-ui/react`) primitives for dialogs, tabs (with an animated indicator), the task filter toggle group, single and multiple selection, project suggestions, and collapsible task descriptions, including focus management and keyboard navigation. `SelectField` and `MultiSelectField` share dropdown structure and styling; `FormSelect` connects selection to React Hook Form. The project autocomplete accepts both registered projects and explicit absolute paths. Keep simple buttons, text inputs, and textareas as native controls. Base UI provides unstyled components; keep their styling in this project's stylesheets and application decisions in the controller/forms. React, React DOM, React Hook Form, and the official MCP Apps bridge supply existing infrastructure rather than custom equivalents.
 
+Motion is short and quiet. Its purpose is to show what changed and to ease layout shifts. Timing tokens (`--motion-fast`, `--motion-base`, `--motion-slow`, `--ease-out`) live in the motion section of `shared.css` and match `MOTION` in `ui/components/motion-utils.ts`. Base UI dialogs, popups, and collapsible panels animate through their `data-starting-style` and `data-ending-style` attributes. A collapsible panel uses the `collapse-panel` class and puts its padding and border on an inner element, so the height animation stays smooth. For other content, use the primitives in `motion.tsx` and the reduced-motion helpers in `motion-utils.ts`:
+
+- `Presence` folds content in or out, or pops it, and keeps the last content mounted while it leaves.
+- `useAnimatedHeight` eases a size change in place.
+- `useListMotion` slides keyed rows to their new positions.
+- `MotionContent` keys changing text or counts and applies a fade or rise without moving surrounding content.
+
+Animations that run while the activity timeline measures positions change only opacity, so they never disturb its reading position. Reduced-motion preferences turn every animation off. The Web Animations helpers also skip animation where the API is missing, as in jsdom tests.
+
 ## Extending the UI
 
 - Add a component when a section has a clear responsibility, reused presentation, or an independent interaction. Compose these sections in the inspector or shell; avoid moving networking or scope bookkeeping into JSX.

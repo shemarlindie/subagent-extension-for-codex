@@ -192,17 +192,19 @@ export function SettingsForm({
                 <span className="settings-group-badge">{edits} changed</span>
               )}
             </Collapsible.Trigger>
-            <Collapsible.Panel className="settings-group-content">
-              {group.keys.map((key) => (
-                <SettingField
-                  key={key}
-                  name={key}
-                  field={properties[key]}
-                  control={control}
-                  register={register}
-                  models={models}
-                />
-              ))}
+            <Collapsible.Panel className="collapse-panel">
+              <div className="settings-group-content">
+                {group.keys.map((key) => (
+                  <SettingField
+                    key={key}
+                    name={key}
+                    field={properties[key]}
+                    control={control}
+                    register={register}
+                    models={models}
+                  />
+                ))}
+              </div>
             </Collapsible.Panel>
           </Collapsible.Root>
         );

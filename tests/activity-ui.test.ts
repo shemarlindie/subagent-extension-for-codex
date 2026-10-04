@@ -263,6 +263,72 @@ test("scroll to latest FAB returns to zero and keeps subsequent activity pinned"
   assert.equal(viewport.scrollTop, 0);
 });
 
+test("scroll to latest glides back and stays pinned until the reader takes over", (t) => {
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
+  const initial = activityMessages("glide");
+  const view = render(createElement(GroupedEventList, { events: initial }));
+  const viewport = view.getByRole("region", { name: "Activity history" });
+  // jsdom has no smooth scrolling; record requests and move scrollTop by hand.
+  const scrollTo = vi.fn();
+  Object.defineProperty(viewport, "scrollTo", { value: scrollTo });
+  const fab = () =>
+    view.queryByRole("button", { name: "Scroll to latest activity" });
+  const scrollAt = (top: number) => {
+    viewport.scrollTop = top;
+    fireEvent.scroll(viewport);
+  };
+  const glide = () => {
+    scrollAt(240);
+    assert.ok(fab());
+    fireEvent.click(fab()!);
+    assertAbsent(fab(), "The button leaves as the glide starts");
+  };
+
+  glide();
+  assert.deepEqual(scrollTo.mock.calls.at(-1), [
+    { top: 0, behavior: "smooth" },
+  ]);
+  assert.equal(viewport.scrollTop, 240, "The browser animates the scroll");
+  scrollAt(120);
+  assertAbsent(fab(), "Scroll events while closing in keep the feed pinned");
+  scrollAt(0);
+  assertAbsent(fab());
+
+  glide();
+  scrollAt(200);
+  scrollAt(260);
+  assert.ok(fab(), "Scrolling away during the glide hands control back");
+
+  scrollAt(240);
+  fireEvent.click(fab()!);
+  fireEvent(viewport, new Event("scrollend"));
+  assertAbsent(fab(), "A scroll end from before the glide is ignored");
+  scrollAt(150);
+  fireEvent(viewport, new Event("scrollend"));
+  assert.ok(fab(), "A glide that stops short is judged by where it stopped");
+
+  glide();
+  scrollAt(150);
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: [...initial, ...activityMessages("glide-next", 1)],
+    }),
+  );
+  assert.equal(viewport.scrollTop, 0, "New activity finishes the glide");
+  assertAbsent(fab());
+
+  vi.useFakeTimers();
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
+  glide();
+  act(() => {
+    vi.advanceTimersByTime(1500);
+  });
+  assert.ok(fab(), "A glide that never moves is judged where it stopped");
+});
+
 test("new activity preserves the visible reader anchor while unpinned", (t) => {
   t.onTestFinished(cleanup);
   mockActivityGeometry();

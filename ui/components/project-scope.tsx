@@ -1,4 +1,5 @@
 import { projectChoices } from "../core/selectors";
+import { MotionContent } from "./motion";
 import { useController, useSnapshot } from "./controller-context";
 import { SelectField } from "./select-field";
 export function ProjectScope() {
@@ -38,7 +39,9 @@ export function ProjectScope() {
         />
       )}
       <small id="project-path" title={state.repository}>
-        {state.repository ?? "Choose a project to focus delegated work"}
+        <MotionContent changeKey={state.repository}>
+          {state.repository ?? "Choose a project to focus delegated work"}
+        </MotionContent>
       </small>
       {state.projectCandidate && (
         <button

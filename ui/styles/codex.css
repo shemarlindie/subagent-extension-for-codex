@@ -705,6 +705,13 @@ body[data-expanded-panel="true"] .detail[data-stacked] .activity-scroll-top {
   body[data-selected="false"] .detail {
     display: none;
   }
+  /* Moving between the list and a task slides in the direction of travel. */
+  body[data-selected="true"] .detail {
+    animation: motion-slide-end var(--motion-base) var(--ease-out);
+  }
+  body[data-selected="false"] aside {
+    animation: motion-slide-start var(--motion-base) var(--ease-out);
+  }
   .back {
     display: inline-block;
   }

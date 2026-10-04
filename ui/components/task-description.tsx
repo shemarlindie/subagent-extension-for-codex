@@ -9,8 +9,9 @@ export function TaskDescription({ task }: { task: Task }) {
         <Chevron />
         Description
       </Collapsible.Trigger>
-      <Collapsible.Panel className="task-description-content">
-        {task.description}
+      {/* The panel animates its height; the inner box keeps its own scroll and padding. */}
+      <Collapsible.Panel className="collapse-panel">
+        <div className="task-description-content">{task.description}</div>
       </Collapsible.Panel>
     </Collapsible.Root>
   );

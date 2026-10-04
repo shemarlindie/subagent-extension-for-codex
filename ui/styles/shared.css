@@ -313,9 +313,23 @@ form .select-trigger {
   outline: var(--focus-ring);
   outline-offset: 0;
 }
-.dot.live {
-  box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--accent, #8caeeb) 15%, transparent);
+/* Every status dot wears a faint halo in its own colour (the motion section makes a running task's breathe). */
+.dot {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+/* Room for the halo at its widest, so it never touches the status label. */
+.row-meta .dot {
+  margin-right: 2px;
+}
+.dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.15;
 }
 /* On narrow screens Back shares the status line. */
 .task-topline {
@@ -414,19 +428,20 @@ form .select-trigger {
   /* From the item's content edge back to the rail. */
   margin-left: calc(-1 * var(--timeline-gutter) - 3px);
   border-radius: 50%;
-  background: var(--muted, #8392a7);
+  --dot-color: var(--muted, #8392a7);
+  background: var(--dot-color);
+  /* A faint halo in the dot's colour; opaque, so the rail stays hidden behind it. */
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--dot-color) 15%, var(--bg, #111c2b));
 }
 .timeline-dot[data-status="running"] {
-  background: var(--accent, #8caeeb);
-  /* Opaque, so the rail stays hidden behind the halo. */
-  box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--accent, #8caeeb) 15%, var(--bg, #111c2b));
+  --dot-color: var(--accent, #8caeeb);
 }
 .timeline-dot[data-status="completed"] {
-  background: #62a17b;
+  --dot-color: #62a17b;
 }
 .timeline-dot[data-status="failed"] {
-  background: var(--danger, #f87171);
+  --dot-color: var(--danger, #f87171);
 }
 .activity-group {
   --group-pad: 12px;
@@ -470,7 +485,7 @@ form .select-trigger {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.activity-debug-panel > .event {
+.activity-debug-body > .event {
   padding: 10px 0;
   /* Keep the timestamp on the same line as the first line of the body. */
   align-items: baseline;
@@ -517,7 +532,7 @@ form .select-trigger {
   color: var(--muted, #8392a7);
 }
 @media (max-width: 480px) {
-  .activity-debug-panel > .event {
+  .activity-debug-body > .event {
     grid-template-columns: minmax(0, 1fr);
     gap: 3px;
   }
@@ -556,7 +571,8 @@ form .select-trigger {
   outline: var(--focus-ring);
   outline-offset: 0;
 }
-.activity-debug-panel {
+/* The panel animates its height; the body inside carries the frame. */
+.activity-debug-body {
   margin-top: 10px;
   padding: 8px 12px;
   border: 1px solid var(--line, #263348);
@@ -695,4 +711,256 @@ form .select-trigger {
 }
 .project-selection > button {
   flex-shrink: 0;
+}
+
+/*
+ * Motion: short, quiet transitions that show what changed and ease layout shifts.
+ * Durations match MOTION in ui/components/motion.tsx. Reduced motion turns them off below.
+ */
+:root {
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 240ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+}
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes motion-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes motion-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes motion-slide-start {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+@keyframes motion-slide-end {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+/*
+ * A waiting task's dot sends out a ring, then the next one starts. The ring grows from the
+ * dot's edge to 4px past it, speeding up the whole way. It holds its strength until 75% of
+ * the way, then fades out, also speeding up. Growth and fade run as two animations so each
+ * keeps its own timing. --ping-start is the dot's share of the ring's full size.
+ */
+@keyframes motion-ping-grow {
+  from {
+    transform: scale(var(--ping-start));
+  }
+  to {
+    transform: none;
+  }
+}
+/* A running task's halo gently brightens and dims in place, without growing. */
+@keyframes motion-glow {
+  50% {
+    opacity: 0.3;
+  }
+}
+/* The same glow for timeline dots, whose halo is an opaque shadow that hides the rail. */
+@keyframes motion-glow-rail {
+  50% {
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--dot-color) 30%, var(--bg, #111c2b));
+  }
+}
+@keyframes motion-ping-fade {
+  0%,
+  75% {
+    opacity: 0.35;
+    /* Applies to the 75% → 100% stretch, so the fade accelerates. */
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Presence wraps an element without adding a box of its own. */
+.presence {
+  display: contents;
+}
+
+/* Control feedback: hover, press, selection and disabled states ease rather than snap. */
+button,
+.select-trigger,
+input,
+textarea {
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+/* Dialogs fade and settle in; closing is quicker than opening. */
+.dialog-overlay {
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+#dialog.dialog,
+#login.dialog {
+  transition:
+    opacity var(--motion-base) var(--ease-out),
+    transform var(--motion-base) var(--ease-out);
+}
+.dialog-overlay[data-starting-style],
+.dialog-overlay[data-ending-style] {
+  opacity: 0;
+}
+#dialog.dialog[data-starting-style],
+#dialog.dialog[data-ending-style],
+#login.dialog[data-starting-style],
+#login.dialog[data-ending-style] {
+  opacity: 0;
+  transform: translate(-50%, calc(-50% + 8px)) scale(0.97);
+}
+.dialog-overlay[data-ending-style],
+#dialog.dialog[data-ending-style],
+#login.dialog[data-ending-style] {
+  transition-duration: var(--motion-fast);
+}
+
+/* Menus and pickers grow from their trigger. */
+.select-popup,
+.autocomplete-popup,
+.menu-popup {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+.select-popup[data-starting-style],
+.select-popup[data-ending-style],
+.autocomplete-popup[data-starting-style],
+.autocomplete-popup[data-ending-style],
+.menu-popup[data-starting-style],
+.menu-popup[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.96);
+}
+.select-icon {
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.select-trigger[data-popup-open] .select-icon {
+  transform: rotate(180deg);
+}
+
+/* Collapsible panels open to their measured height, so content below slides. */
+.collapse-panel {
+  height: var(--collapsible-panel-height);
+  overflow: hidden;
+  transition:
+    height var(--motion-base) var(--ease-out),
+    opacity var(--motion-base) var(--ease-out);
+}
+.collapse-panel[data-starting-style],
+.collapse-panel[data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+.task-description-trigger svg,
+.settings-group-trigger svg {
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.settings-group-summary {
+  transition:
+    opacity var(--motion-fast) ease,
+    visibility var(--motion-fast);
+}
+.settings-group-trigger[data-panel-open] .settings-group-summary {
+  opacity: 0;
+}
+.settings-group-badge {
+  animation: motion-pop var(--motion-base) var(--ease-out);
+}
+/*
+ * Native disclosures (raw responses, thinking) where the browser can animate them.
+ * Scoped here: page-wide, auto heights would also animate Base UI's own measurements.
+ */
+.activity-body details {
+  interpolate-size: allow-keywords;
+}
+.activity-body details::details-content {
+  block-size: 0;
+  overflow: clip;
+  transition:
+    block-size var(--motion-base) var(--ease-out),
+    content-visibility var(--motion-base) allow-discrete;
+}
+.activity-body details[open]::details-content {
+  block-size: auto;
+}
+
+/* Content that replaces other content fades in place; nothing moves. */
+.motion-swap {
+  animation: motion-fade var(--motion-base) var(--ease-out);
+}
+.motion-rise {
+  display: inline-block;
+  animation: motion-rise var(--motion-base) var(--ease-out);
+}
+.task-view,
+.detail > .empty,
+[role="tabpanel"]:not([hidden]),
+.row,
+.form-error:not(:empty) {
+  animation: motion-fade var(--motion-base) var(--ease-out);
+}
+
+/* Status colours cross-fade; only a running task's halo breathes, other halos hold still. */
+.dot,
+.timeline-dot {
+  transition:
+    background-color var(--motion-slow) ease,
+    box-shadow var(--motion-slow) ease;
+}
+/* Waiting asks for attention, so it sends out rings. */
+.dot.waiting:not(.locked)::after {
+  /* The ring's full size: 4px past the dot on each side; a 6px dot in a 14px ring. */
+  inset: -4px;
+  --ping-start: 0.4286;
+  animation:
+    motion-ping-grow 1.4s cubic-bezier(0.5, 0, 1, 1) infinite,
+    motion-ping-fade 1.4s linear infinite;
+}
+/* Running is the normal state, so it only glows softly. */
+.dot.live::after {
+  animation: motion-glow 2.4s ease-in-out infinite;
+}
+.timeline-dot[data-status="running"] {
+  animation: motion-glow-rail 2.4s ease-in-out infinite;
+}
+.refresh-glyph {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Separate, so browsers without the pseudo-element keep the rule above. */
+  ::details-content {
+    transition-duration: 0.01ms !important;
+  }
 }

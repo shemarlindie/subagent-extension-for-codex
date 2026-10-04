@@ -9,6 +9,7 @@ import { LoginForm } from "../forms/login-form";
 import { useController, useSnapshot } from "../components/controller-context";
 import { WorkerPicker } from "./worker-picker";
 import { InlinePreview } from "../components/inline-preview";
+import { Presence } from "../components/motion";
 export function AppShell() {
   const controller = useController(),
     state = useSnapshot();
@@ -35,11 +36,13 @@ export function AppShell() {
               Design preview · fixture data · actions never execute workers
             </div>
           )}
-          {state.error && (
-            <div id="error" className="banner error" role="alert">
-              {state.error}
-            </div>
-          )}
+          <Presence show={Boolean(state.error)}>
+            {state.error && (
+              <div id="error" className="banner error" role="alert">
+                {state.error}
+              </div>
+            )}
+          </Presence>
           <div className="shell">
             <aside aria-label="Delegated tasks">
               {state.mode === "console" && <WorkerPicker />}
