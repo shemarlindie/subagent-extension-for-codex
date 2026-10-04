@@ -21,6 +21,7 @@ import {
   EventDetails as EventList,
   EventList as GroupedEventList,
 } from "../ui/components/event-list";
+import { EVENT_TAIL_SIZE } from "../ui/core/event-history";
 import {
   ActivityContent,
   ActivityValue,
@@ -407,6 +408,48 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
     "The timeline returns to the top of the inspector",
   );
   assertAbsent(fab());
+});
+
+test("timeline items mark their rail ends, status and trimmed history as data attributes", (t) => {
+  t.onTestFinished(cleanup);
+  const timeline = (events: ActivityEvent[]) =>
+    render(createElement(GroupedEventList, { events }))
+      .getByRole("region", { name: "Activity history" })
+      .querySelector<HTMLElement>(".timeline")!;
+  const whole = timeline(activityMessages("rail-whole", 3));
+  assert.equal(whole.hasAttribute("data-trimmed"), false);
+  const items = [...whole.querySelectorAll<HTMLElement>(".timeline-item")];
+  assert.deepEqual(
+    items.map((item) => [
+      item.tagName,
+      item.hasAttribute("data-first"),
+      item.hasAttribute("data-last"),
+    ]),
+    [
+      ["ARTICLE", true, false],
+      ["ARTICLE", false, false],
+      ["ARTICLE", false, true],
+    ],
+  );
+  assert.ok(
+    items.every(
+      (item) =>
+        item.matches(".activity-group[data-activity-id]") &&
+        item.querySelector(".timeline-dot")?.getAttribute("data-status") ===
+          item.dataset.status &&
+        item.querySelector(".timeline-dot")?.getAttribute("aria-hidden") ===
+          "true",
+    ),
+    "Collapsible props and the item status reach the rendered article and its dot",
+  );
+  cleanup();
+  const trimmed = timeline(activityMessages("rail-trimmed", EVENT_TAIL_SIZE));
+  assert.equal(trimmed.hasAttribute("data-trimmed"), true);
+  assert.match(
+    trimmed.nextElementSibling?.textContent ?? "",
+    /Showing the most recent/,
+    "The note follows the rail where the oldest rows were dropped",
+  );
 });
 
 test("new groups animate in and movement animations respect reduced motion", (t) => {

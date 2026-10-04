@@ -340,31 +340,88 @@ form .select-trigger {
     display: none;
   }
 }
-.activity-dot {
+/* Timeline: the rail runs between the first and last markers rather than past them. */
+.timeline-item {
+  /* Rail to content, and item top to marker centre. */
+  --timeline-gutter: 14px;
+  --timeline-marker-y: 14px;
+  position: relative;
+  /* Room for the marker to overhang the rail. */
+  margin-left: 3px;
+  padding-left: var(--timeline-gutter);
+}
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line, #263348);
+}
+.timeline-item[data-status="failed"]::before {
+  background: var(--danger, #f87171);
+}
+.timeline-item[data-first]::before {
+  top: var(--timeline-marker-y);
+}
+.timeline-item[data-last]::before {
+  bottom: auto;
+  height: var(--timeline-marker-y);
+}
+.timeline-item[data-first][data-last]::before {
+  display: none;
+}
+/* Older items were dropped, so the rail runs on past the last item and fades out. */
+.timeline[data-trimmed] {
+  --timeline-fade: 32px;
+  padding-bottom: var(--timeline-fade);
+}
+.timeline[data-trimmed] .timeline-item[data-last]::before {
+  display: block;
+  bottom: calc(-1 * var(--timeline-fade));
+  height: auto;
+  background: linear-gradient(var(--line, #263348), transparent);
+}
+.activity-trimmed-note {
+  /* Lines up with the row titles beside the dots. */
+  margin: 0 0 0 15px;
+}
+.timeline-dot {
+  position: relative;
+  z-index: 1;
   display: inline-block;
-  flex: 0 0 6px;
-  width: 6px;
-  height: 6px;
+  /* An odd width centres the dot on the 1px rail without half pixels. */
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  /* From the item's content edge back to the rail. */
+  margin-left: calc(-1 * var(--timeline-gutter) - 3px);
   border-radius: 50%;
   background: var(--muted, #8392a7);
 }
-.activity-dot-running {
+.timeline-dot[data-status="running"] {
   background: var(--accent, #8caeeb);
+  /* Opaque, so the rail stays hidden behind the halo. */
   box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--accent, #8caeeb) 15%, transparent);
+    color-mix(in srgb, var(--accent, #8caeeb) 15%, var(--bg, #111c2b));
 }
-.activity-dot-completed {
+.timeline-dot[data-status="completed"] {
   background: #62a17b;
 }
-.activity-dot-failed {
+.timeline-dot[data-status="failed"] {
   background: var(--danger, #f87171);
 }
 .activity-group {
-  padding: 12px 0 12px 14px;
-  margin-left: 3px;
-  border-left: 1px solid var(--line, #263348);
+  --group-pad: 12px;
+  /* Dots centre on a heading kept at the debug toggle's 28px height. */
+  --timeline-marker-y: calc(var(--group-pad) + 14px);
+  padding-top: var(--group-pad);
+  padding-bottom: var(--group-pad);
+  border-left: 0;
 }
 .activity-group-heading {
+  min-height: 28px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -379,8 +436,11 @@ form .select-trigger {
   white-space: nowrap;
   font-size: 10px;
 }
-.activity-group-heading .activity-dot {
-  margin-left: -18px;
+.activity-group-title {
+  min-width: 0;
+}
+.activity-group-title .activity-badge {
+  margin-left: 8px;
 }
 .activity-badge {
   font-size: 10px;
@@ -422,8 +482,7 @@ form .select-trigger {
 .activity-tool,
 .activity-operation,
 .activity-status {
-  padding-top: 7px;
-  padding-bottom: 7px;
+  --group-pad: 7px;
 }
 .activity-code {
   margin: 8px 0;
@@ -440,9 +499,6 @@ form .select-trigger {
 }
 .activity-status {
   color: var(--muted, #8392a7);
-}
-.activity-group.activity-error {
-  border-left-color: var(--danger, #f87171);
 }
 @media (max-width: 480px) {
   .activity-debug-panel > .event {

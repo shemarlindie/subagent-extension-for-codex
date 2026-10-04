@@ -8,6 +8,7 @@ import {
 } from "../core/activity-timeline";
 import { EVENT_TAIL_SIZE } from "../core/event-history";
 import { useActivityScroll } from "./use-activity-scroll";
+import { Timeline, TimelineDot, TimelineItem } from "./timeline";
 import {
   ActivityContent,
   ActivityValue,
@@ -278,7 +279,15 @@ function thinkingOnly(events: Event[]) {
     })
   );
 }
-function GroupCard({ group }: { group: ActivityGroup }) {
+function GroupCard({
+  group,
+  first,
+  last,
+}: {
+  group: ActivityGroup;
+  first: boolean;
+  last: boolean;
+}) {
   const [debugOpen, setDebugOpen] = useState(false);
   // Avoid hidden content work until inspection; retain it afterward to keep disclosures open.
   const [debugMounted, setDebugMounted] = useState(false);
@@ -308,19 +317,26 @@ function GroupCard({ group }: { group: ActivityGroup }) {
           : undefined;
   return (
     <Collapsible.Root
-      render={<article />}
+      render={
+        <TimelineItem
+          render={<article />}
+          status={group.state}
+          first={first}
+          last={last}
+        />
+      }
       open={debugOpen}
       onOpenChange={setDebugOpen}
       data-activity-id={group.id}
       className={`activity-group activity-${group.kind}${quietThinking ? " activity-thinking-only" : ""}${group.state === "failed" ? " activity-error" : ""}`}
     >
       <div className="activity-group-heading">
-        <span
-          className={`activity-dot activity-dot-${group.state}`}
-          aria-hidden="true"
-        />
-        <strong>{title}</strong>
-        {badge && <span className="activity-badge">{badge}</span>}
+        <TimelineDot />
+        {/* One line box so the smaller badge shares the title's baseline. */}
+        <span className="activity-group-title">
+          <strong>{title}</strong>
+          {badge && <span className="activity-badge">{badge}</span>}
+        </span>
         <time dateTime={group.events[0].timestamp}>
           {new Date(group.events[0].timestamp).toLocaleTimeString([], {
             hour: "2-digit",
@@ -408,14 +424,22 @@ export function EventList({
         role="region"
         aria-label="Activity history"
       >
+        <Timeline trimmed={events.length === EVENT_TAIL_SIZE}>
+          {groups.map((group, index) => (
+            <GroupCard
+              key={group.id}
+              group={group}
+              first={index === 0}
+              last={index === groups.length - 1}
+            />
+          ))}
+        </Timeline>
+        {/* Sits where the rail fades out, since the oldest rows are the ones dropped. */}
         {events.length === EVENT_TAIL_SIZE && (
-          <p className="help">
+          <p className="help activity-trimmed-note">
             Showing the most recent {EVENT_TAIL_SIZE} events.
           </p>
         )}
-        {groups.map((group) => (
-          <GroupCard key={group.id} group={group} />
-        ))}
       </div>
       {!pinned && (
         <button
