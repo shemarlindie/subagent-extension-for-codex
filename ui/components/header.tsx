@@ -3,6 +3,7 @@ import { Menu } from "@base-ui/react/menu";
 import { MotionContent } from "./motion";
 import { canAnimate, MOTION } from "./motion-utils";
 import { useController, useSnapshot } from "./controller-context";
+import { Button, buttonClass } from "./button";
 export function Header() {
   const controller = useController(),
     state = useSnapshot(),
@@ -51,45 +52,45 @@ export function Header() {
         </span>
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
-          <button
+          <Button
             id="refresh"
-            className="quiet"
+            variant="ghost"
             aria-label="Refresh tasks"
             onClick={refresh}
           >
             <span ref={glyph} className="refresh-glyph" aria-hidden="true">
               ↻
             </span>
-          </button>
+          </Button>
           {state.host.canExpand && (
-            <button id="expand" className="quiet" onClick={expand}>
+            <Button id="expand" variant="ghost" onClick={expand}>
               {expandLabel}
-            </button>
+            </Button>
           )}
           {canAddProject && (
-            <button
+            <Button
               id="add-project"
-              className="quiet"
+              variant="ghost"
               disabled={blocked}
               onClick={addProject}
             >
               Add project
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             id="settings"
-            className="quiet"
+            variant="ghost"
             disabled={blocked}
             onClick={settings}
           >
             Settings
-          </button>
+          </Button>
         </div>
         {/* The console header has room for every button, so only the panel gets the menu. */}
         {!consoleMode && (
           <Menu.Root>
             <Menu.Trigger
-              className="quiet toolbar-menu"
+              className={buttonClass("ghost", { className: "toolbar-menu" })}
               aria-label="More actions"
             >
               ⋯
@@ -130,14 +131,14 @@ export function Header() {
             </Menu.Portal>
           </Menu.Root>
         )}
-        <button
+        <Button
           id="delegate"
-          className="primary"
+          variant="primary"
           disabled={blocked}
           onClick={() => controller.run(() => controller.delegate())}
         >
           {consoleMode ? "＋ Delegate" : "New task"}
-        </button>
+        </Button>
       </div>
     </header>
   );

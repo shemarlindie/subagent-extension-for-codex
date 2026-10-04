@@ -10,6 +10,7 @@ import { PermissionForm } from "../forms/permission-form";
 import { HandoffForm } from "../forms/handoff-form";
 import { FormFooter } from "../forms/form-footer";
 import { useAnimatedHeight } from "./motion";
+import { buttonClass } from "./button";
 export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   const controller = useController(),
     state = useSnapshot(),
@@ -78,7 +79,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
             <Dialog.Title id="dialog-title">{title}</Dialog.Title>
             <Dialog.Close
               type="button"
-              className="dialog-close quiet"
+              className={buttonClass("ghost", { className: "dialog-close" })}
               aria-label="Close"
               disabled={state.busy}
             >

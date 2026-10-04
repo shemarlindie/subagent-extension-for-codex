@@ -9,6 +9,7 @@ import { EvidenceTabs } from "./evidence-tabs";
 import { WorkerInspector } from "./worker-inspector";
 import { TaskDescription } from "./task-description";
 import { MotionContent } from "./motion";
+import { Button } from "./button";
 export function TaskInspector() {
   const controller = useController(),
     state = useSnapshot(),
@@ -42,13 +43,14 @@ export function TaskInspector() {
         <div key={task.id} className="task-view">
           <div ref={headerRef} className="task-header">
             <div className="task-topline">
-              <button
+              <Button
                 id="back"
-                className="back quiet"
+                variant="ghost"
+                className="back"
                 onClick={() => controller.back()}
               >
                 ← Tasks
-              </button>
+              </Button>
               <div
                 className="eyebrow"
                 data-live={live && live.state !== "failed" ? "" : undefined}
@@ -89,14 +91,14 @@ export function TaskInspector() {
             Give a worker a review, investigation, or implementation to work on
             while you stay in Codex.
           </p>
-          <button
+          <Button
             id="empty-start"
-            className="primary"
+            variant="primary"
             disabled={!state.connected || state.busy}
             onClick={() => controller.run(() => controller.delegate())}
           >
             New task
-          </button>
+          </Button>
         </div>
       )}
     </section>

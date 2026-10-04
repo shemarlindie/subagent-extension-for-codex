@@ -2,6 +2,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { useController, useSnapshot } from "../components/controller-context";
+import { Button } from "../components/button";
 import { Field } from "./fields";
 export function LoginForm() {
   const controller = useController(),
@@ -57,9 +58,9 @@ export function LoginForm() {
               {error}
             </div>
             <footer>
-              <button className="primary" disabled={isSubmitting}>
+              <Button type="submit" variant="primary" disabled={isSubmitting}>
                 Connect
-              </button>
+              </Button>
             </footer>
           </form>
         </Dialog.Popup>

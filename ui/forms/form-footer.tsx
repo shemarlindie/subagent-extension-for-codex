@@ -1,5 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useController, useSnapshot } from "../components/controller-context";
+import { Button } from "../components/button";
 interface FormFooterProps {
   label: string;
   disabled?: boolean;
@@ -27,13 +28,14 @@ export function FormFooter({
         >
           {dismissLabel}
         </Dialog.Close>
-        <button
+        <Button
           id="submit"
-          className="primary"
+          type="submit"
+          variant="primary"
           disabled={state.busy || stale || disabled}
         >
           {state.busy ? "Working…" : label}
-        </button>
+        </Button>
       </footer>
     </>
   );

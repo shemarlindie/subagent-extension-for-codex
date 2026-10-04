@@ -1068,8 +1068,8 @@ textarea {
   color: var(--muted, #8392a7);
   pointer-events: none;
 }
-/* Low-emphasis button; the global button:hover fill is overridden on purpose. */
-.quiet-button {
+/* Text buttons (variant "text"); the global button:hover fill is overridden on purpose. */
+.text-button {
   padding: 0;
   border: 0;
   border-radius: 4px;
@@ -1078,14 +1078,14 @@ textarea {
   font-size: inherit;
   cursor: pointer;
 }
-.quiet-button:hover {
+.text-button:hover {
   background: transparent;
   color: var(--text, #dce7f5);
 }
-.quiet-button:focus-visible {
+.text-button:focus-visible {
   outline: var(--focus-ring);
 }
-.quiet-button.underline {
+.text-button.underline {
   text-decoration: underline;
 }
 .search-clear {

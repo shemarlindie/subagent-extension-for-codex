@@ -62,7 +62,7 @@ button.primary {
 button.primary:hover {
   opacity: 0.85;
 }
-button.quiet {
+button.ghost {
   border-color: transparent;
 }
 button:focus-visible,

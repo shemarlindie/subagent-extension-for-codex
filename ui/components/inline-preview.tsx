@@ -2,6 +2,7 @@ import { failedStatus, locked, terminal } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
 import { MotionContent } from "./motion";
 import { TaskStatus } from "./status";
+import { Button } from "./button";
 
 export function InlinePreview() {
   const controller = useController(),
@@ -25,9 +26,9 @@ export function InlinePreview() {
       <div className="preview-heading">
         <strong>Delegated work</strong>
         {state.host.canExpand && (
-          <button
+          <Button
             id="open-panel"
-            className="quiet"
+            variant="ghost"
             disabled={state.busy}
             onClick={() =>
               controller.run(async () => {
@@ -36,7 +37,7 @@ export function InlinePreview() {
             }
           >
             Open panel
-          </button>
+          </Button>
         )}
       </div>
       <p className="preview-scope muted">

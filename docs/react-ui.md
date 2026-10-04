@@ -34,6 +34,15 @@ Icons live in one catalog, `ICONS` in `ui/components/icons.tsx`. Render them wit
 
 Use `<Chevron square />` for rotating icons. It pads the short dimension without scaling the artwork, so rotation keeps a stable layout footprint. The default chevron fits its artwork tightly.
 
+Buttons use `<Button>` from `ui/components/button.tsx`, with a `variant`:
+
+- `default`: the bordered secondary button beside a primary one, such as Cancel or Back.
+- `primary`: the filled button that submits or confirms.
+- `ghost`: borderless until hovered, for toolbar and navigation buttons.
+- `text`: muted text with no box, for low-emphasis inline actions. Only this variant takes `underline`.
+
+`type` defaults to `"button"`, so pass `type="submit"` for a form's submit button. Base UI parts that render their own button, such as `Dialog.Close` and `Menu.Trigger`, take `className={buttonClass("ghost")}`. Both themes style the variant classes (`primary`, `ghost`, `text-button`). Components with their own look, such as task rows and filter pills, keep a native `<button>` with their own class.
+
 ## Extending the UI
 
 - Add a component when a section has a clear responsibility, reused presentation, or an independent interaction. Compose these sections in the inspector or shell; avoid moving networking or scope bookkeeping into JSX.

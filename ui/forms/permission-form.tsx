@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { Dialog } from "@base-ui/react/dialog";
 import type { Task } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
+import { Button } from "../components/button";
 import { Field } from "./fields";
 export function PermissionForm({ task }: { task: Task }) {
   const controller = useController(),
@@ -44,19 +45,14 @@ export function PermissionForm({ task }: { task: Task }) {
         >
           Close
         </Dialog.Close>
-        <button type="button" disabled={disabled} onClick={decide(false)}>
+        <Button disabled={disabled} onClick={decide(false)}>
           Deny
-        </button>
-        <button
-          type="button"
-          className="primary"
-          disabled={disabled}
-          onClick={decide(true)}
-        >
+        </Button>
+        <Button variant="primary" disabled={disabled} onClick={decide(true)}>
           {request.tool === "CodexExecution"
             ? "Approve this execution turn"
             : "Approve this request once"}
-        </button>
+        </Button>
       </footer>
     </form>
   );

@@ -1,5 +1,6 @@
 import type { Artifact } from "../core/types";
 import { useController, useSnapshot } from "./controller-context";
+import { Button } from "./button";
 export function downloadArtifact(artifact: Artifact) {
   const url = URL.createObjectURL(
     new Blob([artifact.content], { type: artifact.mime_type }),
@@ -41,9 +42,9 @@ export function ArtifactList() {
         Codex.
       </p>
       {state.selectedArtifact && (
-        <button onClick={() => controller.selectArtifact()}>
+        <Button onClick={() => controller.selectArtifact()}>
           All artifacts
-        </button>
+        </Button>
       )}
       {artifacts.length ? (
         artifacts.map((artifact) => (
@@ -51,7 +52,7 @@ export function ArtifactList() {
             <div className="artifact-head">
               <strong>{artifact.title}</strong>
               <small>{artifact.type}</small>
-              <button
+              <Button
                 data-artifact={artifact.id}
                 onClick={() =>
                   state.mode === "console"
@@ -60,11 +61,11 @@ export function ArtifactList() {
                 }
               >
                 Inspect
-              </button>
+              </Button>
               {state.mode === "console" && (
-                <button onClick={() => downloadArtifact(artifact)}>
+                <Button onClick={() => downloadArtifact(artifact)}>
                   Download {artifact.type}
-                </button>
+                </Button>
               )}
             </div>
             <ArtifactContent artifact={artifact} />

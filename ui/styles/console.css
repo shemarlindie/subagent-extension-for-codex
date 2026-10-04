@@ -54,6 +54,14 @@ button:disabled {
 .primary:hover {
   background: #e3f1bb;
 }
+/* Ghost buttons drop the box until hovered, as in the Codex panel. */
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+button.ghost:hover {
+  background: #253245;
+}
 input,
 textarea {
   width: 100%;

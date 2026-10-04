@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { DialogState } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
+import { Button } from "../components/button";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 
@@ -56,13 +57,12 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
             maxLength={4096}
             disabled={state.busy || browsing}
           />
-          <button
-            type="button"
+          <Button
             disabled={state.busy || browsing}
             onClick={() => void browse()}
           >
             {browsing ? "Choosing…" : "Browse…"}
-          </button>
+          </Button>
         </div>
       </Field>
       {error && (

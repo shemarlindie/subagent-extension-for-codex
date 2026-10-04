@@ -13,7 +13,7 @@ import { useNow } from "./use-now";
 import { useListMotion } from "./motion";
 import type { Filter, Task } from "../core/types";
 import { useController, useSnapshot } from "./controller-context";
-import { QuietButton } from "./quiet-button";
+import { Button } from "./button";
 import { TaskStatusIcon } from "./task-status-icon";
 interface TaskRowProps {
   task: Task;
@@ -106,9 +106,9 @@ export function TaskList() {
         </span>
         <span className="list-count">
           {narrowed && (
-            <QuietButton underline onClick={resetFilters}>
+            <Button variant="text" underline onClick={resetFilters}>
               Reset
-            </QuietButton>
+            </Button>
           )}
           <span id="count">
             {state.mode === "console"

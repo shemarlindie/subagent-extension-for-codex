@@ -6,6 +6,7 @@ import {
 import { reasoningLevels } from "../../src/core/reasoning";
 import type { Defaults, Project, Task, Worker } from "../core/types";
 import { profileLabel } from "../core/selectors";
+import { Button } from "../components/button";
 import { Field } from "./fields";
 import { FormSelect } from "./form-select";
 import { ProjectAutocomplete } from "./project-autocomplete";
@@ -70,14 +71,13 @@ export function ProjectField({
           )}
         </div>
         {onBrowse && (
-          <button
-            type="button"
+          <Button
             disabled={disabled}
             onClick={onBrowse}
             title="Choose and add a repository on the service host"
           >
             Browse…
-          </button>
+          </Button>
         )}
       </div>
       {allowParent && (

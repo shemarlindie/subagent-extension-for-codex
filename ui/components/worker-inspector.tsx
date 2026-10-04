@@ -1,5 +1,6 @@
 import { profileLabel } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
+import { Button } from "./button";
 export function WorkerInspector() {
   const controller = useController(),
     state = useSnapshot();
@@ -30,8 +31,8 @@ export function WorkerInspector() {
           ? "Inspects the selected workspace without editing source files."
           : "Can edit the selected workspace and request execution permission."}
       </p>
-      <button
-        className="primary"
+      <Button
+        variant="primary"
         onClick={() =>
           controller.run(() =>
             controller.delegate(`${worker.provider}:${profile}`),
@@ -39,7 +40,7 @@ export function WorkerInspector() {
         }
       >
         Delegate to this worker
-      </button>
+      </Button>
       <h3>Capabilities</h3>
       <div className="metadata">
         {Object.entries(worker.capabilities).map(([name, supported]) => (

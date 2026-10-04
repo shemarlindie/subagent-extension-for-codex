@@ -5,7 +5,7 @@ import type { Filter } from "../core/types";
 import { FILTER_LABELS, filterCounts } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
 import { Icon } from "./icons";
-import { QuietButton } from "./quiet-button";
+import { Button } from "./button";
 import { scrollChildIntoView } from "./scroll-into-view";
 
 const FILTER_EDGE_GAP = 16;
@@ -74,7 +74,8 @@ export function TaskFilters() {
         />
         {/* The native clear button is hidden; this one also restores focus to the input. */}
         {state.search && (
-          <QuietButton
+          <Button
+            variant="text"
             className="search-clear"
             aria-label="Clear search"
             onClick={() => {
@@ -83,7 +84,7 @@ export function TaskFilters() {
             }}
           >
             <Icon name="close" size={12} />
-          </QuietButton>
+          </Button>
         )}
       </div>
       <RadioGroup

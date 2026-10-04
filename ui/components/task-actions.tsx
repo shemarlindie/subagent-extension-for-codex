@@ -1,6 +1,7 @@
 import type { Task } from "../core/types";
 import { terminal, locked } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
+import { Button } from "./button";
 export function TaskActions({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
@@ -35,24 +36,24 @@ export function TaskActions({ task }: { task: Task }) {
   return (
     <div className="actions">
       {actions.map((action) => (
-        <button
+        <Button
           key={action}
           data-action={action}
           disabled={state.busy}
           onClick={() => controller.open({ kind: "control", action, task })}
         >
           {labels[action]}
-        </button>
+        </Button>
       ))}
       {state.mode === "console" && (
-        <button
+        <Button
           id="workspace"
           onClick={() => controller.open({ kind: "workspace", task })}
         >
           Workspace path
-        </button>
+        </Button>
       )}
-      <button
+      <Button
         id="handoff"
         disabled={state.busy}
         onClick={() => controller.open({ kind: "handoff", task })}
@@ -62,7 +63,7 @@ export function TaskActions({ task }: { task: Task }) {
           : state.mode === "console" && !controller.transport.embedded
             ? "Copy for Codex"
             : "Prepare handoff"}
-      </button>
+      </Button>
     </div>
   );
 }

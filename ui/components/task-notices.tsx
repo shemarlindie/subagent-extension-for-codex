@@ -3,6 +3,7 @@ import type { Task } from "../core/types";
 import { locked } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
 import { Presence, useAnimatedHeight } from "./motion";
+import { Button } from "./button";
 export function TaskNotices({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
@@ -32,14 +33,14 @@ export function TaskNotices({ task }: { task: Task }) {
               : (pending?.input.description ?? pending?.tool ?? ""),
           )}
         </ClampedText>
-        <button
+        <Button
           id="respond"
-          className="primary"
+          variant="primary"
           disabled={state.busy}
           onClick={() => controller.open({ kind: "respond", task })}
         >
           Review request
-        </button>
+        </Button>
       </TaskNotice>
       <TaskNotice show={Boolean(error)}>
         <ClampedText>{error}</ClampedText>
@@ -84,14 +85,14 @@ function ClampedText({ children }: { children: ReactNode }) {
         {children}
       </p>
       {(overflowing || open) && (
-        <button
-          type="button"
-          className="callout-more quiet"
+        <Button
+          variant="ghost"
+          className="callout-more"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
           {open ? "Show less" : "Show more"}
-        </button>
+        </Button>
       )}
     </>
   );

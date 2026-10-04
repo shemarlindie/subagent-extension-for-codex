@@ -2,6 +2,7 @@ import { projectChoices } from "../core/selectors";
 import { MotionContent } from "./motion";
 import { useController, useSnapshot } from "./controller-context";
 import { SelectField } from "./select-field";
+import { Button } from "./button";
 export function ProjectScope() {
   const controller = useController(),
     state = useSnapshot();
@@ -44,14 +45,14 @@ export function ProjectScope() {
         </MotionContent>
       </small>
       {state.projectCandidate && (
-        <button
-          className="quiet"
+        <Button
+          variant="ghost"
           disabled={disabled}
           title={state.projectCandidate}
           onClick={() => controller.addProject()}
         >
           Add chat project
-        </button>
+        </Button>
       )}
     </div>
   );
