@@ -188,7 +188,7 @@ form .select-trigger {
   cursor: pointer;
 }
 .task-description {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
 }
 .task-description-trigger {
   display: inline-flex;
@@ -1438,4 +1438,15 @@ textarea {
   display: inline-flex;
   align-items: baseline;
   gap: 8px;
+}
+.actions {
+  align-items: center;
+  gap: 4px 8px;
+}
+.actions-separator {
+  color: var(--muted, #8392a7);
+}
+.actions .text-button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

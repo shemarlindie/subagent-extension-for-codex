@@ -232,6 +232,7 @@ aside {
   margin: 24px 0 18px;
   border-bottom: 1px solid #243040;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
 }
 .tabs button {

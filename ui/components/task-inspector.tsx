@@ -74,8 +74,8 @@ export function TaskInspector() {
             </div>
             <h1 title={task.title}>{task.title}</h1>
             <TaskDescription task={task} />
-            <TaskNotices task={task} />
             <TaskActions task={task} />
+            <TaskNotices task={task} />
           </div>
           <EvidenceTabs task={task} />
         </div>

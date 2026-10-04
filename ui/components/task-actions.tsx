@@ -1,5 +1,6 @@
 import type { Task } from "../core/types";
 import { terminal, locked } from "../core/selectors";
+import { Fragment, type ReactNode } from "react";
 import { useController, useSnapshot } from "./controller-context";
 import { Button } from "./button";
 export function TaskActions({ task }: { task: Task }) {
@@ -33,37 +34,60 @@ export function TaskActions({ task }: { task: Task }) {
     cancel: "Cancel task",
     retry: "New attempt",
   };
+  // Keyed so the dot separators can be interleaved between buttons below.
+  const buttons: [key: string, button: ReactNode][] = actions.map((action) => [
+    action,
+    <Button
+      variant="text"
+      underline
+      data-action={action}
+      disabled={state.busy}
+      onClick={() => controller.open({ kind: "control", action, task })}
+    >
+      {labels[action]}
+    </Button>,
+  ]);
+  if (state.mode === "console") {
+    buttons.push([
+      "workspace",
+      <Button
+        variant="text"
+        underline
+        id="workspace"
+        onClick={() => controller.open({ kind: "workspace", task })}
+      >
+        Workspace path
+      </Button>,
+    ]);
+  }
+  buttons.push([
+    "handoff",
+    <Button
+      variant="text"
+      underline
+      id="handoff"
+      disabled={state.busy}
+      onClick={() => controller.open({ kind: "handoff", task })}
+    >
+      {state.host.canSend
+        ? "Bring to Codex"
+        : state.mode === "console" && !controller.transport.embedded
+          ? "Copy for Codex"
+          : "Prepare handoff"}
+    </Button>,
+  ]);
   return (
     <div className="actions">
-      {actions.map((action) => (
-        <Button
-          key={action}
-          data-action={action}
-          disabled={state.busy}
-          onClick={() => controller.open({ kind: "control", action, task })}
-        >
-          {labels[action]}
-        </Button>
+      {buttons.map(([key, button], index) => (
+        <Fragment key={key}>
+          {index > 0 && (
+            <span className="actions-separator" aria-hidden="true">
+              ·
+            </span>
+          )}
+          {button}
+        </Fragment>
       ))}
-      {state.mode === "console" && (
-        <Button
-          id="workspace"
-          onClick={() => controller.open({ kind: "workspace", task })}
-        >
-          Workspace path
-        </Button>
-      )}
-      <Button
-        id="handoff"
-        disabled={state.busy}
-        onClick={() => controller.open({ kind: "handoff", task })}
-      >
-        {state.host.canSend
-          ? "Bring to Codex"
-          : state.mode === "console" && !controller.transport.embedded
-            ? "Copy for Codex"
-            : "Prepare handoff"}
-      </Button>
     </div>
   );
 }

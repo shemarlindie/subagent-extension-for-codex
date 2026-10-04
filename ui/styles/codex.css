@@ -320,6 +320,7 @@ h3 {
   border-bottom: 1px solid var(--line);
   margin-top: 20px;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
 }
 .tabs button {
@@ -588,7 +589,7 @@ body[data-expanded-panel="true"] .task-header h1 {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
-  margin: 6px 0 8px;
+  margin: 6px 0;
 }
 body[data-expanded-panel="true"] .task-description-content {
   max-height: min(280px, 25dvh);
@@ -629,7 +630,7 @@ body[data-expanded-panel="true"] .callout-text[data-open] {
   display: block;
 }
 body[data-expanded-panel="true"] .task-header .actions {
-  margin: 12px 0 0;
+  margin: 0;
 }
 body[data-expanded-panel="true"] .evidence {
   flex: 1;
@@ -639,7 +640,7 @@ body[data-expanded-panel="true"] .evidence {
 }
 body[data-expanded-panel="true"] .evidence .tabs {
   flex: none;
-  margin-top: 12px;
+  margin-top: 0;
 }
 body[data-expanded-panel="true"] .evidence > [role="tabpanel"]:not([hidden]) {
   flex: 1;
