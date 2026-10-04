@@ -301,21 +301,9 @@ form .select-trigger {
   outline: 2px solid var(--accent, #8caeeb);
   outline-offset: 2px;
 }
-/* Stays visible above scrolled history. */
-.activity-current {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 10px 12px;
-  margin-bottom: 16px;
-  background: var(--surface, #172334);
-  border: 1px solid var(--line, #263348);
-  border-radius: 8px;
-  font-size: 12px;
-  overflow-wrap: anywhere;
+.dot.live {
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--accent, #8caeeb) 15%, transparent);
 }
 /* On narrow screens Back shares the status line. */
 .task-topline {
@@ -326,8 +314,31 @@ form .select-trigger {
 .task-topline .eyebrow {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  /* One space between parts, matching the spaces around the text separators. */
+  gap: 0.3em;
+  /* Clip a long line without cutting off the status dot's halo. */
+  overflow: clip;
+  overflow-clip-margin: 4px;
   white-space: nowrap;
+}
+.task-topline .eyebrow .dot {
+  /* Clears the running halo before the status label. */
+  margin-right: 5px;
+}
+/* Only the live detail gives way, so the labels before it never move. */
+.eyebrow-live {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.eyebrow-live:empty {
+  display: none;
+}
+/* Narrow screens give live detail the worker's room; Details still names the worker. */
+@media (max-width: 400px) {
+  .eyebrow[data-live] .eyebrow-worker {
+    display: none;
+  }
 }
 .activity-dot {
   display: inline-block;

@@ -119,7 +119,7 @@ test("preview ids are unique and every activity timeline renders", () => {
     );
   for (const task of previewTasks) {
     const html = renderToStaticMarkup(
-      createElement(EventList, { events: eventsFor(task.id), task }),
+      createElement(EventList, { events: eventsFor(task.id) }),
     );
     assert.ok(html.includes("activity-timeline"), `${task.id} did not render`);
   }

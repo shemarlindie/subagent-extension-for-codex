@@ -1,9 +1,8 @@
 import { useId, useState } from "react";
 import { Collapsible } from "@base-ui/react/collapsible";
-import type { Event, Task } from "../core/types";
+import type { Event } from "../core/types";
 import {
   groupActivity,
-  currentActivityStatus,
   activityFailed,
   type ActivityGroup,
 } from "../core/activity-timeline";
@@ -388,17 +387,14 @@ function GroupCard({ group }: { group: ActivityGroup }) {
 }
 export function EventList({
   events,
-  task,
   active,
 }: {
   events: Event[];
-  task?: Task;
   active?: boolean;
 }) {
   const groups = groupActivity(events).sort(
-      (a, b) => b.events.at(-1)!.id - a.events.at(-1)!.id,
-    ),
-    current = currentActivityStatus(events, task);
+    (a, b) => b.events.at(-1)!.id - a.events.at(-1)!.id,
+  );
   const { viewportRef, pinned, scrollToTop } = useActivityScroll(
     events,
     active,
@@ -412,13 +408,6 @@ export function EventList({
         role="region"
         aria-label="Activity history"
       >
-        <div className="activity-current" role="status">
-          <span
-            className={`activity-dot activity-dot-${current.state}`}
-            aria-hidden="true"
-          />
-          <span>{current.text}</span>
-        </div>
         {events.length === EVENT_TAIL_SIZE && (
           <p className="help">
             Showing the most recent {EVENT_TAIL_SIZE} events.

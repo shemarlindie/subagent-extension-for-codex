@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { selectedTask, profileLabel } from "../core/selectors";
+import { selectedTask, profileLabel, locked } from "../core/selectors";
+import { currentActivityStatus } from "../core/activity-timeline";
 import { useController, useSnapshot } from "./controller-context";
 import { TaskStatus } from "./status";
 import { TaskActions } from "./task-actions";
@@ -12,6 +13,15 @@ export function TaskInspector() {
     state = useSnapshot(),
     task = selectedTask(state);
   const { detailRef, headerRef, stacked } = useStackedLayout(task?.id);
+  // Only a running task has live detail beyond its status label.
+  // Events load after selection; until then the label alone is accurate.
+  const live =
+    task?.status === "running" &&
+    !task.pending_input &&
+    !locked(task) &&
+    state.events.length
+      ? currentActivityStatus(state.events, task)
+      : undefined;
   return (
     <section
       ref={detailRef}
@@ -34,11 +44,19 @@ export function TaskInspector() {
               >
                 ← Tasks
               </button>
-              <div className="eyebrow">
-                <TaskStatus task={task} />
-                <span>
-                  {" "}
+              <div className="eyebrow" data-live={live ? "" : undefined}>
+                <TaskStatus task={task} live={live?.state === "running"} />
+                <span className="eyebrow-worker">
                   / {task.provider} · {profileLabel(task.worker_profile)}
+                </span>
+                {/* Trails the line so changing detail never shifts the labels before it. */}
+                <span className="eyebrow-live" role="status">
+                  {live && (
+                    <>
+                      <span aria-hidden="true">· </span>
+                      {live.text}
+                    </>
+                  )}
                 </span>
               </div>
             </div>

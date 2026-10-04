@@ -1244,6 +1244,40 @@ test("task and result text render literally without HTML interpretation", async 
   assert.equal((window as any).injected, undefined);
 });
 
+test("the header trails a running task's live activity and drops it once settled", async (t) => {
+  let events: unknown[] = [];
+  const { controller, transport } = await setup(t, (transport) => {
+    const original = transport.tool.bind(transport);
+    transport.tool = async <T>(name: string, args = {}) =>
+      (name === "get_agent_events" ? events : original(name, args)) as T;
+  });
+  const live = () => document.querySelector(".eyebrow-live");
+  const eyebrow = () => document.querySelector(".eyebrow");
+  assert.equal(live()?.textContent, "", "No detail before events load");
+  assert.equal(eyebrow()?.hasAttribute("data-live"), false);
+  events = [
+    {
+      id: 1,
+      task_id: "one",
+      timestamp: "2026-10-03T12:00:00.000Z",
+      type: "task.started",
+      data: {},
+    },
+  ];
+  await act(() => controller.refresh());
+  assert.equal(live()?.textContent, "· Working");
+  assert.equal(eyebrow()?.hasAttribute("data-live"), true);
+  assert.ok(
+    live()?.matches(".eyebrow > :last-child"),
+    "Changing detail never shifts the labels before it",
+  );
+  assert.ok(document.querySelector(".eyebrow .dot.live"));
+  transport.tasks = [{ ...task(), status: "completed" }];
+  await act(() => controller.refresh());
+  assert.equal(live()?.textContent, "");
+  assertAbsent(document.querySelector(".eyebrow .dot.live"));
+});
+
 test("long notices clamp behind Show more and expand on demand", async (t) => {
   // jsdom has no layout, so report clamped notice text as overflowing.
   vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
