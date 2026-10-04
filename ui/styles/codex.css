@@ -137,6 +137,11 @@ small {
   overflow: hidden;
   overflow-wrap: anywhere;
 }
+.preview-task small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .inline-preview .error {
   overflow-wrap: anywhere;
 }
