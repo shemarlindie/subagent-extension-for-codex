@@ -12,7 +12,9 @@ export async function readEventTail(
   for (;;) {
     const page = await read(after);
     if (!isCurrent()) return [];
-    if (!page.length) return recent;
+    // Keep the same array when nothing arrived so unchanged views skip rendering.
+    if (!page.length)
+      return recent.length === previous.length ? previous : recent;
     recent = [...recent, ...page].slice(-EVENT_TAIL_SIZE);
     const cursor = page.at(-1)!.id;
     if (page.length < 1000 || cursor <= after) return recent;

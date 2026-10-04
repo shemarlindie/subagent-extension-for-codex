@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { memo, useId, useState } from "react";
 import { Collapsible } from "@base-ui/react/collapsible";
 import type { Event } from "../core/types";
 import {
@@ -401,7 +401,8 @@ function GroupCard({
     </Collapsible.Root>
   );
 }
-export function EventList({
+// Polls keep the same events array when nothing changed, so a hidden tab skips work.
+export const EventList = memo(function EventList({
   events,
   active,
 }: {
@@ -466,4 +467,4 @@ export function EventList({
       )}
     </section>
   );
-}
+});
