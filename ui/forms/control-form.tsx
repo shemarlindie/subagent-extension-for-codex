@@ -83,7 +83,10 @@ export function ControlForm({
       ) : (
         <>
           <p>{task.title}</p>
-          <TaskDescription task={task} />
+          <TaskDescription
+            task={task}
+            defaultOpen={action === "interrupt" || action === "cancel"}
+          />
         </>
       )}
       <FormFooter label={labels[action]} />

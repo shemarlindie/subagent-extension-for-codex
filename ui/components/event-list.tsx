@@ -84,10 +84,11 @@ export const EventList = memo(function EventList({
           title="Scroll to latest activity"
           onClick={scrollToTop}
         >
+          {/* Cropped stroke bounds retain the original 20px / 24-unit scale. */}
           <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
+            width={20 * (14 / 24)}
+            height={20 * (14 / 24)}
+            viewBox="5 5 14 14"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"

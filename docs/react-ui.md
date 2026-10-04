@@ -30,6 +30,8 @@ Motion is short and quiet. Its purpose is to show what changed and to ease layou
 
 Animations that run while the activity timeline measures positions change only opacity, so they never disturb its reading position. Reduced-motion preferences turn every animation off. The Web Animations helpers also skip animation where the API is missing, as in jsdom tests.
 
+Use `<Chevron square />` for rotating icons. It pads the short dimension without scaling the artwork, so rotation keeps a stable layout footprint. The default chevron fits its artwork tightly.
+
 ## Extending the UI
 
 - Add a component when a section has a clear responsibility, reused presentation, or an independent interaction. Compose these sections in the inspector or shell; avoid moving networking or scope bookkeeping into JSX.
@@ -46,13 +48,15 @@ The standalone console uses credentialed HTTP requests, token login, and SSE act
 
 The embedded panel renders a compact summary in `inline` mode: project/chat scope, task counts, and the selected task's status. Counts cover the current scope even when the full panel has search or status filters applied. **Open panel** requests `fullscreen` when the host advertises it; the host controls placement. The full interface appears in expanded mode. Collapsing preserves task selection and hides any open dialog while retaining its draft for expansion. Scope changes still discard stale dialogs. The standalone console and fixture preview retain their full layout.
 
-Delegation forms collect the full request as the description without a manual title field. The service generates a title from the description's first line or sentence, up to 120 characters. Task rows and the inline preview show the concise title. The inspector shows the full description in a disclosure that starts collapsed.
+Delegation forms collect the full request as the description without a manual title field. The service generates a title from the description's first line or sentence, up to 120 characters. Task rows and the inline preview show the concise title. The inspector shows the full description in a disclosure that starts collapsed. Interrupt and cancel confirmations start with the description expanded; retry confirmations keep it collapsed.
 
 **Settings** opens a dialog built from `get_agent_settings`, for hosts that do not render native plugin settings. Groups follow the returned layout and collapse to a one-line summary; only the first starts open. A badge counts unsaved edits per group, and saving sends only changed fields through `update_agent_settings`. Dialog titles and footers stay visible while long forms scroll.
 
 Model selection shows each discovered model's display name with its description as secondary text. The delegation Model field remains free text, so custom IDs and aliases still work.
 
 The activity timeline groups tool lifecycles and streamed responses. Consecutive artifact creations within one task show a count and their titles; thinking-token updates show **Thinking…** with a ticking clock while it is the latest activity, then **Thought for 7s** once something follows (`thinkingSpan`; only the clock ticks, through `useNow`). Other consecutive updates with the same event kind and summary share a row with an event count. Messages, failures, input requests, lifecycle transitions, and events without summaries keep separate rows. Routine status updates continue to share a row showing the latest status. Messages appear as cards while tools and status stay as compact rows, and fenced code blocks in message text render as code (no other markdown is interpreted). Each row's debug button, a Base UI collapsible, exposes every original event; grouping changes presentation only. Rows render through the reusable `Timeline`, `TimelineItem` and `TimelineDot` components in `ui/components/timeline.tsx`. They use Base UI's `useRender`, so each accepts a `render` prop and exposes its state as `data-trimmed`, `data-first`, `data-last` and `data-status` for styling.
+
+Opening a row's debug details expands its newest raw response. Older responses stay collapsed initially, and manually changed disclosures survive refreshes and reopening the debug panel.
 
 Opening either HTML entrypoint outside an iframe with `?preview=1` selects fixture data; `&theme=dark` selects the dark preview theme. Preview does not connect to the service or execute workers. Unsupported fixture operations fail explicitly, and projects added in it are not remembered. Native host rendering and delivery still require separate host verification.
 

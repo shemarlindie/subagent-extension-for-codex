@@ -377,12 +377,29 @@ h3 {
 [role="tabpanel"] {
   padding-top: 14px;
 }
+[role="tabpanel"] > :first-child {
+  margin-top: 0;
+}
 /* Activity scrolls right up to the tabs; its gap is inside the scroller instead. */
 .activity-panel {
+  --activity-top-pad: 14px;
   padding-top: 0;
 }
+.activity-panel:has(.activity-group[data-first]) {
+  --activity-top-pad: 2px;
+}
+/* Subtract the first row's 12px padding, or 7px for compact rows. */
+.activity-panel:has(
+  .activity-group[data-first]:is(
+      .activity-tool,
+      .activity-operation,
+      .activity-status
+    )
+) {
+  --activity-top-pad: 7px;
+}
 .activity-panel .activity-viewport {
-  padding-top: 14px;
+  padding-top: var(--activity-top-pad);
 }
 .empty {
   padding: 60px 12px;
@@ -517,6 +534,7 @@ footer {
 }
 .back {
   display: none;
+  padding: 2px;
 }
 /* The expanded panel fits its viewport; the task list and inspector scroll on their own. */
 body[data-expanded-panel="true"] {
@@ -641,7 +659,7 @@ body[data-expanded-panel="true"] .activity-panel .activity-viewport {
   flex: 1;
   max-height: none;
   margin: 0 calc(-1 * var(--detail-pad));
-  padding: 14px var(--detail-pad) 18px;
+  padding: var(--activity-top-pad) var(--detail-pad) 18px;
 }
 body[data-expanded-panel="true"] .activity-panel .activity-scroll-top {
   right: calc(var(--detail-pad) - 4px);
@@ -679,6 +697,12 @@ body[data-expanded-panel="true"] .detail[data-stacked] .activity-viewport {
   overflow: visible;
   margin: 0;
   padding: 0;
+}
+body[data-expanded-panel="true"]
+  .detail[data-stacked]
+  .evidence
+  > .activity-panel:not([hidden]) {
+  padding-top: var(--activity-top-pad);
 }
 body[data-expanded-panel="true"] .detail[data-stacked] .activity-timeline {
   display: block;

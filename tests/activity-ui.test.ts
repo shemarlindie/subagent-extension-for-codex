@@ -149,6 +149,50 @@ test("latest group is first and fresh progress moves an older tool to the top wi
   assert.equal(debug.getAttribute("aria-expanded"), "true");
 });
 
+test("tool debug opens only the newest raw response and preserves a manual collapse", async (t) => {
+  t.onTestFinished(cleanup);
+  const events = [
+    event(
+      "tool.started",
+      { id: "raw-default-read", name: "Read", input: { file_path: "a.ts" } },
+      "raw-default-start",
+    ),
+    event(
+      "tool.completed",
+      { id: "raw-default-read", name: "Read", text: "File contents" },
+      "raw-default-complete",
+    ),
+  ];
+  const view = render(createElement(GroupedEventList, { events }));
+  fireEvent.click(view.getByRole("button", { name: "Debug activity: Read" }));
+  const inspectors = Array.from(
+    view.container.querySelectorAll<HTMLDetailsElement>("details.activity-raw"),
+  );
+  assert.equal(inspectors.length, 2);
+  assert.equal(inspectors[0].open, true);
+  assert.equal(
+    inspectors[0].querySelector("pre")?.textContent,
+    JSON.stringify(events[1].data, null, 2),
+  );
+  assert.equal(inspectors[1].open, false);
+  assertAbsent(inspectors[1].querySelector("pre"));
+  await act(async () => {
+    inspectors[0].open = false;
+    inspectors[0].dispatchEvent(new Event("toggle"));
+  });
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: events.map((item) => ({ ...item })),
+    }),
+  );
+  assert.equal(
+    view.container.querySelector("details.activity-raw"),
+    inspectors[0],
+  );
+  assert.equal(inspectors[0].open, false);
+  assertAbsent(inspectors[0].querySelector("pre"));
+});
+
 test("artifact counts update without closing debug or remounting raw inspectors", async (t) => {
   t.onTestFinished(cleanup);
   const events = [1, 2, 3].map((index) =>
@@ -167,10 +211,7 @@ test("artifact counts update without closing debug or remounting raw inspectors"
   fireEvent.click(debug);
   const panel = document.getElementById(debug.getAttribute("aria-controls")!)!;
   const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
-  await act(async () => {
-    raw.open = true;
-    raw.dispatchEvent(new Event("toggle"));
-  });
+  assert.equal(raw.open, true, "Artifact debug opens its newest raw response");
   await waitFor(() =>
     assert.equal(
       raw.querySelector("pre")?.textContent,

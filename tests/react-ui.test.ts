@@ -701,6 +701,32 @@ test("description toggles literally, survives refresh, and resets for another ta
   assert.ok(screen.getByText("Second instructions"));
 });
 
+for (const action of ["interrupt", "cancel", "retry"] as const) {
+  test(`${action} confirmation defaults the task description ${action === "retry" ? "closed" : "open"}`, async (t) => {
+    const { controller, transport, user } = await setup(t);
+    await act(() =>
+      controller.open({ kind: "control", action, task: transport.tasks[0] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const toggle = within(dialog).getByRole("button", { name: "Description" });
+    const expanded = action !== "retry";
+    assert.equal(toggle.getAttribute("aria-expanded"), String(expanded));
+    if (expanded) {
+      assert.equal(
+        dialog.querySelector(".task-description-content")?.textContent,
+        transport.tasks[0].description,
+      );
+    }
+    await user.click(toggle);
+    assert.equal(toggle.getAttribute("aria-expanded"), String(!expanded));
+    assert.equal(
+      transport.calls.some((call) => call.name === `${action}_agent_task`),
+      false,
+      "Inspecting the description does not submit the task action",
+    );
+  });
+}
+
 test("delegation submits the full request without a title and search matches description", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
     transport.tasks[0].description = "Inspect the unique zebra boundary.";

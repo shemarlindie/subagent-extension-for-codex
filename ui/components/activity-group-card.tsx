@@ -112,10 +112,11 @@ export function ActivityGroupCard({
           title={`Inspect ${group.events.length} raw ${group.events.length === 1 ? "response" : "responses"}`}
           onClick={() => setDebugMounted(true)}
         >
+          {/* Crop empty space while keeping the original 15px / 24-unit scale. */}
           <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
+            width="12.1875"
+            height="11.5625"
+            viewBox="2.25 2.25 19.5 18.5"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.5"
@@ -156,7 +157,11 @@ export function ActivityGroupCard({
               Debug details · {group.events.length}{" "}
               {group.events.length === 1 ? "event" : "events"}
             </p>
-            <EventDetails events={group.events} rawOnly={showsOwnText} />
+            <EventDetails
+              events={group.events}
+              rawOnly={showsOwnText}
+              expandNewestRaw
+            />
           </div>
         )}
       </Collapsible.Panel>

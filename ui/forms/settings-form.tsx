@@ -181,7 +181,7 @@ export function SettingsForm({
             defaultOpen={index === 0}
           >
             <Collapsible.Trigger className="settings-group-trigger">
-              <Chevron />
+              <Chevron square />
               <span className="settings-group-title">{group.title}</span>
               <span className="settings-group-summary">
                 {group.keys

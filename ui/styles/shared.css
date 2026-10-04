@@ -94,6 +94,21 @@
   flex-shrink: 0;
   color: var(--muted, #8fa5c1);
 }
+.chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 8.3125px;
+  height: 4.8125px;
+}
+.chevron svg {
+  display: block;
+  flex: none;
+}
+.chevron-square {
+  height: 8.3125px;
+}
 .select-positioner,
 .autocomplete-positioner,
 .menu-positioner {
@@ -180,7 +195,7 @@ form .select-trigger {
   align-items: center;
   gap: 5px;
   border: 0;
-  padding: 3px 0;
+  padding: 2px;
   background: transparent;
   font-size: 11px;
   color: var(--muted, #8fa5c1);
@@ -578,6 +593,9 @@ form .select-trigger {
   border: 1px solid var(--line, #263348);
   border-radius: 6px;
 }
+.activity-debug-body > .event:last-child {
+  border-bottom: 0;
+}
 .activity-debug-caption {
   margin: 0;
   font-size: 11px;
@@ -700,6 +718,9 @@ form .select-trigger {
   flex-shrink: 0;
 }
 
+#project-scope {
+  min-width: 160px;
+}
 .project-selection {
   display: flex;
   align-items: center;
@@ -947,7 +968,11 @@ textarea {
   animation: motion-glow-rail 2.4s ease-in-out infinite;
 }
 .refresh-glyph {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5em;
+  height: 1.5em;
 }
 
 @media (prefers-reduced-motion: reduce) {

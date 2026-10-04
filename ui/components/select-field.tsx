@@ -43,7 +43,7 @@ function SelectTrigger({
     >
       <Select.Value className="select-value" placeholder={placeholder} />
       <Select.Icon className="select-icon">
-        <Chevron />
+        <Chevron square />
       </Select.Icon>
     </Select.Trigger>
   );

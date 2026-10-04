@@ -129,13 +129,16 @@ function EventCard({
   );
 }
 
-/** `rawOnly` hides content already shown by the group and opens its newest raw response. */
+/** `rawOnly` hides content already shown by the group. */
 export function EventDetails({
   events,
   rawOnly,
+  expandNewestRaw = rawOnly,
 }: {
   events: Event[];
   rawOnly?: boolean;
+  /** Default for the newest disclosure; user toggles remain local to each response. */
+  expandNewestRaw?: boolean;
 }) {
   const toolNames = new Map(
     events
@@ -158,7 +161,7 @@ export function EventDetails({
               event={event}
               toolName={toolNames.get(event.data.id)}
               rawOnly={rawOnly}
-              expandRaw={rawOnly && index === 0}
+              expandRaw={expandNewestRaw && index === 0}
             />
           ))
       ) : (
