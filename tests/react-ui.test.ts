@@ -971,6 +971,23 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
   });
 });
 
+test("a panel opened outside a host points developers at the dev host", async (t) => {
+  // Opened directly in a browser: not embedded, so the full layout shows.
+  const { controller } = await setup(
+    t,
+    (transport) => {
+      transport.embedded = false;
+    },
+    { start: false },
+  );
+  await act(() => controller.showHostRequired());
+  assert.ok(
+    screen.getByText(
+      "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui.",
+    ),
+  );
+});
+
 test("task filters keep exactly one filter selected", async (t) => {
   const { user } = await setup(t);
   const pressed = (name: string) =>

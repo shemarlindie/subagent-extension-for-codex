@@ -45,7 +45,7 @@ export function TaskList() {
         {!state.connected ? (
           <p className="help">
             {state.connection === "Open through MCP"
-              ? "Ask Codex to call open_codex_subagent_extension. Add ?preview=1 for a design preview."
+              ? "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui."
               : "Waiting for the host connection."}
           </p>
         ) : tasks.length ? (
