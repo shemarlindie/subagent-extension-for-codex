@@ -50,3 +50,27 @@ test("a stopped task reports only recorded runtime", () => {
   assert.equal(runtimeLive(stale), false);
   assert.equal(taskRuntimeMs(stale, Date.now()), 60_000);
 });
+
+test("a run held for input freezes at the request time and resumes against the same start", () => {
+  const started = Date.parse("2026-10-02T08:00:00Z");
+  const waiting = task({
+    status: "waiting",
+    run_started_at: new Date(started).toISOString(),
+    updated_at: new Date(started + 30_000).toISOString(),
+    pending_input: { id: "question", tool: "AskUserQuestion", input: {} },
+  });
+  assert.equal(runtimeLive(waiting), false);
+  assert.equal(taskRuntimeMs(waiting, started + 30_000), 90_000);
+  assert.equal(taskRuntimeMs(waiting, started + 90_000), 90_000);
+  const resumed = {
+    ...waiting,
+    status: "running" as const,
+    pending_input: undefined,
+  };
+  assert.equal(runtimeLive(resumed), true);
+  assert.equal(taskRuntimeMs(resumed, started + 90_000), 150_000);
+  assert.equal(
+    taskRuntimeMs({ ...waiting, updated_at: "" }, started + 90_000),
+    60_000,
+  );
+});

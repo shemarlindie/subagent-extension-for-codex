@@ -1892,3 +1892,20 @@ test("a thinking row with nothing after it counts up only while the worker runs"
   view.rerender(createElement(GroupedEventList, { events, running: false }));
   assertAbsent(view.container.querySelector(".activity-duration"));
 });
+
+test("task completion activity includes the accumulated runtime", (t) => {
+  t.onTestFinished(cleanup);
+  const events = [event("task.completed", {}, "completed-runtime")];
+  const view = render(
+    createElement(GroupedEventList, { events, runtimeMs: 95_000 }),
+  );
+  assert.equal(
+    view.container.querySelector(".activity-group-title strong")?.textContent,
+    "Task completed after 1m 35s",
+  );
+  view.rerender(createElement(GroupedEventList, { events }));
+  assert.equal(
+    view.container.querySelector(".activity-group-title strong")?.textContent,
+    "Task completed",
+  );
+});

@@ -8,6 +8,8 @@
   --hover: #efefec;
   --accent: #256c51;
   --warn: #925e17;
+  --danger: #98514c;
+  --status-paused: var(--warn);
   --radius: 8px;
   font: 13px/1.5
     var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
@@ -21,6 +23,8 @@
   --hover: #30302e;
   --accent: #8bd8b5;
   --warn: #edbc74;
+  --danger: #e08b83;
+  --status-paused: var(--warn);
 }
 * {
   box-sizing: border-box;
@@ -256,9 +260,11 @@ aside {
 .dot.completed {
   background: var(--accent);
 }
-.dot.waiting,
-.dot.failed {
+.dot.waiting {
   background: var(--warn);
+}
+.dot.failed {
+  background: var(--danger, var(--warn));
 }
 .detail {
   padding: 22px 24px;

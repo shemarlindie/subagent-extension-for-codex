@@ -17,9 +17,14 @@ export const runtimeLive = (task: Task) =>
 
 /** Finished runs plus the one in progress, which `runtime_ms` does not yet include. */
 export function taskRuntimeMs(task: Task, now: number) {
-  if (!runtimeLive(task)) return task.runtime_ms;
+  // An input request holds the current run open. Freeze its display when the
+  // request arrived; resuming reconciles with the backend's runtime budget.
+  const waiting = task.status === "waiting" && Boolean(task.pending_input);
+  if (!task.run_started_at || (!runtimeLive(task) && !waiting))
+    return task.runtime_ms;
+  const end = waiting ? Date.parse(task.updated_at) : now;
+  if (!Number.isFinite(end)) return task.runtime_ms;
   return (
-    task.runtime_ms +
-    Math.max(0, now - new Date(task.run_started_at!).getTime())
+    task.runtime_ms + Math.max(0, end - new Date(task.run_started_at).getTime())
   );
 }

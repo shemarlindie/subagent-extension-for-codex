@@ -5,6 +5,7 @@ import {
   previewProjects,
 } from "./preview-fixtures";
 import type { Task } from "../../src/core/model";
+import { listedTask } from "../../src/core/task-list";
 const previewModels = [
   {
     value: "default",
@@ -194,7 +195,16 @@ export function previewTool(
     ),
     get_agent_panel_context: panelContext(args, options),
     list_agent_projects: projectsWith(options),
-    list_agent_tasks: newestFirst.filter((task) => inScope(task, args)),
+    list_agent_tasks: newestFirst
+      .filter((task) => inScope(task, args))
+      .map((task) =>
+        listedTask(
+          task,
+          previewEvents
+            .filter((event) => event.task_id === task.id)
+            .slice(-200),
+        ),
+      ),
     get_agent_events: previewEvents.filter(
       (event) =>
         event.task_id === args.task_id && event.id > Number(args.after ?? 0),

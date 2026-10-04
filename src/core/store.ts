@@ -104,6 +104,18 @@ export class Store {
         (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
       );
   }
+  recentEvents(id: string, owner: string): Event[] {
+    this.get(id, owner);
+    return this.db
+      .prepare(
+        "SELECT * FROM events WHERE task_id=? ORDER BY id DESC LIMIT 200",
+      )
+      .all(id)
+      .reverse()
+      .map(
+        (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
+      );
+  }
   artifact(
     t: Task,
     type: string,

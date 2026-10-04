@@ -17,6 +17,8 @@
   --hover: #253245;
   --accent: #d4e69b;
   --warn: #e6a8a8;
+  --danger: #f19494;
+  --status-paused: #d4b06c;
 }
 * {
   box-sizing: border-box;

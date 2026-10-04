@@ -4,6 +4,51 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Store } from "../src/core/store.js";
+import { startSchema, type Task } from "../src/core/model.js";
+
+test("recent events return only the task's latest 200 in chronological order after owner checks", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "task-recent-events-"));
+  const store = new Store(join(dir, "tasks.sqlite"));
+  const task: Task = {
+    ...startSchema.parse({
+      title: "Review",
+      description: "Review",
+      worker_profile: "reviewer",
+    }),
+    title: "Review",
+    id: "recent",
+    owner: "alice",
+    status: "running",
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    instructions: [],
+    attempt: 1,
+    runtime_ms: 0,
+  };
+  try {
+    store.save(task);
+    const other = { ...task, id: "other" };
+    store.save(other);
+    assert.deepEqual(store.recentEvents(task.id, task.owner), []);
+    const expected = [];
+    for (let index = 0; index < 205; index++) {
+      expected.push(store.event(task, "agent.message", { index }));
+      store.event(other, "agent.message", { unrelated: index });
+    }
+    assert.deepEqual(
+      store.recentEvents(task.id, task.owner),
+      expected.slice(-200),
+    );
+    assert.throws(() => store.recentEvents(task.id, "bob"), /Task not found/);
+    assert.throws(
+      () => store.recentEvents("missing", task.owner),
+      /Task not found/,
+    );
+  } finally {
+    store.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 
 test("stored requests regain titles without losing descriptions, timestamps, or events", async () => {
   const dir = await mkdtemp(join(tmpdir(), "task-title-migration-"));

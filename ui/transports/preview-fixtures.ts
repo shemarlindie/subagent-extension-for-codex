@@ -1221,6 +1221,8 @@ export const previewTasks: Task[] = [
     worker_profile: "implementer",
     status: "waiting",
     waiting_reason: "waiting_for_user",
+    runtime_ms: 120000,
+    run_started_at: at(45),
     pending_input: {
       id: "preview-question-request",
       tool: "AskUserQuestion",
@@ -1317,6 +1319,7 @@ export const previewTasks: Task[] = [
       "Improve the task inspector layout while preserving keyboard navigation and narrow-panel behavior.",
     worker_profile: "implementer",
     status: "interrupted",
+    runtime_ms: 125000,
     ...timestamps(20, 2),
   },
   {

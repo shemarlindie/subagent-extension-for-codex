@@ -334,9 +334,47 @@ form .select-trigger {
   display: inline-block;
   vertical-align: middle;
 }
-/* Room for the halo at its widest, so it never touches the status label. */
-.row-meta .dot {
-  margin-right: 2px;
+.row-meta {
+  justify-content: space-between;
+}
+.row-worker {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row-trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.row-runtime {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.row-status-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.row-status-icon.running,
+.row-status-icon.completed {
+  color: var(--accent, #8bd8b5);
+}
+.row-status-glow {
+  fill: currentColor;
+  opacity: 0.15;
+  animation: motion-glow 2.4s ease-in-out infinite;
+}
+.row-status-icon.paused,
+.row-status-icon.waiting,
+.row-status-icon.interrupted,
+.row-status-icon.input {
+  color: var(--status-paused, var(--warn, #edbc74));
+}
+.row-status-icon.failed {
+  color: var(--danger, #f87171);
 }
 .dot::after {
   content: "";

@@ -26,12 +26,14 @@ export function ActivityGroupCard({
   last,
   span,
   running,
+  runtimeMs,
 }: {
   group: ActivityGroup;
   first: boolean;
   last: boolean;
   span?: { start: number; end: number | null };
   running: boolean;
+  runtimeMs?: number;
 }) {
   const [debugOpen, setDebugOpen] = useState(false);
   // Avoid hidden content work until inspection; retain it afterward to keep disclosures open.
@@ -57,13 +59,16 @@ export function ActivityGroupCard({
       ? span.end - span.start
       : undefined;
   const title =
-    thoughtMs !== undefined
-      ? thoughtMs >= 1000
-        ? `Thought for ${formatDuration(thoughtMs)}`
-        : "Thought"
-      : quietThinking
-        ? "Thinking"
-        : group.title;
+    group.events.some((event) => event.type === "task.completed") &&
+    runtimeMs !== undefined
+      ? `Task completed after ${formatDuration(runtimeMs)}`
+      : thoughtMs !== undefined
+        ? thoughtMs >= 1000
+          ? `Thought for ${formatDuration(thoughtMs)}`
+          : "Thought"
+        : quietThinking
+          ? "Thinking"
+          : group.title;
   const badge =
     group.state === "running"
       ? "Running"

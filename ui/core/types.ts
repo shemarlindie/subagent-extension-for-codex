@@ -2,11 +2,12 @@ import type {
   Artifact,
   Capabilities,
   Event,
-  Task,
   ModelChoice,
 } from "../../src/core/model";
 import type { DroppedSummary } from "./event-history";
-export type { Artifact, Event, Task };
+import type { ListedTask } from "../../src/core/task-list";
+export type Task = ListedTask;
+export type { Artifact, Event };
 export type Mode = "panel" | "console";
 export type Tab = "result" | "activity" | "changes" | "details";
 export type Filter = "all" | "active" | "attention" | "completed";

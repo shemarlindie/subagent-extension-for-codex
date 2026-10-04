@@ -5,6 +5,7 @@ import {
 } from "../core/chat-project.js";
 import { browseProject } from "../core/project-picker.js";
 import { Control } from "../core/control.js";
+import { listedTask } from "../core/task-list.js";
 import { type InputAuthority, startSchema } from "../core/model.js";
 import {
   panelContextInput,
@@ -169,6 +170,12 @@ export function definitions(
             (t) =>
               (!a.conversation_id || t.conversation_id === a.conversation_id) &&
               (!a.repository || t.repository === a.repository),
+          )
+          .map((t) =>
+            listedTask(
+              t,
+              t.status === "running" ? c.store.recentEvents(t.id, owner) : [],
+            ),
           ),
     }),
     list_available_workers: tool({

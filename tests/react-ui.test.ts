@@ -1382,11 +1382,12 @@ test("the header trails a running task's live activity and drops it once settled
     live()?.matches(".eyebrow > :last-child"),
     "Changing detail never shifts the labels before it",
   );
-  assert.ok(document.querySelector(".eyebrow .dot.live"));
+  assert.ok(document.querySelector(".eyebrow .row-status-icon.running"));
   transport.tasks = [{ ...task(), status: "completed" }];
   await act(() => controller.refresh());
   assert.equal(live()?.textContent, "");
-  assertAbsent(document.querySelector(".eyebrow .dot.live"));
+  assertAbsent(document.querySelector(".eyebrow .row-status-icon.running"));
+  assert.ok(document.querySelector(".eyebrow .row-status-icon.completed"));
 });
 
 test("long notices clamp behind Show more and expand on demand", async (t) => {

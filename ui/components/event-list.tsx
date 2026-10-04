@@ -29,10 +29,12 @@ export const EventList = memo(function EventList({
   events,
   active,
   running = false,
+  runtimeMs,
   dropped,
 }: {
   events: Event[];
   active?: boolean;
+  runtimeMs?: number;
   /** What fell off the front of `events`, tallied by the event reader. */
   dropped?: DroppedSummary;
   /** The worker is mid-turn, so a thinking row with nothing after it is still going. */
@@ -63,6 +65,7 @@ export const EventList = memo(function EventList({
               last={index === groups.length - 1}
               span={thinkingSpan(group, events)}
               running={running}
+              runtimeMs={runtimeMs}
             />
           ))}
         </Timeline>

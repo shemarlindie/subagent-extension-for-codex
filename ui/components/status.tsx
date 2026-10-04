@@ -1,15 +1,25 @@
 import type { Task } from "../core/types";
-import { locked, statusLabel } from "../core/selectors";
+import { rowStatus } from "../core/task-status";
+import type { ActivityState } from "../core/activity-timeline";
 import { MotionContent } from "./motion";
-export function TaskStatus({ task }: { task: Task }) {
-  // A task doing work right now glows; a locked worker is a fault, so its dot holds still.
-  const held = locked(task),
-    active = task.status === "running" && !task.pending_input && !held;
+import { TaskStatusIcon } from "./task-status-icon";
+import { statusLabel } from "../core/selectors";
+export function TaskStatus({
+  task,
+  activity,
+}: {
+  task: Task;
+  activity?: { text: string; state: ActivityState };
+}) {
+  const presentation = rowStatus(
+    activity ? { ...task, live_activity: activity } : task,
+  );
   return (
     <>
-      <span
-        className={`dot ${task.status}${active ? " live" : ""}${held ? " locked" : ""}`}
-        aria-hidden="true"
+      <TaskStatusIcon
+        kind={presentation.kind}
+        label={presentation.label}
+        decorative
       />
       <MotionContent changeKey={statusLabel(task)}>
         {statusLabel(task)}
