@@ -3,7 +3,11 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { startSchema } from "../src/core/model.js";
-import { filterCounts, visibleTasks } from "../ui/core/selectors";
+import {
+  effectiveFilter,
+  filterCounts,
+  visibleTasks,
+} from "../ui/core/selectors";
 import type { Filter, Snapshot, Task } from "../ui/core/types";
 
 const task = (patch: Partial<Task>): Task => ({
@@ -95,7 +99,7 @@ test("filter counts match each filter's list and follow search and scope", () =>
   const state = (patch: object) =>
     ({
       tasks,
-      filter: "all",
+      filter: null,
       search: "",
       repository: "/repo",
       ...patch,
@@ -122,4 +126,39 @@ test("filter counts match each filter's list and follow search and scope", () =>
     completed: 1,
     failed: 0,
   });
+});
+
+test("the filter follows the first nonempty one in order until chosen", () => {
+  const state = (tasks: Task[], patch: object = {}) =>
+    ({
+      tasks,
+      filter: null,
+      search: "",
+      mode: "panel",
+      ...patch,
+    }) as unknown as Snapshot;
+
+  const running = task({ id: "a", status: "running" }),
+    failed = task({ id: "b", status: "failed" }),
+    done = task({ id: "c", status: "completed" }),
+    asking = task({ id: "d", pending_input: input });
+
+  assert.equal(effectiveFilter(state([])), "all");
+  assert.equal(effectiveFilter(state([done])), "completed");
+  assert.equal(effectiveFilter(state([done, running])), "active");
+  assert.equal(effectiveFilter(state([done, running, failed])), "failed");
+  assert.equal(effectiveFilter(state([done, failed, asking])), "attention");
+
+  // Needs input does not exist outside the panel.
+  assert.equal(
+    effectiveFilter(state([asking, done], { mode: "console" })),
+    "active",
+  );
+
+  // A chosen filter wins, even when it is empty.
+  assert.equal(
+    effectiveFilter(state([asking], { filter: "failed" })),
+    "failed",
+  );
+  assert.equal(effectiveFilter(state([asking], { filter: "all" })), "all");
 });

@@ -939,7 +939,7 @@ test("the header menu offers the secondary actions and runs them", async (t) => 
   );
 });
 
-test("a thread panel leaves Add project to global launches", async (t) => {
+test("a thread panel leaves global actions to global launches", async (t) => {
   const { controller, user } = await setup(t);
 
   await act(() =>
@@ -947,11 +947,13 @@ test("a thread panel leaves Add project to global launches", async (t) => {
   );
 
   assertAbsent(screen.queryByRole("button", { name: "Add project" }));
+  assertAbsent(screen.queryByRole("button", { name: "Settings" }));
+  assertAbsent(screen.queryByRole("button", { name: "New task" }));
   await user.click(screen.getByRole("button", { name: "More actions" }));
 
   assert.deepEqual(
     (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
-    ["Refresh", "Collapse", "Settings"],
+    ["Refresh", "Collapse"],
   );
 });
 
@@ -1173,36 +1175,73 @@ test("task filters keep exactly one filter selected", async (t) => {
   const checked = (name: RegExp) =>
     screen.getByRole("radio", { name }).getAttribute("aria-checked");
 
-  assert.equal(checked(/^All/), "true");
-  await user.click(screen.getByRole("radio", { name: /^Done/ }));
-  assert.equal(checked(/^Done/), "true");
+  // Until one is chosen, the first nonempty filter in order is selected.
+  assert.equal(checked(/^Active/), "true");
   assert.equal(checked(/^All/), "false");
+  await user.click(screen.getByRole("radio", { name: /^All/ }));
+  assert.equal(checked(/^All/), "true");
+  assert.equal(checked(/^Active/), "false");
   // Clicking the selected filter must not leave the list with no filter.
-  await user.click(screen.getByRole("radio", { name: /^Done/ }));
-  assert.equal(checked(/^Done/), "true");
+  await user.click(screen.getByRole("radio", { name: /^All/ }));
+  assert.equal(checked(/^All/), "true");
+});
+
+test("task filters list the nonempty filters in priority order", async (t) => {
+  await setup(t);
+
+  const names = screen
+    .getAllByRole("radio")
+    .map((radio) => radio.getAttribute("data-filter"));
+
+  assert.deepEqual(names, ["active", "all"]);
+  assertAbsent(screen.queryByRole("radio", { name: /^Failed/ }));
+  assertAbsent(screen.queryByRole("radio", { name: /^Done/ }));
 });
 
 test("task filters show counts and an empty state with a way out", async (t) => {
   const { user } = await setup(t);
   assert.ok(screen.getByRole("radio", { name: "All, 1" }));
-  assert.ok(screen.getByRole("radio", { name: "Failed, 0" }));
+  assert.ok(screen.getByRole("radio", { name: "Active, 1" }));
   assertAbsent(screen.queryByRole("button", { name: "Reset" }));
-  await user.click(screen.getByRole("radio", { name: /^Failed/ }));
-  assert.ok(screen.getByText("No failed tasks."));
-  assert.equal(screen.getByText("0 of 1").id, "count");
-  await user.click(screen.getByRole("button", { name: "Reset" }));
-  assert.ok(screen.getByRole("button", { name: /^Review authentication/ }));
   const search = screen.getByRole("searchbox", { name: "Search tasks" });
   await user.type(search, "zzz");
+
   // Counts follow the search, so no filter promises tasks the list cannot show.
+  // With nothing left, only All remains, so the row keeps its place.
+  assert.deepEqual(
+    screen
+      .getAllByRole("radio")
+      .map((radio) => radio.getAttribute("data-filter")),
+    ["all"],
+  );
+
   assert.ok(screen.getByRole("radio", { name: "All, 0" }));
   assert.ok(screen.getByText("No tasks match “zzz”."));
+  assert.equal(screen.getByText("0 of 1").id, "count");
   await user.click(screen.getByRole("button", { name: "Clear search" }));
   assert.equal((search as HTMLInputElement).value, "");
-  await user.click(screen.getByRole("radio", { name: /^Done/ }));
   await user.type(search, "a");
   await user.click(screen.getByRole("button", { name: "Reset" }));
   assert.equal((search as HTMLInputElement).value, "");
+
+  assert.equal(
+    screen.getByRole("radio", { name: /^All/ }).getAttribute("aria-checked"),
+    "true",
+  );
+});
+
+test("a chosen filter stays visible after it empties", async (t) => {
+  const { user } = await setup(t);
+  await user.click(screen.getByRole("radio", { name: /^Active/ }));
+
+  await user.type(
+    screen.getByRole("searchbox", { name: "Search tasks" }),
+    "zzz",
+  );
+
+  assert.ok(screen.getByRole("radio", { name: "Active, 0" }));
+  assert.ok(screen.getByText("No tasks match “zzz” in Active."));
+  await user.click(screen.getByRole("button", { name: "Reset" }));
 
   assert.equal(
     screen.getByRole("radio", { name: /^All/ }).getAttribute("aria-checked"),
@@ -1214,7 +1253,7 @@ test("console shows the filtered task count against the total", async (t) => {
   const { user } = await setup(t, undefined, { mode: "console" });
   assert.equal(document.getElementById("count")?.textContent, "1 TASK");
   assertAbsent(screen.queryByRole("radio", { name: /^Needs input/ }));
-  await user.click(screen.getByRole("radio", { name: /^Failed/ }));
+  await user.type(screen.getByRole("searchbox"), "zzz");
   assert.equal(document.getElementById("count")?.textContent, "0 OF 1 TASK");
 });
 

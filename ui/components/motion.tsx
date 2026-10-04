@@ -38,7 +38,7 @@ export function MotionContent({
   );
 }
 
-type Variant = "collapse" | "pop";
+type Variant = "collapse" | "fold" | "pop";
 
 // Collapse folds every box edge so neighbours slide rather than jump.
 function frames(variant: Variant, element: HTMLElement): Keyframe[] {
@@ -47,6 +47,46 @@ function frames(variant: Variant, element: HTMLElement): Keyframe[] {
       { opacity: 0, transform: "scale(0.85)" },
       { opacity: 1, transform: "none" },
     ];
+
+  // Fold shrinks an item in a flex row along its width; the negative margin cancels the row's gap.
+  if (variant === "fold") {
+    // The Presence wrapper has no box, so the row is the nearest ancestor that does.
+    let row = element.parentElement;
+
+    while (row && getComputedStyle(row).display === "contents")
+      row = row.parentElement;
+    const gap = parseFloat(getComputedStyle(row ?? element).columnGap);
+
+    return [
+      {
+        opacity: 0,
+        overflow: "hidden",
+        width: "0px",
+        paddingLeft: "0px",
+        paddingRight: "0px",
+        borderLeftWidth: "0px",
+        borderRightWidth: "0px",
+        marginLeft: `${-(gap || 0)}px`,
+      },
+      {
+        opacity: 1,
+        overflow: "hidden",
+        width: `${element.offsetWidth}px`,
+        ...Object.fromEntries(
+          (
+            [
+              "paddingLeft",
+              "paddingRight",
+              "borderLeftWidth",
+              "borderRightWidth",
+              "marginLeft",
+            ] as const
+          ).map((edge) => [edge, getComputedStyle(element)[edge]]),
+        ),
+      },
+    ];
+  }
+
   const style = getComputedStyle(element);
 
   const edges = [
@@ -77,6 +117,8 @@ function frames(variant: Variant, element: HTMLElement): Keyframe[] {
 interface PresenceProps {
   show: boolean;
   variant?: Variant;
+  /** False applies this change at once, for batches such as a first load that should not play. */
+  animate?: boolean;
   children?: ReactNode;
 }
 
@@ -88,6 +130,7 @@ interface PresenceProps {
 export function Presence({
   show,
   variant = "collapse",
+  animate = true,
   children,
 }: PresenceProps) {
   const wrapper = useRef<HTMLDivElement>(null);
@@ -109,7 +152,7 @@ export function Presence({
     first.current = false;
     const element = wrapper.current?.firstElementChild as HTMLElement | null;
 
-    if (!canAnimate(element)) {
+    if (!animate || !canAnimate(element)) {
       if (!show) setExiting(false);
 
       return;

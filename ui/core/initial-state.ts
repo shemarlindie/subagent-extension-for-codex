@@ -9,7 +9,7 @@ export function initialState(mode: Mode, path: string): Snapshot {
     events: [],
     artifacts: [],
     revision: "HEAD",
-    filter: "all",
+    filter: null,
     search: "",
     tab: "result",
     connected: false,

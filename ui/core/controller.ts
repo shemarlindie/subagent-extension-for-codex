@@ -469,7 +469,7 @@ export class Controller {
         events: [],
         artifacts: [],
         tab: data.panel_selection.tab === "result" ? "result" : "activity",
-        filter: "all",
+        filter: null,
         search: "",
       });
     }
@@ -491,7 +491,7 @@ export class Controller {
       conversation: undefined,
       projectCandidate: undefined,
       projectCandidateAuto: false,
-      filter: "all",
+      filter: null,
       search: "",
     });
 

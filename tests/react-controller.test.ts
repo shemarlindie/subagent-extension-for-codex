@@ -635,7 +635,7 @@ test("All chats preserves repository and discards a delayed conversation respons
   assert.equal(state.repository, "/repo/a");
   assert.equal(state.revision, "feature");
   assert.equal(state.projectCandidate, undefined);
-  assert.equal(state.filter, "all");
+  assert.equal(state.filter, null);
   assert.equal(state.search, "");
 
   assert.deepEqual(

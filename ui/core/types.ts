@@ -165,7 +165,8 @@ export type Snapshot = {
   projectCandidate?: string;
   projectCandidateAuto?: boolean;
   revision: string;
-  filter: Filter;
+  // Null until the user picks one; the list then follows the first nonempty filter.
+  filter: Filter | null;
   search: string;
   tab: Tab;
   connected: boolean;

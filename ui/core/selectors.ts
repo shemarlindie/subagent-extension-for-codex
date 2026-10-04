@@ -3,11 +3,11 @@ import type { Filter, Question, Snapshot, Task } from "./types";
 
 // Display order of the status filters; the panel hides "attention" outside panel mode.
 export const FILTER_LABELS: Record<Filter, string> = {
-  all: "All",
-  active: "Active",
   attention: "Needs input",
-  completed: "Done",
   failed: "Failed",
+  active: "Active",
+  completed: "Done",
+  all: "All",
 };
 
 const FILTERS = Object.keys(FILTER_LABELS) as Filter[];
@@ -70,8 +70,25 @@ export function scopedTasks(state: Snapshot) {
   );
 }
 
-export const visibleTasks = (state: Snapshot) =>
-  scopedTasks(state).filter((task) => matchesFilter(task, state.filter));
+// The chosen filter, or until one is chosen, the first in display order that holds tasks.
+export function effectiveFilter(state: Snapshot): Filter {
+  if (state.filter) return state.filter;
+  const counts = filterCounts(state);
+
+  return (
+    FILTERS.find(
+      (filter) =>
+        counts[filter] > 0 &&
+        (filter !== "attention" || state.mode === "panel"),
+    ) ?? "all"
+  );
+}
+
+export const visibleTasks = (state: Snapshot) => {
+  const filter = effectiveFilter(state);
+
+  return scopedTasks(state).filter((task) => matchesFilter(task, filter));
+};
 
 export function filterCounts(state: Snapshot) {
   const scoped = scopedTasks(state);

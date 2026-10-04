@@ -2,6 +2,7 @@ import { useRef } from "react";
 
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../core/duration";
 import {
+  effectiveFilter,
   FILTER_LABELS,
   locked,
   profileLabel,
@@ -97,9 +98,10 @@ export function TaskList() {
   const controller = useController(),
     state = useSnapshot(),
     tasks = visibleTasks(state),
-    total = scopedTasks({ ...state, search: "", filter: "all" }).length,
-    narrowed = state.filter !== "all" || Boolean(state.search),
-    filterLabel = FILTER_LABELS[state.filter],
+    total = scopedTasks({ ...state, search: "", filter: null }).length,
+    filter = effectiveFilter(state),
+    narrowed = tasks.length < total || Boolean(state.search),
+    filterLabel = FILTER_LABELS[filter],
     listRef = useRef<HTMLDivElement>(null);
 
   useListMotion(listRef, "data-task", tasks.map((task) => task.id).join());
@@ -149,8 +151,8 @@ export function TaskList() {
         ) : (
           <p className="help">
             {state.search
-              ? `No tasks match “${state.search}”${state.filter === "all" ? "" : ` in ${filterLabel}`}.`
-              : EMPTY_FILTER[state.filter]}
+              ? `No tasks match “${state.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
+              : EMPTY_FILTER[filter]}
           </p>
         )}
       </div>

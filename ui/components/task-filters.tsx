@@ -2,11 +2,16 @@ import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
 import { useEffect, useRef } from "react";
 
-import { FILTER_LABELS, filterCounts } from "../core/selectors";
+import {
+  effectiveFilter,
+  FILTER_LABELS,
+  filterCounts,
+} from "../core/selectors";
 import type { Filter } from "../core/types";
 import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
 import { Icon } from "./icons";
+import { Presence } from "./motion";
 import { scrollChildIntoView } from "./scroll-into-view";
 
 const FILTER_EDGE_GAP = 16;
@@ -22,12 +27,26 @@ export function TaskFilters() {
   const controller = useController(),
     state = useSnapshot(),
     counts = filterCounts(state),
+    current = effectiveFilter(state),
     searchRef = useRef<HTMLInputElement>(null),
-    groupRef = useRef<HTMLDivElement>(null);
+    groupRef = useRef<HTMLDivElement>(null),
+    // A load or scope switch passes through an empty list, so the batch that follows sets every
+    // pill at once; it appears in place. Only changes between populated renders animate.
+    hadTasks = useRef(false),
+    settled = hadTasks.current;
+
+  useEffect(() => {
+    hadTasks.current = state.tasks.length > 0;
+  });
 
   const filters = (Object.entries(FILTER_LABELS) as [Filter, string][]).filter(
     ([filter]) => filter !== "attention" || state.mode === "panel",
   );
+
+  // Empty filters hide, except the chosen one, which stays so the list never shows an unmarked selection.
+  // All always shows, which keeps the row reserved.
+  const shown = (filter: Filter) =>
+    filter === "all" || counts[filter] > 0 || filter === current;
 
   // "/" jumps to search from anywhere outside a text field or dialog.
   useEffect(() => {
@@ -53,12 +72,12 @@ export function TaskFilters() {
   useEffect(() => {
     const group = groupRef.current,
       selected = group?.querySelector<HTMLElement>(
-        `[data-filter="${state.filter}"]`,
+        `[data-filter="${current}"]`,
       );
 
     if (group && selected)
       scrollChildIntoView(group, selected, FILTER_EDGE_GAP);
-  }, [state.filter]);
+  }, [current]);
 
   return (
     <>
@@ -99,31 +118,39 @@ export function TaskFilters() {
         ref={groupRef}
         className="filters"
         aria-label="Filter tasks"
-        value={state.filter}
+        value={current}
         onValueChange={(value) => controller.setFilter(value as Filter)}
       >
         {filters.map(([filter, label]) => (
-          <Radio.Root
+          <Presence
             key={filter}
-            value={filter}
-            data-filter={filter}
-            aria-label={`${label}, ${counts[filter]}`}
-            nativeButton
-            render={<button type="button" />}
+            show={shown(filter)}
+            variant="fold"
+            animate={settled}
           >
-            {label}
-            <span
-              className="filter-count"
-              data-alert={
-                (filter === "attention" || filter === "failed") &&
-                counts[filter] > 0
-                  ? ""
-                  : undefined
-              }
+            <Radio.Root
+              value={filter}
+              data-filter={filter}
+              aria-label={`${label}, ${counts[filter]}`}
+              nativeButton
+              render={<button type="button" />}
+              // Choosing the pill that auto-select already marked fires no change, so pin it here.
+              onClick={() => controller.setFilter(filter)}
             >
-              {counts[filter]}
-            </span>
-          </Radio.Root>
+              {label}
+              <span
+                className="filter-count"
+                data-alert={
+                  (filter === "attention" || filter === "failed") &&
+                  counts[filter] > 0
+                    ? ""
+                    : undefined
+                }
+              >
+                {counts[filter]}
+              </span>
+            </Radio.Root>
+          </Presence>
         ))}
       </RadioGroup>
     </>
