@@ -14,6 +14,7 @@ import { pathToFileURL } from "node:url";
 import { application } from "../src/server/app.js";
 import { Auth } from "../src/server/auth.js";
 import type { ModelChoice, Provider, RunContext } from "../src/core/model.js";
+import { waitForListening } from "./helpers.js";
 
 type InputDecision = Awaited<ReturnType<RunContext["input"]>>;
 
@@ -49,7 +50,7 @@ async function setup(
     resolve("dist/console.html"),
   );
   const server = app.listen(0, "127.0.0.1");
-  await new Promise<void>((r) => server.once("listening", r));
+  await waitForListening(server);
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   const rpc = async (
     name: string,

@@ -15,6 +15,7 @@ import { Projects } from "../src/core/projects.js";
 import { Workspaces } from "../src/core/workspace.js";
 import { Auth } from "../src/server/auth.js";
 import { application } from "../src/server/app.js";
+import { waitForListening } from "./helpers.js";
 
 async function fixture(t: TestContext) {
   const dir = await realpath(
@@ -36,10 +37,7 @@ async function fixture(t: TestContext) {
     html,
   );
   const server = app.listen(0, "127.0.0.1");
-  await new Promise<void>((resolve, reject) => {
-    server.once("listening", resolve);
-    server.once("error", reject);
-  });
+  await waitForListening(server);
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   t.onTestFinished(async () => {
     await app.locals.closeMcp();

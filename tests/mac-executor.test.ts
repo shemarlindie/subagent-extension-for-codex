@@ -18,6 +18,7 @@ import {
   macExecutorProfile,
   managedProcess,
 } from "../src/providers/mac-executor.js";
+import { waitForListening } from "./helpers.js";
 const exec = promisify(execFile);
 
 test("executor environment contains only the restricted key and runtime settings", () => {
@@ -114,8 +115,7 @@ test(
       readOnly: true,
     });
     const server = createServer((socket) => socket.end());
-    server.listen(0, "127.0.0.1");
-    await new Promise<void>((resolve) => server.once("listening", resolve));
+    await waitForListening(server.listen(0, "127.0.0.1"));
     try {
       const port = (server.address() as { port: number }).port;
       const code = `require('node:net').connect(${port}, '127.0.0.1').on('error', error => { console.log(error.code); process.exit(0); }).on('connect', () => { console.log('CONNECTED'); process.exit(0); });`;

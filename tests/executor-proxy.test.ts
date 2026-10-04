@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { request } from "node:http";
 import { connect, createServer } from "node:net";
 import { executorProxy } from "../src/providers/executor-proxy.js";
+import { waitForListening } from "./helpers.js";
 
 async function tunnel(url: string, target: string, auth = true) {
   const parsed = new URL(url);
@@ -64,8 +65,7 @@ test("executor proxy authenticates each tunnel and blocks unsupported hosts, por
 });
 test("executor proxy pins validated public IPs, tunnels bytes, and revalidates DNS on every connection", async () => {
   const server = createServer((socket) => socket.pipe(socket));
-  server.listen(0, "127.0.0.1");
-  await new Promise<void>((resolve) => server.once("listening", resolve));
+  await waitForListening(server.listen(0, "127.0.0.1"));
   const port = (server.address() as { port: number }).port;
   let lookups = 0;
   const calls: any[] = [];

@@ -13,6 +13,7 @@ import { Workspaces } from "../src/core/workspace.js";
 import { startSchema, type Task } from "../src/core/model.js";
 import { Control } from "../src/core/control.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
+import { waitForListening } from "./helpers.js";
 
 const exec = promisify(execFile);
 
@@ -91,7 +92,7 @@ test(
     store.close();
 
     const reservation = createServer();
-    await new Promise<void>((done) => reservation.listen(0, "127.0.0.1", done));
+    await waitForListening(reservation.listen(0, "127.0.0.1"));
     t.onTestFinished(
       () =>
         new Promise<void>((done, reject) =>

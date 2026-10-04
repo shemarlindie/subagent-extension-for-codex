@@ -13,6 +13,7 @@ import { FixtureProvider } from "../src/providers/fixture.js";
 import { Auth } from "../src/server/auth.js";
 import { application } from "../src/server/app.js";
 import { Forms } from "../src/core/forms.js";
+import { waitForListening } from "./helpers.js";
 
 const parentMeta = {
   "codex/sandbox-state-meta": {
@@ -52,7 +53,7 @@ async function setup(t: TestContext) {
     resolve("dist/console.html"),
   );
   const server = app.listen(0, "127.0.0.1");
-  await new Promise<void>((done) => server.once("listening", done));
+  await waitForListening(server);
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   t.onTestFinished(async () => {
     await app.locals.closeMcp();

@@ -1,5 +1,9 @@
 # Agent instructions
 
+## Running integration tests
+
+- HTTP and executor integration suites need localhost TCP listeners; `mac-executor` also invokes nested macOS `sandbox-exec` profiles. If the default Codex command sandbox reports `listen EPERM` or `sandbox_apply: Operation not permitted`, rerun the affected suites with escalated execution permission. CI needs a macOS runner that permits both operations. Do not skip or weaken these tests.
+
 ## Verifying UI changes
 
 Check in the browser when a change is large, when seeing it would help, or when the user asks. Skip small changes that tests cover.
@@ -16,7 +20,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
   - **Live: …** tasks (ten of them): each is running and ends on a different latest activity, such as thinking, a running tool, compaction, a retry, a rate limit, a hook, a background task or a provider failure. Use them to check the live status line and the clocks. **Live: thinking** is the one with an active thinking state.
   - **Migrate the config loader**: pending question.
   - **Convert the test suite to the new runner**: exceeds the 200-event activity tail (trimmed timeline). Use it to test timeline scrolling, since most other timelines are short.
-- The host's selects ignore `form_input`; set `.value` and dispatch `change`. **Width** sets narrow (360/480) or wide (Fill) layouts. At 360px the short frame stacks the inspector (the whole pane scrolls), so use 480 or Fill for the fixed-header layout.
+- The host's selects ignore `form_input`; set `.value` and dispatch `change`. **Width** offers 360, 480, 760, and Fill. At 360px the short frame stacks the inspector (the whole pane scrolls), so use 480 or Fill for the fixed-header layout.
 - The panel is an iframe: query `document.querySelector('iframe').contentDocument` (`#tab-activity`, `.activity-group`, `.activity-debug-toggle`).
 - Measure layout with `getBoundingClientRect` instead of judging by eye, and use `scrollIntoView` to move the timeline.
 - A hidden browser pane throttles frames, so do not time animations. Sample them instead: get the running animations with `element.getAnimations()`, pause them, set `currentTime`, and measure.

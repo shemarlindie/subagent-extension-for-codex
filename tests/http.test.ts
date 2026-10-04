@@ -16,6 +16,7 @@ import { application } from "../src/server/app.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { ModelChoice } from "../src/core/model.js";
+import { waitForListening } from "./helpers.js";
 
 // Panel tools return loosely shaped structured content; tests narrow each field.
 const panel = (response: object) =>
@@ -112,7 +113,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     undefined,
     resolve("dist/codex.html"),
   ).listen(0, "127.0.0.1");
-  await new Promise<void>((r) => server.once("listening", r));
+  await waitForListening(server);
   const address = server.address() as { port: number };
   const base = `http://127.0.0.1:${address.port}`;
   const post = (
@@ -740,7 +741,7 @@ test("SSE requires authentication and replays owned events in global cursor orde
     "http://127.0.0.1:4317",
     resolve("dist/console.html"),
   ).listen(0, "127.0.0.1");
-  await new Promise<void>((r) => server.once("listening", r));
+  await waitForListening(server);
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   const make = (id: string, owner: string) => ({
     ...startSchema.parse({ title: "test", description: "test" }),
@@ -827,7 +828,7 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
     events,
   );
   const server = app.listen(0, "127.0.0.1");
-  await new Promise<void>((r) => server.once("listening", r));
+  await waitForListening(server);
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   const rpc = async (
     method: string,

@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { dataDirectory, installRoot } from "../src/service/runtime.js";
+import { waitForListening } from "./helpers.js";
 const exec = promisify(execFile);
 const launcher = new URL("../dist/service/launcher.js", import.meta.url).href;
 async function connect(env: NodeJS.ProcessEnv) {
@@ -31,7 +32,7 @@ async function data(t: import("vitest").TestContext) {
 }
 async function fake(t: import("vitest").TestContext, handler: RequestListener) {
   const server = createServer(handler);
-  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+  await waitForListening(server.listen(0, "127.0.0.1"));
   t.onTestFinished(
     () =>
       new Promise<void>((done, reject) =>
@@ -174,7 +175,7 @@ test(
     const dir = await data(t);
     // Reserve a random port, then release it immediately before launch.
     const reservation = createServer();
-    await new Promise<void>((done) => reservation.listen(0, "127.0.0.1", done));
+    await waitForListening(reservation.listen(0, "127.0.0.1"));
     const port = (reservation.address() as import("node:net").AddressInfo).port;
     await new Promise<void>((done) => reservation.close(() => done()));
     let pid: number | undefined;

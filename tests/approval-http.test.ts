@@ -13,6 +13,7 @@ import { Workspaces } from "../src/core/workspace.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
 import { type Result, type RunContext } from "../src/core/model.js";
 import { application } from "../src/server/app.js";
+import { waitForListening } from "./helpers.js";
 
 class PermissionProvider extends FixtureProvider {
   async run(ctx: RunContext): Promise<Result> {
@@ -64,10 +65,7 @@ async function setup() {
     html,
   );
   const server = app.listen(0, "127.0.0.1");
-  await new Promise<void>((resolve, reject) => {
-    server.once("listening", resolve);
-    server.once("error", reject);
-  });
+  await waitForListening(server);
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   const bearer = {
     Authorization: "Bearer test-token",
