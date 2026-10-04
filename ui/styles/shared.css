@@ -443,7 +443,22 @@ form .select-trigger {
   width: 1px;
   background: var(--line, #263348);
 }
+/* The failed stretch fades only where it joins a neighbouring item; the first and last ends stay solid. */
 .timeline-item[data-status="failed"]::before {
+  background: linear-gradient(
+    var(--line, #263348),
+    var(--danger, #f87171) var(--timeline-marker-y),
+    var(--danger, #f87171) calc(100% - var(--timeline-marker-y)),
+    var(--line, #263348)
+  );
+}
+.timeline-item[data-status="failed"][data-first]::before {
+  background: linear-gradient(
+    var(--danger, #f87171) calc(100% - var(--timeline-marker-y)),
+    var(--line, #263348)
+  );
+}
+.timeline-item[data-status="failed"][data-last]::before {
   background: var(--danger, #f87171);
 }
 .timeline-item[data-first]::before {
