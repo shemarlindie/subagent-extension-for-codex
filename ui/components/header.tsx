@@ -1,8 +1,19 @@
+import { Menu } from "@base-ui/react/menu";
 import { useController, useSnapshot } from "./controller-context";
 export function Header() {
   const controller = useController(),
     state = useSnapshot(),
-    consoleMode = state.mode === "console";
+    consoleMode = state.mode === "console",
+    blocked = !state.connected || state.busy,
+    expandLabel =
+      state.host.displayMode === "fullscreen" ? "Collapse" : "Expand";
+  const refresh = () => controller.run(() => controller.refresh()),
+    expand = () =>
+      controller.run(async () => {
+        await controller.transport.expand?.();
+      }),
+    addProject = () => controller.addProject(),
+    settings = () => controller.run(() => controller.settings());
   return (
     <header>
       <div className="brand">
@@ -22,47 +33,85 @@ export function Header() {
         <span id="connection" className="connection muted" role="status">
           {state.connection}
         </span>
-        <button
-          id="refresh"
-          className="quiet"
-          aria-label="Refresh tasks"
-          onClick={() => controller.run(() => controller.refresh())}
-        >
-          ↻
-        </button>
-        {state.host.canExpand && (
+        {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
+        <div className="toolbar toolbar-inline">
           <button
-            id="expand"
+            id="refresh"
             className="quiet"
-            onClick={() =>
-              controller.run(async () => {
-                await controller.transport.expand?.();
-              })
-            }
+            aria-label="Refresh tasks"
+            onClick={refresh}
           >
-            {state.host.displayMode === "fullscreen" ? "Collapse" : "Expand"}
+            ↻
           </button>
+          {state.host.canExpand && (
+            <button id="expand" className="quiet" onClick={expand}>
+              {expandLabel}
+            </button>
+          )}
+          <button
+            id="add-project"
+            className="quiet"
+            disabled={blocked}
+            onClick={addProject}
+          >
+            Add project
+          </button>
+          <button
+            id="settings"
+            className="quiet"
+            disabled={blocked}
+            onClick={settings}
+          >
+            Settings
+          </button>
+        </div>
+        {/* The console header has room for every button, so only the panel gets the menu. */}
+        {!consoleMode && (
+          <Menu.Root>
+            <Menu.Trigger
+              className="quiet toolbar-menu"
+              aria-label="More actions"
+            >
+              ⋯
+            </Menu.Trigger>
+            <Menu.Portal>
+              <Menu.Positioner
+                className="menu-positioner"
+                align="end"
+                sideOffset={4}
+              >
+                <Menu.Popup className="menu-popup">
+                  <Menu.Item className="menu-item" onClick={refresh}>
+                    Refresh
+                  </Menu.Item>
+                  {state.host.canExpand && (
+                    <Menu.Item className="menu-item" onClick={expand}>
+                      {expandLabel}
+                    </Menu.Item>
+                  )}
+                  <Menu.Item
+                    className="menu-item"
+                    disabled={blocked}
+                    onClick={addProject}
+                  >
+                    Add project
+                  </Menu.Item>
+                  <Menu.Item
+                    className="menu-item"
+                    disabled={blocked}
+                    onClick={settings}
+                  >
+                    Settings
+                  </Menu.Item>
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
         )}
-        <button
-          id="add-project"
-          className="quiet"
-          disabled={!state.connected || state.busy}
-          onClick={() => controller.addProject()}
-        >
-          Add project
-        </button>
-        <button
-          id="settings"
-          className="quiet"
-          disabled={!state.connected || state.busy}
-          onClick={() => controller.run(() => controller.settings())}
-        >
-          Settings
-        </button>
         <button
           id="delegate"
           className="primary"
-          disabled={!state.connected || state.busy}
+          disabled={blocked}
           onClick={() => controller.run(() => controller.delegate())}
         >
           {consoleMode ? "＋ Delegate" : "New task"}

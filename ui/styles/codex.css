@@ -64,8 +64,8 @@ button.quiet {
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring);
+  outline-offset: 0;
 }
 [hidden] {
   display: none !important;
@@ -87,6 +87,13 @@ header .mark {
 }
 header .grow {
   flex: 1;
+}
+header button {
+  white-space: nowrap;
+}
+/* Narrow panels fold the secondary actions into a menu (see the media query below). */
+header .toolbar-menu {
+  display: none;
 }
 .muted,
 small {
@@ -195,7 +202,7 @@ aside {
   box-shadow: 0 0 0 1px var(--line);
 }
 .filters button:focus-visible {
-  outline: 2px solid var(--accent, currentColor);
+  outline: var(--focus-ring);
   outline-offset: -2px;
 }
 .list-label {
@@ -334,7 +341,7 @@ h3 {
   color: var(--text);
 }
 .tabs button:focus-visible {
-  outline: 2px solid var(--accent, currentColor);
+  outline: var(--focus-ring);
   outline-offset: -2px;
 }
 .tab-count {
@@ -365,6 +372,13 @@ h3 {
   }
 }
 [role="tabpanel"] {
+  padding-top: 14px;
+}
+/* Activity scrolls right up to the tabs; its gap is inside the scroller instead. */
+.activity-panel {
+  padding-top: 0;
+}
+.activity-panel .activity-viewport {
   padding-top: 14px;
 }
 .empty {
@@ -421,14 +435,16 @@ pre {
 }
 .facts {
   display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
-  gap: 6px;
+  /* Labels keep to one line; the value column takes the remaining room. */
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 16px;
   font-size: 11px;
   margin-top: 10px;
   overflow-wrap: anywhere;
 }
 .facts dt {
   color: var(--muted);
+  white-space: nowrap;
 }
 .facts dd {
   margin: 0;
@@ -610,7 +626,7 @@ body[data-expanded-panel="true"] .evidence > .activity-panel:not([hidden]) {
   flex-direction: column;
   overflow: visible;
   margin: 0;
-  padding: 14px 0 0;
+  padding: 0;
 }
 body[data-expanded-panel="true"] .activity-panel .activity-timeline {
   flex: 1;
@@ -622,7 +638,7 @@ body[data-expanded-panel="true"] .activity-panel .activity-viewport {
   flex: 1;
   max-height: none;
   margin: 0 calc(-1 * var(--detail-pad));
-  padding: 0 var(--detail-pad) 18px;
+  padding: 14px var(--detail-pad) 18px;
 }
 body[data-expanded-panel="true"] .activity-panel .activity-scroll-top {
   right: calc(var(--detail-pad) - 4px);
@@ -689,6 +705,11 @@ body[data-expanded-panel="true"] .detail[data-stacked] .activity-scroll-top {
   .back {
     display: inline-block;
   }
+  /* Tabs run edge to edge, scrolling past the content margin and resting inside it. */
+  .tabs {
+    margin-inline: calc(-1 * var(--detail-pad, 18px));
+    padding-inline: var(--detail-pad, 18px);
+  }
   header {
     padding: 12px;
   }
@@ -697,6 +718,12 @@ body[data-expanded-panel="true"] .detail[data-stacked] .activity-scroll-top {
   }
   header button {
     font-size: 12px;
+  }
+  header .toolbar-inline {
+    display: none;
+  }
+  header .toolbar-menu {
+    display: inline-flex;
   }
   .two {
     grid-template-columns: 1fr;

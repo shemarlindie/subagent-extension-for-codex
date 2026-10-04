@@ -771,6 +771,21 @@ test("inline preview expands and collapses while preserving the selected task", 
   assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
 });
 
+test("the header menu offers the secondary actions and runs them", async (t) => {
+  const { transport, user } = await setup(t);
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+  assert.deepEqual(
+    (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
+    ["Refresh", "Collapse", "Add project", "Settings"],
+  );
+  await user.click(screen.getByRole("menuitem", { name: "Settings" }));
+  await waitFor(() =>
+    assert.ok(
+      transport.calls.some((call) => call.name === "get_agent_settings"),
+    ),
+  );
+});
+
 test("inline host without expansion offers the chat controls fallback", async (t) => {
   await setup(
     t,
@@ -954,6 +969,46 @@ test("task filters keep exactly one filter selected", async (t) => {
   // Clicking the selected filter must not leave the list with no filter.
   await user.click(screen.getByRole("button", { name: "Done" }));
   assert.equal(pressed("Done"), "true");
+});
+
+test("selecting a tab scrolls it into view in an overflowing tab list", async (t) => {
+  const { user } = await setup(t);
+  const list = screen.getByRole("tablist");
+  const scrollTo = vi.fn();
+  // jsdom has no layout, so describe a 100px list whose Details tab sits past its edge.
+  const define = (element: HTMLElement, values: Record<string, unknown>) =>
+    Object.entries(values).forEach(([key, value]) =>
+      Object.defineProperty(element, key, { configurable: true, value }),
+    );
+  define(list, { clientWidth: 100, scrollLeft: 0, scrollTo });
+  define(screen.getByRole("tab", { name: "Details" }), {
+    offsetLeft: 150,
+    offsetWidth: 60,
+  });
+  define(screen.getByRole("tab", { name: "Result" }), {
+    offsetLeft: 0,
+    offsetWidth: 60,
+  });
+  await user.click(screen.getByRole("tab", { name: "Details" }));
+  // Right edge (210) plus the 12px gap, less the visible width.
+  await waitFor(() => assert.equal(scrollTo.mock.calls.at(-1)?.[0].left, 122));
+  // A tab already fully inside the list leaves it where it is.
+  scrollTo.mockClear();
+  define(list, { scrollLeft: 0 });
+  define(screen.getByRole("tab", { name: /^Artifacts/ }), {
+    offsetLeft: 20,
+    offsetWidth: 40,
+  });
+  await user.click(screen.getByRole("tab", { name: /^Artifacts/ }));
+  await waitFor(() =>
+    assert.equal(
+      screen
+        .getByRole("tab", { name: /^Artifacts/ })
+        .getAttribute("aria-selected"),
+      "true",
+    ),
+  );
+  assert.equal(scrollTo.mock.calls.length, 0);
 });
 
 test("evidence tabs support keyboard arrows and keep tab focus through refresh", async (t) => {

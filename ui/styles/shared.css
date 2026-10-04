@@ -1,4 +1,9 @@
 /* Shared React/Base UI structure; surface styles retain their existing themes. */
+:root {
+  /* A quiet ring: visible to keyboard users without shouting. */
+  --focus-ring: 1px solid
+    color-mix(in srgb, var(--accent, #8caeeb) 55%, transparent);
+}
 .brand,
 .toolbar {
   display: flex;
@@ -58,8 +63,8 @@
   display: none;
 }
 [role="tabpanel"]:focus-visible {
-  outline: 2px solid var(--accent, #d4e69b);
-  outline-offset: 3px;
+  outline: var(--focus-ring);
+  outline-offset: 0;
 }
 @media (max-width: 640px) {
   #dialog.dialog,
@@ -90,13 +95,15 @@
   color: var(--muted, #8fa5c1);
 }
 .select-positioner,
-.autocomplete-positioner {
+.autocomplete-positioner,
+.menu-positioner {
   z-index: 20;
   outline: none;
   max-width: calc(100vw - 24px);
 }
 .select-popup,
-.autocomplete-popup {
+.autocomplete-popup,
+.menu-popup {
   max-width: 100%;
   min-width: var(--anchor-width);
   max-height: min(320px, var(--available-height));
@@ -109,7 +116,8 @@
   box-shadow: 0 8px 24px #0002;
 }
 .select-item,
-.autocomplete-item {
+.autocomplete-item,
+.menu-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -121,8 +129,12 @@
   overflow-wrap: anywhere;
 }
 .select-item[data-highlighted],
-.autocomplete-item[data-highlighted] {
+.autocomplete-item[data-highlighted],
+.menu-item[data-highlighted] {
   background: var(--hover, #1e3047);
+}
+.menu-item[data-disabled] {
+  opacity: 0.4;
 }
 .select-check {
   color: var(--accent, #d4e69b);
@@ -277,8 +289,8 @@ form .select-trigger {
   padding: 0 8px 4px 2px;
 }
 .activity-viewport:focus-visible {
-  outline: 2px solid var(--accent, #8caeeb);
-  outline-offset: 2px;
+  outline: var(--focus-ring);
+  outline-offset: 0;
 }
 .activity-scroll-top {
   position: absolute;
@@ -298,8 +310,8 @@ form .select-trigger {
   cursor: pointer;
 }
 .activity-scroll-top:focus-visible {
-  outline: 2px solid var(--accent, #8caeeb);
-  outline-offset: 2px;
+  outline: var(--focus-ring);
+  outline-offset: 0;
 }
 .dot.live {
   box-shadow: 0 0 0 3px
@@ -537,8 +549,8 @@ form .select-trigger {
   background: var(--surface, #172334);
 }
 .activity-debug-toggle:focus-visible {
-  outline: 2px solid var(--accent, #8caeeb);
-  outline-offset: 2px;
+  outline: var(--focus-ring);
+  outline-offset: 0;
 }
 .activity-debug-panel {
   margin-top: 10px;
