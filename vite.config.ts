@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const root = import.meta.dirname;
 // Same optional .env as npm run dev/start; shell variables take precedence.
@@ -47,7 +48,8 @@ export default defineConfig({
   root: "ui/dev",
   plugins: [react()],
   define: {
-    __DEV_HOST_CWD__: JSON.stringify(root),
+    // Codex sends sandboxCwd as a file URI; plain paths are ignored.
+    __DEV_HOST_CWD__: JSON.stringify(pathToFileURL(root).href),
   },
   server: {
     port: 5317,

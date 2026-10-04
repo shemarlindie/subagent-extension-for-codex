@@ -2,7 +2,6 @@
 // does (iframe + AppBridge), so the panel runs its real HostTransport, and
 // answers tool calls from fixtures or the running service over MCP.
 import { useEffect, useRef, useState } from "react";
-import { createRoot } from "react-dom/client";
 import {
   AppBridge,
   PostMessageTransport,
@@ -14,21 +13,22 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { previewTool } from "../transports/preview-tools";
+import { PREVIEW_THREAD } from "../transports/preview-fixtures";
+import type { Task } from "../../src/core/model";
+import {
+  codexMeta,
+  fixtureCall,
+  fixtureLaunchArgs,
+  normalizeCwd,
+  parseStyles,
+  settingsFrom,
+  threadLabel,
+  threadsOf,
+  type Settings,
+  type Thread,
+} from "./host-helpers";
 import "./host.css";
 
-type Settings = {
-  source: "fixtures" | "live";
-  launch: "thread" | "global";
-  theme: "light" | "dark";
-  displayMode: McpUiDisplayMode;
-  width: string;
-  canSend: boolean;
-  canShare: boolean;
-  showLog: boolean;
-  threadId: string;
-  cwd: string;
-  styles: string;
-};
 type LogEntry = { id: number; time: string; kind: string; detail: unknown };
 
 const storageKey = "panel-dev-host";
@@ -41,8 +41,11 @@ const defaults: Settings = {
   canSend: true,
   canShare: true,
   showLog: false,
-  threadId: "dev-thread",
+  // The fixtures give most of their tasks to this thread.
+  threadId: PREVIEW_THREAD,
   cwd: __DEV_HOST_CWD__,
+  autoRegister: true,
+  addedProjects: [],
   styles: "",
 };
 const widths = [
@@ -54,18 +57,9 @@ const widths = [
 
 function loadSettings(): Settings {
   try {
-    return { ...defaults, ...JSON.parse(localStorage.getItem(storageKey)!) };
+    return settingsFrom(defaults, localStorage.getItem(storageKey));
   } catch {
     return defaults;
-  }
-}
-function parseStyles(text: string): Record<string, string> | undefined {
-  try {
-    const value = JSON.parse(text);
-    // Accept either the variables map or a whole hostContext.styles object.
-    return value?.variables ?? value;
-  } catch {
-    return undefined;
   }
 }
 function hostContext(settings: Settings): McpUiHostContext {
@@ -80,42 +74,29 @@ function hostContext(settings: Settings): McpUiHostContext {
     ...(variables ? { styles: { variables } } : {}),
   } as McpUiHostContext;
 }
-/** Request metadata Codex attaches to tool calls from a thread. */
-function codexMeta(settings: Settings) {
-  if (settings.launch === "global") return undefined;
-  return {
-    ...(settings.threadId ? { threadId: settings.threadId } : {}),
-    ...(settings.cwd
-      ? { "codex/sandbox-state-meta": { sandboxCwd: settings.cwd } }
-      : {}),
-  };
-}
-function fixtureCall(name: string, args: Record<string, unknown> = {}) {
-  try {
-    const result = previewTool(name, args);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result) }],
-      structuredContent: (name.endsWith("_agent_settings")
-        ? result
-        : { result }) as Record<string, unknown>,
-    } satisfies CallToolResult;
-  } catch (error) {
-    return {
-      isError: true,
-      content: [{ type: "text", text: String(error) }],
-    } satisfies CallToolResult;
-  }
-}
+const fixtureThreads = threadsOf(
+  previewTool("list_agent_tasks", { conversation_id: null }) as Task[],
+);
 
-function Host() {
+// The only export, so Fast Refresh can swap it in place. main.tsx mounts it.
+export function Host() {
   const [settings, setSettings] = useState(loadSettings);
   const [session, setSession] = useState(0);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [height, setHeight] = useState(240);
   const [bridge, setBridge] = useState<AppBridge>();
+  const [liveThreads, setLiveThreads] = useState<Thread[]>([]);
+  // Read by the running session's tool calls, which a registration must not relaunch.
+  const added = useRef(settings.addedProjects);
   const frame = useRef<HTMLIFrameElement>(null);
   const update = (patch: Partial<Settings>) =>
     setSettings((current) => ({ ...current, ...patch }));
+  // Clearing projects changes what the panel was launched with, so relaunch.
+  const resetProjects = () => {
+    added.current = [];
+    update({ addedProjects: [] });
+    setSession((n) => n + 1);
+  };
   const record = (kind: string, detail?: unknown) =>
     setLog((entries) =>
       [
@@ -137,7 +118,8 @@ function Host() {
   }, [settings]);
 
   // Settings fixed at initialization; changing one starts a new panel session.
-  const { source, launch, canSend, canShare, threadId, cwd } = settings;
+  const { source, launch, canSend, canShare, threadId, cwd, autoRegister } =
+    settings;
   const sessionKey = JSON.stringify([
     session,
     source,
@@ -146,6 +128,7 @@ function Host() {
     canShare,
     threadId,
     cwd,
+    autoRegister,
   ]);
   useEffect(() => {
     const iframe = frame.current!;
@@ -178,6 +161,24 @@ function Host() {
         );
         return connection;
       })());
+    // Offer the service's threads in the Thread picker. Read-only, and not
+    // part of the panel's traffic, so it stays out of the bridge log.
+    if (source === "live")
+      void service()
+        .then((connection) =>
+          connection.callTool({
+            name: "list_agent_tasks",
+            arguments: { conversation_id: null },
+          }),
+        )
+        .then((result) =>
+          setLiveThreads(
+            threadsOf(
+              (result.structuredContent as { result?: Task[] })?.result ?? [],
+            ),
+          ),
+        )
+        .catch(() => setLiveThreads([]));
     const call = async (name: string, args: Record<string, unknown> = {}) => {
       const result =
         source === "live"
@@ -188,7 +189,24 @@ function Host() {
               arguments: args,
               _meta: codexMeta(current),
             })) as CallToolResult)
-          : fixtureCall(name, args);
+          : fixtureCall(name, args, {
+              autoRegisterChatProject: current.autoRegister,
+              addedProjects: added.current,
+            });
+      // Fixture registrations persist until Reset, like the service's registry.
+      if (
+        source === "fixtures" &&
+        name === "register_user_agent_project" &&
+        !result.isError
+      ) {
+        const { repository } = (
+          result.structuredContent as { result: { repository: string } }
+        ).result;
+        if (!added.current.includes(repository)) {
+          added.current = [...added.current, repository];
+          update({ addedProjects: added.current });
+        }
+      }
       record(result.isError ? "tool error" : "tool", {
         name,
         arguments: args,
@@ -212,15 +230,10 @@ function Host() {
           ? "open_codex_subagent_extension_global"
           : "open_codex_subagent_extension";
       try {
-        const result =
-          source === "live"
-            ? await call(name)
-            : {
-                content: [],
-                structuredContent: previewTool(
-                  "get_agent_panel_context",
-                ) as Record<string, unknown>,
-              };
+        const result = await call(
+          name,
+          source === "live" ? {} : fixtureLaunchArgs(current),
+        );
         await next.sendToolInput({ arguments: {} });
         await next.sendToolResult(result);
       } catch (error) {
@@ -272,6 +285,11 @@ function Host() {
   }, [bridge, theme, displayMode, styles]);
 
   const inline = displayMode === "inline";
+  const knownThreads = source === "live" ? liveThreads : fixtureThreads;
+  // Keep a typed-in Thread ID selectable even when it has no tasks yet.
+  const threadOptions = knownThreads.some((thread) => thread.id === threadId)
+    ? knownThreads
+    : [{ id: threadId, latest: "", tasks: 0 }, ...knownThreads];
   return (
     <div className={`host${settings.showLog ? "" : " no-log"}`}>
       <header className="toolbar">
@@ -299,6 +317,22 @@ function Host() {
             <option value="global">Global</option>
           </select>
         </label>
+        {launch === "thread" && (
+          <label>
+            Thread
+            <select
+              className="thread"
+              value={threadId}
+              onChange={(e) => update({ threadId: e.target.value })}
+            >
+              {threadOptions.map((thread) => (
+                <option key={thread.id} value={thread.id} title={thread.id}>
+                  {threadLabel(thread)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           Theme
           <select
@@ -368,7 +402,7 @@ function Host() {
           <label>
             Thread ID
             <input
-              key={`thread-${session}`}
+              key={`thread-${session}-${threadId}`}
               defaultValue={threadId}
               disabled={launch === "global"}
               onBlur={(e) => update({ threadId: e.target.value.trim() })}
@@ -377,12 +411,48 @@ function Host() {
           <label>
             Sandbox cwd
             <input
-              key={`cwd-${session}`}
+              key={`cwd-${session}-${cwd}`}
               defaultValue={cwd}
               disabled={launch === "global"}
-              onBlur={(e) => update({ cwd: e.target.value.trim() })}
+              placeholder="file:///path/to/repository"
+              onBlur={(e) => update({ cwd: normalizeCwd(e.target.value) })}
             />
           </label>
+          <label
+            className="check"
+            title={
+              source === "live"
+                ? "The live service uses your own setting."
+                : undefined
+            }
+          >
+            <input
+              type="checkbox"
+              checked={autoRegister}
+              disabled={source === "live"}
+              onChange={(e) => update({ autoRegister: e.target.checked })}
+            />
+            Automatically add chat projects
+          </label>
+          <div className="added-projects">
+            <span>Added projects (fixtures)</span>
+            {settings.addedProjects.length ? (
+              <ul>
+                {settings.addedProjects.map((repository) => (
+                  <li key={repository}>{repository}</li>
+                ))}
+              </ul>
+            ) : (
+              <small>None. Add project registers here until reset.</small>
+            )}
+            <button
+              type="button"
+              disabled={!settings.addedProjects.length}
+              onClick={resetProjects}
+            >
+              Reset projects
+            </button>
+          </div>
           <label>
             Host style variables (JSON)
             <textarea
@@ -434,5 +504,3 @@ function summarize(entry: LogEntry) {
   const detail = entry.detail as { name?: string } | string | undefined;
   return typeof detail === "string" ? detail : (detail?.name ?? "");
 }
-
-createRoot(document.getElementById("root")!).render(<Host />);

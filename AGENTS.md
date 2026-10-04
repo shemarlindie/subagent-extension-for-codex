@@ -7,6 +7,10 @@ Check in the browser when a change is large, when seeing it would help, or when 
 - Preview fixtures (`ui/transports/preview-fixtures.ts`) cover every task status and activity row kind. Build events with the typed builder, not by hand; `tests/preview-sdk-fixtures.test.ts` replays them through the provider. Add a fixture for any new event or row kind.
 - The `panel-dev` server (port 5317) is usually running. Navigate to `http://localhost:5317`; do not start or stop it.
 - Set **Data** to `fixtures` and **Relaunch** (the iframe is blank for a few seconds). Use `live` data only for what fixtures cannot show: set **Launch** to `global`, and do not start tasks, since live mode performs real actions.
+- **Launch** works with fixtures, too (controls in [Local development](docs/development.md#panel-dev-host)). `Thread` shows the chosen thread's tasks for one project; `Global` shows every conversation and project.
+  - **Thread**: the default `dev-thread` has tasks in `/demo/project` and `/demo/website`; `other-thread` owns two more.
+  - **Sandbox cwd**: the default (this repository) is not a fixture project, so it shows **Add chat project**. Set it to `/demo/website` to scope the panel to that project.
+  - Projects added in fixtures are kept until **Host** > **Reset projects**. Reset after checking registration so later checks start from the fixture projects.
 - Fixture tasks for specific cases:
   - **Refactor the billing module**: running (live status, running rows).
   - **Live: …** tasks (ten of them): each is running and ends on a different latest activity, such as thinking, a running tool, compaction, a retry, a rate limit, a hook, a background task or a provider failure. Use them to check the live status line and the clocks. **Live: thinking** is the one with an active thinking state.

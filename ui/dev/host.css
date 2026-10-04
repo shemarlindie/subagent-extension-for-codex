@@ -47,6 +47,9 @@ body {
   color: var(--muted);
   font-size: 11px;
 }
+.toolbar select.thread {
+  max-width: 260px;
+}
 .toolbar label.check {
   display: flex;
   align-items: center;
@@ -86,6 +89,21 @@ button {
 }
 .more[open] summary {
   grid-column: 1 / -1;
+}
+.added-projects {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  align-content: start;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.added-projects ul {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--text);
+  font-size: 12px;
 }
 .more textarea {
   font-family: ui-monospace, monospace;

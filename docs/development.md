@@ -66,7 +66,9 @@ This starts a Vite server at `http://127.0.0.1:5317` with React Fast Refresh and
 CSS hot replacement, for development only; production HTML still comes from
 `scripts/build-ui.mjs`.
 
-The page is a mock MCP Apps host (`ui/dev/host.tsx`). It embeds the panel in an
+The page is a mock MCP Apps host (`ui/dev/host.tsx`, mounted by `main.tsx`;
+its pure helpers are in `host-helpers.ts` and tested in
+`tests/dev-host.test.ts`). It embeds the panel in an
 iframe through the official `AppBridge`, so the panel runs its real
 `HostTransport`, as it does in Codex. Like Codex, the host calls the launch tool
 and delivers its result to the panel. The toolbar controls:
@@ -75,8 +77,17 @@ and delivers its result to the panel. The toolbar controls:
   `ui/transports/preview-tools.ts`) or the live service. Fixtures need no
   service; unsupported operations fail explicitly.
 - **Launch**: thread (`open_codex_subagent_extension` with Codex's `threadId`
-  and `codex/sandbox-state-meta` request metadata, editable under **Host**) or
-  global.
+  and `codex/sandbox-state-meta` request metadata) or global. With fixtures,
+  `preview-tools.ts` resolves the thread's scope the way the service does.
+- **Thread** (thread launches only): the threads that have tasks, from the
+  fixtures or the live service. **Host** > **Thread ID** accepts any ID.
+- **Host** > **Sandbox cwd**: the chat's directory, sent as a `file://` URI; a
+  typed path is converted. An unregistered directory shows **Add chat
+  project**.
+- **Host** > **Automatically add chat projects** and **Reset projects**
+  (fixtures only): the auto-add setting, and the projects registered during the
+  preview. Registration works with fixtures and is kept across relaunches and
+  reloads until reset; starting a task still fails.
 - **Theme**, **Display** (inline or fullscreen; the panel's **Open panel** and
   **Collapse** requests switch it), and **Width**.
 - **Send messages** and **Update context** host capabilities, and optional host
