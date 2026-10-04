@@ -178,32 +178,19 @@ aside {
   padding: 12px 0;
 }
 .search {
-  width: calc(100% - 16px);
-  margin: 0 8px;
   background: transparent;
   border: 1px solid var(--line);
-  padding: 7px 10px;
   border-radius: 6px;
 }
 .filters {
-  display: flex;
-  gap: 2px;
   margin: 10px 8px;
-  padding: 2px;
   border: 1px solid var(--line);
-  border-radius: 8px;
 }
 .filters button {
-  flex: 1;
-  font-size: 11px;
-  padding: 5px 4px;
-  border-color: transparent;
-  border-radius: 6px;
+  padding: 5px 7px;
   color: var(--muted);
-  white-space: nowrap;
 }
-.filters button[aria-pressed="true"],
-.filters button[data-pressed] {
+.filters button[aria-checked="true"] {
   background: var(--hover);
   color: var(--text);
   box-shadow: 0 0 0 1px var(--line);

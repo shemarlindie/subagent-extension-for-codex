@@ -1,5 +1,14 @@
 import { rowStatus } from "./task-status";
-import type { Snapshot, Task } from "./types";
+import type { Filter, Snapshot, Task } from "./types";
+// Display order of the status filters; the panel hides "attention" outside panel mode.
+export const FILTER_LABELS: Record<Filter, string> = {
+  all: "All",
+  active: "Active",
+  attention: "Needs input",
+  completed: "Done",
+  failed: "Failed",
+};
+const FILTERS = Object.keys(FILTER_LABELS) as Filter[];
 export const terminal = (task: Task) =>
   ["completed", "failed", "cancelled"].includes(task.status);
 export const locked = (task: Task) =>
@@ -18,7 +27,15 @@ export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 export const failedStatus = (task: Task) =>
   ["failed", "unconfirmed", "interrupted"].includes(rowStatus(task).kind);
 export const needsInput = (task: Task) => Boolean(task.pending_input);
-export function visibleTasks(state: Snapshot) {
+// Each task lands in one status filter besides All; see failedStatus.
+const matchesFilter = (task: Task, filter: Filter) =>
+  filter === "all" ||
+  (filter === "active" && !terminal(task) && !failedStatus(task)) ||
+  (filter === "attention" && needsInput(task) && !failedStatus(task)) ||
+  (filter === "completed" && task.status === "completed") ||
+  (filter === "failed" && failedStatus(task));
+// Tasks in the chosen project, worker and search, before the status filter applies.
+export function scopedTasks(state: Snapshot) {
   const search = state.search.toLowerCase();
   return state.tasks.filter(
     (task) =>
@@ -28,15 +45,19 @@ export function visibleTasks(state: Snapshot) {
       (!search ||
         `${task.title} ${task.description} ${task.worker_profile} ${task.id}`
           .toLowerCase()
-          .includes(search)) &&
-      (state.filter === "all" ||
-        (state.filter === "active" && !terminal(task) && !failedStatus(task)) ||
-        (state.filter === "attention" &&
-          needsInput(task) &&
-          !failedStatus(task)) ||
-        (state.filter === "completed" && task.status === "completed") ||
-        (state.filter === "failed" && failedStatus(task))),
+          .includes(search)),
   );
+}
+export const visibleTasks = (state: Snapshot) =>
+  scopedTasks(state).filter((task) => matchesFilter(task, state.filter));
+export function filterCounts(state: Snapshot) {
+  const scoped = scopedTasks(state);
+  return Object.fromEntries(
+    FILTERS.map((filter) => [
+      filter,
+      scoped.filter((task) => matchesFilter(task, filter)).length,
+    ]),
+  ) as Record<Filter, number>;
 }
 export function projectChoices(state: Snapshot) {
   const choices = state.projects.filter(

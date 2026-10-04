@@ -1,7 +1,9 @@
 import { useRef } from "react";
 import {
+  FILTER_LABELS,
   locked,
   profileLabel,
+  scopedTasks,
   terminal,
   visibleTasks,
 } from "../core/selectors";
@@ -9,8 +11,9 @@ import { rowStatus } from "../core/task-status";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../core/duration";
 import { useNow } from "./use-now";
 import { useListMotion } from "./motion";
-import type { Task } from "../core/types";
+import type { Filter, Task } from "../core/types";
 import { useController, useSnapshot } from "./controller-context";
+import { QuietButton } from "./quiet-button";
 import { TaskStatusIcon } from "./task-status-icon";
 interface TaskRowProps {
   task: Task;
@@ -75,22 +78,45 @@ function TaskRowRuntime({ task }: { task: Task }) {
     </span>
   );
 }
+const EMPTY_FILTER: Record<Filter, string> = {
+  all: "No tasks yet. Start a task to see it here.",
+  active: "No active tasks.",
+  attention: "No tasks need input.",
+  completed: "No completed tasks.",
+  failed: "No failed tasks.",
+};
 export function TaskList() {
   const controller = useController(),
     state = useSnapshot(),
     tasks = visibleTasks(state),
+    total = scopedTasks({ ...state, search: "", filter: "all" }).length,
+    narrowed = state.filter !== "all" || Boolean(state.search),
+    filterLabel = FILTER_LABELS[state.filter],
     listRef = useRef<HTMLDivElement>(null);
   useListMotion(listRef, "data-task", tasks.map((task) => task.id).join());
+  const resetFilters = () => {
+    controller.setSearch("");
+    controller.setFilter("all");
+  };
   return (
     <>
       <div className="list-label">
         <span id="scope">
           {state.conversation ? "This conversation" : "All conversations"}
         </span>
-        <span id="count">
-          {state.mode === "console"
-            ? `${tasks.length} TASK${tasks.length === 1 ? "" : "S"}`
-            : tasks.length}
+        <span className="list-count">
+          {narrowed && (
+            <QuietButton underline onClick={resetFilters}>
+              Reset
+            </QuietButton>
+          )}
+          <span id="count">
+            {state.mode === "console"
+              ? `${narrowed ? `${tasks.length} OF ${total}` : tasks.length} TASK${total === 1 ? "" : "S"}`
+              : narrowed
+                ? `${tasks.length} of ${total}`
+                : tasks.length}
+          </span>
         </span>
       </div>
       <div id="task-list" ref={listRef}>
@@ -111,7 +137,9 @@ export function TaskList() {
           ))
         ) : (
           <p className="help">
-            No matching tasks. Start a task or change the filter.
+            {state.search
+              ? `No tasks match “${state.search}”${state.filter === "all" ? "" : ` in ${filterLabel}`}.`
+              : EMPTY_FILTER[state.filter]}
           </p>
         )}
       </div>

@@ -29,6 +29,10 @@ export const ICONS = {
     path: "M8 9a4 4 0 1 1 6.5 3.1C13 13 12 13.5 12 15.5M12 20h.01",
     strokeWidth: 3,
   },
+  search: {
+    shapes: <circle cx="11" cy="11" r="6" />,
+    path: "m20 20-4.5-4.5",
+  },
   pencil: { path: "M4 20h16M5 15l-1 4 4-1L19 7l-3-3Z M13 7l3 3" },
   circle: { shapes: <circle cx="12" cy="12" r="9" />, strokeWidth: 3 },
   dot: {

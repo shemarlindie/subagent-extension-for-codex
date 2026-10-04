@@ -134,23 +134,14 @@ aside {
 }
 
 .filters {
-  display: flex;
-  gap: 2px;
   margin: 10px 8px 20px;
-  padding: 2px;
   border: 1px solid #243040;
-  border-radius: 8px;
 }
 .filters button {
-  flex: 1;
-  font-size: 11px;
   padding: 6px 9px;
-  border-color: transparent;
-  border-radius: 6px;
   color: #8392a7;
-  white-space: nowrap;
 }
-.filters button[aria-pressed="true"] {
+.filters button[aria-checked="true"] {
   background: #1e3047;
   color: #dce7f5;
 }

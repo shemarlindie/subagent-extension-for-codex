@@ -1016,15 +1016,68 @@ test("a panel opened outside a host points developers at the dev host", async (t
 
 test("task filters keep exactly one filter selected", async (t) => {
   const { user } = await setup(t);
-  const pressed = (name: string) =>
-    screen.getByRole("button", { name }).getAttribute("aria-pressed");
-  assert.equal(pressed("All"), "true");
-  await user.click(screen.getByRole("button", { name: "Done" }));
-  assert.equal(pressed("Done"), "true");
-  assert.equal(pressed("All"), "false");
+  const checked = (name: RegExp) =>
+    screen.getByRole("radio", { name }).getAttribute("aria-checked");
+  assert.equal(checked(/^All/), "true");
+  await user.click(screen.getByRole("radio", { name: /^Done/ }));
+  assert.equal(checked(/^Done/), "true");
+  assert.equal(checked(/^All/), "false");
   // Clicking the selected filter must not leave the list with no filter.
-  await user.click(screen.getByRole("button", { name: "Done" }));
-  assert.equal(pressed("Done"), "true");
+  await user.click(screen.getByRole("radio", { name: /^Done/ }));
+  assert.equal(checked(/^Done/), "true");
+});
+
+test("task filters show counts and an empty state with a way out", async (t) => {
+  const { user } = await setup(t);
+  assert.ok(screen.getByRole("radio", { name: "All, 1" }));
+  assert.ok(screen.getByRole("radio", { name: "Failed, 0" }));
+  assertAbsent(screen.queryByRole("button", { name: "Reset" }));
+  await user.click(screen.getByRole("radio", { name: /^Failed/ }));
+  assert.ok(screen.getByText("No failed tasks."));
+  assert.equal(screen.getByText("0 of 1").id, "count");
+  await user.click(screen.getByRole("button", { name: "Reset" }));
+  assert.ok(screen.getByRole("button", { name: /^Review authentication/ }));
+  const search = screen.getByRole("searchbox", { name: "Search tasks" });
+  await user.type(search, "zzz");
+  // Counts follow the search, so no filter promises tasks the list cannot show.
+  assert.ok(screen.getByRole("radio", { name: "All, 0" }));
+  assert.ok(screen.getByText("No tasks match “zzz”."));
+  await user.click(screen.getByRole("button", { name: "Clear search" }));
+  assert.equal((search as HTMLInputElement).value, "");
+  await user.click(screen.getByRole("radio", { name: /^Done/ }));
+  await user.type(search, "a");
+  await user.click(screen.getByRole("button", { name: "Reset" }));
+  assert.equal((search as HTMLInputElement).value, "");
+  assert.equal(
+    screen.getByRole("radio", { name: /^All/ }).getAttribute("aria-checked"),
+    "true",
+  );
+});
+
+test("console shows the filtered task count against the total", async (t) => {
+  const { user } = await setup(t, undefined, { mode: "console" });
+  assert.equal(document.getElementById("count")?.textContent, "1 TASK");
+  assertAbsent(screen.queryByRole("radio", { name: /^Needs input/ }));
+  await user.click(screen.getByRole("radio", { name: /^Failed/ }));
+  assert.equal(document.getElementById("count")?.textContent, "0 OF 1 TASK");
+});
+
+test("search clears with Escape and focuses with the slash key", async (t) => {
+  const { user } = await setup(t);
+  const search = screen.getByRole("searchbox", { name: "Search tasks" });
+  await user.keyboard("/");
+  assert.equal(document.activeElement, search);
+  await user.keyboard("abc");
+  assert.equal((search as HTMLInputElement).value, "abc");
+  await user.keyboard("{Escape}");
+  assert.equal((search as HTMLInputElement).value, "");
+  assert.equal(document.activeElement, search);
+  await user.keyboard("{Escape}");
+  assert.notEqual(document.activeElement, search);
+  // Typing a slash in another text field leaves the shortcut alone.
+  await user.click(screen.getByRole("button", { name: "New task" }));
+  await enterTask(user, "a/b");
+  assert.notEqual(document.activeElement, search);
 });
 
 test("selecting a tab scrolls it into view in an overflowing tab list", async (t) => {

@@ -1043,3 +1043,110 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Task search and status filters; themes supply the colors. */
+.search-box {
+  position: relative;
+  margin: 0 8px;
+}
+.search-box .search {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 7px 28px 7px 28px;
+}
+.search::-webkit-search-cancel-button {
+  display: none;
+}
+.search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  transform: translateY(-50%);
+  color: var(--muted, #8392a7);
+  pointer-events: none;
+}
+/* Low-emphasis button; the global button:hover fill is overridden on purpose. */
+.quiet-button {
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted, #8392a7);
+  font-size: inherit;
+  cursor: pointer;
+}
+.quiet-button:hover {
+  background: transparent;
+  color: var(--text, #dce7f5);
+}
+.quiet-button:focus-visible {
+  outline: var(--focus-ring);
+}
+.quiet-button.underline {
+  text-decoration: underline;
+}
+.search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  transform: translateY(-50%);
+}
+/* Narrow panels scroll the filters sideways; local-attached gradients fade the clipped edges. */
+.filters {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background:
+    linear-gradient(to right, var(--bg, #111c2b), transparent) left / 16px 100%
+      no-repeat local,
+    linear-gradient(to left, var(--bg, #111c2b), transparent) right / 16px 100%
+      no-repeat local;
+}
+.filters::-webkit-scrollbar {
+  display: none;
+}
+.filters button {
+  flex: 1 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 11px;
+  border-color: transparent;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.filters button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+.filter-count {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.filter-count[data-alert] {
+  background: var(--warn, #d9a441);
+  color: var(--bg, #111c2b);
+}
+.list-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 import { startSchema } from "../src/core/model.js";
-import { visibleTasks } from "../ui/core/selectors";
+import { filterCounts, visibleTasks } from "../ui/core/selectors";
 import type { Filter, Snapshot, Task } from "../ui/core/types";
 
 const task = (patch: Partial<Task>): Task => ({
@@ -77,4 +77,39 @@ test("each task state appears only in its own filter besides All", () => {
     );
     assert.deepEqual(found, expected, name);
   }
+});
+
+test("filter counts match each filter's list and follow search and scope", () => {
+  const tasks = [
+    task({ id: "a", title: "alpha", status: "running" }),
+    task({ id: "b", title: "beta", status: "failed" }),
+    task({ id: "c", title: "alpha two", status: "completed" }),
+    task({ id: "d", title: "other", repository: "/elsewhere" }),
+  ];
+  const state = (patch: object) =>
+    ({
+      tasks,
+      filter: "all",
+      search: "",
+      repository: "/repo",
+      ...patch,
+    }) as unknown as Snapshot;
+  const counts = filterCounts(state({}));
+  assert.deepEqual(counts, {
+    all: 3,
+    active: 1,
+    attention: 0,
+    completed: 1,
+    failed: 1,
+  });
+  for (const filter of Object.keys(counts) as Filter[])
+    assert.equal(counts[filter], visibleTasks(state({ filter })).length);
+  // Search narrows every count, but the selected filter does not.
+  assert.deepEqual(filterCounts(state({ search: "alpha", filter: "failed" })), {
+    all: 2,
+    active: 1,
+    attention: 0,
+    completed: 1,
+    failed: 0,
+  });
 });

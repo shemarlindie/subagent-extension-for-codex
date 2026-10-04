@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Tabs } from "@base-ui/react/tabs";
 import type { Task, Tab } from "../core/types";
+import { scrollChildIntoView } from "./scroll-into-view";
 import { useController, useSnapshot } from "./controller-context";
 import { MotionContent } from "./motion";
 import { ResultReport } from "./result-report";
@@ -18,23 +19,7 @@ function useActiveTabInView(tab: Tab) {
     const list = listRef.current,
       // By id rather than aria-selected, which can still show the previous tab here.
       active = list?.querySelector<HTMLElement>(`#tab-${tab}`);
-    if (!list || !active) return;
-    const left = active.offsetLeft - TAB_EDGE_GAP,
-      right = active.offsetLeft + active.offsetWidth + TAB_EDGE_GAP;
-    const target =
-      left < list.scrollLeft
-        ? left
-        : right > list.scrollLeft + list.clientWidth
-          ? right - list.clientWidth
-          : undefined;
-    if (target !== undefined)
-      list.scrollTo?.({
-        left: Math.max(0, target),
-        behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")
-          .matches
-          ? "auto"
-          : "smooth",
-      });
+    if (list && active) scrollChildIntoView(list, active, TAB_EDGE_GAP);
   }, [tab]);
   return listRef;
 }
