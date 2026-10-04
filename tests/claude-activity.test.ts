@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import type { Query, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { test } from "vitest";
+
+import { type RunContext, startSchema, type Task } from "../src/core/model.js";
 import { ClaudeAgentProvider } from "../src/providers/claude.js";
-import { startSchema, type RunContext, type Task } from "../src/core/model.js";
 
 function recorder() {
   const events: { type: string; data: Record<string, unknown> }[] = [];

@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
-import { afterEach, test } from "vitest";
-import { createElement } from "react";
+
 import { cleanup, render, screen } from "@testing-library/react";
+import { createElement } from "react";
+import { afterEach, test } from "vitest";
+
 import { Button, buttonClass } from "../ui/components/button";
 
 afterEach(cleanup);

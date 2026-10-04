@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+
 import { test, vi } from "vitest";
+
+import type { TransportEvents } from "../ui/core/types";
 import { ConsoleTransport } from "../ui/transports/console";
 import { HostTransport } from "../ui/transports/host";
-import type { TransportEvents } from "../ui/core/types";
 
 function callbacks() {
   const statuses: string[] = [];

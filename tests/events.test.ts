@@ -1,19 +1,21 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { randomBytes } from "node:crypto";
+
 import { Webhook } from "standardwebhooks";
+import { test } from "vitest";
+
+import { now, startSchema, type Task } from "../src/core/model.js";
 import { Store } from "../src/core/store.js";
-import { Events, EventProtocolError } from "../src/events/service.js";
+import { EventProtocolError, Events } from "../src/events/service.js";
 import {
   callbackUrl,
   publicAddress,
   validSecret,
   type WebhookPost,
 } from "../src/events/webhook.js";
-import { startSchema, now, type Task } from "../src/core/model.js";
 
 const secret = "whsec_" + Buffer.alloc(32, 7).toString("base64");
 

@@ -1,7 +1,8 @@
-import { defineDialog, firstTextField } from "./dialog-definition";
 import { useForm } from "react-hook-form";
-import type { Task } from "../core/types";
+
 import { useController, useSnapshot } from "../components/controller-context";
+import type { Task } from "../core/types";
+import { defineDialog, firstTextField } from "./dialog-definition";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 

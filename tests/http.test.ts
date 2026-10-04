@@ -1,21 +1,23 @@
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { startSchema, now } from "../src/core/model.js";
-import { test } from "vitest";
 import assert from "node:assert/strict";
-import { mkdtemp, realpath } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { mkdtemp, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { Auth } from "../src/server/auth.js";
-import { Store } from "../src/core/store.js";
+import { pathToFileURL } from "node:url";
+
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { test } from "vitest";
+
 import { Control } from "../src/core/control.js";
+import type { ModelChoice } from "../src/core/model.js";
+import { now, startSchema } from "../src/core/model.js";
+import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
 import { application } from "../src/server/app.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { ModelChoice } from "../src/core/model.js";
+import { Auth } from "../src/server/auth.js";
 import { waitForListening } from "./helpers.js";
 
 // Panel tools return loosely shaped structured content; tests narrow each field.

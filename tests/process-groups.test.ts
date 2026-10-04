@@ -1,13 +1,15 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+
+import { test } from "vitest";
+
+import type { ExecutorRecord } from "../src/providers/executor-journal.js";
 import {
   identifyLaunch,
-  stopRecordedGroup,
   type ProcessGroups,
   type ProcessIdentity,
+  stopRecordedGroup,
 } from "../src/providers/process-groups.js";
-import type { ExecutorRecord } from "../src/providers/executor-journal.js";
 
 const launch = randomUUID();
 

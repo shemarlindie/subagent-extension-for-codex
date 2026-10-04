@@ -1,21 +1,23 @@
-import { test, vi } from "vitest";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, symlink, realpath } from "node:fs/promises";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
+import { mkdtemp, realpath, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
+import { test, vi } from "vitest";
+
+import {
+  now,
+  type RunContext,
+  startSchema,
+  type Task,
+} from "../src/core/model.js";
 import {
   ClaudeAgentProvider,
   claudeEnvironment,
   claudeSandbox,
 } from "../src/providers/claude.js";
-import {
-  startSchema,
-  now,
-  type Task,
-  type RunContext,
-} from "../src/core/model.js";
-import { type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
 
 const result = {
   summary: "Reviewed",

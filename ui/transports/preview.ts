@@ -1,6 +1,7 @@
 import { applyDocumentTheme } from "@modelcontextprotocol/ext-apps";
-import { previewTool } from "./preview-tools";
+
 import type { Transport, TransportEvents } from "../core/types";
+import { previewTool } from "./preview-tools";
 
 export class PreviewTransport implements Transport {
   readonly embedded = false;

@@ -1,8 +1,8 @@
 import { failedStatus, locked, terminal } from "../core/selectors";
+import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
 import { MotionContent } from "./motion";
 import { TaskStatus } from "./status";
-import { Button } from "./button";
 
 export function InlinePreview() {
   const controller = useController(),

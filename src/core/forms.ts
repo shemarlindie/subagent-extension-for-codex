@@ -1,20 +1,22 @@
-import { permissionModeSchema, permissionLabels } from "./permissions.js";
 import { createHash, randomBytes } from "node:crypto";
+
 import {
-  inputRequired,
-  type ServerContext,
   type CallToolResult,
   type ElicitRequestFormParams,
+  inputRequired,
+  type ServerContext,
 } from "@modelcontextprotocol/server";
 import {
-  OpenAIFormSchema,
-  OpenAIFormResultSchema,
   createOpenAIFormContentSchema,
   type OpenAIForm,
+  OpenAIFormResultSchema,
+  OpenAIFormSchema,
 } from "@openai/mcp-extensions/server";
+
+import { hostProjectCandidate } from "../panel/host-context.js";
 import { type Control } from "./control.js";
 import { reasoningLevels } from "./model.js";
-import { hostProjectCandidate } from "../panel/host-context.js";
+import { permissionLabels, permissionModeSchema } from "./permissions.js";
 
 type Kind =
   "request_agent_task" | "request_agent_input" | "request_agent_project";

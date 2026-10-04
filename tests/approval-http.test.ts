@@ -1,18 +1,20 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
-import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { Auth } from "../src/server/auth.js";
-import { Store } from "../src/core/store.js";
+import { test } from "vitest";
+
 import { Control } from "../src/core/control.js";
+import { type Result, type RunContext } from "../src/core/model.js";
+import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
-import { type Result, type RunContext } from "../src/core/model.js";
 import { application } from "../src/server/app.js";
+import { Auth } from "../src/server/auth.js";
 import { waitForListening } from "./helpers.js";
 
 class PermissionProvider extends FixtureProvider {

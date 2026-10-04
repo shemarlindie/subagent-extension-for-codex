@@ -3,10 +3,12 @@
 // ui/transports/preview-fixtures.ts), and here they are replayed through the
 // provider's own normalization to prove the derived events match.
 import assert from "node:assert/strict";
-import { test } from "vitest";
+
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { ClaudeAgentProvider } from "../src/providers/claude.js";
+import { test } from "vitest";
+
 import type { RunContext } from "../src/core/model.js";
+import { ClaudeAgentProvider } from "../src/providers/claude.js";
 import { previewEvents } from "../ui/transports/preview-fixtures";
 
 type Kind<T> = T extends { type: "system"; subtype: infer S extends string }

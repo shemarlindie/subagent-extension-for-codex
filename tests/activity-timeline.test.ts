@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+
 import { test } from "vitest";
-import { startSchema, type Event, type Task } from "../src/core/model.js";
+
+import { type Event, startSchema, type Task } from "../src/core/model.js";
 import {
-  groupActivity,
   currentActivityStatus,
+  groupActivity,
   thinkingSpan,
 } from "../ui/core/activity-timeline";
 

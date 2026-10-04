@@ -1,3 +1,7 @@
+import { delegationDialog } from "./delegation";
+import { readEventTail } from "./event-history";
+import { initialState } from "./initial-state";
+import { selectedTask, terminal } from "./selectors";
 import type {
   Artifact,
   Defaults,
@@ -7,16 +11,12 @@ import type {
   PanelData,
   Project,
   QuestionDraft,
-  Snapshot,
   SettingsDocument,
+  Snapshot,
   Task,
   Transport,
   Worker,
 } from "./types";
-import { selectedTask, terminal } from "./selectors";
-import { initialState } from "./initial-state";
-import { readEventTail } from "./event-history";
-import { delegationDialog } from "./delegation";
 
 /** Owns async lifecycles and reviewed scope; components own presentation and drafts. */
 export class Controller {

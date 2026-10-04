@@ -1,9 +1,10 @@
-import { useRef } from "react";
 import { Menu } from "@base-ui/react/menu";
+import { useRef } from "react";
+
+import { Button, buttonClass } from "./button";
+import { useController, useSnapshot } from "./controller-context";
 import { MotionContent } from "./motion";
 import { canAnimate, MOTION } from "./motion-utils";
-import { useController, useSnapshot } from "./controller-context";
-import { Button, buttonClass } from "./button";
 
 export function Header() {
   const controller = useController(),

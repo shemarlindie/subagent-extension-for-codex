@@ -1,11 +1,12 @@
-import { useEffect, useRef } from "react";
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
-import type { Filter } from "../core/types";
+import { useEffect, useRef } from "react";
+
 import { FILTER_LABELS, filterCounts } from "../core/selectors";
+import type { Filter } from "../core/types";
+import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
 import { Icon } from "./icons";
-import { Button } from "./button";
 import { scrollChildIntoView } from "./scroll-into-view";
 
 const FILTER_EDGE_GAP = 16;

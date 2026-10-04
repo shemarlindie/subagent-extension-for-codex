@@ -1,7 +1,9 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
 import { request } from "node:http";
 import { connect, createServer } from "node:net";
+
+import { test } from "vitest";
+
 import { executorProxy } from "../src/providers/executor-proxy.js";
 import { waitForListening } from "./helpers.js";
 

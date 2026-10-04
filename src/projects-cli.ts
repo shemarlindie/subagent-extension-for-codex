@@ -1,8 +1,9 @@
 import { mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+
+import { Projects } from "./core/projects.js";
 import { Store } from "./core/store.js";
 import { Workspaces } from "./core/workspace.js";
-import { Projects } from "./core/projects.js";
 import { dataDirectory } from "./service/runtime.js";
 
 const data = dataDirectory();

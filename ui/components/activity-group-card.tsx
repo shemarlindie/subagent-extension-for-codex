@@ -1,15 +1,16 @@
-import { useId, useState } from "react";
 import { Collapsible } from "@base-ui/react/collapsible";
+import { useId, useState } from "react";
+
 import type { ActivityGroup } from "../core/activity-timeline";
 import { formatDuration } from "../core/duration";
-import { useNow } from "./use-now";
-import { TimelineDot, TimelineItem } from "./timeline";
-import { MotionContent } from "./motion";
-import { ActivityTime } from "./activity-time";
-import { ActivityContent } from "./activity-content";
-import { Icon } from "./icons";
-import { EventBody, EventDetails } from "./event-details";
 import { streamContent, thinkingOnly } from "../utils/activity";
+import { ActivityContent } from "./activity-content";
+import { ActivityTime } from "./activity-time";
+import { EventBody, EventDetails } from "./event-details";
+import { Icon } from "./icons";
+import { MotionContent } from "./motion";
+import { TimelineDot, TimelineItem } from "./timeline";
+import { useNow } from "./use-now";
 
 function ThinkingClock({ start }: { start: number }) {
   const elapsed = useNow(true) - start;

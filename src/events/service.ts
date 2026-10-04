@@ -1,19 +1,21 @@
 import {
-  createHash,
-  randomBytes,
   createCipheriv,
   createDecipheriv,
+  createHash,
+  randomBytes,
   timingSafeEqual,
 } from "node:crypto";
+
 import { z } from "zod";
-import type { Store } from "../core/store.js";
+
 import { type Event } from "../core/model.js";
+import type { Store } from "../core/store.js";
 import {
   callbackUrl,
-  validSecret,
   signedHeaders,
-  webhookPost,
+  validSecret,
   type WebhookPost,
+  webhookPost,
 } from "./webhook.js";
 
 const names = [

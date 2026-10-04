@@ -1,15 +1,16 @@
 import { useEffect } from "react";
-import { Header } from "../components/header";
-import { ProjectScope } from "../components/project-scope";
-import { TaskFilters } from "../components/task-filters";
-import { TaskList } from "../components/task-list";
-import { TaskInspector } from "../components/task-inspector";
-import { DialogHost } from "../components/dialog-host";
-import { LoginForm } from "../forms/login-form";
+
 import { useController, useSnapshot } from "../components/controller-context";
-import { WorkerPicker } from "./worker-picker";
+import { DialogHost } from "../components/dialog-host";
+import { Header } from "../components/header";
 import { InlinePreview } from "../components/inline-preview";
 import { Presence } from "../components/motion";
+import { ProjectScope } from "../components/project-scope";
+import { TaskFilters } from "../components/task-filters";
+import { TaskInspector } from "../components/task-inspector";
+import { TaskList } from "../components/task-list";
+import { LoginForm } from "../forms/login-form";
+import { WorkerPicker } from "./worker-picker";
 
 export function AppShell() {
   const controller = useController(),

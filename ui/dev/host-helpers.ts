@@ -2,8 +2,9 @@
 // component so tests can import them without mounting the page.
 import type { McpUiDisplayMode } from "@modelcontextprotocol/ext-apps/app-bridge";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { previewTool, type PreviewOptions } from "../transports/preview-tools";
+
 import type { Task } from "../../src/core/model";
+import { type PreviewOptions, previewTool } from "../transports/preview-tools";
 
 export type Settings = {
   source: "fixtures" | "live";

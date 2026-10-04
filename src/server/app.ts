@@ -1,13 +1,15 @@
-import express from "express";
-import { createMcpHandler } from "@modelcontextprotocol/server";
+import { readFile } from "node:fs/promises";
+
 import { toNodeHandler } from "@modelcontextprotocol/node";
+import { createMcpHandler } from "@modelcontextprotocol/server";
+import express from "express";
+
 import { type Control } from "../core/control.js";
+import { type Event } from "../core/model.js";
+import { type Events } from "../events/service.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
 import { callTool, isUserTool } from "./tools.js";
-import { type Event } from "../core/model.js";
-import { type Events } from "../events/service.js";
-import { readFile } from "node:fs/promises";
 
 /** Host directory forwarded by the stdio proxy; malformed values are ignored. */
 function hostDirectoryMeta(header: unknown) {

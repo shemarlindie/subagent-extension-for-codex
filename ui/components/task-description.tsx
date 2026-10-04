@@ -1,4 +1,5 @@
 import { Collapsible } from "@base-ui/react/collapsible";
+
 import type { Task } from "../core/types";
 import { Chevron } from "./chevron";
 

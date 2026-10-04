@@ -1,5 +1,6 @@
-import type { Ref } from "react";
 import { Select } from "@base-ui/react/select";
+import type { Ref } from "react";
+
 import { Chevron } from "./chevron";
 
 export type SelectOption = {

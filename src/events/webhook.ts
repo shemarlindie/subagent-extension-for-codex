@@ -1,6 +1,7 @@
 import { lookup } from "node:dns/promises";
 import { request } from "node:https";
 import type { LookupFunction } from "node:net";
+
 import ipaddr from "ipaddr.js";
 import { Webhook } from "standardwebhooks";
 

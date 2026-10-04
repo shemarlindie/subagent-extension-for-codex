@@ -1,12 +1,13 @@
 import {
-  useLayoutEffect,
-  useRef,
-  useState,
   type Key,
   type ReactNode,
   type RefObject,
+  useLayoutEffect,
+  useRef,
+  useState,
 } from "react";
-import { MOTION, canAnimate } from "./motion-utils";
+
+import { canAnimate, MOTION } from "./motion-utils";
 
 type MotionTag = "span" | "strong" | "div";
 

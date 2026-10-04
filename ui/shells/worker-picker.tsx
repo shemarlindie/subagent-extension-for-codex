@@ -1,6 +1,6 @@
 import { useController, useSnapshot } from "../components/controller-context";
-import { profileLabel } from "../core/selectors";
 import { SelectField } from "../components/select-field";
+import { profileLabel } from "../core/selectors";
 
 export function WorkerPicker() {
   const controller = useController(),

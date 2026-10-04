@@ -1,11 +1,12 @@
 import { createRoot } from "react-dom/client";
+
+import { ControllerContext } from "./components/controller-context";
 import { Controller } from "./core/controller";
 import type { Mode } from "./core/types";
-import { HostTransport } from "./transports/host";
-import { ConsoleTransport } from "./transports/console";
-import { PreviewTransport } from "./transports/preview";
-import { ControllerContext } from "./components/controller-context";
 import { AppShell } from "./shells/app-shell";
+import { ConsoleTransport } from "./transports/console";
+import { HostTransport } from "./transports/host";
+import { PreviewTransport } from "./transports/preview";
 
 export function mount(mode: Mode) {
   const embedded = window.parent !== window;

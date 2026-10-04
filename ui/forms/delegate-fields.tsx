@@ -1,16 +1,17 @@
 import { useFormContext, useWatch } from "react-hook-form";
+
 import {
   permissionLabels,
   permissionModeSchema,
 } from "../../src/core/permissions";
 import { reasoningLevels } from "../../src/core/reasoning";
-import type { Defaults, Project, Task, Worker } from "../core/types";
-import { profileLabel } from "../core/selectors";
 import { Button } from "../components/button";
+import { profileLabel } from "../core/selectors";
+import type { Defaults, Project, Task, Worker } from "../core/types";
 import { Field } from "./fields";
 import { FormSelect } from "./form-select";
-import { ProjectAutocomplete } from "./project-autocomplete";
 import { ModelAutocomplete } from "./model-autocomplete";
+import { ProjectAutocomplete } from "./project-autocomplete";
 
 export type DelegateValues = {
   permission_mode: keyof typeof permissionLabels;

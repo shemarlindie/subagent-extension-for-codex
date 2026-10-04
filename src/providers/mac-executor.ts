@@ -1,11 +1,12 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { mkdir, realpath } from "node:fs/promises";
-import { dirname, join, resolve, relative, isAbsolute } from "node:path";
-import { executorProxy } from "./executor-proxy.js";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+
 import { type Task, UnconfirmedTerminationError } from "../core/model.js";
-import { type CodexSessionRef } from "./codex-session.js";
 import { git } from "../core/workspace.js";
+import { type CodexSessionRef } from "./codex-session.js";
 import { ExecutorJournal } from "./executor-journal.js";
+import { executorProxy } from "./executor-proxy.js";
 import {
   identifyLaunch,
   stopRecordedGroup,

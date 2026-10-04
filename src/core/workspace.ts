@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { mkdir, realpath } from "node:fs/promises";
-import { join, relative, isAbsolute } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
+import { promisify } from "node:util";
+
 import { type Task } from "./model.js";
 
 const exec = promisify(execFile);

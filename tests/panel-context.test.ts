@@ -1,20 +1,22 @@
-import { test, type TestContext } from "vitest";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, realpath, rm, symlink } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+
+import { test, type TestContext } from "vitest";
+
 import { Control } from "../src/core/control.js";
+import { startSchema, type Task } from "../src/core/model.js";
+import { Projects } from "../src/core/projects.js";
 import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
-import { Projects } from "../src/core/projects.js";
-import { startSchema, type Task } from "../src/core/model.js";
+import { withHostRepository } from "../src/panel/host-context.js";
 import {
   resolvePanelContext,
   taskPanelContext,
 } from "../src/panel/panel-context.js";
-import { withHostRepository } from "../src/panel/host-context.js";
 import { withConversation } from "../src/server/tools.js";
 
 async function fixture(t: TestContext) {

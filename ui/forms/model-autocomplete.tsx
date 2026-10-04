@@ -1,6 +1,7 @@
-import { useState } from "react";
 import { Autocomplete } from "@base-ui/react/autocomplete";
+import { useState } from "react";
 import { useController, useFormContext } from "react-hook-form";
+
 import type { ModelChoice } from "../../src/core/model";
 import type { DelegateValues } from "./delegate-fields";
 

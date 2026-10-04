@@ -4,8 +4,8 @@ import type {
   Event,
   ModelChoice,
 } from "../../src/core/model";
-import type { DroppedSummary } from "./event-history";
 import type { ListedTask } from "../../src/core/task-list";
+import type { DroppedSummary } from "./event-history";
 
 export type Task = ListedTask;
 export type { Artifact, Event };

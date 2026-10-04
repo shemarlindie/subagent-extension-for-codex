@@ -1,6 +1,6 @@
 import { profileLabel } from "../core/selectors";
-import { useController, useSnapshot } from "./controller-context";
 import { Button } from "./button";
+import { useController, useSnapshot } from "./controller-context";
 
 export function WorkerInspector() {
   const controller = useController(),

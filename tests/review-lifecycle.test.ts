@@ -1,17 +1,19 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
+import { execFile, execFileSync } from "node:child_process";
+import { mkdir, mkdtemp, readdir, realpath, rm } from "node:fs/promises";
 import { createServer } from "node:http";
-import { mkdtemp, mkdir, realpath, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { execFile, execFileSync } from "node:child_process";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
-import { Store } from "../src/core/store.js";
-import { Projects } from "../src/core/projects.js";
-import { Workspaces } from "../src/core/workspace.js";
-import { startSchema, type Task } from "../src/core/model.js";
+import { promisify } from "node:util";
+
+import { test } from "vitest";
+
 import { Control } from "../src/core/control.js";
+import { startSchema, type Task } from "../src/core/model.js";
+import { Projects } from "../src/core/projects.js";
+import { Store } from "../src/core/store.js";
+import { Workspaces } from "../src/core/workspace.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
 import { waitForListening } from "./helpers.js";
 

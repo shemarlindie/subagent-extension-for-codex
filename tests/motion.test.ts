@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
+
 import { test } from "vitest";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -8,8 +9,9 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
 });
 
+import { act, cleanup, render } from "@testing-library/react";
 import { createElement, useRef } from "react";
-import { render, cleanup, act } from "@testing-library/react";
+
 import {
   MotionContent,
   Presence,

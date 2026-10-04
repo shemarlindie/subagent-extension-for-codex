@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { reasoningLevels } from "./reasoning.js";
+
 import {
-  permissionModeSchema,
   approvalDeciderSchema,
   type ClaudePolicy,
+  permissionModeSchema,
 } from "./permissions.js";
+import { reasoningLevels } from "./reasoning.js";
 
 export const roles = [
   "researcher",

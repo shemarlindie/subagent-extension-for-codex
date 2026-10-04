@@ -1,7 +1,8 @@
-import { build, parseAst } from "vite";
-import react from "@vitejs/plugin-react";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+
+import react from "@vitejs/plugin-react";
+import { build, parseAst } from "vite";
 
 await mkdir("dist", { recursive: true });
 

@@ -1,20 +1,22 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import {
-  mkdtemp,
   mkdir,
+  mkdtemp,
   realpath,
-  symlink,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { execFileSync } from "node:child_process";
-import { Store } from "../src/core/store.js";
-import { Projects } from "../src/core/projects.js";
-import { Workspaces, git } from "../src/core/workspace.js";
+
+import { test } from "vitest";
+
 import { Control } from "../src/core/control.js";
+import { Projects } from "../src/core/projects.js";
+import { Store } from "../src/core/store.js";
+import { git, Workspaces } from "../src/core/workspace.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
 import { callTool, isUserTool } from "../src/server/tools.js";
 

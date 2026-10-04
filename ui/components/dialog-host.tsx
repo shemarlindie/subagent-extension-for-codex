@@ -1,9 +1,10 @@
-import { useRef } from "react";
 import { Dialog } from "@base-ui/react/dialog";
-import { useController, useSnapshot } from "./controller-context";
+import { useRef } from "react";
+
 import { dialogDefinition } from "../forms/dialog-registry";
-import { useAnimatedHeight } from "./motion";
 import { buttonClass } from "./button";
+import { useController, useSnapshot } from "./controller-context";
+import { useAnimatedHeight } from "./motion";
 
 export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   const controller = useController(),

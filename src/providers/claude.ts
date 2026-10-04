@@ -1,36 +1,38 @@
-import {
-  taskClaudeMode,
-  readOnlyProfile,
-  resolveClaudePolicy,
-  claudeOverrideDefaults,
-  type ClaudePolicy,
-} from "../core/permissions.js";
-import {
-  query,
-  type Options,
-  type SDKUserMessage,
-  type SDKMessage,
-  type SandboxSettings,
-} from "@anthropic-ai/claude-agent-sdk";
+import { access, readdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import {
-  join,
-  resolve,
-  relative,
-  isAbsolute,
-  dirname,
   basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
 } from "node:path";
-import { realpath, readdir, access } from "node:fs/promises";
+
 import {
-  type Provider,
+  type Options,
+  query,
+  type SandboxSettings,
+  type SDKMessage,
+  type SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk";
+import { z } from "zod";
+
+import {
   type ModelChoice,
-  type Task,
-  type RunContext,
+  type Provider,
   type Result,
   resultSchema,
+  type RunContext,
+  type Task,
 } from "../core/model.js";
-import { z } from "zod";
+import {
+  claudeOverrideDefaults,
+  type ClaudePolicy,
+  readOnlyProfile,
+  resolveClaudePolicy,
+  taskClaudeMode,
+} from "../core/permissions.js";
 import { git } from "../core/workspace.js";
 
 // The extension's own credentials never reach delegated sessions. Claude

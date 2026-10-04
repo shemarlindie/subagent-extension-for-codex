@@ -1,33 +1,35 @@
 // Mock MCP Apps host for panel development. It embeds the panel the way Codex
 // does (iframe + AppBridge), so the panel runs its real HostTransport, and
 // answers tool calls from fixtures or the running service over MCP.
-import { useEffect, useRef, useState } from "react";
+import "./host.css";
+
 import {
   AppBridge,
-  PostMessageTransport,
   type McpUiDisplayMode,
   type McpUiHostCapabilities,
   type McpUiHostContext,
+  PostMessageTransport,
 } from "@modelcontextprotocol/ext-apps/app-bridge";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { previewTool } from "../transports/preview-tools";
-import { PREVIEW_THREAD } from "../transports/preview-fixtures";
+import { useEffect, useRef, useState } from "react";
+
 import type { Task } from "../../src/core/model";
+import { PREVIEW_THREAD } from "../transports/preview-fixtures";
+import { previewTool } from "../transports/preview-tools";
 import {
   codexMeta,
   fixtureCall,
   fixtureLaunchArgs,
   normalizeCwd,
   parseStyles,
+  type Settings,
   settingsFrom,
+  type Thread,
   threadLabel,
   threadsOf,
-  type Settings,
-  type Thread,
 } from "./host-helpers";
-import "./host.css";
 
 type LogEntry = { id: number; time: string; kind: string; detail: unknown };
 

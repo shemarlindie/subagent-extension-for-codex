@@ -1,5 +1,5 @@
-import { mkdir, writeFile, access } from "node:fs/promises";
 import { execFileSync, spawn } from "node:child_process";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const repo = resolve(".codex-subagent-extension/demo-repository");

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+
 import { label, MAX_ACTIVITY_DEPTH, record } from "../utils/activity";
 import { NestedContentOmitted } from "./nested-content-omitted";
 

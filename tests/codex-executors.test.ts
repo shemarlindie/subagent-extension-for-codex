@@ -1,7 +1,9 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
-import { CodexExecutors } from "../src/providers/codex-executors.js";
+
+import { test } from "vitest";
+
 import { startSchema, type Task } from "../src/core/model.js";
+import { CodexExecutors } from "../src/providers/codex-executors.js";
 import type { ExecutorHandle } from "../src/providers/mac-executor.js";
 
 const task: Task = {

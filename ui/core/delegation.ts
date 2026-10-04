@@ -1,5 +1,5 @@
-import type { Defaults, DialogState, Project, Snapshot } from "./types";
 import { selectedTask } from "./selectors";
+import type { Defaults, DialogState, Project, Snapshot } from "./types";
 
 /** Registered projects plus the chat's project when starting a task may add it. */
 export function taskProjects(state: Snapshot, projects = state.projects) {

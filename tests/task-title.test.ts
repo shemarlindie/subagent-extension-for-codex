@@ -1,5 +1,7 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
+
+import { test } from "vitest";
+
 import { generateTaskTitle } from "../src/core/task-title.js";
 
 test("generated titles summarize the first request line and normalize whitespace", () => {

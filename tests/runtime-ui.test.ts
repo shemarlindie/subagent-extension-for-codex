@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
+
 import { test, vi } from "vitest";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -8,12 +9,13 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
 });
 
-import { createElement } from "react";
 import { act, cleanup, render } from "@testing-library/react";
+import { createElement } from "react";
+
 import { startSchema } from "../src/core/model.js";
-import type { Task } from "../ui/core/types";
 import { TaskDetails } from "../ui/components/task-details";
 import { TaskRow } from "../ui/components/task-list";
+import type { Task } from "../ui/core/types";
 
 const task = (patch: Partial<Task>): Task => ({
   ...startSchema.parse({

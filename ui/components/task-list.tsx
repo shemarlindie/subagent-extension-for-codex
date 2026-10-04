@@ -1,4 +1,6 @@
 import { useRef } from "react";
+
+import { formatDuration, runtimeLive, taskRuntimeMs } from "../core/duration";
 import {
   FILTER_LABELS,
   locked,
@@ -8,13 +10,12 @@ import {
   visibleTasks,
 } from "../core/selectors";
 import { rowStatus } from "../core/task-status";
-import { formatDuration, runtimeLive, taskRuntimeMs } from "../core/duration";
-import { useNow } from "./use-now";
-import { useListMotion } from "./motion";
 import type { Filter, Task } from "../core/types";
-import { useController, useSnapshot } from "./controller-context";
 import { Button } from "./button";
+import { useController, useSnapshot } from "./controller-context";
+import { useListMotion } from "./motion";
 import { TaskStatusIcon } from "./task-status-icon";
+import { useNow } from "./use-now";
 
 interface TaskRowProps {
   task: Task;

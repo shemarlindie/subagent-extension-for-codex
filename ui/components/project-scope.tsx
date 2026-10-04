@@ -1,8 +1,8 @@
 import { projectChoices } from "../core/selectors";
-import { MotionContent } from "./motion";
-import { useController, useSnapshot } from "./controller-context";
-import { SelectField } from "./select-field";
 import { Button } from "./button";
+import { useController, useSnapshot } from "./controller-context";
+import { MotionContent } from "./motion";
+import { SelectField } from "./select-field";
 
 export function ProjectScope() {
   const controller = useController(),

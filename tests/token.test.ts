@@ -1,8 +1,10 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, readFile, stat, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { test } from "vitest";
+
 import { adminToken } from "../src/service/token.js";
 
 async function data(t: import("vitest").TestContext) {

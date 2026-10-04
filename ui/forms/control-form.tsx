@@ -1,10 +1,11 @@
-import { defineDialog, firstTextField } from "./dialog-definition";
 import { useForm } from "react-hook-form";
-import type { DialogState, Task } from "../core/types";
+
 import { useController } from "../components/controller-context";
+import { TaskDescription } from "../components/task-description";
+import type { DialogState, Task } from "../core/types";
+import { defineDialog, firstTextField } from "./dialog-definition";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
-import { TaskDescription } from "../components/task-description";
 
 export function controlTitle(action: string) {
   return (

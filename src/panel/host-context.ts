@@ -1,6 +1,7 @@
-import { fileURLToPath } from "node:url";
 import { realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { Control } from "../core/control.js";
 import { git } from "../core/workspace.js";
 

@@ -1,19 +1,21 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, realpath } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
+
+import { test } from "vitest";
+
 import { Control } from "../src/core/control.js";
+import { Forms } from "../src/core/forms.js";
+import type { ModelChoice, Provider, RunContext } from "../src/core/model.js";
+import { Projects } from "../src/core/projects.js";
 import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
 import { FixtureProvider } from "../src/providers/fixture.js";
-import { Forms } from "../src/core/forms.js";
-import { Projects } from "../src/core/projects.js";
-import { pathToFileURL } from "node:url";
 import { application } from "../src/server/app.js";
 import { Auth } from "../src/server/auth.js";
-import type { ModelChoice, Provider, RunContext } from "../src/core/model.js";
 import { waitForListening } from "./helpers.js";
 
 type InputDecision = Awaited<ReturnType<RunContext["input"]>>;

@@ -1,7 +1,8 @@
 import { z } from "zod";
+
 import type { Control } from "../core/control.js";
 import type { Task } from "../core/model.js";
-import { withHostRepository, hostProjectCandidate } from "./host-context.js";
+import { hostProjectCandidate, withHostRepository } from "./host-context.js";
 
 export const panelContextInput = z.object({
   conversation_id: z.string().min(1).max(256).nullable().optional(),

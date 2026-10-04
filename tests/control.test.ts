@@ -1,19 +1,21 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { execFileSync } from "node:child_process";
-import { Store } from "../src/core/store.js";
-import { Workspaces } from "../src/core/workspace.js";
+
+import { test } from "vitest";
+
 import { Control } from "../src/core/control.js";
-import { FixtureProvider } from "../src/providers/fixture.js";
 import type {
   ModelChoice,
   Provider,
-  RunContext,
   Result,
+  RunContext,
 } from "../src/core/model.js";
+import { Store } from "../src/core/store.js";
+import { Workspaces } from "../src/core/workspace.js";
+import { FixtureProvider } from "../src/providers/fixture.js";
 
 const pause = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 

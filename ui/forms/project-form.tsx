@@ -1,8 +1,9 @@
-import { defineDialog } from "./dialog-definition";
 import { useRef, useState } from "react";
-import type { DialogState } from "../core/types";
-import { useController, useSnapshot } from "../components/controller-context";
+
 import { Button } from "../components/button";
+import { useController, useSnapshot } from "../components/controller-context";
+import type { DialogState } from "../core/types";
+import { defineDialog } from "./dialog-definition";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 

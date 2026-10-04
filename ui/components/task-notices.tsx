@@ -1,16 +1,17 @@
 import type { ReactNode } from "react";
-import type { Task } from "../core/types";
+
 import { locked, pendingQuestions } from "../core/selectors";
+import type { Task } from "../core/types";
+import { QuestionForm } from "../forms/question-form";
+import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
 import { Presence } from "./motion";
-import { Button } from "./button";
 import {
   CollapsibleNotice,
   Notice,
   NoticeText,
   type NoticeTone,
 } from "./notice";
-import { QuestionForm } from "../forms/question-form";
 
 export function TaskNotices({ task }: { task: Task }) {
   const controller = useController(),

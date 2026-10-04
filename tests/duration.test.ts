@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+
 import { test } from "vitest";
+
 import { startSchema, type Task } from "../src/core/model.js";
 import {
   formatDuration,

@@ -4,13 +4,14 @@
 // check, and tests/preview-sdk-fixtures.test.ts replays them through the provider's
 // own `normalize` to prove the derived events match. All content is invented.
 import type {
-  SDKMessage,
   SDKAssistantMessage,
-  SDKUserMessage,
+  SDKMessage,
   SDKResultMessage,
   SDKSystemMessage,
+  SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { Task, Event, Artifact, Result } from "../../src/core/model";
+
+import type { Artifact, Event, Result, Task } from "../../src/core/model";
 
 type Data = Record<string, unknown>;
 

@@ -1,11 +1,11 @@
-import {
-  previewTasks,
-  previewEvents,
-  previewArtifacts,
-  previewProjects,
-} from "./preview-fixtures";
 import type { Task } from "../../src/core/model";
 import { listedTask } from "../../src/core/task-list";
+import {
+  previewArtifacts,
+  previewEvents,
+  previewProjects,
+  previewTasks,
+} from "./preview-fixtures";
 
 const previewModels = [
   {

@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
+
 import type { DialogState } from "../core/types";
-import type { DialogDefinition, DialogKind } from "./dialog-definition";
-import { projectDialog } from "./project-form";
-import { settingsDialog } from "./settings-form";
-import { delegateDialog } from "./delegate-form";
 import { controlDialog } from "./control-form";
-import { permissionDialog } from "./permission-form";
+import { delegateDialog } from "./delegate-form";
+import type { DialogDefinition, DialogKind } from "./dialog-definition";
 import { handoffDialog } from "./handoff-form";
 import { artifactDialog, workspaceDialog } from "./info-dialogs";
+import { permissionDialog } from "./permission-form";
+import { projectDialog } from "./project-form";
+import { settingsDialog } from "./settings-form";
 
 // A new dialog variant fails to compile until it is registered here.
 const registry: { [K in DialogKind]: DialogDefinition<K> } = {

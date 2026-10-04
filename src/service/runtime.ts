@@ -1,7 +1,7 @@
-import { homedir } from "node:os";
-import { resolve, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // Package root: this module lives in src/service/ (or dist/service/ when built).
 export const installRoot = resolve(

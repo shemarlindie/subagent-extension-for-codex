@@ -1,6 +1,6 @@
 import type { Artifact } from "../core/types";
-import { useController, useSnapshot } from "./controller-context";
 import { Button } from "./button";
+import { useController, useSnapshot } from "./controller-context";
 
 export function downloadArtifact(artifact: Artifact) {
   const url = URL.createObjectURL(

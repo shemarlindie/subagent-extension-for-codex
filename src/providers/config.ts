@@ -1,14 +1,16 @@
-import OpenAI from "openai";
 import { isAbsolute, join } from "node:path";
+
+import OpenAI from "openai";
+
 import type { Provider } from "../core/model.js";
 import type { Store } from "../core/store.js";
 import { ClaudeAgentProvider } from "./claude.js";
-import { FixtureProvider } from "./fixture.js";
 import { CodexAgentProvider } from "./codex.js";
-import { CodexSessions } from "./codex-session.js";
 import { CodexExecutors } from "./codex-executors.js";
-import { MacExecutor } from "./mac-executor.js";
+import { CodexSessions } from "./codex-session.js";
 import { ExecutorJournal } from "./executor-journal.js";
+import { FixtureProvider } from "./fixture.js";
+import { MacExecutor } from "./mac-executor.js";
 
 /** Explicit opt-in; constructing a provider does not make API requests. */
 export function configuredProviders(

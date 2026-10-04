@@ -1,20 +1,22 @@
 import assert from "node:assert/strict";
-import { test, type TestContext } from "vitest";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { test, type TestContext } from "vitest";
+
 import { Control } from "../src/core/control.js";
-import { Store } from "../src/core/store.js";
 import { Projects } from "../src/core/projects.js";
+import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
-import { Auth } from "../src/server/auth.js";
 import { application } from "../src/server/app.js";
+import { Auth } from "../src/server/auth.js";
 import { waitForListening } from "./helpers.js";
 
 async function fixture(t: TestContext) {

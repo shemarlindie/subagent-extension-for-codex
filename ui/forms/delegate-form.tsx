@@ -1,19 +1,20 @@
-import { defineDialog } from "./dialog-definition";
 import { useEffect, useRef } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
-import type { DialogState, Task } from "../core/types";
+
 import { useController, useSnapshot } from "../components/controller-context";
+import { taskProjects } from "../core/delegation";
+import type { DialogState, Task } from "../core/types";
 import {
   ApprovalField,
   BudgetFields,
-  ModelFields,
+  type DelegateValues,
   DependencyField,
+  ModelFields,
   ProjectField,
   WorkerFields,
   WorkspaceField,
-  type DelegateValues,
 } from "./delegate-fields";
-import { taskProjects } from "../core/delegation";
+import { defineDialog } from "./dialog-definition";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 

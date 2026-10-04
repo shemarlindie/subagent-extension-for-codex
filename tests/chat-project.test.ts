@@ -1,18 +1,20 @@
 import assert from "node:assert/strict";
-import { test, type TestContext } from "vitest";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, realpath, rm, symlink } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { Control } from "../src/core/control.js";
-import { Store } from "../src/core/store.js";
-import { Projects } from "../src/core/projects.js";
-import { Workspaces } from "../src/core/workspace.js";
+
+import { test, type TestContext } from "vitest";
+
 import {
   autoRegisterChatProject,
   currentChatProject,
 } from "../src/core/chat-project.js";
+import { Control } from "../src/core/control.js";
+import { Projects } from "../src/core/projects.js";
+import { Store } from "../src/core/store.js";
+import { Workspaces } from "../src/core/workspace.js";
 
 async function fixture(t: TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "chat-project-")));

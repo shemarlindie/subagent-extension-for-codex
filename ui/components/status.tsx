@@ -1,9 +1,9 @@
-import type { Task } from "../core/types";
-import { rowStatus } from "../core/task-status";
 import type { ActivityState } from "../core/activity-timeline";
+import { statusLabel } from "../core/selectors";
+import { rowStatus } from "../core/task-status";
+import type { Task } from "../core/types";
 import { MotionContent } from "./motion";
 import { TaskStatusIcon } from "./task-status-icon";
-import { statusLabel } from "../core/selectors";
 
 interface TaskStatusProps {
   task: Task;

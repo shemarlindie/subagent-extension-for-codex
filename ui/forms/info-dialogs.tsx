@@ -1,7 +1,8 @@
-import { useController } from "../components/controller-context";
 import type { ReactNode } from "react";
-import { FormFooter } from "./form-footer";
+
+import { useController } from "../components/controller-context";
 import { defineDialog } from "./dialog-definition";
+import { FormFooter } from "./form-footer";
 
 function InfoForm({ children }: { children: ReactNode }) {
   const controller = useController();

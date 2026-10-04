@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
-import { mkdirSync, openSync, closeSync, readFileSync } from "node:fs";
+import { closeSync, mkdirSync, openSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+
 import { dataDirectory, installRoot } from "./runtime.js";
 
 class ServiceStartingError extends Error {}

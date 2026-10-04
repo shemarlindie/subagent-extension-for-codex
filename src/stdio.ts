@@ -1,23 +1,25 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { connectService } from "./service/launcher.js";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-  definitions,
-  withConversation,
-  isUserTool,
-  type AnyTool,
-} from "./server/tools.js";
-import { type Control } from "./core/control.js";
-import { withSettingsCapability } from "./core/settings.js";
-import { delegationPanel, panelUri } from "./panel/panel.js";
-import { taskPanelContext } from "./panel/panel-context.js";
-import type { Task } from "./core/model.js";
 import { z } from "zod";
+
 import { hostDirectoryFromMeta } from "./core/chat-project.js";
+import { type Control } from "./core/control.js";
+import type { Task } from "./core/model.js";
+import { withSettingsCapability } from "./core/settings.js";
 import { hostProjectCandidate } from "./panel/host-context.js";
 import { codexContextCapability } from "./panel/host-context.js";
+import { delegationPanel, panelUri } from "./panel/panel.js";
+import { taskPanelContext } from "./panel/panel-context.js";
+import {
+  type AnyTool,
+  definitions,
+  isUserTool,
+  withConversation,
+} from "./server/tools.js";
+import { connectService } from "./service/launcher.js";
 
 const { token, origin } = await connectService();
 

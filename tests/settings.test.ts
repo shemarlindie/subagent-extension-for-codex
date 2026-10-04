@@ -1,16 +1,18 @@
-import { test, type TestContext } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store } from "../src/core/store.js";
+
+import { test, type TestContext } from "vitest";
+
 import type { ModelChoice } from "../src/core/model.js";
+import { claudeOverrideDefaults } from "../src/core/permissions.js";
 import {
   Settings,
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
 } from "../src/core/settings.js";
-import { claudeOverrideDefaults } from "../src/core/permissions.js";
+import { Store } from "../src/core/store.js";
 
 async function fixture(t: TestContext) {
   const dir = await mkdtemp(join(tmpdir(), "settings-test-"));

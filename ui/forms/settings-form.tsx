@@ -1,14 +1,15 @@
-import { defineDialog } from "./dialog-definition";
-import { useForm, useWatch } from "react-hook-form";
 import { Collapsible } from "@base-ui/react/collapsible";
-import type { DialogState, SettingsDocument } from "../core/types";
-import { useController, useSnapshot } from "../components/controller-context";
-import {
-  permissionLabels,
-  claudeOverrideLabels,
-} from "../../src/core/permissions";
+import { useForm, useWatch } from "react-hook-form";
+
 import type { ModelChoice } from "../../src/core/model";
+import {
+  claudeOverrideLabels,
+  permissionLabels,
+} from "../../src/core/permissions";
 import { Chevron } from "../components/chevron";
+import { useController, useSnapshot } from "../components/controller-context";
+import type { DialogState, SettingsDocument } from "../core/types";
+import { defineDialog } from "./dialog-definition";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 import { FormSelect } from "./form-select";

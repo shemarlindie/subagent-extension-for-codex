@@ -1,18 +1,20 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
+import { execFile, spawn } from "node:child_process";
 import {
-  mkdtemp,
   mkdir,
-  writeFile,
+  mkdtemp,
   readFile,
   realpath,
   symlink,
+  writeFile,
 } from "node:fs/promises";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
-import { createServer } from "node:net";
+
+import { test } from "vitest";
+
 import {
   executorEnvironment,
   macExecutorProfile,

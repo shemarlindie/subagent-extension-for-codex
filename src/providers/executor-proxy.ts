@@ -1,7 +1,8 @@
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import { createServer } from "node:http";
 import { connect, type Socket } from "node:net";
-import { lookup } from "node:dns/promises";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+
 import { publicAddress } from "../events/webhook.js";
 
 const hosts = new Set([

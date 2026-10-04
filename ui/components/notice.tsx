@@ -1,8 +1,9 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Collapsible } from "@base-ui/react/collapsible";
-import { useAnimatedHeight } from "./motion";
-import { Icon } from "./icons";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+
 import { Button } from "./button";
+import { Icon } from "./icons";
+import { useAnimatedHeight } from "./motion";
 
 /** Colors the notice's left bar; `warning` is the default. */
 export type NoticeTone = "warning" | "error" | "info";

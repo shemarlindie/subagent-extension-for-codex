@@ -1,9 +1,10 @@
-import { DatabaseSync } from "node:sqlite";
+import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { randomUUID } from "node:crypto";
-import { type Task, type Event, type Artifact, now } from "./model.js";
+import { DatabaseSync } from "node:sqlite";
+
+import { type Artifact, type Event, now, type Task } from "./model.js";
 import { generateTaskTitle } from "./task-title.js";
 
 export class Store {

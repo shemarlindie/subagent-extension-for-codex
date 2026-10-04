@@ -1,17 +1,19 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { Store } from "../src/core/store.js";
+import { join } from "node:path";
+
+import { test } from "vitest";
+
 import {
   startSchema,
   type Task,
   UnconfirmedTerminationError,
 } from "../src/core/model.js";
+import { Store } from "../src/core/store.js";
 import { ExecutorJournal } from "../src/providers/executor-journal.js";
 import { MacExecutor } from "../src/providers/mac-executor.js";
-import { execFileSync } from "node:child_process";
 
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), "ac-executor-journal-"));

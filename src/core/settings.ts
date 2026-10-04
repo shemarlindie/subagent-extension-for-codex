@@ -1,28 +1,29 @@
 import {
-  permissionModeSchema,
-  approvalDeciderSchema,
-  legacyClaudeMode,
-  approvalDecider,
-  claudeSandboxSchema,
-  claudeEnvironmentSchema,
-  claudeToolsSchema,
-  claudePathGuardSchema,
-  claudeOverrideDefaults,
-  type ClaudeOverrides,
-} from "./permissions.js";
-import { z } from "zod";
-import {
-  OpenAISettingsReadResultSchema,
   OPENAI_SETTINGS_CAPABILITY_KEY,
+  OpenAISettingsReadResultSchema,
 } from "@openai/mcp-extensions/server";
+import { z } from "zod";
+
 import {
   approvalModeSchema,
   type InputAuthority,
-  roles,
+  type ModelChoice,
   modelNameSchema,
   reasoningSchema,
-  type ModelChoice,
+  roles,
 } from "./model.js";
+import {
+  approvalDecider,
+  approvalDeciderSchema,
+  claudeEnvironmentSchema,
+  claudeOverrideDefaults,
+  type ClaudeOverrides,
+  claudePathGuardSchema,
+  claudeSandboxSchema,
+  claudeToolsSchema,
+  legacyClaudeMode,
+  permissionModeSchema,
+} from "./permissions.js";
 import { type Store } from "./store.js";
 
 // Codex defaults are not supported yet; settings cover these providers only.

@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
-import { afterEach, describe, test } from "vitest";
-import { createElement } from "react";
+
 import { cleanup, render } from "@testing-library/react";
-import { ICONS, Icon, type IconName } from "../ui/components/icons";
+import { createElement } from "react";
+import { afterEach, describe, test } from "vitest";
+
+import { Icon, type IconName, ICONS } from "../ui/components/icons";
 import { TaskStatusIcon } from "../ui/components/task-status-icon";
 
 afterEach(cleanup);

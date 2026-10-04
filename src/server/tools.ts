@@ -1,21 +1,22 @@
 import { z } from "zod";
+
 import {
   autoRegisterChatProject,
   currentChatProject,
 } from "../core/chat-project.js";
-import { browseProject } from "../core/project-picker.js";
 import { Control } from "../core/control.js";
-import { listedTask } from "../core/task-list.js";
 import { type InputAuthority, startSchema } from "../core/model.js";
+import { browseProject } from "../core/project-picker.js";
+import {
+  settingsReadOutputSchema,
+  settingsUpdateOutputSchema,
+  settingsUpdateSchema,
+} from "../core/settings.js";
+import { listedTask } from "../core/task-list.js";
 import {
   panelContextInput,
   resolvePanelContext,
 } from "../panel/panel-context.js";
-import {
-  settingsUpdateSchema,
-  settingsReadOutputSchema,
-  settingsUpdateOutputSchema,
-} from "../core/settings.js";
 
 const taskId = z.object({ task_id: z.string() });
 

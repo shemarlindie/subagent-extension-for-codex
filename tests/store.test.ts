@@ -1,10 +1,12 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store } from "../src/core/store.js";
+
+import { test } from "vitest";
+
 import { startSchema, type Task } from "../src/core/model.js";
+import { Store } from "../src/core/store.js";
 
 test("recent events return only the task's latest 200 in chronological order after owner checks", async () => {
   const dir = await mkdtemp(join(tmpdir(), "task-recent-events-"));

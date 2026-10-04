@@ -1,28 +1,29 @@
-import {
-  resolveClaudePermission,
-  exceedsPermission,
-  approvalDecider,
-  resolveClaudePolicy,
-} from "./permissions.js";
 import { randomUUID } from "node:crypto";
 import { access } from "node:fs/promises";
 import { hostname } from "node:os";
-import { Store } from "./store.js";
-import { Workspaces } from "./workspace.js";
-import { Settings } from "./settings.js";
-import { Projects } from "./projects.js";
+
 import { Forms } from "./forms.js";
-import { generateTaskTitle } from "./task-title.js";
 import {
-  startSchema,
   approvalRank,
   type InputAuthority,
-  UnconfirmedTerminationError,
-  type Start,
-  type Task,
-  type Provider,
   now,
+  type Provider,
+  type Start,
+  startSchema,
+  type Task,
+  UnconfirmedTerminationError,
 } from "./model.js";
+import {
+  approvalDecider,
+  exceedsPermission,
+  resolveClaudePermission,
+  resolveClaudePolicy,
+} from "./permissions.js";
+import { Projects } from "./projects.js";
+import { Settings } from "./settings.js";
+import { Store } from "./store.js";
+import { generateTaskTitle } from "./task-title.js";
+import { Workspaces } from "./workspace.js";
 
 /** Cancel a queued input without letting later requests bypass its predecessor. */
 async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {

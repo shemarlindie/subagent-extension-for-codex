@@ -1,7 +1,8 @@
-import { basename, isAbsolute, relative } from "node:path";
 import { realpath, stat } from "node:fs/promises";
+import { basename, isAbsolute, relative } from "node:path";
+
 import { type Store } from "./store.js";
-import { Workspaces, git } from "./workspace.js";
+import { git, Workspaces } from "./workspace.js";
 
 /** Only explicit user registration (UI/CLI) or configuration grants roots, never task arguments. */
 export class Projects {

@@ -1,16 +1,17 @@
 import { memo } from "react";
-import type { Event } from "../core/types";
+
 import { groupActivity, thinkingSpan } from "../core/activity-timeline";
 import {
-  EVENT_TAIL_SIZE,
   describeDropped,
   type DroppedSummary,
+  EVENT_TAIL_SIZE,
 } from "../core/event-history";
-import { useActivityScroll } from "./use-activity-scroll";
-import { Timeline } from "./timeline";
-import { Presence } from "./motion";
+import type { Event } from "../core/types";
 import { ActivityGroupCard } from "./activity-group-card";
 import { Icon } from "./icons";
+import { Presence } from "./motion";
+import { Timeline } from "./timeline";
+import { useActivityScroll } from "./use-activity-scroll";
 
 export { EventDetails } from "./event-details";
 

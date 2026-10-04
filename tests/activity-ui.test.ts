@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
+
 import { test, vi } from "vitest";
+
 import type { Event as ActivityEvent } from "../ui/core/types";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -9,24 +11,25 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
 });
 
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  waitFor,
+} from "@testing-library/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+
 import {
-  render,
-  cleanup,
-  act,
-  waitFor,
-  fireEvent,
-} from "@testing-library/react";
+  ActivityContent,
+  ActivityValue,
+} from "../ui/components/activity-content";
 import {
   EventDetails as EventList,
   EventList as GroupedEventList,
 } from "../ui/components/event-list";
 import { EVENT_TAIL_SIZE } from "../ui/core/event-history";
-import {
-  ActivityContent,
-  ActivityValue,
-} from "../ui/components/activity-content";
 
 function parseHtml(html: string) {
   return new DOMParser().parseFromString(html, "text/html");

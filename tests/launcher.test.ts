@@ -1,11 +1,13 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer, type RequestListener } from "node:http";
-import { mkdtemp, writeFile, readFile, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+
+import { test } from "vitest";
+
 import { dataDirectory, installRoot } from "../src/service/runtime.js";
 import { waitForListening } from "./helpers.js";
 

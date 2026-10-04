@@ -1,13 +1,13 @@
 import { approvalLabels } from "../../src/core/model";
 import {
-  permissionLabels,
   approvalDecider,
-  taskClaudeMode,
   claudeOverrideLabels,
+  permissionLabels,
+  taskClaudeMode,
 } from "../../src/core/permissions";
-import type { Task } from "../core/types";
-import { profileLabel } from "../core/selectors";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../core/duration";
+import { profileLabel } from "../core/selectors";
+import type { Task } from "../core/types";
 import { useNow } from "./use-now";
 
 export function TaskDetails({ task }: { task: Task }) {

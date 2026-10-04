@@ -1,8 +1,9 @@
 import { realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
+
+import { hostProjectCandidate } from "../panel/host-context.js";
 import type { Control } from "./control.js";
 import { git } from "./workspace.js";
-import { hostProjectCandidate } from "../panel/host-context.js";
 
 /** Read transport metadata only; model tool arguments cannot supply this authority. */
 export function hostDirectoryFromMeta(meta?: Record<string, unknown>) {

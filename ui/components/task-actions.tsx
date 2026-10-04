@@ -1,8 +1,9 @@
-import type { Task } from "../core/types";
-import { terminal, locked } from "../core/selectors";
 import { Fragment, type ReactNode } from "react";
-import { useController, useSnapshot } from "./controller-context";
+
+import { locked, terminal } from "../core/selectors";
+import type { Task } from "../core/types";
 import { Button } from "./button";
+import { useController, useSnapshot } from "./controller-context";
 
 export function TaskActions({ task }: { task: Task }) {
   const controller = useController(),

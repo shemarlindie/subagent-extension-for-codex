@@ -1,11 +1,12 @@
 import { useState } from "react";
-import type { Event } from "../core/types";
+
 import { activityFailed } from "../core/activity-timeline";
 import { EVENT_TAIL_SIZE } from "../core/event-history";
-import { ActivityContent } from "./activity-content";
-import { ActivityValue } from "./activity-value";
-import { ActivityTime } from "./activity-time";
+import type { Event } from "../core/types";
 import { eventTitle, label, record } from "../utils/activity";
+import { ActivityContent } from "./activity-content";
+import { ActivityTime } from "./activity-time";
+import { ActivityValue } from "./activity-value";
 
 const envelope = new Set([
   "raw_response",

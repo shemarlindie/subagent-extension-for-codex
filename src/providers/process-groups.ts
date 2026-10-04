@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { setTimeout as delay } from "node:timers/promises";
+import { promisify } from "node:util";
+
 import { UnconfirmedTerminationError } from "../core/model.js";
 import type { ExecutorRecord } from "./executor-journal.js";
 

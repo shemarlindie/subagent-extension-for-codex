@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+
 import { test } from "vitest";
-import { listedTask, type ListedTask } from "../src/core/task-list.js";
-import { previewTasks, previewEvents } from "../ui/transports/preview-fixtures";
-import { previewTool } from "../ui/transports/preview-tools";
+
 import type { Event } from "../src/core/model.js";
+import { type ListedTask, listedTask } from "../src/core/task-list.js";
+import { previewEvents, previewTasks } from "../ui/transports/preview-fixtures";
+import { previewTool } from "../ui/transports/preview-tools";
 
 test("preview task listing exposes the latest rate limit and provider failure summaries", () => {
   const tasks = previewTool("list_agent_tasks", {

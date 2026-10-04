@@ -1,11 +1,12 @@
 // Development server for the panel UI: React Fast Refresh inside a mock MCP
 // Apps host (ui/dev/). Production bundles still come from scripts/build-ui.mjs.
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
 const root = import.meta.dirname;
 // Same optional .env as npm run dev/start; shell variables take precedence.

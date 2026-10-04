@@ -2,6 +2,7 @@
 // hot update to the host refreshes the component instead of re-running
 // createRoot on the same container.
 import { createRoot } from "react-dom/client";
+
 import { Host } from "./host";
 
 createRoot(document.getElementById("root")!).render(<Host />);

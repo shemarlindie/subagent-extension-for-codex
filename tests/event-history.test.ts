@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
+
 import { test } from "vitest";
-import type { Event } from "../ui/core/types";
+
 import {
-  EVENT_TAIL_SIZE,
   describeDropped,
+  EVENT_TAIL_SIZE,
   readEventTail,
 } from "../ui/core/event-history";
+import type { Event } from "../ui/core/types";
 
 const event = (id: number, task_id = "task"): Event => ({
   id,

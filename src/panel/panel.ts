@@ -1,12 +1,14 @@
-import type {
-  OpenAIUiToolMetadata,
-  OpenAIUiResourceMetadata,
-} from "@openai/mcp-extensions/server";
-import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import { readFile } from "node:fs/promises";
+
+import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
+import type {
+  OpenAIUiResourceMetadata,
+  OpenAIUiToolMetadata,
+} from "@openai/mcp-extensions/server";
 import { z } from "zod";
+
 import type { Task } from "../core/model.js";
-import { panelContextInput, type PanelContextInput } from "./panel-context.js";
+import { type PanelContextInput, panelContextInput } from "./panel-context.js";
 
 // Bump the URI when resource metadata changes to invalidate host caches.
 export const panelUri = "ui://codex-subagent-extension/app-v6";

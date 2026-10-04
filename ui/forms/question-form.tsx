@@ -1,21 +1,22 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import {
   useForm,
-  useWatch,
   type UseFormRegister,
   type UseFormSetValue,
+  useWatch,
 } from "react-hook-form";
+
+import { Button } from "../components/button";
+import { useController, useSnapshot } from "../components/controller-context";
+import { Icon } from "../components/icons";
+import { Presence } from "../components/motion";
+import { pendingQuestions } from "../core/selectors";
 import type {
   Question,
   QuestionAnswers as Answers,
   QuestionDraft,
   Task,
 } from "../core/types";
-import { pendingQuestions } from "../core/selectors";
-import { useController, useSnapshot } from "../components/controller-context";
-import { Presence } from "../components/motion";
-import { Icon } from "../components/icons";
-import { Button } from "../components/button";
 
 // Cards further back than this stay hidden so the stack reads as a stack, not a pile.
 const MAX_PEEK = 2;

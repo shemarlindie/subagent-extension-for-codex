@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+
 import { test } from "vitest";
+
 import { startSchema } from "../src/core/model.js";
 import { filterCounts, visibleTasks } from "../ui/core/selectors";
 import type { Filter, Snapshot, Task } from "../ui/core/types";

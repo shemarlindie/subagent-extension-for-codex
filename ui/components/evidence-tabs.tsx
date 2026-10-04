@@ -1,12 +1,13 @@
-import { useEffect, useRef } from "react";
 import { Tabs } from "@base-ui/react/tabs";
-import type { Task, Tab } from "../core/types";
-import { scrollChildIntoView } from "./scroll-into-view";
+import { useEffect, useRef } from "react";
+
+import type { Tab, Task } from "../core/types";
+import { ArtifactList } from "./artifact-list";
 import { useController, useSnapshot } from "./controller-context";
+import { EventList } from "./event-list";
 import { MotionContent } from "./motion";
 import { ResultReport } from "./result-report";
-import { EventList } from "./event-list";
-import { ArtifactList } from "./artifact-list";
+import { scrollChildIntoView } from "./scroll-into-view";
 import { TaskDetails } from "./task-details";
 
 const TAB_EDGE_GAP = 12;

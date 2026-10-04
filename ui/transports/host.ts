@@ -3,6 +3,7 @@ import {
   applyDocumentTheme,
   applyHostStyleVariables,
 } from "@modelcontextprotocol/ext-apps";
+
 import type { PanelData, Transport, TransportEvents } from "../core/types";
 
 export class HostTransport implements Transport {

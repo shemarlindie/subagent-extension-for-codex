@@ -1,9 +1,10 @@
-import { defineDialog, firstTextField } from "./dialog-definition";
-import { useForm } from "react-hook-form";
 import { Dialog } from "@base-ui/react/dialog";
-import type { Task } from "../core/types";
-import { useController, useSnapshot } from "../components/controller-context";
+import { useForm } from "react-hook-form";
+
 import { Button } from "../components/button";
+import { useController, useSnapshot } from "../components/controller-context";
+import type { Task } from "../core/types";
+import { defineDialog, firstTextField } from "./dialog-definition";
 import { Field } from "./fields";
 
 export function PermissionForm({ task }: { task: Task }) {

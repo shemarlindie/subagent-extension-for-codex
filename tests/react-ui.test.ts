@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
-import { describe, test, vi, type TestContext } from "vitest";
+
+import { describe, test, type TestContext, vi } from "vitest";
+
 import type {
   HostState,
   Task,
@@ -15,20 +17,21 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
 });
 
-import { createElement } from "react";
 import {
   act,
+  cleanup,
   render,
   screen,
-  cleanup,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Controller } from "../ui/core/controller";
+import { createElement } from "react";
+
 import { ControllerContext } from "../ui/components/controller-context";
-import { AppShell } from "../ui/shells/app-shell";
+import { Controller } from "../ui/core/controller";
 import { SKIPPED_ANSWER } from "../ui/forms/question-form";
+import { AppShell } from "../ui/shells/app-shell";
 
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
 // which never finishes and starves waitFor's timeout.

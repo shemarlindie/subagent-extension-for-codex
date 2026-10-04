@@ -1,14 +1,16 @@
-import OpenAI from "openai";
 import { createHash } from "node:crypto";
 import { isAbsolute } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { z } from "zod";
-import { type Task, resultSchema } from "../core/model.js";
+
+import OpenAI from "openai";
+import type { AgentSessionStreamParams } from "openai/lib/agents/agent-session-stream";
 import type {
   AgentSession,
   AgentSessionInputParam,
 } from "openai/resources/beta/agents/agents";
-import type { AgentSessionStreamParams } from "openai/lib/agents/agent-session-stream";
+import { z } from "zod";
+
+import { resultSchema, type Task } from "../core/model.js";
 
 const ownerRef = (owner: string) =>
   createHash("sha256").update(owner).digest("hex");

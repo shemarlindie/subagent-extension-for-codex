@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, realpath } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { execFileSync } from "node:child_process";
+
 import { Control } from "../dist/core/control.js";
 import { Store } from "../dist/core/store.js";
 import { Workspaces } from "../dist/core/workspace.js";

@@ -1,16 +1,17 @@
-import { resolve, join } from "node:path";
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
-import { Store } from "./core/store.js";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
 import { Control } from "./core/control.js";
-import { Workspaces } from "./core/workspace.js";
-import { configuredProviders } from "./providers/config.js";
-import { Auth } from "./server/auth.js";
-import { application } from "./server/app.js";
-import { Events } from "./events/service.js";
 import { Projects } from "./core/projects.js";
-import { dataDirectory, installRoot } from "./service/runtime.js";
+import { Store } from "./core/store.js";
+import { Workspaces } from "./core/workspace.js";
+import { Events } from "./events/service.js";
+import { configuredProviders } from "./providers/config.js";
+import { application } from "./server/app.js";
+import { Auth } from "./server/auth.js";
 import { lease } from "./service/lease.js";
+import { dataDirectory, installRoot } from "./service/runtime.js";
 import { adminToken } from "./service/token.js";
 
 const data = dataDirectory();

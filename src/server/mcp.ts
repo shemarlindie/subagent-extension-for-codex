@@ -3,24 +3,25 @@ import {
   ProtocolError,
   type ServerContext,
 } from "@modelcontextprotocol/server";
-import { type Events, EventProtocolError } from "../events/service.js";
-import {
-  definitions,
-  withConversation,
-  isUserTool,
-  type AnyTool,
-} from "./tools.js";
-import { type Control } from "../core/control.js";
 import { z } from "zod";
+
+import { autoRegisterChatProject } from "../core/chat-project.js";
+import { type Control } from "../core/control.js";
+import type { Task } from "../core/model.js";
 import { withSettingsCapability } from "../core/settings.js";
+import { EventProtocolError, type Events } from "../events/service.js";
+import { codexContextCapability } from "../panel/host-context.js";
 import { delegationPanel, panelUri } from "../panel/panel.js";
 import {
   resolvePanelContext,
   taskPanelContext,
 } from "../panel/panel-context.js";
-import type { Task } from "../core/model.js";
-import { autoRegisterChatProject } from "../core/chat-project.js";
-import { codexContextCapability } from "../panel/host-context.js";
+import {
+  type AnyTool,
+  definitions,
+  isUserTool,
+  withConversation,
+} from "./tools.js";
 
 export function mcp(
   c: Control,

@@ -1,8 +1,10 @@
-import { test } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { test } from "vitest";
+
 import { Store } from "../src/core/store.js";
 import { configuredProviders } from "../src/providers/config.js";
 

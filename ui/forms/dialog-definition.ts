@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+
 import type { DialogState } from "../core/types";
 
 export type DialogKind = DialogState["kind"];

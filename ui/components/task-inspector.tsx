@@ -1,15 +1,16 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { selectedTask, profileLabel, locked } from "../core/selectors";
+
 import { currentActivityStatus } from "../core/activity-timeline";
+import { locked, profileLabel, selectedTask } from "../core/selectors";
+import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
+import { EvidenceTabs } from "./evidence-tabs";
+import { MotionContent } from "./motion";
 import { TaskStatus } from "./status";
 import { TaskActions } from "./task-actions";
-import { TaskNotices } from "./task-notices";
-import { EvidenceTabs } from "./evidence-tabs";
-import { WorkerInspector } from "./worker-inspector";
 import { TaskDescription } from "./task-description";
-import { MotionContent } from "./motion";
-import { Button } from "./button";
+import { TaskNotices } from "./task-notices";
+import { WorkerInspector } from "./worker-inspector";
 
 export function TaskInspector() {
   const controller = useController(),

@@ -1,24 +1,26 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
-import { test } from "vitest";
+
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { test } from "vitest";
+
+import { EventList } from "../ui/components/event-list";
 import {
-  previewTasks,
-  previewEvents,
-  previewArtifacts,
-  previewLiveStatus,
-  PREVIEW_THREAD,
-} from "../ui/transports/preview-fixtures";
-import { previewTool } from "../ui/transports/preview-tools";
-import {
-  groupActivity,
   activityKind,
   currentActivityStatus,
+  groupActivity,
 } from "../ui/core/activity-timeline";
-import { EventList } from "../ui/components/event-list";
 import { EVENT_TAIL_SIZE } from "../ui/core/event-history";
 import type { Event } from "../ui/core/types";
+import {
+  PREVIEW_THREAD,
+  previewArtifacts,
+  previewEvents,
+  previewLiveStatus,
+  previewTasks,
+} from "../ui/transports/preview-fixtures";
+import { previewTool } from "../ui/transports/preview-tools";
 
 const eventsFor = (taskId: string): Event[] =>
   previewEvents.filter((event) => event.task_id === taskId);
