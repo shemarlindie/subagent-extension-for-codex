@@ -134,15 +134,22 @@ aside {
 }
 
 .filters {
-  margin: 10px 8px 20px;
-  border: 1px solid #243040;
+  /* aside has 16px side padding; bleed to its edge and rest inside the same inset. */
+  margin: 10px -16px 20px;
+  padding-inline: 16px;
 }
 .filters button {
-  padding: 6px 9px;
+  padding: 5px 11px;
+  border: 1px solid #243040;
+  background: transparent;
   color: #8392a7;
+}
+.filters button:hover {
+  background: #ffffff0f;
 }
 .filters button[aria-checked="true"] {
   background: #1e3047;
+  border-color: #3a5170;
   color: #dce7f5;
 }
 .row {

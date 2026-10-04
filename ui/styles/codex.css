@@ -183,17 +183,22 @@ aside {
   border-radius: 6px;
 }
 .filters {
-  margin: 10px 8px;
-  border: 1px solid var(--line);
+  margin: 10px 0;
 }
 .filters button {
-  padding: 5px 7px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  background: transparent;
   color: var(--muted);
+}
+.filters button:hover {
+  background: var(--hover);
+  color: var(--text);
 }
 .filters button[aria-checked="true"] {
   background: var(--hover);
+  border-color: color-mix(in srgb, var(--text) 40%, var(--line));
   color: var(--text);
-  box-shadow: 0 0 0 1px var(--line);
 }
 .filters button:focus-visible {
   outline: var(--focus-ring);

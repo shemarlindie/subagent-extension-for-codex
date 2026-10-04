@@ -1098,33 +1098,28 @@ textarea {
   height: 22px;
   transform: translateY(-50%);
 }
-/* Narrow panels scroll the filters sideways; local-attached gradients fade the clipped edges. */
+/* Narrow panels scroll the filters sideways, clipped at the panel edge like the tabs. */
 .filters {
   position: relative;
   display: flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 8px;
+  gap: 6px;
+  /* Side padding is the resting inset; themes bleed the strip to the panel edge with a matching negative margin. */
+  padding: 2px 8px;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
-  background:
-    linear-gradient(to right, var(--bg, #111c2b), transparent) left / 16px 100%
-      no-repeat local,
-    linear-gradient(to left, var(--bg, #111c2b), transparent) right / 16px 100%
-      no-repeat local;
 }
 .filters::-webkit-scrollbar {
   display: none;
 }
 .filters button {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
   font-size: 11px;
-  border-color: transparent;
-  border-radius: 6px;
+  border-radius: 999px;
   white-space: nowrap;
 }
 .filters button:focus-visible {
