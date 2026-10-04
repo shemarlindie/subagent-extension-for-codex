@@ -30,6 +30,8 @@ body {
   grid-template-columns: minmax(0, 1fr) 320px;
   grid-template-rows: auto minmax(0, 1fr);
   height: 100vh;
+  height: 100dvh;
+  min-height: 0;
 }
 .toolbar {
   grid-column: 1 / -1;
@@ -54,8 +56,21 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-bottom: 2px;
   font-size: 13px;
   color: var(--text);
+  white-space: nowrap;
+}
+.toolbar select {
+  appearance: none;
+  padding-right: 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='m3 2.5 3 3 3-3' fill='none' stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 12px 8px;
+}
+:root[data-theme="dark"] .toolbar select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='m3 2.5 3 3 3-3' fill='none' stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5'/%3E%3C/svg%3E");
 }
 select,
 input,
@@ -75,8 +90,33 @@ button {
   position: relative;
 }
 .more summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
+  list-style: none;
   padding: 4px 0;
+}
+.more summary::-webkit-details-marker {
+  display: none;
+}
+.more summary::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 1.25px 1.25px 0;
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+}
+.more[open] summary::before {
+  transform: rotate(45deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .more summary::before {
+    transition: none;
+  }
 }
 .more[open] > label {
   margin-top: 8px;
@@ -111,12 +151,16 @@ button {
 }
 .stage {
   overflow: auto;
+  min-width: 0;
+  min-height: 0;
   padding: 24px 16px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
 }
 .frame {
+  min-width: 0;
+  min-height: 0;
   max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 10px;
