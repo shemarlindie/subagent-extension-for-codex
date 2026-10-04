@@ -80,24 +80,24 @@ and delivers its result to the panel. The toolbar controls:
   and `codex/sandbox-state-meta` request metadata) or global. With fixtures,
   `preview-tools.ts` resolves the thread's scope the way the service does.
 - **Thread** (thread launches only): the threads that have tasks, from the
-  fixtures or the live service. **Host** > **Thread ID** accepts any ID.
-- **Host** > **Sandbox cwd**: the chat's directory, sent as a `file://` URI; a
-  typed path is converted. An unregistered directory shows **Add chat
-  project**.
-- **Host** > **Automatically add chat projects** and **Reset projects**
-  (fixtures only): the auto-add setting, and the projects registered during the
-  preview. Registration works with fixtures and is kept across relaunches and
-  reloads until reset; starting a task still fails.
+  fixtures or the live service.
 - **Theme**, **Display** (inline or fullscreen; the panel's **Open panel** and
   **Collapse** requests switch it), and **Width**.
-- **Send messages** and **Update context** host capabilities, and optional host
-  style variables as JSON.
+- **Send messages** and **Update context** host capabilities.
+- **Inspector**: the toolbar button opens a right-side pane with **Bridge log**,
+  **Host settings**, and **Icon catalog** tabs. Host settings include **Thread
+  ID** (accepts any ID), **Sandbox cwd** (the chat's directory, sent as a
+  `file://` URI; a typed path is converted), auto-adding chat projects, and
+  resetting fixture projects, plus optional host style variables as JSON. An
+  unregistered directory shows **Add chat project**. Fixture registrations
+  persist across relaunches and reloads until reset; starting a task still
+  fails. The icon catalog lists every panel glyph.
 
 Changing data, launch, capabilities, or host metadata starts a new panel
 session; theme, display mode, width, and styles are pushed as host context
-changes. The bridge log records tool calls, messages, model context updates, and
-display-mode requests. It is hidden by default; **Bridge log** shows it on the
-right, including entries recorded while it was hidden.
+changes. The bridge log records tool calls, messages, model context updates,
+and display-mode requests, including entries recorded while the inspector is
+closed. Open **Inspector** and select **Bridge log** to view them.
 
 Live mode connects to the service's `/mcp` endpoint through the Vite proxy at
 `/service`. The proxy adds the admin token server-side and drops the browser

@@ -23,7 +23,7 @@ const defaults: Settings = {
   width: "480",
   canSend: true,
   canShare: true,
-  showLog: false,
+  showInspector: false,
   threadId: PREVIEW_THREAD,
   cwd: "file:///repo",
   autoRegister: true,
@@ -49,6 +49,20 @@ test("saved settings override defaults and old plain cwds are converted", () => 
 
   assert.deepEqual(settingsFrom(defaults, null), defaults);
   assert.deepEqual(settingsFrom(defaults, "not json"), defaults);
+});
+
+test("saved bridge log visibility migrates to the inspector setting", () => {
+  const migrated = settingsFrom(defaults, JSON.stringify({ showLog: true }));
+
+  assert.equal(migrated.showInspector, true);
+  assert.equal("showLog" in migrated, false);
+
+  const currentSettingWins = settingsFrom(
+    defaults,
+    JSON.stringify({ showLog: true, showInspector: false }),
+  );
+
+  assert.equal(currentSettingWins.showInspector, false);
 });
 
 test("thread launches carry Codex metadata; global launches carry none", () => {

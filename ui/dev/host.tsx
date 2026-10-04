@@ -13,9 +13,10 @@ import {
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import type { Task } from "../../src/core/model";
+import { Icon, type IconName, ICONS } from "../components/icons";
 import { PREVIEW_THREAD } from "../transports/preview-fixtures";
 import { previewTool } from "../transports/preview-tools";
 import {
@@ -33,6 +34,16 @@ import {
 
 type LogEntry = { id: number; time: string; kind: string; detail: unknown };
 
+type InspectorTab = "bridge-log" | "host-settings" | "icon-catalog";
+
+const inspectorTabs: { id: InspectorTab; label: string }[] = [
+  { id: "bridge-log", label: "Bridge log" },
+  { id: "host-settings", label: "Host settings" },
+  { id: "icon-catalog", label: "Icon catalog" },
+];
+
+const iconNames = Object.keys(ICONS) as IconName[];
+
 const storageKey = "panel-dev-host";
 
 const defaults: Settings = {
@@ -43,7 +54,7 @@ const defaults: Settings = {
   width: "480",
   canSend: true,
   canShare: true,
-  showLog: false,
+  showInspector: false,
   // The fixtures give most of their tasks to this thread.
   threadId: PREVIEW_THREAD,
   cwd: __DEV_HOST_CWD__,
@@ -88,6 +99,10 @@ const fixtureThreads = threadsOf(
 // The only export, so Fast Refresh can swap it in place. main.tsx mounts it.
 export function Host() {
   const [settings, setSettings] = useState(loadSettings);
+
+  const [activeInspectorTab, setActiveInspectorTab] =
+    useState<InspectorTab>("bridge-log");
+
   const [session, setSession] = useState(0);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [height, setHeight] = useState(240);
@@ -107,6 +122,38 @@ export function Host() {
     setSession((n) => n + 1);
   };
 
+  // Arrow keys move and activate tabs; Home and End select the endpoints.
+  const handleInspectorTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+
+    const tabs = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+    );
+
+    const currentIndex = tabs.indexOf(event.target as HTMLButtonElement);
+    if (currentIndex < 0) return;
+
+    event.preventDefault();
+
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? tabs.length - 1
+          : (currentIndex +
+              (event.key === "ArrowRight" ? 1 : -1) +
+              tabs.length) %
+            tabs.length;
+
+    const nextTab = inspectorTabs[nextIndex];
+
+    if (!nextTab) return;
+
+    setActiveInspectorTab(nextTab.id);
+    tabs[nextIndex]?.focus();
+  };
+
+  // Keep recording while closed so Bridge log can show the session history later.
   const record = (kind: string, detail?: unknown) =>
     setLog((entries) =>
       [
@@ -337,7 +384,9 @@ export function Host() {
     : [{ id: threadId, latest: "", tasks: 0 }, ...knownThreads];
 
   return (
-    <div className={`host${settings.showLog ? "" : " no-log"}`}>
+    <div
+      className={`host${settings.showInspector ? " inspector-open" : " inspector-closed"}`}
+    >
       <header className="toolbar">
         <label>
           Data
@@ -432,83 +481,19 @@ export function Host() {
           />
           Update context
         </label>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={settings.showLog}
-            onChange={(e) => update({ showLog: e.target.checked })}
-          />
-          Bridge log
-        </label>
         <button type="button" onClick={() => setSession((n) => n + 1)}>
           Relaunch
         </button>
-        <details className="more">
-          <summary>Host</summary>
-          <label>
-            Thread ID
-            <input
-              key={`thread-${session}-${threadId}`}
-              defaultValue={threadId}
-              disabled={launch === "global"}
-              onBlur={(e) => update({ threadId: e.target.value.trim() })}
-            />
-          </label>
-          <label>
-            Sandbox cwd
-            <input
-              key={`cwd-${session}-${cwd}`}
-              defaultValue={cwd}
-              disabled={launch === "global"}
-              placeholder="file:///path/to/repository"
-              onBlur={(e) => update({ cwd: normalizeCwd(e.target.value) })}
-            />
-          </label>
-          <label
-            className="check"
-            title={
-              source === "live"
-                ? "The live service uses your own setting."
-                : undefined
-            }
-          >
-            <input
-              type="checkbox"
-              checked={autoRegister}
-              disabled={source === "live"}
-              onChange={(e) => update({ autoRegister: e.target.checked })}
-            />
-            Automatically add chat projects
-          </label>
-          <div className="added-projects">
-            <span>Added projects (fixtures)</span>
-            {settings.addedProjects.length ? (
-              <ul>
-                {settings.addedProjects.map((repository) => (
-                  <li key={repository}>{repository}</li>
-                ))}
-              </ul>
-            ) : (
-              <small>None. Add project registers here until reset.</small>
-            )}
-            <button
-              type="button"
-              disabled={!settings.addedProjects.length}
-              onClick={resetProjects}
-            >
-              Reset projects
-            </button>
-          </div>
-          <label>
-            Host style variables (JSON)
-            <textarea
-              rows={6}
-              value={styles}
-              placeholder='{"--color-background-primary": "#fff"}'
-              onChange={(e) => update({ styles: e.target.value })}
-            />
-          </label>
-        </details>
+        <button
+          id="inspector-toggle"
+          type="button"
+          className={`inspector-toggle${settings.showInspector ? " active" : ""}`}
+          aria-expanded={settings.showInspector}
+          aria-controls="inspector-pane"
+          onClick={() => update({ showInspector: !settings.showInspector })}
+        >
+          Inspector
+        </button>
       </header>
       <main className="stage">
         <div
@@ -521,27 +506,166 @@ export function Host() {
           <iframe ref={frame} key={sessionKey} title="Delegated work" />
         </div>
       </main>
-      {/* The log keeps recording while hidden, so showing it reveals history. */}
-      <aside className="log" hidden={!settings.showLog}>
-        <div className="log-header">
-          <strong>Bridge log</strong>
-          <button type="button" onClick={() => setLog([])}>
-            Clear
+      <aside
+        id="inspector-pane"
+        className="inspector"
+        aria-label="Development inspector"
+        hidden={!settings.showInspector}
+      >
+        <div className="inspector-header">
+          <div
+            className="inspector-tabs"
+            role="tablist"
+            aria-label="Inspector sections"
+            onKeyDown={handleInspectorTabKeyDown}
+          >
+            {inspectorTabs.map(({ id, label }) => (
+              <button
+                key={id}
+                id={`inspector-tab-${id}`}
+                className="inspector-tab"
+                type="button"
+                role="tab"
+                aria-selected={activeInspectorTab === id}
+                aria-controls="inspector-panel"
+                tabIndex={activeInspectorTab === id ? 0 : -1}
+                onClick={() => setActiveInspectorTab(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            className="inspector-close"
+            type="button"
+            aria-label="Close inspector"
+            title="Close inspector"
+            onClick={() => {
+              update({ showInspector: false });
+
+              requestAnimationFrame(() =>
+                document.getElementById("inspector-toggle")?.focus(),
+              );
+            }}
+          >
+            <Icon name="close" size={14} />
           </button>
         </div>
-        <ol>
-          {log.map((entry) => (
-            <li key={entry.id}>
-              <details>
-                <summary>
-                  <time>{entry.time}</time> <b>{entry.kind}</b>{" "}
-                  {summarize(entry)}
-                </summary>
-                <pre>{JSON.stringify(entry.detail, null, 2)}</pre>
-              </details>
-            </li>
-          ))}
-        </ol>
+        <section
+          id="inspector-panel"
+          className="inspector-panel"
+          role="tabpanel"
+          aria-labelledby={`inspector-tab-${activeInspectorTab}`}
+          tabIndex={0}
+        >
+          {activeInspectorTab === "bridge-log" && (
+            <>
+              <div className="inspector-section-header">
+                <strong>Bridge log</strong>
+                <button type="button" onClick={() => setLog([])}>
+                  Clear
+                </button>
+              </div>
+              <ol className="log-entries">
+                {log.map((entry) => (
+                  <li key={entry.id}>
+                    <details>
+                      <summary>
+                        <time>{entry.time}</time> <b>{entry.kind}</b>{" "}
+                        {summarize(entry)}
+                      </summary>
+                      <pre>{JSON.stringify(entry.detail, null, 2)}</pre>
+                    </details>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+          {activeInspectorTab === "host-settings" && (
+            <div className="host-settings">
+              <label>
+                Thread ID
+                <input
+                  key={`thread-${session}-${threadId}`}
+                  defaultValue={threadId}
+                  disabled={launch === "global"}
+                  onBlur={(e) => update({ threadId: e.target.value.trim() })}
+                />
+              </label>
+              <label>
+                Sandbox cwd
+                <input
+                  key={`cwd-${session}-${cwd}`}
+                  defaultValue={cwd}
+                  disabled={launch === "global"}
+                  placeholder="file:///path/to/repository"
+                  onBlur={(e) => update({ cwd: normalizeCwd(e.target.value) })}
+                />
+              </label>
+              <label className="settings-check">
+                <input
+                  type="checkbox"
+                  checked={autoRegister}
+                  disabled={source === "live"}
+                  onChange={(e) => update({ autoRegister: e.target.checked })}
+                />
+                <span
+                  title={
+                    source === "live"
+                      ? "The live service uses your own setting."
+                      : undefined
+                  }
+                >
+                  Automatically add chat projects
+                </span>
+              </label>
+              <div className="added-projects">
+                <span>Added projects (fixtures)</span>
+                {settings.addedProjects.length ? (
+                  <ul>
+                    {settings.addedProjects.map((repository) => (
+                      <li key={repository}>{repository}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <small>None. Add project registers here until reset.</small>
+                )}
+                <button
+                  type="button"
+                  disabled={!settings.addedProjects.length}
+                  onClick={resetProjects}
+                >
+                  Reset projects
+                </button>
+              </div>
+              <label>
+                Host style variables (JSON)
+                <textarea
+                  rows={6}
+                  value={styles}
+                  placeholder='{"--color-background-primary": "#fff"}'
+                  onChange={(e) => update({ styles: e.target.value })}
+                />
+              </label>
+            </div>
+          )}
+          {activeInspectorTab === "icon-catalog" && (
+            <>
+              <div className="inspector-section-header">
+                <strong>Panel icons</strong>
+                <span>{iconNames.length}</span>
+              </div>
+              <ul className="icon-catalog" aria-label="Panel icon catalog">
+                {iconNames.map((name) => (
+                  <li key={name} className="icon-catalog-item">
+                    <Icon name={name} size={18} />
+                    <code>{name}</code>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
       </aside>
     </div>
   );

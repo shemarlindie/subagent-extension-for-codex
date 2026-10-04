@@ -14,7 +14,7 @@ export type Settings = {
   width: string;
   canSend: boolean;
   canShare: boolean;
-  showLog: boolean;
+  showInspector: boolean;
   threadId: string;
   cwd: string;
   /** Fixtures only; the live service uses the user's own setting. */
@@ -41,7 +41,19 @@ export function normalizeCwd(value: string) {
 /** Saved settings over the defaults; unreadable storage falls back to them. */
 export function settingsFrom(defaults: Settings, stored: string | null) {
   try {
-    const saved: Settings = { ...defaults, ...JSON.parse(stored!) };
+    const parsed = JSON.parse(stored!) as Partial<Settings> & {
+      showLog?: boolean;
+    };
+
+    const saved: Settings = {
+      ...defaults,
+      ...parsed,
+      // Preserve the old Bridge log toggle as the Inspector's initial state.
+      showInspector:
+        parsed.showInspector ?? parsed.showLog ?? defaults.showInspector,
+    };
+
+    delete (saved as Settings & { showLog?: boolean }).showLog;
 
     return { ...saved, cwd: normalizeCwd(saved.cwd) };
   } catch {

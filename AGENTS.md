@@ -18,7 +18,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
 - **Launch** works with fixtures, too (controls in [Local development](docs/development.md#panel-dev-host)). `Thread` shows the chosen thread's tasks for one project; `Global` shows every conversation and project.
   - **Thread**: the default `dev-thread` has tasks in `/demo/project` and `/demo/website`; `other-thread` owns two more.
   - **Sandbox cwd**: the default (this repository) is not a fixture project, so it shows **Add chat project**. Set it to `/demo/website` to scope the panel to that project.
-  - Projects added in fixtures are kept until **Host** > **Reset projects**. Reset after checking registration so later checks start from the fixture projects.
+  - Projects added in fixtures are kept until **Inspector** > **Host settings** > **Reset projects**. Reset after checking registration so later checks start from the fixture projects.
 - Fixture tasks for specific cases:
   - **Refactor the billing module**: running (live status, running rows).
   - **Live: …** tasks (ten of them): each is running and ends on a different latest activity, such as thinking, a running tool, compaction, a retry, a rate limit, a hook, a background task or a provider failure. Use them to check the live status line and the clocks. **Live: thinking** is the one with an active thinking state.
