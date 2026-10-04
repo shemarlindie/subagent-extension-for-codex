@@ -943,9 +943,25 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
   });
 });
 
+test("task filters keep exactly one filter selected", async (t) => {
+  const { user } = await setup(t);
+  const pressed = (name: string) =>
+    screen.getByRole("button", { name }).getAttribute("aria-pressed");
+  assert.equal(pressed("All"), "true");
+  await user.click(screen.getByRole("button", { name: "Done" }));
+  assert.equal(pressed("Done"), "true");
+  assert.equal(pressed("All"), "false");
+  // Clicking the selected filter must not leave the list with no filter.
+  await user.click(screen.getByRole("button", { name: "Done" }));
+  assert.equal(pressed("Done"), "true");
+});
+
 test("evidence tabs support keyboard arrows and keep tab focus through refresh", async (t) => {
   const { controller, user } = await setup(t);
   const result = screen.getByRole("tab", { name: "Result" });
+  // Count badges stay separate words for assistive technology.
+  assert.ok(screen.getByRole("tab", { name: /^Artifacts \d+$/ }));
+  assert.ok(screen.getByRole("tab", { name: /^Activity \d+$/ }));
   await user.click(result);
   await user.keyboard("{ArrowRight}");
   await waitFor(() =>

@@ -133,12 +133,24 @@ aside {
 
 .filters {
   display: flex;
-  gap: 6px;
+  gap: 2px;
   margin: 10px 8px 20px;
+  padding: 2px;
+  border: 1px solid #243040;
+  border-radius: 8px;
 }
 .filters button {
+  flex: 1;
   font-size: 11px;
   padding: 6px 9px;
+  border-color: transparent;
+  border-radius: 6px;
+  color: #8392a7;
+  white-space: nowrap;
+}
+.filters button[aria-pressed="true"] {
+  background: #1e3047;
+  color: #dce7f5;
 }
 .row {
   display: block;
@@ -206,18 +218,55 @@ aside {
   margin: 24px 0;
 }
 .tabs {
+  position: relative;
   display: flex;
-  gap: 12px;
+  gap: 4px;
   margin: 24px 0 18px;
   border-bottom: 1px solid #243040;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 .tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
+  border-radius: 6px 6px 0 0;
   background: none;
-  padding: 12px 0;
+  padding: 12px;
+  white-space: nowrap;
   color: #8392a7;
+  cursor: pointer;
+}
+.tabs button:hover {
+  background: #ffffff0f;
+}
+.tab-count {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: #ffffff1a;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tab-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--active-tab-width);
+  height: 2px;
+  background: var(--accent, #d4e69b);
+  transform: translateX(var(--active-tab-left));
+  transition:
+    transform 0.18s ease,
+    width 0.18s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-indicator {
+    transition: none;
+  }
 }
 .event {
   display: grid;

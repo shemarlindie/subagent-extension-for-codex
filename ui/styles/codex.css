@@ -175,16 +175,28 @@ aside {
   display: flex;
   gap: 2px;
   margin: 10px 8px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 .filters button {
   flex: 1;
   font-size: 11px;
   padding: 5px 4px;
   border-color: transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  white-space: nowrap;
 }
-.filters button[aria-pressed="true"] {
+.filters button[aria-pressed="true"],
+.filters button[data-pressed] {
   background: var(--hover);
   color: var(--text);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.filters button:focus-visible {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: -2px;
 }
 .list-label {
   display: flex;
@@ -294,20 +306,63 @@ h3 {
   margin: 4px 0 10px;
 }
 .tabs {
+  position: relative;
   display: flex;
-  gap: 15px;
+  gap: 4px;
   border-bottom: 1px solid var(--line);
   margin-top: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 .tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border: 0;
-  border-radius: 0;
-  padding: 9px 0;
+  border-radius: 6px 6px 0 0;
+  background: none;
+  padding: 9px 12px;
+  white-space: nowrap;
   color: var(--muted);
+  cursor: pointer;
+}
+.tabs button:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 .tabs button[aria-selected="true"] {
   color: var(--text);
-  box-shadow: inset 0 -2px var(--text);
+}
+.tabs button:focus-visible {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: -2px;
+}
+.tab-count {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tab-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--active-tab-width);
+  height: 2px;
+  background: var(--text);
+  transform: translateX(var(--active-tab-left));
+  transition:
+    transform 0.18s ease,
+    width 0.18s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-indicator {
+    transition: none;
+  }
 }
 [role="tabpanel"] {
   padding-top: 14px;

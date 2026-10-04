@@ -48,7 +48,6 @@
 }
 .tabs button[data-active] {
   color: var(--text, var(--fg, #d4e69b));
-  border-bottom-color: var(--accent, #d4e69b);
 }
 .row-meta {
   display: flex;

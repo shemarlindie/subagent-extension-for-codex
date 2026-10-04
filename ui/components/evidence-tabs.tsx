@@ -17,11 +17,12 @@ export function EvidenceTabs({ task }: { task: Task }) {
           Result
         </Tabs.Tab>
         <Tabs.Tab value="changes" id="tab-changes">
-          Artifacts ({state.artifacts.length})
+          Artifacts <span className="tab-count">{state.artifacts.length}</span>
         </Tabs.Tab>
         <Tabs.Tab value="activity" id="tab-activity">
-          Activity ({state.events.length})
+          Activity <span className="tab-count">{state.events.length}</span>
         </Tabs.Tab>
+        <Tabs.Indicator className="tab-indicator" />
       </Tabs.List>
       <Tabs.Panel value="result">
         <ResultReport result={task.result} />
