@@ -9,7 +9,11 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 });
 import { createElement, useRef } from "react";
 import { render, cleanup, act } from "@testing-library/react";
-import { Presence, useAnimatedHeight } from "../ui/components/motion";
+import {
+  MotionContent,
+  Presence,
+  useAnimatedHeight,
+} from "../ui/components/motion";
 
 type Call = {
   element: HTMLElement;
@@ -60,6 +64,33 @@ const notice = (show: boolean, text = "Saved") =>
     { show },
     show && createElement("div", { className: "notice" }, text),
   );
+
+test("MotionContent replaces keyed content with the selected entrance style", (t) => {
+  t.onTestFinished(cleanup);
+  const content = (value: string, variant: "swap" | "rise" = "swap") =>
+    createElement(MotionContent, {
+      changeKey: value,
+      as: "strong",
+      variant,
+      className: "activity-title",
+      children: value,
+    });
+  const view = render(content("Thinking"));
+  const first = view.container.querySelector("strong");
+  assert.ok(first);
+  assert.equal(first.className, "motion-swap activity-title");
+
+  view.rerender(content("Thought", "rise"));
+  const next = view.container.querySelector("strong");
+  assert.ok(next);
+  assert.notEqual(
+    next,
+    first,
+    "A changed key remounts the presentation element",
+  );
+  assert.equal(next.textContent, "Thought");
+  assert.equal(next.className, "motion-rise activity-title");
+});
 
 test("Presence removes content at once without animation support", (t) => {
   t.onTestFinished(cleanup);
