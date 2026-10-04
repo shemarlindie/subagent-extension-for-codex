@@ -37,6 +37,7 @@ export function HandoffForm({ task }: { task: Task }) {
         />
       </Field>
       <FormFooter
+        dismissLabel="Close"
         label={
           canSend ? "Send to conversation" : canCopy ? "Copy message" : "Done"
         }

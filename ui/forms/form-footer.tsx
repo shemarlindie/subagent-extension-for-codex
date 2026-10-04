@@ -3,8 +3,13 @@ import { useController, useSnapshot } from "../components/controller-context";
 interface FormFooterProps {
   label: string;
   disabled?: boolean;
+  dismissLabel?: string;
 }
-export function FormFooter({ label, disabled = false }: FormFooterProps) {
+export function FormFooter({
+  label,
+  disabled = false,
+  dismissLabel = "Cancel",
+}: FormFooterProps) {
   const controller = useController(),
     state = useSnapshot(),
     stale = state.dialog?.scope !== state.scopeVersion;
@@ -20,7 +25,7 @@ export function FormFooter({ label, disabled = false }: FormFooterProps) {
           disabled={state.busy}
           onClick={() => controller.dismiss()}
         >
-          Cancel
+          {dismissLabel}
         </Dialog.Close>
         <button
           id="submit"

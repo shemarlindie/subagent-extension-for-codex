@@ -88,7 +88,7 @@ export function ControlForm({ dialog }: ControlFormProps) {
           />
         </>
       )}
-      <FormFooter label={labels[action]} />
+      <FormFooter label={labels[action]} dismissLabel="Close" />
     </form>
   );
 }

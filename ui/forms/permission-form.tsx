@@ -42,7 +42,7 @@ export function PermissionForm({ task }: { task: Task }) {
           disabled={state.busy}
           onClick={() => controller.dismiss()}
         >
-          Cancel
+          Close
         </Dialog.Close>
         <button type="button" disabled={disabled} onClick={decide(false)}>
           Deny

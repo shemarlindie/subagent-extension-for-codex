@@ -2000,7 +2000,7 @@ test("permission cancellation keeps the request pending and approval includes th
     screen.getByLabelText("Message (optional)"),
     "Draft decision",
   );
-  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  await user.click(screen.getByText("Close", { selector: "footer button" }));
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
   assert.equal(
     transport.calls.filter((call) => call.name === "submit_agent_input").length,

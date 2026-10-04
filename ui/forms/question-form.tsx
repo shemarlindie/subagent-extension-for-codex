@@ -139,7 +139,7 @@ export function QuestionForm({ task }: { task: Task }) {
           Answer each question before sending.
         </p>
       )}
-      <FormFooter label="Send answer" />
+      <FormFooter label="Send answer" dismissLabel="Close" />
     </form>
   );
 }
