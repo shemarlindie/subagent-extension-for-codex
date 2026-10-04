@@ -1,12 +1,13 @@
 // Code-quality lint only; formatting belongs to Prettier (eslint-config-prettier
 // turns off conflicting rules).
 import js from "@eslint/js";
-import { defineConfig } from "eslint/config";
-import tseslint from "typescript-eslint";
-import reactHooks from "eslint-plugin-react-hooks";
-import prettier from "eslint-config-prettier/flat";
-import globals from "globals";
 import stylistic from "@stylistic/eslint-plugin";
+import { defineConfig } from "eslint/config";
+import prettier from "eslint-config-prettier/flat";
+import reactHooks from "eslint-plugin-react-hooks";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
+import globals from "globals";
+import tseslint from "typescript-eslint";
 
 export default defineConfig(
   { ignores: ["dist/", ".codex-subagent-extension/", "node_modules/"] },
@@ -29,8 +30,20 @@ export default defineConfig(
   },
   {
     // Blank-line layout is the one formatting concern Prettier leaves alone.
-    plugins: { "@stylistic": stylistic },
+    plugins: {
+      "@stylistic": stylistic,
+      "simple-import-sort": simpleImportSort,
+    },
     rules: {
+      // Side-effect imports keep their order; then node: built-ins, packages,
+      // and relative paths.
+      "simple-import-sort/imports": [
+        "error",
+        {
+          groups: [["^\\u0000"], ["^node:"], ["^@?\\w"], ["^"], ["^\\."]],
+        },
+      ],
+      "simple-import-sort/exports": "error",
       "@stylistic/padding-line-between-statements": [
         "error",
         { blankLine: "always", prev: "import", next: "*" },
