@@ -695,7 +695,11 @@ form .select-trigger {
 }
 /* The question notice is one toggle: padding lives on the trigger so the whole box is clickable. */
 .callout.question-notice {
+  margin: 0 0 16px;
   padding: 0;
+}
+.task-header .actions {
+  margin: 0 0 16px;
 }
 .question-notice-trigger {
   display: flex;
