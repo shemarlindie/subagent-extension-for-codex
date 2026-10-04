@@ -9,6 +9,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
 - Set **Data** to `fixtures` and **Relaunch** (the iframe is blank for a few seconds). Use `live` data only for what fixtures cannot show: set **Launch** to `global`, and do not start tasks, since live mode performs real actions.
 - Fixture tasks for specific cases:
   - **Refactor the billing module**: running (live status, running rows).
+  - **Live: …** tasks (ten of them): each is running and ends on a different latest activity, such as thinking, a running tool, compaction, a retry, a rate limit, a hook, a background task or a provider failure. Use them to check the live status line and the clocks. **Live: thinking** is the one with an active thinking state.
   - **Migrate the config loader**: pending question.
   - **Convert the test suite to the new runner**: exceeds the 200-event activity tail (trimmed timeline). Use it to test timeline scrolling, since most other timelines are short.
 - The host's selects ignore `form_input`; set `.value` and dispatch `change`. **Width** sets narrow (360/480) or wide (Fill) layouts. At 360px the short frame stacks the inspector (the whole pane scrolls), so use 480 or Fill for the fixed-header layout.

@@ -343,6 +343,10 @@ form .select-trigger {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.eyebrow-runtime {
+  /* Fixed-width digits keep the ticking clock from jittering the line. */
+  font-variant-numeric: tabular-nums;
+}
 .eyebrow-live:empty {
   display: none;
 }

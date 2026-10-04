@@ -7,8 +7,13 @@ import {
   previewTasks,
   previewEvents,
   previewArtifacts,
+  previewLiveStatus,
 } from "../ui/transports/preview-fixtures";
-import { groupActivity, activityKind } from "../ui/core/activity-timeline";
+import {
+  groupActivity,
+  activityKind,
+  currentActivityStatus,
+} from "../ui/core/activity-timeline";
 import { EventList } from "../ui/components/event-list";
 import { EVENT_TAIL_SIZE } from "../ui/core/event-history";
 import type { Event } from "../ui/core/types";
@@ -123,4 +128,21 @@ test("preview ids are unique and every activity timeline renders", () => {
     );
     assert.ok(html.includes("activity-timeline"), `${task.id} did not render`);
   }
+});
+
+test("each running preview task ends on a different latest activity", () => {
+  const expected: Record<string, string> = {
+    ...previewLiveStatus,
+    // Streamed text is the latest activity of the long-running permission fixture.
+    "preview-refactor": "Responding",
+  };
+  const seen = new Set<string>();
+  for (const [id, status] of Object.entries(expected)) {
+    const task = previewTasks.find((candidate) => candidate.id === id)!;
+    assert.equal(task.status, "running", `${id} is not running`);
+    const live = currentActivityStatus(eventsFor(id), task);
+    assert.equal(live.text, status, `${id} status line`);
+    seen.add(live.text);
+  }
+  assert.equal(seen.size, Object.keys(expected).length, "states repeat");
 });

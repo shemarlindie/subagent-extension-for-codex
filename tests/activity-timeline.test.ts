@@ -4,6 +4,7 @@ import { startSchema, type Event, type Task } from "../src/core/model.js";
 import {
   groupActivity,
   currentActivityStatus,
+  thinkingSpan,
 } from "../ui/core/activity-timeline";
 
 for (const type of [
@@ -949,4 +950,48 @@ test("merged normalized message content separates housekeeping bursts in input e
     groups.find((group) => group.kind === "message")?.events.map((e) => e.id),
     [1, 3],
   );
+});
+
+test("a thinking row lasts until the next event, or is open-ended when none follows", () => {
+  const thinking = [event(10, "thinking_tokens"), event(14, "thinking_tokens")];
+  const [group] = groupActivity(thinking);
+  assert.deepEqual(thinkingSpan(group, thinking), {
+    start: 10000,
+    end: null,
+  });
+  const all = [
+    ...thinking,
+    event(20, "tool.started", { id: "a", name: "Read" }),
+  ];
+  assert.deepEqual(thinkingSpan(group, all), { start: 10000, end: 20000 });
+});
+
+test("a message that absorbed its thinking marker spans marker to message", () => {
+  const raw = { message: { id: "m1" } };
+  const events = [
+    sdk(5, "status", { status: "requesting" }),
+    event(9, "agent.message", { text: "Done", raw_response: raw }),
+    event(5.5, "agent.message", {
+      content: [{ type: "thinking", thinking: "hm" }],
+      raw_response: raw,
+    }),
+  ];
+  const message = groupActivity(events).find((g) => g.kind === "message")!;
+  const span = thinkingSpan(message, events);
+  assert.ok(span && span.end !== null && span.end > span.start);
+});
+
+test("rows that are not thinking have no span", () => {
+  const events = [event(1, "tool.started", { id: "a", name: "Read" })];
+  assert.equal(thinkingSpan(groupActivity(events)[0], events), undefined);
+});
+
+test("housekeeping before the first thinking signal does not count as thinking", () => {
+  const events = [
+    event(10, "agent.started"),
+    sdk(12, "status", { status: "requesting" }),
+    event(20, "tool.started", { id: "a", name: "Read" }),
+  ];
+  const group = groupActivity(events).find((g) => g.title === "Thinking…")!;
+  assert.deepEqual(thinkingSpan(group, events), { start: 12000, end: 20000 });
 });

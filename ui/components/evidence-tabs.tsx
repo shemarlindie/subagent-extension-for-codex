@@ -75,7 +75,11 @@ export function EvidenceTabs({ task }: { task: Task }) {
       </Tabs.Panel>
       {/* Stays mounted so the reading position survives tab switches. */}
       <Tabs.Panel value="activity" className="activity-panel" keepMounted>
-        <EventList events={state.events} active={state.tab === "activity"} />
+        <EventList
+          events={state.events}
+          active={state.tab === "activity"}
+          running={task.status === "running" && !task.pending_input}
+        />
       </Tabs.Panel>
       <Tabs.Panel value="details">
         <TaskDetails task={task} />

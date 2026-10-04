@@ -4,8 +4,11 @@ import type { Event } from "../core/types";
 import {
   groupActivity,
   activityFailed,
+  thinkingSpan,
   type ActivityGroup,
 } from "../core/activity-timeline";
+import { formatDuration } from "../core/duration";
+import { useNow } from "./use-now";
 import { EVENT_TAIL_SIZE } from "../core/event-history";
 import { useActivityScroll } from "./use-activity-scroll";
 import { Timeline, TimelineDot, TimelineItem } from "./timeline";
@@ -279,14 +282,28 @@ function thinkingOnly(events: Event[]) {
     })
   );
 }
+// Only this component ticks, so a running thinking row never re-renders the list.
+function ThinkingClock({ start }: { start: number }) {
+  const elapsed = useNow(true) - start;
+  if (elapsed < 1000) return null;
+  return (
+    <span className="activity-badge activity-duration">
+      {formatDuration(elapsed)}
+    </span>
+  );
+}
 function GroupCard({
   group,
   first,
   last,
+  span,
+  running,
 }: {
   group: ActivityGroup;
   first: boolean;
   last: boolean;
+  span?: { start: number; end: number | null };
+  running: boolean;
 }) {
   const [debugOpen, setDebugOpen] = useState(false);
   // Avoid hidden content work until inspection; retain it afterward to keep disclosures open.
@@ -306,7 +323,19 @@ function GroupCard({
   // Their text is mostly empty, so it is only shown through the debug view.
   const quietThinking = conversational && thinkingOnly(contentEvents);
   // The heading and the debug toggle's label name the row the same way.
-  const title = quietThinking ? "Thinking" : group.title;
+  // A finished thinking row states its duration in place of "Thinking…".
+  const thoughtMs =
+    span?.end != null && (group.kind !== "message" || quietThinking)
+      ? span.end - span.start
+      : undefined;
+  const title =
+    thoughtMs !== undefined
+      ? thoughtMs >= 1000
+        ? `Thought for ${formatDuration(thoughtMs)}`
+        : "Thought"
+      : quietThinking
+        ? "Thinking"
+        : group.title;
   const badge =
     group.state === "running"
       ? "Running"
@@ -336,6 +365,9 @@ function GroupCard({
         <span className="activity-group-title">
           <strong>{title}</strong>
           {badge && <span className="activity-badge">{badge}</span>}
+          {span?.end === null && running && (
+            <ThinkingClock start={span.start} />
+          )}
         </span>
         <time dateTime={group.events[0].timestamp}>
           {new Date(group.events[0].timestamp).toLocaleTimeString([], {
@@ -405,9 +437,12 @@ function GroupCard({
 export const EventList = memo(function EventList({
   events,
   active,
+  running = false,
 }: {
   events: Event[];
   active?: boolean;
+  /** The worker is mid-turn, so a thinking row with nothing after it is still going. */
+  running?: boolean;
 }) {
   const groups = groupActivity(events).sort(
     (a, b) => b.events.at(-1)!.id - a.events.at(-1)!.id,
@@ -432,6 +467,8 @@ export const EventList = memo(function EventList({
               group={group}
               first={index === 0}
               last={index === groups.length - 1}
+              span={thinkingSpan(group, events)}
+              running={running}
             />
           ))}
         </Timeline>

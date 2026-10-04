@@ -178,6 +178,8 @@ export interface Task extends Start {
   created_at: string;
   updated_at: string;
   started_at?: string;
+  /** Start of the run in progress; `runtime_ms` only counts finished runs. */
+  run_started_at?: string;
   completed_at?: string;
   workspace?: string;
   base_commit?: string;

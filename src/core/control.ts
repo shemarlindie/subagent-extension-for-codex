@@ -331,6 +331,7 @@ export class Control {
       t.instructions = live.instructions;
       t.status = "running";
       t.started_at ??= now();
+      t.run_started_at = new Date(begin).toISOString();
       t.session_owner = this.ownerWorker;
       this.store.save(t);
       this.store.event(t, "task.started", { attempt: t.attempt });
@@ -500,6 +501,7 @@ export class Control {
     } finally {
       clearTimeout(timer);
       t.runtime_ms += Date.now() - begin;
+      delete t.run_started_at;
       try {
         const diff = terminationUnconfirmed
           ? ""

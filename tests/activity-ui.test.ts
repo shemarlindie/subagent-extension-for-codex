@@ -1707,3 +1707,51 @@ test("message debug view shows only the raw response, not a second rendering", a
   assert.ok(view.getByText("Raw response", { selector: "summary" }));
   cleanup();
 });
+
+test("a thinking row shows how long the worker thought", (t) => {
+  t.onTestFinished(cleanup);
+  const at = (second: number, e: ActivityEvent): ActivityEvent => ({
+    ...e,
+    timestamp: new Date(Date.UTC(2026, 9, 2, 12, 0, second)).toISOString(),
+  });
+  const view = render(
+    createElement(GroupedEventList, {
+      events: [
+        at(0, event("thinking_tokens", {}, "think-a")),
+        at(3, event("thinking_tokens", {}, "think-b")),
+        at(7, event("agent.message", { text: "Done" }, "think-reply")),
+      ],
+    }),
+  );
+  const titles = [...view.container.querySelectorAll("strong")].map(
+    (title) => title.textContent,
+  );
+  // The finished row names its duration instead of also saying "Thinking…".
+  assert.ok(titles.includes("Thought for 7s"), titles.join(" | "));
+  assert.ok(!titles.includes("Thinking…"));
+  assertAbsent(view.container.querySelector(".activity-duration"));
+});
+
+test("a thinking row with nothing after it counts up only while the worker runs", (t) => {
+  t.onTestFinished(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+  vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:05.000Z") });
+  const events = [
+    {
+      ...event("thinking_tokens", {}, "live-think"),
+      timestamp: "2026-10-02T12:00:00.000Z",
+    },
+  ];
+  const view = render(
+    createElement(GroupedEventList, { events, running: true }),
+  );
+  const duration = () =>
+    view.container.querySelector(".activity-duration")?.textContent;
+  assert.equal(duration(), "5s");
+  act(() => void vi.advanceTimersByTime(3000));
+  assert.equal(duration(), "8s");
+  view.rerender(createElement(GroupedEventList, { events, running: false }));
+  assertAbsent(view.container.querySelector(".activity-duration"));
+});

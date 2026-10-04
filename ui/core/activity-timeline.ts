@@ -125,6 +125,37 @@ function thinkingSignal(e: Event) {
 function onlyThinkingSignals(group: ActivityGroup) {
   return group.events.length > 0 && group.events.every(thinkingSignal);
 }
+/**
+ * When a thinking row started and ended, in epoch ms. A row that ends on a
+ * thinking signal lasts until the task's next event (housekeeping events may
+ * precede the first signal, so it starts there); `end: null` means nothing has
+ * followed yet, so the caller decides whether it is still going. Other rows
+ * have no span.
+ */
+export function thinkingSpan(
+  group: ActivityGroup,
+  events: Event[],
+): { start: number; end: number | null } | undefined {
+  const firstSignal = group.events.find(thinkingSignal),
+    last = group.events.at(-1)!;
+  if (!firstSignal) return undefined;
+  const start = Date.parse(firstSignal.timestamp);
+  if (thinkingSignal(last) && group.kind !== "message") {
+    let next: Event | undefined;
+    for (const e of events)
+      if (
+        e.task_id === last.task_id &&
+        e.id > last.id &&
+        (!next || e.id < next.id)
+      )
+        next = e;
+    return { start, end: next ? Date.parse(next.timestamp) : null };
+  }
+  // A message that absorbed its thinking marker spans marker to message.
+  if (group.kind === "message")
+    return { start, end: Date.parse(last.timestamp) };
+  return undefined;
+}
 function hasThinkingContent(e: Event) {
   const hasThinkingBlock = (value: unknown): boolean => {
     if (Array.isArray(value)) return value.some(hasThinkingBlock);

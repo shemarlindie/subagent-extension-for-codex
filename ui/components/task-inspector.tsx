@@ -1,6 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { selectedTask, profileLabel, locked } from "../core/selectors";
 import { currentActivityStatus } from "../core/activity-timeline";
+import { formatDuration, runtimeLive, taskRuntimeMs } from "../core/duration";
+import type { Task } from "../core/types";
+import { useNow } from "./use-now";
 import { useController, useSnapshot } from "./controller-context";
 import { TaskStatus } from "./status";
 import { TaskActions } from "./task-actions";
@@ -46,6 +49,7 @@ export function TaskInspector() {
               </button>
               <div className="eyebrow" data-live={live ? "" : undefined}>
                 <TaskStatus task={task} live={live?.state === "running"} />
+                <TaskRuntime task={task} />
                 <span className="eyebrow-worker">
                   / {task.provider} · {profileLabel(task.worker_profile)}
                 </span>
@@ -90,6 +94,19 @@ export function TaskInspector() {
         </div>
       )}
     </section>
+  );
+}
+
+// Only a run in progress ticks; finished tasks show their total in Details.
+function TaskRuntime({ task }: { task: Task }) {
+  const live = runtimeLive(task),
+    now = useNow(live);
+  if (!live) return null;
+  return (
+    <span className="eyebrow-runtime">
+      <span aria-hidden="true"> · </span>
+      {formatDuration(taskRuntimeMs(task, now))}
+    </span>
   );
 }
 

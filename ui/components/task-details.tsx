@@ -7,7 +7,10 @@ import {
 } from "../../src/core/permissions";
 import type { Task } from "../core/types";
 import { profileLabel } from "../core/selectors";
+import { formatDuration, runtimeLive, taskRuntimeMs } from "../core/duration";
+import { useNow } from "./use-now";
 export function TaskDetails({ task }: { task: Task }) {
+  const now = useNow(runtimeLive(task));
   const facts = {
     "Task ID": task.id,
     Worker: `${task.provider} · ${profileLabel(task.worker_profile)}`,
@@ -43,7 +46,7 @@ export function TaskDetails({ task }: { task: Task }) {
     Session: task.session_id ?? "Not started",
     Dependencies: task.depends_on.join(", ") || "None",
     Attempt: task.attempt,
-    "Runtime used": `${Math.round(task.runtime_ms / 1000)}s`,
+    "Runtime used": formatDuration(taskRuntimeMs(task, now)),
     "Reported cost":
       task.cost_usd === undefined
         ? "Unavailable"
