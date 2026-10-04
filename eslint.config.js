@@ -1,12 +1,14 @@
 // Code-quality lint only; formatting belongs to Prettier (eslint-config-prettier
 // turns off conflicting rules).
 import js from "@eslint/js";
+import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import prettier from "eslint-config-prettier/flat";
 import globals from "globals";
+import stylistic from "@stylistic/eslint-plugin";
 
-export default tseslint.config(
+export default defineConfig(
   { ignores: ["dist/", ".codex-subagent-extension/", "node_modules/"] },
   js.configs.recommended,
   tseslint.configs.recommended,
@@ -23,6 +25,52 @@ export default tseslint.config(
       ],
       // Best-effort cleanup and probing deliberately ignore failures.
       "no-empty": ["error", { allowEmptyCatch: true }],
+    },
+  },
+  {
+    // Blank-line layout is the one formatting concern Prettier leaves alone.
+    plugins: { "@stylistic": stylistic },
+    rules: {
+      "@stylistic/padding-line-between-statements": [
+        "error",
+        { blankLine: "always", prev: "import", next: "*" },
+        { blankLine: "any", prev: "import", next: "import" },
+        {
+          blankLine: "always",
+          prev: "*",
+          next: [
+            "function",
+            "class",
+            "interface",
+            "type",
+            "multiline-block-like",
+            "multiline-export",
+            "multiline-const",
+            "multiline-expression",
+          ],
+        },
+        {
+          blankLine: "always",
+          prev: [
+            "function",
+            "class",
+            "interface",
+            "type",
+            "multiline-block-like",
+            "multiline-export",
+            "multiline-const",
+            "multiline-expression",
+          ],
+          next: "*",
+        },
+        { blankLine: "always", prev: "*", next: "return" },
+      ],
+      // Methods and fields are separated, except consecutive single-line fields.
+      "@stylistic/lines-between-class-members": [
+        "error",
+        "always",
+        { exceptAfterSingleLine: true },
+      ],
     },
   },
   {

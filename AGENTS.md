@@ -4,6 +4,10 @@
 
 - HTTP and executor integration suites need localhost TCP listeners; `mac-executor` also invokes nested macOS `sandbox-exec` profiles. If the default Codex command sandbox reports `listen EPERM` or `sandbox_apply: Operation not permitted`, rerun the affected suites with escalated execution permission. CI needs a macOS runner that permits both operations. Do not skip or weaken these tests.
 
+## Formatting
+
+Run Prettier and ESLint with `--fix` on the files you change (`npx eslint --fix <files> && npx prettier --write <files>`). ESLint enforces blank-line layout.
+
 ## Verifying UI changes
 
 Check in the browser when a change is large, when seeing it would help, or when the user asks. Skip small changes that tests cover.
