@@ -32,6 +32,7 @@ import "./host.css";
 type LogEntry = { id: number; time: string; kind: string; detail: unknown };
 
 const storageKey = "panel-dev-host";
+
 const defaults: Settings = {
   source: "fixtures",
   launch: "thread",
@@ -48,6 +49,7 @@ const defaults: Settings = {
   addedProjects: [],
   styles: "",
 };
+
 const widths = [
   ["360", "360px"],
   ["480", "480px"],
@@ -62,8 +64,10 @@ function loadSettings(): Settings {
     return defaults;
   }
 }
+
 function hostContext(settings: Settings): McpUiHostContext {
   const variables = parseStyles(settings.styles);
+
   return {
     theme: settings.theme,
     displayMode: settings.displayMode,
@@ -74,6 +78,7 @@ function hostContext(settings: Settings): McpUiHostContext {
     ...(variables ? { styles: { variables } } : {}),
   } as McpUiHostContext;
 }
+
 const fixtureThreads = threadsOf(
   previewTool("list_agent_tasks", { conversation_id: null }) as Task[],
 );
@@ -89,14 +94,17 @@ export function Host() {
   // Read by the running session's tool calls, which a registration must not relaunch.
   const added = useRef(settings.addedProjects);
   const frame = useRef<HTMLIFrameElement>(null);
+
   const update = (patch: Partial<Settings>) =>
     setSettings((current) => ({ ...current, ...patch }));
+
   // Clearing projects changes what the panel was launched with, so relaunch.
   const resetProjects = () => {
     added.current = [];
     update({ addedProjects: [] });
     setSession((n) => n + 1);
   };
+
   const record = (kind: string, detail?: unknown) =>
     setLog((entries) =>
       [
@@ -114,12 +122,14 @@ export function Host() {
     try {
       localStorage.setItem(storageKey, JSON.stringify(settings));
     } catch {}
+
     document.documentElement.dataset.theme = settings.theme;
   }, [settings]);
 
   // Settings fixed at initialization; changing one starts a new panel session.
   const { source, launch, canSend, canShare, threadId, cwd, autoRegister } =
     settings;
+
   const sessionKey = JSON.stringify([
     session,
     source,
@@ -130,10 +140,12 @@ export function Host() {
     cwd,
     autoRegister,
   ]);
+
   useEffect(() => {
     const iframe = frame.current!;
     const view = iframe.contentWindow!;
     const current = { ...settings };
+
     const capabilities: McpUiHostCapabilities = {
       serverTools: {},
       openLinks: {},
@@ -141,26 +153,32 @@ export function Host() {
       ...(canSend ? { message: { text: {} } } : {}),
       ...(canShare ? { updateModelContext: { structuredContent: {} } } : {}),
     };
+
     const next = new AppBridge(
       null,
       { name: "Panel dev host", version: "0.0.0" },
       capabilities,
       { hostContext: hostContext(current) },
     );
+
     let client: Promise<Client> | undefined;
+
     const service = () =>
       (client ??= (async () => {
         const connection = new Client({
           name: "panel-dev-host",
           version: "0.0.0",
         });
+
         await connection.connect(
           new StreamableHTTPClientTransport(
             new URL("/service/mcp", location.origin),
           ),
         );
+
         return connection;
       })());
+
     // Offer the service's threads in the Thread picker. Read-only, and not
     // part of the panel's traffic, so it stays out of the bridge log.
     if (source === "live")
@@ -179,6 +197,7 @@ export function Host() {
           ),
         )
         .catch(() => setLiveThreads([]));
+
     const call = async (name: string, args: Record<string, unknown> = {}) => {
       const result =
         source === "live"
@@ -193,6 +212,7 @@ export function Host() {
               autoRegisterChatProject: current.autoRegister,
               addedProjects: added.current,
             });
+
       // Fixture registrations persist until Reset, like the service's registry.
       if (
         source === "fixtures" &&
@@ -202,18 +222,22 @@ export function Host() {
         const { repository } = (
           result.structuredContent as { result: { repository: string } }
         ).result;
+
         if (!added.current.includes(repository)) {
           added.current = [...added.current, repository];
           update({ addedProjects: added.current });
         }
       }
+
       record(result.isError ? "tool error" : "tool", {
         name,
         arguments: args,
         result,
       });
+
       return result;
     };
+
     next.oncalltool = async ({ name, arguments: args }) => {
       try {
         return await call(name, args);
@@ -222,51 +246,68 @@ export function Host() {
         throw error;
       }
     };
+
     next.oninitialized = async () => {
       record("initialized");
+
       // Codex renders the panel as the result of its launch tool.
       const name =
         launch === "global"
           ? "open_codex_subagent_extension_global"
           : "open_codex_subagent_extension";
+
       try {
         const result = await call(
           name,
           source === "live" ? {} : fixtureLaunchArgs(current),
         );
+
         await next.sendToolInput({ arguments: {} });
         await next.sendToolResult(result);
       } catch (error) {
         record("launch error", String(error));
       }
     };
+
     next.onrequestdisplaymode = async ({ mode }) => {
       record("display mode", mode);
       update({ displayMode: mode });
+
       return { mode };
     };
+
     next.onsizechange = (size) => {
       if (size.height) setHeight(size.height);
     };
+
     next.onmessage = async (params) => {
       record("message", params);
+
       return {};
     };
+
     next.onupdatemodelcontext = async (params) => {
       record("model context", params);
+
       return {};
     };
+
     next.onopenlink = async ({ url }) => {
       record("open link", url);
       window.open(url, "_blank", "noopener");
+
       return {};
     };
+
     next.onloggingmessage = (params) => record("log", params);
+
     // Listen before the document loads: the panel sends initialize at startup.
     void next.connect(new PostMessageTransport(view, view)).then(() => {
       iframe.src = "./panel.html";
     });
+
     setBridge(next);
+
     return () => {
       setBridge(undefined);
       void next.close();
@@ -278,6 +319,7 @@ export function Host() {
   }, [sessionKey]);
 
   const { theme, displayMode, styles } = settings;
+
   useEffect(() => {
     bridge?.setHostContext(hostContext(settings));
     // Only these settings are part of the host context.
@@ -286,10 +328,12 @@ export function Host() {
 
   const inline = displayMode === "inline";
   const knownThreads = source === "live" ? liveThreads : fixtureThreads;
+
   // Keep a typed-in Thread ID selectable even when it has no tasks yet.
   const threadOptions = knownThreads.some((thread) => thread.id === threadId)
     ? knownThreads
     : [{ id: threadId, latest: "", tasks: 0 }, ...knownThreads];
+
   return (
     <div className={`host${settings.showLog ? "" : " no-log"}`}>
       <header className="toolbar">
@@ -500,7 +544,9 @@ export function Host() {
     </div>
   );
 }
+
 function summarize(entry: LogEntry) {
   const detail = entry.detail as { name?: string } | string | undefined;
+
   return typeof detail === "string" ? detail : (detail?.name ?? "");
 }

@@ -14,21 +14,26 @@ import type {
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason: unknown) => void;
+
   const promise = new Promise<T>((yes, no) => {
     resolve = yes;
     reject = no;
   });
+
   return { promise, resolve, reject };
 }
+
 const flush = async () => {
   for (let i = 0; i < 30; i++) await Promise.resolve();
 };
+
 const defaults: Defaults = {
   default_provider: "claude",
   default_worker_profile: "reviewer",
   max_runtime_minutes: 0.5,
   max_cost_usd: null,
 };
+
 function task(
   id: string,
   repository = "/repo/a",
@@ -56,6 +61,7 @@ function task(
     runtime_ms: 0,
   };
 }
+
 class FakeTransport implements Transport {
   embedded = true;
   preview = true;
@@ -72,10 +78,12 @@ class FakeTransport implements Transport {
     this.events = events;
     await this.connectGate;
   }
+
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     this.calls.push({ name, args });
     const answer = this.handler?.(name, args);
     if (answer !== undefined) return (await answer) as T;
+
     const values: Record<string, unknown> = {
       get_agent_panel_context: this.context,
       list_agent_projects: this.projects,
@@ -87,26 +95,34 @@ class FakeTransport implements Transport {
       get_agent_artifacts: [],
       get_agent_settings: { values: defaults },
     };
+
     assert.ok(name in values, `Unexpected tool ${name}`);
+
     return values[name] as T;
   }
+
   watch() {
     this.watches++;
   }
+
   dispose() {
     this.disposals++;
   }
 }
+
 function setup(mode: "panel" | "console" = "panel", wide = false) {
   const transport = new FakeTransport();
   const paths: string[] = [];
+
   const environment = {
     hidden: () => false,
     wide: () => wide,
     path: "/",
     navigate: (path: string) => paths.push(path),
   };
+
   const controller = new Controller(transport, mode, environment);
+
   return { transport, controller, paths, environment };
 }
 
@@ -114,11 +130,13 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
   for (const explicit of [false, true]) {
     const { controller, transport } = setup();
     t.onTestFinished(() => controller.dispose());
+
     transport.tasks = [
       task("a", "/repo/a", "chat-a"),
       task("b", "/repo/a", "chat-b"),
       task("c", "/repo/b", "chat-a"),
     ];
+
     if (explicit)
       controller.applyScope(
         {
@@ -131,18 +149,22 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
         false,
       );
     await controller.start();
+
     const bootstrap = transport.calls.filter(
       (call) => call.name === "get_agent_panel_context",
     );
+
     assert.equal(bootstrap.length, explicit ? 0 : 1);
     if (!explicit)
       assert.deepEqual(bootstrap[0].args, { conversation_id: null });
+
     assert.deepEqual(
       transport.calls.find((call) => call.name === "list_agent_tasks")?.args,
       explicit
         ? { conversation_id: "chat-a", repository: "/repo/a" }
         : { conversation_id: null },
     );
+
     assert.deepEqual(
       controller.getSnapshot().tasks.map((item) => item.id),
       explicit ? ["a"] : ["a", "b", "c"],
@@ -155,22 +177,26 @@ test("a project switch rejects an old list response and refreshes the current sc
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   const gate = deferred<Task[]>();
+
   transport.handler = (name, args) =>
     name === "list_agent_tasks"
       ? args.repository === "/repo/b"
         ? [task("new", "/repo/b")]
         : gate.promise
       : undefined;
+
   const oldRefresh = controller.refresh();
   await flush();
   await controller.changeProject("/repo/b");
   gate.resolve([task("stale")]);
   await oldRefresh;
   await flush();
+
   assert.deepEqual(
     controller.getSnapshot().tasks.map((item) => item.id),
     ["new"],
   );
+
   assert.equal(controller.getSnapshot().repository, "/repo/b");
 });
 
@@ -180,6 +206,7 @@ test("delayed detail from a previous selection cannot replace current events or 
   transport.tasks = [task("a"), task("b")];
   await controller.start();
   const gate = deferred<Event[]>();
+
   transport.handler = (name, args) =>
     name === "get_agent_events"
       ? args.task_id === "a"
@@ -188,15 +215,18 @@ test("delayed detail from a previous selection cannot replace current events or 
       : name === "get_agent_artifacts"
         ? [{ id: args.task_id, task_id: args.task_id }]
         : undefined;
+
   const first = controller.select("a");
   await controller.select("b");
   gate.resolve([{ id: 1, task_id: "a", type: "log", timestamp: "", data: {} }]);
   await first;
   assert.equal(controller.getSnapshot().selected, "b");
+
   assert.deepEqual(
     controller.getSnapshot().events.map((item) => item.task_id),
     ["b"],
   );
+
   assert.deepEqual(
     controller.getSnapshot().artifacts.map((item) => item.id),
     ["b"],
@@ -213,10 +243,12 @@ test("refresh preserves dialog identity and reviewed defaults while discovering 
   if (dialog?.kind !== "delegate") throw new Error("Expected delegate dialog");
   assert.equal(dialog.defaults.max_runtime_minutes, 0.5);
   assert.equal(dialog.defaults.max_cost_usd, null);
+
   transport.projects = [
     ...transport.projects,
     { repository: "/repo/b", kind: "repository" },
   ];
+
   await controller.refresh();
   assert.equal(controller.getSnapshot().dialog, dialog);
   assert.equal(controller.getSnapshot().projects.length, 2);
@@ -227,14 +259,18 @@ test("delegation project lookup discarded when conversation changes", async (t) 
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   const gate = deferred<typeof transport.projects>();
+
   transport.handler = (name) =>
     name === "list_agent_projects" ? gate.promise : undefined;
+
   const opening = controller.delegate();
   await flush();
+
   controller.applyScope(
     { panel_scope: { conversation_id: "another-chat" } },
     false,
   );
+
   gate.resolve(transport.projects);
   await opening;
   assert.equal(controller.getSnapshot().dialog, undefined);
@@ -248,10 +284,12 @@ test("in-flight mutation never selects its returned task after the host changes 
   const original = controller.getSnapshot().dialog;
   const gate = deferred<Task>();
   const submitting = controller.submit(() => gate.promise, true);
+
   controller.applyScope(
     { panel_scope: { conversation_id: "new-chat", repository: "/repo/b" } },
     false,
   );
+
   assert.equal(controller.getSnapshot().busy, true);
   gate.resolve(task("old-outcome"));
   await submitting;
@@ -260,9 +298,11 @@ test("in-flight mutation never selects its returned task after the host changes 
   assert.equal(controller.getSnapshot().busy, false);
   assert.match(controller.getSnapshot().formError, /original scope/);
   let retryCalls = 0;
+
   await controller.submit(async () => {
     retryCalls++;
   });
+
   assert.equal(retryCalls, 0);
   assert.match(controller.getSnapshot().formError, /reopen/);
 });
@@ -271,6 +311,7 @@ test("approved parent roots allow delegation in a scoped subrepository; console 
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   transport.projects = [{ repository: "/repo", kind: "parent" }];
+
   controller.applyScope(
     {
       panel_scope: {
@@ -281,14 +322,17 @@ test("approved parent roots allow delegation in a scoped subrepository; console 
     },
     false,
   );
+
   await controller.start();
   await controller.delegate();
   assert.equal(controller.getSnapshot().dialog?.kind, "delegate");
   const dialog = controller.getSnapshot().dialog;
+
   if (dialog?.kind === "delegate") {
     assert.equal(dialog.repository, "/repo/sub");
     assert.equal(dialog.revision, "feature");
   }
+
   const consoleSetup = setup("console");
   t.onTestFinished(() => consoleSetup.controller.dispose());
   consoleSetup.transport.projects = transport.projects;
@@ -300,21 +344,26 @@ test("automatic global history does not prefill delegation, while an intentional
   const { controller, transport } = setup("panel", true);
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("history", "/history")];
+
   transport.projects = [
     { repository: "/repo/a", kind: "repository" },
     { repository: "/repo/b", kind: "repository" },
   ];
+
   await controller.start();
   await controller.delegate();
   let dialog = controller.getSnapshot().dialog;
+
   assert.equal(
     dialog?.kind === "delegate" ? dialog.repository : "wrong dialog",
     undefined,
   );
+
   controller.dismiss();
   await controller.select("history");
   await controller.delegate();
   dialog = controller.getSnapshot().dialog;
+
   assert.equal(
     dialog?.kind === "delegate" ? dialog.repository : undefined,
     "/history",
@@ -326,6 +375,7 @@ test("event pagination follows the server cursor and retains the latest 200 even
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a")];
   await controller.start();
+
   const events = Array.from({ length: 1005 }, (_, i) => ({
     id: i + 1,
     task_id: "a",
@@ -333,27 +383,34 @@ test("event pagination follows the server cursor and retains the latest 200 even
     timestamp: "",
     data: {},
   }));
+
   transport.handler = (name, args) =>
     name === "get_agent_events"
       ? events.filter((item) => item.id > Number(args.after)).slice(0, 1000)
       : undefined;
+
   await controller.select("a");
+
   assert.deepEqual(
     controller.getSnapshot().events.map((item) => item.id),
     events.slice(-200).map((item) => item.id),
   );
+
   assert.deepEqual(
     transport.calls
       .filter((call) => call.name === "get_agent_events")
       .map((call) => call.args.after),
     [0, 1000],
   );
+
   await controller.refresh();
+
   assert.equal(
     transport.calls.filter((call) => call.name === "get_agent_events").at(-1)
       ?.args.after,
     1005,
   );
+
   assert.equal(controller.getSnapshot().events.length, 200);
 });
 
@@ -378,9 +435,11 @@ test("Back keeps scoped narrow panels on the task list through refresh", async (
 for (const phase of ["connect", "read", "poll"] as const) {
   test(`host teardown during ${phase} stops further reads and polling`, async (t) => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
     t.onTestFinished(() => {
       vi.useRealTimers();
     });
+
     const { controller, transport } = setup("console");
     transport.preview = false;
     t.onTestFinished(() => controller.dispose());
@@ -393,13 +452,17 @@ for (const phase of ["connect", "read", "poll"] as const) {
           : undefined;
     const starting = controller.start();
     await flush();
+
     if (phase === "poll") {
       await starting;
+
       transport.handler = (name) =>
         name === "list_agent_tasks" ? gate.promise.then(() => []) : undefined;
+
       vi.advanceTimersByTime(3000);
       await flush();
     }
+
     transport.events.teardown();
     const calls = transport.calls.length;
     gate.resolve();
@@ -416,9 +479,11 @@ for (const phase of ["connect", "read", "poll"] as const) {
 
 test("embedded polling skips hidden panels and waits for a pending refresh", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
   t.onTestFinished(() => {
     vi.useRealTimers();
   });
+
   const { controller, transport, environment } = setup("console");
   transport.preview = false;
   t.onTestFinished(() => controller.dispose());
@@ -431,8 +496,10 @@ test("embedded polling skips hidden panels and waits for a pending refresh", asy
   assert.equal(transport.calls.length, initial);
   hidden = false;
   const gate = deferred<Task[]>();
+
   transport.handler = (name) =>
     name === "list_agent_tasks" ? gate.promise : undefined;
+
   vi.advanceTimersByTime(3000);
   await flush();
   const pending = transport.calls.length;
@@ -449,18 +516,22 @@ test("embedded polling skips hidden panels and waits for a pending refresh", asy
 
 test("embedded polling reports tool failures then retries successfully", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
   t.onTestFinished(() => {
     vi.useRealTimers();
   });
+
   const { controller, transport } = setup("console");
   transport.preview = false;
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   let fails = true;
+
   transport.handler = (name) =>
     name === "list_agent_tasks" && fails
       ? Promise.reject(new Error("Host temporarily unavailable"))
       : undefined;
+
   vi.advanceTimersByTime(3000);
   await flush();
   assert.equal(controller.getSnapshot().connection, "Reconnecting…");
@@ -474,13 +545,16 @@ test("embedded polling reports tool failures then retries successfully", async (
 
 test("embedded startup schedules a retry when its first read fails", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
   t.onTestFinished(() => {
     vi.useRealTimers();
   });
+
   const { controller, transport } = setup();
   transport.preview = false;
   t.onTestFinished(() => controller.dispose());
   let fails = true;
+
   transport.handler = (name) =>
     name === "list_agent_tasks" && fails
       ? Promise.reject(new Error("Host temporarily unavailable"))
@@ -492,9 +566,11 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
   assert.equal(transport.watches, 0);
 
   fails = false;
+
   const previousReads = transport.calls.filter(
     (call) => call.name === "list_agent_tasks",
   ).length;
+
   vi.advanceTimersByTime(5000);
   await flush();
 
@@ -502,16 +578,19 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
     transport.calls.filter((call) => call.name === "list_agent_tasks").length,
     previousReads + 1,
   );
+
   assert.equal(
     controller.getSnapshot().connection,
     "Connected · refreshes every 5s",
   );
+
   assert.equal(controller.getSnapshot().error, "");
 });
 
 test("All chats preserves repository and discards a delayed conversation response", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
+
   controller.applyScope(
     {
       panel_scope: {
@@ -523,21 +602,26 @@ test("All chats preserves repository and discards a delayed conversation respons
     },
     false,
   );
+
   transport.tasks = [task("a", "/repo/a", "chat-a")];
   await controller.start();
+
   assert.equal(
     controller.getSnapshot().projectCandidate,
     "/repo/chat-candidate",
   );
+
   controller.setFilter("attention");
   controller.setSearch("old search");
   const gate = deferred<Task[]>();
+
   transport.handler = (name, args) =>
     name === "list_agent_tasks"
       ? args.conversation_id === "chat-a"
         ? gate.promise
         : [task("a", "/repo/a", "chat-a"), task("b", "/repo/a", "chat-b")]
       : undefined;
+
   const oldRefresh = controller.refresh();
   await flush();
   await controller.allChats();
@@ -551,10 +635,12 @@ test("All chats preserves repository and discards a delayed conversation respons
   assert.equal(state.projectCandidate, undefined);
   assert.equal(state.filter, "all");
   assert.equal(state.search, "");
+
   assert.deepEqual(
     state.tasks.map((item) => item.id),
     ["a", "b"],
   );
+
   assert.deepEqual(
     transport.calls.filter((call) => call.name === "list_agent_tasks").at(-1)
       ?.args,
@@ -566,10 +652,12 @@ test("unrelated tool output leaves scope, selection and the open form intact", a
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a", "/repo/a", "chat")];
+
   controller.applyScope(
     { panel_scope: { conversation_id: "chat", repository: "/repo/a" } },
     false,
   );
+
   await controller.start();
   await controller.delegate();
   const before = controller.getSnapshot();
@@ -584,6 +672,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
   for (const auto of [false, true]) {
     const { controller, transport } = setup();
     t.onTestFinished(() => controller.dispose());
+
     controller.applyScope(
       {
         panel_scope: { conversation_id: "chat-a" },
@@ -594,6 +683,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
       },
       false,
     );
+
     await controller.start();
     await controller.delegate();
     const dialog = controller.getSnapshot().dialog;
@@ -602,6 +692,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
       assert.equal(dialog.repository, auto ? "/repo/chat" : "/repo/a");
     // A registered project never triggers registration.
     await controller.addChatProjectForTask("/repo/a");
+
     transport.handler = (name) =>
       name === "list_agent_projects"
         ? [
@@ -611,14 +702,18 @@ test("New task offers the chat project only when auto-add is on and adds it befo
         : name === "register_user_agent_project"
           ? { repository: "/repo/chat", kind: "repository" }
           : undefined;
+
     await controller.addChatProjectForTask("/repo/chat");
+
     const registrations = transport.calls.filter(
       (call) => call.name === "register_user_agent_project",
     );
+
     assert.deepEqual(
       registrations.map((call) => call.args),
       auto ? [{ repository: "/repo/chat" }] : [],
     );
+
     assert.equal(
       controller.getSnapshot().projectCandidate,
       auto ? undefined : "/repo/chat",
@@ -640,6 +735,7 @@ test("Failed filter shows failed, unconfirmed and live-failed tasks only", async
   done.status = "completed";
   const cancelled = task("cancelled");
   cancelled.status = "cancelled";
+
   transport.tasks = [
     failed,
     unconfirmed,
@@ -648,8 +744,10 @@ test("Failed filter shows failed, unconfirmed and live-failed tasks only", async
     cancelled,
     task("ok"),
   ];
+
   await controller.start();
   controller.setFilter("failed");
+
   assert.deepEqual(
     visibleTasks(controller.getSnapshot()).map((item) => item.id),
     ["failed", "unconfirmed", "live-failed"],

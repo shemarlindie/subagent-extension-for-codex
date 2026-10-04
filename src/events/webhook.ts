@@ -3,15 +3,18 @@ import { request } from "node:https";
 import type { LookupFunction } from "node:net";
 import ipaddr from "ipaddr.js";
 import { Webhook } from "standardwebhooks";
+
 export interface Reply {
   status: number;
   body: string;
 }
+
 export type WebhookPost = (
   url: string,
   body: string,
   headers: Record<string, string>,
 ) => Promise<Reply>;
+
 export function callbackUrl(value: string) {
   if (value.length > 2048) throw new Error("Callback URL is too long");
   const url = new URL(value);
@@ -25,8 +28,10 @@ export function callbackUrl(value: string) {
     throw new Error(
       "Callback must be HTTPS on port 443 without credentials or fragments",
     );
+
   return url;
 }
+
 export function publicAddress(address: string) {
   try {
     return ipaddr.process(address).range() === "unicast";
@@ -34,6 +39,7 @@ export function publicAddress(address: string) {
     return false;
   }
 }
+
 /** Resolve on each request and pin the validated address in the actual TLS connection. */
 export function createWebhookPost(
   resolveDns: typeof lookup = lookup,
@@ -46,6 +52,7 @@ export function createWebhookPost(
     if (!addresses.length || addresses.some((a) => !publicAddress(a.address)))
       throw new Error("Callback address is not public");
     const address = addresses[0];
+
     return new Promise((resolve, reject) => {
       const req = connect(
         url,
@@ -68,28 +75,35 @@ export function createWebhookPost(
         (res) => {
           let text = "";
           res.setEncoding("utf8");
+
           res.on("data", (chunk: string) => {
             text += chunk;
             if (Buffer.byteLength(text) > 65536)
               req.destroy(new Error("Callback response too large"));
           });
+
           res.on("error", reject);
+
           res.on("end", () =>
             resolve({ status: res.statusCode ?? 0, body: text }),
           );
         },
       );
+
       const timeout = setTimeout(
         () => req.destroy(new Error("Callback timed out")),
         10000,
       );
+
       req.on("close", () => clearTimeout(timeout));
       req.on("error", reject);
       req.end(body);
     });
   };
 }
+
 export const webhookPost = createWebhookPost();
+
 export function validSecret(secret: string) {
   if (!/^whsec_[A-Za-z0-9+/]+={0,2}$/.test(secret))
     throw new Error("Invalid webhook signing secret");
@@ -102,6 +116,7 @@ export function validSecret(secret: string) {
   )
     throw new Error("Invalid webhook signing secret");
 }
+
 export function signedHeaders(
   id: string,
   body: string,
@@ -112,6 +127,7 @@ export function signedHeaders(
   const time = new Date();
   let signature = new Webhook(secret).sign(id, time, body);
   if (previous) signature += " " + new Webhook(previous).sign(id, time, body);
+
   return {
     "Content-Type": "application/json",
     "webhook-id": id,

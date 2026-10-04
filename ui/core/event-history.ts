@@ -1,6 +1,7 @@
 import { activityFailed, activityKind } from "./activity-timeline";
 import { formatDuration } from "./duration";
 import type { Event } from "./types";
+
 export const EVENT_TAIL_SIZE = 200;
 
 /** What fell off the front of a task's activity once it outgrew the tail. */
@@ -18,6 +19,7 @@ export type DroppedSummary = {
   retries: number;
   artifacts: number;
 };
+
 export type EventTail = { events: Event[]; dropped?: DroppedSummary };
 
 /** Tally dropped events onto a running summary without mutating the previous one. */
@@ -26,6 +28,7 @@ export function addDropped(
   dropped: Event[],
 ): DroppedSummary | undefined {
   if (!dropped.length) return previous;
+
   const summary: DroppedSummary = previous
     ? { ...previous, tools: { ...previous.tools } }
     : {
@@ -40,21 +43,27 @@ export function addDropped(
         retries: 0,
         artifacts: 0,
       };
+
   for (const event of dropped) {
     summary.count++;
     summary.to = event.timestamp;
+
     if (event.type === "tool.started") {
       summary.toolCalls++;
+
       const name =
         typeof event.data.name === "string" ? event.data.name : "Tool";
+
       summary.tools[name] = (summary.tools[name] ?? 0) + 1;
     }
+
     if (event.type === "agent.message" && event.data.role !== "user")
       summary.messages++;
     if (activityFailed(event)) summary.failures++;
     if (activityKind(event) === "api_retry") summary.retries++;
     if (event.type === "artifact.created") summary.artifacts++;
   }
+
   return summary;
 }
 
@@ -73,6 +82,7 @@ export async function readEventTail(
       recent.length && previousDropped?.task_id === taskId
         ? previousDropped
         : undefined;
+
   for (;;) {
     const page = await read(after);
     if (!isCurrent()) return { events: [] };
@@ -83,11 +93,13 @@ export async function readEventTail(
         dropped,
       };
     recent = [...recent, ...page];
+
     if (recent.length > EVENT_TAIL_SIZE) {
       const overflow = recent.length - EVENT_TAIL_SIZE;
       dropped = addDropped(dropped, recent.slice(0, overflow));
       recent = recent.slice(overflow);
     }
+
     const cursor = page.at(-1)!.id;
     if (page.length < 1000 || cursor <= after)
       return { events: recent, dropped };
@@ -106,6 +118,7 @@ export function describeDropped(summary: DroppedSummary) {
     ),
     shown = tools.slice(0, 3).map(([name, n]) => `${name} ${n}`),
     hidden = tools.length - shown.length;
+
   return {
     headline: `${plural(summary.count, "earlier event")}${
       elapsed >= 1000 ? ` over ${formatDuration(elapsed)}` : ""

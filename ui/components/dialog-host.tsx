@@ -4,19 +4,24 @@ import { useController, useSnapshot } from "./controller-context";
 import { dialogDefinition } from "../forms/dialog-registry";
 import { useAnimatedHeight } from "./motion";
 import { buttonClass } from "./button";
+
 export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   const controller = useController(),
     state = useSnapshot(),
     // The closing animation keeps showing the last dialog rather than an empty box.
     lastDialog = useRef(state.dialog);
+
   if (state.dialog) lastDialog.current = state.dialog;
   const dialog = state.dialog ?? lastDialog.current;
   const definition = dialog && dialogDefinition(dialog);
+
   const trigger = useRef<HTMLElement | null>(null),
     openedScope = useRef(0),
     popup = useRef<HTMLDivElement>(null);
+
   // Switching forms or showing an error eases the height instead of snapping it.
   useAnimatedHeight(popup, `${dialog?.kind}:${state.formError ?? ""}`);
+
   return (
     // Host collapse hides the modal; keeping its contents mounted retains drafts.
     <Dialog.Root
@@ -37,6 +42,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
           initialFocus={() => {
             trigger.current = document.activeElement as HTMLElement | null;
             openedScope.current = dialog?.scope ?? 0;
+
             return (
               (dialog && definition?.initialFocus?.(popup.current, dialog)) ||
               true

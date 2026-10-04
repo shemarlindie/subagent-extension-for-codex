@@ -33,20 +33,25 @@ export function normalizeCwd(value: string) {
   // The pathname setter also escapes "#" and "?", which encodeURI keeps.
   const url = new URL("file:///");
   url.pathname = cwd;
+
   return url.href;
 }
+
 /** Saved settings over the defaults; unreadable storage falls back to them. */
 export function settingsFrom(defaults: Settings, stored: string | null) {
   try {
     const saved: Settings = { ...defaults, ...JSON.parse(stored!) };
+
     return { ...saved, cwd: normalizeCwd(saved.cwd) };
   } catch {
     return defaults;
   }
 }
+
 export function parseStyles(text: string): Record<string, string> | undefined {
   try {
     const value = JSON.parse(text);
+
     // Accept either the variables map or a whole hostContext.styles object.
     return value?.variables ?? value;
   } catch {
@@ -59,6 +64,7 @@ export function codexMeta(
   settings: Pick<Settings, "launch" | "threadId" | "cwd">,
 ) {
   if (settings.launch === "global") return undefined;
+
   return {
     ...(settings.threadId ? { threadId: settings.threadId } : {}),
     ...(settings.cwd
@@ -66,6 +72,7 @@ export function codexMeta(
       : {}),
   };
 }
+
 /**
  * Fixture stand-in for the service's withConversation: Codex launches with
  * empty arguments, and the service turns the thread metadata into these.
@@ -75,6 +82,7 @@ export function fixtureLaunchArgs(
 ) {
   const meta = codexMeta(settings);
   if (!meta) return {};
+
   return {
     ...(meta.threadId ? { conversation_id: meta.threadId } : {}),
     ...(meta["codex/sandbox-state-meta"]
@@ -82,6 +90,7 @@ export function fixtureLaunchArgs(
       : {}),
   };
 }
+
 /** A fixture result shaped like the service's MCP tool result. */
 export function fixtureCall(
   name: string,
@@ -90,10 +99,12 @@ export function fixtureCall(
 ) {
   try {
     const result = previewTool(name, args, options);
+
     // The openers and settings tools return their payload unwrapped.
     const unwrapped =
       name.startsWith("open_codex_subagent_extension") ||
       name.endsWith("_agent_settings");
+
     return {
       content: [{ type: "text", text: JSON.stringify(result) }],
       structuredContent: (unwrapped ? result : { result }) as Record<
@@ -110,12 +121,15 @@ export function fixtureCall(
 }
 
 export type Thread = { id: string; latest: string; tasks: number };
+
 /** Conversations that have tasks, newest activity first. */
 export function threadsOf(tasks: Task[]): Thread[] {
   const threads = new Map<string, Thread & { created: string }>();
+
   for (const task of tasks) {
     if (!task.conversation_id) continue;
     const thread = threads.get(task.conversation_id);
+
     if (!thread)
       threads.set(task.conversation_id, {
         id: task.conversation_id,
@@ -130,13 +144,16 @@ export function threadsOf(tasks: Task[]): Thread[] {
         Object.assign(thread, { latest: task.title, created: task.created_at });
     }
   }
+
   return [...threads.values()]
     .sort((a, b) => b.created.localeCompare(a.created))
     .map(({ id, latest, tasks }) => ({ id, latest, tasks }));
 }
+
 /** Picker label; long IDs such as UUIDs are shortened. */
 export function threadLabel({ id, latest, tasks }: Thread) {
   const name = id.length > 12 ? `${id.slice(0, 8)}…` : id || "(none)";
+
   return tasks
     ? `${name} · ${latest} (${tasks} ${tasks === 1 ? "task" : "tasks"})`
     : `${name} · no tasks`;

@@ -44,6 +44,7 @@ test("saved settings override defaults and old plain cwds are converted", () => 
     settingsFrom(defaults, JSON.stringify({ cwd: "/old", width: "fill" })),
     { ...defaults, cwd: "file:///old", width: "fill" },
   );
+
   assert.deepEqual(settingsFrom(defaults, null), defaults);
   assert.deepEqual(settingsFrom(defaults, "not json"), defaults);
 });
@@ -53,10 +54,12 @@ test("thread launches carry Codex metadata; global launches carry none", () => {
     threadId: PREVIEW_THREAD,
     "codex/sandbox-state-meta": { sandboxCwd: "file:///repo" },
   });
+
   assert.deepEqual(fixtureLaunchArgs(defaults), {
     conversation_id: PREVIEW_THREAD,
     host_directory: "file:///repo",
   });
+
   assert.deepEqual(codexMeta({ ...defaults, threadId: "", cwd: "" }), {});
   const global = { ...defaults, launch: "global" as const };
   assert.equal(codexMeta(global), undefined);
@@ -85,6 +88,7 @@ test("threads are grouped by conversation, newest first", () => {
       title,
       created_at: new Date(Date.UTC(2026, 0, 1, 0, at)).toISOString(),
     }) as Task;
+
   assert.deepEqual(
     threadsOf([
       task("a", "First in a", 1),
@@ -104,6 +108,7 @@ test("thread labels shorten long IDs and name empty threads", () => {
     threadLabel({ id: "dev-thread", latest: "Fix it", tasks: 1 }),
     "dev-thread · Fix it (1 task)",
   );
+
   assert.equal(
     threadLabel({
       id: "00000000-0000-4000-8000-000000000001",
@@ -112,6 +117,7 @@ test("thread labels shorten long IDs and name empty threads", () => {
     }),
     "00000000… · Fix it (3 tasks)",
   );
+
   assert.equal(
     threadLabel({ id: "", latest: "", tasks: 0 }),
     "(none) · no tasks",

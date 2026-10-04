@@ -18,27 +18,34 @@ const task: Task = {
   created_at: "now",
   updated_at: "now",
 };
+
 const ref = {
   session_id: "sess_one",
   state_ref: "openai-agent-session:sess_one",
   environment_id: "env_one",
   remote_url: "https://api.openai.com/executor",
 };
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: Error) => void;
+
   const promise = new Promise<T>((a, b) => {
     resolve = a;
     reject = b;
   });
+
   return { promise, resolve, reject };
 }
+
 function fixture() {
   const ending = deferred<{
     code: number | null;
     signal: NodeJS.Signals | null;
   }>();
+
   let stops = 0;
+
   const handle: ExecutorHandle = {
     exited: ending.promise,
     stop: async () => {
@@ -46,6 +53,7 @@ function fixture() {
       ending.resolve({ code: 0, signal: null });
     },
   };
+
   return { handle, ending, stops: () => stops };
 }
 
@@ -53,14 +61,18 @@ test("concurrent executor acquisitions share startup and keep compute between tu
   const f = fixture();
   const ready = deferred<ExecutorHandle>();
   let starts = 0;
+
   const pool = new CodexExecutors({
     start: async () => {
       starts++;
+
       return ready.promise;
     },
   });
+
   const first = pool.acquire(task, ref),
     second = pool.acquire(task, ref);
+
   await Promise.resolve();
   assert.equal(starts, 1);
   ready.resolve(f.handle);
@@ -81,10 +93,12 @@ test("concurrent executor acquisitions share startup and keep compute between tu
 test("executor acquisition verifies persisted session and rejects changed ownership, workspace and policy", async () => {
   const f = fixture();
   const pool = new CodexExecutors({ start: async () => f.handle });
+
   await assert.rejects(
     pool.acquire({ ...task, session_id: undefined }, ref),
     /Persist/,
   );
+
   const lease = await pool.acquire(task, ref);
   for (const changed of [
     { ...task, owner: "bob" },
@@ -92,14 +106,17 @@ test("executor acquisition verifies persisted session and rejects changed owners
     { ...task, worker_profile: "implementer" as const },
   ])
     await assert.rejects(pool.acquire(changed, ref), /identity changed/);
+
   await assert.rejects(
     pool.stop({ ...task, owner: "bob" }, ref),
     /identity changed/,
   );
+
   await assert.rejects(
     pool.acquire(task, { ...ref, environment_id: "other" }),
     /identity changed/,
   );
+
   lease.release();
   await pool.close();
 });
@@ -120,12 +137,15 @@ test("shutdown waits for pending startup, stops its executor and refuses new wor
 test("startup captures immutable task and session identity", async () => {
   const f = fixture();
   let observed: Task | undefined;
+
   const pool = new CodexExecutors({
     start: async (input) => {
       observed = input;
+
       return f.handle;
     },
   });
+
   const mutable = structuredClone(task);
   const acquiring = pool.acquire(mutable, ref);
   mutable.workspace = "/wrong";
@@ -138,12 +158,15 @@ test("startup captures immutable task and session identity", async () => {
 test("failed startup can retry, but executor exit cannot replace compute while still leased", async () => {
   const f = fixture();
   let starts = 0;
+
   const pool = new CodexExecutors({
     start: async () => {
       if (++starts === 1) throw new Error("startup failed");
+
       return f.handle;
     },
   });
+
   await assert.rejects(pool.acquire(task, ref), /startup failed/);
   await new Promise((resolve) => setImmediate(resolve));
   const lease = await pool.acquire(task, ref);
@@ -158,6 +181,7 @@ test("failed startup can retry, but executor exit cannot replace compute while s
 
 test("shutdown reports stop failure and keeps the service closed", async () => {
   const f = fixture();
+
   const pool = new CodexExecutors({
     start: async () => ({
       ...f.handle,
@@ -166,6 +190,7 @@ test("shutdown reports stop failure and keeps the service closed", async () => {
       },
     }),
   });
+
   const lease = await pool.acquire(task, ref);
   lease.release();
   await assert.rejects(pool.close(), AggregateError);
@@ -177,14 +202,17 @@ test("turn ownership excludes concurrent input writers and releases after a fail
   const f = fixture();
   const pool = new CodexExecutors({ start: async () => f.handle });
   const turn = deferred<void>();
+
   const running = assert.rejects(
     pool.run(task, ref, () => turn.promise),
     /turn failed/,
   );
+
   await assert.rejects(
     pool.run(task, ref, async () => "duplicate"),
     /active Codex turn/,
   );
+
   await assert.rejects(pool.stop(task, ref), /still in use/);
   turn.reject(new Error("turn failed"));
   await running;

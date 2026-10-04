@@ -7,30 +7,39 @@ import { Control } from "../dist/core/control.js";
 import { Store } from "../dist/core/store.js";
 import { Workspaces } from "../dist/core/workspace.js";
 import { ClaudeAgentProvider } from "../dist/providers/claude.js";
+
 if (process.env.CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY !== "1") {
   console.error(
     "Set CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, or $0.50 for parity. A response can exceed the budget before work stops.",
   );
+
   process.exit(1);
 }
+
 const scenario = process.argv[2] ?? "read";
+
 assert.ok(
   ["read", "resume", "sandbox", "mcp", "budget", "parity"].includes(scenario),
   "Choose read, resume, sandbox, mcp, budget, or parity",
 );
+
 const root = await realpath(
   await mkdtemp(join(tmpdir(), "codex-subagent-extension-native-proof-")),
 );
+
 const repo = join(root, "repo");
 await mkdir(repo);
 execFileSync("git", ["init", "-q", repo]);
+
 await writeFile(
   join(repo, "README.md"),
   "# Native verification\n\nThe verification marker is COBALT-27.\n",
 );
+
 if (scenario === "parity") {
   // Project-scoped Claude Code configuration, loaded the same way the CLI does.
   const { fileURLToPath } = await import("node:url");
+
   const sdk = (path) =>
     fileURLToPath(
       new URL(
@@ -38,6 +47,7 @@ if (scenario === "parity") {
         import.meta.url,
       ),
     );
+
   await writeFile(
     join(root, "fixture-mcp.mjs"),
     `import { McpServer } from ${JSON.stringify(sdk("mcp.js"))};
@@ -49,6 +59,7 @@ server.registerTool("fixture_marker", { description: "Return the fixture MCP mar
 await server.connect(new StdioServerTransport());
 `,
   );
+
   await writeFile(
     join(repo, ".mcp.json"),
     JSON.stringify({
@@ -60,13 +71,16 @@ await server.connect(new StdioServerTransport());
       },
     }),
   );
+
   await mkdir(join(repo, ".claude", "skills", "marker-skill"), {
     recursive: true,
   });
+
   await writeFile(
     join(repo, ".claude", "skills", "marker-skill", "SKILL.md"),
     "---\nname: marker-skill\ndescription: Reveals the fixture skill marker.\n---\n\nThe skill marker is VERMILION-41.\n",
   );
+
   await writeFile(
     join(repo, ".claude", "settings.json"),
     JSON.stringify({
@@ -86,9 +100,12 @@ await server.connect(new StdioServerTransport());
       },
     }),
   );
+
   execFileSync("git", ["-C", repo, "add", ".mcp.json", ".claude"]);
 }
+
 execFileSync("git", ["-C", repo, "add", "README.md"]);
+
 execFileSync("git", [
   "-C",
   repo,
@@ -100,7 +117,9 @@ execFileSync("git", [
   "-qm",
   "Verification fixture",
 ]);
+
 const store = new Store(join(root, "tasks.sqlite"));
+
 const control = new Control(
   store,
   new Workspaces(join(root, "worktrees"), [repo]),
@@ -117,16 +136,21 @@ if (scenario === "read") {
       "Read README.md using the native Read tool. Report the exact verification marker in your structured findings and evidence. Do not ask questions, run commands or edit files.",
     budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
   });
+
   console.log(JSON.stringify({ phase: "started", root, task_id: task.id }));
+
   try {
     const deadline = Date.now() + 70000;
     let previous;
+
     while (Date.now() < deadline) {
       const current = store.get(task.id, "verification");
+
       if (current.status !== previous) {
         console.log(JSON.stringify({ phase: "state", status: current.status }));
         previous = current.status;
       }
+
       if (
         ["completed", "failed", "cancelled", "interrupted"].includes(
           current.status,
@@ -136,22 +160,26 @@ if (scenario === "read") {
         assert.ok(current.result.findings.join(" ").includes("COBALT-27"));
         assert.ok(current.session_id && current.session_state_ref);
         const evidence = store.events(task.id, "verification");
+
         assert.ok(
           evidence.some(
             (e) => e.type === "tool.started" && e.data.name === "Read",
           ),
         );
+
         assert.ok(
           store
             .artifacts(task.id, "verification")
             .some((a) => a.type === "report"),
         );
+
         assert.equal(
           execFileSync("git", ["-C", repo, "status", "--porcelain"], {
             encoding: "utf8",
           }),
           "",
         );
+
         console.log(
           JSON.stringify({
             phase: "verified",
@@ -162,10 +190,13 @@ if (scenario === "read") {
             primary_clean: true,
           }),
         );
+
         break;
       }
+
       await new Promise((r) => setTimeout(r, 250));
     }
+
     assert.equal(
       store.get(task.id, "verification").status,
       "completed",
@@ -183,23 +214,29 @@ if (scenario === "read") {
       "Before reading anything, use the native AskUserQuestion tool to ask: May I inspect README now? Offer Proceed and Wait. Wait for the user response before inspecting README. Afterwards report its exact verification marker in structured findings.",
     budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
   });
+
   console.log(JSON.stringify({ phase: "started", root, task_id: task.id }));
   let reopened;
+
   try {
     const deadline = Date.now() + 65000;
+
     while (
       Date.now() < deadline &&
       !store.get(task.id, "verification").pending_input
     ) {
       const current = store.get(task.id, "verification");
+
       assert.ok(
         !["completed", "failed", "cancelled", "interrupted"].includes(
           current.status,
         ),
         current.error ?? "Task ended before asking",
       );
+
       await new Promise((r) => setTimeout(r, 250));
     }
+
     const waiting = store.get(task.id, "verification");
     assert.equal(waiting.pending_input?.tool, "AskUserQuestion");
     assert.ok(waiting.session_id && waiting.session_state_ref);
@@ -208,24 +245,31 @@ if (scenario === "read") {
     assert.equal(store.get(task.id, "verification").status, "interrupted");
     await control.close();
     const nextStore = new Store(join(root, "tasks.sqlite"));
+
     reopened = new Control(
       nextStore,
       new Workspaces(join(root, "worktrees"), [repo]),
       new Map([["claude", new ClaudeAgentProvider()]]),
       repo,
     );
+
     await reopened.recover();
+
     await reopened.continue(
       "verification",
       task.id,
       "Proceed now. Read README.md with the Read tool and report its exact marker in structured findings. Do not ask another question or run commands.",
     );
+
     console.log(
       JSON.stringify({ phase: "resumed_after_restart", same_task: true }),
     );
+
     const finalDeadline = Date.now() + 65000;
+
     while (Date.now() < finalDeadline) {
       const current = nextStore.get(task.id, "verification");
+
       if (
         ["completed", "failed", "cancelled", "interrupted"].includes(
           current.status,
@@ -235,17 +279,20 @@ if (scenario === "read") {
         assert.equal(current.session_id, session);
         assert.equal(current.attempt, 2);
         assert.ok(current.result.findings.join(" ").includes("COBALT-27"));
+
         assert.ok(
           nextStore
             .artifacts(task.id, "verification")
             .some((a) => a.type === "report"),
         );
+
         assert.equal(
           execFileSync("git", ["-C", repo, "status", "--porcelain"], {
             encoding: "utf8",
           }),
           "",
         );
+
         console.log(
           JSON.stringify({
             phase: "verified",
@@ -255,10 +302,13 @@ if (scenario === "read") {
             primary_clean: true,
           }),
         );
+
         break;
       }
+
       await new Promise((r) => setTimeout(r, 250));
     }
+
     assert.equal(
       nextStore.get(task.id, "verification").status,
       "completed",
@@ -274,24 +324,31 @@ if (scenario === "read") {
   const { randomBytes } = await import("node:crypto");
   const { fileURLToPath } = await import("node:url");
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+
   const { StdioClientTransport } =
     await import("@modelcontextprotocol/sdk/client/stdio.js");
+
   const token = randomBytes(32).toString("base64url");
+
   const app = application(
     control,
     new Auth(token, "verification"),
     "http://127.0.0.1:4317",
     fileURLToPath(new URL("../dist/console.html", import.meta.url)),
   );
+
   const server = app.listen(0, "127.0.0.1");
+
   await new Promise((resolve, reject) => {
     server.once("listening", resolve);
     server.once("error", reject);
   });
+
   const client = new Client({
     name: "native-headless-verification",
     version: "1",
   });
+
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [fileURLToPath(new URL("../dist/stdio.js", import.meta.url))],
@@ -301,17 +358,21 @@ if (scenario === "read") {
     },
     stderr: "pipe",
   });
+
   const call = async (name, args = {}) => {
     const response = await client.callTool({ name, arguments: args });
     assert.ok(!response.isError, JSON.stringify(response.content));
+
     return response.structuredContent.result;
   };
+
   try {
     await client.connect(transport);
     const tools = await client.listTools();
     assert.ok(tools.tools.some((t) => t.name === "start_agent_task"));
     const workers = await call("list_available_workers");
     assert.ok(workers.some((w) => w.provider === "claude"));
+
     const task = await call("start_agent_task", {
       provider: "claude",
       worker_profile: "reviewer",
@@ -320,13 +381,17 @@ if (scenario === "read") {
         "Read README.md with the native Read tool. Include its exact verification marker in your structured findings. Do not ask questions, edit files or run commands.",
       budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
     });
+
     console.log(
       JSON.stringify({ phase: "mcp_task_created", task_id: task.id, root }),
     );
+
     const deadline = Date.now() + 65000;
     let completed;
+
     while (Date.now() < deadline) {
       const current = await call("get_agent_task", { task_id: task.id });
+
       if (
         ["completed", "failed", "cancelled", "interrupted"].includes(
           current.status,
@@ -336,24 +401,30 @@ if (scenario === "read") {
         completed = current;
         break;
       }
+
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
+
     assert.ok(completed, "Native MCP verification timed out");
     const report = await call("get_agent_result", { task_id: task.id });
     assert.ok(report.result.findings.join(" ").includes("COBALT-27"));
     const artifacts = await call("get_agent_artifacts", { task_id: task.id });
     assert.ok(artifacts.some((a) => a.type === "report"));
     const events = await call("get_agent_events", { task_id: task.id });
+
     assert.ok(
       events.some((e) => e.type === "tool.started" && e.data.name === "Read"),
     );
+
     assert.ok(events.some((e) => e.type === "task.completed"));
+
     assert.equal(
       execFileSync("git", ["-C", repo, "status", "--porcelain"], {
         encoding: "utf8",
       }),
       "",
     );
+
     console.log(
       JSON.stringify({
         phase: "verified",
@@ -377,6 +448,7 @@ if (scenario === "read") {
   }
 } else if (scenario === "budget") {
   const limit = 0.001;
+
   const task = await control.start("verification", {
     provider: "claude",
     worker_profile: "reviewer",
@@ -385,6 +457,7 @@ if (scenario === "read") {
       "Read README.md using Read and report its exact marker in structured findings. Do not ask questions, edit files or run shell commands.",
     budget: { max_runtime_minutes: 1, max_cost_usd: limit },
   });
+
   console.log(
     JSON.stringify({
       phase: "budget_task_created",
@@ -393,11 +466,14 @@ if (scenario === "read") {
       configured_limit_usd: limit,
     }),
   );
+
   try {
     const deadline = Date.now() + 65000;
     let ended;
+
     while (Date.now() < deadline) {
       const current = store.get(task.id, "verification");
+
       if (
         ["completed", "failed", "cancelled", "interrupted"].includes(
           current.status,
@@ -406,24 +482,29 @@ if (scenario === "read") {
         ended = current;
         break;
       }
+
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
+
     assert.ok(ended, "Native budget verification timed out");
     assert.equal(ended.status, "failed", ended.error);
     assert.match(ended.error, /error_max_budget_usd/);
     assert.ok(ended.cost_usd >= limit);
     assert.equal(ended.result, undefined);
+
     assert.ok(
       !store
         .events(task.id, "verification")
         .some((e) => e.type === "task.completed"),
     );
+
     assert.equal(
       execFileSync("git", ["-C", repo, "status", "--porcelain"], {
         encoding: "utf8",
       }),
       "",
     );
+
     console.log(
       JSON.stringify({
         phase: "verified",
@@ -440,6 +521,7 @@ if (scenario === "read") {
   }
 } else if (scenario === "parity") {
   const { access } = await import("node:fs/promises");
+
   const task = await control.start("verification", {
     provider: "claude",
     worker_profile: "implementer",
@@ -448,6 +530,7 @@ if (scenario === "read") {
       "Do exactly these steps and nothing else: 1. Invoke the marker-skill skill with the Skill tool and note its marker. 2. Call the fixture_marker tool of the fixture MCP server and note its marker. 3. Use the Agent tool to start one subagent that reads README.md with the Read tool and returns its verification marker. Report all three markers in your structured findings. Do not edit files or run shell commands.",
     budget: { max_runtime_minutes: 3, max_cost_usd: 0.5 },
   });
+
   console.log(
     JSON.stringify({
       phase: "started",
@@ -457,19 +540,25 @@ if (scenario === "read") {
       claude_policy: task.claude_policy,
     }),
   );
+
   const expected = (tool) =>
     ["Skill", "Agent", "Task", "Read", "Glob", "Grep"].includes(tool) ||
     tool.startsWith("mcp__fixture__");
+
   const approvals = [];
+
   try {
     const deadline = Date.now() + 185000;
     let ended;
+
     while (Date.now() < deadline) {
       const current = store.get(task.id, "verification");
+
       if (current.pending_input) {
         const { id, tool } = current.pending_input;
         const allow = expected(tool);
         approvals.push({ tool, approved: allow });
+
         control.input(
           "verification",
           task.id,
@@ -479,6 +568,7 @@ if (scenario === "read") {
           allow ? undefined : "Only the fixture steps are approved",
         );
       }
+
       if (
         ["completed", "failed", "cancelled", "interrupted"].includes(
           current.status,
@@ -487,15 +577,20 @@ if (scenario === "read") {
         ended = current;
         break;
       }
+
       await new Promise((r) => setTimeout(r, 100));
     }
+
     assert.ok(ended, "Native parity verification timed out");
     assert.equal(ended.status, "completed", ended.error);
+
     const started = store
       .events(task.id, "verification")
       .filter((e) => e.type === "tool.started")
       .map((e) => e.data.name);
+
     const findings = ended.result.findings.join(" ");
+
     const observed = {
       skill_tool: started.includes("Skill"),
       skill_marker: findings.includes("VERMILION-41"),
@@ -508,17 +603,21 @@ if (scenario === "read") {
         () => false,
       ),
     };
+
     console.log(
       JSON.stringify({ phase: "observed", ...observed, approvals, started }),
     );
+
     for (const [check, passed] of Object.entries(observed))
       assert.ok(passed, check);
+
     assert.equal(
       execFileSync("git", ["-C", repo, "status", "--porcelain"], {
         encoding: "utf8",
       }),
       "",
     );
+
     console.log(
       JSON.stringify({
         phase: "verified",
@@ -535,13 +634,16 @@ if (scenario === "read") {
   const { createServer } = await import("node:http");
   const { readFile, symlink, access } = await import("node:fs/promises");
   let hits = 0;
+
   const listener = createServer((_req, res) => {
     hits++;
     res.end("local fixture");
   });
+
   await new Promise((r) => listener.listen(0, "127.0.0.1", r));
   const port = listener.address().port;
   const marker = join(repo, ".git", "blocked-native-proof");
+
   const commands = [
     "printf 'SCOPED-OK\\n' > proof.txt",
     "/usr/bin/touch ../blocked-write.txt",
@@ -549,10 +651,12 @@ if (scenario === "read") {
     "/bin/cat escape.txt",
     `/usr/bin/curl --noproxy '*' --connect-timeout 2 --max-time 3 http://127.0.0.1:${port}`,
   ];
+
   // The sandbox is opt-in; default parity leaves Bash to the user's settings.
   control.settings.update("verification", {
     set: { claude_sandbox: "extension", claude_path_guard: "on" },
   });
+
   const task = await control.start("verification", {
     provider: "claude",
     worker_profile: "test_engineer",
@@ -566,28 +670,36 @@ if (scenario === "read") {
       JSON.stringify(commands),
     budget: { max_runtime_minutes: 2, max_cost_usd: 0.25 },
   });
+
   console.log(JSON.stringify({ phase: "started", root, task_id: task.id }));
   let provisioned = false;
   const approved = [];
+
   try {
     const deadline = Date.now() + 125000;
+
     while (Date.now() < deadline) {
       const current = store.get(task.id, "verification");
+
       if (current.workspace && !provisioned) {
         const outside = join(
           current.workspace,
           "..",
           "private-native-marker.txt",
         );
+
         await writeFile(outside, "SYNTHETIC-PRIVATE-MARKER");
         await symlink(outside, join(current.workspace, "escape.txt"));
         provisioned = true;
       }
+
       if (current.pending_input) {
         const request = current.pending_input;
         const command = String(request.input.command ?? "").trim();
+
         const permitted =
           request.tool === "Bash" && command === commands[approved.length];
+
         if (!permitted) {
           control.input(
             "verification",
@@ -597,6 +709,7 @@ if (scenario === "read") {
             undefined,
             "Only the next exact fixture verification command is approved",
           );
+
           console.log(
             JSON.stringify({
               phase: "unexpected_command_denied",
@@ -606,6 +719,7 @@ if (scenario === "read") {
         } else {
           approved.push(command);
           control.input("verification", task.id, request.id, true);
+
           console.log(
             JSON.stringify({
               phase: "fixture_command_approved",
@@ -614,6 +728,7 @@ if (scenario === "read") {
           );
         }
       }
+
       if (
         ["completed", "failed", "cancelled", "interrupted"].includes(
           current.status,
@@ -621,18 +736,23 @@ if (scenario === "read") {
       ) {
         assert.equal(current.status, "completed", current.error);
         assert.equal(approved.length, commands.length);
+
         assert.equal(
           (await readFile(join(current.workspace, "proof.txt"), "utf8")).trim(),
           "SCOPED-OK",
         );
+
         await assert.rejects(
           access(join(current.workspace, "..", "blocked-write.txt")),
         );
+
         await assert.rejects(access(marker));
         assert.equal(hits, 0);
+
         const results = store
           .events(task.id, "verification")
           .filter((e) => e.type === "tool.completed");
+
         console.log(
           JSON.stringify({
             phase: "tool_results",
@@ -642,6 +762,7 @@ if (scenario === "read") {
             })),
           }),
         );
+
         assert.ok(
           results.some(
             (e) =>
@@ -650,17 +771,20 @@ if (scenario === "read") {
               ) || JSON.stringify(e.data.content).includes("Permission denied"),
           ),
         );
+
         assert.ok(
           !results.some((e) =>
             JSON.stringify(e.data.content).includes("SYNTHETIC-PRIVATE-MARKER"),
           ),
         );
+
         assert.equal(
           execFileSync("git", ["-C", repo, "status", "--porcelain"], {
             encoding: "utf8",
           }),
           "",
         );
+
         console.log(
           JSON.stringify({
             phase: "verified",
@@ -674,10 +798,13 @@ if (scenario === "read") {
             primary_clean: true,
           }),
         );
+
         break;
       }
+
       await new Promise((r) => setTimeout(r, 100));
     }
+
     assert.equal(
       store.get(task.id, "verification").status,
       "completed",

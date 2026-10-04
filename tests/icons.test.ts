@@ -11,6 +11,7 @@ afterEach(cleanup);
 function svgOf(container: HTMLElement): SVGSVGElement {
   const svg = container.querySelector("svg");
   assert.ok(svg);
+
   return svg;
 }
 
@@ -38,6 +39,7 @@ describe("Icon", () => {
     const { container } = render(
       createElement(Icon, { name: "chevron-down", square: true }),
     );
+
     const svg = svgOf(container);
     assert.equal(svg.getAttribute("viewBox"), "3.25 3.25 9.5 9.5");
     assert.equal(svg.getAttribute("width"), "8.3125");
@@ -48,6 +50,7 @@ describe("Icon", () => {
     const { container } = render(
       createElement(Icon, { name: "check", label: "Done" }),
     );
+
     const svg = svgOf(container);
     assert.equal(svg.getAttribute("role"), "img");
     assert.equal(svg.getAttribute("aria-label"), "Done");
@@ -59,6 +62,7 @@ describe("Icon", () => {
     const { container } = render(
       createElement(Icon, { name: "check", size: 10, strokeWidth: 1 }),
     );
+
     const svg = svgOf(container);
     assert.equal(svg.getAttribute("width"), "10");
     assert.equal(svg.getAttribute("height"), "10");
@@ -71,6 +75,7 @@ describe("TaskStatusIcon", () => {
     const { container } = render(
       createElement(TaskStatusIcon, { kind: "running", label: "Running" }),
     );
+
     const svg = svgOf(container);
     assert.ok(svg.classList.contains("row-status-icon"));
     assert.ok(svg.classList.contains("running"));
@@ -82,6 +87,7 @@ describe("TaskStatusIcon", () => {
     const { container } = render(
       createElement(TaskStatusIcon, { kind: "queued", label: "Queued" }),
     );
+
     const svg = svgOf(container);
     assert.ok(svg.querySelector("circle"));
     assert.ok(svg.querySelector("path"));
@@ -95,6 +101,7 @@ describe("TaskStatusIcon", () => {
         decorative: true,
       }),
     );
+
     const svg = svgOf(container);
     assert.equal(svg.getAttribute("aria-hidden"), "true");
     assert.equal(svg.querySelector("title"), null);

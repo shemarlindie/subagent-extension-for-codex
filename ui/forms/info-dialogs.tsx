@@ -5,6 +5,7 @@ import { defineDialog } from "./dialog-definition";
 
 function InfoForm({ children }: { children: ReactNode }) {
   const controller = useController();
+
   return (
     <form
       onSubmit={(event) => {

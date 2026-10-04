@@ -9,8 +9,10 @@ import type { Task } from "../core/types";
 import { profileLabel } from "../core/selectors";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../core/duration";
 import { useNow } from "./use-now";
+
 export function TaskDetails({ task }: { task: Task }) {
   const now = useNow(runtimeLive(task));
+
   const facts = {
     "Task ID": task.id,
     Worker: `${task.provider} · ${profileLabel(task.worker_profile)}`,
@@ -52,6 +54,7 @@ export function TaskDetails({ task }: { task: Task }) {
         ? "Unavailable"
         : `$${task.cost_usd.toFixed(3)}`,
   };
+
   return (
     <div className="task-details">
       <div className="meta">

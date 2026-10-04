@@ -10,14 +10,18 @@ import { startSchema, type RunContext, type Task } from "../src/core/model.js";
 
 function recorder() {
   const events: { type: string; data: Record<string, unknown> }[] = [];
+
   const context = {
     emit: (type: string, data: Record<string, unknown>) =>
       events.push({ type, data }),
   } as unknown as RunContext;
+
   const normalize = (message: Record<string, unknown>) => {
     new ClaudeAgentProvider().normalize(context, message as SDKMessage);
+
     return events;
   };
+
   return { events, context, normalize };
 }
 
@@ -43,6 +47,7 @@ const systemSubtypes = [
   "mirror_error",
   "future_subtype",
 ];
+
 for (const subtype of systemSubtypes) {
   test(`Claude preserves system ${subtype} as inspectable activity`, () => {
     const message = {
@@ -52,12 +57,15 @@ for (const subtype of systemSubtypes) {
       session_id: "sdk-session",
       extra: { nested: [0, false, null, "retained"] },
     };
+
     const { normalize } = recorder();
+
     assert.deepEqual(normalize(message), [
       { type: "claude.activity", data: { ...message, raw_response: message } },
     ]);
   });
 }
+
 for (const type of [
   "stream_event",
   "tool_progress",
@@ -73,6 +81,7 @@ for (const type of [
       event: { type: "future_delta", value: 0 },
       enabled: false,
     };
+
     assert.deepEqual(recorder().normalize(message), [
       { type: "claude.activity", data: { ...message, raw_response: message } },
     ]);
@@ -81,6 +90,7 @@ for (const type of [
 
 test("Claude preserves familiar event contracts and their full SDK envelope", () => {
   const { events, normalize } = recorder();
+
   const init = {
     type: "system",
     subtype: "init",
@@ -88,6 +98,7 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
     tools: ["Read"],
     plugins: [{ name: "plugin", path: "/plugin" }],
   };
+
   const assistant = {
     type: "assistant",
     uuid: "a",
@@ -104,6 +115,7 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
       ],
     },
   };
+
   const user = {
     type: "user",
     uuid: "u",
@@ -119,9 +131,11 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
       ],
     },
   };
+
   normalize(init);
   normalize(assistant);
   normalize(user);
+
   assert.deepEqual(events, [
     {
       type: "agent.started",
@@ -170,19 +184,23 @@ test("mixed message blocks keep text, thinking, images, documents and future con
       { type: "document", source: { type: "text", data: "document content" } },
       { type: "future_block", value: { enabled: false, count: 0 } },
     ];
+
     const message = {
       type: role,
       message: { content: blocks },
       parent_tool_use_id: "parent",
     };
+
     const events = recorder().normalize(message);
     assert.equal(events.length, blocks.length);
     assert.equal(events[0].data.text, "Visible text");
+
     for (let i = 1; i < blocks.length; i++) {
       assert.equal(events[i].type, "agent.content");
       assert.deepEqual(events[i].data.content, blocks[i]);
       assert.equal(events[i].data.role, role);
     }
+
     for (const event of events)
       assert.deepEqual(event.data.raw_response, message);
   }
@@ -222,6 +240,7 @@ for (const subtype of [
       modelUsage: {},
       duration_ms: 0,
     };
+
     assert.deepEqual(recorder().normalize(message), [
       {
         type: "agent.completed",
@@ -235,8 +254,10 @@ test("run emits result accounting exactly once for success and failure", async (
   const workspace = await mkdtemp(join(tmpdir(), "claude-activity-"));
   execFileSync("git", ["init", "-q", workspace]);
   t.onTestFinished(() => rm(workspace, { recursive: true, force: true }));
+
   for (const failed of [false, true]) {
     const { events, context } = recorder();
+
     context.task = {
       ...startSchema.parse({
         title: "Review",
@@ -254,9 +275,11 @@ test("run emits result accounting exactly once for success and failure", async (
       attempt: 1,
       runtime_ms: 0,
     } as Task;
+
     context.signal = new AbortController().signal;
     context.session = () => {};
     context.input = async () => ({ approved: false });
+
     const message = {
       type: "result",
       subtype: failed ? "error_max_turns" : "success",
@@ -266,6 +289,7 @@ test("run emits result accounting exactly once for success and failure", async (
       total_cost_usd: 0.25,
       usage: { output_tokens: 0 },
     };
+
     const provider = new ClaudeAgentProvider(
       () =>
         Object.assign(
@@ -275,13 +299,16 @@ test("run emits result accounting exactly once for success and failure", async (
           { close() {} },
         ) as unknown as Query,
     );
+
     if (failed)
       await assert.rejects(provider.run(context, "Review"), /error_max_turns/);
     else
       assert.equal((await provider.run(context, "Review")).summary, "Finished");
+
     const completed = events.filter(
       (event) => event.type === "agent.completed",
     );
+
     assert.equal(completed.length, 1);
     assert.equal(completed[0].data.cost_usd, 0.25);
     assert.deepEqual(completed[0].data.raw_response, message);

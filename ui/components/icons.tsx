@@ -97,6 +97,7 @@ export interface IconProps extends SvgProps {
 function squareGeometry(def: IconDefinition) {
   const [x, y, w, h] = (def.viewBox ?? "0 0 24 24").split(" ").map(Number);
   const side = Math.max(w, h);
+
   return {
     viewBox: `${x - (side - w) / 2} ${y - (side - h) / 2} ${side} ${side}`,
     width: Math.max(def.width ?? w, def.height ?? h),
@@ -114,6 +115,7 @@ export function Icon({
 }: IconProps) {
   const def: IconDefinition = ICONS[name];
   const squared = square ? squareGeometry(def) : undefined;
+
   return (
     <svg
       viewBox={squared?.viewBox ?? def.viewBox ?? "0 0 24 24"}

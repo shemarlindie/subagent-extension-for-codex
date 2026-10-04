@@ -1,16 +1,19 @@
 import type { Artifact } from "../core/types";
 import { useController, useSnapshot } from "./controller-context";
 import { Button } from "./button";
+
 export function downloadArtifact(artifact: Artifact) {
   const url = URL.createObjectURL(
     new Blob([artifact.content], { type: artifact.mime_type }),
   );
+
   const link = document.createElement("a");
   link.href = url;
   link.download = artifact.id + (artifact.type === "diff" ? ".patch" : ".json");
   link.click();
   URL.revokeObjectURL(url);
 }
+
 export function ArtifactContent({ artifact }: { artifact: Artifact }) {
   return (
     <pre data-scroll={`artifact-${artifact.id}`}>
@@ -27,14 +30,17 @@ export function ArtifactContent({ artifact }: { artifact: Artifact }) {
     </pre>
   );
 }
+
 export function ArtifactList() {
   const controller = useController(),
     state = useSnapshot();
+
   const artifacts = state.selectedArtifact
     ? state.artifacts.filter(
         (artifact) => artifact.id === state.selectedArtifact,
       )
     : state.artifacts;
+
   return (
     <>
       <p className="help">

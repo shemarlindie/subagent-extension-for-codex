@@ -7,6 +7,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   writable: true,
   value: true,
 });
+
 import { createElement } from "react";
 import { act, cleanup, render } from "@testing-library/react";
 import { startSchema } from "../src/core/model.js";
@@ -32,6 +33,7 @@ const task = (patch: Partial<Task>): Task => ({
   runtime_ms: 60_000,
   ...patch,
 });
+
 const runtime = (view: ReturnType<typeof render>) =>
   [...view.container.querySelectorAll(".fact")]
     .find((fact) => fact.querySelector("dt")?.textContent === "Runtime used")
@@ -42,23 +44,27 @@ test("a running task's runtime ticks and a finished task's stays fixed", (t) => 
     cleanup();
     vi.useRealTimers();
   });
+
   vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:30.000Z") });
   const running = task({ run_started_at: "2026-10-02T12:00:00.000Z" });
   const view = render(createElement(TaskDetails, { task: running }));
   assert.equal(runtime(view), "1m 30s");
   act(() => void vi.advanceTimersByTime(5000));
   assert.equal(runtime(view), "1m 35s");
+
   view.rerender(
     createElement(TaskDetails, {
       task: { ...running, status: "completed", runtime_ms: 95_000 },
     }),
   );
+
   act(() => void vi.advanceTimersByTime(5000));
   assert.equal(runtime(view), "1m 35s");
 });
 
 const row = (task: Task) =>
   createElement(TaskRow, { task, selected: false, onSelect() {} });
+
 const rowRuntime = (view: ReturnType<typeof render>) =>
   view.container.querySelector(".row-runtime")?.textContent;
 
@@ -67,6 +73,7 @@ test("task list runtime ticks, freezes while stopped, and accumulates after resu
     cleanup();
     vi.useRealTimers();
   });
+
   vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:30.000Z") });
   const running = task({ run_started_at: "2026-10-02T12:00:00.000Z" });
   const view = render(row(running));
@@ -78,6 +85,7 @@ test("task list runtime ticks, freezes while stopped, and accumulates after resu
     view.rerender(
       row(task({ status, runtime_ms: 95_000, run_started_at: undefined })),
     );
+
     const expected = status === "waiting" ? "Waiting" : "Interrupted";
     assert.equal(rowRuntime(view), expected);
     act(() => void vi.advanceTimersByTime(5000));
@@ -92,6 +100,7 @@ test("task list runtime ticks, freezes while stopped, and accumulates after resu
       }),
     ),
   );
+
   assert.equal(rowRuntime(view), "1m 35s");
   act(() => void vi.advanceTimersByTime(5000));
   assert.equal(rowRuntime(view), "1m 40s");
@@ -102,7 +111,9 @@ test("task list shows a Needs input label without a timer while a worker awaits 
     cleanup();
     vi.useRealTimers();
   });
+
   vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:30.000Z") });
+
   const view = render(
     row(
       task({
@@ -111,6 +122,7 @@ test("task list shows a Needs input label without a timer while a worker awaits 
       }),
     ),
   );
+
   assert.equal(rowRuntime(view), "Needs input");
   act(() => void vi.advanceTimersByTime(5000));
   assert.equal(rowRuntime(view), "Needs input");
@@ -121,10 +133,12 @@ test("task list freezes an open run when input is requested and catches up on re
     cleanup();
     vi.useRealTimers();
   });
+
   vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:30.000Z") });
   const running = task({ run_started_at: "2026-10-02T12:00:00.000Z" });
   const view = render(row(running));
   assert.equal(rowRuntime(view), "1m 30s");
+
   view.rerender(
     row({
       ...running,
@@ -133,6 +147,7 @@ test("task list freezes an open run when input is requested and catches up on re
       updated_at: new Date(Date.now()).toISOString(),
     }),
   );
+
   assert.equal(rowRuntime(view), "Needs input");
   act(() => void vi.advanceTimersByTime(10_000));
   assert.equal(rowRuntime(view), "Needs input");
@@ -147,17 +162,21 @@ test("task list shows a fixed final runtime for every terminal status, including
     cleanup();
     vi.useRealTimers();
   });
+
   vi.useFakeTimers();
   const view = render(row(task({ status: "completed" })));
+
   for (const status of ["completed", "failed", "cancelled"] as const) {
     for (const runtime_ms of [95_000, 0]) {
       view.rerender(row(task({ status, runtime_ms })));
+
       const prefix =
         status === "cancelled"
           ? "Stopped after"
           : status === "failed"
             ? "Failed after"
             : "Ran for";
+
       const expected = `${prefix} ${runtime_ms ? "1m 35s" : "0s"}`;
       assert.equal(rowRuntime(view), expected);
       act(() => void vi.advanceTimersByTime(5000));
@@ -169,6 +188,7 @@ test("task list shows a fixed final runtime for every terminal status, including
 test("task list shows stopped state labels regardless of recorded runtime", (t) => {
   t.onTestFinished(cleanup);
   const view = render(row(task({ status: "queued", runtime_ms: 0 })));
+
   for (const status of [
     "queued",
     "starting",
@@ -185,6 +205,7 @@ test("task list shows stopped state labels regardless of recorded runtime", (t) 
 test("task list status icons expose each task state to assistive technology", (t) => {
   t.onTestFinished(cleanup);
   const view = render(row(task({})));
+
   const states: Array<[Partial<Task>, string]> = [
     [{ status: "queued" }, "Queued"],
     [{ status: "starting" }, "Starting"],
@@ -210,6 +231,7 @@ test("task list status icons expose each task state to assistive technology", (t
       "Shutdown unconfirmed",
     ],
   ];
+
   for (const [patch, label] of states) {
     view.rerender(row(task(patch)));
     const icon = view.getByRole("img", { name: label });
@@ -225,6 +247,7 @@ test("task list status icons expose each task state to assistive technology", (t
 test("task list icons describe the running task's latest activity", (t) => {
   t.onTestFinished(cleanup);
   const view = render(row(task({})));
+
   for (const [live_activity, kind, label] of [
     [
       { text: "Waiting for rate limit reset", state: "info" },
@@ -241,8 +264,10 @@ test("task list icons describe the running task's latest activity", (t) => {
     const icon = view.getByRole("img", { name: label });
     assert.ok(icon.classList.contains(kind));
     assert.equal(icon.querySelector("title")?.textContent, label);
+
     if (kind === "failed") {
       assert.equal(rowRuntime(view), "Compaction failed");
+
       view.rerender(
         row(
           task({
@@ -251,6 +276,7 @@ test("task list icons describe the running task's latest activity", (t) => {
           }),
         ),
       );
+
       assert.equal(rowRuntime(view), "Compaction failed");
     }
   }
@@ -258,9 +284,11 @@ test("task list icons describe the running task's latest activity", (t) => {
 
 test("unconfirmed shutdown shows a heavy warning question mark", (t) => {
   t.onTestFinished(cleanup);
+
   const view = render(
     row(task({ status: "waiting", waiting_reason: "termination_unconfirmed" })),
   );
+
   const icon = view.getByRole("img", { name: "Shutdown unconfirmed" });
   assert.ok(icon.classList.contains("unconfirmed"));
   assert.equal(icon.getAttribute("stroke-width"), "3");
@@ -268,18 +296,24 @@ test("unconfirmed shutdown shows a heavy warning question mark", (t) => {
 
 test("terminal states and input requests take precedence over stale activity", (t) => {
   t.onTestFinished(cleanup);
+
   const live_activity = {
     text: "Context compaction failed",
     state: "failed" as const,
   };
+
   const view = render(row(task({ live_activity })));
+
   for (const status of ["completed", "failed", "cancelled"] as const) {
     view.rerender(row(task({ status, live_activity })));
+
     view.getByRole("img", {
       name: status[0].toUpperCase() + status.slice(1),
     });
+
     assert.equal(view.queryByRole("img", { name: live_activity.text }), null);
   }
+
   view.rerender(
     row(
       task({
@@ -289,15 +323,18 @@ test("terminal states and input requests take precedence over stale activity", (
       }),
     ),
   );
+
   assert.ok(
     view.getByRole("img", { name: "Needs input" }).classList.contains("input"),
   );
+
   assert.equal(view.queryByRole("img", { name: live_activity.text }), null);
 });
 
 test("task list uses short state labels when no runtime timer is available", (t) => {
   t.onTestFinished(cleanup);
   const view = render(row(task({ runtime_ms: 0 })));
+
   const cases: Array<[Partial<Task>, string]> = [
     [{ status: "running" }, "Running"],
     [{ status: "running", runtime_ms: 95_000 }, "Running"],
@@ -327,6 +364,7 @@ test("task list uses short state labels when no runtime timer is available", (t)
       "Compaction failed",
     ],
   ];
+
   for (const [patch, label] of cases) {
     view.rerender(row(task({ runtime_ms: 0, ...patch })));
     assert.equal(rowRuntime(view), label);
@@ -338,17 +376,23 @@ test("task list replaces its activity fallback with a live timer once the run st
     cleanup();
     vi.useRealTimers();
   });
+
   vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:00.000Z") });
+
   const running = task({
     runtime_ms: 0,
     live_activity: { text: "Waiting for rate limit reset", state: "info" },
   });
+
   const view = render(row(running));
   assert.equal(rowRuntime(view), "Rate limit");
+
   view.rerender(
     row({ ...running, run_started_at: new Date(Date.now()).toISOString() }),
   );
+
   assert.equal(rowRuntime(view), "Rate limit");
+
   view.rerender(
     row({
       ...running,
@@ -356,6 +400,7 @@ test("task list replaces its activity fallback with a live timer once the run st
       live_activity: { text: "Working", state: "running" },
     }),
   );
+
   assert.equal(rowRuntime(view), "0s");
   act(() => void vi.advanceTimersByTime(5000));
   assert.equal(rowRuntime(view), "5s");

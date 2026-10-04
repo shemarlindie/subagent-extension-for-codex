@@ -11,6 +11,7 @@ import { Field } from "./fields";
 import { FormSelect } from "./form-select";
 import { ProjectAutocomplete } from "./project-autocomplete";
 import { ModelAutocomplete } from "./model-autocomplete";
+
 export type DelegateValues = {
   permission_mode: keyof typeof permissionLabels;
   approval_decider: "user" | "parent_agent";
@@ -28,12 +29,14 @@ export type DelegateValues = {
   cost: number;
   deps: string[];
 };
+
 interface ProjectFieldProps {
   projects: Project[];
   allowParent: boolean;
   disabled?: boolean;
   onBrowse?: () => void;
 }
+
 export function ProjectField({
   projects,
   allowParent,
@@ -42,6 +45,7 @@ export function ProjectField({
 }: ProjectFieldProps) {
   const { control } = useFormContext<DelegateValues>(),
     options = projects.filter((project) => project.kind === "repository");
+
   return (
     <Field id="repository" label="Project">
       <div className="project-selection">
@@ -89,8 +93,10 @@ export function ProjectField({
     </Field>
   );
 }
+
 export function WorkspaceField() {
   const { control } = useFormContext<DelegateValues>();
+
   return (
     <Field id="workspace-strategy" label="Workspace">
       <FormSelect
@@ -109,9 +115,11 @@ export function WorkspaceField() {
     </Field>
   );
 }
+
 export function WorkerFields({ workers }: { workers: Worker[] }) {
   const { register, control } = useFormContext<DelegateValues>();
   const strategy = useWatch({ control, name: "workspace_strategy" });
+
   return (
     <div className="two">
       <div>
@@ -143,6 +151,7 @@ export function WorkerFields({ workers }: { workers: Worker[] }) {
     </div>
   );
 }
+
 export function BudgetFields({ workers }: { workers: Worker[] }) {
   const {
       register,
@@ -153,9 +162,11 @@ export function BudgetFields({ workers }: { workers: Worker[] }) {
       control,
       name: ["worker", "costMode", "runtimeMode"],
     });
+
   const provider = workers.find(
     (item) => item.provider === worker.split(":")[0],
   );
+
   return (
     <>
       <div className="two">
@@ -247,9 +258,11 @@ export function BudgetFields({ workers }: { workers: Worker[] }) {
     </>
   );
 }
+
 export function DependencyField({ tasks }: { tasks: Task[] }) {
   const { control } = useFormContext<DelegateValues>(),
     repository = useWatch({ control, name: "repository" });
+
   return (
     <Field id="deps" label="Wait for tasks (optional)">
       <FormSelect
@@ -271,26 +284,34 @@ interface ModelFieldsProps {
   defaults: Defaults;
   workers: Worker[];
 }
+
 export function ModelFields({ defaults, workers }: ModelFieldsProps) {
   const { control } = useFormContext<DelegateValues>();
+
   const [worker, selectedModel] = useWatch({
     control,
     name: ["worker", "model"],
   });
+
   const [provider, role] = worker.split(":");
+
   const model =
     defaults[`${role}_default_model`] ||
     defaults[`${provider}_default_model`] ||
     defaults.default_model;
+
   const reasoning = [
     defaults[`${role}_default_reasoning_effort`],
     defaults[`${provider}_default_reasoning_effort`],
     defaults.default_reasoning_effort,
   ].find((value) => value && value !== "default");
+
   const workerInfo = workers.find((item) => item.provider === provider);
+
   const metadata = workerInfo?.models?.find(
     (item) => item.value === (selectedModel.trim() || model || "default"),
   );
+
   const supported =
     metadata?.supportsEffort === false
       ? []
@@ -299,6 +320,7 @@ export function ModelFields({ defaults, workers }: ModelFieldsProps) {
           (level) =>
             provider !== "claude" || !["none", "minimal"].includes(level),
         ));
+
   return (
     <>
       <Field id="model" label="Model">
@@ -327,6 +349,7 @@ export function ModelFields({ defaults, workers }: ModelFieldsProps) {
           rules={{
             validate: (value) => {
               const resolved = value === "default" ? reasoning : value;
+
               return (
                 !resolved ||
                 supported.some((level) => level === resolved) ||
@@ -357,6 +380,7 @@ export function ApprovalField() {
   const { control } = useFormContext<DelegateValues>();
   const worker = useWatch({ control, name: "worker" });
   const claude = worker?.split(":")[0] === "claude";
+
   return (
     <>
       <Field id="permission-mode" label="Permission mode">

@@ -5,6 +5,7 @@ import { useRender } from "@base-ui/react/use-render";
 export type TimelineStatus = "running" | "completed" | "failed" | "info";
 
 type TimelineState = { trimmed: boolean };
+
 type TimelineItemState = {
   status: TimelineStatus;
   first: boolean;
@@ -53,6 +54,7 @@ export function TimelineItem({
     state: { status, first, last },
     props: mergeProps<"div">({ className: "timeline-item" }, props),
   });
+
   return <ItemStatus.Provider value={status}>{element}</ItemStatus.Provider>;
 }
 

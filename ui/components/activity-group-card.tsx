@@ -14,6 +14,7 @@ import { streamContent, thinkingOnly } from "../utils/activity";
 function ThinkingClock({ start }: { start: number }) {
   const elapsed = useNow(true) - start;
   if (elapsed < 1000) return null;
+
   return (
     <span className="activity-badge activity-duration">
       {formatDuration(elapsed)}
@@ -43,24 +44,29 @@ export function ActivityGroupCard({
   const [debugMounted, setDebugMounted] = useState(false);
   const debugId = useId();
   const conversational = group.kind === "message" || group.kind === "stream";
+
   // Messages, and event/status rows with a summary, already show their text above;
   // tools and operations keep the structured debug body for their input and output.
   const showsOwnText =
     conversational ||
     ((group.kind === "event" || group.kind === "status") &&
       group.summary !== undefined);
+
   const contentEvents = group.events.filter(
     (event) => event.type === "agent.message" || event.type === "agent.content",
   );
+
   // Thinking-only messages read as a quiet "Thinking" row, not an assistant reply.
   // Their text is mostly empty, so it is only shown through the debug view.
   const quietThinking = conversational && thinkingOnly(contentEvents);
+
   // The heading and the debug toggle's label name the row the same way.
   // A finished thinking row states its duration in place of "Thinking…".
   const thoughtMs =
     span?.end != null && (group.kind !== "message" || quietThinking)
       ? span.end - span.start
       : undefined;
+
   const title =
     group.events.some((event) => event.type === "task.completed") &&
     runtimeMs !== undefined
@@ -72,6 +78,7 @@ export function ActivityGroupCard({
         : quietThinking
           ? "Thinking"
           : group.title;
+
   const badge =
     group.state === "running"
       ? "Running"

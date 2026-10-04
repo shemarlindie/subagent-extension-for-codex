@@ -13,20 +13,28 @@ import type {
 import type { Task, Event, Artifact, Result } from "../../src/core/model";
 
 type Data = Record<string, unknown>;
+
 type Uuid = SDKAssistantMessage["uuid"];
+
 type Beta = SDKAssistantMessage["message"];
+
 type AssistantBlock = Beta["content"][number];
+
 type UserContent = Exclude<SDKUserMessage["message"]["content"], string>;
+
 type UserBlock = UserContent[number];
+
 /** SDK messages built by `sdk()`; the others have dedicated builders. */
 type Plain = Exclude<
   SDKMessage,
   SDKAssistantMessage | SDKUserMessage | SDKResultMessage | SDKSystemMessage
 >;
+
 type Body<T> = T extends unknown ? Omit<T, "uuid" | "session_id"> : never;
 
 const SESSION = "preview-session";
 const MODEL = "claude-sonnet-5-5";
+
 // A 64×64 checkerboard PNG, small enough to inline.
 const IMAGE =
   "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAa0lEQVR42u3XMQ0AIAxFQYRVE3LQhBJ0YKBMXSBcwtiBm15+WyPSF32m77b7BgAAAABQArzy0dM9AAAAAEANoMQAAAAA9oASAwAAANgDSgwAAABgDygxAAAAgD2gxAAAAAD2gBIDAAAAfAPY6lJReJDUYR4AAAAASUVORK5CYII=";
@@ -36,6 +44,7 @@ export const previewProjects = [
   { repository: "/demo/project", name: "Demo project", kind: "repository" },
   { repository: "/demo/website", name: "Demo website", kind: "repository" },
 ];
+
 /** The dev host's default Thread ID; most tasks belong to it. */
 export const PREVIEW_THREAD = "dev-thread";
 const OTHER_THREAD = "other-thread";
@@ -69,6 +78,7 @@ const usage: Beta["usage"] = {
   service_tier: "standard",
   speed: "standard",
 };
+
 const resultUsage = (
   input_tokens: number,
   output_tokens: number,
@@ -87,6 +97,7 @@ const resultUsage = (
   service_tier: "standard",
   speed: "standard",
 });
+
 const text = (value: string): AssistantBlock => ({
   type: "text",
   text: value,
@@ -108,16 +119,20 @@ class Timeline {
   ) {
     this.clock = Date.parse(start);
   }
+
   get end() {
     return new Date(this.clock).toISOString();
   }
+
   private uuid(): Uuid {
     return `00000000-0000-4000-8000-${String(this.firstId * 1000 + ++this.uuids).padStart(12, "0")}`;
   }
+
   private messageId = () => `msg_${this.taskId}_${++this.messages}`;
   /** An event the service records itself (task lifecycle, input, artifacts). */
   add(type: string, data: Data = {}, gapMs = 1500) {
     this.clock += gapMs;
+
     this.events.push({
       id: this.firstId + this.count++,
       task_id: this.taskId,
@@ -125,8 +140,10 @@ class Timeline {
       timestamp: new Date(this.clock).toISOString(),
       data,
     });
+
     return this;
   }
+
   /** Most SDK messages surface unchanged as `claude.activity`. */
   sdk(body: Body<Plain>, gapMs?: number) {
     const message = {
@@ -134,12 +151,14 @@ class Timeline {
       uuid: this.uuid(),
       session_id: SESSION,
     } as Plain;
+
     return this.add(
       "claude.activity",
       { ...message, raw_response: message },
       gapMs,
     );
   }
+
   init(tools: string[]) {
     const message: SDKSystemMessage = {
       type: "system",
@@ -158,12 +177,14 @@ class Timeline {
       uuid: this.uuid(),
       session_id: SESSION,
     };
+
     return this.add("agent.started", {
       model: message.model,
       tools: message.tools,
       raw_response: message,
     });
   }
+
   /** One assistant message; each content block becomes its own event. */
   assistant(
     content: AssistantBlock[],
@@ -189,6 +210,7 @@ class Timeline {
       uuid: this.uuid(),
       session_id: SESSION,
     };
+
     for (const block of content) {
       if (block.type === "text")
         this.add("agent.message", {
@@ -211,8 +233,10 @@ class Timeline {
           raw_response: message,
         });
     }
+
     return this;
   }
+
   /** One user message; tool results become `tool.completed` events. */
   userMessage(content: UserContent) {
     const message: SDKUserMessage = {
@@ -222,6 +246,7 @@ class Timeline {
       uuid: this.uuid(),
       session_id: SESSION,
     };
+
     for (const block of content) {
       if (block.type === "text")
         this.add("agent.content", {
@@ -244,23 +269,29 @@ class Timeline {
           raw_response: message,
         });
     }
+
     return this;
   }
+
   say(value: string, id?: string) {
     return this.assistant([text(value)], id);
   }
+
   think(thinking: string, id?: string) {
     return this.assistant(
       [{ type: "thinking", thinking, signature: "synthetic-signature" }],
       id,
     );
   }
+
   user(value: string) {
     return this.userMessage([{ type: "text", text: value }]);
   }
+
   /** Thinking-token ticks that precede a reasoning step. */
   ticks(...estimates: number[]) {
     let previous = 0;
+
     for (const estimated_tokens of estimates) {
       this.sdk(
         {
@@ -271,15 +302,20 @@ class Timeline {
         },
         600,
       );
+
       previous = estimated_tokens;
     }
+
     return this;
   }
+
   toolStart(name: string, input: Data) {
     const id = `toolu_${this.taskId}_${++this.tools}`;
     this.assistant([{ type: "tool_use", id, name, input }]);
+
     return id;
   }
+
   toolProgress(id: string, name: string, seconds: number) {
     return this.sdk(
       {
@@ -292,6 +328,7 @@ class Timeline {
       1000,
     );
   }
+
   toolDone(
     id: string,
     content: string | (UserBlock & { type: "text" | "image" })[],
@@ -301,6 +338,7 @@ class Timeline {
       { type: "tool_result", tool_use_id: id, content, is_error: error },
     ]);
   }
+
   /** A complete tool call: start, optional progress ticks, then its result. */
   tool(
     name: string,
@@ -311,17 +349,21 @@ class Timeline {
     const id = this.toolStart(name, input);
     for (const seconds of options.progress ?? [])
       this.toolProgress(id, name, seconds);
+
     return this.toolDone(id, content, options.error);
   }
+
   stream(event: Extract<Plain, { type: "stream_event" }>["event"]) {
     return this.sdk(
       { type: "stream_event", event, parent_tool_use_id: null },
       120,
     );
   }
+
   /** A streamed text response, optionally left unfinished (still running). */
   streamed(chunks: string[], finish = true) {
     const id = this.messageId();
+
     this.stream({
       type: "message_start",
       message: {
@@ -338,26 +380,32 @@ class Timeline {
         usage,
       },
     });
+
     this.stream({
       type: "content_block_start",
       index: 0,
       content_block: text(""),
     });
+
     for (const chunk of chunks)
       this.stream({
         type: "content_block_delta",
         index: 0,
         delta: { type: "text_delta", text: chunk },
       });
+
     if (finish) {
       this.stream({ type: "content_block_stop", index: 0 });
       this.stream({ type: "message_stop" });
     }
+
     return this;
   }
+
   artifact(id: string, type: string, title: string) {
     return this.add("artifact.created", { artifact_id: id, type, title }, 300);
   }
+
   /** The turn's result message, then the service's `task.completed`. */
   finish(
     summary: string,
@@ -369,6 +417,7 @@ class Timeline {
       200,
     );
   }
+
   /** The turn's result alone: the task is still running until the service records its end. */
   turnResult(
     summary: string,
@@ -392,6 +441,7 @@ class Timeline {
       ...fields,
     });
   }
+
   result(message: SDKResultMessage) {
     return this.add("agent.completed", {
       ...message,
@@ -407,6 +457,7 @@ const begin = (t: Timeline, tools: string[]) =>
     .add("task.queued", {}, 100)
     .add("task.started", { attempt: 1 }, 300)
     .init(tools);
+
 const rateLimit = (t: Timeline, status: "allowed" | "rejected" = "allowed") =>
   t.sdk({
     type: "rate_limit_event",
@@ -417,8 +468,10 @@ const rateLimit = (t: Timeline, status: "allowed" | "rejected" = "allowed") =>
       utilization: status === "rejected" ? 1 : 0.12,
     },
   });
+
 const at = (minutes: number) =>
   new Date(Date.parse("2026-10-02T08:00:00Z") + minutes * 60000).toISOString();
+
 const timestamps = (start: number, minutes: number) => ({
   created_at: at(start),
   updated_at: at(start + minutes),
@@ -442,6 +495,7 @@ const auditResult: Result = {
     "Ask the `fast-parse` maintainers to add a licence before adopting it.",
   ],
 };
+
 const blocksResult: Result = {
   summary: "Catalogued the design assets and flagged one mismatched icon size.",
   findings: ["`logo-small.png` is 64×64 px; the manifest expects 128×128."],
@@ -450,6 +504,7 @@ const blocksResult: Result = {
   tests: ["npm run lint — passed"],
   recommendations: ["Regenerate the small logo from the vector source."],
 };
+
 const questionInput = {
   questions: [
     {
@@ -513,16 +568,20 @@ begin(audit, ["Glob", "Grep", "Read", "Bash"]);
 rateLimit(audit);
 audit.ticks(40, 120, 310);
 audit.think("", "msg_audit_plan");
+
 audit.say(
   "I'll start with the manifest, then check each dependency's licence field.",
   "msg_audit_plan",
 );
+
 const glob = audit.toolStart("Glob", { pattern: "**/package.json" });
 audit.toolProgress(glob, "Glob", 1);
+
 audit.toolDone(
   glob,
   "package.json\nnode_modules/legacy-charts/package.json\nnode_modules/fast-parse/package.json",
 );
+
 audit.sdk({
   type: "system",
   subtype: "hook_started",
@@ -530,6 +589,7 @@ audit.sdk({
   hook_name: "Validate workspace",
   hook_event: "PreToolUse",
 });
+
 audit.sdk({
   type: "system",
   subtype: "hook_progress",
@@ -540,6 +600,7 @@ audit.sdk({
   stderr: "",
   output: "checking boundary",
 });
+
 audit.sdk({
   type: "system",
   subtype: "hook_response",
@@ -552,12 +613,14 @@ audit.sdk({
   exit_code: 0,
   outcome: "success",
 });
+
 audit.tool(
   "Read",
   { file_path: "package.json" },
   '1\t{\n2\t  "name": "demo-project",\n3\t  "dependencies": {\n4\t    "legacy-charts": "^2.1.0",\n5\t    "fast-parse": "^0.4.2"\n6\t  }\n7\t}',
   { progress: [1] },
 );
+
 audit.sdk({
   type: "system",
   subtype: "api_retry",
@@ -567,7 +630,9 @@ audit.sdk({
   error_status: 529,
   error: "overloaded",
 });
+
 audit.ticks(80, 260);
+
 audit.assistant(
   [
     {
@@ -582,17 +647,20 @@ audit.assistant(
   ],
   "msg_audit_grep",
 );
+
 audit.tool(
   "Grep",
   { pattern: '"license"', path: "node_modules" },
   'node_modules/legacy-charts/package.json:  "license": "GPL-3.0"\nnode_modules/chart-utils/package.json:  "license": "MIT"',
   { progress: [2, 4] },
 );
+
 audit.sdk({
   type: "system",
   subtype: "compact_boundary",
   compact_metadata: { trigger: "auto", pre_tokens: 41000, post_tokens: 7800 },
 });
+
 audit.sdk({
   type: "system",
   subtype: "files_persisted",
@@ -600,6 +668,7 @@ audit.sdk({
   failed: [],
   processed_at: at(2),
 });
+
 audit.sdk({
   type: "system",
   subtype: "notification",
@@ -607,11 +676,13 @@ audit.sdk({
   text: "Licence scan complete.",
   priority: "low",
 });
+
 audit.sdk({
   type: "tool_use_summary",
   summary: "Read the manifest and scanned dependency licences.",
   preceding_tool_use_ids: [],
 });
+
 audit.artifact("preview-audit-report", "report", "Licence audit");
 audit.artifact("preview-audit-diff", "diff", "Repository diff · attempt 1");
 audit.finish(auditResult.summary);
@@ -621,16 +692,20 @@ const failed = new Timeline("preview-failed", at(30), 200);
 begin(failed, ["Read", "Edit", "Bash"]);
 rateLimit(failed);
 failed.say("I'll run the flaky test in a loop to reproduce it.");
+
 const flaky = failed.toolStart("Bash", {
   command: "npm test -- retry.test.ts --repeat 20",
 });
+
 failed.toolProgress(flaky, "Bash", 3);
 failed.toolProgress(flaky, "Bash", 6);
+
 failed.toolDone(
   flaky,
   "FAIL retry.test.ts\n  ● retries with backoff\n    expected 3 calls, received 2\n\nTest Suites: 1 failed, 1 total",
   true,
 );
+
 failed.sdk({
   type: "system",
   subtype: "permission_denied",
@@ -638,13 +713,16 @@ failed.sdk({
   tool_use_id: "toolu_preview-failed_denied",
   message: "Edit is not allowed in plan mode.",
 });
+
 failed.sdk({
   type: "system",
   subtype: "mirror_error",
   error: "Transcript sync failed: disk quota exceeded",
   key: { projectKey: "demo-project", sessionId: SESSION },
 });
+
 rateLimit(failed, "rejected");
+
 failed.result({
   type: "result",
   subtype: "error_max_turns",
@@ -667,11 +745,13 @@ failed.result({
   uuid: "00000000-0000-4000-8000-000000299999",
   session_id: SESSION,
 });
+
 failed.add(
   "artifact.error",
   { message: "Could not collect the repository diff." },
   300,
 );
+
 failed.add(
   "task.failed",
   { error: "Worker stopped: reached the maximum number of turns." },
@@ -682,11 +762,13 @@ failed.add(
 const question = new Timeline("preview-question", at(45), 300);
 begin(question, ["Read", "Grep", "AskUserQuestion"]);
 question.say("The loader has three plausible formats, so I need a decision.");
+
 question.tool(
   "Grep",
   { pattern: "loadConfig", path: "src" },
   "src/config.ts:12:export function loadConfig(path: string)",
 );
+
 question.add("agent.input_required", {
   request: {
     id: "preview-question-request",
@@ -694,6 +776,7 @@ question.add("agent.input_required", {
     input: questionInput,
   },
 });
+
 question.sdk({
   type: "system",
   subtype: "session_state_changed",
@@ -704,6 +787,7 @@ question.sdk({
 const stacked = new Timeline("preview-stacked-questions", at(50), 300);
 begin(stacked, ["Read", "Grep", "AskUserQuestion"]);
 stacked.say("The rollout plan depends on three product decisions.");
+
 stacked.add("agent.input_required", {
   request: {
     id: "preview-stacked-questions-request",
@@ -711,6 +795,7 @@ stacked.add("agent.input_required", {
     input: stackedQuestionInput,
   },
 });
+
 stacked.sdk({
   type: "system",
   subtype: "session_state_changed",
@@ -724,6 +809,7 @@ rateLimit(refactor);
 refactor.sdk({ type: "system", subtype: "status", status: "requesting" });
 refactor.think("Planning the module split before touching files.");
 refactor.say("Splitting billing into invoices and payments.");
+
 refactor.add("agent.input_required", {
   request: {
     id: "preview-refactor-request",
@@ -731,18 +817,22 @@ refactor.add("agent.input_required", {
     input: { command: "npm run build", description: "Build the new modules." },
   },
 });
+
 refactor.add("agent.input_decision", {
   request_id: "preview-refactor-request",
   approved: true,
   authority: "user",
 });
+
 refactor.add("agent.input_submitted", { approved: true }, 200);
+
 refactor.sdk({
   type: "system",
   subtype: "task_started",
   task_id: "preview-bg-tests",
   description: "Run the billing test suite in the background",
 });
+
 refactor.sdk({
   type: "system",
   subtype: "task_progress",
@@ -750,12 +840,14 @@ refactor.sdk({
   description: "Running 42 tests",
   usage: { total_tokens: 1200, tool_uses: 3, duration_ms: 8000 },
 });
+
 refactor.sdk({
   type: "system",
   subtype: "task_updated",
   task_id: "preview-bg-tests",
   patch: { status: "running", description: "Running 42 tests · 18 done" },
 });
+
 refactor.sdk({
   type: "system",
   subtype: "background_tasks_changed",
@@ -767,18 +859,21 @@ refactor.sdk({
     },
   ],
 });
+
 refactor.sdk({
   type: "system",
   subtype: "task_started",
   task_id: "preview-bg-lint",
   description: "Lint the new modules",
 });
+
 refactor.sdk({
   type: "system",
   subtype: "task_updated",
   task_id: "preview-bg-lint",
   patch: { status: "killed", description: "Superseded by the test run" },
 });
+
 refactor.sdk({
   type: "system",
   subtype: "task_notification",
@@ -787,7 +882,9 @@ refactor.sdk({
   output_file: "/demo/project/.tasks/preview-bg-tests.log",
   summary: "42 tests passed",
 });
+
 refactor.sdk({ type: "system", subtype: "status", status: "compacting" });
+
 refactor.sdk({
   type: "system",
   subtype: "compact_boundary",
@@ -797,17 +894,21 @@ refactor.sdk({
     post_tokens: 12000,
   },
 });
+
 refactor.sdk({
   type: "system",
   subtype: "local_command_output",
   content: "Compacted context · 12k tokens kept",
 });
+
 const edit = refactor.toolStart("Edit", {
   file_path: "src/billing/invoices.ts",
   old_string: "export function charge(",
   new_string: "export function chargeInvoice(",
 });
+
 refactor.toolProgress(edit, "Edit", 2);
+
 refactor.streamed(
   [
     "The new `payments` module exposes ",
@@ -821,24 +922,29 @@ refactor.streamed(
 const cancelled = new Timeline("preview-cancelled", at(75), 500);
 begin(cancelled, ["Read", "WebFetch"]);
 cancelled.say("Drafting release notes from the merged pull requests.");
+
 const fetch = cancelled.toolStart("WebFetch", {
   url: "https://example.com/releases",
 });
+
 cancelled.toolProgress(fetch, "WebFetch", 5);
 cancelled.add("task.cancelled", {}, 400);
 
 // --- Content blocks and rarer messages ----------------------------------------
 const blocks = new Timeline("preview-blocks", at(90), 600);
 begin(blocks, ["Read", "WebSearch", "mcp__assets__list"]);
+
 blocks.add(
   "task.instruction",
   { message: "Also check the vendored icons." },
   200,
 );
+
 blocks.add("task.control_requested", { status: "interrupted" }, 200);
 blocks.add("task.interrupted", {}, 200);
 blocks.add("task.continued", {}, 200);
 blocks.user("Also check the vendored icons.");
+
 blocks.assistant(
   [
     {
@@ -849,8 +955,10 @@ blocks.assistant(
   ],
   "msg_blocks_a",
 );
+
 blocks.assistant([{ type: "redacted_thinking", data: "redacted" }]);
 blocks.say("Looking at the asset folder first.", "msg_blocks_a");
+
 blocks.tool("Read", { file_path: "assets/logo-small.png" }, [
   { type: "text", text: "Image preview of assets/logo-small.png" },
   {
@@ -858,6 +966,7 @@ blocks.tool("Read", { file_path: "assets/logo-small.png" }, [
     source: { type: "base64", media_type: "image/png", data: IMAGE },
   },
 ]);
+
 blocks.assistant([
   {
     type: "text",
@@ -875,6 +984,7 @@ blocks.assistant([
     ],
   },
 ]);
+
 blocks.userMessage([
   {
     type: "document",
@@ -886,6 +996,7 @@ blocks.userMessage([
     },
   },
 ]);
+
 blocks.assistant([
   {
     type: "server_tool_use",
@@ -907,31 +1018,37 @@ blocks.assistant([
     ],
   },
 ]);
+
 blocks.sdk({
   type: "prompt_suggestion",
   suggestion: "Regenerate the small logo from the SVG source.",
 });
+
 blocks.sdk({
   type: "system",
   subtype: "elicitation_complete",
   mcp_server_name: "assets",
   elicitation_id: "preview-elicitation",
 });
+
 blocks.sdk({
   type: "system",
   subtype: "plugin_install",
   status: "installed",
   name: "asset-tools",
 });
+
 blocks.sdk({
   type: "system",
   subtype: "memory_recall",
   mode: "select",
   memories: [{ path: "style-guide.md", scope: "personal" }],
 });
+
 blocks.say(
   'Done. Summary of sizes:\n\n```json\n{ "logo-small.png": "64x64", "logo.png": "512x512" }\n```',
 );
+
 blocks.artifact("preview-blocks-report", "report", "Asset catalogue");
 blocks.artifact("preview-blocks-log", "log", "Scan log");
 blocks.finish(blocksResult.summary);
@@ -939,22 +1056,26 @@ blocks.finish(blocksResult.summary);
 // --- Rare SDK signals and session housekeeping --------------------------------
 const signals = new Timeline("preview-signals", at(100), 700);
 begin(signals, ["Read"]);
+
 signals.sdk({
   type: "auth_status",
   isAuthenticating: true,
   output: ["Refreshing credentials…"],
 });
+
 signals.sdk({
   type: "auth_status",
   isAuthenticating: false,
   output: [],
 });
+
 signals.sdk({
   type: "system",
   subtype: "informational",
   content: "Plan mode is active; edits are disabled.",
   level: "notice",
 });
+
 signals.sdk({
   type: "system",
   subtype: "commands_changed",
@@ -962,6 +1083,7 @@ signals.sdk({
     { name: "review", description: "Review changes", argumentHint: "" },
   ],
 });
+
 signals.sdk({
   type: "system",
   subtype: "control_request_progress",
@@ -972,6 +1094,7 @@ signals.sdk({
   retry_delay_ms: 1500,
   error_status: 429,
 });
+
 signals.sdk({
   type: "system",
   subtype: "model_refusal_fallback",
@@ -982,6 +1105,7 @@ signals.sdk({
   request_id: null,
   content: "The request was retried with a different model.",
 });
+
 signals.sdk({
   type: "system",
   subtype: "model_refusal_no_fallback",
@@ -989,21 +1113,25 @@ signals.sdk({
   request_id: null,
   content: "The model declined to continue and no fallback was available.",
 });
+
 signals.sdk({
   type: "system",
   subtype: "worker_shutting_down",
   reason: "host_draining",
 });
+
 signals.sdk({
   type: "conversation_reset",
   new_conversation_id: "00000000-0000-4000-8000-0000000fffff",
   trigger: "clear",
 });
+
 signals.sdk({
   type: "system",
   subtype: "session_state_changed",
   state: "idle",
 });
+
 signals.add("task.recovery_required", {
   error: "The worker restarted; confirm it stopped before continuing.",
 });
@@ -1018,8 +1146,10 @@ const longResult: Result = {
   tests: ["npm test — 36 files passed after the fix to suite-17."],
   recommendations: ["Remove the legacy runner once CI has run twice."],
 };
+
 const long = new Timeline("preview-long", at(110), 900);
 begin(long, ["Read", "Edit", "Bash"]);
+
 for (let i = 0; i < 36; i++) {
   const file = `tests/suite-${i}.test.ts`;
   if (i % 12 === 0) rateLimit(long);
@@ -1036,12 +1166,14 @@ for (let i = 0; i < 36; i++) {
   long.ticks(40 + i, 120 + i);
   long.think(`Next up: ${file}. Check the imports before converting.`);
   long.say(`Converting ${file} to the new runner.`);
+
   long.tool(
     "Read",
     { file_path: file },
     `1\timport { test } from "legacy-runner";\n2\ttest("suite ${i}", () => {});`,
     { progress: [1] },
   );
+
   if (i % 3 === 0)
     long.tool(
       "Edit",
@@ -1063,6 +1195,7 @@ for (let i = 0; i < 36; i++) {
       { progress: [2, 4], error: i === 17 },
     );
 }
+
 long.artifact("preview-long-report", "report", "Conversion report");
 long.finish(longResult.summary);
 
@@ -1072,9 +1205,12 @@ const lifecycle = (id: string, start: number, ...rest: [string, Data?][]) => {
     at(start),
     parseInt(id.replace(/\D/g, "") || "0") + 800,
   );
+
   for (const [type, data] of rest) t.add(type, data);
+
   return t;
 };
+
 const interrupted = lifecycle(
   "preview-interrupted",
   20,
@@ -1084,6 +1220,7 @@ const interrupted = lifecycle(
   ["task.control_requested", { status: "interrupted" }],
   ["task.interrupted", { reason: "service_restart" }],
 );
+
 const permission = lifecycle(
   "preview-input",
   25,
@@ -1104,6 +1241,7 @@ const permission = lifecycle(
     },
   ],
 );
+
 const dependent = lifecycle(
   "preview-dependent",
   95,
@@ -1117,11 +1255,14 @@ const dependent = lifecycle(
 // run looks like it began under a minute ago and its clocks read a few seconds.
 const liveStart = Date.now() - 40000;
 const liveClock = () => new Date(liveStart).toISOString();
+
 const liveTimeline = (name: string, firstId: number) => {
   const timeline = new Timeline(`preview-live-${name}`, liveClock(), firstId);
   begin(timeline, ["Read", "Edit", "Bash"]);
+
   return timeline.say("Starting on the change.");
 };
+
 const liveStates: {
   name: string;
   title: string;
@@ -1141,10 +1282,12 @@ const liveStates: {
     status: "Running Bash · npm test -- --runInBand",
     timeline: (() => {
       const timeline = liveTimeline("tool", 1100);
+
       const id = timeline.toolStart("Bash", {
         command: "npm test -- --runInBand",
         description: "Run the test suite",
       });
+
       return timeline.toolProgress(id, "Bash", 4);
     })(),
   },
@@ -1226,11 +1369,14 @@ const liveStates: {
     }),
   },
 ];
+
 const liveTimelines = liveStates.map((live) => live.timeline);
+
 /** Expected inspector status line for each live task, keyed by task id. */
 export const previewLiveStatus = Object.fromEntries(
   liveStates.map((live) => [live.timeline.taskId, live.status]),
 );
+
 const liveTasks: Task[] = liveStates.map((live, index) => ({
   ...taskBase,
   id: live.timeline.taskId,
@@ -1471,6 +1617,7 @@ const diff = `diff --git a/package.json b/package.json
 -    "legacy-charts": "^2.1.0",
      "fast-parse": "^0.4.2"
    }`;
+
 export const previewArtifacts: Artifact[] = [
   {
     id: "preview-audit-report",

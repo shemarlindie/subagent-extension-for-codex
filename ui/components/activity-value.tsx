@@ -46,6 +46,7 @@ function FieldValue({ name, value, depth }: FieldValueProps): ReactNode {
       return <span>{new Date(value * 1000).toLocaleString()}</span>;
     if (name.includes("tokens")) return <span>{value.toLocaleString()}</span>;
   }
+
   if (
     typeof value === "string" &&
     [
@@ -73,6 +74,7 @@ function FieldValue({ name, value, depth }: FieldValueProps): ReactNode {
     ].includes(name)
   )
     return <span>{label(value)}</span>;
+
   return <ActivityValue value={value} depth={depth} />;
 }
 
@@ -106,6 +108,7 @@ export function ActivityValue({
     );
   const fields = Object.entries(value).filter(([, item]) => item !== undefined);
   if (!fields.length) return null;
+
   return (
     <dl className="activity-fields">
       {fields.map(([key, item]) => (

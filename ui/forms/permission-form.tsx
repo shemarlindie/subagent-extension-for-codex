@@ -5,14 +5,18 @@ import type { Task } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
 import { Button } from "../components/button";
 import { Field } from "./fields";
+
 export function PermissionForm({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
     request = task.pending_input!;
+
   const { register, handleSubmit } = useForm({
     defaultValues: { response: "" },
   });
+
   const disabled = state.busy || state.dialog?.scope !== state.scopeVersion;
+
   const decide = (approved: boolean) =>
     handleSubmit((values) =>
       controller.submit(async () => {
@@ -24,6 +28,7 @@ export function PermissionForm({ task }: { task: Task }) {
         });
       }),
     );
+
   return (
     <form onSubmit={(event) => event.preventDefault()}>
       <p className="form-note">
@@ -58,6 +63,7 @@ export function PermissionForm({ task }: { task: Task }) {
     </form>
   );
 }
+
 export const permissionDialog = defineDialog<"respond">({
   title: () => "Review permission request",
   // Worker questions answer inline in the task notice instead.

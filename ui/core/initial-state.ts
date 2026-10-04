@@ -1,4 +1,5 @@
 import type { Mode, Snapshot } from "./types";
+
 export function initialState(mode: Mode, path: string): Snapshot {
   return {
     mode,

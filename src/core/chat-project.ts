@@ -8,7 +8,9 @@ import { hostProjectCandidate } from "../panel/host-context.js";
 export function hostDirectoryFromMeta(meta?: Record<string, unknown>) {
   const state = meta?.["codex/sandbox-state-meta"] as
     { sandboxCwd?: unknown } | undefined;
+
   const directory = state?.sandboxCwd;
+
   return typeof directory === "string" && directory.length <= 4096
     ? directory
     : undefined;
@@ -30,6 +32,7 @@ async function isApproved(c: Control, root: string) {
     await (c.projects
       ? c.projects.resolve(root)
       : c.workspaces.repository(root));
+
     return true;
   } catch {
     return false;
@@ -60,6 +63,7 @@ export async function autoRegisterChatProject(
       return undefined;
     // Keep existing grants as they are instead of adding a redundant narrower row.
     if (!(await isApproved(c, root))) await c.projects.register(root);
+
     return root;
   } catch {
     return undefined;
@@ -78,8 +82,10 @@ export async function currentChatProject(
       "The host supplied no usable local project directory. Use the actual absolute repository from the task context, and call request_agent_project if it is not registered.",
     );
   const registered = await isApproved(c, root);
+
   const auto =
     !!c.projects && c.settings.values(owner).auto_register_chat_project;
+
   return {
     repository: root,
     registered,

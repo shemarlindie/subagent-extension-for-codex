@@ -23,17 +23,21 @@ async function fixture(t: TestContext) {
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
   const c = new Control(store, workspaces, new Map(), dir);
   c.projects = new Projects(store, workspaces);
+
   t.onTestFinished(async () => {
     await c.close();
     await rm(dir, { recursive: true, force: true });
   });
+
   const repo = async (name: string, approved = true) => {
     const path = join(dir, name);
     await mkdir(path, { recursive: true });
     execFileSync("git", ["init", "-q", path]);
     if (approved) await c.projects!.register(path);
+
     return path;
   };
+
   const seed = (
     id: string,
     repository: string,
@@ -56,35 +60,44 @@ async function fixture(t: TestContext) {
       runtime_ms: 0,
       ...overrides,
     };
+
     store.save(task);
+
     return task;
   };
+
   return { dir, c, repo, seed };
 }
 
 test("panel defaults use only the latest owned task in the same conversation", async (t) => {
   const f = await fixture(t);
+
   const a = await f.repo("a"),
     b = await f.repo("b");
+
   f.seed("old", a, {
     conversation_id: "chat-a",
     revision: "old",
     created_at: "2026-01-01",
   });
+
   f.seed("latest", a, {
     conversation_id: "chat-a",
     revision: "feature",
     created_at: "2026-01-02",
   });
+
   f.seed("other-chat", b, {
     conversation_id: "chat-b",
     created_at: "2026-01-03",
   });
+
   f.seed("other-owner", b, {
     owner: "bob",
     conversation_id: "chat-a",
     created_at: "2026-01-04",
   });
+
   assert.deepEqual(
     await resolvePanelContext(f.c, "alice", { conversation_id: "chat-a" }),
     {
@@ -95,6 +108,7 @@ test("panel defaults use only the latest owned task in the same conversation", a
       },
     },
   );
+
   for (const args of [
     {},
     { conversation_id: null },
@@ -104,6 +118,7 @@ test("panel defaults use only the latest owned task in the same conversation", a
       panel_scope: { conversation_id: args.conversation_id ?? null },
     });
   }
+
   assert.deepEqual(
     await resolvePanelContext(f.c, "alice", {
       conversation_id: "chat-a",
@@ -117,6 +132,7 @@ test("panel defaults use only the latest owned task in the same conversation", a
       },
     },
   );
+
   assert.deepEqual(
     await resolvePanelContext(f.c, "alice", {
       conversation_id: "chat-a",
@@ -135,16 +151,20 @@ test("panel defaults use only the latest owned task in the same conversation", a
 
 test("an unavailable history default does not prevent choosing a different project", async (t) => {
   const f = await fixture(t);
+
   const old = await f.repo("removed"),
     active = await f.repo("active");
+
   f.seed("old-task", old, { conversation_id: "chat-a" });
   f.c.store.db.prepare("DELETE FROM project_roots WHERE path=?").run(old);
+
   assert.deepEqual(
     await resolvePanelContext(f.c, "alice", { conversation_id: "chat-a" }),
     {
       panel_scope: { conversation_id: "chat-a" },
     },
   );
+
   assert.equal(
     (
       await resolvePanelContext(f.c, "alice", {
@@ -154,10 +174,12 @@ test("an unavailable history default does not prevent choosing a different proje
     ).panel_scope.repository,
     active,
   );
+
   await assert.rejects(
     resolvePanelContext(f.c, "alice", { repository: old }),
     /outside allowed roots/,
   );
+
   await assert.rejects(
     resolvePanelContext(f.c, "alice", { task_id: "old-task" }),
     /outside allowed roots/,
@@ -166,17 +188,22 @@ test("an unavailable history default does not prevent choosing a different proje
 
 test("task selection checks ownership and rejects conflicting scope", async (t) => {
   const f = await fixture(t);
+
   const a = await f.repo("a"),
     b = await f.repo("b");
+
   const selected = f.seed("selected", a, {
     conversation_id: "chat-a",
     revision: "feature",
   });
+
   f.seed("private", a, { owner: "bob" });
+
   await assert.rejects(
     resolvePanelContext(f.c, "alice", { task_id: "private" }),
     /Task not found/,
   );
+
   await assert.rejects(
     resolvePanelContext(f.c, "alice", {
       task_id: "selected",
@@ -184,10 +211,12 @@ test("task selection checks ownership and rejects conflicting scope", async (t) 
     }),
     /different conversation/,
   );
+
   await assert.rejects(
     resolvePanelContext(f.c, "alice", { task_id: "selected", repository: b }),
     /different repository/,
   );
+
   await assert.rejects(
     resolvePanelContext(f.c, "alice", {
       task_id: "selected",
@@ -195,10 +224,12 @@ test("task selection checks ownership and rejects conflicting scope", async (t) 
     }),
     /different revision/,
   );
+
   assert.deepEqual(
     await resolvePanelContext(f.c, "alice", { task_id: "selected" }),
     taskPanelContext(selected),
   );
+
   selected.result = {
     summary: "Done",
     findings: [],
@@ -207,19 +238,24 @@ test("task selection checks ownership and rejects conflicting scope", async (t) 
     tests: [],
     recommendations: [],
   };
+
   f.c.store.save(selected);
+
   assert.equal(
     (await resolvePanelContext(f.c, "alice", { task_id: selected.id }))
       .panel_selection?.tab,
     "result",
   );
+
   assert.equal(
     taskPanelContext(selected).panel_selection.tab,
     "activity",
     "a newly started task always activates Activity",
   );
+
   const alias = join(f.dir, "alias");
   await symlink(a, alias, "dir");
+
   assert.equal(
     (
       await resolvePanelContext(f.c, "alice", {
@@ -233,18 +269,23 @@ test("task selection checks ownership and rejects conflicting scope", async (t) 
 
 test("sandbox directory hints resolve approved Git roots without granting access", async (t) => {
   const f = await fixture(t);
+
   const a = await f.repo("approved repo"),
     b = await f.repo("unapproved", false);
+
   await mkdir(join(a, "src"));
   const alias = join(f.dir, "alias");
   await symlink(a, alias, "dir");
+
   const meta = {
     "codex/sandbox-state-meta": {
       sandboxCwd: pathToFileURL(join(alias, "src")).href,
       sandboxPolicy: { type: "danger-full-access" },
     },
   };
+
   assert.equal((await withHostRepository(f.c, {}, meta)).repository, a);
+
   assert.deepEqual(
     await resolvePanelContext(f.c, "alice", {
       host_directory: pathToFileURL(join(a, "src")).href,
@@ -253,6 +294,7 @@ test("sandbox directory hints resolve approved Git roots without granting access
       panel_scope: { conversation_id: null, repository: a, revision: "HEAD" },
     },
   );
+
   for (const sandboxCwd of [
     pathToFileURL(b).href,
     "file://remote-host/repo",
@@ -272,15 +314,18 @@ test("sandbox directory hints resolve approved Git roots without granting access
       sandboxCwd,
     );
   }
+
   assert.deepEqual(
     f.c.projects!.list().map((p) => p.repository),
     [a],
   );
+
   const explicit = { repository: b };
   assert.deepEqual(await withHostRepository(f.c, explicit, meta), explicit);
   const selection = { task_id: "selected" };
   assert.deepEqual(await withHostRepository(f.c, selection, meta), selection);
   f.seed("fallback", a, { conversation_id: "chat-a", revision: "feature" });
+
   assert.deepEqual(
     await resolvePanelContext(f.c, "alice", {
       conversation_id: "chat-a",
@@ -303,6 +348,7 @@ test("host correlation honors explicit values and isolates supported tools", () 
     threadId: "thread",
     "codex/sandbox-state-meta": { sandboxCwd: "file:///project" },
   };
+
   for (const name of [
     "start_agent_task",
     "list_agent_tasks",
@@ -310,10 +356,12 @@ test("host correlation honors explicit values and isolates supported tools", () 
     "get_agent_panel_context",
   ]) {
     assert.equal(withConversation(name, {}, meta).conversation_id, "session");
+
     assert.equal(
       withConversation(name, {}, { threadId: "thread" }).conversation_id,
       "thread",
     );
+
     for (const conversation_id of ["explicit", null]) {
       assert.equal(
         withConversation(name, { conversation_id }, meta).conversation_id,
@@ -321,6 +369,7 @@ test("host correlation honors explicit values and isolates supported tools", () 
       );
     }
   }
+
   for (const value of ["", "   ", "x".repeat(257), 7, null]) {
     assert.equal(
       withConversation("list_agent_tasks", {}, { "openai/session": value })
@@ -328,14 +377,17 @@ test("host correlation honors explicit values and isolates supported tools", () 
       undefined,
     );
   }
+
   assert.deepEqual(
     withConversation("get_agent_task", { task_id: "owned" }, meta),
     { task_id: "owned" },
   );
+
   assert.equal(
     withConversation("start_agent_task", {}, meta).host_directory,
     undefined,
   );
+
   for (const name of [
     "open_codex_subagent_extension",
     "get_agent_panel_context",
@@ -343,10 +395,12 @@ test("host correlation honors explicit values and isolates supported tools", () 
     assert.deepEqual(withConversation(name, { conversation_id: null }, meta), {
       conversation_id: null,
     });
+
     assert.equal(
       withConversation(name, {}, meta).host_directory,
       "file:///project",
     );
+
     assert.equal(
       withConversation(name, { host_directory: "file:///explicit" }, meta)
         .host_directory,
@@ -359,15 +413,19 @@ test("an unregistered chat Git root is an add-project candidate without granting
   const f = await fixture(t);
   const repository = await f.repo("chat-project", false);
   await mkdir(join(repository, "src"));
+
   const context = await resolvePanelContext(f.c, "alice", {
     conversation_id: "new-chat",
     host_directory: pathToFileURL(join(repository, "src")).href,
   });
+
   assert.deepEqual(context, {
     panel_scope: { conversation_id: "new-chat" },
     panel_project_candidate: { repository, auto_register: true },
   });
+
   assert.deepEqual(f.c.projects!.list(), []);
+
   await assert.rejects(
     f.c.projects!.resolve(repository),
     /outside allowed roots/,
@@ -377,10 +435,12 @@ test("an unregistered chat Git root is an add-project candidate without granting
 test("explicit task panels ignore ambient chat and directory but reject explicit conflicts", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("task-repo");
+
   const meta = {
     "openai/session": "ambient-chat",
     "codex/sandbox-state-meta": { sandboxCwd: "file:///unrelated-project" },
   };
+
   for (const selected of [
     f.seed("legacy", repository),
     f.seed("another-chat", repository, { conversation_id: "task-chat" }),
@@ -391,10 +451,12 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
     ]) {
       const args = withConversation(name, { task_id: selected.id }, meta);
       assert.deepEqual(args, { task_id: selected.id });
+
       assert.deepEqual(
         await resolvePanelContext(f.c, "alice", args),
         taskPanelContext(selected),
       );
+
       await assert.rejects(
         resolvePanelContext(
           f.c,

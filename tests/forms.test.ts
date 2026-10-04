@@ -26,6 +26,7 @@ async function setup(
   execFileSync("git", ["init", "-q", dir]);
   await writeFile(join(dir, "README.md"), "hello\n");
   execFileSync("git", ["-C", dir, "add", "README.md"]);
+
   execFileSync("git", [
     "-C",
     dir,
@@ -37,21 +38,25 @@ async function setup(
     "-qm",
     "initial",
   ]);
+
   const c = new Control(
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
     new Map([provider, ...extra].map((p) => [p.id, p])),
     dir,
   );
+
   const app = application(
     c,
     new Auth("token"),
     "http://127.0.0.1:4317",
     resolve("dist/console.html"),
   );
+
   const server = app.listen(0, "127.0.0.1");
   await waitForListening(server);
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+
   const rpc = async (
     name: string,
     args: object,
@@ -93,7 +98,9 @@ async function setup(
         },
       }),
     });
+
     const text = await result.text();
+
     return JSON.parse(
       text.startsWith("event:")
         ? text
@@ -103,14 +110,17 @@ async function setup(
         : text,
     );
   };
+
   const close = async () => {
     await app.locals.closeMcp();
     server.closeAllConnections();
     await new Promise<void>((r) => server.close(() => r()));
     await c.close();
   };
+
   return { c, rpc, close };
 }
+
 const accepted = {
   action: "accept",
   content: {
@@ -121,16 +131,19 @@ const accepted = {
     max_cost_usd: 1,
   },
 };
+
 async function until(fn: () => boolean) {
   for (let i = 0; i < 300; i++) {
     if (fn()) return;
     await new Promise((r) => setTimeout(r, 10));
   }
+
   throw new Error("Timed out");
 }
 
 test("native host delegation requests user input before starting and retries complete idempotently", async () => {
   const { c, rpc, close } = await setup();
+
   try {
     const args = {
       conversation_id: "conversation-a",
@@ -139,12 +152,15 @@ test("native host delegation requests user input before starting and retries com
       model: "suggested-model",
       reasoning_effort: "low",
     };
+
     const requested = await rpc("request_agent_task", args);
+
     assert.equal(
       requested.result?.resultType,
       "input_required",
       JSON.stringify(requested),
     );
+
     assert.equal(c.store.all().length, 0);
     const form = requested.result.inputRequests.form;
     assert.ok(form.params.requestedSchema.required.includes("repository"));
@@ -154,14 +170,18 @@ test("native host delegation requests user input before starting and retries com
     assert.ok(!schema.required.includes("title"));
     assert.ok(!("title" in schema.properties));
     assert.ok(schema.required.includes("description"));
+
     assert.equal(
       schema.properties.description.default,
       "Suggested full instructions",
     );
+
     assert.equal(schema.properties.description.minLength, 1);
     assert.equal(schema.properties.description.maxLength, 20000);
+
     const repository =
       form.params.requestedSchema.properties.repository.oneOf[0].const;
+
     const response = {
       ...accepted,
       content: {
@@ -173,34 +193,43 @@ test("native host delegation requests user input before starting and retries com
           "Edited complete instructions [input]\nKeep all details and evidence.",
       },
     };
+
     assert.equal(form.method, "elicitation/create");
     assert.equal(form.params.requestedSchema.properties.worker.oneOf.length, 7);
+
     assert.equal(
       form.params.requestedSchema.properties.worker.default,
       "fixture:reviewer",
     );
+
     const state = requested.result.requestState;
+
     const missingProject = await rpc(
       "request_agent_task",
       args,
       state,
       accepted,
     );
+
     assert.ok(missingProject.result.isError);
     assert.equal(c.store.all().length, 0);
+
     const [first, second] = await Promise.all([
       rpc("request_agent_task", args, state, response),
       rpc("request_agent_task", args, state, response),
     ]);
+
     const task = first.result?.structuredContent.result;
     assert.ok(task?.id, JSON.stringify(first));
     assert.equal(second.result?.structuredContent.result.id, task.id);
     assert.equal(task.conversation_id, "conversation-a");
     assert.equal(task.title, "Edited complete instructions [input]");
+
     assert.equal(
       task.description,
       "Edited complete instructions [input]\nKeep all details and evidence.",
     );
+
     assert.equal(c.store.get(task.id, "local").description, task.description);
     assert.equal(task.repository, await realpath(repository));
     assert.equal(task.budget.max_cost_usd, 1);
@@ -208,6 +237,7 @@ test("native host delegation requests user input before starting and retries com
     assert.equal(task.reasoning_effort, "high");
     assert.equal(c.store.get(task.id, "local").model, "accepted-model");
     assert.equal(c.store.all().length, 1);
+
     assert.ok(
       (
         await rpc(
@@ -218,6 +248,7 @@ test("native host delegation requests user input before starting and retries com
         )
       ).result.isError,
     );
+
     assert.ok(
       (
         await rpc("request_agent_task", args, state, {
@@ -229,6 +260,7 @@ test("native host delegation requests user input before starting and retries com
         })
       ).result.isError,
     );
+
     assert.equal(c.store.all().length, 1);
   } finally {
     await close();
@@ -237,6 +269,7 @@ test("native host delegation requests user input before starting and retries com
 
 function withModels(models: () => Promise<ModelChoice[]>): Provider {
   const provider = new FixtureProvider();
+
   return Object.assign(provider, { models });
 }
 
@@ -252,12 +285,15 @@ test("host delegation offers discovered models as readable choices and keeps a c
       { value: "haiku", displayName: "Haiku 4.5", description: "" },
     ]),
   );
+
   try {
     const args = { model: "custom-model" };
     const requested = await rpc("request_agent_task", args);
+
     const model =
       requested.result.inputRequests.form.params.requestedSchema.properties
         .model;
+
     assert.deepEqual(model.oneOf, [
       { const: "", title: "Use configured default" },
       {
@@ -267,11 +303,14 @@ test("host delegation offers discovered models as readable choices and keeps a c
       { const: "haiku", title: "Haiku 4.5" },
       { const: "custom-model", title: "custom-model (custom)" },
     ]);
+
     assert.equal(model.default, "custom-model");
     assert.ok(model.description.length < 160);
+
     const repository =
       requested.result.inputRequests.form.params.requestedSchema.properties
         .repository.oneOf[0].const;
+
     const unlisted = await rpc(
       "request_agent_task",
       args,
@@ -281,11 +320,14 @@ test("host delegation offers discovered models as readable choices and keeps a c
         content: { ...accepted.content, repository, model: "unlisted" },
       },
     );
+
     assert.ok(
       unlisted.result?.isError ?? unlisted.error,
       JSON.stringify(unlisted),
     );
+
     assert.equal(c.store.all().length, 0);
+
     const started = await rpc(
       "request_agent_task",
       args,
@@ -295,6 +337,7 @@ test("host delegation offers discovered models as readable choices and keeps a c
         content: { ...accepted.content, repository, model: "sonnet" },
       },
     );
+
     const task = started.result?.structuredContent.result;
     assert.ok(task?.id, JSON.stringify(started));
     assert.equal(task.model, "sonnet");
@@ -311,16 +354,21 @@ test("host delegation names providers and flags workers without a model list", a
     ]),
     { id: "claude" },
   );
+
   const { rpc, close } = await setup(claude, [new FixtureProvider()]);
+
   try {
     const requested = await rpc("request_agent_task", {});
+
     const model =
       requested.result.inputRequests.form.params.requestedSchema.properties
         .model;
+
     assert.deepEqual(model.oneOf[1], {
       const: "sonnet",
       title: "claude · Sonnet 5.5",
     });
+
     assert.match(model.description, /No model list for fixture/);
   } finally {
     await close();
@@ -331,11 +379,14 @@ test("host delegation keeps a free-text model field when discovery fails", async
   const { rpc, close } = await setup(
     withModels(() => Promise.reject(new Error("offline"))),
   );
+
   try {
     const requested = await rpc("request_agent_task", {});
+
     const model =
       requested.result.inputRequests.form.params.requestedSchema.properties
         .model;
+
     assert.equal("oneOf" in model, false);
     assert.equal(model.maxLength, 200);
     assert.equal(model.default, "");
@@ -346,43 +397,53 @@ test("host delegation keeps a free-text model field when discovery fails", async
 
 test("persisted forms from before project selection reject submission and require reopening", async () => {
   const { c, rpc, close } = await setup();
+
   try {
     const requested = await rpc("request_agent_task", {});
     const state = requested.result.requestState;
     const row = c.store.db.prepare("SELECT id,body FROM form_requests").get()!;
     const legacy = JSON.parse(String(row.body));
     delete legacy.form.properties.repository;
+
     legacy.form.required = legacy.form.required.filter(
       (name: string) => name !== "repository",
     );
+
     c.store.db
       .prepare("UPDATE form_requests SET body=? WHERE id=?")
       .run(JSON.stringify(legacy), row.id);
+
     c.forms = new Forms(c); // Model loading a pending form after upgrading the service.
     const submitted = await rpc("request_agent_task", {}, state, accepted);
     assert.ok(submitted.result.isError, JSON.stringify(submitted));
+
     assert.match(
       submitted.result.content[0].text,
       /Reopen the task form and select a project/,
     );
+
     assert.equal(c.store.all().length, 0);
     const reopened = await rpc("request_agent_task", {});
     const schema = reopened.result.inputRequests.form.params.requestedSchema;
     const repository = schema.properties.repository.oneOf[0].const;
+
     const response = {
       ...accepted,
       content: { ...accepted.content, repository },
     };
+
     const started = await rpc(
       "request_agent_task",
       {},
       reopened.result.requestState,
       response,
     );
+
     assert.equal(
       started.result.structuredContent.result.repository,
       await realpath(repository),
     );
+
     assert.equal(c.store.all().length, 1);
   } finally {
     await close();
@@ -391,6 +452,7 @@ test("persisted forms from before project selection reject submission and requir
 
 test("persisted task-only forms require reopening before changing pending state", async () => {
   const { c, rpc, close } = await setup();
+
   try {
     const requested = await rpc("request_agent_task", {});
     const state = requested.result.requestState;
@@ -400,25 +462,33 @@ test("persisted task-only forms require reopening before changing pending state"
     const legacy = JSON.parse(String(row.body));
     legacy.form.properties.task = legacy.form.properties.description;
     delete legacy.form.properties.description;
+
     legacy.form.required = legacy.form.required.map((name: string) =>
       name === "description" ? "task" : name,
     );
+
     const body = JSON.stringify(legacy);
+
     c.store.db
       .prepare("UPDATE form_requests SET body=? WHERE id=?")
       .run(body, row.id);
+
     c.forms = new Forms(c);
     const { description, ...fields } = accepted.content;
+
     const submitted = await rpc("request_agent_task", {}, state, {
       action: "accept",
       content: { ...fields, repository, task: description },
     });
+
     assert.ok(submitted.result.isError, JSON.stringify(submitted));
     assert.match(submitted.result.content[0].text, /Reopen the task form/);
     assert.equal(c.store.all().length, 0);
+
     const persisted = c.store.db
       .prepare("SELECT body FROM form_requests WHERE id=?")
       .get(row.id)!;
+
     assert.equal(persisted.body, body);
     assert.equal(JSON.parse(String(persisted.body)).status, "pending");
   } finally {
@@ -428,6 +498,7 @@ test("persisted task-only forms require reopening before changing pending state"
 
 test("persisted title and description forms preserve the accepted title after reload", async () => {
   const { c, rpc, close } = await setup();
+
   try {
     const requested = await rpc("request_agent_task", {});
     const state = requested.result.requestState;
@@ -435,19 +506,25 @@ test("persisted title and description forms preserve the accepted title after re
     const repository = schema.properties.repository.oneOf[0].const;
     const row = c.store.db.prepare("SELECT id,body FROM form_requests").get()!;
     const legacy = JSON.parse(String(row.body));
+
     legacy.form.properties.title = {
       type: "string",
       title: "Title",
       minLength: 1,
       maxLength: 120,
     };
+
     legacy.form.required.push("title");
+
     c.store.db
       .prepare("UPDATE form_requests SET body=? WHERE id=?")
       .run(JSON.stringify(legacy), row.id);
+
     c.forms = new Forms(c);
+
     const description =
       "Review all permissions [input]\nPreserve every detail.";
+
     const submitted = await rpc("request_agent_task", {}, state, {
       action: "accept",
       content: {
@@ -457,6 +534,7 @@ test("persisted title and description forms preserve the accepted title after re
         description,
       },
     });
+
     const task = submitted.result?.structuredContent?.result;
     assert.ok(task?.id, JSON.stringify(submitted));
     assert.equal(task.title, "Legacy custom heading");
@@ -471,10 +549,12 @@ test("persisted title and description forms preserve the accepted title after re
 
 test("form state is durable, owner-bound, expiring and cannot accept unsolicited or malformed responses", async () => {
   const { c, rpc, close } = await setup();
+
   try {
     const requested = await rpc("request_agent_task", {});
     const state = requested.result.requestState;
     assert.throws(() => c.forms.verify("other-owner", state));
+
     assert.equal(
       (
         await rpc(
@@ -486,9 +566,11 @@ test("form state is durable, owner-bound, expiring and cannot accept unsolicited
       ).error.code,
       -32602,
     );
+
     assert.ok(
       (await rpc("request_agent_task", {}, undefined, accepted)).result.isError,
     );
+
     assert.ok(
       (
         await rpc("request_agent_task", {}, state, {
@@ -497,6 +579,7 @@ test("form state is durable, owner-bound, expiring and cannot accept unsolicited
         })
       ).result.isError,
     );
+
     assert.ok(
       (
         await rpc("request_agent_task", {}, state, {
@@ -505,15 +588,19 @@ test("form state is durable, owner-bound, expiring and cannot accept unsolicited
         })
       ).result.isError,
     );
+
     assert.equal(c.store.all().length, 0);
     c.forms = new Forms(c); // A fresh service facade reads persisted pending state.
     assert.equal(c.forms.verify("local", state), state);
+
     const cancelled = await rpc("request_agent_task", {}, state, {
       action: "cancel",
     });
+
     assert.equal(cancelled.result.structuredContent.result.cancelled, true);
     assert.equal(c.store.all().length, 0);
     c.forms = new Forms(c, () => Date.now() + 11 * 60000);
+
     assert.equal(
       (await rpc("request_agent_task", {}, state, { action: "cancel" })).error
         .code,
@@ -526,37 +613,45 @@ test("form state is durable, owner-bound, expiring and cannot accept unsolicited
 
 test("worker question forms bind the exact input ID and reject stale answers", async () => {
   const { c, rpc, close } = await setup();
+
   try {
     const task = await c.start("local", {
       provider: "fixture",
       title: "Need decision [input]",
       description: "Need decision [input]",
     });
+
     await until(() => !!c.store.get(task.id, "local").pending_input);
     const args = { task_id: task.id };
     const first = await rpc("request_agent_input", args);
     const stale = await rpc("request_agent_input", args);
+
     assert.equal(
       first.result.inputRequests.form.params.requestedSchema.properties.q0.type,
       "string",
     );
+
     const response = {
       action: "accept",
       content: { q0: "Preserve compatibility" },
     };
+
     const answered = await rpc(
       "request_agent_input",
       args,
       first.result.requestState,
       response,
     );
+
     assert.ok(!answered.result.isError, JSON.stringify(answered));
     await until(() => c.store.get(task.id, "local").status === "completed");
+
     assert.ok(
       c.store
         .events(task.id, "local")
         .some((e) => JSON.stringify(e.data).includes("Preserve compatibility")),
     );
+
     assert.ok(
       (
         await rpc(
@@ -567,6 +662,7 @@ test("worker question forms bind the exact input ID and reject stale answers", a
         )
       ).result.isError,
     );
+
     assert.ok(
       !(
         await rpc(
@@ -585,11 +681,13 @@ test("worker question forms bind the exact input ID and reject stale answers", a
 test("shell permission forms default to deny, preserve original commands, and never grant on cancellation", async () => {
   const provider: Provider = new FixtureProvider();
   let decision: InputDecision | undefined;
+
   provider.run = async (ctx) => {
     decision = await ctx.input("Bash", {
       command: "git status",
       description: "Inspect workspace",
     });
+
     return {
       summary: "Permission resolved",
       findings: [],
@@ -599,7 +697,9 @@ test("shell permission forms default to deny, preserve original commands, and ne
       recommendations: [],
     };
   };
+
   const { c, rpc, close } = await setup(provider);
+
   try {
     const task = await c.start("local", {
       provider: "fixture",
@@ -607,17 +707,21 @@ test("shell permission forms default to deny, preserve original commands, and ne
       description: "Inspect workspace",
       worker_profile: "implementer",
     });
+
     await until(() => !!c.store.get(task.id, "local").pending_input);
     const args = { task_id: task.id };
     const first = await rpc("request_agent_input", args);
+
     assert.equal(
       first.result.inputRequests.form.params.requestedSchema.properties.decision
         .default,
       "deny",
     );
+
     assert.ok(
       first.result.inputRequests.form.params.message.includes("git status"),
     );
+
     assert.ok(
       (
         await rpc("request_agent_input", args, first.result.requestState, {
@@ -626,17 +730,22 @@ test("shell permission forms default to deny, preserve original commands, and ne
         })
       ).result.isError,
     );
+
     assert.equal(decision, undefined);
+
     await rpc("request_agent_input", args, first.result.requestState, {
       action: "cancel",
     });
+
     assert.equal(decision, undefined);
     assert.ok(c.store.get(task.id, "local").pending_input);
     const second = await rpc("request_agent_input", args);
+
     await rpc("request_agent_input", args, second.result.requestState, {
       action: "accept",
       content: { decision: "deny" },
     });
+
     await until(() => !!decision);
     const resolved: InputDecision = decision!;
     assert.equal(resolved.approved, false);
@@ -649,6 +758,7 @@ test("shell permission forms default to deny, preserve original commands, and ne
 test("rich question forms preserve titled choices and multiple selections for native worker answers", async () => {
   const provider: Provider = new FixtureProvider();
   let decision: InputDecision | undefined;
+
   provider.run = async (ctx) => {
     decision = await ctx.input("AskUserQuestion", {
       questions: [
@@ -666,6 +776,7 @@ test("rich question forms preserve titled choices and multiple selections for na
         },
       ],
     });
+
     return {
       summary: "Questions resolved",
       findings: [],
@@ -675,30 +786,38 @@ test("rich question forms preserve titled choices and multiple selections for na
       recommendations: [],
     };
   };
+
   const { c, rpc, close } = await setup(provider);
+
   try {
     const task = await c.start("local", {
       provider: "fixture",
       title: "Choose approach",
       description: "Choose approach",
     });
+
     await until(() => !!c.store.get(task.id, "local").pending_input);
     const args = { task_id: task.id };
     const request = await rpc("request_agent_input", args);
+
     const fields =
       request.result.inputRequests.form.params.requestedSchema.properties;
+
     assert.equal(fields.q0.oneOf[0].title, "Adapter");
     assert.equal(fields.q0.oneOf[0].description, "Preserve clients");
     assert.equal(fields.q1.type, "array");
     assert.equal(fields.q1.items.anyOf[1].const, "Integration tests");
+
     const bad = await rpc(
       "request_agent_input",
       args,
       request.result.requestState,
       { action: "accept", content: { q0: "Adapter", q1: ["Not offered"] } },
     );
+
     assert.ok(bad.result.isError);
     assert.equal(decision, undefined);
+
     const answered = await rpc(
       "request_agent_input",
       args,
@@ -708,10 +827,12 @@ test("rich question forms preserve titled choices and multiple selections for na
         content: { q0: "Adapter", q1: ["Unit tests", "Integration tests"] },
       },
     );
+
     assert.ok(!answered.result.isError, JSON.stringify(answered));
     await until(() => !!decision);
     const resolved: InputDecision = decision!;
     assert.equal(resolved.approved, true);
+
     assert.deepEqual(resolved.input!.answers, {
       "Compatibility strategy?": "Adapter",
       "Which checks?": "Unit tests, Integration tests",
@@ -723,6 +844,7 @@ test("rich question forms preserve titled choices and multiple selections for na
 
 test("clients without form capabilities receive an explicit protocol error and no task is started", async () => {
   const { c, rpc, close } = await setup();
+
   try {
     const result = await rpc(
       "request_agent_task",
@@ -731,6 +853,7 @@ test("clients without form capabilities receive an explicit protocol error and n
       undefined,
       {},
     );
+
     assert.equal(result.error?.code, -32021, JSON.stringify(result));
     assert.equal(c.store.all().length, 0);
   } finally {
@@ -740,14 +863,17 @@ test("clients without form capabilities receive an explicit protocol error and n
 
 test("host delegation preserves an explicit or default choice to run without a cost limit", async () => {
   const { c, rpc, close } = await setup();
+
   try {
     const args = {};
     const requested = await rpc("request_agent_task", args);
+
     assert.equal(
       requested.result.inputRequests.form.params.requestedSchema.properties
         .use_cost_budget.default,
       true,
     );
+
     const response = {
       ...accepted,
       content: {
@@ -758,25 +884,30 @@ test("host delegation preserves an explicit or default choice to run without a c
             .repository.oneOf[0].const,
       },
     };
+
     const started = await rpc(
       "request_agent_task",
       args,
       requested.result.requestState,
       response,
     );
+
     assert.equal(
       started.result.structuredContent.result.budget.max_cost_usd,
       null,
     );
+
     // The form's effective default is tested with the authenticated service owner.
     const owner = c.store.all()[0].owner;
     c.settings.update(owner, { set: { max_cost_usd: null } });
     const inherited = await rpc("request_agent_task", args);
+
     assert.equal(
       inherited.result.inputRequests.form.params.requestedSchema.properties
         .use_cost_budget.default,
       false,
     );
+
     const second = await rpc(
       "request_agent_task",
       args,
@@ -791,6 +922,7 @@ test("host delegation preserves an explicit or default choice to run without a c
         },
       },
     );
+
     assert.equal(
       second.result.structuredContent.result.budget.max_cost_usd,
       null,
@@ -803,12 +935,15 @@ test("host delegation preserves an explicit or default choice to run without a c
 test("Codex execution forms disclose whole-turn authority and bind approval to the pending request", async () => {
   const provider: Provider = new FixtureProvider();
   let decision: InputDecision | undefined;
+
   const policy = {
     workspace: "/isolated/worktree",
     policy: "Shell commands execute within the sandbox",
   };
+
   provider.run = async (ctx) => {
     decision = await ctx.input("CodexExecution", policy);
+
     return {
       summary: "Turn permission resolved",
       findings: [],
@@ -818,7 +953,9 @@ test("Codex execution forms disclose whole-turn authority and bind approval to t
       recommendations: [],
     };
   };
+
   const { c, rpc, close } = await setup(provider);
+
   try {
     const task = await c.start("local", {
       provider: "fixture",
@@ -826,6 +963,7 @@ test("Codex execution forms disclose whole-turn authority and bind approval to t
       description: "Run a Codex turn",
       worker_profile: "implementer",
     });
+
     await until(() => !!c.store.get(task.id, "local").pending_input);
     const args = { task_id: task.id };
     const requested = await rpc("request_agent_input", args);
@@ -834,17 +972,21 @@ test("Codex execution forms disclose whole-turn authority and bind approval to t
     assert.match(form.message, /no separate command approval prompts/);
     assert.ok(form.message.includes(policy.workspace));
     assert.equal(form.requestedSchema.properties.decision.default, "deny");
+
     assert.equal(
       form.requestedSchema.properties.decision.oneOf[1].title,
       "Approve this execution turn",
     );
+
     assert.equal(decision, undefined);
+
     const submitted = await rpc(
       "request_agent_input",
       args,
       requested.result.requestState,
       { action: "accept", content: { decision: "allow" } },
     );
+
     assert.ok(!submitted.result.isError, JSON.stringify(submitted));
     await until(() => !!decision);
     const resolved: InputDecision = decision!;
@@ -860,10 +1002,13 @@ test("project registration form requires explicit allow and replays durably with
   c.projects = new Projects(c.store, c.workspaces);
   const register = c.projects.register.bind(c.projects);
   let registrations = 0;
+
   c.projects.register = async (...args) => {
     registrations++;
+
     return register(...args);
   };
+
   try {
     const args = { repository: c.repository };
     const requested = await rpc("request_agent_project", args);
@@ -874,28 +1019,36 @@ test("project registration form requires explicit allow and replays durably with
     assert.deepEqual(c.projects.list(), []);
     const state = requested.result.requestState;
     assert.throws(() => c.forms.verify("other-owner", state));
+
     const response = {
       action: "accept",
       content: { repository: c.repository, decision: "allow" },
     };
+
     const [submitted, concurrent] = await Promise.all([
       rpc("request_agent_project", args, state, response),
       rpc("request_agent_project", args, state, response),
     ]);
+
     assert.deepEqual(concurrent, submitted);
     assert.equal(registrations, 1);
+
     assert.equal(
       submitted.result.structuredContent.result.repository,
       await realpath(c.repository),
     );
+
     assert.equal(c.projects.list().length, 1);
     assert.equal(c.store.all().length, 0);
     c.forms = new Forms(c);
+
     assert.deepEqual(
       await rpc("request_agent_project", args, state, response),
       submitted,
     );
+
     assert.equal(registrations, 1);
+
     assert.ok(
       (
         await rpc("request_agent_project", args, state, {
@@ -904,6 +1057,7 @@ test("project registration form requires explicit allow and replays durably with
         })
       ).result.isError,
     );
+
     assert.ok(
       (
         await rpc(
@@ -914,7 +1068,9 @@ test("project registration form requires explicit allow and replays durably with
         )
       ).result.isError,
     );
+
     c.forms = new Forms(c, () => Date.now() + 11 * 60000);
+
     assert.equal(
       (await rpc("request_agent_project", args, state, response)).error.code,
       -32602,
@@ -927,6 +1083,7 @@ test("project registration form requires explicit allow and replays durably with
 test("project registration cancellation and accepted deny never grant access", async () => {
   const { c, rpc, close } = await setup();
   c.projects = new Projects(c.store, c.workspaces);
+
   try {
     for (const response of [
       { action: "cancel" },
@@ -937,15 +1094,18 @@ test("project registration cancellation and accepted deny never grant access", a
       },
     ]) {
       const requested = await rpc("request_agent_project", {});
+
       const submitted = await rpc(
         "request_agent_project",
         {},
         requested.result.requestState,
         response,
       );
+
       assert.equal(submitted.result.structuredContent.result.cancelled, true);
       assert.deepEqual(c.projects.list(), []);
     }
+
     assert.equal(c.store.all().length, 0);
   } finally {
     await close();
@@ -955,21 +1115,25 @@ test("project registration cancellation and accepted deny never grant access", a
 test("project registration validates repository roots and does not trust unsolicited responses", async () => {
   const { c, rpc, close } = await setup();
   c.projects = new Projects(c.store, c.workspaces);
+
   try {
     const response = {
       action: "accept",
       content: { repository: c.repository, decision: "allow" },
     };
+
     assert.ok(
       (await rpc("request_agent_project", {}, undefined, response)).result
         .isError,
     );
+
     for (const repository of [
       "relative/path",
       join(c.repository, "README.md"),
       await mkdtemp(join(tmpdir(), "ac-not-git-")),
     ]) {
       const requested = await rpc("request_agent_project", {});
+
       const submitted = await rpc(
         "request_agent_project",
         {},
@@ -979,10 +1143,13 @@ test("project registration validates repository roots and does not trust unsolic
           content: { ...response.content, repository },
         },
       );
+
       assert.ok(submitted.result.isError, JSON.stringify(submitted));
       assert.deepEqual(c.projects.list(), []);
     }
+
     const requested = await rpc("request_agent_project", {});
+
     for (const content of [
       { repository: "", decision: "allow" },
       { repository: c.repository, decision: "allow", kind: "parent" },
@@ -998,8 +1165,10 @@ test("project registration validates repository roots and does not trust unsolic
           )
         ).result.isError,
       );
+
       assert.deepEqual(c.projects.list(), []);
     }
+
     assert.equal(c.store.all().length, 0);
   } finally {
     await close();
@@ -1009,6 +1178,7 @@ test("project registration validates repository roots and does not trust unsolic
 test("project registration prefills host metadata without changing continuation arguments", async () => {
   const { c, rpc, close } = await setup();
   c.projects = new Projects(c.store, c.workspaces);
+
   try {
     const requested = await rpc(
       "request_agent_project",
@@ -1022,16 +1192,20 @@ test("project registration prefills host metadata without changing continuation 
         },
       },
     );
+
     assert.equal(
       requested.result.inputRequests.form.params.requestedSchema.properties
         .repository.default,
       await realpath(c.repository),
     );
+
     const stored = JSON.parse(
       String(c.store.db.prepare("SELECT body FROM form_requests").get()!.body),
     );
+
     assert.deepEqual(stored.args, {});
     assert.deepEqual(c.projects.list(), []);
+
     const submitted = await rpc(
       "request_agent_project",
       {},
@@ -1041,6 +1215,7 @@ test("project registration prefills host metadata without changing continuation 
         content: { repository: c.repository, decision: "allow" },
       },
     );
+
     assert.ok(!submitted.result.isError, JSON.stringify(submitted));
     assert.equal(c.projects.list().length, 1);
     assert.equal(c.store.all().length, 0);

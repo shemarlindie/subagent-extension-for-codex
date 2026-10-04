@@ -23,9 +23,11 @@ export function TaskFilters() {
     counts = filterCounts(state),
     searchRef = useRef<HTMLInputElement>(null),
     groupRef = useRef<HTMLDivElement>(null);
+
   const filters = (Object.entries(FILTER_LABELS) as [Filter, string][]).filter(
     ([filter]) => filter !== "attention" || state.mode === "panel",
   );
+
   // "/" jumps to search from anywhere outside a text field or dialog.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -40,18 +42,23 @@ export function TaskFilters() {
       event.preventDefault();
       searchRef.current?.focus();
     };
+
     document.addEventListener("keydown", onKeyDown);
+
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
   // Keep the selected filter visible when the group scrolls sideways.
   useEffect(() => {
     const group = groupRef.current,
       selected = group?.querySelector<HTMLElement>(
         `[data-filter="${state.filter}"]`,
       );
+
     if (group && selected)
       scrollChildIntoView(group, selected, FILTER_EDGE_GAP);
   }, [state.filter]);
+
   return (
     <>
       <div className="search-box">

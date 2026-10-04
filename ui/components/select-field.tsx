@@ -1,12 +1,14 @@
 import type { Ref } from "react";
 import { Select } from "@base-ui/react/select";
 import { Chevron } from "./chevron";
+
 export type SelectOption = {
   value: string;
   label: string;
   /** Secondary text shown under the label in the menu only. */
   description?: string;
 };
+
 export type SelectFieldProps = {
   id: string;
   label: string;
@@ -20,6 +22,7 @@ export type SelectFieldProps = {
   triggerRef?: Ref<HTMLButtonElement>;
   onBlur?(): void;
 };
+
 function SelectTrigger({
   id,
   label,
@@ -48,6 +51,7 @@ function SelectTrigger({
     </Select.Trigger>
   );
 }
+
 function SelectOptions({ options }: { options: SelectOption[] }) {
   return (
     <Select.Portal>
@@ -91,6 +95,7 @@ function SelectOptions({ options }: { options: SelectOption[] }) {
     </Select.Portal>
   );
 }
+
 /** Shared styling; Base UI owns positioning, dismissal, focus, and keyboard input. */
 export function SelectField(
   props: SelectFieldProps & {
@@ -102,6 +107,7 @@ export function SelectField(
     props.value === "" && !props.options.some((option) => option.value === "")
       ? null
       : props.value;
+
   return (
     <Select.Root
       items={props.options}
@@ -115,6 +121,7 @@ export function SelectField(
     </Select.Root>
   );
 }
+
 export function MultiSelectField(
   props: SelectFieldProps & {
     value: string[];

@@ -1,14 +1,17 @@
 import { profileLabel } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
 import { Button } from "./button";
+
 export function WorkerInspector() {
   const controller = useController(),
     state = useSnapshot();
+
   const worker = state.workers.find((worker) =>
     worker.profiles.some(
       (profile) => `${worker.provider}.${profile}` === state.workerRoute,
     ),
   );
+
   if (!worker)
     return (
       <div className="empty">
@@ -16,10 +19,12 @@ export function WorkerInspector() {
         <p>Select an available worker from the list.</p>
       </div>
     );
+
   const profile = state.workerRoute!.slice(worker.provider.length + 1),
     readOnly = ["researcher", "reviewer", "security_reviewer"].includes(
       profile,
     );
+
   return (
     <>
       <span className="eyebrow">Available worker</span>

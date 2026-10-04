@@ -8,6 +8,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   writable: true,
   value: true,
 });
+
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -30,6 +31,7 @@ import {
 function parseHtml(html: string) {
   return new DOMParser().parseFromString(html, "text/html");
 }
+
 const eventIds = new Map<string, number>();
 import userEvent from "@testing-library/user-event";
 
@@ -39,6 +41,7 @@ function event(
   id = "one",
 ): ActivityEvent {
   if (!eventIds.has(id)) eventIds.set(id, eventIds.size + 1);
+
   return {
     id: eventIds.get(id)!,
     task_id: "task",
@@ -47,6 +50,7 @@ function event(
     data,
   };
 }
+
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
 // which never finishes and starves waitFor's timeout.
 function assertAbsent(element: Element | null, message = "Unexpected element") {
@@ -55,8 +59,10 @@ function assertAbsent(element: Element | null, message = "Unexpected element") {
     `${message}: ${element?.outerHTML.slice(0, 200)}`,
   );
 }
+
 function markup(events: ActivityEvent[]) {
   const html = renderToStaticMarkup(createElement(EventList, { events }));
+
   return parseHtml(html);
 }
 
@@ -67,14 +73,18 @@ function mockActivityGeometry() {
     function (this: HTMLElement) {
       let top = 100;
       let height = 300;
+
       if (this.matches("[data-activity-id]")) {
         const viewport = this.closest(".activity-viewport") as HTMLElement;
+
         const groups = Array.from(
           viewport.querySelectorAll("[data-activity-id]"),
         );
+
         top += 40 + groups.indexOf(this) * 100 - viewport.scrollTop;
         height = 100;
       }
+
       return {
         top,
         bottom: top + height,
@@ -102,30 +112,37 @@ function activityMessages(prefix: string, count = 4) {
 
 test("latest group is first and fresh progress moves an older tool to the top without resetting inspection", (t) => {
   t.onTestFinished(cleanup);
+
   const started = event(
     "tool.started",
     { id: "latest-order-read", name: "Read", input: { file_path: "a.ts" } },
     "latest-order-start",
   );
+
   const newer = event(
     "agent.message",
     { text: "Newer message" },
     "latest-order-message",
   );
+
   const view = render(
     createElement(GroupedEventList, { events: [started, newer] }),
   );
+
   const groups = () =>
     Array.from(view.container.querySelectorAll(".activity-group"));
+
   assert.match(groups()[0].textContent ?? "", /Newer message/);
   const tool = groups()[1];
   const debug = view.getByRole("button", { name: "Debug activity: Read" });
   fireEvent.click(debug);
   const raw = tool.querySelector("details.activity-raw") as HTMLDetailsElement;
+
   act(() => {
     raw.open = true;
     raw.dispatchEvent(new Event("toggle"));
   });
+
   const progress = event(
     "claude.activity",
     {
@@ -136,14 +153,18 @@ test("latest group is first and fresh progress moves an older tool to the top wi
     },
     "latest-order-progress",
   );
+
   view.rerender(
     createElement(GroupedEventList, { events: [started, newer, progress] }),
   );
+
   assert.equal(groups()[0], tool, "The updated group moves without remounting");
+
   assert.ok(
     Array.from(tool.querySelectorAll("details.activity-raw")).includes(raw),
     "The original response inspector survives newly prepended debug events",
   );
+
   assert.equal(raw.open, true);
   assert.ok(raw.querySelector("pre"));
   assert.equal(debug.getAttribute("aria-expanded"), "true");
@@ -151,6 +172,7 @@ test("latest group is first and fresh progress moves an older tool to the top wi
 
 test("tool debug opens only the newest raw response and preserves a manual collapse", async (t) => {
   t.onTestFinished(cleanup);
+
   const events = [
     event(
       "tool.started",
@@ -163,38 +185,48 @@ test("tool debug opens only the newest raw response and preserves a manual colla
       "raw-default-complete",
     ),
   ];
+
   const view = render(createElement(GroupedEventList, { events }));
   fireEvent.click(view.getByRole("button", { name: "Debug activity: Read" }));
+
   const inspectors = Array.from(
     view.container.querySelectorAll<HTMLDetailsElement>("details.activity-raw"),
   );
+
   assert.equal(inspectors.length, 2);
   assert.equal(inspectors[0].open, true);
+
   assert.equal(
     inspectors[0].querySelector("pre")?.textContent,
     JSON.stringify(events[1].data, null, 2),
   );
+
   assert.equal(inspectors[1].open, false);
   assertAbsent(inspectors[1].querySelector("pre"));
+
   await act(async () => {
     inspectors[0].open = false;
     inspectors[0].dispatchEvent(new Event("toggle"));
   });
+
   view.rerender(
     createElement(GroupedEventList, {
       events: events.map((item) => ({ ...item })),
     }),
   );
+
   assert.equal(
     view.container.querySelector("details.activity-raw"),
     inspectors[0],
   );
+
   assert.equal(inspectors[0].open, false);
   assertAbsent(inspectors[0].querySelector("pre"));
 });
 
 test("artifact counts update without closing debug or remounting raw inspectors", async (t) => {
   t.onTestFinished(cleanup);
+
   const events = [1, 2, 3].map((index) =>
     event(
       "artifact.created",
@@ -202,45 +234,56 @@ test("artifact counts update without closing debug or remounting raw inspectors"
       `count-artifact-${index}`,
     ),
   );
+
   const view = render(
     createElement(GroupedEventList, { events: events.slice(0, 1) }),
   );
+
   const debug = view.getByRole("button", {
     name: "Debug activity: Created an artifact",
   });
+
   fireEvent.click(debug);
   const panel = document.getElementById(debug.getAttribute("aria-controls")!)!;
   const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
   assert.equal(raw.open, true, "Artifact debug opens its newest raw response");
+
   await waitFor(() =>
     assert.equal(
       raw.querySelector("pre")?.textContent,
       JSON.stringify(events[0].data, null, 2),
     ),
   );
+
   for (const count of [2, 3]) {
     view.rerender(
       createElement(GroupedEventList, { events: events.slice(0, count) }),
     );
+
     assert.equal(
       view.getByRole("button", {
         name: `Debug activity: Created ${count} artifacts`,
       }),
       debug,
     );
+
     assert.equal(debug.getAttribute("aria-expanded"), "true");
     assert.equal(debug.getAttribute("title"), `Inspect ${count} raw responses`);
     assert.equal(panel.hidden, false);
+
     const inspectors = Array.from(
       panel.querySelectorAll("details.activity-raw"),
     );
+
     assert.equal(inspectors.length, count);
     assert.ok(inspectors.includes(raw));
     assert.equal(raw.open, true);
+
     assert.equal(
       raw.querySelector("pre")?.textContent,
       JSON.stringify(events[0].data, null, 2),
     );
+
     assert.equal(view.container.querySelectorAll(".activity-group").length, 1);
   }
 });
@@ -251,29 +294,35 @@ test("pinned updates stay at zero and manually returning within the 48px buffer 
   const initial = activityMessages("pin-buffer");
   const view = render(createElement(GroupedEventList, { events: initial }));
   const viewport = view.getByRole("region", { name: "Activity history" });
+
   const fab = () =>
     view.queryByRole("button", { name: "Scroll to latest activity" });
+
   assert.equal(viewport.scrollTop, 0);
   assertAbsent(fab());
   viewport.scrollTop = 30;
   const next = [...initial, ...activityMessages("pin-buffer-next", 1)];
   view.rerender(createElement(GroupedEventList, { events: next }));
+
   assert.equal(
     viewport.scrollTop,
     0,
     "Pinned updates undo browser scroll anchoring",
   );
+
   viewport.scrollTop = 49;
   fireEvent.scroll(viewport);
   assert.ok(fab(), "Beyond the buffer, the reader controls scrolling");
   viewport.scrollTop = 48;
   fireEvent.scroll(viewport);
   assertAbsent(fab(), "The edge of the buffer repins");
+
   view.rerender(
     createElement(GroupedEventList, {
       events: [...next, ...activityMessages("pin-buffer-last", 1)],
     }),
   );
+
   assert.equal(viewport.scrollTop, 0);
 });
 
@@ -285,22 +334,28 @@ test("scroll to latest FAB returns to zero and keeps subsequent activity pinned"
   const viewport = view.getByRole("region", { name: "Activity history" });
   viewport.scrollTop = 240;
   fireEvent.scroll(viewport);
+
   fireEvent.click(
     view.getByRole("button", { name: "Scroll to latest activity" }),
   );
+
   assert.equal(viewport.scrollTop, 0);
+
   assert.ok(
     document.activeElement === viewport,
     "Focus returns to the activity region when the FAB disappears",
   );
+
   assertAbsent(
     view.queryByRole("button", { name: "Scroll to latest activity" }),
   );
+
   view.rerender(
     createElement(GroupedEventList, {
       events: [...initial, ...activityMessages("fab-pin-next", 1)],
     }),
   );
+
   assert.equal(viewport.scrollTop, 0);
 });
 
@@ -313,12 +368,15 @@ test("scroll to latest glides back and stays pinned until the reader takes over"
   // jsdom has no smooth scrolling; record requests and move scrollTop by hand.
   const scrollTo = vi.fn();
   Object.defineProperty(viewport, "scrollTo", { value: scrollTo });
+
   const fab = () =>
     view.queryByRole("button", { name: "Scroll to latest activity" });
+
   const scrollAt = (top: number) => {
     viewport.scrollTop = top;
     fireEvent.scroll(viewport);
   };
+
   const glide = () => {
     scrollAt(240);
     assert.ok(fab());
@@ -327,9 +385,11 @@ test("scroll to latest glides back and stays pinned until the reader takes over"
   };
 
   glide();
+
   assert.deepEqual(scrollTo.mock.calls.at(-1), [
     { top: 0, behavior: "smooth" },
   ]);
+
   assert.equal(viewport.scrollTop, 240, "The browser animates the scroll");
   scrollAt(120);
   assertAbsent(fab(), "Scroll events while closing in keep the feed pinned");
@@ -351,22 +411,28 @@ test("scroll to latest glides back and stays pinned until the reader takes over"
 
   glide();
   scrollAt(150);
+
   view.rerender(
     createElement(GroupedEventList, {
       events: [...initial, ...activityMessages("glide-next", 1)],
     }),
   );
+
   assert.equal(viewport.scrollTop, 0, "New activity finishes the glide");
   assertAbsent(fab());
 
   vi.useFakeTimers();
+
   t.onTestFinished(() => {
     vi.useRealTimers();
   });
+
   glide();
+
   act(() => {
     vi.advanceTimersByTime(1500);
   });
+
   assert.ok(fab(), "A glide that never moves is judged where it stopped");
 });
 
@@ -378,20 +444,26 @@ test("new activity preserves the visible reader anchor while unpinned", (t) => {
   const viewport = view.getByRole("region", { name: "Activity history" });
   viewport.scrollTop = 175;
   fireEvent.scroll(viewport);
+
   const anchor =
     view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
+
   const before = anchor.getBoundingClientRect().top;
+
   view.rerender(
     createElement(GroupedEventList, {
       events: [...initial, ...activityMessages("reader-anchor-next", 1)],
     }),
   );
+
   assert.equal(anchor.getBoundingClientRect().top, before);
+
   assert.equal(
     viewport.scrollTop,
     275,
     "Compensate for the prepended 100px group",
   );
+
   assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
 });
 
@@ -402,8 +474,10 @@ test("new activity preserves a reader scroll before its scroll event fires", (t)
   const view = render(createElement(GroupedEventList, { events: initial }));
   const viewport = view.getByRole("region", { name: "Activity history" });
   viewport.scrollTop = 175;
+
   const anchor =
     view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
+
   const before = anchor.getBoundingClientRect().top;
 
   view.rerender(
@@ -425,19 +499,25 @@ test("a hidden activity tab keeps its reading anchor through new activity", (t) 
   const viewport = view.getByRole("region", { name: "Activity history" });
   viewport.scrollTop = 175;
   fireEvent.scroll(viewport);
+
   const anchor =
     view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
+
   const before = anchor.getBoundingClientRect().top;
   const next = [...initial, ...activityMessages("hidden-tab-next", 1)];
+
   view.rerender(
     createElement(GroupedEventList, { events: initial, active: false }),
   );
+
   // Browsers report zero while hidden and restore the offset when shown.
   viewport.scrollTop = 0;
   fireEvent.scroll(viewport);
+
   view.rerender(
     createElement(GroupedEventList, { events: next, active: false }),
   );
+
   viewport.scrollTop = 175;
   view.rerender(createElement(GroupedEventList, { events: next }));
   assert.equal(anchor.getBoundingClientRect().top, before);
@@ -450,6 +530,7 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
   const inspector = document.body.appendChild(document.createElement("div"));
   inspector.style.overflowY = "auto";
   t.onTestFinished(() => inspector.remove());
+
   // The inspector starts at 100px with a 200px header above the timeline.
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
@@ -457,13 +538,16 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
       let top = 100;
       let height = 300;
       if (this.matches(".activity-viewport")) top = timeline;
+
       if (this.matches("[data-activity-id]")) {
         const groups = Array.from(
           inspector.querySelectorAll("[data-activity-id]"),
         );
+
         top = timeline + 40 + groups.indexOf(this) * 100;
         height = 100;
       }
+
       return {
         top,
         bottom: top + height,
@@ -477,26 +561,33 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
       };
     },
   );
+
   const fab = () =>
     view.queryByRole("button", { name: "Scroll to latest activity" });
+
   const initial = activityMessages("inspector-scroll");
+
   const view = render(createElement(GroupedEventList, { events: initial }), {
     container: inspector,
   });
+
   inspector.scrollTop = 150;
   fireEvent.scroll(inspector);
   assertAbsent(fab(), "Scrolling past the header keeps the latest pinned");
+
   view.rerender(
     createElement(GroupedEventList, {
       events: [...initial, ...activityMessages("inspector-scroll-pinned", 1)],
     }),
   );
+
   assert.equal(inspector.scrollTop, 150, "Pinned updates leave the header");
   inspector.scrollTop = 400;
   fireEvent.scroll(inspector);
   assert.ok(fab(), "Scrolling into history unpins");
   const anchor = inspector.querySelectorAll<HTMLElement>(".activity-group")[2];
   const before = anchor.getBoundingClientRect().top;
+
   view.rerender(
     createElement(GroupedEventList, {
       events: [
@@ -506,26 +597,32 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
       ],
     }),
   );
+
   assert.equal(anchor.getBoundingClientRect().top, before);
   assert.equal(inspector.scrollTop, 500);
   fireEvent.click(fab()!);
+
   assert.equal(
     inspector.scrollTop,
     200,
     "The timeline returns to the top of the inspector",
   );
+
   assertAbsent(fab());
 });
 
 test("timeline items mark their rail ends, status and trimmed history as data attributes", (t) => {
   t.onTestFinished(cleanup);
+
   const timeline = (events: ActivityEvent[]) =>
     render(createElement(GroupedEventList, { events }))
       .getByRole("region", { name: "Activity history" })
       .querySelector<HTMLElement>(".timeline")!;
+
   const whole = timeline(activityMessages("rail-whole", 3));
   assert.equal(whole.hasAttribute("data-trimmed"), false);
   const items = [...whole.querySelectorAll<HTMLElement>(".timeline-item")];
+
   assert.deepEqual(
     items.map((item) => [
       item.tagName,
@@ -538,6 +635,7 @@ test("timeline items mark their rail ends, status and trimmed history as data at
       ["ARTICLE", false, true],
     ],
   );
+
   assert.ok(
     items.every(
       (item) =>
@@ -549,9 +647,11 @@ test("timeline items mark their rail ends, status and trimmed history as data at
     ),
     "Collapsible props and the item status reach the rendered article and its dot",
   );
+
   cleanup();
   const trimmed = timeline(activityMessages("rail-trimmed", EVENT_TAIL_SIZE));
   assert.equal(trimmed.hasAttribute("data-trimmed"), true);
+
   assert.match(
     trimmed.nextElementSibling?.textContent ?? "",
     /Showing the most recent/,
@@ -562,21 +662,26 @@ test("timeline items mark their rail ends, status and trimmed history as data at
 test("new groups animate in and movement animations respect reduced motion", (t) => {
   t.onTestFinished(cleanup);
   mockActivityGeometry();
+
   const previousAnimate = Object.getOwnPropertyDescriptor(
     HTMLElement.prototype,
     "animate",
   );
+
   const previousMatchMedia = Object.getOwnPropertyDescriptor(
     window,
     "matchMedia",
   );
+
   let reducedMotion = false;
   let cancellations = 0;
+
   const calls: {
     element: HTMLElement;
     frames: Keyframe[];
     options: KeyframeAnimationOptions;
   }[] = [];
+
   Object.defineProperty(HTMLElement.prototype, "animate", {
     configurable: true,
     value(
@@ -585,6 +690,7 @@ test("new groups animate in and movement animations respect reduced motion", (t)
       options: KeyframeAnimationOptions,
     ) {
       calls.push({ element: this, frames, options });
+
       return {
         cancel() {
           cancellations++;
@@ -592,10 +698,12 @@ test("new groups animate in and movement animations respect reduced motion", (t)
       };
     },
   });
+
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: () => ({ matches: reducedMotion }),
   });
+
   t.onTestFinished(() => {
     if (previousAnimate)
       Object.defineProperty(HTMLElement.prototype, "animate", previousAnimate);
@@ -604,19 +712,24 @@ test("new groups animate in and movement animations respect reduced motion", (t)
       Object.defineProperty(window, "matchMedia", previousMatchMedia);
     else delete (window as any).matchMedia;
   });
+
   const initial = activityMessages("animation", 2);
   const view = render(createElement(GroupedEventList, { events: [] }));
   const viewport = view.getByRole("region", { name: "Activity history" });
+
   Object.defineProperty(viewport, "clientHeight", {
     configurable: true,
     value: 300,
   });
+
   view.rerender(createElement(GroupedEventList, { events: initial }));
+
   assert.equal(
     calls.length,
     2,
     "First activity arriving in an empty feed animates",
   );
+
   calls.length = 0;
   viewport.scrollTop = 30;
   fireEvent.scroll(viewport);
@@ -624,41 +737,51 @@ test("new groups animate in and movement animations respect reduced motion", (t)
   view.rerender(createElement(GroupedEventList, { events: next }));
   const newest = view.container.querySelector(".activity-group");
   const entrance = calls.find((call) => call.element === newest);
+
   assert.ok(
     entrance,
     "A newly inserted visible group receives an entrance animation",
   );
+
   assert.equal(entrance.frames[0].opacity, 0);
   assert.equal(entrance.frames[1].opacity, 1);
   assert.equal(entrance.frames[1].transform, "translateY(0)");
   assert.ok(Number(entrance.options.duration) > 0);
   const retainedMovement = calls.find((call) => call.element !== newest);
+
   assert.ok(
     retainedMovement,
     "Existing visible groups animate to their new positions",
   );
+
   assert.equal(retainedMovement.frames[0].transform, "translateY(-130px)");
   assert.equal(retainedMovement.frames[0].opacity, 1);
   const cancelledBeforeScroll = cancellations;
   fireEvent.scroll(viewport);
+
   assert.equal(
     cancellations,
     cancelledBeforeScroll,
     "Restoring the top must not cancel new animations",
   );
+
   viewport.scrollTop = 80;
   fireEvent.scroll(viewport);
+
   assert.ok(
     cancellations > cancelledBeforeScroll,
     "Manual scrolling can interrupt movement animations",
   );
+
   reducedMotion = true;
   const callCount = calls.length;
+
   view.rerender(
     createElement(GroupedEventList, {
       events: [...next, ...activityMessages("animation-reduced", 1)],
     }),
   );
+
   assert.equal(
     calls.length,
     callCount,
@@ -695,6 +818,7 @@ const families = [
   ["future_event", undefined, "Future event"],
   ["system", "future_subtype", "Future subtype"],
 ] as const;
+
 for (const [type, subtype, title] of families) {
   test(`activity UI presents ${subtype ?? type} with friendly fields and raw inspection`, () => {
     const raw = {
@@ -707,19 +831,23 @@ for (const [type, subtype, title] of families) {
       },
       uuid: "raw-only-id",
     };
+
     const doc = markup([
       event("claude.activity", { ...raw, raw_response: raw }),
     ]);
+
     assert.equal(doc.querySelector("strong")?.textContent, title);
     assert.match(doc.body.textContent ?? "", /Extra details/);
     assert.match(doc.body.textContent ?? "", /Item count0/);
     assert.match(doc.body.textContent ?? "", /EnabledNo/);
     assert.match(doc.body.textContent ?? "", /Readable detail/);
     const disclosure = doc.querySelector("details.activity-raw");
+
     assert.equal(
       disclosure?.querySelector("summary")?.textContent,
       "Raw response",
     );
+
     assert.equal(disclosure?.hasAttribute("open"), false);
     assertAbsent(disclosure?.querySelector("pre") ?? null);
     assert.ok(!doc.body.textContent?.includes("raw-only-id"));
@@ -728,6 +856,7 @@ for (const [type, subtype, title] of families) {
 
 test("mixed content, tool inputs and tool results are readable and HTML stays literal", () => {
   const malicious = "<script>window.injected = true</script>";
+
   const doc = markup([
     event("agent.message", { text: malicious }, "message"),
     event(
@@ -779,6 +908,7 @@ test("mixed content, tool inputs and tool results are readable and HTML stays li
       "completed",
     ),
   ]);
+
   const text = doc.body.textContent ?? "";
   for (const snippet of [
     malicious,
@@ -836,6 +966,7 @@ test("streamed text, thinking and tool input fragments render as content", () =>
       "input",
     ),
   ]);
+
   assert.match(doc.body.textContent ?? "", /Streamed text/);
   assert.match(doc.body.textContent ?? "", /Streamed reasoning/);
   assert.match(doc.body.textContent ?? "", /Tool input fragment/);
@@ -869,6 +1000,7 @@ test("failures are distinguished for results, tool errors and denied permissions
       "permission",
     ),
   ]);
+
   assert.equal(doc.querySelectorAll(".activity-error").length, 3);
   for (const snippet of [
     "Tool failed",
@@ -882,6 +1014,7 @@ test("failures are distinguished for results, tool errors and denied permissions
 
 test("opening raw response shows the original full JSON and preserves disclosure through refresh", async (t) => {
   t.onTestFinished(cleanup);
+
   const raw = {
     type: "assistant",
     uuid: "raw-message-id",
@@ -889,56 +1022,71 @@ test("opening raw response shows the original full JSON and preserves disclosure
     usage: { input_tokens: 0 },
     future_field: false,
   };
+
   const activity = event("agent.message", { text: "Hello", raw_response: raw });
   const view = render(createElement(EventList, { events: [activity] }));
+
   const details = view.container.querySelector(
     "details.activity-raw",
   ) as HTMLDetailsElement;
+
   assert.equal(details.open, false);
   assertAbsent(details.querySelector("pre"));
+
   await act(async () => {
     details.open = true;
     details.dispatchEvent(new Event("toggle"));
   });
+
   await waitFor(() =>
     assert.equal(
       details.querySelector("pre")?.textContent,
       JSON.stringify(raw, null, 2),
     ),
   );
+
   view.rerender(createElement(EventList, { events: [{ ...activity }] }));
   assert.equal(view.container.querySelector("details.activity-raw"), details);
   assert.equal(details.open, true);
+
   assert.equal(
     details.querySelector("pre")?.textContent,
     JSON.stringify(raw, null, 2),
   );
+
   assertAbsent(view.container.querySelector("script"));
+
   await act(async () => {
     details.open = false;
     details.dispatchEvent(new Event("toggle"));
   });
+
   await waitFor(() => assertAbsent(details.querySelector("pre")));
 });
 
 test("legacy events expose their entire data when no original SDK response exists", async (t) => {
   t.onTestFinished(cleanup);
+
   const data = {
     text: "Legacy event",
     enabled: false,
     count: 0,
     nested: [null],
   };
+
   const view = render(
     createElement(EventList, { events: [event("agent.message", data)] }),
   );
+
   const details = view.container.querySelector(
     "details.activity-raw",
   ) as HTMLDetailsElement;
+
   await act(async () => {
     details.open = true;
     details.dispatchEvent(new Event("toggle"));
   });
+
   await waitFor(() =>
     assert.equal(
       details.querySelector("pre")?.textContent,
@@ -958,18 +1106,22 @@ test("activity metadata formats currency, seconds, token counts and utilization"
     usage: { input_tokens: 12345, output_tokens: 0 },
     rate_limit_info: { utilization: 0.75 },
   };
+
   const doc = markup([event("agent.completed", values)]);
+
   const fields = new Map(
     Array.from(doc.querySelectorAll(".activity-fields > div")).map((field) => [
       field.querySelector("dt")?.textContent,
       field.querySelector("dd")?.textContent,
     ]),
   );
+
   const cost = new Intl.NumberFormat(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 4,
   }).format(values.cost_usd);
+
   assert.equal(fields.get("Cost"), cost);
   assert.equal(fields.has("Total cost"), false, "Avoid duplicated result cost");
   assert.equal(fields.get("Duration"), "2.5 s");
@@ -986,6 +1138,7 @@ test("supported base64 images render inline, including images nested in document
     type: "image",
     source: { type: "base64", media_type, data: "aGVsbG8=" },
   });
+
   const doc = markup([
     event(
       "agent.content",
@@ -1025,15 +1178,19 @@ test("supported base64 images render inline, including images nested in document
       "nested-document",
     ),
   ]);
+
   const images = Array.from(doc.querySelectorAll("img.activity-image"));
   assert.equal(images.length, 6);
+
   for (const image of images) {
     assert.match(
       image.getAttribute("src") ?? "",
       /^data:image\/(png|jpeg|gif|webp);base64,aGVsbG8=$/,
     );
+
     assert.equal(image.getAttribute("alt"), "Claude activity attachment");
   }
+
   assert.match(doc.body.textContent ?? "", /Nested document/);
   assert.match(doc.body.textContent ?? "", /Nested caption/);
 });
@@ -1079,6 +1236,7 @@ test("unsupported image sources present readable metadata without embedding unsa
       "pdf",
     ),
   ]);
+
   assert.equal(doc.querySelectorAll("img").length, 0);
   const text = doc.body.textContent ?? "";
   for (const snippet of [
@@ -1098,6 +1256,7 @@ test("unsupported image sources present readable metadata without embedding unsa
 
 test("grouped tool activity retains individual raw inspections while progress refreshes", async (t) => {
   t.onTestFinished(cleanup);
+
   const rawStart = {
     type: "assistant",
     uuid: "start-wire",
@@ -1112,6 +1271,7 @@ test("grouped tool activity retains individual raw inspections while progress re
       ],
     },
   };
+
   const started = event(
     "tool.started",
     {
@@ -1122,6 +1282,7 @@ test("grouped tool activity retains individual raw inspections while progress re
     },
     "group-start",
   );
+
   const progress = event(
     "claude.activity",
     {
@@ -1132,29 +1293,36 @@ test("grouped tool activity retains individual raw inspections while progress re
     },
     "group-progress",
   );
+
   const view = render(
     createElement(GroupedEventList, { events: [started, progress] }),
   );
+
   const groups = view.container.querySelectorAll(".activity-group");
   assert.equal(groups.length, 1);
   const debug = view.getByRole("button", { name: "Debug activity: Read" });
   assert.equal(debug.getAttribute("aria-expanded"), "false");
   fireEvent.click(debug);
   assert.equal(debug.getAttribute("aria-expanded"), "true");
+
   const raw = Array.from(
     view.container.querySelectorAll("details.activity-raw"),
   ).at(-1) as HTMLDetailsElement;
+
   assert.ok(raw, "Grouped events retain per-response raw details");
+
   await act(async () => {
     raw.open = true;
     raw.dispatchEvent(new Event("toggle"));
   });
+
   await waitFor(() =>
     assert.equal(
       raw.querySelector("pre")?.textContent,
       JSON.stringify(rawStart, null, 2),
     ),
   );
+
   const completed = event(
     "tool.completed",
     {
@@ -1165,20 +1333,26 @@ test("grouped tool activity retains individual raw inspections while progress re
     },
     "group-completed",
   );
+
   view.rerender(
     createElement(GroupedEventList, { events: [started, progress, completed] }),
   );
+
   assert.equal(view.container.querySelectorAll(".activity-group").length, 1);
+
   assert.ok(
     raw.isConnected,
     "Stable group updates retain the open raw inspector",
   );
+
   assert.equal(raw.open, true);
   assert.equal(debug.getAttribute("aria-expanded"), "true");
+
   assert.equal(
     raw.querySelector("pre")?.textContent,
     JSON.stringify(rawStart, null, 2),
   );
+
   assert.equal(
     view.container.querySelectorAll("details.activity-raw").length,
     3,
@@ -1230,6 +1404,7 @@ test("grouped streams accumulate readable blocks and preserve every frame for in
     },
     { type: "message_stop" },
   ];
+
   const events = frames.map((frame, i) =>
     event(
       "claude.activity",
@@ -1242,9 +1417,11 @@ test("grouped streams accumulate readable blocks and preserve every frame for in
       `stream-accumulation-${i}`,
     ),
   );
+
   const html = renderToStaticMarkup(
     createElement(GroupedEventList, { events }),
   );
+
   const doc = parseHtml(html);
   assert.equal(doc.querySelectorAll(".activity-group").length, 1);
   const content = doc.querySelector(".activity-stream > .activity-body");
@@ -1252,10 +1429,12 @@ test("grouped streams accumulate readable blocks and preserve every frame for in
   assert.match(content?.textContent ?? "", /Checking evidence/);
   assert.match(content?.textContent ?? "", /\{"file_path":"a.ts"\}/);
   assert.equal(doc.querySelectorAll("details.activity-raw").length, 0);
+
   assert.equal(
     doc.querySelector("button.activity-debug-toggle")?.getAttribute("title"),
     "Inspect 10 raw responses",
   );
+
   assert.equal(
     doc.querySelector(".activity-debug-panel")?.hasAttribute("hidden"),
     true,
@@ -1299,9 +1478,11 @@ test("final SDK message replaces provisional stream fragments in the main conver
       "final-fold-message",
     ),
   ];
+
   const doc = parseHtml(
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
   );
+
   assert.equal(doc.querySelectorAll(".activity-group").length, 1);
   const content = doc.querySelector(".activity-message > .activity-body");
   assert.equal(content?.textContent, "Final response");
@@ -1310,6 +1491,7 @@ test("final SDK message replaces provisional stream fragments in the main conver
 
 test("a compact accessible debug toggle hides inspection until opened and preserves raw state", async (t) => {
   t.onTestFinished(cleanup);
+
   const activity = event(
     "agent.message",
     {
@@ -1324,10 +1506,13 @@ test("a compact accessible debug toggle hides inspection until opened and preser
     },
     "debug-message",
   );
+
   const view = render(createElement(GroupedEventList, { events: [activity] }));
+
   const toggle = view.getByRole("button", {
     name: "Debug activity: Assistant",
   });
+
   assert.equal(toggle.tagName, "BUTTON");
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   assert.equal(toggle.getAttribute("title"), "Inspect 1 raw response");
@@ -1336,39 +1521,50 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   assert.ok(panel.classList.contains("activity-debug-panel"));
   assert.equal(panel.hidden, true);
   assertAbsent(view.queryByText("Raw response", { selector: "summary" }));
+
   assertAbsent(
     panel.querySelector(".event"),
     "Individual debug events mount only after first activation",
   );
+
   const outside = view.container.cloneNode(true) as HTMLElement;
+
   outside
     .querySelectorAll(".activity-debug-panel")
     .forEach((element) => element.remove());
+
   assert.ok(
     !/Inspect activity|Inspect response|Raw response/.test(
       outside.textContent ?? "",
     ),
   );
+
   toggle.focus();
+
   assert.ok(
     document.activeElement === toggle,
     "Native debug button participates in keyboard focus",
   );
+
   await userEvent.setup({ document: document }).keyboard("{Enter}");
   assert.equal(panel.hidden, false);
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
   // The newest raw response opens automatically with the debug panel.
   assert.equal(raw.open, true);
+
   assert.equal(
     raw.querySelector("pre")?.textContent,
     JSON.stringify(activity.data.raw_response, null, 2),
   );
+
   view.rerender(createElement(GroupedEventList, { events: [{ ...activity }] }));
+
   assert.ok(
     view.getByRole("button", { name: "Debug activity: Assistant" }) === toggle,
     "Debug toggle keeps its identity",
   );
+
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   assert.equal(raw.open, true);
   assert.equal(panel.hidden, false);
@@ -1376,11 +1572,13 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   assert.equal(panel.hidden, true);
   fireEvent.click(toggle);
+
   assert.equal(
     raw.open,
     true,
     "Closing the debug panel preserves individual raw disclosures",
   );
+
   assert.equal(
     raw.querySelector("pre")?.textContent,
     JSON.stringify(activity.data.raw_response, null, 2),
@@ -1425,14 +1623,18 @@ test("operation failure messages remain visible outside collapsed debug details"
       "visible-tool-failed",
     ),
   ];
+
   const doc = parseHtml(
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
   );
+
   const summaries = Array.from(
     doc.querySelectorAll(".activity-group-summary"),
   ).map((node) => node.textContent);
+
   assert.ok(summaries.includes("Visible hook stderr"));
   assert.ok(summaries.some((text) => text?.includes("Visible tool error")));
+
   assert.equal(
     doc.querySelectorAll(".activity-group.activity-error").length,
     2,
@@ -1487,18 +1689,23 @@ test("cancelled and stopped grouped operations never display Done badges", () =>
       "killed-task-finish",
     ),
   ];
+
   const doc = parseHtml(
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
   );
+
   assert.equal(doc.querySelectorAll(".activity-group").length, 3);
   assert.equal(doc.querySelectorAll(".activity-badge").length, 0);
+
   const summaries = Array.from(
     doc.querySelectorAll(".activity-group-summary"),
   ).map((node) => node.textContent ?? "");
+
   assert.equal(
     summaries.filter((text) => text.startsWith("Cancelled")).length,
     1,
   );
+
   assert.equal(
     summaries.filter((text) => text.startsWith("Stopped")).length,
     2,
@@ -1507,6 +1714,7 @@ test("cancelled and stopped grouped operations never display Done badges", () =>
 
 test("tool result image previews and individual responses mount on first debug activation", (t) => {
   t.onTestFinished(cleanup);
+
   const events = [
     event(
       "tool.started",
@@ -1532,23 +1740,28 @@ test("tool result image previews and individual responses mount on first debug a
       "lazy-image-result",
     ),
   ];
+
   const view = render(createElement(GroupedEventList, { events }));
   const toggle = view.getByRole("button", { name: "Debug activity: Read" });
   const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
   assert.equal(panel.hidden, true);
   assertAbsent(view.container.querySelector("img.activity-image"));
+
   assert.equal(
     view.container.querySelectorAll("details.activity-raw").length,
     0,
   );
+
   fireEvent.click(toggle);
   assert.equal(panel.hidden, false);
   const image = panel.querySelector("img.activity-image")!;
   assert.equal(image.getAttribute("src"), "data:image/png;base64,aGVsbG8=");
+
   assert.equal(
     panel.querySelectorAll("details.activity-raw").length,
     events.length,
   );
+
   fireEvent.click(toggle);
   assert.equal(panel.hidden, true);
   assert.equal(panel.querySelector("img.activity-image"), image);
@@ -1561,14 +1774,17 @@ test("tool result image previews and individual responses mount on first debug a
 });
 
 const nestedContentNotice = "Nested content omitted · inspect raw response";
+
 function wrapNested(
   value: unknown,
   wrap: (value: unknown) => unknown,
   levels: number,
 ): unknown {
   for (let i = 0; i < levels; i++) value = wrap(value);
+
   return value;
 }
+
 function contentMarkup(content: unknown) {
   return parseHtml(
     renderToStaticMarkup(createElement(ActivityContent, { content })),
@@ -1599,6 +1815,7 @@ for (const [name, wrap] of [
       wrap,
       10000,
     );
+
     const doc = contentMarkup(content);
     assert.equal(doc.querySelector(".muted")?.textContent, nestedContentNotice);
     assert.ok(!doc.body.textContent?.includes("Hidden deep text"));
@@ -1621,14 +1838,17 @@ test("metadata and content share a nesting budget without serializing omitted pa
       throw new Error("Omitted payload must not be serialized");
     },
   };
+
   const tool = { type: "tool_use", name: "Read", input: payload };
   const doc = contentMarkup(wrapNested(tool, (value) => [value], 6));
   assert.ok(doc.body.textContent?.includes(nestedContentNotice));
   assert.ok(!doc.body.textContent?.includes("Hidden metadata"));
   const metadata = wrapNested(payload, (value) => ({ nested: value }), 10000);
+
   const html = renderToStaticMarkup(
     createElement(ActivityValue, { value: metadata }),
   );
+
   assert.ok(html.includes(nestedContentNotice));
   assert.ok(!html.includes("Hidden metadata"));
   assert.ok(!html.includes("<pre>"));
@@ -1637,14 +1857,18 @@ test("metadata and content share a nesting budget without serializing omitted pa
 test("cyclic content and metadata stop at the nesting limit", () => {
   const tool: Record<string, unknown> = { type: "tool_result" };
   tool.content = tool;
+
   assert.ok(
     contentMarkup(tool).body.textContent?.includes(nestedContentNotice),
   );
+
   const metadata: Record<string, unknown> = {};
   metadata.self = metadata;
+
   const html = renderToStaticMarkup(
     createElement(ActivityValue, { value: metadata }),
   );
+
   assert.ok(html.includes(nestedContentNotice));
 });
 
@@ -1659,6 +1883,7 @@ test("error fields and assistant errors preserve exact diagnostic text", () => {
   const diagnostic = "failed_to_read /tmp/my_file.test.ts: ENOENT.code";
   const content = contentMarkup({ error: diagnostic });
   assert.equal(content.querySelector("dd")?.textContent, diagnostic);
+
   const doc = markup([
     event(
       "claude.activity",
@@ -1670,6 +1895,7 @@ test("error fields and assistant errors preserve exact diagnostic text", () => {
       "diagnostic-assistant",
     ),
   ]);
+
   assert.equal(doc.querySelector("p.error")?.textContent, diagnostic);
 });
 
@@ -1696,6 +1922,7 @@ test("stream blocks ignore invalid indexes while default and numeric indexes acc
       delta: { type: "text_delta", text: "block" },
     },
   ];
+
   for (const index of [
     {},
     "0",
@@ -1718,11 +1945,13 @@ test("stream blocks ignore invalid indexes while default and numeric indexes acc
       },
     );
   }
+
   frames.push({
     type: "content_block_delta",
     index: 0,
     delta: { type: "text_delta", text: " remains" },
   });
+
   const events = frames.map((frame, i) =>
     event(
       "claude.activity",
@@ -1733,13 +1962,16 @@ test("stream blocks ignore invalid indexes while default and numeric indexes acc
       `validated-stream-index-${i}`,
     ),
   );
+
   const doc = parseHtml(
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
   );
+
   const blocks = Array.from(
     doc.querySelectorAll(".activity-stream > .activity-body p.activity-text"),
     (node) => node.textContent,
   );
+
   assert.deepEqual(blocks, ["Default block remains", "Second block"]);
 });
 
@@ -1747,7 +1979,9 @@ test("fenced code in message text renders as a code block", () => {
   const doc = contentMarkup([
     { type: "text", text: "Run this:\n```sh\nnpm test\n```\nThen retry." },
   ]);
+
   assert.equal(doc.querySelector("pre.activity-code")?.textContent, "npm test");
+
   assert.deepEqual(
     [...doc.querySelectorAll("p.activity-text")].map((p) => p.textContent),
     ["Run this:", "Then retry."],
@@ -1766,6 +2000,7 @@ test("thinking-only assistant messages are not styled as message cards", () => {
     { role: "assistant", content: { type: "thinking", thinking: "Hmm" } },
     "thinking-only",
   );
+
   const reply = event(
     "agent.content",
     {
@@ -1777,14 +2012,18 @@ test("thinking-only assistant messages are not styled as message cards", () => {
     },
     "thinking-plus-reply",
   );
+
   const view = render(
     createElement(GroupedEventList, { events: [thinking, reply] }),
   );
+
   const groups = view.container.querySelectorAll(".activity-group");
   assert.equal(groups.length, 2);
+
   const quiet = [...groups].filter((g) =>
     g.classList.contains("activity-thinking-only"),
   );
+
   assert.equal(quiet.length, 1);
   // A thinking-only message must not be titled as an assistant reply.
   assert.equal(quiet[0].querySelector("strong")?.textContent, "Thinking");
@@ -1806,10 +2045,13 @@ test("message debug view shows only the raw response, not a second rendering", a
     },
     "raw-only",
   );
+
   const view = render(createElement(GroupedEventList, { events: [msg] }));
+
   await userEvent.click(
     view.getByRole("button", { name: "Debug activity: Assistant" }),
   );
+
   assert.equal(view.getAllByText("Visible once").length, 1);
   assert.ok(view.getByText("Raw response", { selector: "summary" }));
   cleanup();
@@ -1818,6 +2060,7 @@ test("message debug view shows only the raw response, not a second rendering", a
 test("the trimmed note summarizes dropped events only for the task being shown", (t) => {
   t.onTestFinished(cleanup);
   const events = activityMessages("dropped-note", EVENT_TAIL_SIZE);
+
   const dropped = {
     task_id: "task",
     count: 12,
@@ -1830,15 +2073,19 @@ test("the trimmed note summarizes dropped events only for the task being shown",
     retries: 0,
     artifacts: 0,
   };
+
   const note = (summary = dropped) =>
     render(
       createElement(GroupedEventList, { events, dropped: summary }),
     ).container.querySelector(".activity-trimmed-note")!.textContent;
+
   assert.match(
     note()!,
     /12 earlier events over 1m 30s not shown\. 5 tool calls \(Bash 3, Read 2\) · 4 messages · 1 failure\./,
   );
+
   cleanup();
+
   assert.doesNotMatch(
     note({ ...dropped, task_id: "other" })!,
     /earlier events/,
@@ -1847,10 +2094,12 @@ test("the trimmed note summarizes dropped events only for the task being shown",
 
 test("a thinking row shows how long the worker thought", (t) => {
   t.onTestFinished(cleanup);
+
   const at = (second: number, e: ActivityEvent): ActivityEvent => ({
     ...e,
     timestamp: new Date(Date.UTC(2026, 9, 2, 12, 0, second)).toISOString(),
   });
+
   const view = render(
     createElement(GroupedEventList, {
       events: [
@@ -1860,9 +2109,11 @@ test("a thinking row shows how long the worker thought", (t) => {
       ],
     }),
   );
+
   const titles = [...view.container.querySelectorAll("strong")].map(
     (title) => title.textContent,
   );
+
   // The finished row names its duration instead of also saying "Thinking…".
   assert.ok(titles.includes("Thought for 7s"), titles.join(" | "));
   assert.ok(!titles.includes("Thinking…"));
@@ -1874,18 +2125,23 @@ test("a thinking row with nothing after it counts up only while the worker runs"
     cleanup();
     vi.useRealTimers();
   });
+
   vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:05.000Z") });
+
   const events = [
     {
       ...event("thinking_tokens", {}, "live-think"),
       timestamp: "2026-10-02T12:00:00.000Z",
     },
   ];
+
   const view = render(
     createElement(GroupedEventList, { events, running: true }),
   );
+
   const duration = () =>
     view.container.querySelector(".activity-duration")?.textContent;
+
   assert.equal(duration(), "5s");
   act(() => void vi.advanceTimersByTime(3000));
   assert.equal(duration(), "8s");
@@ -1896,14 +2152,18 @@ test("a thinking row with nothing after it counts up only while the worker runs"
 test("task completion activity includes the accumulated runtime", (t) => {
   t.onTestFinished(cleanup);
   const events = [event("task.completed", {}, "completed-runtime")];
+
   const view = render(
     createElement(GroupedEventList, { events, runtimeMs: 95_000 }),
   );
+
   assert.equal(
     view.container.querySelector(".activity-group-title strong")?.textContent,
     "Task completed after 1m 35s",
   );
+
   view.rerender(createElement(GroupedEventList, { events }));
+
   assert.equal(
     view.container.querySelector(".activity-group-title strong")?.textContent,
     "Task completed",

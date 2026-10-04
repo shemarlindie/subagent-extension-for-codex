@@ -14,6 +14,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   writable: true,
   value: true,
 });
+
 import { createElement } from "react";
 import {
   act,
@@ -60,6 +61,7 @@ function task(id = "one", repository = "/repo/a"): Task {
     runtime_ms: 0,
   };
 }
+
 class FakeTransport implements Transport {
   embedded = true;
   preview = true;
@@ -74,21 +76,27 @@ class FakeTransport implements Transport {
     canExpand: true,
     displayMode: "fullscreen",
   };
+
   expandCalls = 0;
   async connect(events: TransportEvents) {
     this.events = events;
     events.host(this.host);
   }
+
   async expand() {
     this.expandCalls++;
+
     this.host = {
       ...this.host,
       displayMode: this.host.displayMode === "inline" ? "fullscreen" : "inline",
     };
+
     this.events.host(this.host);
   }
+
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     this.calls.push({ name, args });
+
     const values: Record<string, unknown> = {
       get_agent_panel_context: { panel_scope: { conversation_id: null } },
       list_agent_projects: this.projects,
@@ -118,12 +126,16 @@ class FakeTransport implements Transport {
       start_agent_task: this.tasks[0],
       submit_agent_input: {},
     };
+
     assert.ok(name in values, `Unexpected tool ${name}`);
+
     return values[name] as T;
   }
+
   async send(message: string) {
     this.messages.push(message);
   }
+
   watch() {}
   dispose() {}
 }
@@ -138,6 +150,7 @@ function configureProjectRegistration(
   } = {},
 ) {
   const original = transport.tool.bind(transport);
+
   transport.tool = async <T>(
     name: string,
     args: Record<string, unknown> = {},
@@ -145,21 +158,28 @@ function configureProjectRegistration(
     if (name === "browse_user_agent_project") {
       transport.calls.push({ name, args });
       if (options.browseError) throw new Error(options.browseError);
+
       return { repository: options.picked ?? null } as T;
     }
+
     if (name === "register_user_agent_project") {
       transport.calls.push({ name, args });
       if (options.registerError) throw new Error(options.registerError);
+
       const project = {
         repository: options.canonicalRepository ?? String(args.repository),
         kind: "repository",
       };
+
       transport.projects.push(project);
+
       return project as T;
     }
+
     return original<T>(name, args);
   };
 }
+
 async function setup(
   t: TestContext,
   configure?: (transport: FakeTransport) => void,
@@ -174,18 +194,21 @@ async function setup(
   const transport = new FakeTransport();
   if (options.displayMode) transport.host.displayMode = options.displayMode;
   configure?.(transport);
+
   const controller = new Controller(transport, options.mode ?? "panel", {
     hidden: () => false,
     wide: () => options.wide ?? true,
     path: "/",
     navigate: () => {},
   });
+
   if (options.scoped)
     controller.applyScope(
       { panel_scope: { conversation_id: null, repository: "/repo/a" } },
       false,
     );
   if (options.start !== false) await controller.start();
+
   function Harness() {
     return createElement(
       ControllerContext.Provider,
@@ -193,12 +216,16 @@ async function setup(
       createElement(AppShell),
     );
   }
+
   render(createElement(Harness));
+
   t.onTestFinished(() => {
     cleanup();
     controller.dispose();
   });
+
   const user = userEvent.setup({ document: document });
+
   return { controller, transport, user };
 }
 
@@ -212,6 +239,7 @@ async function selectOption(
   await user.click(trigger);
   await user.click(await screen.findByRole("option", { name: option }));
   if (multiple) await user.keyboard("{Escape}");
+
   await waitFor(() =>
     assert.equal(trigger.getAttribute("aria-expanded"), "false"),
   );
@@ -233,6 +261,7 @@ function configureModelDefaults(
   }[],
 ) {
   const original = transport.tool.bind(transport);
+
   transport.tool = async <T>(name: string, args = {}) => {
     const result = await original<any>(name, args);
     if (name === "get_agent_settings")
@@ -243,6 +272,7 @@ function configureModelDefaults(
         profiles: ["reviewer", "researcher"],
         ...(models ? { models } : {}),
       })) as T;
+
     return result as T;
   };
 }
@@ -250,12 +280,16 @@ function configureModelDefaults(
 test("settings dialog renders host schema groups and saves only changed fields", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
     const original = transport.tool.bind(transport);
+
     transport.tool = async <T>(name: string, args = {}) => {
       if (name === "update_agent_settings") {
         transport.calls.push({ name, args });
+
         return { values: {} } as T;
       }
+
       const result = await original<any>(name, args);
+
       return (
         name === "get_agent_settings"
           ? {
@@ -298,6 +332,7 @@ test("settings dialog renders host schema groups and saves only changed fields",
       ) as T;
     };
   });
+
   await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("dialog");
   assert.ok(screen.getByRole("button", { name: "Close" }));
@@ -308,14 +343,17 @@ test("settings dialog renders host schema groups and saves only changed fields",
   await selectOption(user, "Use cost limit", "On");
   await user.click(screen.getByRole("button", { name: /^Other settings/ }));
   await selectOption(user, "Model", "model-a");
+
   // One edit in each group.
   assert.equal(
     screen.getAllByText("1 changed", { selector: ".settings-group-badge" })
       .length,
     2,
   );
+
   await user.click(screen.getByRole("button", { name: "Save 2 changes" }));
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+
   assert.deepEqual(
     transport.calls.find((call) => call.name === "update_agent_settings")!.args,
     { set: { use_cost_budget: true, default_model: "model-a" } },
@@ -325,6 +363,7 @@ test("settings dialog renders host schema groups and saves only changed fields",
 test("settings dialog labels discovered models and summarizes collapsed groups", async (t) => {
   const { user } = await setup(t, (transport) => {
     const original = transport.tool.bind(transport);
+
     transport.tool = async <T>(name: string, args = {}) => {
       const result = await original<any>(name, args);
       if (name === "list_available_workers")
@@ -378,30 +417,38 @@ test("settings dialog labels discovered models and summarizes collapsed groups",
             },
           ],
         } as T;
+
       return result as T;
     };
   });
+
   await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("dialog");
   // Collapsed groups summarize current values with display names and Inherit.
   const models = screen.getByRole("button", { name: /^Models/ });
   assert.equal(models.getAttribute("aria-expanded"), "false");
+
   assert.equal(
     models.querySelector(".settings-group-summary")?.textContent,
     "Model A · Inherit",
   );
+
   await user.click(models);
+
   const trigger = screen.getByRole("combobox", {
     name: "Default model",
   });
+
   assert.equal(trigger.textContent, "Model A");
   await user.click(trigger);
   // Menu options show the description as secondary text.
   const option = await screen.findByRole("option", { name: /Model A/ });
+
   assert.equal(
     option.querySelector(".select-item-description")?.textContent,
     "Fast model",
   );
+
   assert.ok(await screen.findByRole("option", { name: "Inherit" }));
   await user.keyboard("{Escape}");
 });
@@ -424,34 +471,42 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
       ],
     ),
   );
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   const model = screen.getByLabelText("Model") as HTMLInputElement;
   assert.equal(model.placeholder, "limited-model");
   await user.click(model);
+
   const suggestion = await screen.findByRole("option", {
     name: /Limited model/,
   });
+
   assert.match(suggestion.textContent ?? "", /limited-model/);
   assert.match(suggestion.textContent ?? "", /SDK model/);
   await user.keyboard("{Escape}");
   await enterTask(user, "Check discovered metadata");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await screen.findByText(
     /Choose a reasoning effort supported by claude model limited-model: low/,
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   await selectOption(user, "Reasoning effort", "low");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   assert.equal(
     transport.calls.find((call) => call.name === "start_agent_task")!.args
       .reasoning_effort,
@@ -470,34 +525,42 @@ test("runtime default model metadata blocks unsupported effort and permits nativ
       },
     ]),
   );
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Check native default metadata");
   assert.equal((screen.getByLabelText("Model") as HTMLInputElement).value, "");
   await selectOption(user, "Reasoning effort", "high (unsupported by claude)");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await screen.findByText(
     /Choose a reasoning effort supported by claude model default/,
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   await selectOption(
     user,
     "Reasoning effort",
     "Use default (provider runtime)",
   );
+
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   const call = transport.calls.find(
     (call) => call.name === "start_agent_task",
   )!;
+
   assert.equal(call.args.model, "");
   assert.equal(call.args.reasoning_effort, "default");
 });
@@ -513,6 +576,7 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
       },
     ]),
   );
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Use custom model ID");
@@ -520,15 +584,18 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
   assert.ok(screen.getByText(/Reasoning support for this model is unknown/));
   await selectOption(user, "Reasoning effort", "high");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   const call = transport.calls.find(
     (call) => call.name === "start_agent_task",
   )!;
+
   assert.equal(call.args.model, "custom-model");
   assert.equal(call.args.reasoning_effort, "high");
 });
@@ -541,25 +608,31 @@ test("model selection retains unsupported Codex effort on Claude and blocks subm
   await selectOption(user, "Worker", "codex · reviewer");
   await selectOption(user, "Reasoning effort", "none");
   await selectOption(user, "Worker", "claude · reviewer");
+
   assert.match(
     screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
       "",
     /none \(unsupported by claude\)/,
   );
+
   await user.click(screen.getByRole("button", { name: "Start task" }));
   await screen.findByText(/Choose a reasoning effort supported by claude/);
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   await selectOption(user, "Reasoning effort", "high");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   assert.equal(
     transport.calls.find((call) => call.name === "start_agent_task")!.args
       .reasoning_effort,
@@ -571,28 +644,35 @@ test("model selection rejects unsupported inherited Claude effort and accepts an
   const { transport, user } = await setup(t, (transport) =>
     configureModelDefaults(transport, { default_reasoning_effort: "none" }),
   );
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Investigate inherited effort");
+
   assert.match(
     screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
       "",
     /Use default \(none\)/,
   );
+
   await user.click(screen.getByRole("button", { name: "Start task" }));
   await screen.findByText(/Choose a reasoning effort supported by claude/);
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   await selectOption(user, "Reasoning effort", "medium");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   assert.equal(
     transport.calls.find((call) => call.name === "start_agent_task")!.args
       .reasoning_effort,
@@ -611,50 +691,62 @@ test("model selection updates role and provider defaults while preserving explic
       reviewer_default_reasoning_effort: "max",
     }),
   );
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   const field = screen.getByLabelText("Model") as HTMLInputElement;
   assert.equal(field.placeholder, "review-model");
+
   assert.match(
     screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
       "",
     /Use default \(max\)/,
   );
+
   await user.type(field, "explicit-model");
   await selectOption(user, "Worker", "claude · researcher");
   assert.equal(field.placeholder, "claude-model");
   assert.equal(field.value, "explicit-model");
+
   assert.match(
     screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
       "",
     /Use default \(medium\)/,
   );
+
   await selectOption(user, "Worker", "codex · researcher");
   assert.equal(field.placeholder, "global-model");
+
   assert.match(
     screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
       "",
     /Use default \(low\)/,
   );
+
   await selectOption(user, "Reasoning effort", "high");
   await selectOption(user, "Worker", "claude · reviewer");
   assert.equal(field.placeholder, "review-model");
   assert.equal(field.value, "explicit-model");
+
   assert.equal(
     screen.getByRole("combobox", { name: "Reasoning effort" }).textContent,
     "high",
   );
+
   await enterTask(user, "Preserve explicit selections");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   const call = transport.calls.find(
     (call) => call.name === "start_agent_task",
   )!;
+
   assert.equal(call.args.model, "explicit-model");
   assert.equal(call.args.reasoning_effort, "high");
 });
@@ -662,34 +754,44 @@ test("model selection updates role and provider defaults while preserving explic
 test("description toggles literally, survives refresh, and resets for another task", async (t) => {
   const literal =
     '<img src=x onerror="window.injected=true">\nFull worker instructions.';
+
   const { controller, transport, user } = await setup(t, (transport) => {
     transport.tasks[0].description = literal;
+
     transport.tasks.push({
       ...task("two"),
       title: "Second task",
       description: "Second instructions",
     });
   });
+
   const toggle = screen.getByRole("button", {
     name: "Description",
   });
+
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   await user.click(toggle);
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
+
   const panel = toggle
     .closest(".task-description")!
     .querySelector(".task-description-content")!;
+
   assert.equal(panel.textContent, literal);
   assertAbsent(panel.querySelector("img"));
+
   transport.tasks[0] = {
     ...transport.tasks[0],
     description: literal + " Updated.",
   };
+
   await act(() => controller.refresh());
+
   assert.ok(
     screen.getByRole("button", { name: "Description" }) === toggle,
     "Refresh retains the description toggle node",
   );
+
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   assert.equal(panel.textContent, literal + " Updated.");
   await user.click(toggle);
@@ -705,21 +807,26 @@ test("description toggles literally, survives refresh, and resets for another ta
 for (const action of ["interrupt", "cancel", "retry"] as const) {
   test(`${action} confirmation defaults the task description ${action === "retry" ? "closed" : "open"}`, async (t) => {
     const { controller, transport, user } = await setup(t);
+
     await act(() =>
       controller.open({ kind: "control", action, task: transport.tasks[0] }),
     );
+
     const dialog = await screen.findByRole("dialog");
     const toggle = within(dialog).getByRole("button", { name: "Description" });
     const expanded = action !== "retry";
     assert.equal(toggle.getAttribute("aria-expanded"), String(expanded));
+
     if (expanded) {
       assert.equal(
         dialog.querySelector(".task-description-content")?.textContent,
         transport.tasks[0].description,
       );
     }
+
     await user.click(toggle);
     assert.equal(toggle.getAttribute("aria-expanded"), String(!expanded));
+
     assert.equal(
       transport.calls.some((call) => call.name === `${action}_agent_task`),
       false,
@@ -731,34 +838,42 @@ for (const action of ["interrupt", "cancel", "retry"] as const) {
 test("delegation submits the full request without a title and search matches description", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
     transport.tasks[0].description = "Inspect the unique zebra boundary.";
+
     transport.tasks.push({
       ...task("two"),
       title: "Other task",
       description: "Unrelated instructions",
     });
   });
+
   await user.type(
     screen.getByRole("searchbox", { name: "Search tasks" }),
     "ZEBRA",
   );
+
   assert.ok(screen.getByRole("button", { name: /^Review authentication/ }));
   assertAbsent(screen.queryByRole("button", { name: /^Other task/ }));
   await act(() => controller.setSearch(""));
   await user.click(screen.getByRole("button", { name: "New task" }));
   assertAbsent(screen.queryByLabelText("Task title"));
+
   const request =
     "Review authentication.\nInclude all edge cases and report the evidence.";
+
   await enterTask(user, request);
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   const submitted = transport.calls.find(
     (call) => call.name === "start_agent_task",
   )!.args;
+
   assert.ok(!("title" in submitted));
   assert.equal(submitted.description, request);
   assert.ok(!("task" in submitted));
@@ -774,22 +889,27 @@ test("inline preview expands and collapses while preserving the selected task", 
     },
     { displayMode: "inline" },
   );
+
   await act(() => controller.select("two"));
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByText("Running", { exact: true }));
   assertAbsent(screen.queryByRole("button", { name: "New task" }));
   assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
+
   assertAbsent(
     screen.queryByRole("complementary", { name: "Delegated tasks" }),
   );
+
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   assert.equal(transport.expandCalls, 1);
   assert.equal(controller.getSnapshot().selected, "two");
   assert.ok(screen.getByRole("button", { name: "New task" }));
+
   assert.equal(
     screen.getByRole("heading", { level: 1 }).textContent,
     "Review database",
   );
+
   await user.click(screen.getByRole("button", { name: "Collapse" }));
   assert.equal(transport.expandCalls, 2);
   assert.equal(controller.getSnapshot().selected, "two");
@@ -801,11 +921,14 @@ test("inline preview expands and collapses while preserving the selected task", 
 test("the header menu offers the secondary actions and runs them", async (t) => {
   const { transport, user } = await setup(t);
   await user.click(screen.getByRole("button", { name: "More actions" }));
+
   assert.deepEqual(
     (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
     ["Refresh", "Collapse", "Add project", "Settings"],
   );
+
   await user.click(screen.getByRole("menuitem", { name: "Settings" }));
+
   await waitFor(() =>
     assert.ok(
       transport.calls.some((call) => call.name === "get_agent_settings"),
@@ -815,11 +938,14 @@ test("the header menu offers the secondary actions and runs them", async (t) => 
 
 test("a thread panel leaves Add project to global launches", async (t) => {
   const { controller, user } = await setup(t);
+
   await act(() =>
     controller.applyScope({ panel_scope: { conversation_id: "thread" } }),
   );
+
   assertAbsent(screen.queryByRole("button", { name: "Add project" }));
   await user.click(screen.getByRole("button", { name: "More actions" }));
+
   assert.deepEqual(
     (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
     ["Refresh", "Collapse", "Settings"],
@@ -834,6 +960,7 @@ test("inline host without expansion offers the chat controls fallback", async (t
     },
     { displayMode: "inline" },
   );
+
   assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   assert.ok(screen.getByText("Expand this app using the chat controls."));
   assertAbsent(screen.queryByRole("button", { name: "New task" }));
@@ -850,12 +977,15 @@ test("failed expansion keeps the inline preview and displays the host error", as
     },
     { displayMode: "inline" },
   );
+
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   await screen.findByRole("alert");
+
   assert.equal(
     screen.getByRole("alert").textContent,
     "Panel expansion unavailable",
   );
+
   assert.equal(transport.expandCalls, 1);
   assert.equal(controller.getSnapshot().host.displayMode, "inline");
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
@@ -874,18 +1004,22 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   assert.ok(controller.getSnapshot().dialog === dialogState);
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   await screen.findByRole("dialog");
+
   assert.ok(
     screen.getByLabelText("Description") === field,
     "Host expansion retains the draft field node",
   );
+
   assert.equal(
     (field as HTMLTextAreaElement).value,
     "Preserve this suspended draft",
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   await act(() => transport.expand());
   assertAbsent(screen.queryByRole("dialog"));
   await act(() => controller.changeProject("/repo/b"));
@@ -894,10 +1028,12 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   assertAbsent(screen.queryByRole("dialog"));
   await user.click(screen.getAllByRole("button", { name: "New task" })[0]);
   await screen.findByRole("dialog");
+
   assert.equal(
     (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
     "",
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
@@ -911,6 +1047,7 @@ describe("console and nonembedded panels retain the full interface in inline mod
     assert.ok(screen.getByRole("region", { name: "Task inspector" }));
     assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   });
+
   test("nonembedded panel", async (t) => {
     await setup(
       t,
@@ -919,6 +1056,7 @@ describe("console and nonembedded panels retain the full interface in inline mod
       },
       { displayMode: "inline" },
     );
+
     assert.ok(screen.getByRole("button", { name: "New task" }));
     assert.ok(screen.getByRole("region", { name: "Task inspector" }));
     assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
@@ -941,16 +1079,19 @@ test("inline preview summarizes repository scope independently of list filters",
       const waiting = task("waiting");
       waiting.title = "Waiting review";
       waiting.status = "waiting";
+
       waiting.pending_input = {
         id: "request",
         tool: "AskUserQuestion",
         input: {},
       };
+
       const stopped = task("stopped");
       stopped.status = "failed";
       stopped.waiting_reason = "termination_unconfirmed";
       const complete = task("complete");
       complete.status = "completed";
+
       transport.tasks.push(
         waiting,
         stopped,
@@ -960,14 +1101,17 @@ test("inline preview summarizes repository scope independently of list filters",
     },
     { displayMode: "inline", scoped: true },
   );
+
   await act(() => {
     controller.setFilter("completed");
     controller.setSearch("no matching task");
   });
+
   assert.equal(
     screen.getByRole("status").textContent,
     "4 tasks · 2 active · 2 needing attention",
   );
+
   assert.ok(screen.getByText("Waiting review"));
   assert.ok(screen.getByText("Needs input", { exact: true }));
   assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
@@ -982,13 +1126,16 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
       },
       { displayMode: "inline" },
     );
+
     assert.equal(
       screen.getByRole("status").textContent,
       "0 tasks · 0 active · 0 needing attention",
     );
+
     assert.ok(screen.getByText("No delegated tasks yet."));
     assert.ok(screen.getByRole("button", { name: "Open panel" }));
   });
+
   test("connecting", async (t) => {
     await setup(t, undefined, { start: false });
     assert.ok(screen.getByRole("region", { name: "Delegated work preview" }));
@@ -1007,7 +1154,9 @@ test("a panel opened outside a host points developers at the dev host", async (t
     },
     { start: false },
   );
+
   await act(() => controller.showHostRequired());
+
   assert.ok(
     screen.getByText(
       "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui.",
@@ -1017,8 +1166,10 @@ test("a panel opened outside a host points developers at the dev host", async (t
 
 test("task filters keep exactly one filter selected", async (t) => {
   const { user } = await setup(t);
+
   const checked = (name: RegExp) =>
     screen.getByRole("radio", { name }).getAttribute("aria-checked");
+
   assert.equal(checked(/^All/), "true");
   await user.click(screen.getByRole("radio", { name: /^Done/ }));
   assert.equal(checked(/^Done/), "true");
@@ -1049,6 +1200,7 @@ test("task filters show counts and an empty state with a way out", async (t) => 
   await user.type(search, "a");
   await user.click(screen.getByRole("button", { name: "Reset" }));
   assert.equal((search as HTMLInputElement).value, "");
+
   assert.equal(
     screen.getByRole("radio", { name: /^All/ }).getAttribute("aria-checked"),
     "true",
@@ -1085,31 +1237,39 @@ test("selecting a tab scrolls it into view in an overflowing tab list", async (t
   const { user } = await setup(t);
   const list = screen.getByRole("tablist");
   const scrollTo = vi.fn();
+
   // jsdom has no layout, so describe a 100px list whose Details tab sits past its edge.
   const define = (element: HTMLElement, values: Record<string, unknown>) =>
     Object.entries(values).forEach(([key, value]) =>
       Object.defineProperty(element, key, { configurable: true, value }),
     );
+
   define(list, { clientWidth: 100, scrollLeft: 0, scrollTo });
+
   define(screen.getByRole("tab", { name: "Details" }), {
     offsetLeft: 150,
     offsetWidth: 60,
   });
+
   define(screen.getByRole("tab", { name: "Result" }), {
     offsetLeft: 0,
     offsetWidth: 60,
   });
+
   await user.click(screen.getByRole("tab", { name: "Details" }));
   // Right edge (210) plus the 12px gap, less the visible width.
   await waitFor(() => assert.equal(scrollTo.mock.calls.at(-1)?.[0].left, 122));
   // A tab already fully inside the list leaves it where it is.
   scrollTo.mockClear();
   define(list, { scrollLeft: 0 });
+
   define(screen.getByRole("tab", { name: /^Artifacts/ }), {
     offsetLeft: 20,
     offsetWidth: 40,
   });
+
   await user.click(screen.getByRole("tab", { name: /^Artifacts/ }));
+
   await waitFor(() =>
     assert.equal(
       screen
@@ -1118,6 +1278,7 @@ test("selecting a tab scrolls it into view in an overflowing tab list", async (t
       "true",
     ),
   );
+
   assert.equal(scrollTo.mock.calls.length, 0);
 });
 
@@ -1129,6 +1290,7 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
   assert.ok(screen.getByRole("tab", { name: /^Activity \d+$/ }));
   await user.click(result);
   await user.keyboard("{ArrowRight}");
+
   await waitFor(() =>
     assert.equal(
       screen
@@ -1137,18 +1299,23 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
       "true",
     ),
   );
+
   await waitFor(() =>
     assert.ok(
       document.activeElement === screen.getByRole("tab", { name: /Artifacts/ }),
     ),
   );
+
   await act(() => controller.refresh());
+
   await waitFor(() =>
     assert.ok(
       document.activeElement === screen.getByRole("tab", { name: /Artifacts/ }),
     ),
   );
+
   await user.keyboard("{ArrowRight}");
+
   await waitFor(() =>
     assert.equal(
       screen
@@ -1157,7 +1324,9 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
       "true",
     ),
   );
+
   await user.keyboard("{ArrowRight}");
+
   await waitFor(() =>
     assert.equal(
       screen
@@ -1166,6 +1335,7 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
       "true",
     ),
   );
+
   assert.ok(screen.getByText("Task ID"));
 });
 
@@ -1174,25 +1344,32 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
   const trigger = screen.getByRole("button", { name: "New task" });
   await user.click(trigger);
   const field = await screen.findByLabelText("Description");
+
   await waitFor(() =>
     assert.ok(
       document.activeElement === field,
       "Task field should receive dialog focus",
     ),
   );
+
   await user.type(field, "Keep this draft");
+
   transport.projects = [
     ...transport.projects,
     { repository: "/repo/b", kind: "repository" },
   ];
+
   await act(() => controller.refresh());
+
   assert.ok(
     screen.getByLabelText("Description") === field,
     "Polling should retain the task field",
   );
+
   assert.equal((field as HTMLTextAreaElement).value, "Keep this draft");
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => assert.ok(screen.queryByRole("dialog") === null));
+
   await waitFor(() =>
     assert.ok(
       document.activeElement === trigger,
@@ -1205,43 +1382,53 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   const { transport, user } = await setup(t);
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
+
   assert.equal(
     screen.getByRole("combobox", { name: "Project" }).textContent,
     "/repo/a",
   );
+
   assert.equal(
     (screen.getByLabelText("Runtime limit · minutes") as HTMLInputElement)
       .value,
     "0.5",
   );
+
   await enterTask(user, "Investigate failing tests");
   await selectOption(user, "Worker", "codex · reviewer");
   await user.type(screen.getByLabelText("Model"), "selected-model");
   await selectOption(user, "Reasoning effort", "high");
   await selectOption(user, "Cost limit", "Apply cost budget");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await screen.findByText(
     "This worker cannot enforce a cost budget. Choose No cost limit.",
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   await selectOption(user, "Cost limit", "No cost limit");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   const call = transport.calls.find(
     (call) => call.name === "start_agent_task",
   )!;
+
   assert.deepEqual(call.args.budget, {
     max_runtime_minutes: 0.5,
     max_cost_usd: null,
   });
+
   assert.equal(call.args.conversation_id, null);
   assert.equal(call.args.provider, "codex");
   assert.equal(call.args.model, "selected-model");
@@ -1253,6 +1440,7 @@ test("changing projects clears revision and dependencies while retaining the tas
     transport.projects.push({ repository: "/repo/b", kind: "repository" });
     transport.tasks.push(task("two", "/repo/b"));
   });
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   await selectOption(user, "Project", "/repo/a");
@@ -1260,27 +1448,34 @@ test("changing projects clears revision and dependencies while retaining the tas
   await selectOption(user, "Workspace", "Isolated worktree");
   await user.clear(screen.getByLabelText("Revision"));
   await user.type(screen.getByLabelText("Revision"), "edited-branch");
+
   await selectOption(
     user,
     "Wait for tasks (optional)",
     "Review authentication",
     true,
   );
+
   await selectOption(user, "Project", "/repo/b");
+
   assert.equal(
     (screen.getByLabelText("Revision") as HTMLInputElement).value,
     "HEAD",
   );
+
   assert.equal(
     (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
     "Persistent task",
   );
+
   assert.match(
     screen.getByRole("combobox", { name: "Wait for tasks (optional)" })
       .textContent ?? "",
     /No dependencies/,
   );
+
   await selectOption(user, "Project", "/repo/a");
+
   assert.match(
     screen.getByRole("combobox", { name: "Wait for tasks (optional)" })
       .textContent ?? "",
@@ -1300,21 +1495,26 @@ test("worker question accepts a custom answer with no preset selection", async (
       },
     };
   });
+
   // A new question opens expanded, with its choices inline rather than in a dialog.
   const toggle = screen.getByRole("button", { name: /Claude has a question/ });
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   assertAbsent(screen.queryByRole("dialog"));
   await user.click(screen.getByRole("radio", { name: "Preset" }));
+
   await user.type(
     screen.getByLabelText("Write your own answer"),
     "Custom approach",
   );
+
   // A typed answer replaces the single choice.
   assert.equal(
     (screen.getByRole("radio", { name: "Preset" }) as HTMLInputElement).checked,
     false,
   );
+
   await user.click(screen.getByRole("button", { name: "Send answer" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "submit_agent_input")
@@ -1322,6 +1522,7 @@ test("worker question accepts a custom answer with no preset selection", async (
       1,
     ),
   );
+
   assert.deepEqual(
     transport.calls.find((call) => call.name === "submit_agent_input")?.args,
     {
@@ -1346,20 +1547,26 @@ test("permission review makes no decision until the user clicks Deny", async (t)
       input: { description: "Execute shell commands" },
     };
   });
+
   await user.click(screen.getByRole("button", { name: "Review request" }));
   await screen.findByRole("dialog");
+
   await waitFor(() =>
     assert.ok(
       document.activeElement === screen.getByLabelText("Message (optional)"),
       "Permission dialog should focus its message field",
     ),
   );
+
   assert.equal(screen.queryByRole("combobox", { name: "Decision" }), null);
+
   assert.equal(
     transport.calls.filter((call) => call.name === "submit_agent_input").length,
     0,
   );
+
   await user.click(screen.getByRole("button", { name: "Deny" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "submit_agent_input")
@@ -1367,6 +1574,7 @@ test("permission review makes no decision until the user clicks Deny", async (t)
       1,
     ),
   );
+
   assert.equal(
     transport.calls.find((call) => call.name === "submit_agent_input")?.args
       .approved,
@@ -1376,6 +1584,7 @@ test("permission review makes no decision until the user clicks Deny", async (t)
 
 test("handoff sends only after explicit submit and uses the edited message", async (t) => {
   const { controller, transport, user } = await setup(t);
+
   await act(async () =>
     transport.events.host({
       canSend: true,
@@ -1384,23 +1593,28 @@ test("handoff sends only after explicit submit and uses the edited message", asy
       displayMode: "fullscreen",
     }),
   );
+
   await user.click(screen.getByRole("button", { name: "Bring to Codex" }));
   await screen.findByRole("dialog");
+
   await waitFor(() =>
     assert.ok(
       document.activeElement === screen.getByLabelText("Message"),
       "Handoff dialog should focus its message field",
     ),
   );
+
   assert.deepEqual(transport.messages, []);
   await act(() => controller.refresh());
   assert.deepEqual(transport.messages, []);
   const field = screen.getByLabelText("Message");
   await user.clear(field);
   await user.type(field, "Edited handoff for this chat");
+
   await user.click(
     screen.getByRole("button", { name: "Send to conversation" }),
   );
+
   await waitFor(() =>
     assert.deepEqual(transport.messages, ["Edited handoff for this chat"]),
   );
@@ -1408,8 +1622,10 @@ test("handoff sends only after explicit submit and uses the edited message", asy
 
 test("task and result text render literally without HTML interpretation", async (t) => {
   const injection = '<img src=x onerror="window.injected=true">';
+
   const { user } = await setup(t, (transport) => {
     transport.tasks[0].title = injection;
+
     transport.tasks[0].result = {
       summary: "<script>window.injected=true</script>",
       findings: [injection],
@@ -1419,10 +1635,12 @@ test("task and result text render literally without HTML interpretation", async 
       recommendations: [],
     };
   });
+
   assert.equal(
     screen.getByRole("heading", { level: 1 }).textContent,
     injection,
   );
+
   await user.click(screen.getByRole("tab", { name: "Result" }));
   assert.ok(screen.getByText("<script>window.injected=true</script>"));
   assert.ok(document.querySelector("img, script") === null);
@@ -1431,15 +1649,19 @@ test("task and result text render literally without HTML interpretation", async 
 
 test("the header trails a running task's live activity and drops it once settled", async (t) => {
   let events: unknown[] = [];
+
   const { controller, transport } = await setup(t, (transport) => {
     const original = transport.tool.bind(transport);
+
     transport.tool = async <T>(name: string, args = {}) =>
       (name === "get_agent_events" ? events : original(name, args)) as T;
   });
+
   const live = () => document.querySelector(".eyebrow-live");
   const eyebrow = () => document.querySelector(".eyebrow");
   assert.equal(live()?.textContent, "", "No detail before events load");
   assert.equal(eyebrow()?.hasAttribute("data-live"), false);
+
   events = [
     {
       id: 1,
@@ -1449,13 +1671,16 @@ test("the header trails a running task's live activity and drops it once settled
       data: {},
     },
   ];
+
   await act(() => controller.refresh());
   assert.equal(live()?.textContent, "· Working");
   assert.equal(eyebrow()?.hasAttribute("data-live"), true);
+
   assert.ok(
     live()?.matches(".eyebrow > :last-child"),
     "Changing detail never shifts the labels before it",
   );
+
   assert.ok(document.querySelector(".eyebrow .row-status-icon.running"));
   transport.tasks = [{ ...task(), status: "completed" }];
   await act(() => controller.refresh());
@@ -1471,19 +1696,23 @@ test("long notices clamp behind Show more and expand on demand", async (t) => {
       return this.matches(".notice-text:not([data-open])") ? 80 : 0;
     },
   );
+
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
     function (this: HTMLElement) {
       return this.matches(".notice-text") ? 36 : 0;
     },
   );
+
   const { user } = await setup(t, (transport) => {
     transport.tasks[0].error = "Worker stopped unexpectedly. ".repeat(20);
   });
+
   // Task errors use the error tone.
   assert.equal(
     document.querySelector(".notice")?.getAttribute("data-tone"),
     "error",
   );
+
   const more = screen.getByRole("button", { name: "Show more" });
   assert.equal(more.getAttribute("aria-expanded"), "false");
   await user.click(more);
@@ -1499,28 +1728,35 @@ test("the inspector stacks when its fixed header would squeeze the evidence", as
   t.onTestFinished(() => {
     vi.unstubAllGlobals();
   });
+
   const notify: (() => void)[] = [];
+
   vi.stubGlobal(
     "ResizeObserver",
     class {
       constructor(callback: () => void) {
         notify.push(callback);
       }
+
       observe() {}
       disconnect() {}
     },
   );
+
   let height = 600;
+
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
     function (this: HTMLElement) {
       return this.id === "detail" ? height : 0;
     },
   );
+
   vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
     function (this: HTMLElement) {
       return this.matches(".task-header") ? 300 : 0;
     },
   );
+
   await setup(t);
   const detail = screen.getByRole("region", { name: "Task inspector" });
   assert.equal(detail.hasAttribute("data-stacked"), false, "300px is enough");
@@ -1552,18 +1788,23 @@ test("console delegation requires choosing a project even with a sole registered
   const { transport, user } = await setup(t, undefined, { mode: "console" });
   await user.click(screen.getByRole("button", { name: "＋ Delegate" }));
   await screen.findByRole("dialog");
+
   assert.equal(
     screen.getByRole("combobox", { name: "Project" }).textContent,
     "Choose a project",
   );
+
   await enterTask(user, "Explicit project choice");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   await selectOption(user, "Project", "/repo/a");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
@@ -1577,6 +1818,7 @@ test("narrow scoped panel Back keeps the task list visible across refresh", asyn
     wide: false,
     scoped: true,
   });
+
   assert.equal(document.body.dataset.selected, "true");
   await user.click(screen.getByRole("button", { name: "← Tasks" }));
   assert.equal(document.body.dataset.selected, "false");
@@ -1591,40 +1833,52 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
   const picker = screen.getByRole("combobox", { name: "Project scope" });
   await user.click(picker);
   const all = await screen.findByRole("option", { name: "All projects" });
+
   await waitFor(() =>
     assert.ok(
       document.activeElement === all,
       "All projects should receive opening focus",
     ),
   );
+
   await user.keyboard("{End}");
+
   await waitFor(() =>
     assert.ok(
       document.activeElement === screen.getByRole("option", { name: "a" }),
       "Project option should receive focus",
     ),
   );
+
   await user.keyboard("{Enter}");
+
   await waitFor(() =>
     assert.equal(controller.getSnapshot().repository, "/repo/a"),
   );
+
   await waitFor(() =>
     assert.equal(picker.getAttribute("aria-expanded"), "false"),
   );
+
   assert.match(picker.textContent ?? "", /a/);
   await act(() => controller.refresh());
+
   assert.ok(
     screen.getByRole("combobox", { name: "Project scope" }) === picker,
     "Polling should retain the picker trigger",
   );
+
   await user.click(picker);
+
   await waitFor(() =>
     assert.ok(
       document.activeElement === screen.getByRole("option", { name: "a" }),
       "Project option should receive focus",
     ),
   );
+
   await user.keyboard("{Home}");
+
   await waitFor(() =>
     assert.ok(
       document.activeElement ===
@@ -1632,7 +1886,9 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
       "All projects should receive Home focus",
     ),
   );
+
   await user.keyboard("{Enter}");
+
   await waitFor(() =>
     assert.equal(controller.getSnapshot().repository, undefined),
   );
@@ -1645,41 +1901,54 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   await enterTask(user, "Keyboard worker selection");
   const worker = screen.getByRole("combobox", { name: "Worker" });
   await user.click(worker);
+
   await waitFor(() =>
     assert.ok(
       document.activeElement ===
         screen.getByRole("option", { name: "claude · reviewer" }),
     ),
   );
+
   await user.keyboard("{End}");
+
   await waitFor(() =>
     assert.ok(
       document.activeElement ===
         screen.getByRole("option", { name: "codex · reviewer" }),
     ),
   );
+
   await user.keyboard("{Enter}");
+
   await waitFor(() =>
     assert.equal(worker.getAttribute("aria-expanded"), "false"),
   );
+
   assert.match(worker.textContent ?? "", /codex · reviewer/);
   await user.click(worker);
+
   await waitFor(() =>
     assert.ok(
       document.activeElement ===
         screen.getByRole("option", { name: "codex · reviewer" }),
     ),
   );
+
   await user.keyboard("{Escape}");
+
   await waitFor(() =>
     assert.equal(worker.getAttribute("aria-expanded"), "false"),
   );
+
   assert.ok(screen.getByRole("dialog") === dialog);
+
   assert.equal(
     (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
     "Keyboard worker selection",
   );
+
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.find((call) => call.name === "start_agent_task")?.args
@@ -1695,24 +1964,32 @@ test("dependency multiselect retains multiple choices until explicit submission"
     second.title = "Review database";
     transport.tasks.push(second);
   });
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Wait for both reviews");
+
   const dependencies = screen.getByRole("combobox", {
     name: "Wait for tasks (optional)",
   });
+
   await user.click(dependencies);
+
   await user.click(
     await screen.findByRole("option", { name: "Review authentication" }),
   );
+
   assert.equal(dependencies.getAttribute("aria-expanded"), "true");
   await user.click(screen.getByRole("option", { name: "Review database" }));
   await user.keyboard("{Escape}");
+
   await waitFor(() =>
     assert.equal(dependencies.getAttribute("aria-expanded"), "false"),
   );
+
   assert.ok(screen.getByRole("dialog"));
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.deepEqual(
       transport.calls.find((call) => call.name === "start_agent_task")?.args
@@ -1726,17 +2003,21 @@ test("approved parent project suggestions allow an unlisted nested repository pa
   const { transport, user } = await setup(t, (transport) => {
     transport.projects.push({ repository: "/approved", kind: "parent" });
   });
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
+
   const project = screen.getByRole("combobox", {
     name: "Project",
   });
+
   await user.clear(project);
   await user.type(project, "/approved/new/nested-repo");
   await user.keyboard("{Escape}");
   assert.ok(screen.getByRole("dialog"));
   await enterTask(user, "Review nested repository");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.find((call) => call.name === "start_agent_task")?.args
@@ -1763,6 +2044,7 @@ test("worker questions submit preset multiple answers and a custom override toge
       },
     };
   });
+
   // Only the front card of the stack is exposed; the next one waits behind it.
   assert.ok(screen.getByText("Question 1 of 2"));
   assertAbsent(screen.queryByRole("group", { name: "Which scope?" }));
@@ -1772,20 +2054,25 @@ test("worker questions submit preset multiple answers and a custom override toge
   assert.ok(screen.getByText("Question 2 of 2"));
   await user.click(screen.getByRole("button", { name: "Back" }));
   assert.ok(screen.getByText("Question 1 of 2"));
+
   // Moving between cards keeps the answers already chosen.
   assert.equal(
     (screen.getByRole("checkbox", { name: "Tests" }) as HTMLInputElement)
       .checked,
     true,
   );
+
   await user.click(screen.getByRole("button", { name: "Next" }));
   assertAbsent(screen.queryByRole("group", { name: "Which checks?" }));
   await user.click(screen.getByRole("radio", { name: "Default scope" }));
+
   await user.type(
     screen.getByRole("textbox", { name: "Write your own answer" }),
     "Expanded scope",
   );
+
   await user.click(screen.getByRole("button", { name: "Send answers" }));
+
   await waitFor(() =>
     assert.deepEqual(
       (
@@ -1812,12 +2099,14 @@ test("a single worker question can be skipped and the skip undone", async (t) =>
       },
     };
   });
+
   await user.click(screen.getByRole("button", { name: "Skip this question" }));
   assert.ok(screen.getByText("Skipped", { selector: "[role=status]" }));
   await user.click(screen.getByRole("button", { name: "Undo" }));
   assert.ok(screen.getByRole("button", { name: "Skip this question" }));
   await user.click(screen.getByRole("button", { name: "Skip this question" }));
   await user.click(screen.getByRole("button", { name: "Send answer" }));
+
   await waitFor(() =>
     assert.deepEqual(
       transport.calls.find((call) => call.name === "submit_agent_input")?.args,
@@ -1857,24 +2146,30 @@ test("a skipped stacked question sends an explicit skipped answer", async (t) =>
       },
     };
   });
+
   await user.click(screen.getByRole("radio", { name: "YAML" }));
   // Skipping drops the partial answer and moves to the next card.
   await user.click(screen.getByRole("button", { name: "Skip this question" }));
   assert.ok(screen.getByText("Question 2 of 2"));
+
   assert.ok(
     screen.getByRole("button", { name: "Format" }).hasAttribute("data-skipped"),
   );
+
   await user.click(screen.getByRole("button", { name: "Format" }));
+
   assert.equal(
     (screen.getByRole("radio", { name: "YAML" }) as HTMLInputElement).checked,
     false,
   );
+
   // Picking a choice takes the skip back; Undo restores the card too.
   await user.click(screen.getByRole("radio", { name: "JSON" }));
   assertAbsent(screen.queryByText("Skipped", { selector: "[role=status]" }));
   await user.click(screen.getByRole("button", { name: "Skip this question" }));
   await user.click(screen.getByRole("radio", { name: "Changed" }));
   await user.click(screen.getByRole("button", { name: "Send answers" }));
+
   await waitFor(() =>
     assert.deepEqual(
       (
@@ -1894,8 +2189,10 @@ test("a free-text worker question answers in a text box and shows send failures 
       tool: "AskUserQuestion",
       input: { question: "Which branch?" },
     };
+
     const original = transport.tool.bind(transport);
     let failures = 1;
+
     transport.tool = async <T>(
       name: string,
       args: Record<string, unknown> = {},
@@ -1904,17 +2201,21 @@ test("a free-text worker question answers in a text box and shows send failures 
         transport.calls.push({ name, args });
         throw new Error("Input request is stale");
       }
+
       return original<T>(name, args);
     };
   });
+
   await user.type(
     screen.getByRole("textbox", { name: "Which branch?" }),
     "main",
   );
+
   await user.click(screen.getByRole("button", { name: "Send answer" }));
   // The failure stays beside the answer, which is kept for a retry.
   await screen.findByText("Input request is stale");
   await user.click(screen.getByRole("button", { name: "Send answer" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "submit_agent_input")
@@ -1922,6 +2223,7 @@ test("a free-text worker question answers in a text box and shows send failures 
       2,
     ),
   );
+
   assert.deepEqual(
     transport.calls.findLast((call) => call.name === "submit_agent_input")?.args
       .input,
@@ -1955,8 +2257,10 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
         ],
       },
     };
+
     // Like the service, answering resolves the request, so the form unmounts.
     const original = transport.tool.bind(transport);
+
     transport.tool = async <T>(
       name: string,
       args: Record<string, unknown> = {},
@@ -1966,27 +2270,35 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
           ...transport.tasks[0],
           pending_input: undefined,
         };
+
       return original<T>(name, args);
     };
   });
+
   await user.click(screen.getByRole("checkbox", { name: "Tests" }));
   await user.click(screen.getByRole("button", { name: "Next" }));
   await user.click(screen.getByRole("button", { name: "Skip this question" }));
+
   await user.type(
     screen.getByRole("textbox", { name: "Write your own answer" }),
     "Platform team",
   );
+
   const reopen = async () => {
     controller.back();
+
     await waitFor(() =>
       assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
     );
+
     await controller.select("one");
     await screen.findByText(/Question \d of 3/);
   };
+
   await reopen();
   // The same card, choices, typed answer and skip come back.
   assert.ok(screen.getByText("Question 3 of 3"));
+
   assert.equal(
     (
       screen.getByRole("textbox", {
@@ -1995,16 +2307,21 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
     ).value,
     "Platform team",
   );
+
   assert.ok(
     screen.getByRole("button", { name: "Scope" }).hasAttribute("data-skipped"),
   );
+
   await user.click(screen.getByRole("button", { name: "Checks" }));
+
   assert.equal(
     (screen.getByRole("checkbox", { name: "Tests" }) as HTMLInputElement)
       .checked,
     true,
   );
+
   await user.click(screen.getByRole("button", { name: "Send answers" }));
+
   await waitFor(() =>
     assert.deepEqual(
       (
@@ -2018,10 +2335,12 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
       },
     ),
   );
+
   // An answered request leaves no draft, even though the form unmounts afterwards.
   await waitFor(() =>
     assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
   );
+
   assert.equal(controller.questionDrafts.size, 0);
 });
 
@@ -2038,16 +2357,20 @@ test("keyboard focus follows the stacked question cards", async (t) => {
       },
     };
   });
+
   // Enter in a typed answer moves on and continues in the next card.
   await user.type(
     screen.getByRole("textbox", { name: "Write your own answer" }),
     "TOML{Enter}",
   );
+
   assert.ok(screen.getByText("Question 2 of 2"));
+
   assert.equal(
     document.activeElement,
     screen.getByRole("radio", { name: "All" }),
   );
+
   // Skip and Undo are one button, so focus stays put while it toggles.
   const toggle = screen.getByRole("button", { name: "Skip this question" });
   await user.click(toggle);
@@ -2055,6 +2378,7 @@ test("keyboard focus follows the stacked question cards", async (t) => {
   assert.equal(document.activeElement, toggle);
   // Back disappears on the first card, so focus moves to the send button.
   await user.click(screen.getByRole("button", { name: "Back" }));
+
   assert.equal(
     document.activeElement,
     screen.getByRole("button", { name: "Send answers" }),
@@ -2083,43 +2407,57 @@ test("stacked worker questions return to the first unanswered card before sendin
       },
     };
   });
+
   // Headers summarize stacked questions; clicking the summary collapses the notice.
   await user.click(screen.getByText("Format · Extras"));
+
   const toggle = () =>
     screen.getByRole("button", { name: /Claude has 2 questions/ });
+
   assert.equal(toggle().getAttribute("aria-expanded"), "false");
   // A collapsed question stays collapsed when its task is shown again.
   controller.back();
+
   await waitFor(() =>
     assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
   );
+
   await controller.select("one");
+
   await waitFor(() =>
     assert.equal(toggle().getAttribute("aria-expanded"), "false"),
   );
+
   await user.click(toggle());
   await user.click(screen.getByRole("button", { name: "Extras" }));
   assert.ok(screen.getByText("Question 2 of 2"));
   await user.click(screen.getByRole("checkbox", { name: "Docs" }));
+
   // A typed answer joins the multiple choices.
   await user.type(
     screen.getByRole("textbox", { name: "Write your own answer" }),
     "Examples",
   );
+
   await user.click(screen.getByRole("button", { name: "Send answers" }));
+
   assert.equal(
     screen
       .getByText("Answer each question before sending.")
       .getAttribute("role"),
     "alert",
   );
+
   assert.ok(screen.getByText("Question 1 of 2"));
+
   assert.equal(
     transport.calls.filter((call) => call.name === "submit_agent_input").length,
     0,
   );
+
   await user.click(screen.getByRole("radio", { name: "JSON" }));
   await user.click(screen.getByRole("button", { name: "Send answers" }));
+
   await waitFor(() =>
     assert.deepEqual(
       (
@@ -2140,13 +2478,16 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   await user.clear(runtime);
   await user.type(runtime, "0");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await screen.findByText(
     "Runtime limit must be greater than zero and at most 120 minutes.",
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   await user.clear(runtime);
   await user.type(runtime, "1");
   await selectOption(user, "Cost limit", "Apply cost budget");
@@ -2154,13 +2495,16 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   await user.clear(cost);
   await user.type(cost, "0");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   await user.clear(cost);
   await user.type(cost, "0.01");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.deepEqual(
       transport.calls.find((call) => call.name === "start_agent_task")?.args
@@ -2174,21 +2518,28 @@ test("console worker picker routes and seeds the delegation worker", async (t) =
   const { controller, user, transport } = await setup(t, undefined, {
     mode: "console",
   });
+
   await selectOption(user, "Worker", "codex · reviewer");
+
   await waitFor(() =>
     assert.equal(controller.getSnapshot().workerRoute, "codex.reviewer"),
   );
+
   await user.click(
     screen.getByRole("button", { name: "Delegate to this worker" }),
   );
+
   await screen.findByRole("dialog");
+
   assert.match(
     screen.getByRole("combobox", { name: "Worker" }).textContent ?? "",
     /codex · reviewer/,
   );
+
   await selectOption(user, "Project", "/repo/a");
   await enterTask(user, "Use selected worker");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.find((call) => call.name === "start_agent_task")?.args
@@ -2206,12 +2557,15 @@ test("permission buttons allow explicit approval without a dropdown", async (t) 
       input: { description: "Execute shell commands" },
     };
   });
+
   await user.click(screen.getByRole("button", { name: "Review request" }));
   await screen.findByRole("dialog");
   assert.equal(screen.queryByRole("combobox", { name: "Decision" }), null);
+
   await user.click(
     screen.getByRole("button", { name: "Approve this execution turn" }),
   );
+
   await waitFor(() =>
     assert.equal(
       transport.calls.find((call) => call.name === "submit_agent_input")?.args
@@ -2228,32 +2582,39 @@ test("current repository selection locks revision to HEAD and submits the checko
   const revision = screen.getByLabelText("Revision") as HTMLInputElement;
   assert.equal(revision.value, "HEAD");
   assert.equal(revision.readOnly, true);
+
   assert.match(
     screen.getByRole("combobox", { name: "Workspace" }).textContent ?? "",
     /Current repository/,
   );
+
   await selectOption(user, "Workspace", "Isolated worktree");
   assert.equal(revision.readOnly, false);
   await user.clear(revision);
   await user.type(revision, "feature-branch");
   await enterTask(user, "Review my uncommitted edits");
+
   await selectOption(
     user,
     "Workspace",
     "Current repository (uncommitted changes)",
   );
+
   await waitFor(() => assert.equal(revision.value, "HEAD"));
   assert.equal(revision.readOnly, true);
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   const call = transport.calls.find(
     (call) => call.name === "start_agent_task",
   )!;
+
   assert.equal(call.args.workspace_strategy, "current_repo");
   assert.equal(call.args.revision, "HEAD");
   assert.equal(call.args.repository, "/repo/a");
@@ -2263,14 +2624,17 @@ test("delegation defaults to inherited native permissions and separately selects
   const { user, transport } = await setup(t);
   await user.click(screen.getByRole("button", { name: "New task" }));
   await screen.findByRole("dialog");
+
   assert.equal(
     screen.getByRole("combobox", { name: "Permission mode" }).textContent,
     "Your Claude Code settings",
   );
+
   await selectOption(user, "Permission mode", "Accept edits");
   await selectOption(user, "Approval decision maker", "Parent agent");
   await enterTask(user, "Review authentication with parent approvals");
   await user.click(screen.getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.find((call) => call.name === "start_agent_task")?.args
@@ -2278,6 +2642,7 @@ test("delegation defaults to inherited native permissions and separately selects
       "parent_agent",
     ),
   );
+
   assert.equal(
     transport.calls.find((call) => call.name === "start_agent_task")?.args
       .permission_mode,
@@ -2291,32 +2656,40 @@ test("global UI adds a manually entered project only after explicit submission a
     (transport) => configureProjectRegistration(transport),
     { mode: "console" },
   );
+
   await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
+
   await user.type(
     within(dialog).getByLabelText("Repository path"),
     "/repo/new-project",
   );
+
   assert.equal(
     transport.calls.filter(
       (call) => call.name === "register_user_agent_project",
     ).length,
     0,
   );
+
   await user.click(within(dialog).getByRole("button", { name: "Add project" }));
+
   await waitFor(() =>
     assert.equal(controller.getSnapshot().repository, "/repo/new-project"),
   );
+
   assert.deepEqual(
     transport.calls.find((call) => call.name === "register_user_agent_project")
       ?.args,
     { repository: "/repo/new-project" },
   );
+
   assert.ok(
     controller
       .getSnapshot()
       .projects.some((project) => project.repository === "/repo/new-project"),
   );
+
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
 });
 
@@ -2327,9 +2700,11 @@ test("browsing a folder fills the project draft without granting access", async 
       configureProjectRegistration(transport, { picked: "/repo/picked" }),
     { mode: "console" },
   );
+
   await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+
   await waitFor(() =>
     assert.equal(
       (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
@@ -2337,14 +2712,17 @@ test("browsing a folder fills the project draft without granting access", async 
       "/repo/picked",
     ),
   );
+
   assert.equal(
     transport.calls.filter(
       (call) => call.name === "register_user_agent_project",
     ).length,
     0,
   );
+
   await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+
   assert.equal(
     transport.calls.filter(
       (call) => call.name === "register_user_agent_project",
@@ -2359,19 +2737,25 @@ test("cancelling the native picker preserves the manual project path", async (t)
     (transport) => configureProjectRegistration(transport),
     { mode: "console" },
   );
+
   await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
+
   const path = within(dialog).getByLabelText(
     "Repository path",
   ) as HTMLInputElement;
+
   await user.type(path, "/repo/manual-draft");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+
   await waitFor(() =>
     assert.ok(
       transport.calls.some((call) => call.name === "browse_user_agent_project"),
     ),
   );
+
   assert.equal(path.value, "/repo/manual-draft");
+
   assert.equal(
     transport.calls.filter(
       (call) => call.name === "register_user_agent_project",
@@ -2389,19 +2773,24 @@ test("project registration errors preserve the draft and do not change the selec
       }),
     { mode: "console" },
   );
+
   await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
+
   await user.type(
     within(dialog).getByLabelText("Repository path"),
     "/repo/invalid/src",
   );
+
   await user.click(within(dialog).getByRole("button", { name: "Add project" }));
   await screen.findByText("Use repository root");
+
   assert.equal(
     (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
       .value,
     "/repo/invalid/src",
   );
+
   assert.equal(controller.getSnapshot().repository, undefined);
   assert.equal(transport.projects.length, 1);
 });
@@ -2414,28 +2803,36 @@ test("permission cancellation keeps the request pending and approval includes th
       input: { command: "pwd" },
     };
   });
+
   await user.click(screen.getByRole("button", { name: "Review request" }));
   await screen.findByRole("dialog");
+
   await user.type(
     screen.getByLabelText("Message (optional)"),
     "Draft decision",
   );
+
   await user.click(screen.getByText("Close", { selector: "footer button" }));
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+
   assert.equal(
     transport.calls.filter((call) => call.name === "submit_agent_input").length,
     0,
   );
+
   assert.equal(transport.tasks[0].pending_input?.id, "message-request");
   await user.click(screen.getByRole("button", { name: "Review request" }));
   await screen.findByRole("dialog");
+
   await user.type(
     screen.getByLabelText("Message (optional)"),
     "Only run this command",
   );
+
   await user.click(
     screen.getByRole("button", { name: "Approve this request once" }),
   );
+
   await waitFor(() =>
     assert.deepEqual(
       transport.calls.find((call) => call.name === "submit_agent_input")?.args,
@@ -2453,26 +2850,32 @@ test("a chat project hint prefills registration without registering it automatic
   const { controller, transport, user } = await setup(t, (transport) =>
     configureProjectRegistration(transport),
   );
+
   await act(() =>
     controller.applyScope({
       panel_scope: { conversation_id: "chat-project" },
       panel_project_candidate: { repository: "/repo/chat-project" },
     }),
   );
+
   await user.click(screen.getByRole("button", { name: "Add chat project" }));
   const dialog = await screen.findByRole("dialog");
+
   assert.equal(
     (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
       .value,
     "/repo/chat-project",
   );
+
   assert.equal(
     transport.calls.filter(
       (call) => call.name === "register_user_agent_project",
     ).length,
     0,
   );
+
   await user.click(within(dialog).getByRole("button", { name: "Add project" }));
+
   await waitFor(() =>
     assert.equal(controller.getSnapshot().repository, "/repo/chat-project"),
   );
@@ -2487,6 +2890,7 @@ test("folder picker failure keeps manual entry available", async (t) => {
       }),
     { mode: "console" },
   );
+
   await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
@@ -2494,6 +2898,7 @@ test("folder picker failure keeps manual entry available", async (t) => {
   const path = within(dialog).getByLabelText("Repository path");
   await user.type(path, "/repo/manual-fallback");
   await user.click(within(dialog).getByRole("button", { name: "Add project" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.find(
@@ -2506,47 +2911,60 @@ test("folder picker failure keeps manual entry available", async (t) => {
 
 test("a delayed native folder selection cannot overwrite a new project dialog after scope changes", async (t) => {
   let finish!: (result: { repository: string }) => void;
+
   const { controller, transport, user } = await setup(
     t,
     (transport) => {
       configureProjectRegistration(transport);
       const original = transport.tool.bind(transport);
+
       transport.tool = async <T>(
         name: string,
         args: Record<string, unknown> = {},
       ): Promise<T> => {
         if (name === "browse_user_agent_project") {
           transport.calls.push({ name, args });
+
           return new Promise<{ repository: string }>((resolve) => {
             finish = resolve;
           }) as Promise<T>;
         }
+
         return original<T>(name, args);
       };
     },
     { mode: "console" },
   );
+
   await user.click(screen.getByRole("button", { name: "Add project" }));
   const firstDialog = await screen.findByRole("dialog");
+
   await user.click(
     within(firstDialog).getByRole("button", { name: "Browse…" }),
   );
+
   await act(() =>
     controller.applyScope({
       panel_scope: { conversation_id: null, repository: "/repo/other" },
     }),
   );
+
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
   await user.click(screen.getByRole("button", { name: "Add project" }));
   const dialog = await screen.findByRole("dialog");
+
   const path = within(dialog).getByLabelText(
     "Repository path",
   ) as HTMLInputElement;
+
   await user.type(path, "/repo/new-draft");
+
   await act(async () => {
     finish({ repository: "/repo/stale-selection" });
   });
+
   assert.equal(path.value, "/repo/new-draft");
+
   assert.equal(
     transport.calls.filter(
       (call) => call.name === "register_user_agent_project",
@@ -2562,6 +2980,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
       canonicalRepository: "/repo/canonical",
     }),
   );
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Review this new project with my draft intact");
@@ -2571,6 +2990,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
   await user.type(runtime, "12.5");
   const scope = controller.getSnapshot().repository;
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+
   await waitFor(() =>
     assert.match(
       within(dialog).getByRole("combobox", { name: "Project" }).textContent ??
@@ -2578,41 +2998,54 @@ test("browsing a project inside delegation preserves the draft and starts only a
       /canonical/,
     ),
   );
+
   assert.equal(controller.getSnapshot().repository, scope);
+
   assert.equal(
     (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
     "Review this new project with my draft intact",
   );
+
   assert.equal((runtime as HTMLInputElement).value, "12.5");
+
   assert.match(
     within(dialog).getByRole("combobox", { name: "Worker" }).textContent ?? "",
     /codex/,
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+
   assert.deepEqual(
     transport.calls.find((call) => call.name === "register_user_agent_project")
       ?.args,
     { repository: "/repo/alias" },
   );
+
   await user.click(within(dialog).getByRole("button", { name: "Start task" }));
+
   await waitFor(() =>
     assert.equal(
       transport.calls.filter((call) => call.name === "start_agent_task").length,
       1,
     ),
   );
+
   const started = transport.calls.find(
     (call) => call.name === "start_agent_task",
   )!;
+
   assert.equal(started.args.repository, "/repo/canonical");
+
   assert.equal(
     started.args.description,
     "Review this new project with my draft intact",
   );
+
   assert.equal(started.args.provider, "codex");
+
   assert.equal(
     (started.args.budget as { max_runtime_minutes: number })
       .max_runtime_minutes,
@@ -2627,19 +3060,23 @@ test("task project registration failure preserves the selected project and draft
       registerError: "Use repository root",
     }),
   );
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Keep this description after registration failure");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   await within(dialog).findByText("Use repository root");
+
   assert.equal(
     within(dialog).getByRole("combobox", { name: "Project" }).textContent,
     "/repo/a",
   );
+
   assert.equal(
     (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
     "Keep this description after registration failure",
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
@@ -2650,10 +3087,12 @@ test("cancelling the task project picker preserves selection and task draft with
   const { transport, user } = await setup(t, (transport) =>
     configureProjectRegistration(transport),
   );
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Preserve task while browsing");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
+
   await waitFor(() =>
     assert.equal(
       (
@@ -2664,20 +3103,24 @@ test("cancelling the task project picker preserves selection and task draft with
       false,
     ),
   );
+
   assert.equal(
     within(dialog).getByRole("combobox", { name: "Project" }).textContent,
     "/repo/a",
   );
+
   assert.equal(
     (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
     "Preserve task while browsing",
   );
+
   assert.equal(
     transport.calls.filter(
       (call) => call.name === "register_user_agent_project",
     ).length,
     0,
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
@@ -2686,42 +3129,53 @@ test("cancelling the task project picker preserves selection and task draft with
 
 test("pending task project browsing disables Start and ignores selection after scope changes", async (t) => {
   let finish!: (result: { repository: string }) => void;
+
   const { controller, transport, user } = await setup(t, (transport) => {
     configureProjectRegistration(transport);
     const original = transport.tool.bind(transport);
+
     transport.tool = async <T>(
       name: string,
       args: Record<string, unknown> = {},
     ): Promise<T> => {
       if (name === "browse_user_agent_project") {
         transport.calls.push({ name, args });
+
         return new Promise<{ repository: string }>((resolve) => {
           finish = resolve;
         }) as Promise<T>;
       }
+
       return original<T>(name, args);
     };
   });
+
   await user.click(screen.getByRole("button", { name: "New task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "A pending folder selection");
+
   const start = within(dialog).getByRole("button", {
     name: "Start task",
   }) as HTMLButtonElement;
+
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   assert.equal(start.disabled, true);
+
   await act(() =>
     controller.applyScope({ panel_scope: { conversation_id: "new-chat" } }),
   );
+
   await act(async () => {
     finish({ repository: "/repo/stale-selection" });
   });
+
   assert.equal(
     transport.calls.filter(
       (call) => call.name === "register_user_agent_project",
     ).length,
     0,
   );
+
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,

@@ -17,17 +17,22 @@ export async function withHostRepository(
   meta?: Record<string, unknown>,
 ) {
   if (args.repository !== undefined || args.task_id !== undefined) return args;
+
   const state = meta?.["codex/sandbox-state-meta"] as
     { sandboxCwd?: unknown } | undefined;
+
   const directory = args.host_directory ?? state?.sandboxCwd;
   if (typeof directory !== "string" || directory.length > 4096) return args;
+
   try {
     const cwd = fileURLToPath(directory);
     if (!isAbsolute(cwd)) return args;
     const root = (await git(cwd, ["rev-parse", "--show-toplevel"])).trim();
+
     const repository = c.projects
       ? await c.projects.resolve(root)
       : await c.workspaces.repository(root);
+
     return { ...args, repository };
   } catch {
     // Unknown/remote/unapproved directories do not grant access or block the UI.
@@ -38,9 +43,11 @@ export async function withHostRepository(
 /** A local Git-root suggestion for review; this does not resolve or grant access. */
 export async function hostProjectCandidate(directory?: string) {
   if (!directory) return undefined;
+
   try {
     const cwd = fileURLToPath(directory);
     if (!isAbsolute(cwd)) return undefined;
+
     return await realpath(
       (await git(cwd, ["rev-parse", "--show-toplevel"])).trim(),
     );

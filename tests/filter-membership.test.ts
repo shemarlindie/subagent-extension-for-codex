@@ -22,7 +22,9 @@ const task = (patch: Partial<Task>): Task => ({
   runtime_ms: 0,
   ...patch,
 });
+
 const input = { id: "i", tool: "AskUserQuestion", input: {} };
+
 const cases: [string, Partial<Task>, Filter[]][] = [
   ["running", { status: "running" }, ["all", "active"]],
   ["queued", { status: "queued" }, ["all", "active"]],
@@ -75,6 +77,7 @@ test("each task state appears only in its own filter besides All", () => {
           search: "",
         } as unknown as Snapshot).length === 1,
     );
+
     assert.deepEqual(found, expected, name);
   }
 });
@@ -86,6 +89,7 @@ test("filter counts match each filter's list and follow search and scope", () =>
     task({ id: "c", title: "alpha two", status: "completed" }),
     task({ id: "d", title: "other", repository: "/elsewhere" }),
   ];
+
   const state = (patch: object) =>
     ({
       tasks,
@@ -94,7 +98,9 @@ test("filter counts match each filter's list and follow search and scope", () =>
       repository: "/repo",
       ...patch,
     }) as unknown as Snapshot;
+
   const counts = filterCounts(state({}));
+
   assert.deepEqual(counts, {
     all: 3,
     active: 1,
@@ -102,8 +108,10 @@ test("filter counts match each filter's list and follow search and scope", () =>
     completed: 1,
     failed: 1,
   });
+
   for (const filter of Object.keys(counts) as Filter[])
     assert.equal(counts[filter], visibleTasks(state({ filter })).length);
+
   // Search narrows every count, but the selected filter does not.
   assert.deepEqual(filterCounts(state({ search: "alpha", filter: "failed" })), {
     all: 2,

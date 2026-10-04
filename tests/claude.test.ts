@@ -16,6 +16,7 @@ import {
   type RunContext,
 } from "../src/core/model.js";
 import { type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
+
 const result = {
   summary: "Reviewed",
   findings: ["Missing check"],
@@ -24,10 +25,12 @@ const result = {
   tests: [],
   recommendations: [],
 };
+
 async function context() {
   const workspace = await mkdtemp(join(tmpdir(), "claude-contract-"));
   execFileSync("git", ["init", "-q", workspace]);
   await writeFile(join(workspace, "a.ts"), "test");
+
   const task: Task = {
     ...startSchema.parse({
       title: "Review",
@@ -48,8 +51,10 @@ async function context() {
     cost_usd: 1,
     session_id: "existing-session",
   };
+
   const events: any[] = [];
   const sessions: any[] = [];
+
   const c: RunContext = {
     task,
     signal: new AbortController().signal,
@@ -57,8 +62,10 @@ async function context() {
     session: (id, ref) => sessions.push({ id, ref }),
     input: async () => ({ approved: false, message: "User declined" }),
   };
+
   return { c, events, sessions, workspace };
 }
+
 test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async () => {
   let time = 1000;
   vi.spyOn(Date, "now").mockImplementation(() => time);
@@ -67,11 +74,14 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   let launches = 0;
   let closes = 0;
   let resolve!: (models: any[]) => void;
+
   const pending = new Promise<any[]>((r) => {
     resolve = r;
   });
+
   let discoveryPrompt: AsyncIterable<any> | undefined;
   let options: Options | undefined;
+
   const models = [
     {
       value: "discovered-model",
@@ -79,10 +89,12 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
       description: "SDK metadata",
     },
   ];
+
   const provider = new ClaudeAgentProvider((args) => {
     launches++;
     discoveryPrompt = args.prompt as AsyncIterable<any>;
     options = args.options;
+
     return {
       supportedModels: () => pending,
       close: () => {
@@ -90,6 +102,7 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
       },
     } as unknown as Query;
   });
+
   const first = provider.models();
   const second = provider.models();
   assert.equal(first, second);
@@ -104,9 +117,11 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   assert.equal(options!.env!.CODEX_SUBAGENT_EXTENSION_TOKEN, undefined);
   const next = discoveryPrompt![Symbol.asyncIterator]().next();
   let emitted = false;
+
   void next.then(() => {
     emitted = true;
   });
+
   await Promise.resolve();
   assert.equal(emitted, false);
   resolve(models);
@@ -129,11 +144,14 @@ test("failed Claude model discovery closes the query and retries after a short c
   vi.spyOn(Date, "now").mockImplementation(() => time);
   let attempts = 0;
   let closes = 0;
+
   const provider = new ClaudeAgentProvider(() => {
     const attempt = ++attempts;
+
     return {
       supportedModels: async () => {
         if (attempt === 1) throw new Error("SDK discovery failed");
+
         return [
           { value: "retried-model", displayName: "Retried", description: "" },
         ];
@@ -143,6 +161,7 @@ test("failed Claude model discovery closes the query and retries after a short c
       },
     } as unknown as Query;
   });
+
   await assert.rejects(provider.models(), /SDK discovery failed/);
   assert.equal(closes, 1);
   await assert.rejects(provider.models(), /SDK discovery failed/);
@@ -153,12 +172,15 @@ test("failed Claude model discovery closes the query and retries after a short c
   assert.equal(attempts, 2);
   assert.equal(closes, 2);
 });
+
 test("Claude SDK query uses native harness, resume, structured output, remaining budget and profile restrictions", async () => {
   const { c, events, sessions } = await context();
   let options: Options | undefined;
   let closed = false;
+
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
+
     const messages = (async function* () {
       yield {
         type: "system",
@@ -167,6 +189,7 @@ test("Claude SDK query uses native harness, resume, structured output, remaining
         model: "configured-model",
         tools: ["Read"],
       };
+
       yield {
         type: "assistant",
         message: {
@@ -181,6 +204,7 @@ test("Claude SDK query uses native harness, resume, structured output, remaining
           ],
         },
       };
+
       yield {
         type: "result",
         subtype: "success",
@@ -191,17 +215,21 @@ test("Claude SDK query uses native harness, resume, structured output, remaining
         usage: {},
       };
     })();
+
     return Object.assign(messages, {
       close: () => (closed = true),
     }) as unknown as Query;
   });
+
   assert.deepEqual(await provider.run(c, "Review"), result);
   assert.equal(options!.cwd, c.task.workspace);
   assert.equal(options!.resume, "existing-session");
   assert.equal(options!.maxBudgetUsd, 4);
+
   assert.ok(
     options!.tools instanceof Array && !options!.tools.includes("Bash"),
   );
+
   assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
   assert.equal(options!.strictMcpConfig, undefined);
   assert.ok(!options!.disallowedTools!.includes("Skill"));
@@ -211,12 +239,15 @@ test("Claude SDK query uses native harness, resume, structured output, remaining
   assert.ok(events.find((e) => e.type === "tool.started"));
   assert.ok(closed);
 });
+
 test("Claude read-only profile bundle denies outside paths, symlink escapes, Git metadata and disallowed tools", async () => {
   const { c, workspace } = await context();
   await symlink(tmpdir(), join(workspace, "escape"));
   let options: Options | undefined;
+
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
+
     return Object.assign(
       (async function* () {
         yield {
@@ -230,8 +261,10 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
       { close: () => {} },
     ) as unknown as Query;
   });
+
   await provider.run(c, "Review");
   const hook = options!.hooks!.PreToolUse![0].hooks[0];
+
   const check = async (tool: string, input: object) => {
     const r = await hook(
       {
@@ -246,20 +279,25 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
       "x",
       { signal: c.signal },
     );
+
     return (r as any).hookSpecificOutput?.permissionDecision;
   };
+
   assert.equal(
     await check("Read", { file_path: join(tmpdir(), "secret") }),
     "deny",
   );
+
   assert.equal(
     await check("Read", { file_path: join(workspace, "escape", "secret") }),
     "deny",
   );
+
   assert.equal(
     await check("Read", { file_path: join(workspace, ".git") }),
     "deny",
   );
+
   assert.equal(await check("Bash", { command: "pwd" }), "deny");
   assert.equal(await check("Write", { file_path: "a.ts" }), "deny");
   assert.equal(await check("Agent", {}), "deny");
@@ -267,11 +305,14 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
   assert.equal(await check("Skill", { skill: "review" }), undefined);
   assert.equal(await check("Read", { file_path: "a.ts" }), undefined);
 });
+
 test("Claude forwards the selected model and effort and omits inherited native settings", async () => {
   const { c } = await context();
   let options: Options | undefined;
+
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
+
     return Object.assign(
       (async function* () {
         yield {
@@ -285,6 +326,7 @@ test("Claude forwards the selected model and effort and omits inherited native s
       { close: () => {} },
     ) as unknown as Query;
   });
+
   c.task.model = "selected-model";
   c.task.reasoning_effort = "high";
   await provider.run(c, "Review");
@@ -299,12 +341,15 @@ test("Claude forwards the selected model and effort and omits inherited native s
   await provider.run(c, "Review");
   assert.equal(Object.hasOwn(options!, "effort"), false);
 });
+
 test("write-profile shell commands require human decision and cannot use edited approval payloads", async () => {
   const { c } = await context();
   c.task.worker_profile = "implementer";
   let options: Options | undefined;
+
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
+
     return Object.assign(
       (async function* () {
         yield {
@@ -318,38 +363,48 @@ test("write-profile shell commands require human decision and cannot use edited 
       { close: () => {} },
     ) as unknown as Query;
   });
+
   await provider.run(c, "Implement");
   const command = { command: "npm test" };
+
   const denied = await options!.canUseTool!("Bash", command, {
     signal: c.signal,
     toolUseID: "tool",
     requestId: "request",
   });
+
   assert.equal(denied!.behavior, "deny");
+
   c.input = async () => ({
     approved: true,
     input: { command: "other command" },
   });
+
   const approved = await options!.canUseTool!("Bash", command, {
     signal: c.signal,
     toolUseID: "tool",
     requestId: "request",
   });
+
   assert.equal(approved!.behavior, "allow");
   assert.deepEqual((approved as any).updatedInput, command);
   // MCP tools follow the same approval routing as shell commands.
   const tool = { query: "status" };
+
   const mcp = await options!.canUseTool!("mcp__server__tool", tool, {
     signal: c.signal,
     toolUseID: "tool",
     requestId: "request",
   });
+
   assert.equal(mcp!.behavior, "allow");
   assert.deepEqual((mcp as any).updatedInput, tool);
 });
+
 test("Claude forwards each native permission mode and reserves bypass opt-in for bypassPermissions", async () => {
   const { c, workspace } = await context();
   c.task.worker_profile = "implementer";
+
   // Restrictions enabled in settings apply in every native mode.
   c.task.claude_policy = {
     sandbox: "extension",
@@ -358,9 +413,12 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
     path_guard: true,
     subagents: false,
   };
+
   let options: Options | undefined;
+
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
+
     return Object.assign(
       (async function* () {
         yield {
@@ -374,6 +432,7 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
       { close: () => {} },
     ) as unknown as Query;
   });
+
   for (const mode of [
     "default",
     "acceptEdits",
@@ -385,11 +444,14 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
     c.task.permission_mode = mode;
     await provider.run(c, "Implement");
     assert.equal(options!.permissionMode, mode);
+
     assert.equal(
       options!.allowDangerouslySkipPermissions,
       mode === "bypassPermissions" ? true : undefined,
     );
+
     const hook = options!.hooks!.PreToolUse![0].hooks[0];
+
     const decision = await hook(
       {
         hook_event_name: "PreToolUse",
@@ -403,10 +465,12 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
       "x",
       { signal: c.signal },
     );
+
     assert.equal(
       (decision as any).hookSpecificOutput?.permissionDecision,
       mode === "plan" ? "deny" : undefined,
     );
+
     const outside = await hook(
       {
         hook_event_name: "PreToolUse",
@@ -420,22 +484,26 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
       "x",
       { signal: c.signal },
     );
+
     assert.equal(
       (outside as any).hookSpecificOutput?.permissionDecision,
       "deny",
     );
   }
+
   c.task.permission_mode = "inherit";
   await provider.run(c, "Implement");
   assert.equal(Object.hasOwn(options!, "permissionMode"), false);
   c.task.worker_profile = "reviewer";
   c.task.permission_mode = "bypassPermissions";
   await provider.run(c, "Review");
+
   assert.ok(
     options!.tools instanceof Array &&
       !options!.tools.includes("Write") &&
       !options!.tools.includes("Bash"),
   );
+
   assert.equal(
     (await options!.canUseTool!(
       "Write",
@@ -451,8 +519,10 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
   c.task.worker_profile = "implementer";
   c.task.permission_mode = "default";
   let options: Options | undefined;
+
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
+
     return Object.assign(
       (async function* () {
         yield {
@@ -466,9 +536,12 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
       { close: () => {} },
     ) as unknown as Query;
   });
+
   await provider.run(c, "Implement");
+
   for (const tool of ["Edit", "Write"]) {
     const input = { file_path: "a.ts", content: "approved contents" };
+
     assert.equal(
       (await options!.canUseTool!(tool, input, {
         signal: c.signal,
@@ -477,27 +550,34 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
       }))!.behavior,
       "deny",
     );
+
     let requested: unknown;
+
     c.input = async (name, payload) => {
       requested = { name, payload };
+
       return {
         approved: true,
         input: { file_path: "/tmp/another-file", content: "substitution" },
       };
     };
+
     const allowed = await options!.canUseTool!(tool, input, {
       signal: c.signal,
       toolUseID: "edit",
       requestId: "request",
     });
+
     assert.deepEqual(requested, { name: tool, payload: input });
     assert.equal(allowed!.behavior, "allow");
     assert.deepEqual((allowed as any).updatedInput, input);
     c.input = async () => ({ approved: false });
   }
 });
+
 test("Claude failed result accounts for cost and never reports task success", async () => {
   const { c, events } = await context();
+
   const provider = new ClaudeAgentProvider(
     () =>
       Object.assign(
@@ -514,7 +594,9 @@ test("Claude failed result accounts for cost and never reports task success", as
         { close: () => {} },
       ) as unknown as Query,
   );
+
   await assert.rejects(provider.run(c, "Review"), /error_max_budget/);
+
   assert.equal(
     events.find((e) => e.type === "agent.completed")?.data.cost_usd,
     0.3,
@@ -525,8 +607,10 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
   const { c } = await context();
   c.task.budget.max_cost_usd = null;
   let options: Options | undefined;
+
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
+
     const messages = (async function* () {
       yield {
         type: "result",
@@ -538,14 +622,17 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
         usage: {},
       };
     })();
+
     return Object.assign(messages, { close: () => {} }) as unknown as Query;
   });
+
   assert.deepEqual(await provider.run(c, "Review"), result);
   assert.equal(Object.hasOwn(options!, "maxBudgetUsd"), false);
 });
 
 test("filtered Claude environment excludes service and other-provider credentials at the real SDK spawn boundary", async () => {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
+
   const env = claudeEnvironment(
     {
       PATH: process.env.PATH,
@@ -562,13 +649,16 @@ test("filtered Claude environment excludes service and other-provider credential
     },
     "filtered",
   );
+
   assert.deepEqual(Object.keys(env).sort(), [
     "ANTHROPIC_API_KEY",
     "CLAUDE_CONFIG_DIR",
     "HOME",
     "PATH",
   ]);
+
   let spawned: Record<string, string | undefined> | undefined;
+
   await assert.rejects(async () => {
     const stream = query({
       prompt: "Never executed",
@@ -580,6 +670,7 @@ test("filtered Claude environment excludes service and other-provider credential
         },
       },
     });
+
     try {
       for await (const _ of stream) {
         // Drain the stream.
@@ -588,6 +679,7 @@ test("filtered Claude environment excludes service and other-provider credential
       stream.close();
     }
   }, /Synthetic spawn refusal/);
+
   assert.ok(spawned);
   assert.equal(spawned.ANTHROPIC_API_KEY, "synthetic-claude-key");
   assert.equal(spawned.CLAUDE_CONFIG_DIR, "/synthetic/claude-state");
@@ -613,6 +705,7 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
   const { c, workspace } = await context();
   const sandbox = await claudeSandbox(c.task);
   let args: string[] | undefined;
+
   await assert.rejects(async () => {
     const stream = query({
       prompt: "Never executed",
@@ -625,6 +718,7 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
         },
       },
     });
+
     try {
       for await (const _ of stream) {
         // Drain the stream.
@@ -633,6 +727,7 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
       stream.close();
     }
   }, /Sandbox serialization probe only/);
+
   assert.ok(args);
   const settings = JSON.parse(args[args.indexOf("--settings") + 1]);
   assert.equal(settings.sandbox.enabled, true);
@@ -643,14 +738,17 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
   assert.deepEqual(settings.sandbox.network.allowedDomains, []);
   assert.equal(settings.sandbox.network.allowAllUnixSockets, false);
   const canonicalWorkspace = await realpath(workspace);
+
   assert.deepEqual(settings.sandbox.filesystem.allowWrite, [
     canonicalWorkspace,
   ]);
+
   assert.ok(
     settings.sandbox.filesystem.denyWrite.includes(
       join(canonicalWorkspace, ".git"),
     ),
   );
+
   assert.ok(settings.sandbox.filesystem.allowRead.includes(canonicalWorkspace));
   assert.ok(settings.sandbox.filesystem.denyRead.includes(canonicalWorkspace));
 });
@@ -658,8 +756,10 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
 test("native StructuredOutput accepts only the result contract while other reporting tools stay denied", async () => {
   const { c } = await context();
   let options: Options | undefined;
+
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
+
     return Object.assign(
       (async function* () {
         yield {
@@ -673,8 +773,10 @@ test("native StructuredOutput accepts only the result contract while other repor
       { close: () => {} },
     ) as unknown as Query;
   });
+
   await provider.run(c, "Report");
   const hook = options!.hooks!.PreToolUse![0].hooks[0];
+
   const check = (name: string, params: object) =>
     hook(
       {
@@ -689,17 +791,21 @@ test("native StructuredOutput accepts only the result contract while other repor
       "x",
       { signal: c.signal },
     );
+
   const permission = (name: string, input: object) =>
     options!.canUseTool!(name, input as Record<string, unknown>, {
       signal: c.signal,
       toolUseID: "x",
       requestId: "request",
     });
+
   assert.deepEqual(await check("StructuredOutput", result), {});
+
   assert.equal(
     (await permission("StructuredOutput", result))!.behavior,
     "allow",
   );
+
   for (const invalid of [
     { summary: "Missing report fields" },
     { ...result, command: "unrelated shell command" },
@@ -709,11 +815,13 @@ test("native StructuredOutput accepts only the result contract while other repor
         .permissionDecision,
       "deny",
     );
+
     assert.equal(
       (await permission("StructuredOutput", invalid))!.behavior,
       "deny",
     );
   }
+
   assert.equal(
     (await permission("mcp__unconfigured__report", result))!.behavior,
     "deny",
@@ -729,13 +837,18 @@ async function runWithPolicy(
   ctx.c.task.permission_mode = "default";
   ctx.c.task.claude_policy = policy;
   const asked: string[] = [];
+
   ctx.c.input = async (tool) => {
     asked.push(tool);
+
     return { approved: true };
   };
+
   let options: Options | undefined;
+
   const provider = new ClaudeAgentProvider((args) => {
     options = args.options;
+
     return Object.assign(
       (async function* () {
         yield {
@@ -749,8 +862,10 @@ async function runWithPolicy(
       { close: () => {} },
     ) as unknown as Query;
   });
+
   await provider.run(ctx.c, "Work");
   const hook = options!.hooks!.PreToolUse![0].hooks[0];
+
   const check = async (tool: string, input: object) =>
     (
       (await hook(
@@ -767,14 +882,17 @@ async function runWithPolicy(
         { signal: ctx.c.signal },
       )) as any
     ).hookSpecificOutput?.permissionDecision;
+
   const decide = async (tool: string, input: Record<string, unknown>) =>
     (await options!.canUseTool!(tool, input, {
       signal: ctx.c.signal,
       toolUseID: "x",
       requestId: "request",
     }))!.behavior;
+
   return { ...ctx, options: options!, check, decide, asked };
 }
+
 const parity = {
   sandbox: "user_config",
   environment: "inherit",
@@ -800,6 +918,7 @@ test("Claude parity policy leaves sandbox, tools and paths to the user's configu
     "CLAUDE_CODE_OAUTH_TOKEN",
   ])
     assert.equal(options.env![name], undefined, name);
+
   for (const [tool, input] of [
     ["WebFetch", { url: "https://example.com" }],
     ["Agent", { prompt: "Look" }],
@@ -809,6 +928,7 @@ test("Claude parity policy leaves sandbox, tools and paths to the user's configu
     assert.equal(await check(tool, input), undefined, tool);
     assert.equal(await decide(tool, input), "allow", tool);
   }
+
   // Without a path guard, outside reads are not auto-approved.
   assert.deepEqual(asked, ["WebFetch", "Agent", "NotebookEdit", "Read"]);
   assert.equal(await check("StructuredOutput", { summary: "x" }), "deny");
@@ -817,42 +937,52 @@ test("Claude parity policy leaves sandbox, tools and paths to the user's configu
 test("Claude path guard and restricted tools apply independently when enabled", async () => {
   const guarded = await runWithPolicy({ ...parity, path_guard: true });
   assert.equal(await guarded.check("WebFetch", { url: "x" }), undefined);
+
   assert.equal(
     await guarded.check("NotebookEdit", {
       notebook_path: join(tmpdir(), "x.ipynb"),
     }),
     "deny",
   );
+
   assert.equal(
     await guarded.decide("Read", { file_path: join(tmpdir(), "outside") }),
     "deny",
   );
+
   assert.equal(await guarded.decide("Read", { file_path: "a.ts" }), "allow");
+
   assert.equal(
     await guarded.decide("Write", { file_path: join(guarded.workspace, "b") }),
     "allow",
   );
+
   assert.deepEqual(guarded.asked, ["Write"]);
 
   const restricted = await runWithPolicy({ ...parity, tools: "restricted" });
+
   assert.ok(
     Array.isArray(restricted.options.tools) &&
       restricted.options.tools.includes("Bash") &&
       !restricted.options.tools.includes("WebFetch"),
   );
+
   assert.equal(await restricted.check("WebFetch", { url: "x" }), "deny");
   assert.equal(await restricted.decide("WebFetch", { url: "x" }), "deny");
   assert.equal(await restricted.check("mcp__server__tool", {}), undefined);
+
   assert.equal(
     await restricted.check("Read", { file_path: join(tmpdir(), "outside") }),
     undefined,
   );
 
   const loosenedReviewer = await runWithPolicy(parity, "reviewer");
+
   assert.equal(
     await loosenedReviewer.check("Bash", { command: "pwd" }),
     undefined,
   );
+
   assert.deepEqual(loosenedReviewer.options.disallowedTools, []);
 });
 
@@ -860,14 +990,18 @@ test("Claude extension sandbox modes add the sandbox and lock network domains at
   const extension = await runWithPolicy({ ...parity, sandbox: "extension" });
   assert.equal(extension.options.sandbox?.enabled, true);
   assert.equal(extension.options.managedSettings, undefined);
+
   const locked = await runWithPolicy({
     ...parity,
     sandbox: "extension_locked",
   });
+
   assert.equal(locked.options.sandbox?.failIfUnavailable, true);
+
   assert.deepEqual(locked.options.managedSettings, {
     sandbox: { network: { allowManagedDomainsOnly: true } },
   });
+
   const noSubagents = await runWithPolicy({ ...parity, subagents: false });
   assert.deepEqual(noSubagents.options.disallowedTools, ["Agent", "Task"]);
 });
@@ -877,8 +1011,10 @@ test("Claude tasks without stored restrictions run with CLI parity defaults", as
   c.task.worker_profile = "implementer";
   c.task.permission_mode = "inherit";
   let options: Options | undefined;
+
   await new ClaudeAgentProvider((args) => {
     options = args.options;
+
     return Object.assign(
       (async function* () {
         yield {
@@ -892,6 +1028,7 @@ test("Claude tasks without stored restrictions run with CLI parity defaults", as
       { close: () => {} },
     ) as unknown as Query;
   }).run(c, "Implement");
+
   assert.equal(options!.sandbox, undefined);
   assert.equal(Object.hasOwn(options!, "permissionMode"), false);
   assert.deepEqual(options!.tools, { type: "preset", preset: "claude_code" });

@@ -23,6 +23,7 @@ import {
   type Provider,
   now,
 } from "./model.js";
+
 /** Cancel a queued input without letting later requests bypass its predecessor. */
 async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {
   await new Promise<void>((resolve, reject) => {
@@ -30,8 +31,10 @@ async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {
       signal.removeEventListener("abort", aborted);
       reject(new Error("Input interrupted"));
     };
+
     signal.addEventListener("abort", aborted, { once: true });
     if (signal.aborted) aborted();
+
     void previous.then(() => {
       signal.removeEventListener("abort", aborted);
       if (signal.aborted) reject(new Error("Input interrupted"));
@@ -39,6 +42,7 @@ async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {
     });
   });
 }
+
 interface Active {
   inputTail?: Promise<void>;
   stopStatus?: "interrupted" | "cancelled";
@@ -50,6 +54,7 @@ interface Active {
     message?: string;
   }) => void;
 }
+
 export class Control {
   active = new Map<string, Active>();
   scheduling = false;
@@ -68,8 +73,10 @@ export class Control {
     this.settings = new Settings(store, () => [...providers.keys()]);
     this.forms = new Forms(this);
   }
+
   async recover() {
     this.forms.recover();
+
     for (const t of this.store.all()) {
       if (
         t.provider === "codex" &&
@@ -92,6 +99,7 @@ export class Control {
           continue;
         }
       }
+
       if (
         ["starting", "running", "waiting"].includes(t.status) &&
         t.waiting_reason !== "waiting_for_dependency" &&
@@ -100,14 +108,18 @@ export class Control {
         t.status = "interrupted";
         delete t.pending_input;
         delete t.waiting_reason;
+
         t.error =
           "Service restarted; verify session state and continue explicitly.";
+
         this.store.save(t);
         this.store.event(t, "task.interrupted", { reason: "service_restart" });
       }
     }
+
     void this.schedule();
   }
+
   workers() {
     return [...this.providers.values()].map((p) => ({
       provider: p.id,
@@ -123,11 +135,13 @@ export class Control {
       ],
     }));
   }
+
   async availableWorkers() {
     return Promise.all(
       this.workers().map(async (worker) => {
         const provider = this.providers.get(worker.provider)!;
         if (!provider.models) return worker;
+
         try {
           return { ...worker, models: await provider.models() };
         } catch {
@@ -140,6 +154,7 @@ export class Control {
       }),
     );
   }
+
   async start(
     owner: string,
     input: unknown,
@@ -155,18 +170,22 @@ export class Control {
       throw new Error("Task approval mode exceeds the user-approved default");
     let resolved: ReturnType<typeof resolveClaudePermission> | undefined;
     let claudePolicy: ReturnType<typeof resolveClaudePolicy> | undefined;
+
     if (parsed.provider === "claude") {
       const defaults = this.settings.values(owner);
       // Restrictions are fixed when the task starts; later settings changes don't apply.
       claudePolicy = resolveClaudePolicy(defaults, parsed.worker_profile);
+
       const baseline = resolveClaudePermission(
         { worker_profile: parsed.worker_profile },
         defaults.claude_permission_mode,
       );
+
       resolved = resolveClaudePermission(
         parsed,
         defaults.claude_permission_mode,
       );
+
       if (
         authority !== "user" &&
         exceedsPermission(resolved.mode, baseline.mode)
@@ -183,6 +202,7 @@ export class Control {
           "Parent approval requires user authorization in settings",
         );
     }
+
     const req = {
       ...parsed,
       ...(resolved
@@ -198,6 +218,7 @@ export class Control {
           : parsed.title.trim(),
       description: parsed.description.trim(),
     };
+
     if (!req.title) throw new Error("Task title is required");
     if (!req.description) throw new Error("Task description is required");
     if (
@@ -209,6 +230,7 @@ export class Control {
         "Claude reasoning effort must be low, medium, high, xhigh or max",
       );
     const provider = this.providers.get(req.provider);
+
     if (
       provider?.models &&
       req.reasoning_effort &&
@@ -216,9 +238,11 @@ export class Control {
     ) {
       // Unknown or unavailable metadata leaves final validation to the provider.
       const models = await provider.models().catch(() => []);
+
       const model = models.find(
         (item) => item.value === (req.model || "default"),
       );
+
       if (
         model &&
         (model.supportsEffort === false ||
@@ -229,16 +253,19 @@ export class Control {
           `Model ${model.value} does not support reasoning effort ${req.reasoning_effort}`,
         );
     }
+
     this.validateBudgets(req);
     if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD")
       throw new Error("Current repository workspace requires revision HEAD");
     for (const id of req.depends_on) this.store.get(id, owner);
     if (req.parent_task_id) this.store.get(req.parent_task_id, owner);
+
     const repository = this.projects
       ? await this.projects.resolve(req.repository)
       : await this.workspaces.repository(
           req.repository === "current" ? this.repository : req.repository,
         );
+
     const t: Task = {
       ...req,
       repository,
@@ -251,11 +278,14 @@ export class Control {
       attempt: 0,
       runtime_ms: 0,
     };
+
     this.store.save(t);
     this.store.event(t, "task.queued");
     void this.schedule();
+
     return t;
   }
+
   private validateBudgets(req: Start) {
     const p = this.providers.get(req.provider);
     if (!p) throw new Error("Provider is not enabled");
@@ -268,9 +298,11 @@ export class Control {
     if (!p.capabilities.runtime_budget)
       throw new Error("Provider does not support runtime budgets");
   }
+
   async schedule() {
     if (this.scheduling || this.stopped) return;
     this.scheduling = true;
+
     try {
       for (const t of this.store.all().reverse()) {
         if (this.active.size >= this.concurrency) break;
@@ -283,6 +315,7 @@ export class Control {
         )
           continue;
         const deps = t.depends_on.map((id) => this.store.get(id, t.owner));
+
         if (deps.some((d) => ["failed", "cancelled"].includes(d.status))) {
           t.status = "failed";
           t.error = "Dependency failed or was cancelled";
@@ -291,6 +324,7 @@ export class Control {
           this.store.event(t, "task.failed", { error: t.error });
           continue;
         }
+
         if (
           deps.some((d) => d.status !== "completed" || this.active.has(d.id))
         ) {
@@ -300,8 +334,10 @@ export class Control {
             this.store.save(t);
             this.store.event(t, "task.waiting", { reason: t.waiting_reason });
           }
+
           continue;
         }
+
         delete t.waiting_reason;
         t.status = "starting";
         t.attempt++;
@@ -315,17 +351,21 @@ export class Control {
       this.scheduling = false;
     }
   }
+
   async execute(t: Task, a: Active) {
     const begin = Date.now();
     let timer: NodeJS.Timeout | undefined;
     let terminationUnconfirmed = false;
+
     try {
       this.validateBudgets(t);
       if (this.projects) await this.projects.resolve(t.repository);
+
       if (!t.workspace) {
         await this.workspaces.create(t);
         this.store.save(t);
       }
+
       if (a.abort.signal.aborted) throw a.abort.signal.reason;
       const live = this.store.get(t.id, t.owner);
       t.instructions = live.instructions;
@@ -335,10 +375,12 @@ export class Control {
       t.session_owner = this.ownerWorker;
       this.store.save(t);
       this.store.event(t, "task.started", { attempt: t.attempt });
+
       const remaining =
         t.budget.max_runtime_minutes === null
           ? Infinity
           : t.budget.max_runtime_minutes * 60000 - t.runtime_ms;
+
       if (remaining <= 0) throw new Error("Runtime budget exhausted");
       if (
         t.budget.max_cost_usd !== null &&
@@ -353,6 +395,7 @@ export class Control {
         }, remaining);
       const provider = this.providers.get(t.provider)!;
       const deps = t.depends_on.map((id) => this.store.get(id, t.owner));
+
       const workspaceContext =
         t.workspace_strategy === "current_repo"
           ? [
@@ -360,6 +403,7 @@ export class Control {
               await this.workspaces.diff(t),
             ].join("\n\n")
           : "";
+
       const prompt = [
         t.description,
         ...(workspaceContext ? [workspaceContext] : []),
@@ -373,6 +417,7 @@ export class Control {
         ),
         ...t.instructions,
       ].join("\n\n");
+
       const result = await provider.run(
         {
           task: t,
@@ -385,6 +430,7 @@ export class Control {
               t.cost_usd = (t.cost_usd ?? 0) + data.cost_usd;
               this.store.save(t);
             }
+
             this.store.event(t, type, data);
           },
           session: (id, ref) => {
@@ -398,8 +444,10 @@ export class Control {
               if (a.abort.signal.aborted || signal?.aborted)
                 throw new Error("Input interrupted");
               const mode = t.approval_mode ?? "ask_user";
+
               if (mode === "auto_approve" || mode === "deny") {
                 const approved = mode === "auto_approve";
+
                 this.store.event(t, "agent.permission_decided", {
                   tool,
                   input,
@@ -407,6 +455,7 @@ export class Control {
                   approved,
                   authority: "policy",
                 });
+
                 return {
                   approved,
                   message: approved
@@ -415,28 +464,37 @@ export class Control {
                 };
               }
             }
+
             const previous = a.inputTail ?? Promise.resolve();
             let release!: () => void;
+
             const released = new Promise<void>(
               (resolve) => (release = resolve),
             );
+
             a.inputTail = previous.then(() => released);
+
             const inputSignal = signal
               ? AbortSignal.any([a.abort.signal, signal])
               : a.abort.signal;
+
             try {
               await waitForInputSlot(previous, inputSignal);
               if (inputSignal.aborted) throw new Error("Input interrupted");
               t.status = "waiting";
+
               t.waiting_reason =
                 tool === "AskUserQuestion"
                   ? "waiting_for_user"
                   : "waiting_for_permission";
+
               t.pending_input = { id: randomUUID(), tool, input };
               this.store.save(t);
+
               this.store.event(t, "agent.input_required", {
                 request: t.pending_input,
               });
+
               return await new Promise((resolve, reject) => {
                 const onAbort = () => {
                   a.resolveInput = undefined;
@@ -444,10 +502,13 @@ export class Control {
                   signal?.removeEventListener("abort", onAbort);
                   reject(new Error("Input interrupted"));
                 };
+
                 a.abort.signal.addEventListener("abort", onAbort, {
                   once: true,
                 });
+
                 signal?.addEventListener("abort", onAbort, { once: true });
+
                 a.resolveInput = (r) => {
                   a.abort.signal.removeEventListener("abort", onAbort);
                   signal?.removeEventListener("abort", onAbort);
@@ -456,9 +517,11 @@ export class Control {
                   delete t.waiting_reason;
                   t.status = "running";
                   this.store.save(t);
+
                   this.store.event(t, "agent.input_submitted", {
                     approved: r.approved,
                   });
+
                   resolve(r);
                 };
               });
@@ -469,10 +532,12 @@ export class Control {
         },
         prompt,
       );
+
       if (a.abort.signal.aborted) throw a.abort.signal.reason;
       t.result = result;
       t.status = "completed";
       t.completed_at = now();
+
       this.store.artifact(
         t,
         "report",
@@ -494,18 +559,22 @@ export class Control {
         delete t.waiting_reason;
       } else if (!["interrupted", "cancelled"].includes(t.status)) {
         t.status = "failed";
+
         t.error =
           t.error ?? (error instanceof Error ? error.message : String(error));
+
         t.completed_at = now();
       }
     } finally {
       clearTimeout(timer);
       t.runtime_ms += Date.now() - begin;
       delete t.run_started_at;
+
       try {
         const diff = terminationUnconfirmed
           ? ""
           : await this.workspaces.diff(t);
+
         if (diff)
           this.store.artifact(
             t,
@@ -519,22 +588,27 @@ export class Control {
       } catch (error) {
         this.store.event(t, "artifact.error", { message: String(error) });
       }
+
       if (a.stopStatus && !terminationUnconfirmed) {
         t.status = a.stopStatus;
         delete t.error;
       }
+
       delete t.pending_input;
       if (!terminationUnconfirmed) delete t.waiting_reason;
       if (t.status === "cancelled") t.completed_at = now();
       this.store.save(t);
+
       this.store.event(t, `task.${t.status}`, {
         summary: t.result?.summary,
         error: t.error,
       });
+
       this.active.delete(t.id);
       if (!this.stopped) queueMicrotask(() => void this.schedule());
     }
   }
+
   async stop(owner: string, id: string, status: "interrupted" | "cancelled") {
     const t = this.store.get(id, owner);
     if (t.waiting_reason === "termination_unconfirmed")
@@ -544,6 +618,7 @@ export class Control {
     if (["completed", "failed", "cancelled"].includes(t.status))
       throw new Error(`Cannot stop ${t.status} task`);
     const a = this.active.get(id);
+
     if (a) {
       // Mark the execution's object through its abort callback, then await durable finalization.
       a.stopStatus = status;
@@ -561,15 +636,19 @@ export class Control {
       delete current.error;
       if (status === "cancelled") current.completed_at = now();
       this.store.save(current);
+
       return current;
     }
+
     t.status = status;
     delete t.waiting_reason;
     this.store.save(t);
     this.store.event(t, `task.${status}`);
     void this.schedule();
+
     return t;
   }
+
   async continue(owner: string, id: string, message = "Continue the task.") {
     const t = this.store.get(id, owner);
     if (t.status !== "interrupted")
@@ -577,12 +656,14 @@ export class Control {
     if (this.active.has(id)) throw new Error("Task is still finalizing");
     this.validateBudgets(t);
     if (this.projects) await this.projects.resolve(t.repository);
+
     if (t.session_id) {
       if (t.session_owner !== this.ownerWorker)
         throw new Error("Session belongs to another worker");
       if (!t.session_state_ref) throw new Error("Session state unavailable");
       if (t.provider === "claude") await access(t.session_state_ref);
     }
+
     if (t.workspace) await access(t.workspace);
     t.status = "queued";
     delete t.error;
@@ -591,8 +672,10 @@ export class Control {
     this.store.save(t);
     this.store.event(t, "task.continued");
     void this.schedule();
+
     return t;
   }
+
   async steer(owner: string, id: string, message: string) {
     let t = this.store.get(id, owner);
     if (t.waiting_reason === "termination_unconfirmed")
@@ -601,18 +684,22 @@ export class Control {
       );
     if (["completed", "failed", "cancelled"].includes(t.status))
       throw new Error("Cannot steer a terminal task");
+
     if (this.active.has(id)) {
       await this.stop(owner, id, "interrupted");
       t = this.store.get(id, owner);
     }
+
     t.instructions.push(message);
     this.store.save(t);
     this.store.event(t, "task.instruction", { message });
     if (t.status === "interrupted")
       return this.continue(owner, id, "Follow the latest instruction.");
     void this.schedule();
+
     return t;
   }
+
   input(
     owner: string,
     id: string,
@@ -637,18 +724,23 @@ export class Control {
       );
     const a = this.active.get(id);
     if (!a?.resolveInput) throw new Error("No active input request");
+
     this.store.event(t, "agent.input_decision", {
       request_id: requestId,
       approved,
       authority,
     });
+
     a.resolveInput({ approved, input, message });
+
     return this.store.get(id, owner);
   }
+
   async retry(owner: string, id: string) {
     const t = this.store.get(id, owner);
     if (!["failed", "cancelled"].includes(t.status))
       throw new Error("Retry requires failed or cancelled task");
+
     return this.start(owner, {
       ...t,
       parent_task_id: t.id,
@@ -658,23 +750,30 @@ export class Control {
       ],
     });
   }
+
   async close() {
     this.stopped = true;
+
     const tasks = await Promise.allSettled(
       [...this.active.keys()].map((id) => {
         const t = this.store.all().find((t) => t.id === id)!;
+
         return ["completed", "failed", "cancelled"].includes(t.status)
           ? this.active.get(id)!.done
           : this.stop(t.owner, id, "interrupted");
       }),
     );
+
     const providers = await Promise.allSettled(
       [...this.providers.values()].map((provider) => provider.close?.()),
     );
+
     this.store.close();
+
     const errors = [...tasks, ...providers].flatMap((result) =>
       result.status === "rejected" ? [result.reason] : [],
     );
+
     if (errors.length)
       throw new AggregateError(errors, "Worker shutdown incomplete");
   }

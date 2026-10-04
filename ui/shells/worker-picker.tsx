@@ -1,9 +1,11 @@
 import { useController, useSnapshot } from "../components/controller-context";
 import { profileLabel } from "../core/selectors";
 import { SelectField } from "../components/select-field";
+
 export function WorkerPicker() {
   const controller = useController(),
     state = useSnapshot();
+
   return (
     <>
       <label htmlFor="worker-view">Worker</label>

@@ -23,6 +23,7 @@ interface RawResponseProps {
 
 function RawResponse({ event, defaultOpen }: RawResponseProps) {
   const [open, setOpen] = useState(defaultOpen ?? false);
+
   return (
     <details
       className="activity-raw"
@@ -47,8 +48,10 @@ export function EventBody({ event }: { event: Event }) {
     return <ActivityValue value={data.input} />;
   if (event.type === "tool.completed")
     return <ActivityContent content={data.content ?? data.text} />;
+
   if (event.type === "claude.activity" && data.type === "stream_event") {
     const stream = record(data.event);
+
     return (
       <>
         <p className="muted">{label(String(stream.type ?? "Streaming"))}</p>
@@ -66,6 +69,7 @@ export function EventBody({ event }: { event: Event }) {
       </>
     );
   }
+
   if (
     event.type === "claude.activity" &&
     (data.type === "assistant" || data.type === "user")
@@ -76,6 +80,7 @@ export function EventBody({ event }: { event: Event }) {
         {data.error != null && <p className="error">{String(data.error)}</p>}
       </>
     );
+
   const proseKeys = [
     "text",
     "summary",
@@ -84,7 +89,9 @@ export function EventBody({ event }: { event: Event }) {
     "result",
     "content",
   ];
+
   const prose = proseKeys.filter((key) => typeof data[key] === "string");
+
   return (
     <>
       {prose.map((key) => (
@@ -113,6 +120,7 @@ interface EventCardProps {
 
 function EventCard({ event, toolName, rawOnly, expandRaw }: EventCardProps) {
   const failed = activityFailed(event);
+
   return (
     <article className={`event${failed ? " activity-error" : ""}`}>
       <ActivityTime timestamp={event.timestamp} />
@@ -143,6 +151,7 @@ export function EventDetails({
       .filter((event) => event.type === "tool.started")
       .map((event) => [event.data.id, String(event.data.name ?? "Tool")]),
   );
+
   return (
     <>
       {events.length === EVENT_TAIL_SIZE && (

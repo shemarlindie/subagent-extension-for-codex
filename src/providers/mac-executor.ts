@@ -13,6 +13,7 @@ import {
 } from "./process-groups.js";
 
 const quote = (value: string) => JSON.stringify(value);
+
 export function macExecutorProfile(options: {
   workspace: string;
   runtime: string;
@@ -28,6 +29,7 @@ export function macExecutorProfile(options: {
       options.proxyPort > 65535)
   )
     throw new Error("Invalid executor proxy port");
+
   const reads = [
     "/usr",
     "/bin",
@@ -41,6 +43,7 @@ export function macExecutorProfile(options: {
     options.runtime,
     options.gitDirectory,
   ];
+
   return `(version 1)
 (deny default)
 (allow process-exec)
@@ -63,6 +66,7 @@ export function executorEnvironment(
   executableDirectory?: string,
 ): NodeJS.ProcessEnv {
   if (!key) throw new Error("A restricted executor key is required");
+
   return {
     PATH: [executableDirectory, "/usr/bin", "/bin", "/usr/sbin", "/sbin"]
       .filter(Boolean)
@@ -80,10 +84,12 @@ export function executorEnvironment(
       : {}),
   };
 }
+
 export interface ExecutorHandle {
   stop(): Promise<void>;
   exited: Promise<{ code: number | null; signal: NodeJS.Signals | null }>;
 }
+
 /** macOS OS sandbox applies to the native executor and all descendants. */
 export class MacExecutor {
   constructor(
@@ -94,19 +100,23 @@ export class MacExecutor {
   ) {
     if (!key) throw new Error("A restricted executor key is required");
   }
+
   async recover(task: Task) {
     const record = this.journal.read(task);
     if (!record || record.phase === "stopped") return;
     if (process.platform !== "darwin")
       throw new Error("Native executor recovery requires macOS");
+
     if (record.phase === "starting" && !record.pid) {
       const identified = await identifyLaunch(record.launch_id);
       const { pid, ...identity } = identified;
       this.journal.running(task, record.launch_id, pid, identity);
     }
+
     await stopRecordedGroup(this.journal.read(task)!);
     this.journal.stopped(task, record.launch_id);
   }
+
   async start(task: Task, ref: CodexSessionRef): Promise<ExecutorHandle> {
     if (process.platform !== "darwin")
       throw new Error("This executor requires macOS sandbox-exec");
@@ -126,12 +136,14 @@ export class MacExecutor {
     const executable = await realpath(this.executable);
     await mkdir(this.runtimeRoot, { recursive: true, mode: 0o700 });
     const runtimeBase = await realpath(this.runtimeRoot);
+
     const gitDirectory = await realpath(
       resolve(
         workspace,
         (await git(workspace, ["rev-parse", "--git-common-dir"])).trim(),
       ),
     );
+
     for (const protectedRoot of [workspace, gitDirectory]) {
       const delta = relative(protectedRoot, join(runtimeBase, task.id));
       if (
@@ -142,16 +154,19 @@ export class MacExecutor {
           "Executor runtime must be outside the worktree and Git metadata",
         );
     }
+
     const reservation = this.journal.reserve(task, ref);
     let cleanup: ExecutorHandle | undefined;
     let cleanupProxy: Awaited<ReturnType<typeof executorProxy>> | undefined;
     let launchedPID: number | undefined;
+
     try {
       const runtime = join(runtimeBase, task.id, reservation.launch_id);
       await mkdir(join(runtime, "tmp"), { recursive: true, mode: 0o700 });
       await mkdir(join(runtime, "logs"), { recursive: true, mode: 0o700 });
       const proxy = await executorProxy();
       cleanupProxy = proxy;
+
       const profile = macExecutorProfile({
         workspace,
         runtime,
@@ -162,6 +177,7 @@ export class MacExecutor {
         ),
         proxyPort: proxy.port,
       });
+
       const child = spawn(
         "/usr/bin/sandbox-exec",
         [
@@ -189,18 +205,22 @@ export class MacExecutor {
           stdio: ["pipe", "ignore", "ignore"],
         },
       );
+
       const handle = managedProcess(child);
       cleanup = handle;
       launchedPID = child.pid;
+
       if (child.pid) {
         const identified = await identifyLaunch(
           reservation.launch_id,
           undefined,
           child.pid,
         );
+
         const { pid: _pid, ...identity } = identified;
         this.journal.running(task, reservation.launch_id, child.pid, identity);
       }
+
       void handle.exited
         .finally(() => {
           try {
@@ -210,16 +230,19 @@ export class MacExecutor {
           }
         })
         .catch(() => {});
+
       return {
         exited: handle.exited,
         stop: async () => {
           try {
             await handle.stop();
+
             if (child.pid && !(await waitForGroupExit(child.pid))) {
               throw new Error(
                 "Executor process group remains alive after shutdown",
               );
             }
+
             this.journal.stopped(task, reservation.launch_id);
           } finally {
             await proxy.stop();
@@ -242,6 +265,7 @@ export class MacExecutor {
       } finally {
         await cleanupProxy?.stop();
       }
+
       throw error;
     }
   }
@@ -249,6 +273,7 @@ export class MacExecutor {
 
 export function managedProcess(child: ChildProcess): ExecutorHandle {
   let finished = false;
+
   const exited = new Promise<{
     code: number | null;
     signal: NodeJS.Signals | null;
@@ -257,33 +282,42 @@ export function managedProcess(child: ChildProcess): ExecutorHandle {
       finished = true;
       reject(error);
     });
+
     child.once("close", (code, signal) => {
       finished = true;
       resolve({ code, signal });
     });
   });
+
   // Start errors must remain observable even if the caller is still awaiting API events.
   void exited.catch(() => {});
   let stopping: Promise<void> | undefined;
+
   return {
     exited,
     stop() {
       return (stopping ??= (async () => {
         if (finished) {
           await exited;
+
           return;
         }
+
         child.stdin?.end();
+
         const signal = (value: NodeJS.Signals) => {
           if (finished || !child.pid) return;
+
           try {
             process.kill(-child.pid, value);
           } catch (error) {
             if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
           }
         };
+
         signal("SIGTERM");
         const timer = setTimeout(() => signal("SIGKILL"), 2000);
+
         try {
           await exited;
         } finally {

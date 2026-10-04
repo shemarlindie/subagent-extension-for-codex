@@ -6,6 +6,7 @@ export interface ExecutorStarter {
   start(task: Task, ref: CodexSessionRef): Promise<ExecutorHandle>;
   recover?(task: Task): Promise<void>;
 }
+
 interface Entry {
   identity: string;
   ready: Promise<ExecutorHandle>;
@@ -37,8 +38,10 @@ export class CodexExecutors {
     if (this.writers.has(task.id))
       throw new Error("This task already has an active Codex turn");
     this.writers.add(task.id);
+
     try {
       const lease = await this.acquire(task, ref);
+
       try {
         return await work({ exited: lease.exited });
       } finally {
@@ -54,6 +57,7 @@ export class CodexExecutors {
       throw new Error(
         "Persist the task session and workspace before executor startup",
       );
+
     return JSON.stringify([
       task.owner,
       task.workspace,
@@ -73,9 +77,11 @@ export class CodexExecutors {
       throw new Error("Executor identity changed for this task");
     if (entry?.stopping || entry?.exited)
       throw new Error("Executor is stopping or has exited");
+
     if (!entry) {
       const snapshot = structuredClone(task);
       const session = structuredClone(ref);
+
       entry = {
         identity,
         leases: 0,
@@ -84,8 +90,10 @@ export class CodexExecutors {
           this.starter.start(snapshot, session),
         ),
       };
+
       this.entries.set(task.id, entry);
       const current = entry;
+
       void current.ready
         .then((handle) => handle.exited)
         .then(
@@ -93,9 +101,11 @@ export class CodexExecutors {
           () => this.exited(task.id, current),
         );
     }
+
     const current = entry;
     current.leases++;
     let released = false;
+
     const release = () => {
       if (released) return;
       released = true;
@@ -107,10 +117,12 @@ export class CodexExecutors {
       )
         this.entries.delete(task.id);
     };
+
     try {
       const handle = await current.ready;
       if (this.closing || current.stopping || current.exited)
         throw new Error("Executor became unavailable during startup");
+
       return { exited: handle.exited, release };
     } catch (error) {
       release();
@@ -149,9 +161,11 @@ export class CodexExecutors {
       const outcomes = await Promise.allSettled(
         [...this.entries].map(([id, entry]) => this.stopEntry(id, entry)),
       );
+
       const errors = outcomes.flatMap((result) =>
         result.status === "rejected" ? [result.reason] : [],
       );
+
       if (errors.length)
         throw new AggregateError(errors, "Executor shutdown incomplete");
     }));

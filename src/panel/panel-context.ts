@@ -16,6 +16,7 @@ export const panelContextInput = z.object({
       "Optional local file URI directory hint. Validated against registered Git roots; never an access grant.",
     ),
 });
+
 export type PanelContextInput = z.infer<typeof panelContextInput>;
 
 export function taskPanelContext(task: Task) {
@@ -43,15 +44,19 @@ export async function resolvePanelContext(
     target.conversation_id !== args.conversation_id
   )
     throw new Error("Task belongs to a different conversation");
+
   const conversationId =
     args.conversation_id === null
       ? null
       : (args.conversation_id ?? target?.conversation_id ?? null);
+
   const latest = conversationId
     ? c.store.all(owner).find((t) => t.conversation_id === conversationId)
     : undefined;
+
   const source = target ?? latest;
   let repository = args.repository ?? source?.repository;
+
   if (repository) {
     try {
       repository = c.projects
@@ -63,14 +68,17 @@ export async function resolvePanelContext(
       repository = undefined;
     }
   }
+
   if (target && repository !== target.repository)
     throw new Error("Task belongs to a different repository");
   if (target && args.revision && args.revision !== target.revision)
     throw new Error("Task uses a different revision");
+
   const candidate =
     !args.repository && !target && args.conversation_id !== null
       ? await hostProjectCandidate(args.host_directory)
       : undefined;
+
   return {
     ...(candidate && candidate !== repository
       ? {

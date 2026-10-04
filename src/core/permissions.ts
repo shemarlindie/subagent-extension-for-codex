@@ -8,12 +8,16 @@ export const claudePermissionModes = [
   "auto",
   "bypassPermissions",
 ] as const;
+
 export type ClaudePermissionMode = (typeof claudePermissionModes)[number];
+
 export const permissionModeSchema = z.enum([
   "inherit",
   ...claudePermissionModes,
 ]);
+
 export const approvalDeciderSchema = z.enum(["user", "parent_agent"]);
+
 // Optional restrictions on delegated Claude sessions. "profile" applies the
 // worker profile's bundle: read-only profiles restrict, write profiles don't.
 export const claudeSandboxSchema = z.enum([
@@ -21,9 +25,11 @@ export const claudeSandboxSchema = z.enum([
   "extension",
   "extension_locked",
 ]);
+
 export const claudeEnvironmentSchema = z.enum(["inherit", "filtered"]);
 export const claudeToolsSchema = z.enum(["profile", "all", "restricted"]);
 export const claudePathGuardSchema = z.enum(["profile", "on", "off"]);
+
 export const claudeOverridesSchema = z.object({
   claude_sandbox: claudeSandboxSchema,
   claude_environment: claudeEnvironmentSchema,
@@ -31,7 +37,9 @@ export const claudeOverridesSchema = z.object({
   claude_path_guard: claudePathGuardSchema,
   claude_subagents: z.boolean(),
 });
+
 export type ClaudeOverrides = z.infer<typeof claudeOverridesSchema>;
+
 // Delegated sessions behave like the user's own Claude Code CLI by default.
 export const claudeOverrideDefaults: ClaudeOverrides = {
   claude_sandbox: "user_config",
@@ -40,6 +48,7 @@ export const claudeOverrideDefaults: ClaudeOverrides = {
   claude_path_guard: "profile",
   claude_subagents: true,
 };
+
 export const claudeOverrideLabels: Record<string, Record<string, string>> = {
   claude_sandbox: {
     user_config: "Your Claude Code settings",
@@ -61,6 +70,7 @@ export const claudeOverrideLabels: Record<string, Record<string, string>> = {
     off: "Off",
   },
 };
+
 // Persisted tasks can predate the separate decision-maker field.
 export function approvalDecider(task: {
   approval_decider?: z.infer<typeof approvalDeciderSchema>;
@@ -71,6 +81,7 @@ export function approvalDecider(task: {
     (task.approval_mode === "parent_agent" ? "parent_agent" : "user")
   );
 }
+
 export const permissionLabels = {
   inherit: "Your Claude Code settings",
   default: "Default — ask for approval",
@@ -80,6 +91,7 @@ export const permissionLabels = {
   auto: "Auto — SDK approval classifier",
   bypassPermissions: "Bypass permission prompts",
 } as const;
+
 export const permissionRank: Record<ClaudePermissionMode, number> = {
   plan: 0,
   dontAsk: 1,
@@ -88,8 +100,10 @@ export const permissionRank: Record<ClaudePermissionMode, number> = {
   auto: 4,
   bypassPermissions: 5,
 };
+
 export const readOnlyProfile = (role: string) =>
   ["researcher", "reviewer", "security_reviewer"].includes(role);
+
 export function legacyClaudeMode(
   mode?: string,
 ): ClaudePermissionMode | undefined {
@@ -103,6 +117,7 @@ export function legacyClaudeMode(
       return "dontAsk";
   }
 }
+
 export function resolveClaudePermission(
   input: {
     permission_mode?: z.infer<typeof permissionModeSchema>;
@@ -117,8 +132,10 @@ export function resolveClaudePermission(
   // Review profiles stay read-only unless a task or setting chooses a mode.
   if (readOnlyProfile(input.worker_profile))
     return { mode: "plan" as const, source: "task_profile" as const };
+
   return { mode: "inherit" as const, source: "user_config" as const };
 }
+
 /** Whether a model-selected mode could allow more than the user-approved baseline. "inherit" defers to Claude Code settings, so its authority is unknown. */
 export function exceedsPermission(
   requested: z.infer<typeof permissionModeSchema>,
@@ -129,8 +146,10 @@ export function exceedsPermission(
   // Under unknown settings, only modes that never approve beyond settings rules are safe.
   if (baseline === "inherit")
     return permissionRank[requested] > permissionRank.dontAsk;
+
   return permissionRank[requested] > permissionRank[baseline];
 }
+
 /** The native mode a stored task runs with; undefined leaves it to the user's Claude Code settings. */
 export function taskClaudeMode(task: {
   permission_mode?: z.infer<typeof permissionModeSchema>;
@@ -139,12 +158,14 @@ export function taskClaudeMode(task: {
 }): ClaudePermissionMode | undefined {
   if (task.permission_mode && task.permission_mode !== "inherit")
     return task.permission_mode;
+
   // Tasks stored before native modes keep their legacy policy.
   return (
     legacyClaudeMode(task.approval_mode) ??
     (readOnlyProfile(task.worker_profile) ? "plan" : undefined)
   );
 }
+
 export const claudePolicySchema = z.object({
   sandbox: claudeSandboxSchema,
   environment: claudeEnvironmentSchema,
@@ -152,13 +173,16 @@ export const claudePolicySchema = z.object({
   path_guard: z.boolean(),
   subagents: z.boolean(),
 });
+
 export type ClaudePolicy = z.infer<typeof claudePolicySchema>;
+
 /** Settings choose each restriction; "profile" restricts read-only profiles only. */
 export function resolveClaudePolicy(
   overrides: ClaudeOverrides,
   workerProfile: string,
 ): ClaudePolicy {
   const readOnly = readOnlyProfile(workerProfile);
+
   return {
     sandbox: overrides.claude_sandbox,
     environment: overrides.claude_environment,

@@ -3,13 +3,16 @@ import { terminal, locked } from "../core/selectors";
 import { Fragment, type ReactNode } from "react";
 import { useController, useSnapshot } from "./controller-context";
 import { Button } from "./button";
+
 export function TaskActions({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
     capabilities = state.workers.find(
       (worker) => worker.provider === task.provider,
     )?.capabilities;
+
   const controls = !terminal(task) && !locked(task);
+
   const actions = [
     ...(controls
       ? [
@@ -27,6 +30,7 @@ export function TaskActions({ task }: { task: Task }) {
       ? ["retry"]
       : []),
   ];
+
   const labels: Record<string, string> = {
     steer: "Steer",
     interrupt: "Interrupt",
@@ -34,6 +38,7 @@ export function TaskActions({ task }: { task: Task }) {
     cancel: "Cancel task",
     retry: "New attempt",
   };
+
   // Keyed so the dot separators can be interleaved between buttons below.
   const buttons: [key: string, button: ReactNode][] = actions.map((action) => [
     action,
@@ -47,6 +52,7 @@ export function TaskActions({ task }: { task: Task }) {
       {labels[action]}
     </Button>,
   ]);
+
   if (state.mode === "console") {
     buttons.push([
       "workspace",
@@ -60,6 +66,7 @@ export function TaskActions({ task }: { task: Task }) {
       </Button>,
     ]);
   }
+
   buttons.push([
     "handoff",
     <Button
@@ -76,6 +83,7 @@ export function TaskActions({ task }: { task: Task }) {
           : "Prepare handoff"}
     </Button>,
   ]);
+
   return (
     <div className="actions">
       {buttons.map(([key, button], index) => (

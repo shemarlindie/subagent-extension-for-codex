@@ -11,6 +11,7 @@ import {
   type NoticeTone,
 } from "./notice";
 import { QuestionForm } from "../forms/question-form";
+
 export function TaskNotices({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
@@ -19,6 +20,7 @@ export function TaskNotices({ task }: { task: Task }) {
     error = !isLocked ? task.error : undefined,
     questions =
       pending?.tool === "AskUserQuestion" ? pendingQuestions(task) : undefined;
+
   // Notices fold in and out so the evidence below slides instead of jumping.
   return (
     <>
@@ -60,6 +62,7 @@ function QuestionNotice({ task }: { task: Task }) {
   const controller = useController(),
     questions = pendingQuestions(task),
     request = task.pending_input?.id;
+
   return (
     <CollapsibleNotice
       title={

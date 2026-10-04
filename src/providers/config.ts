@@ -26,6 +26,7 @@ export function configuredProviders(
     providers.set("claude", new ClaudeAgentProvider());
   if (env.CODEX_SUBAGENT_EXTENSION_FIXTURE === "1" || mode === "fixture")
     providers.set("fixture", new FixtureProvider());
+
   if (
     mode !== "fixture" &&
     (env.CODEX_SUBAGENT_EXTENSION_CODEX === "1" || mode === "codex")
@@ -48,10 +49,12 @@ export function configuredProviders(
       throw new Error(
         "The application key must not be reused as the executor key",
       );
+
     const sessions = new CodexSessions(
       new OpenAI({ apiKey: env.OPENAI_API_KEY }),
       model,
     );
+
     const executors = new CodexExecutors(
       new MacExecutor(
         executable,
@@ -60,7 +63,9 @@ export function configuredProviders(
         new ExecutorJournal(store),
       ),
     );
+
     providers.set("codex", new CodexAgentProvider(sessions, executors));
   }
+
   return providers;
 }

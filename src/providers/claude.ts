@@ -32,12 +32,14 @@ import {
 } from "../core/model.js";
 import { z } from "zod";
 import { git } from "../core/workspace.js";
+
 // The extension's own credentials never reach delegated sessions. Claude
 // credentials come from the user's configuration, not a subscription token.
 const privateVariable = (name: string) =>
   name.startsWith("CODEX_SUBAGENT_EXTENSION_") ||
   name.startsWith("OPENAI_") ||
   name === "CLAUDE_CODE_OAUTH_TOKEN";
+
 /** The service environment for the native harness, or only Claude authentication and basic process settings when filtered. */
 export function claudeEnvironment(
   source: NodeJS.ProcessEnv,
@@ -49,6 +51,7 @@ export function claudeEnvironment(
         ([name, value]) => value !== undefined && !privateVariable(name),
       ),
     );
+
   const allowed = [
     "PATH",
     "HOME",
@@ -63,23 +66,27 @@ export function claudeEnvironment(
     "ANTHROPIC_API_KEY",
     "ANTHROPIC_AUTH_TOKEN",
   ];
+
   return Object.fromEntries(
     allowed.flatMap((name) =>
       source[name] === undefined ? [] : [[name, source[name]]],
     ),
   );
 }
+
 /** Native Bash restrictions; the model/API harness itself is outside this sandbox. */
 export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
   if (!task.workspace) throw new Error("Task workspace unavailable");
   const workspace = await realpath(task.workspace);
   const repository = await realpath(task.repository);
+
   const gitDirectory = await realpath(
     resolve(
       workspace,
       (await git(workspace, ["rev-parse", "--git-common-dir"])).trim(),
     ),
   );
+
   return {
     enabled: true,
     failIfUnavailable: true,
@@ -109,6 +116,7 @@ export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
     },
   };
 }
+
 const output = z.strictObject({
   summary: z.string(),
   findings: z.array(z.string()),
@@ -117,16 +125,20 @@ const output = z.strictObject({
   tests: z.array(z.string()),
   recommendations: z.array(z.string()),
 });
+
 const readTools = ["Read", "Glob", "Grep"];
 const writeTools = ["Edit", "Write"];
 /** File tools whose target the path guard checks. */
 const pathTools = [...readTools, ...writeTools, "NotebookEdit"];
+
 const toolPath = (input: Record<string, unknown>, workspace: string) =>
   String(input.file_path ?? input.notebook_path ?? input.path ?? workspace);
+
 /** Whether a path stays inside the workspace and out of Git metadata, following symlinks. */
 async function inWorkspace(workspace: string, path: string) {
   const target = resolve(workspace, path);
   let actual: string;
+
   try {
     actual = await realpath(target);
   } catch {
@@ -137,7 +149,9 @@ async function inWorkspace(workspace: string, path: string) {
       return false;
     }
   }
+
   const rel = relative(await realpath(workspace), actual);
+
   return !(
     rel.startsWith("..") ||
     isAbsolute(rel) ||
@@ -145,12 +159,15 @@ async function inWorkspace(workspace: string, path: string) {
     rel.startsWith(".git/")
   );
 }
+
 /** Tools without workspace paths that run after approval; entries ending in `*` match by prefix. */
 const approvalTools = ["Bash", "Skill", "mcp__*"];
+
 const approvalTool = (tool: string) =>
   approvalTools.some((entry) =>
     entry.endsWith("*") ? tool.startsWith(entry.slice(0, -1)) : tool === entry,
   );
+
 export class ClaudeAgentProvider implements Provider {
   id = "claude";
   capabilities = {
@@ -167,6 +184,7 @@ export class ClaudeAgentProvider implements Provider {
     parallel_subagents: true,
     dynamic_subagents: false,
   };
+
   private catalog?: { expires: number; models: ModelChoice[] };
   private catalogRequest?: Promise<ModelChoice[]>;
   private catalogFailure?: { expires: number; error: unknown };
@@ -179,24 +197,30 @@ export class ClaudeAgentProvider implements Provider {
       return Promise.reject(this.catalogFailure.error);
     const request = this.discoverModels();
     this.catalogRequest = request;
+
     void request
       .finally(() => {
         this.catalogRequest = undefined;
       })
       .catch(() => {});
+
     return request;
   }
+
   private async discoverModels(): Promise<ModelChoice[]> {
     const abortController = new AbortController();
     let release!: () => void;
+
     const pending = new Promise<void>((resolve) => {
       release = resolve;
     });
+
     // Initialize the native harness without submitting a user turn or granting tools.
     // eslint-disable-next-line require-yield -- an open prompt stream that never sends a turn
     const prompt = (async function* (): AsyncGenerator<SDKUserMessage> {
       await pending;
     })();
+
     const session = this.launch({
       prompt,
       options: {
@@ -220,7 +244,9 @@ export class ClaudeAgentProvider implements Provider {
         }),
       },
     });
+
     let timer: ReturnType<typeof setTimeout> | undefined;
+
     try {
       const timeout = new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
@@ -228,9 +254,11 @@ export class ClaudeAgentProvider implements Provider {
           reject(new Error("Claude model discovery timed out"));
         }, 10000);
       });
+
       const models = await Promise.race([session.supportedModels(), timeout]);
       this.catalog = { models, expires: Date.now() + 5 * 60 * 1000 };
       this.catalogFailure = undefined;
+
       return models;
     } catch (error) {
       // Polling must not repeatedly launch a failing harness.
@@ -242,11 +270,13 @@ export class ClaudeAgentProvider implements Provider {
       session.close();
     }
   }
+
   async run(c: RunContext, prompt: string): Promise<Result> {
     // Tasks created before session restrictions were configurable use the defaults.
     const policy =
       c.task.claude_policy ??
       resolveClaudePolicy(claudeOverrideDefaults, c.task.worker_profile);
+
     const workspace = c.task.workspace!;
     const abortController = new AbortController();
     const abort = () => abortController.abort();
@@ -255,11 +285,14 @@ export class ClaudeAgentProvider implements Provider {
     // Without a mode, the user's Claude Code settings choose it.
     const nativeMode = taskClaudeMode(c.task);
     const restricted = policy.tools === "restricted";
+
     const readOnly =
       restricted &&
       (readOnlyProfile(c.task.worker_profile) || nativeMode === "plan");
+
     const guarded = (tool: string) =>
       policy.path_guard && pathTools.includes(tool);
+
     // The restricted set offers file, search, approval-routed and question tools only.
     const restrictedDenial = (tool: string) =>
       !restricted ||
@@ -272,6 +305,7 @@ export class ClaudeAgentProvider implements Provider {
           : approvalTool(tool) || writeTools.includes(tool)
             ? undefined
             : "Tool not permitted";
+
     const sandbox =
       policy.sandbox === "user_config"
         ? {}
@@ -286,6 +320,7 @@ export class ClaudeAgentProvider implements Provider {
                 }
               : {}),
           };
+
     const options: Options = {
       cwd: workspace,
       ...(c.task.model ? { model: c.task.model } : {}),
@@ -331,6 +366,7 @@ export class ClaudeAgentProvider implements Provider {
                 if (input.hook_event_name !== "PreToolUse") return {};
                 const tool = input.tool_name;
                 const params = input.tool_input as Record<string, unknown>;
+
                 const deny = (reason: string) => ({
                   hookSpecificOutput: {
                     hookEventName: "PreToolUse" as const,
@@ -338,6 +374,7 @@ export class ClaudeAgentProvider implements Provider {
                     permissionDecisionReason: reason,
                   },
                 });
+
                 if (tool === "StructuredOutput")
                   return output.strict().safeParse(params).success
                     ? {}
@@ -351,6 +388,7 @@ export class ClaudeAgentProvider implements Provider {
                   !(await inWorkspace(workspace, toolPath(params, workspace)))
                 )
                   return deny("Path outside task workspace or Git metadata");
+
                 return {};
               },
             ],
@@ -362,14 +400,18 @@ export class ClaudeAgentProvider implements Provider {
           return output.strict().safeParse(input).success
             ? { behavior: "allow", updatedInput: input }
             : { behavior: "deny", message: "Invalid structured report" };
+
         if (tool === "AskUserQuestion") {
           const answer = await c.input(tool, input, signal);
+
           return answer.approved
             ? { behavior: "allow", updatedInput: { ...input, ...answer.input } }
             : { behavior: "deny", message: answer.message ?? "User declined" };
         }
+
         const denial = restrictedDenial(tool);
         if (denial) return { behavior: "deny", message: denial };
+
         if (guarded(tool)) {
           if (!(await inWorkspace(workspace, toolPath(input, workspace))))
             return { behavior: "deny", message: "Path outside task workspace" };
@@ -377,8 +419,10 @@ export class ClaudeAgentProvider implements Provider {
           if (readTools.includes(tool))
             return { behavior: "allow", updatedInput: input };
         }
+
         // Calls not already approved by settings or the permission mode ask the task's approver.
         const answer = await c.input(tool, input, signal);
+
         return answer.approved
           ? { behavior: "allow", updatedInput: input }
           : {
@@ -393,20 +437,25 @@ export class ClaudeAgentProvider implements Provider {
             };
       },
     };
+
     const stream = this.launch({ prompt, options });
     let result: Result | undefined;
+
     try {
       for await (const m of stream) {
         if ("session_id" in m && m.session_id) {
           const ref = await this.sessionPath(m.session_id, c.task.workspace!);
           c.session(m.session_id, ref);
         }
+
         this.normalize(c, m);
+
         if (m.type === "result") {
           if (m.subtype !== "success" || m.is_error)
             throw new Error(
               `Claude result: ${m.subtype}${"errors" in m ? ": " + m.errors.join("; ") : ""}`,
             );
+
           result = m.structured_output
             ? output.parse(m.structured_output)
             : {
@@ -419,36 +468,46 @@ export class ClaudeAgentProvider implements Provider {
               };
         }
       }
+
       if (!result) throw new Error("Claude ended without a result");
+
       return result;
     } finally {
       c.signal.removeEventListener("abort", abort);
       stream.close();
     }
   }
+
   async sessionPath(id: string, workspace: string) {
     const root = join(
       process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"),
       "projects",
     );
+
     try {
       for (const d of await readdir(root)) {
         const p = join(root, d, `${id}.jsonl`);
+
         try {
           await access(p);
+
           return p;
         } catch {}
       }
     } catch {}
+
     return join(root, workspace.replace(/[^a-zA-Z0-9]/g, "-"), `${id}.jsonl`);
   }
+
   normalize(c: RunContext, m: SDKMessage) {
     // Keep the complete wire response on every derived activity, including
     // unknown SDK variants, so normalization never discards diagnostic context.
     const emit = (type: string, data: Record<string, unknown>) =>
       c.emit(type, { ...data, raw_response: m });
+
     if (m.type === "assistant" || m.type === "user") {
       const content = m.message.content;
+
       if (typeof content === "string") {
         emit(m.type === "assistant" ? "agent.message" : "agent.content", {
           role: m.type,
@@ -473,6 +532,7 @@ export class ClaudeAgentProvider implements Provider {
             });
           else emit("agent.content", { role: m.type, content: b });
         }
+
         if (!content.length || ("error" in m && m.error))
           emit("claude.activity", { ...m });
       }

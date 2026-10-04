@@ -8,6 +8,7 @@ export const MOTION = {
 
 export function reducedMotion(element?: Element | null) {
   const view = element?.ownerDocument.defaultView ?? window;
+
   return view.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 

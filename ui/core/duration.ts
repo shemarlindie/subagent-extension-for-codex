@@ -6,8 +6,10 @@ export function formatDuration(ms: number) {
     hours = Math.floor(total / 3600),
     minutes = Math.floor((total % 3600) / 60),
     seconds = total % 60;
+
   if (hours) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
   if (minutes) return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+
   return `${seconds}s`;
 }
 
@@ -24,6 +26,7 @@ export function taskRuntimeMs(task: Task, now: number) {
     return task.runtime_ms;
   const end = waiting ? Date.parse(task.updated_at) : now;
   if (!Number.isFinite(end)) return task.runtime_ms;
+
   return (
     task.runtime_ms + Math.max(0, end - new Date(task.run_started_at).getTime())
   );

@@ -3,15 +3,20 @@ import { MotionContent } from "./motion";
 import { useController, useSnapshot } from "./controller-context";
 import { SelectField } from "./select-field";
 import { Button } from "./button";
+
 export function ProjectScope() {
   const controller = useController(),
     state = useSnapshot();
+
   const choice = projectChoices(state).find(
     (project) => project.repository === state.repository,
   );
+
   const projectName =
     choice?.name ?? state.repository?.split("/").at(-1) ?? "All projects";
+
   const disabled = !state.connected || !state.scopeKnown || state.busy;
+
   return (
     <div className="context-bar" aria-label="Project context">
       {state.conversation ? (

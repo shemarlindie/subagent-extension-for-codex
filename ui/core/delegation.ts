@@ -1,11 +1,13 @@
 import type { Defaults, DialogState, Project, Snapshot } from "./types";
 import { selectedTask } from "./selectors";
+
 /** Registered projects plus the chat's project when starting a task may add it. */
 export function taskProjects(state: Snapshot, projects = state.projects) {
   const candidate =
     state.mode === "panel" && state.projectCandidateAuto
       ? state.projectCandidate
       : undefined;
+
   return candidate &&
     !projects.some((project) => project.repository === candidate)
     ? [
@@ -14,6 +16,7 @@ export function taskProjects(state: Snapshot, projects = state.projects) {
       ]
     : projects;
 }
+
 /** Resolve defaults without treating an automatically highlighted task as project intent. */
 export function delegationDialog(
   state: Snapshot,
@@ -37,6 +40,7 @@ export function delegationDialog(
       "No workers are available. Check service configuration in Codex.",
     );
   const task = explicitSelection ? selectedTask(state) : undefined;
+
   return {
     kind: "delegate",
     defaults,

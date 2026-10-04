@@ -32,6 +32,7 @@ function modelField(
       ? [{ provider: worker.provider, models: worker.models }]
       : [],
   );
+
   const saved = typeof requested === "string" ? requested.trim() : "";
   if (!catalogs.length)
     return {
@@ -44,9 +45,11 @@ function modelField(
     };
   // Name the provider whenever a choice could be paired with another worker.
   const prefix = workers.length > 1;
+
   const uncataloged = workers
     .filter((worker) => !catalogs.some((c) => c.provider === worker.provider))
     .map((worker) => worker.provider);
+
   const choices = [
     { const: "", title: "Use configured default" },
     ...catalogs.flatMap(({ provider, models }) =>
@@ -64,9 +67,11 @@ function modelField(
     (choice, index, all) =>
       all.findIndex((other) => other.const === choice.const) === index,
   );
+
   // Keep a requested custom ID selectable even when the catalog omits it.
   if (saved && !choices.some((choice) => choice.const === saved))
     choices.push({ const: saved, title: `${saved} (custom)` });
+
   return {
     type: "string",
     title: "Model",
@@ -82,6 +87,7 @@ function modelField(
     default: saved,
   };
 }
+
 interface Request {
   kind: Kind;
   args: Record<string, unknown>;
@@ -94,6 +100,7 @@ interface Request {
   answer?: string;
   result?: CallToolResult;
 }
+
 const canonical = (v: unknown): string =>
   JSON.stringify(v, (_k, value) =>
     value && typeof value === "object" && !Array.isArray(value)
@@ -102,11 +109,14 @@ const canonical = (v: unknown): string =>
         )
       : value,
   );
+
 const hash = (v: string) => createHash("sha256").update(v).digest("hex");
+
 const complete = (result: unknown): CallToolResult => ({
   content: [{ type: "text", text: JSON.stringify(result) }],
   structuredContent: { result },
 });
+
 const failed = (error: unknown): CallToolResult => ({
   isError: true,
   content: [{ type: "text", text: String(error) }],
@@ -123,49 +133,62 @@ export class Forms {
       "CREATE TABLE IF NOT EXISTS form_requests(id TEXT PRIMARY KEY, owner TEXT NOT NULL, expires INTEGER NOT NULL, body TEXT NOT NULL)",
     );
   }
+
   /** Recover submissions only after the service has secured its listener. */
   recover() {
     for (const row of this.c.store.db
       .prepare("SELECT id,body FROM form_requests")
       .all()) {
       const r: Request = JSON.parse(String(row.body));
+
       if (r.status === "processing") {
         r.status = "complete";
+
         r.result = failed(
           r.kind === "request_agent_project"
             ? "Service restarted during project registration. Inspect registered projects before requesting registration again."
             : "Service restarted during form submission. Inspect tasks before starting another request.",
         );
+
         this.save(String(row.id), r);
       }
     }
   }
+
   verify(owner: string, token: string): string {
     this.load(owner, token);
+
     return token;
   }
+
   private load(owner: string, token: string): Request {
     if (!/^[A-Za-z0-9_-]{43}$/.test(token))
       throw new Error("Invalid or expired form state");
+
     const row = this.c.store.db
       .prepare(
         "SELECT body FROM form_requests WHERE id=? AND owner=? AND expires>?",
       )
       .get(hash(token), owner, this.now());
+
     if (!row) throw new Error("Invalid or expired form state");
+
     return JSON.parse(String(row.body));
   }
+
   private save(id: string, r: Request) {
     this.c.store.db
       .prepare("UPDATE form_requests SET body=? WHERE id=?")
       .run(JSON.stringify(r), id);
   }
+
   private checkInput(owner: string, r: Request) {
     if (!r.task_id) return;
     const task = this.c.store.get(r.task_id, owner);
     if (task.pending_input?.id !== r.request_id)
       throw new Error("Input request is stale");
   }
+
   private async build(
     owner: string,
     kind: Kind,
@@ -175,6 +198,7 @@ export class Forms {
     if (kind === "request_agent_project") {
       if (!this.c.projects)
         throw new Error("Project registration is unavailable");
+
       return {
         kind,
         args,
@@ -207,27 +231,34 @@ export class Forms {
         }),
       };
     }
+
     if (kind === "request_agent_task") {
       const defaults = this.c.settings.taskInput(owner, args);
+
       const workspaceStrategy = defaults.workspace_strategy as
         "worktree" | "current_repo";
+
       const description =
         typeof args.description === "string" ? args.description.trim() : "";
+
       const projects = this.c.projects?.list() ?? [
         { repository: this.c.repository, kind: "repository" },
       ];
+
       const choices = projects.filter((p) => p.kind === "repository");
       if (!choices.length)
         throw new Error(
           "Add a repository through the project user interface or local projects CLI before opening a task form",
         );
       const availableWorkers = await this.c.availableWorkers();
+
       const workers = availableWorkers.flatMap((w) =>
         w.profiles.map((profile) => ({
           const: `${w.provider}:${profile}`,
           title: `${w.provider} · ${profile.replaceAll("_", " ")}`,
         })),
       );
+
       return {
         kind,
         args,
@@ -355,9 +386,11 @@ export class Forms {
         }),
       };
     }
+
     const task = this.c.store.get(String(args.task_id), owner);
     if (!task.pending_input) throw new Error("No pending input request");
     const pending = task.pending_input;
+
     const r: Request = {
       kind,
       args,
@@ -367,9 +400,11 @@ export class Forms {
       form: { type: "object", properties: {} },
       message: "",
     };
+
     if (pending.tool !== "AskUserQuestion") {
       const wholeTurn = pending.tool === "CodexExecution";
       r.message = `${wholeTurn ? "Allow this Codex execution turn? Approval covers the entire turn, including shell commands; there are no separate command approval prompts. Review the workspace and execution policy below." : `Worker requests permission for ${pending.tool}:`}\n${JSON.stringify(pending.input)}`;
+
       r.form = OpenAIFormSchema.parse({
         type: "object",
         properties: {
@@ -390,8 +425,10 @@ export class Forms {
         },
         required: ["decision"],
       });
+
       return r;
     }
+
     // Worker-supplied question payloads; every field is read defensively.
     const questions: {
       question?: unknown;
@@ -400,12 +437,14 @@ export class Forms {
     }[] = Array.isArray(pending.input.questions)
       ? pending.input.questions
       : [{ question: pending.input.question ?? "Your response" }];
+
     if (!questions.length || questions.length > 20)
       throw new Error("Unsupported worker question; respond in the console");
     r.questions = questions.map((q) => String(q.question));
     if (new Set(r.questions).size !== r.questions.length)
       throw new Error("Duplicate worker questions; respond in the console");
     r.message = `Answer the worker's questions for task: ${task.title}`;
+
     const properties = Object.fromEntries(
       questions.map((q, i) => {
         const options = Array.isArray(q.options)
@@ -415,6 +454,7 @@ export class Forms {
               ...(o.description ? { description: String(o.description) } : {}),
             }))
           : [];
+
         return [
           `q${i}`,
           options.length
@@ -436,13 +476,16 @@ export class Forms {
         ];
       }),
     );
+
     r.form = OpenAIFormSchema.parse({
       type: "object",
       properties,
       required: Object.keys(properties),
     });
+
     return r;
   }
+
   async handle(
     owner: string,
     kind: Kind,
@@ -452,14 +495,17 @@ export class Forms {
     const state = ctx.mcpReq.requestState<string>();
     let token = state;
     let r: Request;
+
     if (!token) {
       if (
         ctx.mcpReq.inputResponses &&
         Object.keys(ctx.mcpReq.inputResponses).length
       )
         throw new Error("Form responses require request state");
+
       const stateMeta = ctx.mcpReq._meta?.["codex/sandbox-state-meta"] as
         { sandboxCwd?: unknown } | undefined;
+
       // Save the hint in the form, keeping original arguments stable on retries.
       const repositoryHint =
         kind === "request_agent_project" &&
@@ -468,16 +514,21 @@ export class Forms {
         stateMeta.sandboxCwd.length <= 4096
           ? await hostProjectCandidate(stateMeta.sandboxCwd)
           : undefined;
+
       r = await this.build(owner, kind, args, repositoryHint);
+
       this.c.store.db
         .prepare("DELETE FROM form_requests WHERE expires<=?")
         .run(this.now());
+
       const count = this.c.store.db
         .prepare("SELECT COUNT(*) AS n FROM form_requests WHERE owner=?")
         .get(owner)!;
+
       if (Number(count.n) >= 500)
         throw new Error("Too many pending form requests");
       token = randomBytes(32).toString("base64url");
+
       this.c.store.db
         .prepare("INSERT INTO form_requests VALUES(?,?,?,?)")
         .run(hash(token), owner, this.now() + 10 * 60000, JSON.stringify(r));
@@ -486,14 +537,19 @@ export class Forms {
       if (r.kind !== kind || canonical(r.args) !== canonical(args))
         throw new Error("Form state does not match this tool request");
     }
+
     const id = hash(token);
     const raw = ctx.mcpReq.inputResponses?.form;
+
     const response =
       raw === undefined ? undefined : OpenAIFormResultSchema.parse(raw);
+
     const answer = response ? canonical(response) : undefined;
+
     if (r.status !== "pending") {
       if (answer !== r.answer)
         throw new Error("Form was already submitted with a different response");
+
       return (
         this.inFlight.get(id) ??
         r.result ??
@@ -504,6 +560,7 @@ export class Forms {
         )
       );
     }
+
     if (kind === "request_agent_task" && !r.form.properties.repository)
       throw new Error(
         "This saved form predates explicit project selection. Reopen the task form and select a project.",
@@ -526,16 +583,20 @@ export class Forms {
           }),
         },
       });
+
     if (response.action !== "accept") {
       r.status = "complete";
       r.answer = answer;
       r.result = complete({ cancelled: true });
       this.save(id, r);
+
       return r.result;
     }
+
     const content = createOpenAIFormContentSchema(r.form).parse(
       response.content,
     );
+
     if (
       Object.keys(content).some((key) => !Object.hasOwn(r.form.properties, key))
     )
@@ -543,9 +604,11 @@ export class Forms {
     r.status = "processing";
     r.answer = answer;
     this.save(id, r);
+
     const run = (async () => {
       try {
         let result: unknown;
+
         if (kind === "request_agent_project") {
           // Accepting the form alone never grants access: require explicit allow.
           result =
@@ -554,6 +617,7 @@ export class Forms {
               : { cancelled: true };
         } else if (kind === "request_agent_task") {
           const [provider, worker_profile] = String(content.worker).split(":");
+
           result = await this.c.start(
             owner,
             {
@@ -611,6 +675,7 @@ export class Forms {
                 : content[`q${i}`],
             ]),
           );
+
           result = await this.c.input(
             owner,
             r.task_id!,
@@ -619,15 +684,20 @@ export class Forms {
             r.questions ? { answers } : undefined,
           );
         }
+
         r.result = complete(result);
       } catch (error) {
         r.result = failed(error);
       }
+
       r.status = "complete";
       this.save(id, r);
+
       return r.result;
     })();
+
     this.inFlight.set(id, run);
+
     try {
       return await run;
     } finally {

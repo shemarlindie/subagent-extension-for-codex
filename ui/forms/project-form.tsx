@@ -9,20 +9,25 @@ import { FormFooter } from "./form-footer";
 interface ProjectFormProps {
   dialog: Extract<DialogState, { kind: "project" }>;
 }
+
 export function ProjectForm({ dialog }: ProjectFormProps) {
   const controller = useController(),
     state = useSnapshot();
+
   const [repository, setRepository] = useState(dialog.repository ?? "");
   const [browsing, setBrowsing] = useState(false);
   const [error, setError] = useState("");
   const request = useRef(0);
+
   const active = () =>
     controller.getSnapshot().dialog === dialog &&
     controller.getSnapshot().scopeVersion === dialog.scope;
+
   async function browse() {
     const generation = ++request.current;
     setBrowsing(true);
     setError("");
+
     try {
       const result = await controller.browseProject();
       if (generation === request.current && active() && result.repository)
@@ -34,6 +39,7 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
       if (active()) setBrowsing(false);
     }
   }
+
   return (
     <form
       onSubmit={(event) => {
@@ -75,6 +81,7 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
     </form>
   );
 }
+
 export const projectDialog = defineDialog<"project">({
   title: () => "Add project",
   render: (dialog) => <ProjectForm dialog={dialog} />,

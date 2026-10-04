@@ -7,6 +7,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   writable: true,
   value: true,
 });
+
 import { createElement, useRef } from "react";
 import { render, cleanup, act } from "@testing-library/react";
 import {
@@ -26,6 +27,7 @@ type Call = {
 function mockMotion(t: { onTestFinished(fn: () => void): void }) {
   const calls: Call[] = [];
   let reduced = false;
+
   Object.defineProperty(HTMLElement.prototype, "animate", {
     configurable: true,
     value(
@@ -38,18 +40,23 @@ function mockMotion(t: { onTestFinished(fn: () => void): void }) {
         playState: "running",
         cancel() {},
       };
+
       calls.push({ element: this, frames, options, animation });
+
       return animation;
     },
   });
+
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: () => ({ matches: reduced }),
   });
+
   t.onTestFinished(() => {
     delete (HTMLElement.prototype as any).animate;
     delete (window as any).matchMedia;
   });
+
   return {
     calls,
     reduce() {
@@ -67,6 +74,7 @@ const notice = (show: boolean, text = "Saved") =>
 
 test("MotionContent replaces keyed content with the selected entrance style", (t) => {
   t.onTestFinished(cleanup);
+
   const content = (value: string, variant: "swap" | "rise" = "swap") =>
     createElement(MotionContent, {
       changeKey: value,
@@ -75,6 +83,7 @@ test("MotionContent replaces keyed content with the selected entrance style", (t
       className: "activity-title",
       children: value,
     });
+
   const view = render(content("Thinking"));
   const first = view.container.querySelector("strong");
   assert.ok(first);
@@ -83,11 +92,13 @@ test("MotionContent replaces keyed content with the selected entrance style", (t
   view.rerender(content("Thought", "rise"));
   const next = view.container.querySelector("strong");
   assert.ok(next);
+
   assert.notEqual(
     next,
     first,
     "A changed key remounts the presentation element",
   );
+
   assert.equal(next.textContent, "Thought");
   assert.equal(next.className, "motion-rise activity-title");
 });
@@ -109,10 +120,12 @@ test("Presence folds content out, keeping the last content until it finishes", (
   const element = view.container.querySelector<HTMLElement>(".notice");
   assert.ok(element, "Exiting content stays mounted");
   assert.equal(element.textContent, "Permission needed");
+
   assert.ok(
     element.closest(".presence")?.hasAttribute("inert"),
     "Exiting content cannot be interacted with",
   );
+
   const exit = motion.calls.at(-1)!;
   assert.equal(exit.element, element);
   assert.equal(exit.frames[0].opacity, 1);
@@ -132,12 +145,14 @@ test("Presence folds content out, keeping the last content until it finishes", (
 test("Presence pop variant scales and respects reduced motion", (t) => {
   t.onTestFinished(cleanup);
   const motion = mockMotion(t);
+
   const button = (show: boolean) =>
     createElement(
       Presence,
       { show, variant: "pop" },
       createElement("button", null, "Latest"),
     );
+
   const view = render(button(false));
   view.rerender(button(true));
   assert.equal(motion.calls.at(-1)!.frames[0].transform, "scale(0.85)");
@@ -151,21 +166,25 @@ test("Presence pop variant scales and respects reduced motion", (t) => {
 function Grow({ open }: { open: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useAnimatedHeight(ref, open);
+
   return createElement("div", { ref, "data-open": open || undefined });
 }
 
 test("useAnimatedHeight eases between the old and new height", (t) => {
   t.onTestFinished(cleanup);
   const motion = mockMotion(t);
+
   Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
     configurable: true,
     get(this: HTMLElement) {
       return this.dataset.open ? 120 : 40;
     },
   });
+
   t.onTestFinished(() => {
     delete (HTMLElement.prototype as any).offsetHeight;
   });
+
   const view = render(createElement(Grow, { open: false }));
   assert.equal(motion.calls.length, 0, "Mounting does not animate");
   view.rerender(createElement(Grow, { open: true }));

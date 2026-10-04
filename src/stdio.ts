@@ -18,7 +18,9 @@ import { z } from "zod";
 import { hostDirectoryFromMeta } from "./core/chat-project.js";
 import { hostProjectCandidate } from "./panel/host-context.js";
 import { codexContextCapability } from "./panel/host-context.js";
+
 const { token, origin } = await connectService();
+
 const server = new McpServer(
   { name: "codex-subagent-extension", version: "0.1.0" },
   {
@@ -27,6 +29,7 @@ const server = new McpServer(
     capabilities: withSettingsCapability(codexContextCapability),
   },
 );
+
 async function serviceTool(name: string, args: Record<string, unknown>) {
   const response = await fetch(
     `${origin}/api/${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
@@ -42,10 +45,13 @@ async function serviceTool(name: string, args: Record<string, unknown>) {
       redirect: "error",
     },
   );
+
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Service request failed");
+
   return body.result;
 }
+
 server.registerTool(
   "request_agent_project",
   {
@@ -70,9 +76,11 @@ server.registerTool(
         throw new Error(
           "This host cannot show registration confirmations. Use Add project in the panel, or enable Automatically add chat projects in user settings and start the task from this chat.",
         );
+
       const repository =
         args.repository ??
         (await hostProjectCandidate(hostDirectoryFromMeta(extra._meta)));
+
       const answer = await server.server.elicitInput(
         {
           mode: "form",
@@ -100,23 +108,27 @@ server.registerTool(
         },
         { timeout: 600000 },
       );
+
       if (answer.action !== "accept")
         return {
           content: [{ type: "text", text: "Project registration cancelled." }],
           structuredContent: { result: { cancelled: true } },
         };
+
       const content = z
         .strictObject({
           repository: z.string().min(1).max(4096),
           decision: z.enum(["deny", "allow"]),
         })
         .parse(answer.content);
+
       const result =
         content.decision === "allow"
           ? await serviceTool("register_user_agent_project", {
               repository: content.repository,
             })
           : { cancelled: true };
+
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
         structuredContent: { result },
@@ -129,6 +141,7 @@ server.registerTool(
     }
   },
 );
+
 // Definitions supply schemas only; the proxy forwards calls to the service.
 const tools: Record<string, AnyTool> = definitions({} as Control, "local");
 for (const [name, d] of Object.entries(tools))
@@ -178,7 +191,9 @@ for (const [name, d] of Object.entries(tools))
             redirect: "error",
           },
         );
+
         const body = await response.json();
+
         return {
           isError: !response.ok,
           content: [{ type: "text" as const, text: JSON.stringify(body) }],
@@ -211,6 +226,7 @@ for (const [name, d] of Object.entries(tools))
       }
     },
   );
+
 const panel = delegationPanel(
   resolve(dirname(fileURLToPath(import.meta.url)), "../dist/codex.html"),
   undefined,
@@ -229,12 +245,15 @@ const panel = delegationPanel(
         redirect: "error",
       },
     );
+
     const body = await response.json();
     if (!response.ok)
       throw new Error(body.error ?? "Panel context unavailable");
+
     return body.result;
   },
 );
+
 server.registerTool(panel.name, panel.tool, async (args, extra) => {
   try {
     return await panel.open(withConversation(panel.name, args, extra._meta));
@@ -245,7 +264,9 @@ server.registerTool(panel.name, panel.tool, async (args, extra) => {
     };
   }
 });
+
 server.registerResource(panel.title, panel.uri, panel.resource, panel.read);
+
 server.registerTool(panel.global.name, panel.global.tool, async () => {
   try {
     return await panel.global.open();
@@ -256,4 +277,5 @@ server.registerTool(panel.global.name, panel.global.tool, async () => {
     };
   }
 });
+
 await server.connect(new StdioServerTransport());

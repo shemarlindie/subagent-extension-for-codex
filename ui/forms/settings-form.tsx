@@ -12,11 +12,15 @@ import { Chevron } from "../components/chevron";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 import { FormSelect } from "./form-select";
+
 type Property = NonNullable<SettingsDocument["schema"]["properties"]>[string];
+
 type Values = Record<string, string>;
+
 // Mirrors native host rendering: layout groups first, then an "Other settings" group.
 function groups(settings: SettingsDocument) {
   const properties = settings.schema.properties ?? {};
+
   const listed = (settings.layout ?? []).map((group) => ({
     title: group.title,
     keys: group.items
@@ -25,14 +29,18 @@ function groups(settings: SettingsDocument) {
       )
       .map((item) => item.property!),
   }));
+
   const seen = new Set(listed.flatMap((group) => group.keys));
   const other = Object.keys(properties).filter((key) => !seen.has(key));
+
   return [
     ...listed,
     ...(other.length ? [{ title: "Other settings", keys: other }] : []),
   ].filter((group) => group.keys.length);
 }
+
 type Models = Map<string, ModelChoice>;
+
 // Blank models and "default" efforts defer to the next configured scope.
 function display(name: string, value: string, models: Models) {
   if (name === "claude_permission_mode")
@@ -47,13 +55,17 @@ function display(name: string, value: string, models: Models) {
     return models.get(value)!.displayName;
   if (value === "true") return "On";
   if (value === "false") return "Off";
+
   return value;
 }
+
 function parse(field: Property, value: string) {
   if (field.type === "boolean") return value === "true";
   if (field.type === "number" || field.type === "integer") return Number(value);
+
   return value;
 }
+
 interface SettingFieldProps {
   name: string;
   field: Property;
@@ -61,6 +73,7 @@ interface SettingFieldProps {
   control: ReturnType<typeof useForm<Values>>["control"];
   register: ReturnType<typeof useForm<Values>>["register"];
 }
+
 function SettingField({
   name,
   field,
@@ -75,6 +88,7 @@ function SettingField({
         {field.description.trim()}
       </p>
     ) : null;
+
   const options =
     field.type === "boolean"
       ? [
@@ -88,6 +102,7 @@ function SettingField({
             ? models.get(value)?.description
             : undefined,
         }));
+
   return (
     <div>
       <Field id={id} label={label}>
@@ -125,10 +140,12 @@ function SettingField({
     </div>
   );
 }
+
 /** Schema-driven fallback for hosts that do not render native plugin settings. */
 interface SettingsFormProps {
   dialog: Extract<DialogState, { kind: "settings" }>;
 }
+
 export function SettingsForm({ dialog }: SettingsFormProps) {
   const controller = useController(),
     // Settings enums carry IDs only; discovered catalogs supply names and descriptions.
@@ -139,19 +156,23 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
     ),
     { settings } = dialog,
     properties = settings.schema.properties ?? {};
+
   const initial = Object.fromEntries(
     Object.keys(properties).map((key) => [
       key,
       String(settings.values[key] ?? ""),
     ]),
   );
+
   const { control, register, handleSubmit } = useForm<Values>({
     defaultValues: initial,
   });
+
   const values = { ...initial, ...useWatch({ control }) } as Values,
     changed = Object.keys(initial).filter(
       (key) => values[key] !== initial[key],
     );
+
   return (
     <form
       className="settings-form"
@@ -162,6 +183,7 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
             .filter(([key, value]) => value !== initial[key])
             .map(([key, value]) => [key, parse(properties[key], value)]),
         );
+
         return controller.submit(async () => {
           if (Object.keys(set).length)
             await controller.tool("update_agent_settings", { set });
@@ -175,6 +197,7 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
       </p>
       {groups(settings).map((group, index) => {
         const edits = group.keys.filter((key) => changed.includes(key)).length;
+
         return (
           <Collapsible.Root
             key={group.title}
@@ -221,6 +244,7 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
     </form>
   );
 }
+
 export const settingsDialog = defineDialog<"settings">({
   title: () => "Plugin settings",
   render: (dialog) => <SettingsForm dialog={dialog} />,

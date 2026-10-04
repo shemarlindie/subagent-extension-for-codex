@@ -11,12 +11,15 @@ export interface ProcessIdentity {
   started: string;
   command: string;
 }
+
 export interface ProcessGroups {
   list(): Promise<ProcessIdentity[]>;
   exists(pgid: number): boolean;
   signal(pgid: number, signal: NodeJS.Signals): void;
 }
+
 const exec = promisify(execFile);
+
 export const macProcessGroups: ProcessGroups = {
   async list() {
     const { stdout } = await exec(
@@ -28,10 +31,12 @@ export const macProcessGroups: ProcessGroups = {
         maxBuffer: 8 * 1024 * 1024,
       },
     );
+
     return stdout.split("\n").flatMap((line) => {
       const match = line.match(
         /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(.*)$/,
       );
+
       return match
         ? [
             {
@@ -48,8 +53,10 @@ export const macProcessGroups: ProcessGroups = {
   exists(pgid) {
     if (!Number.isSafeInteger(pgid) || pgid <= 1)
       throw new Error("Invalid executor process group");
+
     try {
       process.kill(-pgid, 0);
+
       return true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ESRCH") return false;
@@ -60,6 +67,7 @@ export const macProcessGroups: ProcessGroups = {
   signal(pgid, signal) {
     if (!Number.isSafeInteger(pgid) || pgid <= 1)
       throw new Error("Invalid executor process group");
+
     try {
       process.kill(-pgid, signal);
     } catch (error) {
@@ -67,6 +75,7 @@ export const macProcessGroups: ProcessGroups = {
     }
   },
 };
+
 const owned = (p: ProcessIdentity, launch: string) =>
   p.pid > 1 &&
   p.pid === p.pgid &&
@@ -80,6 +89,7 @@ export async function waitForGroupExit(
 ) {
   const deadline = Date.now() + graceMs;
   while (groups.exists(pgid) && Date.now() < deadline) await delay(25);
+
   return !groups.exists(pgid);
 }
 
@@ -91,12 +101,14 @@ export async function identifyLaunch(
   const matches = (await groups.list()).filter(
     (p) => owned(p, launch) && (pid === undefined || p.pid === pid),
   );
+
   if (matches.length !== 1)
     throw new UnconfirmedTerminationError(
       [],
       "Executor launch has no unique owned process-group leader",
     );
   const { command: _command, ...identity } = matches[0];
+
   return identity;
 }
 
@@ -112,6 +124,7 @@ export async function stopRecordedGroup(
       "Executor record has no verified process identity",
     );
   const pid = record.pid;
+
   const verify = async () => {
     const p = (await groups.list()).find((p) => p.pid === pid);
     if (
@@ -126,6 +139,7 @@ export async function stopRecordedGroup(
         "Executor process identity changed; refusing to signal its PID",
       );
   };
+
   if (!groups.exists(pid)) return;
   await verify();
   groups.signal(pid, "SIGTERM");

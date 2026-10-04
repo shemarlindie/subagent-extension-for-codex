@@ -12,6 +12,7 @@ export async function connectService() {
     explicit ??
     process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN ??
     `http://127.0.0.1:${process.env.PORT ?? 4317}`;
+
   if (
     !explicit &&
     !process.env.PORT &&
@@ -23,6 +24,7 @@ export async function connectService() {
       ).origin;
     } catch {}
   }
+
   const url = new URL(origin);
   if (
     url.protocol !== "http:" ||
@@ -37,14 +39,17 @@ export async function connectService() {
       "Local stdio proxy requires a plain loopback HTTP service origin",
     );
   origin = url.origin;
+
   const token = () =>
     process.env.CODEX_SUBAGENT_EXTENSION_TOKEN ??
     readFileSync(join(data, "admin-token"), "utf8").trim();
+
   const probe = async () => {
     const response = await fetch(`${origin}/health`, {
       signal: AbortSignal.timeout(1000),
       redirect: "error",
     });
+
     const health = await response.json();
     if (
       health.service === "codex-subagent-extension" &&
@@ -56,6 +61,7 @@ export async function connectService() {
       throw new Error(
         "Port is occupied by an incompatible service; stop or upgrade it explicitly",
       );
+
     const auth = await fetch(`${origin}/api/tools/list_agent_projects`, {
       method: "POST",
       headers: {
@@ -67,13 +73,17 @@ export async function connectService() {
       signal: AbortSignal.timeout(1000),
       redirect: "error",
     });
+
     if (!auth.ok)
       throw new Error(
         "Service token or protocol mismatch; inspect data/URL overrides",
       );
+
     return { origin, token: token() };
   };
+
   let needsLaunch = false;
+
   try {
     return await probe();
   } catch (error) {
@@ -87,10 +97,13 @@ export async function connectService() {
       needsLaunch = true;
     }
   }
+
   let spawnError: Error | undefined;
+
   if (needsLaunch) {
     mkdirSync(data, { recursive: true, mode: 0o700 });
     const log = openSync(join(data, "service.log"), "a", 0o600);
+
     const child = spawn(process.execPath, [join(installRoot, "dist/main.js")], {
       cwd: installRoot,
       detached: true,
@@ -111,24 +124,30 @@ export async function connectService() {
         CODEX_SUBAGENT_EXTENSION_ORIGIN: origin,
       },
     });
+
     child.on("error", (e) => {
       spawnError = e;
     });
+
     child.unref();
     closeSync(log);
   }
+
   // Concurrent launchers may spawn losers: the service lease alone owns recovery and workers.
   const deadline = Date.now() + 15000;
   let last: unknown;
+
   while (Date.now() < deadline) {
     if (spawnError) throw spawnError;
     await new Promise((resolve) => setTimeout(resolve, 100));
+
     try {
       return await probe();
     } catch (e) {
       last = e;
     }
   }
+
   throw new Error(
     `Service startup failed. Inspect ${join(data, "service.log")}: ${String(last)}`,
   );

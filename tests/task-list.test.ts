@@ -9,6 +9,7 @@ test("preview task listing exposes the latest rate limit and provider failure su
   const tasks = previewTool("list_agent_tasks", {
     conversation_id: null,
   }) as ListedTask[];
+
   for (const [title, expected] of [
     [
       "Live: waiting for a rate limit",
@@ -26,6 +27,7 @@ test("preview task listing exposes the latest rate limit and provider failure su
     assert.ok(source);
     assert.equal("live_activity" in source, false);
   }
+
   for (const task of tasks.filter((task) => task.status !== "running")) {
     assert.equal(task.live_activity, undefined);
   }
@@ -42,6 +44,7 @@ test("list summaries recover after subsequent work and disappear when the task s
     const before = listedTask(task, events);
     assert.ok(before.live_activity);
     assert.notEqual(before.live_activity.state, "running");
+
     const continued: Event = {
       id: Math.max(...events.map((event) => event.id)) + 1,
       task_id: task.id,
@@ -49,10 +52,12 @@ test("list summaries recover after subsequent work and disappear when the task s
       type: "task.continued",
       data: {},
     };
+
     assert.deepEqual(listedTask(task, [...events, continued]).live_activity, {
       text: "Working",
       state: "running",
     });
+
     for (const status of [
       "waiting",
       "interrupted",
@@ -65,6 +70,7 @@ test("list summaries recover after subsequent work and disappear when the task s
         undefined,
       );
     }
+
     assert.equal("live_activity" in task, false);
   }
 });

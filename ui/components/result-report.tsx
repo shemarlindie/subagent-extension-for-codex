@@ -1,4 +1,5 @@
 import type { Result } from "../../src/core/model";
+
 const sections = [
   "findings",
   "evidence",
@@ -6,6 +7,7 @@ const sections = [
   "tests",
   "recommendations",
 ] as const;
+
 export function ResultReport({ result }: { result?: Result }) {
   return result ? (
     <div className="report">

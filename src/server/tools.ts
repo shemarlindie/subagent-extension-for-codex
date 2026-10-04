@@ -16,7 +16,9 @@ import {
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
 } from "../core/settings.js";
+
 const taskId = z.object({ task_id: z.string() });
+
 /**
  * A tool whose handler receives its schema's parsed output. `run` uses method
  * syntax so any tool widens to `AnyTool` for name-based dispatch.
@@ -27,8 +29,10 @@ type Tool<S extends z.ZodType, R> = {
   outputSchema?: z.ZodType;
   run(args: z.output<S>): R;
 };
+
 export type AnyTool = Tool<z.ZodType<Record<string, unknown>>, unknown>;
 const tool = <S extends z.ZodType, R>(definition: Tool<S, R>) => definition;
+
 /** Optional host conversation correlation is a UI scope, never an access grant. */
 export function withConversation(
   name: string,
@@ -45,12 +49,14 @@ export function withConversation(
   ) {
     const state = meta?.["codex/sandbox-state-meta"] as
       { sandboxCwd?: unknown } | undefined;
+
     if (
       typeof state?.sandboxCwd === "string" &&
       state.sandboxCwd.length <= 4096
     )
       args = { ...args, host_directory: state.sandboxCwd };
   }
+
   // A selected task supplies its own scope; ambient chat hints cannot constrain it.
   if (
     ![
@@ -70,10 +76,12 @@ export function withConversation(
   // Codex core adds threadId; ChatGPT documents its anonymized session field.
   // Both are optional correlation hints, never filesystem/ownership authority.
   const session = meta?.["openai/session"] ?? meta?.threadId;
+
   return typeof session === "string" && session.trim() && session.length <= 256
     ? { ...args, conversation_id: session }
     : args;
 }
+
 export function definitions(
   c: Control,
   owner: string,
@@ -144,6 +152,7 @@ export function definitions(
       // Null opts out of host correlation; persisted tasks keep the optional string contract.
       run: async (a) => {
         await autoRegisterChatProject(c, owner, hostMeta, a.repository);
+
         return c.start(
           owner,
           { ...a, conversation_id: a.conversation_id ?? undefined },
@@ -254,6 +263,7 @@ export function definitions(
       run: (a) => c.store.events(a.task_id, owner, a.after),
     }),
   };
+
   return {
     ...tools,
     register_user_agent_project: tool({
@@ -265,6 +275,7 @@ export function definitions(
           throw new Error(
             "Project registration is unavailable in this service.",
           );
+
         return c.projects.register(a.repository);
       },
     }),
@@ -280,6 +291,7 @@ export function definitions(
         "User interface only: create a task with the user-selected native permission mode.",
       run: async (a) => {
         await autoRegisterChatProject(c, owner, hostMeta, a.repository);
+
         return c.start(
           owner,
           { ...a, conversation_id: a.conversation_id ?? undefined },
@@ -310,6 +322,7 @@ export function definitions(
     }),
   };
 }
+
 export const isUserTool = (name: string) =>
   [
     "register_user_agent_project",
@@ -318,6 +331,7 @@ export const isUserTool = (name: string) =>
     "submit_user_agent_input",
     "update_user_agent_settings",
   ].includes(name);
+
 export async function callTool(
   c: Control,
   owner: string,
@@ -331,5 +345,6 @@ export async function callTool(
   const defs = definitions(c, owner, authority, hostMeta);
   if (!(name in defs)) throw new Error("Unknown tool");
   const d: AnyTool = defs[name as keyof typeof defs];
+
   return d.run(d.schema.parse(args ?? {}));
 }

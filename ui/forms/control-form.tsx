@@ -5,6 +5,7 @@ import { useController } from "../components/controller-context";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 import { TaskDescription } from "../components/task-description";
+
 export function controlTitle(action: string) {
   return (
     (
@@ -18,14 +19,18 @@ export function controlTitle(action: string) {
     )[action] ?? "Task action"
   );
 }
+
 interface ControlFormProps {
   dialog: Extract<DialogState, { kind: "control" }>;
 }
+
 export function ControlForm({ dialog }: ControlFormProps) {
   const controller = useController(),
     { action, task } = dialog;
+
   const { register, handleSubmit } = useForm<{ instruction: string }>();
   const instruction = action === "steer" || action === "continue";
+
   const descriptions: Record<string, string> = {
     steer:
       "A running turn will be interrupted and continued with your instruction.",
@@ -36,6 +41,7 @@ export function ControlForm({ dialog }: ControlFormProps) {
     interrupt:
       "Stop current execution and preserve the workspace and session for continuation.",
   };
+
   const labels: Record<string, string> = {
     steer: "Send instruction",
     continue: "Continue",
@@ -43,6 +49,7 @@ export function ControlForm({ dialog }: ControlFormProps) {
     retry: "Start new attempt",
     interrupt: "Interrupt",
   };
+
   const tools: Record<string, string> = {
     steer: "send_agent_instruction",
     continue: "continue_agent_task",
@@ -50,6 +57,7 @@ export function ControlForm({ dialog }: ControlFormProps) {
     retry: "retry_agent_task",
     interrupt: "interrupt_agent_task",
   };
+
   return (
     <form
       onSubmit={handleSubmit((values) =>
@@ -93,6 +101,7 @@ export function ControlForm({ dialog }: ControlFormProps) {
     </form>
   );
 }
+
 export const controlDialog = defineDialog<"control">({
   title: ({ action }) => controlTitle(action),
   render: (dialog) => <ControlForm dialog={dialog} />,

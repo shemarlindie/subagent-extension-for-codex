@@ -8,10 +8,12 @@ export function waitForListening(server: Server): Promise<void> {
       server.off("listening", onListening);
       server.off("error", onError);
     };
+
     const onListening = () => {
       cleanup();
       resolve();
     };
+
     const onError = (error: Error) => {
       cleanup();
       reject(error);

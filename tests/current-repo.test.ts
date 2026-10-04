@@ -25,13 +25,17 @@ async function setup() {
   const dir = await realpath(
     await mkdtemp(join(tmpdir(), "agent-current-repo-")),
   );
+
   const repo = join(dir, "repo");
   await mkdir(repo);
+
   const git = (...args: string[]) =>
     execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" });
+
   git("init", "-q");
   await writeFile(join(repo, "tracked.txt"), "committed content\n");
   git("add", ".");
+
   git(
     "-c",
     "user.name=Test",
@@ -41,14 +45,17 @@ async function setup() {
     "-qm",
     "initial",
   );
+
   const workspaces = new Workspaces(join(dir, "worktrees"), [repo]);
   const provider = new FixtureProvider();
+
   const c = new Control(
     new Store(join(dir, "tasks.sqlite")),
     workspaces,
     new Map([[provider.id, provider]]),
     repo,
   );
+
   return {
     dir,
     repo,
@@ -88,10 +95,12 @@ function task(repository: string, revision = "HEAD"): Task {
 async function dirty(repo: string, git: (...args: string[]) => string) {
   await writeFile(join(repo, "tracked.txt"), "staged content\n");
   git("add", "tracked.txt");
+
   await writeFile(
     join(repo, "tracked.txt"),
     "staged content\nunstaged content\n",
   );
+
   await writeFile(join(repo, "new file.txt"), "untracked content\n");
 }
 
@@ -100,11 +109,13 @@ async function until(done: () => boolean) {
     if (done()) return;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
+
   throw new Error("Task did not complete");
 }
 
 test("current repository uses HEAD and includes staged, unstaged and untracked edits without creating a worktree", async () => {
   const s = await setup();
+
   try {
     await dirty(s.repo, s.git);
     const before = s.git("status", "--porcelain");
@@ -112,10 +123,12 @@ test("current repository uses HEAD and includes staged, unstaged and untracked e
     await s.workspaces.create(t);
     assert.equal(t.workspace, s.repo);
     assert.equal(t.base_commit, s.git("rev-parse", "HEAD").trim());
+
     assert.equal(
       s.git("worktree", "list", "--porcelain").match(/^worktree /gm)?.length,
       1,
     );
+
     await assert.rejects(access(s.workspaces.root), { code: "ENOENT" });
     const diff = await s.workspaces.diff(t);
     for (const content of [
@@ -133,6 +146,7 @@ test("current repository uses HEAD and includes staged, unstaged and untracked e
 
 test("current repository rejects a non-HEAD revision without altering the checkout", async () => {
   const s = await setup();
+
   try {
     await dirty(s.repo, s.git);
     const before = s.git("status", "--porcelain");
@@ -140,6 +154,7 @@ test("current repository rejects a non-HEAD revision without altering the checko
     await assert.rejects(s.workspaces.create(t), /HEAD/);
     assert.equal(t.workspace, undefined);
     assert.equal(s.git("status", "--porcelain"), before);
+
     assert.equal(
       s.git("worktree", "list", "--porcelain").match(/^worktree /gm)?.length,
       1,
@@ -151,12 +166,15 @@ test("current repository rejects a non-HEAD revision without altering the checko
 
 test("current repository review receives the working tree diff in its provider prompt and artifact", async () => {
   const s = await setup();
+
   try {
     await dirty(s.repo, s.git);
     let receivedPrompt = "";
+
     s.provider.run = async (context, prompt) => {
       assert.equal(context.task.workspace, s.repo);
       receivedPrompt = prompt;
+
       return {
         summary: "Reviewed",
         findings: [],
@@ -166,29 +184,36 @@ test("current repository review receives the working tree diff in its provider p
         recommendations: [],
       };
     };
+
     const before = s.git("status", "--porcelain");
+
     const started = await s.c.start("alice", {
       title: "Review my uncommitted edits",
       description: "Review my uncommitted edits",
       provider: "fixture",
       workspace_strategy: "current_repo",
     });
+
     await until(
       () =>
         !s.c.active.has(started.id) &&
         s.c.store.get(started.id, "alice").status === "completed",
     );
+
     for (const content of [
       "staged content",
       "unstaged content",
       "untracked content",
     ])
       assert.ok(receivedPrompt.includes(content), content);
+
     const diff = s.c.store
       .artifacts(started.id, "alice")
       .find((artifact) => artifact.type === "diff");
+
     assert.ok(diff?.content.includes("untracked content"));
     assert.equal(s.git("status", "--porcelain"), before);
+
     assert.equal(
       await readFile(join(s.repo, "tracked.txt"), "utf8"),
       "staged content\nunstaged content\n",
@@ -201,16 +226,19 @@ test("current repository review receives the working tree diff in its provider p
 test("current repository settings persist, are owner-scoped, and allow task overrides", async () => {
   const s = await setup();
   s.c.stopped = true;
+
   try {
     assert.equal(
       s.c.settings.values("alice").default_workspace_strategy,
       "current_repo",
     );
+
     assert.equal(
       startSchema.parse({ title: "Review", description: "Review" })
         .workspace_strategy,
       "current_repo",
     );
+
     assert.equal(
       (
         await s.c.start("alice", {
@@ -220,29 +248,36 @@ test("current repository settings persist, are owner-scoped, and allow task over
       ).workspace_strategy,
       "current_repo",
     );
+
     s.c.settings.update("alice", {
       set: { default_workspace_strategy: "worktree" },
     });
+
     assert.equal(
       s.c.settings.values("alice").default_workspace_strategy,
       "worktree",
     );
+
     assert.equal(
       s.c.settings.values("bob").default_workspace_strategy,
       "current_repo",
     );
+
     const inherited = await s.c.start("alice", {
       title: "Review",
       description: "Review",
     });
+
     const overridden = await s.c.start("alice", {
       title: "Implement",
       description: "Implement",
       workspace_strategy: "current_repo",
     });
+
     assert.equal(inherited.workspace_strategy, "worktree");
     assert.equal(overridden.workspace_strategy, "current_repo");
     const { Settings } = await import("../src/core/settings.js");
+
     assert.equal(
       new Settings(s.c.store, () => ["fixture"]).values("alice")
         .default_workspace_strategy,
@@ -256,24 +291,29 @@ test("current repository settings persist, are owner-scoped, and allow task over
 test("task form offers current repository and submits its selected strategy", async () => {
   const s = await setup();
   s.c.stopped = true;
+
   try {
     const args = {
       title: "Review edits",
       description: "Review edits",
       workspace_strategy: "worktree",
     };
+
     const requested = (await s.c.forms.handle(
       "alice",
       "request_agent_task",
       args,
       { mcpReq: { requestState: () => undefined } } as unknown as ServerContext,
     )) as any;
+
     const schema = requested.inputRequests.form.params.requestedSchema;
+
     assert.ok(
       schema.properties.workspace_strategy.oneOf.some(
         (choice: any) => choice.const === "current_repo",
       ),
     );
+
     const result = await s.c.forms.handle("alice", "request_agent_task", args, {
       mcpReq: {
         requestState: () => requested.requestState,
@@ -293,6 +333,7 @@ test("task form offers current repository and submits its selected strategy", as
         },
       },
     } as unknown as ServerContext);
+
     assert.ok(!result.isError, JSON.stringify(result));
     assert.equal(s.c.store.all()[0].workspace_strategy, "current_repo");
   } finally {
@@ -303,6 +344,7 @@ test("task form offers current repository and submits its selected strategy", as
 test("host task form defaults current repository to HEAD and forces HEAD on submit", async () => {
   const s = await setup();
   s.c.stopped = true;
+
   try {
     const args = {
       title: "Review edits",
@@ -310,15 +352,18 @@ test("host task form defaults current repository to HEAD and forces HEAD on subm
       revision: "feature-branch",
       workspace_strategy: "current_repo",
     };
+
     const requested = (await s.c.forms.handle(
       "alice",
       "request_agent_task",
       args,
       { mcpReq: { requestState: () => undefined } } as unknown as ServerContext,
     )) as any;
+
     const schema = requested.inputRequests.form.params.requestedSchema;
     assert.equal(schema.properties.workspace_strategy.default, "current_repo");
     assert.equal(schema.properties.revision.default, "HEAD");
+
     const result = await s.c.forms.handle("alice", "request_agent_task", args, {
       mcpReq: {
         requestState: () => requested.requestState,
@@ -338,6 +383,7 @@ test("host task form defaults current repository to HEAD and forces HEAD on subm
         },
       },
     } as unknown as ServerContext);
+
     assert.ok(!result.isError, JSON.stringify(result));
     const task = s.c.store.all()[0];
     assert.equal(task.workspace_strategy, "current_repo");
@@ -349,12 +395,15 @@ test("host task form defaults current repository to HEAD and forces HEAD on subm
 
 test("current repository write profiles edit the checkout while preserving unrelated staged and unstaged changes", async () => {
   const s = await setup();
+
   try {
     await writeFile(
       join(s.repo, "implementation.ts"),
       "export const value = 1;\n",
     );
+
     s.git("add", "implementation.ts");
+
     s.git(
       "-c",
       "user.name=Test",
@@ -364,20 +413,26 @@ test("current repository write profiles edit the checkout while preserving unrel
       "-qm",
       "implementation",
     );
+
     await dirty(s.repo, s.git);
     const staged = s.git("diff", "--cached");
+
     const unrelatedTracked = await readFile(
       join(s.repo, "tracked.txt"),
       "utf8",
     );
+
     const unrelatedNew = await readFile(join(s.repo, "new file.txt"), "utf8");
+
     s.provider.run = async (context) => {
       assert.equal(context.task.worker_profile, "implementer");
       assert.equal(context.task.workspace, s.repo);
+
       await writeFile(
         join(context.task.workspace!, "implementation.ts"),
         "export const value = 2;\n",
       );
+
       return {
         summary: "Implemented",
         findings: [],
@@ -387,6 +442,7 @@ test("current repository write profiles edit the checkout while preserving unrel
         recommendations: [],
       };
     };
+
     const started = await s.c.start("alice", {
       title: "Update implementation.ts",
       description: "Update implementation.ts",
@@ -394,28 +450,35 @@ test("current repository write profiles edit the checkout while preserving unrel
       worker_profile: "implementer",
       workspace_strategy: "current_repo",
     });
+
     await until(
       () =>
         !s.c.active.has(started.id) &&
         s.c.store.get(started.id, "alice").status === "completed",
     );
+
     assert.equal(
       await readFile(join(s.repo, "implementation.ts"), "utf8"),
       "export const value = 2;\n",
     );
+
     assert.equal(
       await readFile(join(s.repo, "tracked.txt"), "utf8"),
       unrelatedTracked,
     );
+
     assert.equal(
       await readFile(join(s.repo, "new file.txt"), "utf8"),
       unrelatedNew,
     );
+
     assert.equal(s.git("diff", "--cached"), staged);
+
     assert.equal(
       s.git("worktree", "list", "--porcelain").match(/^worktree /gm)?.length,
       1,
     );
+
     assert.ok(
       s.c.store
         .artifacts(started.id, "alice")
@@ -429,11 +492,13 @@ test("current repository write profiles edit the checkout while preserving unrel
 
 test("Claude current repository reviewer runs in the checkout and its mandatory hook denies edits", async () => {
   const s = await setup();
+
   try {
     await dirty(s.repo, s.git);
     const status = s.git("status", "--porcelain");
     let options: Options | undefined;
     let receivedPrompt: string | AsyncIterable<any> | undefined;
+
     const result = {
       summary: "Reviewed",
       findings: [],
@@ -442,9 +507,11 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
       tests: [],
       recommendations: [],
     };
+
     const provider = new ClaudeAgentProvider((args) => {
       options = args.options;
       receivedPrompt = args.prompt;
+
       return Object.assign(
         (async function* () {
           yield {
@@ -458,7 +525,9 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
         { close: () => {} },
       ) as unknown as Query;
     });
+
     s.c.providers.set("claude", provider);
+
     const started = await s.c.start("alice", {
       title: "Review uncommitted changes",
       description: "Review uncommitted changes",
@@ -466,11 +535,13 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
       worker_profile: "reviewer",
       workspace_strategy: "current_repo",
     });
+
     await until(
       () =>
         !s.c.active.has(started.id) &&
         s.c.store.get(started.id, "alice").status === "completed",
     );
+
     assert.equal(options!.cwd, s.repo);
     assert.equal(typeof receivedPrompt, "string");
     assert.ok((receivedPrompt as string).includes("unstaged content"));
@@ -480,6 +551,7 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
       assert.ok(!(options!.tools as string[]).includes(tool));
     const hook = options!.hooks!.PreToolUse![0].hooks[0];
     const signal = new AbortController().signal;
+
     for (const tool of ["Edit", "Write", "Bash"]) {
       const decision = await hook(
         {
@@ -497,12 +569,14 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
         tool,
         { signal },
       );
+
       assert.equal(
         (decision as any).hookSpecificOutput?.permissionDecision,
         "deny",
         tool,
       );
     }
+
     const read = await hook(
       {
         hook_event_name: "PreToolUse",
@@ -516,10 +590,12 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
       "Read",
       { signal },
     );
+
     assert.equal(
       (read as any).hookSpecificOutput?.permissionDecision,
       undefined,
     );
+
     assert.equal(s.git("status", "--porcelain"), status);
   } finally {
     await s.close();

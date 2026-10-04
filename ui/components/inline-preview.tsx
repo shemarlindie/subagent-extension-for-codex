@@ -7,20 +7,25 @@ import { Button } from "./button";
 export function InlinePreview() {
   const controller = useController(),
     state = useSnapshot();
+
   // Summarize the whole scope, independent of the expanded view's list filters.
   const tasks = state.tasks.filter(
     (task) => !state.repository || task.repository === state.repository,
   );
+
   const attention = tasks.filter((task) => task.pending_input || locked(task));
   const active = tasks.filter((task) => !terminal(task) && !failedStatus(task));
+
   const task =
     tasks.find((task) => task.id === state.selected) ??
     attention[0] ??
     active[0] ??
     tasks[0];
+
   const project = state.projects.find(
     (project) => project.repository === state.repository,
   );
+
   return (
     <section className="inline-preview" aria-label="Delegated work preview">
       <div className="preview-heading">

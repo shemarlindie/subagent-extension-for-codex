@@ -24,16 +24,20 @@ async function fixture(t: import("vitest").TestContext) {
   const store = new Store(db);
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
   const projects = new Projects(store, workspaces);
+
   t.onTestFinished(async () => {
     if (store.db.isOpen) store.close();
     await rm(dir, { recursive: true, force: true });
   });
+
   async function repo(name: string) {
     const path = join(dir, name);
     await mkdir(path, { recursive: true });
     execFileSync("git", ["init", "-q", path]);
+
     return path;
   }
+
   return { dir, db, store, workspaces, projects, repo };
 }
 
@@ -45,14 +49,17 @@ test("project registration requires user authority and grants live persistent ac
   const tool = "register_user_agent_project";
   assert.equal(isUserTool(tool), true);
   assert.equal(isUserTool("browse_user_agent_project"), true);
+
   await assert.rejects(
     callTool(control, "owner", tool, { repository }),
     /user interface/i,
   );
+
   await assert.rejects(
     callTool(control, "owner", "browse_user_agent_project", {}),
     /user interface/i,
   );
+
   await assert.rejects(f.projects.resolve(repository), /outside allowed roots/);
   assert.deepEqual(f.projects.list(), []);
 
@@ -60,7 +67,9 @@ test("project registration requires user authority and grants live persistent ac
     callTool(control, "owner", tool, { repository: "relative/path" }, "user"),
     /absolute/i,
   );
+
   await mkdir(join(repository, "src"));
+
   await assert.rejects(
     callTool(
       control,
@@ -71,21 +80,25 @@ test("project registration requires user authority and grants live persistent ac
     ),
     /repository root/i,
   );
+
   assert.deepEqual(f.projects.list(), []);
 
   assert.deepEqual(
     await callTool(control, "owner", tool, { repository }, "user"),
     { repository, kind: "repository" },
   );
+
   assert.equal(await f.projects.resolve(repository), repository);
   await callTool(control, "owner", tool, { repository }, "user");
   assert.equal(f.projects.list().length, 1);
   const reopened = new Store(f.db);
+
   try {
     const registry = new Projects(
       reopened,
       new Workspaces(join(f.dir, "reopened-worktrees"), []),
     );
+
     assert.equal(await registry.resolve(repository), repository);
   } finally {
     reopened.close();
@@ -94,22 +107,28 @@ test("project registration requires user authority and grants live persistent ac
 
 test("registration persists and a running registry sees CLI database updates", async (t) => {
   const f = await fixture(t);
+
   const a = await f.repo("a"),
     b = await f.repo("b");
+
   await f.projects.register(a);
   assert.equal(await f.projects.resolve(a), a);
   await assert.rejects(f.projects.resolve(b), /outside allowed roots/);
   const cliStore = new Store(f.db);
+
   try {
     const cli = new Projects(
       cliStore,
       new Workspaces(join(f.dir, "unused"), []),
     );
+
     await cli.register(b);
   } finally {
     cliStore.close();
   }
+
   assert.equal(await f.projects.resolve(b), b);
+
   assert.deepEqual(
     f.projects.list().map((p) => p.repository),
     [a, b],
@@ -118,21 +137,28 @@ test("registration persists and a running registry sees CLI database updates", a
 
 test("explicit paths cannot grant access, and current never falls back to another project", async (t) => {
   const f = await fixture(t);
+
   const a = await f.repo("a"),
     b = await f.repo("b");
+
   await f.projects.register(a);
+
   await assert.rejects(
     f.projects.resolve("current"),
     /explicit repository path/,
   );
+
   await assert.rejects(f.projects.resolve("a"), /absolute/);
   await assert.rejects(f.projects.resolve(b), /outside allowed roots/);
+
   assert.deepEqual(
     f.projects.list().map((p) => p.repository),
     [a],
   );
+
   await assert.rejects(f.projects.register("a"), /absolute/);
   await mkdir(join(a, "subdir"));
+
   await assert.rejects(
     f.projects.register(join(a, "subdir")),
     /repository root/,
@@ -180,14 +206,17 @@ for (const missing of ["deleted", "parent replaced with file"] as const) {
       await writeFile(join(f.dir, "unavailable"), "no longer a directory");
 
     assert.equal(await f.projects.resolve(available), available);
+
     assert.deepEqual(
       f.projects.list().map((p) => p.repository),
       [available, unavailable],
       "temporary filesystem failures must not revoke saved approval",
     );
+
     await assert.rejects(f.projects.resolve(unavailable), {
       code: missing === "deleted" ? "ENOENT" : "ENOTDIR",
     });
+
     await assert.rejects(f.projects.resolve(outside), /outside allowed roots/);
 
     if (missing === "parent replaced with file")
@@ -214,26 +243,32 @@ test("repository approval does not grant access to independent nested repositori
   const nested = await f.repo("outer/nested");
   await f.projects.register(outer);
   assert.equal(await f.projects.resolve(outer), outer);
+
   await assert.rejects(
     f.projects.resolve(nested),
     /outside allowed roots|not registered/i,
   );
+
   await f.projects.register(nested);
   assert.equal(await f.projects.resolve(nested), nested);
 
   const another = await f.repo("outer/another");
+
   await assert.rejects(
     f.projects.resolve(another),
     /outside allowed roots|not registered/i,
   );
+
   await f.projects.register(outer, "parent");
   assert.equal(await f.projects.resolve(another), another);
 });
 
 test("tasks and interrupted continuations stay bound to the chosen project", async (t) => {
   const f = await fixture(t);
+
   const a = await f.repo("a"),
     b = await f.repo("b");
+
   for (const repo of [a, b]) {
     execFileSync("git", [
       "-C",
@@ -247,23 +282,30 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
       "-qm",
       "initial",
     ]);
+
     await f.projects.register(repo);
   }
+
   const provider = new FixtureProvider();
+
   const control = new Control(
     f.store,
     f.workspaces,
     new Map([[provider.id, provider]]),
     a,
   );
+
   control.projects = f.projects;
+
   const until = async (fn: () => boolean) => {
     for (let i = 0; i < 300; i++) {
       if (fn()) return;
       await new Promise((done) => setTimeout(done, 10));
     }
+
     throw new Error("Timed out waiting for fixture lifecycle");
   };
+
   try {
     await assert.rejects(
       control.start("owner", {
@@ -274,17 +316,21 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
       }),
       /explicit repository path/,
     );
+
     assert.equal(f.store.all().length, 0);
+
     const task = await control.start("owner", {
       provider: "fixture",
       title: "Review [input]",
       description: "Review [input]",
       repository: b,
     });
+
     await until(() => f.store.get(task.id, "owner").status === "waiting");
     const started = f.store.get(task.id, "owner");
     assert.equal(started.repository, b);
     assert.equal(started.workspace, b);
+
     assert.equal(
       (
         await git(started.workspace!, [
@@ -295,6 +341,7 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
       ).trim(),
       join(b, ".git"),
     );
+
     await control.stop("owner", task.id, "interrupted");
     control.repository = a;
     const resumed = await control.continue("owner", task.id);

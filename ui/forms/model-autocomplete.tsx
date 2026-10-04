@@ -3,18 +3,22 @@ import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useController, useFormContext } from "react-hook-form";
 import type { ModelChoice } from "../../src/core/model";
 import type { DelegateValues } from "./delegate-fields";
+
 function matches(model: ModelChoice, query: string) {
   const text = query.trim().toLowerCase();
+
   return [model.value, model.displayName, model.description].some((field) =>
     field?.toLowerCase().includes(text),
   );
 }
+
 /** Discovered models are suggestions; custom model IDs and aliases remain valid. */
 interface ModelAutocompleteProps {
   models: ModelChoice[];
   placeholder: string;
   describedBy?: string;
 }
+
 export function ModelAutocomplete({
   models,
   placeholder,
@@ -25,6 +29,7 @@ export function ModelAutocomplete({
   const [open, setOpen] = useState(false);
   // An unmatched custom ID closes the menu so the rest of the form stays usable.
   const hasMatches = models.some((model) => matches(model, field.value));
+
   return (
     <Autocomplete.Root
       items={models}

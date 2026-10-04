@@ -4,6 +4,7 @@ import { MotionContent } from "./motion";
 import { canAnimate, MOTION } from "./motion-utils";
 import { useController, useSnapshot } from "./controller-context";
 import { Button, buttonClass } from "./button";
+
 export function Header() {
   const controller = useController(),
     state = useSnapshot(),
@@ -13,8 +14,10 @@ export function Header() {
     canAddProject = !state.conversation,
     expandLabel =
       state.host.displayMode === "fullscreen" ? "Collapse" : "Expand";
+
   // One full turn acknowledges the click, however quickly the refresh returns.
   const glyph = useRef<HTMLSpanElement>(null);
+
   const refresh = () => {
       if (canAnimate(glyph.current))
         glyph.current!.animate(
@@ -29,6 +32,7 @@ export function Header() {
       }),
     addProject = () => controller.addProject(),
     settings = () => controller.run(() => controller.settings());
+
   return (
     <header>
       <div className="brand">

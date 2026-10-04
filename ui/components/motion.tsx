@@ -9,6 +9,7 @@ import {
 import { MOTION, canAnimate } from "./motion-utils";
 
 type MotionTag = "span" | "strong" | "div";
+
 type MotionVariant = "swap" | "rise";
 
 interface MotionContentProps {
@@ -28,6 +29,7 @@ export function MotionContent({
   children,
 }: MotionContentProps) {
   const classes = [`motion-${variant}`, className].filter(Boolean).join(" ");
+
   return (
     <Tag key={changeKey} className={classes}>
       {children}
@@ -45,6 +47,7 @@ function frames(variant: Variant, element: HTMLElement): Keyframe[] {
       { opacity: 1, transform: "none" },
     ];
   const style = getComputedStyle(element);
+
   const edges = [
     "paddingTop",
     "paddingBottom",
@@ -53,6 +56,7 @@ function frames(variant: Variant, element: HTMLElement): Keyframe[] {
     "borderTopWidth",
     "borderBottomWidth",
   ] as const;
+
   return [
     {
       opacity: 0,
@@ -88,37 +92,50 @@ export function Presence({
   const wrapper = useRef<HTMLDivElement>(null);
   const [previous, setPrevious] = useState(show);
   const [exiting, setExiting] = useState(false);
+
   if (previous !== show) {
     setPrevious(show);
     setExiting(!show);
   }
+
   // The exit animation shows the content that was last visible.
   const last = useRef(children);
   if (show) last.current = children;
   const first = useRef(true);
+
   useLayoutEffect(() => {
     const skip = first.current;
     first.current = false;
     const element = wrapper.current?.firstElementChild as HTMLElement | null;
+
     if (!canAnimate(element)) {
       if (!show) setExiting(false);
+
       return;
     }
+
     if (skip) return;
     const keyframes = frames(variant, element!);
     const timing = { duration: MOTION.base, easing: MOTION.easing };
+
     if (show) {
       const animation = element!.animate(keyframes, timing);
+
       return () => animation.cancel();
     }
+
     const animation = element!.animate(keyframes.reverse(), {
       ...timing,
       fill: "forwards",
     });
+
     animation.onfinish = () => setExiting(false);
+
     return () => animation.cancel();
   }, [show]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!show && !exiting) return null;
+
   return (
     <div ref={wrapper} className="presence" inert={!show}>
       {show ? children : last.current}
@@ -137,23 +154,29 @@ export function useListMotion(
   key: unknown,
 ) {
   const tops = useRef(new Map<string, number>());
+
   useLayoutEffect(() => {
     const container = ref.current;
     if (!container) return;
+
     const previous = tops.current,
       next = new Map<string, number>(),
       animations: Animation[] = [];
+
     const motion = canAnimate(container),
       // Relative to the list, so layout shifts above it never read as row movement.
       origin = container.getBoundingClientRect().top - container.scrollTop;
+
     for (const element of container.querySelectorAll<HTMLElement>(
       `[${attribute}]`,
     )) {
       const id = element.getAttribute(attribute)!,
         top = element.getBoundingClientRect().top - origin;
+
       next.set(id, top);
       const old = previous.get(id);
       if (!motion || old === undefined || Math.abs(old - top) < 1) continue;
+
       animations.push(
         element.animate(
           [{ transform: `translateY(${old - top}px)` }, { transform: "none" }],
@@ -161,7 +184,9 @@ export function useListMotion(
         ),
       );
     }
+
     tops.current = next;
+
     return () => animations.forEach((animation) => animation.cancel());
   }, [ref, attribute, key]);
 }
@@ -176,9 +201,11 @@ export function useAnimatedHeight(
 ) {
   const height = useRef<number | undefined>(undefined);
   const animating = useRef(false);
+
   const observed = useRef<{ element: HTMLElement; observer?: ResizeObserver }>(
     undefined,
   );
+
   // Track unrelated size changes (such as a resize) so the next change starts from the real height.
   // The element can mount later (a dialog popup), so check it after every render.
   useLayoutEffect(() => {
@@ -189,25 +216,32 @@ export function useAnimatedHeight(
     // A new element starts from its own height, never a predecessor's.
     height.current = element?.offsetHeight;
     if (!element) return;
+
     const observer =
       typeof ResizeObserver === "undefined"
         ? undefined
         : new ResizeObserver(() => {
             if (!animating.current) height.current = element.offsetHeight;
           });
+
     observer?.observe(element);
     observed.current = { element, observer };
   });
+
   useLayoutEffect(() => () => observed.current?.observer?.disconnect(), []);
+
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) return;
+
     const from = height.current,
       to = element.offsetHeight;
+
     height.current = to;
     if (from === undefined || Math.abs(from - to) < 1 || !canAnimate(element))
       return;
     animating.current = true;
+
     const animation = element.animate(
       [
         { height: `${from}px`, overflow: "hidden" },
@@ -215,12 +249,15 @@ export function useAnimatedHeight(
       ],
       { duration: MOTION.base, easing: MOTION.easing },
     );
+
     let finished = false;
+
     animation.onfinish = () => {
       finished = true;
       animating.current = false;
       height.current = element.offsetHeight;
     };
+
     return () => {
       // Interrupted: the next change starts from where this one had reached.
       // Cleanup runs after the DOM changed, so read the size the animation still holds.

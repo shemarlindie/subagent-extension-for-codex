@@ -10,11 +10,14 @@ import { WorkerInspector } from "./worker-inspector";
 import { TaskDescription } from "./task-description";
 import { MotionContent } from "./motion";
 import { Button } from "./button";
+
 export function TaskInspector() {
   const controller = useController(),
     state = useSnapshot(),
     task = selectedTask(state);
+
   const { detailRef, headerRef, stacked } = useStackedLayout(task?.id);
+
   // Only a running task has live detail beyond its status label.
   // Events load after selection; until then the label alone is accurate.
   const live =
@@ -24,10 +27,12 @@ export function TaskInspector() {
     state.events.length
       ? currentActivityStatus(state.events, task)
       : undefined;
+
   const displayTask =
     task?.status === "running" && live?.state === "failed"
       ? { ...task, status: "failed" as const }
       : task;
+
   return (
     <section
       ref={detailRef}
@@ -113,21 +118,27 @@ function useStackedLayout(taskId?: string) {
   const detailRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [stacked, setStacked] = useState(false);
+
   useLayoutEffect(() => {
     const detail = detailRef.current,
       header = headerRef.current;
+
     if (!detail || !header || typeof ResizeObserver === "undefined")
       return setStacked(false);
+
     // Stacking leaves both heights unchanged, so this cannot oscillate.
     const measure = () =>
       setStacked(
         detail.clientHeight - header.offsetHeight < MIN_EVIDENCE_HEIGHT,
       );
+
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(detail);
     observer.observe(header);
+
     return () => observer.disconnect();
   }, [taskId]);
+
   return { detailRef, headerRef, stacked };
 }

@@ -3,6 +3,7 @@ import { test } from "vitest";
 import { browseProject } from "../src/core/project-picker.js";
 
 type Execute = NonNullable<Parameters<typeof browseProject>[0]>["execute"];
+
 // The picker only uses the resolved stdout, so fakes skip the child-process handle.
 const fake = (
   run: (...args: unknown[]) => Promise<{ stdout: string; stderr: string }>,
@@ -10,13 +11,16 @@ const fake = (
 
 test("native folder picker uses a fixed script and preserves folder-name spaces", async () => {
   const calls: unknown[][] = [];
+
   const result = await browseProject({
     platform: "darwin",
     execute: fake(async (...args) => {
       calls.push(args);
+
       return { stdout: "/repo/ project with spaces /\n", stderr: "" };
     }),
   });
+
   assert.deepEqual(result, { repository: "/repo/ project with spaces /" });
   assert.equal(calls.length, 1);
   assert.equal(calls[0][0], "/usr/bin/osascript");
@@ -39,21 +43,25 @@ test("native folder cancellation returns no repository", async () => {
 
 test("unsupported hosts retain manual registration without executing a picker", async () => {
   let executed = false;
+
   await assert.rejects(
     browseProject({
       platform: "linux",
       execute: fake(async () => {
         executed = true;
+
         return { stdout: "", stderr: "" };
       }),
     }),
     /absolute repository path/i,
   );
+
   assert.equal(executed, false);
 });
 
 test("picker rejects overlapping requests and releases its lock after errors", async () => {
   let fail!: (error: Error) => void;
+
   const pending = browseProject({
     platform: "darwin",
     execute: fake(
@@ -63,6 +71,7 @@ test("picker rejects overlapping requests and releases its lock after errors", a
         }),
     ),
   });
+
   await assert.rejects(
     browseProject({
       platform: "darwin",
@@ -70,8 +79,10 @@ test("picker rejects overlapping requests and releases its lock after errors", a
     }),
     /already open/i,
   );
+
   fail(new Error("osascript failed"));
   await assert.rejects(pending, /osascript failed/);
+
   assert.deepEqual(
     await browseProject({
       platform: "darwin",

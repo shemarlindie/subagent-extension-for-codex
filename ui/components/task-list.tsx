@@ -15,6 +15,7 @@ import type { Filter, Task } from "../core/types";
 import { useController, useSnapshot } from "./controller-context";
 import { Button } from "./button";
 import { TaskStatusIcon } from "./task-status-icon";
+
 interface TaskRowProps {
   task: Task;
   selected: boolean;
@@ -43,6 +44,7 @@ export function TaskRow({ task, selected, onSelect }: TaskRowProps) {
 
 function TaskRowStatus({ task }: { task: Task }) {
   const { kind, label } = rowStatus(task);
+
   return <TaskStatusIcon kind={kind} label={label} />;
 }
 
@@ -58,10 +60,13 @@ function TaskRowRuntime({ task }: { task: Task }) {
     live = runtimeLive(task) && !activityLabel,
     now = useNow(live),
     runtime = taskRuntimeMs(task, now);
+
   // Attention states and tasks without an active clock use their short label.
   const label =
     activityLabel || (!live && !terminal(task)) ? status.shortLabel : undefined;
+
   const duration = formatDuration(runtime);
+
   return (
     <span
       className="row-runtime"
@@ -78,6 +83,7 @@ function TaskRowRuntime({ task }: { task: Task }) {
     </span>
   );
 }
+
 const EMPTY_FILTER: Record<Filter, string> = {
   all: "No tasks yet. Start a task to see it here.",
   active: "No active tasks.",
@@ -85,6 +91,7 @@ const EMPTY_FILTER: Record<Filter, string> = {
   completed: "No completed tasks.",
   failed: "No failed tasks.",
 };
+
 export function TaskList() {
   const controller = useController(),
     state = useSnapshot(),
@@ -93,11 +100,14 @@ export function TaskList() {
     narrowed = state.filter !== "all" || Boolean(state.search),
     filterLabel = FILTER_LABELS[state.filter],
     listRef = useRef<HTMLDivElement>(null);
+
   useListMotion(listRef, "data-task", tasks.map((task) => task.id).join());
+
   const resetFilters = () => {
     controller.setSearch("");
     controller.setFilter("all");
   };
+
   return (
     <>
       <div className="list-label">

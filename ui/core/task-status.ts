@@ -20,6 +20,7 @@ export function rowStatus(task: Task) {
       !task.pending_input
         ? activity.text
         : statusLabel(task);
+
   const shortLabels = {
     queued: "Queued",
     starting: "Starting",
@@ -33,10 +34,12 @@ export function rowStatus(task: Task) {
     paused: "Rate limit",
     unconfirmed: "Unconfirmed",
   };
+
   const displayLabel =
     activity?.text === "Context compaction failed"
       ? "Compaction failed"
       : label;
+
   return {
     kind,
     label: displayLabel,

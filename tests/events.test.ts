@@ -14,7 +14,9 @@ import {
   type WebhookPost,
 } from "../src/events/webhook.js";
 import { startSchema, now, type Task } from "../src/core/model.js";
+
 const secret = "whsec_" + Buffer.alloc(32, 7).toString("base64");
+
 const request = (args: Record<string, string> = {}) => ({
   name: "agent_task.completed",
   arguments: args,
@@ -25,6 +27,7 @@ const request = (args: Record<string, string> = {}) => ({
   },
   cursor: null,
 });
+
 const make = (id = "task-a", owner = "alice"): Task => ({
   ...startSchema.parse({
     title: "Review",
@@ -41,27 +44,34 @@ const make = (id = "task-a", owner = "alice"): Task => ({
   attempt: 1,
   runtime_ms: 0,
 });
+
 async function setup(status = 200) {
   const dir = await mkdtemp(join(tmpdir(), "ac-events-")),
     db = join(dir, "db.sqlite"),
     store = new Store(db),
     key = randomBytes(32);
+
   const posts: Array<{
     url: string;
     body: any;
     headers: Record<string, string>;
   }> = [];
+
   let currentStatus = status;
+
   const post: WebhookPost = async (url, body, headers) => {
     const json = JSON.parse(body);
     new Webhook(secret).verify(body, headers);
     posts.push({ url, body: json, headers });
+
     return json.type === "verification"
       ? { status: 200, body: JSON.stringify({ challenge: json.challenge }) }
       : { status: currentStatus, body: "" };
   };
+
   const events = new Events(store, key, post);
   store.save(make());
+
   return {
     store,
     key,
@@ -71,6 +81,7 @@ async function setup(status = 200) {
     setStatus: (n: number) => (currentStatus = n),
   };
 }
+
 test("webhook validation rejects non-HTTPS, credentials, redirects ports, non-public IPs, and malformed secrets", () => {
   for (const url of [
     "http://receiver.example/cb",
@@ -97,43 +108,55 @@ test("webhook validation rejects non-HTTPS, credentials, redirects ports, non-pu
   assert.equal(publicAddress("8.8.8.8"), true);
   assert.equal(publicAddress("2606:4700:4700::1111"), true);
   assert.throws(() => validSecret("not-a-secret"));
+
   assert.throws(() =>
     validSecret("whsec_" + Buffer.alloc(12).toString("base64")),
   );
+
   validSecret(secret);
 });
+
 test("subscribe identity is canonical, owner-scoped, encrypted and refreshable with bounded expiration", async () => {
   const { store, events } = await setup();
+
   try {
     const a = (await events.handle("alice", "events/subscribe", {
       ...request({ provider: "claude", conversation_id: "chat-a" }),
       ttlMs: 60000,
     })) as any;
+
     const b = (await events.handle(
       "alice",
       "events/subscribe",
       request({ conversation_id: "chat-a", provider: "claude" }),
     )) as any;
+
     assert.equal(a.id, b.id);
     assert.ok(a.refreshBefore);
     assert.equal(a.cursor, null);
+
     assert.equal(
       store.db.prepare("SELECT COUNT(*) AS n FROM event_subscriptions").get()!
         .n,
       1,
     );
+
     const body = String(
       store.db.prepare("SELECT body FROM event_subscriptions").get()!.body,
     );
+
     assert.ok(!body.includes(secret));
+
     await assert.rejects(
       events.handle("bob", "events/subscribe", request({ task_id: "task-a" })),
       /unauthorized/,
     );
+
     const finite = (await events.handle("alice", "events/subscribe", {
       ...request(),
       ttlMs: null,
     })) as any;
+
     assert.ok(finite.refreshBefore);
     assert.ok(new Date(finite.refreshBefore).getTime() < Date.now() + 86401000);
   } finally {
@@ -141,12 +164,15 @@ test("subscribe identity is canonical, owner-scoped, encrypted and refreshable w
     store.close();
   }
 });
+
 test("failed callback verification never creates a subscription or exposes the supplied secret", async () => {
   const { store, key } = await setup();
+
   const events = new Events(store, key, async () => ({
     status: 200,
     body: JSON.stringify({ challenge: "wrong" }),
   }));
+
   try {
     await assert.rejects(
       events.handle("alice", "events/subscribe", request()),
@@ -156,6 +182,7 @@ test("failed callback verification never creates a subscription or exposes the s
         e.reason === "challenge_failed" &&
         !e.message.includes(secret),
     );
+
     assert.equal(
       store.db.prepare("SELECT COUNT(*) AS n FROM event_subscriptions").get()!
         .n,
@@ -166,14 +193,18 @@ test("failed callback verification never creates a subscription or exposes the s
     store.close();
   }
 });
+
 test("completion events are compact, filtered, signed, idempotent and durable across restart", async () => {
   const { store, events, key, posts, db } = await setup();
+
   await events.handle(
     "alice",
     "events/subscribe",
     request({ task_id: "task-a" }),
   );
+
   const t = make();
+
   t.result = {
     summary: "Review complete",
     findings: [],
@@ -182,26 +213,34 @@ test("completion events are compact, filtered, signed, idempotent and durable ac
     tests: [],
     recommendations: [],
   };
+
   store.save(t);
+
   const event = store.event(t, "task.completed", {
     summary: "Review complete",
   });
+
   store.save(make("task-other"));
   store.event(make("task-other"), "task.completed", { summary: "Filtered" });
   events.capture();
   events.capture();
+
   assert.equal(
     store.db.prepare("SELECT COUNT(*) AS n FROM event_outbox").get()!.n,
     1,
   );
+
   await events.close();
   store.close();
   const restored = new Store(db);
+
   const restarted = new Events(restored, key, async (url, body, headers) => {
     new Webhook(secret).verify(body, headers);
     posts.push({ url, body: JSON.parse(body), headers });
+
     return { status: 200, body: "" };
   });
+
   await restarted.flush();
   await restarted.flush();
   const delivered = posts.filter((p) => !p.body.type);
@@ -215,8 +254,10 @@ test("completion events are compact, filtered, signed, idempotent and durable ac
   await restarted.close();
   restored.close();
 });
+
 test("transient failures retry with stable event IDs; permanent failures stop delivery", async () => {
   const { store, events, posts, setStatus } = await setup(503);
+
   try {
     await events.handle("alice", "events/subscribe", request());
     store.event(make(), "task.completed", {});
@@ -234,12 +275,15 @@ test("transient failures retry with stable event IDs; permanent failures stop de
     events.capture();
     setStatus(410);
     await events.flush();
+
     const sub = JSON.parse(
       String(
         store.db.prepare("SELECT body FROM event_subscriptions").get()!.body,
       ),
     );
+
     assert.equal(sub.active, false);
+
     assert.equal(
       store.db
         .prepare("SELECT COUNT(*) AS n FROM event_outbox WHERE status='ready'")
@@ -251,29 +295,36 @@ test("transient failures retry with stable event IDs; permanent failures stop de
     store.close();
   }
 });
+
 test("unsubscribe is idempotent and revoked ownership prevents queued delivery", async () => {
   const { store, events, posts } = await setup();
+
   try {
     const params = request();
     await events.handle("alice", "events/subscribe", params);
     store.event(make(), "task.completed", {});
     events.capture();
+
     store.db
       .prepare("UPDATE tasks SET owner=? WHERE id=?")
       .run("bob", "task-a");
+
     await events.flush();
     assert.equal(posts.filter((p) => !p.body.type).length, 0);
     const { secret: _secret, ...delivery } = params.delivery;
+
     await events.handle("alice", "events/unsubscribe", {
       name: params.name,
       arguments: params.arguments,
       delivery,
     });
+
     await events.handle("alice", "events/unsubscribe", {
       name: params.name,
       arguments: params.arguments,
       delivery,
     });
+
     assert.equal(
       store.db.prepare("SELECT COUNT(*) AS n FROM event_subscriptions").get()!
         .n,
@@ -284,25 +335,31 @@ test("unsubscribe is idempotent and revoked ownership prevents queued delivery",
     store.close();
   }
 });
+
 test("input-required and failure catalogs match persisted event envelopes without carrying high-volume logs", async () => {
   const { store, events, posts } = await setup();
+
   try {
     const catalog = (await events.handle("alice", "events/list", {})) as any;
     assert.equal(catalog.events.length, 3);
     for (const name of ["agent_task.input_required", "agent_task.failed"])
       await events.handle("alice", "events/subscribe", { ...request(), name });
     store.event(make(), "agent.message", { text: "do not webhook logs" });
+
     store.event(make(), "agent.input_required", {
       request: { tool: "Bash", input: { command: "large" } },
     });
+
     store.event(make(), "task.failed", { error: "Runtime budget exhausted" });
     events.capture();
     await events.flush();
     const delivered = posts.filter((p) => !p.body.type);
+
     assert.deepEqual(delivered.map((p) => p.body.name).sort(), [
       "agent_task.failed",
       "agent_task.input_required",
     ]);
+
     assert.ok(!JSON.stringify(delivered).includes("large"));
   } finally {
     await events.close();
@@ -317,48 +374,60 @@ test("callback transport revalidates DNS, pins the approved address and retains 
     connections = 0,
     pinned: any;
   let dns = [{ address: "8.8.8.8", family: 4 }];
+
   const post = createWebhookPost(
     (async () => {
       lookups++;
+
       return dns;
     }) as any,
     ((_url: any, options: any, onResponse: any) => {
       connections++;
       assert.equal(options.servername, "receiver.example");
+
       options.lookup(
         "receiver.example",
         { all: true },
         (_error: any, addresses: any) => (pinned = addresses),
       );
+
       const req = new EventEmitter() as any;
+
       req.end = () => {
         const response = new EventEmitter() as any;
         response.statusCode = 302;
         response.setEncoding = () => {};
         onResponse(response);
+
         queueMicrotask(() => {
           response.emit("end");
           req.emit("close");
         });
       };
+
       req.destroy = (e: Error) => {
         req.emit("error", e);
         req.emit("close");
       };
+
       return req;
     }) as any,
   );
+
   assert.equal(
     (await post("https://receiver.example/callback", "{}", {})).status,
     302,
   );
+
   assert.equal(connections, 1);
   assert.deepEqual(pinned, [{ address: "8.8.8.8", family: 4 }]);
   dns = [{ address: "127.0.0.1", family: 4 }];
+
   await assert.rejects(
     post("https://receiver.example/callback", "{}", {}),
     /not public/,
   );
+
   assert.equal(lookups, 2);
   assert.equal(connections, 1);
 });
@@ -368,19 +437,24 @@ test("secret rotation signs with both keys during the bounded transition window 
   let current = secret;
   const posts: any[] = [];
   const other = "whsec_" + Buffer.alloc(32, 3).toString("base64");
+
   const events = new Events(store, key, async (_url, body, headers) => {
     const json = JSON.parse(body);
     new Webhook(current).verify(body, headers);
     posts.push({ json, headers, body });
+
     return { status: 200, body: JSON.stringify({ challenge: json.challenge }) };
   });
+
   try {
     await events.handle("alice", "events/subscribe", request());
     current = other;
+
     const updated = {
       ...request(),
       delivery: { ...request().delivery, secret: other },
     };
+
     await events.handle("alice", "events/subscribe", updated);
     await events.handle("alice", "events/subscribe", updated);
     assert.equal(posts.filter((p) => p.json.type).length, 2);
@@ -395,8 +469,10 @@ test("secret rotation signs with both keys during the bounded transition window 
     store.close();
   }
 });
+
 test("expired subscriptions and subscriptions recreated after unsubscribe never send old queued work", async () => {
   const { store, events, posts } = await setup();
+
   try {
     await events.handle("alice", "events/subscribe", request());
     store.event(make(), "task.completed", {});
@@ -404,18 +480,22 @@ test("expired subscriptions and subscriptions recreated after unsubscribe never 
     const row = store.db.prepare("SELECT body FROM event_subscriptions").get()!;
     const s = JSON.parse(String(row.body));
     s.expires = 0;
+
     store.db
       .prepare("UPDATE event_subscriptions SET body=?")
       .run(JSON.stringify(s));
+
     await events.flush();
     assert.equal(posts.filter((p) => !p.body.type).length, 0);
     const params = request();
     const { secret: _secret, ...delivery } = params.delivery;
+
     await events.handle("alice", "events/unsubscribe", {
       name: params.name,
       arguments: {},
       delivery,
     });
+
     await events.handle("alice", "events/subscribe", request());
     await events.flush();
     assert.equal(posts.filter((p) => !p.body.type).length, 0);

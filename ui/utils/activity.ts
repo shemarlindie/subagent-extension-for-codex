@@ -10,6 +10,7 @@ export const record = (value: unknown): Record<string, unknown> =>
 
 export const label = (key: string) => {
   const words = key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_.]/g, " ");
+
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
@@ -53,6 +54,7 @@ const sdkTitles: Record<string, string> = {
 
 function sdkTitle(data: Record<string, unknown>) {
   const key = String(data.subtype ?? data.type ?? "activity");
+
   return sdkTitles[key] ?? label(key);
 }
 
@@ -68,12 +70,14 @@ export function eventTitle(event: Event, failed: boolean, toolName?: string) {
   if (event.type === "agent.started") return "Agent started";
   if (event.type === "agent.completed")
     return `Agent ${failed ? "failed" : "finished"}`;
+
   return label(event.type);
 }
 
 /** Rebuilds visible content blocks from SDK stream start and delta events. */
 export function streamContent(events: Event[]) {
   const blocks = new Map<number, Record<string, unknown>>();
+
   for (const event of events) {
     const frame = record(event.data.event);
     const index = frame.index ?? 0;
@@ -81,31 +85,40 @@ export function streamContent(events: Event[]) {
       continue;
     if (frame.type === "content_block_start")
       blocks.set(index, { ...record(frame.content_block) });
+
     if (frame.type === "content_block_delta") {
       const delta = record(frame.delta);
       const block = blocks.get(index) ?? {};
+
       if (delta.type === "text_delta") {
         block.type = "text";
         block.text = String(block.text ?? "") + String(delta.text ?? "");
       }
+
       if (delta.type === "thinking_delta") {
         block.type = "thinking";
+
         block.thinking =
           String(block.thinking ?? "") + String(delta.thinking ?? "");
       }
+
       if (delta.type === "input_json_delta") {
         block.type = "input_json_delta";
+
         block.partial_json =
           String(block.partial_json ?? "") + String(delta.partial_json ?? "");
       }
+
       blocks.set(index, block);
     }
   }
+
   return [...blocks.values()];
 }
 
 function isThinkingBlock(block: unknown) {
   const type = record(block).type;
+
   return type === "thinking" || type === "redacted_thinking";
 }
 
@@ -117,6 +130,7 @@ export function thinkingOnly(events: Event[]) {
       // The provider emits one content block per event; accept arrays too.
       const content = event.data.content ?? event.data.text;
       const blocks = Array.isArray(content) ? content : [content];
+
       return blocks.length > 0 && blocks.every(isThinkingBlock);
     })
   );

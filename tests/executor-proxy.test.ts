@@ -7,6 +7,7 @@ import { waitForListening } from "./helpers.js";
 
 async function tunnel(url: string, target: string, auth = true) {
   const parsed = new URL(url);
+
   return new Promise<{ status: number; socket: import("node:net").Socket }>(
     (resolve, reject) => {
       const req = request({
@@ -24,20 +25,25 @@ async function tunnel(url: string, target: string, auth = true) {
             }
           : {},
       });
+
       req.once("connect", (res, socket) =>
         resolve({ status: res.statusCode!, socket }),
       );
+
       req.once("error", reject);
       req.end();
     },
   );
 }
+
 test("executor proxy authenticates each tunnel and blocks unsupported hosts, ports, and private DNS answers", async () => {
   let lookups = 0,
     dials = 0;
+
   const proxy = await executorProxy(
     async () => {
       lookups++;
+
       return [{ address: "127.0.0.1", family: 4 }];
     },
     (() => {
@@ -45,6 +51,7 @@ test("executor proxy authenticates each tunnel and blocks unsupported hosts, por
       throw new Error("Should not dial");
     }) as typeof connect,
   );
+
   try {
     for (const [target, auth, expected] of [
       ["api.openai.com:443", false, 407],
@@ -57,35 +64,43 @@ test("executor proxy authenticates each tunnel and blocks unsupported hosts, por
       assert.equal(response.status, expected);
       response.socket.destroy();
     }
+
     assert.equal(lookups, 1);
     assert.equal(dials, 0);
   } finally {
     await proxy.stop();
   }
 });
+
 test("executor proxy pins validated public IPs, tunnels bytes, and revalidates DNS on every connection", async () => {
   const server = createServer((socket) => socket.pipe(socket));
   await waitForListening(server.listen(0, "127.0.0.1"));
   const port = (server.address() as { port: number }).port;
   let lookups = 0;
   const calls: any[] = [];
+
   const proxy = await executorProxy(
     async () => {
       lookups++;
+
       return [{ address: lookups === 1 ? "8.8.8.8" : "10.0.0.1", family: 4 }];
     },
     ((options: any) => {
       calls.push(options);
+
       return connect({ host: "127.0.0.1", port });
     }) as typeof connect,
   );
+
   try {
     const first = await tunnel(proxy.url, "api.openai.com:443");
     assert.equal(first.status, 200);
     assert.deepEqual(calls[0], { host: "8.8.8.8", port: 443, family: 4 });
+
     const echoed = new Promise<string>((resolve) =>
       first.socket.once("data", (chunk) => resolve(String(chunk))),
     );
+
     first.socket.write("test payload");
     assert.equal(await echoed, "test payload");
     first.socket.destroy();

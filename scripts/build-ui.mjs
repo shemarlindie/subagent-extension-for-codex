@@ -2,7 +2,9 @@ import { build, parseAst } from "vite";
 import react from "@vitejs/plugin-react";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+
 await mkdir("dist", { recursive: true });
+
 for (const [entry, template, stylesheet, output] of [
   [
     "ui/entries/console.ts",
@@ -33,21 +35,26 @@ for (const [entry, template, stylesheet, output] of [
       },
     },
   });
+
   const chunks = [result]
     .flat()
     .flatMap((bundle) => bundle.output)
     .filter((file) => file.type === "chunk");
+
   if (chunks.length !== 1)
     throw new Error(`Expected one bundle chunk, got ${chunks.length}`);
+
   const css =
     (await readFile(stylesheet, "utf8")) +
     "\n" +
     (await readFile("ui/styles/shared.css", "utf8"));
+
   const html = (await readFile(template, "utf8"))
     .replace("/*__CSS__*/", () => css)
     .replace("/*__APP__*/", () =>
       chunks[0].code.replaceAll("</script", "<\\/script"),
     );
+
   // Parse the final embedded module too: String.replace replacement tokens can corrupt bundles.
   const module = html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
   if (!module) throw new Error("Missing application module");

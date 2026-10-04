@@ -16,8 +16,10 @@ import { useController, useSnapshot } from "../components/controller-context";
 import { Presence } from "../components/motion";
 import { Icon } from "../components/icons";
 import { Button } from "../components/button";
+
 // Cards further back than this stay hidden so the stack reads as a stack, not a pile.
 const MAX_PEEK = 2;
+
 // The SDK has no per-question skip; an explicit answer tells Claude what happened.
 export const SKIPPED_ANSWER =
   "(Skipped: the user has no preference; use your best judgment.)";
@@ -31,6 +33,7 @@ function answerFor(
   const typed = custom?.trim() ?? "";
   if (Array.isArray(preset))
     return [...preset, ...(typed ? [typed] : [])].join(", ");
+
   return question.multiSelect ? typed : typed || (preset?.trim() ?? "");
 }
 
@@ -47,6 +50,7 @@ interface QuestionCardProps {
   onNext?: () => void;
   onUnskip: () => void;
 }
+
 function QuestionCard({
   question,
   index,
@@ -66,6 +70,7 @@ function QuestionCard({
     active = position === "active",
     presetField = register(`answers.${index}`),
     customField = register(`custom.${index}`);
+
   return (
     <div
       className="question-card"
@@ -108,6 +113,7 @@ function QuestionCard({
                   // A single choice and a typed answer are alternatives.
                   if (!multiple) setValue(`custom.${index}`, "");
                   onUnskip();
+
                   return presetField.onChange(event);
                 }}
               />
@@ -135,6 +141,7 @@ function QuestionCard({
                   if (!multiple) setValue(`answers.${index}`, "");
                   onUnskip();
                 }
+
                 return customField.onChange(event);
               }}
               onKeyDown={(event) => {
@@ -154,6 +161,7 @@ function QuestionCard({
           {...customField}
           onChange={(event) => {
             if (event.target.value.trim()) onUnskip();
+
             return customField.onChange(event);
           }}
         />
@@ -170,6 +178,7 @@ export function QuestionForm({ task }: { task: Task }) {
     request = task.pending_input!.id,
     // Answers left unsent when this request was last on screen.
     draft = controller.questionDrafts.get(request);
+
   const { register, control, setValue, getValues, handleSubmit } =
     useForm<Answers>({
       defaultValues: draft?.values ?? {
@@ -182,6 +191,7 @@ export function QuestionForm({ task }: { task: Task }) {
         custom: {},
       },
     });
+
   const [active, setActive] = useState(draft?.active ?? 0),
     [incomplete, setIncomplete] = useState(false),
     [error, setError] = useState<string>(),
@@ -209,11 +219,13 @@ export function QuestionForm({ task }: { task: Task }) {
           ? "Answer each question before sending."
           : "Answer the question before sending."
         : error;
+
   const show = (index: number) => {
     setIncomplete(false);
     setError(undefined);
     setActive(index);
   };
+
   // Moving cards can hide the focused control; restore focus once the new card is in front.
   useEffect(() => {
     const target = focusAfterMove.current;
@@ -226,23 +238,28 @@ export function QuestionForm({ task }: { task: Task }) {
         )
         ?.focus();
   }, [active]);
+
   // Leaving the task unmounts the form; keep its unsent answers as a draft to restore.
   // (Collapsing the notice keeps the form mounted, so it needs no draft.)
   useEffect(() => {
     view.current = { active, skipped };
   });
+
   useEffect(
     () => () => {
       if (sent.current) return;
+
       const draft: QuestionDraft = {
         values: structuredClone(getValues()),
         skipped: [...view.current.skipped],
         active: view.current.active,
       };
+
       controller.questionDrafts.set(request, draft);
     },
     [controller, request, getValues],
   );
+
   // A skipped card drops its partial answer and moves on to the next card.
   const skipOne = (index: number) => {
     setValue(`answers.${index}`, questions[index].multiSelect ? [] : "");
@@ -250,12 +267,14 @@ export function QuestionForm({ task }: { task: Task }) {
     setSkipped(new Set(skipped).add(index));
     if (index < questions.length - 1) show(index + 1);
   };
+
   const unskip = (index: number) => {
     if (!skipped.has(index)) return;
     const next = new Set(skipped);
     next.delete(index);
     setSkipped(next);
   };
+
   // Next moves one card on. Sending first returns to any unanswered card;
   // it returns true only when every question has an answer or a skip.
   const advance = () => {
@@ -263,11 +282,15 @@ export function QuestionForm({ task }: { task: Task }) {
       if (unanswered < 0) return true;
       setActive(unanswered);
       setIncomplete(true);
+
       return false;
     }
+
     show(active + 1);
+
     return false;
   };
+
   return (
     <form
       ref={form}
@@ -277,6 +300,7 @@ export function QuestionForm({ task }: { task: Task }) {
         // Set before sending: a successful answer can unmount the form before
         // the call returns, and an answered request must not leave a draft.
         sent.current = true;
+
         const failure = await controller.answer(
           task,
           Object.fromEntries(
@@ -286,6 +310,7 @@ export function QuestionForm({ task }: { task: Task }) {
             ]),
           ),
         );
+
         sent.current = !failure;
         setError(failure);
       })}

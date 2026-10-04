@@ -5,17 +5,22 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Store } from "../src/core/store.js";
 import { configuredProviders } from "../src/providers/config.js";
+
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), "ac-provider-config-"));
+
   return { dir, store: new Store(join(dir, "db.sqlite")) };
 }
+
 test("Codex service registration is opt-in and fixture-only mode remains free of live workers", async () => {
   const { dir, store } = await setup();
+
   try {
     assert.deepEqual(
       [...configuredProviders(store, dir, {}).keys()],
       ["claude"],
     );
+
     assert.deepEqual(
       [
         ...configuredProviders(store, dir, {
@@ -25,6 +30,7 @@ test("Codex service registration is opt-in and fixture-only mode remains free of
       ],
       ["fixture"],
     );
+
     assert.throws(
       () =>
         configuredProviders(store, dir, {
@@ -36,11 +42,13 @@ test("Codex service registration is opt-in and fixture-only mode remains free of
     store.close();
   }
 });
+
 test(
   "opt-in Codex configuration requires explicit model, executable and distinct credential roles",
   { skip: process.platform !== "darwin" },
   async () => {
     const { dir, store } = await setup();
+
     try {
       const config = {
         CODEX_SUBAGENT_EXTENSION_CODEX: "1",
@@ -49,6 +57,7 @@ test(
         OPENAI_API_KEY: "test-application-key",
         OPENAI_EXECUTOR_API_KEY: "test-restricted-key",
       };
+
       for (const key of [
         "CODEX_SUBAGENT_EXTENSION_CODEX_MODEL",
         "CODEX_SUBAGENT_EXTENSION_CODEX_EXECUTABLE",
@@ -58,6 +67,7 @@ test(
         assert.throws(() =>
           configuredProviders(store, dir, { ...config, [key]: undefined }),
         );
+
       assert.throws(
         () =>
           configuredProviders(store, dir, {
@@ -66,6 +76,7 @@ test(
           }),
         /absolute native Codex executable path/,
       );
+
       assert.throws(
         () =>
           configuredProviders(store, dir, {
@@ -74,14 +85,17 @@ test(
           }),
         /must not be reused/,
       );
+
       const providers = configuredProviders(store, dir, config);
       assert.deepEqual([...providers.keys()], ["claude", "codex"]);
       assert.equal(providers.get("codex")?.capabilities.cost_budget, false);
       await providers.get("codex")?.close?.();
+
       const only = configuredProviders(store, dir, {
         ...config,
         CODEX_SUBAGENT_EXTENSION_PROVIDER: "codex",
       });
+
       assert.deepEqual([...only.keys()], ["codex"]);
       await only.get("codex")?.close?.();
     } finally {

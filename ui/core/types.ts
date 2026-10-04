@@ -6,11 +6,13 @@ import type {
 } from "../../src/core/model";
 import type { DroppedSummary } from "./event-history";
 import type { ListedTask } from "../../src/core/task-list";
+
 export type Task = ListedTask;
 export type { Artifact, Event };
 export type Mode = "panel" | "console";
 export type Tab = "result" | "activity" | "changes" | "details";
 export type Filter = "all" | "active" | "attention" | "completed" | "failed";
+
 export type Worker = {
   provider: string;
   profiles: string[];
@@ -18,6 +20,7 @@ export type Worker = {
   model_discovery_error?: string;
   capabilities: Partial<Capabilities>;
 };
+
 export type Project = {
   repository: string;
   name?: string;
@@ -25,6 +28,7 @@ export type Project = {
   /** The chat's unregistered project, added when a task starts with it. */
   pending?: boolean;
 };
+
 export type Defaults = {
   claude_permission_mode?: import("../../src/core/model").Start["permission_mode"];
   default_approval_decider?: "user" | "parent_agent";
@@ -41,6 +45,7 @@ export type Defaults = {
   max_cost_usd: number | null;
   use_cost_budget?: boolean;
 };
+
 export type SettingsDocument = {
   values: Record<string, string | number | boolean>;
   schema: {
@@ -64,6 +69,7 @@ export type SettingsDocument = {
     items: { kind: string; property?: string }[];
   }[];
 };
+
 export type PanelData = {
   panel_scope?: {
     conversation_id: string | null;
@@ -74,12 +80,14 @@ export type PanelData = {
   panel_selection?: { task_id?: string; tab?: string };
   tasks?: Task[];
 };
+
 export type HostState = {
   canSend: boolean;
   canShare: boolean;
   canExpand: boolean;
   displayMode: "inline" | "fullscreen" | "pip";
 };
+
 export type TransportEvents = {
   scope(data: PanelData): void;
   refresh(): void;
@@ -88,6 +96,7 @@ export type TransportEvents = {
   host(state: HostState): void;
   teardown(): void;
 };
+
 export interface Transport {
   embedded: boolean;
   preview: boolean;
@@ -100,6 +109,7 @@ export interface Transport {
   expand?(): Promise<void>;
   login?(token: string): Promise<void>;
 }
+
 export type Question = {
   question: string;
   /** Short chip label (at most 12 characters in the Claude SDK schema). */
@@ -107,17 +117,20 @@ export type Question = {
   options?: { label: string; description?: string }[];
   multiSelect?: boolean;
 };
+
 /** Question form values, indexed by question position. */
 export type QuestionAnswers = {
   answers: Record<string, string | string[]>;
   custom: Record<string, string>;
 };
+
 /** Unsent answers to one question request, restored when its task is shown again. */
 export type QuestionDraft = {
   values: QuestionAnswers;
   skipped: number[];
   active: number;
 };
+
 export type DialogState =
   | { kind: "project"; repository?: string; scope: number }
   | { kind: "settings"; settings: SettingsDocument; scope: number }
@@ -134,6 +147,7 @@ export type DialogState =
   | { kind: "handoff"; task: Task; scope: number }
   | { kind: "artifact"; artifact: Artifact; scope: number }
   | { kind: "workspace"; task: Task; scope: number };
+
 export type Snapshot = {
   mode: Mode;
   tasks: Task[];

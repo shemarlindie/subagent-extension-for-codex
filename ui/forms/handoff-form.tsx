@@ -4,17 +4,21 @@ import type { Task } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
+
 export function handoffMessage(task: Task) {
   return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task, full results with get_agent_result, and reports/patches with get_agent_artifacts using task_id=${JSON.stringify(task.id)}. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\nDescription excerpt: ${task.description.slice(0, 1500)}${task.description.length > 1500 ? "… (truncated)" : ""}\nSummary excerpt: ${task.result?.summary.slice(0, 2500) ?? "No result yet."}${(task.result?.summary.length ?? 0) > 2500 ? "… (truncated)" : ""}`;
 }
+
 export function HandoffForm({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
     canSend = state.host.canSend,
     canCopy = state.mode === "console" && !controller.transport.embedded;
+
   const { register, handleSubmit } = useForm({
     defaultValues: { message: handoffMessage(task) },
   });
+
   return (
     <form
       onSubmit={handleSubmit((values) =>
@@ -46,6 +50,7 @@ export function HandoffForm({ task }: { task: Task }) {
     </form>
   );
 }
+
 export const handoffDialog = defineDialog<"handoff">({
   title: () => "Bring task to Codex",
   render: ({ task }) => <HandoffForm task={task} />,

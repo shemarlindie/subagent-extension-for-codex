@@ -9,10 +9,12 @@ test("generated titles summarize the first request line and normalize whitespace
     ),
     "Review authentication.",
   );
+
   assert.equal(
     generateTaskTitle("Inspect\t\tall permissions\nThen report every finding"),
     "Inspect all permissions",
   );
+
   assert.equal(
     generateTaskTitle(
       "Investigate version 1.2 regressions? Include reproduction steps.",
@@ -26,6 +28,7 @@ test("long generated titles fit the heading limit while the request remains inta
     "Review " +
     "authentication permissions ".repeat(12) +
     "and report all findings.";
+
   const title = generateTaskTitle(description);
   assert.ok(title.length <= 120);
   assert.ok(title.endsWith("…"));

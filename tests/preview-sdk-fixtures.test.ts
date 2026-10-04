@@ -14,6 +14,7 @@ type Kind<T> = T extends { type: "system"; subtype: infer S extends string }
   : T extends { type: infer U extends string }
     ? U
     : never;
+
 // Adding a message kind to the SDK makes this fail to compile until a fixture
 // covers it (and the test below keeps the fixtures honest).
 const sdkKinds: Record<Kind<SDKMessage>, true> = {
@@ -67,6 +68,7 @@ const providerTypes = new Set([
   "tool.started",
   "tool.completed",
 ]);
+
 // Events the service records itself (src/core/control.ts, src/core/store.ts).
 // `agent.permission_decided` is only emitted for non-Claude providers.
 const serviceTypes = new Set([
@@ -90,6 +92,7 @@ const serviceTypes = new Set([
 
 const kindOf = (message: Record<string, unknown>) =>
   message.type === "system" ? `system:${message.subtype}` : message.type;
+
 const raw = (event: { data: Record<string, unknown> }) =>
   event.data.raw_response as Record<string, unknown> | undefined;
 
@@ -97,19 +100,23 @@ test("fixture SDK messages cover every kind the SDK defines", () => {
   const seen = new Set(
     previewEvents.flatMap((event) => {
       const message = raw(event);
+
       return message ? [kindOf(message)] : [];
     }),
   );
+
   for (const kind of Object.keys(sdkKinds))
     assert.ok(seen.has(kind), `no fixture for SDK message kind ${kind}`);
 });
 
 test("fixture events match what the provider derives from their SDK message", () => {
   let checked = 0;
+
   for (const event of previewEvents.filter((e) => providerTypes.has(e.type))) {
     const message = raw(event);
     assert.ok(message, `${event.task_id}#${event.id} has no raw_response`);
     const derived: { type: string; data: Record<string, unknown> }[] = [];
+
     new ClaudeAgentProvider().normalize(
       {
         emit: (type: string, data: Record<string, unknown>) =>
@@ -117,6 +124,7 @@ test("fixture events match what the provider derives from their SDK message", ()
       } as unknown as RunContext,
       message as unknown as SDKMessage,
     );
+
     assert.ok(
       derived.some((candidate) => {
         try {
@@ -124,6 +132,7 @@ test("fixture events match what the provider derives from their SDK message", ()
             { type: candidate.type, data: candidate.data },
             { type: event.type, data: event.data },
           );
+
           return true;
         } catch {
           return false;
@@ -131,8 +140,10 @@ test("fixture events match what the provider derives from their SDK message", ()
       }),
       `${event.task_id}#${event.id} (${event.type}) differs from the provider's output`,
     );
+
     checked++;
   }
+
   assert.ok(checked > 50, `only ${checked} fixture events were compared`);
 });
 
@@ -150,6 +161,7 @@ test("service events use known types and cover the service's lifecycle", () => {
 test("service event payloads match what the service emits", () => {
   const payload = (type: string) =>
     previewEvents.filter((event) => event.type === type).map((e) => e.data);
+
   for (const data of payload("agent.input_required"))
     assert.deepEqual(Object.keys(data), ["request"]);
   for (const { request } of payload("agent.input_required") as {

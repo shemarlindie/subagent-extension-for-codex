@@ -16,20 +16,26 @@ import {
 import { taskProjects } from "../core/delegation";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
+
 interface DelegateFormProps {
   dialog: Extract<DialogState, { kind: "delegate" }>;
 }
+
 export function DelegateForm({ dialog }: DelegateFormProps) {
   const controller = useController(),
     state = useSnapshot(),
     defaults = dialog.defaults;
+
   const choices = state.workers.flatMap((worker) =>
     worker.profiles.map((profile) => `${worker.provider}:${profile}`),
   );
+
   const preferred =
     dialog.preferredWorker ??
     `${defaults.default_provider}:${defaults.default_worker_profile}`;
+
   const strategyDefault = defaults.default_workspace_strategy ?? "current_repo";
+
   const form = useForm<DelegateValues>({
     defaultValues: {
       permission_mode: "inherit",
@@ -56,8 +62,10 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
       deps: [],
     },
   });
+
   const repository = useWatch({ control: form.control, name: "repository" }),
     previous = useRef(repository);
+
   // Project changes reset only project-bound defaults, preserving the task draft.
   useEffect(() => {
     if (repository !== previous.current) {
@@ -65,18 +73,23 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
         "revision",
         repository === dialog.repository ? dialog.revision : "HEAD",
       );
+
       form.setValue("deps", []);
       previous.current = repository;
     }
   }, [repository, form, dialog.repository, dialog.revision]);
+
   const strategy = useWatch({
     control: form.control,
     name: "workspace_strategy",
   });
+
   useEffect(() => {
     if (strategy === "current_repo") form.setValue("revision", "HEAD");
   }, [strategy, repository, form]);
+
   const conversation = useRef(state.conversation).current;
+
   return (
     <FormProvider {...form}>
       <form
@@ -84,6 +97,7 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
           controller.submit(async () => {
             const [provider, worker_profile] = values.worker.split(":");
             await controller.addChatProjectForTask(values.repository);
+
             return controller.tool<Task>("start_agent_task", {
               permission_mode:
                 provider === "claude" ? values.permission_mode : "inherit",
@@ -167,6 +181,7 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
     </FormProvider>
   );
 }
+
 export const delegateDialog = defineDialog<"delegate">({
   title: () => "New delegated task",
   render: (dialog) => <DelegateForm dialog={dialog} />,

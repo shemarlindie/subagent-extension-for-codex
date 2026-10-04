@@ -21,6 +21,7 @@ import {
 import type { Task } from "../core/model.js";
 import { autoRegisterChatProject } from "../core/chat-project.js";
 import { codexContextCapability } from "../panel/host-context.js";
+
 export function mcp(
   c: Control,
   owner: string,
@@ -42,6 +43,7 @@ export function mcp(
         "Use get_current_agent_project and list_available_workers before delegation. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user, then pass its explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input; Claude permission decisions require approval_decider parent_agent. Use request_agent_input or user buttons for permissions routed to the user. Worktree changes are returned as artifacts; current_repo write profiles edit the checkout directly.",
     },
   );
+
   server.registerTool(
     "request_agent_task",
     {
@@ -61,6 +63,7 @@ export function mcp(
           ctx.mcpReq._meta,
           typeof args.repository === "string" ? args.repository : undefined,
         );
+
         return await c.forms.handle(owner, "request_agent_task", args, ctx);
       } catch (error) {
         return {
@@ -70,6 +73,7 @@ export function mcp(
       }
     },
   );
+
   server.registerTool(
     "request_agent_project",
     {
@@ -95,6 +99,7 @@ export function mcp(
       }
     },
   );
+
   server.registerTool(
     "request_agent_input",
     {
@@ -113,6 +118,7 @@ export function mcp(
       }
     },
   );
+
   const tools: Record<string, AnyTool> = definitions(c, owner);
   for (const [name, d] of Object.entries(tools))
     server.registerTool(
@@ -144,9 +150,11 @@ export function mcp(
             "parent",
             ctx.mcpReq._meta,
           );
+
           const result = await current[name].run(
             withConversation(name, args, ctx.mcpReq._meta),
           );
+
           return {
             content: [{ type: "text" as const, text: JSON.stringify(result) }],
             structuredContent: name.endsWith("_agent_settings")
@@ -166,6 +174,7 @@ export function mcp(
         }
       },
     );
+
   if (events)
     for (const method of [
       "events/list",
@@ -181,6 +190,7 @@ export function mcp(
         },
         async (params) => {
           const { _meta, ...args } = params;
+
           try {
             return {
               resultType: "complete" as const,
@@ -198,6 +208,7 @@ export function mcp(
         },
       );
     }
+
   const panel = delegationPanel(
     nativeHtmlPath,
     (conversationId) =>
@@ -206,6 +217,7 @@ export function mcp(
         .filter((t) => !conversationId || t.conversation_id === conversationId),
     (args) => resolvePanelContext(c, owner, args),
   );
+
   server.registerTool(panel.name, panel.tool, async (args, ctx) => {
     try {
       return await panel.open(
@@ -218,7 +230,9 @@ export function mcp(
       };
     }
   });
+
   server.registerResource(panel.title, panel.uri, panel.resource, panel.read);
+
   server.registerTool(panel.global.name, panel.global.tool, async () => {
     try {
       return await panel.global.open();
@@ -229,5 +243,6 @@ export function mcp(
       };
     }
   });
+
   return server;
 }

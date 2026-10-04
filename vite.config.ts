@@ -18,21 +18,27 @@ function dataDirectory() {
     return resolve(process.env.CODEX_SUBAGENT_EXTENSION_DATA);
   const legacy = join(root, ".codex-subagent-extension");
   if (existsSync(join(legacy, "console.sqlite"))) return legacy;
+
   return join(homedir(), ".local", "share", "codex-subagent-extension");
 }
+
 function serviceOrigin() {
   const configured =
     process.env.CODEX_SUBAGENT_EXTENSION_URL ??
     process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN;
+
   if (configured) return configured;
+
   if (!process.env.PORT)
     try {
       return JSON.parse(
         readFileSync(join(dataDirectory(), "service.json"), "utf8"),
       ).origin as string;
     } catch {}
+
   return `http://127.0.0.1:${process.env.PORT ?? 4317}`;
 }
+
 function serviceToken() {
   try {
     return (

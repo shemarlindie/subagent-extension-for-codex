@@ -4,16 +4,19 @@ import { useState } from "react";
 import { useController, useSnapshot } from "../components/controller-context";
 import { Button } from "../components/button";
 import { Field } from "./fields";
+
 export function LoginForm() {
   const controller = useController(),
     state = useSnapshot(),
     [error, setError] = useState("");
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { isSubmitting },
   } = useForm({ defaultValues: { token: "" } });
+
   return (
     <Dialog.Root
       open={state.loginRequired}

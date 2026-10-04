@@ -16,6 +16,7 @@ export { EventDetails } from "./event-details";
 
 function DroppedNote({ summary }: { summary: DroppedSummary }) {
   const { headline, details } = describeDropped(summary);
+
   return (
     <>
       {" "}
@@ -46,10 +47,12 @@ export const EventList = memo(function EventList({
   const groups = groupActivity(events).sort(
     (a, b) => b.events.at(-1)!.id - a.events.at(-1)!.id,
   );
+
   const { viewportRef, pinned, scrollToTop } = useActivityScroll(
     events,
     active,
   );
+
   return (
     <section className="activity-timeline" aria-label="Worker activity">
       <div

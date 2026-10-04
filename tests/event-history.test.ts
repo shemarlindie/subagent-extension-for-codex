@@ -17,26 +17,31 @@ const event = (id: number, task_id = "task"): Event => ({
 
 test("an empty poll keeps the same events array", async () => {
   const previous = [event(1), event(2)];
+
   const { events: tail } = await readEventTail(
     "task",
     previous,
     async () => [],
     () => true,
   );
+
   assert.ok(tail === previous, "Unchanged views can skip rendering");
 });
 
 test("new pages append and keep only the most recent tail", async () => {
   const previous = [event(1)];
+
   const pages = [
     Array.from({ length: EVENT_TAIL_SIZE }, (_, i) => event(i + 2)),
   ];
+
   const { events: tail } = await readEventTail(
     "task",
     previous,
     async () => pages.shift() ?? [],
     () => true,
   );
+
   assert.equal(tail.length, EVENT_TAIL_SIZE);
   assert.equal(tail[0].id, 2);
   assert.equal(tail.at(-1)!.id, EVENT_TAIL_SIZE + 1);
@@ -44,12 +49,14 @@ test("new pages append and keep only the most recent tail", async () => {
 
 test("events from another task are dropped rather than reused", async () => {
   const previous = [event(1, "other")];
+
   const { events: tail } = await readEventTail(
     "task",
     previous,
     async () => [],
     () => true,
   );
+
   assert.deepEqual(tail, []);
   assert.ok(tail !== previous);
 });
@@ -70,12 +77,14 @@ test("dropped events are tallied by kind and carried across polls", async () => 
     typed(5, "task.failed"),
     ...Array.from({ length: EVENT_TAIL_SIZE }, (_, i) => event(i + 6)),
   ];
+
   const first = await readEventTail(
     "task",
     [],
     async (after) => (after ? [] : history),
     () => true,
   );
+
   assert.equal(first.events.length, EVENT_TAIL_SIZE);
   assert.equal(first.dropped?.count, 5);
   assert.equal(first.dropped?.toolCalls, 3);
@@ -84,6 +93,7 @@ test("dropped events are tallied by kind and carried across polls", async () => 
   assert.equal(first.dropped?.failures, 1);
   // A later poll adds to the same tally rather than starting over.
   const next = event(1000);
+
   const second = await readEventTail(
     "task",
     first.events,
@@ -91,6 +101,7 @@ test("dropped events are tallied by kind and carried across polls", async () => 
     () => true,
     first.dropped,
   );
+
   assert.equal(second.dropped?.count, 6);
   assert.equal(first.dropped?.count, 5, "the previous summary is not mutated");
 });
@@ -107,6 +118,7 @@ test("a summary from another history is not reused", async () => {
       () => true,
     )
   ).dropped;
+
   const fresh = await readEventTail(
     "task",
     [],
@@ -114,6 +126,7 @@ test("a summary from another history is not reused", async () => {
     () => true,
     stale,
   );
+
   assert.equal(fresh.dropped, undefined);
 });
 
@@ -130,7 +143,9 @@ test("the dropped note names the span, tools and trouble", () => {
     retries: 2,
     artifacts: 0,
   });
+
   assert.equal(headline, "1,284 earlier events over 9m 40s not shown.");
+
   assert.deepEqual(details, [
     "412 tool calls (Bash 190, Edit 88, Read 60, +2 more)",
     "31 messages",

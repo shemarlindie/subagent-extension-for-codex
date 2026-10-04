@@ -6,14 +6,17 @@ export function scrollChildIntoView(
   gap: number,
 ) {
   if (!list.clientWidth) return;
+
   const left = child.offsetLeft - gap,
     right = child.offsetLeft + child.offsetWidth + gap;
+
   const target =
     left < list.scrollLeft
       ? left
       : right > list.scrollLeft + list.clientWidth
         ? right - list.clientWidth
         : undefined;
+
   if (target !== undefined)
     list.scrollTo?.({
       left: Math.max(0, target),

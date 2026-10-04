@@ -74,17 +74,22 @@ export function NoticeText({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
   useAnimatedHeight(ref, open);
+
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) return;
+
     const measure = () =>
       setOverflowing(element.scrollHeight > element.clientHeight + 1);
+
     measure();
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(measure);
     observer.observe(element);
+
     return () => observer.disconnect();
   }, [children, open]);
+
   return (
     <>
       <p ref={ref} className="notice-text" data-open={open || undefined}>

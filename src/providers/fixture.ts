@@ -1,5 +1,6 @@
 import { setTimeout } from "node:timers/promises";
 import { type Provider, type RunContext, type Result } from "../core/model.js";
+
 export class FixtureProvider implements Provider {
   id = "fixture";
   capabilities = {
@@ -15,23 +16,29 @@ export class FixtureProvider implements Provider {
     parallel_subagents: false,
     dynamic_subagents: false,
   };
+
   async run(c: RunContext, prompt: string): Promise<Result> {
     c.session(
       c.task.session_id ?? `fixture_${c.task.id}`,
       `fixture:${c.task.workspace}`,
     );
+
     c.emit("agent.message", {
       text: "Fixture worker inspecting task (no model call).",
     });
+
     if (prompt.includes("[input]")) {
       const r = await c.input(
         "AskUserQuestion",
         { question: "Which approach should the worker use?" },
         c.signal,
       );
+
       c.emit("agent.message", { text: r.message ?? JSON.stringify(r.input) });
     }
+
     await setTimeout(80, undefined, { signal: c.signal });
+
     return {
       summary: "Fixture task completed. No Claude execution occurred.",
       findings: [],

@@ -27,8 +27,10 @@ import { type Store } from "./store.js";
 
 // Codex defaults are not supported yet; settings cover these providers only.
 const settingsProviders = ["claude", "fixture"] as const;
+
 const scopeTitle = (scope: string) =>
   scope[0].toUpperCase() + scope.slice(1).replaceAll("_", " ");
+
 import { globalPanelToolName } from "../panel/panel.js";
 
 export const settingsCapability = {
@@ -37,6 +39,7 @@ export const settingsCapability = {
     updateTool: "update_user_agent_settings",
   },
 };
+
 // Hosts on MCP 2025-11-25 or earlier may read only the legacy location.
 export function withSettingsCapability(capabilities: {
   experimental?: Record<string, object>;
@@ -47,9 +50,11 @@ export function withSettingsCapability(capabilities: {
     extensions: settingsCapability,
   };
 }
+
 // Native settings support only inclusive bounds. These sit just above the
 // server's exclusive zero bounds, so fractional saved values stay valid.
 const hostMinimums = { max_runtime_minutes: 0.01, max_cost_usd: 0.01 };
+
 // Scalar properties keep the native settings editor compatible with the host.
 const modelSettingsShape = {
   default_model: modelNameSchema.meta({
@@ -83,6 +88,7 @@ const modelSettingsShape = {
     ]: typeof reasoningSchema;
   }),
 };
+
 const valuesSchema = z.strictObject({
   ...modelSettingsShape,
   auto_register_chat_project: z.boolean().meta({
@@ -149,16 +155,19 @@ const valuesSchema = z.strictObject({
     .nullable()
     .meta({ title: "Default cost budget (USD; null means no limit)" }),
 });
+
 const costAmount = z
   .number()
   .positive()
   .max(100)
   .meta({ title: "Default cost budget (USD)" });
+
 const runtimeAmount = z
   .number()
   .positive()
   .max(120)
   .meta({ title: "Default runtime budget (minutes)" });
+
 const hostValuesSchema = valuesSchema
   .omit({ default_approval_mode: true })
   .extend({
@@ -169,6 +178,7 @@ const hostValuesSchema = valuesSchema
     max_cost_usd: costAmount,
     use_cost_budget: z.boolean().meta({ title: "Apply a default cost limit" }),
   });
+
 // Fill missing fields in older settings rows without adding JSON Schema defaults to host fields.
 const storedValuesSchema = valuesSchema.extend({
   auto_register_chat_project: z.boolean().default(true),
@@ -203,6 +213,7 @@ const storedValuesSchema = valuesSchema.extend({
   cost_budget_amount: costAmount.optional(),
   runtime_budget_amount: runtimeAmount.optional(),
 });
+
 // Use this project's Zod instance for transport schemas; the extension SDK may
 // install a different Zod version. Validate layout with its schema when reading.
 export const settingsReadOutputSchema = z.object({
@@ -221,9 +232,11 @@ export const settingsReadOutputSchema = z.object({
   layout: z.array(z.record(z.string(), z.unknown())).optional(),
   values: hostValuesSchema,
 });
+
 export const settingsUpdateOutputSchema = z.object({
   values: hostValuesSchema,
 });
+
 export const settingsUpdateSchema = z.strictObject({
   set: valuesSchema
     .extend({ use_cost_budget: z.boolean(), use_runtime_budget: z.boolean() })
@@ -231,6 +244,7 @@ export const settingsUpdateSchema = z.strictObject({
     .refine((v) => Object.keys(v).length > 0, "Set at least one setting")
     .meta({ minProperties: 1 }),
 });
+
 export type SettingsValues = z.infer<typeof valuesSchema>;
 
 export class Settings {
@@ -245,16 +259,20 @@ export class Settings {
       const enabled = providers().filter((provider) =>
         settingsProviders.some((supported) => supported === provider),
       );
+
       return enabled.length ? enabled : ["claude"];
     };
+
     store.db.exec(
       "CREATE TABLE IF NOT EXISTS user_settings(owner TEXT PRIMARY KEY, body TEXT NOT NULL)",
     );
   }
+
   private saved(owner: string) {
     const row = this.store.db
       .prepare("SELECT body FROM user_settings WHERE owner=?")
       .get(owner);
+
     const body = row
       ? JSON.parse(String(row.body))
       : {
@@ -266,6 +284,7 @@ export class Settings {
           max_runtime_minutes: 20,
           max_cost_usd: 5,
         };
+
     // Ignore Codex defaults saved before they were removed.
     delete body.codex_default_model;
     delete body.codex_default_reasoning_effort;
@@ -283,23 +302,30 @@ export class Settings {
       body.default_approval_mode === "parent_agent"
     )
       body.default_approval_decider = "parent_agent";
+
     return storedValuesSchema.parse(body);
   }
+
   values(owner: string): SettingsValues {
     const { cost_budget_amount, runtime_budget_amount, ...values } =
       this.saved(owner);
+
     const available = this.providers();
     // A saved provider can disappear when the service configuration changes.
     if (!available.includes(values.default_provider))
       values.default_provider = valuesSchema.shape.default_provider.parse(
         available[0],
       );
+
     return values;
   }
+
   private hostValues(owner: string) {
     const { cost_budget_amount, runtime_budget_amount, ...values } =
       this.saved(owner);
+
     const { default_approval_mode, ...visible } = this.values(owner);
+
     return {
       ...visible,
       use_runtime_budget: values.max_runtime_minutes !== null,
@@ -309,6 +335,7 @@ export class Settings {
       max_cost_usd: values.max_cost_usd ?? cost_budget_amount ?? 5,
     };
   }
+
   read(
     owner: string,
     catalogs: { provider: string; models?: ModelChoice[] }[] = [],
@@ -320,29 +347,38 @@ export class Settings {
           .meta({ title: "Default provider" }),
       }),
     );
+
     catalogs = catalogs.filter((catalog) =>
       this.providers().includes(catalog.provider),
     );
+
     const values = this.hostValues(owner);
     const fields = values as Record<string, unknown>;
     const properties = schema.properties!;
+
     for (const [key, minimum] of Object.entries(hostMinimums)) {
       const field = properties[key] as Record<string, unknown>;
       delete field.exclusiveMinimum;
       field.minimum = minimum;
     }
+
     const scopes = ["global", ...this.providers(), ...roles];
+
     for (const scope of scopes) {
       const prefix = scope === "global" ? "default" : `${scope}_default`;
       const modelKey = `${prefix}_model`;
       const effortKey = `${prefix}_reasoning_effort`;
       const providerScope = this.providers().includes(scope);
+
       const choices = catalogs
         .filter((catalog) => !providerScope || catalog.provider === scope)
         .flatMap((catalog) => catalog.models ?? []);
+
       const modelField = properties[modelKey] as Record<string, unknown>;
+
       modelField.description =
         "Blank inherits the next default: role → provider → global → provider runtime. Saved custom model IDs remain available.";
+
       if (choices.length)
         modelField.enum = [
           ...new Set([
@@ -352,6 +388,7 @@ export class Settings {
           ]),
         ];
       const provider = providerScope ? scope : values.default_provider;
+
       const effectiveModel = String(
         fields[modelKey] ||
           (scope !== "global" && !providerScope
@@ -360,14 +397,18 @@ export class Settings {
           (scope !== "global" ? values.default_model : "") ||
           "default",
       );
+
       const metadata = catalogs
         .find((catalog) => catalog.provider === provider)
         ?.models?.find((model) => model.value === effectiveModel);
+
       const effortField = properties[effortKey] as Record<string, unknown>;
+
       const levels =
         metadata?.supportsEffort === false
           ? []
           : metadata?.supportedEffortLevels;
+
       effortField.description = `Default inherits the next configured reasoning setting. ${
         levels === undefined
           ? "Model-specific effort support is unknown; the provider validates it when work starts."
@@ -379,6 +420,7 @@ export class Settings {
           ? "The saved effort is not supported by this model; choose another effort or model."
           : ""
       }`;
+
       // Global and role choices apply across providers; only provider fields have a fixed catalog.
       // Preserve saved values in the schema even if the runtime catalog has changed.
       if (providerScope && levels !== undefined)
@@ -386,6 +428,7 @@ export class Settings {
           ...new Set(["default", ...levels, String(fields[effortKey])]),
         ];
     }
+
     // Defaults are effective values, never JSON Schema defaults.
     return settingsReadOutputSchema.parse(
       OpenAISettingsReadResultSchema.parse({
@@ -443,6 +486,7 @@ export class Settings {
       }),
     );
   }
+
   update(owner: string, input: unknown, authority: InputAuthority = "user") {
     const { set } = settingsUpdateSchema.parse(input);
     if (authority !== "user" && set.auto_register_chat_project !== undefined)
@@ -473,21 +517,25 @@ export class Settings {
     // Synchronous read/merge/write preserves omitted fields across concurrent requests.
     const previous = this.saved(owner);
     const { use_cost_budget, use_runtime_budget, ...fields } = set;
+
     // Older clients can still send the retired policy setting. Translate explicit
     // updates without overriding a native mode supplied in the same request.
     if (fields.default_approval_mode !== undefined) {
       fields.claude_permission_mode ??=
         legacyClaudeMode(fields.default_approval_mode) ?? "inherit";
+
       fields.default_approval_decider ??=
         fields.default_approval_mode === "parent_agent"
           ? "parent_agent"
           : "user";
     }
+
     const amount =
       fields.max_cost_usd ??
       previous.max_cost_usd ??
       previous.cost_budget_amount ??
       5;
+
     const max_cost_usd =
       use_cost_budget === undefined
         ? fields.max_cost_usd === undefined
@@ -498,11 +546,13 @@ export class Settings {
         : use_cost_budget
           ? amount
           : null;
+
     const runtimeAmountValue =
       fields.max_runtime_minutes ??
       previous.max_runtime_minutes ??
       previous.runtime_budget_amount ??
       20;
+
     const max_runtime_minutes =
       use_runtime_budget === undefined
         ? fields.max_runtime_minutes === undefined
@@ -514,6 +564,7 @@ export class Settings {
         : use_runtime_budget
           ? runtimeAmountValue
           : null;
+
     const values = storedValuesSchema.parse({
       ...previous,
       ...fields,
@@ -522,13 +573,16 @@ export class Settings {
       max_runtime_minutes,
       runtime_budget_amount: runtimeAmountValue,
     });
+
     this.store.db
       .prepare(
         "INSERT INTO user_settings VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET body=excluded.body",
       )
       .run(owner, JSON.stringify(values));
+
     return { values: this.hostValues(owner) };
   }
+
   taskInput(owner: string, input: unknown) {
     const args = z.record(z.string(), z.unknown()).parse(input);
     if (args.model !== undefined)
@@ -539,6 +593,7 @@ export class Settings {
     const provider = args.provider ?? defaults.default_provider;
     const role = args.worker_profile ?? defaults.default_worker_profile;
     const fields = defaults as Record<string, unknown>;
+
     // Resolve each choice independently; inheritance sentinels leave the next scope in control.
     const model = [
       args.model,
@@ -546,12 +601,14 @@ export class Settings {
       fields[`${provider}_default_model`],
       defaults.default_model,
     ].find((value) => typeof value === "string" && value.trim());
+
     const reasoning = [
       args.reasoning_effort,
       fields[`${role}_default_reasoning_effort`],
       fields[`${provider}_default_reasoning_effort`],
       defaults.default_reasoning_effort,
     ].find((value) => value !== undefined && value !== "default");
+
     return {
       ...args,
       model: typeof model === "string" ? model.trim() : undefined,

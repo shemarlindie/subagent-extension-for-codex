@@ -5,6 +5,7 @@ import {
   approvalDeciderSchema,
   type ClaudePolicy,
 } from "./permissions.js";
+
 export const roles = [
   "researcher",
   "reviewer",
@@ -14,30 +15,37 @@ export const roles = [
   "refactorer",
   "security_reviewer",
 ] as const;
+
 export { reasoningLevels } from "./reasoning.js";
 export const modelNameSchema = z.string().trim().max(200);
 export const reasoningSchema = z.enum(["default", ...reasoningLevels]);
+
 export const approvalModes = [
   "ask_user",
   "parent_agent",
   "auto_approve",
   "deny",
 ] as const;
+
 export type ApprovalMode = (typeof approvalModes)[number];
 export const approvalModeSchema = z.enum(approvalModes);
+
 export const approvalLabels: Record<ApprovalMode, string> = {
   ask_user: "Ask user",
   parent_agent: "Parent agent",
   auto_approve: "Auto-approve in sandbox",
   deny: "Deny execution requests",
 };
+
 export const approvalRank: Record<ApprovalMode, number> = {
   deny: 0,
   ask_user: 1,
   parent_agent: 2,
   auto_approve: 3,
 };
+
 export type InputAuthority = "user" | "parent";
+
 export const startSchema = z.object({
   permission_mode: permissionModeSchema
     .optional()
@@ -119,7 +127,9 @@ export const startSchema = z.object({
     })
     .default({ max_runtime_minutes: 20, max_cost_usd: 5 }),
 });
+
 export type Start = z.infer<typeof startSchema>;
+
 export type Status =
   | "queued"
   | "starting"
@@ -129,6 +139,7 @@ export type Status =
   | "completed"
   | "failed"
   | "cancelled";
+
 export interface Result {
   summary: string;
   findings: string[];
@@ -137,6 +148,7 @@ export interface Result {
   tests: string[];
   recommendations: string[];
 }
+
 export const resultSchema = {
   type: "object",
   properties: Object.fromEntries(
@@ -164,6 +176,7 @@ export const resultSchema = {
   ],
   additionalProperties: false,
 };
+
 export interface Task extends Start {
   title: string;
   // "parent" appears only on tasks stored before parent-mode inheritance was removed.
@@ -203,6 +216,7 @@ export interface Event {
   timestamp: string;
   data: Record<string, unknown>;
 }
+
 export interface Artifact {
   id: string;
   task_id: string;
@@ -212,6 +226,7 @@ export interface Artifact {
   mime_type: string;
   created_at: string;
 }
+
 export interface Capabilities {
   interrupt: boolean;
   session_continue: boolean;
@@ -225,6 +240,7 @@ export interface Capabilities {
   parallel_subagents: boolean;
   dynamic_subagents: boolean;
 }
+
 export interface RunContext {
   task: Task;
   signal: AbortSignal;
@@ -240,6 +256,7 @@ export interface RunContext {
     message?: string;
   }>;
 }
+
 export interface ModelChoice {
   value: string;
   displayName: string;
@@ -247,6 +264,7 @@ export interface ModelChoice {
   supportsEffort?: boolean;
   supportedEffortLevels?: (typeof reasoningLevels)[number][];
 }
+
 export interface Provider {
   id: string;
   capabilities: Capabilities;
@@ -255,6 +273,7 @@ export interface Provider {
   recover?(task: Task): Promise<void>;
   close?(): Promise<void>;
 }
+
 export class UnconfirmedTerminationError extends AggregateError {
   constructor(
     errors: unknown[],
@@ -263,4 +282,5 @@ export class UnconfirmedTerminationError extends AggregateError {
     super(errors, message);
   }
 }
+
 export const now = () => new Date().toISOString();

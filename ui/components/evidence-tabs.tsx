@@ -8,6 +8,7 @@ import { ResultReport } from "./result-report";
 import { EventList } from "./event-list";
 import { ArtifactList } from "./artifact-list";
 import { TaskDetails } from "./task-details";
+
 const TAB_EDGE_GAP = 12;
 
 // The tab list scrolls sideways on narrow panels, so the selected tab can sit off-screen
@@ -15,14 +16,18 @@ const TAB_EDGE_GAP = 12;
 // Only the list scrolls, never the page, so the inspector doesn't jump.
 function useActiveTabInView(tab: Tab) {
   const listRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const list = listRef.current,
       // By id rather than aria-selected, which can still show the previous tab here.
       active = list?.querySelector<HTMLElement>(`#tab-${tab}`);
+
     if (list && active) scrollChildIntoView(list, active, TAB_EDGE_GAP);
   }, [tab]);
+
   return listRef;
 }
+
 // A changed count rises into place so new evidence is noticed without moving the tabs.
 function TabCount({ value }: { value: number }) {
   return (
@@ -33,10 +38,12 @@ function TabCount({ value }: { value: number }) {
     </span>
   );
 }
+
 export function EvidenceTabs({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
     listRef = useActiveTabInView(state.tab);
+
   return (
     <Tabs.Root
       className="evidence"

@@ -18,6 +18,7 @@ for (const type of [
       event(2, type, { tokens: 20 }),
       event(3, type, { tokens: 30 }),
     ];
+
     const groups = groupActivity(events);
     assert.equal(groups.length, 1);
     assert.equal(groups[0].title, "Thinking…");
@@ -31,6 +32,7 @@ test("SDK thinking updates use Thinking… and keep their original payloads", ()
     sdk(1, "thinking_tokens", { tokens: 10 }),
     sdk(2, "thinking_tokens", { tokens: 20 }),
   ];
+
   const groups = groupActivity(events);
   assert.equal(groups.length, 1);
   assert.equal(groups[0].title, "Thinking…");
@@ -73,11 +75,14 @@ for (const type of [
           ? sdk(id, "thinking_tokens", { tokens: id * 10 })
           : event(id, type, { tokens: id * 10 }),
       );
+
       const events = [active.start, ...updates];
+
       assert.deepEqual(currentActivityStatus(events), {
         text: active.text,
         state: "running",
       });
+
       const groups = groupActivity(events);
       assert.equal(groups[0].state, "running");
       assert.equal(groups[1].title, "Thinking…");
@@ -98,6 +103,7 @@ test("thinking updates preserve an input request while a tool is still running",
     event(2, "agent.input_required", { tool: "Read" }),
     event(3, "agent.thinking_tokens", { tokens: 10 }),
   ];
+
   assert.deepEqual(currentActivityStatus(events), {
     text: "Needs input · Read",
     state: "info",
@@ -109,16 +115,20 @@ for (const count of [1, 2, 3]) {
     const events = Array.from({ length: count }, (_, index) =>
       event(index + 1, "artifact.created", { title: `Artifact ${index + 1}` }),
     );
+
     const groups = groupActivity(events);
     assert.equal(groups.length, 1);
+
     assert.equal(
       groups[0].title,
       count === 1 ? "Created an artifact" : `Created ${count} artifacts`,
     );
+
     assert.equal(
       groups[0].summary,
       events.map((entry) => entry.data.title).join(" · "),
     );
+
     assert.deepEqual(groups[0].events, events);
   });
 }
@@ -134,11 +144,14 @@ test("correlated tool progress interrupts adjacent artifact consolidation", () =
     }),
     event(4, "artifact.created", { title: "Second" }),
   ];
+
   const groups = groupActivity(events);
+
   assert.deepEqual(
     groups.map((group) => group.events.map((entry) => entry.id)),
     [[1, 3], [2], [4]],
   );
+
   assert.equal(groups[1].title, "Created an artifact");
   assert.equal(groups[2].title, "Created an artifact");
 });
@@ -149,6 +162,7 @@ test("an intervening event keeps repeated thinking updates separate", () => {
     sdk(2, "notification", { text: "New information" }),
     event(3, "agent.thinking_tokens", { tokens: 20 }),
   ];
+
   assert.deepEqual(
     groupActivity(events).map((group) => group.events.map((entry) => entry.id)),
     [[1], [2], [3]],
@@ -158,11 +172,14 @@ test("an intervening event keeps repeated thinking updates separate", () => {
 for (const type of ["artifact.created", "agent.thinking_tokens"]) {
   test(`adjacent ${type} events from separate host tasks stay separate`, () => {
     const first = event(1, type, { title: "Same", tokens: 10 });
+
     const second = {
       ...event(2, type, { title: "Same", tokens: 20 }),
       task_id: "other-host-task",
     };
+
     const groups = groupActivity([first, second]);
+
     assert.deepEqual(
       groups.map((group) => group.events),
       [[first], [second]],
@@ -176,6 +193,7 @@ test("repeated notifications consolidate only when their summaries match", () =>
     sdk(2, "notification", { text: "Ready" }),
     sdk(3, "notification", { text: "Finished" }),
   ];
+
   const groups = groupActivity(events);
   assert.equal(groups.length, 2);
   assert.equal(groups[0].title, "Notification · 2 events");
@@ -196,6 +214,7 @@ for (const role of ["assistant", "user"]) {
           ...(summary ? { summary } : {}),
         }),
       );
+
       assert.deepEqual(
         groupActivity(events).map((group) => group.events),
         events.map((entry) => [entry]),
@@ -209,6 +228,7 @@ test("unknown events without summaries retain distinct payloads in separate rows
     event(1, "custom.update", { progress: 10 }),
     event(2, "custom.update", { progress: 20 }),
   ];
+
   assert.deepEqual(
     groupActivity(events).map((group) => group.events),
     events.map((entry) => [entry]),
@@ -221,11 +241,14 @@ for (const type of ["artifact.created", "thinking_tokens"]) {
       event(1, type, { error: "Operation failed", title: "Routine title" }),
       event(2, type, { error: "Operation failed", title: "Routine title" }),
     ];
+
     const groups = groupActivity(events);
+
     assert.deepEqual(
       groups.map((group) => group.events),
       events.map((entry) => [entry]),
     );
+
     for (const group of groups) {
       assert.equal(group.state, "failed");
       assert.equal(group.summary, "Operation failed");
@@ -247,6 +270,7 @@ for (const type of [
 ]) {
   test(`repeated ${type} events remain individually inspectable`, () => {
     const events = [event(1, type), event(2, type)];
+
     assert.deepEqual(
       groupActivity(events).map((group) => group.events),
       events.map((entry) => [entry]),
@@ -261,6 +285,7 @@ for (const [type, title] of [
   test(`${type} has a lifecycle title and stays separate from connection events`, () => {
     const events = [event(1, type), event(2, "agent.started"), sdk(3, "init")];
     const groups = groupActivity(events);
+
     assert.deepEqual(
       groups.map((group) => ({
         kind: group.kind,
@@ -286,11 +311,14 @@ test("repeated failure events stay individually prominent", () => {
     event(3, "artifact.error", { error: "Could not create artifact" }),
     event(4, "artifact.error", { error: "Could not create artifact" }),
   ];
+
   const groups = groupActivity(events);
+
   assert.deepEqual(
     groups.map((group) => group.events),
     events.map((entry) => [entry]),
   );
+
   assert.ok(groups.every((group) => group.state === "failed"));
 });
 
@@ -307,9 +335,11 @@ function event(
     timestamp: new Date(id * 1000).toISOString(),
   };
 }
+
 function sdk(id: number, subtype: string, data: Record<string, unknown> = {}) {
   return event(id, "claude.activity", { type: "system", subtype, ...data });
 }
+
 function task(status: Task["status"]): Task {
   return {
     ...startSchema.parse({
@@ -359,20 +389,25 @@ test("tool lifecycles correlate interleaved starts, progress and results without
       content: "File text",
     }),
   ];
+
   const groups = groupActivity(events);
   assert.equal(groups.length, 2);
   assert.equal(groups[0].kind, "tool");
   assert.equal(groups[0].state, "completed");
+
   assert.deepEqual(
     groups[0].events.map((e) => e.id),
     [1, 3, 5],
   );
+
   assert.match(groups[0].title, /Read/);
   assert.equal(groups[1].state, "failed");
+
   assert.deepEqual(
     groups[1].events.map((e) => e.id),
     [2, 4],
   );
+
   assert.match(groups[1].title, /Bash/);
 });
 
@@ -399,17 +434,22 @@ test("hooks and background SDK tasks correlate by their own IDs across interleav
       summary: "Reviewed",
     }),
   ];
+
   const groups = groupActivity(events);
   assert.equal(groups.length, 2);
+
   assert.deepEqual(
     groups[0].events.map((e) => e.id),
     [1, 3, 5],
   );
+
   assert.equal(groups[0].state, "failed");
+
   assert.deepEqual(
     groups[1].events.map((e) => e.id),
     [2, 4, 6],
   );
+
   assert.equal(groups[1].state, "completed");
 });
 
@@ -421,11 +461,14 @@ test("contiguous housekeeping combines while failures remain prominent", () => {
     sdk(4, "permission_denied", { tool_name: "Bash", message: "Blocked" }),
     sdk(5, "status", { status: "compacting" }),
   ];
+
   const groups = groupActivity(events);
+
   assert.deepEqual(
     groups[0].events.map((e) => e.id),
     [1, 2, 3],
   );
+
   const failure = groups.find((g) => g.events.some((e) => e.id === 4));
   assert.equal(failure?.state, "failed");
   assert.equal(failure?.events.length, 1);
@@ -446,16 +489,20 @@ for (const boundary of [
       event(3, "tool.started", { id: "reused", name: "Read" }),
       event(4, "tool.completed", { id: "reused", content: "Later result" }),
     ]);
+
     const tools = groups.filter((g) => g.kind === "tool");
     assert.equal(tools.length, 2);
+
     assert.deepEqual(
       tools[0].events.map((e) => e.id),
       [1],
     );
+
     assert.deepEqual(
       tools[1].events.map((e) => e.id),
       [3, 4],
     );
+
     assert.notEqual(tools[0].id, tools[1].id);
   });
 }
@@ -465,7 +512,9 @@ test("orphan results and future events remain represented", () => {
     event(1, "tool.completed", { id: "missing", content: "Result" }),
     sdk(2, "future_activity", { detail: "Retained" }),
   ];
+
   const groups = groupActivity(events);
+
   assert.deepEqual(
     groups.flatMap((g) => g.events).map((e) => e.id),
     [1, 2],
@@ -483,6 +532,7 @@ function stream(
     event: wire,
   });
 }
+
 test("stream blocks accumulate text, thinking and tool input while preserving every raw event", () => {
   const events = [
     stream(1, { type: "message_start", message: { id: "message-one" } }),
@@ -523,6 +573,7 @@ test("stream blocks accumulate text, thinking and tool input while preserving ev
     }),
     stream(9, { type: "message_stop" }),
   ];
+
   const groups = groupActivity(events);
   assert.equal(groups.length, 1);
   assert.equal(groups[0].kind, "stream");
@@ -553,19 +604,24 @@ test("different parent streams do not merge and current status follows the lates
       "parent-tool",
     ),
   ]);
+
   assert.equal(groups.length, 2);
+
   assert.deepEqual(
     groups[0].events.map((e) => e.id),
     [1, 3],
   );
+
   assert.deepEqual(
     groups[1].events.map((e) => e.id),
     [2, 4],
   );
+
   const status = currentActivityStatus([
     event(1, "tool.started", { id: "read", name: "Read" }),
     event(2, "tool.started", { id: "bash", name: "Bash" }),
   ]);
+
   assert.equal(status.state, "running");
   assert.match(status.text, /Bash/);
 });
@@ -583,6 +639,7 @@ for (const status of [
       [event(1, "tool.started", { id: "read", name: "Read" })],
       task(status),
     );
+
     assert.ok(!current.text.includes("Read"));
     if (status !== "queued") assert.notEqual(current.state, "running");
     else assert.equal(current.text, "Queued");
@@ -596,11 +653,13 @@ test("streamed response and normalized final message share their SDK message ide
     type: "message_start",
     message: { id: "sdk-message" },
   });
+
   const delta = stream(2, {
     type: "content_block_delta",
     index: 0,
     delta: { type: "text_delta", text: "Hi" },
   });
+
   const final = event(3, "agent.message", {
     text: "Hi",
     raw_response: {
@@ -608,10 +667,12 @@ test("streamed response and normalized final message share their SDK message ide
       message: { id: "sdk-message", content: [{ type: "text", text: "Hi" }] },
     },
   });
+
   const thinking = event(4, "agent.content", {
     content: { type: "thinking", thinking: "Evidence" },
     raw_response: final.data.raw_response,
   });
+
   const groups = groupActivity([first, delta, final, thinking]);
   assert.equal(groups.length, 1);
   assert.equal(groups[0].kind, "message");
@@ -627,15 +688,19 @@ test("grouping orders retained events chronologically and accounts for each even
     sdk(3, "hook_response", { hook_id: "hook", outcome: "success" }),
     sdk(2, "hook_started", { hook_id: "hook" }),
   ];
+
   const groups = groupActivity(original);
+
   assert.deepEqual(
     groups.map((g) => g.events[0].id),
     [1, 2, 4],
   );
+
   assert.deepEqual(
     groups.flatMap((g) => g.events.map((e) => e.id)).sort((a, b) => a - b),
     [1, 2, 3, 4, 5],
   );
+
   assert.deepEqual(
     original.map((e) => e.id),
     [5, 1, 4, 3, 2],
@@ -645,20 +710,25 @@ test("grouping orders retained events chronologically and accounts for each even
 
 test("identical SDK tool IDs in separate host tasks cannot correlate", () => {
   const first = event(1, "tool.started", { id: "read", name: "Read" });
+
   const second = {
     ...event(2, "tool.started", { id: "read", name: "Read" }),
     task_id: "other-host-task",
   };
+
   const result = event(3, "tool.completed", {
     id: "read",
     content: "First task result",
   });
+
   const groups = groupActivity([first, second, result]);
   assert.equal(groups.length, 2);
+
   assert.deepEqual(
     groups[0].events.map((e) => e.id),
     [1, 3],
   );
+
   assert.deepEqual(
     groups[1].events.map((e) => e.id),
     [2],
@@ -676,6 +746,7 @@ test("current status follows the most recently updated interleaved operation", (
       elapsed_time_seconds: 2,
     }),
   ]);
+
   assert.equal(current.state, "running");
   assert.match(current.text, /Running Read/);
 });
@@ -687,6 +758,7 @@ for (const terminal of ["agent.completed", "task.interrupted"]) {
       event(2, terminal),
       event(3, "task.continued"),
     ]);
+
     assert.equal(current.text, "Working");
     assert.equal(current.state, "running");
   });
@@ -697,6 +769,7 @@ test("submitted input clears a stale current input request", () => {
     event(1, "agent.input_required", { tool: "AskUserQuestion" }),
     event(2, "agent.input_submitted"),
   ]);
+
   assert.equal(current.text, "Working");
   assert.equal(current.state, "running");
 });
@@ -706,6 +779,7 @@ test("one host task lifecycle boundary preserves another host's operation correl
     ...event(2, "tool.started", { id: "read", name: "Read" }),
     task_id: "other-host-task",
   };
+
   const otherProgress = {
     ...event(4, "claude.activity", {
       type: "tool_progress",
@@ -714,10 +788,12 @@ test("one host task lifecycle boundary preserves another host's operation correl
     }),
     task_id: "other-host-task",
   };
+
   const otherResult = {
     ...event(5, "tool.completed", { id: "read", content: "Other task result" }),
     task_id: "other-host-task",
   };
+
   const groups = groupActivity([
     event(1, "tool.started", { id: "read", name: "Read" }),
     otherStart,
@@ -725,11 +801,14 @@ test("one host task lifecycle boundary preserves another host's operation correl
     otherProgress,
     otherResult,
   ]);
+
   const other = groups.find((group) => group.events.includes(otherStart));
+
   assert.deepEqual(
     other?.events.map((e) => e.id),
     [2, 4, 5],
   );
+
   assert.equal(other?.state, "completed");
 });
 
@@ -746,6 +825,7 @@ test("notifications and failures present useful prose in their group summaries",
       errors: ["Turn limit reached"],
     }),
   ]);
+
   assert.equal(groups[0].summary, "Build artifacts are ready");
   assert.match(groups[1].summary ?? "", /Shell execution blocked/);
   assert.match(groups[2].summary ?? "", /Turn limit reached/);
@@ -757,6 +837,7 @@ test("SDK action-required sessions report input state instead of running", () =>
   const current = currentActivityStatus([
     sdk(1, "session_state_changed", { state: "requires_action" }),
   ]);
+
   assert.equal(current.text, "Needs input");
   assert.equal(current.state, "info");
 });
@@ -778,6 +859,7 @@ test("rejected SDK rate limits report waiting rather than running", () => {
       rate_limit_info: { status: "rejected" },
     }),
   ]);
+
   assert.equal(current.text, "Waiting for rate limit reset");
   assert.equal(current.state, "info");
 });
@@ -790,6 +872,7 @@ test("failed context compaction exposes its exact error and failed current state
       compact_error: "Context could not be compacted",
     }),
   ];
+
   const groups = groupActivity(events);
   assert.equal(groups.length, 1);
   assert.equal(groups[0].state, "failed");
@@ -810,6 +893,7 @@ test("failed SDK result takes precedence over a still-running host task", () => 
     ],
     task("running"),
   );
+
   assert.equal(current.text, "Failed");
   assert.equal(current.state, "failed");
 });
@@ -823,6 +907,7 @@ test("failed hooks expose stderr or fallback output in the group summary", () =>
       sdk(1, "hook_started", { hook_id: "hook", hook_name: "Checks" }),
       sdk(2, "hook_response", { hook_id: "hook", outcome: "error", ...fields }),
     ]);
+
     assert.equal(groups[0].state, "failed");
     assert.equal(groups[0].summary, fields.stderr ?? fields.output);
   }
@@ -845,9 +930,11 @@ test("failed tools expose string or mixed text-block results in their summary", 
       }),
       event(2, "tool.completed", { id: "read", error: true, content }),
     ]);
+
     assert.equal(groups[0].state, "failed");
     assert.match(groups[0].summary ?? "", /Read failed:/);
     assert.match(groups[0].summary ?? "", /access denied/);
+
     assert.deepEqual(
       groups[0].events[0].data.input,
       { file_path: "src/a.ts" },
@@ -903,6 +990,7 @@ test("late tool progress preserves a failed result summary and state", () => {
       elapsed_time_seconds: 3,
     }),
   ]);
+
   assert.equal(groups.length, 1);
   assert.equal(groups[0].state, "failed");
   assert.equal(groups[0].summary, "Access denied");
@@ -920,12 +1008,15 @@ test("merged tool progress separates housekeeping bursts in input event order", 
     }),
     sdk(4, "status", { status: "compacting" }),
   ]);
+
   const statuses = groups.filter((group) => group.kind === "status");
   assert.equal(statuses.length, 2);
+
   assert.deepEqual(
     statuses.map((group) => group.events.map((e) => e.id)),
     [[2], [4]],
   );
+
   assert.deepEqual(
     groups.find((group) => group.kind === "tool")?.events.map((e) => e.id),
     [1, 3],
@@ -934,18 +1025,22 @@ test("merged tool progress separates housekeeping bursts in input event order", 
 
 test("merged normalized message content separates housekeeping bursts in input event order", () => {
   const raw = { type: "assistant", message: { id: "shared-message" } };
+
   const groups = groupActivity([
     event(1, "agent.message", { text: "Initial text", raw_response: raw }),
     sdk(2, "status", { status: "requesting" }),
     event(3, "agent.message", { text: "Continuation text", raw_response: raw }),
     sdk(4, "status", { status: "compacting" }),
   ]);
+
   const statuses = groups.filter((group) => group.kind === "status");
   assert.equal(statuses.length, 2);
+
   assert.deepEqual(
     statuses.map((group) => group.events.map((e) => e.id)),
     [[2], [4]],
   );
+
   assert.deepEqual(
     groups.find((group) => group.kind === "message")?.events.map((e) => e.id),
     [1, 3],
@@ -955,19 +1050,23 @@ test("merged normalized message content separates housekeeping bursts in input e
 test("a thinking row lasts until the next event, or is open-ended when none follows", () => {
   const thinking = [event(10, "thinking_tokens"), event(14, "thinking_tokens")];
   const [group] = groupActivity(thinking);
+
   assert.deepEqual(thinkingSpan(group, thinking), {
     start: 10000,
     end: null,
   });
+
   const all = [
     ...thinking,
     event(20, "tool.started", { id: "a", name: "Read" }),
   ];
+
   assert.deepEqual(thinkingSpan(group, all), { start: 10000, end: 20000 });
 });
 
 test("a message that absorbed its thinking marker spans marker to message", () => {
   const raw = { message: { id: "m1" } };
+
   const events = [
     sdk(5, "status", { status: "requesting" }),
     event(9, "agent.message", { text: "Done", raw_response: raw }),
@@ -976,6 +1075,7 @@ test("a message that absorbed its thinking marker spans marker to message", () =
       raw_response: raw,
     }),
   ];
+
   const message = groupActivity(events).find((g) => g.kind === "message")!;
   const span = thinkingSpan(message, events);
   assert.ok(span && span.end !== null && span.end > span.start);
@@ -992,6 +1092,7 @@ test("housekeeping before the first thinking signal does not count as thinking",
     sdk(12, "status", { status: "requesting" }),
     event(20, "tool.started", { id: "a", name: "Read" }),
   ];
+
   const group = groupActivity(events).find((g) => g.title === "Thinking…")!;
   assert.deepEqual(thinkingSpan(group, events), { start: 12000, end: 20000 });
 });

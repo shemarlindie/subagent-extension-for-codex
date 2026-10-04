@@ -8,11 +8,13 @@ export { ActivityValue, label, record };
 // A closed ``` fence with an optional info string; group 1 is the code. Unclosed
 // fences (still streaming) do not match and stay plain text.
 const FENCE = /```[^\n`]*\n([\s\S]*?)```/g;
+
 /** Plain text with fenced code blocks shown as code; no other markdown. */
 function Prose({ text }: { text: string }): ReactNode {
   if (!text.includes("```")) return <p className="activity-text">{text}</p>;
   const parts: ReactNode[] = [];
   let last = 0;
+
   for (const match of text.matchAll(FENCE)) {
     const before = text.slice(last, match.index).trim();
     if (before)
@@ -21,13 +23,16 @@ function Prose({ text }: { text: string }): ReactNode {
           {before}
         </p>,
       );
+
     parts.push(
       <pre key={match.index} className="activity-code">
         {match[1].replace(/\n$/, "")}
       </pre>,
     );
+
     last = match.index + match[0].length;
   }
+
   const rest = text.slice(last).trim();
   if (rest)
     parts.push(
@@ -35,6 +40,7 @@ function Prose({ text }: { text: string }): ReactNode {
         {rest}
       </p>,
     );
+
   return <>{parts}</>;
 }
 
@@ -112,8 +118,10 @@ export function ActivityContent({
         <ActivityContent content={block.content} depth={depth + 1} />
       </section>
     );
+
   if (type === "image" || type === "document") {
     const source = record(block.source);
+
     const inlineImage =
       type === "image" &&
       source.type === "base64" &&
@@ -121,6 +129,7 @@ export function ActivityContent({
       ["image/png", "image/jpeg", "image/gif", "image/webp"].includes(
         String(source.media_type),
       );
+
     return (
       <section>
         <p>
@@ -145,10 +154,12 @@ export function ActivityContent({
       </section>
     );
   }
+
   if (!Object.keys(block).length)
     return <ActivityValue value={content} depth={depth} />;
   // Includes search/code results, citations, tool references and future blocks.
   const { type: _, ...fields } = block;
+
   return (
     <section>
       {typeof type === "string" && <p className="muted">{label(type)}</p>}

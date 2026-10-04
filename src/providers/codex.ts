@@ -20,6 +20,7 @@ export class CodexAgentProvider implements Provider {
     parallel_subagents: false,
     dynamic_subagents: false,
   };
+
   constructor(
     private sessions: Pick<
       CodexSessions,
@@ -27,9 +28,11 @@ export class CodexAgentProvider implements Provider {
     >,
     private executors: CodexExecutors,
   ) {}
+
   close() {
     return this.executors.close();
   }
+
   async recover(task: RunContext["task"]) {
     await this.executors.recover(task);
     if (!task.session_id) return;
@@ -40,12 +43,14 @@ export class CodexAgentProvider implements Provider {
       );
     await this.sessions.cancelAndWait(task, task.native_turn_id);
   }
+
   async run(c: RunContext, prompt: string) {
     if (c.task.budget.max_cost_usd !== null || c.task.budget.max_tokens)
       throw new Error(
         "Codex cannot enforce cost or token limits; explicitly disable the cost limit",
       );
     c.signal.throwIfAborted();
+
     // Disclose the full instructions before authorizing the execution turn.
     const permission = await c.input(
       "CodexExecution",
@@ -60,6 +65,7 @@ export class CodexAgentProvider implements Provider {
       },
       c.signal,
     );
+
     if (!permission.approved)
       throw new Error("Native Codex execution was not approved");
     c.signal.throwIfAborted();
@@ -72,10 +78,12 @@ export class CodexAgentProvider implements Provider {
     let turnId: string | undefined;
     let terminal = false;
     let failure: unknown[] = [];
+
     try {
       return await this.executors.run(c.task, ref, async (executor) => {
         const local = new AbortController();
         const signal = AbortSignal.any([c.signal, local.signal]);
+
         const stream = await this.sessions.turn(
           c.task,
           prompt,
@@ -85,7 +93,9 @@ export class CodexAgentProvider implements Provider {
                 const input = z
                   .strictObject({ question: z.string().min(1).max(2000) })
                   .parse(args);
+
                 const answer = await c.input("AskUserQuestion", input, signal);
+
                 return {
                   answered: answer.approved,
                   input: answer.input ?? {},
@@ -96,8 +106,10 @@ export class CodexAgentProvider implements Provider {
           },
           signal,
         );
+
         const consume = (async () => {
           submitted = true;
+
           for await (const event of stream) {
             if (
               event.type === "agent.session.turn.created" &&
@@ -108,9 +120,11 @@ export class CodexAgentProvider implements Provider {
               c.session(ref.session_id, ref.state_ref);
               c.emit("agent.turn_started", { turn_id: turnId });
             }
+
             if ("turn_id" in event && event.turn_id === turnId) {
               if (event.type === "agent.session.turn.completed")
                 terminal = true;
+
               if (
                 event.type === "agent.session.turn.cancelled" ||
                 event.type === "agent.session.turn.failed"
@@ -118,22 +132,29 @@ export class CodexAgentProvider implements Provider {
                 terminal = true;
                 throw new Error(`Codex turn ${event.turn.status}`);
               }
+
               if (event.type === "agent.session.turn.output_text.delta")
                 c.emit("agent.message", { text: event.delta.slice(0, 20000) });
             }
+
             if (event.type === "agent.session.failed")
               throw new Error("Codex session failed");
           }
+
           if (!turnId || !terminal)
             throw new Error("Codex turn completion unconfirmed");
+
           const result = await this.sessions.structuredResult(
             c.task,
             turnId,
             signal,
           );
+
           c.emit("agent.completed", { turn_id: turnId });
+
           return result;
         })();
+
         try {
           return await Promise.race([
             consume,
@@ -160,6 +181,7 @@ export class CodexAgentProvider implements Provider {
       });
     } catch (error) {
       failure = [error];
+
       if (submitted) {
         try {
           if (turnId) await this.sessions.cancelAndWait(c.task, turnId);
@@ -177,6 +199,7 @@ export class CodexAgentProvider implements Provider {
           );
         }
       }
+
       throw error;
     } finally {
       try {

@@ -9,6 +9,7 @@ import {
   MultiSelectField,
   type SelectFieldProps,
 } from "../components/select-field";
+
 /** Connect library controls through RHF's supported controlled-field integration. */
 export function FormSelect<T extends FieldValues, N extends FieldPath<T>>({
   name,
@@ -21,6 +22,7 @@ export function FormSelect<T extends FieldValues, N extends FieldPath<T>>({
     multiple?: boolean;
   }) {
   const { field, fieldState } = useController({ name, control, rules });
+
   const errorId = `${props.id}-error`,
     shared = {
       ...props,
@@ -33,6 +35,7 @@ export function FormSelect<T extends FieldValues, N extends FieldPath<T>>({
           .filter(Boolean)
           .join(" ") || undefined,
     };
+
   return (
     <>
       {multiple ? (

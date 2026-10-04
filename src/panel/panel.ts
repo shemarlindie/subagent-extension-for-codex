@@ -11,10 +11,12 @@ import { panelContextInput, type PanelContextInput } from "./panel-context.js";
 // Bump the URI when resource metadata changes to invalidate host caches.
 export const panelUri = "ui://codex-subagent-extension/app-v6";
 export const globalPanelToolName = "open_codex_subagent_extension_global";
+
 const entrypoints = {
   entrypoints: [{ type: "thread" }],
   preferredModelDisplayMode: "inline",
 } satisfies OpenAIUiToolMetadata;
+
 const resourceMeta = {
   "openai/ui": {
     availableDisplayModes: ["inline", "fullscreen"],
@@ -70,6 +72,7 @@ export function delegationPanel(
       const resolved = context
         ? await context(args)
         : { panel_scope: { conversation_id: args.conversation_id ?? null } };
+
       return {
         content: [
           {
@@ -114,6 +117,7 @@ export function delegationPanel(
       ],
     }),
   };
+
   return {
     ...panel,
     // Global and thread entrypoints both launch with empty arguments. Give

@@ -12,6 +12,7 @@ import { Projects } from "./core/projects.js";
 import { dataDirectory, installRoot } from "./service/runtime.js";
 import { lease } from "./service/lease.js";
 import { adminToken } from "./service/token.js";
+
 const data = dataDirectory();
 mkdirSync(data, { recursive: true, mode: 0o700 });
 // mkdirSync's mode applies only on creation; tighten an existing directory too.
@@ -21,11 +22,14 @@ process.once("exit", release);
 const token = adminToken(data);
 const store = new Store(join(data, "console.sqlite"));
 const providers = configuredProviders(store, data);
+
 const concurrency = Number(
   process.env.CODEX_SUBAGENT_EXTENSION_CONCURRENCY ?? 3,
 );
+
 if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 20)
   throw new Error("Concurrency must be between 1 and 20");
+
 const c = new Control(
   store,
   new Workspaces(join(data, "worktrees"), []),
@@ -41,18 +45,23 @@ for (const root of JSON.parse(
   await c.projects.register(resolve(root), "parent");
 
 const port = Number(process.env.PORT ?? 4317);
+
 const origin =
   process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN ?? `http://127.0.0.1:${port}`;
+
 const auth = new Auth(token);
 const keyPath = join(data, "events-key");
 let eventKey: Buffer;
+
 try {
   eventKey = readFileSync(keyPath);
 } catch {
   eventKey = randomBytes(32);
   writeFileSync(keyPath, eventKey, { mode: 0o600, flag: "wx" });
 }
+
 const events = new Events(c.store, eventKey);
+
 const app = application(
   c,
   auth,
@@ -61,9 +70,11 @@ const app = application(
   events,
   join(installRoot, "dist/codex.html"),
 );
+
 // Reserve the listener before recovery can change durable tasks or launch workers.
 app.locals.ready = false;
 const server = app.listen(port, "127.0.0.1");
+
 try {
   await new Promise<void>((resolve, reject) => {
     server.once("listening", resolve);
@@ -73,14 +84,17 @@ try {
   c.store.close();
   throw error;
 }
+
 try {
   await c.recover();
   events.start();
+
   writeFileSync(
     join(data, "service.json"),
     JSON.stringify({ origin, pid: process.pid, version: "0.1.0" }),
     { mode: 0o600 },
   );
+
   app.locals.ready = true;
 } catch (error) {
   server.close();
@@ -88,15 +102,19 @@ try {
   await c.close();
   throw error;
 }
+
 const tokenSource =
   process.env.CODEX_SUBAGENT_EXTENSION_TOKEN === undefined
     ? `file: ${join(data, "admin-token")}`
     : "from CODEX_SUBAGENT_EXTENSION_TOKEN";
+
 console.error(
   `Codex subagent extension service: ${origin}\nLogin token ${tokenSource}`,
 );
+
 const prune = setInterval(() => auth.prune(), 60000);
 let closing: Promise<void> | undefined;
+
 function close() {
   return (closing ??= (async () => {
     app.locals.ready = false;
@@ -108,5 +126,6 @@ function close() {
     process.exit(0);
   })());
 }
+
 process.on("SIGINT", () => void close());
 process.on("SIGTERM", () => void close());

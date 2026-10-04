@@ -1,21 +1,25 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useController, useFormContext } from "react-hook-form";
 import type { DelegateValues } from "./delegate-fields";
+
 /** Suggestions never restrict a path inside an approved parent; the service validates it. */
 interface ProjectAutocompleteProps {
   repositories: string[];
   disabled?: boolean;
 }
+
 export function ProjectAutocomplete({
   repositories,
   disabled = false,
 }: ProjectAutocompleteProps) {
   const { control } = useFormContext<DelegateValues>();
+
   const { field, fieldState } = useController({
     control,
     name: "repository",
     rules: { required: "Enter an approved repository path." },
   });
+
   return (
     <Autocomplete.Root
       items={repositories}
