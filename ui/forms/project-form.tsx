@@ -4,11 +4,10 @@ import { useController, useSnapshot } from "../components/controller-context";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
 
-export function ProjectForm({
-  dialog,
-}: {
+interface ProjectFormProps {
   dialog: Extract<DialogState, { kind: "project" }>;
-}) {
+}
+export function ProjectForm({ dialog }: ProjectFormProps) {
   const controller = useController(),
     state = useSnapshot();
   const [repository, setRepository] = useState(dialog.repository ?? "");

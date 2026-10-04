@@ -14,6 +14,11 @@ type TimelineItemState = {
 // Lets a dot match its item's status without repeating the prop.
 const ItemStatus = createContext<TimelineStatus>("info");
 
+type TimelineProps = useRender.ComponentProps<"div", TimelineState> & {
+  /** Older items were dropped, so the rail fades out past the last marker. */
+  trimmed?: boolean;
+};
+
 /**
  * A vertical rail that runs between the first and last item markers.
  * State becomes data attributes (`data-trimmed`, `data-first`, `data-status`) for styling.
@@ -23,10 +28,7 @@ export function Timeline({
   ref,
   trimmed = false,
   ...props
-}: useRender.ComponentProps<"div", TimelineState> & {
-  /** Older items were dropped, so the rail fades out past the last marker. */
-  trimmed?: boolean;
-}) {
+}: TimelineProps) {
   return useRender({
     render,
     ref,

@@ -15,11 +15,10 @@ import {
 import { taskProjects } from "../core/delegation";
 import { Field } from "./fields";
 import { FormFooter } from "./form-footer";
-export function DelegateForm({
-  dialog,
-}: {
+interface DelegateFormProps {
   dialog: Extract<DialogState, { kind: "delegate" }>;
-}) {
+}
+export function DelegateForm({ dialog }: DelegateFormProps) {
   const controller = useController(),
     state = useSnapshot(),
     defaults = dialog.defaults;

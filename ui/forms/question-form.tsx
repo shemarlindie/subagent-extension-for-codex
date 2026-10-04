@@ -13,17 +13,18 @@ type Answers = {
   answers: Record<string, string | string[]>;
   custom: Record<string, string>;
 };
+interface QuestionFieldProps {
+  question: Question;
+  index: number;
+  register: UseFormRegister<Answers>;
+  control: Control<Answers>;
+}
 function QuestionField({
   question,
   index,
   register,
   control,
-}: {
-  question: Question;
-  index: number;
-  register: UseFormRegister<Answers>;
-  control: Control<Answers>;
-}) {
+}: QuestionFieldProps) {
   const custom = useWatch({ control, name: `custom.${index}` }),
     id = `answer-${index}`,
     hasOptions = Boolean(question.options?.length);

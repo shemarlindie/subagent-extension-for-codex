@@ -38,13 +38,15 @@ function Prose({ text }: { text: string }): ReactNode {
   return <>{parts}</>;
 }
 
+interface ActivityContentProps {
+  content: unknown;
+  depth?: number;
+}
+
 export function ActivityContent({
   content,
   depth = 0,
-}: {
-  content: unknown;
-  depth?: number;
-}): ReactNode {
+}: ActivityContentProps): ReactNode {
   if (
     content !== null &&
     typeof content === "object" &&

@@ -10,15 +10,16 @@ function matches(model: ModelChoice, query: string) {
   );
 }
 /** Discovered models are suggestions; custom model IDs and aliases remain valid. */
+interface ModelAutocompleteProps {
+  models: ModelChoice[];
+  placeholder: string;
+  describedBy?: string;
+}
 export function ModelAutocomplete({
   models,
   placeholder,
   describedBy,
-}: {
-  models: ModelChoice[];
-  placeholder: string;
-  describedBy?: string;
-}) {
+}: ModelAutocompleteProps) {
   const { control } = useFormContext<DelegateValues>();
   const { field } = useController({ control, name: "model" });
   const [open, setOpen] = useState(false);

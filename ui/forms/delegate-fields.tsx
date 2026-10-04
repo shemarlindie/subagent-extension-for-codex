@@ -27,17 +27,18 @@ export type DelegateValues = {
   cost: number;
   deps: string[];
 };
+interface ProjectFieldProps {
+  projects: Project[];
+  allowParent: boolean;
+  disabled?: boolean;
+  onBrowse?: () => void;
+}
 export function ProjectField({
   projects,
   allowParent,
   disabled = false,
   onBrowse,
-}: {
-  projects: Project[];
-  allowParent: boolean;
-  disabled?: boolean;
-  onBrowse?: () => void;
-}) {
+}: ProjectFieldProps) {
   const { control } = useFormContext<DelegateValues>(),
     options = projects.filter((project) => project.kind === "repository");
   return (
@@ -266,13 +267,11 @@ export function DependencyField({ tasks }: { tasks: Task[] }) {
   );
 }
 
-export function ModelFields({
-  defaults,
-  workers,
-}: {
+interface ModelFieldsProps {
   defaults: Defaults;
   workers: Worker[];
-}) {
+}
+export function ModelFields({ defaults, workers }: ModelFieldsProps) {
   const { control } = useFormContext<DelegateValues>();
   const [worker, selectedModel] = useWatch({
     control,

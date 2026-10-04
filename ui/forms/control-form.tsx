@@ -17,11 +17,10 @@ export function controlTitle(action: string) {
     )[action] ?? "Task action"
   );
 }
-export function ControlForm({
-  dialog,
-}: {
+interface ControlFormProps {
   dialog: Extract<DialogState, { kind: "control" }>;
-}) {
+}
+export function ControlForm({ dialog }: ControlFormProps) {
   const controller = useController(),
     { action, task } = dialog;
   const { register, handleSubmit } = useForm<{ instruction: string }>();

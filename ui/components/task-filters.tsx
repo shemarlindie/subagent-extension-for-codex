@@ -12,6 +12,7 @@ export function TaskFilters() {
       ? [["attention", "Needs input"] as [Filter, string]]
       : []),
     ["completed", "Done"],
+    ["failed", "Failed"],
   ];
   return (
     <>

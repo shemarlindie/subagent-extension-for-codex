@@ -11,6 +11,14 @@ import { MOTION, canAnimate } from "./motion-utils";
 type MotionTag = "span" | "strong" | "div";
 type MotionVariant = "swap" | "rise";
 
+interface MotionContentProps {
+  changeKey: Key | null | undefined;
+  as?: MotionTag;
+  variant?: MotionVariant;
+  className?: string;
+  children: ReactNode;
+}
+
 /** Replaces changing content with a keyed element that enters using the shared motion style. */
 export function MotionContent({
   changeKey,
@@ -18,13 +26,7 @@ export function MotionContent({
   variant = "swap",
   className,
   children,
-}: {
-  changeKey: Key | null | undefined;
-  as?: MotionTag;
-  variant?: MotionVariant;
-  className?: string;
-  children: ReactNode;
-}) {
+}: MotionContentProps) {
   const classes = [`motion-${variant}`, className].filter(Boolean).join(" ");
   return (
     <Tag key={changeKey} className={classes}>
@@ -67,6 +69,12 @@ function frames(variant: Variant, element: HTMLElement): Keyframe[] {
   ];
 }
 
+interface PresenceProps {
+  show: boolean;
+  variant?: Variant;
+  children?: ReactNode;
+}
+
 /**
  * Keeps its child mounted while it animates out, and animates it in when shown.
  * The child should be a single element; the wrapper itself has no box.
@@ -76,11 +84,7 @@ export function Presence({
   show,
   variant = "collapse",
   children,
-}: {
-  show: boolean;
-  variant?: Variant;
-  children?: ReactNode;
-}) {
+}: PresenceProps) {
   const wrapper = useRef<HTMLDivElement>(null);
   const [previous, setPrevious] = useState(show);
   const [exiting, setExiting] = useState(false);

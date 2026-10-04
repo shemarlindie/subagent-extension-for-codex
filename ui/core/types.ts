@@ -10,7 +10,7 @@ export type Task = ListedTask;
 export type { Artifact, Event };
 export type Mode = "panel" | "console";
 export type Tab = "result" | "activity" | "changes" | "details";
-export type Filter = "all" | "active" | "attention" | "completed";
+export type Filter = "all" | "active" | "attention" | "completed" | "failed";
 export type Worker = {
   provider: string;
   profiles: string[];

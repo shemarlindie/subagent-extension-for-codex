@@ -24,14 +24,7 @@ function DroppedNote({ summary }: { summary: DroppedSummary }) {
   );
 }
 
-// Polls keep the same events array when nothing changed, so a hidden tab skips work.
-export const EventList = memo(function EventList({
-  events,
-  active,
-  running = false,
-  runtimeMs,
-  dropped,
-}: {
+interface EventListProps {
   events: Event[];
   active?: boolean;
   runtimeMs?: number;
@@ -39,7 +32,16 @@ export const EventList = memo(function EventList({
   dropped?: DroppedSummary;
   /** The worker is mid-turn, so a thinking row with nothing after it is still going. */
   running?: boolean;
-}) {
+}
+
+// Polls keep the same events array when nothing changed, so a hidden tab skips work.
+export const EventList = memo(function EventList({
+  events,
+  active,
+  running = false,
+  runtimeMs,
+  dropped,
+}: EventListProps) {
   const groups = groupActivity(events).sort(
     (a, b) => b.events.at(-1)!.id - a.events.at(-1)!.id,
   );

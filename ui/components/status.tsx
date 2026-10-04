@@ -4,13 +4,12 @@ import type { ActivityState } from "../core/activity-timeline";
 import { MotionContent } from "./motion";
 import { TaskStatusIcon } from "./task-status-icon";
 import { statusLabel } from "../core/selectors";
-export function TaskStatus({
-  task,
-  activity,
-}: {
+interface TaskStatusProps {
   task: Task;
   activity?: { text: string; state: ActivityState };
-}) {
+}
+
+export function TaskStatus({ task, activity }: TaskStatusProps) {
   const presentation = rowStatus(
     activity ? { ...task, live_activity: activity } : task,
   );

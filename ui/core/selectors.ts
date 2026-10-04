@@ -1,3 +1,4 @@
+import { rowStatus } from "./task-status";
 import type { Snapshot, Task } from "./types";
 export const terminal = (task: Task) =>
   ["completed", "failed", "cancelled"].includes(task.status);
@@ -27,7 +28,8 @@ export function visibleTasks(state: Snapshot) {
         (state.filter === "active" && !terminal(task)) ||
         (state.filter === "attention" &&
           Boolean(task.pending_input || locked(task))) ||
-        (state.filter === "completed" && task.status === "completed")),
+        (state.filter === "completed" && task.status === "completed") ||
+        (state.filter === "failed" && rowStatus(task).kind === "failed")),
   );
 }
 export function projectChoices(state: Snapshot) {

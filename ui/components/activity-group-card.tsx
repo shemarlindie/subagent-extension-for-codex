@@ -20,6 +20,15 @@ function ThinkingClock({ start }: { start: number }) {
   );
 }
 
+interface ActivityGroupCardProps {
+  group: ActivityGroup;
+  first: boolean;
+  last: boolean;
+  span?: { start: number; end: number | null };
+  running: boolean;
+  runtimeMs?: number;
+}
+
 export function ActivityGroupCard({
   group,
   first,
@@ -27,14 +36,7 @@ export function ActivityGroupCard({
   span,
   running,
   runtimeMs,
-}: {
-  group: ActivityGroup;
-  first: boolean;
-  last: boolean;
-  span?: { start: number; end: number | null };
-  running: boolean;
-  runtimeMs?: number;
-}) {
+}: ActivityGroupCardProps) {
   const [debugOpen, setDebugOpen] = useState(false);
   // Avoid hidden content work until inspection; retain it afterward to keep disclosures open.
   const [debugMounted, setDebugMounted] = useState(false);

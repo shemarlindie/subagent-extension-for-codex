@@ -16,13 +16,12 @@ const envelope = new Set([
   "parent_tool_use_id",
 ]);
 
-function RawResponse({
-  event,
-  defaultOpen,
-}: {
+interface RawResponseProps {
   event: Event;
   defaultOpen?: boolean;
-}) {
+}
+
+function RawResponse({ event, defaultOpen }: RawResponseProps) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   return (
     <details
@@ -105,17 +104,14 @@ export function EventBody({ event }: { event: Event }) {
   );
 }
 
-function EventCard({
-  event,
-  toolName,
-  rawOnly,
-  expandRaw,
-}: {
+interface EventCardProps {
   event: Event;
   toolName?: string;
   rawOnly?: boolean;
   expandRaw?: boolean;
-}) {
+}
+
+function EventCard({ event, toolName, rawOnly, expandRaw }: EventCardProps) {
   const failed = activityFailed(event);
   return (
     <article className={`event${failed ? " activity-error" : ""}`}>
@@ -129,17 +125,19 @@ function EventCard({
   );
 }
 
+interface EventDetailsProps {
+  events: Event[];
+  rawOnly?: boolean;
+  /** Default for the newest disclosure; user toggles remain local to each response. */
+  expandNewestRaw?: boolean;
+}
+
 /** `rawOnly` hides content already shown by the group. */
 export function EventDetails({
   events,
   rawOnly,
   expandNewestRaw = rawOnly,
-}: {
-  events: Event[];
-  rawOnly?: boolean;
-  /** Default for the newest disclosure; user toggles remain local to each response. */
-  expandNewestRaw?: boolean;
-}) {
+}: EventDetailsProps) {
   const toolNames = new Map(
     events
       .filter((event) => event.type === "tool.started")

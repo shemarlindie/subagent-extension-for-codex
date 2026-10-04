@@ -48,13 +48,12 @@ export function TaskNotices({ task }: { task: Task }) {
   );
 }
 
-function TaskNotice({
-  show,
-  children,
-}: {
+interface TaskNoticeProps {
   show: boolean;
   children: ReactNode;
-}) {
+}
+
+function TaskNotice({ show, children }: TaskNoticeProps) {
   return (
     <Presence show={show}>
       <div className="callout attention">{children}</div>

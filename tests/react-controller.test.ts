@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import { Controller } from "../ui/core/controller";
+import { visibleTasks } from "../ui/core/selectors";
 import type {
   Defaults,
   Event,
@@ -623,4 +624,34 @@ test("New task offers the chat project only when auto-add is on and adds it befo
       auto ? undefined : "/repo/chat",
     );
   }
+});
+
+test("Failed filter shows failed, unconfirmed and live-failed tasks only", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  const failed = task("failed");
+  failed.status = "failed";
+  const unconfirmed = task("unconfirmed");
+  unconfirmed.status = "failed";
+  unconfirmed.waiting_reason = "termination_unconfirmed";
+  const liveFailed = task("live-failed");
+  liveFailed.live_activity = { text: "Provider failed", state: "failed" };
+  const done = task("done");
+  done.status = "completed";
+  const cancelled = task("cancelled");
+  cancelled.status = "cancelled";
+  transport.tasks = [
+    failed,
+    unconfirmed,
+    liveFailed,
+    done,
+    cancelled,
+    task("ok"),
+  ];
+  await controller.start();
+  controller.setFilter("failed");
+  assert.deepEqual(
+    visibleTasks(controller.getSnapshot()).map((item) => item.id),
+    ["failed", "unconfirmed", "live-failed"],
+  );
 });

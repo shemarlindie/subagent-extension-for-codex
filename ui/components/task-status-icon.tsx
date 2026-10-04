@@ -2,13 +2,18 @@ import type { rowStatus } from "../core/task-status";
 
 type StatusPresentation = ReturnType<typeof rowStatus>;
 
+interface TaskStatusIconProps extends Pick<
+  StatusPresentation,
+  "kind" | "label"
+> {
+  decorative?: boolean;
+}
+
 export function TaskStatusIcon({
   kind,
   label,
   decorative = false,
-}: Pick<StatusPresentation, "kind" | "label"> & {
-  decorative?: boolean;
-}) {
+}: TaskStatusIconProps) {
   const path =
     kind === "running" || kind === "starting"
       ? "M7 4l12 8-12 8Z"
@@ -39,8 +44,8 @@ export function TaskStatusIcon({
       {!decorative && <title>{label}</title>}
       {kind === "running" && (
         <>
-          <circle className="row-status-glow" cx="12" cy="12" r="6" />
-          <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" />
+          <circle className="row-status-glow" cx="12" cy="12" r="8" />
+          <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />
         </>
       )}
       {kind === "queued" && <circle cx="12" cy="12" r="9" />}

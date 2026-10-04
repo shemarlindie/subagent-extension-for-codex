@@ -2,13 +2,15 @@ import { Collapsible } from "@base-ui/react/collapsible";
 import type { Task } from "../core/types";
 import { Chevron } from "./chevron";
 
+interface TaskDescriptionProps {
+  task: Task;
+  defaultOpen?: boolean;
+}
+
 export function TaskDescription({
   task,
   defaultOpen = false,
-}: {
-  task: Task;
-  defaultOpen?: boolean;
-}) {
+}: TaskDescriptionProps) {
   return (
     <Collapsible.Root className="task-description" defaultOpen={defaultOpen}>
       <Collapsible.Trigger className="task-description-trigger">

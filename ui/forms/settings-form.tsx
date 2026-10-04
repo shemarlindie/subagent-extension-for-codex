@@ -53,19 +53,20 @@ function parse(field: Property, value: string) {
   if (field.type === "number" || field.type === "integer") return Number(value);
   return value;
 }
+interface SettingFieldProps {
+  name: string;
+  field: Property;
+  models: Models;
+  control: ReturnType<typeof useForm<Values>>["control"];
+  register: ReturnType<typeof useForm<Values>>["register"];
+}
 function SettingField({
   name,
   field,
   control,
   register,
   models,
-}: {
-  name: string;
-  field: Property;
-  models: Models;
-  control: ReturnType<typeof useForm<Values>>["control"];
-  register: ReturnType<typeof useForm<Values>>["register"];
-}) {
+}: SettingFieldProps) {
   const id = `setting-${name}`,
     label = field.title ?? name,
     help = field.description?.trim() ? (
@@ -124,11 +125,10 @@ function SettingField({
   );
 }
 /** Schema-driven fallback for hosts that do not render native plugin settings. */
-export function SettingsForm({
-  dialog,
-}: {
+interface SettingsFormProps {
   dialog: Extract<DialogState, { kind: "settings" }>;
-}) {
+}
+export function SettingsForm({ dialog }: SettingsFormProps) {
   const controller = useController(),
     // Settings enums carry IDs only; discovered catalogs supply names and descriptions.
     models: Models = new Map(

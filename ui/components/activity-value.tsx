@@ -18,15 +18,13 @@ const fieldLabels: Record<string, string> = {
   file_path: "File path",
 };
 
-function FieldValue({
-  name,
-  value,
-  depth,
-}: {
+interface FieldValueProps {
   name: string;
   value: unknown;
   depth: number;
-}): ReactNode {
+}
+
+function FieldValue({ name, value, depth }: FieldValueProps): ReactNode {
   if (typeof value === "number" && Number.isFinite(value)) {
     if (name.endsWith("_usd"))
       return (
@@ -78,14 +76,16 @@ function FieldValue({
   return <ActivityValue value={value} depth={depth} />;
 }
 
+interface ActivityValueProps {
+  value: unknown;
+  depth?: number;
+}
+
 /** Safe, structured fallback for new SDK fields and nested tool payloads. */
 export function ActivityValue({
   value,
   depth = 0,
-}: {
-  value: unknown;
-  depth?: number;
-}): ReactNode {
+}: ActivityValueProps): ReactNode {
   if (value === undefined) return null;
   if (value === null) return <span className="muted">None</span>;
   if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;

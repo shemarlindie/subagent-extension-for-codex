@@ -12,15 +12,13 @@ import { useListMotion } from "./motion";
 import type { Task } from "../core/types";
 import { useController, useSnapshot } from "./controller-context";
 import { TaskStatusIcon } from "./task-status-icon";
-export function TaskRow({
-  task,
-  selected,
-  onSelect,
-}: {
+interface TaskRowProps {
   task: Task;
   selected: boolean;
   onSelect(): void;
-}) {
+}
+
+export function TaskRow({ task, selected, onSelect }: TaskRowProps) {
   return (
     <button
       className="row"
