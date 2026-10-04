@@ -1,3 +1,4 @@
+import { defineDialog } from "./dialog-definition";
 import { useRef, useState } from "react";
 import type { DialogState } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
@@ -74,3 +75,7 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
     </form>
   );
 }
+export const projectDialog = defineDialog<"project">({
+  title: () => "Add project",
+  render: (dialog) => <ProjectForm dialog={dialog} />,
+});

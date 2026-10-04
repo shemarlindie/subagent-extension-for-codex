@@ -1,3 +1,4 @@
+import { defineDialog, firstTextField } from "./dialog-definition";
 import { useForm } from "react-hook-form";
 import { Dialog } from "@base-ui/react/dialog";
 import type { Task } from "../core/types";
@@ -57,3 +58,9 @@ export function PermissionForm({ task }: { task: Task }) {
     </form>
   );
 }
+export const permissionDialog = defineDialog<"respond">({
+  title: () => "Review permission request",
+  // Worker questions answer inline in the task notice instead.
+  render: ({ task }) => <PermissionForm task={task} />,
+  initialFocus: firstTextField,
+});

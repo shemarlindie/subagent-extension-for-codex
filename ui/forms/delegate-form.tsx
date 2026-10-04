@@ -1,3 +1,4 @@
+import { defineDialog } from "./dialog-definition";
 import { useEffect, useRef } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import type { DialogState, Task } from "../core/types";
@@ -166,3 +167,12 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
     </FormProvider>
   );
 }
+export const delegateDialog = defineDialog<"delegate">({
+  title: () => "New delegated task",
+  render: (dialog) => <DelegateForm dialog={dialog} />,
+  // With a known repository the project is settled, so start on the description.
+  initialFocus: (popup, { repository }) =>
+    repository
+      ? (popup?.querySelector<HTMLElement>("#description") ?? null)
+      : null,
+});

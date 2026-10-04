@@ -49,7 +49,7 @@ Buttons use `<Button>` from `ui/components/button.tsx`, with a `variant`:
 
 - Add a component when a section has a clear responsibility, reused presentation, or an independent interaction. Compose these sections in the inspector or shell; avoid moving networking or scope bookkeeping into JSX.
 - Reuse the selection fields for new dropdowns and the existing project autocomplete for editable project suggestions. Keep primitive styling in `ui/styles/shared.css`; define surface colors through CSS variables in `ui/styles/console.css` and `ui/styles/codex.css`.
-- Add a form for a new user-reviewed operation. Share fields and footers, declare its typed dialog variant, and wire it into `DialogHost`. Submit through `controller.submit` to retain busy/error handling and the scope captured when the dialog opened. Send messages or execute tools only after the user submits.
+- Add a form for a new user-reviewed operation. Share fields and footers, declare its typed dialog variant, export a `defineDialog` definition (title, render, optional initial focus) from the form, and register it in `ui/forms/dialog-registry.ts`; `DialogHost` stays a generic shell. Submit through `controller.submit` to retain busy/error handling and the scope captured when the dialog opened. Send messages or execute tools only after the user submits.
 - Add a selector for a pure calculation shared across views. Keep transport calls and mutation outside selectors.
 - Add a transport when the connection mechanism changes. Implement `Transport` and deliver `TransportEvents`; select it in bootstrap. Rendering and forms should not branch on HTTP versus MCP tool envelopes.
 

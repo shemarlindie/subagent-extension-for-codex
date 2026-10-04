@@ -1348,6 +1348,12 @@ test("permission review makes no decision until the user clicks Deny", async (t)
   });
   await user.click(screen.getByRole("button", { name: "Review request" }));
   await screen.findByRole("dialog");
+  await waitFor(() =>
+    assert.ok(
+      document.activeElement === screen.getByLabelText("Message (optional)"),
+      "Permission dialog should focus its message field",
+    ),
+  );
   assert.equal(screen.queryByRole("combobox", { name: "Decision" }), null);
   assert.equal(
     transport.calls.filter((call) => call.name === "submit_agent_input").length,
@@ -1380,6 +1386,12 @@ test("handoff sends only after explicit submit and uses the edited message", asy
   );
   await user.click(screen.getByRole("button", { name: "Bring to Codex" }));
   await screen.findByRole("dialog");
+  await waitFor(() =>
+    assert.ok(
+      document.activeElement === screen.getByLabelText("Message"),
+      "Handoff dialog should focus its message field",
+    ),
+  );
   assert.deepEqual(transport.messages, []);
   await act(() => controller.refresh());
   assert.deepEqual(transport.messages, []);

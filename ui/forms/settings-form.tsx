@@ -1,3 +1,4 @@
+import { defineDialog } from "./dialog-definition";
 import { useForm, useWatch } from "react-hook-form";
 import { Collapsible } from "@base-ui/react/collapsible";
 import type { DialogState, SettingsDocument } from "../core/types";
@@ -220,3 +221,7 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
     </form>
   );
 }
+export const settingsDialog = defineDialog<"settings">({
+  title: () => "Plugin settings",
+  render: (dialog) => <SettingsForm dialog={dialog} />,
+});

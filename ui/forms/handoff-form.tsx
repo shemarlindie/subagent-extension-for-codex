@@ -1,3 +1,4 @@
+import { defineDialog, firstTextField } from "./dialog-definition";
 import { useForm } from "react-hook-form";
 import type { Task } from "../core/types";
 import { useController, useSnapshot } from "../components/controller-context";
@@ -45,3 +46,8 @@ export function HandoffForm({ task }: { task: Task }) {
     </form>
   );
 }
+export const handoffDialog = defineDialog<"handoff">({
+  title: () => "Bring task to Codex",
+  render: ({ task }) => <HandoffForm task={task} />,
+  initialFocus: firstTextField,
+});

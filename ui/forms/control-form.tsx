@@ -1,3 +1,4 @@
+import { defineDialog, firstTextField } from "./dialog-definition";
 import { useForm } from "react-hook-form";
 import type { DialogState, Task } from "../core/types";
 import { useController } from "../components/controller-context";
@@ -92,3 +93,8 @@ export function ControlForm({ dialog }: ControlFormProps) {
     </form>
   );
 }
+export const controlDialog = defineDialog<"control">({
+  title: ({ action }) => controlTitle(action),
+  render: (dialog) => <ControlForm dialog={dialog} />,
+  initialFocus: firstTextField,
+});
