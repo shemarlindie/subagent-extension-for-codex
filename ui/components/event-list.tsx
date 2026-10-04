@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { Collapsible } from "@base-ui/react/collapsible";
 import type { Event, Task } from "../core/types";
 import {
   groupActivity,
@@ -57,11 +58,18 @@ function sdkTitle(data: Record<string, unknown>) {
   const key = String(data.subtype ?? data.type ?? "activity");
   return titles[key] ?? label(key);
 }
-function RawResponse({ event }: { event: Event }) {
-  const [open, setOpen] = useState(false);
+function RawResponse({
+  event,
+  defaultOpen,
+}: {
+  event: Event;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
   return (
     <details
       className="activity-raw"
+      open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
       <summary>Raw response</summary>
@@ -138,7 +146,17 @@ function EventBody({ event }: { event: Event }) {
     </>
   );
 }
-function EventCard({ event, toolName }: { event: Event; toolName?: string }) {
+function EventCard({
+  event,
+  toolName,
+  rawOnly,
+  expandRaw,
+}: {
+  event: Event;
+  toolName?: string;
+  rawOnly?: boolean;
+  expandRaw?: boolean;
+}) {
   const d = event.data;
   const failed = activityFailed(event);
   const title =
@@ -168,14 +186,21 @@ function EventCard({ event, toolName }: { event: Event; toolName?: string }) {
         })}
       </time>
       <div className="activity-body">
-        <strong>{title}</strong>
-        <EventBody event={event} />
-        <RawResponse event={event} />
+        {!rawOnly && <strong>{title}</strong>}
+        {!rawOnly && <EventBody event={event} />}
+        <RawResponse event={event} defaultOpen={expandRaw} />
       </div>
     </article>
   );
 }
-export function EventDetails({ events }: { events: Event[] }) {
+/** `rawOnly` skips the title and rendered body when the group already shows them and opens the newest raw response. */
+export function EventDetails({
+  events,
+  rawOnly,
+}: {
+  events: Event[];
+  rawOnly?: boolean;
+}) {
   const toolNames = new Map(
     events
       .filter((e) => e.type === "tool.started")
@@ -191,11 +216,13 @@ export function EventDetails({ events }: { events: Event[] }) {
       {events.length ? (
         [...events]
           .reverse()
-          .map((event) => (
+          .map((event, index) => (
             <EventCard
               key={event.id}
               event={event}
               toolName={toolNames.get(event.data.id)}
+              rawOnly={rawOnly}
+              expandRaw={rawOnly && index === 0}
             />
           ))
       ) : (
@@ -236,15 +263,42 @@ function StreamContent({ group }: { group: ActivityGroup }) {
   }
   return <ActivityContent content={[...blocks.values()]} />;
 }
+const isThinkingBlock = (block: unknown) => {
+  const type = record(block).type;
+  return type === "thinking" || type === "redacted_thinking";
+};
+/** True when every message in the group holds only thinking blocks. */
+function thinkingOnly(events: Event[]) {
+  return (
+    events.length > 0 &&
+    events.every((e) => {
+      // The provider emits one content block per event; accept arrays too.
+      const content = e.data.content ?? e.data.text;
+      const blocks = Array.isArray(content) ? content : [content];
+      return blocks.length > 0 && blocks.every(isThinkingBlock);
+    })
+  );
+}
 function GroupCard({ group }: { group: ActivityGroup }) {
   const [debugOpen, setDebugOpen] = useState(false);
   // Avoid hidden content work until inspection; retain it afterward to keep disclosures open.
   const [debugMounted, setDebugMounted] = useState(false);
   const debugId = useId();
   const conversational = group.kind === "message" || group.kind === "stream";
+  // Messages, and event/status rows with a summary, already show their text above;
+  // tools and operations keep the structured debug body for their input and output.
+  const showsOwnText =
+    conversational ||
+    ((group.kind === "event" || group.kind === "status") &&
+      group.summary !== undefined);
   const contentEvents = group.events.filter(
     (e) => e.type === "agent.message" || e.type === "agent.content",
   );
+  // Thinking-only messages read as a quiet "Thinking" row, not an assistant reply.
+  // Their text is mostly empty, so it is only shown through the debug view.
+  const quietThinking = conversational && thinkingOnly(contentEvents);
+  // The heading and the debug toggle's label name the row the same way.
+  const title = quietThinking ? "Thinking" : group.title;
   const badge =
     group.state === "running"
       ? "Running"
@@ -254,16 +308,19 @@ function GroupCard({ group }: { group: ActivityGroup }) {
           ? "Done"
           : undefined;
   return (
-    <article
+    <Collapsible.Root
+      render={<article />}
+      open={debugOpen}
+      onOpenChange={setDebugOpen}
       data-activity-id={group.id}
-      className={`activity-group activity-${group.kind}${group.state === "failed" ? " activity-error" : ""}`}
+      className={`activity-group activity-${group.kind}${quietThinking ? " activity-thinking-only" : ""}${group.state === "failed" ? " activity-error" : ""}`}
     >
       <div className="activity-group-heading">
         <span
           className={`activity-dot activity-dot-${group.state}`}
           aria-hidden="true"
         />
-        <strong>{group.title}</strong>
+        <strong>{title}</strong>
         {badge && <span className="activity-badge">{badge}</span>}
         <time dateTime={group.events[0].timestamp}>
           {new Date(group.events[0].timestamp).toLocaleTimeString([], {
@@ -271,17 +328,12 @@ function GroupCard({ group }: { group: ActivityGroup }) {
             minute: "2-digit",
           })}
         </time>
-        <button
-          type="button"
+        <Collapsible.Trigger
           className="activity-debug-toggle"
-          aria-label={`Debug activity: ${group.title}`}
-          title={`Inspect ${group.events.length} raw ${group.events.length === 1 ? "response" : "responses"}`}
-          aria-expanded={debugOpen}
+          aria-label={`Debug activity: ${title}`}
           aria-controls={debugId}
-          onClick={() => {
-            setDebugMounted(true);
-            setDebugOpen((open) => !open);
-          }}
+          title={`Inspect ${group.events.length} raw ${group.events.length === 1 ? "response" : "responses"}`}
+          onClick={() => setDebugMounted(true)}
         >
           <svg
             width="15"
@@ -297,14 +349,14 @@ function GroupCard({ group }: { group: ActivityGroup }) {
             <path d="m8 3 2 3m6-3-2 3M9 9h6M12 9v11M4 7l3 3m13-3-3 3M3 13h4m10 0h4M4 19l3-3m13 3-3-3" />
             <rect x="7" y="6" width="10" height="14" rx="5" />
           </svg>
-        </button>
+        </Collapsible.Trigger>
       </div>
       {group.summary && (
         <p className="activity-group-summary" title={group.summary}>
           {group.summary}
         </p>
       )}
-      {conversational && (
+      {conversational && !quietThinking && (
         <div className="activity-body">
           {contentEvents.length ? (
             contentEvents.map((event) => (
@@ -315,18 +367,23 @@ function GroupCard({ group }: { group: ActivityGroup }) {
           )}
         </div>
       )}
-      <div id={debugId} className="activity-debug-panel" hidden={!debugOpen}>
+      {/* Always mounted so the toggle's aria-controls resolves while closed. */}
+      <Collapsible.Panel
+        keepMounted
+        id={debugId}
+        className="activity-debug-panel"
+      >
         {debugMounted && (
           <>
             <p className="activity-debug-caption">
               Debug details · {group.events.length}{" "}
               {group.events.length === 1 ? "event" : "events"}
             </p>
-            <EventDetails events={group.events} />
+            <EventDetails events={group.events} rawOnly={showsOwnText} />
           </>
         )}
-      </div>
-    </article>
+      </Collapsible.Panel>
+    </Collapsible.Root>
   );
 }
 export function EventList({ events, task }: { events: Event[]; task?: Task }) {

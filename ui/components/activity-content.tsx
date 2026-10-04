@@ -7,6 +7,39 @@ function NestedContentOmitted() {
   );
 }
 
+// A closed ``` fence with an optional info string; group 1 is the code. Unclosed
+// fences (still streaming) do not match and stay plain text.
+const FENCE = /```[^\n`]*\n([\s\S]*?)```/g;
+/** Plain text with fenced code blocks shown as code; no other markdown. */
+function Prose({ text }: { text: string }): ReactNode {
+  if (!text.includes("```")) return <p className="activity-text">{text}</p>;
+  const parts: ReactNode[] = [];
+  let last = 0;
+  for (const match of text.matchAll(FENCE)) {
+    const before = text.slice(last, match.index).trim();
+    if (before)
+      parts.push(
+        <p key={last} className="activity-text">
+          {before}
+        </p>,
+      );
+    parts.push(
+      <pre key={match.index} className="activity-code">
+        {match[1].replace(/\n$/, "")}
+      </pre>,
+    );
+    last = match.index + match[0].length;
+  }
+  const rest = text.slice(last).trim();
+  if (rest)
+    parts.push(
+      <p key={last} className="activity-text">
+        {rest}
+      </p>,
+    );
+  return <>{parts}</>;
+}
+
 export const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -161,14 +194,13 @@ export function ActivityContent({
         ))}
       </>
     );
-  if (typeof content === "string")
-    return <p className="activity-text">{content}</p>;
+  if (typeof content === "string") return <Prose text={content} />;
   const block = record(content);
   const type = block.type;
   if (type === "text" || type === "text_delta")
     return (
       <>
-        <p className="activity-text">{String(block.text ?? "")}</p>
+        <Prose text={String(block.text ?? "")} />
         {block.citations != null && (
           <details>
             <summary>Citations</summary>

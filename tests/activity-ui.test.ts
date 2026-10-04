@@ -1108,16 +1108,11 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   assert.equal(panel.hidden, false);
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
-  assertAbsent(raw.querySelector("pre"));
-  await act(async () => {
-    raw.open = true;
-    raw.dispatchEvent(new Event("toggle"));
-  });
-  await waitFor(() =>
-    assert.equal(
-      raw.querySelector("pre")?.textContent,
-      JSON.stringify(activity.data.raw_response, null, 2),
-    ),
+  // The newest raw response opens automatically with the debug panel.
+  assert.equal(raw.open, true);
+  assert.equal(
+    raw.querySelector("pre")?.textContent,
+    JSON.stringify(activity.data.raw_response, null, 2),
   );
   view.rerender(createElement(GroupedEventList, { events: [{ ...activity }] }));
   assert.ok(
@@ -1496,4 +1491,76 @@ test("stream blocks ignore invalid indexes while default and numeric indexes acc
     (node) => node.textContent,
   );
   assert.deepEqual(blocks, ["Default block remains", "Second block"]);
+});
+
+test("fenced code in message text renders as a code block", () => {
+  const doc = contentMarkup([
+    { type: "text", text: "Run this:\n```sh\nnpm test\n```\nThen retry." },
+  ]);
+  assert.equal(doc.querySelector("pre.activity-code")?.textContent, "npm test");
+  assert.deepEqual(
+    [...doc.querySelectorAll("p.activity-text")].map((p) => p.textContent),
+    ["Run this:", "Then retry."],
+  );
+});
+
+test("unclosed fences while streaming stay plain text", () => {
+  const doc = contentMarkup("Partial ```sh\nnpm te");
+  assertAbsent(doc.querySelector("pre"));
+  assert.equal(doc.querySelector("p")?.textContent, "Partial ```sh\nnpm te");
+});
+
+test("thinking-only assistant messages are not styled as message cards", () => {
+  const thinking = event(
+    "agent.content",
+    { role: "assistant", content: { type: "thinking", thinking: "Hmm" } },
+    "thinking-only",
+  );
+  const reply = event(
+    "agent.content",
+    {
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "Hmm" },
+        { type: "text", text: "Done" },
+      ],
+    },
+    "thinking-plus-reply",
+  );
+  const view = render(
+    createElement(GroupedEventList, { events: [thinking, reply] }),
+  );
+  const groups = view.container.querySelectorAll(".activity-group");
+  assert.equal(groups.length, 2);
+  const quiet = [...groups].filter((g) =>
+    g.classList.contains("activity-thinking-only"),
+  );
+  assert.equal(quiet.length, 1);
+  // A thinking-only message must not be titled as an assistant reply.
+  assert.equal(quiet[0].querySelector("strong")?.textContent, "Thinking");
+  // The thinking text is only available through the debug view.
+  assertAbsent(quiet[0].querySelector("details"));
+  assert.equal(view.getAllByText("Assistant").length, 1);
+  // The debug toggle names the row the way its heading does.
+  assert.ok(view.getByRole("button", { name: "Debug activity: Thinking" }));
+  cleanup();
+});
+
+test("message debug view shows only the raw response, not a second rendering", async () => {
+  const msg = event(
+    "agent.message",
+    {
+      role: "assistant",
+      text: "Visible once",
+      content: { type: "text", text: "Visible once" },
+    },
+    "raw-only",
+  );
+  const view = render(createElement(GroupedEventList, { events: [msg] }));
+  await userEvent.click(
+    view.getByRole("button", { name: "Debug activity: Assistant" }),
+  );
+  assert.equal(view.getAllByText("Visible once").length, 1);
+  assert.ok(view.getByText("Raw response", { selector: "summary" }));
+  cleanup();
 });

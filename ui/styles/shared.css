@@ -311,7 +311,11 @@ form .select-trigger {
   outline: 2px solid var(--accent, #8caeeb);
   outline-offset: 2px;
 }
+/* Stays visible above scrolled history. */
 .activity-current {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -379,10 +383,47 @@ form .select-trigger {
 }
 .activity-debug-panel > .event {
   padding: 10px 0;
+  /* Keep the timestamp on the same line as the first line of the body. */
+  align-items: baseline;
 }
-.activity-message {
-  padding-top: 18px;
-  padding-bottom: 18px;
+/* Raw-only events start with the disclosure, so it needs no top gap. */
+.activity-debug-panel .activity-body > .activity-raw:first-child {
+  margin-top: 0;
+}
+/* Message headers share the timeline rule with tools; only the content sits in a card. */
+.activity-message > .activity-body,
+.activity-stream > .activity-body {
+  margin-top: 8px;
+  padding: 2px 14px;
+  background: var(--surface, #172334);
+  border: 1px solid var(--line, #263348);
+  border-radius: 10px;
+}
+.activity-message.activity-error > .activity-body,
+.activity-stream.activity-error > .activity-body {
+  border-color: var(--danger, #f87171);
+}
+.activity-thinking-only .activity-group-heading strong {
+  color: var(--muted, #8392a7);
+}
+.activity-tool,
+.activity-operation,
+.activity-status {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.activity-code {
+  margin: 8px 0;
+  padding: 10px 12px;
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--line, #263348);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text, #dce7f5) 5%, transparent);
+  white-space: pre;
+  font:
+    12px/1.5 ui-monospace,
+    monospace;
 }
 .activity-status {
   color: var(--muted, #8392a7);
