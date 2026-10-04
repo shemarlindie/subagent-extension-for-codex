@@ -5,6 +5,8 @@ export function Header() {
     state = useSnapshot(),
     consoleMode = state.mode === "console",
     blocked = !state.connected || state.busy,
+    // A thread offers its own chat project in the context bar instead.
+    canAddProject = !state.conversation,
     expandLabel =
       state.host.displayMode === "fullscreen" ? "Collapse" : "Expand";
   const refresh = () => controller.run(() => controller.refresh()),
@@ -48,14 +50,16 @@ export function Header() {
               {expandLabel}
             </button>
           )}
-          <button
-            id="add-project"
-            className="quiet"
-            disabled={blocked}
-            onClick={addProject}
-          >
-            Add project
-          </button>
+          {canAddProject && (
+            <button
+              id="add-project"
+              className="quiet"
+              disabled={blocked}
+              onClick={addProject}
+            >
+              Add project
+            </button>
+          )}
           <button
             id="settings"
             className="quiet"
@@ -89,13 +93,15 @@ export function Header() {
                       {expandLabel}
                     </Menu.Item>
                   )}
-                  <Menu.Item
-                    className="menu-item"
-                    disabled={blocked}
-                    onClick={addProject}
-                  >
-                    Add project
-                  </Menu.Item>
+                  {canAddProject && (
+                    <Menu.Item
+                      className="menu-item"
+                      disabled={blocked}
+                      onClick={addProject}
+                    >
+                      Add project
+                    </Menu.Item>
+                  )}
                   <Menu.Item
                     className="menu-item"
                     disabled={blocked}

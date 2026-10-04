@@ -786,6 +786,19 @@ test("the header menu offers the secondary actions and runs them", async (t) => 
   );
 });
 
+test("a thread panel leaves Add project to global launches", async (t) => {
+  const { controller, user } = await setup(t);
+  await act(() =>
+    controller.applyScope({ panel_scope: { conversation_id: "thread" } }),
+  );
+  assertAbsent(screen.queryByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+  assert.deepEqual(
+    (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
+    ["Refresh", "Collapse", "Settings"],
+  );
+});
+
 test("inline host without expansion offers the chat controls fallback", async (t) => {
   await setup(
     t,
@@ -1982,7 +1995,7 @@ test("a chat project hint prefills registration without registering it automatic
       panel_project_candidate: { repository: "/repo/chat-project" },
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Add chat project" }));
   const dialog = await screen.findByRole("dialog");
   assert.equal(
     (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
@@ -2055,7 +2068,9 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
     within(firstDialog).getByRole("button", { name: "Browse…" }),
   );
   await act(() =>
-    controller.applyScope({ panel_scope: { conversation_id: "new-chat" } }),
+    controller.applyScope({
+      panel_scope: { conversation_id: null, repository: "/repo/other" },
+    }),
   );
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
   await user.click(screen.getByRole("button", { name: "Add project" }));

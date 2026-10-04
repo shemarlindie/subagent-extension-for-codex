@@ -250,7 +250,9 @@ recover tasks or own workers. Client disconnection leaves the service and tasks
 running. Stop the PID recorded in `service.pid` gracefully with SIGTERM when needed.
 An incompatible process on the configured port is rejected, never replaced.
 
-Use **Add project** in the global task UI or expanded chat panel. Enter an
+Use **Add project** in the global task UI or a global panel launch. A panel
+opened from a thread offers **Add chat project** for that chat's repository
+instead. Enter an
 absolute Git repository path, or use **Browse…** to open the native folder
 picker on the macOS service host. Selecting a folder only fills the path; click
 **Add project** to approve access. Invalid paths stay in the form with an error,
