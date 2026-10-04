@@ -1,5 +1,5 @@
 import { rowStatus } from "./task-status";
-import type { Filter, Snapshot, Task } from "./types";
+import type { Filter, Question, Snapshot, Task } from "./types";
 // Display order of the status filters; the panel hides "attention" outside panel mode.
 export const FILTER_LABELS: Record<Filter, string> = {
   all: "All",
@@ -27,6 +27,14 @@ export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 export const failedStatus = (task: Task) =>
   ["failed", "unconfirmed", "interrupted"].includes(rowStatus(task).kind);
 export const needsInput = (task: Task) => Boolean(task.pending_input);
+// One AskUserQuestion call carries every stacked question in `questions`
+// (1-4 in the Claude SDK); Codex workers send a single free-text `question`.
+export const pendingQuestions = (task: Task): Question[] => {
+  const input = task.pending_input?.input ?? {};
+  return Array.isArray(input.questions) && input.questions.length
+    ? (input.questions as Question[])
+    : [{ question: String(input.question ?? "Your response") }];
+};
 // Each task lands in one status filter besides All; see failedStatus.
 const matchesFilter = (task: Task, filter: Filter) =>
   filter === "all" ||

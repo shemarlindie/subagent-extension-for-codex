@@ -6,6 +6,7 @@ import type {
   Mode,
   PanelData,
   Project,
+  QuestionDraft,
   Snapshot,
   SettingsDocument,
   Task,
@@ -29,6 +30,13 @@ export class Controller {
   private browsing = false;
   private explicitSelection = false;
   private timer?: ReturnType<typeof setTimeout>;
+  /**
+   * Question requests the user collapsed. New requests open expanded; a collapsed
+   * one stays collapsed when its task is shown again during this session.
+   */
+  readonly collapsedQuestions = new Set<string>();
+  /** Unsent answers by question request, so switching tasks does not discard them. */
+  readonly questionDrafts = new Map<string, QuestionDraft>();
   constructor(
     readonly transport: Transport,
     mode: Mode,
@@ -570,6 +578,34 @@ export class Controller {
   }
   dismiss() {
     if (!this.state.busy) this.patch({ dialog: undefined, formError: "" });
+  }
+  /**
+   * Answers a worker's pending question from the task inspector, outside any dialog.
+   * Resolves with the failure message, or nothing once the answer is sent.
+   */
+  async answer(
+    task: Task,
+    answers: Record<string, string>,
+  ): Promise<string | undefined> {
+    const request = task.pending_input;
+    if (!request || this.state.busy || this.disposed) return;
+    this.patch({ busy: true });
+    try {
+      await this.tool("submit_agent_input", {
+        task_id: task.id,
+        request_id: request.id,
+        approved: true,
+        input: { ...request.input, answers },
+      });
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    } finally {
+      this.patch({ busy: false });
+    }
+    // The request is answered, so nothing about it needs remembering.
+    this.questionDrafts.delete(request.id);
+    this.collapsedQuestions.delete(request.id);
+    await this.refresh().catch(this.report);
   }
   /** All mutations/messages are bound to the scope visible when the dialog opened. */
   async submit(operation: () => Promise<Task | void>, selectReturned = false) {

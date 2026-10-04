@@ -601,6 +601,16 @@ body[data-expanded-panel="true"] .task-header .callout {
   margin: 12px 0;
   padding: 10px 12px;
 }
+body[data-expanded-panel="true"] .task-header .callout.question-notice {
+  display: block;
+  padding: 0;
+}
+body[data-expanded-panel="true"] .question-notice-trigger {
+  padding: 10px 12px;
+}
+body[data-expanded-panel="true"] .question-notice-body {
+  padding: 0 12px 12px;
+}
 body[data-expanded-panel="true"] .task-header .callout > * {
   grid-column: 1;
 }

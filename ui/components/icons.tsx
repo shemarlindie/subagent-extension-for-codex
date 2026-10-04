@@ -22,6 +22,7 @@ export const ICONS = {
   pause: { path: "M8 5v14M16 5v14", strokeWidth: 3 },
   check: { path: "M5 12l4 4L19 6", strokeWidth: 3 },
   close: { path: "M6 6l12 12M18 6L6 18", strokeWidth: 3 },
+  minus: { path: "M6 12h12", strokeWidth: 3 },
   stop: { path: "M6 6h12v12H6Z", strokeWidth: 3 },
   clock: { path: "M12 8v4l3 2", strokeWidth: 3 },
   // Hook arc, stem, then a zero-length segment for the dot.

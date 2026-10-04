@@ -27,6 +27,7 @@ import userEvent from "@testing-library/user-event";
 import { Controller } from "../ui/core/controller";
 import { ControllerContext } from "../ui/components/controller-context";
 import { AppShell } from "../ui/shells/app-shell";
+import { SKIPPED_ANSWER } from "../ui/forms/question-form";
 
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
 // which never finishes and starves waitFor's timeout.
@@ -1299,11 +1300,19 @@ test("worker question accepts a custom answer with no preset selection", async (
       },
     };
   });
-  await user.click(screen.getByRole("button", { name: "Review request" }));
-  await screen.findByRole("dialog");
+  // A new question opens expanded, with its choices inline rather than in a dialog.
+  const toggle = screen.getByRole("button", { name: /Claude has a question/ });
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  assertAbsent(screen.queryByRole("dialog"));
+  await user.click(screen.getByRole("radio", { name: "Preset" }));
   await user.type(
-    screen.getByLabelText("Or write your own answer"),
+    screen.getByLabelText("Write your own answer"),
     "Custom approach",
+  );
+  // A typed answer replaces the single choice.
+  assert.equal(
+    (screen.getByRole("radio", { name: "Preset" }) as HTMLInputElement).checked,
+    false,
   );
   await user.click(screen.getByRole("button", { name: "Send answer" }));
   await waitFor(() =>
@@ -1737,19 +1746,29 @@ test("worker questions submit preset multiple answers and a custom override toge
       },
     };
   });
-  await user.click(screen.getByRole("button", { name: "Review request" }));
-  await screen.findByRole("dialog");
-  const checks = screen.getByRole("combobox", { name: "Which checks?" });
-  await user.click(checks);
-  await user.click(await screen.findByRole("option", { name: "Types" }));
-  await user.click(screen.getByRole("option", { name: "Tests" }));
-  await user.keyboard("{Escape}");
-  await selectOption(user, "Which scope?", "Default scope");
+  // Only the front card of the stack is exposed; the next one waits behind it.
+  assert.ok(screen.getByText("Question 1 of 2"));
+  assertAbsent(screen.queryByRole("group", { name: "Which scope?" }));
+  await user.click(screen.getByRole("checkbox", { name: "Types" }));
+  await user.click(screen.getByRole("checkbox", { name: "Tests" }));
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  assert.ok(screen.getByText("Question 2 of 2"));
+  await user.click(screen.getByRole("button", { name: "Back" }));
+  assert.ok(screen.getByText("Question 1 of 2"));
+  // Moving between cards keeps the answers already chosen.
+  assert.equal(
+    (screen.getByRole("checkbox", { name: "Tests" }) as HTMLInputElement)
+      .checked,
+    true,
+  );
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  assertAbsent(screen.queryByRole("group", { name: "Which checks?" }));
+  await user.click(screen.getByRole("radio", { name: "Default scope" }));
   await user.type(
-    screen.getAllByLabelText("Or write your own answer")[1],
+    screen.getByRole("textbox", { name: "Write your own answer" }),
     "Expanded scope",
   );
-  await user.click(screen.getByRole("button", { name: "Send answer" }));
+  await user.click(screen.getByRole("button", { name: "Send answers" }));
   await waitFor(() =>
     assert.deepEqual(
       (
@@ -1760,6 +1779,337 @@ test("worker questions submit preset multiple answers and a custom override toge
         "Which checks?": "Types, Tests",
         "Which scope?": "Expanded scope",
       },
+    ),
+  );
+});
+
+test("a single worker question can be skipped and the skip undone", async (t) => {
+  const { transport, user } = await setup(t, (transport) => {
+    transport.tasks[0].pending_input = {
+      id: "request",
+      tool: "AskUserQuestion",
+      input: {
+        questions: [
+          { question: "Which format?", options: [{ label: "YAML" }] },
+        ],
+      },
+    };
+  });
+  await user.click(screen.getByRole("button", { name: "Skip this question" }));
+  assert.ok(screen.getByText("Skipped", { selector: "[role=status]" }));
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  assert.ok(screen.getByRole("button", { name: "Skip this question" }));
+  await user.click(screen.getByRole("button", { name: "Skip this question" }));
+  await user.click(screen.getByRole("button", { name: "Send answer" }));
+  await waitFor(() =>
+    assert.deepEqual(
+      transport.calls.find((call) => call.name === "submit_agent_input")?.args,
+      {
+        task_id: "one",
+        request_id: "request",
+        approved: true,
+        input: {
+          questions: [
+            { question: "Which format?", options: [{ label: "YAML" }] },
+          ],
+          answers: { "Which format?": SKIPPED_ANSWER },
+        },
+      },
+    ),
+  );
+});
+
+test("a skipped stacked question sends an explicit skipped answer", async (t) => {
+  const { transport, user } = await setup(t, (transport) => {
+    transport.tasks[0].pending_input = {
+      id: "request",
+      tool: "AskUserQuestion",
+      input: {
+        questions: [
+          {
+            question: "Which format?",
+            header: "Format",
+            options: [{ label: "YAML" }, { label: "JSON" }],
+          },
+          {
+            question: "Which scope?",
+            header: "Scope",
+            options: [{ label: "All" }, { label: "Changed" }],
+          },
+        ],
+      },
+    };
+  });
+  await user.click(screen.getByRole("radio", { name: "YAML" }));
+  // Skipping drops the partial answer and moves to the next card.
+  await user.click(screen.getByRole("button", { name: "Skip this question" }));
+  assert.ok(screen.getByText("Question 2 of 2"));
+  assert.ok(
+    screen.getByRole("button", { name: "Format" }).hasAttribute("data-skipped"),
+  );
+  await user.click(screen.getByRole("button", { name: "Format" }));
+  assert.equal(
+    (screen.getByRole("radio", { name: "YAML" }) as HTMLInputElement).checked,
+    false,
+  );
+  // Picking a choice takes the skip back; Undo restores the card too.
+  await user.click(screen.getByRole("radio", { name: "JSON" }));
+  assertAbsent(screen.queryByText("Skipped", { selector: "[role=status]" }));
+  await user.click(screen.getByRole("button", { name: "Skip this question" }));
+  await user.click(screen.getByRole("radio", { name: "Changed" }));
+  await user.click(screen.getByRole("button", { name: "Send answers" }));
+  await waitFor(() =>
+    assert.deepEqual(
+      (
+        transport.calls.find((call) => call.name === "submit_agent_input")?.args
+          .input as any
+      )?.answers,
+      { "Which format?": SKIPPED_ANSWER, "Which scope?": "Changed" },
+    ),
+  );
+});
+
+test("a free-text worker question answers in a text box and shows send failures inline", async (t) => {
+  const { transport, user } = await setup(t, (transport) => {
+    // Codex workers ask one free-text question rather than a questions list.
+    transport.tasks[0].pending_input = {
+      id: "request",
+      tool: "AskUserQuestion",
+      input: { question: "Which branch?" },
+    };
+    const original = transport.tool.bind(transport);
+    let failures = 1;
+    transport.tool = async <T>(
+      name: string,
+      args: Record<string, unknown> = {},
+    ): Promise<T> => {
+      if (name === "submit_agent_input" && failures-- > 0) {
+        transport.calls.push({ name, args });
+        throw new Error("Input request is stale");
+      }
+      return original<T>(name, args);
+    };
+  });
+  await user.type(
+    screen.getByRole("textbox", { name: "Which branch?" }),
+    "main",
+  );
+  await user.click(screen.getByRole("button", { name: "Send answer" }));
+  // The failure stays beside the answer, which is kept for a retry.
+  await screen.findByText("Input request is stale");
+  await user.click(screen.getByRole("button", { name: "Send answer" }));
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "submit_agent_input")
+        .length,
+      2,
+    ),
+  );
+  assert.deepEqual(
+    transport.calls.findLast((call) => call.name === "submit_agent_input")?.args
+      .input,
+    { question: "Which branch?", answers: { "Which branch?": "main" } },
+  );
+});
+
+test("unsent question answers survive switching tasks and clear once sent", async (t) => {
+  const { controller, transport, user } = await setup(t, (transport) => {
+    transport.tasks[0].pending_input = {
+      id: "request",
+      tool: "AskUserQuestion",
+      input: {
+        questions: [
+          {
+            question: "Which checks?",
+            header: "Checks",
+            multiSelect: true,
+            options: [{ label: "Types" }, { label: "Tests" }],
+          },
+          {
+            question: "Which scope?",
+            header: "Scope",
+            options: [{ label: "All" }],
+          },
+          {
+            question: "Which owner?",
+            header: "Owner",
+            options: [{ label: "Me" }],
+          },
+        ],
+      },
+    };
+    // Like the service, answering resolves the request, so the form unmounts.
+    const original = transport.tool.bind(transport);
+    transport.tool = async <T>(
+      name: string,
+      args: Record<string, unknown> = {},
+    ): Promise<T> => {
+      if (name === "submit_agent_input")
+        transport.tasks[0] = {
+          ...transport.tasks[0],
+          pending_input: undefined,
+        };
+      return original<T>(name, args);
+    };
+  });
+  await user.click(screen.getByRole("checkbox", { name: "Tests" }));
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await user.click(screen.getByRole("button", { name: "Skip this question" }));
+  await user.type(
+    screen.getByRole("textbox", { name: "Write your own answer" }),
+    "Platform team",
+  );
+  const reopen = async () => {
+    controller.back();
+    await waitFor(() =>
+      assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
+    );
+    await controller.select("one");
+    await screen.findByText(/Question \d of 3/);
+  };
+  await reopen();
+  // The same card, choices, typed answer and skip come back.
+  assert.ok(screen.getByText("Question 3 of 3"));
+  assert.equal(
+    (
+      screen.getByRole("textbox", {
+        name: "Write your own answer",
+      }) as HTMLInputElement
+    ).value,
+    "Platform team",
+  );
+  assert.ok(
+    screen.getByRole("button", { name: "Scope" }).hasAttribute("data-skipped"),
+  );
+  await user.click(screen.getByRole("button", { name: "Checks" }));
+  assert.equal(
+    (screen.getByRole("checkbox", { name: "Tests" }) as HTMLInputElement)
+      .checked,
+    true,
+  );
+  await user.click(screen.getByRole("button", { name: "Send answers" }));
+  await waitFor(() =>
+    assert.deepEqual(
+      (
+        transport.calls.find((call) => call.name === "submit_agent_input")?.args
+          .input as any
+      )?.answers,
+      {
+        "Which checks?": "Tests",
+        "Which scope?": SKIPPED_ANSWER,
+        "Which owner?": "Platform team",
+      },
+    ),
+  );
+  // An answered request leaves no draft, even though the form unmounts afterwards.
+  await waitFor(() =>
+    assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
+  );
+  assert.equal(controller.questionDrafts.size, 0);
+});
+
+test("keyboard focus follows the stacked question cards", async (t) => {
+  const { user } = await setup(t, (transport) => {
+    transport.tasks[0].pending_input = {
+      id: "request",
+      tool: "AskUserQuestion",
+      input: {
+        questions: [
+          { question: "Which format?", options: [{ label: "YAML" }] },
+          { question: "Which scope?", options: [{ label: "All" }] },
+        ],
+      },
+    };
+  });
+  // Enter in a typed answer moves on and continues in the next card.
+  await user.type(
+    screen.getByRole("textbox", { name: "Write your own answer" }),
+    "TOML{Enter}",
+  );
+  assert.ok(screen.getByText("Question 2 of 2"));
+  assert.equal(
+    document.activeElement,
+    screen.getByRole("radio", { name: "All" }),
+  );
+  // Skip and Undo are one button, so focus stays put while it toggles.
+  const toggle = screen.getByRole("button", { name: "Skip this question" });
+  await user.click(toggle);
+  assert.equal(toggle.textContent, "Undo");
+  assert.equal(document.activeElement, toggle);
+  // Back disappears on the first card, so focus moves to the send button.
+  await user.click(screen.getByRole("button", { name: "Back" }));
+  assert.equal(
+    document.activeElement,
+    screen.getByRole("button", { name: "Send answers" }),
+  );
+});
+
+test("stacked worker questions return to the first unanswered card before sending", async (t) => {
+  const { controller, transport, user } = await setup(t, (transport) => {
+    transport.tasks[0].pending_input = {
+      id: "request",
+      tool: "AskUserQuestion",
+      input: {
+        questions: [
+          {
+            question: "Which format?",
+            header: "Format",
+            options: [{ label: "YAML" }, { label: "JSON" }],
+          },
+          {
+            question: "Which extras?",
+            header: "Extras",
+            multiSelect: true,
+            options: [{ label: "Docs" }, { label: "Tests" }],
+          },
+        ],
+      },
+    };
+  });
+  // Headers summarize stacked questions; clicking the summary collapses the notice.
+  await user.click(screen.getByText("Format · Extras"));
+  const toggle = () =>
+    screen.getByRole("button", { name: /Claude has 2 questions/ });
+  assert.equal(toggle().getAttribute("aria-expanded"), "false");
+  // A collapsed question stays collapsed when its task is shown again.
+  controller.back();
+  await waitFor(() =>
+    assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
+  );
+  await controller.select("one");
+  await waitFor(() =>
+    assert.equal(toggle().getAttribute("aria-expanded"), "false"),
+  );
+  await user.click(toggle());
+  await user.click(screen.getByRole("button", { name: "Extras" }));
+  assert.ok(screen.getByText("Question 2 of 2"));
+  await user.click(screen.getByRole("checkbox", { name: "Docs" }));
+  // A typed answer joins the multiple choices.
+  await user.type(
+    screen.getByRole("textbox", { name: "Write your own answer" }),
+    "Examples",
+  );
+  await user.click(screen.getByRole("button", { name: "Send answers" }));
+  assert.equal(
+    screen
+      .getByText("Answer each question before sending.")
+      .getAttribute("role"),
+    "alert",
+  );
+  assert.ok(screen.getByText("Question 1 of 2"));
+  assert.equal(
+    transport.calls.filter((call) => call.name === "submit_agent_input").length,
+    0,
+  );
+  await user.click(screen.getByRole("radio", { name: "JSON" }));
+  await user.click(screen.getByRole("button", { name: "Send answers" }));
+  await waitFor(() =>
+    assert.deepEqual(
+      (
+        transport.calls.find((call) => call.name === "submit_agent_input")?.args
+          .input as any
+      )?.answers,
+      { "Which format?": "JSON", "Which extras?": "Docs, Examples" },
     ),
   );
 });

@@ -5,7 +5,6 @@ import { ProjectForm } from "../forms/project-form";
 import { SettingsForm } from "../forms/settings-form";
 import { DelegateForm } from "../forms/delegate-form";
 import { ControlForm, controlTitle } from "../forms/control-form";
-import { QuestionForm } from "../forms/question-form";
 import { PermissionForm } from "../forms/permission-form";
 import { HandoffForm } from "../forms/handoff-form";
 import { FormFooter } from "../forms/form-footer";
@@ -34,9 +33,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
           : dialog.kind === "control"
             ? controlTitle(dialog.action)
             : dialog.kind === "respond"
-              ? dialog.task.pending_input?.tool === "AskUserQuestion"
-                ? "Respond to worker"
-                : "Review permission request"
+              ? "Review permission request"
               : dialog.kind === "handoff"
                 ? "Bring task to Codex"
                 : dialog.kind === "artifact"
@@ -95,11 +92,8 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
           ) : dialog?.kind === "control" ? (
             <ControlForm dialog={dialog} />
           ) : dialog?.kind === "respond" ? (
-            dialog.task.pending_input?.tool === "AskUserQuestion" ? (
-              <QuestionForm task={dialog.task} />
-            ) : (
-              <PermissionForm task={dialog.task} />
-            )
+            // Worker questions answer inline in the task notice instead.
+            <PermissionForm task={dialog.task} />
           ) : dialog?.kind === "handoff" ? (
             <HandoffForm task={dialog.task} />
           ) : (
