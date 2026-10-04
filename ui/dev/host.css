@@ -105,6 +105,12 @@ button {
   overflow: hidden;
   background: var(--surface);
 }
+.host.no-log {
+  grid-template-columns: minmax(0, 1fr);
+}
+.host.no-log .log {
+  display: none;
+}
 .frame.fullscreen {
   height: 100%;
 }
@@ -157,6 +163,9 @@ button {
   .host {
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr) 200px;
+  }
+  .host.no-log {
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .log {
     border-left: 0;

@@ -24,6 +24,7 @@ type Settings = {
   width: string;
   canSend: boolean;
   canShare: boolean;
+  showLog: boolean;
   threadId: string;
   cwd: string;
   styles: string;
@@ -39,6 +40,7 @@ const defaults: Settings = {
   width: "480",
   canSend: true,
   canShare: true,
+  showLog: false,
   threadId: "dev-thread",
   cwd: __DEV_HOST_CWD__,
   styles: "",
@@ -271,7 +273,7 @@ function Host() {
 
   const inline = displayMode === "inline";
   return (
-    <div className="host">
+    <div className={`host${settings.showLog ? "" : " no-log"}`}>
       <header className="toolbar">
         <label>
           Data
@@ -350,6 +352,14 @@ function Host() {
           />
           Update context
         </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={settings.showLog}
+            onChange={(e) => update({ showLog: e.target.checked })}
+          />
+          Bridge log
+        </label>
         <button type="button" onClick={() => setSession((n) => n + 1)}>
           Relaunch
         </button>
@@ -395,7 +405,8 @@ function Host() {
           <iframe ref={frame} key={sessionKey} title="Delegated work" />
         </div>
       </main>
-      <aside className="log">
+      {/* The log keeps recording while hidden, so showing it reveals history. */}
+      <aside className="log" hidden={!settings.showLog}>
         <div className="log-header">
           <strong>Bridge log</strong>
           <button type="button" onClick={() => setLog([])}>

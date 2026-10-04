@@ -84,8 +84,9 @@ and delivers its result to the panel. The toolbar controls:
 
 Changing data, launch, capabilities, or host metadata starts a new panel
 session; theme, display mode, width, and styles are pushed as host context
-changes. The bridge log on the right records tool calls, messages, model context
-updates, and display-mode requests.
+changes. The bridge log records tool calls, messages, model context updates, and
+display-mode requests. It is hidden by default; **Bridge log** shows it on the
+right, including entries recorded while it was hidden.
 
 Live mode connects to the service's `/mcp` endpoint through the Vite proxy at
 `/service`. The proxy adds the admin token server-side and drops the browser
