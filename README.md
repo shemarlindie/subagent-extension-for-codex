@@ -162,7 +162,7 @@ Legacy explicit Claude `approval_mode` arguments and updates migrate to native m
 
 ### Claude session restrictions
 
-These user-only settings add restrictions to delegated Claude sessions. Model-visible `update_agent_settings` rejects them. Each task stores the resolved values when it starts, shown under **Session restrictions** in task details. Tasks created before these settings existed use the current defaults.
+These user-only settings add restrictions to delegated Claude sessions. Model-visible `update_agent_settings` rejects them. Each task stores the resolved values when it starts, shown under **Session restrictions** in the inspector's Details tab. Tasks created before these settings existed use the current defaults.
 
 | Setting              | Default       | Options                                                                                                                                                                                                                                                                                                                                                  |
 | -------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

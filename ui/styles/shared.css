@@ -151,24 +151,14 @@ form .select-trigger {
 .select-value[data-placeholder] {
   color: var(--muted, #8fa5c1);
 }
-.task-details {
-  margin-top: 22px;
-}
-.task-details-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+.callout-more {
+  justify-self: start;
+  padding: 2px 0;
   border: 0;
-  padding: 3px 0;
   background: transparent;
   font-size: 11px;
   color: var(--muted, #8fa5c1);
-}
-.task-details-trigger svg {
-  transform: rotate(-90deg);
-}
-.task-details-trigger[data-panel-open] svg {
-  transform: rotate(0);
+  cursor: pointer;
 }
 .task-description {
   margin: 0 0 10px;
@@ -326,6 +316,18 @@ form .select-trigger {
   border-radius: 8px;
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+/* On narrow screens Back shares the status line. */
+.task-topline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.task-topline .eyebrow {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 .activity-dot {
   display: inline-block;

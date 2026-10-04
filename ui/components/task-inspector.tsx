@@ -1,9 +1,9 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { selectedTask, profileLabel } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
 import { TaskStatus } from "./status";
 import { TaskActions } from "./task-actions";
 import { TaskNotices } from "./task-notices";
-import { TaskDetails } from "./task-details";
 import { EvidenceTabs } from "./evidence-tabs";
 import { WorkerInspector } from "./worker-inspector";
 import { TaskDescription } from "./task-description";
@@ -11,55 +11,43 @@ export function TaskInspector() {
   const controller = useController(),
     state = useSnapshot(),
     task = selectedTask(state);
+  const { detailRef, headerRef, stacked } = useStackedLayout(task?.id);
   return (
     <section
+      ref={detailRef}
       id="detail"
-      className="detail"
+      className={`detail${task && !state.workerRoute ? " has-task" : ""}`}
       aria-label="Task inspector"
       data-task={task?.id}
+      data-stacked={stacked || undefined}
     >
       {state.workerRoute ? (
         <WorkerInspector />
       ) : task ? (
-        <div key={task.id}>
-          <button
-            id="back"
-            className="back quiet"
-            onClick={() => controller.back()}
-          >
-            ← Tasks
-          </button>
-          <div className="eyebrow">
-            <TaskStatus task={task} />
-            <span>
-              {" "}
-              / {task.provider} · {profileLabel(task.worker_profile)}
-            </span>
+        <div key={task.id} className="task-view">
+          <div ref={headerRef} className="task-header">
+            <div className="task-topline">
+              <button
+                id="back"
+                className="back quiet"
+                onClick={() => controller.back()}
+              >
+                ← Tasks
+              </button>
+              <div className="eyebrow">
+                <TaskStatus task={task} />
+                <span>
+                  {" "}
+                  / {task.provider} · {profileLabel(task.worker_profile)}
+                </span>
+              </div>
+            </div>
+            <h1 title={task.title}>{task.title}</h1>
+            <TaskDescription task={task} />
+            <TaskNotices task={task} />
+            <TaskActions task={task} />
           </div>
-          <h1>{task.title}</h1>
-          <TaskDescription task={task} />
-          <div className="meta">
-            <span>
-              {task.repository.split("/").at(-1)} · {task.revision} ·{" "}
-              {task.workspace_strategy === "current_repo"
-                ? "current repository"
-                : "isolated worktree"}
-            </span>
-            <span>
-              {task.budget.max_runtime_minutes === null
-                ? "No runtime limit"
-                : `${task.budget.max_runtime_minutes} min limit`}
-            </span>
-            <span>
-              {task.budget.max_cost_usd === null
-                ? "No cost limit"
-                : `$${task.budget.max_cost_usd} budget`}
-            </span>
-          </div>
-          <TaskNotices task={task} />
-          <TaskActions task={task} />
           <EvidenceTabs task={task} />
-          <TaskDetails task={task} />
         </div>
       ) : (
         <div className="empty">
@@ -85,4 +73,31 @@ export function TaskInspector() {
       )}
     </section>
   );
+}
+
+// Evidence needs room for its tabs and a few activity rows.
+const MIN_EVIDENCE_HEIGHT = 280;
+
+// When a fixed header would squeeze the evidence, the whole inspector scrolls instead.
+function useStackedLayout(taskId?: string) {
+  const detailRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [stacked, setStacked] = useState(false);
+  useLayoutEffect(() => {
+    const detail = detailRef.current,
+      header = headerRef.current;
+    if (!detail || !header || typeof ResizeObserver === "undefined")
+      return setStacked(false);
+    // Stacking leaves both heights unchanged, so this cannot oscillate.
+    const measure = () =>
+      setStacked(
+        detail.clientHeight - header.offsetHeight < MIN_EVIDENCE_HEIGHT,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(detail);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [taskId]);
+  return { detailRef, headerRef, stacked };
 }

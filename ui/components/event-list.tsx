@@ -386,19 +386,28 @@ function GroupCard({ group }: { group: ActivityGroup }) {
     </Collapsible.Root>
   );
 }
-export function EventList({ events, task }: { events: Event[]; task?: Task }) {
+export function EventList({
+  events,
+  task,
+  active,
+}: {
+  events: Event[];
+  task?: Task;
+  active?: boolean;
+}) {
   const groups = groupActivity(events).sort(
       (a, b) => b.events.at(-1)!.id - a.events.at(-1)!.id,
     ),
     current = currentActivityStatus(events, task);
-  const { viewportRef, pinned, onScroll, scrollToTop } =
-    useActivityScroll(events);
+  const { viewportRef, pinned, scrollToTop } = useActivityScroll(
+    events,
+    active,
+  );
   return (
     <section className="activity-timeline" aria-label="Worker activity">
       <div
         ref={viewportRef}
         className="activity-viewport"
-        onScroll={onScroll}
         tabIndex={0}
         role="region"
         aria-label="Activity history"

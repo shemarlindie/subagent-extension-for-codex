@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
-import { describe, test, type TestContext } from "vitest";
+import { describe, test, vi, type TestContext } from "vitest";
 import type {
   HostState,
   Task,
@@ -992,6 +992,16 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
       "true",
     ),
   );
+  await user.keyboard("{ArrowRight}");
+  await waitFor(() =>
+    assert.equal(
+      screen
+        .getByRole("tab", { name: "Details" })
+        .getAttribute("aria-selected"),
+      "true",
+    ),
+  );
+  assert.ok(screen.getByText("Task ID"));
 });
 
 test("dialog focuses task, preserves the draft and field node during refresh, and restores trigger focus", async (t) => {
@@ -1234,25 +1244,83 @@ test("task and result text render literally without HTML interpretation", async 
   assert.equal((window as any).injected, undefined);
 });
 
+test("long notices clamp behind Show more and expand on demand", async (t) => {
+  // jsdom has no layout, so report clamped notice text as overflowing.
+  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return this.matches(".callout-text:not([data-open])") ? 80 : 0;
+    },
+  );
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return this.matches(".callout-text") ? 36 : 0;
+    },
+  );
+  const { user } = await setup(t, (transport) => {
+    transport.tasks[0].error = "Worker stopped unexpectedly. ".repeat(20);
+  });
+  const more = screen.getByRole("button", { name: "Show more" });
+  assert.equal(more.getAttribute("aria-expanded"), "false");
+  await user.click(more);
+  const less = screen.getByRole("button", { name: "Show less" });
+  assert.equal(less.getAttribute("aria-expanded"), "true");
+  assert.ok(document.querySelector(".callout-text[data-open]"));
+  await user.click(less);
+  assert.ok(screen.getByRole("button", { name: "Show more" }));
+  assertAbsent(document.querySelector(".callout-text[data-open]"));
+});
+
+test("the inspector stacks when its fixed header would squeeze the evidence", async (t) => {
+  t.onTestFinished(() => {
+    vi.unstubAllGlobals();
+  });
+  const notify: (() => void)[] = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: () => void) {
+        notify.push(callback);
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  let height = 600;
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return this.id === "detail" ? height : 0;
+    },
+  );
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return this.matches(".task-header") ? 300 : 0;
+    },
+  );
+  await setup(t);
+  const detail = screen.getByRole("region", { name: "Task inspector" });
+  assert.equal(detail.hasAttribute("data-stacked"), false, "300px is enough");
+  height = 560;
+  act(() => notify.forEach((callback) => callback()));
+  assert.equal(detail.hasAttribute("data-stacked"), true, "260px is not");
+});
+
 test("refresh preserves disclosure and inspector scroll, while Back stays on the task list", async (t) => {
   const { controller, user } = await setup(t);
   const detail = screen.getByRole("region", { name: "Task inspector" });
-  const disclosure = screen.getByRole("button", { name: "Task details" });
-  const root = disclosure.closest(".task-details");
+  const disclosure = screen.getByRole("button", { name: "Description" });
+  const root = disclosure.closest(".task-description");
   await user.click(disclosure);
   assert.equal(disclosure.getAttribute("aria-expanded"), "true");
   detail.scrollTop = 160;
   await act(() => controller.refresh());
-  assert.ok(
-    screen.getByRole("button", { name: "Task details" }) === disclosure,
-  );
-  assert.ok(disclosure.closest(".task-details") === root);
+  assert.ok(screen.getByRole("button", { name: "Description" }) === disclosure);
+  assert.ok(disclosure.closest(".task-description") === root);
   assert.equal(disclosure.getAttribute("aria-expanded"), "true");
   assert.equal(detail.scrollTop, 160);
   await user.click(screen.getByRole("button", { name: "← Tasks" }));
   await act(() => controller.refresh());
   assert.equal(controller.getSnapshot().selected, undefined);
-  assert.ok(screen.queryByText("Task details") === null);
+  assert.ok(screen.queryByRole("button", { name: "Description" }) === null);
 });
 
 test("console delegation requires choosing a project even with a sole registered repository", async (t) => {

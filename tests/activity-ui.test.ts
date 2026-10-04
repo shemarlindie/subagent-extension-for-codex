@@ -309,6 +309,106 @@ test("new activity preserves a reader scroll before its scroll event fires", (t)
   assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
 });
 
+test("a hidden activity tab keeps its reading anchor through new activity", (t) => {
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
+  const initial = activityMessages("hidden-tab");
+  const view = render(createElement(GroupedEventList, { events: initial }));
+  const viewport = view.getByRole("region", { name: "Activity history" });
+  viewport.scrollTop = 175;
+  fireEvent.scroll(viewport);
+  const anchor =
+    view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
+  const before = anchor.getBoundingClientRect().top;
+  const next = [...initial, ...activityMessages("hidden-tab-next", 1)];
+  view.rerender(
+    createElement(GroupedEventList, { events: initial, active: false }),
+  );
+  // Browsers report zero while hidden and restore the offset when shown.
+  viewport.scrollTop = 0;
+  fireEvent.scroll(viewport);
+  view.rerender(
+    createElement(GroupedEventList, { events: next, active: false }),
+  );
+  viewport.scrollTop = 175;
+  view.rerender(createElement(GroupedEventList, { events: next }));
+  assert.equal(anchor.getBoundingClientRect().top, before);
+  assert.equal(viewport.scrollTop, 275);
+  assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
+});
+
+test("activity pins, anchors and returns to latest when the inspector scrolls instead", (t) => {
+  t.onTestFinished(cleanup);
+  const inspector = document.body.appendChild(document.createElement("div"));
+  inspector.style.overflowY = "auto";
+  t.onTestFinished(() => inspector.remove());
+  // The inspector starts at 100px with a 200px header above the timeline.
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    function (this: HTMLElement) {
+      const timeline = 300 - inspector.scrollTop;
+      let top = 100;
+      let height = 300;
+      if (this.matches(".activity-viewport")) top = timeline;
+      if (this.matches("[data-activity-id]")) {
+        const groups = Array.from(
+          inspector.querySelectorAll("[data-activity-id]"),
+        );
+        top = timeline + 40 + groups.indexOf(this) * 100;
+        height = 100;
+      }
+      return {
+        top,
+        bottom: top + height,
+        left: 0,
+        right: 400,
+        width: 400,
+        height,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      };
+    },
+  );
+  const fab = () =>
+    view.queryByRole("button", { name: "Scroll to latest activity" });
+  const initial = activityMessages("inspector-scroll");
+  const view = render(createElement(GroupedEventList, { events: initial }), {
+    container: inspector,
+  });
+  inspector.scrollTop = 150;
+  fireEvent.scroll(inspector);
+  assertAbsent(fab(), "Scrolling past the header keeps the latest pinned");
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: [...initial, ...activityMessages("inspector-scroll-pinned", 1)],
+    }),
+  );
+  assert.equal(inspector.scrollTop, 150, "Pinned updates leave the header");
+  inspector.scrollTop = 400;
+  fireEvent.scroll(inspector);
+  assert.ok(fab(), "Scrolling into history unpins");
+  const anchor = inspector.querySelectorAll<HTMLElement>(".activity-group")[2];
+  const before = anchor.getBoundingClientRect().top;
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: [
+        ...initial,
+        ...activityMessages("inspector-scroll-pinned", 1),
+        ...activityMessages("inspector-scroll-next", 1),
+      ],
+    }),
+  );
+  assert.equal(anchor.getBoundingClientRect().top, before);
+  assert.equal(inspector.scrollTop, 500);
+  fireEvent.click(fab()!);
+  assert.equal(
+    inspector.scrollTop,
+    200,
+    "The timeline returns to the top of the inspector",
+  );
+  assertAbsent(fab());
+});
+
 test("new groups animate in and movement animations respect reduced motion", (t) => {
   t.onTestFinished(cleanup);
   mockActivityGeometry();

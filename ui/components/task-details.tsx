@@ -1,4 +1,3 @@
-import { Collapsible } from "@base-ui/react/collapsible";
 import { approvalLabels } from "../../src/core/model";
 import {
   permissionLabels,
@@ -6,11 +5,12 @@ import {
   taskClaudeMode,
   claudeOverrideLabels,
 } from "../../src/core/permissions";
-import { Chevron } from "./chevron";
 import type { Task } from "../core/types";
+import { profileLabel } from "../core/selectors";
 export function TaskDetails({ task }: { task: Task }) {
   const facts = {
     "Task ID": task.id,
+    Worker: `${task.provider} · ${profileLabel(task.worker_profile)}`,
     ...(task.provider === "claude"
       ? {
           "Permission mode":
@@ -50,21 +50,33 @@ export function TaskDetails({ task }: { task: Task }) {
         : `$${task.cost_usd.toFixed(3)}`,
   };
   return (
-    <Collapsible.Root className="task-details">
-      <Collapsible.Trigger className="task-details-trigger">
-        <Chevron />
-        Task details
-      </Collapsible.Trigger>
-      <Collapsible.Panel className="task-details-content">
-        <dl className="facts">
-          {Object.entries(facts).map(([label, value]) => (
-            <div className="fact" key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </Collapsible.Panel>
-    </Collapsible.Root>
+    <div className="task-details">
+      <div className="meta">
+        <span>
+          {task.repository.split("/").at(-1)} · {task.revision} ·{" "}
+          {task.workspace_strategy === "current_repo"
+            ? "current repository"
+            : "isolated worktree"}
+        </span>
+        <span>
+          {task.budget.max_runtime_minutes === null
+            ? "No runtime limit"
+            : `${task.budget.max_runtime_minutes} min limit`}
+        </span>
+        <span>
+          {task.budget.max_cost_usd === null
+            ? "No cost limit"
+            : `$${task.budget.max_cost_usd} budget`}
+        </span>
+      </div>
+      <dl className="facts">
+        {Object.entries(facts).map(([label, value]) => (
+          <div className="fact" key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
