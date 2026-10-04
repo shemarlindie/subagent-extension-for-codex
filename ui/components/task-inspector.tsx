@@ -97,14 +97,16 @@ export function TaskInspector() {
             Give a worker a review, investigation, or implementation to work on
             while you stay in Codex.
           </p>
-          <Button
-            id="empty-start"
-            variant="primary"
-            disabled={!state.connected || state.busy}
-            onClick={() => controller.run(() => controller.delegate())}
-          >
-            New task
-          </Button>
+          {!state.conversation && (
+            <Button
+              id="empty-start"
+              variant="primary"
+              disabled={!state.connected || state.busy}
+              onClick={() => controller.run(() => controller.delegate())}
+            >
+              New task
+            </Button>
+          )}
         </div>
       )}
     </section>

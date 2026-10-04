@@ -13,6 +13,8 @@ export function Header() {
     blocked = !state.connected || state.busy,
     // A thread offers its own chat project in the context bar instead.
     canAddProject = !state.conversation,
+    // Thread mode scopes the panel to the conversation, so global actions go.
+    threadMode = !!state.conversation,
     expandLabel =
       state.host.displayMode === "fullscreen" ? "Collapse" : "Expand";
 
@@ -82,14 +84,16 @@ export function Header() {
               Add project
             </Button>
           )}
-          <Button
-            id="settings"
-            variant="ghost"
-            disabled={blocked}
-            onClick={settings}
-          >
-            Settings
-          </Button>
+          {!threadMode && (
+            <Button
+              id="settings"
+              variant="ghost"
+              disabled={blocked}
+              onClick={settings}
+            >
+              Settings
+            </Button>
+          )}
         </div>
         {/* The console header has room for every button, so only the panel gets the menu. */}
         {!consoleMode && (
@@ -124,26 +128,30 @@ export function Header() {
                       Add project
                     </Menu.Item>
                   )}
-                  <Menu.Item
-                    className="menu-item"
-                    disabled={blocked}
-                    onClick={settings}
-                  >
-                    Settings
-                  </Menu.Item>
+                  {!threadMode && (
+                    <Menu.Item
+                      className="menu-item"
+                      disabled={blocked}
+                      onClick={settings}
+                    >
+                      Settings
+                    </Menu.Item>
+                  )}
                 </Menu.Popup>
               </Menu.Positioner>
             </Menu.Portal>
           </Menu.Root>
         )}
-        <Button
-          id="delegate"
-          variant="primary"
-          disabled={blocked}
-          onClick={() => controller.run(() => controller.delegate())}
-        >
-          {consoleMode ? "＋ Delegate" : "New task"}
-        </Button>
+        {!threadMode && (
+          <Button
+            id="delegate"
+            variant="primary"
+            disabled={blocked}
+            onClick={() => controller.run(() => controller.delegate())}
+          >
+            {consoleMode ? "＋ Delegate" : "New task"}
+          </Button>
+        )}
       </div>
     </header>
   );
