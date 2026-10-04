@@ -337,7 +337,7 @@ that task's scope rather than ambient chat or directory metadata; explicit
 conflicting arguments are rejected. Other launches preserve explicit or host
 chat context. The app-only `open_codex_subagent_extension_global` opens all
 chats and all projects. Unscoped panels explicitly request a null conversation;
-scoped panels offer **All chats**, retaining the repository/revision filter.
+scoped panels show the project name and path read-only, with no project selector or **All chats** button.
 `get_agent_panel_context`
 resolves validated defaults from host metadata or the latest task in the same
 chat. New task prefills known project/revision and user worker/budget defaults.

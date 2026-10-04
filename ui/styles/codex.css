@@ -155,7 +155,10 @@ small {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-#conversation-context {
+#project-name {
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .shell {

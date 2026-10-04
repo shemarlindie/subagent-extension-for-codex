@@ -44,8 +44,8 @@ The top project selector and chat indicator remain visible beside the inspector.
 Global launches use an app-only opener that explicitly requests all conversations
 and no repository default. Unscoped widget startup also sends an explicit null
 conversation, preventing ambient host chat/directory metadata from hiding task
-history. Chat launches retain their scope and offer an **All chats** button that
-keeps the selected project and revision while expanding the conversation scope.
+history. Chat launches retain their scope and show the project name and path read-only;
+the project selector and **All chats** are available only from the global entrypoint.
 The project registry refreshes on polling and manual refresh, preserving drafts
 and stable selector options. Project filtering also restricts default dependencies. Scope changes invalidate
 in-flight reads, clear old evidence and close unsent forms. A mutation already
