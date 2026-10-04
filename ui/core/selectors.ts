@@ -13,6 +13,11 @@ export const statusLabel = (task: Task) =>
         ? "Waiting on dependency"
         : task.status[0].toUpperCase() + task.status.slice(1);
 export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
+// A failed row status (including interrupted and unconfirmed shutdown) places
+// a task in Failed alone; the other filters never overlap except through All.
+export const failedStatus = (task: Task) =>
+  ["failed", "unconfirmed", "interrupted"].includes(rowStatus(task).kind);
+export const needsInput = (task: Task) => Boolean(task.pending_input);
 export function visibleTasks(state: Snapshot) {
   const search = state.search.toLowerCase();
   return state.tasks.filter(
@@ -25,11 +30,12 @@ export function visibleTasks(state: Snapshot) {
           .toLowerCase()
           .includes(search)) &&
       (state.filter === "all" ||
-        (state.filter === "active" && !terminal(task)) ||
+        (state.filter === "active" && !terminal(task) && !failedStatus(task)) ||
         (state.filter === "attention" &&
-          Boolean(task.pending_input || locked(task))) ||
+          needsInput(task) &&
+          !failedStatus(task)) ||
         (state.filter === "completed" && task.status === "completed") ||
-        (state.filter === "failed" && rowStatus(task).kind === "failed")),
+        (state.filter === "failed" && failedStatus(task))),
   );
 }
 export function projectChoices(state: Snapshot) {

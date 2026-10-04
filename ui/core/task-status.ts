@@ -4,7 +4,7 @@ import type { Task } from "./types";
 export function rowStatus(task: Task) {
   const activity = task.status === "running" ? task.live_activity : undefined,
     kind = locked(task)
-      ? "failed"
+      ? "unconfirmed"
       : task.pending_input
         ? "input"
         : activity?.state === "failed"
@@ -31,6 +31,7 @@ export function rowStatus(task: Task) {
     cancelled: "Stopped",
     input: "Needs input",
     paused: "Rate limit",
+    unconfirmed: "Unconfirmed",
   };
   const displayLabel =
     activity?.text === "Context compaction failed"
@@ -42,8 +43,6 @@ export function rowStatus(task: Task) {
     shortLabel:
       activity?.text === "Context compaction failed"
         ? "Compaction failed"
-        : locked(task)
-          ? "Unconfirmed"
-          : shortLabels[kind],
+        : shortLabels[kind],
   };
 }

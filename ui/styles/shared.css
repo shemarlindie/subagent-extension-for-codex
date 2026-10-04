@@ -370,7 +370,8 @@ form .select-trigger {
 .row-status-icon.paused,
 .row-status-icon.waiting,
 .row-status-icon.interrupted,
-.row-status-icon.input {
+.row-status-icon.input,
+.row-status-icon.unconfirmed {
   color: var(--status-paused, var(--warn, #edbc74));
 }
 .row-status-icon.failed {

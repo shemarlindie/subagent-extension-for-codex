@@ -1,4 +1,4 @@
-import { locked, terminal } from "../core/selectors";
+import { failedStatus, locked, terminal } from "../core/selectors";
 import { useController, useSnapshot } from "./controller-context";
 import { MotionContent } from "./motion";
 import { TaskStatus } from "./status";
@@ -11,7 +11,7 @@ export function InlinePreview() {
     (task) => !state.repository || task.repository === state.repository,
   );
   const attention = tasks.filter((task) => task.pending_input || locked(task));
-  const active = tasks.filter((task) => !terminal(task));
+  const active = tasks.filter((task) => !terminal(task) && !failedStatus(task));
   const task =
     tasks.find((task) => task.id === state.selected) ??
     attention[0] ??

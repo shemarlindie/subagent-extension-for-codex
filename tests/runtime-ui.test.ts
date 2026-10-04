@@ -256,6 +256,16 @@ test("task list icons describe the running task's latest activity", (t) => {
   }
 });
 
+test("unconfirmed shutdown shows a heavy warning question mark", (t) => {
+  t.onTestFinished(cleanup);
+  const view = render(
+    row(task({ status: "waiting", waiting_reason: "termination_unconfirmed" })),
+  );
+  const icon = view.getByRole("img", { name: "Shutdown unconfirmed" });
+  assert.ok(icon.classList.contains("unconfirmed"));
+  assert.equal(icon.getAttribute("stroke-width"), "3");
+});
+
 test("terminal states and input requests take precedence over stale activity", (t) => {
   t.onTestFinished(cleanup);
   const live_activity = {
