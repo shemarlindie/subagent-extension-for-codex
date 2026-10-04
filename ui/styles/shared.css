@@ -195,7 +195,7 @@ form .select-trigger {
   align-items: center;
   gap: 5px;
   border: 0;
-  padding: 2px;
+  padding: 2px 3px;
   background: transparent;
   font-size: 11px;
   color: var(--muted, #8fa5c1);

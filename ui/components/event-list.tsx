@@ -10,6 +10,7 @@ import { useActivityScroll } from "./use-activity-scroll";
 import { Timeline } from "./timeline";
 import { Presence } from "./motion";
 import { ActivityGroupCard } from "./activity-group-card";
+import { Icon } from "./icons";
 
 export { EventDetails } from "./event-details";
 
@@ -89,20 +90,7 @@ export const EventList = memo(function EventList({
           title="Scroll to latest activity"
           onClick={scrollToTop}
         >
-          {/* Cropped stroke bounds retain the original 20px / 24-unit scale. */}
-          <svg
-            width={20 * (14 / 24)}
-            height={20 * (14 / 24)}
-            viewBox="5 5 14 14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="m6 12 6-6 6 6M12 6v12" />
-          </svg>
+          <Icon name="arrow-up" />
         </button>
       </Presence>
     </section>

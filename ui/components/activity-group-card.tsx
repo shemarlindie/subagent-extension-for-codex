@@ -7,6 +7,7 @@ import { TimelineDot, TimelineItem } from "./timeline";
 import { MotionContent } from "./motion";
 import { ActivityTime } from "./activity-time";
 import { ActivityContent } from "./activity-content";
+import { Icon } from "./icons";
 import { EventBody, EventDetails } from "./event-details";
 import { streamContent, thinkingOnly } from "../utils/activity";
 
@@ -119,21 +120,7 @@ export function ActivityGroupCard({
           title={`Inspect ${group.events.length} raw ${group.events.length === 1 ? "response" : "responses"}`}
           onClick={() => setDebugMounted(true)}
         >
-          {/* Crop empty space while keeping the original 15px / 24-unit scale. */}
-          <svg
-            width="12.1875"
-            height="11.5625"
-            viewBox="2.25 2.25 19.5 18.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="m8 3 2 3m6-3-2 3M9 9h6M12 9v11M4 7l3 3m13-3-3 3M3 13h4m10 0h4M4 19l3-3m13 3-3-3" />
-            <rect x="7" y="6" width="10" height="14" rx="5" />
-          </svg>
+          <Icon name="bug" />
         </Collapsible.Trigger>
       </div>
       {group.summary && (
