@@ -1,7 +1,7 @@
 import { projectChoices } from "../core/selectors";
 import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
-import { MotionContent } from "./motion";
+import { Presence } from "./motion";
 import { SelectField } from "./select-field";
 
 export function ProjectScope() {
@@ -44,11 +44,15 @@ export function ProjectScope() {
           }
         />
       )}
-      <small id="project-path" title={state.repository}>
-        <MotionContent changeKey={state.repository}>
-          {state.repository ?? "Choose a project to focus delegated work"}
-        </MotionContent>
-      </small>
+      {!state.conversation && (
+        <Button
+          id="add-project"
+          disabled={!state.connected || state.busy}
+          onClick={() => controller.run(() => controller.browseAndAddProject())}
+        >
+          Browse
+        </Button>
+      )}
       {state.projectCandidate && (
         <Button
           variant="ghost"
@@ -59,6 +63,13 @@ export function ProjectScope() {
           Add chat project
         </Button>
       )}
+      <Presence show={Boolean(state.error)}>
+        {state.error && (
+          <span id="error" className="context-error" role="alert">
+            {state.error}
+          </span>
+        )}
+      </Presence>
     </div>
   );
 }

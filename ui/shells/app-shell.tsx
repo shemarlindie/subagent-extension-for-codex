@@ -42,7 +42,7 @@ export function AppShell() {
               Design preview · fixture data · actions never execute workers
             </div>
           )}
-          <Presence show={Boolean(state.error)}>
+          <Presence show={state.mode === "console" && Boolean(state.error)}>
             {state.error && (
               <div id="error" className="banner error" role="alert">
                 {state.error}

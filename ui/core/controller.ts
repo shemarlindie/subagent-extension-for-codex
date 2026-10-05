@@ -518,6 +518,44 @@ export class Controller {
     );
   }
 
+  /** Pick a folder and register it without the project dialog, then scope to it. */
+  async browseAndAddProject() {
+    if (this.state.dialog || this.state.busy || !this.state.connected) return;
+    const scope = this.state.scopeVersion;
+    this.patch({ busy: true, error: "" });
+
+    try {
+      const picked = await this.browseProject();
+      if (
+        !picked.repository ||
+        this.disposed ||
+        scope !== this.state.scopeVersion
+      )
+        return;
+
+      const registered = await this.tool<{ repository: string }>(
+        "register_user_agent_project",
+        { repository: picked.repository },
+      );
+
+      const projects = await this.tool<Project[]>("list_agent_projects");
+      if (this.disposed || scope !== this.state.scopeVersion) return;
+
+      this.patch({
+        projects,
+        projectCandidate: undefined,
+        projectCandidateAuto: false,
+        busy: false,
+      });
+
+      await this.changeProject(registered.repository);
+    } finally {
+      // A scope change already reset busy; clearing it again would stomp the new scope's work.
+      if (!this.disposed && scope === this.state.scopeVersion)
+        this.patch({ busy: false });
+    }
+  }
+
   async browseTaskProject(): Promise<string | undefined> {
     const dialog = this.state.dialog;
     if (

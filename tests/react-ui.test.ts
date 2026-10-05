@@ -1442,7 +1442,7 @@ test("the header menu offers the secondary actions and runs them", async (t) => 
 
   assert.deepEqual(
     (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
-    ["Refresh", "Collapse", "Add project", "Settings"],
+    ["Refresh", "Settings"],
   );
 
   await user.click(screen.getByRole("menuitem", { name: "Settings" }));
@@ -1468,7 +1468,7 @@ test("a thread panel leaves global actions to global launches", async (t) => {
 
   assert.deepEqual(
     (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
-    ["Refresh", "Collapse"],
+    ["Refresh"],
   );
 });
 
@@ -3330,6 +3330,48 @@ test("browsing a folder fills the project draft without granting access", async 
     ).length,
     0,
   );
+});
+
+test("the panel's Browse button picks a folder and adds it without the project dialog", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    configureProjectRegistration(transport, { picked: "/repo/picked" }),
+  );
+
+  await user.click(screen.getByRole("button", { name: "Browse" }));
+
+  await waitFor(() =>
+    assert.deepEqual(
+      transport.calls
+        .filter((call) => call.name === "register_user_agent_project")
+        .map((call) => call.args),
+      [{ repository: "/repo/picked" }],
+    ),
+  );
+
+  assertAbsent(screen.queryByRole("dialog"));
+});
+
+test("cancelling the panel's folder picker adds nothing", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    configureProjectRegistration(transport),
+  );
+
+  await user.click(screen.getByRole("button", { name: "Browse" }));
+
+  await waitFor(() =>
+    assert.ok(
+      transport.calls.some((call) => call.name === "browse_user_agent_project"),
+    ),
+  );
+
+  assert.equal(
+    transport.calls.filter(
+      (call) => call.name === "register_user_agent_project",
+    ).length,
+    0,
+  );
+
+  assertAbsent(screen.queryByRole("dialog"));
 });
 
 test("cancelling the native picker preserves the manual project path", async (t) => {

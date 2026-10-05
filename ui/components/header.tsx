@@ -13,8 +13,8 @@ export function Header() {
     state = useSnapshot(),
     consoleMode = state.mode === "console",
     blocked = !state.connected || state.busy,
-    // A thread offers its own chat project in the context bar instead.
-    canAddProject = !state.conversation,
+    // The panel offers this in its project bar; only the console header carries it.
+    canAddProject = consoleMode && !state.conversation,
     // Thread mode scopes the panel to the conversation, so global actions go.
     threadMode = !!state.conversation,
     expandLabel =
@@ -38,6 +38,14 @@ export function Header() {
     addProject = () => controller.addProject(),
     settings = () => controller.run(() => controller.settings());
 
+  const status = (
+    <span id="connection" className="connection muted" role="status">
+      <MotionContent changeKey={state.connection}>
+        {state.connection}
+      </MotionContent>
+    </span>
+  );
+
   return (
     <header>
       <div className="brand">
@@ -49,16 +57,15 @@ export function Header() {
             Codex subagent extension <span>Delegated work, in one place</span>
           </h1>
         ) : (
-          <strong>Delegated work</strong>
+          <div className="brand-text">
+            <strong>Delegated work</strong>
+            {status}
+          </div>
         )}
       </div>
       <span className="grow" />
       <div className="toolbar">
-        <span id="connection" className="connection muted" role="status">
-          <MotionContent changeKey={state.connection}>
-            {state.connection}
-          </MotionContent>
-        </span>
+        {consoleMode && status}
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
           <TooltipWrapper label="Refresh tasks">
@@ -144,20 +151,6 @@ export function Header() {
                   <Menu.Item className="menu-item" onClick={refresh}>
                     Refresh
                   </Menu.Item>
-                  {state.host.canExpand && (
-                    <Menu.Item className="menu-item" onClick={expand}>
-                      {expandLabel}
-                    </Menu.Item>
-                  )}
-                  {canAddProject && (
-                    <Menu.Item
-                      className="menu-item"
-                      disabled={blocked}
-                      onClick={addProject}
-                    >
-                      Add project
-                    </Menu.Item>
-                  )}
                   {!threadMode && (
                     <Menu.Item
                       className="menu-item"
