@@ -89,16 +89,6 @@ export function TaskInspector() {
         <div className="empty">
           <Icon name="task-card" size={40} className="empty-icon" />
           <p>Task details will show here.</p>
-          {!state.conversation && (
-            <Button
-              id="empty-start"
-              variant="primary"
-              disabled={!state.connected || state.busy}
-              onClick={() => controller.run(() => controller.delegate())}
-            >
-              New Task
-            </Button>
-          )}
         </div>
       )}
     </section>
