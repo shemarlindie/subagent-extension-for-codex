@@ -110,6 +110,9 @@
   --warn: #925e17;
   --status-paused: var(--warn);
   --radius: 8px;
+  /* Codex's sidebar is a faint tint of the text color over the page (about 3% light, 4% dark). */
+  --sidebar-bg: color-mix(in srgb, var(--color-text-primary) 3%, var(--bg));
+  --sidebar-selected: var(--hover);
   font: var(--font-text-sm-size) / 1.5 var(--font-sans);
 }
 :root[data-theme="dark"] {
@@ -153,6 +156,12 @@
   --color-ring-success: rgb(64, 201, 119);
   --color-ring-warning: rgb(255, 133, 73);
 
+  --sidebar-bg: color-mix(in srgb, var(--color-text-primary) 4%, var(--bg));
+  --sidebar-selected: color-mix(
+    in srgb,
+    var(--color-text-primary) 10%,
+    transparent
+  );
   --accent: #8bd8b5;
   --warn: #edbc74;
 }
