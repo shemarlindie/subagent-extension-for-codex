@@ -10,9 +10,7 @@ header strong {
   font-weight: 600;
 }
 header .mark {
-  font:
-    19px ui-monospace,
-    monospace;
+  flex: none;
 }
 header .grow {
   flex: 1;

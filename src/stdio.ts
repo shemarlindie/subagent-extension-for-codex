@@ -12,6 +12,7 @@ import { hostProjectCandidate } from "./panel/host-context.js";
 import { codexContextCapability } from "./panel/host-context.js";
 import { delegationPanel, panelUri } from "./panel/panel.js";
 import { taskPanelContext } from "./panel/panel-context.js";
+import { productGlyphIcons } from "./server/product-glyph.js";
 import {
   type AnyTool,
   definitions,
@@ -23,7 +24,11 @@ import { connectService } from "./service/launcher.js";
 const { token, origin } = await connectService();
 
 const server = new McpServer(
-  { name: "codex-subagent-extension", version: "0.1.0" },
+  {
+    name: "codex-subagent-extension",
+    version: "0.1.0",
+    icons: productGlyphIcons,
+  },
   {
     instructions:
       "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Use get_current_agent_project for host project discovery. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user to confirm registration.",

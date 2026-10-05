@@ -503,7 +503,7 @@ export function Host() {
             ...(inline ? { height } : {}),
           }}
         >
-          <iframe ref={frame} key={sessionKey} title="Delegated work" />
+          <iframe ref={frame} key={sessionKey} title="Delegated Work" />
         </div>
       </main>
       <aside

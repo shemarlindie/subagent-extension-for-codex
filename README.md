@@ -242,6 +242,8 @@ dependencies, including installed native Claude runtime assets. Extract its
 be available on the execution host. Native assets match the build host; build
 on the destination OS/architecture rather than copying a native bundle between
 platforms. Ordinary source checkouts require `npm ci` before building.
+The packaged `assets/product-icon.svg` serves the composer and listing; the
+`assets/product-glyph.svg` file supplies the MCP server and tool icons.
 The stdio launcher connects to the authenticated local service or starts it when
 the loopback connection is refused. Startup errors go to `service.log` in the data
 directory. Concurrent launchers share the PID lease; losing processes cannot

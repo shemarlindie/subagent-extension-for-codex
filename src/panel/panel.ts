@@ -8,6 +8,7 @@ import type {
 import { z } from "zod";
 
 import type { Task } from "../core/model.js";
+import { productGlyphIcons } from "../server/product-glyph.js";
 import { type PanelContextInput, panelContextInput } from "./panel-context.js";
 
 // Bump the URI when resource metadata changes to invalidate host caches.
@@ -46,8 +47,9 @@ export function delegationPanel(
     uri: panelUri,
     tool: {
       description:
-        "Open Delegated work beside this chat when supported. Supply the actual approved repository and revision for first-use defaults, or task_id to activate an existing delegated task. Conversation correlation can be supplied by the host. Existing task tools remain usable without the panel.",
-      title: "Delegated work",
+        "Open Delegated Work beside this chat when supported. Supply the actual approved repository and revision for first-use defaults, or task_id to activate an existing delegated task. Conversation correlation can be supplied by the host. Existing task tools remain usable without the panel.",
+      title: "Delegated Work",
+      icons: productGlyphIcons,
       inputSchema: panelContextInput,
       outputSchema: z.object({
         conversation_id: z.string().nullable().optional(),
@@ -129,7 +131,7 @@ export function delegationPanel(
       tool: {
         ...panel.tool,
         description:
-          "Open Delegated work across all projects and conversations.",
+          "Open Delegated Work across all projects and conversations.",
         inputSchema: z.strictObject({}),
         _meta: {
           ui: { resourceUri: panelUri, visibility: ["app"] },

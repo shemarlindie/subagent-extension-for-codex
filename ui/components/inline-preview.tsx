@@ -40,9 +40,9 @@ export function InlinePreview() {
   );
 
   return (
-    <section className="inline-preview" aria-label="Delegated work preview">
+    <section className="inline-preview" aria-label="Delegated Work preview">
       <div className="preview-heading">
-        <strong>Delegated work</strong>
+        <strong>Delegated Work</strong>
         {state.host.canExpand && (
           <TooltipWrapper label="Open panel">
             <Button

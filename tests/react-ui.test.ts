@@ -1517,7 +1517,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   await user.type(field, "Preserve this suspended draft");
   const dialogState = controller.getSnapshot().dialog;
   await act(() => transport.expand());
-  assert.ok(screen.getByRole("region", { name: "Delegated work preview" }));
+  assert.ok(screen.getByRole("region", { name: "Delegated Work preview" }));
   assertAbsent(screen.queryByRole("dialog"));
   assert.ok(controller.getSnapshot().dialog === dialogState);
   await user.click(screen.getByRole("button", { name: "Open panel" }));
@@ -1649,7 +1649,7 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
 
   test("connecting", async (t) => {
     await setup(t, undefined, { start: false });
-    assert.ok(screen.getByRole("region", { name: "Delegated work preview" }));
+    assert.ok(screen.getByRole("region", { name: "Delegated Work preview" }));
     assert.equal(screen.getByRole("status").textContent, "Connecting…");
     assertAbsent(screen.queryByText("No delegated tasks yet."));
     assertAbsent(screen.queryByRole("button", { name: "New task" }));

@@ -24,7 +24,7 @@ export class HostTransport implements Transport {
   constructor(
     // DEBUG: Use the tracing subclass until the panel sizing investigation is complete.
     private app: App = new SizeTracingApp(
-      { name: "Delegated work", version: "0.1.0" },
+      { name: "Delegated Work", version: "0.1.0" },
       {},
       { autoResize: true },
     ),

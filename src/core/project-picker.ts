@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 const execute = promisify(execFile);
 
 const script = `try
-  set selectedFolder to choose folder with prompt "Choose a Git repository to add to Delegated work"
+  set selectedFolder to choose folder with prompt "Choose a Git repository to add to Delegated Work"
   return POSIX path of selectedFolder
 on error number -128
   return ""

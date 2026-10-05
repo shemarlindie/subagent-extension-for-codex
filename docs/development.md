@@ -122,7 +122,7 @@ reproduced, so confirm layout-sensitive changes in Codex before release.
 ## Codex
 
 With the MCP configuration above, reload the MCP connection in Codex and open
-**Delegated work** from a chat. It should show the same tasks as the dev host in
+**Delegated Work** from a chat. It should show the same tasks as the dev host in
 live mode.
 
 ## Demo

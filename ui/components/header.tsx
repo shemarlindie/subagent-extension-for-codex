@@ -45,11 +45,9 @@ export function Header() {
   return (
     <header>
       <div className="brand">
-        <span className="mark" aria-hidden="true">
-          ⌘
-        </span>
+        <Icon name="worker" size={20} className="mark" />
         <div className="brand-text">
-          <strong>Delegated work</strong>
+          <strong>Delegated Work</strong>
           {status}
         </div>
       </div>

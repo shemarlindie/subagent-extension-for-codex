@@ -15,6 +15,7 @@ import {
   resolvePanelContext,
   taskPanelContext,
 } from "../panel/panel-context.js";
+import { productGlyphIcons } from "./product-glyph.js";
 import {
   type AnyTool,
   definitions,
@@ -31,7 +32,11 @@ export function mcp(
   nativeHtmlPath = htmlPath,
 ) {
   const server = new McpServer(
-    { name: "codex-subagent-extension", version: "0.1.0" },
+    {
+      name: "codex-subagent-extension",
+      version: "0.1.0",
+      icons: productGlyphIcons,
+    },
     {
       capabilities: {
         ...codexContextCapability,

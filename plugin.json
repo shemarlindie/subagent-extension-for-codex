@@ -2,13 +2,15 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "codex-subagent-extension",
   "version": "0.1.0",
-  "description": "Delegate coding tasks to Claude in isolated worktrees, inspect progress, and collect results.",
+  "description": "Delegate coding tasks to Claude, inspect progress, and collect results.",
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "Codex subagent extension",
-        "shortDescription": "Delegate, inspect, and control Claude coding tasks",
-        "brandColor": "#3a83f7"
+        "displayName": "Codex Subagent Extension",
+        "shortDescription": "Delegate, inspect, and control Claude coding tasks.",
+        "brandColor": "#3a83f7",
+        "composerIcon": "./assets/product-icon.svg",
+        "logo": "./assets/product-icon.svg"
       }
     }
   }

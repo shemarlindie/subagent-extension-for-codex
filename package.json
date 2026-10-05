@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Durable Claude delegation for Codex",
+  "description": "Claude delegation for Codex",
   "engines": {
     "node": ">=24"
   },
@@ -71,6 +71,7 @@
     "dist",
     "plugin.json",
     "mcp.json",
+    "assets",
     "skills",
     "README.md",
     "docs"

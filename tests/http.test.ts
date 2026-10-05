@@ -222,6 +222,29 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       "ui://codex-subagent-extension/app-v6",
     );
 
+    assert.deepEqual(
+      opener.icons?.map((icon) => icon.theme),
+      ["light", "dark"],
+    );
+
+    for (const [index, color] of ["#202124", "#f5f5f5"].entries()) {
+      const icon: NonNullable<typeof opener.icons>[number] | undefined =
+        opener.icons?.[index];
+
+      assert.ok(icon);
+      assert.equal(icon.mimeType, "image/svg+xml");
+      assert.deepEqual(icon.sizes, ["any"]);
+      assert.match(icon.src, /^data:image\/svg\+xml;base64,/);
+
+      assert.match(
+        Buffer.from(
+          icon.src.slice("data:image/svg+xml;base64,".length),
+          "base64",
+        ).toString("utf8"),
+        new RegExp(`stroke="${color}"`),
+      );
+    }
+
     assert.deepEqual(opener._meta?.["openai/ui"], {
       entrypoints: [{ type: "thread" }],
       preferredModelDisplayMode: "inline",
@@ -254,11 +277,11 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       "inline",
     );
 
-    assert.match(ui.contents[0].text, /<title>Delegated work<\/title>/);
+    assert.match(ui.contents[0].text, /<title>Delegated Work<\/title>/);
     const standalone = await fetch(base + "/");
     assert.equal(standalone.status, 200);
 
-    assert.match(await standalone.text(), /<title>Delegated work<\/title>/);
+    assert.match(await standalone.text(), /<title>Delegated Work<\/title>/);
 
     assert.deepEqual((ui.contents[0] as any)._meta.ui.csp, {
       connectDomains: [],
@@ -295,6 +318,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     )!;
 
     assert.ok(globalOpener);
+    assert.deepEqual(globalOpener.icons, opener.icons);
 
     assert.deepEqual(globalOpener._meta?.ui, {
       resourceUri: (opener._meta as any).ui.resourceUri,
@@ -722,7 +746,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
 
       assert.equal(proxyUi.contents[0].mimeType, "text/html;profile=mcp-app");
       assert.ok("text" in proxyUi.contents[0]);
-      assert.match(proxyUi.contents[0].text, /<title>Delegated work<\/title>/);
+      assert.match(proxyUi.contents[0].text, /<title>Delegated Work<\/title>/);
 
       assert.deepEqual((proxyUi.contents[0] as any)._meta.ui.csp, {
         connectDomains: [],
