@@ -32,9 +32,9 @@ Animations that run while the activity timeline measures positions change only o
 
 Banner messages use `Notice`, `CollapsibleNotice` and `NoticeText` from `ui/components/notice.tsx`. Pass `tone` (`warning`, the default, `error` or `info`) rather than adding a new banner class; the tone only changes the accent color in `.notice[data-tone]`. `NoticeText` clamps long text behind **Show more**.
 
-Icons live in one catalog, `ICONS` in `ui/components/icons.tsx`. Render them with `<Icon name="bug" />` rather than inline `<svg>` markup. To add a glyph, add an entry (path data, optional cropped `viewBox`, size, stroke width). Icons are decorative unless you pass `label`, and `className` and other SVG props pass through. Pass `square` to pad a cropped icon to a square without scaling it.
+Icons live in one catalog, `ICONS` in `ui/components/icons.tsx`. Render them with `<Icon name="bug" />` rather than inline `<svg>` markup. Every glyph uses the shared 24-unit viewBox and defaults to 16 px; pass `size` to override its rendered size. To add a glyph, include its tight geometry bounds, path data, optional shapes, and stroke width. Icons are decorative unless you pass `label`, and `className` and other SVG props pass through.
 
-Use `<Chevron square />` for rotating icons. It pads the short dimension without scaling the artwork, so rotation keeps a stable layout footprint. The default chevron fits its artwork tightly.
+Use `<Chevron />` for compact dropdown and disclosure carets. It keeps a square layout footprint while preserving the caret's smaller drawn size.
 
 Buttons use `<Button>` from `ui/components/button.tsx`, with a `variant`:
 

@@ -15,7 +15,7 @@ export function TaskDescription({
   return (
     <Collapsible.Root className="task-description" defaultOpen={defaultOpen}>
       <Collapsible.Trigger className="task-description-trigger">
-        <Chevron square />
+        <Chevron size={10} />
         Description
       </Collapsible.Trigger>
       {/* The panel animates its height; the inner box keeps its own scroll and padding. */}

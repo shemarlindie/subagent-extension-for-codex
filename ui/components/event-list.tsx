@@ -94,7 +94,7 @@ export const EventList = memo(function EventList({
           title="Scroll to latest activity"
           onClick={scrollToTop}
         >
-          <Icon name="arrow-up" />
+          <Icon name="arrow-up" size={10} />
         </button>
       </Presence>
     </section>

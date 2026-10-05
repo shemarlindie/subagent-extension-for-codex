@@ -1,13 +1,10 @@
 import { Icon } from "./icons";
 
-/** A square viewport keeps rotating chevrons from changing their layout footprint. */
-export function Chevron({ square = false }: { square?: boolean }) {
+/** A shared square viewport keeps rotating chevrons from changing layout. */
+export function Chevron({ size = 12 }: { size?: number }) {
   return (
-    <span
-      className={`chevron${square ? " chevron-square" : ""}`}
-      aria-hidden="true"
-    >
-      <Icon name="chevron-down" square={square} />
+    <span className="chevron" aria-hidden="true">
+      <Icon name="chevron-down" size={size} />
     </span>
   );
 }

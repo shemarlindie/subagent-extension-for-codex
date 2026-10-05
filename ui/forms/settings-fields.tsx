@@ -9,6 +9,7 @@ import {
 
 import { Button } from "../components/button";
 import { Presence } from "../components/motion";
+import { workerProfileIconName } from "../components/worker-profile-icon";
 import { FormSelect } from "./form-select";
 import {
   helpId,
@@ -144,7 +145,13 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
             name={row.key}
             id={id}
             label={row.label}
-            options={row.options}
+            options={row.options.map((option) => ({
+              ...option,
+              icon:
+                row.key === "default_worker_profile"
+                  ? workerProfileIconName(option.value)
+                  : undefined,
+            }))}
             describedBy={describedBy}
           />
         </div>

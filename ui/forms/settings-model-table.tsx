@@ -1,4 +1,8 @@
 import { unsupportedEffortWarning } from "../../src/core/settings-document";
+import {
+  WorkerProfileIcon,
+  workerProfileIconName,
+} from "../components/worker-profile-icon";
 import { FormSelect } from "./form-select";
 import type { SettingsControls } from "./settings-fields";
 import type { ModelScope } from "./settings-layout";
@@ -17,11 +21,24 @@ export function ModelTable({ scopes, control, register }: ModelTableProps) {
         <span>Reasoning effort</span>
       </div>
       {scopes.map((scope) => {
-        const warningId = `setting-${scope.effort.key}-warning`;
+        const warningId = `setting-${scope.effort.key}-warning`,
+          profile = scope.model.key.replace(/_default_model$/, ""),
+          hasProfileIcon = Boolean(workerProfileIconName(profile));
 
         return (
           <div key={scope.model.key} className="model-table-row">
-            <span className="setting-label">{scope.label}</span>
+            <span
+              className={`setting-label${hasProfileIcon ? " setting-profile-label" : ""}`}
+            >
+              {hasProfileIcon && (
+                <WorkerProfileIcon
+                  profile={profile}
+                  size={10}
+                  className="setting-profile-icon"
+                />
+              )}
+              {scope.label}
+            </span>
             {/* Without a discovered catalog the model ID is typed instead. */}
             {scope.model.options ? (
               <FormSelect

@@ -198,7 +198,7 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
             >
               <Accordion.Header className="settings-group-header">
                 <Accordion.Trigger className="settings-group-trigger">
-                  <Chevron square />
+                  <Chevron />
                   <span className="settings-group-title">{section.title}</span>
                   <span className="settings-group-summary">
                     {section.rows

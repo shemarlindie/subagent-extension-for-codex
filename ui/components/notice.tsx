@@ -60,7 +60,7 @@ export function CollapsibleNotice({
             </span>
           )}
         </span>
-        <Icon name="chevron-down" square size={12} className="notice-caret" />
+        <Icon name="chevron-down" size={12} className="notice-caret" />
       </Collapsible.Trigger>
       <Collapsible.Panel className="collapse-panel" keepMounted>
         <div className="notice-body">{children}</div>

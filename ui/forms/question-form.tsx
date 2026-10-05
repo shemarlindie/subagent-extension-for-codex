@@ -336,9 +336,9 @@ export function QuestionForm({ task }: { task: Task }) {
                 onClick={() => show(index)}
               >
                 {skipped.has(index) ? (
-                  <Icon name="minus" size={10} />
+                  <Icon name="minus" size={8} />
                 ) : (
-                  answers[index] && <Icon name="check" size={10} />
+                  answers[index] && <Icon name="check" size={8} />
                 )}
                 {question.header || `Question ${index + 1}`}
               </button>

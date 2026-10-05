@@ -2,12 +2,15 @@ import { Select } from "@base-ui/react/select";
 import type { Ref } from "react";
 
 import { Chevron } from "./chevron";
+import { Icon, type IconName } from "./icons";
 
 export type SelectOption = {
   value: string;
   label: string;
   /** Secondary text shown under the label in the menu only. */
   description?: string;
+  /** Optional leading icon for the menu option and selected value. */
+  icon?: IconName;
 };
 
 export type SelectFieldProps = {
@@ -27,6 +30,7 @@ export type SelectFieldProps = {
 function SelectTrigger({
   id,
   label,
+  options,
   placeholder,
   required,
   invalid,
@@ -45,9 +49,28 @@ function SelectTrigger({
       aria-describedby={describedBy}
       onBlur={onBlur}
     >
-      <Select.Value className="select-value" placeholder={placeholder} />
+      <Select.Value className="select-value" placeholder={placeholder}>
+        {(value) => {
+          const option = options.find((item) => item.value === value);
+
+          return option ? (
+            <span className="select-value-content">
+              {option.icon && (
+                <Icon
+                  name={option.icon}
+                  size={10}
+                  className="select-worker-icon"
+                />
+              )}
+              <span className="select-value-label">{option.label}</span>
+            </span>
+          ) : (
+            placeholder
+          );
+        }}
+      </Select.Value>
       <Select.Icon className="select-icon">
-        <Chevron square />
+        <Chevron />
       </Select.Icon>
     </Select.Trigger>
   );
@@ -71,13 +94,22 @@ function SelectOptions({ options }: { options: SelectOption[] }) {
                   value={option.value}
                   className="select-item"
                 >
-                  <span className="select-item-text">
-                    <Select.ItemText>{option.label}</Select.ItemText>
-                    {option.description && (
-                      <span className="select-item-description">
-                        {option.description}
-                      </span>
+                  <span className="select-item-content">
+                    {option.icon && (
+                      <Icon
+                        name={option.icon}
+                        size={10}
+                        className="select-worker-icon"
+                      />
                     )}
+                    <span className="select-item-text">
+                      <Select.ItemText>{option.label}</Select.ItemText>
+                      {option.description && (
+                        <span className="select-item-description">
+                          {option.description}
+                        </span>
+                      )}
+                    </span>
                   </span>
                   <Select.ItemIndicator
                     className="select-check"

@@ -32,10 +32,9 @@ export function TaskStatusIcon({
   return (
     <Icon
       name={STATUS_ICONS[kind]}
+      size={10}
       className={`row-status-icon ${kind}`}
       label={decorative ? undefined : label}
-    >
-      {kind === "queued" && <circle cx="12" cy="12" r="9" />}
-    </Icon>
+    />
   );
 }

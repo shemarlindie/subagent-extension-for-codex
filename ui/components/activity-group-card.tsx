@@ -128,7 +128,7 @@ export function ActivityGroupCard({
           title={`Inspect ${group.events.length} raw ${group.events.length === 1 ? "response" : "responses"}`}
           onClick={() => setDebugMounted(true)}
         >
-          <Icon name="bug" />
+          <Icon name="bug" size={12} />
         </Collapsible.Trigger>
       </div>
       {group.summary && (
