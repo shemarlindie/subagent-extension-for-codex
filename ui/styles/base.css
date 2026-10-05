@@ -1,0 +1,49 @@
+/* Reset and element defaults: buttons, form fields, focus and [hidden]. */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--color-background-primary, var(--bg));
+  color: var(--color-text-primary, var(--text));
+}
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  padding: 6px 10px;
+}
+button:hover {
+  background: var(--hover);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button.primary {
+  color: var(--bg);
+  background: var(--text);
+  border-color: var(--text);
+}
+button.primary:hover {
+  opacity: 0.85;
+}
+button.ghost {
+  border-color: transparent;
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 0;
+}
+[hidden] {
+  display: none !important;
+}

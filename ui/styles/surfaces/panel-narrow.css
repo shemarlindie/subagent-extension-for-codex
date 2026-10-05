@@ -1,0 +1,66 @@
+/* Narrow panels (640px and under): single-column list/detail, folded header actions. */
+@media (max-width: 640px) {
+  /* The dropdown takes the row, and an error wraps onto its own line. */
+  .context-bar .select-trigger {
+    flex: 1 1 0;
+  }
+  .context-error {
+    flex-basis: 100%;
+  }
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 420px;
+  }
+  aside {
+    border-right: 0;
+  }
+  .detail {
+    padding: 18px;
+  }
+  body[data-selected="true"] aside {
+    display: none;
+  }
+  body[data-selected="false"] .detail {
+    display: none;
+  }
+  /* Moving between the list and a task slides in the direction of travel. */
+  body[data-selected="true"] .detail {
+    animation: motion-slide-end var(--motion-base) var(--ease-out);
+  }
+  body[data-selected="false"] aside {
+    animation: motion-slide-start var(--motion-base) var(--ease-out);
+  }
+  .back {
+    display: inline-block;
+  }
+  /* Tabs run edge to edge, scrolling past the content margin and resting inside it. */
+  .tabs {
+    margin-inline: calc(-1 * var(--detail-pad, 18px));
+    padding-inline: var(--detail-pad, 18px);
+  }
+  header {
+    padding: 12px;
+  }
+  .toolbar .connection {
+    display: none;
+  }
+  header button {
+    font-size: 12px;
+  }
+  /* Expand/Collapse stays on the bar; the rest fold into the menu. */
+  header .toolbar-inline > :not(#expand) {
+    display: none;
+  }
+  header .toolbar-menu {
+    display: inline-flex;
+  }
+  .two {
+    grid-template-columns: 1fr;
+  }
+  .meta {
+    gap: 8px;
+  }
+  .empty {
+    padding: 35px 10px;
+  }
+}

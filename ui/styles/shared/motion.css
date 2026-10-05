@@ -81,19 +81,6 @@
   display: contents;
 }
 
-/* Control feedback: hover, press, selection and disabled states ease rather than snap. */
-button,
-.select-trigger,
-input,
-textarea {
-  transition:
-    background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    opacity var(--motion-fast) ease,
-    box-shadow var(--motion-fast) ease;
-}
-
 /* Dialogs fade and settle in; closing is quicker than opening. */
 .dialog-overlay {
   transition: opacity var(--motion-base) var(--ease-out);

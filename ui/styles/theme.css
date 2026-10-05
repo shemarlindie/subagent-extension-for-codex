@@ -1,0 +1,29 @@
+/* Design tokens: light by default, dark when the host or the system sets data-theme="dark". */
+:root {
+  color-scheme: light;
+  --bg: #fff;
+  --surface: #f7f7f5;
+  --text: #242424;
+  --muted: #73736f;
+  --line: #e7e7e3;
+  --hover: #efefec;
+  --accent: #256c51;
+  --warn: #925e17;
+  --danger: #98514c;
+  --status-paused: var(--warn);
+  --radius: 8px;
+  font: 13px/1.5
+    var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+}
+:root[data-theme="dark"] {
+  --bg: #202020;
+  --surface: #191919;
+  --text: #ededeb;
+  --muted: #a0a09b;
+  --line: #373735;
+  --hover: #30302e;
+  --accent: #8bd8b5;
+  --warn: #edbc74;
+  --danger: #e08b83;
+  --status-paused: var(--warn);
+}

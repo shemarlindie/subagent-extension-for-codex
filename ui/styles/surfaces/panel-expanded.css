@@ -1,0 +1,187 @@
+/* The expanded panel fits its viewport; the task list and inspector scroll on their own. */
+body[data-expanded-panel="true"] {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+body[data-expanded-panel="true"] #root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+body[data-expanded-panel="true"] .shell {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+body[data-expanded-panel="true"] aside {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+body[data-expanded-panel="true"] #task-list {
+  flex: 1;
+}
+body[data-expanded-panel="true"] #task-list,
+body[data-expanded-panel="true"] .detail {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/*
+ * A task keeps a compact header in place while only the selected tab scrolls,
+ * so the inspector never nests a scroller inside another.
+ */
+body[data-expanded-panel="true"] .detail.has-task {
+  --detail-pad: 24px;
+  padding: 0;
+  /* The activity hook restores the reading position itself. */
+  overflow-anchor: none;
+}
+body[data-expanded-panel="true"] .task-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 18px var(--detail-pad) 0;
+}
+body[data-expanded-panel="true"] .task-header {
+  flex: none;
+}
+body[data-expanded-panel="true"] .task-header h1 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin: 6px 0;
+}
+body[data-expanded-panel="true"] .notice-expand-text[data-open] {
+  max-height: min(280px, 25dvh);
+}
+body[data-expanded-panel="true"] .task-header .notice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: center;
+  margin: 12px 0;
+  padding: 10px 12px;
+}
+body[data-expanded-panel="true"] .task-header .notice.notice-collapsible {
+  display: block;
+  margin: 0 0 12px;
+  padding: 0;
+}
+body[data-expanded-panel="true"] .notice-trigger {
+  padding: 10px 12px;
+}
+body[data-expanded-panel="true"] .notice-body {
+  padding: 0 12px 12px;
+}
+body[data-expanded-panel="true"] .task-header .notice > * {
+  grid-column: 1;
+}
+body[data-expanded-panel="true"] .task-header .notice > .primary {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+body[data-expanded-panel="true"] .notice-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 2px 0 0;
+}
+body[data-expanded-panel="true"] .notice-text[data-open] {
+  display: block;
+}
+body[data-expanded-panel="true"] .task-header .actions {
+  margin: 0 0 12px;
+}
+body[data-expanded-panel="true"] .evidence {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+body[data-expanded-panel="true"] .evidence .tabs {
+  flex: none;
+  margin-top: 0;
+}
+body[data-expanded-panel="true"] .evidence > [role="tabpanel"]:not([hidden]) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Bleed to the inspector edge so the scrollbar sits against it. */
+  margin: 0 calc(-1 * var(--detail-pad));
+  padding: 14px var(--detail-pad) 18px;
+}
+body[data-expanded-panel="true"] .evidence > .activity-panel:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+}
+body[data-expanded-panel="true"] .activity-panel .activity-timeline {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+body[data-expanded-panel="true"] .activity-panel .activity-viewport {
+  flex: 1;
+  max-height: none;
+  margin: 0 calc(-1 * var(--detail-pad));
+  padding: var(--activity-top-pad) var(--detail-pad) 18px;
+}
+body[data-expanded-panel="true"] .activity-panel .activity-scroll-top {
+  right: calc(var(--detail-pad) - 4px);
+}
+@media (max-width: 640px) {
+  body[data-expanded-panel="true"] .detail.has-task {
+    --detail-pad: 18px;
+  }
+}
+@media (max-width: 400px) {
+  body[data-expanded-panel="true"] .task-header .notice > .primary {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    margin-top: 8px;
+  }
+}
+/* Too short for a fixed header: the whole inspector scrolls instead. */
+body[data-expanded-panel="true"] .detail[data-stacked] .task-view {
+  height: auto;
+  padding-bottom: 18px;
+}
+body[data-expanded-panel="true"] .detail[data-stacked] .evidence {
+  display: block;
+}
+body[data-expanded-panel="true"]
+  .detail[data-stacked]
+  .evidence
+  > [role="tabpanel"]:not([hidden]) {
+  overflow: visible;
+  margin: 0;
+  padding: 14px 0 0;
+}
+body[data-expanded-panel="true"] .detail[data-stacked] .activity-viewport {
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+}
+body[data-expanded-panel="true"]
+  .detail[data-stacked]
+  .evidence
+  > .activity-panel:not([hidden]) {
+  padding-top: var(--activity-top-pad);
+}
+body[data-expanded-panel="true"] .detail[data-stacked] .activity-timeline {
+  display: block;
+}
+body[data-expanded-panel="true"] .detail[data-stacked] .activity-scroll-top {
+  position: sticky;
+  bottom: 16px;
+  margin: -40px 4px 0 auto;
+}

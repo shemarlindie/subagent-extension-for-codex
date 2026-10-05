@@ -1,0 +1,500 @@
+/* Panel layout: header, context bar, task list, inspector, forms and the narrow-width base. */
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+header strong {
+  font-weight: 600;
+}
+header .mark {
+  font:
+    19px ui-monospace,
+    monospace;
+}
+header .grow {
+  flex: 1;
+}
+header button {
+  white-space: nowrap;
+}
+/* Narrow panels fold the secondary actions into a menu (see the media query below). */
+header .toolbar-menu {
+  display: none;
+}
+.muted,
+small {
+  color: var(--muted);
+}
+small {
+  font-size: 11px;
+}
+.connection {
+  font-size: 11px;
+}
+header .brand {
+  min-width: 0;
+}
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.brand-text .connection {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-preview {
+  padding: 12px 16px;
+}
+.preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.inline-preview p {
+  margin: 6px 0;
+}
+.preview-scope {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.preview-task {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 4px;
+}
+.preview-task-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.preview-task small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.inline-preview .error {
+  overflow-wrap: anywhere;
+}
+.context-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.context-error {
+  flex: 1;
+  min-width: 0;
+  color: var(--warn);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.context-bar .select-trigger {
+  /* The sidebar's width less its border and the search box's margins, so the two match. */
+  flex: 0 1 228px;
+  min-width: 0;
+  width: auto;
+  padding: 7px 8px;
+}
+.context-bar > button {
+  flex: none;
+  align-self: stretch;
+}
+#project-name {
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shell {
+  display: grid;
+  grid-template-columns: 245px minmax(0, 1fr);
+  min-height: 540px;
+}
+aside {
+  min-width: 0;
+  background: var(--color-background-secondary, var(--surface));
+  border-right: 1px solid var(--line);
+  /* No side padding: children inset themselves so #task-list's scrollbar can reach the edge. */
+  padding: 12px 0;
+}
+.search {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.filters {
+  margin: 10px 0;
+}
+.filters button {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+.filters button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.filters button[aria-checked="true"] {
+  background: var(--hover);
+  border-color: color-mix(in srgb, var(--text) 40%, var(--line));
+  color: var(--text);
+}
+.filters button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+.list-label {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 16px;
+  color: var(--muted);
+  font-size: 11px;
+}
+#task-list {
+  padding: 0 8px;
+}
+.row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border-color: transparent;
+  padding: 10px;
+  margin: 2px 0;
+}
+.row[aria-current="true"] {
+  background: var(--hover);
+}
+.row-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+.dot.running,
+.dot.completed {
+  background: var(--accent);
+}
+.dot.waiting {
+  background: var(--warn);
+}
+.dot.failed {
+  background: var(--danger, var(--warn));
+}
+.detail {
+  padding: 22px 24px;
+  min-width: 0;
+}
+.eyebrow {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+h1 {
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 550;
+  letter-spacing: -0.4px;
+  margin: 10px 0 12px;
+  overflow-wrap: anywhere;
+}
+h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+h3 {
+  font-size: 12px;
+  margin: 18px 0 6px;
+  font-weight: 600;
+}
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--muted);
+}
+/* Notices differ only by tone: the accent colors the left bar and nothing else. */
+.notice {
+  --notice-accent: var(--warn);
+  border-left: 3px solid var(--notice-accent);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin: 16px 0;
+  background: var(--surface);
+}
+.notice[data-tone="error"] {
+  --notice-accent: var(--danger);
+}
+.notice[data-tone="info"] {
+  --notice-accent: var(--accent);
+}
+.notice[data-tone="plain"] {
+  --notice-accent: transparent;
+}
+.notice p {
+  margin: 4px 0 10px;
+}
+.tabs {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-top: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 6px 6px 0 0;
+  background: none;
+  padding: 9px 12px;
+  white-space: nowrap;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tabs button:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.tabs button[aria-selected="true"] {
+  color: var(--text);
+}
+.tabs button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+.tab-count {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tab-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--active-tab-width);
+  height: 2px;
+  background: var(--text);
+  transform: translateX(var(--active-tab-left));
+  transition:
+    transform 0.18s ease,
+    width 0.18s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-indicator {
+    transition: none;
+  }
+}
+[role="tabpanel"] {
+  padding-top: 14px;
+}
+[role="tabpanel"] > :first-child {
+  margin-top: 0;
+}
+/* Activity scrolls right up to the tabs; its gap is inside the scroller instead. */
+.activity-panel {
+  --activity-top-pad: 14px;
+  padding-top: 0;
+}
+.activity-panel:has(.activity-group[data-first]) {
+  --activity-top-pad: 2px;
+}
+/* Subtract the first row's 12px padding, or 7px for compact rows. */
+.activity-panel:has(
+  .activity-group[data-first]:is(
+      .activity-tool,
+      .activity-operation,
+      .activity-status
+    )
+) {
+  --activity-top-pad: 7px;
+}
+.activity-panel .activity-viewport {
+  padding-top: var(--activity-top-pad);
+}
+.empty {
+  padding: 60px 12px;
+  text-align: center;
+  max-width: 380px;
+  margin: auto;
+}
+.empty p {
+  color: var(--muted);
+}
+.event {
+  display: grid;
+  grid-template-columns: 65px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+time {
+  font-size: 11px;
+  color: var(--muted);
+  padding-top: 2px;
+}
+pre {
+  font:
+    11px/1.6 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 12px;
+  max-height: 320px;
+  overflow: auto;
+  margin: 8px 0;
+}
+.diff-line {
+  display: block;
+}
+.diff-line.add {
+  color: var(--accent);
+}
+.diff-line.remove {
+  color: var(--warn);
+}
+.report p {
+  margin-top: 0;
+}
+.report ul {
+  padding-left: 18px;
+}
+.facts {
+  display: grid;
+  /* Labels keep to one line; the value column takes the remaining room. */
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 16px;
+  font-size: 11px;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+}
+.facts dt {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.facts dd {
+  margin: 0;
+  color: var(--text);
+}
+.artifact {
+  margin-bottom: 14px;
+}
+.artifact-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.artifact-head strong {
+  flex: 1;
+}
+.banner {
+  padding: 8px 18px;
+  background: var(--surface);
+  font-size: 12px;
+  border-bottom: 1px solid var(--line);
+}
+#error {
+  color: var(--warn);
+}
+label {
+  display: block;
+  font-size: 12px;
+  margin: 12px 0 5px;
+}
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  padding: 8px;
+}
+textarea {
+  resize: vertical;
+  min-height: 95px;
+}
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+.form-error {
+  color: var(--warn);
+  margin-top: 10px;
+  font-size: 12px;
+}
+.help {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 0;
+}
+.form-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+.back {
+  display: none;
+  padding: 2px;
+}
+
+/* Project dropdown default; the context bar and narrow rules override it. */
+.select-trigger {
+  width: 100%;
+  padding: 8px;
+}

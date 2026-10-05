@@ -4,18 +4,18 @@ The delegation panel is the only UI. It runs embedded in a host and in a regular
 
 ## Module boundaries
 
-| Directory or file                                                               | Responsibility                                                                                                      |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `ui/core/types.ts`                                                              | UI snapshots, dialog variants, and the transport contract; task/event/artifact models reuse server types.           |
-| `ui/core/controller.ts`                                                         | Async requests, refresh scheduling, selection, navigation, scope changes, and submission lifecycle.                 |
-| `ui/core/initial-state.ts`, `ui/core/delegation.ts`, `ui/core/event-history.ts` | Route initialization, delegation defaults, and bounded event pagination.                                            |
-| `ui/core/selectors.ts`                                                          | Pure derived values, filtering, formatting, and capability decisions.                                               |
-| `ui/transports/`                                                                | Console HTTP/SSE, MCP host bridge, and read-only fixture preview implementations.                                   |
-| `ui/components/`                                                                | Focused presentation and interactions: task lists, status, actions, inspector sections, evidence tabs, and dialogs. |
-| `ui/forms/`                                                                     | Form drafts, validation, and explicit submission; reusable fields and footer live beside the forms.                 |
-| `ui/shells/`                                                                    | Page composition.                                                                                                   |
-| `ui/components/controller-context.tsx`                                          | Controller access and React subscriptions through `useSyncExternalStore`.                                           |
-| `ui/styles/shared.css`, `ui/styles/app.css`                                     | Shared component styling (partials in `ui/styles/shared/`) and the theme and layout rules.                          |
+| Directory or file                                                               | Responsibility                                                                                                        |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `ui/core/types.ts`                                                              | UI snapshots, dialog variants, and the transport contract; task/event/artifact models reuse server types.             |
+| `ui/core/controller.ts`                                                         | Async requests, refresh scheduling, selection, navigation, scope changes, and submission lifecycle.                   |
+| `ui/core/initial-state.ts`, `ui/core/delegation.ts`, `ui/core/event-history.ts` | Route initialization, delegation defaults, and bounded event pagination.                                              |
+| `ui/core/selectors.ts`                                                          | Pure derived values, filtering, formatting, and capability decisions.                                                 |
+| `ui/transports/`                                                                | Console HTTP/SSE, MCP host bridge, and read-only fixture preview implementations.                                     |
+| `ui/components/`                                                                | Focused presentation and interactions: task lists, status, actions, inspector sections, evidence tabs, and dialogs.   |
+| `ui/forms/`                                                                     | Form drafts, validation, and explicit submission; reusable fields and footer live beside the forms.                   |
+| `ui/shells/`                                                                    | Page composition.                                                                                                     |
+| `ui/components/controller-context.tsx`                                          | Controller access and React subscriptions through `useSyncExternalStore`.                                             |
+| `ui/styles/app.css`                                                             | The one stylesheet: an `@import` index over `theme.css`, `base.css`, `surfaces/` (layout) and `shared/` (components). |
 
 The controller owns durable UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access.
 
@@ -48,7 +48,7 @@ Buttons use `<Button>` from `ui/components/button.tsx`, with a `variant`:
 ## Extending the UI
 
 - Add a component when a section has a clear responsibility, reused presentation, or an independent interaction. Compose these sections in the inspector or shell; avoid moving networking or scope bookkeeping into JSX.
-- Reuse the selection fields for new dropdowns and the existing project autocomplete for editable project suggestions. Keep primitive styling in the matching `ui/styles/shared/*.css` partial (listed in cascade order by `shared.css`); define surface colors through CSS variables in `ui/styles/app.css`.
+- Reuse the selection fields for new dropdowns and the existing project autocomplete for editable project suggestions. Keep primitive styling in the matching `ui/styles/shared/*.css` partial (listed in cascade order by `app.css`); define surface colors through CSS variables in `ui/styles/theme.css`, and put panel layout in `ui/styles/surfaces/`.
 - Add a form for a new user-reviewed operation. Share fields and footers, declare its typed dialog variant, export a `defineDialog` definition (title, render, optional initial focus) from the form, and register it in `ui/forms/dialog-registry.ts`; `DialogHost` stays a generic shell. Submit through `controller.submit` to retain busy/error handling and the scope captured when the dialog opened. Send messages or execute tools only after the user submits.
 - Add a selector for a pure calculation shared across views. Keep transport calls and mutation outside selectors.
 - Add a transport when the connection mechanism changes. Implement `Transport` and deliver `TransportEvents`; select it in bootstrap. Rendering and forms should not branch on HTTP versus MCP tool envelopes.

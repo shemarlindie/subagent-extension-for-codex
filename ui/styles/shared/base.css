@@ -1,4 +1,4 @@
-/* Shared React/Base UI structure; surface styles retain their existing themes. */
+/* Shared React/Base UI structure: toolbar, tooltips, dialogs and tab details. */
 :root {
   /* A quiet ring: visible to keyboard users without shouting. */
   --focus-ring: 1px solid
@@ -9,15 +9,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.toolbar-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 32px;
-  height: 32px;
-  padding: 5px;
 }
 .tooltip-positioner {
   z-index: 20;

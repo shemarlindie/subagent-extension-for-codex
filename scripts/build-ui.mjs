@@ -62,10 +62,7 @@ async function inlineImports(file) {
   if (chunks.length !== 1)
     throw new Error(`Expected one bundle chunk, got ${chunks.length}`);
 
-  const css =
-    (await readFile(stylesheet, "utf8")) +
-    "\n" +
-    (await inlineImports("ui/styles/shared.css"));
+  const css = await inlineImports(stylesheet);
 
   const html = (await readFile(template, "utf8"))
     .replace("/*__CSS__*/", () => css)
