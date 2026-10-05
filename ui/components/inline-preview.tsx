@@ -1,4 +1,7 @@
+import { useLayoutEffect } from "react";
+
 import { failedStatus, locked, terminal } from "../core/selectors";
+import { traceSize } from "../core/size-trace";
 import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
 import { Icon } from "./icons";
@@ -9,6 +12,14 @@ import { TooltipWrapper } from "./tooltip";
 export function InlinePreview() {
   const controller = useController(),
     state = useSnapshot();
+
+  // DEBUG: Measure the first compact commit and the next frame during panel sizing diagnosis.
+  useLayoutEffect(() => {
+    traceSize("compact-render-committed");
+    const frame = requestAnimationFrame(() => traceSize("compact-next-frame"));
+
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   // Summarize the whole scope, independent of the expanded view's list filters.
   const tasks = state.tasks.filter(

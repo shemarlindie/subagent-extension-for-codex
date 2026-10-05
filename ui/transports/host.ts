@@ -4,7 +4,17 @@ import {
   applyHostStyleVariables,
 } from "@modelcontextprotocol/ext-apps";
 
+import { traceSize } from "../core/size-trace";
 import type { PanelData, Transport, TransportEvents } from "../core/types";
+
+// DEBUG: Trace the SDK's outgoing sizes without replacing its resize observer.
+class SizeTracingApp extends App {
+  override sendSizeChanged(params: Parameters<App["sendSizeChanged"]>[0]) {
+    traceSize("size-notification", params);
+
+    return super.sendSizeChanged(params);
+  }
+}
 
 export class HostTransport implements Transport {
   readonly embedded = true;
@@ -12,7 +22,8 @@ export class HostTransport implements Transport {
   private disposed = false;
   private events?: TransportEvents;
   constructor(
-    private app = new App(
+    // DEBUG: Use the tracing subclass until the panel sizing investigation is complete.
+    private app: App = new SizeTracingApp(
       { name: "Delegated work", version: "0.1.0" },
       {},
       { autoResize: true },
@@ -21,9 +32,13 @@ export class HostTransport implements Transport {
 
   async connect(events: TransportEvents) {
     this.events = events;
+    // DEBUG: Compare handshake timing with the first compact render and size notification.
+    traceSize("bridge-connect-start");
 
     this.app.ontoolresult = (result) => {
       if (!this.disposed) {
+        // DEBUG: Mark when task data arrives without recording its contents.
+        traceSize("tool-result-received");
         const data = result.structuredContent as PanelData;
         events.scope(data);
       }
@@ -39,6 +54,8 @@ export class HostTransport implements Transport {
     };
 
     await this.app.connect();
+    // DEBUG: Automatic resize reporting starts after this handshake completes.
+    traceSize("bridge-connected");
     if (this.disposed) return;
     if (!this.app.getHostCapabilities()?.serverTools)
       throw new Error("This host does not support the console’s MCP tools.");
@@ -52,6 +69,8 @@ export class HostTransport implements Transport {
     if (context?.styles?.variables)
       applyHostStyleVariables(context.styles.variables);
     const displayMode = context?.displayMode ?? "inline";
+    // DEBUG: Correlate host mode changes with viewport and card measurements.
+    traceSize("host-context", { displayMode });
     const capabilities = this.app.getHostCapabilities();
 
     this.events?.host({

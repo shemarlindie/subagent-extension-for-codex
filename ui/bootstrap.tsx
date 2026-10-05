@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { ControllerContext } from "./components/controller-context";
 import { Controller } from "./core/controller";
+import { traceSize } from "./core/size-trace";
 import { detectEnvironment } from "./environment";
 import { AppShell } from "./shells/app-shell";
 import { ConsoleTransport } from "./transports/console";
@@ -11,6 +12,8 @@ import { PreviewTransport } from "./transports/preview";
 
 export function mount() {
   const environment = detectEnvironment();
+  // DEBUG: Timestamp startup before the host bridge connects or React renders.
+  if (environment.kind === "host") traceSize("bootstrap-start");
 
   // Only a host supplies a theme; a standalone page follows the system setting.
   if (environment.kind === "http") {
