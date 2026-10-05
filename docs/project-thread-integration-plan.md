@@ -1,4 +1,4 @@
-# Project and chat aware delegation panel
+# Project and chat context for Delegated Work
 
 October 2, 2026. Requested outcome: asking Claude to review work opens delegated
 work beside the chat with the correct repository and new task active; New task

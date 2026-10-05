@@ -217,9 +217,21 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       (t) => t.name === "open_codex_subagent_extension",
     )!;
 
+    assert.equal(opener.title, "Delegated Work");
+
     assert.equal(
       (opener._meta as any).ui.resourceUri,
       "ui://codex-subagent-extension/app-v6",
+    );
+
+    const resources = await client.listResources();
+
+    assert.ok(
+      resources.resources.some(
+        (resource) =>
+          resource.name === "Delegated Work" &&
+          resource.uri === "ui://codex-subagent-extension/app-v6",
+      ),
     );
 
     assert.deepEqual(
@@ -318,6 +330,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     )!;
 
     assert.ok(globalOpener);
+    assert.equal(globalOpener.title, "Delegated Work");
     assert.deepEqual(globalOpener.icons, opener.icons);
 
     assert.deepEqual(globalOpener._meta?.ui, {

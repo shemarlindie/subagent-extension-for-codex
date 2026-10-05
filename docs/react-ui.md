@@ -1,6 +1,6 @@
 # React UI architecture
 
-The delegation panel is the only UI. It runs embedded in a host and in a regular browser tab against the HTTP service. One entrypoint (`ui/entries/app.ts`) builds one page, `dist/app.html`. At runtime `ui/environment.ts` picks the transport from where the page renders (an iframe uses the host bridge, a top-level page with an injected API origin uses HTTP, `?preview=1` uses fixtures, anything else shows "Open through MCP"), and `ui/bootstrap.tsx` creates the controller and mounts the shell. Service APIs, MCP resources, standalone routes, and fixture preview remain the integration boundaries.
+Delegated Work is the only UI. It runs embedded in a host and in a regular browser tab against the HTTP service. One entrypoint (`ui/entries/app.ts`) builds one page, `dist/app.html`. At runtime `ui/environment.ts` picks the transport from where the page renders (an iframe uses the host bridge, a top-level page with an injected API origin uses HTTP, `?preview=1` uses fixtures, anything else shows "Open through MCP"), and `ui/bootstrap.tsx` creates the controller and mounts the shell. Service APIs, MCP resources, standalone routes, and fixture preview remain the integration boundaries.
 
 ## Module boundaries
 

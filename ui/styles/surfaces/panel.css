@@ -35,6 +35,10 @@ small {
 header .brand {
   min-width: 0;
 }
+/* Center the global status against the toolbar actions. */
+header .brand-global {
+  align-self: stretch;
+}
 .brand-text {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,4 @@
-# Embedded Codex delegation panel
+# Embedded Delegated Work app
 
 The shared frontend architecture is documented in [React UI architecture](react-ui.md).
 

@@ -938,7 +938,7 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
     ),
   );
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   const model = screen.getByLabelText("Model") as HTMLInputElement;
   assert.equal(model.placeholder, "limited-model");
@@ -992,7 +992,7 @@ test("runtime default model metadata blocks unsupported effort and permits nativ
     ]),
   );
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Check native default metadata");
   assert.equal((screen.getByLabelText("Model") as HTMLInputElement).value, "");
@@ -1043,7 +1043,7 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
     ]),
   );
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Use custom model ID");
   await user.type(screen.getByLabelText("Model"), "custom-model");
@@ -1068,7 +1068,7 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
 
 test("model selection retains unsupported Codex effort on Claude and blocks submission until corrected", async (t) => {
   const { transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Investigate effort selection");
   await selectOption(user, "Worker", "codex · reviewer");
@@ -1111,7 +1111,7 @@ test("model selection rejects unsupported inherited Claude effort and accepts an
     configureModelDefaults(transport, { default_reasoning_effort: "none" }),
   );
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Investigate inherited effort");
 
@@ -1158,7 +1158,7 @@ test("model selection updates role and provider defaults while preserving explic
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   const field = screen.getByLabelText("Model") as HTMLInputElement;
   assert.equal(field.placeholder, "review-model");
@@ -1361,7 +1361,7 @@ test("delegation submits the full request without a title and search matches des
 
   assertAbsent(screen.queryByRole("button", { name: /^Other task/ }));
   await act(() => controller.setSearch(""));
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   assertAbsent(screen.queryByLabelText("Task title"));
 
   const request =
@@ -1400,7 +1400,7 @@ test("inline preview expands and collapses while preserving the selected task", 
   await act(() => controller.select("two"));
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByText("Running", { exact: true }));
-  assertAbsent(screen.queryByRole("button", { name: "New task" }));
+  assertAbsent(screen.queryByRole("button", { name: "New Task" }));
   assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
 
   assertAbsent(
@@ -1410,7 +1410,7 @@ test("inline preview expands and collapses while preserving the selected task", 
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   assert.equal(transport.expandCalls, 1);
   assert.equal(controller.getSnapshot().selected, "two");
-  assert.ok(screen.getByRole("button", { name: "New task" }));
+  assert.ok(screen.getByRole("button", { name: "New Task" }));
 
   assert.equal(
     screen.getByRole("heading", { level: 1 }).textContent,
@@ -1455,13 +1455,26 @@ test("the header menu offers the secondary actions and runs them", async (t) => 
 test("a thread panel leaves global actions to global launches", async (t) => {
   const { controller, user } = await setup(t);
 
+  assert.ok(document.querySelector("header .brand-global"));
+  assertAbsent(document.querySelector("header .brand .mark"));
+  assertAbsent(document.querySelector("header .brand-text strong"));
+  assert.ok(document.querySelector("header .brand [role=status]"));
+
   await act(() =>
     controller.applyScope({ panel_scope: { conversation_id: "thread" } }),
   );
 
+  assertAbsent(document.querySelector("header .brand-global"));
+  assert.ok(document.querySelector("header .brand .mark"));
+
+  assert.equal(
+    document.querySelector("header .brand-text strong")?.textContent,
+    "Delegated Work",
+  );
+
   assertAbsent(screen.queryByRole("button", { name: "Project" }));
   assertAbsent(screen.queryByRole("button", { name: "Settings" }));
-  assertAbsent(screen.queryByRole("button", { name: "New task" }));
+  assertAbsent(screen.queryByRole("button", { name: "New Task" }));
   await user.click(screen.getByRole("button", { name: "More actions" }));
 
   assert.deepEqual(
@@ -1481,7 +1494,7 @@ test("inline host without expansion offers the chat controls fallback", async (t
 
   assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   assert.ok(screen.getByText("Expand this app using the chat controls."));
-  assertAbsent(screen.queryByRole("button", { name: "New task" }));
+  assertAbsent(screen.queryByRole("button", { name: "New Task" }));
 });
 
 test("failed expansion keeps the inline preview and displays the host error", async (t) => {
@@ -1512,7 +1525,7 @@ test("failed expansion keeps the inline preview and displays the host error", as
 
 test("host collapse preserves a delegation draft until scope changes", async (t) => {
   const { controller, transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   const field = await screen.findByLabelText("Description");
   await user.type(field, "Preserve this suspended draft");
   const dialogState = controller.getSnapshot().dialog;
@@ -1544,7 +1557,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   assert.equal(controller.getSnapshot().dialog, undefined);
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   assertAbsent(screen.queryByRole("dialog"));
-  await user.click(screen.getAllByRole("button", { name: "New task" })[0]);
+  await user.click(screen.getAllByRole("button", { name: "New Task" })[0]);
   await screen.findByRole("dialog");
 
   assert.equal(
@@ -1568,7 +1581,7 @@ describe("nonembedded panels retain the full interface in inline mode", () => {
       { displayMode: "inline" },
     );
 
-    assert.ok(screen.getByRole("button", { name: "New task" }));
+    assert.ok(screen.getByRole("button", { name: "New Task" }));
     assert.ok(screen.getByRole("region", { name: "Task inspector" }));
     assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   });
@@ -1652,7 +1665,7 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
     assert.ok(screen.getByRole("region", { name: "Delegated Work preview" }));
     assert.equal(screen.getByRole("status").textContent, "Connecting…");
     assertAbsent(screen.queryByText("No delegated tasks yet."));
-    assertAbsent(screen.queryByRole("button", { name: "New task" }));
+    assertAbsent(screen.queryByRole("button", { name: "New Task" }));
   });
 });
 
@@ -1804,7 +1817,7 @@ test("search clears with Escape and focuses with the slash key", async (t) => {
   await user.keyboard("{Escape}");
   assert.notEqual(document.activeElement, search);
   // Typing a slash in another text field leaves the shortcut alone.
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await enterTask(user, "a/b");
   assert.notEqual(document.activeElement, search);
 });
@@ -1917,7 +1930,7 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
 
 test("dialog focuses task, preserves the draft and field node during refresh, and restores trigger focus", async (t) => {
   const { controller, transport, user } = await setup(t);
-  const trigger = screen.getByRole("button", { name: "New task" });
+  const trigger = screen.getByRole("button", { name: "New Task" });
   await user.click(trigger);
   const field = await screen.findByLabelText("Description");
 
@@ -1956,7 +1969,7 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
 
 test("task form keeps fractional runtime defaults and rejects cost budgets for unsupported workers", async (t) => {
   const { transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
 
   assert.equal(
@@ -2017,7 +2030,7 @@ test("changing projects clears revision and dependencies while retaining the tas
     transport.tasks.push(task("two", "/repo/b"));
   });
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await selectOption(user, "Project", "/repo/a");
   await enterTask(user, "Persistent task");
@@ -2451,7 +2464,7 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
 
 test("delegation selects support keyboard choice and Escape preserves the draft dialog", async (t) => {
   const { user, transport } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Keyboard worker selection");
   const worker = screen.getByRole("combobox", { name: "Worker" });
@@ -2520,7 +2533,7 @@ test("dependency multiselect retains multiple choices until explicit submission"
     transport.tasks.push(second);
   });
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Wait for both reviews");
 
@@ -2559,7 +2572,7 @@ test("approved parent project suggestions allow an unlisted nested repository pa
     transport.projects.push({ repository: "/approved", kind: "parent" });
   });
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
 
   const project = screen.getByRole("combobox", {
@@ -3026,7 +3039,7 @@ test("stacked worker questions return to the first unanswered card before sendin
 
 test("zero runtime and cost budgets cannot launch a task", async (t) => {
   const { transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Budget validation");
   const runtime = screen.getByLabelText("Runtime limit · minutes");
@@ -3097,7 +3110,7 @@ test("permission buttons allow explicit approval without a dropdown", async (t) 
 
 test("current repository selection locks revision to HEAD and submits the checkout strategy", async (t) => {
   const { transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   const revision = screen.getByLabelText("Revision") as HTMLInputElement;
   assert.equal(revision.value, "HEAD");
@@ -3142,7 +3155,7 @@ test("current repository selection locks revision to HEAD and submits the checko
 
 test("delegation defaults to inherited native permissions and separately selects the approval decision maker", async (t) => {
   const { user, transport } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
 
   assert.equal(
@@ -3565,7 +3578,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Review this new project with my draft intact");
   await selectOption(user, "Worker", "codex · reviewer");
@@ -3645,7 +3658,7 @@ test("task project registration failure preserves the selected project and draft
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Keep this description after registration failure");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
@@ -3672,7 +3685,7 @@ test("cancelling the task project picker preserves selection and task draft with
     configureProjectRegistration(transport),
   );
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Preserve task while browsing");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
@@ -3734,7 +3747,7 @@ test("pending task project browsing disables Start and ignores selection after s
     };
   });
 
-  await user.click(screen.getByRole("button", { name: "New task" }));
+  await user.click(screen.getByRole("button", { name: "New Task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "A pending folder selection");
 

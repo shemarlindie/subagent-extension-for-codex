@@ -133,7 +133,7 @@ Reload/restart the Codex client or MCP connection as required by your installed 
 
 Expected: Claude worker profiles are discoverable and settings are readable. Tool names may have a client-specific server prefix. Successful tool discovery alone does not prove native execution.
 
-The supplied `plugin.json`, `mcp.json`, and delegation skill provide an alternative packaging route. Direct MCP configuration above is sufficient for this first check. The local stdio proxy exposes task tools and the same `app-v6` delegation panel and global/thread entrypoint metadata as HTTP. Call `open_codex_subagent_extension` to open the panel, then expand it into the conversation side panel if the host initially displays it inline. Native launch placement still needs verification in the installed host; HTTP rich forms and events are separate capabilities.
+The supplied `plugin.json`, `mcp.json`, and delegation skill provide an alternative packaging route. Direct MCP configuration above is sufficient for this first check. The local stdio proxy exposes task tools and the same `app-v6` Delegated Work app and global/thread entrypoint metadata as HTTP. Call `open_codex_subagent_extension` to open the app, then expand it into the conversation side panel if the host initially displays it inline. Native launch placement still needs verification in the installed host; HTTP rich forms and events are separate capabilities.
 
 ### A5. Try one small native task
 

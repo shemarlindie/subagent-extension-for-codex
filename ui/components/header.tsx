@@ -44,10 +44,10 @@ export function Header() {
 
   return (
     <header>
-      <div className="brand">
-        <Icon name="worker" size={20} className="mark" />
+      <div className={`brand${threadMode ? "" : " brand-global"}`}>
+        {threadMode && <Icon name="worker" size={20} className="mark" />}
         <div className="brand-text">
-          <strong>Delegated Work</strong>
+          {threadMode && <strong>Delegated Work</strong>}
           {status}
         </div>
       </div>

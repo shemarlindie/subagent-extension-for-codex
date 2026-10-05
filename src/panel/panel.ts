@@ -81,7 +81,7 @@ export function delegationPanel(
         content: [
           {
             type: "text" as const,
-            text: "Delegation panel ready. Use list_agent_tasks to retrieve tasks.",
+            text: "Delegated Work ready. Use list_agent_tasks to retrieve tasks.",
           },
         ],
         structuredContent: {
@@ -102,11 +102,11 @@ export function delegationPanel(
         _meta: { conversation_id: resolved.panel_scope.conversation_id },
       };
     },
-    title: "Delegation panel",
+    title: "Delegated Work",
     // The panel uses the authenticated bridge; no browser credentials are needed.
     resource: {
       description:
-        "Embedded delegation panel using the portable MCP Apps bridge",
+        "Embedded Delegated Work app using the portable MCP Apps bridge",
       mimeType: RESOURCE_MIME_TYPE,
       _meta: resourceMeta,
     },

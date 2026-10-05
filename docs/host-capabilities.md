@@ -8,7 +8,7 @@ repository; it is not a claim that every host/version implements every feature.
 Rechecked October 2, 2026 against the official OpenAI developer documentation
 and its linked OpenAI extension specification and SDK. In this project, the
 target host is **Codex inside the ChatGPT desktop app**. The user has confirmed
-that the thread-specific delegation panel is present and works there. This
+that the thread-specific Delegated Work app is present and works there. This
 confirms that surface in their installation, not every mode or bridge feature.
 
 | Mode         | Presentation                                                      | Current documentation evidence                                                                                     |
