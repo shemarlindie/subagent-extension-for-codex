@@ -15,6 +15,7 @@
     border-right: 0;
   }
   .detail {
+    --detail-pad: 18px;
     padding: 18px;
   }
   body[data-selected="true"] aside {
@@ -35,8 +36,8 @@
   }
   /* Tabs run edge to edge, scrolling past the content margin and resting inside it. */
   .tabs {
-    margin-inline: calc(-1 * var(--detail-pad, 18px));
-    padding-inline: var(--detail-pad, 18px);
+    margin-inline: calc(-1 * var(--detail-pad));
+    padding-inline: var(--detail-pad);
   }
   header {
     padding: 12px;

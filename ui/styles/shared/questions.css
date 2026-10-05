@@ -12,7 +12,7 @@
 }
 .question-count {
   font-size: 12px;
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 .question-steps {
@@ -25,21 +25,21 @@
   align-items: center;
   gap: 4px;
   padding: 2px 9px;
-  border: 1px solid var(--line, #2e3e50);
+  border: 1px solid var(--line);
   border-radius: 999px;
   background: transparent;
   font-size: 11px;
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
 }
 .question-step[data-answered] {
-  color: var(--text, var(--fg, #dce7f5));
+  color: var(--text);
 }
 .question-step[data-answered] svg {
-  color: var(--accent, #d4e69b);
+  color: var(--success);
 }
 .question-step[aria-current="step"] {
-  border-color: var(--accent, #d4e69b);
-  color: var(--text, var(--fg, #dce7f5));
+  border-color: var(--accent);
+  color: var(--text);
 }
 /*
  * Every card shares one grid cell, so the deck is as tall as its tallest card
@@ -49,7 +49,7 @@
   --peek-step: 7px;
   display: grid;
   margin-top: 8px;
-  padding-bottom: calc(var(--peek, 0) * var(--peek-step));
+  padding-bottom: calc(var(--peek) * var(--peek-step));
 }
 .question-card {
   grid-area: 1 / 1;
@@ -58,9 +58,9 @@
   flex-direction: column;
   min-width: 0;
   padding: 14px;
-  border: 1px solid var(--line, #2e3e50);
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--bg, #111c2b);
+  background: var(--bg);
   transform-origin: 50% 100%;
   transition:
     transform var(--motion-slow) var(--ease-out),
@@ -79,8 +79,8 @@
   z-index: calc(3 - var(--depth));
   background: color-mix(
     in srgb,
-    var(--surface, #172334) calc(100% - var(--depth) * 25%),
-    var(--bg, #111c2b)
+    var(--surface) calc(100% - var(--depth) * 25%),
+    var(--bg)
   );
   transform: translateY(calc(var(--depth) * var(--peek-step)))
     scale(calc(1 - var(--depth) * 0.04));
@@ -112,17 +112,17 @@
   margin-bottom: 8px;
   padding: 1px 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent, #d4e69b) 16%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent, #d4e69b);
+  color: var(--accent);
 }
 .question-hint {
   flex: none;
   margin-left: auto;
   font-size: 11px;
   white-space: nowrap;
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
 }
 .question-card .question-text {
   flex: 1;
@@ -142,7 +142,7 @@
   gap: 10px;
   margin: 0;
   padding: 9px 11px;
-  border: 1px solid var(--line, #2e3e50);
+  border: 1px solid var(--line);
   border-radius: 8px;
   font-size: inherit;
   color: inherit;
@@ -152,12 +152,12 @@
     border-color var(--motion-fast) ease;
 }
 .question-option:hover {
-  background: var(--hover, #1e3047);
+  background: var(--hover);
 }
 .question-option:has(input:checked),
 .question-other[data-filled] {
-  border-color: var(--accent, #d4e69b);
-  background: color-mix(in srgb, var(--accent, #d4e69b) 8%, transparent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .question-option:has(input:focus-visible) {
   outline: var(--focus-ring);
@@ -167,7 +167,7 @@
   width: auto;
   margin: 0;
   padding: 0;
-  accent-color: var(--accent, #d4e69b);
+  accent-color: var(--accent);
 }
 .question-option-text {
   display: grid;
@@ -179,7 +179,7 @@
 }
 .question-option-description {
   font-size: 12px;
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
 }
 .question-form .question-other {
   padding: 0;
@@ -209,7 +209,7 @@
   font-size: 12px;
 }
 .question-actions [role="status"] {
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
   animation: motion-fade var(--motion-base) var(--ease-out);
 }
 .question-nav {
@@ -231,7 +231,7 @@
 }
 
 .settings-group {
-  border: 1px solid var(--line, #2e3e50);
+  border: 1px solid var(--line);
   border-radius: 8px;
   margin: 0 0 8px;
 }
@@ -264,7 +264,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
 }
 .settings-group-trigger[data-panel-open] .settings-group-summary {
   visibility: hidden;
@@ -274,6 +274,6 @@
   border-radius: 999px;
   padding: 1px 8px;
   font-size: 11px;
-  background: var(--accent, #d4e69b);
-  color: var(--bg, #111c2b);
+  background: var(--accent);
+  color: var(--bg);
 }

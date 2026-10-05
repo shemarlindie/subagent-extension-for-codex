@@ -8,7 +8,7 @@
       "interface": {
         "displayName": "Codex subagent extension",
         "shortDescription": "Delegate, inspect, and control Claude coding tasks",
-        "brandColor": "#d4e69b"
+        "brandColor": "#3a83f7"
       }
     }
   }

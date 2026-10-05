@@ -26,13 +26,13 @@ textarea {
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: var(--muted, #8392a7);
+  color: var(--muted);
   font-size: inherit;
   cursor: pointer;
 }
 .text-button:hover {
   background: transparent;
-  color: var(--text, #dce7f5);
+  color: var(--text);
 }
 .text-button:focus-visible {
   outline: var(--focus-ring);

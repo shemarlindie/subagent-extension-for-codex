@@ -19,6 +19,6 @@
   width: 10px;
   height: 10px;
   transform: translateY(-50%);
-  color: var(--muted, #8392a7);
+  color: var(--muted);
   pointer-events: none;
 }

@@ -105,8 +105,9 @@
   --line: var(--color-border-primary);
   --hover: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
   --danger: var(--color-text-danger);
-  /* Not in the host palette. */
-  --accent: #256c51;
+  --success: var(--color-text-success);
+  /* Keep the extension accent aligned with Codex's primary ring color. */
+  --accent: var(--color-ring-primary);
   --warn: #925e17;
   --status-paused: var(--warn);
   --radius: 8px;
@@ -162,6 +163,5 @@
     var(--color-text-primary) 10%,
     transparent
   );
-  --accent: #8bd8b5;
   --warn: #edbc74;
 }

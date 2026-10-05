@@ -202,15 +202,17 @@ aside {
   background: var(--muted);
   flex-shrink: 0;
 }
-.dot.running,
+.dot.running {
+  background: var(--success);
+}
 .dot.completed {
-  background: var(--accent);
+  background: var(--success);
 }
 .dot.waiting {
   background: var(--warn);
 }
 .dot.failed {
-  background: var(--danger, var(--warn));
+  background: var(--danger);
 }
 .detail {
   padding: 22px 24px;
@@ -410,7 +412,7 @@ pre {
   display: block;
 }
 .diff-line.add {
-  color: var(--accent);
+  color: var(--success);
 }
 .diff-line.remove {
   color: var(--warn);

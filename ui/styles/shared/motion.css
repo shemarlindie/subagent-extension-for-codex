@@ -60,8 +60,7 @@
 /* The same glow for timeline dots, whose halo is an opaque shadow that hides the rail. */
 @keyframes motion-glow-rail {
   50% {
-    box-shadow: 0 0 0 3px
-      color-mix(in srgb, var(--dot-color) 30%, var(--bg, #111c2b));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 30%, var(--bg));
   }
 }
 @keyframes motion-ping-fade {

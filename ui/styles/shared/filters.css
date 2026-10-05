@@ -37,8 +37,8 @@
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
 .filter-count[data-alert] {
-  background: var(--warn, #d9a441);
-  color: var(--bg, #111c2b);
+  background: var(--warn);
+  color: var(--bg);
 }
 .list-count {
   display: inline-flex;
@@ -50,7 +50,7 @@
   gap: 4px 8px;
 }
 .actions-separator {
-  color: var(--muted, #8392a7);
+  color: var(--muted);
 }
 .actions .text-button:disabled {
   opacity: 0.5;

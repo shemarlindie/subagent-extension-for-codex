@@ -91,7 +91,7 @@
   }
   .setting-row,
   .model-table {
-    border-top: 1px solid var(--line, #2e3e50);
+    border-top: 1px solid var(--line);
   }
   .setting-row {
     padding: 10px 0;
@@ -133,7 +133,7 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
 }
 /* An amount under a limit that is off is disabled and recedes. */
 .setting-amount[data-off] {
@@ -141,7 +141,7 @@
 }
 /* Marks a value the form refused to save, once the user has edited it. */
 .settings-form input:user-invalid {
-  border-color: var(--warn, #f0a37a);
+  border-color: var(--warn);
 }
 /* A fixed unit width lines up amounts across rows. */
 .setting-unit {
@@ -162,12 +162,12 @@ input[type="number"]::-webkit-inner-spin-button {
   height: 18px;
   padding: 2px;
   border-radius: 999px;
-  background: var(--line, #2e3e50);
+  background: var(--line);
   cursor: pointer;
-  transition: background-color var(--motion-fast, 120ms) ease;
+  transition: background-color var(--motion-fast) ease;
 }
 .switch[data-checked] {
-  background: var(--accent, #d4e69b);
+  background: var(--accent);
 }
 .switch:focus-visible {
   outline: var(--focus-ring);
@@ -177,8 +177,8 @@ input[type="number"]::-webkit-inner-spin-button {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--bg, #111c2b);
-  transition: transform var(--motion-fast, 120ms) var(--ease-out, ease);
+  background: var(--bg);
+  transition: transform var(--motion-fast) var(--ease-out);
 }
 .switch-thumb[data-checked] {
   transform: translateX(12px);
@@ -197,14 +197,14 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 .model-table-head span {
   font-size: 11px;
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
 }
 .model-table-row > .help {
   grid-column: 1 / -1;
   margin: 0;
 }
 .help.warn {
-  color: var(--warn, #f0a37a);
+  color: var(--warn);
 }
 @container (max-width: 380px) {
   .model-table {
@@ -222,7 +222,7 @@ input[type="number"]::-webkit-inner-spin-button {
   font:
     11px ui-monospace,
     monospace;
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
 }
 
 .project-path-entry {

@@ -21,7 +21,7 @@
   cursor: pointer;
 }
 .notice-trigger:hover {
-  background: color-mix(in srgb, var(--hover, #1e3047) 60%, transparent);
+  background: color-mix(in srgb, var(--hover) 60%, transparent);
 }
 .notice-static,
 .notice-static:hover {
@@ -56,7 +56,7 @@
 }
 .notice-caret {
   flex: none;
-  color: var(--muted, #8fa5c1);
+  color: var(--muted);
   transition: transform var(--motion-base) var(--ease-out);
 }
 .notice-trigger[data-panel-open] .notice-caret {
