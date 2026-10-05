@@ -330,7 +330,7 @@ test("unconfirmed shutdown shows a heavy warning question mark", (t) => {
 
   const icon = view.getByRole("img", { name: "Shutdown unconfirmed" });
   assert.ok(icon.classList.contains("unconfirmed"));
-  assert.equal(icon.getAttribute("stroke-width"), "3");
+  assert.equal(icon.getAttribute("stroke-width"), "4");
 });
 
 test("terminal states and input requests take precedence over stale activity", (t) => {

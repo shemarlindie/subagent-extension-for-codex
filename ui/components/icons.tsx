@@ -1,181 +1,180 @@
 import type { ReactNode, SVGProps } from "react";
 
 interface IconDefinition {
-  /** Tight bounds of the icon geometry before its stroke is applied. */
-  bounds: readonly [left: number, top: number, right: number, bottom: number];
   /** Path data drawn with the icon's stroke. */
   path?: string;
   /** Extra shapes drawn before the path, such as filled dots. */
   shapes?: ReactNode;
-  strokeWidth?: number;
+  /** Stroke width in the 24 x 24 drawing space. */
+  strokeWidth: number;
 }
 
-// Keep artwork (including stroke bounds) inside this shared canvas.
+// Every glyph is drawn to fill this canvas, stroke included.
 const ICON_VIEW_BOX = "0 0 24 24";
-const ICON_VIEW_SIZE = 24;
 const DEFAULT_ICON_SIZE = 16;
 
 /**
- * Catalog of every icon in the panel. Add new glyphs here and render them with
+ * Catalog of every icon in the panel. Draw new glyphs to fill the 24 x 24 box (stroke included), add them here and render them with
  * `<Icon name="…" />` instead of writing inline `<svg>` markup.
  */
 export const ICONS = {
-  plus: { bounds: [5, 5, 19, 19], path: "M12 5v14M5 12h14", strokeWidth: 2.5 },
+  plus: {
+    path: "M12 1.818v20.364M1.818 12h20.364",
+    strokeWidth: 3.636,
+  },
   worker: {
-    bounds: [2, 3, 22, 21],
-    path: "M12 3v2M8 5h8a4 4 0 0 1 4 4v4a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4ZM2 10v4m20-4v4M9 10h.01M15 10h.01M9 14h6M8 20v1m8-1v1",
-    strokeWidth: 1.8,
+    path: "M12 2.092v2.202M7.596 4.294h8.807a4.404 4.404 0 0 1 4.404 4.404v4.404a4.404 4.404 0 0 1-4.404 4.404H7.596a4.404 4.404 0 0 1-4.404-4.404V8.697a4.404 4.404 0 0 1 4.404-4.404ZM0.991 9.798v4.404m22.018-4.404v4.404M8.697 9.798h0.011M15.303 9.798h0.011M8.697 14.202h6.606M7.596 20.807v1.101m8.807-1.101v1.101",
+    strokeWidth: 1.982,
   },
   eye: {
-    bounds: [2, 6, 22, 18],
-    path: "M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
-    strokeWidth: 1.8,
+    path: "M0.991 12s3.853-6.606 11.009-6.606 11.009 6.606 11.009 6.606-3.853 6.606-11.009 6.606-11.009-6.606-11.009-6.606Zm11.009 3.303a3.303 3.303 0 1 0 0-6.606 3.303 3.303 0 0 0 0 6.606Z",
+    strokeWidth: 1.982,
   },
   code: {
-    bounds: [4, 6, 20, 18],
-    path: "m8 8-4 4 4 4m8-8 4 4-4 4m-3-10-2 12",
-    strokeWidth: 1.8,
+    path: "m6.607 6.607-5.393 5.393 5.393 5.393m10.787-10.787 5.393 5.393-5.393 5.393m-4.045-13.483-2.697 16.18",
+    strokeWidth: 2.427,
   },
   flask: {
-    bounds: [4.5, 3, 19.5, 22],
-    path: "M9 3h6m-5 0v7l-5.5 9.3A1.8 1.8 0 0 0 6 22h12a1.8 1.8 0 0 0 1.5-2.7L14 10V3M7 17h10",
-    strokeWidth: 1.8,
+    path: "M8.538 1.038h6.923m-5.769 0v8.077l-6.346 10.731A2.077 2.077 0 0 0 5.077 22.962h13.846a2.077 2.077 0 0 0 1.731-3.115L14.308 9.115V1.038M6.231 17.192h11.538",
+    strokeWidth: 2.077,
   },
   "arrows-horizontal": {
-    bounds: [4, 4, 20, 20],
-    path: "M4 7h16m0 0-3-3m3 3-3 3M20 17H4m0 0 3-3m-3 3 3 3",
-    strokeWidth: 1.8,
+    path: "M1.213 5.258h21.573m0 0-4.045-4.045m4.045 4.045-4.045 4.045M22.787 18.742H1.213m0 0 4.045-4.045m-4.045 4.045 4.045 4.045",
+    strokeWidth: 2.427,
   },
   "shield-check": {
-    bounds: [4, 2, 20, 22],
-    path: "M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Zm-3-10 2 2 4-4",
-    strokeWidth: 1.8,
+    path: "M12 23.009s8.807-4.404 8.807-12.11V4.294l-8.807-3.303-8.807 3.303v6.606c0 7.706 8.807 12.11 8.807 12.11Zm-3.303-11.009 2.202 2.202 4.404-4.404",
+    strokeWidth: 1.982,
   },
   settings: {
-    bounds: [2, 2, 22, 22],
-    path: "M10 2h4l1 3 2 1 3-1 2 4-2 2v2l2 2-2 4-3-1-2 1-1 3h-4l-1-3-2-1-3 1-2-4 2-2v-2l-2-2 2-4 3 1 2-1zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
-    strokeWidth: 1.7,
+    path: "M9.788 0.94h4.424l1.106 3.318 2.212 1.106 3.318-1.106 2.212 4.424-2.212 2.212v2.212l2.212 2.212-2.212 4.424-3.318-1.106-2.212 1.106-1.106 3.318h-4.424l-1.106-3.318-2.212-1.106-3.318 1.106-2.212-4.424 2.212-2.212v-2.212l-2.212-2.212 2.212-4.424 3.318 1.106 2.212-1.106zM12 8.682a3.318 3.318 0 1 0 0 6.636 3.318 3.318 0 0 0 0-6.636Z",
+    strokeWidth: 1.88,
   },
   expand: {
-    bounds: [4, 4, 20, 20],
-    path: "M9 9 4 4m0 3V4h3M15 9l5-5m-3 0h3v3M9 15l-5 5m0-3v3h3M15 15l5 5m-3 0h3v-3",
-    strokeWidth: 1.8,
+    path: "M7.955 7.955 1.213 1.213m0 4.045V1.213h4.045M16.045 7.955l6.742-6.742m-4.045 0h4.045v4.045M7.955 16.045l-6.742 6.742m0-4.045v4.045h4.045M16.045 16.045l6.742 6.742m-4.045 0h4.045v-4.045",
+    strokeWidth: 2.427,
   },
   collapse: {
-    bounds: [4, 4, 20, 20],
-    path: "M4 4l5 5m-3 0h3V6M20 4l-5 5m3 0h-3V6M4 20l5-5m-3 0h3v3M20 20l-5-5m3 0h-3v3",
-    strokeWidth: 1.8,
+    path: "M1.213 1.213l6.742 6.742m-4.045 0h4.045V3.91M22.787 1.213l-6.742 6.742m4.045 0h-4.045V3.91M1.213 22.787l6.742-6.742m-4.045 0h4.045v4.045M22.787 22.787l-6.742-6.742m4.045 0h-4.045v4.045",
+    strokeWidth: 2.427,
   },
   "more-horizontal": {
-    bounds: [5, 12, 19, 12],
-    path: "M5 12h.01M12 12h.01M19 12h.01",
-    strokeWidth: 4,
+    path: "M2.667 12h0.013M12 12h0.013M21.333 12h0.013",
+    strokeWidth: 5.333,
   },
   // Two arcs with rounded arrowheads, fitted so the arrow tips stay unclipped.
   refresh: {
-    bounds: [1.375, 2.12, 22.625, 21.88],
     path: "M2.55 9.18A9.82 9.82 0 0 1 20.9 7.85M16.703 7.261 20.9 7.85 22.625 3.978M21.45 14.82A9.82 9.82 0 0 1 3.1 16.15M7.297 16.739 3.1 16.15 1.375 20.022",
     strokeWidth: 2.75,
   },
-  play: { bounds: [7, 4, 19, 20], path: "M7 4l12 8-12 8Z", strokeWidth: 3 },
-  pause: { bounds: [8, 5, 16, 19], path: "M8 5v14M16 5v14", strokeWidth: 3 },
-  check: { bounds: [5, 6, 19, 16], path: "M5 12l4 4L19 6", strokeWidth: 3 },
-  close: {
-    bounds: [6, 6, 18, 18],
-    path: "M6 6l12 12M18 6L6 18",
-    strokeWidth: 3,
+  play: {
+    path: "M4.421 1.895l15.158 10.105-15.158 10.105Z",
+    strokeWidth: 3.789,
   },
-  minus: { bounds: [6, 12, 18, 12], path: "M6 12h12", strokeWidth: 3 },
-  stop: { bounds: [6, 6, 18, 18], path: "M6 6h12v12H6Z", strokeWidth: 3 },
+  pause: {
+    path: "M6.353 2.118v19.765M17.647 2.118v19.765",
+    strokeWidth: 4.235,
+  },
+  check: {
+    path: "M2.118 13.412l5.647 5.647L21.882 4.941",
+    strokeWidth: 4.235,
+  },
+  close: {
+    path: "M2.4 2.4l19.2 19.2M21.6 2.4L2.4 21.6",
+    strokeWidth: 4.8,
+  },
+  minus: {
+    path: "M2.4 12h19.2",
+    strokeWidth: 4.8,
+  },
+  stop: {
+    path: "M2.4 2.4h19.2v19.2H2.4Z",
+    strokeWidth: 4.8,
+  },
   clock: {
-    bounds: [3, 3, 21, 21],
-    shapes: <circle cx="12" cy="12" r="9" />,
-    path: "M12 8v4l3 2",
-    strokeWidth: 3,
+    shapes: <circle cx="12" cy="12" r="10.286" />,
+    path: "M12 7.429v4.571l3.429 2.286",
+    strokeWidth: 3.429,
   },
   // Hook arc, stem, then a zero-length segment for the dot.
   help: {
-    bounds: [8, 5, 16.5, 20],
-    path: "M8 9a4 4 0 1 1 6.5 3.1C13 13 12 13.5 12 15.5M12 20h.01",
-    strokeWidth: 3,
+    path: "M6.333 7.333a5.333 5.333 0 1 1 8.667 4.133C13 12.667 11.667 13.333 11.667 16M11.667 22h0.013",
+    strokeWidth: 4,
   },
   search: {
-    bounds: [5, 5, 20, 20],
-    shapes: <circle cx="11" cy="11" r="6" />,
-    path: "m20 20-4.5-4.5",
+    shapes: <circle cx="9.882" cy="9.882" r="8.471" />,
+    path: "m22.588 22.588-6.353-6.353",
+    strokeWidth: 2.824,
   },
   glasses: {
-    bounds: [1, 6, 23, 18],
     shapes: (
       <>
-        <rect x="2.5" y="6" width="8.5" height="12" rx="3" />
-        <rect x="13" y="6" width="8.5" height="12" rx="3" />
+        <rect x="2.42" y="5.95" width="8.571" height="12.101" rx="3.025" />
+        <rect x="13.008" y="5.95" width="8.571" height="12.101" rx="3.025" />
       </>
     ),
-    path: "M2.5 8 1 7.5M10.5 10.5c.5-1.2 2.5-1.2 3 0m8-2 1.5-.5",
-    strokeWidth: 1.8,
+    path: "M2.42 7.966 0.908 7.462M10.487 10.487c0.504-1.21 2.521-1.21 3.025 0m8.067-2.017 1.513-0.504",
+    strokeWidth: 1.815,
   },
   "git-merge": {
-    bounds: [3.75, 1.75, 20.25, 22.25],
     shapes: (
       <>
-        <circle cx="6" cy="4" r="2.25" />
-        <circle cx="6" cy="20" r="2.25" />
-        <circle cx="18" cy="4" r="2.25" />
+        <circle cx="5.543" cy="3.39" r="2.422" />
+        <circle cx="5.543" cy="20.61" r="2.422" />
+        <circle cx="18.457" cy="3.39" r="2.422" />
       </>
     ),
-    path: "M6 6.25v11.5M18 6.25v2a7 7 0 0 1-7 7H6",
-    strokeWidth: 1.8,
+    path: "M5.543 5.812v12.377M18.457 5.812v2.152a7.534 7.534 0 0 1-7.534 7.534H5.543",
+    strokeWidth: 1.937,
   },
   "diff-search": {
-    bounds: [2.5, 2.5, 22.2, 21.5],
     shapes: (
       <>
-        <rect x="2.5" y="2.5" width="12.5" height="19" rx="2" />
-        <circle cx="16.5" cy="14.5" r="4.1" />
+        <rect x="1.005" y="1.395" width="13.953" height="21.209" rx="2.233" />
+        <circle cx="16.633" cy="14.791" r="4.577" />
       </>
     ),
-    path: "M5.5 7h7m-7 4v2m3-1h4m-7 4h3M19.4 17.4l2.8 2.8",
-    strokeWidth: 1.8,
+    path: "M4.353 6.419h7.814m-7.814 4.465v2.233m3.349-1.116h4.465m-7.814 4.465h3.349M19.87 18.028l3.126 3.126",
+    strokeWidth: 2.009,
   },
   "clipboard-check": {
-    bounds: [4, 2.5, 20, 21],
-    shapes: <rect x="8.5" y="2.5" width="7" height="4" rx="1.5" />,
-    path: "M8.5 4.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2h-2.5M8 13l2.5 2.5 5-5M8 18h8",
-    strokeWidth: 1.8,
+    shapes: (
+      <rect x="7.862" y="1.064" width="8.276" height="4.729" rx="1.773" />
+    ),
+    path: "M7.862 3.429H4.906a2.365 2.365 0 0 0-2.365 2.365V20.571a2.365 2.365 0 0 0 2.365 2.365h14.187a2.365 2.365 0 0 0 2.365-2.365V5.793a2.365 2.365 0 0 0-2.365-2.365h-2.956M7.271 13.478l2.956 2.956 5.911-5.911M7.271 19.389h9.458",
+    strokeWidth: 2.128,
   },
   pencil: {
-    bounds: [4, 2, 20, 20],
-    path: "M4 20h16M5 13l-1 4 4-1L19 5l-3-3Z M13 5l3 3",
+    path: "M2.4 22.8h19.2M3.6 14.4l-1.2 4.8 4.8-1.2L20.4 4.8l-3.6-3.6ZM13.2 4.8l3.6 3.6",
+    strokeWidth: 2.4,
   },
   circle: {
-    bounds: [3, 3, 21, 21],
-    shapes: <circle cx="12" cy="12" r="9" />,
-    strokeWidth: 3,
+    shapes: <circle cx="12" cy="12" r="10.286" />,
+    strokeWidth: 3.429,
   },
   dot: {
-    bounds: [4, 4, 20, 20],
     shapes: (
       <>
-        <circle className="row-status-glow" cx="12" cy="12" r="8" />
-        <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />
+        <circle className="row-status-glow" cx="12" cy="12" r="10.667" />
+        <circle cx="12" cy="12" r="6.667" fill="currentColor" stroke="none" />
       </>
     ),
+    strokeWidth: 2.667,
   },
   "chevron-down": {
-    bounds: [3, 8, 21, 17],
-    path: "M3 8l9 9 9-9",
-    strokeWidth: 3,
+    path: "M1.714 6.857l10.286 10.286 10.286-10.286",
+    strokeWidth: 3.429,
   },
   bug: {
-    bounds: [3, 3, 21, 21],
-    path: "m8 3 2 3m6-3-2 3M9 9h6M12 9v11M4 7l3 3m13-3-3 3M3 13h4m10 0h4M4 19l3-3m13 3-3-3",
-    shapes: <rect x="7" y="6" width="10" height="14" rx="5" />,
-    strokeWidth: 1.5,
+    shapes: (
+      <rect x="5.846" y="4.615" width="12.308" height="17.231" rx="6.154" />
+    ),
+    path: "m7.077 0.923 2.462 3.692m7.385-3.692-2.462 3.692M8.308 8.308h7.385M12 8.308v13.538M2.154 5.846l3.692 3.692m16-3.692-3.692 3.692M0.923 13.231h4.923m12.308 0h4.923M2.154 20.615l3.692-3.692m16 3.692-3.692-3.692",
+    strokeWidth: 1.846,
   },
   "arrow-up": {
-    bounds: [8, 8, 16, 20],
-    path: "M8 12l4-4 4 4M12 8v12",
+    path: "M5.143 8.571l6.857-6.857 6.857 6.857M12 1.714v20.571",
+    strokeWidth: 3.429,
   },
 } as const satisfies Record<string, IconDefinition>;
 
@@ -198,13 +197,7 @@ export interface IconProps extends SvgProps {
 
 export function Icon({ name, size, strokeWidth, label, ...rest }: IconProps) {
   const def: IconDefinition = ICONS[name];
-  const effectiveStrokeWidth = strokeWidth ?? def.strokeWidth ?? 2;
-  const [left, top, right, bottom] = def.bounds;
-  const sourceWidth = right - left + effectiveStrokeWidth;
-  const sourceHeight = bottom - top + effectiveStrokeWidth;
-  const scale = ICON_VIEW_SIZE / Math.max(sourceWidth, sourceHeight);
-  const translateX = ICON_VIEW_SIZE / 2 - ((left + right) / 2) * scale;
-  const translateY = ICON_VIEW_SIZE / 2 - ((top + bottom) / 2) * scale;
+  const effectiveStrokeWidth = strokeWidth ?? def.strokeWidth;
 
   return (
     <svg
@@ -222,12 +215,8 @@ export function Icon({ name, size, strokeWidth, label, ...rest }: IconProps) {
       {...rest}
     >
       {label && <title>{label}</title>}
-      <g
-        transform={`matrix(${scale} 0 0 ${scale} ${translateX} ${translateY})`}
-      >
-        {def.shapes}
-        {def.path && <path d={def.path} />}
-      </g>
+      {def.shapes}
+      {def.path && <path d={def.path} />}
     </svg>
   );
 }
