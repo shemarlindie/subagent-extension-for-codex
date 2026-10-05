@@ -1,7 +1,5 @@
-import { Collapsible } from "@base-ui/react/collapsible";
-
 import type { Task } from "../core/types";
-import { Chevron } from "./chevron";
+import { ExpandableNotice } from "./notice";
 
 interface TaskDescriptionProps {
   task: Task;
@@ -13,15 +11,8 @@ export function TaskDescription({
   defaultOpen = false,
 }: TaskDescriptionProps) {
   return (
-    <Collapsible.Root className="task-description" defaultOpen={defaultOpen}>
-      <Collapsible.Trigger className="task-description-trigger">
-        <Chevron size={10} />
-        Description
-      </Collapsible.Trigger>
-      {/* The panel animates its height; the inner box keeps its own scroll and padding. */}
-      <Collapsible.Panel className="collapse-panel">
-        <div className="task-description-content">{task.description}</div>
-      </Collapsible.Panel>
-    </Collapsible.Root>
+    <ExpandableNotice defaultOpen={defaultOpen}>
+      {task.description}
+    </ExpandableNotice>
   );
 }

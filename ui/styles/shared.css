@@ -245,34 +245,6 @@ form .select-trigger {
   color: var(--muted, #8fa5c1);
   cursor: pointer;
 }
-.task-description {
-  margin: 0 0 8px;
-}
-.task-description-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  border: 0;
-  padding: 2px 3px;
-  background: transparent;
-  font-size: 11px;
-  color: var(--muted, #8fa5c1);
-}
-.task-description-trigger svg {
-  transform: rotate(-90deg);
-}
-.task-description-trigger[data-panel-open] svg {
-  transform: rotate(0);
-}
-.task-description-content {
-  max-height: 280px;
-  overflow: auto;
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: var(--surface, #172334);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
 
 .form-error,
 .dialog .form-error {
@@ -788,6 +760,11 @@ form .select-trigger {
 .notice-trigger:hover {
   background: color-mix(in srgb, var(--hover, #1e3047) 60%, transparent);
 }
+.notice-static,
+.notice-static:hover {
+  background: transparent;
+  cursor: default;
+}
 .notice-heading {
   flex: 1;
   min-width: 0;
@@ -824,6 +801,28 @@ form .select-trigger {
 }
 .notice-body {
   padding: 0 14px 14px;
+}
+/* The text is the notice: one clamped line when closed, the whole text when open. */
+.notice-expandable {
+  align-items: flex-start;
+}
+.notice-expandable .notice-caret {
+  margin-top: 4px;
+}
+.notice-expand-text {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.notice-expand-text[data-open] {
+  display: block;
+  max-height: 280px;
+  overflow: auto;
 }
 .question-form .question-error {
   margin: 10px 0 0;
@@ -1529,7 +1528,6 @@ textarea {
   height: 0;
   opacity: 0;
 }
-.task-description-trigger svg,
 .settings-group-trigger svg {
   transition: transform var(--motion-base) var(--ease-out);
 }

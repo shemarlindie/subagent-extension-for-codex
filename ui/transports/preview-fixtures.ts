@@ -1459,7 +1459,7 @@ export const previewTasks: Task[] = [
     id: "preview-refactor",
     title: "Refactor the billing module",
     description:
-      "Split billing into invoices and payments without changing public behaviour.",
+      "Split billing into invoices and payments without changing public behaviour.\n\nKeep the exported API stable: existing callers import from billing/index.\nMove invoice rendering, tax calculation and PDF export into billing/invoices, and charge, refund and webhook handling into billing/payments.\n\nDo not touch the database schema. Add tests for any code that moves, and run the full billing suite before finishing.",
     worker_profile: "implementer",
     status: "running",
     workspace_strategy: "current_repo",

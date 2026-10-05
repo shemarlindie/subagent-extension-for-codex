@@ -1220,6 +1220,8 @@ test("model selection updates role and provider defaults while preserving explic
 });
 
 test("description toggles literally, survives refresh, and resets for another task", async (t) => {
+  overflowClampedDescriptions();
+
   const literal =
     '<img src=x onerror="window.injected=true">\nFull worker instructions.';
 
@@ -1233,17 +1235,13 @@ test("description toggles literally, survives refresh, and resets for another ta
     });
   });
 
-  const toggle = screen.getByRole("button", {
-    name: "Description",
-  });
+  const toggle = descriptionToggle(document.body);
 
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   await user.click(toggle);
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
 
-  const panel = toggle
-    .closest(".task-description")!
-    .querySelector(".task-description-content")!;
+  const panel = toggle.querySelector(".notice-expand-text")!;
 
   assert.equal(panel.textContent, literal);
   assertAbsent(panel.querySelector("img"));
@@ -1256,7 +1254,7 @@ test("description toggles literally, survives refresh, and resets for another ta
   await act(() => controller.refresh());
 
   assert.ok(
-    screen.getByRole("button", { name: "Description" }) === toggle,
+    descriptionToggle(document.body) === toggle,
     "Refresh retains the description toggle node",
   );
 
@@ -1266,14 +1264,53 @@ test("description toggles literally, survives refresh, and resets for another ta
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   await user.click(toggle);
   await act(() => controller.select("two"));
-  const next = screen.getByRole("button", { name: "Description" });
+  const next = descriptionToggle(document.body);
   assert.equal(next.getAttribute("aria-expanded"), "false");
   await user.click(next);
-  assert.ok(screen.getByText("Second instructions"));
+
+  assert.equal(
+    next.querySelector(".notice-expand-text")!.textContent,
+    "Second instructions",
+  );
 });
+
+test("a description that fits on one line has no toggle", async (t) => {
+  await setup(t);
+
+  assert.equal(
+    document.querySelector(".notice-expand-text")?.textContent,
+    "Review authentication and report relevant findings.",
+  );
+
+  assertAbsent(descriptionToggle(document.body));
+});
+
+// jsdom has no layout, so report a clamped description as overflowing: it then offers its toggle.
+function overflowClampedDescriptions() {
+  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return this.matches(".notice-expand-text:not([data-open])") ? 80 : 0;
+    },
+  );
+
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return this.matches(".notice-expand-text") ? 18 : 0;
+    },
+  );
+}
+
+// The toggle's name is the description's first line, so find it by tone.
+function descriptionToggle(root: HTMLElement) {
+  return root.querySelector<HTMLElement>(
+    '[data-tone="plain"] button.notice-trigger',
+  )!;
+}
 
 for (const action of ["interrupt", "cancel", "retry"] as const) {
   test(`${action} confirmation defaults the task description ${action === "retry" ? "closed" : "open"}`, async (t) => {
+    overflowClampedDescriptions();
+
     const { controller, transport, user } = await setup(t);
 
     await act(() =>
@@ -1281,13 +1318,13 @@ for (const action of ["interrupt", "cancel", "retry"] as const) {
     );
 
     const dialog = await screen.findByRole("dialog");
-    const toggle = within(dialog).getByRole("button", { name: "Description" });
+    const toggle = descriptionToggle(dialog);
     const expanded = action !== "retry";
     assert.equal(toggle.getAttribute("aria-expanded"), String(expanded));
 
     if (expanded) {
       assert.equal(
-        dialog.querySelector(".task-description-content")?.textContent,
+        dialog.querySelector(".notice-expand-text")?.textContent,
         transport.tasks[0].description,
       );
     }
@@ -2265,7 +2302,10 @@ test("long notices clamp behind Show more and expand on demand", async (t) => {
 
   // Task errors use the error tone.
   assert.equal(
-    document.querySelector(".notice")?.getAttribute("data-tone"),
+    document
+      .querySelector(".notice-text")
+      ?.closest(".notice")
+      ?.getAttribute("data-tone"),
     "error",
   );
 
@@ -2322,22 +2362,27 @@ test("the inspector stacks when its fixed header would squeeze the evidence", as
 });
 
 test("refresh preserves disclosure and inspector scroll, while Back stays on the task list", async (t) => {
+  overflowClampedDescriptions();
+
   const { controller, user } = await setup(t);
   const detail = screen.getByRole("region", { name: "Task inspector" });
-  const disclosure = screen.getByRole("button", { name: "Description" });
-  const root = disclosure.closest(".task-description");
+  const disclosure = descriptionToggle(document.body);
+  const root = disclosure.closest(".notice-collapsible");
   await user.click(disclosure);
   assert.equal(disclosure.getAttribute("aria-expanded"), "true");
   detail.scrollTop = 160;
   await act(() => controller.refresh());
-  assert.ok(screen.getByRole("button", { name: "Description" }) === disclosure);
-  assert.ok(disclosure.closest(".task-description") === root);
+  assert.ok(descriptionToggle(document.body) === disclosure);
+  assert.ok(disclosure.closest(".notice-collapsible") === root);
   assert.equal(disclosure.getAttribute("aria-expanded"), "true");
   assert.equal(detail.scrollTop, 160);
   await user.click(screen.getByRole("button", { name: "← Tasks" }));
   await act(() => controller.refresh());
   assert.equal(controller.getSnapshot().selected, undefined);
-  assert.ok(screen.queryByRole("button", { name: "Description" }) === null);
+
+  assert.ok(
+    document.querySelector('[data-tone="plain"] .notice-trigger') === null,
+  );
 });
 
 test("console delegation requires choosing a project even with a sole registered repository", async (t) => {

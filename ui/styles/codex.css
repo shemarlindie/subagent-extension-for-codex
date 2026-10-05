@@ -320,6 +320,9 @@ h3 {
 .notice[data-tone="info"] {
   --notice-accent: var(--accent);
 }
+.notice[data-tone="plain"] {
+  --notice-accent: transparent;
+}
 .notice p {
   margin: 4px 0 10px;
 }
@@ -600,7 +603,7 @@ body[data-expanded-panel="true"] .task-header h1 {
   overflow: hidden;
   margin: 6px 0;
 }
-body[data-expanded-panel="true"] .task-description-content {
+body[data-expanded-panel="true"] .notice-expand-text[data-open] {
   max-height: min(280px, 25dvh);
 }
 body[data-expanded-panel="true"] .task-header .notice {

@@ -332,6 +332,9 @@ aside {
 .notice[data-tone="info"] {
   --notice-accent: var(--accent);
 }
+.notice[data-tone="plain"] {
+  --notice-accent: transparent;
+}
 .notice p {
   font-size: 12px;
   line-height: 1.6;
