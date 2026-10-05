@@ -1387,7 +1387,16 @@ test("inline preview expands and collapses while preserving the selected task", 
 
 test("the header menu offers the secondary actions and runs them", async (t) => {
   const { transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "More actions" }));
+  const trigger = screen.getByRole("button", { name: "More actions" });
+  await user.hover(trigger);
+
+  assert.equal(
+    (await screen.findByRole("tooltip")).textContent,
+    "More actions",
+  );
+
+  await user.unhover(trigger);
+  await user.click(trigger);
 
   assert.deepEqual(
     (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
@@ -1410,7 +1419,7 @@ test("a thread panel leaves global actions to global launches", async (t) => {
     controller.applyScope({ panel_scope: { conversation_id: "thread" } }),
   );
 
-  assertAbsent(screen.queryByRole("button", { name: "Add project" }));
+  assertAbsent(screen.queryByRole("button", { name: "Project" }));
   assertAbsent(screen.queryByRole("button", { name: "Settings" }));
   assertAbsent(screen.queryByRole("button", { name: "New task" }));
   await user.click(screen.getByRole("button", { name: "More actions" }));
@@ -3163,7 +3172,7 @@ test("global UI adds a manually entered project only after explicit submission a
     { mode: "console" },
   );
 
-  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Project" }));
   const dialog = await screen.findByRole("dialog");
 
   await user.type(
@@ -3207,7 +3216,7 @@ test("browsing a folder fills the project draft without granting access", async 
     { mode: "console" },
   );
 
-  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Project" }));
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
 
@@ -3244,7 +3253,7 @@ test("cancelling the native picker preserves the manual project path", async (t)
     { mode: "console" },
   );
 
-  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Project" }));
   const dialog = await screen.findByRole("dialog");
 
   const path = within(dialog).getByLabelText(
@@ -3280,7 +3289,7 @@ test("project registration errors preserve the draft and do not change the selec
     { mode: "console" },
   );
 
-  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Project" }));
   const dialog = await screen.findByRole("dialog");
 
   await user.type(
@@ -3397,7 +3406,7 @@ test("folder picker failure keeps manual entry available", async (t) => {
     { mode: "console" },
   );
 
-  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Project" }));
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   await within(dialog).findByText("Native folder picker unavailable");
@@ -3442,7 +3451,7 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
     { mode: "console" },
   );
 
-  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Project" }));
   const firstDialog = await screen.findByRole("dialog");
 
   await user.click(
@@ -3456,7 +3465,7 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
   );
 
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
-  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Project" }));
   const dialog = await screen.findByRole("dialog");
 
   const path = within(dialog).getByLabelText(

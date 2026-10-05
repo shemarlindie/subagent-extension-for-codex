@@ -3,8 +3,10 @@ import { useRef } from "react";
 
 import { Button, buttonClass } from "./button";
 import { useController, useSnapshot } from "./controller-context";
+import { Icon } from "./icons";
 import { MotionContent } from "./motion";
 import { canAnimate, MOTION } from "./motion-utils";
+import { TooltipWrapper } from "./tooltip";
 
 export function Header() {
   const controller = useController(),
@@ -59,51 +61,79 @@ export function Header() {
         </span>
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
-          <Button
-            id="refresh"
-            variant="ghost"
-            aria-label="Refresh tasks"
-            onClick={refresh}
-          >
-            <span ref={glyph} className="refresh-glyph" aria-hidden="true">
-              ↻
-            </span>
-          </Button>
-          {state.host.canExpand && (
-            <Button id="expand" variant="ghost" onClick={expand}>
-              {expandLabel}
+          <TooltipWrapper label="Refresh tasks">
+            <Button
+              id="refresh"
+              variant="ghost"
+              className="toolbar-icon-button"
+              aria-label="Refresh tasks"
+              onClick={refresh}
+            >
+              <span ref={glyph} className="refresh-glyph" aria-hidden="true">
+                <Icon name="refresh" size={14} />
+              </span>
             </Button>
+          </TooltipWrapper>
+          {state.host.canExpand && (
+            <TooltipWrapper label={expandLabel}>
+              <Button
+                id="expand"
+                variant="ghost"
+                className="toolbar-icon-button"
+                aria-label={expandLabel}
+                onClick={expand}
+              >
+                <Icon
+                  name={
+                    state.host.displayMode === "fullscreen"
+                      ? "collapse"
+                      : "expand"
+                  }
+                  size={14}
+                />
+              </Button>
+            </TooltipWrapper>
           )}
           {canAddProject && (
             <Button
               id="add-project"
               variant="ghost"
+              className="toolbar-project-button"
               disabled={blocked}
               onClick={addProject}
             >
-              Add project
+              <Icon name="plus" size={11} />
+              Project
             </Button>
           )}
           {!threadMode && (
-            <Button
-              id="settings"
-              variant="ghost"
-              disabled={blocked}
-              onClick={settings}
-            >
-              Settings
-            </Button>
+            <TooltipWrapper label="Settings">
+              <Button
+                id="settings"
+                variant="ghost"
+                className="toolbar-icon-button"
+                aria-label="Settings"
+                disabled={blocked}
+                onClick={settings}
+              >
+                <Icon name="settings" size={14} />
+              </Button>
+            </TooltipWrapper>
           )}
         </div>
         {/* The console header has room for every button, so only the panel gets the menu. */}
         {!consoleMode && (
           <Menu.Root>
-            <Menu.Trigger
-              className={buttonClass("ghost", { className: "toolbar-menu" })}
-              aria-label="More actions"
-            >
-              ⋯
-            </Menu.Trigger>
+            <TooltipWrapper label="More actions">
+              <Menu.Trigger
+                className={buttonClass("ghost", {
+                  className: "toolbar-menu toolbar-icon-button",
+                })}
+                aria-label="More actions"
+              >
+                <Icon name="more-horizontal" size={14} />
+              </Menu.Trigger>
+            </TooltipWrapper>
             <Menu.Portal>
               <Menu.Positioner
                 className="menu-positioner"

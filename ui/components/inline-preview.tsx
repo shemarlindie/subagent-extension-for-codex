@@ -1,8 +1,10 @@
 import { failedStatus, locked, terminal } from "../core/selectors";
 import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
+import { Icon } from "./icons";
 import { MotionContent } from "./motion";
 import { TaskStatus } from "./status";
+import { TooltipWrapper } from "./tooltip";
 
 export function InlinePreview() {
   const controller = useController(),
@@ -31,18 +33,22 @@ export function InlinePreview() {
       <div className="preview-heading">
         <strong>Delegated work</strong>
         {state.host.canExpand && (
-          <Button
-            id="open-panel"
-            variant="ghost"
-            disabled={state.busy}
-            onClick={() =>
-              controller.run(async () => {
-                await controller.transport.expand?.();
-              })
-            }
-          >
-            Open panel
-          </Button>
+          <TooltipWrapper label="Open panel">
+            <Button
+              id="open-panel"
+              variant="ghost"
+              className="toolbar-icon-button"
+              aria-label="Open panel"
+              disabled={state.busy}
+              onClick={() =>
+                controller.run(async () => {
+                  await controller.transport.expand?.();
+                })
+              }
+            >
+              <Icon name="expand" size={14} />
+            </Button>
+          </TooltipWrapper>
         )}
       </div>
       <p className="preview-scope muted">

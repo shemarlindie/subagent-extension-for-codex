@@ -10,6 +10,34 @@
   align-items: center;
   gap: 8px;
 }
+.toolbar-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+}
+.toolbar-project-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tooltip-positioner {
+  z-index: 20;
+}
+.tooltip-popup {
+  max-width: 220px;
+  padding: 4px 8px;
+  border: 1px solid var(--line, #2e3e50);
+  border-radius: 5px;
+  background: var(--surface, #172334);
+  color: var(--text, var(--fg, #dce7f5));
+  box-shadow: 0 4px 14px #0003;
+  font-size: 11px;
+  line-height: 1.35;
+}
 .grow {
   flex: 1;
 }
@@ -1544,8 +1572,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5em;
-  height: 1.5em;
+  flex: none;
+  line-height: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
