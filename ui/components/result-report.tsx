@@ -28,7 +28,7 @@ export function ResultReport({ result }: { result?: Result }) {
       ))}
     </div>
   ) : (
-    <p className="muted">
+    <p className="help">
       The worker’s summary and evidence appear here when the task finishes.
     </p>
   );

@@ -108,7 +108,7 @@ function TaskRowRuntime({ task }: { task: Task }) {
 }
 
 const EMPTY_FILTER: Record<Filter, string> = {
-  all: "No tasks yet. Start a task to see it here.",
+  all: "No tasks yet.",
   active: "No active tasks.",
   attention: "No tasks need input.",
   completed: "No completed tasks.",
@@ -181,7 +181,7 @@ export function TaskList() {
             />
           ))
         ) : (
-          <p className="help">
+          <p className="help empty-state">
             {state.search
               ? `No tasks match “${state.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
               : EMPTY_FILTER[filter]}

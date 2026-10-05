@@ -5,6 +5,7 @@ import { locked, profileLabel, selectedTask } from "../core/selectors";
 import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
 import { EvidenceTabs } from "./evidence-tabs";
+import { Icon } from "./icons";
 import { MotionContent } from "./motion";
 import { TaskStatus } from "./status";
 import { TaskActions } from "./task-actions";
@@ -86,16 +87,8 @@ export function TaskInspector() {
         </div>
       ) : (
         <div className="empty">
-          <span className="eyebrow">A separate workspace. A focused task.</span>
-          <h1>
-            Keep your flow.
-            <br />
-            Delegate the next step.
-          </h1>
-          <p>
-            Give a worker a review, investigation, or implementation to work on
-            while you stay in Codex.
-          </p>
+          <Icon name="task-card" size={40} className="empty-icon" />
+          <p>Task details will show here.</p>
           {!state.conversation && (
             <Button
               id="empty-start"
@@ -103,7 +96,7 @@ export function TaskInspector() {
               disabled={!state.connected || state.busy}
               onClick={() => controller.run(() => controller.delegate())}
             >
-              New task
+              New Task
             </Button>
           )}
         </div>

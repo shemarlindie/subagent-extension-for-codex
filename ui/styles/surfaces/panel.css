@@ -164,6 +164,10 @@ aside {
 #task-list {
   padding: 0 8px;
 }
+#task-list > .empty-state {
+  padding: 8px 10px;
+  text-align: center;
+}
 .row {
   display: block;
   width: 100%;
@@ -211,6 +215,10 @@ aside {
 .detail {
   padding: 22px 24px;
   min-width: 0;
+}
+.detail:not(.has-task) {
+  display: grid;
+  place-items: center;
 }
 .eyebrow {
   font-size: 11px;
@@ -364,7 +372,11 @@ h3 {
   max-width: 380px;
   margin: auto;
 }
+.empty-icon {
+  color: var(--muted);
+}
 .empty p {
+  margin: 12px 0 0;
   color: var(--muted);
 }
 .event {

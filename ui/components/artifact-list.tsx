@@ -27,29 +27,22 @@ export function ArtifactList() {
 
   return (
     <>
-      <p className="help">
-        Inspect reports and patches here. Applying changes is a separate step in
-        Codex.
-      </p>
-      {artifacts.length ? (
-        artifacts.map((artifact) => (
-          <article className="artifact" key={artifact.id}>
-            <div className="artifact-head">
-              <strong>{artifact.title}</strong>
-              <small>{artifact.type}</small>
-              <Button
-                data-artifact={artifact.id}
-                onClick={() => controller.open({ kind: "artifact", artifact })}
-              >
-                Inspect
-              </Button>
-            </div>
-            <ArtifactContent artifact={artifact} />
-          </article>
-        ))
-      ) : (
-        <p className="muted">No artifacts yet.</p>
-      )}
+      <p className="help">Inspect reports and patches here.</p>
+      {artifacts.map((artifact) => (
+        <article className="artifact" key={artifact.id}>
+          <div className="artifact-head">
+            <strong>{artifact.title}</strong>
+            <small>{artifact.type}</small>
+            <Button
+              data-artifact={artifact.id}
+              onClick={() => controller.open({ kind: "artifact", artifact })}
+            >
+              Inspect
+            </Button>
+          </div>
+          <ArtifactContent artifact={artifact} />
+        </article>
+      ))}
     </>
   );
 }

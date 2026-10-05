@@ -84,19 +84,25 @@ export function ExpandableNotice({
 }: ExpandableNoticeProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(defaultOpen);
-  // A notice that starts open was opened for a reason, so it stays a toggle until measured closed.
+  // Measure the clamped text even when it starts open, so short text has no disclosure.
   const [overflowing, setOverflowing] = useState(defaultOpen);
   useAnimatedHeight(ref, open);
 
   useLayoutEffect(() => {
     const element = ref.current;
-    if (!element || open) return;
+    if (!element) return;
 
-    // Mid-animation the box is the interpolated height, not the clamp's, and swapping
-    // the toggle for plain text then would remount the element and cut the animation.
     const measure = () => {
       if (element.getAnimations?.().length) return;
-      setOverflowing(element.scrollHeight > element.clientHeight + 1);
+
+      // The open style removes the line clamp, so briefly restore it to measure overflow.
+      const wasOpen = element.hasAttribute("data-open");
+      if (wasOpen) element.removeAttribute("data-open");
+      const nextOverflowing = element.scrollHeight > element.clientHeight + 1;
+      if (wasOpen) element.setAttribute("data-open", "");
+
+      setOverflowing(nextOverflowing);
+      if (!nextOverflowing) setOpen(false);
     };
 
     measure();
@@ -105,7 +111,7 @@ export function ExpandableNotice({
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, [children, open, overflowing]);
+  }, [children, open]);
 
   const text = (
     <span

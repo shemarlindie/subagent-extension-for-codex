@@ -89,7 +89,7 @@ export const ICONS = {
   },
   stop: {
     path: "M2.4 2.4h19.2v19.2H2.4Z",
-    strokeWidth: 4.8,
+    strokeWidth: 4.2,
   },
   clock: {
     shapes: <circle cx="12" cy="12" r="10.286" />,
@@ -143,6 +143,35 @@ export const ICONS = {
     ),
     path: "M7.862 3.429H4.906a2.365 2.365 0 0 0-2.365 2.365V20.571a2.365 2.365 0 0 0 2.365 2.365h14.187a2.365 2.365 0 0 0 2.365-2.365V5.793a2.365 2.365 0 0 0-2.365-2.365h-2.956M7.271 13.478l2.956 2.956 5.911-5.911M7.271 19.389h9.458",
     strokeWidth: 2.128,
+  },
+  "task-details": {
+    path: "M14 2.5H7A2.5 2.5 0 0 0 4.5 5v14A2.5 2.5 0 0 0 7 21.5h10a2.5 2.5 0 0 0 2.5-2.5V9Zm0 0v4a2.5 2.5 0 0 0 2.5 2.5h3M8.5 15h7m-7 4h7",
+    strokeWidth: 1.8,
+  },
+  "task-card": {
+    shapes: (
+      <>
+        <rect x="3" y="3.5" width="18" height="17" rx="2" />
+        <rect x="6.5" y="7" width="3.5" height="3.5" rx="0.5" />
+      </>
+    ),
+    path: "M12.5 8.75h4.5M6.5 15h10.5",
+    strokeWidth: 1.8,
+  },
+  "inspector-panel": {
+    shapes: <rect x="2.5" y="3" width="19" height="18" rx="2" />,
+    path: "M2.5 7.5h19M9 7.5V21M5 5.25h.01M7 5.25h.01m5 5.75h5.5m-5.5 3.5h5.5m-5.5 3.5h4",
+    strokeWidth: 1.8,
+  },
+  handoff: {
+    shapes: (
+      <>
+        <circle cx="4" cy="12" r="2.5" />
+        <circle cx="20" cy="12" r="2.5" />
+      </>
+    ),
+    path: "M7 12h10.5m-3-3 3 3-3 3",
+    strokeWidth: 1.8,
   },
   pencil: {
     path: "M2.4 22.8h19.2M3.6 14.4l-1.2 4.8 4.8-1.2L20.4 4.8l-3.6-3.6ZM13.2 4.8l3.6 3.6",

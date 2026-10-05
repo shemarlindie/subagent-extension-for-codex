@@ -2,8 +2,8 @@ import { Icon, type IconName } from "./icons";
 
 /** Shared profile glyphs used in task rows and worker settings. */
 const WORKER_PROFILE_ICONS = {
-  researcher: "diff-search",
-  reviewer: "git-merge",
+  researcher: "glasses",
+  reviewer: "diff-search",
   implementer: "code",
   debugger: "bug",
   test_engineer: "flask",

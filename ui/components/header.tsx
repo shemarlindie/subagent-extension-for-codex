@@ -146,7 +146,7 @@ export function Header() {
             disabled={blocked}
             onClick={() => controller.run(() => controller.delegate())}
           >
-            New task
+            New Task
           </Button>
         )}
       </div>
