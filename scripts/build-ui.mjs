@@ -31,20 +31,12 @@ async function inlineImports(file) {
   return css;
 }
 
-for (const [entry, template, stylesheet, output] of [
-  [
-    "ui/entries/console.ts",
-    "ui/templates/console.html",
-    "ui/styles/console.css",
-    "dist/console.html",
-  ],
-  [
-    "ui/entries/panel.ts",
-    "ui/templates/codex.html",
-    "ui/styles/codex.css",
-    "dist/codex.html",
-  ],
-]) {
+{
+  const entry = "ui/entries/app.ts",
+    template = "ui/templates/app.html",
+    stylesheet = "ui/styles/app.css",
+    output = "dist/app.html";
+
   // Ignore vite.config.ts: it configures the dev host, not production bundles.
   const result = await build({
     configFile: false,

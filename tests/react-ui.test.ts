@@ -189,7 +189,6 @@ async function setup(
   t: TestContext,
   configure?: (transport: FakeTransport) => void,
   options: {
-    mode?: "panel" | "console";
     wide?: boolean;
     scoped?: boolean;
     displayMode?: HostState["displayMode"];
@@ -197,14 +196,13 @@ async function setup(
   } = {},
 ) {
   const transport = new FakeTransport();
+
   if (options.displayMode) transport.host.displayMode = options.displayMode;
   configure?.(transport);
 
-  const controller = new Controller(transport, options.mode ?? "panel", {
+  const controller = new Controller(transport, {
     hidden: () => false,
     wide: () => options.wide ?? true,
-    path: "/",
-    navigate: () => {},
   });
 
   if (options.scoped)
@@ -1560,14 +1558,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   );
 });
 
-describe("console and nonembedded panels retain the full interface in inline mode", () => {
-  test("console", async (t) => {
-    await setup(t, undefined, { mode: "console", displayMode: "inline" });
-    assert.ok(screen.getByRole("button", { name: "＋ Delegate" }));
-    assert.ok(screen.getByRole("region", { name: "Task inspector" }));
-    assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
-  });
-
+describe("nonembedded panels retain the full interface in inline mode", () => {
   test("nonembedded panel", async (t) => {
     await setup(
       t,
@@ -1798,14 +1789,6 @@ test("the all-project task list shows each project above its task title", async 
       ["row-project", "row-title"],
     );
   }
-});
-
-test("console shows the filtered task count against the total", async (t) => {
-  const { user } = await setup(t, undefined, { mode: "console" });
-  assert.equal(document.getElementById("count")?.textContent, "1 TASK");
-  assertAbsent(screen.queryByRole("radio", { name: /^Needs input/ }));
-  await user.type(screen.getByRole("searchbox"), "zzz");
-  assert.equal(document.getElementById("count")?.textContent, "0 OF 1 TASK");
 });
 
 test("search clears with Escape and focuses with the slash key", async (t) => {
@@ -2382,35 +2365,6 @@ test("refresh preserves disclosure and inspector scroll, while Back stays on the
 
   assert.ok(
     document.querySelector('[data-tone="plain"] .notice-trigger') === null,
-  );
-});
-
-test("console delegation requires choosing a project even with a sole registered repository", async (t) => {
-  const { transport, user } = await setup(t, undefined, { mode: "console" });
-  await user.click(screen.getByRole("button", { name: "＋ Delegate" }));
-  await screen.findByRole("dialog");
-
-  assert.equal(
-    screen.getByRole("combobox", { name: "Project" }).textContent,
-    "Choose a project",
-  );
-
-  await enterTask(user, "Explicit project choice");
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
-    0,
-  );
-
-  await selectOption(user, "Project", "/repo/a");
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
   );
 });
 
@@ -3115,41 +3069,6 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   );
 });
 
-test("console worker picker routes and seeds the delegation worker", async (t) => {
-  const { controller, user, transport } = await setup(t, undefined, {
-    mode: "console",
-  });
-
-  await selectOption(user, "Worker", "codex · reviewer");
-
-  await waitFor(() =>
-    assert.equal(controller.getSnapshot().workerRoute, "codex.reviewer"),
-  );
-
-  await user.click(
-    screen.getByRole("button", { name: "Delegate to this worker" }),
-  );
-
-  await screen.findByRole("dialog");
-
-  assert.match(
-    screen.getByRole("combobox", { name: "Worker" }).textContent ?? "",
-    /codex · reviewer/,
-  );
-
-  await selectOption(user, "Project", "/repo/a");
-  await enterTask(user, "Use selected worker");
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.find((call) => call.name === "start_agent_task")?.args
-        .provider,
-      "codex",
-    ),
-  );
-});
-
 test("permission buttons allow explicit approval without a dropdown", async (t) => {
   const { user, transport } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
@@ -3255,10 +3174,13 @@ test("global UI adds a manually entered project only after explicit submission a
   const { controller, transport, user } = await setup(
     t,
     (transport) => configureProjectRegistration(transport),
-    { mode: "console" },
+    {},
   );
 
-  await user.click(screen.getByRole("button", { name: "Project" }));
+  act(() => {
+    void controller.addProject();
+  });
+
   const dialog = await screen.findByRole("dialog");
 
   await user.type(
@@ -3295,14 +3217,17 @@ test("global UI adds a manually entered project only after explicit submission a
 });
 
 test("browsing a folder fills the project draft without granting access", async (t) => {
-  const { transport, user } = await setup(
+  const { controller, transport, user } = await setup(
     t,
     (transport) =>
       configureProjectRegistration(transport, { picked: "/repo/picked" }),
-    { mode: "console" },
+    {},
   );
 
-  await user.click(screen.getByRole("button", { name: "Project" }));
+  act(() => {
+    void controller.addProject();
+  });
+
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
 
@@ -3375,13 +3300,16 @@ test("cancelling the panel's folder picker adds nothing", async (t) => {
 });
 
 test("cancelling the native picker preserves the manual project path", async (t) => {
-  const { transport, user } = await setup(
+  const { controller, transport, user } = await setup(
     t,
     (transport) => configureProjectRegistration(transport),
-    { mode: "console" },
+    {},
   );
 
-  await user.click(screen.getByRole("button", { name: "Project" }));
+  act(() => {
+    void controller.addProject();
+  });
+
   const dialog = await screen.findByRole("dialog");
 
   const path = within(dialog).getByLabelText(
@@ -3414,10 +3342,13 @@ test("project registration errors preserve the draft and do not change the selec
       configureProjectRegistration(transport, {
         registerError: "Use repository root",
       }),
-    { mode: "console" },
+    {},
   );
 
-  await user.click(screen.getByRole("button", { name: "Project" }));
+  act(() => {
+    void controller.addProject();
+  });
+
   const dialog = await screen.findByRole("dialog");
 
   await user.type(
@@ -3525,16 +3456,19 @@ test("a chat project hint prefills registration without registering it automatic
 });
 
 test("folder picker failure keeps manual entry available", async (t) => {
-  const { transport, user } = await setup(
+  const { controller, transport, user } = await setup(
     t,
     (transport) =>
       configureProjectRegistration(transport, {
         browseError: "Native folder picker unavailable",
       }),
-    { mode: "console" },
+    {},
   );
 
-  await user.click(screen.getByRole("button", { name: "Project" }));
+  act(() => {
+    void controller.addProject();
+  });
+
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   await within(dialog).findByText("Native folder picker unavailable");
@@ -3576,10 +3510,13 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
         return original<T>(name, args);
       };
     },
-    { mode: "console" },
+    {},
   );
 
-  await user.click(screen.getByRole("button", { name: "Project" }));
+  act(() => {
+    void controller.addProject();
+  });
+
   const firstDialog = await screen.findByRole("dialog");
 
   await user.click(
@@ -3593,7 +3530,11 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
   );
 
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
-  await user.click(screen.getByRole("button", { name: "Project" }));
+
+  act(() => {
+    void controller.addProject();
+  });
+
   const dialog = await screen.findByRole("dialog");
 
   const path = within(dialog).getByLabelText(

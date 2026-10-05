@@ -52,7 +52,7 @@ async function setup(
     c,
     new Auth("token"),
     "http://127.0.0.1:4317",
-    resolve("dist/console.html"),
+    resolve("dist/app.html"),
   );
 
   const server = app.listen(0, "127.0.0.1");

@@ -54,20 +54,6 @@ export function TaskActions({ task }: { task: Task }) {
     </Button>,
   ]);
 
-  if (state.mode === "console") {
-    buttons.push([
-      "workspace",
-      <Button
-        variant="text"
-        underline
-        id="workspace"
-        onClick={() => controller.open({ kind: "workspace", task })}
-      >
-        Workspace path
-      </Button>,
-    ]);
-  }
-
   buttons.push([
     "handoff",
     <Button
@@ -79,7 +65,7 @@ export function TaskActions({ task }: { task: Task }) {
     >
       {state.host.canSend
         ? "Bring to Codex"
-        : state.mode === "console" && !controller.transport.embedded
+        : !controller.transport.embedded
           ? "Copy for Codex"
           : "Prepare handoff"}
     </Button>,

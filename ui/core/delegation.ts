@@ -3,10 +3,9 @@ import type { Defaults, DialogState, Project, Snapshot } from "./types";
 
 /** Registered projects plus the chat's project when starting a task may add it. */
 export function taskProjects(state: Snapshot, projects = state.projects) {
-  const candidate =
-    state.mode === "panel" && state.projectCandidateAuto
-      ? state.projectCandidate
-      : undefined;
+  const candidate = state.projectCandidateAuto
+    ? state.projectCandidate
+    : undefined;
 
   return candidate &&
     !projects.some((project) => project.repository === candidate)
@@ -27,13 +26,7 @@ export function delegationDialog(
 ): Extract<DialogState, { kind: "delegate" }> {
   projects = taskProjects(state, projects);
   const choices = projects.filter((project) => project.kind === "repository");
-  if (
-    !choices.length &&
-    !(
-      state.mode === "panel" &&
-      projects.some((project) => project.kind === "parent")
-    )
-  )
+  if (!choices.length && !projects.some((project) => project.kind === "parent"))
     throw new Error("Add a project before delegating.");
   if (!state.workers.some((worker) => worker.profiles.length))
     throw new Error(
@@ -47,12 +40,10 @@ export function delegationDialog(
     preferredWorker,
     scope: state.scopeVersion,
     repository:
-      state.mode === "console"
-        ? undefined
-        : (state.repository ??
-          task?.repository ??
-          choices.find((project) => project.pending)?.repository ??
-          (choices.length === 1 ? choices[0].repository : undefined)),
+      state.repository ??
+      task?.repository ??
+      choices.find((project) => project.pending)?.repository ??
+      (choices.length === 1 ? choices[0].repository : undefined),
     revision: state.repository ? state.revision : (task?.revision ?? "HEAD"),
   };
 }

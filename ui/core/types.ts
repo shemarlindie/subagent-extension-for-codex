@@ -10,7 +10,6 @@ import type { DroppedSummary } from "./event-history";
 
 export type Task = ListedTask;
 export type { Artifact, Event };
-export type Mode = "panel" | "console";
 export type Tab = "result" | "activity" | "changes" | "details";
 export type Filter = "all" | "active" | "attention" | "completed" | "failed";
 
@@ -135,11 +134,9 @@ export type DialogState =
   | { kind: "control"; action: string; task: Task; scope: number }
   | { kind: "respond"; task: Task; scope: number }
   | { kind: "handoff"; task: Task; scope: number }
-  | { kind: "artifact"; artifact: Artifact; scope: number }
-  | { kind: "workspace"; task: Task; scope: number };
+  | { kind: "artifact"; artifact: Artifact; scope: number };
 
 export type Snapshot = {
-  mode: Mode;
   tasks: Task[];
   workers: Worker[];
   projects: Project[];
@@ -148,8 +145,6 @@ export type Snapshot = {
   droppedEvents?: DroppedSummary;
   artifacts: Artifact[];
   selected?: string;
-  selectedArtifact?: string;
-  workerRoute?: string;
   conversation?: string;
   repository?: string;
   projectCandidate?: string;

@@ -20,20 +20,6 @@ function InfoForm({ children }: { children: ReactNode }) {
   );
 }
 
-export const workspaceDialog = defineDialog<"workspace">({
-  title: () => "Task workspace",
-  render: ({ task }) => (
-    <InfoForm>
-      <p>
-        {task.workspace_strategy === "current_repo"
-          ? "This task uses the current repository. Worker edits are already present in this checkout."
-          : "The worktree is retained for inspection and session continuation."}
-      </p>
-      <pre>{task.workspace ?? "Not created yet"}</pre>
-    </InfoForm>
-  ),
-});
-
 export const artifactDialog = defineDialog<"artifact">({
   title: ({ artifact }) => artifact.title,
   render: ({ artifact }) => (

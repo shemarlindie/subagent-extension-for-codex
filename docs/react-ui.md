@@ -1,6 +1,6 @@
 # React UI architecture
 
-The standalone console and embedded delegation panel share one React application. Their entrypoints remain `ui/entries/console.ts` (console) and `ui/entries/panel.ts` (panel); `ui/bootstrap.tsx` selects a transport, creates a controller, and mounts the shell. Service APIs, MCP resources, standalone routes, and fixture preview remain the integration boundaries.
+The delegation panel is the only UI. It runs embedded in a host and in a regular browser tab against the HTTP service. One entrypoint (`ui/entries/app.ts`) builds one page, `dist/app.html`. At runtime `ui/environment.ts` picks the transport from where the page renders (an iframe uses the host bridge, a top-level page with an injected API origin uses HTTP, `?preview=1` uses fixtures, anything else shows "Open through MCP"), and `ui/bootstrap.tsx` creates the controller and mounts the shell. Service APIs, MCP resources, standalone routes, and fixture preview remain the integration boundaries.
 
 ## Module boundaries
 
@@ -13,9 +13,9 @@ The standalone console and embedded delegation panel share one React application
 | `ui/transports/`                                                                | Console HTTP/SSE, MCP host bridge, and read-only fixture preview implementations.                                   |
 | `ui/components/`                                                                | Focused presentation and interactions: task lists, status, actions, inspector sections, evidence tabs, and dialogs. |
 | `ui/forms/`                                                                     | Form drafts, validation, and explicit submission; reusable fields and footer live beside the forms.                 |
-| `ui/shells/`                                                                    | Page composition and console-specific worker navigation.                                                            |
+| `ui/shells/`                                                                    | Page composition.                                                                                                   |
 | `ui/components/controller-context.tsx`                                          | Controller access and React subscriptions through `useSyncExternalStore`.                                           |
-| `ui/styles/shared.css`, `ui/styles/console.css`, `ui/styles/codex.css`          | Shared component styling (partials in `ui/styles/shared/`) and mode-specific layout/theme rules.                    |
+| `ui/styles/shared.css`, `ui/styles/app.css`                                     | Shared component styling (partials in `ui/styles/shared/`) and the theme and layout rules.                          |
 
 The controller owns durable UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access.
 
@@ -48,7 +48,7 @@ Buttons use `<Button>` from `ui/components/button.tsx`, with a `variant`:
 ## Extending the UI
 
 - Add a component when a section has a clear responsibility, reused presentation, or an independent interaction. Compose these sections in the inspector or shell; avoid moving networking or scope bookkeeping into JSX.
-- Reuse the selection fields for new dropdowns and the existing project autocomplete for editable project suggestions. Keep primitive styling in the matching `ui/styles/shared/*.css` partial (listed in cascade order by `shared.css`); define surface colors through CSS variables in `ui/styles/console.css` and `ui/styles/codex.css`.
+- Reuse the selection fields for new dropdowns and the existing project autocomplete for editable project suggestions. Keep primitive styling in the matching `ui/styles/shared/*.css` partial (listed in cascade order by `shared.css`); define surface colors through CSS variables in `ui/styles/app.css`.
 - Add a form for a new user-reviewed operation. Share fields and footers, declare its typed dialog variant, export a `defineDialog` definition (title, render, optional initial focus) from the form, and register it in `ui/forms/dialog-registry.ts`; `DialogHost` stays a generic shell. Submit through `controller.submit` to retain busy/error handling and the scope captured when the dialog opened. Send messages or execute tools only after the user submits.
 - Add a selector for a pure calculation shared across views. Keep transport calls and mutation outside selectors.
 - Add a transport when the connection mechanism changes. Implement `Transport` and deliver `TransportEvents`; select it in bootstrap. Rendering and forms should not branch on HTTP versus MCP tool envelopes.
@@ -57,9 +57,9 @@ Keep scope handling centralized. Changing the project or conversation invalidate
 
 ## Console, host, and preview behavior
 
-The standalone console uses credentialed HTTP requests, token login, and SSE activity refreshes. Its task, worker, and artifact routes continue to use the existing paths. Embedded views use the MCP Apps bridge for tools, theme variables, selection context, display modes, and optional message delivery. Capabilities determine which host actions are available; opening the panel outside a host reports that MCP is required.
+In a browser tab the page uses credentialed HTTP requests, token login, and SSE activity refreshes; the page has a single URL and no routes. Embedded views use the MCP Apps bridge for tools, theme variables, selection context, display modes, and optional message delivery. The host determines which actions are available (send, share, expand); opening the panel outside a host reports that MCP is required.
 
-The embedded panel renders a compact summary in `inline` mode: project/chat scope, task counts, and the selected task's status. Counts cover the current scope even when the full panel has search or status filters applied. **Open panel** requests `fullscreen` when the host advertises it; the host controls placement. The full interface appears in expanded mode. Collapsing preserves task selection and hides any open dialog while retaining its draft for expansion. Scope changes still discard stale dialogs. The standalone console and fixture preview retain their full layout.
+The embedded panel renders a compact summary in `inline` mode: project/chat scope, task counts, and the selected task's status. Counts cover the current scope even when the full panel has search or status filters applied. **Open panel** requests `fullscreen` when the host advertises it; the host controls placement. The full interface appears in expanded mode. Collapsing preserves task selection and hides any open dialog while retaining its draft for expansion. Scope changes still discard stale dialogs. A standalone browser tab and fixture preview always use the full layout.
 
 Delegation forms collect the full request as the description without a manual title field. The service generates a title from the description's first line or sentence, up to 120 characters. Task rows and the inline preview show the concise title. The inspector shows the description as one line that expands in place and starts collapsed (a one-line description has no toggle). Interrupt and cancel confirmations start with the description expanded; retry confirmations keep it collapsed.
 
@@ -75,9 +75,9 @@ The activity timeline groups tool lifecycles and streamed responses. Consecutive
 
 Opening a row's debug details expands its newest raw response. Older responses stay collapsed initially, and manually changed disclosures survive refreshes and reopening the debug panel.
 
-Opening either HTML entrypoint outside an iframe with `?preview=1` selects fixture data; `&theme=dark` selects the dark preview theme. Preview does not connect to the service or execute workers. Unsupported fixture operations fail explicitly, and projects added in it are not remembered. Native host rendering and delivery still require separate host verification.
+Opening the page outside an iframe with `?preview=1` selects fixture data; `&theme=dark` selects the dark preview theme. Preview does not connect to the service or execute workers. Unsupported fixture operations fail explicitly, and projects added in it are not remembered. Native host rendering and delivery still require separate host verification.
 
-Use `?preview=1` for the console, or to look at built HTML without a dev server. For panel work, use the panel dev host (`npm run dev:ui`): it runs the panel through the real host bridge, with thread or global launches and host capabilities, while `?preview=1` always opens the panel in global scope with no host.
+Use `?preview=1` to look at built HTML without a dev server. For panel work, use the panel dev host (`npm run dev:ui`): it runs the panel through the real host bridge, with thread or global launches and host capabilities, while `?preview=1` always opens the panel in global scope with no host.
 
 ![Fixture preview with a selected task and artifact report](images/react-panel-preview.png)
 
@@ -89,6 +89,6 @@ Use `?preview=1` for the console, or to look at built HTML without a dev server.
 
 ## Build and verification
 
-`scripts/build-ui.mjs` bundles each entrypoint with Vite's build API (one minified ES module per entrypoint, the automatic JSX runtime through `@vitejs/plugin-react`, and `process.env.NODE_ENV="production"`). It does not read `vite.config.ts`, which configures only the dev host. It embeds JavaScript and CSS into `dist/console.html` and `dist/codex.html`, preserving self-contained HTML delivery without runtime CDN requests. The build also parses the final embedded module with Vite's `parseAst` to catch template replacement corruption. Edit source files, then rebuild; generated HTML is not the source of truth. Run `npm run typecheck` and `npm test` as described in [Local development](development.md#checks).
+`scripts/build-ui.mjs` bundles the entrypoint with Vite's build API (one minified ES module, the automatic JSX runtime through `@vitejs/plugin-react`, and `process.env.NODE_ENV="production"`). It does not read `vite.config.ts`, which configures only the dev host. It embeds JavaScript and CSS into `dist/app.html`, preserving self-contained HTML delivery without runtime CDN requests. The build also parses the final embedded module with Vite's `parseAst` to catch template replacement corruption. Edit source files, then rebuild; generated HTML is not the source of truth. Run `npm run typecheck` and `npm test` as described in [Local development](development.md#checks).
 
 Typechecking covers server TypeScript, the browser/TSX configuration in `ui/tsconfig.json`, and the tests and Vite configs through `tsconfig.test.json`. The test suite includes controller scope/race/lifecycle checks, HTTP and host transport contracts, and React Testing Library/user-event interactions in Vitest's jsdom environment. React interaction tests cover keyboard tabs, dialog focus restoration, draft preservation through refresh, budgets, worker input, explicit handoff submission, and literal text rendering. Existing HTTP/MCP and generated-panel checks remain relevant. Automated DOM/protocol checks do not establish actual browser layout or native host placement; verify those separately for changes affecting them.

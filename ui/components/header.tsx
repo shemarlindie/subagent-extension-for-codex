@@ -11,10 +11,7 @@ import { TooltipWrapper } from "./tooltip";
 export function Header() {
   const controller = useController(),
     state = useSnapshot(),
-    consoleMode = state.mode === "console",
     blocked = !state.connected || state.busy,
-    // The panel offers this in its project bar; only the console header carries it.
-    canAddProject = consoleMode && !state.conversation,
     // Thread mode scopes the panel to the conversation, so global actions go.
     threadMode = !!state.conversation,
     expandLabel =
@@ -35,7 +32,6 @@ export function Header() {
       controller.run(async () => {
         await controller.transport.expand?.();
       }),
-    addProject = () => controller.addProject(),
     settings = () => controller.run(() => controller.settings());
 
   const status = (
@@ -52,20 +48,13 @@ export function Header() {
         <span className="mark" aria-hidden="true">
           ⌘
         </span>
-        {consoleMode ? (
-          <h1>
-            Codex subagent extension <span>Delegated work, in one place</span>
-          </h1>
-        ) : (
-          <div className="brand-text">
-            <strong>Delegated work</strong>
-            {status}
-          </div>
-        )}
+        <div className="brand-text">
+          <strong>Delegated work</strong>
+          {status}
+        </div>
       </div>
       <span className="grow" />
       <div className="toolbar">
-        {consoleMode && status}
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
           <TooltipWrapper label="Refresh tasks">
@@ -101,18 +90,6 @@ export function Header() {
               </Button>
             </TooltipWrapper>
           )}
-          {canAddProject && (
-            <Button
-              id="add-project"
-              variant="ghost"
-              className="toolbar-project-button"
-              disabled={blocked}
-              onClick={addProject}
-            >
-              <Icon name="plus" size={11} />
-              Project
-            </Button>
-          )}
           {!threadMode && (
             <TooltipWrapper label="Settings">
               <Button
@@ -128,43 +105,40 @@ export function Header() {
             </TooltipWrapper>
           )}
         </div>
-        {/* The console header has room for every button, so only the panel gets the menu. */}
-        {!consoleMode && (
-          <Menu.Root>
-            <TooltipWrapper label="More actions">
-              <Menu.Trigger
-                className={buttonClass("ghost", {
-                  className: "toolbar-menu toolbar-icon-button",
-                })}
-                aria-label="More actions"
-              >
-                <Icon name="more-horizontal" size={14} />
-              </Menu.Trigger>
-            </TooltipWrapper>
-            <Menu.Portal>
-              <Menu.Positioner
-                className="menu-positioner"
-                align="end"
-                sideOffset={4}
-              >
-                <Menu.Popup className="menu-popup">
-                  <Menu.Item className="menu-item" onClick={refresh}>
-                    Refresh
+        <Menu.Root>
+          <TooltipWrapper label="More actions">
+            <Menu.Trigger
+              className={buttonClass("ghost", {
+                className: "toolbar-menu toolbar-icon-button",
+              })}
+              aria-label="More actions"
+            >
+              <Icon name="more-horizontal" size={14} />
+            </Menu.Trigger>
+          </TooltipWrapper>
+          <Menu.Portal>
+            <Menu.Positioner
+              className="menu-positioner"
+              align="end"
+              sideOffset={4}
+            >
+              <Menu.Popup className="menu-popup">
+                <Menu.Item className="menu-item" onClick={refresh}>
+                  Refresh
+                </Menu.Item>
+                {!threadMode && (
+                  <Menu.Item
+                    className="menu-item"
+                    disabled={blocked}
+                    onClick={settings}
+                  >
+                    Settings
                   </Menu.Item>
-                  {!threadMode && (
-                    <Menu.Item
-                      className="menu-item"
-                      disabled={blocked}
-                      onClick={settings}
-                    >
-                      Settings
-                    </Menu.Item>
-                  )}
-                </Menu.Popup>
-              </Menu.Positioner>
-            </Menu.Portal>
-          </Menu.Root>
-        )}
+                )}
+              </Menu.Popup>
+            </Menu.Positioner>
+          </Menu.Portal>
+        </Menu.Root>
         {!threadMode && (
           <Button
             id="delegate"
@@ -172,7 +146,7 @@ export function Header() {
             disabled={blocked}
             onClick={() => controller.run(() => controller.delegate())}
           >
-            {consoleMode ? "＋ Delegate" : "New task"}
+            New task
           </Button>
         )}
       </div>

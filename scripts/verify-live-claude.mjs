@@ -335,7 +335,7 @@ if (scenario === "read") {
     control,
     new Auth(token, "verification"),
     "http://127.0.0.1:4317",
-    fileURLToPath(new URL("../dist/console.html", import.meta.url)),
+    fileURLToPath(new URL("../dist/app.html", import.meta.url)),
   );
 
   const server = app.listen(0, "127.0.0.1");

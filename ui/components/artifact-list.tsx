@@ -2,18 +2,6 @@ import type { Artifact } from "../core/types";
 import { Button } from "./button";
 import { useController, useSnapshot } from "./controller-context";
 
-export function downloadArtifact(artifact: Artifact) {
-  const url = URL.createObjectURL(
-    new Blob([artifact.content], { type: artifact.mime_type }),
-  );
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = artifact.id + (artifact.type === "diff" ? ".patch" : ".json");
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 export function ArtifactContent({ artifact }: { artifact: Artifact }) {
   return (
     <pre data-scroll={`artifact-${artifact.id}`}>
@@ -35,11 +23,7 @@ export function ArtifactList() {
   const controller = useController(),
     state = useSnapshot();
 
-  const artifacts = state.selectedArtifact
-    ? state.artifacts.filter(
-        (artifact) => artifact.id === state.selectedArtifact,
-      )
-    : state.artifacts;
+  const artifacts = state.artifacts;
 
   return (
     <>
@@ -47,11 +31,6 @@ export function ArtifactList() {
         Inspect reports and patches here. Applying changes is a separate step in
         Codex.
       </p>
-      {state.selectedArtifact && (
-        <Button onClick={() => controller.selectArtifact()}>
-          All artifacts
-        </Button>
-      )}
       {artifacts.length ? (
         artifacts.map((artifact) => (
           <article className="artifact" key={artifact.id}>
@@ -60,29 +39,16 @@ export function ArtifactList() {
               <small>{artifact.type}</small>
               <Button
                 data-artifact={artifact.id}
-                onClick={() =>
-                  state.mode === "console"
-                    ? controller.selectArtifact(artifact.id)
-                    : controller.open({ kind: "artifact", artifact })
-                }
+                onClick={() => controller.open({ kind: "artifact", artifact })}
               >
                 Inspect
               </Button>
-              {state.mode === "console" && (
-                <Button onClick={() => downloadArtifact(artifact)}>
-                  Download {artifact.type}
-                </Button>
-              )}
             </div>
             <ArtifactContent artifact={artifact} />
           </article>
         ))
       ) : (
-        <p className="muted">
-          {state.selectedArtifact
-            ? "This artifact is unavailable for the selected task."
-            : "No artifacts yet."}
-        </p>
+        <p className="muted">No artifacts yet.</p>
       )}
     </>
   );

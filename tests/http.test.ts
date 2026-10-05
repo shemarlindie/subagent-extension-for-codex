@@ -120,9 +120,9 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     c,
     auth,
     "http://127.0.0.1:4317",
-    resolve("dist/console.html"),
+    resolve("dist/app.html"),
     undefined,
-    resolve("dist/codex.html"),
+    resolve("dist/app.html"),
   ).listen(0, "127.0.0.1");
 
   await waitForListening(server);
@@ -258,10 +258,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     const standalone = await fetch(base + "/");
     assert.equal(standalone.status, 200);
 
-    assert.match(
-      await standalone.text(),
-      /<title>Codex subagent extension<\/title>/,
-    );
+    assert.match(await standalone.text(), /<title>Delegated work<\/title>/);
 
     assert.deepEqual((ui.contents[0] as any)._meta.ui.csp, {
       connectDomains: [],
@@ -893,7 +890,7 @@ test("SSE requires authentication and replays owned events in global cursor orde
     c,
     auth,
     "http://127.0.0.1:4317",
-    resolve("dist/console.html"),
+    resolve("dist/app.html"),
   ).listen(0, "127.0.0.1");
 
   await waitForListening(server);
@@ -989,7 +986,7 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
     c,
     new Auth("token"),
     "http://127.0.0.1:4317",
-    resolve("dist/console.html"),
+    resolve("dist/app.html"),
     events,
   );
 

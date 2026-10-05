@@ -1,8 +1,7 @@
-import type { Mode, Snapshot } from "./types";
+import type { Snapshot } from "./types";
 
-export function initialState(mode: Mode, path: string): Snapshot {
+export function initialState(): Snapshot {
   return {
-    mode,
     tasks: [],
     workers: [],
     projects: [],
@@ -13,7 +12,7 @@ export function initialState(mode: Mode, path: string): Snapshot {
     search: "",
     tab: "result",
     connected: false,
-    scopeKnown: mode === "console",
+    scopeKnown: false,
     busy: false,
     connection: "Connecting…",
     error: "",
@@ -26,13 +25,5 @@ export function initialState(mode: Mode, path: string): Snapshot {
       canExpand: false,
       displayMode: "inline",
     },
-    ...(mode === "console"
-      ? {
-          selected: path.match(/\/tasks\/([^/]+)/)?.[1],
-          workerRoute: path.match(/\/workers\/([^/]+)/)?.[1],
-          selectedArtifact: path.match(/\/artifacts\/([^/]+)/)?.[1],
-          tab: path.includes("/artifacts/") ? "changes" : "activity",
-        }
-      : {}),
   };
 }

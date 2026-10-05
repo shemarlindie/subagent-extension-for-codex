@@ -1,7 +1,7 @@
 import { rowStatus } from "./task-status";
 import type { Filter, Question, Snapshot, Task } from "./types";
 
-// Display order of the status filters; the panel hides "attention" outside panel mode.
+// Display order of the status filters; the panel hides "attention" without the capability.
 export const FILTER_LABELS: Record<Filter, string> = {
   attention: "Needs input",
   failed: "Failed",
@@ -54,15 +54,13 @@ const matchesFilter = (task: Task, filter: Filter) =>
   (filter === "completed" && task.status === "completed") ||
   (filter === "failed" && failedStatus(task));
 
-// Tasks in the chosen project, worker and search, before the status filter applies.
+// Tasks in the chosen project and search, before the status filter applies.
 export function scopedTasks(state: Snapshot) {
   const search = state.search.toLowerCase();
 
   return state.tasks.filter(
     (task) =>
       (!state.repository || task.repository === state.repository) &&
-      (!state.workerRoute ||
-        `${task.provider}.${task.worker_profile}` === state.workerRoute) &&
       (!search ||
         `${task.title} ${task.description} ${task.worker_profile} ${task.id}`
           .toLowerCase()
@@ -75,13 +73,7 @@ export function effectiveFilter(state: Snapshot): Filter {
   if (state.filter) return state.filter;
   const counts = filterCounts(state);
 
-  return (
-    FILTERS.find(
-      (filter) =>
-        counts[filter] > 0 &&
-        (filter !== "attention" || state.mode === "panel"),
-    ) ?? "all"
-  );
+  return FILTERS.find((filter) => counts[filter] > 0) ?? "all";
 }
 
 export const visibleTasks = (state: Snapshot) => {

@@ -17,7 +17,6 @@ export class HostTransport implements Transport {
       {},
       { autoResize: true },
     ),
-    private legacyConsole = false,
   ) {}
 
   async connect(events: TransportEvents) {
@@ -26,16 +25,7 @@ export class HostTransport implements Transport {
     this.app.ontoolresult = (result) => {
       if (!this.disposed) {
         const data = result.structuredContent as PanelData;
-        const meta = result._meta as { conversation_id?: string } | undefined;
-
-        events.scope(
-          this.legacyConsole && !data?.panel_scope && Array.isArray(data?.tasks)
-            ? {
-                ...data,
-                panel_scope: { conversation_id: meta?.conversation_id ?? null },
-              }
-            : data,
-        );
+        events.scope(data);
       }
     };
 

@@ -1,29 +1,33 @@
+import { applyDocumentTheme } from "@modelcontextprotocol/ext-apps";
 import { createRoot } from "react-dom/client";
 
 import { ControllerContext } from "./components/controller-context";
 import { Controller } from "./core/controller";
-import type { Mode } from "./core/types";
+import { detectEnvironment } from "./environment";
 import { AppShell } from "./shells/app-shell";
 import { ConsoleTransport } from "./transports/console";
 import { HostTransport } from "./transports/host";
 import { PreviewTransport } from "./transports/preview";
 
-export function mount(mode: Mode) {
-  const embedded = window.parent !== window;
+export function mount() {
+  const environment = detectEnvironment();
 
-  const preview =
-    !embedded && new URLSearchParams(location.search).get("preview") === "1";
+  // Only a host supplies a theme; a standalone page follows the system setting.
+  if (environment.kind === "http") {
+    const scheme = matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => applyDocumentTheme(scheme.matches ? "dark" : "light");
+    apply();
+    scheme.addEventListener("change", apply);
+  }
 
-  const transport = preview
-    ? new PreviewTransport()
-    : embedded || mode === "panel"
-      ? new HostTransport(undefined, mode === "console")
-      : new ConsoleTransport(
-          (window as Window & { CODEX_SUBAGENT_EXTENSION_ORIGIN?: string })
-            .CODEX_SUBAGENT_EXTENSION_ORIGIN ?? location.origin,
-        );
+  const transport =
+    environment.kind === "http"
+      ? new ConsoleTransport(environment.origin)
+      : environment.kind === "preview"
+        ? new PreviewTransport()
+        : new HostTransport();
 
-  const controller = new Controller(transport, mode);
+  const controller = new Controller(transport);
   const root = createRoot(document.getElementById("root")!);
 
   root.render(
@@ -32,7 +36,7 @@ export function mount(mode: Mode) {
     </ControllerContext.Provider>,
   );
 
-  if (mode === "panel" && !embedded && !preview) controller.showHostRequired();
+  if (environment.kind === "unsupported") controller.showHostRequired();
   else void controller.start();
 
   window.addEventListener(

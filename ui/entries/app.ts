@@ -1,3 +1,3 @@
 import { mount } from "../bootstrap";
 
-mount("console");
+mount();

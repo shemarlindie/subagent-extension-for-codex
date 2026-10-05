@@ -95,24 +95,13 @@ export function application(
     }),
   );
 
-  app.get(
-    [
-      "/",
-      "/tasks/:task",
-      "/tasks/:task/artifacts/:artifact",
-      "/workers/:worker",
-    ],
-    async (_req, res) => {
-      res
-        .type("html")
-        .send(
-          (await readFile(htmlPath, "utf8")).replaceAll(
-            "__API_ORIGIN__",
-            origin,
-          ),
-        );
-    },
-  );
+  app.get("/", async (_req, res) => {
+    res
+      .type("html")
+      .send(
+        (await readFile(htmlPath, "utf8")).replaceAll("__API_ORIGIN__", origin),
+      );
+  });
 
   app.post("/api/login", (req, res) => {
     if (!auth.matches(String(req.body.token ?? ""))) {

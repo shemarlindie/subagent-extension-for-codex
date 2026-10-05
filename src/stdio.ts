@@ -229,7 +229,7 @@ for (const [name, d] of Object.entries(tools))
   );
 
 const panel = delegationPanel(
-  resolve(dirname(fileURLToPath(import.meta.url)), "../dist/codex.html"),
+  resolve(dirname(fileURLToPath(import.meta.url)), "../dist/app.html"),
   undefined,
   async (args) => {
     const response = await fetch(

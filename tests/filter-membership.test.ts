@@ -134,7 +134,6 @@ test("the filter follows the first nonempty one in order until chosen", () => {
       tasks,
       filter: null,
       search: "",
-      mode: "panel",
       ...patch,
     }) as unknown as Snapshot;
 
@@ -148,12 +147,6 @@ test("the filter follows the first nonempty one in order until chosen", () => {
   assert.equal(effectiveFilter(state([done, running])), "active");
   assert.equal(effectiveFilter(state([done, running, failed])), "failed");
   assert.equal(effectiveFilter(state([done, failed, asking])), "attention");
-
-  // Needs input does not exist outside the panel.
-  assert.equal(
-    effectiveFilter(state([asking, done], { mode: "console" })),
-    "active",
-  );
 
   // A chosen filter wins, even when it is empty.
   assert.equal(

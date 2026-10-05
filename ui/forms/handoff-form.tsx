@@ -14,7 +14,8 @@ export function HandoffForm({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
     canSend = state.host.canSend,
-    canCopy = state.mode === "console" && !controller.transport.embedded;
+    // Without a host to send to, a standalone page falls back to the clipboard.
+    canCopy = !controller.transport.embedded;
 
   const { register, handleSubmit } = useForm({
     defaultValues: { message: handoffMessage(task) },

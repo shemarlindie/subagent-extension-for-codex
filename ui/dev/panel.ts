@@ -1,4 +1,4 @@
-// Dev twin of ui/templates/codex.html: same stylesheet order as build-ui.mjs.
-import "../styles/codex.css";
+// Dev twin of ui/templates/app.html: same stylesheet order as build-ui.mjs.
+import "../styles/app.css";
 import "../styles/shared.css";
-import "../entries/panel";
+import "../entries/app";

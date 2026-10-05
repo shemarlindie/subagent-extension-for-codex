@@ -112,20 +112,17 @@ class FakeTransport implements Transport {
   }
 }
 
-function setup(mode: "panel" | "console" = "panel", wide = false) {
+function setup(wide = false) {
   const transport = new FakeTransport();
-  const paths: string[] = [];
 
   const environment = {
     hidden: () => false,
     wide: () => wide,
-    path: "/",
-    navigate: (path: string) => paths.push(path),
   };
 
-  const controller = new Controller(transport, mode, environment);
+  const controller = new Controller(transport, environment);
 
-  return { transport, controller, paths, environment };
+  return { transport, controller, environment };
 }
 
 test("panel bootstrap explicitly requests global scope; host scope skips bootstrap and filters results", async (t) => {
@@ -309,7 +306,7 @@ test("in-flight mutation never selects its returned task after the host changes 
   assert.match(controller.getSnapshot().formError, /reopen/);
 });
 
-test("approved parent roots allow delegation in a scoped subrepository; console still requires repositories", async (t) => {
+test("approved parent roots allow delegation in a scoped subrepository", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   transport.projects = [{ repository: "/repo", kind: "parent" }];
@@ -334,16 +331,10 @@ test("approved parent roots allow delegation in a scoped subrepository; console 
     assert.equal(dialog.repository, "/repo/sub");
     assert.equal(dialog.revision, "feature");
   }
-
-  const consoleSetup = setup("console");
-  t.onTestFinished(() => consoleSetup.controller.dispose());
-  consoleSetup.transport.projects = transport.projects;
-  await consoleSetup.controller.start();
-  await assert.rejects(consoleSetup.controller.delegate(), /Add a project/);
 });
 
 test("automatic global history does not prefill delegation, while an intentional selection does", async (t) => {
-  const { controller, transport } = setup("panel", true);
+  const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("history", "/history")];
 
@@ -442,7 +433,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
       vi.useRealTimers();
     });
 
-    const { controller, transport } = setup("console");
+    const { controller, transport } = setup();
     transport.preview = false;
     t.onTestFinished(() => controller.dispose());
     const gate = deferred<void>();
@@ -461,7 +452,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
       transport.handler = (name) =>
         name === "list_agent_tasks" ? gate.promise.then(() => []) : undefined;
 
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(5000);
       await flush();
     }
 
@@ -486,14 +477,14 @@ test("embedded polling skips hidden panels and waits for a pending refresh", asy
     vi.useRealTimers();
   });
 
-  const { controller, transport, environment } = setup("console");
+  const { controller, transport, environment } = setup();
   transport.preview = false;
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   let hidden = true;
   environment.hidden = () => hidden;
   const initial = transport.calls.length;
-  vi.advanceTimersByTime(3000);
+  vi.advanceTimersByTime(5000);
   await flush();
   assert.equal(transport.calls.length, initial);
   hidden = false;
@@ -502,18 +493,19 @@ test("embedded polling skips hidden panels and waits for a pending refresh", asy
   transport.handler = (name) =>
     name === "list_agent_tasks" ? gate.promise : undefined;
 
-  vi.advanceTimersByTime(3000);
+  vi.advanceTimersByTime(5000);
   await flush();
   const pending = transport.calls.length;
-  assert.equal(pending, initial + 1);
+  // Each refresh reads the project list, then the tasks.
+  assert.equal(pending, initial + 2);
   vi.advanceTimersByTime(30000);
   await flush();
   assert.equal(transport.calls.length, pending);
   gate.resolve([]);
   await flush();
-  vi.advanceTimersByTime(3000);
+  vi.advanceTimersByTime(5000);
   await flush();
-  assert.equal(transport.calls.length, pending + 1);
+  assert.equal(transport.calls.length, pending + 2);
 });
 
 test("embedded polling reports tool failures then retries successfully", async (t) => {
@@ -523,7 +515,7 @@ test("embedded polling reports tool failures then retries successfully", async (
     vi.useRealTimers();
   });
 
-  const { controller, transport } = setup("console");
+  const { controller, transport } = setup();
   transport.preview = false;
   t.onTestFinished(() => controller.dispose());
   await controller.start();
@@ -534,14 +526,19 @@ test("embedded polling reports tool failures then retries successfully", async (
       ? Promise.reject(new Error("Host temporarily unavailable"))
       : undefined;
 
-  vi.advanceTimersByTime(3000);
+  vi.advanceTimersByTime(5000);
   await flush();
   assert.equal(controller.getSnapshot().connection, "Reconnecting…");
   assert.match(controller.getSnapshot().error, /temporarily unavailable/);
   fails = false;
-  vi.advanceTimersByTime(3000);
+  vi.advanceTimersByTime(5000);
   await flush();
-  assert.equal(controller.getSnapshot().connection, "● Connected");
+
+  assert.equal(
+    controller.getSnapshot().connection,
+    "Connected · refreshes every 5s",
+  );
+
   assert.equal(controller.getSnapshot().error, "");
 });
 

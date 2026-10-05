@@ -153,11 +153,7 @@ export function TaskList() {
             </Button>
           )}
           <span id="count">
-            {state.mode === "console"
-              ? `${narrowed ? `${tasks.length} OF ${total}` : tasks.length} TASK${total === 1 ? "" : "S"}`
-              : narrowed
-                ? `${tasks.length} of ${total}`
-                : tasks.length}
+            {narrowed ? `${tasks.length} of ${total}` : tasks.length}
           </span>
         </span>
       </div>

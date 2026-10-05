@@ -10,7 +10,6 @@ import { TaskStatus } from "./status";
 import { TaskActions } from "./task-actions";
 import { TaskDescription } from "./task-description";
 import { TaskNotices } from "./task-notices";
-import { WorkerInspector } from "./worker-inspector";
 
 export function TaskInspector() {
   const controller = useController(),
@@ -38,14 +37,12 @@ export function TaskInspector() {
     <section
       ref={detailRef}
       id="detail"
-      className={`detail${task && !state.workerRoute ? " has-task" : ""}`}
+      className={`detail${task ? " has-task" : ""}`}
       aria-label="Task inspector"
       data-task={task?.id}
       data-stacked={stacked || undefined}
     >
-      {state.workerRoute ? (
-        <WorkerInspector />
-      ) : task ? (
+      {task ? (
         <div key={task.id} className="task-view">
           <div ref={headerRef} className="task-header">
             <div className="task-topline">

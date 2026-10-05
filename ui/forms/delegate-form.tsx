@@ -149,10 +149,9 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
                 });
             })
           }
-          allowParent={
-            state.mode === "panel" &&
-            state.projects.some((project) => project.kind === "parent")
-          }
+          allowParent={state.projects.some(
+            (project) => project.kind === "parent",
+          )}
         />
         <Field id="description" label="Description">
           <textarea

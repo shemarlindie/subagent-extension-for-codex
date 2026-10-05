@@ -39,9 +39,7 @@ export function TaskFilters() {
     hadTasks.current = state.tasks.length > 0;
   });
 
-  const filters = (Object.entries(FILTER_LABELS) as [Filter, string][]).filter(
-    ([filter]) => filter !== "attention" || state.mode === "panel",
-  );
+  const filters = Object.entries(FILTER_LABELS) as [Filter, string][];
 
   // Empty filters hide, except the chosen one, which stays so the list never shows an unmarked selection.
   // All always shows, which keeps the row reserved.

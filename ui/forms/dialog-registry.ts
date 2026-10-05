@@ -5,7 +5,7 @@ import { controlDialog } from "./control-form";
 import { delegateDialog } from "./delegate-form";
 import type { DialogDefinition, DialogKind } from "./dialog-definition";
 import { handoffDialog } from "./handoff-form";
-import { artifactDialog, workspaceDialog } from "./info-dialogs";
+import { artifactDialog } from "./info-dialogs";
 import { permissionDialog } from "./permission-form";
 import { projectDialog } from "./project-form";
 import { settingsDialog } from "./settings-form";
@@ -19,7 +19,6 @@ const registry: { [K in DialogKind]: DialogDefinition<K> } = {
   respond: permissionDialog,
   handoff: handoffDialog,
   artifact: artifactDialog,
-  workspace: workspaceDialog,
 };
 
 /** Looks up by the dialog's kind, which TypeScript cannot correlate with the entry. */

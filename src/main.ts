@@ -67,9 +67,9 @@ const app = application(
   c,
   auth,
   origin,
-  join(installRoot, "dist/console.html"),
+  join(installRoot, "dist/app.html"),
   events,
-  join(installRoot, "dist/codex.html"),
+  join(installRoot, "dist/app.html"),
 );
 
 // Reserve the listener before recovery can change durable tasks or launch workers.

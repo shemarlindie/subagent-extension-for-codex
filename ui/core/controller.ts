@@ -7,7 +7,6 @@ import type {
   Defaults,
   DialogState,
   Filter,
-  Mode,
   PanelData,
   Project,
   QuestionDraft,
@@ -17,6 +16,8 @@ import type {
   Transport,
   Worker,
 } from "./types";
+
+const POLL_INTERVAL_MS = 5000;
 
 /** Owns async lifecycles and reviewed scope; components own presentation and drafts. */
 export class Controller {
@@ -39,15 +40,12 @@ export class Controller {
   readonly questionDrafts = new Map<string, QuestionDraft>();
   constructor(
     readonly transport: Transport,
-    mode: Mode,
     private environment = {
       hidden: () => document.hidden,
       wide: () => window.innerWidth > 640,
-      path: location.pathname,
-      navigate: (path: string) => history.replaceState({}, "", path),
     },
   ) {
-    this.state = initialState(mode, environment.path);
+    this.state = initialState();
   }
 
   getSnapshot = () => this.state;
@@ -114,19 +112,16 @@ export class Controller {
     clearTimeout(this.timer);
     if (this.disposed) return;
 
-    this.timer = setTimeout(
-      async () => {
-        try {
-          if (!this.environment.hidden() && !this.state.busy)
-            await this.refresh();
-        } catch (error) {
-          this.report(error);
-        } finally {
-          if (!this.disposed) this.schedule();
-        }
-      },
-      this.state.mode === "panel" ? 5000 : 3000,
-    );
+    this.timer = setTimeout(async () => {
+      try {
+        if (!this.environment.hidden() && !this.state.busy)
+          await this.refresh();
+      } catch (error) {
+        this.report(error);
+      } finally {
+        if (!this.disposed) this.schedule();
+      }
+    }, POLL_INTERVAL_MS);
   }
 
   dispose() {
@@ -180,11 +175,9 @@ export class Controller {
         version = this.state.scopeVersion;
       }
 
-      if (this.state.mode === "panel") {
-        const projects = await this.tool<Project[]>("list_agent_projects");
-        if (this.disposed || version !== this.state.scopeVersion) return;
-        this.patch({ projects });
-      }
+      const projects = await this.tool<Project[]>("list_agent_projects");
+      if (this.disposed || version !== this.state.scopeVersion) return;
+      this.patch({ projects });
 
       if (!this.state.workers.length) {
         const workers = await this.tool<Worker[]>("list_available_workers");
@@ -213,18 +206,14 @@ export class Controller {
         selected = undefined;
         this.explicitSelection = false;
         this.generation++;
-        this.patch({ events: [], artifacts: [], selectedArtifact: undefined });
+        this.patch({ events: [], artifacts: [] });
       }
 
       if (
         !selected &&
-        !this.state.workerRoute &&
         !this.browsing &&
         tasks.length &&
-        (this.state.mode === "console" ||
-          this.environment.wide() ||
-          conversation ||
-          repository)
+        (this.environment.wide() || conversation || repository)
       ) {
         selected =
           tasks.find((task) => task.pending_input)?.id ??
@@ -232,12 +221,9 @@ export class Controller {
           tasks[0].id;
 
         this.patch({
-          tab:
-            this.state.mode === "console"
-              ? this.state.tab
-              : tasks.find((task) => task.id === selected)?.result
-                ? "result"
-                : "activity",
+          tab: tasks.find((task) => task.id === selected)?.result
+            ? "result"
+            : "activity",
         });
       }
 
@@ -248,9 +234,7 @@ export class Controller {
       this.patch({
         connection: this.transport.preview
           ? "Fixture preview"
-          : this.state.mode === "console"
-            ? "● Connected"
-            : "Connected · refreshes every 5s",
+          : `Connected · refreshes every ${POLL_INTERVAL_MS / 1000}s`,
         error: "",
       });
     } catch (error) {
@@ -274,7 +258,7 @@ export class Controller {
     const id = this.state.selected,
       generation = this.generation;
 
-    if (!id || this.state.workerRoute || this.disposed) return;
+    if (!id || this.disposed) return;
 
     const [{ events, dropped }, artifacts] = await Promise.all([
       readEventTail(
@@ -303,19 +287,13 @@ export class Controller {
 
     this.patch({
       selected: id,
-      selectedArtifact: undefined,
-      workerRoute: undefined,
       events: [],
       artifacts: [],
-      tab:
-        this.state.mode === "console"
-          ? "activity"
-          : this.state.tasks.find((task) => task.id === id)?.result
-            ? "result"
-            : "activity",
+      tab: this.state.tasks.find((task) => task.id === id)?.result
+        ? "result"
+        : "activity",
     });
 
-    this.navigate(`/tasks/${id}`);
     await this.loadDetail();
     await this.share();
   }
@@ -340,48 +318,11 @@ export class Controller {
     this.patch({ tab });
   }
 
-  async chooseWorker(workerRoute?: string) {
-    ++this.generation;
-    this.browsing = false;
-
-    this.patch({
-      workerRoute,
-      selected: undefined,
-      selectedArtifact: undefined,
-      events: [],
-      artifacts: [],
-    });
-
-    this.navigate(workerRoute ? `/workers/${workerRoute}` : "/");
-    await this.refresh();
-    await this.share();
-  }
-
-  private navigate(path: string) {
-    if (
-      this.state.mode === "console" &&
-      !this.transport.embedded &&
-      !this.transport.preview
-    )
-      this.environment.navigate(path);
-  }
-
-  selectArtifact(id?: string) {
-    this.patch({ selectedArtifact: id, tab: "changes" });
-
-    this.navigate(
-      `/tasks/${this.state.selected}${id ? `/artifacts/${id}` : ""}`,
-    );
-
-    this.run(() => this.share(id));
-  }
-
   async share(artifactId?: string) {
     if (this.disposed || !this.state.host.canShare) return;
     const task = selectedTask(this.state);
 
     await this.transport.share?.({
-      selected_worker: this.state.workerRoute ?? null,
       selected_task: this.state.selected ?? null,
       selected_artifact: artifactId ?? null,
       conversation_id: this.state.conversation ?? null,
@@ -400,7 +341,6 @@ export class Controller {
       scopeVersion: this.state.scopeVersion + 1,
       tasks: [],
       selected: undefined,
-      selectedArtifact: undefined,
       events: [],
       artifacts: [],
       ...(this.state.busy
@@ -692,10 +632,7 @@ export class Controller {
   open(
     dialog:
       | Omit<Extract<DialogState, { kind: "control" }>, "scope">
-      | Omit<
-          Extract<DialogState, { kind: "respond" | "handoff" | "workspace" }>,
-          "scope"
-        >
+      | Omit<Extract<DialogState, { kind: "respond" | "handoff" }>, "scope">
       | Omit<Extract<DialogState, { kind: "artifact" }>, "scope">,
   ) {
     if (this.state.dialog || this.state.busy) return;
@@ -791,17 +728,12 @@ export class Controller {
             ...this.state.tasks.filter((item) => item.id !== task.id),
           ],
           selected: task.id,
-          workerRoute: undefined,
-          selectedArtifact: undefined,
           events: [],
           artifacts: [],
           tab: "activity",
-          ...(this.state.mode === "panel"
-            ? { repository: task.repository, revision: task.revision }
-            : {}),
+          repository: task.repository,
+          revision: task.revision,
         });
-
-        this.navigate(`/tasks/${task.id}`);
       }
 
       this.patch({ dialog: undefined });
