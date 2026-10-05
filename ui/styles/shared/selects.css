@@ -7,7 +7,7 @@
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
-  background: var(--color-background-primary, var(--bg, #111c2b));
+  background: var(--bg);
 }
 .select-value {
   overflow: hidden;
@@ -65,8 +65,8 @@
   padding: 4px;
   border: 1px solid var(--line, #2e3e50);
   border-radius: 8px;
-  background: var(--color-background-primary, var(--bg, #111c2b));
-  color: var(--color-text-primary, var(--text, #dce7f5));
+  background: var(--bg);
+  color: var(--text);
   box-shadow: 0 8px 24px #0002;
 }
 .select-item,

@@ -122,7 +122,7 @@ header .brand {
 }
 aside {
   min-width: 0;
-  background: var(--color-background-secondary, var(--surface));
+  background: var(--color-background-secondary);
   border-right: 1px solid var(--line);
   /* No side padding: children inset themselves so #task-list's scrollbar can reach the edge. */
   padding: 12px 0;

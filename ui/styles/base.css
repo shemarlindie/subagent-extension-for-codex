@@ -4,8 +4,8 @@
 }
 body {
   margin: 0;
-  background: var(--color-background-primary, var(--bg));
-  color: var(--color-text-primary, var(--text));
+  background: var(--bg);
+  color: var(--text);
 }
 button,
 input,
