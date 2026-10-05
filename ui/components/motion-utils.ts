@@ -1,4 +1,4 @@
-/** Matches the CSS motion tokens in shared.css. */
+/** Matches the CSS motion tokens in ui/styles/shared/motion.css. */
 export const MOTION = {
   fast: 120,
   base: 180,

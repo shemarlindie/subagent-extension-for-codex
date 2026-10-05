@@ -1,0 +1,279 @@
+/*
+ * Worker questions: each question is a card with its choices inline. Stacked
+ * questions form a deck; cards ahead peek out below the active one, and
+ * answered cards slide off to the left.
+ */
+.question-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 4px 0 12px;
+}
+.question-count {
+  font-size: 12px;
+  color: var(--muted, #8fa5c1);
+  font-variant-numeric: tabular-nums;
+}
+.question-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.question-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border: 1px solid var(--line, #2e3e50);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 11px;
+  color: var(--muted, #8fa5c1);
+}
+.question-step[data-answered] {
+  color: var(--text, var(--fg, #dce7f5));
+}
+.question-step[data-answered] svg {
+  color: var(--accent, #d4e69b);
+}
+.question-step[aria-current="step"] {
+  border-color: var(--accent, #d4e69b);
+  color: var(--text, var(--fg, #dce7f5));
+}
+/*
+ * Every card shares one grid cell, so the deck is as tall as its tallest card
+ * and moving between cards never changes its height.
+ */
+.question-deck {
+  --peek-step: 7px;
+  display: grid;
+  margin-top: 8px;
+  padding-bottom: calc(var(--peek, 0) * var(--peek-step));
+}
+.question-card {
+  grid-area: 1 / 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line, #2e3e50);
+  border-radius: 10px;
+  background: var(--bg, #111c2b);
+  transform-origin: 50% 100%;
+  transition:
+    transform var(--motion-slow) var(--ease-out),
+    opacity var(--motion-slow) var(--ease-out),
+    visibility var(--motion-slow);
+}
+.question-card[data-position="active"] {
+  z-index: 3;
+  box-shadow: 0 6px 18px #0000001f;
+}
+.question-card:not([data-position="active"]) {
+  overflow: hidden;
+  pointer-events: none;
+}
+.question-card[data-position="ahead"] {
+  z-index: calc(3 - var(--depth));
+  background: color-mix(
+    in srgb,
+    var(--surface, #172334) calc(100% - var(--depth) * 25%),
+    var(--bg, #111c2b)
+  );
+  transform: translateY(calc(var(--depth) * var(--peek-step)))
+    scale(calc(1 - var(--depth) * 0.04));
+}
+.question-card[data-position="behind"],
+.question-card[data-hidden] {
+  opacity: 0;
+  visibility: hidden;
+}
+.question-card[data-position="behind"] {
+  transform: translateX(-28px) rotate(-1.5deg);
+}
+/* Content fades in as a card reaches the front, so peeking cards stay blank. */
+.question-card > * {
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+.question-card:not([data-position="active"]) > * {
+  opacity: 0;
+}
+/* The question fills the row; the hint sits on its first line. */
+.question-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.question-header {
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, #d4e69b) 16%, transparent);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent, #d4e69b);
+}
+.question-hint {
+  flex: none;
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--muted, #8fa5c1);
+}
+.question-card .question-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.question-options {
+  display: grid;
+  gap: 6px;
+}
+.question-form .question-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--line, #2e3e50);
+  border-radius: 8px;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+.question-option:hover {
+  background: var(--hover, #1e3047);
+}
+.question-option:has(input:checked),
+.question-other[data-filled] {
+  border-color: var(--accent, #d4e69b);
+  background: color-mix(in srgb, var(--accent, #d4e69b) 8%, transparent);
+}
+.question-option:has(input:focus-visible) {
+  outline: var(--focus-ring);
+}
+.question-option input:is([type="radio"], [type="checkbox"]) {
+  flex: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent, #d4e69b);
+}
+.question-option-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.question-option-label {
+  font-weight: 500;
+}
+.question-option-description {
+  font-size: 12px;
+  color: var(--muted, #8fa5c1);
+}
+.question-form .question-other {
+  padding: 0;
+  cursor: text;
+}
+.question-other input {
+  border: 0;
+  background: transparent;
+  padding: 9px 11px;
+}
+/* The option row carries the focus ring for its input. */
+.question-option input:focus-visible {
+  outline: none;
+}
+.question-card textarea {
+  display: block;
+}
+/* Skip sits on the left; navigation and sending sit on the right. */
+/* The front card's actions: skip on the left, navigation and sending on the right. */
+.question-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.question-actions > :is([role="status"], .text-button) {
+  font-size: 12px;
+}
+.question-actions [role="status"] {
+  color: var(--muted, #8fa5c1);
+  animation: motion-fade var(--motion-base) var(--ease-out);
+}
+.question-nav {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+/* Skipped choices stay usable; picking one takes the skip back. */
+.question-card[data-skipped] :is(.question-options, textarea) {
+  opacity: 0.5;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+.question-card[data-skipped] :is(.question-options, textarea):hover,
+.question-card[data-skipped] :is(.question-options, textarea):focus-within {
+  opacity: 1;
+}
+.question-step[data-skipped] {
+  border-style: dashed;
+}
+
+.settings-group {
+  border: 1px solid var(--line, #2e3e50);
+  border-radius: 8px;
+  margin: 0 0 8px;
+}
+.settings-group-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  padding: 10px 12px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.settings-group-trigger svg {
+  flex: none;
+  transform: rotate(-90deg);
+}
+.settings-group-trigger[data-panel-open] svg {
+  transform: rotate(0);
+}
+.settings-group-title {
+  flex: none;
+  font-weight: 600;
+}
+.settings-group-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted, #8fa5c1);
+}
+.settings-group-trigger[data-panel-open] .settings-group-summary {
+  visibility: hidden;
+}
+.settings-group-badge {
+  flex: none;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  background: var(--accent, #d4e69b);
+  color: var(--bg, #111c2b);
+}

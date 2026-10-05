@@ -1,10 +1,35 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 
 import react from "@vitejs/plugin-react";
 import { build, parseAst } from "vite";
 
 await mkdir("dist", { recursive: true });
+
+// The page embeds its CSS as text, so relative `@import "./x.css";` lines are expanded in place.
+async function inlineImports(file) {
+  const source = await readFile(file, "utf8");
+  const parts = [];
+  let last = 0;
+
+  for (const match of source.matchAll(/^@import "(\.[^"]+)";\n/gm)) {
+    parts.push(source.slice(last, match.index));
+    parts.push(await inlineImports(resolve(dirname(file), match[1])));
+    last = match.index + match[0].length;
+  }
+
+  parts.push(source.slice(last));
+
+  const css = parts.join("");
+
+  // An import in any other form would stay in the page and be ignored, silently dropping styles.
+  if (/@import\b/.test(css.replace(/\/\*[\s\S]*?\*\//g, "")))
+    throw new Error(
+      `Unsupported @import in ${file}; use @import "./file.css";`,
+    );
+
+  return css;
+}
 
 for (const [entry, template, stylesheet, output] of [
   [
@@ -48,7 +73,7 @@ for (const [entry, template, stylesheet, output] of [
   const css =
     (await readFile(stylesheet, "utf8")) +
     "\n" +
-    (await readFile("ui/styles/shared.css", "utf8"));
+    (await inlineImports("ui/styles/shared.css"));
 
   const html = (await readFile(template, "utf8"))
     .replace("/*__CSS__*/", () => css)

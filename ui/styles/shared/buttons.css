@@ -1,0 +1,30 @@
+/* Text buttons (variant "text"); the global button:hover fill is overridden on purpose. */
+.text-button {
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted, #8392a7);
+  font-size: inherit;
+  cursor: pointer;
+}
+.text-button:hover {
+  background: transparent;
+  color: var(--text, #dce7f5);
+}
+.text-button:focus-visible {
+  outline: var(--focus-ring);
+}
+.text-button.underline {
+  text-decoration: underline;
+}
+.search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  transform: translateY(-50%);
+}

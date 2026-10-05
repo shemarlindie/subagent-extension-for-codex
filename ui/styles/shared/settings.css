@@ -1,0 +1,255 @@
+/*
+ * Settings and handoff dialogs keep the maximum height; their forms fill it
+ * and keep the footer at the bottom.
+ */
+#dialog.dialog:has(.settings-form),
+#dialog.dialog:has(.handoff-form) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 40px);
+}
+.settings-form {
+  container-type: inline-size;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+.settings-groups {
+  flex: 1 0 auto;
+}
+.settings-group-header {
+  margin: 0;
+  font: inherit;
+}
+.settings-group-content {
+  padding: 0 12px;
+}
+/* A section's intro text, hidden when the section has none. */
+.settings-section-intro {
+  padding-bottom: 8px;
+}
+.settings-section-intro:empty {
+  display: none;
+}
+.settings-section-intro .help {
+  margin: 0;
+}
+/* Each section ends with its own reset action. */
+.settings-section-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 0 10px;
+}
+.setting-reset {
+  flex: none;
+  font-size: 11px;
+}
+.handoff-form {
+  flex: 1 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.handoff-form textarea {
+  flex: 1 1 auto;
+}
+/* Asks before closing with unsaved edits. */
+.settings-discard-anchor {
+  display: flow-root;
+  scroll-margin-bottom: 80px;
+}
+.settings-discard {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.settings-discard strong {
+  flex: 1 0 100%;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+/* Rows stack label over control, then sit side by side when there is room. */
+.setting-row {
+  display: grid;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 0;
+}
+.setting-row-inline {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 0;
+}
+/* Dividers only separate side-by-side rows; stacked rows rely on spacing. */
+@container (min-width: 480px) {
+  .setting-row:not(.setting-row-inline) {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 45%);
+    gap: 12px;
+  }
+  .setting-row,
+  .model-table {
+    border-top: 1px solid var(--line, #2e3e50);
+  }
+  .setting-row {
+    padding: 10px 0;
+  }
+}
+.setting-label {
+  display: block;
+  margin: 0;
+  font-size: 12px;
+}
+.setting-profile-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.setting-error {
+  /* Use the row's available width, keeping the message under the controls. */
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding-top: 6px;
+  text-align: right;
+}
+.setting-text .help {
+  margin: 2px 0 0;
+}
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.setting-control > :not(.switch) {
+  flex: 1;
+  min-width: 0;
+}
+.setting-amount {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted, #8fa5c1);
+}
+/* An amount under a limit that is off is disabled and recedes. */
+.setting-amount[data-off] {
+  opacity: 0.5;
+}
+/* Marks a value the form refused to save, once the user has edited it. */
+.settings-form input:user-invalid {
+  border-color: var(--warn, #f0a37a);
+}
+/* A fixed unit width lines up amounts across rows. */
+.setting-unit {
+  width: 4ch;
+}
+.setting-amount input {
+  width: 72px;
+  padding: 4px 4px 4px 6px;
+  text-align: right;
+}
+input[type="number"]::-webkit-inner-spin-button {
+  margin-left: 4px;
+}
+.switch {
+  flex: none;
+  display: inline-flex;
+  width: 30px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--line, #2e3e50);
+  cursor: pointer;
+  transition: background-color var(--motion-fast, 120ms) ease;
+}
+.switch[data-checked] {
+  background: var(--accent, #d4e69b);
+}
+.switch:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.switch-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg, #111c2b);
+  transition: transform var(--motion-fast, 120ms) var(--ease-out, ease);
+}
+.switch-thumb[data-checked] {
+  transform: translateX(12px);
+}
+/* Model scopes share one header and note instead of repeating per field. */
+.model-table {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 8px;
+  padding: 8px 0 12px;
+}
+.model-table-head,
+.model-table-row {
+  display: contents;
+}
+.model-table-head span {
+  font-size: 11px;
+  color: var(--muted, #8fa5c1);
+}
+.model-table-row > .help {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.help.warn {
+  color: var(--warn, #f0a37a);
+}
+@container (max-width: 380px) {
+  .model-table {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .model-table-head {
+    display: none;
+  }
+  .model-table-row > .setting-label {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+  }
+}
+.model-id {
+  font:
+    11px ui-monospace,
+    monospace;
+  color: var(--muted, #8fa5c1);
+}
+
+.project-path-entry {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.project-path-entry input {
+  flex: 1;
+  min-width: 0;
+}
+.project-path-entry button {
+  flex-shrink: 0;
+}
+
+#project-scope {
+  min-width: 160px;
+}
+.project-selection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.project-selection-control {
+  flex: 1;
+  min-width: 0;
+}
+.project-selection > button {
+  flex-shrink: 0;
+}

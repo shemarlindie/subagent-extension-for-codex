@@ -1,0 +1,58 @@
+/* Narrow panels scroll the filters sideways, clipped at the panel edge like the tabs. */
+.filters {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  /* Side padding is the resting inset; themes bleed the strip to the panel edge with a matching negative margin. */
+  padding: 2px 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.filters::-webkit-scrollbar {
+  display: none;
+}
+.filters button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.filters button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+.filter-count {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.filter-count[data-alert] {
+  background: var(--warn, #d9a441);
+  color: var(--bg, #111c2b);
+}
+.list-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.actions {
+  align-items: center;
+  gap: 4px 8px;
+}
+.actions-separator {
+  color: var(--muted, #8392a7);
+}
+.actions .text-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -1,0 +1,35 @@
+/* Keep dialog actions reachable while long forms scroll. */
+.dialog form > footer {
+  --bleed: calc(-1 * var(--dialog-pad, 24px));
+  position: sticky;
+  bottom: var(--bleed);
+  z-index: 1;
+  margin: 16px var(--bleed) var(--bleed);
+  padding: 12px var(--dialog-pad, 24px) var(--dialog-pad, 24px);
+  border-top: 1px solid var(--line, #2e3e50);
+  background: var(--bg, #111c2b);
+}
+.dialog-heading {
+  --bleed: calc(-1 * var(--dialog-pad, 24px));
+  position: sticky;
+  top: var(--bleed);
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: var(--bleed) var(--bleed) 0;
+  padding: var(--dialog-pad, 24px) var(--dialog-pad, 24px) 4px;
+  background: var(--bg, #111c2b);
+}
+.dialog-heading h2 {
+  flex: 1;
+  min-width: 0;
+}
+.dialog-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}

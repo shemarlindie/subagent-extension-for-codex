@@ -1,0 +1,24 @@
+/* Task search and status filters; themes supply the colors. */
+.search-box {
+  position: relative;
+  margin: 0 8px;
+}
+.search-box .search {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 7px 28px 7px 28px;
+}
+.search::-webkit-search-cancel-button {
+  display: none;
+}
+.search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-50%);
+  color: var(--muted, #8392a7);
+  pointer-events: none;
+}
