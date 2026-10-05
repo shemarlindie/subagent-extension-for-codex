@@ -22,6 +22,7 @@ export function HandoffForm({ task }: { task: Task }) {
 
   return (
     <form
+      className="handoff-form"
       onSubmit={handleSubmit((values) =>
         controller.submit(async () => {
           if (canSend) await controller.transport.send?.(values.message);

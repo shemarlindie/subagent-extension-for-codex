@@ -251,7 +251,7 @@ form .select-trigger {
 .task-description-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 2px;
   border: 0;
   padding: 2px 3px;
   background: transparent;
@@ -1109,10 +1109,11 @@ form .select-trigger {
   color: var(--bg, #111c2b);
 }
 /*
- * Settings keep one height, the dialog's maximum, so switching sections
- * never resizes the dialog. The form fills it and the footer stays at the bottom.
+ * Settings and handoff dialogs keep the maximum height; their forms fill it
+ * and keep the footer at the bottom.
  */
-#dialog.dialog:has(.settings-form) {
+#dialog.dialog:has(.settings-form),
+#dialog.dialog:has(.handoff-form) {
   display: flex;
   flex-direction: column;
   height: calc(100dvh - 40px);
@@ -1152,6 +1153,15 @@ form .select-trigger {
 .setting-reset {
   flex: none;
   font-size: 11px;
+}
+.handoff-form {
+  flex: 1 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.handoff-form textarea {
+  flex: 1 1 auto;
 }
 /* Asks before closing with unsaved edits. */
 .settings-discard-anchor {
