@@ -6,6 +6,7 @@ import {
   FILTER_LABELS,
   locked,
   profileLabel,
+  projectChoices,
   scopedTasks,
   terminal,
   visibleTasks,
@@ -17,14 +18,21 @@ import { useController, useSnapshot } from "./controller-context";
 import { useListMotion } from "./motion";
 import { TaskStatusIcon } from "./task-status-icon";
 import { useNow } from "./use-now";
+import { WorkerProfileIcon } from "./worker-profile-icon";
 
 interface TaskRowProps {
   task: Task;
+  projectName?: string;
   selected: boolean;
   onSelect(): void;
 }
 
-export function TaskRow({ task, selected, onSelect }: TaskRowProps) {
+export function TaskRow({
+  task,
+  projectName,
+  selected,
+  onSelect,
+}: TaskRowProps) {
   return (
     <button
       className="row"
@@ -32,9 +40,22 @@ export function TaskRow({ task, selected, onSelect }: TaskRowProps) {
       aria-current={selected}
       onClick={onSelect}
     >
+      {projectName && (
+        <span className="row-project" title={projectName}>
+          {projectName}
+        </span>
+      )}
       <span className="row-title">{task.title}</span>
       <span className="row-meta">
-        <span className="row-worker">{profileLabel(task.worker_profile)}</span>
+        <span className="row-worker">
+          <WorkerProfileIcon
+            profile={task.worker_profile}
+            className="row-worker-icon"
+          />
+          <span className="row-worker-label">
+            {profileLabel(task.worker_profile)}
+          </span>
+        </span>
         <span className="row-trailing">
           <TaskRowRuntime task={task} />
           <TaskRowStatus task={task} />
@@ -102,6 +123,14 @@ export function TaskList() {
     filter = effectiveFilter(state),
     narrowed = tasks.length < total || Boolean(state.search),
     filterLabel = FILTER_LABELS[filter],
+    projectNames = new Map(
+      projectChoices(state).map((project) => [
+        project.repository,
+        (project.name ||
+          project.repository.split(/[\\/]/).filter(Boolean).at(-1)) ??
+          project.repository,
+      ]),
+    ),
     listRef = useRef<HTMLDivElement>(null);
 
   useListMotion(listRef, "data-task", tasks.map((task) => task.id).join());
@@ -120,7 +149,7 @@ export function TaskList() {
         <span className="list-count">
           {narrowed && (
             <Button variant="text" underline onClick={resetFilters}>
-              Reset
+              Clear filter
             </Button>
           )}
           <span id="count">
@@ -144,6 +173,13 @@ export function TaskList() {
             <TaskRow
               key={task.id}
               task={task}
+              projectName={
+                state.repository
+                  ? undefined
+                  : ((projectNames.get(task.repository) ||
+                      task.repository.split(/[\\/]/).filter(Boolean).at(-1)) ??
+                    task.repository)
+              }
               selected={task.id === state.selected}
               onSelect={() => controller.run(() => controller.select(task.id))}
             />

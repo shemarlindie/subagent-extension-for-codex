@@ -61,7 +61,9 @@ export function TaskInspector() {
                 className="eyebrow"
                 data-live={live && live.state !== "failed" ? "" : undefined}
               >
-                <TaskStatus task={displayTask ?? task} activity={live} />
+                <span className="eyebrow-status">
+                  <TaskStatus task={displayTask ?? task} activity={live} />
+                </span>
                 <span className="eyebrow-worker">
                   / {task.provider} · {profileLabel(task.worker_profile)}
                 </span>

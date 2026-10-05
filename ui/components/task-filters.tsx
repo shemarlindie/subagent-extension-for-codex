@@ -82,7 +82,7 @@ export function TaskFilters() {
   return (
     <>
       <div className="search-box">
-        <Icon name="search" className="search-icon" />
+        <Icon name="search" size={10} className="search-icon" />
         <input
           id="search"
           ref={searchRef}
@@ -110,7 +110,7 @@ export function TaskFilters() {
               searchRef.current?.focus();
             }}
           >
-            <Icon name="close" size={12} />
+            <Icon name="close" size={14} />
           </Button>
         )}
       </div>

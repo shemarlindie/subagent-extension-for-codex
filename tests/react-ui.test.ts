@@ -5,6 +5,7 @@ import { describe, test, type TestContext, vi } from "vitest";
 
 import type {
   HostState,
+  Project,
   SettingsDocument,
   Task,
   Transport,
@@ -71,7 +72,7 @@ class FakeTransport implements Transport {
   preview = true;
   events!: TransportEvents;
   tasks = [task()];
-  projects = [{ repository: "/repo/a", kind: "repository" }];
+  projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
   messages: string[] = [];
   host: HostState = {
@@ -1318,7 +1319,11 @@ test("delegation submits the full request without a title and search matches des
     "ZEBRA",
   );
 
-  assert.ok(screen.getByRole("button", { name: /^Review authentication/ }));
+  assert.equal(
+    document.querySelector(".row-title")?.textContent,
+    "Review authentication",
+  );
+
   assertAbsent(screen.queryByRole("button", { name: /^Other task/ }));
   await act(() => controller.setSearch(""));
   await user.click(screen.getByRole("button", { name: "New task" }));
@@ -1675,7 +1680,7 @@ test("task filters show counts and an empty state with a way out", async (t) => 
   const { user } = await setup(t);
   assert.ok(screen.getByRole("radio", { name: "All, 1" }));
   assert.ok(screen.getByRole("radio", { name: "Active, 1" }));
-  assertAbsent(screen.queryByRole("button", { name: "Reset" }));
+  assertAbsent(screen.queryByRole("button", { name: "Clear filter" }));
   const search = screen.getByRole("searchbox", { name: "Search tasks" });
   await user.type(search, "zzz");
 
@@ -1694,7 +1699,7 @@ test("task filters show counts and an empty state with a way out", async (t) => 
   await user.click(screen.getByRole("button", { name: "Clear search" }));
   assert.equal((search as HTMLInputElement).value, "");
   await user.type(search, "a");
-  await user.click(screen.getByRole("button", { name: "Reset" }));
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
   assert.equal((search as HTMLInputElement).value, "");
 
   assert.equal(
@@ -1714,12 +1719,48 @@ test("a chosen filter stays visible after it empties", async (t) => {
 
   assert.ok(screen.getByRole("radio", { name: "Active, 0" }));
   assert.ok(screen.getByText("No tasks match “zzz” in Active."));
-  await user.click(screen.getByRole("button", { name: "Reset" }));
+  await user.click(screen.getByRole("button", { name: "Clear filter" }));
 
   assert.equal(
     screen.getByRole("radio", { name: /^All/ }).getAttribute("aria-checked"),
     "true",
   );
+});
+
+test("the all-project task list shows each project above its task title", async (t) => {
+  await setup(t, (transport) => {
+    transport.tasks = [
+      { ...task(), title: "Review authentication" },
+      { ...task("two", "/repo/b"), title: "Update database" },
+    ];
+
+    transport.projects = [
+      { repository: "/repo/a", name: "Alpha", kind: "repository" },
+      { repository: "/repo/b", name: "", kind: "repository" },
+    ];
+  });
+
+  const projectByTitle = new Map(
+    [...document.querySelectorAll(".row")].map((row) => [
+      row.querySelector(".row-title")?.textContent,
+      row.querySelector(".row-project")?.textContent,
+    ]),
+  );
+
+  assert.deepEqual(
+    [...projectByTitle],
+    [
+      ["Review authentication", "Alpha"],
+      ["Update database", "b"],
+    ],
+  );
+
+  for (const row of document.querySelectorAll(".row")) {
+    assert.deepEqual(
+      [...row.children].slice(0, 2).map((child) => child.className),
+      ["row-project", "row-title"],
+    );
+  }
 });
 
 test("console shows the filtered task count against the total", async (t) => {

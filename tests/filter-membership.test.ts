@@ -160,5 +160,6 @@ test("the filter follows the first nonempty one in order until chosen", () => {
     effectiveFilter(state([asking], { filter: "failed" })),
     "failed",
   );
+
   assert.equal(effectiveFilter(state([asking], { filter: "all" })), "all");
 });

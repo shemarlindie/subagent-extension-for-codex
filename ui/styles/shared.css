@@ -89,6 +89,17 @@
   align-items: center;
   gap: 4px;
 }
+.row-project {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 2px;
+  color: var(--muted, #8fa5c1);
+  font-size: 10px;
+  line-height: 1.2;
+}
 .form-error:empty {
   display: none;
 }
@@ -384,6 +395,18 @@ form .select-trigger {
   justify-content: space-between;
 }
 .row-worker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.row-worker-icon {
+  display: block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+.row-worker-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -392,7 +415,7 @@ form .select-trigger {
 .row-trailing {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   flex-shrink: 0;
 }
 .row-runtime {
@@ -400,8 +423,8 @@ form .select-trigger {
   white-space: nowrap;
 }
 .row-status-icon {
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   flex-shrink: 0;
 }
 .row-status-icon.running,
@@ -440,16 +463,16 @@ form .select-trigger {
 .task-topline .eyebrow {
   flex: 1;
   min-width: 0;
-  /* One space between parts, matching the spaces around the text separators. */
   gap: 0.3em;
   /* Clip a long line without cutting off the status dot's halo. */
   overflow: clip;
   overflow-clip-margin: 4px;
   white-space: nowrap;
 }
-.task-topline .eyebrow .dot {
-  /* Clears the running halo before the status label. */
-  margin-right: 5px;
+.task-topline .eyebrow-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 /* Only the live detail gives way, so the labels before it never move. */
 .eyebrow-live {
@@ -1609,8 +1632,8 @@ textarea {
   position: absolute;
   left: 9px;
   top: 50%;
-  width: 13px;
-  height: 13px;
+  width: 10px;
+  height: 10px;
   transform: translateY(-50%);
   color: var(--muted, #8392a7);
   pointer-events: none;
