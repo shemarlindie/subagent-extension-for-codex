@@ -13,8 +13,8 @@ Run Prettier and ESLint with `--fix` on the files you change (`npx eslint --fix 
 Check in the browser when a change is large, when seeing it would help, or when the user asks. Skip small changes that tests cover.
 
 - Preview fixtures (`ui/dev/preview/fixtures.ts`) cover every task status and activity row kind. Build events with the typed builder, not by hand; `ui/dev/preview/preview-sdk-fixtures.test.ts` replays them through the provider. Add a fixture for any new event or row kind.
-- The `panel-dev` server (port 5317) is usually running. Navigate to `http://localhost:5317`; do not start or stop it.
-- Set **Data** to `fixtures` and **Relaunch** (the iframe is blank for a few seconds). Use `live` data only for what fixtures cannot show: set **Launch** to `global`, and do not start tasks, since live mode performs real actions.
+- Dev servers are in `.claude/launch.json`: `panel-dev` (port 5317, usually running) and `service-dev` (port 4317, needed only for live data; Codex may have started it). If one is not running, ask the user before starting it. Do not stop them.
+- Navigate to `http://localhost:5317`, set **Data** to `fixtures` and **Relaunch** (the iframe is blank for a few seconds). Use `live` data only for what fixtures cannot show: set **Launch** to `global`, and do not start tasks, since live mode performs real actions.
 - **Launch** works with fixtures, too (controls in [Local development](docs/development.md#panel-dev-host)). `Thread` shows the chosen thread's tasks for one project; `Global` shows every conversation and project.
   - **Thread**: the default `dev-thread` has tasks in `/demo/project` and `/demo/website`; `other-thread` owns two more.
   - **Sandbox cwd**: the default (this repository) is not a fixture project, so it shows **Add chat project**. Set it to `/demo/website` to scope the panel to that project.
