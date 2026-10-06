@@ -1,8 +1,8 @@
-import type { Transport, TransportEvents } from "../core/types";
+import type { DownloadFile, Transport, TransportEvents } from "../core/types";
+import { saveInBrowser } from "../utils/download";
 
 export class ConsoleTransport implements Transport {
   readonly embedded = false;
-  readonly preview = false;
   private events?: TransportEvents;
   private stream?: EventSource;
   private timer?: ReturnType<typeof setTimeout>;
@@ -48,6 +48,10 @@ export class ConsoleTransport implements Transport {
 
   async login(token: string) {
     await this.api("/api/login", { token });
+  }
+
+  async download(file: DownloadFile) {
+    saveInBrowser(file);
   }
 
   watch() {

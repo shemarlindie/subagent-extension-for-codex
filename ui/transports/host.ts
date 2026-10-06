@@ -5,7 +5,12 @@ import {
 } from "@modelcontextprotocol/ext-apps";
 
 import { traceSize } from "../core/size-trace";
-import type { PanelData, Transport, TransportEvents } from "../core/types";
+import type {
+  DownloadFile,
+  PanelData,
+  Transport,
+  TransportEvents,
+} from "../core/types";
 
 // DEBUG: Trace the SDK's outgoing sizes without replacing its resize observer.
 class SizeTracingApp extends App {
@@ -18,7 +23,6 @@ class SizeTracingApp extends App {
 
 export class HostTransport implements Transport {
   readonly embedded = true;
-  readonly preview = false;
   private disposed = false;
   private events?: TransportEvents;
   constructor(
@@ -82,6 +86,7 @@ export class HostTransport implements Transport {
       ),
       canSend: Boolean(capabilities?.message?.text),
       canShare: Boolean(capabilities?.updateModelContext?.structuredContent),
+      canDownload: Boolean(capabilities?.downloadFile),
     });
   }
 
@@ -139,6 +144,27 @@ export class HostTransport implements Transport {
   async share(structuredContent: Record<string, unknown>) {
     if (this.disposed) throw new Error("The console has closed.");
     await this.app.updateModelContext({ structuredContent });
+  }
+
+  // The sandboxed frame cannot save files itself, so the host does it.
+  async download(file: DownloadFile) {
+    if (this.disposed) throw new Error("The console has closed.");
+
+    const uri = `file:///${encodeURIComponent(file.name)}`;
+
+    const result = await this.app.downloadFile({
+      contents: [
+        {
+          type: "resource",
+          resource:
+            file.base64 === undefined
+              ? { uri, mimeType: file.mimeType, text: file.text }
+              : { uri, mimeType: file.mimeType, blob: file.base64 },
+        },
+      ],
+    });
+
+    if (result.isError) throw new Error("The download was cancelled.");
   }
 
   async expand() {

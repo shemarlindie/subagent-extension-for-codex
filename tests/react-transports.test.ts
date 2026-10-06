@@ -191,6 +191,7 @@ function hostApp() {
   const calls: unknown[] = [];
   const toolOptions: unknown[] = [];
   let response: unknown = { structuredContent: { result: ["task"] } };
+  let downloadDeclined = false;
 
   const app = {
     ontoolresult: undefined as any,
@@ -223,12 +224,20 @@ function hostApp() {
     requestDisplayMode: async (args: unknown) => {
       calls.push(args);
     },
+    downloadFile: async (args: unknown) => {
+      calls.push(args);
+
+      return { isError: downloadDeclined };
+    },
   };
 
   return {
     app,
     calls,
     toolOptions,
+    declineDownloads: () => {
+      downloadDeclined = true;
+    },
     respond: (value: unknown) => {
       response = value;
     },
@@ -267,7 +276,13 @@ test("host preserves structured settings envelopes and unwraps other tools", asy
   await transport.connect(observed.events);
 
   assert.deepEqual(observed.hosts, [
-    { displayMode: "inline", canExpand: true, canSend: true, canShare: true },
+    {
+      displayMode: "inline",
+      canExpand: true,
+      canSend: true,
+      canShare: true,
+      canDownload: false,
+    },
   ]);
 
   assert.deepEqual(
@@ -455,4 +470,57 @@ test("host routes user actions through app-only aliases and preserves settings e
   } finally {
     transport.dispose();
   }
+});
+
+test("host downloads send text and binary files as embedded resources", async () => {
+  const fake = hostApp();
+  const transport = new HostTransport(fake.app as any);
+
+  await transport.download({
+    name: "notes v1.md",
+    mimeType: "text/markdown",
+    text: "# Notes",
+  });
+
+  await transport.download({
+    name: "logo.png",
+    mimeType: "image/png",
+    base64: "AAAA",
+  });
+
+  assert.deepEqual(fake.calls, [
+    {
+      contents: [
+        {
+          type: "resource",
+          resource: {
+            uri: "file:///notes%20v1.md",
+            mimeType: "text/markdown",
+            text: "# Notes",
+          },
+        },
+      ],
+    },
+    {
+      contents: [
+        {
+          type: "resource",
+          resource: {
+            uri: "file:///logo.png",
+            mimeType: "image/png",
+            blob: "AAAA",
+          },
+        },
+      ],
+    },
+  ]);
+
+  fake.declineDownloads();
+
+  await assert.rejects(
+    transport.download({ name: "a.txt", mimeType: "text/plain", text: "" }),
+    /cancelled/,
+  );
+
+  transport.dispose();
 });

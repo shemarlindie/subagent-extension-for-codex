@@ -4,6 +4,9 @@ import assert from "node:assert/strict";
 import { describe, test, type TestContext, vi } from "vitest";
 
 import type {
+  Artifact,
+  ArtifactSummary,
+  DownloadFile,
   HostState,
   Project,
   SettingsDocument,
@@ -30,6 +33,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 
+import { summarizeArtifact } from "../src/core/artifact-file";
 import { ControllerContext } from "../ui/components/controller-context";
 import { Controller } from "../ui/core/controller";
 import { SKIPPED_ANSWER } from "../ui/forms/question-form";
@@ -69,15 +73,17 @@ function task(id = "one", repository = "/repo/a"): Task {
 
 class FakeTransport implements Transport {
   embedded = true;
-  preview = true;
   events!: TransportEvents;
   tasks = [task()];
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
   messages: string[] = [];
+  artifacts: Artifact[] = [];
+  downloads: DownloadFile[] = [];
   host: HostState = {
     canSend: false,
     canShare: false,
+    canDownload: false,
     canExpand: true,
     displayMode: "fullscreen",
   };
@@ -119,7 +125,10 @@ class FakeTransport implements Transport {
       ],
       list_agent_tasks: this.tasks,
       get_agent_events: [],
-      get_agent_artifacts: [],
+      list_user_agent_artifacts: this.artifacts.map(summarizeArtifact),
+      get_user_agent_artifact: this.artifacts.find(
+        (artifact) => artifact.id === args.artifact_id,
+      ),
       get_agent_settings: {
         values: {
           default_provider: "claude",
@@ -139,6 +148,10 @@ class FakeTransport implements Transport {
 
   async send(message: string) {
     this.messages.push(message);
+  }
+
+  async download(file: DownloadFile) {
+    this.downloads.push(file);
   }
 
   watch() {}
@@ -2192,6 +2205,7 @@ test("handoff sends only after explicit submit and uses the edited message", asy
     transport.events.host({
       canSend: true,
       canShare: false,
+      canDownload: false,
       canExpand: false,
       displayMode: "fullscreen",
     }),
@@ -3791,4 +3805,243 @@ test("pending task project browsing disables Start and ignores selection after s
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
   );
+});
+
+describe("artifact files", () => {
+  const report = {
+    summary: "Found one issue.",
+    findings: ["Token expiry is off by one."],
+    evidence: [],
+    changes: [],
+    tests: [],
+    recommendations: [],
+  };
+
+  function artifacts(): Artifact[] {
+    return [
+      {
+        id: "art_report",
+        task_id: "one",
+        type: "report",
+        title: "Worker result",
+        content: JSON.stringify(report),
+        mime_type: "application/json",
+        created_at: "",
+      },
+      {
+        id: "art_diff",
+        task_id: "one",
+        type: "diff",
+        title: "Changes · attempt 1",
+        content:
+          "diff --git a/auth.ts b/auth.ts\n--- a/auth.ts\n+++ b/auth.ts\n@@ -1 +1 @@\n-const ttl = 59;\n+const ttl = 60;",
+        mime_type: "text/x-diff",
+        created_at: "",
+      },
+    ];
+  }
+
+  async function showArtifacts(t: TestContext, canDownload: boolean) {
+    const harness = await setup(t, (transport) => {
+      transport.artifacts = artifacts();
+      transport.host.canDownload = canDownload;
+    });
+
+    await act(() => harness.controller.select("one"));
+    await harness.user.click(screen.getByRole("tab", { name: /Artifacts/ }));
+
+    return harness;
+  }
+
+  test("cards show the file name, size and a formatted snippet", async (t) => {
+    await showArtifacts(t, true);
+
+    const diff = screen.getByRole("article", { name: "Changes · attempt 1" });
+    within(diff).getByText("changes-attempt-1.diff");
+    within(diff).getByText("1 file");
+
+    assert.ok(
+      diff.querySelector(".snippet-files")?.textContent?.includes("auth.ts"),
+    );
+
+    const result = screen.getByRole("article", { name: "Worker result" });
+    within(result).getByText("worker-result.json");
+    // JSON snippets are pretty-printed and highlighted.
+    assert.ok(result.querySelectorAll(".code-line").length > 1);
+    assert.ok(result.querySelector(".hljs-attr"));
+  });
+
+  test("cards render from summaries; content loads once, on preview", async (t) => {
+    const { transport, user } = await showArtifacts(t, true);
+
+    const loads = () =>
+      transport.calls.filter((call) => call.name === "get_user_agent_artifact");
+
+    // Large files keep their snippets: the service bounds what a summary holds.
+    screen.getByRole("article", { name: "Changes · attempt 1" });
+    assert.equal(loads().length, 0);
+
+    await user.click(
+      screen.getByRole("button", { name: "Preview Changes · attempt 1" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => assert.ok(dialog.querySelector(".diff-file")));
+
+    await user.click(within(dialog).getByRole("button", { name: "Download" }));
+    await waitFor(() => assert.equal(transport.downloads.length, 1));
+
+    assert.deepEqual(
+      loads().map((call) => call.args),
+      [{ task_id: "one", artifact_id: "art_diff" }],
+    );
+  });
+
+  test("preview opens a modal with switchable views", async (t) => {
+    const { user } = await showArtifacts(t, false);
+
+    await user.click(
+      screen.getByRole("button", { name: "Preview Worker result" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "Worker result" });
+    within(dialog).getByText("Token expiry is off by one.");
+
+    // Only the active view renders; the modal's fixed height keeps it steady.
+    assertAbsent(dialog.querySelector(".code-view"));
+
+    await user.click(within(dialog).getByRole("button", { name: "Source" }));
+
+    assert.equal(
+      dialog.querySelector(".artifact-body")?.getAttribute("data-view"),
+      "source",
+    );
+
+    assertAbsent(dialog.querySelector(".report"));
+    assert.ok(dialog.querySelector(".code-view .hljs-attr"));
+    assertAbsent(dialog.querySelector("footer"));
+  });
+
+  test("diff previews render files with line numbers", async (t) => {
+    const { user } = await showArtifacts(t, false);
+
+    await user.click(
+      screen.getByRole("button", { name: "Preview Changes · attempt 1" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const rows = [...dialog.querySelectorAll(".diff-row")];
+
+    assert.deepEqual(
+      rows.map((row) => [row.className, row.textContent]),
+      [
+        ["diff-row del", "1−const ttl = 59;"],
+        ["diff-row add", "1+const ttl = 60;"],
+      ],
+    );
+  });
+
+  test("download sends the file through the transport when the host allows it", async (t) => {
+    const { transport, user } = await showArtifacts(t, true);
+
+    await user.click(
+      screen.getByRole("button", { name: "Download changes-attempt-1.diff" }),
+    );
+
+    await waitFor(() =>
+      assert.deepEqual(transport.downloads, [
+        {
+          name: "changes-attempt-1.diff",
+          mimeType: "text/x-diff",
+          text: artifacts()[1].content,
+        },
+      ]),
+    );
+  });
+
+  test("download is hidden when the host cannot save files", async (t) => {
+    await showArtifacts(t, false);
+
+    assertAbsent(screen.queryByRole("button", { name: /^Download/ }));
+  });
+
+  test("the preview shows a busy bar until its content has loaded", async (t) => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+
+    const { controller, user } = await setup(t, (transport) => {
+      transport.artifacts = artifacts();
+      const original = transport.tool.bind(transport);
+
+      transport.tool = async <T>(
+        name: string,
+        args: Record<string, unknown> = {},
+      ): Promise<T> => {
+        if (name === "get_user_agent_artifact") await gate;
+
+        return original<T>(name, args);
+      };
+    });
+
+    await act(() => controller.select("one"));
+    await user.click(screen.getByRole("tab", { name: /Artifacts/ }));
+
+    await user.click(
+      screen.getByRole("button", { name: "Preview Changes · attempt 1" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+
+    const bar = within(dialog).getByRole("progressbar", {
+      name: "Loading changes-attempt-1.diff",
+    });
+
+    // Indeterminate: no value while the size of the work is unknown.
+    assert.equal(bar.getAttribute("aria-valuenow"), null);
+
+    await act(async () => release());
+
+    await waitFor(() =>
+      assertAbsent(within(dialog).queryByRole("progressbar")),
+    );
+
+    assert.ok(dialog.querySelector(".diff-file"));
+  });
+
+  test("an unreadable artifact shows its error on its own card", async (t) => {
+    const { controller, user } = await setup(t, (transport) => {
+      transport.artifacts = artifacts();
+      const original = transport.tool.bind(transport);
+
+      transport.tool = async <T>(
+        name: string,
+        args: Record<string, unknown> = {},
+      ): Promise<T> => {
+        const result = await original<T>(name, args);
+        if (name !== "list_user_agent_artifacts") return result;
+
+        return [
+          ...(result as ArtifactSummary[]),
+          {
+            ...(result as ArtifactSummary[])[0],
+            id: "art_broken",
+            title: "art_broken",
+            snippet: {
+              kind: "error",
+              message: "This artifact could not be read: bad JSON",
+            },
+          },
+        ] as T;
+      };
+    });
+
+    await act(() => controller.select("one"));
+    await user.click(screen.getByRole("tab", { name: /Artifacts/ }));
+
+    const broken = screen.getByRole("article", { name: "art_broken" });
+    within(broken).getByText("This artifact could not be read: bad JSON");
+    // The rest of the list is unaffected.
+    screen.getByRole("article", { name: "Worker result" });
+    screen.getByRole("article", { name: "Changes · attempt 1" });
+  });
 });

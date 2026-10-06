@@ -410,15 +410,6 @@ pre {
   overflow: auto;
   margin: 8px 0;
 }
-.diff-line {
-  display: block;
-}
-.diff-line.add {
-  color: var(--success);
-}
-.diff-line.remove {
-  color: var(--warn);
-}
 .report p {
   margin-top: 0;
 }
@@ -441,23 +432,6 @@ pre {
 .facts dd {
   margin: 0;
   color: var(--text);
-}
-.artifact {
-  margin-bottom: 14px;
-}
-.artifact-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.artifact-head strong {
-  flex: 1;
-}
-.banner {
-  padding: 8px 18px;
-  background: var(--surface);
-  font-size: 12px;
-  border-bottom: 1px solid var(--line);
 }
 #error {
   color: var(--warn);

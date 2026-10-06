@@ -1,3 +1,4 @@
+import type { ArtifactSummary } from "../../src/core/artifact-file";
 import type {
   Artifact,
   Capabilities,
@@ -9,7 +10,7 @@ import type { ListedTask } from "../../src/core/task-list";
 import type { DroppedSummary } from "./event-history";
 
 export type Task = ListedTask;
-export type { Artifact, Event };
+export type { Artifact, ArtifactSummary, Event };
 export type Tab = "result" | "activity" | "changes" | "details";
 export type Filter = "all" | "active" | "attention" | "completed" | "failed";
 
@@ -73,9 +74,16 @@ export type PanelData = {
 export type HostState = {
   canSend: boolean;
   canShare: boolean;
+  canDownload: boolean;
   canExpand: boolean;
   displayMode: "inline" | "fullscreen" | "pip";
 };
+
+/** A file to save; `base64` carries binary content, `text` everything else. */
+export type DownloadFile = {
+  name: string;
+  mimeType: string;
+} & ({ text: string; base64?: never } | { base64: string; text?: never });
 
 export type TransportEvents = {
   scope(data: PanelData): void;
@@ -88,13 +96,14 @@ export type TransportEvents = {
 
 export interface Transport {
   embedded: boolean;
-  preview: boolean;
   connect(events: TransportEvents): Promise<void>;
   tool<T>(name: string, args?: Record<string, unknown>): Promise<T>;
   watch(): void;
   dispose(): void;
   send?(message: string): Promise<void>;
   share?(data: Record<string, unknown>): Promise<void>;
+  /** Saves a file for the user; hosts confirm first and may decline. */
+  download?(file: DownloadFile): Promise<void>;
   expand?(): Promise<void>;
   login?(token: string): Promise<void>;
 }
@@ -134,7 +143,7 @@ export type DialogState =
   | { kind: "control"; action: string; task: Task; scope: number }
   | { kind: "respond"; task: Task; scope: number }
   | { kind: "handoff"; task: Task; scope: number }
-  | { kind: "artifact"; artifact: Artifact; scope: number };
+  | { kind: "artifact"; artifact: ArtifactSummary; scope: number };
 
 export type Snapshot = {
   tasks: Task[];
@@ -143,7 +152,7 @@ export type Snapshot = {
   events: Event[];
   /** Tally of the selected task's events that fell off the front of `events`. */
   droppedEvents?: DroppedSummary;
-  artifacts: Artifact[];
+  artifacts: ArtifactSummary[];
   selected?: string;
   conversation?: string;
   repository?: string;

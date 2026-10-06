@@ -39,6 +39,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
           ref={popup}
           id="dialog"
           className="dialog"
+          data-kind={dialog?.kind}
           aria-describedby={undefined}
           initialFocus={() => {
             trigger.current = document.activeElement as HTMLElement | null;

@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 
 import type { DialogState } from "../core/types";
+import { artifactDialog } from "./artifact-dialog";
 import { controlDialog } from "./control-form";
 import { delegateDialog } from "./delegate-form";
 import type { DialogDefinition, DialogKind } from "./dialog-definition";
 import { handoffDialog } from "./handoff-form";
-import { artifactDialog } from "./info-dialogs";
 import { permissionDialog } from "./permission-form";
 import { projectDialog } from "./project-form";
 import { settingsDialog } from "./settings-form";

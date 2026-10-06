@@ -1,9 +1,11 @@
+import { isBase64Image } from "./artifact-file";
 import { delegationDialog } from "./delegation";
 import { readEventTail } from "./event-history";
 import { initialState } from "./initial-state";
 import { selectedTask, terminal } from "./selectors";
 import type {
   Artifact,
+  ArtifactSummary,
   Defaults,
   DialogState,
   Filter,
@@ -91,15 +93,20 @@ export class Controller {
       });
 
       if (this.disposed) return;
+
+      // Top-level pages save files themselves; embedded ones learn it from the host.
+      if (!this.transport.embedded && this.transport.download)
+        this.patch({ host: { ...this.state.host, canDownload: true } });
+
       this.patch({ connected: true, loginRequired: false });
       await this.refresh();
       if (this.disposed) return;
       this.transport.watch();
-      if (this.transport.embedded && !this.transport.preview) this.schedule();
+      if (this.transport.embedded) this.schedule();
     } catch (error) {
       if (!this.state.connected) {
         this.patch({ connection: "Connection failed" });
-      } else if (this.transport.embedded && !this.transport.preview) {
+      } else if (this.transport.embedded) {
         // Keep the panel polling when its first host read fails transiently.
         this.schedule();
       }
@@ -232,9 +239,7 @@ export class Controller {
       if (this.disposed || version !== this.state.scopeVersion) return;
 
       this.patch({
-        connection: this.transport.preview
-          ? "Fixture preview"
-          : `Connected · refreshes every ${POLL_INTERVAL_MS / 1000}s`,
+        connection: `Connected · refreshes every ${POLL_INTERVAL_MS / 1000}s`,
         error: "",
       });
     } catch (error) {
@@ -268,7 +273,9 @@ export class Controller {
         () => !this.disposed && generation === this.generation,
         this.state.droppedEvents,
       ),
-      this.tool<Artifact[]>("get_agent_artifacts", { task_id: id }),
+      this.tool<ArtifactSummary[]>("list_user_agent_artifacts", {
+        task_id: id,
+      }),
     ]);
 
     if (
@@ -329,6 +336,47 @@ export class Controller {
       repository: task?.repository ?? this.state.repository ?? null,
       revision: task?.revision ?? this.state.revision,
     });
+  }
+
+  /** Recently loaded artifact contents, so previewing then downloading fetches once. */
+  private artifactContents = new Map<string, Promise<Artifact>>();
+
+  /** Fetches an artifact's content; cards only carry its summary. */
+  loadArtifact(summary: ArtifactSummary): Promise<Artifact> {
+    let loading = this.artifactContents.get(summary.id);
+
+    if (!loading) {
+      loading = this.tool<Artifact>("get_user_agent_artifact", {
+        task_id: summary.task_id,
+        artifact_id: summary.id,
+      });
+
+      // A failed load is retried next time rather than cached.
+      loading.catch(() => this.artifactContents.delete(summary.id));
+      this.artifactContents.set(summary.id, loading);
+
+      // Artifacts can be large; keep only the few most recent.
+      for (const id of [...this.artifactContents.keys()].slice(0, -3))
+        this.artifactContents.delete(id);
+    }
+
+    return loading;
+  }
+
+  async download(summary: ArtifactSummary) {
+    if (this.disposed || !this.state.host.canDownload) return;
+    const artifact = await this.loadArtifact(summary);
+    const name = summary.file_name;
+
+    await this.transport.download?.(
+      isBase64Image(artifact)
+        ? {
+            name,
+            mimeType: artifact.mime_type,
+            base64: artifact.content.trim(),
+          }
+        : { name, mimeType: artifact.mime_type, text: artifact.content },
+    );
   }
 
   private invalidateScope(patch: Partial<Snapshot>) {

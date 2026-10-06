@@ -66,7 +66,6 @@ function task(
 
 class FakeTransport implements Transport {
   embedded = true;
-  preview = true;
   events!: TransportEvents;
   calls: { name: string; args: Record<string, unknown> }[] = [];
   watches = 0;
@@ -94,7 +93,7 @@ class FakeTransport implements Transport {
       ],
       list_agent_tasks: this.tasks,
       get_agent_events: [],
-      get_agent_artifacts: [],
+      list_user_agent_artifacts: [],
       get_agent_settings: { values: defaults },
     };
 
@@ -211,7 +210,7 @@ test("delayed detail from a previous selection cannot replace current events or 
       ? args.task_id === "a"
         ? gate.promise
         : [{ id: 2, task_id: "b", type: "log", timestamp: "", data: {} }]
-      : name === "get_agent_artifacts"
+      : name === "list_user_agent_artifacts"
         ? [{ id: args.task_id, task_id: args.task_id }]
         : undefined;
 
@@ -434,7 +433,6 @@ for (const phase of ["connect", "read", "poll"] as const) {
     });
 
     const { controller, transport } = setup();
-    transport.preview = false;
     t.onTestFinished(() => controller.dispose());
     const gate = deferred<void>();
     if (phase === "connect") transport.connectGate = gate.promise;
@@ -478,7 +476,6 @@ test("embedded polling skips hidden panels and waits for a pending refresh", asy
   });
 
   const { controller, transport, environment } = setup();
-  transport.preview = false;
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   let hidden = true;
@@ -516,7 +513,6 @@ test("embedded polling reports tool failures then retries successfully", async (
   });
 
   const { controller, transport } = setup();
-  transport.preview = false;
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   let fails = true;
@@ -550,7 +546,6 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
   });
 
   const { controller, transport } = setup();
-  transport.preview = false;
   t.onTestFinished(() => controller.dispose());
   let fails = true;
 

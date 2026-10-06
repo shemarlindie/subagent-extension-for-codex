@@ -2,7 +2,7 @@ import { Tabs } from "@base-ui/react/tabs";
 import { useEffect, useRef } from "react";
 
 import type { Tab, Task } from "../core/types";
-import { ArtifactList } from "./artifact-list";
+import { ArtifactList } from "./artifact/artifact-list";
 import { useController, useSnapshot } from "./controller-context";
 import { EventList } from "./event-list";
 import { MotionContent } from "./motion";

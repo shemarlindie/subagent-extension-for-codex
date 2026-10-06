@@ -26,6 +26,7 @@ test("theme accent and success states follow their host color tokens", () => {
   const panel = readFileSync("ui/styles/surfaces/panel.css", "utf8");
   const activity = readFileSync("ui/styles/shared/activity.css", "utf8");
   const questions = readFileSync("ui/styles/shared/questions.css", "utf8");
+  const files = readFileSync("ui/styles/shared/files.css", "utf8");
 
   assert.match(theme, /--accent:\s*var\(--color-ring-primary\);/);
   assert.match(theme, /--success:\s*var\(--color-text-success\);/);
@@ -49,7 +50,7 @@ test("theme accent and success states follow their host color tokens", () => {
   for (const [styles, selector, property] of [
     [panel, ".dot.running", "background"],
     [panel, ".dot.completed", "background"],
-    [panel, ".diff-line.add", "color"],
+    [files, ".diff-stat .add", "color"],
     [activity, ".row-status-icon.running", "color"],
     [activity, ".row-status-icon.completed", "color"],
     [activity, '.timeline-dot[data-status="running"]', "--dot-color"],

@@ -22,6 +22,7 @@ export function initialState(): Snapshot {
     host: {
       canSend: false,
       canShare: false,
+      canDownload: false,
       canExpand: false,
       displayMode: "inline",
     },
