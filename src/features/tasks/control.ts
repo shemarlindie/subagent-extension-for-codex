@@ -383,6 +383,7 @@ export class Control {
           ? t.start_tree
           : await this.workspaces.snapshot(t.workspace!);
 
+      await this.workspaces.pin(t, "turn-start", t.turn_start_tree);
       this.store.save(t);
       if (a.abort.signal.aborted) throw a.abort.signal.reason;
       const live = this.store.get(t.id, t.owner);

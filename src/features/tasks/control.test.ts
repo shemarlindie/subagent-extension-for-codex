@@ -805,6 +805,11 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
       .toString()
       .trim();
 
+  const pins = () =>
+    execFileSync("git", ["-C", repo, "for-each-ref", "refs/agent-tasks"])
+      .toString()
+      .trim();
+
   try {
     const running = await c.start("alice", input("[input]"));
     await until(() => !!store.get(running.id, "alice").pending_input);
@@ -836,6 +841,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
 
     assert.match(branches(), new RegExp(`agent/${t.id}`));
     assert.equal((await c.workspaces.changes(t)).state, "workspace_missing");
+    assert.match(pins(), /turn-start/);
 
     await assert.rejects(c.removeWorktree("alice", t.id), /already removed/);
 
@@ -845,6 +851,8 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
 
     assert.equal(branches(), "");
     assert.equal((await c.workspaces.changes(t)).state, "branch_deleted");
+    // Deleting the branch also unpins the task's snapshots.
+    assert.equal(pins(), "");
 
     // Each outcome is a task event.
     assert.deepEqual(

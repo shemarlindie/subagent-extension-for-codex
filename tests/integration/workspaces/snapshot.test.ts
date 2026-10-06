@@ -180,6 +180,26 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
       "turn-1.txt",
       "turn-2.txt",
     ]);
+
+    // Refs pin both snapshots, so pruning everything unreferenced keeps them.
+    assert.equal(
+      s.git(
+        "for-each-ref",
+        "--format=%(objectname) %(refname)",
+        "refs/agent-tasks",
+      ),
+      `${done.start_tree} refs/agent-tasks/${t.id}/start\n` +
+        `${done.turn_start_tree} refs/agent-tasks/${t.id}/turn-start\n`,
+    );
+
+    s.git("-c", "gc.pruneExpire=now", "gc", "-q");
+
+    assert.deepEqual(s.changed(done.start_tree!, done.turn_start_tree!), [
+      "turn-1.txt",
+    ]);
+
+    await s.workspaces.unpin(done);
+    assert.equal(s.git("for-each-ref", "refs/agent-tasks"), "");
   } finally {
     await c.close();
     await s.close();

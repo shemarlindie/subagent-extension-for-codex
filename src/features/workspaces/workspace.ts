@@ -89,6 +89,12 @@ function changesBase(t: Task, scope: ChangeScope) {
   return base;
 }
 
+/** Where a task's snapshot refs live: `refs/agent-tasks/<task-id>/<name>`. */
+const SNAPSHOT_REFS = "refs/agent-tasks";
+
+/** The snapshots a task keeps: its start, and its latest turn's start. */
+export type SnapshotName = "start" | "turn-start";
+
 /** How many recent diffs are cached, and for how long. */
 const DIFF_CACHE_SIZE = 2;
 const DIFF_CACHE_MS = 60_000;
@@ -164,7 +170,8 @@ export class Workspaces {
    * Records a checkout's files, as `git add -A` would stage them, as a tree
    * id. A temporary index in the extension's directory keeps the checkout's
    * own index and files untouched. `.gitignore` applies. New content is
-   * written to the object store as unreferenced blobs, which `git gc` prunes.
+   * written to the object store as unreferenced blobs, which `git gc` prunes
+   * unless the snapshot is pinned.
    */
   async snapshot(cwd: string) {
     await mkdir(this.root, { recursive: true, mode: 0o700 });
@@ -233,6 +240,42 @@ export class Workspaces {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  }
+
+  /**
+   * Keeps a task's snapshot from `git gc`, which prunes unreferenced objects
+   * after two weeks, with a ref to its tree in the task's repository (whose
+   * refs its worktree shares). The ref names a tree, not a commit, so it isn't
+   * a branch and `git log --all` leaves it out. A later pin of the same name
+   * replaces it.
+   */
+  async pin(t: Task, name: SnapshotName, tree: string) {
+    await git(t.repository, [
+      "update-ref",
+      `${SNAPSHOT_REFS}/${t.id}/${name}`,
+      tree,
+    ]);
+  }
+
+  /** Removes a task's snapshot refs, so `git gc` can prune its snapshots. */
+  async unpin(t: Task) {
+    const refs = (
+      await git(t.repository, [
+        "for-each-ref",
+        "--format=%(refname)",
+        `${SNAPSHOT_REFS}/${t.id}/`,
+      ])
+    )
+      .split("\n")
+      .filter(Boolean);
+
+    if (refs.length)
+      await git(
+        t.repository,
+        ["update-ref", "--stdin"],
+        undefined,
+        refs.map((ref) => `delete ${ref}\n`).join(""),
+      );
   }
 
   /**
@@ -311,6 +354,7 @@ export class Workspaces {
       // The task's changes are measured from here, leaving out work that
       // was already uncommitted.
       t.start_tree = await this.snapshot(t.repository);
+      await this.pin(t, "start", t.start_tree);
       t.workspace = t.repository;
 
       return;
@@ -550,13 +594,17 @@ export class Workspaces {
     return { status: "removed" as const };
   }
 
-  /** Deletes a worktree task's branch, once its worktree is removed. */
+  /**
+   * Deletes a worktree task's branch, once its worktree is removed, and its
+   * snapshot refs, since nothing reads its changes after that.
+   */
   async deleteBranch(t: Task) {
     if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch)
       throw new Error("This task has no branch to delete.");
     if (await exists(t.workspace))
       throw new Error("Remove the worktree before deleting its branch.");
     await git(t.repository, ["branch", "-D", "--end-of-options", t.branch]);
+    await this.unpin(t);
   }
 
   /** Whether a worktree task's branch still exists. */
