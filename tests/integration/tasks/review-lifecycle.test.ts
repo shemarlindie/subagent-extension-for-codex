@@ -128,7 +128,7 @@ test(
     await assert.rejects(
       exec(
         process.execPath,
-        [fileURLToPath(new URL("../dist/main.js", import.meta.url))],
+        [fileURLToPath(new URL("../../../dist/main.js", import.meta.url))],
         {
           env: {
             ...env,

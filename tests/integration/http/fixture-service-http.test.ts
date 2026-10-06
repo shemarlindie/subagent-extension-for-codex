@@ -6,7 +6,7 @@ import { afterAll, test } from "vitest";
 
 import { fixtureServicePlugin } from "../../../dev/fixture-service-plugin.js";
 
-const projectRoot = resolve(import.meta.dirname, "..");
+const projectRoot = resolve(import.meta.dirname, "../../..");
 const serviceModule = resolve(projectRoot, "ui/dev/fixture-service.ts");
 
 let server: Awaited<ReturnType<typeof createServer>> | undefined;

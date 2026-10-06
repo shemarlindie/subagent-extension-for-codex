@@ -15,7 +15,11 @@ import {
 import { waitForListening } from "../../support/helpers.js";
 
 const exec = promisify(execFile);
-const launcher = new URL("../dist/service/launcher.js", import.meta.url).href;
+
+const launcher = new URL(
+  "../../../dist/platform/service/launcher.js",
+  import.meta.url,
+).href;
 
 async function connect(env: NodeJS.ProcessEnv) {
   const clean = { ...process.env };
@@ -67,10 +71,10 @@ test("data directory override is independent of packaged installation directory"
   );
 });
 
-// The runtime module sits two levels below the package root in both src/ and dist/.
+// The runtime module sits three levels below the package root in both src/ and dist/.
 test("install root resolves to the package root from source and build output", async () => {
   const built = await import(
-    new URL("../dist/service/runtime.js", import.meta.url).href
+    new URL("../../../dist/platform/service/runtime.js", import.meta.url).href
   );
 
   assert.equal(installRoot, resolve("."));
