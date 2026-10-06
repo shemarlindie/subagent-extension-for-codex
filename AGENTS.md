@@ -25,7 +25,21 @@ Check in the browser when a change is large, when seeing it would help, or when 
   - **Migrate the config loader**: pending question.
   - **Plan the sign-in rollout**: three stacked questions in one request (card deck, single and multiple choice).
   - **Convert the test suite to the new runner**: exceeds the 200-event activity tail (trimmed timeline). Use it to test timeline scrolling, since most other timelines are short.
+  - **Profile the production build** (in `/demo/website`): only large artifacts, each crossing a different preview limit (60-file diff, minified JSON, long report, 20,000-row CSV, 30,000-line log, long Markdown, a single 250 KB line, an SVG large enough to be rasterized, and a PNG with a thumbnail). Their content is generated on first request (`ui/transports/preview-large-artifacts.ts`).
+  - In fixture mode, the artifact tools run the real service code on the Vite server (`ui/dev/fixture-service.ts`), with real thumbnails and summary caching. The **Bridge log** shows each call's `served` source.
+  - **Catalogue the design assets**: one artifact of each small format (JSON, log, Markdown, CSV, SVG, code).
 - The host's selects ignore `form_input`; set `.value` and dispatch `change`. **Width** offers 360, 480, 760, and Fill. At 360px the short frame stacks the inspector (the whole pane scrolls), so use 480 or Fill for the fixed-header layout.
 - The panel is an iframe: query `document.querySelector('iframe').contentDocument` (`#tab-activity`, `.activity-group`, `.activity-debug-toggle`).
 - Measure layout with `getBoundingClientRect` instead of judging by eye, and use `scrollIntoView` to move the timeline.
 - A hidden browser pane throttles frames, so do not time animations. Sample them instead: get the running animations with `element.getAnimations()`, pause them, set `currentTime`, and measure.
+
+## Component and change conventions
+
+- Split oversized component files by responsibility. Keep one React component per file; use a rare exception only when splitting would add unnecessary indirection.
+- Group related components in a domain-specific subfolder when it improves navigation. Name component files to match their component names, using the repository's kebab-case convention.
+- Keep components focused on rendering. Put reusable generic helpers in `ui/utils` and domain logic in `ui/core`; avoid embedding reusable helpers in component modules.
+- Prefer named prop and state types over inline object types.
+- Name components for their actual scope. Use a generic name only when the component and its styling are genuinely reusable; use a domain-specific name when behavior or styling is domain-specific.
+- Keep large collapsed sections lightweight: unmount expensive child rows while closed, and show a loader when asynchronous or deferred rendering needs feedback.
+- Write documentation for the current state. Avoid historical notes about replaced implementations or tools unless that history is needed to understand current behavior.
+- Categorize changes into coherent, independently understandable commit groups, and make dependencies/order clear so a requested group can be applied first. Do not auto-commit unless implementing a plan already divided into commits or the user explicitly asks.

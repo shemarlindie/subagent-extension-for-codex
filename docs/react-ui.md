@@ -1,6 +1,6 @@
 # React UI architecture
 
-Delegated Work is the only UI. It runs embedded in a host and in a regular browser tab against the HTTP service. One entrypoint (`ui/entries/app.ts`) builds one page, `dist/app.html`. At runtime `ui/environment.ts` picks the transport from where the page renders (an iframe uses the host bridge, a top-level page with an injected API origin uses HTTP, `?preview=1` uses fixtures, anything else shows "Open through MCP"), and `ui/bootstrap.tsx` creates the controller and mounts the shell. Service APIs, MCP resources, standalone routes, and fixture preview remain the integration boundaries.
+Delegated Work is the only UI. It runs embedded in a host and in a regular browser tab against the HTTP service. One entrypoint (`ui/entries/app.ts`) builds one page, `dist/app.html`. At runtime `ui/environment.ts` picks the transport from where the page renders (an iframe uses the host bridge, a top-level page with an injected API origin uses HTTP, anything else shows "Open through MCP"), and `ui/bootstrap.tsx` creates the controller and mounts the shell. Fixtures exist only in development, through the panel dev host; `scripts/build-ui.mjs` fails the build if fixtures or the dev host reach the production bundle. Service APIs, MCP resources, and standalone routes remain the integration boundaries.
 
 ## Module boundaries
 
@@ -10,7 +10,7 @@ Delegated Work is the only UI. It runs embedded in a host and in a regular brows
 | `ui/core/controller.ts`                                                         | Async requests, refresh scheduling, selection, navigation, scope changes, and submission lifecycle.                   |
 | `ui/core/initial-state.ts`, `ui/core/delegation.ts`, `ui/core/event-history.ts` | Route initialization, delegation defaults, and bounded event pagination.                                              |
 | `ui/core/selectors.ts`                                                          | Pure derived values, filtering, formatting, and capability decisions.                                                 |
-| `ui/transports/`                                                                | Console HTTP/SSE, MCP host bridge, and read-only fixture preview implementations.                                     |
+| `ui/transports/`                                                                | Console HTTP/SSE and MCP host bridge transports, plus the dev host's fixture data (`preview-*.ts`, development only). |
 | `ui/components/`                                                                | Focused presentation and interactions: task lists, status, actions, inspector sections, evidence tabs, and dialogs.   |
 | `ui/forms/`                                                                     | Form drafts, validation, and explicit submission; reusable fields and footer live beside the forms.                   |
 | `ui/shells/`                                                                    | Page composition.                                                                                                     |
@@ -59,7 +59,7 @@ Keep scope handling centralized. Changing the project or conversation invalidate
 
 In a browser tab the page uses credentialed HTTP requests, token login, and SSE activity refreshes; the page has a single URL and no routes. Embedded views use the MCP Apps bridge for tools, theme variables, selection context, display modes, and optional message delivery. The host determines which actions are available (send, share, expand); opening the panel outside a host reports that MCP is required.
 
-The embedded panel renders a compact summary in `inline` mode: project/chat scope, task counts, and the selected task's status. Counts cover the current scope even when the full panel has search or status filters applied. **Open panel** requests `fullscreen` when the host advertises it; the host controls placement. The full interface appears in expanded mode. Collapsing preserves task selection and hides any open dialog while retaining its draft for expansion. Scope changes still discard stale dialogs. A standalone browser tab and fixture preview always use the full layout.
+The embedded panel renders a compact summary in `inline` mode: project/chat scope, task counts, and the selected task's status. Counts cover the current scope even when the full panel has search or status filters applied. **Open panel** requests `fullscreen` when the host advertises it; the host controls placement. The full interface appears in expanded mode. Collapsing preserves task selection and hides any open dialog while retaining its draft for expansion. Scope changes discard stale dialogs. A standalone browser tab always uses the full layout.
 
 Delegation forms collect the full request as the description without a manual title field. The service generates a title from the description's first line or sentence, up to 120 characters. Task rows and the inline preview show the concise title. The inspector shows the description as one line that expands in place and starts collapsed (a one-line description has no toggle). Interrupt and cancel confirmations start with the description expanded; retry confirmations keep it collapsed.
 
@@ -69,19 +69,19 @@ Sections form an accordion: the first starts open, and opening another closes it
 
 A disabled budget shows its remembered amount. Turning its switch on enables editing. Closed sections stay mounted for validation. Saving an invalid amount shows an error and opens its section; focus moves to the amount, or to its switch if disabled. Saving sends only changed fields through `update_agent_settings`, with budgets sent as switch and amount. Cancel, × and Escape ask before discarding unsaved edits. The dialog keeps its full available height as sections change, and its title and footer stay visible while the form scrolls.
 
-Model selection shows each discovered model's display name with its description as secondary text. The delegation Model field remains free text, so custom IDs and aliases still work.
+Model selection shows each discovered model's display name with its description as secondary text. The delegation Model field is free text, so custom IDs and aliases work.
 
 The activity timeline groups tool lifecycles and streamed responses. Consecutive artifact creations within one task show a count and their titles; thinking-token updates show **Thinking…** with a ticking clock while it is the latest activity, then **Thought for 7s** once something follows (`thinkingSpan`; only the clock ticks, through `useNow`). Other consecutive updates with the same event kind and summary share a row with an event count. Messages, failures, input requests, lifecycle transitions, and events without summaries keep separate rows. Routine status updates continue to share a row showing the latest status. Messages appear as cards while tools and status stay as compact rows, and fenced code blocks in message text render as code (no other markdown is interpreted). Each row's debug button, a Base UI collapsible, exposes every original event; grouping changes presentation only. Rows render through the reusable `Timeline`, `TimelineItem` and `TimelineDot` components in `ui/components/timeline.tsx`. They use Base UI's `useRender`, so each accepts a `render` prop and exposes its state as `data-trimmed`, `data-first`, `data-last` and `data-status` for styling.
 
+The Artifacts tab shows file cards built from service-side summaries and loads content only for preview or download; see [Artifact files](artifact-files.md) for the split and its known limits.
+
 Opening a row's debug details expands its newest raw response. Older responses stay collapsed initially, and manually changed disclosures survive refreshes and reopening the debug panel.
 
-Opening the page outside an iframe with `?preview=1` selects fixture data; `&theme=dark` selects the dark preview theme. Preview does not connect to the service or execute workers. Unsupported fixture operations fail explicitly, and projects added in it are not remembered. Native host rendering and delivery still require separate host verification.
+For panel work, use the panel dev host (`npm run dev:ui`, see [Local development](development.md#panel-dev-host)): it runs the panel through the host bridge on fixture or live data, with thread or global launches and host capabilities. Fixture data does not execute workers; unsupported fixture operations fail explicitly. Native host rendering and delivery require verification in a registered host.
 
-Use `?preview=1` to look at built HTML without a dev server. For panel work, use the panel dev host (`npm run dev:ui`): it runs the panel through the real host bridge, with thread or global launches and host capabilities, while `?preview=1` always opens the panel in global scope with no host.
+![Panel with a selected task and artifact report](images/react-panel-preview.png)
 
-![Fixture preview with a selected task and artifact report](images/react-panel-preview.png)
-
-![Fixture preview showing project selection and a pending permission request](images/react-project-picker.png)
+![Panel showing project selection and a pending permission request](images/react-project-picker.png)
 
 ## Panel dev host
 

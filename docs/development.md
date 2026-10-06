@@ -14,7 +14,7 @@ cp -n .env.example .env
 `npm run dev:ui` load it when present; variables already set in the shell take
 precedence. The stdio proxy reads the mention-test setting from `.env` and uses
 its `CODEX_SUBAGENT_EXTENSION_DATA` only as a fallback destination for the test
-search log. Service connection settings still come from its MCP environment.
+search log. Service connection settings come from its MCP environment.
 The example keeps data in `.codex-subagent-extension/live`. See the
 [configuration table](../README.md#configuration) for every variable.
 
@@ -76,7 +76,7 @@ npm run dev:ui
 ```
 
 This starts a Vite server at `http://127.0.0.1:5317` with React Fast Refresh and
-CSS hot replacement, for development only; production HTML still comes from
+CSS hot replacement, for development only; production HTML comes from
 `scripts/build-ui.mjs`.
 
 The page is a mock MCP Apps host (`ui/dev/host.tsx`, mounted by `main.tsx`;
@@ -86,9 +86,15 @@ iframe through the official `AppBridge`, so the panel runs its real
 `HostTransport`, as it does in Codex. Like Codex, the host calls the launch tool
 and delivers its result to the panel. The toolbar controls:
 
-- **Data**: fixture results (shared with `?preview=1` through
-  `ui/transports/preview-tools.ts`) or the live service. Fixtures need no
-  service; unsupported operations fail explicitly.
+- **Data**: fixture results (`ui/transports/preview-tools.ts`, development
+  only; never in the production bundle) or the live service. Fixtures need no
+  service; unsupported operations fail explicitly. The artifact tools
+  (`FIXTURE_SERVICE_TOOLS` in `host-helpers.ts`) are the exception: the Vite
+  server answers them with the real service code (`ui/dev/fixture-service.ts`,
+  a `Store` in a temporary SQLite file seeded with the fixtures), so summaries,
+  sharp thumbnails and the summary cache run as in production. Edits to `src/`
+  rebuild that store on the next call. The **Bridge log** marks each call
+  `served` by `fixture service`, `browser fixtures` or `service`.
 - **Launch**: thread (`open_codex_subagent_extension` with Codex's `threadId`
   and `codex/sandbox-state-meta` request metadata) or global. With fixtures,
   `preview-tools.ts` resolves the thread's scope the way the service does.
@@ -103,7 +109,7 @@ and delivers its result to the panel. The toolbar controls:
   `file://` URI; a typed path is converted), auto-adding chat projects, and
   resetting fixture projects, plus optional host style variables as JSON. An
   unregistered directory shows **Add chat project**. Fixture registrations
-  persist across relaunches and reloads until reset; starting a task still
+  persist across relaunches and reloads until reset; starting a task
   fails. The icon catalog lists every panel glyph.
 
 Changing data, launch, capabilities, or host metadata starts a new panel
@@ -144,10 +150,15 @@ live mode.
 npm run demo
 ```
 
-Fixture workers and a disposable sample repository in
-`.codex-subagent-extension/demo`; no model calls. Sign in at
-`http://127.0.0.1:4317` with `local-demo-only`. Stop any other service on port
-4317 first.
+The development service runs a fixture worker with a disposable sample
+repository in `.codex-subagent-extension/demo`; it makes no model calls. Sign in at
+`http://127.0.0.1:4317` with `local-demo-only-not-a-real-token`. Stop any other
+service on port 4317 first.
+
+The fixture worker (`dev/fixture-provider.ts`) and demo entry
+(`dev/demo-service.ts`, run through `tsx`) are in `dev/`, outside the `src/`
+build. The package contains neither. Tests import the fixture worker from
+`dev/`. The packaged service supports the `claude` and `codex` providers.
 
 ## What reloads when
 

@@ -2,7 +2,7 @@
 
 A local MVP for Codex to delegate Claude coding tasks through MCP. Claude executes through the Claude Agent SDK and native Claude Code harness. One service owns the durable task database and creates worktrees for isolated tasks; MCP clients never become workers.
 
-For manual setup, staged verification, and continuing in a new thread, see [Setup and resume guide](docs/setup-and-resume.md).
+For local setup and task continuation, see the [Setup and task continuation guide](docs/setup-and-resume.md).
 
 ## Try the console
 
@@ -13,7 +13,7 @@ npm ci
 npm run demo
 ```
 
-Open http://127.0.0.1:4317 and enter `local-demo-only`. This explicit fixture mode uses a disposable sample repository and makes **no model calls**. Add `[input]` to a fixture task to exercise human input, interruption, and continuation. Fixture results identify themselves as fixtures.
+Open http://127.0.0.1:4317 and enter `local-demo-only-not-a-real-token`. `npm run demo` starts a development-only service with a fixture worker and a disposable sample repository. It makes **no model calls**. The demo entry is `dev/demo-service.ts`; the fixture worker is in `dev/` and is excluded from the package. Add `[input]` to a fixture task to exercise human input, interruption, and continuation. Fixture results identify themselves as fixtures.
 
 ## Run real Claude tasks
 
@@ -26,13 +26,13 @@ npm start
 
 Run the command from the project root. Settings come from the shell or an optional `.env`; see [Local development](docs/development.md). Add target repositories with **Add project**, or let a chat's project be added when a task starts from it. A target must be a Git repository root with at least one commit. Use a committed repository or the disposable demo fixture. By default, a task runs directly in the approved repository with `workspace_strategy: "current_repo"` and `revision: "HEAD"`, including staged, unstaged, and untracked files. Set `workspace_strategy: "worktree"` to start from a specified **committed revision** in a detached worktree; the service never automatically merges worktree changes. The browser and host delegation forms offer the same Workspace choice. Review profiles remain read-only; write profiles edit the current checkout directly, so preserve unrelated user changes. Choose a worktree for isolated or parallel edits. Current-repo tasks receive a starting diff for review, and their diff artifacts include pre-existing changes as well as any worker edits. The checkout stays live during execution; changes made by another task or by the user can also appear in those diffs.
 
-Stop the fixture service before starting Claude on the same port. Provider availability is explicit: fixture workers are disabled by default.
+Stop the demo service before starting Claude on the same port.
 
 ### Admin token
 
 The service listens only on loopback, but loopback is not private: other local processes and users can connect to the port, and any web page open in your browser can send it requests. Because the API starts workers that edit repositories and run commands, every API request must present a secret that only your account can read.
 
-On first start, the service generates a random token and writes it to `<data-directory>/admin-token` with owner-only permissions. Each start re-applies owner-only permissions to that file and the data directory. `CODEX_SUBAGENT_EXTENSION_TOKEN` overrides it and must be at least 32 characters unless `CODEX_SUBAGENT_EXTENSION_PROVIDER=fixture`. The token persists across restarts, so MCP configuration keeps working. It is used in three places:
+On first start, the service generates a random token and writes it to `<data-directory>/admin-token` with owner-only permissions. Each start re-applies owner-only permissions to that file and the data directory. `CODEX_SUBAGENT_EXTENSION_TOKEN` overrides it and must be at least 32 characters. The token persists across restarts, so MCP configuration keeps working. It is used in three places:
 
 - **Console login.** Sign in once with the token; the browser receives an HttpOnly session cookie valid for one hour and keeps only that cookie, not the token. Restarting the service invalidates browser sessions; data and worktrees persist.
 - **Stdio MCP proxy.** `dist/stdio.js` reads the file and adds the token to each forwarded request, so the MCP client never handles it.
@@ -54,14 +54,14 @@ The proxy and service share the per-user data default. If you set `CODEX_SUBAGEN
 
 The proxy forwards requests to the running service using its [admin token](#admin-token); it does not create another scheduler. `CODEX_SUBAGENT_EXTENSION_URL` changes its loopback URL. The portable plugin manifest, MCP configuration, and delegation skill are also included; build the package before configuring it. The service starts when the host launches the packaged stdio server; installation alone does not execute it.
 
-For MCP App hosts, connect to the authenticated HTTP endpoint `/mcp`. Delegated Work uses the MCP resource `ui://codex-subagent-extension/app-v6` over the authenticated MCP bridge, with empty network allowlists. The standalone web console retains its existing routes. The app uses portable MCP Apps calls; Codex-specific sidebar behavior remains subject to host verification.
+For MCP App hosts, connect to the authenticated HTTP endpoint `/mcp`. Delegated Work uses the MCP resource `ui://codex-subagent-extension/app-v6` over the authenticated MCP bridge, with empty network allowlists. The standalone web console exposes its task routes over HTTP. The app uses portable MCP Apps calls; Codex-specific sidebar behavior depends on host support.
 
-The standalone web console uses [token login](#admin-token), HTTP tools and live SSE. The stdio proxy provides tools and the separate `app-v6` Delegated Work app through the portable MCP Apps bridge. HTTP and stdio share the app's schemas, resources, and separate global/thread openers. Panel HTML is read from `dist` on each resource request, so rebuilt UI changes can appear without a service restart. Server code changes require a service restart; reload the MCP connection to discover changed opener metadata and resource URIs. Actual app placement is controlled by the host. Existing task tools remain available. Installing the plugin does not register a remote ChatGPT connection or deploy a production service.
+The standalone web console uses [token login](#admin-token), HTTP tools and live SSE. The stdio proxy provides tools and the separate `app-v6` Delegated Work app through the portable MCP Apps bridge. HTTP and stdio share the app's schemas, resources, and separate global/thread openers. Panel HTML is read from `dist` on each resource request, so rebuilt UI changes can appear without a service restart. Server code changes require a service restart; reload the MCP connection to discover changed opener metadata and resource URIs. The host controls app placement. Both transports expose the same task tools. Installing the plugin does not register a remote ChatGPT connection or deploy a production service.
 
 ## Supported workflows
 
 - Durable asynchronous tasks, concurrent branches, explicit dependencies, and conversation filtering.
-- Researcher, reviewer, and security reviewer profiles inspect only by default: `plan` mode, a read-only tool set and the workspace path guard. Settings can loosen them. Implementer, debugger, test engineer, and refactorer profiles can write. Claude uses the Agent SDK’s native permission modes and requests a decision when its native checks leave an action unresolved. Codex retains its existing turn-level approval flow.
+- Researcher, reviewer, and security reviewer profiles inspect only by default: `plan` mode, a read-only tool set and the workspace path guard. Settings can loosen them. Implementer, debugger, test engineer, and refactorer profiles can write. Claude uses the Agent SDK’s native permission modes and requests a decision when its native checks leave an action unresolved. Codex uses turn-level approval.
 - Start, inspect, steer, interrupt, continue, cancel, and retry. Steering interrupts and starts a new SDK turn with the instruction; retry creates a new task.
 - Questions and permission requests carry unique request IDs. Stale or duplicate answers are rejected.
 - Structured results, ordered execution events, reports, and Git-generated patches including committed and untracked changes.
@@ -69,7 +69,7 @@ The standalone web console uses [token login](#admin-token), HTTP tools and live
 - Runtime limits across turns and SDK-native per-turn cost ceilings reduced by observed prior cost. Costs incurred during forcibly interrupted turns may not be reported by the SDK; this is not a billing guarantee. Token limits are unsupported. Claude tasks can start native subagents unless `claude_subagents` is off.
 - Authenticated SSE replay and short-lived browser sessions; all task mutations go through the same tool dispatch as MCP.
 
-The task detail offers **Copy for Codex** in the standalone console and **Send to conversation** when embedded. Review or edit the message before submitting. It includes the task identity, short task/result excerpts and references to tools for retrieving full evidence; it does not apply patches. Embedded message delivery depends on host support and has not yet been verified in a registered host.
+The task detail offers **Copy for Codex** in the standalone console and **Send to conversation** when embedded. Review or edit the message before submitting. It includes the task identity, short task/result excerpts and references to tools for retrieving full evidence; it does not apply patches. Embedded message delivery depends on host support and is unverified in a registered host.
 
 Worker links such as `/workers/claude.reviewer` show that profile's available capabilities and tasks. Use the sidebar worker picker or **Delegate to this worker** to select a profile for a new task.
 
@@ -83,11 +83,10 @@ A worktree provides code separation, not operating-system containment. With defa
 | `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS`     | `[]`                                      | JSON array of explicitly approved parent directory paths                                                                                         |
 | `CODEX_SUBAGENT_EXTENSION_URL`               | discovered local service or port 4317     | Proxy endpoint override; explicit URLs require an already running service                                                                        |
 | `CODEX_SUBAGENT_EXTENSION_CONCURRENCY`       | `3`                                       | Maximum concurrently active tasks (1–20)                                                                                                         |
-| `CODEX_SUBAGENT_EXTENSION_TOKEN`             | generated locally                         | Server-side token override; at least 32 characters except in fixture mode                                                                        |
+| `CODEX_SUBAGENT_EXTENSION_TOKEN`             | generated locally                         | Server-side token override; at least 32 characters                                                                                               |
 | `PORT`                                       | `4317`                                    | Loopback listener port                                                                                                                           |
 | `CODEX_SUBAGENT_EXTENSION_ORIGIN`            | `http://127.0.0.1:4317`                   | Standalone service origin and CORS allowlist                                                                                                     |
-| `CODEX_SUBAGENT_EXTENSION_FIXTURE`           | disabled                                  | Set `1` to add fixture workers for testing                                                                                                       |
-| `CODEX_SUBAGENT_EXTENSION_PROVIDER`          | Claude                                    | Set `fixture` for fixture-only mode                                                                                                              |
+| `CODEX_SUBAGENT_EXTENSION_PROVIDER`          | Claude                                    | `claude` or `codex`; `codex` runs Codex only                                                                                                     |
 | `CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE` | disabled                                  | Set to `1` in the local `.env` to return a sample Claude mention and log searches to `<data-directory>/mention-search.jsonl`; local testing only |
 
 Review `<data-directory>/worktrees/<task-id>` or download returned patches before applying worktree changes. Current-repo tasks use the approved repository itself, and any worker edits are already present there. Cancellation never deletes a worktree. Preserve Claude's local runtime state for resumable sessions. One service may own a data directory at a time.
@@ -101,7 +100,8 @@ Review `<data-directory>/worktrees/<task-id>` or download returned patches befor
 | `src/server/`                                        | Express application, authentication, HTTP MCP endpoint, and tool definitions.                                          |
 | `src/panel/`                                         | MCP App panel resource, panel context, and host project/thread context.                                                |
 | `src/service/`                                       | Install paths, data directory, single-instance lease, and the stdio launcher that starts the service.                  |
-| `src/providers/`, `src/events/`                      | Claude, Codex, and fixture providers with their configuration; webhook and MCP event delivery.                         |
+| `src/providers/`, `src/events/`                      | Claude and Codex providers with their configuration; webhook and MCP event delivery.                                   |
+| `dev/`                                               | Development-only fixture worker and demo service entry; excluded from the packaged service.                            |
 | `ui/`                                                | Shared React UI: `entries/`, `templates/`, `styles/`, plus controller, transport, component, and form modules.         |
 | `ui/dev/`, `vite.config.ts`                          | Panel dev host: mock MCP Apps host and Vite server for `npm run dev:ui`.                                               |
 | `.env.example`                                       | Local development settings template; copy to `.env`.                                                                   |
@@ -110,7 +110,7 @@ Review `<data-directory>/worktrees/<task-id>` or download returned patches befor
 
 ## Verification and remaining plan
 
-The console and embedded panel share a modular React UI, with separate controller, transport, component, and form layers. See [React UI architecture](docs/react-ui.md) for extension boundaries, fixture preview, self-contained HTML builds, and UI verification. [Local development](docs/development.md) covers setup, the service, the `npm run dev:ui` panel dev host with hot reload, what needs a rebuild or restart, and the `npm run typecheck` and `npm test` checks.
+The console and embedded panel share a modular React UI, with separate controller, transport, component, and form layers. See [React UI architecture](docs/react-ui.md) for extension boundaries, self-contained HTML builds, and UI verification. [Local development](docs/development.md) covers setup, the service, the `npm run dev:ui` panel dev host with hot reload, what needs a rebuild or restart, and the `npm run typecheck` and `npm test` checks.
 
 The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, and MCP tool/resource calls. Browser verification covers delegation, live completion, interruption, continuation, input submission, and artifacts in fixture mode. See [implementation status](docs/implementation-status.md).
 
@@ -137,7 +137,7 @@ Each scenario uses a temporary Git fixture and a native task budget of at most $
 
 Settings are edited in the panel: **Settings** in its header opens a dialog built from `get_agent_settings`. The server does not advertise native host settings. `get_agent_settings` and `update_agent_settings` are model-visible; `update_agent_settings` can update ordinary defaults but rejects permission, approval-authority, and automatic project registration settings. App-only `update_user_agent_settings` allows the user to change these defaults. Compatible hosts must enforce app-only tool visibility. Authenticated raw service clients are trusted administrators; this boundary does not cryptographically attest that a human made a request.
 
-Defaults include provider, worker profile, workspace strategy (`current_repo` by default, with `worktree` available), runtime minutes, cost budget, Claude permission mode (`claude_permission_mode: inherit` by default), and approval decision routing (`default_approval_decider: user` by default). Provider choices include only enabled workers; a saved unavailable provider falls back to the first enabled worker until changed. A disabled provider's model and reasoning defaults are hidden but kept, and reappear when it is enabled again. Codex is not yet a settings option: it has no provider choice or model and reasoning defaults, and tasks select it explicitly. On a Codex-only service, settings fall back to Claude. The cost limit remains $5 by default; explicit `max_cost_usd: null` means no cost limit for task budgets and legacy settings updates. `get_agent_settings` reads each budget as a number or `null` (no limit). Updates can also use `use_cost_budget` and `use_runtime_budget`: disabling one preserves the amount for later use, enabling it restores the amount, and updating the amount while disabled keeps the limit disabled. Providers that cannot enforce a numeric limit reject it before starting. The browser and host delegation form expose an Apply cost limit choice; disabling it preserves the runtime limit. Claude omits its native cost ceiling only for that explicit choice. Updates use `{ "set": { "max_runtime_minutes": 10 } }`, preserve omitted fields, and persist per user in SQLite. New tasks inherit these values; explicit task arguments override them subject to the approval authority rules below, and existing tasks keep their original settings. The console's delegation form reads the current defaults when opened. Unsupported providers, invalid budgets, and unknown settings are rejected before persistence. Claude session restrictions, described below, apply in every permission mode.
+Defaults include provider, worker profile, workspace strategy (`current_repo` by default, with `worktree` available), runtime minutes, cost budget, Claude permission mode (`claude_permission_mode: inherit` by default), and approval decision routing (`default_approval_decider: user` by default). Provider choices include only enabled workers; a saved unavailable provider falls back to the first enabled worker until changed. A disabled provider's model and reasoning defaults are hidden and kept for use when the provider is enabled. Codex has no provider choice or model and reasoning defaults in Settings; tasks select it explicitly. On a Codex-only service, settings fall back to Claude. The cost limit is $5 by default; explicit `max_cost_usd: null` means no cost limit for task budgets and settings updates. `get_agent_settings` reads each budget as a number or `null` (no limit). Updates can also use `use_cost_budget` and `use_runtime_budget`: disabling one preserves the amount for later use, enabling it restores the amount, and updating the amount while disabled keeps the limit disabled. Providers that cannot enforce a numeric limit reject it before starting. The browser and host delegation form expose an Apply cost limit choice; disabling it preserves the runtime limit. Claude omits its native cost ceiling only for that explicit choice. Updates use `{ "set": { "max_runtime_minutes": 10 } }`, preserve omitted fields, and persist per user in SQLite. New tasks inherit these values; explicit task arguments override them subject to the approval authority rules below, and existing tasks keep their original settings. The console's delegation form reads the current defaults when opened. Unsupported providers, invalid budgets, and unknown settings are rejected before persistence. Claude session restrictions, described below, apply in every permission mode.
 
 ### Claude permissions
 
@@ -159,11 +159,11 @@ Approval decision routing is separate from the native mode. Tasks accept `approv
 
 A model-selected override cannot increase permission or approval authority beyond the authorized inherited setting. A trusted panel submission through app-only `start_user_agent_task`, or a user-confirmed host form, can authorize an override. Permission replies through model-visible `submit_agent_input` are accepted only when the parent is the decision maker; user decisions use app-only `submit_user_agent_input` or `request_agent_input` host forms. Request IDs and task ownership checks apply to both routes. The panel’s host transport uses the app-only task, input, and settings aliases; the standalone console uses authenticated cookie authority. App-only tools rely on host visibility enforcement, and authenticated raw service clients remain trusted administrators.
 
-Legacy explicit Claude `approval_mode` arguments and updates migrate to native modes: `ask_user` becomes `default` with user routing, `parent_agent` becomes `default` with parent routing, `auto_approve` becomes `bypassPermissions`, and `deny` becomes `dontAsk`. Saved non-default legacy settings receive the same mapping; older default `ask_user` settings adopt `inherit`. There is no extension-wide automatic approval policy for Claude. Codex native permission settings are outside this change: its adapter retains its existing turn-level approval behavior, and the native permission selector is disabled for non-Claude providers. Native modes never grant access to unregistered repositories, allow read-only profiles to write, disable mandatory path checks, or enable unsandboxed retries.
+Claude uses native permission modes and separate approval routing. There is no extension-wide automatic approval policy for Claude. Codex uses turn-level approval, and the native permission selector is available only for Claude. Native modes never grant access to unregistered repositories, allow read-only profiles to write, disable mandatory path checks, or enable unsandboxed retries.
 
 ### Claude session restrictions
 
-These user-only settings add restrictions to delegated Claude sessions. Model-visible `update_agent_settings` rejects them. Each task stores the resolved values when it starts, shown under **Session restrictions** in the inspector's Details tab. Tasks created before these settings existed use the current defaults.
+These user-only settings add restrictions to delegated Claude sessions. Model-visible `update_agent_settings` rejects them. Each task stores the resolved values when it starts, shown under **Session restrictions** in the inspector's Details tab.
 
 | Setting              | Default       | Options                                                                                                                                                                                                                                                                                                                                                  |
 | -------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -189,36 +189,36 @@ support is reported as unknown.
 
 Compatible HTTP MCP hosts can call `request_agent_task` to ask the user to confirm the full request description, worker, committed revision, and budgets before starting work. Browser and native host forms have no manual title field; the service generates the title from the submitted description. The host form lists discovered models as choices, titled with each model's name and description (prefixed with the provider when several are enabled), plus **Use configured default** and any requested custom model. Its description names providers without a model list; their workers use the configured default. Without discovery it keeps a free-text model field. Other custom model IDs remain available through `start_agent_task`, the panel and settings. `request_agent_input` presents the exact pending worker question or permission request. Question forms support titled choices and multiple selections. Permission forms default to deny; cancellation leaves worker input pending and never grants permission. The panel presents direct **Approve** and **Deny** buttons for permission requests, while worker questions retain their answer controls.
 
-`start_agent_task` requires `description` (1–20,000 characters), containing the full request; whitespace-only values are rejected. The title is generated from the description's first line or sentence, up to 120 characters. An optional `title` (1–120 characters) remains an API compatibility override. Workers receive the full description as instructions. Task lists and headings show the title, and the inspector keeps the description collapsed until expanded. `request_agent_task` can omit the description to let the user fill it in. The previous `task` field is no longer supported for new requests. On database open, legacy persisted `task` records migrate automatically to full descriptions and generated titles, preserving existing descriptions and titles.
+`start_agent_task` requires `description` (1–20,000 characters), containing the full request; whitespace-only values are rejected. The title is generated from the description's first line or sentence, up to 120 characters. An optional `title` (1–120 characters) can set the task title. Workers receive the full description as instructions. Task lists and headings show the title, and the inspector keeps the description collapsed until expanded. `request_agent_task` can omit the description to let the user fill it in.
 
-These tools use MCP's `input_required` multi-round-trip flow, as required by the [OpenAI Extensions documentation](https://developers.openai.com/plugins/build/extensions). Hosts return the opaque `requestState` alongside bare `inputResponses.form`. State is persisted, bound to the authenticated owner and original arguments, and expires after ten minutes. Saved forms containing only the legacy `task` field must be reopened to provide a description; saved forms with separate title and description fields still honor their submitted title. Repeated identical submissions return the original outcome; changed arguments, invalid answers, expired state, and stale worker-input IDs are rejected. If the service stops during submission, recovery refuses to repeat the operation; inspect the task list before creating another request.
+These tools use MCP's `input_required` multi-round-trip flow, as required by the [OpenAI Extensions documentation](https://developers.openai.com/plugins/build/extensions). Hosts return the opaque `requestState` alongside bare `inputResponses.form`. State is persisted, bound to the authenticated owner and original arguments, and expires after ten minutes. Repeated identical submissions return the original outcome; changed arguments, invalid answers, expired state, and stale worker-input IDs are rejected. If the service stops during submission, recovery refuses to repeat the operation; inspect the task list before creating another request.
 
-Task and worker-input forms are exposed on the HTTP MCP endpoint. `request_agent_project` uses the durable HTTP flow above or legacy SDK form elicitation over stdio when the host supports it. Without support, use Add project or Browse in the panel; a model-supplied path cannot bypass confirmation. Clients without elicitation support continue using `start_agent_task` and `submit_agent_input` for questions and parent-agent permission decisions. Permission requests routed to the user require the panel's app-only `submit_user_agent_input` route or a supported host form. Protocol tests exercise actual HTTP round trips with fixture workers; native rendering in ChatGPT remains unverified.
+Task and worker-input forms are exposed on the HTTP MCP endpoint. `request_agent_project` uses the durable HTTP flow above or SDK form elicitation over stdio when the host supports it. Without support, use Add project or Browse in the panel; a model-supplied path cannot bypass confirmation. Clients without elicitation support use `start_agent_task` and `submit_agent_input` for questions and parent-agent permission decisions. Permission requests routed to the user require the panel's app-only `submit_user_agent_input` route or a supported host form. Protocol tests exercise actual HTTP round trips with fixture workers; native rendering in ChatGPT is unverified.
 
 ## Codex worker implementation
 
 The native provider uses the official OpenAI SDK and [Agents API](https://developers.openai.com/api/docs/guides/agents-api/overview), with a self-hosted `codex exec-server`. It is disabled by default and requires macOS. To opt in, configure these environment variables before starting the service:
 
-| Variable                                    | Value                                                                               |
-| ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `CODEX_SUBAGENT_EXTENSION_CODEX`            | `1` adds Codex alongside Claude                                                     |
-| `CODEX_SUBAGENT_EXTENSION_PROVIDER`         | Optional `codex` selects Codex only; `fixture` always keeps live providers disabled |
-| `CODEX_SUBAGENT_EXTENSION_CODEX_MODEL`      | An explicit model available to your API account                                     |
-| `CODEX_SUBAGENT_EXTENSION_CODEX_EXECUTABLE` | Absolute native CLI path, available from `command -v codex`                         |
-| `OPENAI_API_KEY`                            | Application key for session management and inference                                |
-| `OPENAI_EXECUTOR_API_KEY`                   | A separate key restricted to environment connections                                |
+| Variable                                    | Value                                                       |
+| ------------------------------------------- | ----------------------------------------------------------- |
+| `CODEX_SUBAGENT_EXTENSION_CODEX`            | `1` adds Codex alongside Claude                             |
+| `CODEX_SUBAGENT_EXTENSION_PROVIDER`         | Optional `codex` selects Codex only                         |
+| `CODEX_SUBAGENT_EXTENSION_CODEX_MODEL`      | An explicit model available to your API account             |
+| `CODEX_SUBAGENT_EXTENSION_CODEX_EXECUTABLE` | Absolute native CLI path, available from `command -v codex` |
+| `OPENAI_API_KEY`                            | Application key for session management and inference        |
+| `OPENAI_EXECUTOR_API_KEY`                   | A separate key restricted to environment connections        |
 
 Keep credentials outside source control. [Self-hosted environments](https://developers.openai.com/api/docs/guides/agents-api/environments/self-hosted) require the application key to stay outside the worker environment. Configuration rejects identical keys, but their actual permission scopes must be configured in your account. Select **No cost limit** for Codex; this adapter rejects cost and token limits it cannot enforce. Runtime limits remain active.
 
 Each native execution turn passes through the task approval policy before session creation or executor startup. Permission covers shell execution inside the stated sandbox for that turn; individual commands do not have separate approval prompts. Read-only profiles cannot write the selected workspace. The macOS sandbox protects Git metadata and limits network access to an authenticated local CONNECT proxy for documented executor hosts. Runtime directories must be outside the worktree and Git metadata. Native authenticated proxy compatibility and containment of descendants that escape the process group remain unverified.
 
-The provider persists its session and coordinator turn, uses native SDK streaming and function handlers for questions, validates the selected turn's saved final report, and awaits executor shutdown before returning. Launch reservations, PID, process birth time, user/group identity, session/environment mapping and lifecycle state persist in SQLite outside the worker runtime. Recovery validates a surviving executor against its unique launch marker and saved process identity before signaling its group; startup reservations without a saved PID are recovered only when one matching owned process is found. When local shutdown and remote turn state can both be confirmed, it restores an interrupted task for explicit continuation. Unknown outcomes keep controls locked and defer artifacts. Legacy records without process identity, ambiguous launches, and live groups whose leader has disappeared remain locked. Descendants that escape the process group are not proven terminated. The HTTP listener is reserved before recovery; health and API requests return 503 until recovery completes. A bind failure leaves task state unchanged.
+The provider persists its session and coordinator turn, uses native SDK streaming and function handlers for questions, validates the selected turn's saved final report, and awaits executor shutdown before returning. Launch reservations, PID, process birth time, user/group identity, session/environment mapping and lifecycle state persist in SQLite outside the worker runtime. Recovery validates a surviving executor against its unique launch marker and saved process identity before signaling its group; startup reservations without a saved PID are recovered only when one matching owned process is found. When local shutdown and remote turn state can both be confirmed, it restores an interrupted task for explicit continuation. Unknown outcomes keep controls locked and defer artifacts. Records without process identity, ambiguous launches, and live groups whose leader has disappeared remain locked. Descendants that escape the process group are not proven terminated. The HTTP listener is reserved before recovery; health and API requests return 503 until recovery completes. A bind failure leaves task state unchanged.
 
-All local contract, orchestration, journal and sandbox checks pass. SDK tests inject HTTP responses, and executor lifecycle tests use local test processes. No authenticated Codex model run has been performed. Native Claude verification is recorded separately; native ChatGPT rendering remains unverified.
+Local contract, orchestration, journal, and sandbox checks pass. SDK tests inject HTTP responses, and executor lifecycle tests use local test processes. Authenticated Codex execution and native ChatGPT rendering are unverified. See [native Claude verification evidence](docs/live-claude-verification.json) for its tested scope.
 
 ## Host-level MCP Events
 
-The HTTP endpoint uses the official MCP 2.0 server SDK for protocol revision `2026-07-28`, including `server/discover`, tools and UI resources. The same endpoint retains stateless legacy MCP compatibility for existing Codex clients. Event operations are `events/list`, `events/subscribe`, and `events/unsubscribe`.
+The HTTP endpoint uses the official MCP 2.0 server SDK for protocol revision `2026-07-28`, including `server/discover`, tools and UI resources. It also accepts stateless MCP connections. Event operations are `events/list`, `events/subscribe`, and `events/unsubscribe`.
 
 Supported webhook events are `agent_task.completed`, `agent_task.failed`, and `agent_task.input_required`. Subscriptions can filter by task, conversation, or provider. This channel carries compact notifications; tool output stays in the authenticated console stream and full results remain retrievable through tools.
 
@@ -226,7 +226,7 @@ Callbacks must use public HTTPS endpoints on port 443. The service verifies a si
 
 Successful deliveries are recorded idempotently. Transient failures retry up to eight attempts with exponential backoff; redirects and permanent client errors are not retried. `410` disables the subscription. Refresh supports signing-key rotation with a five-minute dual-signature window. Granted subscriptions expire within one day by default, or up to seven days when a shorter or longer finite lifetime is requested; requests without expiration receive a finite grant. Events do not expose a replay cursor, so pre-subscription history is not delivered.
 
-These methods and their delivery behavior are verified locally against the [OpenAI MCP Events protocol](https://developers.openai.com/plugins/build/mcp-events). Actual ChatGPT subscription delivery remains a separate host verification gate requiring registration and a reachable authenticated endpoint. No callback was contacted during development tests.
+Local protocol tests cover these methods and their delivery behavior against the [OpenAI MCP Events protocol](https://developers.openai.com/plugins/build/mcp-events). ChatGPT subscription delivery is unverified; it requires a registered host and a reachable authenticated endpoint.
 
 ## Multiple projects and packaged startup
 
@@ -287,7 +287,7 @@ When a read-only check finds the chat project missing outside a task start, the
 model should ask the user with `request_agent_project`. Disabling the setting
 keeps registered projects, and **Add chat project** then prefills a detected
 path for user review.
-Host metadata delivery still requires verification in the target desktop host.
+Host metadata delivery is unverified in the target desktop host.
 
 You can also approve repositories directly on the service host:
 
@@ -315,15 +315,12 @@ packaged service. Both panels and HTTP task forms show explicit project choices.
 Existing tasks, continuations, and retries retain their original repository and
 workspace. Project selection for a new task has no global effect on other chats.
 
-All clients must share the same absolute data override to share a service.
-The new default is independent of the installation directory. For compatibility,
-an existing `console.sqlite` under the installation's old
-`.codex-subagent-extension` directory is used in place; that fallback remains
-installation-dependent. Existing explicit data/token/port overrides
-continue to work. Data is not copied automatically: keep the old absolute DATA
-override when upgrading, especially because worktree and session references are
-absolute. Legacy approved repositories must be registered explicitly; historical
-model-supplied task paths are not access grants.
+All clients must share the same absolute data override to share a service. The
+default data directory is per-user and independent of the installation
+directory. Explicit data, token, and port settings are supported. The service
+uses the configured data path and does not move its database, worktrees, or
+session references. Register approved repositories explicitly or approve a
+parent directory; model-supplied task paths do not grant repository access.
 
 Trusted Codex hooks can supply session cwd, but that context is not automatically
 bound to MCP calls. This implementation uses validated optional directory hints and explicit selection;
@@ -350,19 +347,10 @@ stale reads and unsent forms. The project registry refreshes during polling and 
 drafts and stable options. Parent-approved repositories can be entered by
 absolute path. Global history never silently supplies the next task's project.
 
-The [saved implementation plan](docs/project-thread-integration-plan.md) and
-[research report](docs/project-thread-integration-research.md) compare current
-and legacy docs, public Codex core/app-server contracts, and alternative
-integrations. The desktop UI is closed source. Native placement remains a
-host-controlled behavior; metadata and browser fixture checks do not prove it.
-
-The target is Codex inside the ChatGPT desktop app; the user has confirmed its
-thread-specific panel works. The extension implements inline/fullscreen. The
-official developer reference also documents PiP, while the linked extension
-specification excludes it, so PiP availability needs a host capability check.
-The [display-mode and native-surface notes](docs/host-capabilities.md#display-modes-and-native-extension-surfaces)
-record the conflicting sources and the absence of a documented extension point
-for the host's right pinned summary.
+The target is Codex in the ChatGPT desktop app. The extension requests inline
+and fullscreen modes; the host controls placement. Native placement and
+metadata delivery require verification in a registered host. See
+[host capabilities](docs/host-capabilities.md) for integration details.
 
 ## Extension review limits
 
