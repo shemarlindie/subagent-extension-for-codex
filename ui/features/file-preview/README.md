@@ -20,7 +20,7 @@ Viewers for one file, used by the Changes tab's diffs and its **Preview** modal.
 
 Nothing is truncated. Long content stays light in the DOM instead:
 
-- **Blocks.** `CodeView`, `TableView` and each diff file split their rows into blocks of 200. A block mounts only near the visible part of its scroll area (`LazyBlock` in `ui/shared/components/lazy-block.tsx`, using an `IntersectionObserver`) and otherwise is an empty box of its last measured height, so the scroll position holds. A view's first block renders at once. Tables use one `<tbody>` per block.
+- **Blocks.** `CodeView`, `TableView` and each diff file split their rows into blocks of 200. A block mounts only near the visible part of its scroll area (`LazyBlock` in `ui/shared/components/lazy-block.tsx`, using an `IntersectionObserver`) and otherwise is an empty box of its last measured height, so the scroll position holds. The scroll area is found again when the window or the scroll area itself resizes, since which box scrolls depends on the panel's size and the task header's height. A view's first block renders at once. Tables use one `<tbody>` per block.
 - **Collapsed diff files** unmount their rows, and an expanding file shows `Progress` while it renders.
 - **Highlighting** is synchronous and is skipped above 200,000 characters. Diff lines are highlighted one at a time, so constructs that span lines, such as block comments, can be colored wrongly.
 - **Not virtualized:** Markdown previews and single long lines (a minified file is one row).

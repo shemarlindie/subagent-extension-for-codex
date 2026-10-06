@@ -21,6 +21,57 @@ export function scrollParent(element: HTMLElement) {
   return null;
 }
 
+/**
+ * Layout changes that can move which box scrolls (the evidence tab on wide
+ * panels, the whole inspector on short ones): the window resizing, or a
+ * watched scroll area changing size, as when the task header grows. Every
+ * block is told, at most once a frame; one window listener and one
+ * ResizeObserver serve them all.
+ */
+const resizeListeners = new Set<() => void>();
+let resizeFrame = 0;
+
+function onLayoutChange(listener: () => void) {
+  if (!resizeListeners.size)
+    window.addEventListener("resize", notifyResize, { passive: true });
+  resizeListeners.add(listener);
+
+  return () => {
+    resizeListeners.delete(listener);
+    if (resizeListeners.size) return;
+    window.removeEventListener("resize", notifyResize);
+    cancelAnimationFrame(resizeFrame);
+  };
+}
+
+/** Scroll areas being watched, with how many blocks watch each. */
+const watchedAreas = new Map<Element, number>();
+let areaObserver: ResizeObserver | undefined;
+
+/** Reports size changes of a block's scroll area; returns a stop function. */
+function watchArea(area: Element | null) {
+  if (!area || typeof ResizeObserver === "undefined") return () => {};
+  areaObserver ??= new ResizeObserver(notifyResize);
+  const count = watchedAreas.get(area) ?? 0;
+  if (!count) areaObserver.observe(area);
+  watchedAreas.set(area, count + 1);
+
+  return () => {
+    const left = (watchedAreas.get(area) ?? 1) - 1;
+    if (left) return void watchedAreas.set(area, left);
+    watchedAreas.delete(area);
+    areaObserver?.unobserve(area);
+  };
+}
+
+function notifyResize() {
+  cancelAnimationFrame(resizeFrame);
+
+  resizeFrame = requestAnimationFrame(() =>
+    resizeListeners.forEach((listener) => listener()),
+  );
+}
+
 type LazyBlockProps = {
   /** Height in pixels before the block has been measured. */
   estimate: number;
@@ -58,19 +109,43 @@ export function LazyBlock({
     const element = ref.current;
     if (!element || typeof IntersectionObserver === "undefined") return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // Keep the rendered height for the empty box that replaces it.
-        if (!entry.isIntersecting)
-          height.current = entry.boundingClientRect.height || height.current;
-        setVisible(entry.isIntersecting);
-      },
-      { root: scrollParent(element), rootMargin: MARGIN },
-    );
+    let root: HTMLElement | null,
+      observer: IntersectionObserver | undefined,
+      unwatch = () => {};
 
-    observer.observe(element);
+    // Visibility is measured against the scroll area found now; a block
+    // watched against a box that no longer scrolls would count as always
+    // visible, so a layout change finds the area again.
+    const observe = () => {
+      const next = scrollParent(element);
+      if (observer && next === root) return;
+      observer?.disconnect();
+      unwatch();
+      root = next;
+      // With no scroll area, the window's resize event covers the viewport.
+      unwatch = watchArea(root);
 
-    return () => observer.disconnect();
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          // Keep the rendered height for the empty box that replaces it.
+          if (!entry.isIntersecting)
+            height.current = entry.boundingClientRect.height || height.current;
+          setVisible(entry.isIntersecting);
+        },
+        { root, rootMargin: MARGIN },
+      );
+
+      observer.observe(element);
+    };
+
+    observe();
+    const stop = onLayoutChange(observe);
+
+    return () => {
+      stop();
+      unwatch();
+      observer?.disconnect();
+    };
   }, []);
 
   const hidden = visible ? undefined : "hidden";
