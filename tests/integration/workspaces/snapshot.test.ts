@@ -6,6 +6,7 @@ import {
   readdir,
   realpath,
   rm,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -181,6 +182,239 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
     ]);
   } finally {
     await c.close();
+    await s.close();
+  }
+});
+
+// The tree a snapshot must equal: the checkout as `add -A` stages it, starting
+// from HEAD in a fresh index, which ignores everything in the real index.
+function treeFromHead(repo: string, dir: string) {
+  const env = { ...process.env, GIT_INDEX_FILE: join(dir, "expected-index") };
+
+  const git = (...args: string[]) =>
+    execFileSync(
+      "git",
+      // Unsplit, so the reference adds no shared index files of its own.
+      ["-C", repo, "-c", "core.splitIndex=false", ...args],
+      { encoding: "utf8", env },
+    );
+
+  try {
+    git("read-tree", "HEAD");
+    git("add", "-A");
+
+    return git("write-tree").trim();
+  } finally {
+    execFileSync("rm", ["-f", env.GIT_INDEX_FILE]);
+  }
+}
+
+test("snapshots seeded from the real index match a fresh start, whatever the index holds", async () => {
+  const s = await setup();
+
+  const commit = (...args: string[]) =>
+    s.git(
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      ...args,
+    );
+
+  try {
+    await writeFile(join(s.repo, "a.txt"), "a\n");
+    await writeFile(join(s.repo, "hidden.txt"), "hidden\n");
+    await writeFile(join(s.repo, "gone.txt"), "gone\n");
+    s.git("add", ".");
+    commit("commit", "-qm", "more");
+
+    // Staged then edited again, untracked, deleted, ignored, and an
+    // assume-unchanged file edited behind the index's back.
+    await writeFile(join(s.repo, "a.txt"), "staged\n");
+    s.git("add", "a.txt");
+    await writeFile(join(s.repo, "a.txt"), "staged\nand edited\n");
+    await writeFile(join(s.repo, "new.txt"), "new\n");
+    await rm(join(s.repo, "gone.txt"));
+    await writeFile(join(s.repo, "ignored.log"), "noise\n");
+    s.git("update-index", "--assume-unchanged", "hidden.txt");
+    await writeFile(join(s.repo, "hidden.txt"), "edited anyway\n");
+
+    const index = s.git("ls-files", "-s", "-v");
+    const tree = await s.workspaces.snapshot(s.repo);
+    assert.equal(tree, treeFromHead(s.repo, s.dir));
+    assert.equal(s.git("show", `${tree}:hidden.txt`), "edited anyway\n");
+    // The real index keeps its own entries and marks.
+    assert.equal(s.git("ls-files", "-s", "-v"), index);
+  } finally {
+    await s.close();
+  }
+});
+
+test("split indexes and merge conflicts snapshot from the copied index", async () => {
+  const s = await setup();
+
+  const commit = (...args: string[]) =>
+    s.git(
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      ...args,
+    );
+
+  try {
+    // A split index keeps its shared files in the repository; snapshots
+    // must not add or change any.
+    s.git("config", "core.splitIndex", "true");
+    s.git("update-index", "--split-index");
+    await writeFile(join(s.repo, "tracked.txt"), "edited\n");
+    const gitDir = join(s.repo, ".git");
+
+    const shared = async () =>
+      (await readdir(gitDir)).filter((name) => name.startsWith("sharedindex"));
+
+    const before = await shared();
+    assert.ok(before.length);
+
+    assert.equal(
+      await s.workspaces.snapshot(s.repo),
+      treeFromHead(s.repo, s.dir),
+    );
+
+    assert.deepEqual(await shared(), before);
+
+    // A merge conflict leaves unmerged entries in the index; `add -A` on
+    // the copy resolves them to the working tree, with the conflict markers.
+    s.git("config", "core.splitIndex", "false");
+    s.git("update-index", "--no-split-index");
+    s.git("checkout", "-q", "-b", "other");
+    await writeFile(join(s.repo, "tracked.txt"), "other\n");
+    commit("commit", "-qam", "other");
+    s.git("checkout", "-q", "-");
+    await writeFile(join(s.repo, "tracked.txt"), "main\n");
+    commit("commit", "-qam", "main");
+    assert.throws(() => commit("merge", "-q", "other"));
+    assert.match(s.git("ls-files", "-u"), /tracked\.txt/);
+
+    assert.equal(
+      await s.workspaces.snapshot(s.repo),
+      treeFromHead(s.repo, s.dir),
+    );
+
+    assert.match(s.git("ls-files", "-u"), /tracked\.txt/);
+  } finally {
+    await s.close();
+  }
+});
+
+test("a same-size edit within the index's timestamp is still seen", async () => {
+  const s = await setup();
+
+  try {
+    // Pin the times so the edit matches every cached stat the index keeps
+    // for the file (size, whole-second mtime; ctime is switched off) and
+    // the index has the same mtime: only Git's racily-clean check, which
+    // compares against the index file's own mtime, can see the change.
+    const file = join(s.repo, "tracked.txt"),
+      time = new Date("2026-01-01T00:00:00Z");
+
+    s.git("config", "core.trustctime", "false");
+    await utimes(file, time, time);
+    s.git("add", "tracked.txt");
+    await writeFile(file, "edited!!!\n");
+    await utimes(file, time, time);
+    await utimes(join(s.repo, ".git", "index"), time, time);
+    const tree = await s.workspaces.snapshot(s.repo);
+    assert.equal(s.git("show", `${tree}:tracked.txt`), "edited!!!\n");
+  } finally {
+    await s.close();
+  }
+});
+
+test("a sparse checkout's files outside the sparse set stay in snapshots", async () => {
+  const s = await setup();
+
+  try {
+    await mkdir(join(s.repo, "kept"));
+    await mkdir(join(s.repo, "sparse"));
+    await writeFile(join(s.repo, "kept", "a.txt"), "kept\n");
+    await writeFile(join(s.repo, "sparse", "b.txt"), "outside\n");
+    s.git("add", ".");
+
+    s.git(
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "-qm",
+      "dirs",
+    );
+
+    s.git("sparse-checkout", "set", "kept");
+    await writeFile(join(s.repo, "kept", "a.txt"), "edited\n");
+
+    const tree = await s.workspaces.snapshot(s.repo);
+    assert.equal(s.git("show", `${tree}:sparse/b.txt`), "outside\n");
+    assert.deepEqual(s.changed("HEAD", tree), ["kept/a.txt"]);
+  } finally {
+    await s.close();
+  }
+});
+
+test("thousands of assume-unchanged files still snapshot from the copied index", async () => {
+  const s = await setup();
+
+  try {
+    // More path bytes than one command line holds (about 1 MB on macOS).
+    await mkdir(join(s.repo, "kept"));
+    const name = (i: number) => `kept/${"x".repeat(200)}-${i}.txt`;
+    const paths = Array.from({ length: 6000 }, (_, i) => name(i));
+
+    for (const path of paths) await writeFile(join(s.repo, path), "same\n");
+    s.git("add", ".");
+
+    s.git(
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "-qm",
+      "many",
+    );
+
+    execFileSync(
+      "git",
+      ["-C", s.repo, "update-index", "--assume-unchanged", "-z", "--stdin"],
+      { input: paths.join("\0") },
+    );
+
+    await writeFile(join(s.repo, name(5999)), "edited\n");
+
+    // Point HEAD at a branch that doesn't exist, so starting from HEAD
+    // fails: the snapshot can only come from the copied index.
+    const commit = s.git("rev-parse", "HEAD").trim();
+    s.git("symbolic-ref", "HEAD", "refs/heads/missing");
+
+    const tree = await s.workspaces.snapshot(s.repo);
+    assert.deepEqual(s.changed(commit, tree), [name(5999)]);
+  } finally {
+    await s.close();
+  }
+}, 60_000);
+
+test("a checkout with no index file snapshots from HEAD", async () => {
+  const s = await setup();
+
+  try {
+    await writeFile(join(s.repo, "tracked.txt"), "edited\n");
+    await writeFile(join(s.repo, "new.txt"), "new\n");
+    await rm(join(s.repo, ".git", "index"));
+
+    const tree = await s.workspaces.snapshot(s.repo);
+    assert.deepEqual(s.changed("HEAD", tree), ["new.txt", "tracked.txt"]);
+  } finally {
     await s.close();
   }
 });
