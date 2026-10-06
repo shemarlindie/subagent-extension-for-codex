@@ -474,6 +474,16 @@ const timestamps = (start: number, minutes: number) => ({
   updated_at: at(start + minutes),
 });
 
+// Stand-ins for a worktree task's Git fields. The fixture service replaces
+// them with a real repository's (ui/dev/preview/change-fixtures.ts).
+const FAKE_COMMIT = "4f1c2d9e8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e";
+
+const worktree = (id: string) => ({
+  workspace: `/demo/data/worktrees/${id}`,
+  branch: `agent/${id}`,
+  base_commit: FAKE_COMMIT,
+});
+
 const auditResult: Result = {
   summary:
     "Two dependencies use licences that need review before release; the rest are permissive.",
@@ -1205,6 +1215,19 @@ const interrupted = lifecycle(
   ["task.instruction", { message: "Keep keyboard navigation unchanged." }],
   ["task.control_requested", { status: "interrupted" }],
   ["task.interrupted", { reason: "service_restart" }],
+  // A second turn, so the Changes tab offers This turn.
+  ["task.continued"],
+  ["task.started", { attempt: 2 }],
+  ["task.interrupted", { reason: "service_restart" }],
+);
+
+// --- Changes: a 60-file diff from large-files.ts, for the Changes tab -------
+const build = lifecycle(
+  "preview-build",
+  105,
+  ["task.queued"],
+  ["task.started", { attempt: 1 }],
+  ["task.completed", { summary: "Cached module compilation in 60 files." }],
 );
 
 const permission = lifecycle(
@@ -1401,6 +1424,8 @@ export const previewTasks: Task[] = [
     error: "Worker stopped: reached the maximum number of turns.",
     runtime_ms: 310000,
     cost_usd: 1.18,
+    // Its worktree was removed; the Changes tab names the branch.
+    ...worktree("preview-failed"),
     ...timestamps(30, 6),
   },
   {
@@ -1450,6 +1475,8 @@ export const previewTasks: Task[] = [
     workspace_strategy: "current_repo",
     budget: { max_runtime_minutes: null, max_cost_usd: null },
     runtime_ms: 90000,
+    workspace: "/demo/project",
+    base_commit: FAKE_COMMIT,
     // Relative to load so the live clock reads as a run already under way.
     run_started_at: new Date(Date.now() - 125000).toISOString(),
     ...timestamps(60, 4),
@@ -1528,7 +1555,9 @@ export const previewTasks: Task[] = [
       "Improve the task inspector layout while preserving keyboard navigation and narrow-panel behavior.",
     worker_profile: "implementer",
     status: "interrupted",
+    attempt: 2,
     runtime_ms: 125000,
+    ...worktree("preview-interrupted"),
     ...timestamps(20, 2),
   },
   {
@@ -1576,6 +1605,26 @@ export const previewTasks: Task[] = [
     ...timestamps(110, 9),
     result: longResult,
   },
+  {
+    ...taskBase,
+    id: "preview-build",
+    title: "Speed up the production build",
+    description: "Cache module compilation across the build's source files.",
+    worker_profile: "implementer",
+    status: "completed",
+    runtime_ms: 210000,
+    cost_usd: 1.04,
+    ...worktree("preview-build"),
+    ...timestamps(105, 4),
+    result: {
+      summary: "Cached module compilation in 60 files.",
+      findings: [],
+      evidence: [],
+      changes: ["Switched every build module to the cached compiler."],
+      tests: [],
+      recommendations: [],
+    },
+  },
   ...liveTasks,
 ];
 
@@ -1592,5 +1641,6 @@ export const previewEvents: Event[] = [
   interrupted,
   permission,
   dependent,
+  build,
   ...liveTimelines,
 ].flatMap((timeline) => timeline.events);

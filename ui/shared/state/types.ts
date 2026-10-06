@@ -2,6 +2,7 @@
 
 import type { Event } from "../../../src/features/events/types.js";
 import type { HostState } from "../../adapters/transports/types.js";
+import type { ChangesState } from "../../features/changes/types.js";
 import type { Project } from "../../features/projects/types.js";
 import type { Worker } from "../../features/providers/types.js";
 import type {
@@ -57,6 +58,8 @@ export type Snapshot = {
   filter: Filter | null;
   search: string;
   tab: Tab;
+  /** The selected task's changes, read when Changes or Details opens. */
+  changes?: ChangesState;
   connected: boolean;
   scopeKnown: boolean;
   busy: boolean;

@@ -1,3 +1,13 @@
+import {
+  changesKey,
+  changesStale,
+  readChanges,
+} from "../../features/changes/read-changes";
+import type {
+  Changes,
+  ChangeScope,
+  ChangesState,
+} from "../../features/changes/types";
 import { delegationDialog } from "../../features/delegation/delegation";
 import { readEventTail } from "../../features/tasks/activity/event-history";
 import { initialState } from "./initial-state";
@@ -231,6 +241,10 @@ export class Controller {
       this.patch({ tasks, selected });
       await this.loadDetail();
       if (this.disposed || version !== this.state.scopeVersion) return;
+      // Changes are read live from Git, which polling would repeat for every
+      // task in view, so they reload only when the task's status or turn moves.
+      await this.loadChangesIfStale();
+      if (this.disposed || version !== this.state.scopeVersion) return;
 
       this.patch({
         connection: `Connected · refreshes every ${POLL_INTERVAL_MS / 1000}s`,
@@ -311,6 +325,71 @@ export class Controller {
 
   setTab(tab: Snapshot["tab"]) {
     this.patch({ tab });
+    this.run(() => this.loadChangesIfStale());
+  }
+
+  /** Reads the selected task's changes when a tab showing them is open. */
+  private async loadChangesIfStale() {
+    const task = selectedTask(this.state);
+
+    if (
+      task &&
+      (this.state.tab === "changes" || this.state.tab === "details") &&
+      changesStale(this.state.changes, task)
+    )
+      await this.loadChanges();
+  }
+
+  /**
+   * Reads the selected task's changes, every page, for `scope` (the current
+   * one by default). The last result stays shown while a reload runs.
+   */
+  async loadChanges(scope?: ChangeScope) {
+    const task = selectedTask(this.state);
+    if (!task || this.disposed) return;
+
+    const previous =
+      this.state.changes?.task === task.id ? this.state.changes : undefined;
+
+    const next = scope ?? previous?.scope ?? "task";
+
+    const changes: ChangesState = {
+      task: task.id,
+      scope: next,
+      key: changesKey(task),
+      loading: true,
+      data: previous?.scope === next ? previous.data : undefined,
+    };
+
+    let current = changes;
+    this.patch({ changes });
+    // A newer read, or another task, replaces this one.
+    const live = () => !this.disposed && this.state.changes === current;
+
+    try {
+      const data = await readChanges(
+        task.id,
+        changes.scope,
+        (args) => this.tool<Changes>("get_user_agent_changes", args),
+        live,
+      );
+
+      if (data && live()) {
+        current = { ...changes, loading: false, data };
+        this.patch({ changes: current });
+      }
+    } catch (error) {
+      if (!live()) return;
+
+      current = {
+        ...changes,
+        loading: false,
+        data: undefined,
+        error: error instanceof Error ? error.message : String(error),
+      };
+
+      this.patch({ changes: current });
+    }
   }
 
   /** Shares the selected task, and optionally one item in it, with the host's model. */
@@ -402,7 +481,11 @@ export class Controller {
       this.patch({
         selected: data.panel_selection.task_id,
         events: [],
-        tab: data.panel_selection.tab === "result" ? "result" : "activity",
+        tab:
+          data.panel_selection.tab === "result" ||
+          data.panel_selection.tab === "changes"
+            ? data.panel_selection.tab
+            : "activity",
         filter: null,
         search: "",
       });

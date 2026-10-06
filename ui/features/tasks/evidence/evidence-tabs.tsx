@@ -8,6 +8,7 @@ import {
   useSnapshot,
 } from "../../../shared/state/controller-context";
 import type { Tab, Task } from "../../../shared/state/types";
+import { ChangesPanel } from "../../changes/changes-panel";
 import { EventList } from "../activity/event-list";
 import { TaskDetails } from "../inspector/task-details";
 import { ResultReport } from "./result-report";
@@ -62,6 +63,9 @@ export function EvidenceTabs({ task }: { task: Task }) {
         <Tabs.Tab value="result" id="tab-result">
           Result
         </Tabs.Tab>
+        <Tabs.Tab value="changes" id="tab-changes">
+          Changes
+        </Tabs.Tab>
         <Tabs.Tab value="activity" id="tab-activity">
           Activity <TabCount value={state.events.length} />
         </Tabs.Tab>
@@ -72,6 +76,9 @@ export function EvidenceTabs({ task }: { task: Task }) {
       </Tabs.List>
       <Tabs.Panel value="result">
         <ResultReport result={task.result} />
+      </Tabs.Panel>
+      <Tabs.Panel value="changes">
+        <ChangesPanel task={task} />
       </Tabs.Panel>
       {/* Stays mounted so the reading position survives tab switches. */}
       <Tabs.Panel value="activity" className="activity-panel" keepMounted>
@@ -84,7 +91,10 @@ export function EvidenceTabs({ task }: { task: Task }) {
         />
       </Tabs.Panel>
       <Tabs.Panel value="details">
-        <TaskDetails task={task} />
+        <TaskDetails
+          task={task}
+          changes={state.changes?.task === task.id ? state.changes : undefined}
+        />
       </Tabs.Panel>
     </Tabs.Root>
   );

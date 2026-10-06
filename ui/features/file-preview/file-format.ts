@@ -270,6 +270,40 @@ export function diffPath(file: ParsedDiffFile) {
   return path ?? "unknown";
 }
 
+export type DiffRow =
+  | { kind: "hunk"; content: string }
+  | {
+      kind: "line";
+      type: "add" | "del" | "normal";
+      oldLine?: number;
+      newLine?: number;
+      text: string;
+    };
+
+/** A diff file's hunk headers and lines, in order, with line numbers. */
+export function diffRows(file: ParsedDiffFile): DiffRow[] {
+  return file.chunks.flatMap((chunk): DiffRow[] => [
+    { kind: "hunk", content: chunk.content },
+    ...chunk.changes.map((change): DiffRow => ({
+      kind: "line",
+      type: change.type,
+      oldLine:
+        change.type === "normal"
+          ? change.ln1
+          : change.type === "del"
+            ? change.ln
+            : undefined,
+      newLine:
+        change.type === "normal"
+          ? change.ln2
+          : change.type === "add"
+            ? change.ln
+            : undefined,
+      text: change.content.slice(1),
+    })),
+  ]);
+}
+
 /** An SVG too large to render as an image; it shows as source only. */
 export function isLargeSvg(file: PreviewFile) {
   return (

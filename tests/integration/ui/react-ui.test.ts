@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { describe, test, type TestContext, vi } from "vitest";
 
+import type { Changes } from "../../../ui/features/changes/types";
 import type {
   HostState,
   Project,
@@ -73,6 +74,11 @@ class FakeTransport implements Transport {
   tasks = [task()];
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
+  /** get_user_agent_changes pages; a cursor is the next page's index. */
+  changes: Changes[] = [
+    { scope: "task", files: [], additions: 0, deletions: 0, diff: "" },
+  ];
+
   messages: string[] = [];
   host: HostState = {
     canSend: false,
@@ -118,6 +124,7 @@ class FakeTransport implements Transport {
       ],
       list_agent_tasks: this.tasks,
       get_agent_events: [],
+      get_user_agent_changes: this.changes[Number(args.cursor ?? 0)],
       get_agent_settings: {
         values: {
           default_provider: "claude",
@@ -1893,11 +1900,11 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
     screen
       .getAllByRole("tab")
       .map((tab) => tab.textContent?.replace(/\s*\d+$/, "")),
-    ["Result", "Activity", "Details"],
+    ["Result", "Changes", "Activity", "Details"],
   );
 
   await user.click(result);
-  await user.keyboard("{ArrowRight}");
+  await user.keyboard("{ArrowRight}{ArrowRight}");
 
   await waitFor(() =>
     assert.equal(
@@ -1934,6 +1941,138 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
   );
 
   assert.ok(screen.getByText("Task ID"));
+});
+
+// Two pages of one file each, as the service pages a large diff.
+const changePages = (): Changes[] => {
+  const files: Changes["files"] = [
+    {
+      path: "src/a.ts",
+      status: "modified",
+      additions: 1,
+      deletions: 1,
+      binary: false,
+    },
+    {
+      path: "logo.png",
+      status: "added",
+      additions: 0,
+      deletions: 0,
+      binary: true,
+    },
+  ];
+
+  const page = { scope: "task" as const, files, additions: 1, deletions: 1 };
+
+  return [
+    {
+      ...page,
+      diff: "diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-old line\n+new line\n",
+      next_cursor: "1",
+    },
+    {
+      ...page,
+      diff: "diff --git a/logo.png b/logo.png\nnew file mode 100644\nBinary files /dev/null and b/logo.png differ\n",
+    },
+  ];
+};
+
+test("the Changes tab reads every page and shows the worktree branch and its commands", async (t) => {
+  const { transport, user } = await setup(t, (transport) => {
+    transport.tasks = [
+      {
+        ...task(),
+        branch: "agent/one",
+        workspace: "/data/worktrees/one",
+        base_commit: "abc123",
+      },
+    ];
+
+    transport.changes = changePages();
+  });
+
+  await user.click(screen.getByRole("tab", { name: "Changes" }));
+
+  await waitFor(() =>
+    assert.match(
+      document.querySelector(".diff-row.add")?.textContent ?? "",
+      /new line/,
+    ),
+  );
+
+  assert.deepEqual(
+    transport.calls
+      .filter((call) => call.name === "get_user_agent_changes")
+      .map((call) => call.args),
+    [
+      { task_id: "one", scope: "task" },
+      { task_id: "one", scope: "task", cursor: "1" },
+    ],
+  );
+
+  assert.ok(screen.getByText("+1 −1, 2 files"));
+  assert.ok(screen.getByText("Binary file changed"));
+  assert.ok(screen.getByText("git diff abc123...agent/one"));
+  assert.ok(screen.getByText("git push -u origin agent/one"));
+  assert.ok(screen.getByText("cd /data/worktrees/one"));
+  // One turn so far: the whole task is the only scope.
+  assertAbsent(screen.queryByRole("group", { name: "Changes to show" }));
+
+  await user.click(screen.getByRole("tab", { name: "Details" }));
+  assert.ok(screen.getByText("agent/one"));
+  assert.ok(screen.getAllByText("+1 −1, 2 files").length);
+});
+
+test("the Changes tab offers This turn after a second turn and explains empty states", async (t) => {
+  const { controller, transport, user } = await setup(t, (transport) => {
+    transport.tasks = [{ ...task(), attempt: 2, branch: "agent/one" }];
+  });
+
+  await user.click(screen.getByRole("tab", { name: "Changes" }));
+  await screen.findByText("No changes.");
+  transport.changes = [{ ...transport.changes[0], scope: "turn" }];
+  await user.click(screen.getByRole("button", { name: "This turn" }));
+  await screen.findByText("No changes in this turn.");
+  assert.equal(transport.calls.at(-1)?.args.scope, "turn");
+
+  // A removed worktree names the branch and how to check it out.
+  transport.changes = [
+    {
+      ...transport.changes[0],
+      state: "workspace_missing",
+      branch: "agent/one",
+    },
+  ];
+
+  await user.click(screen.getByRole("button", { name: "Refresh changes" }));
+  await screen.findByText(/The worktree was removed/);
+  assert.ok(screen.getByText("git checkout agent/one"));
+
+  // A finished turn reloads them; an error replaces them.
+  const tool = transport.tool.bind(transport);
+
+  transport.tool = async <T>(name: string, args?: Record<string, unknown>) => {
+    if (name === "get_user_agent_changes")
+      throw new Error("This task predates change tracking.");
+
+    return tool<T>(name, args);
+  };
+
+  transport.tasks = [{ ...transport.tasks[0], status: "completed" }];
+  await act(() => controller.refresh());
+  await screen.findByText("This task predates change tracking.");
+});
+
+test("a current_repo task's changes say they include edits made outside the task", async (t) => {
+  const { user } = await setup(t, (transport) => {
+    transport.tasks = [{ ...task(), workspace_strategy: "current_repo" }];
+  });
+
+  await user.click(screen.getByRole("tab", { name: "Changes" }));
+
+  assert.ok(await screen.findByText(/including any made outside the task/));
+
+  assertAbsent(screen.queryByText(/git push/));
 });
 
 test("dialog focuses task, preserves the draft and field node during refresh, and restores trigger focus", async (t) => {

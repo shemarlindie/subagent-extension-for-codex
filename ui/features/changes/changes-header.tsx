@@ -1,0 +1,114 @@
+import { Toggle } from "@base-ui/react/toggle";
+import { ToggleGroup } from "@base-ui/react/toggle-group";
+
+import { Button } from "../../shared/components/button";
+import { Icon } from "../../shared/components/icons";
+import { TooltipWrapper } from "../../shared/components/tooltip";
+import { useController } from "../../shared/state/controller-context";
+import { Progress } from "../file-preview/components/progress";
+import type { Task } from "../tasks/types";
+import { CommandLine } from "./command-line";
+import { changesSummary } from "./read-changes";
+import type { ChangeScope, ChangesState } from "./types";
+
+type ChangesHeaderProps = {
+  task: Task;
+  changes?: ChangesState;
+};
+
+const SCOPES: { value: ChangeScope; label: string }[] = [
+  { value: "task", label: "Whole task" },
+  { value: "turn", label: "This turn" },
+];
+
+/** Where the changes are, how to get at them, and which part is shown. */
+export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
+  const controller = useController(),
+    data = changes?.data,
+    removed = data?.state === "workspace_missing",
+    branch = task.branch;
+
+  return (
+    <div className="changes-header">
+      <div className="changes-toolbar">
+        {/* A task's first turn is the whole task, so the choice waits for a second. */}
+        {task.attempt > 1 && (
+          <ToggleGroup
+            className="view-switch"
+            aria-label="Changes to show"
+            value={[changes?.scope ?? "task"]}
+            onValueChange={(value) =>
+              value[0] && controller.run(() => controller.loadChanges(value[0]))
+            }
+          >
+            {SCOPES.map((scope) => (
+              <Toggle
+                key={scope.value}
+                value={scope.value}
+                className="view-option"
+              >
+                {scope.label}
+              </Toggle>
+            ))}
+          </ToggleGroup>
+        )}
+        <span className="changes-summary">
+          {data && !removed ? changesSummary(data) : ""}
+        </span>
+        <TooltipWrapper label="Refresh changes">
+          <Button
+            variant="ghost"
+            className="toolbar-icon-button"
+            aria-label="Refresh changes"
+            disabled={changes?.loading}
+            onClick={() => controller.run(() => controller.loadChanges())}
+          >
+            <Icon name="refresh" size={14} />
+          </Button>
+        </TooltipWrapper>
+        {changes?.loading && <Progress label="Reading changes" />}
+      </div>
+      {task.workspace_strategy === "current_repo" ? (
+        <p className="help changes-note">
+          Changes in this checkout since the task started, including any made
+          outside the task.
+        </p>
+      ) : (
+        branch && (
+          <div className="changes-commands">
+            <CommandLine label="Branch" command={branch} />
+            {removed ? (
+              <CommandLine
+                label="Check out"
+                command={`git checkout ${branch}`}
+              />
+            ) : (
+              task.workspace && (
+                <CommandLine
+                  label="Worktree"
+                  command={`cd ${task.workspace}`}
+                />
+              )
+            )}
+            {task.base_commit && (
+              <CommandLine
+                label="Compare"
+                command={`git diff ${task.base_commit}...${branch}`}
+              />
+            )}
+            <CommandLine
+              label="Push"
+              command={`git push -u origin ${branch}`}
+            />
+            {!removed && (
+              <p className="help changes-note">
+                Compare and Push use the branch's commits; commit in the
+                worktree first to include uncommitted changes.
+              </p>
+            )}
+          </div>
+        )
+      )}
+    </div>
+  );
+}

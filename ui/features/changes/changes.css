@@ -1,0 +1,61 @@
+/* The Changes tab: where the work is, how to reach it, and its diff. */
+.changes {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.changes-header {
+  display: grid;
+  gap: 8px;
+}
+.changes-toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+.changes-summary {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+/* Before the first read, the bar stands in for the diff. */
+.file-progress.changes-loading {
+  position: relative;
+  inset: auto;
+}
+.changes-note,
+.changes-empty,
+.changes-error {
+  margin: 0;
+}
+.changes-commands {
+  display: grid;
+  gap: 4px;
+}
+/* Label, command, then Copy where the clipboard is available. */
+.command-line {
+  display: grid;
+  grid-template-columns: 9ch minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.command-label {
+  color: var(--muted);
+}
+.command {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  user-select: all;
+}

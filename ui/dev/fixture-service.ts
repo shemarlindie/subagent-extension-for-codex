@@ -2,18 +2,29 @@
 // ssrLoadModule (see vite.config.ts) and answers FIXTURE_SERVICE_TOOLS with the
 // real service code: a Store in a temporary SQLite file, seeded with the preview
 // fixture tasks, and callTool with user authority, as the console calls it.
-import { mkdtempSync, rmSync } from "node:fs";
+// Tasks with change fixtures get a real Git repository each, so their changes
+// come from Git as in production.
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import type { Control } from "../../src/features/tasks/control";
 import { Store } from "../../src/features/tasks/store";
+import { Workspaces } from "../../src/features/workspaces/workspace";
 import { callTool } from "../../src/platform/server/tools";
+import type { Task } from "../../src/shared/contracts";
 import { FIXTURE_SERVICE_TOOLS } from "./host-helpers";
+import {
+  type Edits,
+  previewChanges,
+  type Turn,
+} from "./preview/change-fixtures";
 import { previewTasks } from "./preview/fixtures";
 
 type FixtureStore = {
   store: Store;
+  workspaces: Workspaces;
   directory: string;
 };
 
@@ -27,21 +38,102 @@ if (previous) {
   rmSync(previous.directory, { recursive: true, force: true });
 }
 
-let current: FixtureStore | undefined;
+let current: Promise<FixtureStore> | undefined;
+
+const git = (cwd: string, ...args: string[]) =>
+  execFileSync(
+    "git",
+    [
+      "-C",
+      cwd,
+      "-c",
+      "user.name=Preview",
+      "-c",
+      "user.email=preview@example.invalid",
+      ...args,
+    ],
+    { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
+  ).trim();
+
+function write(root: string, edits: Edits) {
+  for (const [path, content] of Object.entries(edits)) {
+    const file = join(root, path);
+
+    if (content === null) rmSync(file, { force: true });
+    else {
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, content);
+    }
+  }
+}
+
+function apply(root: string, turn: Turn) {
+  if ("patch" in turn && typeof turn.patch === "string")
+    execFileSync("git", ["-C", root, "apply", "-"], { input: turn.patch });
+  else write(root, turn as Edits);
+}
+
+/**
+ * Builds a task's repository from its change fixture: a base commit, then
+ * each turn. The task's workspace, branch and snapshots become real ones;
+ * the turn snapshot is taken before the last turn.
+ */
+async function seedChanges(task: Task, root: string, workspaces: Workspaces) {
+  const fixture = previewChanges[task.id]();
+  const repo = join(root, "repos", task.id);
+  mkdirSync(repo, { recursive: true });
+  git(repo, "init", "-q");
+  write(repo, fixture.base);
+  git(repo, "add", "-A");
+  git(repo, "commit", "-qm", "Base");
+  task.base_commit = git(repo, "rev-parse", "HEAD");
+
+  if (task.workspace_strategy === "worktree") {
+    task.branch ??= `agent/${task.id}`;
+    task.workspace = join(root, "worktrees", task.id);
+    git(repo, "worktree", "add", "-q", "-b", task.branch, task.workspace);
+  } else {
+    write(repo, fixture.before ?? {});
+    task.workspace = repo;
+    task.start_tree = await workspaces.snapshot(repo);
+  }
+
+  const workspace = task.workspace;
+
+  for (const [index, turn] of fixture.turns.entries()) {
+    if (index === fixture.turns.length - 1)
+      task.turn_start_tree = await workspaces.snapshot(workspace);
+    apply(workspace, turn);
+
+    if (fixture.commit) {
+      git(workspace, "add", "-A");
+      git(workspace, "commit", "-qm", `Turn ${index + 1}`);
+    }
+  }
+
+  if (fixture.removed) git(repo, "worktree", "remove", "--force", workspace);
+}
 
 /** Seeds the fixture tasks on first use. */
 function fixtureStore() {
-  if (!current) {
+  current ??= (async () => {
     const directory = mkdtempSync(join(tmpdir(), "panel-fixture-service-"));
     const store = new Store(join(directory, "fixtures.sqlite"));
+    const workspaces = new Workspaces(join(directory, "snapshots"), []);
+    const fixture = { store, workspaces, directory };
+    (globalThis as { __fixtureStore?: FixtureStore }).__fixtureStore = fixture;
 
-    for (const task of previewTasks) store.save(task);
+    for (const task of previewTasks) {
+      const saved = structuredClone(task);
+      if (previewChanges[task.id])
+        await seedChanges(saved, directory, workspaces);
+      store.save(saved);
+    }
 
-    current = { store, directory };
-    (globalThis as { __fixtureStore?: FixtureStore }).__fixtureStore = current;
-  }
+    return fixture;
+  })();
 
-  return current.store;
+  return current;
 }
 
 // Registered once across reloads; it removes whichever store is current.
@@ -65,12 +157,13 @@ export async function fixtureServiceTool(
   if (!FIXTURE_SERVICE_TOOLS.includes(name))
     throw new Error(`The fixture service does not serve ${name}`);
 
-  const store = fixtureStore();
+  const { store, workspaces } = await fixtureStore();
   const task = previewTasks.find((task) => task.id === args.task_id);
 
-  // Served tools only read the store, so no other control parts are needed.
+  // Served tools only read the store and workspaces, so no other control
+  // parts are needed.
   return callTool(
-    { store } as unknown as Control,
+    { store, workspaces } as unknown as Control,
     task?.owner ?? "preview",
     name,
     args,
@@ -79,10 +172,11 @@ export async function fixtureServiceTool(
 }
 
 /** Closes and removes the store; for tests. */
-export function closeFixtureService() {
+export async function closeFixtureService() {
   if (!current) return;
-  current.store.close();
-  rmSync(current.directory, { recursive: true, force: true });
+  const { store, directory } = await current;
+  store.close();
+  rmSync(directory, { recursive: true, force: true });
   current = undefined;
   delete (globalThis as { __fixtureStore?: FixtureStore }).__fixtureStore;
 }

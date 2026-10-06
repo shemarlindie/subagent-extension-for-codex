@@ -228,6 +228,49 @@ test("delayed detail from a previous selection cannot replace current events", a
   );
 });
 
+test("a host link opens the Changes tab, and a read for a replaced task is dropped", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a"), task("b")];
+  const gate = deferred<unknown>();
+
+  const changes = (id: string) => ({
+    scope: "task",
+    files: [],
+    additions: id === "a" ? 1 : 2,
+    deletions: 0,
+    diff: "",
+  });
+
+  transport.handler = (name, args) =>
+    name === "get_user_agent_changes"
+      ? args.task_id === "a"
+        ? gate.promise
+        : changes("b")
+      : undefined;
+
+  await controller.start();
+
+  controller.applyScope(
+    {
+      panel_scope: { conversation_id: null },
+      panel_selection: { task_id: "a", tab: "changes" },
+    },
+    false,
+  );
+
+  assert.equal(controller.getSnapshot().tab, "changes");
+  const first = controller.loadChanges();
+  await controller.select("b");
+  controller.setTab("changes");
+  await flush();
+  gate.resolve(changes("a"));
+  await first;
+
+  assert.equal(controller.getSnapshot().changes?.task, "b");
+  assert.equal(controller.getSnapshot().changes?.data?.additions, 2);
+});
+
 test("sharing sends the selected task and an optional selected item to the host", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());

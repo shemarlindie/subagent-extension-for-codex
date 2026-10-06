@@ -39,6 +39,7 @@ const previewSettingsDefaults = {
   default_provider: "claude",
   default_worker_profile: "reviewer",
   default_workspace_strategy: "current_repo",
+  worktree_branch_prefix: "agent/",
   auto_register_chat_project: true,
   claude_permission_mode: "inherit",
   default_approval_decider: "user",

@@ -107,9 +107,10 @@ export function fixtureLaunchArgs(
 /**
  * Fixture tools the Vite dev server answers with the real service code
  * (ui/dev/fixture-service.ts), for behavior the browser fixtures cannot fake.
- * The browser fixtures do not answer them. None need it yet.
+ * The browser fixtures do not answer them. Changes are read from real Git
+ * repositories built from ui/dev/preview/change-fixtures.ts.
  */
-export const FIXTURE_SERVICE_TOOLS: string[] = [];
+export const FIXTURE_SERVICE_TOOLS: string[] = ["get_user_agent_changes"];
 
 export const FIXTURE_SERVICE_PATH = "/fixture-service/tools/";
 

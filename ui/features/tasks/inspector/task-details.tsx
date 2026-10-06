@@ -8,9 +8,27 @@ import { approvalLabels } from "../../../../src/shared/contracts";
 import { useNow } from "../../../shared/components/use-now";
 import { profileLabel } from "../../../shared/state/selectors";
 import type { Task } from "../../../shared/state/types";
+import { changesSummary } from "../../changes/read-changes";
+import type { ChangesState } from "../../changes/types";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../list/duration";
 
-export function TaskDetails({ task }: { task: Task }) {
+type TaskDetailsProps = {
+  task: Task;
+  /** The task's changes, read live when Details opens. */
+  changes?: ChangesState;
+};
+
+/** The changes fact: a live summary, or why there is none. */
+function changesFact(changes?: ChangesState) {
+  if (changes?.error) return changes.error;
+  if (!changes?.data) return "Reading…";
+  if (changes.data.state === "workspace_missing")
+    return `On branch ${changes.data.branch}; the worktree was removed`;
+
+  return `${changesSummary(changes.data)}${changes.scope === "turn" ? " in this turn" : ""}`;
+}
+
+export function TaskDetails({ task, changes }: TaskDetailsProps) {
   const now = useNow(runtimeLive(task));
 
   const facts = {
@@ -40,6 +58,7 @@ export function TaskDetails({ task }: { task: Task }) {
     "Reasoning effort": task.reasoning_effort || "Provider runtime default",
     Workspace: task.workspace ?? "Preparing",
     ...(task.branch ? { Branch: task.branch } : {}),
+    Changes: changesFact(changes),
     Repository: task.repository,
     "Workspace strategy":
       task.workspace_strategy === "current_repo"
