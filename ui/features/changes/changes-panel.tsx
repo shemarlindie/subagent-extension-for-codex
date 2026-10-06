@@ -24,6 +24,10 @@ export function ChangesPanel({ task }: { task: Task }) {
           The worktree was removed. Changes are on branch{" "}
           <code>{data.branch}</code>.
         </p>
+      ) : data.state === "branch_deleted" ? (
+        <p className="help changes-empty">
+          The worktree and its branch <code>{data.branch}</code> were deleted.
+        </p>
       ) : data.files.length ? (
         <ChangesView task={task} changes={data} />
       ) : (

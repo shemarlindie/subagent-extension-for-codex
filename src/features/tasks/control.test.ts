@@ -797,6 +797,92 @@ test("worktree branches use the owner's prefix, and Git rejects invalid names", 
   }
 });
 
+test("a stopped task's worktree is removed, keeping the branch, then the branch can be deleted", async () => {
+  const { c, store, repo } = await setup();
+
+  const branches = () =>
+    execFileSync("git", ["-C", repo, "branch", "--list", "agent/*"])
+      .toString()
+      .trim();
+
+  try {
+    const running = await c.start("alice", input("[input]"));
+    await until(() => !!store.get(running.id, "alice").pending_input);
+
+    await assert.rejects(
+      c.removeWorktree("alice", running.id),
+      /Wait until the task stops/,
+    );
+
+    await c.stop("alice", running.id, "cancelled");
+    const t = store.get(running.id, "alice");
+
+    await assert.rejects(
+      c.deleteBranch("alice", t.id),
+      /Remove the worktree before deleting its branch/,
+    );
+
+    // Uncommitted work is listed, not discarded, until the user confirms.
+    await writeFile(join(t.workspace!, "draft.txt"), "draft\n");
+
+    assert.deepEqual(await c.removeWorktree("alice", t.id), {
+      status: "uncommitted",
+      files: ["draft.txt"],
+    });
+
+    assert.deepEqual(await c.removeWorktree("alice", t.id, true), {
+      status: "removed",
+    });
+
+    assert.match(branches(), new RegExp(`agent/${t.id}`));
+    assert.equal((await c.workspaces.changes(t)).state, "workspace_missing");
+
+    await assert.rejects(c.removeWorktree("alice", t.id), /already removed/);
+
+    assert.deepEqual(await c.deleteBranch("alice", t.id), {
+      status: "deleted",
+    });
+
+    assert.equal(branches(), "");
+    assert.equal((await c.workspaces.changes(t)).state, "branch_deleted");
+
+    // Each outcome is a task event.
+    assert.deepEqual(
+      store
+        .events(t.id, "alice")
+        .filter(
+          (e) =>
+            e.type.startsWith("task.worktree") ||
+            e.type.startsWith("task.branch"),
+        )
+        .map((e) => [e.type, e.data]),
+      [
+        [
+          "task.worktree_removed",
+          { path: t.workspace, branch: t.branch, forced: true },
+        ],
+        ["task.branch_deleted", { branch: t.branch }],
+      ],
+    );
+
+    // Another user can't act on the task.
+    await assert.rejects(c.removeWorktree("bob", t.id));
+
+    // An interrupted task can't continue without its worktree.
+    const paused = await c.start("alice", input("[input]"));
+    await until(() => !!store.get(paused.id, "alice").pending_input);
+    await c.stop("alice", paused.id, "interrupted");
+    await c.removeWorktree("alice", paused.id);
+
+    await assert.rejects(
+      c.continue("alice", paused.id),
+      /worktree was removed, so this task can't continue/,
+    );
+  } finally {
+    await c.close();
+  }
+});
+
 test("scheduler enforces concurrency and independent branches run together", async () => {
   const { c, store } = await setup(undefined, 2);
 

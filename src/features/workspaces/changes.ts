@@ -22,8 +22,11 @@ export interface ChangedFile {
 
 export interface Changes {
   scope: ChangeScope;
-  /** Set when the worktree was removed; the work is on `branch`. */
-  state?: "workspace_missing";
+  /**
+   * "workspace_missing": the worktree was removed; the work is on `branch`.
+   * "branch_deleted": the branch was deleted too.
+   */
+  state?: "workspace_missing" | "branch_deleted";
   branch?: string;
   /** Every changed file, on every page. */
   files: ChangedFile[];

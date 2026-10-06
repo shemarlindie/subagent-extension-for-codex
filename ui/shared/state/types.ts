@@ -38,7 +38,15 @@ export type DialogState =
   | { kind: "respond"; task: Task; scope: number }
   | { kind: "handoff"; task: Task; scope: number }
   // A file the task changed, previewed as it is now.
-  | { kind: "file"; task: Task; path: string; scope: number };
+  | { kind: "file"; task: Task; path: string; scope: number }
+  // Confirms removing a worktree with uncommitted `files`, or deleting a branch.
+  | {
+      kind: "worktree";
+      action: "remove" | "delete-branch";
+      task: Task;
+      files?: string[];
+      scope: number;
+    };
 
 /** Something in the selected task that the panel shares with the host's model. */
 export type SharedItem = { kind: "file"; path: string };

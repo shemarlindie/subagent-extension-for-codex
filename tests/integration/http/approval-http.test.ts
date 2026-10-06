@@ -291,6 +291,8 @@ test("MCP advertises app-only aliases and enforces approval policy for model-fac
       "browse_user_agent_project",
       "get_user_agent_changes",
       "get_user_agent_changed_file",
+      "remove_user_agent_worktree",
+      "delete_user_agent_branch",
     ]) {
       const tool = tools.find((entry) => entry.name === name);
       assert.ok(tool, `${name} must be available to the app`);

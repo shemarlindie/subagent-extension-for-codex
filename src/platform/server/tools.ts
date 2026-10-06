@@ -355,6 +355,18 @@ export function definitions(
       description:
         "User interface only: a task's changes for the panel's Changes tab, as get_agent_changes returns them.",
     }),
+    remove_user_agent_worktree: tool({
+      description:
+        "User interface only: remove a stopped worktree task's worktree and keep its branch. With uncommitted changes it removes nothing and returns status uncommitted with the files, unless force discards them.",
+      schema: taskId.extend({ force: z.boolean().default(false) }),
+      run: (a) => c.removeWorktree(owner, a.task_id, a.force),
+    }),
+    delete_user_agent_branch: tool({
+      description:
+        "User interface only: delete a stopped worktree task's branch once its worktree is removed.",
+      schema: taskId,
+      run: (a) => c.deleteBranch(owner, a.task_id),
+    }),
     get_user_agent_changed_file: tool({
       ...tools.get_agent_changed_file,
       description:
@@ -372,6 +384,8 @@ export const isUserTool = (name: string) =>
     "update_user_agent_settings",
     "get_user_agent_changes",
     "get_user_agent_changed_file",
+    "remove_user_agent_worktree",
+    "delete_user_agent_branch",
   ].includes(name);
 
 export async function callTool(

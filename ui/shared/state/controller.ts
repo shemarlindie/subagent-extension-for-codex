@@ -7,6 +7,7 @@ import type {
   Changes,
   ChangeScope,
   ChangesState,
+  WorktreeRemoval,
 } from "../../features/changes/types";
 import { delegationDialog } from "../../features/delegation/delegation";
 import { readEventTail } from "../../features/tasks/activity/event-history";
@@ -392,6 +393,39 @@ export class Controller {
     }
   }
 
+  /**
+   * Removes a task's worktree and keeps its branch. A worktree with
+   * uncommitted changes is kept; a dialog lists them and asks first.
+   */
+  async removeWorktree(task: Task) {
+    if (this.state.busy || this.state.dialog || this.disposed) return;
+    this.patch({ busy: true });
+    let result: WorktreeRemoval;
+
+    try {
+      result = await this.tool<WorktreeRemoval>("remove_user_agent_worktree", {
+        task_id: task.id,
+      });
+    } finally {
+      this.patch({ busy: false });
+    }
+
+    if (result.status === "uncommitted")
+      this.open({
+        kind: "worktree",
+        action: "remove",
+        task,
+        files: result.files,
+      });
+    else await this.afterWorktreeChange();
+  }
+
+  /** The Changes tab reads the removed worktree or branch at once. */
+  async afterWorktreeChange() {
+    await this.loadChanges();
+    await this.refresh();
+  }
+
   /** Shares the selected task, and optionally one item in it, with the host's model. */
   async share(item?: SharedItem) {
     if (this.disposed || !this.state.host.canShare) return;
@@ -710,7 +744,8 @@ export class Controller {
     dialog:
       | Omit<Extract<DialogState, { kind: "control" }>, "scope">
       | Omit<Extract<DialogState, { kind: "respond" | "handoff" }>, "scope">
-      | Omit<Extract<DialogState, { kind: "file" }>, "scope">,
+      | Omit<Extract<DialogState, { kind: "file" }>, "scope">
+      | Omit<Extract<DialogState, { kind: "worktree" }>, "scope">,
   ) {
     if (this.state.dialog || this.state.busy) return;
 

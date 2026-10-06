@@ -2157,6 +2157,100 @@ test("previews say when a file was deleted, is binary, or can't be read", async 
   }
 });
 
+test("worktree actions remove the worktree, confirming uncommitted changes, then delete the branch", async (t) => {
+  const removals: Record<string, unknown>[] = [];
+
+  const { controller, transport, user } = await setup(t, (transport) => {
+    transport.tasks = [{ ...task(), status: "running", branch: "agent/one" }];
+    const tool = transport.tool.bind(transport);
+
+    transport.tool = async <T>(
+      name: string,
+      args?: Record<string, unknown>,
+    ) => {
+      if (name === "remove_user_agent_worktree") {
+        transport.calls.push({ name, args: args ?? {} });
+        removals.push(args ?? {});
+
+        if (!args?.force)
+          return { status: "uncommitted", files: ["draft.txt"] } as T;
+
+        transport.changes = [
+          {
+            ...transport.changes[0],
+            state: "workspace_missing",
+            branch: "agent/one",
+          },
+        ];
+
+        return { status: "removed" } as T;
+      }
+
+      if (name === "delete_user_agent_branch") {
+        transport.calls.push({ name, args: args ?? {} });
+
+        transport.changes = [
+          {
+            ...transport.changes[0],
+            state: "branch_deleted",
+            branch: "agent/one",
+          },
+        ];
+
+        return { status: "deleted" } as T;
+      }
+
+      return tool<T>(name, args);
+    };
+  });
+
+  await user.click(screen.getByRole("tab", { name: "Changes" }));
+  const remove = await screen.findByRole("button", { name: "Remove worktree" });
+  // A running task is using its worktree.
+  assert.equal((remove as HTMLButtonElement).disabled, true);
+  assert.ok(screen.getByText("Available once the task stops."));
+
+  transport.tasks = [{ ...transport.tasks[0], status: "interrupted" }];
+  await act(() => controller.refresh());
+
+  await waitFor(() =>
+    assert.equal((remove as HTMLButtonElement).disabled, false),
+  );
+
+  await user.click(remove);
+
+  // Uncommitted changes are listed before anything is discarded.
+  const dialog = await screen.findByRole("dialog", {
+    name: "Remove worktree?",
+  });
+
+  assert.ok(within(dialog).getByText("draft.txt"));
+
+  await user.click(
+    within(dialog).getByRole("button", { name: "Discard changes and remove" }),
+  );
+
+  await screen.findByText(/The worktree was removed/);
+
+  assert.deepEqual(removals, [
+    { task_id: "one" },
+    { task_id: "one", force: true },
+  ]);
+
+  await user.click(screen.getByRole("button", { name: "Delete branch" }));
+  const confirm = await screen.findByRole("dialog", { name: "Delete branch?" });
+
+  await user.click(
+    within(confirm).getByRole("button", { name: "Delete branch" }),
+  );
+
+  await screen.findByText(/were deleted/);
+
+  assertAbsent(
+    screen.queryByRole("button", { name: /Delete branch|Remove worktree/ }),
+  );
+});
+
 test("a current_repo task's changes say they include edits made outside the task", async (t) => {
   const { user } = await setup(t, (transport) => {
     transport.tasks = [{ ...task(), workspace_strategy: "current_repo" }];

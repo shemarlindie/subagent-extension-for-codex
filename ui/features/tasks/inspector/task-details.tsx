@@ -10,6 +10,7 @@ import { profileLabel } from "../../../shared/state/selectors";
 import type { Task } from "../../../shared/state/types";
 import { changesSummary } from "../../changes/read-changes";
 import type { ChangesState } from "../../changes/types";
+import { WorktreeActions } from "../../changes/worktree-actions";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../list/duration";
 
 type TaskDetailsProps = {
@@ -24,6 +25,8 @@ function changesFact(changes?: ChangesState) {
   if (!changes?.data) return "Reading…";
   if (changes.data.state === "workspace_missing")
     return `On branch ${changes.data.branch}; the worktree was removed`;
+  if (changes.data.state === "branch_deleted")
+    return "The worktree and its branch were deleted";
 
   return `${changesSummary(changes.data)}${changes.scope === "turn" ? " in this turn" : ""}`;
 }
@@ -103,6 +106,7 @@ export function TaskDetails({ task, changes }: TaskDetailsProps) {
           </div>
         ))}
       </dl>
+      {changes?.data && <WorktreeActions task={task} changes={changes} />}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import type { Control } from "../../src/features/tasks/control";
+import { Control } from "../../src/features/tasks/control";
 import { Store } from "../../src/features/tasks/store";
 import { Workspaces } from "../../src/features/workspaces/workspace";
 import { callTool } from "../../src/platform/server/tools";
@@ -24,7 +24,7 @@ import { previewTasks } from "./preview/fixtures";
 
 type FixtureStore = {
   store: Store;
-  workspaces: Workspaces;
+  control: Control;
   directory: string;
 };
 
@@ -87,6 +87,8 @@ async function seedChanges(task: Task, root: string, workspaces: Workspaces) {
   git(repo, "add", "-A");
   git(repo, "commit", "-qm", "Base");
   task.base_commit = git(repo, "rev-parse", "HEAD");
+  // Worktree actions run Git in the repository itself.
+  task.repository = repo;
 
   if (task.workspace_strategy === "worktree") {
     task.branch ??= `agent/${task.id}`;
@@ -112,6 +114,7 @@ async function seedChanges(task: Task, root: string, workspaces: Workspaces) {
   }
 
   if (fixture.removed) git(repo, "worktree", "remove", "--force", workspace);
+  if (fixture.branchDeleted) git(repo, "branch", "-D", task.branch!);
 }
 
 /** Seeds the fixture tasks on first use. */
@@ -120,7 +123,10 @@ function fixtureStore() {
     const directory = mkdtempSync(join(tmpdir(), "panel-fixture-service-"));
     const store = new Store(join(directory, "fixtures.sqlite"));
     const workspaces = new Workspaces(join(directory, "snapshots"), []);
-    const fixture = { store, workspaces, directory };
+    // No providers: served tools read changes and manage worktrees, and
+    // never run a task.
+    const control = new Control(store, workspaces, new Map(), directory);
+    const fixture = { store, control, directory };
     (globalThis as { __fixtureStore?: FixtureStore }).__fixtureStore = fixture;
 
     for (const task of previewTasks) {
@@ -157,18 +163,10 @@ export async function fixtureServiceTool(
   if (!FIXTURE_SERVICE_TOOLS.includes(name))
     throw new Error(`The fixture service does not serve ${name}`);
 
-  const { store, workspaces } = await fixtureStore();
+  const { control } = await fixtureStore();
   const task = previewTasks.find((task) => task.id === args.task_id);
 
-  // Served tools only read the store and workspaces, so no other control
-  // parts are needed.
-  return callTool(
-    { store, workspaces } as unknown as Control,
-    task?.owner ?? "preview",
-    name,
-    args,
-    "user",
-  );
+  return callTool(control, task?.owner ?? "preview", name, args, "user");
 }
 
 /** Closes and removes the store; for tests. */

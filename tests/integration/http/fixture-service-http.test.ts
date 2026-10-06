@@ -225,3 +225,64 @@ test("the Vite fixture-service route serializes service errors as JSON", async (
     error: "The fixture service does not serve list_agent_tasks",
   });
 });
+
+// Last: it changes the fixture repositories the tests above read.
+test("fixture worktrees can be removed and their branches deleted with real Git", async () => {
+  await fixtureServer();
+
+  const call = async (name: string, args: Record<string, unknown>) => {
+    const response = await fetch(`${origin}/fixture-service/tools/${name}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+
+    return {
+      status: response.status,
+      body: (await response.json()) as { result?: any; error?: string },
+    };
+  };
+
+  // Uncommitted work keeps the worktree until the removal is forced.
+  const build = await call("remove_user_agent_worktree", {
+    task_id: "preview-build",
+  });
+
+  assert.equal(build.body.result.status, "uncommitted");
+  // Uncommitted, the rename is a deleted file and an untracked one.
+  assert.equal(build.body.result.files.length, 61);
+
+  assert.deepEqual(
+    (
+      await call("remove_user_agent_worktree", {
+        task_id: "preview-interrupted",
+      })
+    ).body.result,
+    { status: "removed" },
+  );
+
+  assert.equal(
+    (await call("get_user_agent_changes", { task_id: "preview-interrupted" }))
+      .body.result.state,
+    "workspace_missing",
+  );
+
+  assert.deepEqual(
+    (await call("delete_user_agent_branch", { task_id: "preview-interrupted" }))
+      .body.result,
+    { status: "deleted" },
+  );
+
+  assert.equal(
+    (await call("get_user_agent_changes", { task_id: "preview-interrupted" }))
+      .body.result.state,
+    "branch_deleted",
+  );
+
+  // A running task's worktree is in use.
+  assert.match(
+    (await call("remove_user_agent_worktree", { task_id: "preview-refactor" }))
+      .body.error ?? "",
+    /Wait until the task stops/,
+  );
+});

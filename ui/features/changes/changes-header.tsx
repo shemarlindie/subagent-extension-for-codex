@@ -10,6 +10,7 @@ import type { Task } from "../tasks/types";
 import { CommandLine } from "./command-line";
 import { changesSummary } from "./read-changes";
 import type { ChangeScope, ChangesState } from "./types";
+import { WorktreeActions } from "./worktree-actions";
 
 type ChangesHeaderProps = {
   task: Task;
@@ -25,7 +26,8 @@ const SCOPES: { value: ChangeScope; label: string }[] = [
 export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
   const controller = useController(),
     data = changes?.data,
-    removed = data?.state === "workspace_missing",
+    removed =
+      data?.state === "workspace_missing" || data?.state === "branch_deleted",
     branch = task.branch;
 
   return (
@@ -74,7 +76,8 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
           outside the task.
         </p>
       ) : (
-        branch && (
+        branch &&
+        data?.state !== "branch_deleted" && (
           <div className="changes-commands">
             <CommandLine label="Branch" command={branch} />
             {removed ? (
@@ -109,6 +112,7 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
           </div>
         )
       )}
+      <WorktreeActions task={task} changes={changes} />
     </div>
   );
 }

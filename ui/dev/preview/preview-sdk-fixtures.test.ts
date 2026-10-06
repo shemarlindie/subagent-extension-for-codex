@@ -85,6 +85,8 @@ const serviceTypes = new Set([
   "task.completed",
   "task.failed",
   "task.recovery_required",
+  "task.worktree_removed",
+  "task.branch_deleted",
   "agent.input_required",
   "agent.input_submitted",
   "agent.input_decision",
@@ -186,4 +188,8 @@ test("service event payloads match what the service emits", () => {
     assert.deepEqual(Object.keys(data), ["message"]);
   for (const data of payload("task.control_requested"))
     assert.deepEqual(Object.keys(data), ["status"]);
+  for (const data of payload("task.worktree_removed"))
+    assert.deepEqual(Object.keys(data), ["path", "branch", "forced"]);
+  for (const data of payload("task.branch_deleted"))
+    assert.deepEqual(Object.keys(data), ["branch"]);
 });

@@ -67,3 +67,19 @@
   padding: 2px 6px;
   font-size: 11px;
 }
+.worktree-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.task-details .worktree-actions {
+  margin-top: 12px;
+}
+.worktree-files {
+  max-height: 12rem;
+  overflow: auto;
+  margin: 0 0 12px;
+  padding-left: 1.2em;
+  font-size: 12px;
+}

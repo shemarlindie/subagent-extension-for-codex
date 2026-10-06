@@ -198,7 +198,13 @@ export class Workspaces {
     const base = changesBase(t, scope);
 
     if (t.workspace_strategy === "worktree" && !(await exists(t.workspace)))
-      return { ...empty, state: "workspace_missing", branch: t.branch };
+      return {
+        ...empty,
+        state: (await this.branchExists(t))
+          ? "workspace_missing"
+          : "branch_deleted",
+        branch: t.branch,
+      };
 
     const page = cursor ? decodeCursor(cursor) : undefined;
     if (page && page.base !== base) throw new Error("Stale changes cursor");
@@ -355,6 +361,66 @@ export class Workspaces {
         ? { next_cursor: encodeFileCursor(tree, end) }
         : {}),
     };
+  }
+
+  /**
+   * Removes a worktree task's worktree and keeps its branch. Uncommitted
+   * changes are listed instead of removed, unless `force` discards them.
+   */
+  async removeWorktree(t: Task, force = false) {
+    if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch)
+      throw new Error("This task has no worktree to remove.");
+    if (!(await exists(t.workspace)))
+      throw new Error("The worktree was already removed.");
+
+    if (!force) {
+      // "XY path" entries; a rename or copy is followed by its old path.
+      // Ignored files don't block removal.
+      const entries = (
+          await git(t.workspace, ["status", "--porcelain", "-z"])
+        ).split("\0"),
+        files: string[] = [];
+
+      for (let index = 0; index < entries.length; index++) {
+        const entry = entries[index];
+        if (!entry) continue;
+        files.push(entry.slice(3));
+        if (/[RC]/.test(entry.slice(0, 2))) index++;
+      }
+
+      if (files.length) return { status: "uncommitted" as const, files };
+    }
+
+    await git(t.repository, [
+      "worktree",
+      "remove",
+      ...(force ? ["--force"] : []),
+      t.workspace,
+    ]);
+
+    return { status: "removed" as const };
+  }
+
+  /** Deletes a worktree task's branch, once its worktree is removed. */
+  async deleteBranch(t: Task) {
+    if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch)
+      throw new Error("This task has no branch to delete.");
+    if (await exists(t.workspace))
+      throw new Error("Remove the worktree before deleting its branch.");
+    await git(t.repository, ["branch", "-D", "--end-of-options", t.branch]);
+  }
+
+  /** Whether a worktree task's branch still exists. */
+  async branchExists(t: Task) {
+    return git(t.repository, [
+      "rev-parse",
+      "--verify",
+      "--quiet",
+      `refs/heads/${t.branch}`,
+    ]).then(
+      () => true,
+      () => false,
+    );
   }
 
   /** The diff between two trees or commits, as one text. */

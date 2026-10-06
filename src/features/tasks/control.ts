@@ -620,6 +620,10 @@ export class Control {
       return [
         `Dependency ${d.id}'s worktree was removed; its changes are on branch ${changes.branch}.`,
       ];
+    if (changes?.state === "branch_deleted")
+      return [
+        `Dependency ${d.id}'s worktree and branch were deleted, so its changes are unavailable.`,
+      ];
     if (!changes?.diff) return [];
 
     const shown = changes.diff.slice(0, MAX_DEPENDENCY_DIFF_CHARS),
@@ -634,6 +638,47 @@ export class Control {
           ]
         : []),
     ];
+  }
+
+  /** Worktree actions wait until the task isn't running or about to. */
+  private idleWorktreeTask(owner: string, id: string) {
+    const t = this.store.get(id, owner);
+    if (
+      this.active.has(id) ||
+      ["queued", "starting", "running", "waiting"].includes(t.status)
+    )
+      throw new Error(
+        "Wait until the task stops before changing its worktree.",
+      );
+
+    return t;
+  }
+
+  /**
+   * Removes a task's worktree and keeps its branch. With uncommitted
+   * changes, it removes nothing and lists them, unless `force` is set.
+   */
+  async removeWorktree(owner: string, id: string, force = false) {
+    const t = this.idleWorktreeTask(owner, id);
+    const result = await this.workspaces.removeWorktree(t, force);
+
+    if (result.status === "removed")
+      this.store.event(t, "task.worktree_removed", {
+        path: t.workspace,
+        branch: t.branch,
+        forced: force,
+      });
+
+    return result;
+  }
+
+  /** Deletes a task's branch, once its worktree is removed. */
+  async deleteBranch(owner: string, id: string) {
+    const t = this.idleWorktreeTask(owner, id);
+    await this.workspaces.deleteBranch(t);
+    this.store.event(t, "task.branch_deleted", { branch: t.branch });
+
+    return { status: "deleted" as const };
   }
 
   async stop(owner: string, id: string, status: "interrupted" | "cancelled") {
@@ -691,7 +736,13 @@ export class Control {
       if (t.provider === "claude") await access(t.session_state_ref);
     }
 
-    if (t.workspace) await access(t.workspace);
+    if (t.workspace)
+      await access(t.workspace).catch((error: unknown) => {
+        if (t.workspace_strategy !== "worktree") throw error;
+        throw new Error(
+          `The worktree was removed, so this task can't continue; its work is on branch ${t.branch}. Cancel it and start a new attempt.`,
+        );
+      });
     t.status = "queued";
     delete t.error;
     delete t.completed_at;

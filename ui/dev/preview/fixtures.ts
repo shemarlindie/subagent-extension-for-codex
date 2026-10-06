@@ -757,6 +757,17 @@ failed.add(
   200,
 );
 
+// The user removed the worktree afterwards; the branch is kept.
+failed.add(
+  "task.worktree_removed",
+  {
+    path: "/demo/data/worktrees/preview-failed",
+    branch: "agent/preview-failed",
+    forced: false,
+  },
+  60000,
+);
+
 // --- Waiting on a question (AskUserQuestion) ---------------------------------
 const question = new Timeline("preview-question", at(45), 300);
 begin(question, ["Read", "Grep", "AskUserQuestion"]);
@@ -928,6 +939,23 @@ const fetch = cancelled.toolStart("WebFetch", {
 
 cancelled.toolProgress(fetch, "WebFetch", 5);
 cancelled.add("task.cancelled", {}, 400);
+
+// The user discarded the work: worktree, then branch.
+cancelled.add(
+  "task.worktree_removed",
+  {
+    path: "/demo/data/worktrees/preview-cancelled",
+    branch: "agent/preview-cancelled",
+    forced: true,
+  },
+  30000,
+);
+
+cancelled.add(
+  "task.branch_deleted",
+  { branch: "agent/preview-cancelled" },
+  5000,
+);
 
 // --- Content blocks and rarer messages ----------------------------------------
 const blocks = new Timeline("preview-blocks", at(90), 600);
@@ -1497,6 +1525,8 @@ export const previewTasks: Task[] = [
     description: "Summarise merged pull requests into release notes.",
     conversation_id: OTHER_THREAD,
     status: "cancelled",
+    // Its worktree and branch were deleted.
+    ...worktree("preview-cancelled"),
     ...timestamps(75, 1),
   },
   {

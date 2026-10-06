@@ -23,6 +23,8 @@ export type ChangeFixture = {
   commit?: boolean;
   /** Worktree only: the worktree was removed after the last turn. */
   removed?: boolean;
+  /** Worktree only: its branch was deleted too, after removal. */
+  branchDeleted?: boolean;
 };
 
 /**
@@ -181,6 +183,14 @@ export const previewChanges: Record<string, () => ChangeFixture> = {
     turns: [
       Object.fromEntries(largeFiles().map((file) => [file.path, file.content])),
     ],
+  }),
+
+  // A worktree and branch the user deleted.
+  "preview-cancelled": (): ChangeFixture => ({
+    base: { "RELEASE.md": "# Release notes\n" },
+    removed: true,
+    branchDeleted: true,
+    turns: [{ "RELEASE.md": "# Release notes\n\n- Draft\n" }],
   }),
 
   // 60 files and about 7,000 changed lines, with a rename and a deletion.
