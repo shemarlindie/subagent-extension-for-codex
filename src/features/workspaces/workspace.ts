@@ -92,8 +92,8 @@ function changesBase(t: Task, scope: ChangeScope) {
 /** Where a task's snapshot refs live: `refs/agent-tasks/<task-id>/<name>`. */
 const SNAPSHOT_REFS = "refs/agent-tasks";
 
-/** The snapshots a task keeps: its start, and its latest turn's start. */
-export type SnapshotName = "start" | "turn-start";
+/** The snapshots a task keeps: its start, and its latest turn's start and end. */
+export type SnapshotName = "start" | "turn-start" | "end";
 
 /** How many recent diffs are cached, and for how long. */
 const DIFF_CACHE_SIZE = 2;
@@ -387,9 +387,18 @@ export class Workspaces {
   }
 
   /**
-   * A task's changes, live from Git: the whole task from its base (the base
+   * Where a task's changes end: a current_repo task's end snapshot once its
+   * turn has ended, so later edits to the checkout aren't counted, or else a
+   * snapshot of its workspace taken now.
+   */
+  private changesEnd(t: Task) {
+    return t.end_tree ?? this.snapshot(t.workspace!);
+  }
+
+  /**
+   * A task's changes, read from Git: the whole task from its base (the base
    * commit of a worktree, the start snapshot of a current_repo task), or the
-   * latest turn from its turn snapshot, to a snapshot taken now.
+   * latest turn from its turn snapshot, to where its changes end.
    */
   async changes(
     t: Task,
@@ -412,7 +421,7 @@ export class Workspaces {
 
     const page = cursor ? decodeCursor(cursor) : undefined;
     if (page && page.base !== base) throw new Error("Stale changes cursor");
-    const current = page?.current ?? (await this.snapshot(t.workspace));
+    const current = page?.current ?? (await this.changesEnd(t));
 
     const { files, parts } = await this.diffTrees(t.workspace, base, current),
       start = page?.index ?? 0,
@@ -474,8 +483,8 @@ export class Workspaces {
   }
 
   /**
-   * The current content of a file the task changed, read from a snapshot of
-   * its workspace. Only paths in the task's or the latest turn's changes are
+   * The content of a file the task changed, where its changes end (see
+   * `changesEnd`). Only paths in the task's or the latest turn's changes are
    * read. Images come as base64, other binary files as their size only, and
    * large contents in parts through `next_cursor`.
    */
@@ -494,7 +503,7 @@ export class Workspaces {
     // Later parts read the snapshot the first part took.
     const { tree, offset } = cursor
       ? decodeFileCursor(cursor)
-      : { tree: await this.snapshot(t.workspace), offset: 0 };
+      : { tree: await this.changesEnd(t), offset: 0 };
 
     // Every part checks the path, so a cursor can't reach other files. A file
     // changed in the latest turn may match the task's base again.

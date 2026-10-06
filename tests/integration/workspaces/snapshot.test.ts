@@ -163,39 +163,61 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
     assert.ok(first.start_tree);
     assert.equal(first.turn_start_tree, first.start_tree);
     assert.deepEqual(s.changed("HEAD", first.start_tree), ["user.txt"]);
+    // A running turn's changes are live.
+    assert.equal(first.end_tree, undefined);
 
+    // Each ended turn takes an end snapshot; the next turn clears it.
     await c.stop("alice", t.id, "interrupted");
+    const paused = c.store.get(t.id, "alice");
+
+    assert.deepEqual(s.changed(paused.start_tree!, paused.end_tree!), [
+      "turn-1.txt",
+    ]);
+
     await c.continue("alice", t.id);
     await until(() => c.store.get(t.id, "alice").status === "completed");
     const done = c.store.get(t.id, "alice");
     assert.equal(done.start_tree, first.start_tree);
     assert.notEqual(done.turn_start_tree, first.turn_start_tree);
+    assert.notEqual(done.end_tree, paused.end_tree);
 
     // The turn snapshot scopes a diff to the latest turn; the start snapshot
-    // to the whole task.
-    const now = await s.workspaces.snapshot(s.repo);
-    assert.deepEqual(s.changed(done.turn_start_tree!, now), ["turn-2.txt"]);
+    // to the whole task. Both end where the turn ended, leaving out later edits.
+    await writeFile(join(s.repo, "later.txt"), "user\n");
 
-    assert.deepEqual(s.changed(done.start_tree!, now), [
-      "turn-1.txt",
-      "turn-2.txt",
-    ]);
+    const paths = async (scope: "task" | "turn") =>
+      (await s.workspaces.changes(done, scope)).files.map((f) => f.path);
 
-    // Refs pin both snapshots, so pruning everything unreferenced keeps them.
+    assert.deepEqual(await paths("turn"), ["turn-2.txt"]);
+    assert.deepEqual(await paths("task"), ["turn-1.txt", "turn-2.txt"]);
+
+    await assert.rejects(
+      s.workspaces.changedFile(done, "later.txt"),
+      /not among this task's changes/,
+    );
+
+    assert.equal(
+      (await s.workspaces.changedFile(done, "turn-2.txt")).content,
+      "worker\n",
+    );
+
+    // Refs pin the snapshots, so pruning everything unreferenced keeps them.
     assert.equal(
       s.git(
         "for-each-ref",
         "--format=%(objectname) %(refname)",
         "refs/agent-tasks",
       ),
-      `${done.start_tree} refs/agent-tasks/${t.id}/start\n` +
+      `${done.end_tree} refs/agent-tasks/${t.id}/end\n` +
+        `${done.start_tree} refs/agent-tasks/${t.id}/start\n` +
         `${done.turn_start_tree} refs/agent-tasks/${t.id}/turn-start\n`,
     );
 
     s.git("-c", "gc.pruneExpire=now", "gc", "-q");
 
-    assert.deepEqual(s.changed(done.start_tree!, done.turn_start_tree!), [
+    assert.deepEqual(s.changed(done.start_tree!, done.end_tree!), [
       "turn-1.txt",
+      "turn-2.txt",
     ]);
 
     await s.workspaces.unpin(done);

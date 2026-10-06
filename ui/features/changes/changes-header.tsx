@@ -72,8 +72,9 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
       </div>
       {task.workspace_strategy === "current_repo" ? (
         <p className="help changes-note">
-          Changes in this checkout since the task started, including any made
-          outside the task.
+          {task.end_tree
+            ? "Changes in this checkout from the task's start to the end of its latest turn, including any made outside the task."
+            : "Changes in this checkout since the task started, including any made outside the task."}
         </p>
       ) : (
         branch &&

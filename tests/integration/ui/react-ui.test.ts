@@ -2258,9 +2258,29 @@ test("a current_repo task's changes say they include edits made outside the task
 
   await user.click(screen.getByRole("tab", { name: "Changes" }));
 
-  assert.ok(await screen.findByText(/including any made outside the task/));
+  assert.ok(
+    await screen.findByText(/since the task started.*outside the task/),
+  );
 
   assertAbsent(screen.queryByText(/git push/));
+});
+
+test("a current_repo task's changes say they end with its latest turn once it ends", async (t) => {
+  const { user } = await setup(t, (transport) => {
+    transport.tasks = [
+      {
+        ...task(),
+        workspace_strategy: "current_repo",
+        end_tree: "a".repeat(40),
+      },
+    ];
+  });
+
+  await user.click(screen.getByRole("tab", { name: "Changes" }));
+
+  assert.ok(
+    await screen.findByText(/to the end of its latest turn.*outside the task/),
+  );
 });
 
 test("dialog focuses task, preserves the draft and field node during refresh, and restores trigger focus", async (t) => {

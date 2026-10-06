@@ -262,7 +262,7 @@ export function definitions(
     }),
     get_agent_changes: tool({
       description:
-        "Read what a task changed, live from Git: a unified diff with per-file stats, for the whole task (default) or its latest turn. Worktree tasks diff against their base commit; current_repo tasks against a snapshot from task start, so later edits by anyone in that checkout are included. Every page lists every file; large diffs come in pages of whole files, so pass next_cursor back to read the rest. state workspace_missing means the worktree was removed and the work is on branch.",
+        "Read what a task changed, live from Git: a unified diff with per-file stats, for the whole task (default) or its latest turn. Worktree tasks diff their base commit against the worktree now. current_repo tasks diff a snapshot from task start against a snapshot from the end of the latest turn, or the checkout now while a turn runs, so edits by anyone in that checkout in between are included. Every page lists every file; large diffs come in pages of whole files, so pass next_cursor back to read the rest. state workspace_missing means the worktree was removed and the work is on branch.",
       schema: taskId.extend({
         scope: z.enum(["task", "turn"]).default("task"),
         cursor: z.string().max(300).optional(),

@@ -360,6 +360,7 @@ export class Control {
     const begin = Date.now();
     let timer: NodeJS.Timeout | undefined;
     let terminationUnconfirmed = false;
+    let turnStarted = false;
 
     try {
       this.validateBudgets(t);
@@ -384,6 +385,9 @@ export class Control {
           : await this.workspaces.snapshot(t.workspace!);
 
       await this.workspaces.pin(t, "turn-start", t.turn_start_tree);
+      // Changes are live again until this turn ends.
+      delete t.end_tree;
+      turnStarted = true;
       this.store.save(t);
       if (a.abort.signal.aborted) throw a.abort.signal.reason;
       const live = this.store.get(t.id, t.owner);
@@ -596,6 +600,23 @@ export class Control {
       delete t.pending_input;
       if (!terminationUnconfirmed) delete t.waiting_reason;
       if (t.status === "cancelled") t.completed_at = now();
+
+      // A current_repo task's changes stop where its turn ended, so later
+      // edits to the shared checkout aren't counted. A worker that may still
+      // be running keeps them live, as does a failed snapshot.
+      if (
+        turnStarted &&
+        !terminationUnconfirmed &&
+        t.workspace_strategy === "current_repo"
+      )
+        try {
+          const end = await this.workspaces.snapshot(t.workspace!);
+          await this.workspaces.pin(t, "end", end);
+          t.end_tree = end;
+        } catch {
+          // Left live.
+        }
+
       this.store.save(t);
 
       this.store.event(t, `task.${t.status}`, {
