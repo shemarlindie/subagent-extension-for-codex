@@ -3,8 +3,8 @@
 import type { McpUiDisplayMode } from "@modelcontextprotocol/ext-apps/app-bridge";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import type { Task } from "../../src/core/model";
-import { type PreviewOptions, previewTool } from "../transports/preview-tools";
+import type { Task } from "../../src/shared/contracts";
+import { type PreviewOptions, previewTool } from "./preview/tools";
 
 export type Settings = {
   source: "fixtures" | "live";

@@ -10,5 +10,6 @@
     "noEmit": true,
     "esModuleInterop": true
   },
-  "include": ["./**/*.ts", "./**/*.tsx"]
+  "include": ["./**/*.ts", "./**/*.tsx"],
+  "exclude": ["./**/*.test.ts", "./**/*.test.tsx"]
 }

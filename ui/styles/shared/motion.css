@@ -1,6 +1,6 @@
 /*
  * Motion: short, quiet transitions that show what changed and ease layout shifts.
- * Durations match MOTION in ui/components/motion.tsx. Reduced motion turns them off below.
+ * Durations match MOTION in ui/shared/components/motion.tsx. Reduced motion turns them off below.
  */
 :root {
   --motion-fast: 120ms;

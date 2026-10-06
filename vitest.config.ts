@@ -7,7 +7,13 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react()],
   test: {
-    include: ["tests/**/*.test.ts"],
+    include: [
+      "tests/**/*.test.ts",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "ui/**/*.test.ts",
+      "ui/**/*.test.tsx",
+    ],
     environment: "node",
     environmentOptions: {
       jsdom: { url: "http://localhost/", pretendToBeVisual: true },

@@ -99,7 +99,13 @@ export default defineConfig(
   },
   {
     // Tests cast loosely typed protocol results and build partial fakes.
-    files: ["tests/**/*.ts"],
+    files: [
+      "tests/**/*.ts",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "ui/**/*.test.ts",
+      "ui/**/*.test.tsx",
+    ],
     rules: { "@typescript-eslint/no-explicit-any": "off" },
   },
   prettier,

@@ -81,12 +81,12 @@ CSS hot replacement, for development only; production HTML comes from
 
 The page is a mock MCP Apps host (`ui/dev/host.tsx`, mounted by `main.tsx`;
 its pure helpers are in `host-helpers.ts` and tested in
-`tests/dev-host.test.ts`). It embeds the panel in an
+`tests/integration/development/dev-host.test.ts`). It embeds the panel in an
 iframe through the official `AppBridge`, so the panel runs its real
 `HostTransport`, as it does in Codex. Like Codex, the host calls the launch tool
 and delivers its result to the panel. The toolbar controls:
 
-- **Data**: fixture results (`ui/transports/preview-tools.ts`, development
+- **Data**: fixture results (`ui/dev/preview/tools.ts`, development
   only; never in the production bundle) or the live service. Fixtures need no
   service; unsupported operations fail explicitly. The artifact tools
   (`FIXTURE_SERVICE_TOOLS` in `host-helpers.ts`) are the exception: the Vite
@@ -97,7 +97,7 @@ and delivers its result to the panel. The toolbar controls:
   `served` by `fixture service`, `browser fixtures` or `service`.
 - **Launch**: thread (`open_codex_subagent_extension` with Codex's `threadId`
   and `codex/sandbox-state-meta` request metadata) or global. With fixtures,
-  `preview-tools.ts` resolves the thread's scope the way the service does.
+  `ui/dev/preview/tools.ts` resolves the thread's scope the way the service does.
 - **Thread** (thread launches only): the threads that have tasks, from the
   fixtures or the live service.
 - **Theme**, **Display** (inline or fullscreen; the panel's **Open panel** and
@@ -181,7 +181,7 @@ npm test
 ```
 
 Tests run with Vitest (`vitest.config.ts`). `npm test` runs `npm run format:check`, `npm run lint`, and the build first through `pretest`; `npm run test:watch` reruns affected tests on save without those steps, so run `npm run build` first when a test reads `dist/`.
-Fix formatting failures with `npm run format`. Linting (`eslint.config.js`) checks code quality only: TypeScript recommended rules, React hook rules in `ui/`, and no explicit `any` outside `tests/`. `npm run typecheck` also covers the tests and Vite configs. The suite is described in the
+Fix formatting failures with `npm run format`. Linting (`eslint.config.js`) checks code quality only: TypeScript recommended rules, React hook rules in `ui/`, and permits explicit `any` only in test files. `npm run typecheck` also covers the tests and Vite configs. The suite is described in the
 [README](../README.md#verification-and-remaining-plan) and
 [React UI architecture](react-ui.md#build-and-verification). Opt-in checks
 against real Claude make model calls; see

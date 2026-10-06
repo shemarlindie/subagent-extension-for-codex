@@ -3,8 +3,13 @@
   "compilerOptions": {
     "lib": ["ES2024", "DOM", "DOM.Iterable"]
   },
+  "exclude": [],
   "include": [
     "tests/**/*.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "ui/**/*.test.ts",
+    "ui/**/*.test.tsx",
     "dev/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts"

@@ -93,24 +93,25 @@ Review `<data-directory>/worktrees/<task-id>` or download returned patches befor
 
 ## Project layout
 
-| Path                                                 | Contents                                                                                                               |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `src/main.ts`, `src/stdio.ts`, `src/projects-cli.ts` | Entry points: HTTP service, stdio MCP proxy, and project registration CLI.                                             |
-| `src/core/`                                          | Task model, control plane, SQLite store, worktrees, projects, settings, and host forms.                                |
-| `src/server/`                                        | Express application, authentication, HTTP MCP endpoint, and tool definitions.                                          |
-| `src/panel/`                                         | MCP App panel resource, panel context, and host project/thread context.                                                |
-| `src/service/`                                       | Install paths, data directory, single-instance lease, and the stdio launcher that starts the service.                  |
-| `src/providers/`, `src/events/`                      | Claude and Codex providers with their configuration; webhook and MCP event delivery.                                   |
-| `dev/`                                               | Development-only fixture worker and demo service entry; excluded from the packaged service.                            |
-| `ui/`                                                | Shared React UI: `entries/`, `templates/`, `styles/`, plus controller, transport, component, and form modules.         |
-| `ui/dev/`, `vite.config.ts`                          | Panel dev host: mock MCP Apps host and Vite server for `npm run dev:ui`.                                               |
-| `.env.example`                                       | Local development settings template; copy to `.env`.                                                                   |
-| `eslint.config.js`, `tsconfig.test.json`             | Lint rules, and typechecking for tests and the Vite configs.                                                           |
-| `tests/`, `scripts/`, `skills/`, `docs/`             | Vitest suite (`vitest.config.ts`), build/demo/verification scripts, the delegation skill, and design and status notes. |
+| Path                                                 | Contents                                                                                                        |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `src/main.ts`, `src/stdio.ts`, `src/projects-cli.ts` | Entry points: HTTP service, stdio MCP proxy, and project registration CLI.                                      |
+| `src/features/`                                      | Task lifecycle and policy, artifacts, projects, settings, workspaces, events, and provider integrations.        |
+| `src/platform/`                                      | HTTP server, MCP panel context, service lifecycle, authentication, and host adapters.                           |
+| `src/shared/`                                        | Cross-feature contracts, common errors, and shared time helpers.                                                |
+| `dev/`                                               | Development-only fixture worker and demo service entry; excluded from the packaged service.                     |
+| `ui/app/`                                            | UI entry points, environment detection, shell, and HTML template.                                               |
+| `ui/features/`, `ui/shared/`                         | Feature-first React modules and reusable state, components, dialogs, forms, and utilities.                      |
+| `ui/adapters/transports/`                            | Console and MCP host transport adapters.                                                                        |
+| `ui/dev/`, `ui/styles/`, `vite.config.ts`            | Preview fixtures and dev host, plus global and surface styles.                                                  |
+| `.env.example`                                       | Local development settings template; copy to `.env`.                                                            |
+| `eslint.config.js`, `tsconfig.test.json`             | Lint rules, and typechecking for tests and the Vite configs.                                                    |
+| Co-located `*.test.ts` files; `tests/integration/`   | Feature unit/component suites sit by their modules; cross-feature and environment suites remain in integration. |
+| `scripts/`, `skills/`, `docs/`                       | Build/demo/verification scripts, the delegation skill, and design and status notes.                             |
 
 ## Verification and remaining plan
 
-The console and embedded panel share a modular React UI, with separate controller, transport, component, and form layers. See [React UI architecture](docs/react-ui.md) for extension boundaries, self-contained HTML builds, and UI verification. [Local development](docs/development.md) covers setup, the service, the `npm run dev:ui` panel dev host with hot reload, what needs a rebuild or restart, and the `npm run typecheck` and `npm test` checks.
+The console and embedded panel share a feature-oriented React UI, with clear boundaries for state, transports, components, and forms. See [React UI architecture](docs/react-ui.md) for extension boundaries, self-contained HTML builds, and UI verification. [Local development](docs/development.md) covers setup, the service, the `npm run dev:ui` panel dev host with hot reload, what needs a rebuild or restart, and the `npm run typecheck` and `npm test` checks.
 
 The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, and MCP tool/resource calls. Browser verification covers delegation, live completion, interruption, continuation, input submission, and artifacts in fixture mode. See [implementation status](docs/implementation-status.md).
 

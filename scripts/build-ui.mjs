@@ -32,8 +32,8 @@ async function inlineImports(file) {
 }
 
 {
-  const entry = "ui/entries/app.ts",
-    template = "ui/templates/app.html",
+  const entry = "ui/app/entries/app.ts",
+    template = "ui/app/templates/app.html",
     stylesheet = "ui/styles/app.css",
     output = "dist/app.html";
 
@@ -64,10 +64,7 @@ async function inlineImports(file) {
 
   // Fixtures (with their multi-megabyte generators) and the dev host that
   // serves them belong to development only.
-  const developmentOnly = [
-    /[\\/]ui[\\/]dev[\\/]/,
-    /[\\/]ui[\\/]transports[\\/]preview[^\\/]*\.ts$/,
-  ];
+  const developmentOnly = [/[\\/]ui[\\/]dev[\\/]/];
 
   const leaked = chunks[0].moduleIds.filter((id) =>
     developmentOnly.some((pattern) => pattern.test(id)),

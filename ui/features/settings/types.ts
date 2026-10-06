@@ -1,0 +1,32 @@
+import type { SettingSection } from "../../../src/features/settings/settings-document.js";
+import type { ApprovalMode, Start } from "../../../src/features/tasks/model.js";
+
+export type Defaults = {
+  claude_permission_mode?: Start["permission_mode"];
+  default_approval_decider?: "user" | "parent_agent";
+  default_approval_mode?: ApprovalMode;
+  default_model?: string;
+  default_reasoning_effort?: string;
+  [key: `${string}_default_model`]: string | undefined;
+  [key: `${string}_default_reasoning_effort`]: string | undefined;
+  default_workspace_strategy?: "worktree" | "current_repo";
+  default_provider?: string;
+  default_worker_profile?: string;
+  max_runtime_minutes: number | null;
+  use_runtime_budget?: boolean;
+  max_cost_usd: number | null;
+  use_cost_budget?: boolean;
+};
+
+export type SettingValue = string | number | boolean | null;
+
+/**
+ * `get_agent_settings` as the dialog reads it: current values, the defaults a
+ * reset restores, and the sections and rows to show. The JSON `schema` is for
+ * agents; the dialog ignores it.
+ */
+export type SettingsDocument = {
+  values: Record<string, SettingValue>;
+  defaults: Record<string, SettingValue>;
+  sections: SettingSection[];
+};

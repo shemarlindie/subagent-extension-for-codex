@@ -1,3 +1,3 @@
-import { serve } from "./service/serve.js";
+import { serve } from "./platform/service/serve.js";
 
 await serve();

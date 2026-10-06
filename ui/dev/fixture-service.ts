@@ -7,11 +7,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { Control } from "../../src/core/control";
-import { Store } from "../../src/core/store";
-import { callTool } from "../../src/server/tools";
-import { previewArtifacts, previewTasks } from "../transports/preview-fixtures";
+import type { Control } from "../../src/features/tasks/control";
+import { Store } from "../../src/features/tasks/store";
+import { callTool } from "../../src/platform/server/tools";
 import { FIXTURE_SERVICE_TOOLS } from "./host-helpers";
+import { previewArtifacts, previewTasks } from "./preview/fixtures";
 
 type FixtureStore = {
   store: Store;

@@ -4,7 +4,7 @@ import {
   type Provider,
   type Result,
   type RunContext,
-} from "../src/core/model.js";
+} from "../src/shared/contracts.js";
 
 /**
  * A development-only worker that makes no model calls, for the demo service

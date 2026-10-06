@@ -7,13 +7,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { hostDirectoryFromMeta } from "./core/chat-project.js";
-import { type Control } from "./core/control.js";
-import type { Task } from "./core/model.js";
-import { hostProjectCandidate } from "./panel/host-context.js";
-import { codexContextCapability } from "./panel/host-context.js";
-import { delegationPanel, panelUri } from "./panel/panel.js";
-import { taskPanelContext } from "./panel/panel-context.js";
+import { hostDirectoryFromMeta } from "./features/projects/chat-project.js";
+import { type Control } from "./features/tasks/control.js";
+import { hostProjectCandidate } from "./platform/panel/host-context.js";
+import { codexContextCapability } from "./platform/panel/host-context.js";
+import { delegationPanel, panelUri } from "./platform/panel/panel.js";
+import { taskPanelContext } from "./platform/panel/panel-context.js";
 import {
   claudeMentionResource,
   claudeMentionUri,
@@ -24,15 +23,16 @@ import {
   readClaudeMention,
   resolveMentionSearchEnv,
   searchAgentMentions,
-} from "./server/mentions.js";
-import { productGlyphIcons } from "./server/product-glyph.js";
+} from "./platform/server/mentions.js";
+import { productGlyphIcons } from "./platform/server/product-glyph.js";
 import {
   type AnyTool,
   definitions,
   isUserTool,
   withConversation,
-} from "./server/tools.js";
-import { connectService } from "./service/launcher.js";
+} from "./platform/server/tools.js";
+import { connectService } from "./platform/service/launcher.js";
+import type { Task } from "./shared/contracts.js";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 let mentionSearchEnv = resolveMentionSearchEnv(process.env, {}, packageRoot);

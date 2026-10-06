@@ -222,7 +222,7 @@ capabilities and direct integration tests rather than product-name assumptions.
 
 The installed Claude SDK declares `cwd` (defaulting to process cwd), `resume`
 (a specific session ID), and `continue` (the most recent conversation in the
-directory). `src/providers/claude.ts` explicitly passes the task workspace as
+directory). `src/features/providers/claude/provider.ts` explicitly passes the task workspace as
 `cwd` and its saved session ID as `resume`. Preserve both across continuation;
 selecting another project for a new task must not change an existing task's
 repository or workspace.

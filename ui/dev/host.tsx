@@ -15,11 +15,9 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
-import type { Task } from "../../src/core/model";
-import { Icon, type IconName, ICONS } from "../components/icons";
-import { PREVIEW_THREAD } from "../transports/preview-fixtures";
-import { previewTool } from "../transports/preview-tools";
-import { saveInBrowser } from "../utils/download";
+import type { Task } from "../../src/shared/contracts";
+import { Icon, type IconName, ICONS } from "../shared/components/icons";
+import { saveInBrowser } from "../shared/utils/download";
 import {
   codexMeta,
   FIXTURE_SERVICE_TOOLS,
@@ -34,6 +32,8 @@ import {
   threadLabel,
   threadsOf,
 } from "./host-helpers";
+import { PREVIEW_THREAD } from "./preview/fixtures";
+import { previewTool } from "./preview/tools";
 
 type LogEntry = { id: number; time: string; kind: string; detail: unknown };
 
