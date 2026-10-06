@@ -12,6 +12,11 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 
 import type { Artifact, Event, Result, Task } from "../../src/core/model";
+import {
+  largeArtifacts,
+  largeArtifactSpecs,
+  PROFILE_TASK,
+} from "./preview-large-artifacts";
 
 type Data = Record<string, unknown>;
 
@@ -1052,6 +1057,10 @@ blocks.say(
 
 blocks.artifact("preview-blocks-report", "report", "Asset catalogue");
 blocks.artifact("preview-blocks-log", "log", "Scan log");
+blocks.artifact("preview-blocks-notes", "report", "Migration notes");
+blocks.artifact("preview-blocks-sizes", "report", "Asset sizes");
+blocks.artifact("preview-blocks-logo", "file", "logo.svg");
+blocks.artifact("preview-blocks-script", "file", "scan.ts");
 blocks.finish(blocksResult.summary);
 
 // --- Rare SDK signals and session housekeeping --------------------------------
@@ -1199,6 +1208,23 @@ for (let i = 0; i < 36; i++) {
 
 long.artifact("preview-long-report", "report", "Conversion report");
 long.finish(longResult.summary);
+
+// Every artifact here is large; see preview-large-artifacts.ts for the limit each one crosses.
+const profile = new Timeline(PROFILE_TASK, at(115), 2100);
+begin(profile, ["Read", "Bash"]);
+profile.say("Building with profiling enabled.");
+
+profile.tool(
+  "Bash",
+  { command: "npm run build -- --profile" },
+  "Built 1,800 chunks (14.2 MB) in 41s.",
+  { progress: [3, 9] },
+);
+
+for (const [id, type, title] of largeArtifactSpecs)
+  profile.artifact(id, type, title);
+
+profile.finish("Profiled the production build and saved the evidence.");
 
 const lifecycle = (id: string, start: number, ...rest: [string, Data?][]) => {
   const t = new Timeline(
@@ -1518,6 +1544,27 @@ export const previewTasks: Task[] = [
   },
   {
     ...taskBase,
+    id: PROFILE_TASK,
+    title: "Profile the production build",
+    description:
+      "Profile the production build and save the bundle stats, logs and size breakdown.",
+    repository: WEBSITE,
+    worker_profile: "researcher",
+    status: "completed",
+    runtime_ms: 52000,
+    cost_usd: 0.37,
+    ...timestamps(115, 2),
+    result: {
+      summary: "Profiled the production build and saved the evidence.",
+      findings: ["date-fns and chart-core are bundled into many chunks."],
+      evidence: ["Ran npm run build -- --profile."],
+      changes: [],
+      tests: [],
+      recommendations: ["Deduplicate vendor libraries into a shared chunk."],
+    },
+  },
+  {
+    ...taskBase,
     id: "preview-input",
     title: "Investigate session expiry regression",
     description:
@@ -1604,6 +1651,7 @@ export const previewEvents: Event[] = [
   blocks,
   signals,
   long,
+  profile,
   interrupted,
   permission,
   dependent,
@@ -1613,11 +1661,93 @@ export const previewEvents: Event[] = [
 const diff = `diff --git a/package.json b/package.json
 --- a/package.json
 +++ b/package.json
-@@ -3,5 +3,4 @@
+@@ -3,4 +3,3 @@
    "dependencies": {
 -    "legacy-charts": "^2.1.0",
      "fast-parse": "^0.4.2"
-   }`;
+   }
+diff --git a/src/charts/render.ts b/src/charts/render.ts
+--- a/src/charts/render.ts
++++ b/src/charts/render.ts
+@@ -1,9 +1,8 @@
+-import { LegacyChart } from "legacy-charts";
++import { drawChart } from "./draw";
+ import type { Series } from "./types";
+${" "}
+ /** Renders a series into the given canvas. */
+ export function render(canvas: HTMLCanvasElement, series: Series[]) {
+-  const chart = new LegacyChart(canvas, { animate: false });
+-  chart.load(series);
+-  return chart;
++  // The in-house renderer has no licence obligations.
++  return drawChart(canvas, series, { animate: false });
+ }
+diff --git a/src/charts/draw.ts b/src/charts/draw.ts
+new file mode 100644
+--- /dev/null
++++ b/src/charts/draw.ts
+@@ -0,0 +1,9 @@
++import type { Series } from "./types";
++
++export function drawChart(
++  canvas: HTMLCanvasElement,
++  series: Series[],
++  options: { animate: boolean },
++) {
++  return { canvas, series, options };
++}`;
+
+const migrationNotes = `# Asset migration notes
+
+The catalogue covers **14 files**; two logos need new sizes before release.
+
+## Findings
+
+- [x] \`logo.png\` is 512×512 and can stay.
+- [ ] \`logo-small.png\` is 64×64; export a 128×128 version for retina.
+- Fonts are referenced from [the style guide](https://example.com/style).
+
+| Asset | Size | Status |
+| --- | --- | --- |
+| logo.png | 512×512 | OK |
+| logo-small.png | 64×64 | Resize |
+
+\`\`\`ts
+export const LOGO_SIZES = [64, 128, 512] as const;
+\`\`\`
+
+> Run the scan again after exporting the new sizes.
+`;
+
+const assetSizes = `path,width,height,bytes,"notes"
+assets/logo.png,512,512,48213,
+assets/logo-small.png,64,64,3120,"needs 128px, retina"
+assets/icon.svg,24,24,812,vector
+assets/banner.jpg,1600,400,210400,
+assets/favicon.ico,32,32,1150,"multi-size, ICO"
+`;
+
+const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="128" height="128">
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#3a83f7"/>
+  <path d="M20 40 32 20l12 20z" fill="#fff"/>
+</svg>
+`;
+
+const scanScript = `import { readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
+
+/** Lists every asset with its size in bytes. */
+export async function scan(directory: string) {
+  const sizes: Record<string, number> = {};
+
+  for (const name of await readdir(directory)) {
+    const path = join(directory, name);
+    sizes[path] = (await stat(path)).size;
+  }
+
+  return sizes;
+}
+`;
 
 export const previewArtifacts: Artifact[] = [
   {
@@ -1657,6 +1787,42 @@ export const previewArtifacts: Artifact[] = [
     created_at: blocks.end,
   },
   {
+    id: "preview-blocks-notes",
+    task_id: "preview-blocks",
+    type: "report",
+    title: "Migration notes",
+    content: migrationNotes,
+    mime_type: "text/markdown",
+    created_at: blocks.end,
+  },
+  {
+    id: "preview-blocks-sizes",
+    task_id: "preview-blocks",
+    type: "report",
+    title: "Asset sizes",
+    content: assetSizes,
+    mime_type: "text/csv",
+    created_at: blocks.end,
+  },
+  {
+    id: "preview-blocks-logo",
+    task_id: "preview-blocks",
+    type: "file",
+    title: "logo.svg",
+    content: logoSvg,
+    mime_type: "image/svg+xml",
+    created_at: blocks.end,
+  },
+  {
+    id: "preview-blocks-script",
+    task_id: "preview-blocks",
+    type: "file",
+    title: "scan.ts",
+    content: scanScript,
+    mime_type: "text/plain",
+    created_at: blocks.end,
+  },
+  {
     id: "preview-long-report",
     task_id: "preview-long",
     type: "report",
@@ -1665,4 +1831,5 @@ export const previewArtifacts: Artifact[] = [
     mime_type: "application/json",
     created_at: long.end,
   },
+  ...largeArtifacts(profile.end),
 ];

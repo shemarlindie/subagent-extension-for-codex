@@ -8,6 +8,8 @@ import { pathToFileURL } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import { fixtureServicePlugin } from "./dev/fixture-service-plugin";
+
 const root = import.meta.dirname;
 // Same optional .env as npm run dev/start; shell variables take precedence.
 if (existsSync(join(root, ".env"))) process.loadEnvFile(join(root, ".env"));
@@ -53,7 +55,7 @@ function serviceToken() {
 
 export default defineConfig({
   root: "ui/dev",
-  plugins: [react()],
+  plugins: [react(), fixtureServicePlugin()],
   define: {
     // Codex sends sandboxCwd as a file URI; plain paths are ignored.
     __DEV_HOST_CWD__: JSON.stringify(pathToFileURL(root).href),

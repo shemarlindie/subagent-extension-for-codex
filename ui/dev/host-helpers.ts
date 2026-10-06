@@ -104,6 +104,55 @@ export function fixtureLaunchArgs(
   };
 }
 
+/**
+ * Fixture tools the Vite dev server answers with the real service code
+ * (ui/dev/fixture-service.ts), so fixture mode exercises the service's
+ * summaries, thumbnails and cache. The browser fixtures do not answer them.
+ */
+export const FIXTURE_SERVICE_TOOLS = [
+  "list_user_agent_artifacts",
+  "get_user_agent_artifact",
+];
+
+export const FIXTURE_SERVICE_PATH = "/fixture-service/tools/";
+
+/** Calls a fixture tool on the Vite dev server, shaped like fixtureCall's result. */
+export async function fixtureServiceCall(
+  name: string,
+  args: Record<string, unknown>,
+  request: typeof fetch = fetch,
+): Promise<CallToolResult> {
+  try {
+    const response = await request(FIXTURE_SERVICE_PATH + name, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+
+    const body = (await response.json()) as {
+      result?: unknown;
+      error?: string;
+    };
+
+    if (!response.ok) throw new Error(body.error ?? response.statusText);
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(body.result) }],
+      structuredContent: { result: body.result },
+    };
+  } catch (error) {
+    return {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: error instanceof Error ? error.message : String(error),
+        },
+      ],
+    };
+  }
+}
+
 /** A fixture result shaped like the service's MCP tool result. */
 export function fixtureCall(
   name: string,

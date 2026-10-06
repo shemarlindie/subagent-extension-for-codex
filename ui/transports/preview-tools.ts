@@ -2,7 +2,6 @@ import { type ModelChoice, roles, type Task } from "../../src/core/model";
 import { settingsSections } from "../../src/core/settings-document";
 import { listedTask } from "../../src/core/task-list";
 import {
-  previewArtifacts,
   previewEvents,
   previewProjects,
   previewTasks,
@@ -223,7 +222,11 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
   };
 }
 
-/** Fixture tool results shared by the preview transport and the dev host. */
+/**
+ * Fixture tool results for the panel dev host. The artifact tools are not
+ * here: the dev host sends them to the fixture service (ui/dev/fixture-service.ts),
+ * which answers with the real service code.
+ */
 export function previewTool(
   name: string,
   args: Record<string, unknown> = {},
@@ -253,9 +256,6 @@ export function previewTool(
     get_agent_events: previewEvents.filter(
       (event) =>
         event.task_id === args.task_id && event.id > Number(args.after ?? 0),
-    ),
-    get_agent_artifacts: previewArtifacts.filter(
-      (artifact) => artifact.task_id === args.task_id,
     ),
     list_available_workers: [
       {
