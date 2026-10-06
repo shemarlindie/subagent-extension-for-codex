@@ -106,13 +106,10 @@ export function fixtureLaunchArgs(
 
 /**
  * Fixture tools the Vite dev server answers with the real service code
- * (ui/dev/fixture-service.ts), so fixture mode exercises the service's
- * summaries, thumbnails and cache. The browser fixtures do not answer them.
+ * (ui/dev/fixture-service.ts), for behavior the browser fixtures cannot fake.
+ * The browser fixtures do not answer them. None need it yet.
  */
-export const FIXTURE_SERVICE_TOOLS = [
-  "list_user_agent_artifacts",
-  "get_user_agent_artifact",
-];
+export const FIXTURE_SERVICE_TOOLS: string[] = [];
 
 export const FIXTURE_SERVICE_PATH = "/fixture-service/tools/";
 

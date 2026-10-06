@@ -409,13 +409,7 @@ export class Control {
         t.description,
         ...(workspaceContext ? [workspaceContext] : []),
         ...t.context,
-        ...deps.map(
-          (d) =>
-            `Dependency ${d.id}: ${JSON.stringify(d.result)}\nArtifacts: ${this.store
-              .artifacts(d.id, t.owner)
-              .map((a) => a.title + "\n" + a.content.slice(0, 50000))
-              .join("\n")}`,
-        ),
+        ...deps.map((d) => `Dependency ${d.id}: ${JSON.stringify(d.result)}`),
         ...t.instructions,
       ].join("\n\n");
 
@@ -538,14 +532,6 @@ export class Control {
       t.result = result;
       t.status = "completed";
       t.completed_at = now();
-
-      this.store.artifact(
-        t,
-        "report",
-        "Worker result",
-        JSON.stringify(result, null, 2),
-        "application/json",
-      );
     } catch (error) {
       if (error instanceof UnconfirmedTerminationError) {
         terminationUnconfirmed = true;
@@ -570,25 +556,6 @@ export class Control {
       clearTimeout(timer);
       t.runtime_ms += Date.now() - begin;
       delete t.run_started_at;
-
-      try {
-        const diff = terminationUnconfirmed
-          ? ""
-          : await this.workspaces.diff(t);
-
-        if (diff)
-          this.store.artifact(
-            t,
-            "diff",
-            t.workspace_strategy === "current_repo"
-              ? `Repository diff (includes pre-existing changes) · attempt ${t.attempt}`
-              : `Changes · attempt ${t.attempt}`,
-            diff,
-            "text/x-diff",
-          );
-      } catch (error) {
-        this.store.event(t, "artifact.error", { message: String(error) });
-      }
 
       if (a.stopStatus && !terminationUnconfirmed) {
         t.status = a.stopStatus;

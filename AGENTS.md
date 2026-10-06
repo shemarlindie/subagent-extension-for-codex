@@ -25,9 +25,9 @@ Check in the browser when a change is large, when seeing it would help, or when 
   - **Migrate the config loader**: pending question.
   - **Plan the sign-in rollout**: three stacked questions in one request (card deck, single and multiple choice).
   - **Convert the test suite to the new runner**: exceeds the 200-event activity tail (trimmed timeline). Use it to test timeline scrolling, since most other timelines are short.
-  - **Profile the production build** (in `/demo/website`): only large artifacts, each crossing a different preview limit (60-file diff, minified JSON, long report, 20,000-row CSV, 30,000-line log, long Markdown, a single 250 KB line, an SVG large enough to be rasterized, and a PNG with a thumbnail). Their content is generated on first request (`ui/dev/preview/large-artifacts.ts`).
-  - In fixture mode, the artifact tools run the real service code on the Vite server (`ui/dev/fixture-service.ts`), with real thumbnails and summary caching. The **Bridge log** shows each call's `served` source.
-  - **Catalogue the design assets**: one artifact of each small format (JSON, log, Markdown, CSV, SVG, code).
+  - **Catalogue the design assets**: rare content blocks and SDK signals (thinking, images, documents, web search, plugin and memory updates).
+- Large files for the file viewers (60-file diff, minified JSON, 20,000-row CSV, 30,000-line log, long Markdown, a single 250 KB line, and an SVG over 64 KB that shows as source only) come from `ui/dev/preview/large-files.ts`. No fixture task uses them yet; their tests do.
+- Tools in `FIXTURE_SERVICE_TOOLS` (none yet) run the real service code on the Vite server (`ui/dev/fixture-service.ts`). The **Bridge log** shows each call's `served` source.
 - The host's selects ignore `form_input`; set `.value` and dispatch `change`. **Width** offers 360, 480, 760, and Fill. At 360px the short frame stacks the inspector (the whole pane scrolls), so use 480 or Fill for the fixed-header layout.
 - The panel is an iframe: query `document.querySelector('iframe').contentDocument` (`#tab-activity`, `.activity-group`, `.activity-debug-toggle`).
 - Measure layout with `getBoundingClientRect` instead of judging by eye, and use `scrollIntoView` to move the timeline.

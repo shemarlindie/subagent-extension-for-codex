@@ -2,7 +2,6 @@
 
 import type { Event } from "../../../src/features/events/types.js";
 import type { HostState } from "../../adapters/transports/types.js";
-import type { ArtifactSummary } from "../../features/artifacts/types.js";
 import type { Project } from "../../features/projects/types.js";
 import type { Worker } from "../../features/providers/types.js";
 import type {
@@ -36,8 +35,10 @@ export type DialogState =
     }
   | { kind: "control"; action: string; task: Task; scope: number }
   | { kind: "respond"; task: Task; scope: number }
-  | { kind: "handoff"; task: Task; scope: number }
-  | { kind: "artifact"; artifact: ArtifactSummary; scope: number };
+  | { kind: "handoff"; task: Task; scope: number };
+
+/** Something in the selected task that the panel shares with the host's model. */
+export type SharedItem = { kind: "file"; path: string };
 
 export type Snapshot = {
   tasks: Task[];
@@ -46,7 +47,6 @@ export type Snapshot = {
   events: Event[];
   /** Tally of the selected task's events that fell off the front of `events`. */
   droppedEvents?: DroppedSummary;
-  artifacts: ArtifactSummary[];
   selected?: string;
   conversation?: string;
   repository?: string;
@@ -72,16 +72,10 @@ export type Snapshot = {
 export type { Event } from "../../../src/features/events/types.js";
 
 export type {
-  DownloadFile,
   HostState,
   Transport,
   TransportEvents,
 } from "../../adapters/transports/types.js";
-
-export type {
-  Artifact,
-  ArtifactSummary,
-} from "../../features/artifacts/types.js";
 
 export type { Project } from "../../features/projects/types.js";
 

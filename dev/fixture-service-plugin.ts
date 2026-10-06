@@ -3,8 +3,8 @@ import { join } from "node:path";
 import type { Plugin } from "vite";
 
 /**
- * Answers the fixture tools with the real service code, so the panel dev host
- * exercises artifact summaries and thumbnails through the same store as prod.
+ * Answers the fixture service tools with the real service code, so the panel
+ * dev host exercises them through the same store as production.
  */
 export function fixtureServicePlugin(): Plugin {
   return {

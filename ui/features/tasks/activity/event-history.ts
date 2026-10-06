@@ -17,7 +17,6 @@ export type DroppedSummary = {
   messages: number;
   failures: number;
   retries: number;
-  artifacts: number;
 };
 
 export type EventTail = { events: Event[]; dropped?: DroppedSummary };
@@ -41,7 +40,6 @@ export function addDropped(
         messages: 0,
         failures: 0,
         retries: 0,
-        artifacts: 0,
       };
 
   for (const event of dropped) {
@@ -61,7 +59,6 @@ export function addDropped(
       summary.messages++;
     if (activityFailed(event)) summary.failures++;
     if (activityKind(event) === "api_retry") summary.retries++;
-    if (event.type === "artifact.created") summary.artifacts++;
   }
 
   return summary;
@@ -132,7 +129,6 @@ export function describeDropped(summary: DroppedSummary) {
       summary.failures && plural(summary.failures, "failure"),
       summary.retries &&
         `${summary.retries.toLocaleString()} ${summary.retries === 1 ? "retry" : "retries"}`,
-      summary.artifacts && plural(summary.artifacts, "artifact"),
     ].filter((part): part is string => Boolean(part)),
   };
 }

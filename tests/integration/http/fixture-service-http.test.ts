@@ -49,25 +49,37 @@ async function fixtureServer() {
 }
 
 test("the Vite fixture-service route parses requests and returns tool results", async () => {
-  await fixtureServer();
+  const created = await fixtureServer();
 
-  const response = await fetch(
-    `${origin}/fixture-service/tools/list_user_agent_artifacts`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ task_id: "preview-blocks" }),
-    },
-  );
+  // No tool is served yet, so serve one for this test in the server's module graph.
+  const helpers = (await created.ssrLoadModule(
+    resolve(projectRoot, "ui/dev/host-helpers.ts"),
+  )) as { FIXTURE_SERVICE_TOOLS: string[] };
 
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /application\/json/);
+  helpers.FIXTURE_SERVICE_TOOLS.push("list_agent_tasks");
 
-  const body = (await response.json()) as {
-    result: { id: string; file_name: string }[];
-  };
+  try {
+    const response = await fetch(
+      `${origin}/fixture-service/tools/list_agent_tasks`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: null }),
+      },
+    );
 
-  assert.ok(body.result.some((artifact) => artifact.file_name === "logo.svg"));
+    assert.equal(response.status, 200);
+
+    assert.match(
+      response.headers.get("content-type") ?? "",
+      /application\/json/,
+    );
+
+    const body = (await response.json()) as { result: { id: string }[] };
+    assert.ok(body.result.some((task) => task.id === "preview-blocks"));
+  } finally {
+    helpers.FIXTURE_SERVICE_TOOLS.length = 0;
+  }
 });
 
 test("the Vite fixture-service route serializes service errors as JSON", async () => {

@@ -17,7 +17,6 @@ import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import type { Task } from "../../src/shared/contracts";
 import { Icon, type IconName, ICONS } from "../shared/components/icons";
-import { saveInBrowser } from "../shared/utils/download";
 import {
   codexMeta,
   FIXTURE_SERVICE_TOOLS,
@@ -201,7 +200,6 @@ export function Host() {
     const capabilities: McpUiHostCapabilities = {
       serverTools: {},
       openLinks: {},
-      downloadFile: {},
       logging: {},
       ...(canSend ? { message: { text: {} } } : {}),
       ...(canShare ? { updateModelContext: { structuredContent: {} } } : {}),
@@ -252,7 +250,7 @@ export function Host() {
         .catch(() => setLiveThreads([]));
 
     const call = async (name: string, args: Record<string, unknown> = {}) => {
-      // Fixture artifact tools run the real service code on the Vite server.
+      // Fixture service tools run the real service code on the Vite server.
       const served =
         source === "live"
           ? "service"
@@ -359,25 +357,6 @@ export function Host() {
     next.onopenlink = async ({ url }) => {
       record("open link", url);
       window.open(url, "_blank", "noopener");
-
-      return {};
-    };
-
-    next.ondownloadfile = async ({ contents }) => {
-      record("download", contents);
-
-      for (const item of contents)
-        if (item.type === "resource") {
-          const { uri, mimeType = "application/octet-stream" } = item.resource;
-
-          saveInBrowser({
-            name: decodeURIComponent(uri.split("/").at(-1) ?? "download"),
-            mimeType,
-            ...("blob" in item.resource
-              ? { base64: item.resource.blob }
-              : { text: item.resource.text }),
-          });
-        }
 
       return {};
     };

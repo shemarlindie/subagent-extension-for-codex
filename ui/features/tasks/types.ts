@@ -1,7 +1,7 @@
 import type { ListedTask } from "../../../src/features/tasks/task-list.js";
 
 export type Task = ListedTask;
-export type Tab = "result" | "activity" | "changes" | "details";
+export type Tab = "result" | "activity" | "details";
 export type Filter = "all" | "active" | "attention" | "completed" | "failed";
 
 export type Question = {

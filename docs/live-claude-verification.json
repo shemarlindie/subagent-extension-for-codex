@@ -18,7 +18,6 @@
       },
       "model": "claude-sonnet-5-5",
       "reported_cost_usd": 0.2452948,
-      "report_artifacts": 1,
       "observed_tools": [
         "Skill",
         "ToolSearch",
@@ -53,7 +52,6 @@
       },
       "model": "claude-sonnet-5-5",
       "reported_cost_usd": 0.0844414,
-      "report_artifacts": 1,
       "verified": "Read-only profile bundle (restricted tools, path guard, plan) completed a native Read and structured report; primary fixture clean"
     },
     "sandbox": {
@@ -72,7 +70,6 @@
       "workspace_strategy": "worktree",
       "model": "claude-sonnet-5-5",
       "reported_cost_usd": 0.126796,
-      "report_artifacts": 2,
       "observed_tools": ["Bash", "StructuredOutput"],
       "verified": [
         "Extension sandbox enabled through claude_sandbox: extension",
@@ -91,7 +88,6 @@
       "attempt": 2,
       "model": "claude-sonnet-4-6",
       "reported_cost_usd": 0.0185583,
-      "report_artifacts": 1,
       "observed_tools": ["AskUserQuestion", "Read", "StructuredOutput"],
       "verified": "Waiting question interrupted; control plane reopened; same native session completed attempt two",
       "verified_at": "2026-09-30",
@@ -107,7 +103,6 @@
         "Worker discovery through MCP",
         "Native Claude task created through MCP",
         "Structured result retrieved through MCP",
-        "Report artifacts retrieved through MCP",
         "Native Read and completion events retrieved through MCP",
         "Primary fixture repository remained clean"
       ],

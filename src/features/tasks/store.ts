@@ -1,21 +1,9 @@
-import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import {
-  type Artifact,
-  type Event,
-  now,
-  type Task,
-} from "../../shared/contracts.js";
-import type { ArtifactSummary } from "../artifacts/artifact-file.js";
-import {
-  summarizeStoredArtifact,
-  SUMMARY_VERSION,
-  unreadableSummary,
-} from "../artifacts/artifact-summary.js";
+import { type Event, now, type Task } from "../../shared/contracts.js";
 import { generateTaskTitle } from "./task-title.js";
 
 export class Store {
@@ -29,19 +17,16 @@ export class Store {
       .exec(`PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, owner TEXT NOT NULL, body TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL REFERENCES tasks(id),type TEXT NOT NULL,timestamp TEXT NOT NULL,data TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY,task_id TEXT NOT NULL REFERENCES tasks(id),body TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS events_task ON events(task_id,id);`);
 
     this.migrateTaskDescriptions();
-    this.addArtifactSummaries();
+    this.removeArtifacts();
   }
 
-  /** Summaries are cached beside the body, so listing never reads artifact content. */
-  private addArtifactSummaries() {
-    const columns = this.db.prepare("PRAGMA table_info(artifacts)").all();
-
-    if (!columns.some((column) => column.name === "summary"))
-      this.db.exec("ALTER TABLE artifacts ADD COLUMN summary TEXT");
+  /** Artifacts were removed; drop their table and the events that announced them. */
+  private removeArtifacts() {
+    this.db.exec(`DROP TABLE IF EXISTS artifacts;
+    DELETE FROM events WHERE type IN ('artifact.created', 'artifact.error');`);
   }
 
   private migrateTaskDescriptions() {
@@ -165,114 +150,6 @@ export class Store {
       );
   }
 
-  artifact(
-    t: Task,
-    type: string,
-    title: string,
-    content: string,
-    mime_type = "text/plain",
-  ): Artifact {
-    const a = {
-      id: `art_${randomUUID()}`,
-      task_id: t.id,
-      type,
-      title,
-      content,
-      mime_type,
-      created_at: now(),
-    };
-
-    this.db
-      .prepare("INSERT INTO artifacts(id,task_id,body) VALUES(?,?,?)")
-      .run(a.id, t.id, JSON.stringify(a));
-
-    this.event(t, "artifact.created", { artifact_id: a.id, type, title });
-    // Warm the summary so the panel's first listing does not wait for it.
-    void this.summarize(a).catch(() => {});
-
-    return a;
-  }
-
-  private async summarize(artifact: Artifact) {
-    const summary = await summarizeStoredArtifact(artifact);
-
-    this.db
-      .prepare("UPDATE artifacts SET summary=? WHERE id=?")
-      .run(JSON.stringify({ version: SUMMARY_VERSION, summary }), artifact.id);
-
-    return summary;
-  }
-
-  /** The task's artifacts without content, in creation order. */
-  async artifactSummaries(
-    id: string,
-    owner: string,
-  ): Promise<ArtifactSummary[]> {
-    this.get(id, owner);
-
-    const rows = this.db
-      .prepare(
-        "SELECT id, summary FROM artifacts WHERE task_id=? ORDER BY rowid",
-      )
-      .all(id);
-
-    return Promise.all(
-      rows.map(async (row) => {
-        const artifactId = String(row.id);
-        const cached = this.cachedSummary(row.summary);
-        if (cached) return cached;
-
-        // Missing (created before summaries, or still warming) or outdated.
-        // A failure is not cached, so the next listing tries again, and it
-        // affects only this artifact's card, never the rest of the list.
-        try {
-          return await this.summarize(this.artifactBody(artifactId));
-        } catch (error) {
-          const body = this.db
-            .prepare("SELECT body FROM artifacts WHERE id=?")
-            .get(artifactId)?.body;
-
-          return unreadableSummary(artifactId, id, body, error);
-        }
-      }),
-    );
-  }
-
-  /** A current cached summary; an unreadable or outdated one counts as missing. */
-  private cachedSummary(value: unknown) {
-    if (!value) return undefined;
-
-    try {
-      const cached = JSON.parse(String(value)) as {
-        version: number;
-        summary: ArtifactSummary;
-      };
-
-      return cached.version === SUMMARY_VERSION ? cached.summary : undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  /** One artifact with its content. */
-  artifactById(id: string, artifactId: string, owner: string): Artifact {
-    this.get(id, owner);
-    const artifact = this.artifactBody(artifactId);
-    if (artifact.task_id !== id) throw new Error("Artifact not found");
-
-    return artifact;
-  }
-
-  private artifactBody(artifactId: string): Artifact {
-    const row = this.db
-      .prepare("SELECT body FROM artifacts WHERE id=?")
-      .get(artifactId);
-
-    if (!row) throw new Error("Artifact not found");
-
-    return JSON.parse(String(row.body));
-  }
-
   streamEvents(owner: string, after: number): Event[] {
     return this.db
       .prepare(
@@ -282,15 +159,6 @@ export class Store {
       .map(
         (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
       );
-  }
-
-  artifacts(id: string, owner: string): Artifact[] {
-    this.get(id, owner);
-
-    return this.db
-      .prepare("SELECT body FROM artifacts WHERE task_id=? ORDER BY rowid")
-      .all(id)
-      .map((r) => JSON.parse(String(r.body)));
   }
 
   close() {

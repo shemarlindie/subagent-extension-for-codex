@@ -168,11 +168,7 @@ if (scenario === "read") {
           ),
         );
 
-        assert.ok(
-          store
-            .artifacts(task.id, "verification")
-            .some((a) => a.type === "report"),
-        );
+        assert.ok(store.get(task.id, "verification").result);
 
         assert.equal(
           execFileSync("git", ["-C", repo, "status", "--porcelain"], {
@@ -187,7 +183,7 @@ if (scenario === "read") {
             cost_usd: current.cost_usd,
             session_state_available: !!current.session_state_ref,
             read_tool_observed: true,
-            report_persisted: true,
+            result_persisted: true,
             primary_clean: true,
           }),
         );
@@ -281,11 +277,7 @@ if (scenario === "read") {
         assert.equal(current.attempt, 2);
         assert.ok(current.result.findings.join(" ").includes("COBALT-27"));
 
-        assert.ok(
-          nextStore
-            .artifacts(task.id, "verification")
-            .some((a) => a.type === "report"),
-        );
+        assert.ok(nextStore.get(task.id, "verification").result);
 
         assert.equal(
           execFileSync("git", ["-C", repo, "status", "--porcelain"], {
@@ -409,8 +401,6 @@ if (scenario === "read") {
     assert.ok(completed, "Native MCP verification timed out");
     const report = await call("get_agent_result", { task_id: task.id });
     assert.ok(report.result.findings.join(" ").includes("COBALT-27"));
-    const artifacts = await call("get_agent_artifacts", { task_id: task.id });
-    assert.ok(artifacts.some((a) => a.type === "report"));
     const events = await call("get_agent_events", { task_id: task.id });
 
     assert.ok(
@@ -433,7 +423,6 @@ if (scenario === "read") {
         authenticated_service: true,
         native_claude: true,
         result_retrieved: true,
-        artifacts_retrieved: true,
         events_retrieved: true,
         cost_usd: completed.cost_usd,
         primary_clean: true,

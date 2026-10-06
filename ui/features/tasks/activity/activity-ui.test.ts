@@ -224,14 +224,14 @@ test("tool debug opens only the newest raw response and preserves a manual colla
   assertAbsent(inspectors[0].querySelector("pre"));
 });
 
-test("artifact counts update without closing debug or remounting raw inspectors", async (t) => {
+test("grouped event counts update without closing debug or remounting raw inspectors", async (t) => {
   t.onTestFinished(cleanup);
 
   const events = [1, 2, 3].map((index) =>
     event(
-      "artifact.created",
-      { title: `Artifact ${index}` },
-      `count-artifact-${index}`,
+      "workspace.indexed",
+      { message: "Indexed the workspace", index },
+      `count-indexed-${index}`,
     ),
   );
 
@@ -240,13 +240,13 @@ test("artifact counts update without closing debug or remounting raw inspectors"
   );
 
   const debug = view.getByRole("button", {
-    name: "Debug activity: Created an artifact",
+    name: "Debug activity: Workspace indexed",
   });
 
   fireEvent.click(debug);
   const panel = document.getElementById(debug.getAttribute("aria-controls")!)!;
   const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
-  assert.equal(raw.open, true, "Artifact debug opens its newest raw response");
+  assert.equal(raw.open, true, "Debug opens its newest raw response");
 
   await waitFor(() =>
     assert.equal(
@@ -262,7 +262,7 @@ test("artifact counts update without closing debug or remounting raw inspectors"
 
     assert.equal(
       view.getByRole("button", {
-        name: `Debug activity: Created ${count} artifacts`,
+        name: `Debug activity: Workspace indexed · ${count} events`,
       }),
       debug,
     );
@@ -2071,7 +2071,6 @@ test("the trimmed note summarizes dropped events only for the task being shown",
     messages: 4,
     failures: 1,
     retries: 0,
-    artifacts: 0,
   };
 
   const note = (summary = dropped) =>

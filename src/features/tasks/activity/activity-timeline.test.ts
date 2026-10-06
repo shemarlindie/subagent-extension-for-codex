@@ -116,39 +116,16 @@ test("thinking updates preserve an input request while a tool is still running",
   });
 });
 
-for (const count of [1, 2, 3]) {
-  test(`${count} adjacent artifact creations show a count and preserve titles`, () => {
-    const events = Array.from({ length: count }, (_, index) =>
-      event(index + 1, "artifact.created", { title: `Artifact ${index + 1}` }),
-    );
-
-    const groups = groupActivity(events);
-    assert.equal(groups.length, 1);
-
-    assert.equal(
-      groups[0].title,
-      count === 1 ? "Created an artifact" : `Created ${count} artifacts`,
-    );
-
-    assert.equal(
-      groups[0].summary,
-      events.map((entry) => entry.data.title).join(" · "),
-    );
-
-    assert.deepEqual(groups[0].events, events);
-  });
-}
-
-test("correlated tool progress interrupts adjacent artifact consolidation", () => {
+test("correlated tool progress interrupts adjacent event consolidation", () => {
   const events = [
     event(1, "tool.started", { id: "read", name: "Read" }),
-    event(2, "artifact.created", { title: "First" }),
+    event(2, "workspace.indexed", { message: "Indexed" }),
     event(3, "claude.activity", {
       type: "tool_progress",
       tool_use_id: "read",
       elapsed_time_seconds: 1,
     }),
-    event(4, "artifact.created", { title: "Second" }),
+    event(4, "workspace.indexed", { message: "Indexed" }),
   ];
 
   const groups = groupActivity(events);
@@ -158,8 +135,8 @@ test("correlated tool progress interrupts adjacent artifact consolidation", () =
     [[1, 3], [2], [4]],
   );
 
-  assert.equal(groups[1].title, "Created an artifact");
-  assert.equal(groups[2].title, "Created an artifact");
+  assert.equal(groups[1].title, "Workspace indexed");
+  assert.equal(groups[2].title, "Workspace indexed");
 });
 
 test("an intervening event keeps repeated thinking updates separate", () => {
@@ -175,12 +152,12 @@ test("an intervening event keeps repeated thinking updates separate", () => {
   );
 });
 
-for (const type of ["artifact.created", "agent.thinking_tokens"]) {
+for (const type of ["workspace.indexed", "agent.thinking_tokens"]) {
   test(`adjacent ${type} events from separate host tasks stay separate`, () => {
-    const first = event(1, type, { title: "Same", tokens: 10 });
+    const first = event(1, type, { message: "Same", tokens: 10 });
 
     const second = {
-      ...event(2, type, { title: "Same", tokens: 20 }),
+      ...event(2, type, { message: "Same", tokens: 20 }),
       task_id: "other-host-task",
     };
 
@@ -241,11 +218,11 @@ test("unknown events without summaries retain distinct payloads in separate rows
   );
 });
 
-for (const type of ["artifact.created", "thinking_tokens"]) {
+for (const type of ["workspace.indexed", "thinking_tokens"]) {
   test(`failed ${type} events retain diagnostics instead of routine labels`, () => {
     const events = [
-      event(1, type, { error: "Operation failed", title: "Routine title" }),
-      event(2, type, { error: "Operation failed", title: "Routine title" }),
+      event(1, type, { error: "Operation failed", message: "Routine" }),
+      event(2, type, { error: "Operation failed", message: "Routine" }),
     ];
 
     const groups = groupActivity(events);
@@ -258,7 +235,7 @@ for (const type of ["artifact.created", "thinking_tokens"]) {
     for (const group of groups) {
       assert.equal(group.state, "failed");
       assert.equal(group.summary, "Operation failed");
-      assert.ok(!["Thinking…", "Created an artifact"].includes(group.title));
+      assert.notEqual(group.title, "Thinking…");
     }
   });
 }
@@ -314,8 +291,8 @@ test("repeated failure events stay individually prominent", () => {
   const events = [
     sdk(1, "permission_denied", { message: "Blocked" }),
     sdk(2, "permission_denied", { message: "Blocked" }),
-    event(3, "artifact.error", { error: "Could not create artifact" }),
-    event(4, "artifact.error", { error: "Could not create artifact" }),
+    sdk(3, "mirror_error", { error: "Could not mirror the session" }),
+    sdk(4, "mirror_error", { error: "Could not mirror the session" }),
   ];
 
   const groups = groupActivity(events);

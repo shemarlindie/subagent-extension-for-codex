@@ -1,16 +1,12 @@
 import { memo, useMemo } from "react";
 
-import { ResultReport } from "../../tasks/evidence/result-report";
 import {
-  countDelimitedRows,
   delimiterOf,
   fileSource,
   type FileView,
   imageSource,
-  MAX_PREVIEW_LINES,
   parseDelimited,
   type PreviewFile,
-  resultShape,
 } from "../file-format";
 import { CodeView } from "./code-view";
 import { DiffView } from "./diff-view";
@@ -27,24 +23,9 @@ export const FileViewer = memo(function FileViewer({
   file,
   view,
 }: FileViewerProps) {
-  const report = useMemo(
-    () => (view === "report" ? resultShape(file.content) : undefined),
-    [file.content, view],
-  );
-
-  // Parses only the rows the table shows, and counts the rest.
-  const table = useMemo(
+  const rows = useMemo(
     () =>
-      view === "table"
-        ? {
-            rows: parseDelimited(
-              file.content,
-              delimiterOf(file),
-              MAX_PREVIEW_LINES + 1,
-            ),
-            totalRows: countDelimitedRows(file.content),
-          }
-        : undefined,
+      view === "table" ? parseDelimited(file.content, delimiterOf(file)) : [],
     [file, view],
   );
 
@@ -54,14 +35,12 @@ export const FileViewer = memo(function FileViewer({
   );
 
   switch (view) {
-    case "report":
-      return <ResultReport result={report} />;
     case "preview":
       return <MarkdownView content={file.content} />;
     case "diff":
       return <DiffView content={file.content} />;
     case "table":
-      return <TableView {...table!} />;
+      return <TableView rows={rows} />;
     case "image":
       return (
         <div className="image-view">

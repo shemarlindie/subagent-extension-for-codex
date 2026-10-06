@@ -224,7 +224,7 @@ export function definitions(
       run: (a) => c.steer(owner, a.task_id, a.message),
     }),
     cancel_agent_task: tool({
-      description: "Cancel a task. Does not delete its workspace or artifacts.",
+      description: "Cancel a task. Does not delete its workspace.",
       schema: taskId,
       run: (a) => c.stop(owner, a.task_id, "cancelled"),
     }),
@@ -259,12 +259,6 @@ export function definitions(
       run: (a) => ({
         result: c.store.get(a.task_id, owner).result ?? null,
       }),
-    }),
-    get_agent_artifacts: tool({
-      description:
-        "Retrieve report and diff artifacts without applying them to the primary workspace.",
-      schema: taskId,
-      run: (a) => c.store.artifacts(a.task_id, owner),
     }),
     get_agent_events: tool({
       description:
@@ -332,19 +326,6 @@ export function definitions(
         "User interface only: save delegation defaults, including native permission mode and approval decision maker.",
       run: (a) => c.settings.update(owner, a, "user"),
     }),
-    // App-only so image thumbnails and snippets never enter model context.
-    list_user_agent_artifacts: tool({
-      description:
-        "User interface only: list a task's artifacts as file summaries (name, size, snippet or thumbnail) without their content.",
-      schema: taskId,
-      run: (a) => c.store.artifactSummaries(a.task_id, owner),
-    }),
-    get_user_agent_artifact: tool({
-      description:
-        "User interface only: retrieve one artifact with its content for preview or download.",
-      schema: taskId.extend({ artifact_id: z.string() }),
-      run: (a) => c.store.artifactById(a.task_id, a.artifact_id, owner),
-    }),
   };
 }
 
@@ -355,8 +336,6 @@ export const isUserTool = (name: string) =>
     "start_user_agent_task",
     "submit_user_agent_input",
     "update_user_agent_settings",
-    "list_user_agent_artifacts",
-    "get_user_agent_artifact",
   ].includes(name);
 
 export async function callTool(

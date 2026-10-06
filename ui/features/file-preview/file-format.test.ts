@@ -4,7 +4,6 @@ import { test } from "vitest";
 
 import {
   baseMime,
-  countDelimitedRows,
   diffPath,
   fileBadge,
   fileBytes,
@@ -17,7 +16,6 @@ import {
   parseDiffFiles,
   prettyJson,
   type PreviewFile,
-  resultShape,
 } from "./file-format";
 
 function file(path: string, content = "", mime_type?: string): PreviewFile {
@@ -85,10 +83,6 @@ test("delimited text honors quotes, escaped quotes and embedded newlines", () =>
     ["a", "b"],
     ["1", "2"],
   ]);
-
-  assert.deepEqual(parseDelimited("h\n1\n2\n3\n", ",", 2), [["h"], ["1"]]);
-  assert.equal(countDelimitedRows('h,n\n1,"a\nb"\n2,c'), 3);
-  assert.equal(countDelimitedRows("h\n1\n"), 2);
 });
 
 test("diffs parse into files with paths", () => {
@@ -111,21 +105,17 @@ deleted file mode 100644
 });
 
 test("views follow the format, best first", () => {
-  const result = JSON.stringify({
-    summary: "Done",
-    findings: [],
-    evidence: [],
-    changes: [],
-    tests: [],
-    recommendations: [],
-  });
-
-  assert.deepEqual(fileViews(file("r.json", result)), ["report", "source"]);
   assert.deepEqual(fileViews(file("a.json", "{}")), ["source"]);
   assert.deepEqual(fileViews(file("a.md")), ["preview", "source"]);
   assert.deepEqual(fileViews(file("a.csv")), ["table", "source"]);
   assert.deepEqual(fileViews(file("a.png")), ["image"]);
   assert.deepEqual(fileViews(file("a.svg", "<svg/>")), ["image", "source"]);
+
+  // Large SVGs are never rendered as images.
+  assert.deepEqual(fileViews(file("a.svg", "x".repeat(64 * 1024 + 1))), [
+    "source",
+  ]);
+
   assert.deepEqual(fileViews(file("a.ts")), ["source"]);
   assert.deepEqual(fileViews(file("a.diff", "not a diff")), ["source"]);
 
@@ -147,20 +137,7 @@ test("the source view reformats minified JSON and picks a language", () => {
   assert.equal(fileSource(file("a.log")).language, undefined);
 });
 
-test("JSON is pretty-printed when it parses and worker results are recognized", () => {
+test("JSON is pretty-printed only when it parses", () => {
   assert.equal(prettyJson('{"a":1}'), '{\n  "a": 1\n}');
   assert.equal(prettyJson("{oops"), "{oops");
-
-  const result = {
-    summary: "Done",
-    findings: [],
-    evidence: [],
-    changes: [],
-    tests: [],
-    recommendations: [],
-  };
-
-  assert.deepEqual(resultShape(JSON.stringify(result)), result);
-  assert.equal(resultShape('{"summary":"Done","findings":[]}'), undefined);
-  assert.equal(resultShape("[]"), undefined);
 });

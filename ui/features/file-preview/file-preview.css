@@ -81,8 +81,8 @@
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
 }
-.code-more {
-  margin: 6px 12px 0;
+.file-preview-note {
+  margin: 0 0 8px;
 }
 
 /* Diffs: one collapsible section per file, with old and new line numbers. */
@@ -294,7 +294,7 @@
  * full available height so switching views never resizes it; only the active
  * view renders, and longer content scrolls inside.
  */
-#dialog.dialog[data-kind="artifact"] {
+#dialog.dialog[data-kind="file"] {
   width: min(960px, calc(100vw - 32px));
   height: calc(100dvh - 40px);
 }

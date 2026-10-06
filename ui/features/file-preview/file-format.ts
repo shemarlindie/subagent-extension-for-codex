@@ -4,9 +4,6 @@
  */
 import parseDiff from "parse-diff";
 
-import { isResultShape } from "../../../src/features/artifacts/artifact-file";
-import type { Result } from "../../../src/shared/contracts";
-
 /** A file to preview. Without a MIME type, it comes from the path's extension. */
 export type PreviewFile = {
   path: string;
@@ -18,12 +15,12 @@ export type PreviewFile = {
 export type FileFormat =
   "diff" | "json" | "markdown" | "csv" | "image" | "code" | "text";
 
-export type FileView =
-  "report" | "preview" | "diff" | "table" | "image" | "source";
+export type FileView = "preview" | "diff" | "table" | "image" | "source";
 
 export type ParsedDiffFile = ReturnType<typeof parseDiff>[number];
 
-export const MAX_PREVIEW_LINES = 5000;
+/** SVGs larger than this show as source only, never rendered as an image. */
+export const MAX_SVG_IMAGE_BYTES = 64 * 1024;
 
 const MIME_FORMATS: Record<string, FileFormat> = {
   "text/x-diff": "diff",
@@ -107,7 +104,6 @@ const FORMAT_NAMES: Record<FileFormat, string> = {
 };
 
 const VIEW_LABELS: Record<FileView, string> = {
-  report: "Report",
   preview: "Preview",
   diff: "Changes",
   table: "Table",
@@ -215,17 +211,6 @@ export function prettyJson(content: string) {
   }
 }
 
-/** A worker result report, which the preview can render as a report instead of JSON. */
-export function resultShape(content: string): Result | undefined {
-  try {
-    const value = JSON.parse(content);
-
-    return isResultShape(value) ? value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 export function delimiterOf(file: PreviewFile) {
   return baseMime(file) === "text/tab-separated-values" ||
     extensionOf(file.path) === "tsv"
@@ -233,25 +218,14 @@ export function delimiterOf(file: PreviewFile) {
     : ",";
 }
 
-/**
- * Parses CSV or TSV, honoring quoted fields with embedded separators and
- * newlines. With `maxRows`, it stops reading once that many rows are complete.
- */
-export function parseDelimited(
-  content: string,
-  separator = ",",
-  maxRows = Infinity,
-): string[][] {
+/** Parses CSV or TSV, honoring quoted fields with embedded separators and newlines. */
+export function parseDelimited(content: string, separator = ","): string[][] {
   const rows: string[][] = [];
   let row: string[] = [],
     field = "",
     quoted = false;
 
-  for (
-    let index = 0;
-    index < content.length && rows.length < maxRows;
-    index++
-  ) {
+  for (let index = 0; index < content.length; index++) {
     const char = content[index];
 
     if (quoted) {
@@ -273,35 +247,12 @@ export function parseDelimited(
     } else field += char;
   }
 
-  if ((field || row.length) && rows.length < maxRows) {
+  if (field || row.length) {
     row.push(field);
     rows.push(row);
   }
 
   return rows;
-}
-
-/** Rows in CSV or TSV content, counting quoted newlines as part of their field. */
-export function countDelimitedRows(content: string) {
-  let rows = 0,
-    quoted = false,
-    rowHasContent = false;
-
-  for (let index = 0; index < content.length; index++) {
-    const char = content[index];
-
-    if (char === '"') quoted = !quoted;
-    else if (!quoted && (char === "\n" || char === "\r")) {
-      if (char === "\r" && content[index + 1] === "\n") index++;
-      rows++;
-      rowHasContent = false;
-      continue;
-    }
-
-    rowHasContent = true;
-  }
-
-  return rows + (rowHasContent ? 1 : 0);
 }
 
 export function parseDiffFiles(content: string): ParsedDiffFile[] {
@@ -319,11 +270,16 @@ export function diffPath(file: ParsedDiffFile) {
   return path ?? "unknown";
 }
 
+/** An SVG too large to render as an image; it shows as source only. */
+export function isLargeSvg(file: PreviewFile) {
+  return (
+    baseMime(file) === "image/svg+xml" && fileBytes(file) > MAX_SVG_IMAGE_BYTES
+  );
+}
+
 /** The ways a file can be shown, best first. A single view hides the switcher. */
 export function fileViews(file: PreviewFile): FileView[] {
   switch (fileFormat(file)) {
-    case "json":
-      return resultShape(file.content) ? ["report", "source"] : ["source"];
     case "markdown":
       return ["preview", "source"];
     case "diff":
@@ -333,9 +289,9 @@ export function fileViews(file: PreviewFile): FileView[] {
     case "csv":
       return ["table", "source"];
     case "image":
-      return baseMime(file) === "image/svg+xml"
-        ? ["image", "source"]
-        : ["image"];
+      if (baseMime(file) !== "image/svg+xml") return ["image"];
+
+      return isLargeSvg(file) ? ["source"] : ["image", "source"];
     default:
       return ["source"];
   }

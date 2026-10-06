@@ -13,7 +13,7 @@ Use the [README](../README.md) for installation, supported providers, configurat
 
 The service stores task and event records, worktrees, executor state, and the event signing key in its data directory. To reconnect, start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value and use the task list to inspect existing work. Keep Claude's native session state on its original machine; continuation uses the original worker and session.
 
-Before continuing, inspect the task status, recent events, result, and available artifacts. Continue only when the original worker and session are available. If a submission or shutdown outcome is uncertain, inspect the task state before retrying. The service does not automatically merge worktree changes, and cancellation does not delete a worktree.
+Before continuing, inspect the task status, recent events, result, and workspace. Continue only when the original worker and session are available. If a submission or shutdown outcome is uncertain, inspect the task state before retrying. The service does not automatically merge worktree changes, and cancellation does not delete a worktree.
 
 ## Preserve service state
 

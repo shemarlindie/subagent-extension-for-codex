@@ -223,9 +223,9 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
 }
 
 /**
- * Fixture tool results for the panel dev host. The artifact tools are not
- * here: the dev host sends them to the fixture service (ui/dev/fixture-service.ts),
- * which answers with the real service code.
+ * Fixture tool results for the panel dev host. Tools in FIXTURE_SERVICE_TOOLS
+ * are not here: the dev host sends them to the fixture service
+ * (ui/dev/fixture-service.ts), which answers with the real service code.
  */
 export function previewTool(
   name: string,

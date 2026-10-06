@@ -39,7 +39,7 @@ export function ControlForm({ dialog }: ControlFormProps) {
     steer:
       "A running turn will be interrupted and continued with your instruction.",
     continue: "Continue in the existing workspace and native session.",
-    cancel: "Stop this task. Its workspace and artifacts will be retained.",
+    cancel: "Stop this task. Its workspace will be retained.",
     retry:
       "Create another task from the original request. This starts a new worker attempt with the original budgets.",
     interrupt:

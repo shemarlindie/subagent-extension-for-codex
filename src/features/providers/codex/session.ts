@@ -167,7 +167,7 @@ export class CodexSessions {
     );
   }
 
-  /** Caller must exclude concurrent input. Confirm remote state before finalizing artifacts. */
+  /** Caller must exclude concurrent input. Confirm remote state before finalizing the task. */
   async cancelAndWait(
     task: Task,
     turnId: string,

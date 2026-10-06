@@ -6,7 +6,6 @@ import {
 
 import { traceSize } from "../../shared/state/size-trace";
 import type {
-  DownloadFile,
   PanelData,
   Transport,
   TransportEvents,
@@ -86,7 +85,6 @@ export class HostTransport implements Transport {
       ),
       canSend: Boolean(capabilities?.message?.text),
       canShare: Boolean(capabilities?.updateModelContext?.structuredContent),
-      canDownload: Boolean(capabilities?.downloadFile),
     });
   }
 
@@ -144,27 +142,6 @@ export class HostTransport implements Transport {
   async share(structuredContent: Record<string, unknown>) {
     if (this.disposed) throw new Error("The console has closed.");
     await this.app.updateModelContext({ structuredContent });
-  }
-
-  // The sandboxed frame cannot save files itself, so the host does it.
-  async download(file: DownloadFile) {
-    if (this.disposed) throw new Error("The console has closed.");
-
-    const uri = `file:///${encodeURIComponent(file.name)}`;
-
-    const result = await this.app.downloadFile({
-      contents: [
-        {
-          type: "resource",
-          resource:
-            file.base64 === undefined
-              ? { uri, mimeType: file.mimeType, text: file.text }
-              : { uri, mimeType: file.mimeType, blob: file.base64 },
-        },
-      ],
-    });
-
-    if (result.isError) throw new Error("The download was cancelled.");
   }
 
   async expand() {

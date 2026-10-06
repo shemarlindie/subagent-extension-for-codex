@@ -166,7 +166,7 @@ test("current repository rejects a non-HEAD revision without altering the checko
   }
 });
 
-test("current repository review receives the working tree diff in its provider prompt and artifact", async () => {
+test("current repository review receives the working tree diff in its provider prompt", async () => {
   const s = await setup();
 
   try {
@@ -209,11 +209,9 @@ test("current repository review receives the working tree diff in its provider p
     ])
       assert.ok(receivedPrompt.includes(content), content);
 
-    const diff = s.c.store
-      .artifacts(started.id, "alice")
-      .find((artifact) => artifact.type === "diff");
+    const diff = await s.c.workspaces.diff(s.c.store.get(started.id, "alice"));
 
-    assert.ok(diff?.content.includes("untracked content"));
+    assert.ok(diff.includes("untracked content"));
     assert.equal(s.git("status", "--porcelain"), before);
 
     assert.equal(
@@ -484,10 +482,9 @@ test("current repository write profiles edit the checkout while preserving unrel
     );
 
     assert.ok(
-      s.c.store
-        .artifacts(started.id, "alice")
-        .find((artifact) => artifact.type === "diff")
-        ?.content.includes("+export const value = 2;"),
+      (await s.c.workspaces.diff(s.c.store.get(started.id, "alice"))).includes(
+        "+export const value = 2;",
+      ),
     );
   } finally {
     await s.close();

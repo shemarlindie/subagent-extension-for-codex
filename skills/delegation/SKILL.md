@@ -17,7 +17,7 @@ get_agent_panel_context can resolve defaults from optional host directory metada
 
 Worktree tasks start from a committed revision and do not copy uncommitted files automatically. To review uncommitted work in a worktree, supply the relevant diff and file excerpts in bounded context or explain which committed revision is being reviewed. Current-repo tasks inspect the live checkout, including uncommitted files. Conversation history is not copied automatically in either workspace strategy.
 
-Tasks are asynchronous. Continue primary work and retrieve state with get_agent_task. Use get_agent_events for execution activity, get_agent_result for structured findings, and get_agent_artifacts for reports and diffs.
+Tasks are asynchronous. Continue primary work and retrieve state with get_agent_task. Use get_agent_events for execution activity and get_agent_result for structured findings. Worktree changes stay in the task's worktree.
 
 Claude tasks default permission_mode to inherit. Resolution uses an explicit task override, then the user's claude_permission_mode setting, then the profile fallback: plan for read-only profiles, and for write profiles the default mode from the user's Claude Code settings (permission_source user_config). Your own permission mode is not passed on. Explicit native Claude modes are default, acceptEdits, plan, dontAsk, auto, and bypassPermissions. The resolved task.permission_mode and permission_source show the actual choice. Keep inherit unless the task needs an authorized override. Under inherit, a model-selected override can only choose plan or dontAsk. Codex native permission settings are outside this change; its existing adapter and turn-level approval flow remain unchanged.
 
@@ -29,6 +29,6 @@ If a task requires input, use the exact request_id. For questions, submit_agent_
 
 App-only visibility depends on host enforcement; authenticated raw service clients are trusted administrators, and the service does not cryptographically attest human decisions. Legacy Claude approval_mode values migrate to native permissions and routing: ask_user to default/user, parent_agent to default/parent_agent, auto_approve to bypassPermissions, and deny to dontAsk. Persisted legacy tasks and saved host forms retain their legacy permission mode and decision routing when native fields are absent.
 
-Interrupt preserves session state; continue requires its original worker. Steering interrupts the current turn and starts another turn with the instruction. Cancellation retains artifacts. Retry creates a new task.
+Interrupt preserves session state; continue requires its original worker. Steering interrupts the current turn and starts another turn with the instruction. Cancellation retains the workspace. Retry creates a new task.
 
 Inspect returned diffs before applying them. A worktree is code isolation, not an operating-system sandbox. Do not describe interrupted Claude sessions as instruction-pointer pause/resume or promise session portability. Never expose service or provider credentials.

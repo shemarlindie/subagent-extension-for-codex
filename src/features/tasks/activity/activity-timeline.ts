@@ -42,12 +42,9 @@ export function activityFailed(e: Event) {
     d.compact_result === "failed" ||
     d.status === "failed" ||
     object(d.patch).status === "failed" ||
-    [
-      "task.failed",
-      "artifact.error",
-      "permission_denied",
-      "mirror_error",
-    ].includes(activityKind(e)) ||
+    ["task.failed", "permission_denied", "mirror_error"].includes(
+      activityKind(e),
+    ) ||
     (typeof d.error === "string" &&
       !!d.error &&
       activityKind(e) !== "api_retry") ||
@@ -466,11 +463,9 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
           ? "Turn completed"
           : key === "task.completed"
             ? "Task completed"
-            : key === "artifact.created"
-              ? "Created an artifact"
-              : thinking.has(key)
-                ? "Thinking…"
-                : sentence(key),
+            : thinking.has(key)
+              ? "Thinking…"
+              : sentence(key),
       activityFailed(e) ? "failed" : "info",
     );
 
@@ -488,10 +483,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
-    if (!activityFailed(e)) {
-      if (key === "artifact.created") group.summary = string(d.title);
-      if (thinking.has(key)) group.summary = undefined;
-    }
+    if (!activityFailed(e) && thinking.has(key)) group.summary = undefined;
 
     // Generic updates need matching readable summaries; SDK messages and actionable
     // transitions retain their own rows. Every raw event remains inspectable.
@@ -507,8 +499,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         previousEvent &&
         previousEvent.events[0].task_id === e.task_id &&
         activityKind(previousEvent.events[0]) === key &&
-        (key === "artifact.created" ||
-          thinking.has(key) ||
+        (thinking.has(key) ||
           (group.summary !== undefined &&
             previousEvent.summary === group.summary))
       ) {
@@ -516,19 +507,10 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         previousEvent.events.push(e);
         const count = previousEvent.events.length;
 
-        previousEvent.title =
-          key === "artifact.created"
-            ? `Created ${count} artifacts`
-            : thinking.has(key)
-              ? "Thinking…"
-              : `${sentence(key)} · ${count} events`;
+        previousEvent.title = thinking.has(key)
+          ? "Thinking…"
+          : `${sentence(key)} · ${count} events`;
 
-        if (key === "artifact.created")
-          previousEvent.summary =
-            previousEvent.events
-              .map((event) => string(event.data.title))
-              .filter(Boolean)
-              .join(" · ") || undefined;
         adjacentEvent = previousEvent;
       } else adjacentEvent = group;
       if (onlyThinkingSignals(adjacentEvent)) adjacentThinking = adjacentEvent;

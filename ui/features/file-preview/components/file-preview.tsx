@@ -1,6 +1,6 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { type ReactNode, useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 
 import { useController } from "../../../shared/state/controller-context";
 import { formatBytes } from "../../../shared/utils/format";
@@ -11,6 +11,7 @@ import {
   type FileView,
   fileViews,
   formatName,
+  isLargeSvg,
   type PreviewFile,
   viewLabel,
 } from "../file-format";
@@ -21,12 +22,10 @@ import { Progress } from "./progress";
 
 type FilePreviewProps = {
   file: PreviewFile;
-  /** Extra toolbar actions, after Copy. */
-  actions?: ReactNode;
 };
 
 /** A file with a switcher between the views its format offers. */
-export function FilePreview({ file, actions }: FilePreviewProps) {
+export function FilePreview({ file }: FilePreviewProps) {
   const controller = useController(),
     canCopy =
       !controller.transport.embedded &&
@@ -66,7 +65,6 @@ export function FilePreview({ file, actions }: FilePreviewProps) {
         <span className="toolbar-actions">
           {/* Only show Copy where the browser exposes clipboard access. */}
           {canCopy && format !== "image" && <CopyButton text={file.content} />}
-          {actions}
         </span>
         {rendering && <Progress label={`Showing ${viewLabel(view)}`} />}
       </div>
@@ -75,6 +73,11 @@ export function FilePreview({ file, actions }: FilePreviewProps) {
         data-view={shown}
         aria-busy={rendering}
       >
+        {isLargeSvg(file) && (
+          <p className="help file-preview-note">
+            This SVG is over 64 KB, so it is shown as source only.
+          </p>
+        )}
         <FileViewer file={file} view={shown} />
       </div>
     </div>

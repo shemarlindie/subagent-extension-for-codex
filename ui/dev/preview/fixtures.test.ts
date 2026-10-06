@@ -15,7 +15,6 @@ import { EventList } from "../../features/tasks/activity/event-list";
 import type { Event } from "../../shared/state/types";
 import {
   PREVIEW_THREAD,
-  previewArtifacts,
   previewEvents,
   previewLiveStatus,
   previewTasks,
@@ -76,7 +75,6 @@ test("preview events cover the activity kinds the timeline renders", () => {
     "task.failed",
     "task.cancelled",
     "task.continued",
-    "artifact.created",
     "prompt_suggestion",
     "tool_use_summary",
   ])
@@ -127,12 +125,6 @@ test("preview ids are unique and every activity timeline renders", () => {
     new Set(previewTasks.map((task) => task.id)).size,
     previewTasks.length,
   );
-
-  for (const artifact of previewArtifacts)
-    assert.ok(
-      previewTasks.some((task) => task.id === artifact.task_id),
-      `${artifact.id} belongs to an unknown task`,
-    );
 
   for (const task of previewTasks) {
     const html = renderToStaticMarkup(

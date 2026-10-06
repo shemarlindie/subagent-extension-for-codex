@@ -13,7 +13,7 @@ import {
 import type { Task } from "../../../shared/state/types";
 
 export function handoffMessage(task: Task) {
-  return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task, full results with get_agent_result, and reports/patches with get_agent_artifacts using task_id=${JSON.stringify(task.id)}. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\nDescription excerpt: ${task.description.slice(0, 1500)}${task.description.length > 1500 ? "… (truncated)" : ""}\nSummary excerpt: ${task.result?.summary.slice(0, 2500) ?? "No result yet."}${(task.result?.summary.length ?? 0) > 2500 ? "… (truncated)" : ""}`;
+  return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task and full results with get_agent_result using task_id=${JSON.stringify(task.id)}. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\nDescription excerpt: ${task.description.slice(0, 1500)}${task.description.length > 1500 ? "… (truncated)" : ""}\nSummary excerpt: ${task.result?.summary.slice(0, 2500) ?? "No result yet."}${(task.result?.summary.length ?? 0) > 2500 ? "… (truncated)" : ""}`;
 }
 
 export function HandoffForm({ task }: { task: Task }) {

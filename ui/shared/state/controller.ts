@@ -1,11 +1,8 @@
-import { isBase64Image } from "../../features/artifacts/artifact-file";
 import { delegationDialog } from "../../features/delegation/delegation";
 import { readEventTail } from "../../features/tasks/activity/event-history";
 import { initialState } from "./initial-state";
 import { selectedTask, terminal } from "./selectors";
 import type {
-  Artifact,
-  ArtifactSummary,
   Defaults,
   DialogState,
   Filter,
@@ -13,6 +10,7 @@ import type {
   Project,
   QuestionDraft,
   SettingsDocument,
+  SharedItem,
   Snapshot,
   Task,
   Transport,
@@ -93,10 +91,6 @@ export class Controller {
       });
 
       if (this.disposed) return;
-
-      // Top-level pages save files themselves; embedded ones learn it from the host.
-      if (!this.transport.embedded && this.transport.download)
-        this.patch({ host: { ...this.state.host, canDownload: true } });
 
       this.patch({ connected: true, loginRequired: false });
       await this.refresh();
@@ -213,7 +207,7 @@ export class Controller {
         selected = undefined;
         this.explicitSelection = false;
         this.generation++;
-        this.patch({ events: [], artifacts: [] });
+        this.patch({ events: [] });
       }
 
       if (
@@ -265,18 +259,13 @@ export class Controller {
 
     if (!id || this.disposed) return;
 
-    const [{ events, dropped }, artifacts] = await Promise.all([
-      readEventTail(
-        id,
-        this.state.events,
-        (after) => this.tool("get_agent_events", { task_id: id, after }),
-        () => !this.disposed && generation === this.generation,
-        this.state.droppedEvents,
-      ),
-      this.tool<ArtifactSummary[]>("list_user_agent_artifacts", {
-        task_id: id,
-      }),
-    ]);
+    const { events, dropped } = await readEventTail(
+      id,
+      this.state.events,
+      (after) => this.tool("get_agent_events", { task_id: id, after }),
+      () => !this.disposed && generation === this.generation,
+      this.state.droppedEvents,
+    );
 
     if (
       this.disposed ||
@@ -284,7 +273,7 @@ export class Controller {
       generation !== this.generation
     )
       return;
-    this.patch({ events, droppedEvents: dropped, artifacts });
+    this.patch({ events, droppedEvents: dropped });
   }
 
   async select(id: string) {
@@ -295,7 +284,6 @@ export class Controller {
     this.patch({
       selected: id,
       events: [],
-      artifacts: [],
       tab: this.state.tasks.find((task) => task.id === id)?.result
         ? "result"
         : "activity",
@@ -309,7 +297,7 @@ export class Controller {
     this.explicitSelection = false;
     this.browsing = true;
     ++this.generation;
-    this.patch({ selected: undefined, events: [], artifacts: [] });
+    this.patch({ selected: undefined, events: [] });
     this.run(() => this.share());
   }
 
@@ -325,58 +313,18 @@ export class Controller {
     this.patch({ tab });
   }
 
-  async share(artifactId?: string) {
+  /** Shares the selected task, and optionally one item in it, with the host's model. */
+  async share(item?: SharedItem) {
     if (this.disposed || !this.state.host.canShare) return;
     const task = selectedTask(this.state);
 
     await this.transport.share?.({
       selected_task: this.state.selected ?? null,
-      selected_artifact: artifactId ?? null,
+      selected_item: item ?? null,
       conversation_id: this.state.conversation ?? null,
       repository: task?.repository ?? this.state.repository ?? null,
       revision: task?.revision ?? this.state.revision,
     });
-  }
-
-  /** Recently loaded artifact contents, so previewing then downloading fetches once. */
-  private artifactContents = new Map<string, Promise<Artifact>>();
-
-  /** Fetches an artifact's content; cards only carry its summary. */
-  loadArtifact(summary: ArtifactSummary): Promise<Artifact> {
-    let loading = this.artifactContents.get(summary.id);
-
-    if (!loading) {
-      loading = this.tool<Artifact>("get_user_agent_artifact", {
-        task_id: summary.task_id,
-        artifact_id: summary.id,
-      });
-
-      // A failed load is retried next time rather than cached.
-      loading.catch(() => this.artifactContents.delete(summary.id));
-      this.artifactContents.set(summary.id, loading);
-
-      // Artifacts can be large; keep only the few most recent.
-      for (const id of [...this.artifactContents.keys()].slice(0, -3))
-        this.artifactContents.delete(id);
-    }
-
-    return loading;
-  }
-
-  async download(summary: ArtifactSummary) {
-    if (this.disposed || !this.state.host.canDownload) return;
-    const artifact = await this.loadArtifact(summary);
-    const name = summary.file_name;
-
-    await this.transport.download?.(
-      isBase64Image(artifact)
-        ? {
-            name,
-            mimeType: artifact.mime_type,
-            base64: artifact.content.trim(),
-          }
-        : { name, mimeType: artifact.mime_type, text: artifact.content },
-    );
   }
 
   private invalidateScope(patch: Partial<Snapshot>) {
@@ -390,7 +338,6 @@ export class Controller {
       tasks: [],
       selected: undefined,
       events: [],
-      artifacts: [],
       ...(this.state.busy
         ? {
             formError:
@@ -455,7 +402,6 @@ export class Controller {
       this.patch({
         selected: data.panel_selection.task_id,
         events: [],
-        artifacts: [],
         tab: data.panel_selection.tab === "result" ? "result" : "activity",
         filter: null,
         search: "",
@@ -680,8 +626,7 @@ export class Controller {
   open(
     dialog:
       | Omit<Extract<DialogState, { kind: "control" }>, "scope">
-      | Omit<Extract<DialogState, { kind: "respond" | "handoff" }>, "scope">
-      | Omit<Extract<DialogState, { kind: "artifact" }>, "scope">,
+      | Omit<Extract<DialogState, { kind: "respond" | "handoff" }>, "scope">,
   ) {
     if (this.state.dialog || this.state.busy) return;
 
@@ -689,9 +634,6 @@ export class Controller {
       dialog: { ...dialog, scope: this.state.scopeVersion } as DialogState,
       formError: "",
     });
-
-    if (dialog.kind === "artifact")
-      this.run(() => this.share(dialog.artifact.id));
   }
 
   /**
@@ -777,7 +719,6 @@ export class Controller {
           ],
           selected: task.id,
           events: [],
-          artifacts: [],
           tab: "activity",
           repository: task.repository,
           revision: task.revision,

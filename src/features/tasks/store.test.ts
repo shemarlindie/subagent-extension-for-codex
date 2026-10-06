@@ -149,3 +149,61 @@ test("stored requests regain titles without losing descriptions, timestamps, or 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("opening a store drops stored artifacts and their events, and repeats safely", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "task-artifact-migration-"));
+  const path = join(dir, "tasks.sqlite");
+  const original = new Store(path);
+
+  const task: Task = {
+    ...startSchema.parse({
+      title: "Review",
+      description: "Review",
+      worker_profile: "reviewer",
+    }),
+    title: "Review",
+    id: "with-artifacts",
+    owner: "alice",
+    status: "completed",
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    instructions: [],
+    attempt: 1,
+    runtime_ms: 0,
+  };
+
+  try {
+    original.save(task);
+    const kept = original.event(task, "agent.message", { text: "Done" });
+    original.event(task, "artifact.created", { artifact_id: "art_1" });
+    original.event(task, "artifact.error", { message: "No diff" });
+
+    // The table as older versions created it.
+    original.db
+      .exec(`CREATE TABLE artifacts(id TEXT PRIMARY KEY,task_id TEXT NOT NULL REFERENCES tasks(id),body TEXT NOT NULL,summary TEXT);
+    INSERT INTO artifacts(id,task_id,body) VALUES('art_1','with-artifacts','{}');`);
+
+    original.close();
+
+    for (let open = 0; open < 2; open++) {
+      const store = new Store(path);
+
+      try {
+        assert.deepEqual(store.events(task.id, task.owner), [kept]);
+
+        assert.equal(
+          store.db
+            .prepare(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name='artifacts'",
+            )
+            .get(),
+          undefined,
+        );
+      } finally {
+        store.close();
+      }
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

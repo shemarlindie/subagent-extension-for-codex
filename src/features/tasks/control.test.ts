@@ -416,7 +416,7 @@ test("settings reject unsupported providers, invalid budgets, unknown fields and
   await c.close();
 });
 
-test("durable task completes in isolated worktree and produces structured artifact", async () => {
+test("durable task completes in isolated worktree and produces a structured result", async () => {
   const { c, store, repo, db } = await setup();
   const t = await c.start("alice", input());
   await until(() => store.get(t.id, "alice").status === "completed");
@@ -425,20 +425,18 @@ test("durable task completes in isolated worktree and produces structured artifa
   assert.equal(done.session_owner, c.ownerWorker);
   assert.ok(done.session_state_ref);
   assert.ok(done.result?.summary.includes("Fixture"));
-  assert.equal(store.artifacts(t.id, "alice")[0].type, "report");
   await c.close();
   const reopened = new Store(db);
   assert.equal(reopened.get(t.id, "alice").status, "completed");
   reopened.close();
 });
 
-test("ownership enforced across dependencies, artifacts, state, events and controls", async () => {
+test("ownership enforced across dependencies, state, events and controls", async () => {
   const { c, store } = await setup();
   const t = await c.start("alice", input("[input]"));
   await until(() => store.get(t.id, "alice").status === "waiting");
   assert.throws(() => store.get(t.id, "bob"));
   assert.throws(() => store.events(t.id, "bob"));
-  assert.throws(() => store.artifacts(t.id, "bob"));
   await assert.rejects(c.stop("bob", t.id, "cancelled"));
   await assert.rejects(c.start("bob", { ...input(), depends_on: [t.id] }));
   await c.close();
@@ -606,7 +604,7 @@ test("workspace root allowlist rejects external repositories", async () => {
   await c.close();
 });
 
-test("artifact includes edits, untracked files and committed changes without touching primary checkout", async () => {
+test("worktree diff includes edits, untracked files and committed changes without touching primary checkout", async () => {
   class Writer extends FixtureProvider {
     async run(c: RunContext, p: string) {
       await writeFile(join(c.task.workspace!, "README.md"), "changed\n");
@@ -638,13 +636,10 @@ test("artifact includes edits, untracked files and committed changes without tou
       !c.active.has(t.id) && store.get(t.id, "alice").status === "completed",
   );
 
-  const diff = store.artifacts(t.id, "alice").find((a) => a.type === "diff")!;
-  assert.match(diff.content, /changed/);
-  assert.match(diff.content, /answer = 42/);
-
-  execFileSync("git", ["-C", repo, "apply", "--check", "-"], {
-    input: diff.content,
-  });
+  const diff = await c.workspaces.diff(store.get(t.id, "alice"));
+  assert.match(diff, /changed/);
+  assert.match(diff, /answer = 42/);
+  execFileSync("git", ["-C", repo, "apply", "--check", "-"], { input: diff });
 
   assert.equal(await readFile(join(repo, "README.md"), "utf8"), "hello\n");
   await c.close();
@@ -785,7 +780,7 @@ test("continuation revalidates provider budget support before changing an interr
   }
 });
 
-test("unconfirmed termination locks task controls, defers artifacts and survives service recovery", async () => {
+test("unconfirmed termination locks task controls and survives service recovery", async () => {
   const { UnconfirmedTerminationError } =
     await import("../../shared/contracts.js");
 
@@ -823,8 +818,6 @@ test("unconfirmed termination locks task controls, defers artifacts and survives
     c.store.get(task.id, "alice").waiting_reason,
     "termination_unconfirmed",
   );
-
-  assert.deepEqual(c.store.artifacts(task.id, "alice"), []);
 
   await assert.rejects(
     c.stop("alice", task.id, "interrupted"),

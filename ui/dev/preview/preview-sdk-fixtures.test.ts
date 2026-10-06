@@ -88,8 +88,6 @@ const serviceTypes = new Set([
   "agent.input_required",
   "agent.input_submitted",
   "agent.input_decision",
-  "artifact.created",
-  "artifact.error",
 ]);
 
 const kindOf = (message: Record<string, unknown>) =>
@@ -180,14 +178,6 @@ test("service event payloads match what the service emits", () => {
     ]);
   for (const data of payload("task.started"))
     assert.deepEqual(Object.keys(data), ["attempt"]);
-  for (const data of payload("artifact.created"))
-    assert.deepEqual(Object.keys(data).sort(), [
-      "artifact_id",
-      "title",
-      "type",
-    ]);
-  for (const data of payload("artifact.error"))
-    assert.deepEqual(Object.keys(data), ["message"]);
   for (const data of payload("task.failed"))
     assert.deepEqual(Object.keys(data), ["error"]);
   for (const data of payload("task.waiting"))

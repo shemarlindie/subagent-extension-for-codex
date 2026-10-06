@@ -75,6 +75,7 @@ class FakeTransport implements Transport {
   context: PanelData = { panel_scope: { conversation_id: null } };
   projects = [{ repository: "/repo/a", kind: "repository" }];
   handler?: (name: string, args: Record<string, unknown>) => unknown;
+  shared: Record<string, unknown>[] = [];
   async connect(events: TransportEvents) {
     this.events = events;
     await this.connectGate;
@@ -93,13 +94,16 @@ class FakeTransport implements Transport {
       ],
       list_agent_tasks: this.tasks,
       get_agent_events: [],
-      list_user_agent_artifacts: [],
       get_agent_settings: { values: defaults },
     };
 
     assert.ok(name in values, `Unexpected tool ${name}`);
 
     return values[name] as T;
+  }
+
+  async share(data: Record<string, unknown>) {
+    this.shared.push(data);
   }
 
   watch() {
@@ -198,7 +202,7 @@ test("a project switch rejects an old list response and refreshes the current sc
   assert.equal(controller.getSnapshot().repository, "/repo/b");
 });
 
-test("delayed detail from a previous selection cannot replace current events or artifacts", async (t) => {
+test("delayed detail from a previous selection cannot replace current events", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a"), task("b")];
@@ -210,9 +214,7 @@ test("delayed detail from a previous selection cannot replace current events or 
       ? args.task_id === "a"
         ? gate.promise
         : [{ id: 2, task_id: "b", type: "log", timestamp: "", data: {} }]
-      : name === "list_user_agent_artifacts"
-        ? [{ id: args.task_id, task_id: args.task_id }]
-        : undefined;
+      : undefined;
 
   const first = controller.select("a");
   await controller.select("b");
@@ -224,11 +226,34 @@ test("delayed detail from a previous selection cannot replace current events or 
     controller.getSnapshot().events.map((item) => item.task_id),
     ["b"],
   );
+});
 
-  assert.deepEqual(
-    controller.getSnapshot().artifacts.map((item) => item.id),
-    ["b"],
-  );
+test("sharing sends the selected task and an optional selected item to the host", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a")];
+  await controller.start();
+  transport.events.host({ ...controller.getSnapshot().host, canShare: true });
+
+  await controller.select("a");
+  await controller.share({ kind: "file", path: "src/a.ts" });
+
+  assert.deepEqual(transport.shared.slice(-2), [
+    {
+      selected_task: "a",
+      selected_item: null,
+      conversation_id: null,
+      repository: "/repo/a",
+      revision: "HEAD",
+    },
+    {
+      selected_task: "a",
+      selected_item: { kind: "file", path: "src/a.ts" },
+      conversation_id: null,
+      repository: "/repo/a",
+      revision: "HEAD",
+    },
+  ]);
 });
 
 test("refresh preserves dialog identity and reviewed defaults while discovering new projects", async (t) => {

@@ -1,9 +1,4 @@
-import type {
-  DownloadFile,
-  Transport,
-  TransportEvents,
-} from "../../shared/state/types";
-import { saveInBrowser } from "../../shared/utils/download";
+import type { Transport, TransportEvents } from "../../shared/state/types";
 
 export class ConsoleTransport implements Transport {
   readonly embedded = false;
@@ -52,10 +47,6 @@ export class ConsoleTransport implements Transport {
 
   async login(token: string) {
     await this.api("/api/login", { token });
-  }
-
-  async download(file: DownloadFile) {
-    saveInBrowser(file);
   }
 
   watch() {

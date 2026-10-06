@@ -8,7 +8,6 @@ import {
   useSnapshot,
 } from "../../../shared/state/controller-context";
 import type { Tab, Task } from "../../../shared/state/types";
-import { ArtifactList } from "../../artifacts/components/artifact-list";
 import { EventList } from "../activity/event-list";
 import { TaskDetails } from "../inspector/task-details";
 import { ResultReport } from "./result-report";
@@ -16,7 +15,7 @@ import { ResultReport } from "./result-report";
 const TAB_EDGE_GAP = 12;
 
 // The tab list scrolls sideways on narrow panels, so the selected tab can sit off-screen
-// (selection can also come from outside, such as a link to the Changes tab).
+// (selection can also come from outside, such as the host selecting a task).
 // Only the list scrolls, never the page, so the inspector doesn't jump.
 function useActiveTabInView(tab: Tab) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -63,9 +62,6 @@ export function EvidenceTabs({ task }: { task: Task }) {
         <Tabs.Tab value="result" id="tab-result">
           Result
         </Tabs.Tab>
-        <Tabs.Tab value="changes" id="tab-changes">
-          Artifacts <TabCount value={state.artifacts.length} />
-        </Tabs.Tab>
         <Tabs.Tab value="activity" id="tab-activity">
           Activity <TabCount value={state.events.length} />
         </Tabs.Tab>
@@ -76,9 +72,6 @@ export function EvidenceTabs({ task }: { task: Task }) {
       </Tabs.List>
       <Tabs.Panel value="result">
         <ResultReport result={task.result} />
-      </Tabs.Panel>
-      <Tabs.Panel value="changes">
-        <ArtifactList />
       </Tabs.Panel>
       {/* Stays mounted so the reading position survives tab switches. */}
       <Tabs.Panel value="activity" className="activity-panel" keepMounted>

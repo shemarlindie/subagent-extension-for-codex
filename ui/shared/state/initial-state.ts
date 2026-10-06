@@ -6,7 +6,6 @@ export function initialState(): Snapshot {
     workers: [],
     projects: [],
     events: [],
-    artifacts: [],
     revision: "HEAD",
     filter: null,
     search: "",
@@ -22,7 +21,6 @@ export function initialState(): Snapshot {
     host: {
       canSend: false,
       canShare: false,
-      canDownload: false,
       canExpand: false,
       displayMode: "inline",
     },

@@ -143,7 +143,6 @@ test("the dropped note names the span, tools and trouble", () => {
     messages: 31,
     failures: 1,
     retries: 2,
-    artifacts: 0,
   });
 
   assert.equal(headline, "1,284 earlier events over 9m 40s not shown.");

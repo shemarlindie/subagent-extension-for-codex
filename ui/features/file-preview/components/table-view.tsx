@@ -1,21 +1,10 @@
-import { MAX_PREVIEW_LINES } from "../file-format";
-
 type TableViewProps = {
-  /** The header row first; may stop short of the whole file. */
+  /** The header row first. */
   rows: string[][];
-  /** Rows in the whole file, header included, when `rows` is a prefix. */
-  totalRows?: number;
-  maxRows?: number;
 };
 
-export function TableView({
-  rows,
-  totalRows = rows.length,
-  maxRows = MAX_PREVIEW_LINES,
-}: TableViewProps) {
-  const [head = [], ...body] = rows,
-    shown = body.slice(0, maxRows),
-    more = totalRows - 1 - shown.length;
+export function TableView({ rows }: TableViewProps) {
+  const [head = [], ...body] = rows;
 
   return (
     <div className="table-view">
@@ -28,7 +17,7 @@ export function TableView({
           </tr>
         </thead>
         <tbody>
-          {shown.map((row, rowIndex) => (
+          {body.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {head.map((_, index) => (
                 <td key={index}>{row[index] ?? ""}</td>
@@ -37,11 +26,6 @@ export function TableView({
           ))}
         </tbody>
       </table>
-      {more > 0 && (
-        <p className="code-more help">
-          {more.toLocaleString()} more {more === 1 ? "row" : "rows"}
-        </p>
-      )}
     </div>
   );
 }
