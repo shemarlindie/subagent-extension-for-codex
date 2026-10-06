@@ -19,7 +19,7 @@
     "format": "prettier --write .",
     "pretest": "npm run format:check && npm run lint && npm run build",
     "projects": "node --env-file-if-exists=.env dist/projects-cli.js",
-    "prepack": "npm run build && node scripts/bundle-sharp-binaries.mjs",
+    "prepack": "npm run build",
     "package:plugin": "npm pack",
     "dev:ui": "vite",
     "format:check": "prettier --check .",
@@ -44,7 +44,6 @@
     "react-hook-form": "^7.89.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "sharp": "^0.35.5",
     "standardwebhooks": "^1.1.1",
     "zod": "^4.6.5"
   },
@@ -91,7 +90,6 @@
     "express",
     "ipaddr.js",
     "openai",
-    "sharp",
     "standardwebhooks",
     "zod"
   ],
