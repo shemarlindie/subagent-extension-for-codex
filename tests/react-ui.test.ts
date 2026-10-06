@@ -1218,7 +1218,7 @@ test("model selection updates role and provider defaults while preserving explic
 });
 
 test("description toggles literally, survives refresh, and resets for another task", async (t) => {
-  overflowClampedDescriptions();
+  layoutExpandableNotice(true);
 
   const literal =
     '<img src=x onerror="window.injected=true">\nFull worker instructions.';
@@ -1273,6 +1273,8 @@ test("description toggles literally, survives refresh, and resets for another ta
 });
 
 test("a description that fits on one line has no toggle", async (t) => {
+  layoutExpandableNotice(false);
+
   await setup(t);
 
   assert.equal(
@@ -1283,11 +1285,23 @@ test("a description that fits on one line has no toggle", async (t) => {
   assertAbsent(descriptionToggle(document.body));
 });
 
-// jsdom has no layout, so report a clamped description as overflowing: it then offers its toggle.
-function overflowClampedDescriptions() {
+// jsdom has no layout; model visible text and its measured expanded height.
+function layoutExpandableNotice(overflowing: boolean) {
+  vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(
+    function (this: HTMLElement) {
+      return this.matches(".notice-expand-text")
+        ? ({ length: 1, item: () => null } as unknown as DOMRectList)
+        : ({ length: 0, item: () => null } as unknown as DOMRectList);
+    },
+  );
+
   vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
     function (this: HTMLElement) {
-      return this.matches(".notice-expand-text:not([data-open])") ? 80 : 0;
+      return this.matches(".notice-expand-text[data-open]")
+        ? overflowing
+          ? 80
+          : 18
+        : 0;
     },
   );
 
@@ -1307,7 +1321,7 @@ function descriptionToggle(root: HTMLElement) {
 
 for (const action of ["interrupt", "cancel", "retry"] as const) {
   test(`${action} confirmation defaults the task description ${action === "retry" ? "closed" : "open"}`, async (t) => {
-    overflowClampedDescriptions();
+    layoutExpandableNotice(true);
 
     const { controller, transport, user } = await setup(t);
 
@@ -2358,7 +2372,7 @@ test("the inspector stacks when its fixed header would squeeze the evidence", as
 });
 
 test("refresh preserves disclosure and inspector scroll, while Back stays on the task list", async (t) => {
-  overflowClampedDescriptions();
+  layoutExpandableNotice(true);
 
   const { controller, user } = await setup(t);
   const detail = screen.getByRole("region", { name: "Task inspector" });

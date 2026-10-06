@@ -84,8 +84,8 @@ export function ExpandableNotice({
 }: ExpandableNoticeProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(defaultOpen);
-  // Measure the clamped text even when it starts open, so short text has no disclosure.
-  const [overflowing, setOverflowing] = useState(defaultOpen);
+  // Keep the toggle until the text can be measured; the inspector may mount hidden.
+  const [overflowing, setOverflowing] = useState<boolean>();
   useAnimatedHeight(ref, open);
 
   useLayoutEffect(() => {
@@ -94,13 +94,31 @@ export function ExpandableNotice({
 
     const measure = () => {
       if (element.getAnimations?.().length) return;
+      // On narrow panels the inspector is hidden until selection, so its initial
+      // zero-sized measurement must wait for ResizeObserver to report its reveal.
+      if (element.clientHeight === 0 && element.getClientRects().length === 0)
+        return;
 
-      // The open style removes the line clamp, so briefly restore it to measure overflow.
+      // Compare the clamped height with the text's expanded height. scrollHeight
+      // alone does not reveal content hidden by -webkit-line-clamp in Chromium.
       const wasOpen = element.hasAttribute("data-open");
       if (wasOpen) element.removeAttribute("data-open");
-      const nextOverflowing = element.scrollHeight > element.clientHeight + 1;
-      if (wasOpen) element.setAttribute("data-open", "");
+      const collapsedHeight = element.clientHeight;
 
+      const inlineStyle = element.getAttribute("style");
+      element.setAttribute("data-open", "");
+      element.style.setProperty("display", "block");
+      element.style.setProperty("-webkit-line-clamp", "unset");
+      element.style.setProperty("max-height", "none");
+      element.style.setProperty("overflow", "visible");
+      const expandedHeight = element.scrollHeight;
+
+      if (inlineStyle === null) element.removeAttribute("style");
+      else element.setAttribute("style", inlineStyle);
+      if (wasOpen) element.setAttribute("data-open", "");
+      else element.removeAttribute("data-open");
+
+      const nextOverflowing = expandedHeight > collapsedHeight + 1;
       setOverflowing(nextOverflowing);
       if (!nextOverflowing) setOpen(false);
     };
@@ -123,7 +141,7 @@ export function ExpandableNotice({
     </span>
   );
 
-  if (!overflowing && !open)
+  if (overflowing === false && !open)
     return (
       <div className={noticeClass("notice-collapsible")} data-tone={tone}>
         <div className="notice-trigger notice-expandable notice-static">
