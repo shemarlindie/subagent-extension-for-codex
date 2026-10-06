@@ -276,7 +276,7 @@ Run `npm run typecheck` and `npm test` when establishing a new development basel
 - Verify delegation and input/permission rich forms, including cancellation, stale request rejection, and deny defaults. Verify settings rendering, persistence, and their effect on new tasks.
 - Submit a reviewed handoff through **Send to conversation**, confirm actual delivery, and verify host rejection is surfaced. Standalone clipboard success is not embedded delivery evidence.
 - Verify actual subscribed completion/failure/input events through the host, including authenticated callback behavior, delivery recording, and relevant restart/rotation behavior. Local webhook doubles do not prove reception by the host.
-- Record unsupported host features as specific limitations; do not silently replace them with fixture evidence or broaden the MVP to optional file viewers, composer mentions, PiP, or public distribution.
+- Record unsupported host features as specific limitations; do not silently replace them with fixture evidence. Composer mentions are implemented as an optional provider hint, but their Codex-composer behavior still requires live validation. Do not broaden the MVP to optional file viewers, PiP, or public distribution.
 
 At each completed stage, update the implementation audit and evidence with dates and practical limits. Mark only the verified scope complete. If an external requirement remains unavailable, report precisely what it blocks and continue independent authorized work.
 

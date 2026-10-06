@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseEnv } from "node:util";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -12,6 +14,17 @@ import { hostProjectCandidate } from "./panel/host-context.js";
 import { codexContextCapability } from "./panel/host-context.js";
 import { delegationPanel, panelUri } from "./panel/panel.js";
 import { taskPanelContext } from "./panel/panel-context.js";
+import {
+  claudeMentionResource,
+  claudeMentionUri,
+  mentionSearchSchema,
+  mentionSearchToolConfig,
+  mentionSearchToolName,
+  mentionTestModeEnv,
+  readClaudeMention,
+  resolveMentionSearchEnv,
+  searchAgentMentions,
+} from "./server/mentions.js";
 import { productGlyphIcons } from "./server/product-glyph.js";
 import {
   type AnyTool,
@@ -20,6 +33,23 @@ import {
   withConversation,
 } from "./server/tools.js";
 import { connectService } from "./service/launcher.js";
+
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+let mentionSearchEnv = resolveMentionSearchEnv(process.env, {}, packageRoot);
+
+try {
+  const envPath = resolve(packageRoot, ".env");
+  const envFile = await readFile(envPath, "utf8");
+
+  mentionSearchEnv = resolveMentionSearchEnv(
+    process.env,
+    parseEnv(envFile),
+    packageRoot,
+  );
+} catch (error) {
+  if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
+    throw error;
+}
 
 const { token, origin } = await connectService();
 
@@ -31,7 +61,7 @@ const server = new McpServer(
   },
   {
     instructions:
-      "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Use get_current_agent_project for host project discovery. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user to confirm registration.",
+      "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Use get_current_agent_project for host project discovery. A selected Claude composer mention is a provider hint only; use the available reviewer profile for review requests, and resolve the repository through existing project checks. Mention selection does not authorize a project or change permissions. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user to confirm registration.",
     capabilities: codexContextCapability,
   },
 );
@@ -57,6 +87,31 @@ async function serviceTool(name: string, args: Record<string, unknown>) {
 
   return body.result;
 }
+
+server.registerTool(
+  mentionSearchToolName,
+  {
+    ...mentionSearchToolConfig,
+    // The extension schemas use a separate Zod version with compatible runtime parsing.
+    inputSchema:
+      mentionSearchToolConfig.inputSchema as unknown as typeof mentionSearchSchema,
+    outputSchema: mentionSearchToolConfig.outputSchema as unknown as z.ZodType,
+  },
+  async ({ query }) => ({
+    content: [],
+    structuredContent:
+      mentionSearchEnv[mentionTestModeEnv] === "1"
+        ? await searchAgentMentions(query, [], mentionSearchEnv)
+        : await serviceTool(mentionSearchToolName, { query }),
+  }),
+);
+
+server.registerResource(
+  "Claude provider mention",
+  claudeMentionUri,
+  claudeMentionResource,
+  () => readClaudeMention(mentionSearchEnv),
+);
 
 server.registerTool(
   "request_agent_project",
@@ -150,7 +205,10 @@ server.registerTool(
 
 // Definitions supply schemas only; the proxy forwards calls to the service.
 const tools: Record<string, AnyTool> = definitions({} as Control, "local");
-for (const [name, d] of Object.entries(tools))
+
+for (const [name, d] of Object.entries(tools)) {
+  if (name === mentionSearchToolName) continue;
+
   server.registerTool(
     name,
     {
@@ -232,6 +290,7 @@ for (const [name, d] of Object.entries(tools))
       }
     },
   );
+}
 
 const panel = delegationPanel(
   resolve(dirname(fileURLToPath(import.meta.url)), "../dist/app.html"),

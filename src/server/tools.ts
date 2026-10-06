@@ -17,6 +17,11 @@ import {
   panelContextInput,
   resolvePanelContext,
 } from "../panel/panel-context.js";
+import {
+  mentionSearchSchema,
+  mentionSearchToolName,
+  searchAgentMentions,
+} from "./mentions.js";
 
 const taskId = z.object({ task_id: z.string() });
 
@@ -193,6 +198,12 @@ export function definitions(
         "Discover installed providers, profiles, and supported capabilities.",
       schema: z.object({}),
       run: () => c.availableWorkers(),
+    }),
+    [mentionSearchToolName]: tool({
+      description:
+        "Search for the configured Claude provider in the composer mention picker.",
+      schema: mentionSearchSchema,
+      run: ({ query }) => searchAgentMentions(query, c.workers()),
     }),
     interrupt_agent_task: tool({
       description:

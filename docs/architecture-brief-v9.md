@@ -2040,13 +2040,16 @@ These are enhancements around the portable MCP layer.
 
 They should not become dependencies of the delegation system.
 
-Extension availability can vary by ChatGPT client and feature.
+Extension availability can vary by desktop surface and feature, including
+different views inside the same desktop app.
 
 Composer mentions should therefore be treated as optional rather than as a required navigation mechanism.
 
-## Codex UI
+## Codex composer surface
 
-Equivalent rich Plugin Extension surfaces should not be assumed to exist inside Codex unless OpenAI explicitly documents them.
+The Codex composer may be presented inside the ChatGPT desktop app. Do not
+assume that an extension feature documented for the desktop app is rendered in
+the Codex composer without live host validation.
 
 Codex must remain capable of using the extension's MCP tools and skills without rendering the custom console UI.
 

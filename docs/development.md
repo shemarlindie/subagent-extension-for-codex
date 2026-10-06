@@ -12,7 +12,10 @@ cp -n .env.example .env
 
 `.env` is gitignored. `npm run dev`, `npm start`, `npm run projects`, and
 `npm run dev:ui` load it when present; variables already set in the shell take
-precedence. The example keeps data in `.codex-subagent-extension/live`. See the
+precedence. The stdio proxy reads the mention-test setting from `.env` and uses
+its `CODEX_SUBAGENT_EXTENSION_DATA` only as a fallback destination for the test
+search log. Service connection settings still come from its MCP environment.
+The example keeps data in `.codex-subagent-extension/live`. See the
 [configuration table](../README.md#configuration) for every variable.
 
 **One data directory.** The service, the panel dev host, and Codex must all use
@@ -28,6 +31,16 @@ args = ["<checkout-root>/dist/stdio.js"]
 [mcp_servers.codex_subagent_extension.env]
 CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension/live"
 ```
+
+For composer mention diagnostics, add
+`CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE=1` to the project `.env`, then
+reload the MCP connection. The stdio proxy reads this one setting and answers
+mention search locally, so the backend service does not need a restart. Every
+mention query returns a visibly labeled sample `Claude` result and is appended
+to `<data-directory>/mention-search.jsonl`. The log contains the query,
+timestamp, result names, and whether provider checks were skipped for the sample.
+Remove the setting after testing; the sample does not prove a Claude provider
+is available.
 
 Projects need no startup registration. A chat's project is added when a task
 starts from that chat, and **Add project** or `npm run projects` covers the

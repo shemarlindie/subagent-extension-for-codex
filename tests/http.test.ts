@@ -202,6 +202,28 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     const tools = await client.listTools();
     assert.ok(tools.tools.some((t) => t.name === "start_agent_task"));
 
+    const mentionTool = tools.tools.find(
+      (tool) => tool.name === "search_mentions",
+    );
+
+    assert.ok(mentionTool);
+    assert.equal(mentionTool.title, "Choose a worker");
+    assert.equal(mentionTool._meta?.connector_name, "Delegate to Claude");
+
+    assert.deepEqual((mentionTool._meta as any)["openai/extensions"], {
+      "mentions/search": {},
+    });
+
+    assert.deepEqual((mentionTool._meta as any).ui.visibility, ["app"]);
+
+    const mentionResults = await client.callTool({
+      name: "search_mentions",
+      arguments: { query: "claude" },
+    });
+
+    assert.equal(mentionResults.isError, undefined);
+    assert.deepEqual(mentionResults.structuredContent, { items: [] });
+
     assert.ok(
       tools.tools.some((t) => t.name === "open_codex_subagent_extension"),
     );
@@ -233,6 +255,21 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
           resource.uri === "ui://codex-subagent-extension/app-v6",
       ),
     );
+
+    assert.ok(
+      resources.resources.some(
+        (resource) =>
+          resource.uri === "codex-subagent-extension://providers/claude",
+      ),
+    );
+
+    const mentionResource = await client.readResource({
+      uri: "codex-subagent-extension://providers/claude",
+    });
+
+    const mentionContent = mentionResource.contents[0];
+    assert.ok(mentionContent && "text" in mentionContent);
+    assert.match(mentionContent.text, /Claude/);
 
     assert.deepEqual(
       opener.icons?.map((icon) => icon.theme),
@@ -579,6 +616,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
             ),
             CODEX_SUBAGENT_EXTENSION_URL: base,
             CODEX_SUBAGENT_EXTENSION_TOKEN: "private-token",
+            CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE: "0",
           },
           stderr: "pipe",
         }),
@@ -657,6 +695,40 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
 
       const inventory = await stdio.listTools();
       assert.ok(inventory.tools.some((t) => t.name === "continue_agent_task"));
+
+      const proxyMentionTool = inventory.tools.find(
+        (tool) => tool.name === "search_mentions",
+      );
+
+      assert.ok(proxyMentionTool);
+      assert.equal(proxyMentionTool.title, "Choose a worker");
+
+      assert.equal(
+        proxyMentionTool._meta?.connector_name,
+        "Delegate to Claude",
+      );
+
+      assert.deepEqual((proxyMentionTool._meta as any)["openai/extensions"], {
+        "mentions/search": {},
+      });
+
+      assert.deepEqual((proxyMentionTool._meta as any).ui.visibility, ["app"]);
+
+      const proxyMentionResults = await stdio.callTool({
+        name: "search_mentions",
+        arguments: { query: "claude" },
+      });
+
+      assert.equal(proxyMentionResults.isError, undefined);
+      assert.deepEqual(proxyMentionResults.structuredContent, { items: [] });
+
+      const proxyMentionResource = await stdio.readResource({
+        uri: "codex-subagent-extension://providers/claude",
+      });
+
+      const proxyMentionContent = proxyMentionResource.contents[0];
+      assert.ok(proxyMentionContent && "text" in proxyMentionContent);
+      assert.match(proxyMentionContent.text, /Claude/);
 
       const proxyOpener = inventory.tools.find(
         (tool) => tool.name === "open_codex_subagent_extension",

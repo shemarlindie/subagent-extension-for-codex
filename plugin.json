@@ -9,8 +9,10 @@
         "displayName": "Codex Subagent Extension",
         "shortDescription": "Delegate, inspect, and control Claude coding tasks.",
         "brandColor": "#3a83f7",
-        "composerIcon": "./assets/product-icon.svg",
-        "logo": "./assets/product-icon.svg"
+        "composerIcon": "./assets/product-glyph-black.svg",
+        "composerIconDark": "./assets/product-glyph-white.svg",
+        "logo": "./assets/product-glyph-black.svg",
+        "logoDark": "./assets/product-glyph-white.svg"
       }
     }
   }

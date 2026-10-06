@@ -15,6 +15,14 @@ import {
   resolvePanelContext,
   taskPanelContext,
 } from "../panel/panel-context.js";
+import {
+  claudeMentionResource,
+  claudeMentionUri,
+  mentionSearchToolConfig,
+  mentionSearchToolName,
+  readClaudeMention,
+  searchAgentMentions,
+} from "./mentions.js";
 import { productGlyphIcons } from "./product-glyph.js";
 import {
   type AnyTool,
@@ -45,8 +53,24 @@ export function mcp(
       },
       requestState: { verify: (state) => c.forms.verify(owner, state) },
       instructions:
-        "Use get_current_agent_project and list_available_workers before delegation. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user, then pass its explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input; Claude permission decisions require approval_decider parent_agent. Use request_agent_input or user buttons for permissions routed to the user. Worktree changes are returned as artifacts; current_repo write profiles edit the checkout directly.",
+        "Use get_current_agent_project and list_available_workers before delegation. A selected Claude composer mention is a provider hint only; use the available reviewer profile for review requests, and resolve the repository through existing project checks. Mention selection does not authorize a project or change permissions. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user, then pass its explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input; Claude permission decisions require approval_decider parent_agent. Use request_agent_input or user buttons for permissions routed to the user. Worktree changes are returned as artifacts; current_repo write profiles edit the checkout directly.",
     },
+  );
+
+  server.registerTool(
+    mentionSearchToolName,
+    mentionSearchToolConfig,
+    async ({ query }) => ({
+      content: [],
+      structuredContent: await searchAgentMentions(query, c.workers()),
+    }),
+  );
+
+  server.registerResource(
+    "Claude provider mention",
+    claudeMentionUri,
+    claudeMentionResource,
+    () => readClaudeMention(),
   );
 
   server.registerTool(
@@ -125,7 +149,10 @@ export function mcp(
   );
 
   const tools: Record<string, AnyTool> = definitions(c, owner);
-  for (const [name, d] of Object.entries(tools))
+
+  for (const [name, d] of Object.entries(tools)) {
+    if (name === mentionSearchToolName) continue;
+
     server.registerTool(
       name,
       {
@@ -179,6 +206,7 @@ export function mcp(
         }
       },
     );
+  }
 
   if (events)
     for (const method of [

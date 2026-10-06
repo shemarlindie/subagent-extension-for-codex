@@ -43,6 +43,20 @@ The current extension advertises and implements inline/fullscreen only. PiP is
 not implemented or verified here. Its compact inline summary is part of the
 extension's widget, distinct from the host's right pinned summary.
 
+## Composer mentions
+
+Rechecked October 5, 2026: the [MCP Extensions specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#composer-at-mentions)
+defines a typeahead tool that returns resource-link items and lists the surface
+as supported on desktop in its expected-support table. The [extension guide](https://developers.openai.com/plugins/build/extensions)
+says composer mentions are available only in the ChatGPT desktop app. In this
+project, the target is Codex's composer inside that desktop app. The MCP server
+row appears in the composer picker, but the first selected-server search
+returned no item. Search now accepts the server name as a query alias; the
+Claude result, selected-item delivery to the model, and subsequent delegation
+flow still need validation after reloading the service. Treat mentions as an
+optional enhancement; the existing MCP tools and delegation skill remain the
+fallback.
+
 The [extension guide](https://developers.openai.com/plugins/build/extensions)
 documents global/sidebar, thread/conversation and file entrypoints, settings,
 composer mentions, forms and onboarding. The SDK additionally accepts a settings

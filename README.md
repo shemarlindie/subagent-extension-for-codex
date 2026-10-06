@@ -77,17 +77,18 @@ A worktree provides code separation, not operating-system containment. With defa
 
 ## Configuration
 
-| Variable                                 | Default                                   | Meaning                                                                                                                        |
-| ---------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `CODEX_SUBAGENT_EXTENSION_DATA`          | `~/.local/share/codex-subagent-extension` | Persistent SQLite database, approved roots, worktrees, lock and token; explicit relative overrides resolve from invocation cwd |
-| `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` | `[]`                                      | JSON array of explicitly approved parent directory paths                                                                       |
-| `CODEX_SUBAGENT_EXTENSION_URL`           | discovered local service or port 4317     | Proxy endpoint override; explicit URLs require an already running service                                                      |
-| `CODEX_SUBAGENT_EXTENSION_CONCURRENCY`   | `3`                                       | Maximum concurrently active tasks (1–20)                                                                                       |
-| `CODEX_SUBAGENT_EXTENSION_TOKEN`         | generated locally                         | Server-side token override; at least 32 characters except in fixture mode                                                      |
-| `PORT`                                   | `4317`                                    | Loopback listener port                                                                                                         |
-| `CODEX_SUBAGENT_EXTENSION_ORIGIN`        | `http://127.0.0.1:4317`                   | Standalone service origin and CORS allowlist                                                                                   |
-| `CODEX_SUBAGENT_EXTENSION_FIXTURE`       | disabled                                  | Set `1` to add fixture workers for testing                                                                                     |
-| `CODEX_SUBAGENT_EXTENSION_PROVIDER`      | Claude                                    | Set `fixture` for fixture-only mode                                                                                            |
+| Variable                                     | Default                                   | Meaning                                                                                                                                          |
+| -------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CODEX_SUBAGENT_EXTENSION_DATA`              | `~/.local/share/codex-subagent-extension` | Persistent SQLite database, approved roots, worktrees, lock and token; explicit relative overrides resolve from invocation cwd                   |
+| `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS`     | `[]`                                      | JSON array of explicitly approved parent directory paths                                                                                         |
+| `CODEX_SUBAGENT_EXTENSION_URL`               | discovered local service or port 4317     | Proxy endpoint override; explicit URLs require an already running service                                                                        |
+| `CODEX_SUBAGENT_EXTENSION_CONCURRENCY`       | `3`                                       | Maximum concurrently active tasks (1–20)                                                                                                         |
+| `CODEX_SUBAGENT_EXTENSION_TOKEN`             | generated locally                         | Server-side token override; at least 32 characters except in fixture mode                                                                        |
+| `PORT`                                       | `4317`                                    | Loopback listener port                                                                                                                           |
+| `CODEX_SUBAGENT_EXTENSION_ORIGIN`            | `http://127.0.0.1:4317`                   | Standalone service origin and CORS allowlist                                                                                                     |
+| `CODEX_SUBAGENT_EXTENSION_FIXTURE`           | disabled                                  | Set `1` to add fixture workers for testing                                                                                                       |
+| `CODEX_SUBAGENT_EXTENSION_PROVIDER`          | Claude                                    | Set `fixture` for fixture-only mode                                                                                                              |
+| `CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE` | disabled                                  | Set to `1` in the local `.env` to return a sample Claude mention and log searches to `<data-directory>/mention-search.jsonl`; local testing only |
 
 Review `<data-directory>/worktrees/<task-id>` or download returned patches before applying worktree changes. Current-repo tasks use the approved repository itself, and any worker edits are already present there. Cancellation never deletes a worktree. Preserve Claude's local runtime state for resumable sessions. One service may own a data directory at a time.
 
@@ -242,8 +243,8 @@ dependencies, including installed native Claude runtime assets. Extract its
 be available on the execution host. Native assets match the build host; build
 on the destination OS/architecture rather than copying a native bundle between
 platforms. Ordinary source checkouts require `npm ci` before building.
-The packaged `assets/product-icon.svg` serves the composer and listing; the
-`assets/product-glyph.svg` file supplies the MCP server and tool icons.
+The packaged black and white `assets/product-glyph-{black,white}.svg` files supply the
+composer, listing, MCP server, and mention-result icons.
 The stdio launcher connects to the authenticated local service or starts it when
 the loopback connection is refused. Startup errors go to `service.log` in the data
 directory. Concurrent launchers share the PID lease; losing processes cannot
@@ -381,10 +382,14 @@ Public distribution still needs a reachable HTTPS MCP endpoint (or separately
 approved local MCP support), complete listing information and policy links,
 submission-compliant subtitle/color/icons, and a dedicated UI origin. See
 [submission requirements](https://developers.openai.com/plugins/deploy/submission).
-Native rich forms and MCP Events are intentionally HTTP-only. Onboarding,
-mentions, file handlers and deep links remain optional unimplemented extensions.
-Native host rendering and authenticated execution of the packaged service still
-need integration verification beyond the local fixture/protocol tests.
+Native rich forms and MCP Events are intentionally HTTP-only. Composer mention
+search is registered as an optional Claude provider hint, but the Codex
+composer's Claude item results and selected-item handoff still need live host
+verification.
+Onboarding, file handlers and deep links remain optional unimplemented
+extensions. Native host rendering and authenticated execution of the packaged
+service still need integration verification beyond the local fixture/protocol
+tests.
 
 ### Model and reasoning defaults
 
