@@ -35,7 +35,10 @@ test("theme accent and success states follow their host color tokens", () => {
     "utf8",
   );
 
-  const files = readFileSync("ui/features/artifacts/artifacts.css", "utf8");
+  const files = readFileSync(
+    "ui/features/file-preview/file-preview.css",
+    "utf8",
+  );
 
   assert.match(theme, /--accent:\s*var\(--color-ring-primary\);/);
   assert.match(theme, /--success:\s*var\(--color-text-success\);/);

@@ -1,6 +1,6 @@
 import type { ArtifactSummary } from "../../../shared/state/types";
 import { formatBytes } from "../../../shared/utils/format";
-import { DiffStat } from "./diff-stat";
+import { DiffStat } from "../../file-preview/components/diff-stat";
 
 type ArtifactMetaProps = {
   summary: ArtifactSummary;

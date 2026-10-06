@@ -3913,7 +3913,7 @@ describe("artifact files", () => {
     await user.click(within(dialog).getByRole("button", { name: "Source" }));
 
     assert.equal(
-      dialog.querySelector(".artifact-body")?.getAttribute("data-view"),
+      dialog.querySelector(".file-preview-body")?.getAttribute("data-view"),
       "source",
     );
 

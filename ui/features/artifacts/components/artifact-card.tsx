@@ -3,10 +3,10 @@ import { Icon } from "../../../shared/components/icons";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { useController } from "../../../shared/state/controller-context";
 import type { ArtifactSummary } from "../../../shared/state/types";
+import { FileBadge } from "../../file-preview/components/file-badge";
 import { ArtifactMeta } from "./artifact-meta";
 import { ArtifactSnippet } from "./artifact-snippet";
 import { DownloadButton } from "./download-button";
-import { FileBadge } from "./file-badge";
 
 type ArtifactCardProps = {
   summary: ArtifactSummary;
@@ -23,7 +23,7 @@ export function ArtifactCard({ summary }: ArtifactCardProps) {
       aria-label={summary.title}
     >
       <header className="file-card-head">
-        <FileBadge summary={summary} />
+        <FileBadge path={summary.file_name} format={summary.format} />
         <div className="file-card-title">
           <strong title={summary.title}>{summary.title}</strong>
           <ArtifactMeta summary={summary} />

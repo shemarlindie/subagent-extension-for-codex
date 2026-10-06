@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { MAX_PREVIEW_LINES } from "../artifact-view";
+import { MAX_PREVIEW_LINES } from "../file-format";
 import { highlightLines } from "../highlight";
 
 type CodeViewProps = {

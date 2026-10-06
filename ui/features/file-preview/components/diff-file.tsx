@@ -1,19 +1,16 @@
 import { useDeferredValue, useState } from "react";
 
-import { type DiffFile, diffPath, pathLanguage } from "../artifact-file";
+import { diffPath, type ParsedDiffFile, pathLanguage } from "../file-format";
 import { highlightLine } from "../highlight";
-import { ArtifactProgress } from "./artifact-progress";
 import { DiffStat } from "./diff-stat";
+import { Progress } from "./progress";
 
-type ArtifactDiffFileProps = {
-  file: DiffFile;
+type DiffFileProps = {
+  file: ParsedDiffFile;
   initiallyOpen: boolean;
 };
 
-export function ArtifactDiffFile({
-  file,
-  initiallyOpen,
-}: ArtifactDiffFileProps) {
+export function DiffFile({ file, initiallyOpen }: DiffFileProps) {
   const [open, setOpen] = useState(initiallyOpen),
     deferredOpen = useDeferredValue(open),
     renderRows = open && deferredOpen,
@@ -40,7 +37,7 @@ export function ArtifactDiffFile({
         <DiffStat additions={file.additions} deletions={file.deletions} />
       </summary>
       {open && !deferredOpen && (
-        <ArtifactProgress
+        <Progress
           label={`Rendering ${diffPath(file)}`}
           className="diff-progress"
         />

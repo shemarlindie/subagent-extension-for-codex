@@ -1,4 +1,4 @@
-import { MAX_PREVIEW_LINES } from "../artifact-view";
+import { MAX_PREVIEW_LINES } from "../file-format";
 
 type TableViewProps = {
   /** The header row first; may stop short of the whole file. */

@@ -2,10 +2,10 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { ArtifactSummary } from "../../../shared/state/types";
+import { CodeView } from "../../file-preview/components/code-view";
+import { DiffStat } from "../../file-preview/components/diff-stat";
+import { TableView } from "../../file-preview/components/table-view";
 import { SNIPPET_FILES } from "../artifact-file";
-import { CodeView } from "./code-view";
-import { DiffStat } from "./diff-stat";
-import { TableView } from "./table-view";
 
 type ArtifactSnippetProps = {
   summary: ArtifactSummary;
