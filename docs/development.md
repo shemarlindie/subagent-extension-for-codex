@@ -89,11 +89,14 @@ and delivers its result to the panel. The toolbar controls:
 - **Data**: fixture results (`ui/dev/preview/tools.ts`, development
   only; never in the production bundle) or the live service. Fixtures need no
   service; unsupported operations fail explicitly. Tools listed in
-  `FIXTURE_SERVICE_TOOLS` (`host-helpers.ts`; none yet) are the exception: the
-  Vite server answers them with the real service code
-  (`ui/dev/fixture-service.ts`, a `Store` in a temporary SQLite file seeded
-  with the fixture tasks), for behavior the browser fixtures cannot fake. Edits
-  to `src/` rebuild that store on the next call. The **Bridge log** marks each
+  `FIXTURE_SERVICE_TOOLS` (`host-helpers.ts`) are the exception: the Vite
+  server answers them with the real service code (`ui/dev/fixture-service.ts`,
+  a `Store` in a temporary SQLite file seeded with the fixture tasks), for
+  behavior the browser fixtures cannot fake. They are the Changes tab's tools:
+  changes, changed files and worktree actions. Tasks with a change fixture
+  (`ui/dev/preview/change-fixtures.ts`) get a real Git repository each, with a
+  base commit and then each turn's edits, so their diffs come from Git. Edits
+  to `src/` rebuild that store, and its repositories, on the next call. The **Bridge log** marks each
   call `served` by `fixture service`, `browser fixtures` or `service`.
 - **Launch**: thread (`open_codex_subagent_extension` with Codex's `threadId`
   and `codex/sandbox-state-meta` request metadata) or global. With fixtures,

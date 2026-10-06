@@ -26,8 +26,15 @@ Check in the browser when a change is large, when seeing it would help, or when 
   - **Plan the sign-in rollout**: three stacked questions in one request (card deck, single and multiple choice).
   - **Convert the test suite to the new runner**: exceeds the 200-event activity tail (trimmed timeline). Use it to test timeline scrolling, since most other timelines are short.
   - **Catalogue the design assets**: rare content blocks and SDK signals (thinking, images, documents, web search, plugin and memory updates).
-- Large files for the file viewers (60-file diff, minified JSON, 20,000-row CSV, 30,000-line log, long Markdown, a single 250 KB line, and an SVG over 64 KB that shows as source only) come from `ui/dev/preview/large-files.ts`. No fixture task uses them yet; their tests do.
-- Tools in `FIXTURE_SERVICE_TOOLS` (none yet) run the real service code on the Vite server (`ui/dev/fixture-service.ts`). The **Bridge log** shows each call's `served` source.
+  - Changes tab, each read from a real Git repository (`ui/dev/preview/change-fixtures.ts`):
+    - **Tighten the task inspector layout**: a worktree task with two committed turns, so **This turn** shows. Clean, so **Remove worktree** removes it at once.
+    - **Refactor the billing module**: `current_repo`, with the user's earlier README edit left out, renames, a deletion and a binary image.
+    - **Fix the flaky retry test**: the worktree was removed; the branch remains (`task.worktree_removed` event).
+    - **Draft the release notes**: the worktree and branch were deleted (`task.branch_deleted` event).
+    - **Speed up the production build**: the 60-file diff from `large-files.ts`, uncommitted, so **Remove worktree** asks first.
+    - **Profile the production build**: every file in `large-files.ts`, added. Its diff comes in several pages; use it for the previews.
+- Large files for the file viewers (60-file diff, minified JSON, 20,000-row CSV, 30,000-line log, long Markdown, a single 250 KB line, and an SVG over 64 KB that shows as source only) come from `ui/dev/preview/large-files.ts`.
+- Tools in `FIXTURE_SERVICE_TOOLS` (the Changes tab's: changes, changed files and worktree actions) run the real service code on the Vite server (`ui/dev/fixture-service.ts`). Worktree actions change the fixture repositories until the store is rebuilt (an edit to `src/` or a Vite restart). The **Bridge log** shows each call's `served` source.
 - The host's selects ignore `form_input`; set `.value` and dispatch `change`. **Width** offers 360, 480, 760, and Fill. At 360px the short frame stacks the inspector (the whole pane scrolls), so use 480 or Fill for the fixed-header layout.
 - The panel is an iframe: query `document.querySelector('iframe').contentDocument` (`#tab-activity`, `.activity-group`, `.activity-debug-toggle`).
 - Measure layout with `getBoundingClientRect` instead of judging by eye, and use `scrollIntoView` to move the timeline.
