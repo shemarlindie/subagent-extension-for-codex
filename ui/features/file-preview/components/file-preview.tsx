@@ -12,6 +12,7 @@ import {
   fileViews,
   formatName,
   isLargeSvg,
+  MAX_SVG_IMAGE_BYTES,
   type PreviewFile,
   viewLabel,
 } from "../file-format";
@@ -32,7 +33,12 @@ export function FilePreview({ file }: FilePreviewProps) {
       typeof navigator.clipboard?.writeText === "function",
     format = fileFormat(file),
     views = useMemo(() => fileViews(file), [file]),
-    [view, setView] = useState<FileView>(views[0]),
+    // Sizing reads the whole content, so it runs once per file, not per render.
+    size = useMemo(() => fileBytes(file), [file]),
+    largeSvg = useMemo(() => isLargeSvg(file), [file]),
+    [chosen, setView] = useState<FileView>(views[0]),
+    // A new file may not offer the chosen view; it then opens in its best one.
+    view = views.includes(chosen) ? chosen : views[0],
     // The switcher follows `view` at once; the body renders `shown` in the
     // background, keeping the previous view until the new one is ready.
     shown = useDeferredValue(view),
@@ -46,7 +52,7 @@ export function FilePreview({ file }: FilePreviewProps) {
         <span className="file-meta">
           <span className="file-name">{fileName(file.path)}</span>
           <span>{formatName(format)}</span>
-          <span>{formatBytes(fileBytes(file))}</span>
+          <span>{formatBytes(size)}</span>
         </span>
         {views.length > 1 && (
           <ToggleGroup
@@ -73,9 +79,10 @@ export function FilePreview({ file }: FilePreviewProps) {
         data-view={shown}
         aria-busy={rendering}
       >
-        {isLargeSvg(file) && (
+        {largeSvg && (
           <p className="help file-preview-note">
-            This SVG is over 64 KB, so it is shown as source only.
+            This SVG is over {formatBytes(MAX_SVG_IMAGE_BYTES)}, so it is shown
+            as source only.
           </p>
         )}
         <FileViewer file={file} view={shown} />

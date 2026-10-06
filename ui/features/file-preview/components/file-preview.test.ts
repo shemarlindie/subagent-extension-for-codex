@@ -23,15 +23,14 @@ const controller = {
   report: () => {},
 } as unknown as Controller;
 
-function show(file: PreviewFile) {
-  return render(
-    createElement(
-      ControllerContext.Provider,
-      { value: controller },
-      createElement(FilePreview, { file }),
-    ),
+const preview = (file: PreviewFile) =>
+  createElement(
+    ControllerContext.Provider,
+    { value: controller },
+    createElement(FilePreview, { file }),
   );
-}
+
+const show = (file: PreviewFile) => render(preview(file));
 
 test("a file opens in its best view and switches to Source", async (t) => {
   t.onTestFinished(cleanup);
@@ -60,6 +59,25 @@ test("a file opens in its best view and switches to Source", async (t) => {
 
   assert.equal(view.container.querySelector(".markdown-body"), null);
   assert.equal(view.container.querySelectorAll(".code-line").length, 3);
+});
+
+test("a new file without the chosen view opens in its best view", async (t) => {
+  t.onTestFinished(cleanup);
+
+  const view = show({ path: "rows.csv", content: "a,b\n1,2" });
+  await userEvent.click(screen.getByRole("button", { name: "Source" }));
+  view.rerender(preview({ path: "shot.png", content: "AAAA" }));
+
+  await waitFor(() =>
+    assert.equal(
+      view.container
+        .querySelector(".file-preview-body")
+        ?.getAttribute("data-view"),
+      "image",
+    ),
+  );
+
+  assert.ok(view.container.querySelector("img"));
 });
 
 test("diffs render each file with old and new line numbers", (t) => {
