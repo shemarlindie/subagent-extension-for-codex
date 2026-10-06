@@ -365,7 +365,9 @@ export class Control {
       this.validateBudgets(t);
       if (this.projects) await this.projects.resolve(t.repository);
 
-      if (!t.workspace) {
+      const created = !t.workspace;
+
+      if (created) {
         await this.workspaces.create(
           t,
           this.settings.values(t.owner).worktree_branch_prefix,
@@ -374,6 +376,14 @@ export class Control {
         this.store.save(t);
       }
 
+      // Every turn (first run, continue, steer) replaces the turn snapshot.
+      // A new current_repo task's start snapshot is the same moment.
+      t.turn_start_tree =
+        created && t.start_tree
+          ? t.start_tree
+          : await this.workspaces.snapshot(t.workspace!);
+
+      this.store.save(t);
       if (a.abort.signal.aborted) throw a.abort.signal.reason;
       const live = this.store.get(t.id, t.owner);
       t.instructions = live.instructions;

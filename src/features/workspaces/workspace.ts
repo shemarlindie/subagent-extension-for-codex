@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, realpath } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 import { promisify } from "node:util";
 
@@ -7,9 +7,16 @@ import { type Task } from "../../shared/contracts.js";
 
 const exec = promisify(execFile);
 
-export async function git(cwd: string, args: string[]) {
+export async function git(
+  cwd: string,
+  args: string[],
+  env?: NodeJS.ProcessEnv,
+) {
   return (
-    await exec("git", ["-C", cwd, ...args], { maxBuffer: 16 * 1024 * 1024 })
+    await exec("git", ["-C", cwd, ...args], {
+      maxBuffer: 16 * 1024 * 1024,
+      ...(env ? { env: { ...process.env, ...env } } : {}),
+    })
   ).stdout;
 }
 
@@ -18,6 +25,27 @@ export class Workspaces {
     public root: string,
     public allowedRoots: string[],
   ) {}
+
+  /**
+   * Records a checkout's files, as `git add -A` would stage them, as a tree
+   * id. A temporary index in the extension's directory keeps the checkout's
+   * own index and files untouched. `.gitignore` applies. New content is
+   * written to the object store as unreferenced blobs, which `git gc` prunes.
+   */
+  async snapshot(cwd: string) {
+    await mkdir(this.root, { recursive: true, mode: 0o700 });
+    const dir = await mkdtemp(join(this.root, ".snapshot-"));
+    const env = { GIT_INDEX_FILE: join(dir, "index") };
+
+    try {
+      await git(cwd, ["read-tree", "HEAD"], env);
+      await git(cwd, ["add", "-A"], env);
+
+      return (await git(cwd, ["write-tree"], env)).trim();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
 
   async repository(path: string) {
     const actual = await realpath(path);
@@ -66,6 +94,9 @@ export class Workspaces {
     ).trim();
 
     if (t.workspace_strategy === "current_repo") {
+      // The task's changes are measured from here, leaving out work that
+      // was already uncommitted.
+      t.start_tree = await this.snapshot(t.repository);
       t.workspace = t.repository;
 
       return;

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
-  access,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   realpath,
   rm,
@@ -131,7 +131,9 @@ test("current repository uses HEAD and includes staged, unstaged and untracked e
       1,
     );
 
-    await assert.rejects(access(s.workspaces.root), { code: "ENOENT" });
+    // The start snapshot's temporary index is gone; no worktree was made.
+    assert.deepEqual(await readdir(s.workspaces.root), []);
+    assert.ok(t.start_tree);
     const diff = await s.workspaces.diff(t);
     for (const content of [
       "staged content",

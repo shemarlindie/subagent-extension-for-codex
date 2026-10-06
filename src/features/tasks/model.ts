@@ -205,6 +205,10 @@ export interface Task extends Start {
   base_commit?: string;
   /** The worktree's branch, `<worktree_branch_prefix><task-id>`. */
   branch?: string;
+  /** current_repo: snapshot tree of the checkout when the task started. */
+  start_tree?: string;
+  /** Snapshot tree of the workspace when the latest turn started. */
+  turn_start_tree?: string;
   session_id?: string;
   native_turn_id?: string;
   session_owner?: string;
