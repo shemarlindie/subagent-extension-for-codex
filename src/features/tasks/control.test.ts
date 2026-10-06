@@ -493,8 +493,62 @@ test("dependent prompts include each dependency's result and workspace diff", as
     ),
   );
 
-  assert.match(prompt, /changes, as a diff of its workspace/);
+  assert.match(prompt, /changes \(1 file, \+1 −0\), as a diff/);
   assert.match(prompt, /\+export const added = 1;/);
+
+  // Once the worktree is removed, the dependent is pointed at the branch.
+  const { branch, workspace } = store.get(first.id, "alice");
+  execFileSync("git", ["-C", workspace!, "worktree", "remove", "--force", "."]);
+
+  const third = await c.start("alice", {
+    ...input("Review again"),
+    depends_on: [first.id],
+  });
+
+  await until(() => store.get(third.id, "alice").status === "completed");
+
+  assert.ok(
+    prompts
+      .get(third.id)!
+      .includes(`worktree was removed; its changes are on branch ${branch}.`),
+  );
+
+  await c.close();
+});
+
+test("current_repo dependents see only the dependency's own changes", async () => {
+  const prompts = new Map<string, string>();
+
+  class Writer extends FixtureProvider {
+    async run(c: RunContext, p: string) {
+      prompts.set(c.task.id, p);
+
+      if (c.task.description === "Write")
+        await writeFile(join(c.task.workspace!, "worker.ts"), "worker\n");
+
+      return super.run(c, p);
+    }
+  }
+
+  const { c, store, repo } = await setup(new Writer());
+  await writeFile(join(repo, "user.ts"), "user\n");
+  const current = { workspace_strategy: "current_repo" };
+  const first = await c.start("alice", { ...input("Write"), ...current });
+
+  const second = await c.start("alice", {
+    ...input("Review"),
+    ...current,
+    depends_on: [first.id],
+  });
+
+  await until(() => store.get(second.id, "alice").status === "completed");
+
+  const [, dependency] = prompts
+    .get(second.id)!
+    .split(`Dependency ${first.id}:`);
+
+  assert.match(dependency, /\+worker/);
+  assert.doesNotMatch(dependency, /\+user/);
   await c.close();
 });
 
@@ -693,7 +747,16 @@ test("worktree diff includes edits, untracked files and committed changes withou
     done.branch,
   );
 
-  const diff = await c.workspaces.diff(done);
+  const { diff, files } = await c.workspaces.changes(done);
+
+  assert.deepEqual(
+    files.map((file) => [file.path, file.status]),
+    [
+      ["README.md", "modified"],
+      ["new.ts", "added"],
+    ],
+  );
+
   assert.match(diff, /changed/);
   assert.match(diff, /answer = 42/);
   execFileSync("git", ["-C", repo, "apply", "--check", "-"], { input: diff });

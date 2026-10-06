@@ -133,8 +133,8 @@ test("current repository uses HEAD and includes staged, unstaged and untracked e
 
     // The start snapshot's temporary index is gone; no worktree was made.
     assert.deepEqual(await readdir(s.workspaces.root), []);
-    assert.ok(t.start_tree);
-    const diff = await s.workspaces.diff(t);
+    // The start snapshot holds the user's uncommitted work.
+    const diff = await s.workspaces.diff(s.repo, t.base_commit!, t.start_tree!);
     for (const content of [
       "staged content",
       "unstaged content",
@@ -211,9 +211,12 @@ test("current repository review receives the working tree diff in its provider p
     ])
       assert.ok(receivedPrompt.includes(content), content);
 
-    const diff = await s.c.workspaces.diff(s.c.store.get(started.id, "alice"));
+    // The task's own changes leave out the user's earlier edits.
+    const changes = await s.c.workspaces.changes(
+      s.c.store.get(started.id, "alice"),
+    );
 
-    assert.ok(diff.includes("untracked content"));
+    assert.deepEqual(changes.files, []);
     assert.equal(s.git("status", "--porcelain"), before);
 
     assert.equal(
@@ -483,11 +486,17 @@ test("current repository write profiles edit the checkout while preserving unrel
       1,
     );
 
-    assert.ok(
-      (await s.c.workspaces.diff(s.c.store.get(started.id, "alice"))).includes(
-        "+export const value = 2;",
-      ),
+    // Only the worker's edit is the task's change, not the unrelated ones.
+    const changes = await s.c.workspaces.changes(
+      s.c.store.get(started.id, "alice"),
     );
+
+    assert.deepEqual(
+      changes.files.map((file) => file.path),
+      ["implementation.ts"],
+    );
+
+    assert.ok(changes.diff.includes("+export const value = 2;"));
   } finally {
     await s.close();
   }

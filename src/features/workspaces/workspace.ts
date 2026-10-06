@@ -1,11 +1,27 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 import { promisify } from "node:util";
 
 import { type Task } from "../../shared/contracts.js";
+import {
+  changedFiles,
+  type Changes,
+  CHANGES_PAGE_CHARS,
+  type ChangeScope,
+  decodeCursor,
+  diffPage,
+  diffParts,
+  encodeCursor,
+} from "./changes.js";
 
 const exec = promisify(execFile);
+
+const exists = (path: string) =>
+  access(path).then(
+    () => true,
+    () => false,
+  );
 
 export async function git(
   cwd: string,
@@ -14,7 +30,8 @@ export async function git(
 ) {
   return (
     await exec("git", ["-C", cwd, ...args], {
-      maxBuffer: 16 * 1024 * 1024,
+      // Diffs are returned whole, however large.
+      maxBuffer: 1024 * 1024 * 1024,
       ...(env ? { env: { ...process.env, ...env } } : {}),
     })
   ).stdout;
@@ -128,37 +145,80 @@ export class Workspaces {
     t.branch = branch;
   }
 
-  async diff(t: Task) {
-    if (!t.workspace || !t.base_commit) return "";
-    let diff = await git(t.workspace, ["diff", t.base_commit, "--"]);
+  /**
+   * A task's changes, live from Git: the whole task from its base (the base
+   * commit of a worktree, the start snapshot of a current_repo task), or the
+   * latest turn from its turn snapshot, to a snapshot taken now.
+   */
+  async changes(
+    t: Task,
+    scope: ChangeScope = "task",
+    cursor?: string,
+    pageChars = CHANGES_PAGE_CHARS,
+  ): Promise<Changes> {
+    const empty = { scope, files: [], additions: 0, deletions: 0, diff: "" };
+    if (!t.workspace) return empty;
 
-    const untracked = (
-      await git(t.workspace, [
-        "ls-files",
-        "--others",
-        "--exclude-standard",
-        "-z",
-      ])
-    )
-      .split("\0")
-      .filter(Boolean);
+    const base =
+      scope === "turn"
+        ? t.turn_start_tree
+        : t.workspace_strategy === "worktree"
+          ? t.branch && t.base_commit
+          : t.start_tree;
 
-    for (const f of untracked) {
-      try {
-        diff += await git(t.workspace, [
-          "diff",
-          "--no-index",
-          "--",
-          "/dev/null",
-          f,
-        ]);
-      } catch (error) {
-        const e = error as { code?: number; stdout?: string };
-        if (e.code === 1 && e.stdout) diff += e.stdout;
-        else throw error;
-      }
-    }
+    // No compatibility for tasks created before branches and snapshots.
+    if (!base)
+      throw new Error(
+        "This task predates change tracking, so its changes aren't available.",
+      );
 
-    return diff;
+    if (t.workspace_strategy === "worktree" && !(await exists(t.workspace)))
+      return { ...empty, state: "workspace_missing", branch: t.branch };
+
+    const page = cursor ? decodeCursor(cursor) : undefined;
+    if (page && page.base !== base) throw new Error("Stale changes cursor");
+    const current = page?.current ?? (await this.snapshot(t.workspace));
+
+    const diff = (...args: string[]) =>
+      git(t.workspace!, [
+        "-c",
+        "core.quotePath=false",
+        "diff",
+        "--no-ext-diff",
+        "--no-color",
+        "-M",
+        ...args,
+        base,
+        current,
+        "--",
+      ]);
+
+    const [nameStatus, numstat, patch] = await Promise.all([
+      diff("-z", "--name-status"),
+      diff("-z", "--numstat"),
+      diff("--src-prefix=a/", "--dst-prefix=b/"),
+    ]);
+
+    const files = changedFiles(nameStatus, numstat),
+      parts = diffParts(patch),
+      start = page?.index ?? 0,
+      { diff: text, end } = diffPage(parts, start, pageChars);
+
+    return {
+      scope,
+      ...(t.branch ? { branch: t.branch } : {}),
+      files,
+      additions: files.reduce((sum, f) => sum + f.additions, 0),
+      deletions: files.reduce((sum, f) => sum + f.deletions, 0),
+      diff: text,
+      ...(end < parts.length
+        ? { next_cursor: encodeCursor(base, current, end) }
+        : {}),
+    };
+  }
+
+  /** The diff between two trees or commits, as one text. */
+  async diff(cwd: string, from: string, to: string) {
+    return git(cwd, ["diff", "--no-ext-diff", "--no-color", from, to, "--"]);
   }
 }

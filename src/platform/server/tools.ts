@@ -260,6 +260,16 @@ export function definitions(
         result: c.store.get(a.task_id, owner).result ?? null,
       }),
     }),
+    get_agent_changes: tool({
+      description:
+        "Read what a task changed, live from Git: a unified diff with per-file stats, for the whole task (default) or its latest turn. Worktree tasks diff against their base commit; current_repo tasks against a snapshot from task start, so later edits by anyone in that checkout are included. Every page lists every file; large diffs come in pages of whole files, so pass next_cursor back to read the rest. state workspace_missing means the worktree was removed and the work is on branch.",
+      schema: taskId.extend({
+        scope: z.enum(["task", "turn"]).default("task"),
+        cursor: z.string().max(300).optional(),
+      }),
+      run: (a) =>
+        c.workspaces.changes(c.store.get(a.task_id, owner), a.scope, a.cursor),
+    }),
     get_agent_events: tool({
       description:
         "Retrieve ordered execution events after an optional cursor.",
@@ -326,6 +336,11 @@ export function definitions(
         "User interface only: save delegation defaults, including native permission mode and approval decision maker.",
       run: (a) => c.settings.update(owner, a, "user"),
     }),
+    get_user_agent_changes: tool({
+      ...tools.get_agent_changes,
+      description:
+        "User interface only: a task's changes for the panel's Changes tab, as get_agent_changes returns them.",
+    }),
   };
 }
 
@@ -336,6 +351,7 @@ export const isUserTool = (name: string) =>
     "start_user_agent_task",
     "submit_user_agent_input",
     "update_user_agent_settings",
+    "get_user_agent_changes",
   ].includes(name);
 
 export async function callTool(
