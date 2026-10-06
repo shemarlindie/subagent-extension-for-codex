@@ -9,7 +9,6 @@ import { CodexAgentProvider } from "./codex.js";
 import { CodexExecutors } from "./codex-executors.js";
 import { CodexSessions } from "./codex-session.js";
 import { ExecutorJournal } from "./executor-journal.js";
-import { FixtureProvider } from "./fixture.js";
 import { MacExecutor } from "./mac-executor.js";
 
 /** Explicit opt-in; constructing a provider does not make API requests. */
@@ -19,20 +18,14 @@ export function configuredProviders(
   env: NodeJS.ProcessEnv = process.env,
 ) {
   const mode = env.CODEX_SUBAGENT_EXTENSION_PROVIDER;
-  if (mode && !["claude", "fixture", "codex"].includes(mode))
+  if (mode && !["claude", "codex"].includes(mode))
     throw new Error(
-      "CODEX_SUBAGENT_EXTENSION_PROVIDER must be claude, fixture or codex",
+      "CODEX_SUBAGENT_EXTENSION_PROVIDER must be claude or codex",
     );
   const providers = new Map<string, Provider>();
-  if (mode !== "fixture" && mode !== "codex")
-    providers.set("claude", new ClaudeAgentProvider());
-  if (env.CODEX_SUBAGENT_EXTENSION_FIXTURE === "1" || mode === "fixture")
-    providers.set("fixture", new FixtureProvider());
+  if (mode !== "codex") providers.set("claude", new ClaudeAgentProvider());
 
-  if (
-    mode !== "fixture" &&
-    (env.CODEX_SUBAGENT_EXTENSION_CODEX === "1" || mode === "codex")
-  ) {
+  if (env.CODEX_SUBAGENT_EXTENSION_CODEX === "1" || mode === "codex") {
     if (process.platform !== "darwin")
       throw new Error("The configured Codex executor requires macOS");
     const model = env.CODEX_SUBAGENT_EXTENSION_CODEX_MODEL;

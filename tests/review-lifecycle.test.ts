@@ -9,12 +9,12 @@ import { promisify } from "node:util";
 
 import { test } from "vitest";
 
+import { FixtureProvider } from "../dev/fixture-provider.js";
 import { Control } from "../src/core/control.js";
 import { startSchema, type Task } from "../src/core/model.js";
 import { Projects } from "../src/core/projects.js";
 import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
-import { FixtureProvider } from "../src/providers/fixture.js";
 import { waitForListening } from "./helpers.js";
 
 const exec = promisify(execFile);
@@ -133,7 +133,6 @@ test(
           env: {
             ...env,
             CODEX_SUBAGENT_EXTENSION_DATA: data,
-            CODEX_SUBAGENT_EXTENSION_PROVIDER: "fixture",
             PORT: String(port),
           },
           timeout: 15000,

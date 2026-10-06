@@ -241,7 +241,6 @@ test(
 
     const env = {
       CODEX_SUBAGENT_EXTENSION_DATA: dir,
-      CODEX_SUBAGENT_EXTENSION_PROVIDER: "fixture",
       PORT: String(port),
     };
 

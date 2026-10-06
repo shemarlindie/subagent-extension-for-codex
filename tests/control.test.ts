@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import { test } from "vitest";
 
+import { FixtureProvider } from "../dev/fixture-provider.js";
 import { Control } from "../src/core/control.js";
 import type {
   ModelChoice,
@@ -15,7 +16,6 @@ import type {
 } from "../src/core/model.js";
 import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
-import { FixtureProvider } from "../src/providers/fixture.js";
 
 const pause = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 

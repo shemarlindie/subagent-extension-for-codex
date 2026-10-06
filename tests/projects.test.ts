@@ -13,11 +13,11 @@ import { join } from "node:path";
 
 import { test } from "vitest";
 
+import { FixtureProvider } from "../dev/fixture-provider.js";
 import { Control } from "../src/core/control.js";
 import { Projects } from "../src/core/projects.js";
 import { Store } from "../src/core/store.js";
 import { git, Workspaces } from "../src/core/workspace.js";
-import { FixtureProvider } from "../src/providers/fixture.js";
 import { callTool, isUserTool } from "../src/server/tools.js";
 
 async function fixture(t: import("vitest").TestContext) {

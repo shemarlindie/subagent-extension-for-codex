@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import { test, type TestContext } from "vitest";
 
+import { FixtureProvider } from "../dev/fixture-provider.js";
 import { Control } from "../src/core/control.js";
 import {
   type Result,
@@ -22,7 +23,6 @@ import {
 import { Settings } from "../src/core/settings.js";
 import { Store } from "../src/core/store.js";
 import { Workspaces } from "../src/core/workspace.js";
-import { FixtureProvider } from "../src/providers/fixture.js";
 
 test("native permission resolution follows task, setting, then profile or the user's Claude Code settings", () => {
   const task = { worker_profile: "implementer" };

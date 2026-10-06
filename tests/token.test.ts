@@ -42,7 +42,7 @@ test("tightens permissions on an existing token file", async (t) => {
   assert.equal(await mode(path), 0o600);
 });
 
-test("rejects short overrides outside fixture mode without touching the file", async (t) => {
+test("rejects short overrides without touching the file", async (t) => {
   const dir = await data(t);
 
   assert.throws(
@@ -50,28 +50,7 @@ test("rejects short overrides outside fixture mode without touching the file", a
     /at least 32 characters/,
   );
 
-  assert.throws(
-    () =>
-      adminToken(dir, {
-        CODEX_SUBAGENT_EXTENSION_TOKEN: "short",
-        CODEX_SUBAGENT_EXTENSION_PROVIDER: "claude",
-      }),
-    /at least 32 characters/,
-  );
-
   const long = "x".repeat(32);
   assert.equal(adminToken(dir, { CODEX_SUBAGENT_EXTENSION_TOKEN: long }), long);
   await assert.rejects(stat(join(dir, "admin-token")));
-});
-
-test("allows the demo's short override for fixture-only services", async (t) => {
-  const dir = await data(t);
-
-  assert.equal(
-    adminToken(dir, {
-      CODEX_SUBAGENT_EXTENSION_TOKEN: "local-demo-only",
-      CODEX_SUBAGENT_EXTENSION_PROVIDER: "fixture",
-    }),
-    "local-demo-only",
-  );
 });

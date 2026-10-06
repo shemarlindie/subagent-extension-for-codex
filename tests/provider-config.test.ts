@@ -14,23 +14,13 @@ async function setup() {
   return { dir, store: new Store(join(dir, "db.sqlite")) };
 }
 
-test("Codex service registration is opt-in and fixture-only mode remains free of live workers", async () => {
+test("Codex service registration is opt-in", async () => {
   const { dir, store } = await setup();
 
   try {
     assert.deepEqual(
       [...configuredProviders(store, dir, {}).keys()],
       ["claude"],
-    );
-
-    assert.deepEqual(
-      [
-        ...configuredProviders(store, dir, {
-          CODEX_SUBAGENT_EXTENSION_PROVIDER: "fixture",
-          CODEX_SUBAGENT_EXTENSION_CODEX: "1",
-        }).keys(),
-      ],
-      ["fixture"],
     );
 
     assert.throws(

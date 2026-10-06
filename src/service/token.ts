@@ -9,11 +9,7 @@ export function adminToken(data: string, env = process.env) {
   const override = env.CODEX_SUBAGENT_EXTENSION_TOKEN;
 
   if (override !== undefined) {
-    // Fixture-only services run no real workers, so the demo's short token is allowed.
-    if (
-      override.length < minimumTokenLength &&
-      env.CODEX_SUBAGENT_EXTENSION_PROVIDER !== "fixture"
-    )
+    if (override.length < minimumTokenLength)
       throw new Error(
         `CODEX_SUBAGENT_EXTENSION_TOKEN must be at least ${minimumTokenLength} characters`,
       );

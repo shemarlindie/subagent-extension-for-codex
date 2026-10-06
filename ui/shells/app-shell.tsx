@@ -33,11 +33,6 @@ export function AppShell() {
         <>
           <Header />
           <ProjectScope />
-          {controller.transport.preview && (
-            <div id="preview" className="banner">
-              Design preview · fixture data · actions never execute workers
-            </div>
-          )}
           <div className="shell">
             <aside aria-label="Delegated tasks">
               <TaskFilters />

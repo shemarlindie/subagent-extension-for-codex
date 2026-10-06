@@ -1,7 +1,15 @@
 import { setTimeout } from "node:timers/promises";
 
-import { type Provider, type Result, type RunContext } from "../core/model.js";
+import {
+  type Provider,
+  type Result,
+  type RunContext,
+} from "../src/core/model.js";
 
+/**
+ * A development-only worker that makes no model calls, for the demo service
+ * (dev/demo-service.ts) and tests. It is outside src/, so it never ships.
+ */
 export class FixtureProvider implements Provider {
   id = "fixture";
   capabilities = {

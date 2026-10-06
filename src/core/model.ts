@@ -63,7 +63,13 @@ export const startSchema = z.object({
     .describe(
       "Legacy approval policy. For Claude, use permission_mode and approval_decider; explicit legacy values map to native settings. Model calls cannot increase approval authority.",
     ),
-  provider: z.enum(["claude", "codex", "fixture"]).default("claude"),
+  provider: z
+    .string()
+    .regex(/^[a-z][a-z0-9_-]{0,39}$/)
+    .default("claude")
+    .describe(
+      "Worker provider id from list_available_workers; only enabled providers can run.",
+    ),
   worker_profile: z.enum(roles).default("reviewer"),
   model: modelNameSchema
     .optional()

@@ -62,6 +62,22 @@ async function inlineImports(file) {
   if (chunks.length !== 1)
     throw new Error(`Expected one bundle chunk, got ${chunks.length}`);
 
+  // Fixtures (with their multi-megabyte generators) and the dev host that
+  // serves them belong to development only.
+  const developmentOnly = [
+    /[\\/]ui[\\/]dev[\\/]/,
+    /[\\/]ui[\\/]transports[\\/]preview[^\\/]*\.ts$/,
+  ];
+
+  const leaked = chunks[0].moduleIds.filter((id) =>
+    developmentOnly.some((pattern) => pattern.test(id)),
+  );
+
+  if (leaked.length)
+    throw new Error(
+      `Development-only modules reached ${output}:\n${leaked.join("\n")}`,
+    );
+
   const css = await inlineImports(stylesheet);
 
   const html = (await readFile(template, "utf8"))

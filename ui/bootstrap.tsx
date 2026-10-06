@@ -8,10 +8,10 @@ import { detectEnvironment } from "./environment";
 import { AppShell } from "./shells/app-shell";
 import { ConsoleTransport } from "./transports/console";
 import { HostTransport } from "./transports/host";
-import { PreviewTransport } from "./transports/preview";
 
 export function mount() {
   const environment = detectEnvironment();
+
   // DEBUG: Timestamp startup before the host bridge connects or React renders.
   if (environment.kind === "host") traceSize("bootstrap-start");
 
@@ -26,9 +26,7 @@ export function mount() {
   const transport =
     environment.kind === "http"
       ? new ConsoleTransport(environment.origin)
-      : environment.kind === "preview"
-        ? new PreviewTransport()
-        : new HostTransport();
+      : new HostTransport();
 
   const controller = new Controller(transport);
   const root = createRoot(document.getElementById("root")!);
