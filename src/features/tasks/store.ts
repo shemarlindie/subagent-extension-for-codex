@@ -25,8 +25,29 @@ export class Store {
 
   /** Artifacts were removed; drop their table and the events that announced them. */
   private removeArtifacts() {
-    this.db.exec(`DROP TABLE IF EXISTS artifacts;
-    DELETE FROM events WHERE type IN ('artifact.created', 'artifact.error');`);
+    // Only stores written by older versions have the table, so later starts
+    // skip the scan of every event.
+    const table = this.db
+      .prepare(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='artifacts'",
+      )
+      .get();
+
+    if (!table) return;
+
+    // One transaction, so an interrupted start cannot drop the table and keep the events.
+    this.db.exec("BEGIN IMMEDIATE");
+
+    try {
+      this.db
+        .exec(`DELETE FROM events WHERE type IN ('artifact.created', 'artifact.error');
+      DROP TABLE artifacts;`);
+
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   private migrateTaskDescriptions() {
