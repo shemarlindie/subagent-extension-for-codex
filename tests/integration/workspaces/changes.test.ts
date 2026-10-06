@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
 import { Workspaces } from "../../../src/features/workspaces/workspace.js";
 import { startSchema, type Task } from "../../../src/shared/contracts.js";
@@ -303,6 +310,76 @@ test("changed files are read whole or in parts, with images as base64 and other 
     await assert.rejects(
       s.workspaces.changedFile(t, "file-0.txt"),
       /worktree was removed; this file is on branch agent\/task_worktree/,
+    );
+  } finally {
+    await s.close();
+  }
+});
+
+test("later pages reuse the diff of the first, until it expires", async () => {
+  const s = await setup();
+  vi.useFakeTimers({ toFake: ["Date"] });
+
+  try {
+    const t = await s.task("current_repo");
+    for (let i = 0; i < 3; i++)
+      await writeFile(join(s.repo, `file-${i}.txt`), `edited ${i}\n`);
+    const first = await s.workspaces.changes(t, "task", undefined, 10);
+
+    // Moving the checkout away makes every Git call fail, so a page that
+    // still reads must come from the cached diff.
+    await rename(s.repo, `${s.repo}-moved`);
+    const second = await s.workspaces.changes(t, "task", first.next_cursor, 10);
+    assert.match(second.diff, /file-1.txt/);
+    assert.deepEqual(second.files, first.files);
+
+    vi.setSystemTime(Date.now() + 61_000);
+
+    await assert.rejects(
+      s.workspaces.changes(t, "task", second.next_cursor, 10),
+    );
+  } finally {
+    vi.useRealTimers();
+    await s.close();
+  }
+});
+
+test("only the two most recent diffs are kept", async () => {
+  const s = await setup();
+
+  try {
+    const t = await s.task("current_repo");
+    for (let i = 0; i < 3; i++)
+      await writeFile(join(s.repo, `file-${i}.txt`), `edited ${i}\n`);
+
+    // Three tree pairs: the task's (from HEAD's tree), then the turn's from
+    // two other bases, the empty tree and a later snapshot.
+    const oldest = await s.workspaces.changes(t, "task", undefined, 10);
+
+    t.turn_start_tree = s
+      .git(s.repo, "hash-object", "-t", "tree", "/dev/null")
+      .trim();
+
+    await s.workspaces.changes(t, "turn", undefined, 10);
+    for (const i of [0, 1])
+      await writeFile(join(s.repo, `file-${i}.txt`), "turn base\n");
+    t.turn_start_tree = await s.workspaces.snapshot(s.repo);
+    for (const i of [0, 1])
+      await writeFile(join(s.repo, `file-${i}.txt`), "edited again\n");
+    const newest = await s.workspaces.changes(t, "turn", undefined, 10);
+    assert.ok(newest.next_cursor);
+
+    // With Git unreachable, only cached pairs can still be read: the newest
+    // pair's next page, but not the oldest pair's.
+    await rename(s.repo, `${s.repo}-moved`);
+
+    assert.match(
+      (await s.workspaces.changes(t, "turn", newest.next_cursor, 10)).diff,
+      /file-1.txt/,
+    );
+
+    await assert.rejects(
+      s.workspaces.changes(t, "task", oldest.next_cursor, 10),
     );
   } finally {
     await s.close();

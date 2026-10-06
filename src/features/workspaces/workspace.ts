@@ -14,6 +14,7 @@ import { promisify } from "node:util";
 
 import { type Task } from "../../shared/contracts.js";
 import {
+  type ChangedFile,
   type ChangedFileContent,
   changedFiles,
   type Changes,
@@ -86,6 +87,71 @@ function changesBase(t: Task, scope: ChangeScope) {
     );
 
   return base;
+}
+
+/** How many recent diffs are cached, and for how long. */
+const DIFF_CACHE_SIZE = 2;
+const DIFF_CACHE_MS = 60_000;
+
+/**
+ * Runs Git for the changes between two trees: every changed file with its
+ * stats, and the unified diff split into one part per file, in the same order.
+ */
+async function readDiff(cwd: string, base: string, current: string) {
+  const diff = (...args: string[]) =>
+    git(cwd, [
+      "-c",
+      "core.quotePath=false",
+      "diff",
+      "--no-ext-diff",
+      "--no-color",
+      "-M",
+      ...args,
+      base,
+      current,
+      "--",
+    ]);
+
+  const [nameStatus, numstat, patch] = await Promise.all([
+    diff("-z", "--name-status"),
+    diff("-z", "--numstat"),
+    diff("--src-prefix=a/", "--dst-prefix=b/"),
+  ]);
+
+  const files = changedFiles(nameStatus, numstat);
+
+  // Binary files have no line counts, so the list shows their size instead,
+  // read for all of them at once: "<mode> blob <id> <size>\t<path>".
+  const binary = files.filter(
+    (file) => file.binary && file.status !== "deleted",
+  );
+
+  if (binary.length) {
+    const sizes = new Map(
+      (
+        await git(cwd, [
+          "ls-tree",
+          "-r",
+          "-l",
+          "-z",
+          current,
+          "--",
+          ...binary.map((file) => file.path),
+        ])
+      )
+        .split("\0")
+        .filter(Boolean)
+        .map((entry) => {
+          const [meta, path] = entry.split("\t");
+
+          return [path, Number(meta.trim().split(/\s+/)[3])] as const;
+        }),
+    );
+
+    for (const file of binary) file.size = sizes.get(file.path);
+  }
+
+  return { files, parts: diffParts(patch) };
 }
 
 export class Workspaces {
@@ -304,60 +370,7 @@ export class Workspaces {
     if (page && page.base !== base) throw new Error("Stale changes cursor");
     const current = page?.current ?? (await this.snapshot(t.workspace));
 
-    const diff = (...args: string[]) =>
-      git(t.workspace!, [
-        "-c",
-        "core.quotePath=false",
-        "diff",
-        "--no-ext-diff",
-        "--no-color",
-        "-M",
-        ...args,
-        base,
-        current,
-        "--",
-      ]);
-
-    const [nameStatus, numstat, patch] = await Promise.all([
-      diff("-z", "--name-status"),
-      diff("-z", "--numstat"),
-      diff("--src-prefix=a/", "--dst-prefix=b/"),
-    ]);
-
-    const files = changedFiles(nameStatus, numstat);
-
-    // Binary files have no line counts, so the list shows their size instead,
-    // read for all of them at once: "<mode> blob <id> <size>\t<path>".
-    const binary = files.filter(
-      (file) => file.binary && file.status !== "deleted",
-    );
-
-    if (binary.length) {
-      const sizes = new Map(
-        (
-          await git(t.workspace, [
-            "ls-tree",
-            "-r",
-            "-l",
-            "-z",
-            current,
-            "--",
-            ...binary.map((file) => file.path),
-          ])
-        )
-          .split("\0")
-          .filter(Boolean)
-          .map((entry) => {
-            const [meta, path] = entry.split("\t");
-
-            return [path, Number(meta.trim().split(/\s+/)[3])] as const;
-          }),
-      );
-
-      for (const file of binary) file.size = sizes.get(file.path);
-    }
-
-    const parts = diffParts(patch),
+    const { files, parts } = await this.diffTrees(t.workspace, base, current),
       start = page?.index ?? 0,
       { diff: text, end } = diffPage(parts, start, pageChars);
 
@@ -372,6 +385,48 @@ export class Workspaces {
         ? { next_cursor: encodeCursor(base, current, end) }
         : {}),
     };
+  }
+
+  /**
+   * Recent diffs by checkout and tree pair. Reading a large diff page by page
+   * asks for the same pair once per page; trees never change, so a cached
+   * diff is always exact, and a refresh with no new edits also snapshots to
+   * the same tree. Only a few are kept, briefly, since each holds a whole
+   * diff in memory. Entries are promises, so concurrent reads share one run.
+   */
+  private diffs = new Map<
+    string,
+    {
+      expires: number;
+      diff: Promise<{ files: ChangedFile[]; parts: string[] }>;
+    }
+  >();
+
+  /** The file list and the per-file diff between two trees, cached. */
+  private diffTrees(cwd: string, base: string, current: string) {
+    const key = `${cwd}\0${base}\0${current}`,
+      now = Date.now();
+
+    for (const [entry, { expires }] of this.diffs)
+      if (expires <= now) this.diffs.delete(entry);
+
+    const cached = this.diffs.get(key);
+    if (cached) return cached.diff;
+
+    const diff = readDiff(cwd, base, current);
+    this.diffs.set(key, { expires: now + DIFF_CACHE_MS, diff });
+
+    // A failed read isn't kept, so the next request tries again; a newer
+    // entry for the same pair, stored after this one expired, stays.
+    diff.catch(() => {
+      if (this.diffs.get(key)?.diff === diff) this.diffs.delete(key);
+    });
+
+    // Maps keep insertion order, so the first entries are the oldest.
+    for (const entry of this.diffs.keys())
+      if (this.diffs.size > DIFF_CACHE_SIZE) this.diffs.delete(entry);
+
+    return diff;
   }
 
   /**
