@@ -19,21 +19,28 @@ export function ChangesPanel({ task }: { task: Task }) {
         </p>
       ) : !data ? (
         <Progress label="Reading changes" className="changes-loading" />
-      ) : data.state === "workspace_missing" ? (
-        <p className="help changes-empty">
-          The worktree was removed. Changes are on branch{" "}
-          <code>{data.branch}</code>.
-        </p>
       ) : data.state === "branch_deleted" ? (
         <p className="help changes-empty">
           The worktree and its branch <code>{data.branch}</code> were deleted.
         </p>
-      ) : data.files.length ? (
-        <ChangesView task={task} changes={data} />
       ) : (
-        <p className="help changes-empty">
-          {data.scope === "turn" ? "No changes in this turn." : "No changes."}
-        </p>
+        <>
+          {data.state === "workspace_missing" && (
+            <p className="help changes-empty">
+              The worktree was removed. These are the changes committed on
+              branch <code>{data.branch}</code>.
+            </p>
+          )}
+          {data.files.length ? (
+            <ChangesView task={task} changes={data} />
+          ) : (
+            <p className="help changes-empty">
+              {data.scope === "turn"
+                ? "No changes in this turn."
+                : "No changes."}
+            </p>
+          )}
+        </>
       )}
     </div>
   );

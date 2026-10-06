@@ -136,15 +136,12 @@ test("fixture changes come from real Git repositories built per task", async () 
   assert.ok(!paths(refactor).includes("README.md"));
   assert.ok(refactor.files.some((file) => file.binary));
 
-  assert.deepEqual(await changes("preview-failed"), {
-    scope: "task",
-    state: "workspace_missing",
-    branch: "agent/preview-failed",
-    files: [],
-    additions: 0,
-    deletions: 0,
-    diff: "",
-  });
+  // A removed worktree's changes are its branch's commits.
+  const failed = await changes("preview-failed");
+  assert.equal(failed.state, "workspace_missing");
+  assert.equal(failed.branch, "agent/preview-failed");
+  assert.deepEqual(paths(failed), ["test/retry.test.ts"]);
+  assert.match(failed.diff, /\+test\('retries', \{ retry: 2 \}\);/);
 });
 
 test("the large-file fixture's changes come in pages and its files read whole", async () => {

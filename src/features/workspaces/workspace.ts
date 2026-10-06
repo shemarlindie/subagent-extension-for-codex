@@ -387,12 +387,36 @@ export class Workspaces {
   }
 
   /**
-   * Where a task's changes end: a current_repo task's end snapshot once its
-   * turn has ended, so later edits to the checkout aren't counted, or else a
-   * snapshot of its workspace taken now.
+   * Where a task's changes are read, and the tree they end at: a removed
+   * worktree's branch, whose commits hold its work; a current_repo task's
+   * end snapshot once its turn has ended, so later edits to the checkout
+   * aren't counted; or else a snapshot of its workspace taken now. None once
+   * a worktree's branch is deleted too.
    */
-  private changesEnd(t: Task) {
-    return t.end_tree ?? this.snapshot(t.workspace!);
+  private async changesSource(t: Task) {
+    if (t.workspace_strategy === "worktree" && !(await exists(t.workspace!))) {
+      if (!(await this.branchExists(t))) return undefined;
+
+      return {
+        cwd: t.repository,
+        removed: true,
+        end: async () =>
+          (
+            await git(t.repository, [
+              "rev-parse",
+              "--verify",
+              "--end-of-options",
+              `refs/heads/${t.branch}^{tree}`,
+            ])
+          ).trim(),
+      };
+    }
+
+    return {
+      cwd: t.workspace!,
+      removed: false,
+      end: async () => t.end_tree ?? this.snapshot(t.workspace!),
+    };
   }
 
   /**
@@ -409,26 +433,21 @@ export class Workspaces {
     const empty = { scope, files: [], additions: 0, deletions: 0, diff: "" };
     if (!t.workspace) return empty;
     const base = changesBase(t, scope);
+    const source = await this.changesSource(t);
 
-    if (t.workspace_strategy === "worktree" && !(await exists(t.workspace)))
-      return {
-        ...empty,
-        state: (await this.branchExists(t))
-          ? "workspace_missing"
-          : "branch_deleted",
-        branch: t.branch,
-      };
+    if (!source) return { ...empty, state: "branch_deleted", branch: t.branch };
 
     const page = cursor ? decodeCursor(cursor) : undefined;
     if (page && page.base !== base) throw new Error("Stale changes cursor");
-    const current = page?.current ?? (await this.changesEnd(t));
+    const current = page?.current ?? (await source.end());
 
-    const { files, parts } = await this.diffTrees(t.workspace, base, current),
+    const { files, parts } = await this.diffTrees(source.cwd, base, current),
       start = page?.index ?? 0,
       { diff: text, end } = diffPage(parts, start, pageChars);
 
     return {
       scope,
+      ...(source.removed ? { state: "workspace_missing" as const } : {}),
       ...(t.branch ? { branch: t.branch } : {}),
       files,
       additions: files.reduce((sum, f) => sum + f.additions, 0),
@@ -484,9 +503,9 @@ export class Workspaces {
 
   /**
    * The content of a file the task changed, where its changes end (see
-   * `changesEnd`). Only paths in the task's or the latest turn's changes are
-   * read. Images come as base64, other binary files as their size only, and
-   * large contents in parts through `next_cursor`.
+   * `changesSource`). Only paths in the task's or the latest turn's changes
+   * are read. Images come as base64, other binary files as their size only,
+   * and large contents in parts through `next_cursor`.
    */
   async changedFile(
     t: Task,
@@ -495,15 +514,17 @@ export class Workspaces {
     pageChars = CHANGES_PAGE_CHARS,
   ): Promise<ChangedFileContent> {
     if (!t.workspace) throw new Error("This task hasn't changed any files.");
-    if (t.workspace_strategy === "worktree" && !(await exists(t.workspace)))
+    const source = await this.changesSource(t);
+
+    if (!source)
       throw new Error(
-        `The worktree was removed; this file is on branch ${t.branch}.`,
+        `The worktree and its branch ${t.branch} were deleted, so this file is unavailable.`,
       );
 
-    // Later parts read the snapshot the first part took.
+    // Later parts read the tree the first part read.
     const { tree, offset } = cursor
       ? decodeFileCursor(cursor)
-      : { tree: await this.changesEnd(t), offset: 0 };
+      : { tree: await source.end(), offset: 0 };
 
     // Every part checks the path, so a cursor can't reach other files. A file
     // changed in the latest turn may match the task's base again.
@@ -514,7 +535,7 @@ export class Workspaces {
     const changed = await Promise.all(
       scopes.map(async (scope) =>
         (
-          await git(t.workspace!, [
+          await git(source.cwd, [
             "-c",
             "core.quotePath=false",
             "diff",
@@ -536,14 +557,14 @@ export class Workspaces {
     const object = `${tree}:${path}`;
 
     if (
-      !(await git(t.workspace, ["cat-file", "-e", object]).then(
+      !(await git(source.cwd, ["cat-file", "-e", object]).then(
         () => true,
         () => false,
       ))
     )
       return { path, state: "deleted", size: 0 };
 
-    const bytes = await gitBytes(t.workspace, ["cat-file", "blob", object]),
+    const bytes = await gitBytes(source.cwd, ["cat-file", "blob", object]),
       image = imageMime(path);
 
     if (!image && isBinary(bytes))

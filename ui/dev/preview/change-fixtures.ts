@@ -168,7 +168,7 @@ export const previewChanges: Record<string, () => ChangeFixture> = {
     ],
   }),
 
-  // A worktree that was removed; its work is on the branch.
+  // A worktree that was removed; its changes are read from the branch.
   "preview-failed": (): ChangeFixture => ({
     base: { "test/retry.test.ts": "test.skip('retries');\n" },
     commit: true,

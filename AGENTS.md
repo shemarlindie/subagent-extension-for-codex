@@ -29,7 +29,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
   - Changes tab, each read from a real Git repository (`ui/dev/preview/change-fixtures.ts`):
     - **Tighten the task inspector layout**: a worktree task with two committed turns, so **This turn** shows. Clean, so **Remove worktree** removes it at once.
     - **Refactor the billing module**: `current_repo`, with the user's earlier README edit left out, renames, a deletion and a binary image.
-    - **Fix the flaky retry test**: the worktree was removed; the branch remains (`task.worktree_removed` event).
+    - **Fix the flaky retry test**: the worktree was removed; the branch remains, and its commit is the diff (`task.worktree_removed` event).
     - **Draft the release notes**: the worktree and branch were deleted (`task.branch_deleted` event).
     - **Speed up the production build**: the 60-file diff from `large-files.ts`, uncommitted, so **Remove worktree** asks first.
     - **Profile the production build**: every file in `large-files.ts`, added. Its diff comes in several pages; use it for the previews.

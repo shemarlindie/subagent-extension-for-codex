@@ -197,22 +197,64 @@ test("pages hold whole files, list every file, and keep reading the same state",
   }
 });
 
-test("a removed worktree names its branch, and older tasks get an error", async () => {
+test("a removed worktree's changes are its branch's commits, and older tasks get an error", async () => {
   const s = await setup();
 
   try {
     const t = await s.task("worktree");
-    s.git(s.repo, "worktree", "remove", t.workspace!);
+    const w = t.workspace!;
+    await writeFile(join(w, "committed.txt"), "committed\n");
+    s.git(w, "add", "committed.txt");
+
+    s.git(
+      w,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "-qm",
+      "worker commit",
+    );
+
+    // Uncommitted work goes with the worktree.
+    await writeFile(join(w, "draft.txt"), "draft\n");
+    s.git(s.repo, "worktree", "remove", "--force", w);
+
+    const changes = await s.workspaces.changes(t);
+    assert.equal(changes.state, "workspace_missing");
+    assert.equal(changes.branch, t.branch);
+
+    assert.deepEqual(
+      changes.files.map((f) => f.path),
+      ["committed.txt"],
+    );
+
+    assert.match(changes.diff, /\+committed/);
+
+    // Files read from the branch, too.
+    assert.equal(
+      (await s.workspaces.changedFile(t, "committed.txt")).content,
+      "committed\n",
+    );
+
+    // Once the branch is deleted, there's nothing to read.
+    s.git(s.repo, "branch", "-D", t.branch!);
 
     assert.deepEqual(await s.workspaces.changes(t), {
       scope: "task",
-      state: "workspace_missing",
+      state: "branch_deleted",
       branch: t.branch,
       files: [],
       additions: 0,
       deletions: 0,
       diff: "",
     });
+
+    await assert.rejects(
+      s.workspaces.changedFile(t, "committed.txt"),
+      /were deleted/,
+    );
 
     const older = await s.task("current_repo");
     delete older.start_tree;
@@ -305,11 +347,12 @@ test("changed files are read whole or in parts, with images as base64 and other 
       /not among this task's changes/,
     );
 
+    // An uncommitted edit goes with a removed worktree.
     s.git(s.repo, "worktree", "remove", "--force", w);
 
     await assert.rejects(
       s.workspaces.changedFile(t, "file-0.txt"),
-      /worktree was removed; this file is on branch agent\/task_worktree/,
+      /not among this task's changes/,
     );
   } finally {
     await s.close();

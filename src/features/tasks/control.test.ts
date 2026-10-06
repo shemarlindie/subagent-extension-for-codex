@@ -496,7 +496,8 @@ test("dependent prompts include each dependency's result and workspace diff", as
   assert.match(prompt, /changes \(1 file, \+1 −0\), as a diff/);
   assert.match(prompt, /\+export const added = 1;/);
 
-  // Once the worktree is removed, the dependent is pointed at the branch.
+  // Once the worktree is removed, the dependent sees the branch's commits;
+  // the uncommitted file went with the worktree.
   const { branch, workspace } = store.get(first.id, "alice");
   execFileSync("git", ["-C", workspace!, "worktree", "remove", "--force", "."]);
 
@@ -510,7 +511,9 @@ test("dependent prompts include each dependency's result and workspace diff", as
   assert.ok(
     prompts
       .get(third.id)!
-      .includes(`worktree was removed; its changes are on branch ${branch}.`),
+      .includes(
+        `worktree was removed, and its branch ${branch} has no committed changes.`,
+      ),
   );
 
   await c.close();

@@ -23,8 +23,9 @@ export interface ChangedFile {
 export interface Changes {
   scope: ChangeScope;
   /**
-   * "workspace_missing": the worktree was removed; the work is on `branch`.
-   * "branch_deleted": the branch was deleted too.
+   * "workspace_missing": the worktree was removed, so the changes are what
+   * is committed on `branch`. "branch_deleted": the branch was deleted too,
+   * and there are none.
    */
   state?: "workspace_missing" | "branch_deleted";
   branch?: string;

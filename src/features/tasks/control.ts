@@ -631,28 +631,35 @@ export class Control {
 
   /**
    * A dependency's whole-task changes for a dependent's prompt, up to a
-   * bound, in whole files. A removed worktree is named by its branch.
+   * bound, in whole files. A removed worktree's are its branch's commits.
    */
   private async dependencyChanges(d: Task) {
     const changes = await this.workspaces
       .changes(d, "task", undefined, MAX_DEPENDENCY_DIFF_CHARS)
       .catch(() => undefined);
 
-    if (changes?.state === "workspace_missing")
-      return [
-        `Dependency ${d.id}'s worktree was removed; its changes are on branch ${changes.branch}.`,
-      ];
     if (changes?.state === "branch_deleted")
       return [
         `Dependency ${d.id}'s worktree and branch were deleted, so its changes are unavailable.`,
       ];
-    if (!changes?.diff) return [];
+
+    const removed = changes?.state === "workspace_missing";
+
+    if (!changes?.diff)
+      return removed
+        ? [
+            `Dependency ${d.id}'s worktree was removed, and its branch ${changes.branch} has no committed changes.`,
+          ]
+        : [];
 
     const shown = changes.diff.slice(0, MAX_DEPENDENCY_DIFF_CHARS),
-      count = changes.files.length;
+      count = changes.files.length,
+      from = removed
+        ? `as committed on branch ${changes.branch}, since its worktree was removed`
+        : "as a diff from where the task started";
 
     return [
-      `Dependency ${d.id} changes (${count} ${count === 1 ? "file" : "files"}, +${changes.additions} −${changes.deletions}), as a diff from where the task started:`,
+      `Dependency ${d.id} changes (${count} ${count === 1 ? "file" : "files"}, +${changes.additions} −${changes.deletions}), ${from}:`,
       shown,
       ...(changes.next_cursor || shown.length < changes.diff.length
         ? [

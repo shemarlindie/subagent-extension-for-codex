@@ -23,12 +23,14 @@ type TaskDetailsProps = {
 function changesFact(changes?: ChangesState) {
   if (changes?.error) return changes.error;
   if (!changes?.data) return "Reading…";
-  if (changes.data.state === "workspace_missing")
-    return `On branch ${changes.data.branch}; the worktree was removed`;
   if (changes.data.state === "branch_deleted")
     return "The worktree and its branch were deleted";
 
-  return `${changesSummary(changes.data)}${changes.scope === "turn" ? " in this turn" : ""}`;
+  const summary = `${changesSummary(changes.data)}${changes.scope === "turn" ? " in this turn" : ""}`;
+
+  return changes.data.state === "workspace_missing"
+    ? `${summary} on branch ${changes.data.branch}; the worktree was removed`
+    : summary;
 }
 
 export function TaskDetails({ task, changes }: TaskDetailsProps) {

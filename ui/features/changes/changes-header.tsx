@@ -55,7 +55,7 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
           </ToggleGroup>
         )}
         <span className="changes-summary">
-          {data && !removed ? changesSummary(data) : ""}
+          {data && data.state !== "branch_deleted" ? changesSummary(data) : ""}
         </span>
         <TooltipWrapper label="Refresh changes">
           <Button
