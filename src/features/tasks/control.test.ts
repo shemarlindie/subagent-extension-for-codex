@@ -459,6 +459,45 @@ test("dependencies wait for completion and failed dependencies never run", async
   await c.close();
 });
 
+test("dependent prompts include each dependency's result and workspace diff", async () => {
+  const prompts = new Map<string, string>();
+
+  class Writer extends FixtureProvider {
+    async run(c: RunContext, p: string) {
+      prompts.set(c.task.id, p);
+
+      if (c.task.description === "Write")
+        await writeFile(
+          join(c.task.workspace!, "added.ts"),
+          "export const added = 1;\n",
+        );
+
+      return super.run(c, p);
+    }
+  }
+
+  const { c, store } = await setup(new Writer());
+  const first = await c.start("alice", input("Write"));
+
+  const second = await c.start("alice", {
+    ...input("Review"),
+    depends_on: [first.id],
+  });
+
+  await until(() => store.get(second.id, "alice").status === "completed");
+  const prompt = prompts.get(second.id)!;
+
+  assert.ok(
+    prompt.includes(
+      `Dependency ${first.id}: ${JSON.stringify(store.get(first.id, "alice").result)}`,
+    ),
+  );
+
+  assert.match(prompt, /changes, as a diff of its workspace/);
+  assert.match(prompt, /\+export const added = 1;/);
+  await c.close();
+});
+
 test("successful dependencies release and task hierarchy stays separate", async () => {
   const { c, store } = await setup();
   const a = await c.start("alice", input());

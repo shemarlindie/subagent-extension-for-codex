@@ -25,6 +25,9 @@ import {
 import { Store } from "./store.js";
 import { generateTaskTitle } from "./task-title.js";
 
+/** Bounds each dependency's diff in a dependent's prompt, as artifacts were. */
+const MAX_DEPENDENCY_DIFF_CHARS = 50_000;
+
 /** Cancel a queued input without letting later requests bypass its predecessor. */
 async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {
   await new Promise<void>((resolve, reject) => {
@@ -405,11 +408,33 @@ export class Control {
             ].join("\n\n")
           : "";
 
+      // Stopgap: dependency diffs reached dependents as artifacts, which were
+      // removed. The Changes tab plan replaces this with the task's snapshot
+      // changes, and names the branch when a worktree is gone. A removed
+      // workspace gives no diff here.
+      const dependencyContext = await Promise.all(
+        deps.map(async (d) => {
+          const diff = await this.workspaces.diff(d).catch(() => "");
+
+          return [
+            `Dependency ${d.id}: ${JSON.stringify(d.result)}`,
+            ...(diff
+              ? [
+                  `Dependency ${d.id} changes, as a diff of its workspace against its base commit:`,
+                  diff.length > MAX_DEPENDENCY_DIFF_CHARS
+                    ? `${diff.slice(0, MAX_DEPENDENCY_DIFF_CHARS)}\n… (diff truncated)`
+                    : diff,
+                ]
+              : []),
+          ].join("\n");
+        }),
+      );
+
       const prompt = [
         t.description,
         ...(workspaceContext ? [workspaceContext] : []),
         ...t.context,
-        ...deps.map((d) => `Dependency ${d.id}: ${JSON.stringify(d.result)}`),
+        ...dependencyContext,
         ...t.instructions,
       ].join("\n\n");
 
