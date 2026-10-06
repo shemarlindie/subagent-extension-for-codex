@@ -179,6 +179,30 @@ test("summaries use option labels, units, and only model overrides", () => {
   );
 });
 
+test("text rows send their string as typed and summarize a blank value", () => {
+  const prefix: SettingRow = {
+    kind: "text",
+    key: "worktree_branch_prefix",
+    label: "Worktree branch prefix",
+    maxLength: 100,
+    pattern: "[\\w./-]*",
+  };
+
+  const text: SettingSection[] = [
+      { id: "task", title: "Task", rows: [prefix] },
+    ],
+    initial = sectionsForm(text, { worktree_branch_prefix: "agent/" });
+
+  assert.deepEqual(initial, { worktree_branch_prefix: "agent/" });
+
+  assert.deepEqual(changes(text, { worktree_branch_prefix: "" }, initial), {
+    worktree_branch_prefix: "",
+  });
+
+  assert.deepEqual(summary(prefix, initial), ["agent/"]);
+  assert.deepEqual(summary(prefix, { worktree_branch_prefix: "" }), ["None"]);
+});
+
 test("open sections fall back to the first when none exists, but may all be closed", () => {
   assert.deepEqual(openSections(["models"], sections), ["models"]);
   assert.deepEqual(openSections(["gone"], sections), ["task"]);

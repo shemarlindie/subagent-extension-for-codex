@@ -39,6 +39,7 @@ export function TaskDetails({ task }: { task: Task }) {
     Model: task.model || "Provider runtime default",
     "Reasoning effort": task.reasoning_effort || "Provider runtime default",
     Workspace: task.workspace ?? "Preparing",
+    ...(task.branch ? { Branch: task.branch } : {}),
     Repository: task.repository,
     "Workspace strategy":
       task.workspace_strategy === "current_repo"

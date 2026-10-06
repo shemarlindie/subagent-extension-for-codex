@@ -64,6 +64,13 @@ const rowSchema = z.discriminatedUnion("kind", [
   }),
   z.object({ kind: z.literal("switch"), ...base }),
   z.object({
+    kind: z.literal("text"),
+    ...base,
+    maxLength: z.number(),
+    // A regular expression the whole value must match.
+    pattern: z.string(),
+  }),
+  z.object({
     kind: z.literal("budget"),
     ...base,
     // The update tool's on/off key for this limit.
@@ -109,7 +116,12 @@ export const settingHelp = {
     "Delegated sessions may start subagents with the Agent tool.",
   default_approval_decider:
     "Who answers permission prompts the SDK leaves unresolved.",
+  worktree_branch_prefix:
+    "Each worktree task works on its own branch, named this prefix followed by the task ID.",
 };
+
+/** Characters a branch prefix may use; Git checks the whole branch name. */
+export const branchPrefixPattern = "[\\w./-]*";
 
 // Agents read this in an effort field's description; the panel shows it
 // beside a scope flagged `unsupported`.
@@ -312,6 +324,14 @@ export function settingsSections(input: SectionInput): SettingSection[] {
             current_repo: "Current repository",
             worktree: "Isolated worktree",
           }),
+        },
+        {
+          kind: "text",
+          key: "worktree_branch_prefix",
+          label: "Worktree branch prefix",
+          help: [settingHelp.worktree_branch_prefix],
+          maxLength: 100,
+          pattern: branchPrefixPattern,
         },
         {
           kind: "budget",

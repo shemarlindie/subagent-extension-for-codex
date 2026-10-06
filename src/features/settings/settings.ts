@@ -22,6 +22,7 @@ import {
 } from "../tasks/policy/permissions.js";
 import { type Store } from "../tasks/store.js";
 import {
+  branchPrefixPattern,
   modelScope,
   sectionSchema,
   settingHelp,
@@ -113,6 +114,18 @@ const valuesSchema = z.strictObject({
   default_workspace_strategy: z
     .enum(["worktree", "current_repo"])
     .meta({ title: "Workspace" }),
+  // Git checks the whole name when a worktree is created.
+  worktree_branch_prefix: z
+    .string()
+    .max(100)
+    .regex(
+      new RegExp(`^${branchPrefixPattern}$`),
+      "Use letters, digits, '.', '_', '-' and '/'",
+    )
+    .meta({
+      title: "Worktree branch prefix",
+      description: settingHelp.worktree_branch_prefix,
+    }),
   max_runtime_minutes: z.number().positive().max(120).nullable().meta({
     title: "Runtime limit (minutes; null means no limit)",
   }),
@@ -176,6 +189,8 @@ const storedValuesSchema = valuesSchema.extend({
     .boolean()
     .default(claudeOverrideDefaults.claude_subagents),
   default_approval_mode: approvalModeSchema.default("ask_user"),
+  worktree_branch_prefix:
+    valuesSchema.shape.worktree_branch_prefix.default("agent/"),
   ...(Object.fromEntries(
     Object.entries(modelSettingsShape).map(([key, schema]) => [
       key,

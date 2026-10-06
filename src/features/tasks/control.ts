@@ -366,7 +366,11 @@ export class Control {
       if (this.projects) await this.projects.resolve(t.repository);
 
       if (!t.workspace) {
-        await this.workspaces.create(t);
+        await this.workspaces.create(
+          t,
+          this.settings.values(t.owner).worktree_branch_prefix,
+        );
+
         this.store.save(t);
       }
 

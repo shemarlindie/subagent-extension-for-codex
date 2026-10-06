@@ -203,6 +203,8 @@ export interface Task extends Start {
   completed_at?: string;
   workspace?: string;
   base_commit?: string;
+  /** The worktree's branch, `<worktree_branch_prefix><task-id>`. */
+  branch?: string;
   session_id?: string;
   native_turn_id?: string;
   session_owner?: string;

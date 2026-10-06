@@ -675,13 +675,63 @@ test("worktree diff includes edits, untracked files and committed changes withou
       !c.active.has(t.id) && store.get(t.id, "alice").status === "completed",
   );
 
-  const diff = await c.workspaces.diff(store.get(t.id, "alice"));
+  // The worktree is on the task's own branch, which holds the worker's commit.
+  const done = store.get(t.id, "alice");
+  assert.equal(done.branch, `agent/${t.id}`);
+
+  assert.equal(
+    execFileSync("git", ["-C", repo, "log", "-1", "--format=%s", done.branch!])
+      .toString()
+      .trim(),
+    "worker edit",
+  );
+
+  assert.equal(
+    execFileSync("git", ["-C", done.workspace!, "branch", "--show-current"])
+      .toString()
+      .trim(),
+    done.branch,
+  );
+
+  const diff = await c.workspaces.diff(done);
   assert.match(diff, /changed/);
   assert.match(diff, /answer = 42/);
   execFileSync("git", ["-C", repo, "apply", "--check", "-"], { input: diff });
 
   assert.equal(await readFile(join(repo, "README.md"), "utf8"), "hello\n");
   await c.close();
+});
+
+test("worktree branches use the owner's prefix, and Git rejects invalid names", async () => {
+  const { c, store, repo } = await setup();
+
+  try {
+    assert.throws(() =>
+      c.settings.update("alice", { set: { worktree_branch_prefix: "a b/" } }),
+    );
+
+    c.settings.update("alice", { set: { worktree_branch_prefix: "work/" } });
+    const t = await c.start("alice", input());
+    await until(() => store.get(t.id, "alice").status === "completed");
+    assert.equal(store.get(t.id, "alice").branch, `work/${t.id}`);
+
+    execFileSync("git", [
+      "-C",
+      repo,
+      "rev-parse",
+      "--verify",
+      `refs/heads/work/${t.id}`,
+    ]);
+
+    // Allowed characters can still form an invalid ref.
+    c.settings.update("alice", { set: { worktree_branch_prefix: "a..b/" } });
+    const bad = await c.start("alice", input());
+    await until(() => store.get(bad.id, "alice").status === "failed");
+    assert.match(store.get(bad.id, "alice").error!, /Invalid worktree branch/);
+    assert.equal(store.get(bad.id, "alice").workspace, undefined);
+  } finally {
+    await c.close();
+  }
 });
 
 test("scheduler enforces concurrency and independent branches run together", async () => {

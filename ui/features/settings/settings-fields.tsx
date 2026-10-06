@@ -158,6 +158,42 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
       </div>
     );
 
+  if (row.kind === "text")
+    return (
+      <div className="setting-row">
+        {text(
+          <label htmlFor={id} className="setting-label">
+            {row.label}
+          </label>,
+        )}
+        <div className="setting-control">
+          <input
+            id={id}
+            type="text"
+            spellCheck={false}
+            autoComplete="off"
+            maxLength={row.maxLength}
+            aria-invalid={Boolean(error)}
+            aria-describedby={
+              [describedBy, error && errorId].filter(Boolean).join(" ") ||
+              undefined
+            }
+            // Checked by the form, like budgets: closed sections are hidden.
+            {...register(row.key, {
+              validate: (value) =>
+                new RegExp(`^(?:${row.pattern})$`).test(value) ||
+                `${row.label} has characters a branch name can't use.`,
+            })}
+          />
+        </div>
+        <Presence show={Boolean(error)}>
+          <p id={errorId} className="form-error setting-error" role="alert">
+            {error?.message}
+          </p>
+        </Presence>
+      </div>
+    );
+
   const on = row.kind === "budget" && form[onKey(row.key)] === "true";
 
   return (

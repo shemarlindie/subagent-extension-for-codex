@@ -50,7 +50,8 @@ export class Workspaces {
     return actual;
   }
 
-  async create(t: Task) {
+  /** Creates the task's workspace; worktrees get branch `<prefix><task-id>`. */
+  async create(t: Task, branchPrefix = "agent/") {
     if (t.workspace_strategy === "current_repo" && t.revision !== "HEAD")
       throw new Error("Current repository workspace requires revision HEAD");
     t.repository = await this.repository(t.repository);
@@ -70,16 +71,30 @@ export class Workspaces {
       return;
     }
 
+    const branch = (
+      await git(t.repository, [
+        "check-ref-format",
+        "--branch",
+        `${branchPrefix}${t.id}`,
+      ]).catch(() => {
+        throw new Error(`Invalid worktree branch name: ${branchPrefix}${t.id}`);
+      })
+    ).trim();
+
     await mkdir(this.root, { recursive: true, mode: 0o700 });
-    t.workspace = join(this.root, t.id);
+    const workspace = join(this.root, t.id);
 
     await git(t.repository, [
       "worktree",
       "add",
-      "--detach",
-      t.workspace,
+      "-b",
+      branch,
+      workspace,
       t.base_commit,
     ]);
+
+    t.workspace = workspace;
+    t.branch = branch;
   }
 
   async diff(t: Task) {

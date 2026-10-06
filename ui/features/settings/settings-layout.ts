@@ -144,6 +144,8 @@ export function summary(row: SettingRow, form: Values): string[] {
       ];
     case "switch":
       return [form[row.key] === "true" ? "On" : "Off"];
+    case "text":
+      return [form[row.key] || "None"];
     default:
       return [labelOf(row.options, form[row.key])];
   }
