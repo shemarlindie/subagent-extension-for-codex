@@ -223,6 +223,7 @@ test("model calls cannot use any user-only approval tool", async () => {
       "submit_user_agent_input",
       "update_user_agent_settings",
       "get_user_agent_changes",
+      "get_user_agent_changed_file",
     ]) {
       await assert.rejects(
         callTool(c, "alice", name, {}),

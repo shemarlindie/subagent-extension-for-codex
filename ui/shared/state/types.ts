@@ -36,7 +36,9 @@ export type DialogState =
     }
   | { kind: "control"; action: string; task: Task; scope: number }
   | { kind: "respond"; task: Task; scope: number }
-  | { kind: "handoff"; task: Task; scope: number };
+  | { kind: "handoff"; task: Task; scope: number }
+  // A file the task changed, previewed as it is now.
+  | { kind: "file"; task: Task; path: string; scope: number };
 
 /** Something in the selected task that the panel shares with the host's model. */
 export type SharedItem = { kind: "file"; path: string };

@@ -25,7 +25,7 @@ export function ChangesPanel({ task }: { task: Task }) {
           <code>{data.branch}</code>.
         </p>
       ) : data.files.length ? (
-        <ChangesView changes={data} />
+        <ChangesView task={task} changes={data} />
       ) : (
         <p className="help changes-empty">
           {data.scope === "turn" ? "No changes in this turn." : "No changes."}

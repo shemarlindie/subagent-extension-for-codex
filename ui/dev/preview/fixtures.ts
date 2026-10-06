@@ -1230,6 +1230,15 @@ const build = lifecycle(
   ["task.completed", { summary: "Cached module compilation in 60 files." }],
 );
 
+// --- Changes: every file in large-files.ts, for the file previews ----------
+const profile = lifecycle(
+  "preview-profile",
+  107,
+  ["task.queued"],
+  ["task.started", { attempt: 1 }],
+  ["task.completed", { summary: "Wrote the build profile and its reports." }],
+);
+
 const permission = lifecycle(
   "preview-input",
   25,
@@ -1625,6 +1634,27 @@ export const previewTasks: Task[] = [
       recommendations: [],
     },
   },
+  {
+    ...taskBase,
+    id: "preview-profile",
+    title: "Profile the production build",
+    description:
+      "Profile the production build and write reports on chunk and module sizes.",
+    worker_profile: "implementer",
+    status: "completed",
+    runtime_ms: 260000,
+    cost_usd: 1.31,
+    ...worktree("preview-profile"),
+    ...timestamps(107, 5),
+    result: {
+      summary: "Wrote the build profile and its reports.",
+      findings: [],
+      evidence: [],
+      changes: ["Added the build log, size reports and a dependency graph."],
+      tests: [],
+      recommendations: [],
+    },
+  },
   ...liveTasks,
 ];
 
@@ -1642,5 +1672,6 @@ export const previewEvents: Event[] = [
   permission,
   dependent,
   build,
+  profile,
   ...liveTimelines,
 ].flatMap((timeline) => timeline.events);

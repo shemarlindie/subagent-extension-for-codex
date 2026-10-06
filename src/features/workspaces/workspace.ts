@@ -5,14 +5,19 @@ import { promisify } from "node:util";
 
 import { type Task } from "../../shared/contracts.js";
 import {
+  type ChangedFileContent,
   changedFiles,
   type Changes,
   CHANGES_PAGE_CHARS,
   type ChangeScope,
   decodeCursor,
+  decodeFileCursor,
   diffPage,
   diffParts,
   encodeCursor,
+  encodeFileCursor,
+  imageMime,
+  isBinary,
 } from "./changes.js";
 
 const exec = promisify(execFile);
@@ -35,6 +40,38 @@ export async function git(
       ...(env ? { env: { ...process.env, ...env } } : {}),
     })
   ).stdout;
+}
+
+/** Git output as bytes, for file contents that may be binary. */
+async function gitBytes(cwd: string, args: string[]) {
+  return (
+    await exec("git", ["-C", cwd, ...args], {
+      encoding: "buffer",
+      maxBuffer: 1024 * 1024 * 1024,
+    })
+  ).stdout;
+}
+
+/**
+ * What a scope's changes are measured from: a worktree's base commit or a
+ * current_repo task's start snapshot for the whole task, the turn snapshot
+ * for the latest turn.
+ */
+function changesBase(t: Task, scope: ChangeScope) {
+  const base =
+    scope === "turn"
+      ? t.turn_start_tree
+      : t.workspace_strategy === "worktree"
+        ? t.branch && t.base_commit
+        : t.start_tree;
+
+  // No compatibility for tasks created before branches and snapshots.
+  if (!base)
+    throw new Error(
+      "This task predates change tracking, so its changes aren't available.",
+    );
+
+  return base;
 }
 
 export class Workspaces {
@@ -158,19 +195,7 @@ export class Workspaces {
   ): Promise<Changes> {
     const empty = { scope, files: [], additions: 0, deletions: 0, diff: "" };
     if (!t.workspace) return empty;
-
-    const base =
-      scope === "turn"
-        ? t.turn_start_tree
-        : t.workspace_strategy === "worktree"
-          ? t.branch && t.base_commit
-          : t.start_tree;
-
-    // No compatibility for tasks created before branches and snapshots.
-    if (!base)
-      throw new Error(
-        "This task predates change tracking, so its changes aren't available.",
-      );
+    const base = changesBase(t, scope);
 
     if (t.workspace_strategy === "worktree" && !(await exists(t.workspace)))
       return { ...empty, state: "workspace_missing", branch: t.branch };
@@ -199,8 +224,40 @@ export class Workspaces {
       diff("--src-prefix=a/", "--dst-prefix=b/"),
     ]);
 
-    const files = changedFiles(nameStatus, numstat),
-      parts = diffParts(patch),
+    const files = changedFiles(nameStatus, numstat);
+
+    // Binary files have no line counts, so the list shows their size instead,
+    // read for all of them at once: "<mode> blob <id> <size>\t<path>".
+    const binary = files.filter(
+      (file) => file.binary && file.status !== "deleted",
+    );
+
+    if (binary.length) {
+      const sizes = new Map(
+        (
+          await git(t.workspace, [
+            "ls-tree",
+            "-r",
+            "-l",
+            "-z",
+            current,
+            "--",
+            ...binary.map((file) => file.path),
+          ])
+        )
+          .split("\0")
+          .filter(Boolean)
+          .map((entry) => {
+            const [meta, path] = entry.split("\t");
+
+            return [path, Number(meta.trim().split(/\s+/)[3])] as const;
+          }),
+      );
+
+      for (const file of binary) file.size = sizes.get(file.path);
+    }
+
+    const parts = diffParts(patch),
       start = page?.index ?? 0,
       { diff: text, end } = diffPage(parts, start, pageChars);
 
@@ -213,6 +270,89 @@ export class Workspaces {
       diff: text,
       ...(end < parts.length
         ? { next_cursor: encodeCursor(base, current, end) }
+        : {}),
+    };
+  }
+
+  /**
+   * The current content of a file the task changed, read from a snapshot of
+   * its workspace. Only paths in the task's or the latest turn's changes are
+   * read. Images come as base64, other binary files as their size only, and
+   * large contents in parts through `next_cursor`.
+   */
+  async changedFile(
+    t: Task,
+    path: string,
+    cursor?: string,
+    pageChars = CHANGES_PAGE_CHARS,
+  ): Promise<ChangedFileContent> {
+    if (!t.workspace) throw new Error("This task hasn't changed any files.");
+    if (t.workspace_strategy === "worktree" && !(await exists(t.workspace)))
+      throw new Error(
+        `The worktree was removed; this file is on branch ${t.branch}.`,
+      );
+
+    // Later parts read the snapshot the first part took.
+    const { tree, offset } = cursor
+      ? decodeFileCursor(cursor)
+      : { tree: await this.snapshot(t.workspace), offset: 0 };
+
+    // Every part checks the path, so a cursor can't reach other files. A file
+    // changed in the latest turn may match the task's base again.
+    const scopes: ChangeScope[] = t.turn_start_tree
+      ? ["task", "turn"]
+      : ["task"];
+
+    const changed = await Promise.all(
+      scopes.map(async (scope) =>
+        (
+          await git(t.workspace!, [
+            "-c",
+            "core.quotePath=false",
+            "diff",
+            "--no-ext-diff",
+            "-M",
+            "--name-only",
+            "-z",
+            changesBase(t, scope),
+            tree,
+            "--",
+          ])
+        ).split("\0"),
+      ),
+    );
+
+    if (!changed.flat().includes(path))
+      throw new Error(`${path} is not among this task's changes.`);
+
+    const object = `${tree}:${path}`;
+
+    if (
+      !(await git(t.workspace, ["cat-file", "-e", object]).then(
+        () => true,
+        () => false,
+      ))
+    )
+      return { path, state: "deleted", size: 0 };
+
+    const bytes = await gitBytes(t.workspace, ["cat-file", "blob", object]),
+      image = imageMime(path);
+
+    if (!image && isBinary(bytes))
+      return { path, state: "binary", size: bytes.length };
+
+    const content = Buffer.from(bytes).toString(image ? "base64" : "utf8"),
+      end = offset + pageChars;
+
+    return {
+      path,
+      state: "present",
+      size: bytes.length,
+      ...(image ? { mime_type: image } : {}),
+      encoding: image ? "base64" : "utf8",
+      content: content.slice(offset, end),
+      ...(end < content.length
+        ? { next_cursor: encodeFileCursor(tree, end) }
         : {}),
     };
   }

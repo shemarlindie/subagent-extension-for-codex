@@ -110,7 +110,10 @@ export function fixtureLaunchArgs(
  * The browser fixtures do not answer them. Changes are read from real Git
  * repositories built from ui/dev/preview/change-fixtures.ts.
  */
-export const FIXTURE_SERVICE_TOOLS: string[] = ["get_user_agent_changes"];
+export const FIXTURE_SERVICE_TOOLS: string[] = [
+  "get_user_agent_changes",
+  "get_user_agent_changed_file",
+];
 
 export const FIXTURE_SERVICE_PATH = "/fixture-service/tools/";
 

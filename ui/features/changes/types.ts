@@ -1,10 +1,11 @@
 import type {
   ChangedFile,
+  ChangedFileContent,
   Changes,
   ChangeScope,
 } from "../../../src/features/workspaces/changes.js";
 
-export type { ChangedFile, Changes, ChangeScope };
+export type { ChangedFile, ChangedFileContent, Changes, ChangeScope };
 
 /** The selected task's changes, as the Changes tab and Details read them. */
 export type ChangesState = {

@@ -111,6 +111,8 @@ test("worktree changes cover commits, edits, renames, deletions, new and binary 
     );
 
     assert.equal(changes.branch, t.branch);
+    // Binary files carry their size, since they have no line counts.
+    assert.equal(changes.files.find((f) => f.path === "image.png")?.size, 5);
     assert.equal(changes.additions, 2);
     assert.equal(changes.deletions, 40);
     assert.equal(changes.next_cursor, undefined);
@@ -214,6 +216,94 @@ test("a removed worktree names its branch, and older tasks get an error", async 
     // A task that hasn't started has no changes yet.
     delete older.workspace;
     assert.deepEqual((await s.workspaces.changes(older)).files, []);
+  } finally {
+    await s.close();
+  }
+});
+
+test("changed files are read whole or in parts, with images as base64 and other binaries as a size", async () => {
+  const s = await setup();
+
+  try {
+    const t = await s.task("worktree");
+    const w = t.workspace!;
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 3]);
+    await writeFile(join(w, "file-0.txt"), "héllo wörld\n".repeat(10));
+    await writeFile(join(w, "logo.png"), png);
+    await writeFile(join(w, "data.bin"), Buffer.from([1, 0, 2, 0]));
+    await rm(join(w, "file-1.txt"));
+
+    const text = await s.workspaces.changedFile(t, "file-0.txt");
+
+    assert.deepEqual(text, {
+      path: "file-0.txt",
+      state: "present",
+      size: Buffer.byteLength("héllo wörld\n".repeat(10)),
+      encoding: "utf8",
+      content: "héllo wörld\n".repeat(10),
+    });
+
+    // Parts join back into the whole file.
+    let part = await s.workspaces.changedFile(t, "file-0.txt", undefined, 50);
+    let joined = part.content!;
+
+    while (part.next_cursor) {
+      part = await s.workspaces.changedFile(
+        t,
+        "file-0.txt",
+        part.next_cursor,
+        50,
+      );
+
+      joined += part.content;
+    }
+
+    assert.equal(joined, text.content);
+
+    assert.deepEqual(await s.workspaces.changedFile(t, "logo.png"), {
+      path: "logo.png",
+      state: "present",
+      size: png.length,
+      mime_type: "image/png",
+      encoding: "base64",
+      content: png.toString("base64"),
+    });
+
+    assert.deepEqual(await s.workspaces.changedFile(t, "data.bin"), {
+      path: "data.bin",
+      state: "binary",
+      size: 4,
+    });
+
+    assert.deepEqual(await s.workspaces.changedFile(t, "file-1.txt"), {
+      path: "file-1.txt",
+      state: "deleted",
+      size: 0,
+    });
+
+    // Unchanged files, and paths outside the repository, are refused.
+    for (const path of ["file-2.txt", "../repo/file-2.txt", ".git/config"])
+      await assert.rejects(
+        s.workspaces.changedFile(t, path),
+        /not among this task's changes/,
+      );
+
+    // A later part's cursor can't reach an unchanged file either.
+    await assert.rejects(
+      s.workspaces.changedFile(
+        t,
+        "file-2.txt",
+        `${s.git(w, "rev-parse", "HEAD^{tree}").trim()}:0`,
+      ),
+      /not among this task's changes/,
+    );
+
+    s.git(s.repo, "worktree", "remove", "--force", w);
+
+    await assert.rejects(
+      s.workspaces.changedFile(t, "file-0.txt"),
+      /worktree was removed; this file is on branch agent\/task_worktree/,
+    );
   } finally {
     await s.close();
   }

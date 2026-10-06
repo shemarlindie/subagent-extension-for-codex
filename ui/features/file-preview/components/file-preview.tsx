@@ -1,6 +1,6 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { useDeferredValue, useMemo, useState } from "react";
+import { type ReactNode, useDeferredValue, useMemo, useState } from "react";
 
 import { useController } from "../../../shared/state/controller-context";
 import { formatBytes } from "../../../shared/utils/format";
@@ -23,10 +23,12 @@ import { Progress } from "./progress";
 
 type FilePreviewProps = {
   file: PreviewFile;
+  /** Extra toolbar buttons, after Copy. */
+  actions?: ReactNode;
 };
 
 /** A file with a switcher between the views its format offers. */
-export function FilePreview({ file }: FilePreviewProps) {
+export function FilePreview({ file, actions }: FilePreviewProps) {
   const controller = useController(),
     canCopy =
       !controller.transport.embedded &&
@@ -71,6 +73,7 @@ export function FilePreview({ file }: FilePreviewProps) {
         <span className="toolbar-actions">
           {/* Only show Copy where the browser exposes clipboard access. */}
           {canCopy && format !== "image" && <CopyButton text={file.content} />}
+          {actions}
         </span>
         {rendering && <Progress label={`Showing ${viewLabel(view)}`} />}
       </div>

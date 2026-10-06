@@ -1,6 +1,7 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { type ReactNode, useDeferredValue, useMemo, useState } from "react";
 
 import { LazyBlock } from "../../../shared/components/lazy-block";
+import { chunks } from "../../../shared/utils/chunks";
 import {
   diffPath,
   diffRows,
@@ -21,12 +22,15 @@ type DiffFileProps = {
   initiallyOpen: boolean;
   /** Shown instead of rows when the file has none. */
   emptyNote?: string;
+  /** Buttons in the file's header; using them doesn't toggle the file. */
+  actions?: ReactNode;
 };
 
 export function DiffFile({
   file,
   initiallyOpen,
   emptyNote = "No content changes",
+  actions,
 }: DiffFileProps) {
   const [open, setOpen] = useState(initiallyOpen),
     deferredOpen = useDeferredValue(open),
@@ -52,6 +56,15 @@ export function DiffFile({
         {file.new && <span className="diff-tag">new</span>}
         {file.deleted && <span className="diff-tag">deleted</span>}
         <DiffStat additions={file.additions} deletions={file.deletions} />
+        {actions && (
+          // A click in the summary would also open or close the file.
+          <span
+            className="diff-actions"
+            onClick={(event) => event.preventDefault()}
+          >
+            {actions}
+          </span>
+        )}
       </summary>
       {open && !deferredOpen && (
         <Progress
@@ -75,21 +88,17 @@ type DiffRowsProps = {
 
 /** A file's rows in blocks; only blocks near the visible area mount. */
 function DiffRows({ file, language, emptyNote }: DiffRowsProps) {
-  const blocks = useMemo(() => {
-    const rows = diffRows(file),
-      result: (typeof rows)[] = [];
-
-    for (let start = 0; start < rows.length; start += BLOCK_ROWS)
-      result.push(rows.slice(start, start + BLOCK_ROWS));
-
-    return result;
-  }, [file]);
+  const blocks = useMemo(() => chunks(diffRows(file), BLOCK_ROWS), [file]);
 
   return (
     <div className="diff-table hljs">
       {blocks.length === 0 && <p className="help diff-empty">{emptyNote}</p>}
       {blocks.map((rows, blockIndex) => (
-        <LazyBlock key={blockIndex} estimate={rows.length * ROW_HEIGHT}>
+        <LazyBlock
+          key={blockIndex}
+          eager={blockIndex === 0}
+          estimate={rows.length * ROW_HEIGHT}
+        >
           {rows.map((row, index) =>
             row.kind === "hunk" ? (
               <div className="diff-hunk" key={index}>

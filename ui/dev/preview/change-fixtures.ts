@@ -174,6 +174,15 @@ export const previewChanges: Record<string, () => ChangeFixture> = {
     turns: [{ "test/retry.test.ts": "test('retries', { retry: 2 });\n" }],
   }),
 
+  // Every large file, added, for the file previews: megabytes of diff, so
+  // the changes come in several pages.
+  "preview-profile": (): ChangeFixture => ({
+    base: { "README.md": "# Build profile\n" },
+    turns: [
+      Object.fromEntries(largeFiles().map((file) => [file.path, file.content])),
+    ],
+  }),
+
   // 60 files and about 7,000 changed lines, with a rename and a deletion.
   "preview-build": (): ChangeFixture => {
     const diff = largeFiles().find((file) => file.path === "changes.diff")!;

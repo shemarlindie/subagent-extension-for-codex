@@ -5,7 +5,11 @@ import { createServer } from "vite";
 import { afterAll, test } from "vitest";
 
 import { fixtureServicePlugin } from "../../../dev/fixture-service-plugin.js";
-import type { Changes } from "../../../src/features/workspaces/changes.js";
+import type {
+  ChangedFileContent,
+  Changes,
+} from "../../../src/features/workspaces/changes.js";
+import { largeFiles } from "../../../ui/dev/preview/large-files.js";
 
 const projectRoot = resolve(import.meta.dirname, "../../..");
 const serviceModule = resolve(projectRoot, "ui/dev/fixture-service.ts");
@@ -141,6 +145,70 @@ test("fixture changes come from real Git repositories built per task", async () 
     deletions: 0,
     diff: "",
   });
+});
+
+test("the large-file fixture's changes come in pages and its files read whole", async () => {
+  await fixtureServer();
+
+  const call = async <T>(name: string, args: Record<string, unknown>) => {
+    const response = await fetch(`${origin}/fixture-service/tools/${name}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+
+    assert.equal(response.status, 200);
+
+    return ((await response.json()) as { result: T }).result;
+  };
+
+  // Several megabytes of new files cross in pages of whole files.
+  let page = await call<Changes>("get_user_agent_changes", {
+    task_id: "preview-profile",
+  });
+
+  const pages = [page];
+
+  while (page.next_cursor) {
+    page = await call<Changes>("get_user_agent_changes", {
+      task_id: "preview-profile",
+      cursor: page.next_cursor,
+    });
+
+    pages.push(page);
+  }
+
+  assert.ok(pages.length > 1, "the diff should need more than one page");
+
+  assert.equal(
+    pages
+      .map((part) => part.diff)
+      .join("")
+      .match(/^diff --git /gm)?.length,
+    page.files.length,
+  );
+
+  // The 20,000-row table, over a megabyte, arrives whole across its parts.
+  const path = "reports/module-sizes.csv";
+  let part: ChangedFileContent | undefined;
+  let content = "";
+
+  do {
+    part = await call<ChangedFileContent>("get_user_agent_changed_file", {
+      task_id: "preview-profile",
+      path,
+      cursor: part?.next_cursor,
+    });
+
+    assert.equal(part.state, "present");
+    content += part.content;
+  } while (part.next_cursor);
+
+  assert.equal(
+    content,
+    largeFiles().find((file) => file.path === "reports/module-sizes.csv")!
+      .content,
+  );
 });
 
 test("the Vite fixture-service route serializes service errors as JSON", async () => {

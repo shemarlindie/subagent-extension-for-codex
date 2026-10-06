@@ -7,6 +7,7 @@ import {
   changesKey,
   changesStale,
   changesSummary,
+  readChangedFile,
   readChanges,
 } from "./read-changes";
 import type { Changes } from "./types";
@@ -91,5 +92,36 @@ test("summaries count lines and files", () => {
       ],
     }),
     "+3 −1, 1 file",
+  );
+});
+
+test("a changed file's parts are joined; a deleted file has no content", async () => {
+  const parts = [
+    {
+      path: "a",
+      state: "present" as const,
+      size: 6,
+      content: "abc",
+      next_cursor: "1",
+    },
+    { path: "a", state: "present" as const, size: 6, content: "def" },
+  ];
+
+  assert.deepEqual(
+    await readChangedFile(
+      "task",
+      "a",
+      async (args) => parts[Number(args.cursor ?? 0)],
+    ),
+    { path: "a", state: "present", size: 6, content: "abcdef" },
+  );
+
+  assert.deepEqual(
+    await readChangedFile("task", "b", async () => ({
+      path: "b",
+      state: "deleted",
+      size: 0,
+    })),
+    { path: "b", state: "deleted", size: 0 },
   );
 });

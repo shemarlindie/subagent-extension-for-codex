@@ -1,5 +1,10 @@
 import type { Task } from "../tasks/types";
-import type { Changes, ChangeScope, ChangesState } from "./types";
+import type {
+  ChangedFileContent,
+  Changes,
+  ChangeScope,
+  ChangesState,
+} from "./types";
 
 type ReadPage = (args: Record<string, unknown>) => Promise<Changes>;
 
@@ -44,4 +49,27 @@ export function changesStale(state: ChangesState | undefined, task: Task) {
 /** "+12 −3, 4 files" */
 export function changesSummary({ additions, deletions, files }: Changes) {
   return `+${additions} −${deletions}, ${files.length} ${files.length === 1 ? "file" : "files"}`;
+}
+
+type ReadFilePart = (
+  args: Record<string, unknown>,
+) => Promise<ChangedFileContent>;
+
+/** Reads every part of a changed file and joins them. */
+export async function readChangedFile(
+  taskId: string,
+  path: string,
+  read: ReadFilePart,
+) {
+  let part = await read({ task_id: taskId, path });
+  let content = part.content ?? "";
+
+  while (part.next_cursor) {
+    part = await read({ task_id: taskId, path, cursor: part.next_cursor });
+    content += part.content ?? "";
+  }
+
+  const { next_cursor: _, ...last } = part;
+
+  return { ...last, ...(last.state === "present" ? { content } : {}) };
 }

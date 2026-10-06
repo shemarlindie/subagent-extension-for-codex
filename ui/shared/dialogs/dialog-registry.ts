@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { changedFileDialog } from "../../features/changes/changed-file-preview";
 import { delegateDialog } from "../../features/delegation/delegate-form";
 import { projectDialog } from "../../features/projects/project-form";
 import { settingsDialog } from "../../features/settings/settings-form";
@@ -17,6 +18,7 @@ const registry: { [K in DialogKind]: DialogDefinition<K> } = {
   control: controlDialog,
   respond: permissionDialog,
   handoff: handoffDialog,
+  file: changedFileDialog,
 };
 
 /** Looks up by the dialog's kind, which TypeScript cannot correlate with the entry. */

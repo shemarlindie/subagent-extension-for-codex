@@ -127,6 +127,11 @@
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+.diff-actions {
+  flex: none;
+  display: inline-flex;
+  gap: 4px;
+}
 .diff-stat .add {
   color: var(--success);
 }
@@ -361,8 +366,9 @@
   height: 28px;
   font-size: 8px;
 }
+/* Keeps room for the name; the switcher and actions wrap below it instead. */
 .file-preview-toolbar .file-meta {
-  flex: 1;
+  flex: 1 1 12rem;
 }
 .toolbar-actions {
   display: flex;

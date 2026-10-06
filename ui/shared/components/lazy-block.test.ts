@@ -66,8 +66,6 @@ test("a block mounts its rows in view and keeps its measured height out of view"
   const block = view.container.firstChild!.firstChild as HTMLElement;
   assert.equal(block.textContent, "");
   assert.equal(block.style.height, "40px");
-  // The scroll area is the observer's root.
-  assert.equal(observers[0].root, view.container.firstChild);
 
   act(() =>
     observers[0].callback([
@@ -98,9 +96,29 @@ test("without IntersectionObserver, blocks always render", (t) => {
   assert.equal(view.container.textContent, "rows");
 });
 
-test("the viewport is the scroll area when no ancestor scrolls", () => {
-  const element = document.createElement("div");
-  document.body.append(element);
-  assert.equal(scrollParent(element), null);
-  element.remove();
+test("the scroll area is the nearest ancestor that overflows, else the viewport", () => {
+  // jsdom lays nothing out, so sizes are set by hand.
+  const box = (overflowing: boolean) => {
+    const element = document.createElement("div");
+    element.style.overflowY = "auto";
+    Object.defineProperty(element, "scrollHeight", { value: 500 });
+
+    Object.defineProperty(element, "clientHeight", {
+      value: overflowing ? 100 : 500,
+    });
+
+    return element;
+  };
+
+  const outer = box(true),
+    // Scrolls sideways only: grown to fit its rows, as a table view is.
+    inner = box(false),
+    element = document.createElement("div");
+
+  inner.append(element);
+  outer.append(inner);
+  document.body.append(outer);
+  assert.equal(scrollParent(element), outer);
+  assert.equal(scrollParent(outer), null);
+  outer.remove();
 });

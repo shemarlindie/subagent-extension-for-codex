@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 
 import { describe, test, type TestContext, vi } from "vitest";
 
-import type { Changes } from "../../../ui/features/changes/types";
+import type {
+  ChangedFileContent,
+  Changes,
+} from "../../../ui/features/changes/types";
 import type {
   HostState,
   Project,
@@ -79,7 +82,14 @@ class FakeTransport implements Transport {
     { scope: "task", files: [], additions: 0, deletions: 0, diff: "" },
   ];
 
+  /** get_user_agent_changed_file results by path. */
+  changedFiles: Record<string, ChangedFileContent> = {};
+  shared: Record<string, unknown>[] = [];
   messages: string[] = [];
+  async share(data: Record<string, unknown>) {
+    this.shared.push(data);
+  }
+
   host: HostState = {
     canSend: false,
     canShare: false,
@@ -125,6 +135,7 @@ class FakeTransport implements Transport {
       list_agent_tasks: this.tasks,
       get_agent_events: [],
       get_user_agent_changes: this.changes[Number(args.cursor ?? 0)],
+      get_user_agent_changed_file: this.changedFiles[String(args.path)],
       get_agent_settings: {
         values: {
           default_provider: "claude",
@@ -1943,8 +1954,9 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
   assert.ok(screen.getByText("Task ID"));
 });
 
-// Two pages of one file each, as the service pages a large diff.
-const changePages = (): Changes[] => {
+// Two pages of one file each, as the service pages a large diff. The second
+// file is binary.
+const changePages = (binary = "logo.png"): Changes[] => {
   const files: Changes["files"] = [
     {
       path: "src/a.ts",
@@ -1954,11 +1966,12 @@ const changePages = (): Changes[] => {
       binary: false,
     },
     {
-      path: "logo.png",
+      path: binary,
       status: "added",
       additions: 0,
       deletions: 0,
       binary: true,
+      size: 2048,
     },
   ];
 
@@ -1972,7 +1985,7 @@ const changePages = (): Changes[] => {
     },
     {
       ...page,
-      diff: "diff --git a/logo.png b/logo.png\nnew file mode 100644\nBinary files /dev/null and b/logo.png differ\n",
+      diff: `diff --git a/${binary} b/${binary}\nnew file mode 100644\nBinary files /dev/null and b/${binary} differ\n`,
     },
   ];
 };
@@ -2011,7 +2024,7 @@ test("the Changes tab reads every page and shows the worktree branch and its com
   );
 
   assert.ok(screen.getByText("+1 −1, 2 files"));
-  assert.ok(screen.getByText("Binary file changed"));
+  assert.ok(screen.getByText("Binary file changed · 2.0 KB"));
   assert.ok(screen.getByText("git diff abc123...agent/one"));
   assert.ok(screen.getByText("git push -u origin agent/one"));
   assert.ok(screen.getByText("cd /data/worktrees/one"));
@@ -2061,6 +2074,87 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   transport.tasks = [{ ...transport.tasks[0], status: "completed" }];
   await act(() => controller.refresh());
   await screen.findByText("This task predates change tracking.");
+});
+
+test("Preview opens a changed file, and the host can be asked about it", async (t) => {
+  const { transport, user } = await setup(t, (transport) => {
+    transport.host.canShare = true;
+    transport.changes = changePages("data.bin");
+
+    transport.changedFiles = {
+      "src/a.ts": {
+        path: "src/a.ts",
+        state: "present",
+        size: 9,
+        encoding: "utf8",
+        content: "new line\n",
+      },
+    };
+  });
+
+  await user.click(screen.getByRole("tab", { name: "Changes" }));
+  // A binary file that isn't an image has no preview.
+  await screen.findByRole("button", { name: "Preview src/a.ts" });
+  assertAbsent(screen.queryByRole("button", { name: "Preview data.bin" }));
+  // Opening a preview leaves the file's section as it was.
+  const section = document.querySelector(".diff-file") as HTMLDetailsElement;
+  await user.click(screen.getByRole("button", { name: "Preview src/a.ts" }));
+  assert.equal(section.open, true);
+  const dialog = await screen.findByRole("dialog", { name: "src/a.ts" });
+
+  await waitFor(() =>
+    assert.match(
+      dialog.querySelector(".code-view")?.textContent ?? "",
+      /new line/,
+    ),
+  );
+
+  await user.click(
+    within(dialog).getByRole("button", { name: "Ask Codex about this file" }),
+  );
+
+  await within(dialog).findByRole("button", { name: "Shared with Codex" });
+
+  assert.deepEqual(transport.shared.at(-1)?.selected_item, {
+    kind: "file",
+    path: "src/a.ts",
+  });
+});
+
+test("previews say when a file was deleted, is binary, or can't be read", async (t) => {
+  const { controller, transport } = await setup(t);
+  const task = controller.getSnapshot().tasks[0];
+
+  transport.changedFiles = {
+    "gone.ts": { path: "gone.ts", state: "deleted", size: 0 },
+    "data.bin": { path: "data.bin", state: "binary", size: 2048 },
+  };
+
+  for (const [path, text] of [
+    ["gone.ts", "Deleted"],
+    ["data.bin", "Binary file changed · 2.0 KB"],
+    ["missing.ts", "The service returned no file."],
+  ]) {
+    if (path === "missing.ts") {
+      const tool = transport.tool.bind(transport);
+
+      transport.tool = async <T>(
+        name: string,
+        args?: Record<string, unknown>,
+      ) => {
+        if (name === "get_user_agent_changed_file")
+          throw new Error("The service returned no file.");
+
+        return tool<T>(name, args);
+      };
+    }
+
+    act(() => controller.open({ kind: "file", task, path }));
+    const dialog = await screen.findByRole("dialog", { name: path });
+    await within(dialog).findByText(text);
+    act(() => controller.dismiss());
+    await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  }
 });
 
 test("a current_repo task's changes say they include edits made outside the task", async (t) => {

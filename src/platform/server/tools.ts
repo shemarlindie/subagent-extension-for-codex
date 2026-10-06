@@ -270,6 +270,20 @@ export function definitions(
       run: (a) =>
         c.workspaces.changes(c.store.get(a.task_id, owner), a.scope, a.cursor),
     }),
+    get_agent_changed_file: tool({
+      description:
+        "Read the current content of one file a task changed, from its worktree or checkout. path must be listed by get_agent_changes (the whole task or its latest turn). state is deleted when the change removed the file, or binary with only its size for non-image binary files; images come as base64. Large files come in parts: pass next_cursor back to read the rest.",
+      schema: taskId.extend({
+        path: z.string().min(1).max(4096),
+        cursor: z.string().max(300).optional(),
+      }),
+      run: (a) =>
+        c.workspaces.changedFile(
+          c.store.get(a.task_id, owner),
+          a.path,
+          a.cursor,
+        ),
+    }),
     get_agent_events: tool({
       description:
         "Retrieve ordered execution events after an optional cursor.",
@@ -341,6 +355,11 @@ export function definitions(
       description:
         "User interface only: a task's changes for the panel's Changes tab, as get_agent_changes returns them.",
     }),
+    get_user_agent_changed_file: tool({
+      ...tools.get_agent_changed_file,
+      description:
+        "User interface only: a changed file's content for the panel's preview, as get_agent_changed_file returns it.",
+    }),
   };
 }
 
@@ -352,6 +371,7 @@ export const isUserTool = (name: string) =>
     "submit_user_agent_input",
     "update_user_agent_settings",
     "get_user_agent_changes",
+    "get_user_agent_changed_file",
   ].includes(name);
 
 export async function callTool(

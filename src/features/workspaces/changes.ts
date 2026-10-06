@@ -16,6 +16,8 @@ export interface ChangedFile {
   additions: number;
   deletions: number;
   binary: boolean;
+  /** A binary file's current size in bytes, unless it was deleted. */
+  size?: number;
 }
 
 export interface Changes {
@@ -31,6 +33,52 @@ export interface Changes {
   diff: string;
   /** Pass back to read the next page; absent on the last one. */
   next_cursor?: string;
+}
+
+/** A changed file's current content, as get_agent_changed_file returns it. */
+export interface ChangedFileContent {
+  path: string;
+  /** "deleted": the change removed it. "binary": not text and not an image. */
+  state: "present" | "deleted" | "binary";
+  /** Bytes in the file. */
+  size: number;
+  mime_type?: string;
+  /** UTF-8 text, or base64 for images; this page's part of it. */
+  content?: string;
+  encoding?: "utf8" | "base64";
+  /** Pass back to read the next part; absent on the last one. */
+  next_cursor?: string;
+}
+
+/** Images a preview can show; their content is sent as base64. */
+const IMAGE_MIMES: Record<string, string> = {
+  avif: "image/avif",
+  bmp: "image/bmp",
+  gif: "image/gif",
+  ico: "image/x-icon",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
+
+export const imageMime = (path: string) =>
+  IMAGE_MIMES[/\.([a-z0-9]+)$/i.exec(path)?.[1]?.toLowerCase() ?? ""];
+
+/** Git's own test: a NUL byte in the first 8,000 bytes means binary. */
+export const isBinary = (bytes: Uint8Array) =>
+  bytes.subarray(0, 8000).includes(0);
+
+/** File cursors name the snapshot tree, so later parts read the same file. */
+export function encodeFileCursor(tree: string, offset: number) {
+  return `${tree}:${offset}`;
+}
+
+export function decodeFileCursor(cursor: string) {
+  const match = /^([0-9a-f]{40,64}):(\d+)$/.exec(cursor);
+  if (!match) throw new Error("Invalid file cursor");
+
+  return { tree: match[1], offset: Number(match[2]) };
 }
 
 /** Diff text per page. A file larger than this is still sent whole. */

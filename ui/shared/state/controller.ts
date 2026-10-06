@@ -709,7 +709,8 @@ export class Controller {
   open(
     dialog:
       | Omit<Extract<DialogState, { kind: "control" }>, "scope">
-      | Omit<Extract<DialogState, { kind: "respond" | "handoff" }>, "scope">,
+      | Omit<Extract<DialogState, { kind: "respond" | "handoff" }>, "scope">
+      | Omit<Extract<DialogState, { kind: "file" }>, "scope">,
   ) {
     if (this.state.dialog || this.state.busy) return;
 
