@@ -61,6 +61,16 @@ describe("Icon", () => {
     assert.equal(svg.querySelector("title")?.textContent, "Done");
   });
 
+  test("escapes labels inserted into the SVG markup", () => {
+    const label = 'Done <path>unsafe</path> & "quoted"';
+
+    const { container } = render(createElement(Icon, { name: "check", label }));
+
+    const svg = svgOf(container);
+    assert.equal(svg.querySelector("title")?.textContent, label);
+    assert.equal(svg.querySelector("title path"), null);
+  });
+
   test("size and strokeWidth override the catalog", () => {
     const { container } = render(
       createElement(Icon, { name: "check", size: 10, strokeWidth: 1 }),

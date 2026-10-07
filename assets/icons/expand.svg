@@ -1,0 +1,15 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  width="24"
+  height="24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2.427"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path
+    d="M7.955 7.955 1.213 1.213m0 4.045V1.213h4.045M16.045 7.955l6.742-6.742m-4.045 0h4.045v4.045M7.955 16.045l-6.742 6.742m0-4.045v4.045h4.045M16.045 16.045l6.742 6.742m-4.045 0h4.045v-4.045"
+  ></path>
+</svg>

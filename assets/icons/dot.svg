@@ -1,0 +1,21 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  width="24"
+  height="24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2.667"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle
+    class="row-status-glow"
+    fill="currentColor"
+    opacity="0.15"
+    cx="12"
+    cy="12"
+    r="10.667"
+  ></circle>
+  <circle cx="12" cy="12" r="6.667" fill="currentColor" stroke="none"></circle>
+</svg>
