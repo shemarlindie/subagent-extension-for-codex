@@ -43,7 +43,7 @@ test.each([
   "waiting",
   "completed",
   "busy",
-] as const)("task menu gates deletion for %s tasks", async (status) => {
+] as const)("task menu offers deletion for %s tasks", async (status) => {
   onTestFinished(cleanup);
 
   const controller = new Controller(
@@ -77,7 +77,8 @@ test.each([
   const user = userEvent.setup();
   await user.click(view.getByRole("button", { name: /More/ }));
   const action = await view.findByRole("menuitem");
-  const enabled = status === "completed";
+  // Deleting interrupts a running task first; only another action waits.
+  const enabled = status !== "busy";
   assert.equal(action.getAttribute("aria-disabled") === "true", !enabled);
   await user.click(action);
   if (enabled) {

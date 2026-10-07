@@ -10,6 +10,7 @@ import {
   settingsUpdateOutputSchema,
   settingsUpdateSchema,
 } from "../../features/settings/settings.js";
+import { CHAT_EVENTS, chatItems } from "../../features/tasks/chat.js";
 import { Control } from "../../features/tasks/control.js";
 import {
   MAX_MESSAGE_WAIT_SECONDS,
@@ -388,6 +389,25 @@ export function definitions(
         };
       },
     }),
+    get_user_agent_chat: tool({
+      description:
+        "User interface only: a task's Chat after a cursor: its messages, an outcome row for each turn's end, and notes for a new session, a recreated worktree and compaction. An item read again replaces the earlier one with its id.",
+      schema: taskId.extend({
+        after: z.number().int().nonnegative().default(0),
+      }),
+      run: (a) => {
+        const t = c.store.get(a.task_id, owner);
+        const events = c.store.chatEvents(t.id, CHAT_EVENTS);
+
+        return {
+          items: chatItems(t, events).filter(
+            (item) =>
+              item.event_id > a.after || (a.after === 0 && item.event_id === 0),
+          ),
+          next_cursor: Math.max(a.after, events.at(-1)?.id ?? 0),
+        };
+      },
+    }),
     edit_user_agent_queued_message: tool({
       description:
         "User interface only: change a queued message's text before its turn starts.",
@@ -484,6 +504,7 @@ export const isUserTool = (name: string) =>
     "start_user_agent_task",
     "submit_user_agent_input",
     "send_user_agent_message",
+    "get_user_agent_chat",
     "edit_user_agent_queued_message",
     "remove_user_agent_queued_message",
     "resume_user_agent_queue",

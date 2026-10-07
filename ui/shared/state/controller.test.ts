@@ -99,6 +99,7 @@ class FakeTransport implements Transport {
       ],
       list_agent_tasks: this.tasks,
       get_agent_events: [],
+      get_user_agent_chat: { items: [], next_cursor: 0 },
       get_agent_settings: { values: defaults },
     };
 
@@ -263,10 +264,9 @@ test("restores saved dialogs in order and removes each deliberate close", async 
             draft: { repository: "/repo/draft" },
           },
           {
-            kind: "control",
-            action: "steer",
+            kind: "handoff",
             taskId: "task-1",
-            draft: { instruction: "continue the migration" },
+            draft: { message: "continue the migration" },
           },
         ],
       },
@@ -277,16 +277,16 @@ test("restores saved dialogs in order and removes each deliberate close", async 
   t.onTestFinished(() => controller.dispose());
 
   await controller.start();
-  assert.equal(controller.getSnapshot().dialog?.kind, "control");
+  assert.equal(controller.getSnapshot().dialog?.kind, "handoff");
 
-  assert.deepEqual(controller.getDialogDraft("control"), {
-    instruction: "continue the migration",
+  assert.deepEqual(controller.getDialogDraft("handoff"), {
+    message: "continue the migration",
   });
 
-  controller.saveDialogDraft("control", { instruction: "updated draft" });
+  controller.saveDialogDraft("handoff", { message: "updated draft" });
 
   assert.deepEqual(saved.at(-1)?.dialogs?.at(-1)?.draft, {
-    instruction: "updated draft",
+    message: "updated draft",
   });
 
   controller.dismiss();
@@ -306,13 +306,13 @@ test("form updates preserve other state saved for the same dialog", (t) => {
   const { controller } = setup();
   t.onTestFinished(() => controller.dispose());
 
-  controller.open({ kind: "control", action: "steer", task: task("task-1") });
-  controller.saveDialogField("control", "openSections", ["advanced"]);
-  controller.saveDialogDraft("control", { instruction: "keep going" });
+  controller.open({ kind: "handoff", task: task("task-1") });
+  controller.saveDialogField("handoff", "openSections", ["advanced"]);
+  controller.saveDialogDraft("handoff", { message: "keep going" });
 
-  assert.deepEqual(controller.getDialogDraft("control"), {
+  assert.deepEqual(controller.getDialogDraft("handoff"), {
     openSections: ["advanced"],
-    instruction: "keep going",
+    message: "keep going",
   });
 });
 

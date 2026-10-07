@@ -48,16 +48,15 @@ test("parses only valid dialog descriptors and keeps the newest eight", () => {
 
 test("dialog identity ignores draft edits but includes the dialog target", () => {
   const saved = {
-    kind: "control" as const,
-    action: "steer" as const,
+    kind: "handoff" as const,
     taskId: "task-1",
-    draft: { instruction: "first" },
+    draft: { message: "first" },
   };
 
   assert.equal(
     sameDialogReference(saved, {
       ...saved,
-      draft: { instruction: "second" },
+      draft: { message: "second" },
     }),
     true,
   );

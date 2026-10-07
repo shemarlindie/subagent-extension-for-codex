@@ -45,14 +45,3 @@
   align-items: baseline;
   gap: 8px;
 }
-.actions {
-  align-items: center;
-  gap: 4px 8px;
-}
-.actions-separator {
-  color: var(--muted);
-}
-.actions .text-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}

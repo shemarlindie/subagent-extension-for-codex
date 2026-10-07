@@ -27,7 +27,7 @@ export function taskPanelContext(task: Task) {
       repository: task.repository,
       revision: task.revision,
     },
-    panel_selection: { task_id: task.id, tab: "activity" as const },
+    panel_selection: { task_id: task.id, tab: "chat" as const },
   };
 }
 
@@ -107,7 +107,7 @@ export async function resolvePanelContext(
       ? {
           panel_selection: {
             task_id: target.id,
-            tab: "activity" as const,
+            tab: "chat" as const,
           },
         }
       : {}),

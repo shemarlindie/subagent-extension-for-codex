@@ -249,12 +249,6 @@ h3 {
   margin: 18px 0 6px;
   font-weight: 600;
 }
-.actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin: 16px 0;
-}
 .meta {
   display: flex;
   gap: 16px;
@@ -409,12 +403,6 @@ pre {
   max-height: 320px;
   overflow: auto;
   margin: 8px 0;
-}
-.report p {
-  margin-top: 0;
-}
-.report ul {
-  padding-left: 18px;
 }
 .facts {
   display: grid;

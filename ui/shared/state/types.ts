@@ -10,6 +10,7 @@ import type {
   SettingsDocument,
 } from "../../features/settings/types.js";
 import type { DroppedSummary } from "../../features/tasks/activity/event-history.js";
+import type { ChatState } from "../../features/tasks/chat/chat-state.js";
 import type { Filter, Tab, Task } from "../../features/tasks/types.js";
 
 export type PanelData = {
@@ -34,12 +35,6 @@ export type DialogState =
       revision: string;
       scope: number;
     }
-  | {
-      kind: "control";
-      action: ControlAction;
-      task: Task;
-      scope: number;
-    }
   | { kind: "respond"; task: Task; scope: number }
   | { kind: "handoff"; task: Task; scope: number }
   // Confirms deleting the task and everything related to it.
@@ -54,8 +49,6 @@ export type DialogState =
       files?: string[];
       scope: number;
     };
-
-export type ControlAction = "steer" | "continue" | "interrupt";
 
 /** Form edits are JSON-safe values keyed by each form's field names. */
 export type PersistedDialogDraft = Record<string, unknown>;
@@ -73,12 +66,6 @@ export type PersistedDialog =
       preferredWorker?: string;
       repository?: string;
       revision?: string;
-      draft?: PersistedDialogDraft;
-    }
-  | {
-      kind: "control";
-      action: ControlAction;
-      taskId: string;
       draft?: PersistedDialogDraft;
     }
   | {
@@ -104,7 +91,8 @@ export type PersistedDialog =
     };
 
 /** Something in the selected task that the panel shares with the host's model. */
-export type SharedItem = { kind: "file"; path: string };
+export type SharedItem =
+  { kind: "file"; path: string } | { kind: "message"; id: string };
 
 export type Snapshot = {
   tasks: Task[];
@@ -113,6 +101,8 @@ export type Snapshot = {
   events: Event[];
   /** Tally of the selected task's events that fell off the front of `events`. */
   droppedEvents?: DroppedSummary;
+  /** The selected task's Chat, read alongside its events. */
+  chat?: ChatState;
   selected?: string;
   conversation?: string;
   repository?: string;

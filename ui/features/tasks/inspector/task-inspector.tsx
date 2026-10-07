@@ -11,10 +11,9 @@ import { profileLabel, selectedTask } from "../../../shared/state/selectors";
 import { currentActivityStatus } from "../activity/activity-timeline";
 import { EvidenceTabs } from "../evidence/evidence-tabs";
 import { TaskStatus } from "../shared/status";
-import { TaskActions } from "./task-actions";
+import { HandoffButton } from "./handoff-button";
 import { TaskDescription } from "./task-description";
 import { TaskMenu } from "./task-menu";
-import { TaskNotices } from "./task-notices";
 
 export function TaskInspector() {
   const controller = useController(),
@@ -81,11 +80,12 @@ export function TaskInspector() {
                 </div>
                 <h1 title={task.title}>{task.title}</h1>
               </div>
-              <TaskMenu task={task} />
+              <div className="task-tools">
+                <HandoffButton task={task} />
+                <TaskMenu task={task} />
+              </div>
             </div>
             <TaskDescription task={task} />
-            <TaskActions task={task} />
-            <TaskNotices task={task} />
           </div>
           <EvidenceTabs task={task} />
         </div>

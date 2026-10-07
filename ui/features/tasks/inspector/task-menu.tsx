@@ -9,16 +9,12 @@ import {
 } from "../../../shared/state/controller-context";
 import type { Task } from "../../../shared/state/types";
 
-const RUNNING_STATUSES = ["queued", "starting", "running", "waiting"];
-
 type TaskMenuProps = { task: Task };
 
 /** More actions for the open task, beside its title and status. */
 export function TaskMenu({ task }: TaskMenuProps) {
   const controller = useController(),
-    state = useSnapshot(),
-    // The service refuses deleting a task that is running or about to.
-    running = RUNNING_STATUSES.includes(task.status);
+    state = useSnapshot();
 
   return (
     <Menu.Root>
@@ -39,10 +35,10 @@ export function TaskMenu({ task }: TaskMenuProps) {
             <Menu.Item
               className="menu-item"
               data-action="delete"
-              disabled={running || state.busy}
+              disabled={state.busy}
               onClick={() => controller.open({ kind: "delete", task })}
             >
-              {running ? "Delete task (stop it first)" : "Delete task"}
+              Delete task
             </Menu.Item>
           </Menu.Popup>
         </Menu.Positioner>

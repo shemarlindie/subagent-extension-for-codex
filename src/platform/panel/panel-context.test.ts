@@ -238,13 +238,13 @@ test("task selection checks ownership and rejects conflicting scope", async (t) 
   assert.equal(
     (await resolvePanelContext(f.c, "alice", { task_id: selected.id }))
       .panel_selection?.tab,
-    "activity",
+    "chat",
   );
 
   assert.equal(
     taskPanelContext(selected).panel_selection.tab,
-    "activity",
-    "a newly started task always activates Activity",
+    "chat",
+    "a newly started task always opens on Chat",
   );
 
   const alias = join(f.dir, "alias");

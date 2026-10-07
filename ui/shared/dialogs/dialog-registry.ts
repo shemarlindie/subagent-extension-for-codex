@@ -3,7 +3,6 @@ import { worktreeDialog } from "../../features/changes/worktree-form";
 import { delegateDialog } from "../../features/delegation/delegate-form";
 import { projectDialog } from "../../features/projects/project-form";
 import { settingsDialog } from "../../features/settings/settings-form";
-import { controlDialog } from "../../features/tasks/controls/control-form";
 import { deleteTaskDialog } from "../../features/tasks/controls/delete-task-form";
 import { handoffDialog } from "../../features/tasks/controls/handoff-form";
 import { permissionDialog } from "../../features/tasks/controls/permission-form";
@@ -15,7 +14,6 @@ const registry: { [K in DialogKind]: DialogDefinition<K> } = {
   project: projectDialog,
   settings: settingsDialog,
   delegate: delegateDialog,
-  control: controlDialog,
   respond: permissionDialog,
   handoff: handoffDialog,
   delete: deleteTaskDialog,

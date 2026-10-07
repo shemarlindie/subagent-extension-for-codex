@@ -88,6 +88,8 @@ class FakeTransport implements Transport {
   tasks = [task()];
   /** get_agent_events results. */
   taskEvents: Record<string, unknown>[] = [];
+  /** get_user_agent_chat items. */
+  chat: Record<string, unknown>[] = [];
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
   /** get_user_agent_changes pages; a cursor is the next page's index. */
@@ -147,6 +149,7 @@ class FakeTransport implements Transport {
       ],
       list_agent_tasks: this.tasks,
       get_agent_events: this.taskEvents,
+      get_user_agent_chat: { items: this.chat, next_cursor: 0 },
       get_user_agent_changes: this.changes[Number(args.cursor ?? 0)],
       get_user_agent_changed_file: this.changedFiles[String(args.path)],
       get_agent_settings: {
@@ -1348,38 +1351,6 @@ function descriptionToggle(root: HTMLElement) {
   )!;
 }
 
-test("interrupt confirmation defaults the task description open", async (t) => {
-  layoutExpandableNotice(true);
-
-  const { controller, transport, user } = await setup(t);
-
-  await act(() =>
-    controller.open({
-      kind: "control",
-      action: "interrupt",
-      task: transport.tasks[0],
-    }),
-  );
-
-  const dialog = await screen.findByRole("dialog");
-  const toggle = descriptionToggle(dialog);
-  assert.equal(toggle.getAttribute("aria-expanded"), "true");
-
-  assert.equal(
-    dialog.querySelector(".notice-expand-text")?.textContent,
-    transport.tasks[0].description,
-  );
-
-  await user.click(toggle);
-  assert.equal(toggle.getAttribute("aria-expanded"), "false");
-
-  assert.equal(
-    transport.calls.some((call) => call.name === "interrupt_agent_task"),
-    false,
-    "Inspecting the description does not submit the task action",
-  );
-});
-
 test("delegation submits the full request without a title and search matches description", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
     transport.tasks[0].description = "Inspect the unique zebra boundary.";
@@ -1882,7 +1853,7 @@ test("selecting a tab scrolls it into view in an overflowing tab list", async (t
     offsetWidth: 60,
   });
 
-  define(screen.getByRole("tab", { name: "Result" }), {
+  define(screen.getByRole("tab", { name: "Chat" }), {
     offsetLeft: 0,
     offsetWidth: 60,
   });
@@ -1915,7 +1886,7 @@ test("selecting a tab scrolls it into view in an overflowing tab list", async (t
 
 test("evidence tabs support keyboard arrows and keep tab focus through refresh", async (t) => {
   const { controller, user } = await setup(t);
-  const result = screen.getByRole("tab", { name: "Result" });
+  const result = screen.getByRole("tab", { name: "Chat" });
   // Count badges stay separate words for assistive technology.
   assert.ok(screen.getByRole("tab", { name: /^Activity \d+$/ }));
 
@@ -1923,7 +1894,7 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
     screen
       .getAllByRole("tab")
       .map((tab) => tab.textContent?.replace(/\s*\d+$/, "")),
-    ["Result", "Changes", "Activity", "Details"],
+    ["Chat", "Changes", "Activity", "Details"],
   );
 
   await user.click(result);
@@ -2561,7 +2532,7 @@ test("handoff sends only after explicit submit and uses the edited message", asy
 
   await waitFor(() =>
     assert.ok(
-      document.activeElement === screen.getByLabelText("Message"),
+      document.activeElement === document.getElementById("handoff-message"),
       "Handoff dialog should focus its message field",
     ),
   );
@@ -2569,7 +2540,7 @@ test("handoff sends only after explicit submit and uses the edited message", asy
   assert.deepEqual(transport.messages, []);
   await act(() => controller.refresh());
   assert.deepEqual(transport.messages, []);
-  const field = screen.getByLabelText("Message");
+  const field = document.getElementById("handoff-message")!;
   await user.clear(field);
   await user.type(field, "Edited handoff for this chat");
 
@@ -2588,13 +2559,20 @@ test("task and reply text render literally without HTML interpretation", async (
   const { user } = await setup(t, (transport) => {
     transport.tasks[0].title = injection;
 
-    transport.taskEvents = [
+    transport.chat = [
       {
-        id: 1,
-        task_id: transport.tasks[0].id,
-        type: "agent.reply",
-        timestamp: "",
-        data: { text: "<script>window.injected=true</script>", turn: 1 },
+        kind: "message",
+        id: "reply",
+        event_id: 1,
+        message: {
+          id: "reply",
+          event_id: 1,
+          timestamp: "",
+          turn: 1,
+          from: "worker",
+          kind: "reply",
+          text: "<script>window.injected=true</script>",
+        },
       },
     ];
   });
@@ -2604,10 +2582,10 @@ test("task and reply text render literally without HTML interpretation", async (
     injection,
   );
 
-  await user.click(screen.getByRole("tab", { name: "Result" }));
+  await user.click(screen.getByRole("tab", { name: "Chat" }));
 
   assert.equal(
-    document.querySelector(".report")?.textContent,
+    document.querySelector(".chat-worker-text")?.textContent,
     "<script>window.injected=true</script>",
   );
 
@@ -2672,17 +2650,15 @@ test("long notices clamp behind Show more and expand on demand", async (t) => {
   );
 
   const { user } = await setup(t, (transport) => {
-    transport.tasks[0].error = "Worker stopped unexpectedly. ".repeat(20);
-  });
+    transport.tasks[0].status = "waiting";
 
-  // Task errors use the error tone.
-  assert.equal(
-    document
-      .querySelector(".notice-text")
-      ?.closest(".notice")
-      ?.getAttribute("data-tone"),
-    "error",
-  );
+    transport.tasks[0].pending_input = {
+      id: "request",
+      tool: "Bash",
+      kind: "permission",
+      input: { description: "Run the migration script. ".repeat(20) },
+    };
+  });
 
   const more = screen.getByRole("button", { name: "Show more" });
   assert.equal(more.getAttribute("aria-expanded"), "false");

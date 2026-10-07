@@ -1,4 +1,5 @@
 import { settingsSections } from "../../../src/features/settings/settings-document";
+import { chatItems } from "../../../src/features/tasks/chat";
 import { listedTask } from "../../../src/features/tasks/task-list";
 import {
   type ModelChoice,
@@ -205,7 +206,7 @@ function panelContext(args: Record<string, unknown>, options: PreviewOptions) {
       ? {
           panel_selection: {
             task_id: target.id,
-            tab: "activity",
+            tab: "chat",
           },
         }
       : {}),
@@ -257,6 +258,20 @@ export function previewTool(
           events.findLast((event) => event.type === "agent.reply"),
         );
       }),
+    get_user_agent_chat: (() => {
+      const task = previewTasks.find((task) => task.id === args.task_id);
+      if (!task) return { items: [], next_cursor: 0 };
+      const after = Number(args.after ?? 0);
+      const events = previewEvents.filter((event) => event.task_id === task.id);
+
+      return {
+        items: chatItems(task, events).filter(
+          (item) =>
+            item.event_id > after || (after === 0 && item.event_id === 0),
+        ),
+        next_cursor: Math.max(after, events.at(-1)?.id ?? 0),
+      };
+    })(),
     get_agent_events: previewEvents.filter(
       (event) =>
         event.task_id === args.task_id && event.id > Number(args.after ?? 0),

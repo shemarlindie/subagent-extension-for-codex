@@ -473,7 +473,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
 
       assert.deepEqual(panel(started)?.panel_selection, {
         task_id: task.id,
-        tab: "activity",
+        tab: "chat",
       });
     };
 
@@ -598,7 +598,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
 
     assert.deepEqual(panel(started)?.panel_selection, {
       task_id: startedTask.id,
-      tab: "activity",
+      tab: "chat",
     });
 
     assert.deepEqual(panel(started)?.tasks, [panel(started)?.result]);
@@ -978,7 +978,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
 
       assert.deepEqual(panel(proxyStarted)?.panel_selection, {
         task_id: proxyTask.id,
-        tab: "activity",
+        tab: "chat",
       });
 
       assert.deepEqual(panel(proxyStarted)?.tasks, [

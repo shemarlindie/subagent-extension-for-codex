@@ -93,9 +93,6 @@ body[data-expanded-panel="true"] .notice-text {
 body[data-expanded-panel="true"] .notice-text[data-open] {
   display: block;
 }
-body[data-expanded-panel="true"] .task-header .actions {
-  margin: 0 0 12px;
-}
 body[data-expanded-panel="true"] .evidence {
   flex: 1;
   min-height: 0;

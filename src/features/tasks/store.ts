@@ -168,6 +168,21 @@ export class Store {
       );
   }
 
+  /**
+   * The events Chat is built from: those of the given types, and context
+   * compactions, which Claude reports among its other system messages.
+   */
+  chatEvents(id: string, types: string[]): Event[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM events WHERE task_id=? AND (type IN (${types.map(() => "?").join(",")}) OR (type='claude.activity' AND json_extract(data,'$.raw_response.subtype')='compact_boundary')) ORDER BY id`,
+      )
+      .all(id, ...types)
+      .map(
+        (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
+      );
+  }
+
   recentEvents(id: string, owner: string): Event[] {
     this.get(id, owner);
 

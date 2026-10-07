@@ -10,9 +10,8 @@ import {
 import type { Tab, Task } from "../../../shared/state/types";
 import { ChangesPanel } from "../../changes/changes-panel";
 import { EventList } from "../activity/event-list";
+import { ChatPanel } from "../chat/chat-panel";
 import { TaskDetails } from "../inspector/task-details";
-import { latestReply } from "../reply";
-import { ResultReport } from "./result-report";
 
 const TAB_EDGE_GAP = 12;
 
@@ -61,8 +60,8 @@ export function EvidenceTabs({ task }: { task: Task }) {
         className="tabs"
         aria-label="Task evidence"
       >
-        <Tabs.Tab value="result" id="tab-result">
-          Result
+        <Tabs.Tab value="chat" id="tab-chat">
+          Chat
         </Tabs.Tab>
         <Tabs.Tab value="changes" id="tab-changes">
           Changes
@@ -75,8 +74,9 @@ export function EvidenceTabs({ task }: { task: Task }) {
         </Tabs.Tab>
         <Tabs.Indicator className="tab-indicator" />
       </Tabs.List>
-      <Tabs.Panel value="result">
-        <ResultReport reply={latestReply(state.events, task.id)} />
+      {/* Stays mounted so the reading position and draft survive tab switches. */}
+      <Tabs.Panel value="chat" className="chat-panel" keepMounted>
+        <ChatPanel task={task} />
       </Tabs.Panel>
       <Tabs.Panel value="changes">
         <ChangesPanel task={task} />

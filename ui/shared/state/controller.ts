@@ -1,4 +1,5 @@
 import { pendingInputKind } from "../../../src/features/tasks/model";
+import type { BudgetRaise, Delivery } from "../../../src/shared/contracts";
 import {
   changesKey,
   changesStale,
@@ -12,6 +13,7 @@ import type {
 } from "../../features/changes/types";
 import { delegationDialog } from "../../features/delegation/delegation";
 import { readEventTail } from "../../features/tasks/activity/event-history";
+import { type ChatRead, mergeChat } from "../../features/tasks/chat/chat-state";
 import { persistDialog, sameDialogReference } from "./dialog-persistence";
 import { initialState } from "./initial-state";
 import { filterCounts, selectedTask, terminal } from "./selectors";
@@ -28,6 +30,7 @@ import type {
   SettingsDocument,
   SharedItem,
   Snapshot,
+  Tab,
   Task,
   Transport,
   UiStatePersistence,
@@ -65,6 +68,8 @@ export class Controller {
   readonly collapsedQuestions = new Set<string>();
   /** Unsent answers by question request, so switching tasks does not discard them. */
   readonly questionDrafts = new Map<string, QuestionDraft>();
+  /** Unsent Chat messages by task, so switching tasks does not discard them. */
+  readonly composerDrafts = new Map<string, string>();
   constructor(
     readonly transport: Transport,
     private environment = {
@@ -232,15 +237,6 @@ export class Controller {
           break;
         }
 
-        case "control":
-          dialog = {
-            kind: saved.kind,
-            action: saved.action,
-            task: task!,
-            scope,
-          };
-
-          break;
         case "respond":
           if (
             !task!.pending_input ||
@@ -472,7 +468,7 @@ export class Controller {
         selected = undefined;
         this.explicitSelection = false;
         this.generation++;
-        this.patch({ events: [] });
+        this.patch({ events: [], chat: undefined });
       }
 
       let tab = this.state.tab;
@@ -494,7 +490,7 @@ export class Controller {
         selected = restoredTask.id;
         this.explicitSelection = true;
         this.browsing = false;
-        tab = restored?.tab ?? "activity";
+        tab = restored?.tab ?? "chat";
       } else if (restored?.browsing) {
         selected = undefined;
         this.explicitSelection = false;
@@ -512,7 +508,7 @@ export class Controller {
           tasks.find((task) => !terminal(task))?.id ??
           tasks[0].id;
 
-        tab = "activity";
+        tab = "chat";
       }
 
       // Don't replace URL choices with defaults until their project and task resolve.
@@ -564,13 +560,21 @@ export class Controller {
 
     if (!id || this.disposed) return;
 
-    const { events, dropped } = await readEventTail(
-      id,
-      this.state.events,
-      (after) => this.tool("get_agent_events", { task_id: id, after }),
-      () => !this.disposed && generation === this.generation,
-      this.state.droppedEvents,
-    );
+    const previousChat = this.state.chat;
+
+    const [{ events, dropped }, chat] = await Promise.all([
+      readEventTail(
+        id,
+        this.state.events,
+        (after) => this.tool("get_agent_events", { task_id: id, after }),
+        () => !this.disposed && generation === this.generation,
+        this.state.droppedEvents,
+      ),
+      this.tool<ChatRead>("get_user_agent_chat", {
+        task_id: id,
+        after: previousChat?.task === id ? previousChat.cursor : 0,
+      }),
+    ]);
 
     if (
       this.disposed ||
@@ -578,7 +582,12 @@ export class Controller {
       generation !== this.generation
     )
       return;
-    this.patch({ events, droppedEvents: dropped });
+
+    this.patch({
+      events,
+      droppedEvents: dropped,
+      chat: mergeChat(this.state.chat, id, chat),
+    });
   }
 
   async select(id: string) {
@@ -589,7 +598,8 @@ export class Controller {
     this.patch({
       selected: id,
       events: [],
-      tab: "activity",
+      chat: undefined,
+      tab: "chat",
     });
 
     await this.loadDetail();
@@ -600,7 +610,7 @@ export class Controller {
     this.explicitSelection = false;
     this.browsing = true;
     ++this.generation;
-    this.patch({ selected: undefined, events: [] });
+    this.patch({ selected: undefined, events: [], chat: undefined });
     this.run(() => this.share());
   }
 
@@ -740,6 +750,7 @@ export class Controller {
       tasks: [],
       selected: undefined,
       events: [],
+      chat: undefined,
       ...(this.state.busy
         ? {
             formError:
@@ -811,11 +822,12 @@ export class Controller {
       this.patch({
         selected: data.panel_selection.task_id,
         events: [],
-        tab:
-          data.panel_selection.tab === "result" ||
-          data.panel_selection.tab === "changes"
-            ? data.panel_selection.tab
-            : "activity",
+        chat: undefined,
+        tab: (["chat", "changes", "activity", "details"] as const).includes(
+          data.panel_selection.tab as Tab,
+        )
+          ? (data.panel_selection.tab as Tab)
+          : "chat",
         filter: this.restoredView?.filter ?? null,
         search: this.restoredView?.search ?? "",
       });
@@ -1038,7 +1050,6 @@ export class Controller {
 
   open(
     dialog:
-      | Omit<Extract<DialogState, { kind: "control" }>, "scope">
       | Omit<
           Extract<DialogState, { kind: "respond" | "handoff" | "delete" }>,
           "scope"
@@ -1105,6 +1116,85 @@ export class Controller {
     await this.refresh().catch(this.report);
   }
 
+  /**
+   * Runs a Chat action, outside any dialog. Resolves with the failure
+   * message, or nothing once it's done and the task has reloaded.
+   */
+  private async chatAction(
+    operation: () => Promise<unknown>,
+  ): Promise<string | undefined> {
+    if (this.state.busy || this.disposed) return "Wait for the last action.";
+    this.patch({ busy: true });
+
+    try {
+      await operation();
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    } finally {
+      this.patch({ busy: false });
+    }
+
+    await this.refresh().catch(this.report);
+  }
+
+  /** Sends the user's message to a task, as steer, queue or interrupt. */
+  sendMessage(
+    task: Task,
+    message: string,
+    delivery: Delivery,
+    budget?: BudgetRaise,
+  ) {
+    return this.chatAction(() =>
+      this.tool("send_user_agent_message", {
+        task_id: task.id,
+        message,
+        delivery,
+        ...(budget ? { budget } : {}),
+      }),
+    );
+  }
+
+  /** Stops a task's turn; `sendPending` sends its pending steers at once. */
+  interruptTask(task: Task, sendPending = false) {
+    return this.chatAction(() =>
+      this.tool("interrupt_agent_task", {
+        task_id: task.id,
+        send_pending: sendPending,
+      }),
+    );
+  }
+
+  editQueued(task: Task, messageId: string, message: string) {
+    return this.chatAction(() =>
+      this.tool("edit_user_agent_queued_message", {
+        task_id: task.id,
+        message_id: messageId,
+        message,
+      }),
+    );
+  }
+
+  removeQueued(task: Task, messageId: string) {
+    return this.chatAction(() =>
+      this.tool("remove_user_agent_queued_message", {
+        task_id: task.id,
+        message_id: messageId,
+      }),
+    );
+  }
+
+  resumeQueue(task: Task) {
+    return this.chatAction(() =>
+      this.tool("resume_user_agent_queue", { task_id: task.id }),
+    );
+  }
+
+  clearQueue(task: Task) {
+    return this.chatAction(() =>
+      this.tool("clear_user_agent_queue", { task_id: task.id }),
+    );
+  }
+
   /** All mutations/messages are bound to the scope visible when the dialog opened. */
   async submit(
     operation: () => Promise<Task | void>,
@@ -1146,7 +1236,8 @@ export class Controller {
           ],
           selected: task.id,
           events: [],
-          tab: "activity",
+          chat: undefined,
+          tab: "chat",
           repository: task.repository,
           revision: task.revision,
         });

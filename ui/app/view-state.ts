@@ -25,7 +25,7 @@ const DIALOG_STORAGE_KEY = "codex-subagent-extension.dialog.v1";
 const INPUT_PERSISTENCE_DEBOUNCE_MS = 250;
 
 const filters: Filter[] = ["all", "active", "attention", "completed", "failed"];
-const tabs: Tab[] = ["result", "changes", "activity", "details"];
+const tabs: Tab[] = ["chat", "changes", "activity", "details"];
 
 const dialogKey = (id: PersistedDialogId) => `dw_dlg_${id}`;
 

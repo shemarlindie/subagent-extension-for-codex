@@ -1,19 +1,13 @@
 import type {
-  ControlAction,
   DialogState,
   PersistedDialog,
   PersistedDialogDraft,
 } from "./types";
 
-const controlActions = ["steer", "continue", "interrupt"] as const;
-
 export const persistedDialogIds = [
   "project",
   "settings",
   "delegate",
-  "steer",
-  "continue",
-  "interrupt",
   "permission",
   "handoff",
   "delete_task",
@@ -51,12 +45,6 @@ export function persistDialog(dialog: DialogState): PersistedDialog {
         preferredWorker: dialog.preferredWorker,
         repository: dialog.repository,
         revision: dialog.revision,
-      };
-    case "control":
-      return {
-        kind: dialog.kind,
-        action: dialog.action,
-        taskId: dialog.task.id,
       };
     case "respond":
       return {
@@ -105,22 +93,6 @@ export function parsePersistedDialog(
           : {}),
         ...(isString(value.repository) ? { repository: value.repository } : {}),
         ...(isString(value.revision) ? { revision: value.revision } : {}),
-        ...(draft ? { draft } : {}),
-      };
-    case "control":
-      if (
-        !controlActions.includes(
-          value.action as (typeof controlActions)[number],
-        ) ||
-        !isString(value.taskId) ||
-        !value.taskId
-      )
-        return;
-
-      return {
-        kind: value.kind,
-        action: value.action as ControlAction,
-        taskId: value.taskId,
         ...(draft ? { draft } : {}),
       };
     case "respond":
@@ -186,8 +158,6 @@ export function parsePersistedDialogs(value: unknown): PersistedDialog[] {
 /** Gives each distinct dialog variant its own short URL flag name. */
 export function persistedDialogId(dialog: PersistedDialog): PersistedDialogId {
   switch (dialog.kind) {
-    case "control":
-      return dialog.action;
     case "respond":
       return "permission";
     case "delete":

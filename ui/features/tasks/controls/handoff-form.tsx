@@ -10,12 +10,13 @@ import {
   useSnapshot,
 } from "../../../shared/state/controller-context";
 import type { Task } from "../../../shared/state/types";
-import { latestReply } from "../reply";
 
 const excerpt = (text: string, max: number) =>
   text.length > max ? `${text.slice(0, max)}… (truncated)` : text;
 
-export function handoffMessage(task: Task, reply?: string) {
+export function handoffMessage(task: Task) {
+  const reply = task.reply?.text;
+
   return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task and the conversation, including the worker's replies, with get_agent_messages using task_id=${JSON.stringify(task.id)}. Read what it changed with get_agent_changes, and send follow-ups with send_agent_message. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\n${task.branch ? `Branch: ${task.branch}\n` : ""}Description excerpt: ${excerpt(task.description, 1500)}\nLatest reply excerpt: ${reply === undefined ? "No reply yet." : excerpt(reply, 2500)}`;
 }
 
@@ -27,7 +28,7 @@ export function HandoffForm({ task }: { task: Task }) {
     canCopy = !controller.transport.embedded;
 
   const { register, handleSubmit } = usePersistedDialogForm("handoff", {
-    message: handoffMessage(task, latestReply(state.events, task.id)),
+    message: handoffMessage(task),
   });
 
   return (

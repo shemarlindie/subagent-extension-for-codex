@@ -39,7 +39,10 @@ export function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
       )}
     >
       <p className="form-note">
-        Delete this task with its activity and results
+        {["queued", "starting", "running", "waiting"].includes(task.status)
+          ? "Stop and delete"
+          : "Delete"}{" "}
+        this task with its conversation and activity
         {task.workspace_strategy === "worktree" && (
           <>
             , its worktree (uncommitted changes included) and branch{" "}

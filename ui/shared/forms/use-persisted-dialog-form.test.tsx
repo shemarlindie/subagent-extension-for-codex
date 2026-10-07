@@ -38,7 +38,7 @@ function makeTask(): Task {
 }
 
 function DraftForm() {
-  const { register } = usePersistedDialogForm("control", {
+  const { register } = usePersistedDialogForm("handoff", {
     instruction: "initial value",
   });
 
@@ -67,7 +67,7 @@ test("shared form hook restores and records values through the controller", (t) 
   });
 
   t.onTestFinished(() => first.dispose());
-  first.open({ kind: "control", action: "steer", task: makeTask() });
+  first.open({ kind: "handoff", task: makeTask() });
 
   let view = render(
     createElement(
@@ -80,7 +80,7 @@ test("shared form hook restores and records values through the controller", (t) 
 
   act(() => fireEvent.change(input, { target: { value: "edited request" } }));
 
-  assert.deepEqual(first.getDialogDraft("control"), {
+  assert.deepEqual(first.getDialogDraft("handoff"), {
     instruction: "edited request",
   });
 
@@ -97,8 +97,7 @@ test("shared form hook restores and records values through the controller", (t) 
         view: {},
         dialogs: [
           {
-            kind: "control",
-            action: "steer",
+            kind: "handoff",
             taskId: "task-1",
             draft: { instruction: "edited request" },
           },
@@ -109,7 +108,7 @@ test("shared form hook restores and records values through the controller", (t) 
   );
 
   t.onTestFinished(() => restored.dispose());
-  restored.open({ kind: "control", action: "steer", task: makeTask() });
+  restored.open({ kind: "handoff", task: makeTask() });
 
   view = render(
     createElement(
