@@ -228,19 +228,27 @@
   width: 1px;
   background: var(--line);
 }
-/* The failed stretch fades only where it joins a neighbouring item; the first and last ends stay solid. */
+/* Failed stretches stay solid between errors and fade only at other statuses. */
 .timeline-item[data-status="failed"]::before {
   background: linear-gradient(
-    var(--line),
+    var(--timeline-error-start, var(--line)),
     var(--danger) var(--timeline-marker-y),
     var(--danger) calc(100% - var(--timeline-marker-y)),
-    var(--line)
+    var(--timeline-error-end, var(--line))
   );
+}
+.timeline-item[data-status="failed"] + .timeline-item[data-status="failed"] {
+  --timeline-error-start: var(--danger);
+}
+.timeline-item[data-status="failed"]:has(
+    + .timeline-item[data-status="failed"]
+  ) {
+  --timeline-error-end: var(--danger);
 }
 .timeline-item[data-status="failed"][data-first]::before {
   background: linear-gradient(
     var(--danger) calc(100% - var(--timeline-marker-y)),
-    var(--line)
+    var(--timeline-error-end, var(--line))
   );
 }
 .timeline-item[data-status="failed"][data-last]::before {
