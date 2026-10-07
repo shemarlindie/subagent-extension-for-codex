@@ -1,3 +1,4 @@
+import { activityPresentation } from "../../../../src/features/providers/activity/presentation";
 import type { Event } from "../../../shared/state/types";
 
 // Keep prose blocks and structured metadata within the same nesting budget.
@@ -21,49 +22,13 @@ export function formatActivityTime(timestamp: string) {
   });
 }
 
-const sdkTitles: Record<string, string> = {
-  init: "Claude connected",
-  status: "Claude status",
-  compact_boundary: "Context compacted",
-  api_retry: "Retrying API request",
-  local_command_output: "Command output",
-  hook_started: "Hook started",
-  hook_progress: "Hook progress",
-  hook_response: "Hook finished",
-  task_started: "Background task started",
-  task_updated: "Background task updated",
-  task_progress: "Background task progress",
-  task_notification: "Background task finished",
-  session_state_changed: "Session state changed",
-  notification: "Notification",
-  files_persisted: "Files saved",
-  memory_recall: "Recalled from memory",
-  plugin_install: "Plugin installation",
-  elicitation_complete: "Input completed",
-  permission_denied: "Permission denied",
-  mirror_error: "Transcript sync failed",
-  tool_progress: "Tool running",
-  tool_use_summary: "Tool summary",
-  auth_status: "Authentication",
-  rate_limit_event: "Rate limit update",
-  prompt_suggestion: "Suggested next prompt",
-  assistant: "Claude response",
-  user: "User message",
-  stream_event: "Response streaming",
-};
-
-function sdkTitle(data: Record<string, unknown>) {
-  const key = String(data.subtype ?? data.type ?? "activity");
-
-  return sdkTitles[key] ?? label(key);
-}
-
 export function eventTitle(event: Event, failed: boolean, toolName?: string) {
   const { data } = event;
-  if (event.type === "claude.activity") return sdkTitle(data);
+  const presentation = activityPresentation(event);
+  if (presentation.title) return presentation.title;
   if (event.type === "agent.message") return "Worker message";
   if (event.type === "agent.content")
-    return data.role === "user" ? "User content" : "Claude content";
+    return data.role === "user" ? "User content" : "Agent content";
   if (event.type === "tool.started") return `${data.name ?? "Tool"} started`;
   if (event.type === "tool.completed")
     return `${toolName ?? "Tool"} ${failed ? "failed" : "completed"}`;
@@ -74,41 +39,21 @@ export function eventTitle(event: Event, failed: boolean, toolName?: string) {
   return label(event.type);
 }
 
-/** Rebuilds visible content blocks from SDK stream start and delta events. */
+/** Rebuilds visible content blocks from provider-normalized stream updates. */
 export function streamContent(events: Event[]) {
   const blocks = new Map<number, Record<string, unknown>>();
 
   for (const event of events) {
-    const frame = record(event.data.event);
-    const index = frame.index ?? 0;
-    if (typeof index !== "number" || !Number.isSafeInteger(index) || index < 0)
-      continue;
-    if (frame.type === "content_block_start")
-      blocks.set(index, { ...record(frame.content_block) });
+    const update = activityPresentation(event).stream?.update;
+    if (!update) continue;
+    const { index, block: initial, append } = update;
+    if (!Number.isSafeInteger(index) || index < 0) continue;
+    if (initial) blocks.set(index, { ...initial });
 
-    if (frame.type === "content_block_delta") {
-      const delta = record(frame.delta);
+    if (append) {
       const block = blocks.get(index) ?? {};
-
-      if (delta.type === "text_delta") {
-        block.type = "text";
-        block.text = String(block.text ?? "") + String(delta.text ?? "");
-      }
-
-      if (delta.type === "thinking_delta") {
-        block.type = "thinking";
-
-        block.thinking =
-          String(block.thinking ?? "") + String(delta.thinking ?? "");
-      }
-
-      if (delta.type === "input_json_delta") {
-        block.type = "input_json_delta";
-
-        block.partial_json =
-          String(block.partial_json ?? "") + String(delta.partial_json ?? "");
-      }
-
+      block.type = append.type;
+      block[append.field] = String(block[append.field] ?? "") + append.text;
       blocks.set(index, block);
     }
   }

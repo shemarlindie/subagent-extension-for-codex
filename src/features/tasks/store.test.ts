@@ -12,7 +12,7 @@ function deletionFixture() {
   const store = new Store(":memory:");
 
   const task: Task = {
-    ...startSchema.parse({ title: "Delete", description: "Delete" }),
+    ...startSchema.parse({ description: "Delete" }),
     title: "Delete",
     id: "delete",
     owner: "alice",
@@ -22,6 +22,7 @@ function deletionFixture() {
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
+    provider_recovery_required: false,
   };
 
   store.db.exec(`
@@ -124,7 +125,6 @@ test("recent events return only the task's latest 200 in chronological order aft
 
   const task: Task = {
     ...startSchema.parse({
-      title: "Review",
       description: "Review",
       worker_profile: "reviewer",
     }),
@@ -137,6 +137,7 @@ test("recent events return only the task's latest 200 in chronological order aft
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
+    provider_recovery_required: false,
   };
 
   try {
@@ -164,156 +165,6 @@ test("recent events return only the task's latest 200 in chronological order aft
     );
   } finally {
     store.close();
-    await rm(dir, { recursive: true, force: true });
-  }
-});
-
-test("stored requests regain titles without losing descriptions, timestamps, or events", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "task-title-migration-"));
-  const path = join(dir, "tasks.sqlite");
-  const original = new Store(path);
-
-  const request =
-    "Review authentication.\nInclude every edge case and report the evidence.";
-
-  const base = {
-    owner: "alice",
-    created_at: "2026-01-01T00:00:00.000Z",
-    updated_at: "2026-01-02T00:00:00.000Z",
-    status: "completed",
-  };
-
-  const records = [
-    { ...base, id: "missing", description: request },
-    { ...base, id: "blank", title: " \n\t ", description: request },
-    { ...base, id: "legacy-task", task: request },
-    { ...base, id: "legacy-title", title: request },
-    { ...base, id: "current", title: "Existing summary", description: request },
-    {
-      ...base,
-      id: "both",
-      title: "Existing summary",
-      description: request,
-      task: "Obsolete instructions",
-    },
-  ];
-
-  const insert = original.db.prepare("INSERT INTO tasks VALUES(?,?,?)");
-
-  for (const record of records) {
-    insert.run(record.id, record.owner, JSON.stringify(record));
-  }
-
-  original.db
-    .prepare("INSERT INTO events(task_id,type,timestamp,data) VALUES(?,?,?,?)")
-    .run(
-      "legacy-task",
-      "task.completed",
-      base.updated_at,
-      '{"result":"preserved"}',
-    );
-
-  original.close();
-  let migrated: Store | undefined;
-
-  try {
-    migrated = new Store(path);
-
-    for (const record of records) {
-      const task = migrated.get(record.id, "alice");
-      assert.equal(task.description, request);
-
-      assert.equal(
-        task.title,
-        ["current", "both"].includes(record.id)
-          ? "Existing summary"
-          : "Review authentication.",
-      );
-
-      assert.equal(task.created_at, base.created_at);
-      assert.equal(task.updated_at, base.updated_at);
-      assert.ok(!("task" in task));
-    }
-
-    assert.throws(() => migrated!.get("legacy-task", "bob"), /Task not found/);
-    const events = migrated.events("legacy-task", "alice");
-    assert.equal(events.length, 1);
-    assert.equal(events[0].type, "task.completed");
-    assert.deepEqual(events[0].data, { result: "preserved" });
-
-    const stored = migrated.db
-      .prepare("SELECT id,owner,body FROM tasks ORDER BY id")
-      .all();
-
-    migrated.close();
-    migrated = new Store(path);
-
-    assert.deepEqual(
-      migrated.db.prepare("SELECT id,owner,body FROM tasks ORDER BY id").all(),
-      stored,
-    );
-
-    assert.deepEqual(migrated.events("legacy-task", "alice"), events);
-  } finally {
-    migrated?.close();
-    await rm(dir, { recursive: true, force: true });
-  }
-});
-
-test("opening a store drops stored artifacts and their events, and repeats safely", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "task-artifact-migration-"));
-  const path = join(dir, "tasks.sqlite");
-  const original = new Store(path);
-
-  const task: Task = {
-    ...startSchema.parse({
-      title: "Review",
-      description: "Review",
-      worker_profile: "reviewer",
-    }),
-    title: "Review",
-    id: "with-artifacts",
-    owner: "alice",
-    status: "completed",
-    created_at: "2026-01-01T00:00:00.000Z",
-    updated_at: "2026-01-01T00:00:00.000Z",
-    instructions: [],
-    attempt: 1,
-    runtime_ms: 0,
-  };
-
-  try {
-    original.save(task);
-    const kept = original.event(task, "agent.message", { text: "Done" });
-    original.event(task, "artifact.created", { artifact_id: "art_1" });
-    original.event(task, "artifact.error", { message: "No diff" });
-
-    // The table as older versions created it.
-    original.db
-      .exec(`CREATE TABLE artifacts(id TEXT PRIMARY KEY,task_id TEXT NOT NULL REFERENCES tasks(id),body TEXT NOT NULL,summary TEXT);
-    INSERT INTO artifacts(id,task_id,body) VALUES('art_1','with-artifacts','{}');`);
-
-    original.close();
-
-    for (let open = 0; open < 2; open++) {
-      const store = new Store(path);
-
-      try {
-        assert.deepEqual(store.events(task.id, task.owner), [kept]);
-
-        assert.equal(
-          store.db
-            .prepare(
-              "SELECT name FROM sqlite_master WHERE type='table' AND name='artifacts'",
-            )
-            .get(),
-          undefined,
-        );
-      } finally {
-        store.close();
-      }
-    }
-  } finally {
     await rm(dir, { recursive: true, force: true });
   }
 });

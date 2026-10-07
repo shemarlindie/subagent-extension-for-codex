@@ -32,7 +32,6 @@ const request = (args: Record<string, string> = {}) => ({
 
 const make = (id = "task-a", owner = "alice"): Task => ({
   ...startSchema.parse({
-    title: "Review",
     description: "Review",
     conversation_id: "chat-a",
   }),
@@ -45,6 +44,7 @@ const make = (id = "task-a", owner = "alice"): Task => ({
   instructions: [],
   attempt: 1,
   runtime_ms: 0,
+  provider_recovery_required: false,
 });
 
 async function setup(status = 200) {

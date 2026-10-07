@@ -1,5 +1,7 @@
 import { setTimeout } from "node:timers/promises";
 
+import { fixtureMetadata } from "../src/features/providers/metadata.js";
+import { executionTaskPolicy } from "../src/features/providers/task-policy.js";
 import {
   type Provider,
   type Result,
@@ -12,6 +14,8 @@ import {
  */
 export class FixtureProvider implements Provider {
   id = "fixture";
+  taskPolicy = executionTaskPolicy;
+  metadata = fixtureMetadata;
   capabilities = {
     interrupt: true,
     session_continue: true,

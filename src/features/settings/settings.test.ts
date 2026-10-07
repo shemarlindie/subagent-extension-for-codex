@@ -7,7 +7,7 @@ import { test, type TestContext } from "vitest";
 
 import { sectionKeys } from "../../../ui/features/settings/settings-layout.js";
 import type { ModelChoice } from "../../shared/contracts.js";
-import { claudeOverrideDefaults } from "../tasks/policy/permissions.js";
+import { claudeOverrideDefaults } from "../providers/claude/permissions.js";
 import { Store } from "../tasks/store.js";
 import {
   Settings,
@@ -51,25 +51,6 @@ async function fixture(t: TestContext) {
       return store.db
         .prepare("SELECT body FROM user_settings ORDER BY owner")
         .all();
-    },
-    saveLegacy(owner: string) {
-      store.db.prepare("INSERT INTO user_settings VALUES(?,?)").run(
-        owner,
-        JSON.stringify({
-          default_provider: "fixture",
-          default_worker_profile: "researcher",
-          default_workspace_strategy: "current_repo",
-          max_runtime_minutes: 14,
-          max_cost_usd: null,
-        }),
-      );
-    },
-    saveRaw(owner: string, body: unknown) {
-      store.db
-        .prepare(
-          "INSERT INTO user_settings VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET body=excluded.body",
-        )
-        .run(owner, JSON.stringify(body));
     },
     reopen() {
       store.close();
@@ -641,29 +622,6 @@ test("effective provider and role select the matching defaults and isolate owner
   );
 });
 
-test("legacy settings rows inherit runtime model defaults without a rewrite", async (t) => {
-  const f = await fixture(t);
-  f.saveLegacy("legacy");
-  const persisted = f.stored();
-  f.reopen();
-  const values = f.settings.read("legacy").values;
-  assert.equal(values.default_model, "");
-  assert.equal(values.auto_register_chat_project, true);
-  assert.equal(values.default_reasoning_effort, "default");
-  assert.equal(values.fixture_default_model, "");
-  assert.equal(values.researcher_default_reasoning_effort, "default");
-  const input = f.settings.taskInput("legacy", {});
-  assert.equal(input.model, undefined);
-  assert.equal(input.reasoning_effort, undefined);
-  assert.equal(input.worker_profile, "researcher");
-  assert.equal(input.budget.max_runtime_minutes, 14);
-  assert.equal(input.budget.max_cost_usd, null);
-  assert.deepEqual(f.stored(), persisted);
-  f.settings.update("legacy", { set: { default_model: "new-model" } });
-  f.reopen();
-  assert.equal(f.settings.taskInput("legacy", {}).model, "new-model");
-});
-
 test("invalid model and reasoning updates cannot partially persist other settings", async (t) => {
   const f = await fixture(t);
 
@@ -731,8 +689,8 @@ test("native budget toggles preserve the numeric amount across edits and restart
   assert.equal(f.settings.values("alice").max_cost_usd, null);
 
   assert.equal(
-    f.settings.taskInput("alice", { title: "Review", description: "Review" })
-      .budget.max_cost_usd,
+    f.settings.taskInput("alice", { description: "Review" }).budget
+      .max_cost_usd,
     null,
   );
 
@@ -791,8 +749,7 @@ test("removed providers fall back on effective reads without rewriting saved def
   assert.equal(f.settings.read("alice").values.default_provider, "fixture");
 
   assert.equal(
-    f.settings.taskInput("alice", { title: "Review", description: "Review" })
-      .provider,
+    f.settings.taskInput("alice", { description: "Review" }).provider,
     "fixture",
   );
 
@@ -808,7 +765,7 @@ test("removed providers fall back on effective reads without rewriting saved def
   assert.deepEqual(f.stored(), persisted);
 });
 
-test("legacy null budget updates remain compatible and validation is atomic", async (t) => {
+test("null budget updates retain their amount and validation is atomic", async (t) => {
   const f = await fixture(t);
   f.settings.update("alice", { set: { max_cost_usd: 13 } });
   f.settings.update("alice", { set: { max_cost_usd: null } });
@@ -837,7 +794,7 @@ test("legacy null budget updates remain compatible and validation is atomic", as
   assert.equal(f.settings.values("alice").max_cost_usd, 13);
 });
 
-test("Codex defaults are not offered and legacy Codex values are ignored", async (t) => {
+test("Codex defaults are not offered in provider settings", async (t) => {
   const f = await fixture(t);
   f.setProviders(["claude", "codex"]);
   const result = f.settings.read("alice");
@@ -860,29 +817,17 @@ test("Codex defaults are not offered and legacy Codex values are ignored", async
     { codex_default_model: "codex-model" },
   ])
     assert.throws(() => f.settings.update("alice", { set }));
-  f.saveLegacy("bob");
-  f.settings.update("bob", { set: { max_runtime_minutes: 9 } });
-  const raw = JSON.parse(String((f.stored().at(-1) as any).body));
-  raw.default_provider = "codex";
-  raw.codex_default_model = "codex-model";
-  raw.codex_default_reasoning_effort = "high";
-  f.saveRaw("bob", raw);
-  const values = f.settings.read("bob").values as Record<string, unknown>;
-  assert.equal(values.default_provider, "claude");
-  assert.equal(values.max_runtime_minutes, 9);
-  assert.equal("codex_default_model" in values, false);
   f.setProviders(["codex"]);
-  assert.equal(f.settings.taskInput("bob", {}).provider, "claude");
+  assert.equal(f.settings.taskInput("alice", {}).provider, "claude");
 
   assert.equal(
-    f.settings.taskInput("bob", { provider: "codex" }).provider,
+    f.settings.taskInput("alice", { provider: "codex" }).provider,
     "codex",
   );
 });
 
 test("Claude session restrictions are scalar user-only settings with stored defaults", async (t) => {
   const f = await fixture(t);
-  f.saveLegacy("alice");
 
   const keys = [
     "claude_sandbox",
@@ -940,9 +885,77 @@ test("Claude session restrictions are scalar user-only settings with stored defa
   assert.equal(after.claude_sandbox, "extension_locked");
   assert.equal(after.claude_tools, "profile");
   assert.equal(after.claude_subagents, true);
-  assert.equal(after.max_runtime_minutes, 14);
+  assert.equal(after.max_runtime_minutes, 20);
 
   assert.throws(() =>
     f.settings.update("alice", { set: { claude_tools: "none" } }),
+  );
+});
+
+test("settings accept a new built-in's metadata without provider-ID handling", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "provider-settings-test-"));
+  const store = new Store(join(dir, "settings.sqlite"));
+
+  t.onTestFinished(async () => {
+    store.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  const settings = new Settings(
+    store,
+    () => ["new-built-in"],
+    () => ({
+      displayName: "New built-in",
+      settings: { modelDefaults: true },
+    }),
+  );
+
+  const result = settings.read("alice");
+  assert.equal(result.values.default_provider, "new-built-in");
+
+  assert.deepEqual(result.schema.properties!.default_provider.enum, [
+    "new-built-in",
+  ]);
+
+  settings.update("alice", {
+    set: { default_provider: "new-built-in", default_model: "new-model" },
+  });
+
+  assert.equal(settings.taskInput("alice", {}).model, "new-model");
+});
+
+test("execution approval defaults do not change native Claude settings", async (t) => {
+  const f = await fixture(t);
+  f.setProviders(["claude", "fixture"]);
+
+  f.settings.update("alice", {
+    set: {
+      claude_permission_mode: "plan",
+      default_approval_decider: "parent_agent",
+    },
+  });
+
+  f.settings.update("alice", {
+    set: { default_approval_mode: "auto_approve" },
+  });
+
+  const values = f.settings.values("alice");
+  assert.equal(values.claude_permission_mode, "plan");
+  assert.equal(values.default_approval_decider, "parent_agent");
+  assert.equal(values.default_approval_mode, "auto_approve");
+
+  const claudeInput = f.settings.taskInput("alice", { provider: "claude" });
+  assert.equal("approval_mode" in claudeInput, false);
+  assert.equal("provider_options" in claudeInput, false);
+
+  assert.equal(
+    f.settings.taskInput("alice", { provider: "fixture" }).approval_mode,
+    undefined,
+  );
+
+  assert.equal(
+    f.settings.taskInput("alice", { provider: "claude", approval_mode: "deny" })
+      .approval_mode,
+    "deny",
   );
 });

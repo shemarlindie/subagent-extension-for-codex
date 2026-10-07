@@ -44,7 +44,6 @@ async function fixture(t: TestContext) {
   ) => {
     const task: Task = {
       ...startSchema.parse({
-        title: "Review",
         description: "Review",
         repository,
       }),
@@ -57,6 +56,7 @@ async function fixture(t: TestContext) {
       instructions: [],
       attempt: 0,
       runtime_ms: 0,
+      provider_recovery_required: false,
       ...overrides,
     };
 
@@ -441,7 +441,7 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
   };
 
   for (const selected of [
-    f.seed("legacy", repository),
+    f.seed("task-owner-without-conversation-id", repository),
     f.seed("another-chat", repository, { conversation_id: "task-chat" }),
   ]) {
     for (const name of [

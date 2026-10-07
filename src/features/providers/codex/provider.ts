@@ -2,12 +2,18 @@ import { z } from "zod";
 
 import type { Provider, RunContext } from "../../../shared/contracts.js";
 import { UnconfirmedTerminationError } from "../../../shared/contracts.js";
+import { codexMetadata } from "../metadata.js";
 import { CodexExecutors } from "./executors.js";
+import { codexExecutionPresentation } from "./input-presentation.js";
 import type { CodexSessions } from "./session.js";
+import { readCodexTaskOptions, writeCodexTaskOptions } from "./task-options.js";
+import { codexTaskPolicy } from "./task-policy.js";
 
 /** Native provider implementation; production registration still requires executor verification. */
 export class CodexAgentProvider implements Provider {
   id = "codex";
+  taskPolicy = codexTaskPolicy;
+  metadata = codexMetadata;
   capabilities = {
     interrupt: true,
     session_continue: true,
@@ -46,12 +52,15 @@ export class CodexAgentProvider implements Provider {
   async recover(task: RunContext["task"]) {
     await this.executors.recover(task);
     if (!task.session_id) return;
-    if (!task.native_turn_id)
+
+    const nativeTurnId = readCodexTaskOptions(task).native_turn_id;
+
+    if (typeof nativeTurnId !== "string")
       throw new UnconfirmedTerminationError(
         [],
         "The interrupted native input has no observed coordinator turn; its outcome must be inspected before retrying",
       );
-    await this.sessions.cancelAndWait(task, task.native_turn_id);
+    await this.sessions.cancelAndWait(task, nativeTurnId);
   }
 
   async run(c: RunContext, prompt: string) {
@@ -74,6 +83,7 @@ export class CodexAgentProvider implements Provider {
           "Allow this native Codex turn to run shell commands in its sandbox. Read-only profiles cannot write the workspace; write profiles can edit it. Git metadata and direct network access are blocked. Shell commands do not have individual approval prompts.",
       },
       c.signal,
+      codexExecutionPresentation,
     );
 
     if (!permission.approved)
@@ -82,7 +92,9 @@ export class CodexAgentProvider implements Provider {
     const ref = await this.sessions.open(c.task, c.signal);
     c.task.session_id = ref.session_id;
     c.task.session_state_ref = ref.state_ref;
-    delete c.task.native_turn_id;
+
+    c.task.provider_options = writeCodexTaskOptions(c.task, {});
+
     c.session(ref.session_id, ref.state_ref);
     let submitted = false;
     let turnId: string | undefined;
@@ -126,7 +138,12 @@ export class CodexAgentProvider implements Provider {
               event.turn.subagent_id === null
             ) {
               turnId = event.turn.id;
-              c.task.native_turn_id = turnId;
+
+              c.task.provider_options = writeCodexTaskOptions(c.task, {
+                ...readCodexTaskOptions(c.task),
+                native_turn_id: turnId,
+              });
+
               c.session(ref.session_id, ref.state_ref);
               c.emit("agent.turn_started", { turn_id: turnId });
             }

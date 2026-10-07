@@ -33,6 +33,7 @@ const task = (patch: Partial<Task>): Task => ({
   instructions: [],
   attempt: 1,
   runtime_ms: 60_000,
+  provider_recovery_required: false,
   ...patch,
 });
 
@@ -135,6 +136,7 @@ test("task list runtime ticks, freezes while stopped, and accumulates after resu
     row(
       task({
         runtime_ms: 95_000,
+        provider_recovery_required: false,
         run_started_at: new Date(Date.now()).toISOString(),
       }),
     ),
@@ -157,7 +159,12 @@ test("task list shows a Needs input label without a timer while a worker awaits 
     row(
       task({
         run_started_at: "2026-10-02T12:00:00.000Z",
-        pending_input: { id: "question", tool: "AskUserQuestion", input: {} },
+        pending_input: {
+          id: "question",
+          kind: "question",
+          tool: "AskUserQuestion",
+          input: {},
+        },
       }),
     ),
   );
@@ -182,7 +189,12 @@ test("task list freezes an open run when input is requested and catches up on re
     row({
       ...running,
       status: "waiting",
-      pending_input: { id: "question", tool: "AskUserQuestion", input: {} },
+      pending_input: {
+        id: "question",
+        kind: "question",
+        tool: "AskUserQuestion",
+        input: {},
+      },
       updated_at: new Date(Date.now()).toISOString(),
     }),
   );
@@ -257,7 +269,12 @@ test("task list status icons expose each task state to assistive technology", (t
     [
       {
         status: "running",
-        pending_input: { id: "question", tool: "AskUserQuestion", input: {} },
+        pending_input: {
+          id: "question",
+          kind: "question",
+          tool: "AskUserQuestion",
+          input: {},
+        },
       },
       "Needs input",
     ],
@@ -357,7 +374,12 @@ test("terminal states and input requests take precedence over stale activity", (
     row(
       task({
         status: "waiting",
-        pending_input: { id: "question", tool: "AskUserQuestion", input: {} },
+        pending_input: {
+          id: "question",
+          kind: "question",
+          tool: "AskUserQuestion",
+          input: {},
+        },
         live_activity,
       }),
     ),
@@ -380,7 +402,12 @@ test("task list uses short state labels when no runtime timer is available", (t)
     [
       {
         status: "waiting",
-        pending_input: { id: "question", tool: "AskUserQuestion", input: {} },
+        pending_input: {
+          id: "question",
+          kind: "question",
+          tool: "AskUserQuestion",
+          input: {},
+        },
       },
       "Needs input",
     ],
@@ -420,6 +447,7 @@ test("task list replaces its activity fallback with a live timer once the run st
 
   const running = task({
     runtime_ms: 0,
+    provider_recovery_required: false,
     live_activity: { text: "Waiting for rate limit reset", state: "info" },
   });
 

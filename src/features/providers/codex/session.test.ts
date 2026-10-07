@@ -9,7 +9,6 @@ import { CodexSessions } from "./session.js";
 
 const task: Task = {
   ...startSchema.parse({
-    title: "Review changes",
     description: "Review changes",
   }),
   id: "task-one",
@@ -19,6 +18,7 @@ const task: Task = {
   status: "running",
   attempt: 2,
   runtime_ms: 0,
+  provider_recovery_required: true,
   instructions: [],
   created_at: "now",
   updated_at: "now",

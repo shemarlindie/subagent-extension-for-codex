@@ -71,15 +71,10 @@ export const claudeOverrideLabels: Record<string, Record<string, string>> = {
   },
 };
 
-// Persisted tasks can predate the separate decision-maker field.
-export function approvalDecider(task: {
+export function approvalDecider(options: {
   approval_decider?: z.infer<typeof approvalDeciderSchema>;
-  approval_mode?: string;
 }) {
-  return (
-    task.approval_decider ??
-    (task.approval_mode === "parent_agent" ? "parent_agent" : "user")
-  );
+  return options.approval_decider ?? "user";
 }
 
 export const permissionLabels = {
@@ -103,20 +98,6 @@ export const permissionRank: Record<ClaudePermissionMode, number> = {
 
 export const readOnlyProfile = (role: string) =>
   ["researcher", "reviewer", "security_reviewer"].includes(role);
-
-export function legacyClaudeMode(
-  mode?: string,
-): ClaudePermissionMode | undefined {
-  switch (mode) {
-    case "ask_user":
-    case "parent_agent":
-      return "default";
-    case "auto_approve":
-      return "bypassPermissions";
-    case "deny":
-      return "dontAsk";
-  }
-}
 
 export function resolveClaudePermission(
   input: {
@@ -151,21 +132,12 @@ export function exceedsPermission(
 }
 
 /** The native mode a stored task runs with; undefined leaves it to the user's Claude Code settings. */
-export function taskClaudeMode(task: {
+export function taskClaudeMode(options: {
   permission_mode?: z.infer<typeof permissionModeSchema>;
-  approval_mode?: string;
-  worker_profile: string;
 }): ClaudePermissionMode | undefined {
-  if (task.permission_mode)
-    return task.permission_mode === "inherit"
-      ? undefined
-      : task.permission_mode;
-
-  // Tasks stored before native modes keep their legacy policy.
-  return (
-    legacyClaudeMode(task.approval_mode) ??
-    (readOnlyProfile(task.worker_profile) ? "plan" : undefined)
-  );
+  return options.permission_mode === "inherit"
+    ? undefined
+    : options.permission_mode;
 }
 
 export const claudePolicySchema = z.object({

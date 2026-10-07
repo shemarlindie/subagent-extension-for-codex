@@ -1,15 +1,17 @@
 import { useState } from "react";
 
+import { activityPresentation } from "../../../../src/features/providers/activity/presentation";
 import type { Event } from "../../../shared/state/types";
 import { ActivityContent } from "./activity-content";
 import { ActivityTime } from "./activity-time";
 import { activityFailed } from "./activity-timeline";
-import { eventTitle, label, record } from "./activity-utils";
+import { eventTitle, label } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
 import { EVENT_TAIL_SIZE } from "./event-history";
 
 const envelope = new Set([
   "raw_response",
+  "activity",
   "type",
   "subtype",
   "uuid",
@@ -50,35 +52,30 @@ export function EventBody({ event }: { event: Event }) {
   if (event.type === "tool.completed")
     return <ActivityContent content={data.content ?? data.text} />;
 
-  if (event.type === "claude.activity" && data.type === "stream_event") {
-    const stream = record(data.event);
+  const presentation = activityPresentation(event);
+
+  if (presentation.stream) {
+    const stream = presentation.stream;
 
     return (
       <>
-        <p className="muted">{label(String(stream.type ?? "Streaming"))}</p>
-        {stream.delta ? (
-          <ActivityContent content={stream.delta} />
-        ) : stream.content_block ? (
-          <ActivityContent content={stream.content_block} />
+        <p className="muted">{label(stream.title ?? "Streaming")}</p>
+        {stream.content ? (
+          <ActivityContent content={stream.content} />
         ) : (
-          <ActivityValue
-            value={Object.fromEntries(
-              Object.entries(stream).filter(([key]) => key !== "type"),
-            )}
-          />
+          <ActivityValue value={stream.details} />
         )}
       </>
     );
   }
 
-  if (
-    event.type === "claude.activity" &&
-    (data.type === "assistant" || data.type === "user")
-  )
+  if (presentation.body)
     return (
       <>
-        <ActivityContent content={record(data.message).content} />
-        {data.error != null && <p className="error">{String(data.error)}</p>}
+        <ActivityContent content={presentation.body.content} />
+        {presentation.body.error != null && (
+          <p className="error">{String(presentation.body.error)}</p>
+        )}
       </>
     );
 

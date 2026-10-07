@@ -1,10 +1,4 @@
-import {
-  approvalDecider,
-  claudeOverrideLabels,
-  permissionLabels,
-  taskClaudeMode,
-} from "../../../../src/features/tasks/policy/permissions";
-import { approvalLabels } from "../../../../src/shared/contracts";
+import { providerTaskFacts } from "../../../../src/features/providers/presentation";
 import { useNow } from "../../../shared/components/use-now";
 import { profileLabel } from "../../../shared/state/selectors";
 import type { Task } from "../../../shared/state/types";
@@ -40,26 +34,7 @@ export function TaskDetails({ task, changes }: TaskDetailsProps) {
   const facts = {
     "Task ID": task.id,
     Worker: `${task.provider} · ${profileLabel(task.worker_profile)}`,
-    ...(task.provider === "claude"
-      ? {
-          "Permission mode":
-            permissionLabels[taskClaudeMode(task) ?? "inherit"],
-          "Permission source": task.permission_source ?? "Provider default",
-          "Approval decision maker":
-            approvalDecider(task) === "parent_agent" ? "Parent agent" : "User",
-          ...(task.claude_policy
-            ? {
-                "Session restrictions": [
-                  `Sandbox: ${claudeOverrideLabels.claude_sandbox[task.claude_policy.sandbox]}`,
-                  `Environment: ${claudeOverrideLabels.claude_environment[task.claude_policy.environment]}`,
-                  `Tools: ${claudeOverrideLabels.claude_tools[task.claude_policy.tools]}`,
-                  `Path guard: ${task.claude_policy.path_guard ? "On" : "Off"}`,
-                  `Subagents: ${task.claude_policy.subagents ? "On" : "Off"}`,
-                ].join(" · "),
-              }
-            : {}),
-        }
-      : { "Approval mode": approvalLabels[task.approval_mode ?? "ask_user"] }),
+    ...providerTaskFacts(task),
     Model: task.model || "Provider runtime default",
     "Reasoning effort": task.reasoning_effort || "Provider runtime default",
     Workspace: task.workspace ?? "Preparing",

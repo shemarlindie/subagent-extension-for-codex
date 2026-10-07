@@ -41,28 +41,17 @@ test("a typed cwd becomes the file URI Codex sends", () => {
     assert.equal(normalizeCwd(kept), kept);
 });
 
-test("saved settings override defaults and old plain cwds are converted", () => {
+test("saved current settings override defaults", () => {
   assert.deepEqual(
-    settingsFrom(defaults, JSON.stringify({ cwd: "/old", width: "fill" })),
-    { ...defaults, cwd: "file:///old", width: "fill" },
+    settingsFrom(
+      defaults,
+      JSON.stringify({ cwd: "file:///saved", width: "fill" }),
+    ),
+    { ...defaults, cwd: "file:///saved", width: "fill" },
   );
 
   assert.deepEqual(settingsFrom(defaults, null), defaults);
   assert.deepEqual(settingsFrom(defaults, "not json"), defaults);
-});
-
-test("saved bridge log visibility migrates to the inspector setting", () => {
-  const migrated = settingsFrom(defaults, JSON.stringify({ showLog: true }));
-
-  assert.equal(migrated.showInspector, true);
-  assert.equal("showLog" in migrated, false);
-
-  const currentSettingWins = settingsFrom(
-    defaults,
-    JSON.stringify({ showLog: true, showInspector: false }),
-  );
-
-  assert.equal(currentSettingWins.showInspector, false);
 });
 
 test("thread launches carry Codex metadata; global launches carry none", () => {

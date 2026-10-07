@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { test, vi } from "vitest";
 
+import { claudeActivityPresentation } from "../../../../src/features/providers/claude/activity";
 import type { Event as ActivityEvent } from "../../../shared/state/types";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -47,7 +48,10 @@ function event(
     task_id: "task",
     timestamp: "2026-10-02T12:00:00.000Z",
     type,
-    data,
+    data:
+      type === "claude.activity" || data.raw_response
+        ? { ...data, activity: claudeActivityPresentation({ type, data }) }
+        : data,
   };
 }
 
@@ -1064,7 +1068,7 @@ test("opening raw response shows the original full JSON and preserves disclosure
   await waitFor(() => assertAbsent(details.querySelector("pre")));
 });
 
-test("legacy events expose their entire data when no original SDK response exists", async (t) => {
+test("non-SDK events expose their entire data when no original SDK response exists", async (t) => {
   t.onTestFinished(cleanup);
 
   const data = {

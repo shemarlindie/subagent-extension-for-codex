@@ -17,6 +17,7 @@ import type {
   RunContext,
 } from "../../shared/contracts.js";
 import { Projects } from "../projects/projects.js";
+import { codexExecutionPresentation } from "../providers/codex/input-presentation.js";
 import { Workspaces } from "../workspaces/workspace.js";
 import { Control } from "./control.js";
 import { Forms } from "./forms.js";
@@ -396,158 +397,6 @@ test("host delegation keeps a free-text model field when discovery fails", async
     assert.equal("oneOf" in model, false);
     assert.equal(model.maxLength, 200);
     assert.equal(model.default, "");
-  } finally {
-    await close();
-  }
-});
-
-test("persisted forms from before project selection reject submission and require reopening", async () => {
-  const { c, rpc, close } = await setup();
-
-  try {
-    const requested = await rpc("request_agent_task", {});
-    const state = requested.result.requestState;
-    const row = c.store.db.prepare("SELECT id,body FROM form_requests").get()!;
-    const legacy = JSON.parse(String(row.body));
-    delete legacy.form.properties.repository;
-
-    legacy.form.required = legacy.form.required.filter(
-      (name: string) => name !== "repository",
-    );
-
-    c.store.db
-      .prepare("UPDATE form_requests SET body=? WHERE id=?")
-      .run(JSON.stringify(legacy), row.id);
-
-    c.forms = new Forms(c); // Model loading a pending form after upgrading the service.
-    const submitted = await rpc("request_agent_task", {}, state, accepted);
-    assert.ok(submitted.result.isError, JSON.stringify(submitted));
-
-    assert.match(
-      submitted.result.content[0].text,
-      /Reopen the task form and select a project/,
-    );
-
-    assert.equal(c.store.all().length, 0);
-    const reopened = await rpc("request_agent_task", {});
-    const schema = reopened.result.inputRequests.form.params.requestedSchema;
-    const repository = schema.properties.repository.oneOf[0].const;
-
-    const response = {
-      ...accepted,
-      content: { ...accepted.content, repository },
-    };
-
-    const started = await rpc(
-      "request_agent_task",
-      {},
-      reopened.result.requestState,
-      response,
-    );
-
-    assert.equal(
-      started.result.structuredContent.result.repository,
-      await realpath(repository),
-    );
-
-    assert.equal(c.store.all().length, 1);
-  } finally {
-    await close();
-  }
-});
-
-test("persisted task-only forms require reopening before changing pending state", async () => {
-  const { c, rpc, close } = await setup();
-
-  try {
-    const requested = await rpc("request_agent_task", {});
-    const state = requested.result.requestState;
-    const schema = requested.result.inputRequests.form.params.requestedSchema;
-    const repository = schema.properties.repository.oneOf[0].const;
-    const row = c.store.db.prepare("SELECT id,body FROM form_requests").get()!;
-    const legacy = JSON.parse(String(row.body));
-    legacy.form.properties.task = legacy.form.properties.description;
-    delete legacy.form.properties.description;
-
-    legacy.form.required = legacy.form.required.map((name: string) =>
-      name === "description" ? "task" : name,
-    );
-
-    const body = JSON.stringify(legacy);
-
-    c.store.db
-      .prepare("UPDATE form_requests SET body=? WHERE id=?")
-      .run(body, row.id);
-
-    c.forms = new Forms(c);
-    const { description, ...fields } = accepted.content;
-
-    const submitted = await rpc("request_agent_task", {}, state, {
-      action: "accept",
-      content: { ...fields, repository, task: description },
-    });
-
-    assert.ok(submitted.result.isError, JSON.stringify(submitted));
-    assert.match(submitted.result.content[0].text, /Reopen the task form/);
-    assert.equal(c.store.all().length, 0);
-
-    const persisted = c.store.db
-      .prepare("SELECT body FROM form_requests WHERE id=?")
-      .get(row.id)!;
-
-    assert.equal(persisted.body, body);
-    assert.equal(JSON.parse(String(persisted.body)).status, "pending");
-  } finally {
-    await close();
-  }
-});
-
-test("persisted title and description forms preserve the accepted title after reload", async () => {
-  const { c, rpc, close } = await setup();
-
-  try {
-    const requested = await rpc("request_agent_task", {});
-    const state = requested.result.requestState;
-    const schema = requested.result.inputRequests.form.params.requestedSchema;
-    const repository = schema.properties.repository.oneOf[0].const;
-    const row = c.store.db.prepare("SELECT id,body FROM form_requests").get()!;
-    const legacy = JSON.parse(String(row.body));
-
-    legacy.form.properties.title = {
-      type: "string",
-      title: "Title",
-      minLength: 1,
-      maxLength: 120,
-    };
-
-    legacy.form.required.push("title");
-
-    c.store.db
-      .prepare("UPDATE form_requests SET body=? WHERE id=?")
-      .run(JSON.stringify(legacy), row.id);
-
-    c.forms = new Forms(c);
-
-    const description =
-      "Review all permissions [input]\nPreserve every detail.";
-
-    const submitted = await rpc("request_agent_task", {}, state, {
-      action: "accept",
-      content: {
-        ...accepted.content,
-        repository,
-        title: "Legacy custom heading",
-        description,
-      },
-    });
-
-    const task = submitted.result?.structuredContent?.result;
-    assert.ok(task?.id, JSON.stringify(submitted));
-    assert.equal(task.title, "Legacy custom heading");
-    assert.equal(task.description, description);
-    assert.equal(c.store.get(task.id, "local").title, "Legacy custom heading");
-    assert.equal(c.store.get(task.id, "local").description, description);
-    assert.equal(c.store.all().length, 1);
   } finally {
     await close();
   }
@@ -948,7 +797,12 @@ test("Codex execution forms disclose whole-turn authority and bind approval to t
   };
 
   provider.run = async (ctx) => {
-    decision = await ctx.input("CodexExecution", policy);
+    decision = await ctx.input(
+      "CodexExecution",
+      policy,
+      undefined,
+      codexExecutionPresentation,
+    );
 
     return {
       summary: "Turn permission resolved",

@@ -150,7 +150,7 @@ test("persistent owned groups escalate to KILL and a remaining group stays uncon
   );
 });
 
-test("legacy records without verified process identity cannot authorize a signal", async () => {
+test("records without verified process identity cannot authorize a signal", async () => {
   const f = setup();
 
   await assert.rejects(

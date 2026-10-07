@@ -18,8 +18,10 @@ function recorder() {
   const events: { type: string; data: Record<string, unknown> }[] = [];
 
   const context = {
-    emit: (type: string, data: Record<string, unknown>) =>
-      events.push({ type, data }),
+    emit: (type: string, data: Record<string, unknown>) => {
+      const { activity: _, ...payload } = data;
+      events.push({ type, data: payload });
+    },
   } as unknown as RunContext;
 
   const normalize = (message: Record<string, unknown>) => {
@@ -266,9 +268,11 @@ test("run emits result accounting exactly once for success and failure", async (
 
     context.task = {
       ...startSchema.parse({
-        title: "Review",
         description: "Review",
         worker_profile: "reviewer",
+        provider_options: {
+          claude: { permission_mode: "plan", approval_decider: "user" },
+        },
       }),
       repository: workspace,
       workspace,
@@ -280,6 +284,21 @@ test("run emits result accounting exactly once for success and failure", async (
       instructions: [],
       attempt: 1,
       runtime_ms: 0,
+      provider_recovery_required: false,
+      provider_options: {
+        claude: {
+          permission_mode: "plan",
+          approval_decider: "user",
+          claude_policy: {
+            sandbox: "user_config",
+            environment: "inherit",
+            tools: "restricted",
+            path_guard: true,
+            subagents: true,
+          },
+        },
+      },
+      title: "Review",
     } as Task;
 
     context.signal = new AbortController().signal;

@@ -19,8 +19,6 @@ if (existsSync(join(root, ".env"))) process.loadEnvFile(join(root, ".env"));
 function dataDirectory() {
   if (process.env.CODEX_SUBAGENT_EXTENSION_DATA)
     return resolve(process.env.CODEX_SUBAGENT_EXTENSION_DATA);
-  const legacy = join(root, ".codex-subagent-extension");
-  if (existsSync(join(legacy, "console.sqlite"))) return legacy;
 
   return join(homedir(), ".local", "share", "codex-subagent-extension");
 }

@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-import {
-  approvalDeciderSchema,
-  type ClaudePolicy,
-  permissionModeSchema,
-} from "./policy/permissions.js";
 import { reasoningLevels } from "./policy/reasoning.js";
 
 export const roles = [
@@ -31,6 +26,13 @@ export const approvalModes = [
 export type ApprovalMode = (typeof approvalModes)[number];
 export const approvalModeSchema = z.enum(approvalModes);
 
+export const providerOptionsSchema = z.record(
+  z.string(),
+  z.record(z.string(), z.unknown()),
+);
+
+export type ProviderOptions = z.infer<typeof providerOptionsSchema>;
+
 export const approvalLabels: Record<ApprovalMode, string> = {
   ask_user: "Ask user",
   parent_agent: "Parent agent",
@@ -48,20 +50,15 @@ export const approvalRank: Record<ApprovalMode, number> = {
 export type InputAuthority = "user" | "parent";
 
 export const startSchema = z.object({
-  permission_mode: permissionModeSchema
+  provider_options: providerOptionsSchema
     .optional()
     .describe(
-      "Claude native SDK permission mode; inherit uses the user's Claude Code settings, or plan for read-only profiles. User settings can override.",
-    ),
-  approval_decider: approvalDeciderSchema
-    .optional()
-    .describe(
-      "Who answers unresolved permission requests: user or parent_agent. This is independent of the native permission mode.",
+      "Provider-owned options, isolated under the selected provider ID and validated by that provider.",
     ),
   approval_mode: approvalModeSchema
     .optional()
     .describe(
-      "Legacy approval policy. For Claude, use permission_mode and approval_decider; explicit legacy values map to native settings. Model calls cannot increase approval authority.",
+      "Whole-execution approval policy for providers that support it. Model calls cannot increase approval authority.",
     ),
   provider: z
     .string()
@@ -79,14 +76,6 @@ export const startSchema = z.object({
   reasoning_effort: reasoningSchema
     .optional()
     .describe("Reasoning effort; default inherits configured defaults."),
-  title: z
-    .string()
-    .min(1)
-    .max(120)
-    .optional()
-    .describe(
-      "Optional short title; generated from the full description when omitted.",
-    ),
   description: z
     .string()
     .min(1)
@@ -184,13 +173,18 @@ export const resultSchema = {
   additionalProperties: false,
 };
 
+export interface InputPresentation {
+  description: string;
+  approveLabel: string;
+  formMessage?: string;
+  formTitle?: string;
+  formApproveLabel?: string;
+}
+
 export interface Task extends Start {
   title: string;
-  // "parent" appears only on tasks stored before parent-mode inheritance was removed.
-  permission_source?:
-    "task" | "setting" | "task_profile" | "user_config" | "parent";
-  /** Claude session restrictions resolved from settings when the task starts. */
-  claude_policy?: ClaudePolicy;
+  /** Persisted recovery requirement keeps disabled providers locked after a restart. */
+  provider_recovery_required: boolean;
   id: string;
   owner: string;
   status: Status;
@@ -218,14 +212,23 @@ export interface Task extends Start {
    */
   end_tree?: string;
   session_id?: string;
-  native_turn_id?: string;
   session_owner?: string;
   session_state_ref?: string;
   result?: Result;
   error?: string;
-  pending_input?: { id: string; tool: string; input: Record<string, unknown> };
+  pending_input?: {
+    id: string;
+    tool: string;
+    kind: "question" | "permission";
+    presentation?: InputPresentation;
+    input: Record<string, unknown>;
+  };
   instructions: string[];
   attempt: number;
   runtime_ms: number;
   cost_usd?: number;
+}
+
+export function pendingInputKind(input: { kind: "question" | "permission" }) {
+  return input.kind;
 }

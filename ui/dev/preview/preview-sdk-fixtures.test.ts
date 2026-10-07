@@ -169,7 +169,12 @@ test("service event payloads match what the service emits", () => {
   for (const { request } of payload("agent.input_required") as {
     request: Record<string, unknown>;
   }[])
-    assert.deepEqual(Object.keys(request).sort(), ["id", "input", "tool"]);
+    assert.deepEqual(Object.keys(request).sort(), [
+      "id",
+      "input",
+      "kind",
+      "tool",
+    ]);
   for (const data of payload("agent.input_submitted"))
     assert.deepEqual(Object.keys(data), ["approved"]);
   for (const data of payload("agent.input_decision"))

@@ -9,17 +9,16 @@ import {
   roles,
 } from "../../shared/contracts.js";
 import {
-  approvalDecider,
-  approvalDeciderSchema,
-  claudeEnvironmentSchema,
-  claudeOverrideDefaults,
-  type ClaudeOverrides,
-  claudePathGuardSchema,
-  claudeSandboxSchema,
-  claudeToolsSchema,
-  legacyClaudeMode,
-  permissionModeSchema,
-} from "../tasks/policy/permissions.js";
+  builtinProviderMetadata,
+  type ProviderMetadata,
+} from "../providers/metadata.js";
+import {
+  preferredSettingsProvider,
+  providerModelSettingScopes,
+  providerSettingsShape,
+  providerStoredSettingsShape,
+  validateProviderSettingsUpdate,
+} from "../providers/settings.js";
 import { type Store } from "../tasks/store.js";
 import {
   branchPrefixPattern,
@@ -31,7 +30,7 @@ import {
 } from "./settings-document.js";
 
 // Codex defaults are not supported yet; settings cover these providers only.
-const settingsProviders = ["claude", "fixture"] as const;
+const settingsProviders = providerModelSettingScopes;
 
 const scopeTitle = (scope: string) =>
   scope[0].toUpperCase() + scope.slice(1).replaceAll("_", " ");
@@ -75,41 +74,13 @@ const valuesSchema = z.strictObject({
     title: "Automatically add chat projects",
     description: settingHelp.auto_register_chat_project,
   }),
-  claude_permission_mode: permissionModeSchema.meta({
-    title: "Claude permission mode",
-    description: settingHelp.claude_permission_mode,
-  }),
-  // Restriction titles drop "Claude": their settings group already names it.
-  claude_sandbox: claudeSandboxSchema.meta({
-    title: "Bash sandbox",
-    description: settingHelp.claude_sandbox,
-  }),
-  claude_environment: claudeEnvironmentSchema.meta({
-    title: "Environment",
-    description: settingHelp.claude_environment,
-  }),
-  claude_tools: claudeToolsSchema.meta({
-    title: "Tools",
-    description: settingHelp.claude_tools,
-  }),
-  claude_path_guard: claudePathGuardSchema.meta({
-    title: "Workspace path guard",
-    description: settingHelp.claude_path_guard,
-  }),
-  claude_subagents: z.boolean().meta({
-    title: "Allow subagents",
-    description: settingHelp.claude_subagents,
-  }),
-  default_approval_decider: approvalDeciderSchema.meta({
-    title: "Approval decision maker",
-    description: settingHelp.default_approval_decider,
-  }),
+  ...providerSettingsShape,
   default_approval_mode: approvalModeSchema.meta({
-    title: "Approval mode",
+    title: "Execution approval mode",
     description:
-      "Ask user, delegate decisions to the parent agent, auto-approve within the sandbox, or deny execution requests. Read-only profiles and sandbox limits remain enforced.",
+      "Default for execution providers: ask user, delegate to the parent agent, auto-approve within the sandbox, or deny execution requests. Native permission settings are independent. Read-only profiles and sandbox limits remain enforced.",
   }),
-  default_provider: z.enum(settingsProviders).meta({ title: "Provider" }),
+  default_provider: z.string().min(1).meta({ title: "Provider" }),
   default_worker_profile: z.enum(roles).meta({ title: "Worker profile" }),
   default_workspace_strategy: z
     .enum(["worktree", "current_repo"])
@@ -170,24 +141,9 @@ const panelValuesSchema = valuesSchema
     >,
   );
 
-// Fill missing fields in older settings rows without adding JSON Schema defaults to panel fields.
-const storedValuesSchema = valuesSchema.extend({
+const initialValuesSchema = valuesSchema.extend({
   auto_register_chat_project: z.boolean().default(true),
-  claude_permission_mode: permissionModeSchema.default("inherit"),
-  default_approval_decider: approvalDeciderSchema.default("user"),
-  claude_sandbox: claudeSandboxSchema.default(
-    claudeOverrideDefaults.claude_sandbox,
-  ),
-  claude_environment: claudeEnvironmentSchema.default(
-    claudeOverrideDefaults.claude_environment,
-  ),
-  claude_tools: claudeToolsSchema.default(claudeOverrideDefaults.claude_tools),
-  claude_path_guard: claudePathGuardSchema.default(
-    claudeOverrideDefaults.claude_path_guard,
-  ),
-  claude_subagents: z
-    .boolean()
-    .default(claudeOverrideDefaults.claude_subagents),
+  ...providerStoredSettingsShape,
   default_approval_mode: approvalModeSchema.default("ask_user"),
   worktree_branch_prefix:
     valuesSchema.shape.worktree_branch_prefix.default("agent/"),
@@ -203,6 +159,11 @@ const storedValuesSchema = valuesSchema.extend({
       (typeof modelSettingsShape)[K]
     >;
   }),
+  cost_budget_amount: costAmount.optional(),
+  runtime_budget_amount: runtimeAmount.optional(),
+});
+
+const persistedValuesSchema = valuesSchema.extend({
   cost_budget_amount: costAmount.optional(),
   runtime_budget_amount: runtimeAmount.optional(),
 });
@@ -242,15 +203,18 @@ export class Settings {
   constructor(
     private store: Store,
     providers: () => string[],
+    private metadata: (provider: string) => ProviderMetadata | undefined = (
+      provider,
+    ) => builtinProviderMetadata[provider],
   ) {
     // A Codex-only service still needs a valid provider default; tasks can
     // still choose Codex explicitly.
     this.providers = () => {
-      const enabled = providers().filter((provider) =>
-        settingsProviders.some((supported) => supported === provider),
+      const enabled = providers().filter(
+        (provider) => this.metadata(provider)?.settings?.modelDefaults,
       );
 
-      return enabled.length ? enabled : ["claude"];
+      return enabled.length ? enabled : [providerModelSettingScopes[0]];
     };
 
     store.db.exec(
@@ -261,9 +225,7 @@ export class Settings {
   // A new user's settings; schema defaults fill in the rest.
   private initialBody() {
     return {
-      default_provider: this.providers().includes("claude")
-        ? "claude"
-        : this.providers()[0],
+      default_provider: preferredSettingsProvider(this.providers()),
       default_worker_profile: "reviewer",
       default_workspace_strategy: "current_repo",
       max_runtime_minutes: 20,
@@ -276,27 +238,14 @@ export class Settings {
       .prepare("SELECT body FROM user_settings WHERE owner=?")
       .get(owner);
 
-    const body = row ? JSON.parse(String(row.body)) : this.initialBody();
+    if (!row) return initialValuesSchema.parse(this.initialBody());
 
-    // Ignore Codex defaults saved before they were removed.
-    delete body.codex_default_model;
-    delete body.codex_default_reasoning_effort;
-    if (body.default_provider === "codex")
+    const body = JSON.parse(String(row.body));
+
+    if (!this.providers().includes(body.default_provider))
       body.default_provider = this.providers()[0];
-    if (
-      body.claude_permission_mode === undefined &&
-      body.default_approval_mode &&
-      body.default_approval_mode !== "ask_user"
-    )
-      body.claude_permission_mode =
-        legacyClaudeMode(body.default_approval_mode) ?? "inherit";
-    if (
-      body.default_approval_decider === undefined &&
-      body.default_approval_mode === "parent_agent"
-    )
-      body.default_approval_decider = "parent_agent";
 
-    return storedValuesSchema.parse(body);
+    return persistedValuesSchema.parse(body);
   }
 
   values(owner: string): SettingsValues {
@@ -313,8 +262,8 @@ export class Settings {
     return values;
   }
 
-  // Values as the panel and agents read them: without the retired approval
-  // mode or a disabled provider's model defaults.
+  // The panel presents native permission settings; execution approval defaults
+  // remain available to execution providers and direct settings callers.
   private panelValues(values: SettingsValues) {
     const { default_approval_mode, ...visible } = values;
     const panel: z.infer<typeof panelValuesSchema> = visible;
@@ -327,7 +276,7 @@ export class Settings {
   /** The values a new user starts with, which resets restore. */
   defaults() {
     const { cost_budget_amount, runtime_budget_amount, ...values } =
-      storedValuesSchema.parse(this.initialBody());
+      initialValuesSchema.parse(this.initialBody());
 
     return values;
   }
@@ -365,7 +314,14 @@ export class Settings {
 
     for (const key of this.hiddenModelKeys()) delete properties[key];
 
-    const scopes = { values, providers, catalogs };
+    const scopes = {
+      values,
+      providers,
+      catalogs,
+      modelProviders: providers.filter(
+        (provider) => `${provider}_default_model` in properties,
+      ),
+    };
 
     const sections = settingsSections({
       ...scopes,
@@ -382,7 +338,7 @@ export class Settings {
     const modelNote =
       "Blank inherits the next default: the task's worker profile, then its provider, then the global default, then the provider's own default. A model chosen for a task overrides these.";
 
-    for (const scope of ["global", ...providers, ...roles]) {
+    for (const scope of ["global", ...scopes.modelProviders, ...roles]) {
       const info = modelScope(scope, scopes),
         modelField = properties[info.modelKey] as Record<string, unknown>,
         effortField = properties[info.effortKey] as Record<string, unknown>;
@@ -419,22 +375,9 @@ export class Settings {
       throw new Error(
         "Automatic project registration requires a user decision in settings",
       );
-    if (
-      authority !== "user" &&
-      (set.default_approval_mode !== undefined ||
-        set.claude_permission_mode !== undefined ||
-        set.default_approval_decider !== undefined)
-    )
+    if (authority !== "user" && set.default_approval_mode !== undefined)
       throw new Error("Approval settings require a user decision in settings");
-    if (
-      authority !== "user" &&
-      Object.keys(claudeOverrideDefaults).some(
-        (key) => set[key as keyof ClaudeOverrides] !== undefined,
-      )
-    )
-      throw new Error(
-        "Claude session restrictions require a user decision in settings",
-      );
+    validateProviderSettingsUpdate(set, authority);
     if (
       set.default_provider &&
       !this.providers().includes(set.default_provider)
@@ -443,18 +386,6 @@ export class Settings {
     // Synchronous read/merge/write preserves omitted fields across concurrent requests.
     const previous = this.saved(owner);
     const { use_cost_budget, use_runtime_budget, ...fields } = set;
-
-    // Older clients can still send the retired policy setting. Translate explicit
-    // updates without overriding a native mode supplied in the same request.
-    if (fields.default_approval_mode !== undefined) {
-      fields.claude_permission_mode ??=
-        legacyClaudeMode(fields.default_approval_mode) ?? "inherit";
-
-      fields.default_approval_decider ??=
-        fields.default_approval_mode === "parent_agent"
-          ? "parent_agent"
-          : "user";
-    }
 
     const amount =
       fields.max_cost_usd ??
@@ -491,7 +422,7 @@ export class Settings {
           ? runtimeAmountValue
           : null;
 
-    const values = storedValuesSchema.parse({
+    const values = persistedValuesSchema.parse({
       ...previous,
       ...fields,
       max_cost_usd,
@@ -537,20 +468,14 @@ export class Settings {
 
     return {
       ...args,
+      ...(args.provider_options
+        ? { provider_options: args.provider_options }
+        : {}),
       model: typeof model === "string" ? model.trim() : undefined,
       reasoning_effort: reasoning,
-      permission_mode:
-        args.permission_mode ??
-        (provider === "claude" && args.approval_mode !== undefined
-          ? legacyClaudeMode(String(args.approval_mode))
-          : undefined) ??
-        "inherit",
-      approval_decider:
-        args.approval_decider ??
-        (args.approval_mode !== undefined
-          ? approvalDecider({ approval_mode: String(args.approval_mode) })
-          : defaults.default_approval_decider),
-      approval_mode: args.approval_mode ?? defaults.default_approval_mode,
+      ...(args.approval_mode !== undefined
+        ? { approval_mode: args.approval_mode }
+        : {}),
       provider: args.provider ?? defaults.default_provider,
       worker_profile: args.worker_profile ?? defaults.default_worker_profile,
       workspace_strategy:

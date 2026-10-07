@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { FormProvider, useWatch } from "react-hook-form";
 
+import { providerMetadata } from "../../../src/features/providers/metadata";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { Field } from "../../shared/forms/fields";
 import { FormFooter } from "../../shared/forms/form-footer";
@@ -21,6 +22,7 @@ import {
   WorkspaceField,
 } from "./delegate-fields";
 import { taskProjects } from "./delegation";
+import { providerOptionDefaults } from "./provider-defaults";
 
 interface DelegateFormProps {
   dialog: Extract<DialogState, { kind: "delegate" }>;
@@ -39,11 +41,20 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
     dialog.preferredWorker ??
     `${defaults.default_provider}:${defaults.default_worker_profile}`;
 
+  const [preferredProvider] = preferred.split(":"),
+    preferredWorker = state.workers.find(
+      (worker) => worker.provider === preferredProvider,
+    ),
+    optionDefaults = providerOptionDefaults(
+      preferredProvider,
+      preferredWorker?.metadata,
+      defaults,
+    );
+
   const strategyDefault = defaults.default_workspace_strategy ?? "current_repo";
 
   const form = usePersistedDialogForm<DelegateValues>("delegate", {
-    permission_mode: "inherit",
-    approval_decider: defaults.default_approval_decider ?? "user",
+    ...optionDefaults,
     repository: dialog.repository ?? "",
     revision: strategyDefault === "current_repo" ? "HEAD" : dialog.revision,
     workspace_strategy: strategyDefault,
@@ -99,13 +110,33 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
         onSubmit={form.handleSubmit((values) =>
           controller.submit(async () => {
             const [provider, worker_profile] = values.worker.split(":");
+
+            const worker = state.workers.find(
+              (item) => item.provider === provider,
+            );
+
+            const permissions = providerMetadata(
+              provider,
+              worker?.metadata,
+            )?.nativePermissions;
+
+            const nativeOptions = permissions
+              ? {
+                  [permissions.permissionOption]: values.permission_mode,
+                  ...(permissions.approvalDeciderOption
+                    ? {
+                        [permissions.approvalDeciderOption]:
+                          values.approval_decider,
+                      }
+                    : {}),
+                }
+              : undefined;
+
             await controller.addChatProjectForTask(values.repository);
 
             return controller.tool<Task>("start_agent_task", {
-              permission_mode:
-                provider === "claude" ? values.permission_mode : "inherit",
-              ...(provider === "claude"
-                ? { approval_decider: values.approval_decider }
+              ...(nativeOptions
+                ? { provider_options: { [provider]: nativeOptions } }
                 : {}),
               repository: values.repository,
               description: values.description,
@@ -165,7 +196,7 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
           />
         </Field>
         <WorkspaceField />
-        <ApprovalField />
+        <ApprovalField workers={state.workers} />
         <WorkerFields workers={state.workers} />
         <ModelFields defaults={defaults} workers={state.workers} />
         <Field id="context" label="Context to include (optional)">

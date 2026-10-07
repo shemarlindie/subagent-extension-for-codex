@@ -11,11 +11,13 @@ import {
   type Result,
   type RunContext,
   startSchema,
+  type Task,
 } from "../../../shared/contracts.js";
 import { Settings } from "../../settings/settings.js";
+import { Control } from "../../tasks/control.js";
+import { Store } from "../../tasks/store.js";
 import { Workspaces } from "../../workspaces/workspace.js";
-import { Control } from "../control.js";
-import { Store } from "../store.js";
+import { claudeMetadata } from "../metadata.js";
 import {
   claudeOverrideDefaults,
   claudePermissionModes,
@@ -24,24 +26,19 @@ import {
   resolveClaudePolicy,
   taskClaudeMode,
 } from "./permissions.js";
+import { readClaudeTaskOptions } from "./task-options.js";
+import { claudeTaskPolicy } from "./task-policy.js";
 
-test("stored native inheritance ignores legacy approval defaults while older tasks retain them", () => {
-  for (const [approval_mode, expected] of [
-    ["ask_user", "default"],
-    ["parent_agent", "default"],
-    ["auto_approve", "bypassPermissions"],
-    ["deny", "dontAsk"],
-  ] as const) {
-    const task = { worker_profile: "implementer", approval_mode };
-    assert.equal(taskClaudeMode(task), expected);
-    assert.equal(
-      taskClaudeMode({ ...task, permission_mode: "inherit" }),
-      undefined,
-    );
-    assert.equal(taskClaudeMode({ ...task, permission_mode: "auto" }), "auto");
-  }
+test("stored native modes preserve explicit inheritance and native approval", () => {
+  assert.equal(
+    taskClaudeMode({
+      permission_mode: "inherit",
+    }),
+    undefined,
+  );
 
-  assert.equal(taskClaudeMode({ worker_profile: "reviewer" }), "plan");
+  for (const mode of claudePermissionModes)
+    assert.equal(taskClaudeMode({ permission_mode: mode }), mode);
 });
 
 test("native permission resolution follows task, setting, then profile or the user's Claude Code settings", () => {
@@ -111,6 +108,8 @@ async function setup(t: TestContext, provider = new FixtureProvider()) {
 
   const store = new Store(join(dir, "tasks.sqlite"));
   provider.id = "claude";
+  provider.taskPolicy = claudeTaskPolicy;
+  provider.metadata = claudeMetadata;
 
   const c = new Control(
     store,
@@ -134,6 +133,20 @@ const request = {
   worker_profile: "implementer",
   workspace_strategy: "current_repo",
 };
+
+const withClaudeOptions = (
+  input: Record<string, unknown>,
+  options: Record<string, unknown>,
+) => ({
+  ...input,
+  provider_options: {
+    ...((input.provider_options as Record<string, Record<string, unknown>>) ??
+      {}),
+    claude: options,
+  },
+});
+
+const taskOptions = (task: Task) => readClaudeTaskOptions(task);
 
 test("settings expose all SDK permission modes, persist overrides, and require user authority", async (t) => {
   const { c, store } = await setup(t);
@@ -181,29 +194,6 @@ test("settings expose all SDK permission modes, persist overrides, and require u
   assert.equal(reloaded.values("bob").claude_permission_mode, "inherit");
 });
 
-test("legacy saved approval preferences migrate to native mode and decider", async (t) => {
-  const { c, store } = await setup(t);
-
-  for (const [owner, legacy, mode, decider] of [
-    ["parent", "parent_agent", "default", "parent_agent"],
-    ["automatic", "auto_approve", "bypassPermissions", "user"],
-    ["denied", "deny", "dontAsk", "user"],
-  ]) {
-    store.db.prepare("INSERT INTO user_settings VALUES(?,?)").run(
-      owner,
-      JSON.stringify({
-        ...c.settings.values("alice"),
-        default_approval_mode: legacy,
-        claude_permission_mode: undefined,
-        default_approval_decider: undefined,
-      }),
-    );
-
-    assert.equal(c.settings.values(owner).claude_permission_mode, mode);
-    assert.equal(c.settings.values(owner).default_approval_decider, decider);
-  }
-});
-
 test("task arguments cannot spoof parent permissions and resolved source is stored", async (t) => {
   const { c, store } = await setup(t);
 
@@ -219,8 +209,12 @@ test("task arguments cannot spoof parent permissions and resolved source is stor
     "parent",
   );
 
-  assert.equal(task.permission_mode, "inherit");
-  assert.equal(store.get(task.id, "alice").permission_source, "user_config");
+  assert.equal(taskOptions(task).permission_mode, "inherit");
+
+  assert.equal(
+    taskOptions(store.get(task.id, "alice")).permission_source,
+    "user_config",
+  );
 
   assert.equal(
     Object.hasOwn(
@@ -240,7 +234,7 @@ test("parent cannot increase native permissions or grant itself decision authori
   await assert.rejects(
     c.start(
       "alice",
-      { ...request, permission_mode: "bypassPermissions" },
+      withClaudeOptions(request, { permission_mode: "bypassPermissions" }),
       "parent",
     ),
     /exceeds the user-approved native mode/,
@@ -249,29 +243,36 @@ test("parent cannot increase native permissions or grant itself decision authori
   await assert.rejects(
     c.start(
       "alice",
-      { ...request, approval_decider: "parent_agent" },
+      withClaudeOptions(request, { approval_decider: "parent_agent" }),
       "parent",
     ),
     /user authorization/,
   );
 
   await assert.rejects(
-    c.start("alice", { ...request, permission_mode: "acceptEdits" }, "parent"),
+    c.start(
+      "alice",
+      withClaudeOptions(request, { permission_mode: "acceptEdits" }),
+      "parent",
+    ),
     /exceeds the user-approved native mode/,
   );
 
   const restricted = await c.start(
     "alice",
-    { ...request, permission_mode: "dontAsk" },
+    withClaudeOptions(request, { permission_mode: "dontAsk" }),
     "parent",
   );
 
-  assert.equal(restricted.permission_mode, "dontAsk");
+  assert.equal(taskOptions(restricted).permission_mode, "dontAsk");
 
   await assert.rejects(
     c.start(
       "alice",
-      { ...request, worker_profile: "reviewer", permission_mode: "dontAsk" },
+      withClaudeOptions(
+        { ...request, worker_profile: "reviewer" },
+        { permission_mode: "dontAsk" },
+      ),
       "parent",
     ),
     /exceeds the user-approved native mode/,
@@ -286,12 +287,15 @@ test("parent cannot increase native permissions or grant itself decision authori
 
   const approved = await c.start(
     "alice",
-    { ...request, permission_mode: "auto", approval_decider: "parent_agent" },
+    withClaudeOptions(request, {
+      permission_mode: "auto",
+      approval_decider: "parent_agent",
+    }),
     "parent",
   );
 
-  assert.equal(approved.permission_mode, "auto");
-  assert.equal(approved.approval_decider, "parent_agent");
+  assert.equal(taskOptions(approved).permission_mode, "auto");
+  assert.equal(taskOptions(approved).approval_decider, "parent_agent");
 });
 
 test("parent task references require ownership and do not pass on the parent's mode", async (t) => {
@@ -299,7 +303,7 @@ test("parent task references require ownership and do not pass on the parent's m
 
   const parent = await c.start("alice", {
     ...request,
-    permission_mode: "bypassPermissions",
+    ...withClaudeOptions(request, { permission_mode: "bypassPermissions" }),
   });
 
   await assert.rejects(
@@ -312,8 +316,8 @@ test("parent task references require ownership and do not pass on the parent's m
     "parent",
   );
 
-  assert.equal(child.permission_mode, "inherit");
-  assert.equal(child.permission_source, "user_config");
+  assert.equal(taskOptions(child).permission_mode, "inherit");
+  assert.equal(taskOptions(child).permission_source, "user_config");
   c.settings.update("alice", { set: { claude_permission_mode: "dontAsk" } });
 
   const overridden = await c.start(
@@ -322,8 +326,8 @@ test("parent task references require ownership and do not pass on the parent's m
     "parent",
   );
 
-  assert.equal(overridden.permission_mode, "dontAsk");
-  assert.equal(overridden.permission_source, "setting");
+  assert.equal(taskOptions(overridden).permission_mode, "dontAsk");
+  assert.equal(taskOptions(overridden).permission_source, "setting");
 });
 
 class PromptProvider extends FixtureProvider {
@@ -354,49 +358,48 @@ async function until(predicate: () => boolean) {
   throw new Error("Timed out waiting for native permission request");
 }
 
-test("explicit legacy task modes select their original decider unless native routing overrides it", async (t) => {
+test("new Claude tasks require native permission and decision fields", async (t) => {
   const { c } = await setup(t);
+  for (const approval_mode of [
+    "ask_user",
+    "parent_agent",
+    "auto_approve",
+    "deny",
+  ])
+    await assert.rejects(
+      c.start("alice", { ...request, approval_mode }),
+      /Claude uses permission_mode and approval_decider/,
+    );
 
-  c.settings.update("alice", {
-    set: { default_approval_decider: "parent_agent" },
-  });
+  const task = await c.start(
+    "alice",
+    withClaudeOptions(request, {
+      permission_mode: "dontAsk",
+      approval_decider: "parent_agent",
+    }),
+  );
 
-  for (const [approval_mode, permission_mode, approval_decider] of [
-    ["ask_user", "default", "user"],
-    ["parent_agent", "default", "parent_agent"],
-    ["auto_approve", "bypassPermissions", "user"],
-    ["deny", "dontAsk", "user"],
-  ]) {
-    const task = await c.start("alice", { ...request, approval_mode });
-    assert.equal(task.permission_mode, permission_mode);
-    assert.equal(task.approval_decider, approval_decider);
-  }
-
-  const override = await c.start("alice", {
-    ...request,
-    approval_mode: "ask_user",
-    permission_mode: "dontAsk",
-    approval_decider: "parent_agent",
-  });
-
-  assert.equal(override.permission_mode, "dontAsk");
-  assert.equal(override.approval_decider, "parent_agent");
+  assert.equal(taskOptions(task).permission_mode, "dontAsk");
+  assert.equal(taskOptions(task).approval_decider, "parent_agent");
 });
 
-test("persisted Claude tasks retain legacy approval routing with explicit native precedence", async (t) => {
+test("persisted Claude tasks retain native approval routing", async (t) => {
   const { c, store } = await setup(t, new PromptProvider());
 
-  for (const [approval_mode, nativeDecider, parentAllowed] of [
-    ["parent_agent", undefined, true],
-    ["ask_user", undefined, false],
-    ["parent_agent", "user", false],
+  for (const [nativeDecider, parentAllowed] of [
+    ["parent_agent", true],
+    ["user", false],
   ] as const) {
-    const task = await c.start("alice", { ...request, approval_mode });
+    const task = await c.start(
+      "alice",
+      withClaudeOptions(request, {
+        permission_mode: "default",
+        approval_decider: nativeDecider,
+      }),
+    );
+
     await until(() => !!store.get(task.id, "alice").pending_input);
     const persisted = store.get(task.id, "alice");
-    delete persisted.permission_mode;
-    delete persisted.permission_source;
-    persisted.approval_decider = nativeDecider;
     store.save(persisted);
     const pending = persisted.pending_input!;
 
@@ -437,7 +440,7 @@ test("persisted Claude tasks retain legacy approval routing with explicit native
   }
 });
 
-test("native unresolved approvals honor user or parent decision settings independently of legacy auto policy", async (t) => {
+test("native unresolved approvals honor their decision setting independently of execution defaults", async (t) => {
   const { c, store } = await setup(t, new PromptProvider());
 
   c.settings.update("alice", {
@@ -507,23 +510,27 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
     },
   });
 
-  // A model-supplied policy cannot widen the user's settings.
-  const write = await c.start(
-    "alice",
-    {
-      ...request,
-      claude_policy: {
-        sandbox: "user_config",
-        environment: "inherit",
-        tools: "all",
-        path_guard: false,
-        subagents: true,
-      },
-    },
-    "parent",
+  // Provider-owned resolved restrictions cannot be supplied by the caller.
+  await assert.rejects(
+    c.start(
+      "alice",
+      withClaudeOptions(request, {
+        claude_policy: {
+          sandbox: "user_config",
+          environment: "inherit",
+          tools: "all",
+          path_guard: false,
+          subagents: true,
+        },
+      }),
+      "parent",
+    ),
+    /Unrecognized key/,
   );
 
-  assert.deepEqual(store.get(write.id, "alice").claude_policy, {
+  const write = await c.start("alice", request, "parent");
+
+  assert.deepEqual(taskOptions(store.get(write.id, "alice")).claude_policy, {
     sandbox: "extension_locked",
     environment: "filtered",
     tools: "all",
@@ -536,15 +543,20 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
     worker_profile: "reviewer",
   });
 
-  assert.equal(review.claude_policy?.tools, "restricted");
-  assert.equal(review.claude_policy?.path_guard, true);
+  assert.equal(taskOptions(review).claude_policy?.tools, "restricted");
+  assert.equal(taskOptions(review).claude_policy?.path_guard, true);
   // A later settings change does not alter started tasks.
   c.settings.update("alice", { set: { claude_tools: "restricted" } });
-  assert.equal(store.get(write.id, "alice").claude_policy?.tools, "all");
+
+  assert.equal(
+    taskOptions(store.get(write.id, "alice")).claude_policy?.tools,
+    "all",
+  );
+
   const bob = await c.start("bob", request);
 
   assert.deepEqual(
-    bob.claude_policy,
+    taskOptions(bob).claude_policy,
     resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
   );
 });

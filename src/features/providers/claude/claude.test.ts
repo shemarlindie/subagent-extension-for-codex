@@ -14,6 +14,11 @@ import {
   type Task,
 } from "../../../shared/contracts.js";
 import {
+  claudeOverrideDefaults,
+  type ClaudePolicy,
+  resolveClaudePolicy,
+} from "./permissions.js";
+import {
   ClaudeAgentProvider,
   claudeEnvironment,
   claudeSandbox,
@@ -28,9 +33,18 @@ const result = {
   recommendations: [],
 };
 
+const setClaudeOptions = (task: Task, patch: Record<string, unknown>) => {
+  task.provider_options = {
+    ...task.provider_options,
+    claude: { ...task.provider_options?.claude, ...patch },
+  };
+};
+
+const claudeOptions = (task: Task) => task.provider_options?.claude ?? {};
+
 test("Claude session deletion skips absent ids and forwards existing sessions", async () => {
   const task: Task = {
-    ...startSchema.parse({ title: "Delete", description: "Delete" }),
+    ...startSchema.parse({ description: "Delete" }),
     title: "Delete",
     id: "delete-task",
     owner: "alice",
@@ -40,6 +54,7 @@ test("Claude session deletion skips absent ids and forwards existing sessions", 
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
+    provider_recovery_required: false,
   };
 
   const calls: string[] = [];
@@ -56,7 +71,7 @@ test("Claude session deletion skips absent ids and forwards existing sessions", 
 
 test("Claude session deletion only tolerates the SDK's missing-session error", async () => {
   const task: Task = {
-    ...startSchema.parse({ title: "Delete", description: "Delete" }),
+    ...startSchema.parse({ description: "Delete" }),
     title: "Delete",
     id: "delete-task",
     owner: "alice",
@@ -66,6 +81,7 @@ test("Claude session deletion only tolerates the SDK's missing-session error", a
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
+    provider_recovery_required: false,
     session_id: "session-one",
   };
 
@@ -103,9 +119,11 @@ async function context() {
 
   const task: Task = {
     ...startSchema.parse({
-      title: "Review",
       description: "Review",
       worker_profile: "reviewer",
+      provider_options: {
+        claude: { permission_mode: "plan", approval_decider: "user" },
+      },
     }),
     repository: workspace,
     id: "task-test",
@@ -117,6 +135,15 @@ async function context() {
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
+    provider_recovery_required: false,
+    provider_options: {
+      claude: {
+        permission_mode: "plan",
+        approval_decider: "user",
+        permission_source: "task_profile",
+        claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "reviewer"),
+      },
+    },
     workspace,
     cost_usd: 1,
     session_id: "existing-session",
@@ -415,6 +442,12 @@ test("Claude forwards the selected model and effort and omits inherited native s
 test("write-profile shell commands require human decision and cannot use edited approval payloads", async () => {
   const { c } = await context();
   c.task.worker_profile = "implementer";
+
+  setClaudeOptions(c.task, {
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+  });
+
+  setClaudeOptions(c.task, { permission_mode: "inherit" });
   let options: Options | undefined;
 
   const provider = new ClaudeAgentProvider((args) => {
@@ -475,14 +508,20 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
   const { c, workspace } = await context();
   c.task.worker_profile = "implementer";
 
+  setClaudeOptions(c.task, {
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+  });
+
   // Restrictions enabled in settings apply in every native mode.
-  c.task.claude_policy = {
-    sandbox: "extension",
-    environment: "filtered",
-    tools: "restricted",
-    path_guard: true,
-    subagents: false,
-  };
+  setClaudeOptions(c.task, {
+    claude_policy: {
+      sandbox: "extension",
+      environment: "filtered",
+      tools: "restricted",
+      path_guard: true,
+      subagents: false,
+    },
+  });
 
   let options: Options | undefined;
 
@@ -511,7 +550,7 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
     "auto",
     "bypassPermissions",
   ] as const) {
-    c.task.permission_mode = mode;
+    setClaudeOptions(c.task, { permission_mode: mode });
     await provider.run(c, "Implement");
     assert.equal(options!.permissionMode, mode);
 
@@ -561,11 +600,11 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
     );
   }
 
-  c.task.permission_mode = "inherit";
+  setClaudeOptions(c.task, { permission_mode: "inherit" });
   await provider.run(c, "Implement");
   assert.equal(Object.hasOwn(options!, "permissionMode"), false);
   c.task.worker_profile = "reviewer";
-  c.task.permission_mode = "bypassPermissions";
+  setClaudeOptions(c.task, { permission_mode: "bypassPermissions" });
   await provider.run(c, "Review");
 
   assert.ok(
@@ -587,7 +626,12 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
 test("unresolved SDK edits ask the configured decision maker and preserve the original input", async () => {
   const { c } = await context();
   c.task.worker_profile = "implementer";
-  c.task.permission_mode = "default";
+
+  setClaudeOptions(c.task, {
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+  });
+
+  setClaudeOptions(c.task, { permission_mode: "default" });
   let options: Options | undefined;
 
   const provider = new ClaudeAgentProvider((args) => {
@@ -899,13 +943,13 @@ test("native StructuredOutput accepts only the result contract while other repor
 });
 
 async function runWithPolicy(
-  policy: NonNullable<Task["claude_policy"]>,
+  policy: ClaudePolicy,
   worker_profile: Task["worker_profile"] = "implementer",
 ) {
   const ctx = await context();
   ctx.c.task.worker_profile = worker_profile;
-  ctx.c.task.permission_mode = "default";
-  ctx.c.task.claude_policy = policy;
+  setClaudeOptions(ctx.c.task, { permission_mode: "default" });
+  setClaudeOptions(ctx.c.task, { claude_policy: policy });
   const asked: string[] = [];
 
   ctx.c.input = async (tool) => {
@@ -1076,11 +1120,15 @@ test("Claude extension sandbox modes add the sandbox and lock network domains at
   assert.deepEqual(noSubagents.options.disallowedTools, ["Agent", "Task"]);
 });
 
-test("Claude tasks without stored restrictions run with CLI parity defaults", async () => {
+test("Claude tasks with resolved default restrictions run with CLI parity", async () => {
   const { c } = await context();
   c.task.worker_profile = "implementer";
-  c.task.permission_mode = "inherit";
-  c.task.approval_mode = "ask_user";
+
+  setClaudeOptions(c.task, {
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+  });
+
+  setClaudeOptions(c.task, { permission_mode: "inherit" });
   let options: Options | undefined;
 
   await new ClaudeAgentProvider((args) => {
@@ -1107,4 +1155,35 @@ test("Claude tasks without stored restrictions run with CLI parity defaults", as
   assert.deepEqual(options!.disallowedTools, []);
   assert.equal(options!.env!.PATH, process.env.PATH);
   assert.equal(new ClaudeAgentProvider().capabilities.subagents, true);
+});
+
+test("Claude rejects unresolved native task state before launching a harness", async () => {
+  const { c } = await context();
+  let launched = false;
+
+  const provider = new ClaudeAgentProvider(() => {
+    launched = true;
+    throw new Error("Harness should not launch");
+  });
+
+  for (const field of [
+    "claude_policy",
+    "permission_mode",
+    "approval_decider",
+  ] as const) {
+    const options = { ...claudeOptions(c.task) };
+    delete options[field];
+
+    const task = {
+      ...c.task,
+      provider_options: { ...c.task.provider_options, claude: options },
+    };
+
+    await assert.rejects(
+      provider.run({ ...c, task }, "Review"),
+      /Claude task is missing resolved native permission state/,
+    );
+
+    assert.equal(launched, false);
+  }
 });

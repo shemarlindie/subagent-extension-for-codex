@@ -8,13 +8,19 @@
       "task_id": "task_a267cc42-5b72-4776-803e-91891e4e8f74",
       "status": "completed",
       "worker_profile": "implementer",
-      "permission_mode": "inherit",
-      "claude_policy": {
-        "sandbox": "user_config",
-        "environment": "inherit",
-        "tools": "all",
-        "path_guard": false,
-        "subagents": true
+      "provider_options": {
+        "claude": {
+          "permission_mode": "inherit",
+          "permission_source": "user_config",
+          "approval_decider": "user",
+          "claude_policy": {
+            "sandbox": "user_config",
+            "environment": "inherit",
+            "tools": "all",
+            "path_guard": false,
+            "subagents": true
+          }
+        }
       },
       "model": "claude-sonnet-5-5",
       "reported_cost_usd": 0.2452948,
@@ -42,13 +48,19 @@
       "status": "completed",
       "attempt": 1,
       "worker_profile": "reviewer",
-      "permission_mode": "plan",
-      "claude_policy": {
-        "sandbox": "user_config",
-        "environment": "inherit",
-        "tools": "restricted",
-        "path_guard": true,
-        "subagents": true
+      "provider_options": {
+        "claude": {
+          "permission_mode": "plan",
+          "permission_source": "task_profile",
+          "approval_decider": "user",
+          "claude_policy": {
+            "sandbox": "user_config",
+            "environment": "inherit",
+            "tools": "restricted",
+            "path_guard": true,
+            "subagents": true
+          }
+        }
       },
       "model": "claude-sonnet-5-5",
       "reported_cost_usd": 0.0844414,
@@ -59,13 +71,19 @@
       "status": "completed",
       "attempt": 1,
       "worker_profile": "test_engineer",
-      "permission_mode": "default",
-      "claude_policy": {
-        "sandbox": "extension",
-        "environment": "inherit",
-        "tools": "all",
-        "path_guard": true,
-        "subagents": true
+      "provider_options": {
+        "claude": {
+          "permission_mode": "default",
+          "permission_source": "task",
+          "approval_decider": "user",
+          "claude_policy": {
+            "sandbox": "extension",
+            "environment": "inherit",
+            "tools": "all",
+            "path_guard": true,
+            "subagents": true
+          }
+        }
       },
       "workspace_strategy": "worktree",
       "model": "claude-sonnet-5-5",

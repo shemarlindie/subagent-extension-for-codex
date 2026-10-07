@@ -1,9 +1,8 @@
 import type { SettingSection } from "../../../src/features/settings/settings-document.js";
-import type { ApprovalMode, Start } from "../../../src/features/tasks/model.js";
+import type { ApprovalMode } from "../../../src/features/tasks/model.js";
 
 export type Defaults = {
-  claude_permission_mode?: Start["permission_mode"];
-  default_approval_decider?: "user" | "parent_agent";
+  [key: string]: SettingValue | undefined;
   default_approval_mode?: ApprovalMode;
   default_model?: string;
   default_reasoning_effort?: string;

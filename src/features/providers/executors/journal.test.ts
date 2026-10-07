@@ -23,7 +23,6 @@ async function setup() {
   const task: Task = {
     ...startSchema.parse({
       provider: "codex",
-      title: "Review",
       description: "Review",
       budget: { max_cost_usd: null },
     }),
@@ -35,6 +34,7 @@ async function setup() {
     attempt: 1,
     instructions: [],
     runtime_ms: 0,
+    provider_recovery_required: false,
     status: "running",
     created_at: "now",
     updated_at: "now",

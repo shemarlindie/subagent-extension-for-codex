@@ -526,8 +526,7 @@ if (scenario === "read") {
       phase: "started",
       root,
       task_id: task.id,
-      permission_mode: task.permission_mode,
-      claude_policy: task.claude_policy,
+      provider_options: task.provider_options?.claude,
     }),
   );
 
@@ -653,7 +652,7 @@ if (scenario === "read") {
     // Fixture writes stay out of the primary checkout.
     workspace_strategy: "worktree",
     // Ask for every command so only the exact fixture commands are approved.
-    permission_mode: "default",
+    provider_options: { claude: { permission_mode: "default" } },
     title: "Verify scoped command permissions",
     description:
       "Run each of these exact Bash commands once, sequentially. Do not change, combine or retry the commands; do not use other tools. Expected permission failures are evidence, not errors in this verification. Report which commands succeeded or were blocked in your structured tests and evidence. Commands: " +

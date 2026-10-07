@@ -4,7 +4,6 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { type Event, now, type Task } from "../../shared/contracts.js";
-import { generateTaskTitle } from "./task-title.js";
 
 export class Store {
   db: DatabaseSync;
@@ -18,78 +17,6 @@ export class Store {
     CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, owner TEXT NOT NULL, body TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL REFERENCES tasks(id),type TEXT NOT NULL,timestamp TEXT NOT NULL,data TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS events_task ON events(task_id,id);`);
-
-    this.migrateTaskDescriptions();
-    this.removeArtifacts();
-  }
-
-  /** Artifacts were removed; drop their table and the events that announced them. */
-  private removeArtifacts() {
-    // Only stores written by older versions have the table, so later starts
-    // skip the scan of every event.
-    const table = this.db
-      .prepare(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='artifacts'",
-      )
-      .get();
-
-    if (!table) return;
-
-    // One transaction, so an interrupted start cannot drop the table and keep the events.
-    this.db.exec("BEGIN IMMEDIATE");
-
-    try {
-      this.db
-        .exec(`DELETE FROM events WHERE type IN ('artifact.created', 'artifact.error');
-      DROP TABLE artifacts;`);
-
-      this.db.exec("COMMIT");
-    } catch (error) {
-      this.db.exec("ROLLBACK");
-      throw error;
-    }
-  }
-
-  private migrateTaskDescriptions() {
-    // Older versions stored the full request in `task`. Repair JSON bodies in
-    // place, preserving task identity, timestamps, events and execution state.
-    this.db.exec("BEGIN IMMEDIATE");
-
-    try {
-      const update = this.db.prepare("UPDATE tasks SET body=? WHERE id=?");
-
-      for (const row of this.db.prepare("SELECT id, body FROM tasks").all()) {
-        const body = JSON.parse(String(row.body));
-        const original = JSON.stringify(body);
-
-        const hasDescription =
-          typeof body.description === "string" && body.description.trim();
-
-        const hasTitle = typeof body.title === "string" && body.title.trim();
-
-        if (!hasDescription) {
-          if (typeof body.task === "string" && body.task.trim())
-            body.description = body.task;
-          else if (hasTitle) {
-            body.description = body.title;
-            body.title = generateTaskTitle(body.description);
-          }
-        }
-
-        if (typeof body.description === "string" && body.description.trim()) {
-          if (!hasTitle) body.title = generateTaskTitle(body.description);
-          delete body.task;
-        }
-
-        if (JSON.stringify(body) !== original)
-          update.run(JSON.stringify(body), row.id);
-      }
-
-      this.db.exec("COMMIT");
-    } catch (error) {
-      this.db.exec("ROLLBACK");
-      throw error;
-    }
   }
 
   save(t: Task) {

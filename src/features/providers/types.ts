@@ -1,5 +1,9 @@
-import type { Result, Task } from "../tasks/model.js";
+import type { InputPresentation, Result, Task } from "../tasks/model.js";
 import { reasoningLevels } from "../tasks/policy/reasoning.js";
+import type { ProviderMetadata } from "./metadata.js";
+import type { ProviderTaskPolicy } from "./task-policy.js";
+
+export type { ActivityPresentation } from "./activity/types.js";
 
 export interface Capabilities {
   interrupt: boolean;
@@ -24,6 +28,7 @@ export interface RunContext {
     tool: string,
     input: Record<string, unknown>,
     signal?: AbortSignal,
+    presentation?: InputPresentation,
   ) => Promise<{
     approved: boolean;
     input?: Record<string, unknown>;
@@ -42,6 +47,8 @@ export interface ModelChoice {
 export interface Provider {
   id: string;
   capabilities: Capabilities;
+  metadata?: ProviderMetadata;
+  taskPolicy: ProviderTaskPolicy;
   models?(): Promise<ModelChoice[]>;
   run(context: RunContext, prompt: string): Promise<Result>;
   recover?(task: Task): Promise<void>;

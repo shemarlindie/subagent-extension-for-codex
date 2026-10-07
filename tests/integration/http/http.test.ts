@@ -83,7 +83,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
   ) => {
     c.store.save({
       ...startSchema.parse({
-        title: "Panel task",
         description: "Panel task",
         conversation_id,
         repository,
@@ -97,6 +96,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       updated_at: now(),
       attempt: 0,
       runtime_ms: 0,
+      provider_recovery_required: false,
       instructions: [],
     });
   };
@@ -1006,7 +1006,7 @@ test("SSE requires authentication and replays owned events in global cursor orde
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 
   const make = (id: string, owner: string) => ({
-    ...startSchema.parse({ title: "test", description: "test" }),
+    ...startSchema.parse({ description: "test" }),
     id,
     title: "test",
     owner,
@@ -1015,6 +1015,7 @@ test("SSE requires authentication and replays owned events in global cursor orde
     updated_at: now(),
     attempt: 0,
     runtime_ms: 0,
+    provider_recovery_required: false,
     instructions: [],
   });
 

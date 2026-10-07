@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { providerMetadata } from "../../../../src/features/providers/metadata.js";
+import { pendingInputKind } from "../../../../src/features/tasks/model.js";
 import { Button } from "../../../shared/components/button";
 import { Presence } from "../../../shared/components/motion";
 import {
@@ -23,7 +25,9 @@ export function TaskNotices({ task }: { task: Task }) {
     pending = !isLocked ? task.pending_input : undefined,
     error = !isLocked ? task.error : undefined,
     questions =
-      pending?.tool === "AskUserQuestion" ? pendingQuestions(task) : undefined;
+      pending && pendingInputKind(pending) === "question"
+        ? pendingQuestions(task)
+        : undefined;
 
   // Notices fold in and out so the evidence below slides instead of jumping.
   return (
@@ -64,6 +68,11 @@ export function TaskNotices({ task }: { task: Task }) {
 // Keyed by request, so the initial open state is read once per question request.
 function QuestionNotice({ task }: { task: Task }) {
   const controller = useController(),
+    state = useSnapshot(),
+    worker = state.workers.find((worker) => worker.provider === task.provider),
+    providerName =
+      providerMetadata(task.provider, worker?.metadata)?.displayName ??
+      task.provider,
     questions = pendingQuestions(task),
     request = task.pending_input?.id;
 
@@ -71,8 +80,8 @@ function QuestionNotice({ task }: { task: Task }) {
     <CollapsibleNotice
       title={
         questions.length > 1
-          ? `Claude has ${questions.length} questions`
-          : "Claude has a question"
+          ? `${providerName} has ${questions.length} questions`
+          : `${providerName} has a question`
       }
       // Folds away once the cards show the questions in full.
       summary={

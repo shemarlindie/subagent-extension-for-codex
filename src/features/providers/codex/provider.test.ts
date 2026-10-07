@@ -127,7 +127,6 @@ function setup(
     task: {
       ...startSchema.parse({
         provider: "codex",
-        title: "Review",
         description: "Review",
         budget: { max_cost_usd: null },
       }),
@@ -137,6 +136,7 @@ function setup(
       workspace: "/worktree",
       attempt: 1,
       runtime_ms: 0,
+      provider_recovery_required: true,
       instructions: [],
       status: "running",
       created_at: "now",
@@ -170,7 +170,7 @@ test("native Codex provider persists session before execution and stops before r
   assert.ok(f.log.indexOf("persist") < f.log.indexOf("start"));
   assert.ok(f.log.indexOf("start") < f.log.indexOf("turn"));
   assert.equal(f.log.at(-1), "stop");
-  assert.equal(f.c.task.native_turn_id, "turn_one");
+  assert.equal(f.c.task.provider_options?.codex?.native_turn_id, "turn_one");
   await f.pool.close();
 });
 
@@ -331,10 +331,15 @@ test("a failed executor shutdown reports the turn's error alongside its own", as
 test("native recovery checks local shutdown before confirming the saved coordinator turn", async () => {
   const f = setup();
   f.c.task.session_id = ref.session_id;
-  f.c.task.native_turn_id = "turn_one";
+
+  f.c.task.provider_options = {
+    ...f.c.task.provider_options,
+    codex: { native_turn_id: "turn_one" },
+  };
+
   await f.provider.recover(f.c.task);
   assert.deepEqual(f.log, ["local-recovery", "confirm"]);
-  delete f.c.task.native_turn_id;
+  delete f.c.task.provider_options.codex.native_turn_id;
   await assert.rejects(f.provider.recover(f.c.task), /no observed coordinator/);
   assert.equal(f.log.filter((value) => value === "confirm").length, 1);
   await f.pool.close();

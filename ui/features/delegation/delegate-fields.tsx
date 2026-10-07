@@ -1,9 +1,6 @@
 import { useFormContext, useWatch } from "react-hook-form";
 
-import {
-  permissionLabels,
-  permissionModeSchema,
-} from "../../../src/features/tasks/policy/permissions";
+import { providerMetadata } from "../../../src/features/providers/metadata";
 import { reasoningLevels } from "../../../src/features/tasks/policy/reasoning";
 import { Button } from "../../shared/components/button";
 import { Field } from "../../shared/forms/fields";
@@ -14,8 +11,8 @@ import { ModelAutocomplete } from "./model-autocomplete";
 import { ProjectAutocomplete } from "./project-autocomplete";
 
 export type DelegateValues = {
-  permission_mode: keyof typeof permissionLabels;
-  approval_decider: "user" | "parent_agent";
+  permission_mode: string;
+  approval_decider: string;
   repository: string;
   description: string;
   worker: string;
@@ -214,8 +211,10 @@ export function BudgetFields({ workers }: { workers: Worker[] }) {
           ? runtimeMode === "none"
             ? "No cost or runtime limit applies."
             : "Only the runtime limit applies."
-          : provider?.provider === "claude"
-            ? "Claude checks cost after a response. The budget may be exceeded; interrupted usage may be missing."
+          : providerMetadata(provider?.provider ?? "", provider?.metadata)
+                ?.costBudgetHelp
+            ? providerMetadata(provider?.provider ?? "", provider?.metadata)!
+                .costBudgetHelp
             : provider?.capabilities.cost_budget
               ? "Provider cost budget applies."
               : "This provider requires No cost limit."}
@@ -317,10 +316,8 @@ export function ModelFields({ defaults, workers }: ModelFieldsProps) {
     metadata?.supportsEffort === false
       ? []
       : (metadata?.supportedEffortLevels ??
-        reasoningLevels.filter(
-          (level) =>
-            provider !== "claude" || !["none", "minimal"].includes(level),
-        ));
+        providerMetadata(provider, workerInfo?.metadata)?.defaultEffortLevels ??
+        reasoningLevels);
 
   return (
     <>
@@ -377,10 +374,16 @@ export function ModelFields({ defaults, workers }: ModelFieldsProps) {
   );
 }
 
-export function ApprovalField() {
+export function ApprovalField({ workers }: { workers: Worker[] }) {
   const { control } = useFormContext<DelegateValues>();
   const worker = useWatch({ control, name: "worker" });
-  const claude = worker?.split(":")[0] === "claude";
+  const provider = worker?.split(":")[0];
+  const info = workers.find((item) => item.provider === provider);
+
+  const permissions = providerMetadata(
+    provider ?? "",
+    info?.metadata,
+  )?.nativePermissions;
 
   return (
     <>
@@ -390,19 +393,17 @@ export function ApprovalField() {
           name="permission_mode"
           id="permission-mode"
           label="Permission mode"
-          disabled={!claude}
-          options={permissionModeSchema.options.map((value) => ({
-            value,
-            label: permissionLabels[value],
-          }))}
+          disabled={!permissions}
+          options={
+            permissions?.options ?? [{ value: "inherit", label: "Inherit" }]
+          }
         />
         <p className="help">
-          {claude
-            ? "Claude native SDK mode. Inherit uses your Claude Code settings, or plan for read-only profiles; settings can override it."
-            : "Native permission mode selection is available for Claude."}
+          {permissions?.help ??
+            "Native permission mode selection is available for providers that declare it."}
         </p>
       </Field>
-      {claude && (
+      {permissions?.approvalDecider && (
         <Field id="approval-decider" label="Approval decision maker">
           <FormSelect
             control={control}
@@ -414,9 +415,7 @@ export function ApprovalField() {
               { value: "parent_agent", label: "Parent agent" },
             ]}
           />
-          <p className="help">
-            Who answers permission requests that the SDK leaves unresolved.
-          </p>
+          <p className="help">{permissions.approvalDeciderHelp}</p>
         </Field>
       )}
     </>

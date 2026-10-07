@@ -14,6 +14,13 @@ import type {
   Result,
   RunContext,
 } from "../../shared/contracts.js";
+import { claudeTaskPolicy } from "../providers/claude/task-policy.js";
+import { codexTaskPolicy } from "../providers/codex/task-policy.js";
+import { claudeMetadata } from "../providers/metadata.js";
+import {
+  executionTaskPolicy,
+  type ProviderTaskPolicy,
+} from "../providers/task-policy.js";
 import { Workspaces } from "../workspaces/workspace.js";
 import { Control } from "./control.js";
 import { Store } from "./store.js";
@@ -190,6 +197,8 @@ test("known model effort metadata rejects invalid work before queueing while unk
 test("Claude rejects unsupported direct and inherited effort before persisting or running work", async () => {
   const provider = new FixtureProvider();
   provider.id = "claude";
+  provider.taskPolicy = claudeTaskPolicy;
+  provider.metadata = claudeMetadata;
   let calls = 0;
   const run = provider.run.bind(provider);
 
@@ -235,7 +244,7 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
   }
 });
 
-test("task titles stay separate from trimmed worker instructions", async () => {
+test("task titles come from trimmed descriptions while workers receive full instructions", async () => {
   const provider = new FixtureProvider();
   const original = provider.run.bind(provider);
   let received: string | undefined;
@@ -251,12 +260,11 @@ test("task titles stay separate from trimmed worker instructions", async () => {
   try {
     const task = await c.start("alice", {
       ...input(),
-      title: "  Concise heading  ",
       description: "  Full instructions\nwith detailed evidence.  ",
     });
 
     await until(() => store.get(task.id, "alice").status === "completed");
-    assert.equal(task.title, "Concise heading");
+    assert.equal(task.title, "Full instructions");
 
     assert.equal(
       task.description,
@@ -271,41 +279,7 @@ test("task titles stay separate from trimmed worker instructions", async () => {
   }
 });
 
-test("missing titles are generated while workers receive the full request", async () => {
-  const provider = new FixtureProvider();
-  const original = provider.run.bind(provider);
-  let received: string | undefined;
-
-  provider.run = async (ctx, prompt) => {
-    received = prompt;
-
-    return original(ctx, prompt);
-  };
-
-  const { c, store } = await setup(provider);
-
-  try {
-    const description =
-      "Review authentication.\nInclude every edge case and report the evidence.";
-
-    const task = await c.start("alice", {
-      ...input(),
-      title: undefined,
-      description,
-    });
-
-    await until(() => store.get(task.id, "alice").status === "completed");
-    assert.equal(task.title, "Review authentication.");
-    assert.equal(task.description, description);
-    assert.equal(received, description);
-    assert.equal(store.get(task.id, "alice").title, task.title);
-    assert.equal(store.get(task.id, "alice").description, description);
-  } finally {
-    await c.close();
-  }
-});
-
-test("invalid title or description cannot persist or execute a task", async () => {
+test("invalid descriptions cannot persist or execute a task", async () => {
   const provider = new FixtureProvider();
   let runs = 0;
 
@@ -319,11 +293,8 @@ test("invalid title or description cannot persist or execute a task", async () =
   try {
     const cases = [
       { description: undefined },
-      { title: "" },
       { description: "" },
-      { title: " \n\t " },
       { description: " \n\t " },
-      { title: "x".repeat(121) },
       { description: "x".repeat(20001) },
     ];
 
@@ -377,7 +348,6 @@ test("task tools honor defaults and explicit overrides without changing existing
   });
 
   const task: any = await callTool(c, "alice", "start_agent_task", {
-    title: "Test default merge",
     description: "Test default merge",
     budget: { max_cost_usd: 1 },
   });
@@ -641,6 +611,70 @@ test("steering does not lose instructions during active turn", async () => {
   await c.close();
 });
 
+test("native retries extract start options without carrying resolved policy or session state", async () => {
+  for (const [id, policy] of [
+    ["claude", claudeTaskPolicy],
+    ["codex", codexTaskPolicy],
+  ] as const) {
+    const provider: Provider = new FixtureProvider();
+    provider.id = id;
+    provider.taskPolicy = policy;
+    provider.metadata = id === "claude" ? claudeMetadata : undefined;
+    const { c, store } = await setup(provider);
+    c.stopped = true;
+
+    try {
+      const task = await c.start("alice", {
+        ...input(),
+        provider: id,
+        ...(id === "claude"
+          ? {
+              provider_options: {
+                claude: {
+                  permission_mode: "dontAsk",
+                  approval_decider: "parent_agent",
+                },
+              },
+            }
+          : { approval_mode: "deny" }),
+      });
+
+      task.status = "failed";
+      task.session_id = "prior-session";
+      task.session_state_ref = "prior-state";
+      if (id === "codex")
+        task.provider_options = { codex: { native_turn_id: "prior-turn" } };
+      store.save(task);
+
+      // Retries preserve selected authority while re-resolving current session restrictions.
+      c.settings.update("alice", { set: { claude_tools: "all" } });
+      const retry = await c.retry("alice", task.id);
+      assert.notEqual(retry.id, task.id);
+      assert.equal(retry.parent_task_id, task.id);
+      assert.equal(retry.session_id, undefined);
+      assert.equal(retry.session_state_ref, undefined);
+
+      if (id === "claude") {
+        const options = retry.provider_options?.claude;
+        assert.equal(options?.permission_mode, "dontAsk");
+        assert.equal(options?.approval_decider, "parent_agent");
+
+        assert.equal(
+          (options?.claude_policy as { tools: string }).tools,
+          "all",
+        );
+      } else {
+        assert.deepEqual(retry.provider_options, {});
+        assert.equal(retry.approval_mode, "deny");
+      }
+
+      assert.equal(store.get(task.id, "alice").session_id, "prior-session");
+    } finally {
+      await c.close();
+    }
+  }
+});
+
 test("runtime budget stops a worker waiting for input", async () => {
   const { c, store } = await setup();
 
@@ -682,7 +716,14 @@ test("restart recovery marks live task interrupted and clears stale permissions"
   const old = store.get(t.id, "alice");
   old.status = "waiting";
   old.waiting_reason = "waiting_for_permission";
-  old.pending_input = { id: "old", tool: "Bash", input: { command: "pwd" } };
+
+  old.pending_input = {
+    id: "old",
+    kind: "permission",
+    tool: "Bash",
+    input: { command: "pwd" },
+  };
+
   store.save(old);
   await c.recover();
   assert.equal(store.get(t.id, "alice").status, "interrupted");
@@ -1169,6 +1210,7 @@ test("unconfirmed termination locks task controls and survives service recovery"
 test("Codex recovery locks unknown execution and permits explicit continuation only after provider proof", async () => {
   class RecoveringProvider extends FixtureProvider {
     id = "codex";
+    taskPolicy = { ...executionTaskPolicy, recoverBeforeInterrupt: true };
     proven = false;
     async recover() {
       if (!this.proven) throw new Error("executor shutdown unknown");
@@ -1188,7 +1230,12 @@ test("Codex recovery locks unknown execution and permits explicit continuation o
     });
 
     task.status = "running";
-    task.native_turn_id = "turn_one";
+
+    task.provider_options = {
+      ...task.provider_options,
+      codex: { native_turn_id: "turn_one" },
+    };
+
     c.store.save(task);
     await c.recover();
 
@@ -1212,7 +1259,9 @@ test("Codex recovery locks unknown execution and permits explicit continuation o
     const recovered = c.store.get(task.id, "alice");
     assert.equal(recovered.status, "interrupted");
     assert.equal(recovered.waiting_reason, undefined);
-    assert.equal(recovered.native_turn_id, "turn_one");
+
+    assert.equal(recovered.provider_options?.codex?.native_turn_id, "turn_one");
+
     assert.equal((await c.continue("alice", task.id)).status, "queued");
   } finally {
     await c.close();
@@ -1401,6 +1450,263 @@ test("a continuation already awaiting project validation cannot resurrect a dele
     assert.throws(() => store.get(task.id, "alice"), /not found/);
   } finally {
     release?.();
+    await c.close();
+  }
+});
+
+test("a new provider controls preparation and input policy without built-in identity assumptions", async () => {
+  const provider: Provider = new FixtureProvider();
+  provider.id = "new-built-in";
+  const prepared: string[] = [];
+  const decisions: boolean[] = [];
+  let allowParent = false;
+
+  provider.taskPolicy = {
+    prepareStart({ input, authority }) {
+      assert.equal(input.approval_mode, undefined);
+      if (input.model === "forbidden")
+        throw new Error("Native model unavailable");
+      const options = input.provider_options?.[input.provider];
+      if (
+        options?.execution_pool !== undefined &&
+        options.execution_pool !== "isolated"
+      )
+        throw new Error("Native execution pool must be isolated");
+      prepared.push(authority);
+
+      return {
+        model: "native-default",
+        reasoning_effort: "minimal",
+        provider_options: {
+          [input.provider]: { execution_pool: "isolated" },
+        },
+      };
+    },
+    decideInput: () => true,
+    parentMayApprove: () => allowParent,
+    inputKind: (tool) =>
+      tool === "ChooseApproach" ? "question" : "permission",
+  };
+
+  provider.run = async (context) => {
+    const automatic = await context.input("NativeRead", {}, context.signal);
+    decisions.push(automatic.approved);
+    await context.input("ChooseApproach", {}, context.signal);
+    // Changing the provider's automatic policy affects its next request.
+    provider.taskPolicy!.decideInput = () => undefined;
+    const manual = await context.input("NativeWrite", {}, context.signal);
+    decisions.push(manual.approved);
+
+    return {
+      summary: "Done",
+      findings: [],
+      evidence: [],
+      changes: [],
+      tests: [],
+      recommendations: [],
+    };
+  };
+
+  const { c, store } = await setup(provider);
+
+  try {
+    await assert.rejects(
+      c.start("alice", {
+        ...input(),
+        provider: provider.id,
+        model: "forbidden",
+      }),
+      /Native model unavailable/,
+    );
+
+    await assert.rejects(
+      c.start("alice", {
+        ...input(),
+        provider: provider.id,
+        provider_options: {
+          [provider.id]: { execution_pool: "shared" },
+        },
+      }),
+      /must be isolated/,
+    );
+
+    await assert.rejects(
+      c.start("alice", {
+        ...input(),
+        provider: provider.id,
+        provider_options: { claude: { permission_mode: "plan" } },
+      }),
+      /selected provider/,
+    );
+
+    assert.equal(store.all().length, 0);
+
+    const task = await c.start(
+      "alice",
+      { ...input(), provider: provider.id },
+      "parent",
+    );
+
+    assert.equal(task.model, "native-default");
+    assert.equal(task.reasoning_effort, "minimal");
+
+    assert.deepEqual(task.provider_options, {
+      [provider.id]: { execution_pool: "isolated" },
+    });
+
+    assert.deepEqual(
+      store.get(task.id, "alice").provider_options,
+      task.provider_options,
+    );
+
+    assert.deepEqual(prepared, ["parent"]);
+
+    await until(
+      () =>
+        store.get(task.id, "alice").pending_input?.tool === "ChooseApproach",
+    );
+
+    const question = store.get(task.id, "alice").pending_input!;
+    assert.equal(question.kind, "question");
+    assert.deepEqual(decisions, [true]);
+
+    // Questions remain interactive even when the native policy approves tools.
+    c.input(
+      "alice",
+      task.id,
+      question.id,
+      true,
+      { choice: "small" },
+      undefined,
+      "parent",
+    );
+
+    await until(
+      () => store.get(task.id, "alice").pending_input?.tool === "NativeWrite",
+    );
+
+    const permission = store.get(task.id, "alice").pending_input!;
+
+    assert.throws(
+      () =>
+        c.input(
+          "alice",
+          task.id,
+          permission.id,
+          true,
+          undefined,
+          undefined,
+          "parent",
+        ),
+      /requires user approval/,
+    );
+
+    allowParent = true;
+
+    c.input(
+      "alice",
+      task.id,
+      permission.id,
+      false,
+      undefined,
+      undefined,
+      "parent",
+    );
+
+    await until(() => store.get(task.id, "alice").status === "completed");
+    assert.deepEqual(decisions, [true, false]);
+  } finally {
+    await c.close();
+  }
+});
+
+test("a new provider owns native recovery and session continuation, including while disabled", async () => {
+  const provider: Provider = new FixtureProvider();
+  provider.id = "new-native";
+  let proven = false;
+  let sessionValid = false;
+  const recovered: string[] = [];
+  const validated: string[] = [];
+
+  const policy: ProviderTaskPolicy = {
+    prepareStart: () => ({}),
+    decideInput: () => undefined,
+    parentMayApprove: () => false,
+    inputKind: () => "permission",
+    recoverBeforeInterrupt: true,
+    async validateSession(task) {
+      validated.push(task.session_state_ref!);
+      if (!sessionValid) throw new Error("Native session unavailable");
+    },
+  };
+
+  provider.taskPolicy = policy;
+
+  provider.recover = async (task) => {
+    recovered.push(task.id);
+    if (!proven) throw new Error("Native termination unknown");
+  };
+
+  const { c, store } = await setup(provider);
+  c.stopped = true;
+
+  try {
+    const task = await c.start("alice", { ...input(), provider: provider.id });
+    assert.equal(task.provider_recovery_required, true);
+    task.status = "running";
+
+    task.provider_options = {
+      ...task.provider_options,
+      [provider.id]: { native_turn_id: "native-turn" },
+    };
+
+    task.session_id = "native-session";
+    task.session_state_ref = "native:opaque-session";
+    task.session_owner = c.ownerWorker;
+    store.save(task);
+    await c.recover();
+
+    assert.equal(
+      store.get(task.id, "alice").waiting_reason,
+      "termination_unconfirmed",
+    );
+
+    await assert.rejects(c.continue("alice", task.id), /Only interrupted/);
+    c.providers.delete(provider.id);
+    await c.recover();
+
+    assert.equal(
+      store.get(task.id, "alice").waiting_reason,
+      "termination_unconfirmed",
+    );
+
+    c.providers.set(provider.id, provider);
+    proven = true;
+    await c.recover();
+    assert.equal(store.get(task.id, "alice").status, "interrupted");
+    assert.deepEqual(recovered, [task.id, task.id]);
+
+    await assert.rejects(
+      c.continue("alice", task.id),
+      /Native session unavailable/,
+    );
+
+    sessionValid = true;
+    const continued = await c.continue("alice", task.id);
+    assert.equal(continued.status, "queued");
+
+    assert.equal(
+      continued.provider_options?.[provider.id]?.native_turn_id,
+      "native-turn",
+    );
+
+    assert.equal(continued.session_id, "native-session");
+
+    assert.deepEqual(validated, [
+      "native:opaque-session",
+      "native:opaque-session",
+    ]);
+  } finally {
     await c.close();
   }
 });

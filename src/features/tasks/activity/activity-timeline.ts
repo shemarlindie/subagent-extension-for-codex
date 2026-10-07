@@ -1,4 +1,5 @@
 import type { Event, Task } from "../../../shared/contracts.js";
+import { activityPresentation } from "../../providers/activity/presentation.js";
 
 export type ActivityState = "running" | "completed" | "failed" | "info";
 
@@ -30,27 +31,19 @@ const sentence = (v: unknown) => {
 const string = (v: unknown) => (typeof v === "string" ? v : undefined);
 
 export const activityKind = (e: Event) =>
-  e.type === "claude.activity" ? String(e.data.subtype ?? e.data.type) : e.type;
+  activityPresentation(e).kind ?? e.type;
 
 export function activityFailed(e: Event) {
+  const failed = activityPresentation(e).failed;
+  if (failed !== undefined) return failed;
   const d = e.data;
 
   return (
     d.error === true ||
     d.is_error === true ||
-    d.outcome === "error" ||
-    d.compact_result === "failed" ||
     d.status === "failed" ||
-    object(d.patch).status === "failed" ||
-    ["task.failed", "permission_denied", "mirror_error"].includes(
-      activityKind(e),
-    ) ||
-    (typeof d.error === "string" &&
-      !!d.error &&
-      activityKind(e) !== "api_retry") ||
-    (e.type === "agent.completed" &&
-      typeof d.subtype === "string" &&
-      d.subtype !== "success")
+    e.type === "task.failed" ||
+    (typeof d.error === "string" && !!d.error)
   );
 }
 
@@ -60,16 +53,6 @@ const quiet = new Set([
   "task.started",
   "task.queued",
   "task.continued",
-  "init",
-  "status",
-  "session_state_changed",
-  "api_retry",
-  "auth_status",
-  "rate_limit_event",
-  "compact_boundary",
-  "files_persisted",
-  "plugin_install",
-  "elicitation_complete",
 ]);
 
 const boundaries = new Set([
@@ -88,52 +71,28 @@ const thinking = new Set([
   "agent.thinking_tokens",
 ]);
 
+const isQuiet = (e: Event) =>
+  activityPresentation(e).quiet ?? quiet.has(activityKind(e));
+
 function statusTitle(e: Event) {
-  const key = activityKind(e),
-    d = e.data;
-
-  if (thinking.has(key)) return "Thinking…";
-  if (key === "status")
-    return d.compact_result === "failed"
-      ? "Context compaction failed"
-      : d.status === "compacting"
-        ? "Compacting context"
-        : d.status === "requesting"
-          ? "Thinking…"
-          : "Working";
-  if (key === "api_retry")
-    return `Retrying request${typeof d.attempt === "number" ? ` · attempt ${d.attempt}` : ""}`;
-  if (key === "compact_boundary") return "Context compacted";
-  if (key === "auth_status")
-    return d.isAuthenticating
-      ? "Connecting to Claude"
-      : "Authentication updated";
-  if (key === "session_state_changed")
-    return d.state === "requires_action"
-      ? "Needs input"
-      : d.state === "idle"
-        ? "Turn finished"
-        : "Working";
-  if (key === "rate_limit_event")
-    return object(d.rate_limit_info).status === "rejected"
-      ? "Waiting for rate limit reset"
-      : "Rate limit updated";
-  if (key === "files_persisted") return "Files saved";
-  if (key === "plugin_install") return "Updating plugins";
-  if (key === "task.queued") return "Queued";
-  if (key === "task.started") return "Task started";
-  if (key === "task.continued") return "Task continued";
-  if (["agent.started", "init"].includes(key)) return "Claude connected";
-
-  return "Working";
-}
-
-function thinkingSignal(e: Event) {
-  const key = activityKind(e);
+  const presentation = activityPresentation(e);
+  if (presentation.statusTitle) return presentation.statusTitle;
+  if (thinkingSignal(e)) return "Thinking…";
 
   return (
+    {
+      "task.queued": "Queued",
+      "task.started": "Task started",
+      "task.continued": "Task continued",
+      "agent.started": "Agent connected",
+    }[e.type] ?? "Working"
+  );
+}
+
+function thinkingSignal(e: Event): boolean {
+  return (
     !activityFailed(e) &&
-    (thinking.has(key) || (key === "status" && e.data.status === "requesting"))
+    (activityPresentation(e).thinking ?? thinking.has(activityKind(e)))
   );
 }
 
@@ -178,31 +137,16 @@ export function thinkingSpan(
   return undefined;
 }
 
-function hasThinkingContent(e: Event) {
-  const hasThinkingBlock = (value: unknown): boolean => {
-    if (Array.isArray(value)) return value.some(hasThinkingBlock);
-    const block = object(value);
-
-    return (
-      block.type === "thinking" ||
-      block.type === "thinking_delta" ||
-      (Array.isArray(block.content) && hasThinkingBlock(block.content))
-    );
-  };
-
-  const rawMessage = object(object(e.data.raw_response).message);
-
-  return (
-    hasThinkingBlock(e.data.content) || hasThinkingBlock(rawMessage.content)
-  );
-}
-
 function toolTitle(events: Event[]) {
   const start = events.find((e) => e.type === "tool.started");
   const last = events.at(-1)!;
+  const operation = activityPresentation(last).operation;
 
   const name =
-    string(start?.data.name) ?? string(last.data.tool_name) ?? "Tool";
+    string(start?.data.name) ??
+    string(last.data.tool_name) ??
+    operation?.title ??
+    "Tool";
 
   const input = object(start?.data.input);
 
@@ -211,7 +155,10 @@ function toolTitle(events: Event[]) {
       ? [input.pattern, string(input.path)].filter(Boolean).join(" · ")
       : string(input.file_path ?? input.path ?? input.command);
 
-  return { title: name, summary: target?.replace(/\s+/g, " ") };
+  return {
+    title: name,
+    summary: target?.replace(/\s+/g, " ") ?? operation?.summary,
+  };
 }
 
 // Prefer actionable error prose over tool paths and routine operation descriptions.
@@ -230,9 +177,7 @@ function failureSummary(event: Event) {
         : undefined;
 
   return [
-    d.compact_error,
     d.error,
-    object(d.patch).error,
     d.message,
     d.stderr,
     d.output,
@@ -284,7 +229,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     const d = e.data,
       key = activityKind(e);
 
-    if (!quiet.has(key) || activityFailed(e)) adjacentStatus = undefined;
+    if (!isQuiet(e) || activityFailed(e)) adjacentStatus = undefined;
 
     if (boundaries.has(key)) {
       for (const map of [operations, streams, messages]) {
@@ -296,36 +241,28 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       }
     }
 
+    const presentation = activityPresentation(e);
+    const operation = presentation.operation;
+
     const toolId = e.type.startsWith("tool.")
       ? string(d.id)
-      : key === "tool_progress"
-        ? string(d.tool_use_id)
+      : operation?.kind === "tool"
+        ? operation.id.replace(/^tool:/, "")
         : undefined;
 
     const operationId = toolId
       ? `tool:${e.task_id}:${toolId}`
-      : key.startsWith("hook_") && d.hook_id
-        ? `hook:${e.task_id}:${d.hook_id}`
-        : key.startsWith("task_") && d.task_id
-          ? `background:${e.task_id}:${d.task_id}`
-          : undefined;
+      : operation
+        ? `${e.task_id}:${operation.id}`
+        : undefined;
 
     if (operationId) {
       let group = operations.get(operationId);
-      if (
-        !group ||
-        e.type === "tool.started" ||
-        key === "hook_started" ||
-        key === "task_started"
-      ) {
+      if (!group || e.type === "tool.started" || operation?.started) {
         group = add(
           e,
           toolId ? "tool" : "operation",
-          toolId
-            ? "Tool"
-            : key.startsWith("hook_")
-              ? `Hook · ${d.hook_name ?? "Hook"}`
-              : "Background task",
+          toolId ? "Tool" : (operation?.title ?? "Operation"),
           "running",
         );
 
@@ -333,52 +270,40 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       } else group.events.push(e);
       const previousSummary = group.summary;
       if (toolId) Object.assign(group, toolTitle(group.events));
-      else
-        group.summary =
-          string(d.description ?? d.summary ?? object(d.patch).description) ??
-          group.summary;
+      else group.summary = operation?.summary ?? group.summary;
 
-      const complete =
-        e.type === "tool.completed" ||
-        key === "hook_response" ||
-        key === "task_notification" ||
-        ["completed", "stopped"].includes(
-          String(d.status ?? object(d.patch).status),
-        );
-
-      const stopped =
-        d.outcome === "cancelled" ||
-        ["stopped", "killed"].includes(
-          String(d.status ?? object(d.patch).status),
-        );
+      const complete = e.type === "tool.completed" || operation?.completed;
+      const stopped = operation?.stopped;
 
       if (activityFailed(e)) {
         group.state = "failed";
-        group.summary = failureSummary(e) ?? "Operation failed";
+
+        group.summary =
+          presentation.summary ?? failureSummary(e) ?? "Operation failed";
       } else if (group.state === "failed") {
         // Delayed progress must not erase the failure that already ended this operation.
         group.summary = previousSummary;
       } else if (stopped) {
         group.state = "info";
-        const reason = string(d.summary ?? object(d.patch).description);
+        const reason = operation?.summary;
         group.summary = `${d.outcome === "cancelled" ? "Cancelled" : "Stopped"}${reason ? ` · ${reason}` : ""}`;
       } else if (complete) group.state = "completed";
       continue;
     }
 
-    if (key === "stream_event") {
-      const frame = object(d.event),
-        parent = `${e.task_id}:${d.parent_tool_use_id ?? "root"}`;
+    if (presentation.stream) {
+      const stream = presentation.stream,
+        parent = `${e.task_id}:${stream.id}`;
 
       let group = streams.get(parent);
-      if (!group || frame.type === "message_start") {
+      if (!group || stream.started) {
         group = add(e, "stream", "Responding", "running");
         streams.set(parent, group);
-        const id = string(object(frame.message).id);
+        const id = stream.messageId;
         if (id) messages.set(`${e.task_id}:${id}`, group);
       } else group.events.push(e);
 
-      if (frame.type === "message_stop") {
+      if (stream.completed) {
         group.state = "completed";
         streams.delete(parent);
       }
@@ -390,8 +315,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       (e.type === "agent.message" || e.type === "agent.content") &&
       !activityFailed(e)
     ) {
-      const raw = object(d.raw_response),
-        nativeId = string(object(raw.message).id ?? raw.uuid);
+      const nativeId = presentation.messageId;
 
       const id = nativeId ? `${e.task_id}:${nativeId}` : undefined;
       const existing = id ? messages.get(id) : undefined;
@@ -419,7 +343,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       // Keep the marker in the message's debug events so it remains inspectable.
       if (
         d.role !== "user" &&
-        hasThinkingContent(e) &&
+        presentation.hasThinking &&
         previousThinking?.events[0].task_id === e.task_id &&
         onlyThinkingSignals(previousThinking)
       ) {
@@ -435,7 +359,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       continue;
     }
 
-    if (quiet.has(key) && !activityFailed(e)) {
+    if (isQuiet(e) && !activityFailed(e)) {
       const previous = adjacentStatus;
       // Only adjacent housekeeping bursts combine; messages remain in sequence.
       if (
@@ -459,22 +383,22 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         ? key === "status"
           ? statusTitle(e)
           : sentence(key === "agent.completed" ? "Agent failed" : key)
-        : key === "agent.completed"
-          ? "Turn completed"
-          : key === "task.completed"
-            ? "Task completed"
-            : thinking.has(key)
-              ? "Thinking…"
-              : sentence(key),
+        : (presentation.title ??
+            (key === "agent.completed"
+              ? "Turn completed"
+              : key === "task.completed"
+                ? "Task completed"
+                : thinkingSignal(e)
+                  ? "Thinking…"
+                  : sentence(key))),
       activityFailed(e) ? "failed" : "info",
     );
 
     group.summary =
+      presentation.summary ??
       (activityFailed(e) ? failureSummary(e) : undefined) ??
       string(
-        d.compact_error ??
-          object(d.structured_output).summary ??
-          d.text ??
+        d.text ??
           d.summary ??
           d.description ??
           d.message ??
@@ -483,7 +407,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
-    if (!activityFailed(e) && thinking.has(key)) group.summary = undefined;
+    if (thinkingSignal(e)) group.summary = undefined;
 
     // Generic updates need matching readable summaries; SDK messages and actionable
     // transitions retain their own rows. Every raw event remains inspectable.
@@ -499,7 +423,9 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         previousEvent &&
         previousEvent.events[0].task_id === e.task_id &&
         activityKind(previousEvent.events[0]) === key &&
-        (thinking.has(key) ||
+        activityPresentation(previousEvent.events[0]).title ===
+          presentation.title &&
+        (thinkingSignal(e) ||
           (group.summary !== undefined &&
             previousEvent.summary === group.summary))
       ) {
@@ -507,9 +433,9 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         previousEvent.events.push(e);
         const count = previousEvent.events.length;
 
-        previousEvent.title = thinking.has(key)
+        previousEvent.title = thinkingSignal(e)
           ? "Thinking…"
-          : `${sentence(key)} · ${count} events`;
+          : `${presentation.title ?? sentence(key)} · ${count} events`;
 
         adjacentEvent = previousEvent;
       } else adjacentEvent = group;
@@ -556,25 +482,25 @@ export function currentActivityStatus(
   const latest = sorted.findLast((e) => {
     const kind = activityKind(e);
     // Routine thinking updates must not hide live work or an earlier status change.
-    if (active && thinking.has(kind) && !activityFailed(e)) return false;
+    if (active && thinkingSignal(e)) return false;
 
-    return [
-      "task.failed",
-      "task.completed",
-      "task.cancelled",
-      "task.interrupted",
-      "agent.completed",
-      "agent.input_required",
-      "agent.input_submitted",
-      "task.started",
-      "task.continued",
-      "agent.turn_started",
-      "status",
-      "api_retry",
-      "session_state_changed",
-      "rate_limit_event",
-      ...thinking,
-    ].includes(kind);
+    return (
+      [
+        "task.failed",
+        "task.completed",
+        "task.cancelled",
+        "task.interrupted",
+        "agent.completed",
+        "agent.input_required",
+        "agent.input_submitted",
+        "task.started",
+        "task.continued",
+        "agent.turn_started",
+        ...thinking,
+      ].includes(kind) ||
+      (activityPresentation(e).liveStatus ??
+        !!activityPresentation(e).statusTitle)
+    );
   });
 
   if (latest && (!active || latest.id > active.events.at(-1)!.id)) {
@@ -615,21 +541,17 @@ export function currentActivityStatus(
               : "info",
       };
 
-    if (kind === "session_state_changed") {
-      if (latest.data.state === "requires_action")
-        return { text: "Needs input", state: "info" };
-      if (latest.data.state === "idle")
-        return {
-          text: task?.status === "running" ? "Finishing up" : "Turn finished",
-          state: task ? "info" : "completed",
-        };
-    }
-
-    if (
-      kind === "rate_limit_event" &&
-      object(latest.data.rate_limit_info).status === "rejected"
-    )
-      return { text: statusTitle(latest), state: "info" };
+    const presentation = activityPresentation(latest);
+    if (presentation.statusState === "completed")
+      return {
+        text:
+          task?.status === "running"
+            ? "Finishing up"
+            : (presentation.statusTitle ?? "Turn finished"),
+        state: task ? "info" : "completed",
+      };
+    if (presentation.statusState)
+      return { text: statusTitle(latest), state: presentation.statusState };
 
     return { text: statusTitle(latest), state: "running" };
   }

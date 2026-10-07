@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { describe, test, type TestContext, vi } from "vitest";
 
+import { codexExecutionPresentation } from "../../../src/features/providers/codex/input-presentation.js";
 import type {
   ChangedFileContent,
   Changes,
@@ -68,6 +69,7 @@ function task(id = "one", repository = "/repo/a"): Task {
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
+    provider_recovery_required: false,
   };
 }
 
@@ -1637,6 +1639,7 @@ test("inline preview summarizes repository scope independently of list filters",
       waiting.pending_input = {
         id: "request",
         tool: "AskUserQuestion",
+        kind: "question",
         input: {},
       };
 
@@ -2435,6 +2438,7 @@ test("worker question accepts a custom answer with no preset selection", async (
     transport.tasks[0].pending_input = {
       id: "request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: {
         questions: [
           { question: "Which approach?", options: [{ label: "Preset" }] },
@@ -2491,6 +2495,8 @@ test("permission review makes no decision until the user clicks Deny", async (t)
     transport.tasks[0].pending_input = {
       id: "permission",
       tool: "CodexExecution",
+      kind: "permission",
+      presentation: codexExecutionPresentation,
       input: { description: "Execute shell commands" },
     };
   });
@@ -2958,6 +2964,7 @@ test("worker questions submit preset multiple answers and a custom override toge
     transport.tasks[0].pending_input = {
       id: "request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: {
         questions: [
           {
@@ -3018,6 +3025,7 @@ test("a single worker question can be skipped and the skip undone", async (t) =>
     transport.tasks[0].pending_input = {
       id: "request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: {
         questions: [
           { question: "Which format?", options: [{ label: "YAML" }] },
@@ -3056,6 +3064,7 @@ test("a skipped stacked question sends an explicit skipped answer", async (t) =>
     transport.tasks[0].pending_input = {
       id: "request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: {
         questions: [
           {
@@ -3113,6 +3122,7 @@ test("a free-text worker question answers in a text box and shows send failures 
     transport.tasks[0].pending_input = {
       id: "request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: { question: "Which branch?" },
     };
 
@@ -3162,6 +3172,7 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
     transport.tasks[0].pending_input = {
       id: "request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: {
         questions: [
           {
@@ -3275,6 +3286,7 @@ test("keyboard focus follows the stacked question cards", async (t) => {
     transport.tasks[0].pending_input = {
       id: "request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: {
         questions: [
           { question: "Which format?", options: [{ label: "YAML" }] },
@@ -3316,6 +3328,7 @@ test("stacked worker questions return to the first unanswered card before sendin
     transport.tasks[0].pending_input = {
       id: "request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: {
         questions: [
           {
@@ -3445,6 +3458,8 @@ test("permission buttons allow explicit approval without a dropdown", async (t) 
     transport.tasks[0].pending_input = {
       id: "permission",
       tool: "CodexExecution",
+      kind: "permission",
+      presentation: codexExecutionPresentation,
       input: { description: "Execute shell commands" },
     };
   });
@@ -3528,15 +3543,19 @@ test("delegation defaults to inherited native permissions and separately selects
 
   await waitFor(() =>
     assert.equal(
-      transport.calls.find((call) => call.name === "start_agent_task")?.args
-        .approval_decider,
+      (
+        transport.calls.find((call) => call.name === "start_agent_task")
+          ?.args as any
+      ).provider_options.claude.approval_decider,
       "parent_agent",
     ),
   );
 
   assert.equal(
-    transport.calls.find((call) => call.name === "start_agent_task")?.args
-      .permission_mode,
+    (
+      transport.calls.find((call) => call.name === "start_agent_task")
+        ?.args as any
+    ).provider_options.claude.permission_mode,
     "acceptEdits",
   );
 });
@@ -3744,6 +3763,7 @@ test("permission cancellation keeps the request pending and approval includes th
   const { user, transport } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
       id: "message-request",
+      kind: "permission",
       tool: "Bash",
       input: { command: "pwd" },
     };

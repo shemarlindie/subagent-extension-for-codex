@@ -24,10 +24,7 @@ export type Settings = {
   styles: string;
 };
 
-/**
- * Codex sends the cwd as a file URI and the service ignores plain paths, so
- * accept a typed path and store its URI. Older versions saved plain paths.
- */
+/** Codex sends cwd as a file URI, so convert typed paths before storing them. */
 export function normalizeCwd(value: string) {
   const cwd = value.trim();
   if (!cwd.startsWith("/")) return cwd;
@@ -41,21 +38,13 @@ export function normalizeCwd(value: string) {
 /** Saved settings over the defaults; unreadable storage falls back to them. */
 export function settingsFrom(defaults: Settings, stored: string | null) {
   try {
-    const parsed = JSON.parse(stored!) as Partial<Settings> & {
-      showLog?: boolean;
-    };
+    const parsed = JSON.parse(stored!) as Record<string, unknown>;
 
-    const saved: Settings = {
-      ...defaults,
-      ...parsed,
-      // Preserve the old Bridge log toggle as the Inspector's initial state.
-      showInspector:
-        parsed.showInspector ?? parsed.showLog ?? defaults.showInspector,
-    };
+    const saved = Object.fromEntries(
+      Object.entries(parsed).filter(([key]) => Object.hasOwn(defaults, key)),
+    ) as Partial<Settings>;
 
-    delete (saved as Settings & { showLog?: boolean }).showLog;
-
-    return { ...saved, cwd: normalizeCwd(saved.cwd) };
+    return { ...defaults, ...saved };
   } catch {
     return defaults;
   }

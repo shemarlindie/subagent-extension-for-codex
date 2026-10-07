@@ -27,14 +27,17 @@ import {
   type RunContext,
   type Task,
 } from "../../../shared/contracts.js";
+import { git } from "../../workspaces/workspace.js";
+import { claudeMetadata } from "../metadata.js";
+import { claudeActivityPresentation } from "./activity.js";
 import {
   claudeOverrideDefaults,
   type ClaudePolicy,
   readOnlyProfile,
-  resolveClaudePolicy,
-  taskClaudeMode,
-} from "../../tasks/policy/permissions.js";
-import { git } from "../../workspaces/workspace.js";
+} from "./permissions.js";
+import { taskClaudeMode } from "./permissions.js";
+import { readClaudeTaskOptions } from "./task-options.js";
+import { claudeTaskPolicy } from "./task-policy.js";
 
 // The extension's own credentials never reach delegated sessions. Claude
 // credentials come from the user's configuration, not a subscription token.
@@ -173,6 +176,8 @@ const approvalTool = (tool: string) =>
 
 export class ClaudeAgentProvider implements Provider {
   id = "claude";
+  taskPolicy = claudeTaskPolicy;
+  metadata = claudeMetadata;
   capabilities = {
     interrupt: true,
     session_continue: true,
@@ -296,18 +301,24 @@ export class ClaudeAgentProvider implements Provider {
   }
 
   async run(c: RunContext, prompt: string): Promise<Result> {
-    // Tasks created before session restrictions were configurable use the defaults.
-    const policy =
-      c.task.claude_policy ??
-      resolveClaudePolicy(claudeOverrideDefaults, c.task.worker_profile);
+    const taskOptions = readClaudeTaskOptions(c.task);
+    if (
+      !taskOptions.claude_policy ||
+      !taskOptions.permission_mode ||
+      !taskOptions.approval_decider
+    )
+      throw new Error(
+        "Claude task is missing resolved native permission state",
+      );
+    const policy = taskOptions.claude_policy;
 
     const workspace = c.task.workspace!;
     const abortController = new AbortController();
     const abort = () => abortController.abort();
     c.signal.addEventListener("abort", abort, { once: true });
     if (c.signal.aborted) abort();
-    // Without a mode, the user's Claude Code settings choose it.
-    const nativeMode = taskClaudeMode(c.task);
+    // Inherit leaves the native mode to the user's Claude Code settings.
+    const nativeMode = taskClaudeMode(taskOptions);
     const restricted = policy.tools === "restricted";
 
     const readOnly =
@@ -526,8 +537,11 @@ export class ClaudeAgentProvider implements Provider {
   normalize(c: RunContext, m: SDKMessage) {
     // Keep the complete wire response on every derived activity, including
     // unknown SDK variants, so normalization never discards diagnostic context.
-    const emit = (type: string, data: Record<string, unknown>) =>
-      c.emit(type, { ...data, raw_response: m });
+    const emit = (type: string, data: Record<string, unknown>) => {
+      const payload = { ...data, raw_response: m };
+      const activity = claudeActivityPresentation({ type, data: payload });
+      c.emit(type, { ...payload, activity });
+    };
 
     if (m.type === "assistant" || m.type === "user") {
       const content = m.message.content;

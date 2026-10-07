@@ -6,9 +6,10 @@ import {
   roles,
 } from "../../shared/contracts.js";
 import {
-  claudeOverrideLabels,
-  permissionLabels,
-} from "../tasks/policy/permissions.js";
+  providerApprovalRows,
+  providerRestrictionSections,
+  providerSettingHelp,
+} from "../providers/settings.js";
 
 /**
  * The settings dialog's description of each section and row. The panel
@@ -102,20 +103,7 @@ export type SettingSection = z.infer<typeof sectionSchema>;
 export const settingHelp = {
   auto_register_chat_project:
     "When a chat starts a task, register the chat's local Git root from host directory metadata, never from task paths. Turning this off keeps projects already registered.",
-  claude_permission_mode:
-    "Your Claude Code settings decide the mode, except plan for read-only worker profiles. Any other mode applies to every task.",
-  claude_sandbox:
-    "Your Claude Code settings decide the sandbox by default. The extension sandbox allows writes only in the workspace and blocks home and sibling reads and the network. Locking its network also ignores domains your Claude Code settings allow.",
-  claude_environment:
-    "The full environment is the service's, minus the extension's secrets. The filtered allowlist passes only basic process variables and Claude credentials.",
-  claude_tools:
-    "All tools offers every Claude Code tool. The restricted set offers file, search, Bash, question, skill and MCP tools, and only read, question and skill tools to read-only work. By worker profile restricts only read-only profiles.",
-  claude_path_guard:
-    "Keeps file tools inside the task workspace and out of Git metadata. By worker profile applies it only to read-only profiles.",
-  claude_subagents:
-    "Delegated sessions may start subagents with the Agent tool.",
-  default_approval_decider:
-    "Who answers permission prompts the SDK leaves unresolved.",
+  ...providerSettingHelp,
   worktree_branch_prefix:
     "Each worktree task works on its own branch, named this prefix followed by the task ID.",
 };
@@ -146,6 +134,7 @@ export interface ScopeInput {
   values: Record<string, unknown>;
   providers: string[];
   catalogs: Catalog[];
+  modelProviders?: string[];
 }
 
 /**
@@ -360,20 +349,7 @@ export function settingsSections(input: SectionInput): SettingSection[] {
       title: "Approvals and projects",
       help: [userOnly],
       rows: [
-        {
-          kind: "select",
-          key: "claude_permission_mode",
-          label: "Claude permission mode",
-          help: [settingHelp.claude_permission_mode],
-          options: options(permissionLabels),
-        },
-        {
-          kind: "select",
-          key: "default_approval_decider",
-          label: "Approval decision maker",
-          help: [settingHelp.default_approval_decider],
-          options: options({ user: "User", parent_agent: "Parent agent" }),
-        },
+        ...providerApprovalRows,
         {
           kind: "switch",
           key: "auto_register_chat_project",
@@ -382,49 +358,7 @@ export function settingsSections(input: SectionInput): SettingSection[] {
         },
       ],
     },
-    {
-      id: "restrictions",
-      title: "Claude session restrictions",
-      help: [
-        `Limits on delegated Claude sessions, in every permission mode. ${userOnly}`,
-      ],
-      rows: [
-        {
-          kind: "select",
-          key: "claude_sandbox",
-          label: "Bash sandbox",
-          help: [settingHelp.claude_sandbox],
-          options: options(claudeOverrideLabels.claude_sandbox),
-        },
-        {
-          kind: "select",
-          key: "claude_environment",
-          label: "Environment",
-          help: [settingHelp.claude_environment],
-          options: options(claudeOverrideLabels.claude_environment),
-        },
-        {
-          kind: "select",
-          key: "claude_tools",
-          label: "Tools",
-          help: [settingHelp.claude_tools],
-          options: options(claudeOverrideLabels.claude_tools),
-        },
-        {
-          kind: "select",
-          key: "claude_path_guard",
-          label: "Workspace path guard",
-          help: [settingHelp.claude_path_guard],
-          options: options(claudeOverrideLabels.claude_path_guard),
-        },
-        {
-          kind: "switch",
-          key: "claude_subagents",
-          label: "Allow subagents",
-          help: [settingHelp.claude_subagents],
-        },
-      ],
-    },
+    ...providerRestrictionSections,
     // One section per tier keeps the many model/effort pairs in two tables.
     {
       id: "models",
@@ -435,7 +369,7 @@ export function settingsSections(input: SectionInput): SettingSection[] {
           kind: "models",
           scopes: [
             scopeRow("global", "Global"),
-            ...providers.map((provider) =>
+            ...(input.modelProviders ?? providers).map((provider) =>
               scopeRow(provider, titleCase(provider)),
             ),
           ],

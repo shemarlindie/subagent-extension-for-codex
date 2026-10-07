@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,9 +11,6 @@ export const installRoot = resolve(
 export function dataDirectory(env = process.env) {
   if (env.CODEX_SUBAGENT_EXTENSION_DATA)
     return resolve(env.CODEX_SUBAGENT_EXTENSION_DATA);
-  // Preserve the previous packaged installation's database until explicitly migrated.
-  const legacy = join(installRoot, ".codex-subagent-extension");
-  if (existsSync(join(legacy, "console.sqlite"))) return legacy;
 
   return join(homedir(), ".local", "share", "codex-subagent-extension");
 }

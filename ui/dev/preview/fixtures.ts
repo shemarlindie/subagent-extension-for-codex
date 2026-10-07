@@ -11,6 +11,7 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
+import { claudeActivityPresentation } from "../../../src/features/providers/claude/activity";
 import type { Event, Result, Task } from "../../../src/shared/contracts";
 
 type Data = Record<string, unknown>;
@@ -55,6 +56,14 @@ const taskBase = {
   owner: "preview",
   provider: "claude" as const,
   worker_profile: "researcher" as const,
+  provider_recovery_required: false,
+  provider_options: {
+    claude: {
+      permission_mode: "plan",
+      permission_source: "task_profile",
+      approval_decider: "user",
+    },
+  },
   conversation_id: PREVIEW_THREAD,
   repository: previewProjects[0]!.repository,
   revision: "HEAD",
@@ -139,7 +148,9 @@ class Timeline {
       task_id: this.taskId,
       type,
       timestamp: new Date(this.clock).toISOString(),
-      data,
+      data: data.raw_response
+        ? { ...data, activity: claudeActivityPresentation({ type, data }) }
+        : data,
     });
 
     return this;
@@ -783,6 +794,7 @@ question.add("agent.input_required", {
   request: {
     id: "preview-question-request",
     tool: "AskUserQuestion",
+    kind: "question",
     input: questionInput,
   },
 });
@@ -802,6 +814,7 @@ stacked.add("agent.input_required", {
   request: {
     id: "preview-stacked-questions-request",
     tool: "AskUserQuestion",
+    kind: "question",
     input: stackedQuestionInput,
   },
 });
@@ -824,6 +837,7 @@ refactor.add("agent.input_required", {
   request: {
     id: "preview-refactor-request",
     tool: "Bash",
+    kind: "permission",
     input: { command: "npm run build", description: "Build the new modules." },
   },
 });
@@ -1278,6 +1292,7 @@ const permission = lifecycle(
       request: {
         id: "preview-request",
         tool: "Bash",
+        kind: "permission",
         input: {
           command: "npm run typecheck",
           description:
@@ -1429,6 +1444,13 @@ const liveTasks: Task[] = liveStates.map((live, index) => ({
   title: live.title,
   description: `Shows the inspector while "${live.status}" is the latest activity.`,
   worker_profile: "implementer",
+  provider_options: {
+    claude: {
+      permission_mode: "inherit",
+      permission_source: "user_config",
+      approval_decider: "user",
+    },
+  },
   status: "running",
   workspace_strategy: "current_repo",
   budget: { max_runtime_minutes: null, max_cost_usd: null },
@@ -1457,6 +1479,13 @@ export const previewTasks: Task[] = [
     description:
       "Find why retry.test.ts fails intermittently and propose a fix.",
     worker_profile: "debugger",
+    provider_options: {
+      claude: {
+        permission_mode: "inherit",
+        permission_source: "user_config",
+        approval_decider: "user",
+      },
+    },
     status: "failed",
     error: "Worker stopped: reached the maximum number of turns.",
     runtime_ms: 310000,
@@ -1472,6 +1501,13 @@ export const previewTasks: Task[] = [
     description:
       "Move the config loader to a typed schema and keep backwards compatibility.",
     worker_profile: "implementer",
+    provider_options: {
+      claude: {
+        permission_mode: "inherit",
+        permission_source: "user_config",
+        approval_decider: "user",
+      },
+    },
     status: "waiting",
     waiting_reason: "waiting_for_user",
     runtime_ms: 120000,
@@ -1479,6 +1515,7 @@ export const previewTasks: Task[] = [
     pending_input: {
       id: "preview-question-request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: questionInput,
     },
     ...timestamps(45, 1),
@@ -1497,6 +1534,7 @@ export const previewTasks: Task[] = [
     pending_input: {
       id: "preview-stacked-questions-request",
       tool: "AskUserQuestion",
+      kind: "question",
       input: stackedQuestionInput,
     },
     ...timestamps(50, 1),
@@ -1508,6 +1546,13 @@ export const previewTasks: Task[] = [
     description:
       "Split billing into invoices and payments without changing public behaviour.\n\nKeep the exported API stable: existing callers import from billing/index.\nMove invoice rendering, tax calculation and PDF export into billing/invoices, and charge, refund and webhook handling into billing/payments.\n\nDo not touch the database schema. Add tests for any code that moves, and run the full billing suite before finishing.",
     worker_profile: "implementer",
+    provider_options: {
+      claude: {
+        permission_mode: "inherit",
+        permission_source: "user_config",
+        approval_decider: "user",
+      },
+    },
     status: "running",
     workspace_strategy: "current_repo",
     budget: { max_runtime_minutes: null, max_cost_usd: null },
@@ -1574,11 +1619,19 @@ export const previewTasks: Task[] = [
     description:
       "Trace the session expiry regression and identify the first incorrect state transition.",
     worker_profile: "debugger",
+    provider_options: {
+      claude: {
+        permission_mode: "inherit",
+        permission_source: "user_config",
+        approval_decider: "user",
+      },
+    },
     status: "waiting",
     waiting_reason: "waiting_for_permission",
     pending_input: {
       id: "preview-request",
       tool: "Bash",
+      kind: "permission",
       input: {
         command: "npm run typecheck",
         description: "Check the session-state change in the isolated worktree.",
@@ -1593,6 +1646,13 @@ export const previewTasks: Task[] = [
     description:
       "Improve the task inspector layout while preserving keyboard navigation and narrow-panel behavior.",
     worker_profile: "implementer",
+    provider_options: {
+      claude: {
+        permission_mode: "inherit",
+        permission_source: "user_config",
+        approval_decider: "user",
+      },
+    },
     status: "interrupted",
     attempt: 2,
     runtime_ms: 125000,
@@ -1638,6 +1698,13 @@ export const previewTasks: Task[] = [
     description:
       "Convert every test file to the new runner API and run each one after editing it.",
     worker_profile: "implementer",
+    provider_options: {
+      claude: {
+        permission_mode: "inherit",
+        permission_source: "user_config",
+        approval_decider: "user",
+      },
+    },
     status: "completed",
     runtime_ms: 540000,
     cost_usd: 2.37,
@@ -1650,6 +1717,13 @@ export const previewTasks: Task[] = [
     title: "Speed up the production build",
     description: "Cache module compilation across the build's source files.",
     worker_profile: "implementer",
+    provider_options: {
+      claude: {
+        permission_mode: "inherit",
+        permission_source: "user_config",
+        approval_decider: "user",
+      },
+    },
     status: "completed",
     runtime_ms: 210000,
     cost_usd: 1.04,
@@ -1671,6 +1745,13 @@ export const previewTasks: Task[] = [
     description:
       "Profile the production build and write reports on chunk and module sizes.",
     worker_profile: "implementer",
+    provider_options: {
+      claude: {
+        permission_mode: "inherit",
+        permission_source: "user_config",
+        approval_decider: "user",
+      },
+    },
     status: "completed",
     runtime_ms: 260000,
     cost_usd: 1.31,

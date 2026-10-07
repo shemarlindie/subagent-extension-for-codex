@@ -91,6 +91,7 @@ function task(repository: string, revision = "HEAD"): Task {
     updated_at: new Date().toISOString(),
     attempt: 0,
     runtime_ms: 0,
+    provider_recovery_required: false,
   };
 }
 
@@ -239,8 +240,7 @@ test("current repository settings persist, are owner-scoped, and allow task over
     );
 
     assert.equal(
-      startSchema.parse({ title: "Review", description: "Review" })
-        .workspace_strategy,
+      startSchema.parse({ description: "Review" }).workspace_strategy,
       "current_repo",
     );
 

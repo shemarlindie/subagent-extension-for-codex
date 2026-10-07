@@ -28,6 +28,7 @@ const task = (patch: Partial<Task>): Task => ({
   instructions: [],
   attempt: 1,
   runtime_ms: 60_000,
+  provider_recovery_required: false,
   ...patch,
 });
 
@@ -57,7 +58,12 @@ test("a run held for input freezes at the request time and resumes against the s
     status: "waiting",
     run_started_at: new Date(started).toISOString(),
     updated_at: new Date(started + 30_000).toISOString(),
-    pending_input: { id: "question", tool: "AskUserQuestion", input: {} },
+    pending_input: {
+      id: "question",
+      kind: "question",
+      tool: "AskUserQuestion",
+      input: {},
+    },
   });
 
   assert.equal(runtimeLive(waiting), false);

@@ -26,10 +26,16 @@ const task = (patch: Partial<Task>): Task => ({
   instructions: [],
   attempt: 1,
   runtime_ms: 0,
+  provider_recovery_required: false,
   ...patch,
 });
 
-const input = { id: "i", tool: "AskUserQuestion", input: {} };
+const input = {
+  kind: "question" as const,
+  id: "i",
+  tool: "AskUserQuestion",
+  input: {},
+};
 
 const cases: [string, Partial<Task>, Filter[]][] = [
   ["running", { status: "running" }, ["all", "active"]],

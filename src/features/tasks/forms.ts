@@ -15,11 +15,10 @@ import {
 
 import { hostProjectCandidate } from "../../platform/panel/host-context.js";
 import { reasoningLevels } from "../../shared/contracts.js";
+import { inputPresentation } from "../providers/input-presentation.js";
+import { providerMetadata } from "../providers/metadata.js";
 import { type Control } from "./control.js";
-import {
-  permissionLabels,
-  permissionModeSchema,
-} from "./policy/permissions.js";
+import { pendingInputKind } from "./model.js";
 
 type Kind =
   "request_agent_task" | "request_agent_input" | "request_agent_project";
@@ -257,6 +256,23 @@ export class Forms {
         );
       const availableWorkers = await this.c.availableWorkers();
 
+      const nativePermissions = availableWorkers
+        .map(
+          (worker) =>
+            providerMetadata(worker.provider, worker.metadata)
+              ?.nativePermissions,
+        )
+        .filter((permissions) => permissions !== undefined);
+
+      const permissions = nativePermissions[0];
+      const settingsDefaults = defaults as unknown as Record<string, unknown>;
+
+      const defaultProviderOptions =
+        (
+          defaults.provider_options as
+            Record<string, Record<string, unknown>> | undefined
+        )?.[String(defaults.provider)] ?? {};
+
       const workers = availableWorkers.flatMap((w) =>
         w.profiles.map((profile) => ({
           const: `${w.provider}:${profile}`,
@@ -305,25 +321,46 @@ export class Forms {
               enum: ["default", ...reasoningLevels],
               default: args.reasoning_effort ?? "default",
             },
-            ...(availableWorkers.some((worker) => worker.provider === "claude")
+            ...(permissions
               ? {
                   permission_mode: {
                     type: "string",
-                    title: "Claude permission mode",
-                    description:
-                      "Claude native SDK mode. Other workers use their existing permissions. Inherit uses your Claude Code settings, or plan for read-only profiles.",
-                    oneOf: permissionModeSchema.options.map((mode) => ({
-                      const: mode,
-                      title: permissionLabels[mode],
+                    title: permissions.formTitle ?? "Permission mode",
+                    description: permissions.formHelp ?? permissions.help,
+                    oneOf: [
+                      ...new Map(
+                        nativePermissions
+                          .flatMap((native) => native.options)
+                          .map((option) => [option.value, option]),
+                      ).values(),
+                    ].map((option) => ({
+                      const: option.value,
+                      title: option.label,
                     })),
-                    default: defaults.permission_mode,
+                    default:
+                      defaultProviderOptions[permissions.permissionOption] ??
+                      settingsDefaults[permissions.permissionSetting] ??
+                      "inherit",
                   },
-                  approval_decider: {
-                    type: "string",
-                    title: "Approval decision maker",
-                    enum: ["user", "parent_agent"],
-                    default: defaults.approval_decider,
-                  },
+                  ...(permissions.approvalDeciderOption
+                    ? {
+                        approval_decider: {
+                          type: "string",
+                          title: "Approval decision maker",
+                          enum: ["user", "parent_agent"],
+                          default:
+                            defaultProviderOptions[
+                              permissions.approvalDeciderOption
+                            ] ??
+                            (permissions.approvalDeciderSetting
+                              ? settingsDefaults[
+                                  permissions.approvalDeciderSetting
+                                ]
+                              : undefined) ??
+                            "user",
+                        },
+                      }
+                    : {}),
                 }
               : {}),
             workspace_strategy: {
@@ -406,23 +443,21 @@ export class Forms {
       message: "",
     };
 
-    if (pending.tool !== "AskUserQuestion") {
-      const wholeTurn = pending.tool === "CodexExecution";
-      r.message = `${wholeTurn ? "Allow this Codex execution turn? Approval covers the entire turn, including shell commands; there are no separate command approval prompts. Review the workspace and execution policy below." : `Worker requests permission for ${pending.tool}:`}\n${JSON.stringify(pending.input)}`;
+    if (pendingInputKind(pending) !== "question") {
+      const presentation = inputPresentation(pending);
+      r.message = `${presentation.formMessage ?? `Worker requests permission for ${pending.tool}:`}\n${JSON.stringify(pending.input)}`;
 
       r.form = OpenAIFormSchema.parse({
         type: "object",
         properties: {
           decision: {
             type: "string",
-            title: wholeTurn ? "Codex execution permission" : "Permission",
+            title: presentation.formTitle ?? "Permission",
             oneOf: [
               { const: "deny", title: "Deny" },
               {
                 const: "allow",
-                title: wholeTurn
-                  ? "Approve this execution turn"
-                  : "Allow this request",
+                title: presentation.formApproveLabel ?? "Allow this request",
               },
             ],
             default: "deny",
@@ -566,15 +601,6 @@ export class Forms {
       );
     }
 
-    if (kind === "request_agent_task" && !r.form.properties.repository)
-      throw new Error(
-        "This saved form predates explicit project selection. Reopen the task form and select a project.",
-      );
-    // Task-body migration cannot repair a pending form's older input schema.
-    if (kind === "request_agent_task" && !r.form.properties.description)
-      throw new Error(
-        "This saved form predates full task descriptions. Reopen the task form and provide the full request as the description.",
-      );
     this.checkInput(owner, r);
     if (!response)
       return inputRequired({
@@ -623,24 +649,47 @@ export class Forms {
         } else if (kind === "request_agent_task") {
           const [provider, worker_profile] = String(content.worker).split(":");
 
+          const permissions = providerMetadata(
+            provider,
+            this.c.providers.get(provider)?.metadata,
+          )?.nativePermissions;
+
+          const existingOptions = (
+            r.args.provider_options as
+              Record<string, Record<string, unknown>> | undefined
+          )?.[provider];
+
+          const providerOptions: Record<
+            string,
+            Record<string, unknown>
+          > = existingOptions ? { [provider]: { ...existingOptions } } : {};
+
+          if (permissions) {
+            providerOptions[provider] = {
+              ...(providerOptions[provider] ?? {}),
+              [permissions.permissionOption]:
+                content.permission_mode ??
+                r.form.properties.permission_mode?.default ??
+                "inherit",
+              ...(permissions.approvalDeciderOption
+                ? {
+                    [permissions.approvalDeciderOption]:
+                      content.approval_decider ??
+                      r.form.properties.approval_decider?.default ??
+                      "user",
+                  }
+                : {}),
+            };
+          }
+
           result = await this.c.start(
             owner,
             {
               ...r.args,
-              // Older saved forms have no native fields; leave legacy translation to Settings.
-              permission_mode:
-                provider === "claude"
-                  ? (content.permission_mode ??
-                    r.form.properties.permission_mode?.default ??
-                    r.args.permission_mode)
-                  : "inherit",
-              approval_decider:
-                content.approval_decider ??
-                r.form.properties.approval_decider?.default ??
-                r.args.approval_decider,
+              ...(Object.keys(providerOptions).length
+                ? { provider_options: providerOptions }
+                : {}),
               repository: content.repository,
-              // Honor saved title fields; new forms generate from the edited description.
-              title: content.title,
               description: content.description,
               provider,
               worker_profile,

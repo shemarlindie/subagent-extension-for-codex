@@ -1,3 +1,4 @@
+import { pendingInputKind } from "../../../src/features/tasks/model";
 import {
   changesKey,
   changesStale,
@@ -243,7 +244,7 @@ export class Controller {
         case "respond":
           if (
             !task!.pending_input ||
-            task!.pending_input.tool === "AskUserQuestion" ||
+            pendingInputKind(task!.pending_input) === "question" ||
             (saved.requestId && task!.pending_input.id !== saved.requestId)
           ) {
             await this.discardPersistedDialog(saved, tasks, scope);

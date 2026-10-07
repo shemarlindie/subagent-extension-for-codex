@@ -9,8 +9,9 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { test, type TestContext } from "vitest";
 
 import { FixtureProvider } from "../../../dev/fixture-provider.js";
+import { claudeTaskPolicy } from "../../../src/features/providers/claude/task-policy.js";
+import { claudeMetadata } from "../../../src/features/providers/metadata.js";
 import { Control } from "../../../src/features/tasks/control.js";
-import { Forms } from "../../../src/features/tasks/forms.js";
 import { Store } from "../../../src/features/tasks/store.js";
 import { Workspaces } from "../../../src/features/workspaces/workspace.js";
 import { application } from "../../../src/platform/server/app.js";
@@ -46,6 +47,8 @@ async function setup(t: TestContext) {
 
   const provider = new FixtureProvider();
   provider.id = "claude";
+  provider.taskPolicy = claudeTaskPolicy;
+  provider.metadata = claudeMetadata;
 
   const c = new Control(
     new Store(join(dir, "tasks.sqlite")),
@@ -153,9 +156,13 @@ test("HTTP MCP inherits the user's Claude Code settings regardless of host or ar
   const started = await rpc("start_agent_task", request, parentMeta);
   assert.equal(started.result.isError, undefined, JSON.stringify(started));
   const task = started.result.structuredContent.result;
-  assert.equal(task.permission_mode, "inherit");
-  assert.equal(task.permission_source, "user_config");
-  assert.equal(c.store.get(task.id, "local").permission_mode, "inherit");
+  assert.equal(task.provider_options.claude.permission_mode, "inherit");
+  assert.equal(task.provider_options.claude.permission_source, "user_config");
+
+  assert.equal(
+    c.store.get(task.id, "local").provider_options?.claude?.permission_mode,
+    "inherit",
+  );
 
   const spoofed = await rpc("start_agent_task", {
     ...request,
@@ -169,12 +176,14 @@ test("HTTP MCP inherits the user's Claude Code settings regardless of host or ar
   assert.equal(spoofed.result.isError, undefined, JSON.stringify(spoofed));
 
   assert.equal(
-    spoofed.result.structuredContent.result.permission_mode,
+    spoofed.result.structuredContent.result.provider_options.claude
+      .permission_mode,
     "inherit",
   );
 
   assert.equal(
-    spoofed.result.structuredContent.result.permission_source,
+    spoofed.result.structuredContent.result.provider_options.claude
+      .permission_source,
     "user_config",
   );
 });
@@ -203,14 +212,19 @@ test("cookie-authenticated user tasks resolve inherit by profile and ignore perm
 
     assert.equal(res.status, 200);
     const { result } = await res.json();
-    assert.equal(result.permission_mode, expected);
-    assert.equal(result.permission_source, source);
+    assert.equal(result.provider_options.claude.permission_mode, expected);
+    assert.equal(result.provider_options.claude.permission_source, source);
   }
 });
 
 test("host delegation forms resolve inherit to the user's Claude Code settings on submission", async (t) => {
   const { c, dir, rpc, request } = await setup(t);
-  const args = { ...request, permission_mode: "inherit" };
+
+  const args = {
+    ...request,
+    provider_options: { claude: { permission_mode: "inherit" } },
+  };
+
   const initial = await rpc("request_agent_task", args, parentMeta);
 
   assert.equal(
@@ -243,88 +257,13 @@ test("host delegation forms resolve inherit to the user's Claude Code settings o
   );
 
   const task = submission.result.structuredContent.result;
-  assert.equal(task.permission_mode, "inherit");
-  assert.equal(task.permission_source, "user_config");
-  assert.equal(c.store.get(task.id, "local").permission_source, "user_config");
-});
+  assert.equal(task.provider_options.claude.permission_mode, "inherit");
+  assert.equal(task.provider_options.claude.permission_source, "user_config");
 
-test("saved delegation forms without native fields preserve explicit legacy permission choices", async (t) => {
-  const { c, dir, rpc, request } = await setup(t);
-
-  for (const [approval_mode, expectedDecider, savedDecider] of [
-    ["ask_user", "user", "parent_agent"],
-    ["parent_agent", "parent_agent", "user"],
-  ] as const) {
-    c.settings.update("local", {
-      set: { default_approval_decider: savedDecider },
-    });
-
-    const args = { ...request, approval_mode };
-    const initial = await rpc("request_agent_task", args);
-
-    assert.equal(
-      initial.result.resultType,
-      "input_required",
-      JSON.stringify(initial),
-    );
-
-    const row = c.store.db
-      .prepare(
-        "SELECT id,body FROM form_requests WHERE json_extract(body, '$.status')='pending'",
-      )
-      .get()!;
-
-    const legacy = JSON.parse(String(row.body));
-
-    for (const key of ["permission_mode", "approval_decider"]) {
-      delete legacy.args[key];
-      delete legacy.form.properties[key];
-
-      legacy.form.required = legacy.form.required.filter(
-        (name: string) => name !== key,
-      );
-    }
-
-    c.store.db
-      .prepare("UPDATE form_requests SET body=? WHERE id=?")
-      .run(JSON.stringify(legacy), row.id);
-
-    c.forms = new Forms(c);
-
-    const submission = await rpc(
-      "request_agent_task",
-      args,
-      {},
-      initial.result.requestState,
-      {
-        action: "accept",
-        content: {
-          repository: dir,
-          description: "Accept saved legacy task",
-          worker: "claude:implementer",
-          workspace_strategy: "current_repo",
-          revision: "HEAD",
-          max_runtime_minutes: 2,
-          max_cost_usd: 1,
-        },
-      },
-    );
-
-    assert.equal(
-      submission.result.isError,
-      undefined,
-      JSON.stringify(submission),
-    );
-
-    const task = submission.result.structuredContent.result;
-    assert.equal(task.permission_mode, "default");
-    assert.equal(task.approval_decider, expectedDecider);
-
-    assert.equal(
-      c.store.get(task.id, "local").approval_decider,
-      expectedDecider,
-    );
-  }
+  assert.equal(
+    c.store.get(task.id, "local").provider_options?.claude?.permission_source,
+    "user_config",
+  );
 });
 
 test("stdio proxy starts tasks through the bearer-authenticated HTTP boundary without host permission inheritance", async (t) => {
@@ -358,9 +297,13 @@ test("stdio proxy starts tasks through the bearer-authenticated HTTP boundary wi
 
     assert.equal(response.isError, false, JSON.stringify(response));
     const task = (response.structuredContent as any).result;
-    assert.equal(task.permission_mode, "inherit");
-    assert.equal(task.permission_source, "user_config");
-    assert.equal(c.store.get(task.id, "local").permission_mode, "inherit");
+    assert.equal(task.provider_options.claude.permission_mode, "inherit");
+    assert.equal(task.provider_options.claude.permission_source, "user_config");
+
+    assert.equal(
+      c.store.get(task.id, "local").provider_options?.claude?.permission_mode,
+      "inherit",
+    );
   } finally {
     await client.close();
   }

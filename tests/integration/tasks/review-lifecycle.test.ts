@@ -57,7 +57,7 @@ test(
 
     const formBody = JSON.stringify({
       kind: "request_agent_task",
-      args: { title: "Review", description: "Review" },
+      args: { description: "Review" },
       form: { fields: [] },
       message: "Choose task",
       status: "processing",
@@ -80,7 +80,6 @@ test(
       const task: Task = {
         ...startSchema.parse({
           provider: "fixture",
-          title: "Review [input]",
           description: "Review [input]",
           repository,
         }),
@@ -93,6 +92,7 @@ test(
         instructions: [],
         attempt: 1,
         runtime_ms: 0,
+        provider_recovery_required: false,
       };
 
       store.save(task);

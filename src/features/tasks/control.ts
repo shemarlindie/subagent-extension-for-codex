@@ -3,9 +3,9 @@ import { access } from "node:fs/promises";
 import { hostname } from "node:os";
 
 import {
-  approvalRank,
   type InputAuthority,
   now,
+  pendingInputKind,
   type Provider,
   type Start,
   startSchema,
@@ -13,15 +13,11 @@ import {
   UnconfirmedTerminationError,
 } from "../../shared/contracts.js";
 import { Projects } from "../projects/projects.js";
+import { providerMetadata } from "../providers/metadata.js";
+import { assertSelectedProviderOptions } from "../providers/options.js";
 import { Settings } from "../settings/settings.js";
 import { headCommit, Workspaces } from "../workspaces/workspace.js";
 import { Forms } from "./forms.js";
-import {
-  approvalDecider,
-  exceedsPermission,
-  resolveClaudePermission,
-  resolveClaudePolicy,
-} from "./policy/permissions.js";
 import { Store } from "./store.js";
 import { generateTaskTitle } from "./task-title.js";
 
@@ -75,7 +71,12 @@ export class Control {
     public repository: string,
     public concurrency = 3,
   ) {
-    this.settings = new Settings(store, () => [...providers.keys()]);
+    this.settings = new Settings(
+      store,
+      () => [...providers.keys()],
+      (id) => providerMetadata(id, providers.get(id)?.metadata),
+    );
+
     this.forms = new Forms(this);
   }
 
@@ -84,7 +85,7 @@ export class Control {
 
     for (const t of this.store.all()) {
       if (
-        t.provider === "codex" &&
+        t.provider_recovery_required &&
         ["starting", "running", "waiting"].includes(t.status) &&
         t.waiting_reason !== "waiting_for_dependency"
       ) {
@@ -129,6 +130,7 @@ export class Control {
     return [...this.providers.values()].map((p) => ({
       provider: p.id,
       capabilities: p.capabilities,
+      metadata: p.metadata,
       profiles: [
         "researcher",
         "reviewer",
@@ -166,75 +168,26 @@ export class Control {
     authority: InputAuthority = "user",
   ) {
     const parsed = startSchema.parse(this.settings.taskInput(owner, input));
-    if (
-      parsed.provider !== "claude" &&
-      authority !== "user" &&
-      approvalRank[parsed.approval_mode ?? "ask_user"] >
-        approvalRank[this.settings.values(owner).default_approval_mode]
-    )
-      throw new Error("Task approval mode exceeds the user-approved default");
-    let resolved: ReturnType<typeof resolveClaudePermission> | undefined;
-    let claudePolicy: ReturnType<typeof resolveClaudePolicy> | undefined;
+    assertSelectedProviderOptions(parsed.provider, parsed.provider_options);
+    const provider = this.providers.get(parsed.provider);
+    if (!provider) throw new Error("Provider is not enabled");
+    const policy = provider.taskPolicy;
 
-    if (parsed.provider === "claude") {
-      const defaults = this.settings.values(owner);
-      // Restrictions are fixed when the task starts; later settings changes don't apply.
-      claudePolicy = resolveClaudePolicy(defaults, parsed.worker_profile);
-
-      const baseline = resolveClaudePermission(
-        { worker_profile: parsed.worker_profile },
-        defaults.claude_permission_mode,
-      );
-
-      resolved = resolveClaudePermission(
-        parsed,
-        defaults.claude_permission_mode,
-      );
-
-      if (
-        authority !== "user" &&
-        exceedsPermission(resolved.mode, baseline.mode)
-      )
-        throw new Error(
-          "Task permission mode exceeds the user-approved native mode",
-        );
-      if (
-        authority !== "user" &&
-        parsed.approval_decider === "parent_agent" &&
-        defaults.default_approval_decider !== "parent_agent"
-      )
-        throw new Error(
-          "Parent approval requires user authorization in settings",
-        );
-    }
+    const options = policy.prepareStart({
+      input: parsed,
+      defaults: this.settings.values(owner),
+      authority,
+    });
 
     const req = {
       ...parsed,
-      ...(resolved
-        ? {
-            permission_mode: resolved.mode,
-            permission_source: resolved.source,
-            claude_policy: claudePolicy,
-          }
-        : {}),
-      title:
-        parsed.title === undefined
-          ? generateTaskTitle(parsed.description)
-          : parsed.title.trim(),
+      ...options,
+      title: generateTaskTitle(parsed.description),
       description: parsed.description.trim(),
     };
 
     if (!req.title) throw new Error("Task title is required");
     if (!req.description) throw new Error("Task description is required");
-    if (
-      req.provider === "claude" &&
-      req.reasoning_effort &&
-      ["none", "minimal"].includes(req.reasoning_effort)
-    )
-      throw new Error(
-        "Claude reasoning effort must be low, medium, high, xhigh or max",
-      );
-    const provider = this.providers.get(req.provider);
 
     if (
       provider?.models &&
@@ -277,6 +230,7 @@ export class Control {
 
     const t: Task = {
       ...req,
+      provider_recovery_required: policy.recoverBeforeInterrupt ?? false,
       repository,
       id: `task_${randomUUID()}`,
       owner,
@@ -476,30 +430,30 @@ export class Control {
             t.session_owner = this.ownerWorker;
             this.store.save(t);
           },
-          input: async (tool, input, signal) => {
-            if (t.provider !== "claude" && tool !== "AskUserQuestion") {
-              if (a.abort.signal.aborted || signal?.aborted)
-                throw new Error("Input interrupted");
-              const mode = t.approval_mode ?? "ask_user";
+          input: async (tool, input, signal, presentation) => {
+            if (a.abort.signal.aborted || signal?.aborted)
+              throw new Error("Input interrupted");
+            const policy = provider.taskPolicy;
+            const kind = policy.inputKind(tool);
 
-              if (mode === "auto_approve" || mode === "deny") {
-                const approved = mode === "auto_approve";
+            const approved =
+              kind === "question" ? undefined : policy.decideInput(t, tool);
 
-                this.store.event(t, "agent.permission_decided", {
-                  tool,
-                  input,
-                  approval_mode: mode,
-                  approved,
-                  authority: "policy",
-                });
+            if (approved !== undefined) {
+              this.store.event(t, "agent.permission_decided", {
+                tool,
+                input,
+                approval_mode: t.approval_mode ?? "ask_user",
+                approved,
+                authority: "policy",
+              });
 
-                return {
-                  approved,
-                  message: approved
-                    ? undefined
-                    : "Execution denied by task approval mode",
-                };
-              }
+              return {
+                approved,
+                message: approved
+                  ? undefined
+                  : "Execution denied by task approval mode",
+              };
             }
 
             const previous = a.inputTail ?? Promise.resolve();
@@ -524,11 +478,18 @@ export class Control {
               t.status = "waiting";
 
               t.waiting_reason =
-                tool === "AskUserQuestion"
+                kind === "question"
                   ? "waiting_for_user"
                   : "waiting_for_permission";
 
-              t.pending_input = { id: randomUUID(), tool, input };
+              t.pending_input = {
+                id: randomUUID(),
+                tool,
+                kind,
+                input,
+                ...(presentation ? { presentation } : {}),
+              };
+
               this.store.save(t);
 
               this.store.event(t, "agent.input_required", {
@@ -838,7 +799,8 @@ export class Control {
       if (t.session_owner !== this.ownerWorker)
         throw new Error("Session belongs to another worker");
       if (!t.session_state_ref) throw new Error("Session state unavailable");
-      if (t.provider === "claude") await access(t.session_state_ref);
+
+      await this.providers.get(t.provider)!.taskPolicy.validateSession?.(t);
     }
 
     if (t.workspace)
@@ -898,11 +860,9 @@ export class Control {
     if (t.pending_input?.id !== requestId)
       throw new Error("Input request is stale");
     if (
-      t.pending_input.tool !== "AskUserQuestion" &&
+      pendingInputKind(t.pending_input) !== "question" &&
       authority !== "user" &&
-      (t.provider === "claude"
-        ? approvalDecider(t) !== "parent_agent"
-        : t.approval_mode !== "parent_agent")
+      !this.providers.get(t.provider)?.taskPolicy.parentMayApprove(t)
     )
       throw new Error(
         "This permission requires user approval; use the approval buttons or request_agent_input",
@@ -925,9 +885,16 @@ export class Control {
     const t = this.store.get(id, owner);
     if (!["failed", "cancelled"].includes(t.status))
       throw new Error("Retry requires failed or cancelled task");
+    const provider = this.providers.get(t.provider);
+    if (!provider) throw new Error("Provider is not enabled");
+
+    const provider_options = provider.taskPolicy.retryOptions
+      ? provider.taskPolicy.retryOptions(t)
+      : t.provider_options;
 
     return this.start(owner, {
       ...t,
+      provider_options,
       parent_task_id: t.id,
       context: [
         ...t.context,

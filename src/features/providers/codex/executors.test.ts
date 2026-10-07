@@ -7,7 +7,7 @@ import type { ExecutorHandle } from "../executors/mac-executor.js";
 import { CodexExecutors } from "./executors.js";
 
 const task: Task = {
-  ...startSchema.parse({ title: "Review", description: "Review" }),
+  ...startSchema.parse({ description: "Review" }),
   id: "task_one",
   title: "Review",
   owner: "alice",
@@ -16,6 +16,7 @@ const task: Task = {
   status: "running",
   attempt: 1,
   runtime_ms: 0,
+  provider_recovery_required: true,
   instructions: [],
   created_at: "now",
   updated_at: "now",

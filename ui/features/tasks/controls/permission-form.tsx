@@ -1,5 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog";
 
+import { inputPresentation } from "../../../../src/features/providers/input-presentation.js";
 import { Button } from "../../../shared/components/button";
 import {
   defineDialog,
@@ -16,7 +17,8 @@ import type { Task } from "../../../shared/state/types";
 export function PermissionForm({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
-    request = task.pending_input!;
+    request = task.pending_input!,
+    presentation = inputPresentation(request);
 
   const { register, handleSubmit } = usePersistedDialogForm("respond", {
     response: "",
@@ -38,11 +40,7 @@ export function PermissionForm({ task }: { task: Task }) {
 
   return (
     <form onSubmit={(event) => event.preventDefault()}>
-      <p className="form-note">
-        {request.tool === "CodexExecution"
-          ? "Approval covers the entire execution turn, including shell commands."
-          : "Review the full request before allowing the worker to proceed."}
-      </p>
+      <p className="form-note">{presentation.description}</p>
       <pre>{JSON.stringify(request.input, null, 2)}</pre>
       <Field id="response" label="Message (optional)">
         <textarea id="response" maxLength={20000} {...register("response")} />
@@ -62,9 +60,7 @@ export function PermissionForm({ task }: { task: Task }) {
           Deny
         </Button>
         <Button variant="primary" disabled={disabled} onClick={decide(true)}>
-          {request.tool === "CodexExecution"
-            ? "Approve this execution turn"
-            : "Approve this request once"}
+          {presentation.approveLabel}
         </Button>
       </footer>
     </form>

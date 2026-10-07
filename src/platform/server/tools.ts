@@ -131,7 +131,7 @@ export function definitions(
     }),
     start_agent_task: tool({
       description:
-        "Create durable asynchronous work from the full request in description; a concise title is generated automatically when omitted. Work starts in the current repository by default, including uncommitted changes, or in a committed-revision worktree when requested. Supply an explicit absolute repository from list_agent_projects; current does not identify the host chat project. Reopen existing work with open_codex_subagent_extension(task_id), never another start call.",
+        "Create durable asynchronous work from the full request in description; a concise title is generated automatically. Work starts in the current repository by default, including uncommitted changes, or in a committed-revision worktree when requested. Supply an explicit absolute repository from list_agent_projects; current does not identify the host chat project. Reopen existing work with open_codex_subagent_extension(task_id), never another start call.",
       schema: startSchema.extend({
         conversation_id: startSchema.shape.conversation_id.nullable(),
         provider: startSchema.shape.provider.removeDefault().optional(),
@@ -235,7 +235,7 @@ export function definitions(
     }),
     submit_agent_input: tool({
       description:
-        "Respond to a pending question, or decide execution permission when approval_decider is parent_agent for Claude (or approval_mode is parent_agent for legacy workers). Ask-user permissions require user buttons or request_agent_input. Request ID prevents stale approvals.",
+        "Respond to a pending question, or decide execution permission when provider_options.claude.approval_decider is parent_agent for Claude (or approval_mode is parent_agent for execution-approval providers). Ask-user permissions require user buttons or request_agent_input. Request ID prevents stale approvals.",
       schema: taskId.extend({
         request_id: z.string(),
         approved: z.boolean(),

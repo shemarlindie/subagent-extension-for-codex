@@ -61,6 +61,7 @@ async function setup() {
       updated_at: new Date().toISOString(),
       attempt: 1,
       runtime_ms: 0,
+      provider_recovery_required: false,
     };
 
     await workspaces.create(t);

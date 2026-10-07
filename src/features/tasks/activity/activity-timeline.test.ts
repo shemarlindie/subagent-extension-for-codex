@@ -12,6 +12,7 @@ import {
   startSchema,
   type Task,
 } from "../../../shared/contracts.js";
+import { claudeActivityPresentation } from "../../providers/claude/activity.js";
 
 for (const type of [
   "thinking_tokens",
@@ -313,7 +314,10 @@ function event(
   return {
     id,
     type,
-    data,
+    data:
+      type === "claude.activity" || data.raw_response
+        ? { ...data, activity: claudeActivityPresentation({ type, data }) }
+        : data,
     task_id: "host-task",
     timestamp: new Date(id * 1000).toISOString(),
   };
@@ -326,7 +330,6 @@ function sdk(id: number, subtype: string, data: Record<string, unknown> = {}) {
 function task(status: Task["status"]): Task {
   return {
     ...startSchema.parse({
-      title: "Review",
       description: "Review",
       worker_profile: "reviewer",
     }),
@@ -340,6 +343,7 @@ function task(status: Task["status"]): Task {
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
+    provider_recovery_required: false,
   };
 }
 
