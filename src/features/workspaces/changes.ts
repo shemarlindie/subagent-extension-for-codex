@@ -24,10 +24,12 @@ export interface Changes {
   scope: ChangeScope;
   /**
    * "workspace_missing": the worktree was removed, so the changes are what
-   * is committed on `branch`. "branch_deleted": the branch was deleted too,
-   * and there are none.
+   * is committed on `branch`, and there are no uncommitted ones.
+   * "branch_deleted": the branch was deleted too, and there are none.
+   * "end_unrecorded": a current_repo task ended before end snapshots were
+   * recorded, so there are none (see END_UNRECORDED).
    */
-  state?: "workspace_missing" | "branch_deleted";
+  state?: "workspace_missing" | "branch_deleted" | "end_unrecorded";
   branch?: string;
   /** Every changed file, on every page. */
   files: ChangedFile[];
@@ -38,6 +40,10 @@ export interface Changes {
   /** Pass back to read the next page; absent on the last one. */
   next_cursor?: string;
 }
+
+/** Why an "end_unrecorded" task has no changes. */
+export const END_UNRECORDED =
+  "This task ended before its end state was recorded, so its changes can't be told apart from later edits to this checkout.";
 
 /** A changed file's current content, as get_agent_changed_file returns it. */
 export interface ChangedFileContent {

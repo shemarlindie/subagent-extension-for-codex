@@ -111,7 +111,8 @@ test("fixture changes come from real Git repositories built per task", async () 
 
   const paths = (result: Changes) => result.files.map((file) => file.path);
 
-  // The 60-file diff, with its rename and deletion, in one page.
+  // The panel shows uncommitted changes: here the 60-file diff, with its
+  // rename and deletion, in one page.
   const build = await changes("preview-build");
   assert.equal(build.files.length, 60);
   assert.equal(build.next_cursor, undefined);
@@ -119,29 +120,26 @@ test("fixture changes come from real Git repositories built per task", async () 
   assert.ok(build.files.some((file) => file.status === "deleted"));
   assert.equal(build.diff.match(/^diff --git /gm)?.length, 60);
 
-  // Two committed turns on a worktree branch; This turn has only the second.
-  assert.deepEqual(paths(await changes("preview-interrupted")), [
-    "ui/inspector.css",
-    "ui/inspector.tsx",
-    "ui/task-facts.tsx",
-  ]);
-
-  assert.deepEqual(paths(await changes("preview-interrupted", "turn")), [
-    "ui/inspector.tsx",
-    "ui/task-facts.tsx",
-  ]);
+  // Two committed turns on a worktree branch leave nothing uncommitted.
+  assert.deepEqual(paths(await changes("preview-interrupted")), []);
+  assert.deepEqual(paths(await changes("preview-interrupted", "turn")), []);
 
   // current_repo leaves out the user's earlier README edit.
   const refactor = await changes("preview-refactor");
+  assert.ok(paths(refactor).length);
   assert.ok(!paths(refactor).includes("README.md"));
   assert.ok(refactor.files.some((file) => file.binary));
 
-  // A removed worktree's changes are its branch's commits.
-  const failed = await changes("preview-failed");
-  assert.equal(failed.state, "workspace_missing");
-  assert.equal(failed.branch, "agent/preview-failed");
-  assert.deepEqual(paths(failed), ["test/retry.test.ts"]);
-  assert.match(failed.diff, /\+test\('retries', \{ retry: 2 \}\);/);
+  // A removed worktree has nothing uncommitted; its work is on the branch.
+  assert.deepEqual(await changes("preview-failed"), {
+    scope: "task",
+    state: "workspace_missing",
+    branch: "agent/preview-failed",
+    files: [],
+    additions: 0,
+    deletions: 0,
+    diff: "",
+  });
 });
 
 test("the large-file fixture's changes come in pages and its files read whole", async () => {

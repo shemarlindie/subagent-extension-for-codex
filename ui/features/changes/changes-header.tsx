@@ -55,7 +55,9 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
           </ToggleGroup>
         )}
         <span className="changes-summary">
-          {data && data.state !== "branch_deleted" ? changesSummary(data) : ""}
+          {data && !data.state && data.files.length
+            ? `${changesSummary(data)} uncommitted`
+            : ""}
         </span>
         <TooltipWrapper label="Refresh changes">
           <Button
@@ -70,49 +72,50 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
         </TooltipWrapper>
         {changes?.loading && <Progress label="Reading changes" />}
       </div>
-      {task.workspace_strategy === "current_repo" ? (
-        <p className="help changes-note">
-          {task.end_tree
-            ? "Changes in this checkout from the task's start to the end of its latest turn, including any made outside the task."
-            : "Changes in this checkout since the task started, including any made outside the task."}
-        </p>
-      ) : (
-        branch &&
-        data?.state !== "branch_deleted" && (
-          <div className="changes-commands">
-            <CommandLine label="Branch" command={branch} />
-            {removed ? (
-              <CommandLine
-                label="Check out"
-                command={`git checkout ${branch}`}
-              />
-            ) : (
-              task.workspace && (
+      {task.workspace_strategy === "current_repo"
+        ? data?.state !== "end_unrecorded" && (
+            <p className="help changes-note">
+              Uncommitted changes to the files this task changed, including
+              edits to them made outside the task. Committed changes are in the
+              Git history.
+            </p>
+          )
+        : branch &&
+          data?.state !== "branch_deleted" && (
+            <div className="changes-commands">
+              <CommandLine label="Branch" command={branch} />
+              {removed ? (
                 <CommandLine
-                  label="Worktree"
-                  command={`cd ${task.workspace}`}
+                  label="Check out"
+                  command={`git checkout ${branch}`}
                 />
-              )
-            )}
-            {task.base_commit && (
+              ) : (
+                task.workspace && (
+                  <CommandLine
+                    label="Worktree"
+                    command={`cd ${task.workspace}`}
+                  />
+                )
+              )}
+              {task.base_commit && (
+                <CommandLine
+                  label="Compare"
+                  command={`git diff ${task.base_commit}...${branch}`}
+                />
+              )}
               <CommandLine
-                label="Compare"
-                command={`git diff ${task.base_commit}...${branch}`}
+                label="Push"
+                command={`git push -u origin ${branch}`}
               />
-            )}
-            <CommandLine
-              label="Push"
-              command={`git push -u origin ${branch}`}
-            />
-            {!removed && (
-              <p className="help changes-note">
-                Compare and Push use the branch's commits; commit in the
-                worktree first to include uncommitted changes.
-              </p>
-            )}
-          </div>
-        )
-      )}
+              {!removed && (
+                <p className="help changes-note">
+                  Uncommitted changes in the worktree. Committed changes are on
+                  the branch: Compare shows them, and Push sends only them, so
+                  commit these first to include them.
+                </p>
+              )}
+            </div>
+          )}
       <WorktreeActions task={task} changes={changes} />
     </div>
   );

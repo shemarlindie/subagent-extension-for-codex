@@ -25,12 +25,13 @@ function changesFact(changes?: ChangesState) {
   if (!changes?.data) return "Reading…";
   if (changes.data.state === "branch_deleted")
     return "The worktree and its branch were deleted";
+  if (changes.data.state === "end_unrecorded")
+    return "Unavailable; the task ended before its end state was recorded";
 
-  const summary = `${changesSummary(changes.data)}${changes.scope === "turn" ? " in this turn" : ""}`;
+  if (changes.data.state === "workspace_missing")
+    return `On branch ${changes.data.branch}; the worktree was removed`;
 
-  return changes.data.state === "workspace_missing"
-    ? `${summary} on branch ${changes.data.branch}; the worktree was removed`
-    : summary;
+  return `${changesSummary(changes.data)} uncommitted${changes.scope === "turn" ? " in this turn" : ""}`;
 }
 
 export function TaskDetails({ task, changes }: TaskDetailsProps) {

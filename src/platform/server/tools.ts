@@ -262,7 +262,7 @@ export function definitions(
     }),
     get_agent_changes: tool({
       description:
-        "Read what a task changed, live from Git: a unified diff with per-file stats, for the whole task (default) or its latest turn. Worktree tasks diff their base commit against the worktree now. current_repo tasks diff a snapshot from task start against a snapshot from the end of the latest turn, or the checkout now while a turn runs, so edits by anyone in that checkout in between are included. Every page lists every file; large diffs come in pages of whole files, so pass next_cursor back to read the rest. state workspace_missing means the worktree was removed, so the changes are those committed on branch; branch_deleted means the branch is gone too.",
+        "Read what a task changed, live from Git: a unified diff with per-file stats, for the whole task (default) or its latest turn. Worktree tasks diff their base commit against the worktree now. current_repo tasks diff a snapshot from task start against a snapshot from when the worker last stopped (its latest turn ended, or it began waiting for input), or the checkout now while it runs, so edits by anyone in that checkout in between are included. Every page lists every file; large diffs come in pages of whole files, so pass next_cursor back to read the rest. state workspace_missing means the worktree was removed, so the changes are those committed on branch; branch_deleted means the branch is gone too; end_unrecorded means a current_repo task ended before its end state was recorded, so its changes can't be separated from later edits.",
       schema: taskId.extend({
         scope: z.enum(["task", "turn"]).default("task"),
         cursor: z.string().max(300).optional(),
@@ -272,7 +272,7 @@ export function definitions(
     }),
     get_agent_changed_file: tool({
       description:
-        "Read the current content of one file a task changed, from its worktree or checkout. path must be listed by get_agent_changes (the whole task or its latest turn). state is deleted when the change removed the file, or binary with only its size for non-image binary files; images come as base64. Large files come in parts: pass next_cursor back to read the rest.",
+        "Read one file a task changed, where get_agent_changes ends: its worktree now (or, once removed, its branch), or a current_repo checkout as the worker last left it. path must be listed by get_agent_changes (the whole task or its latest turn). state is deleted when the change removed the file, or binary with only its size for non-image binary files; images come as base64. Large files come in parts: pass next_cursor back to read the rest.",
       schema: taskId.extend({
         path: z.string().min(1).max(4096),
         cursor: z.string().max(300).optional(),
@@ -353,7 +353,13 @@ export function definitions(
     get_user_agent_changes: tool({
       ...tools.get_agent_changes,
       description:
-        "User interface only: a task's changes for the panel's Changes tab, as get_agent_changes returns them.",
+        "User interface only: a task's uncommitted changes since it started, for the panel's Changes tab, in the files the task changed (all of a worktree's, for the whole task). Each file is compared with its content at the start, or its committed content if committed since, so earlier uncommitted edits and committed work are left out. Otherwise as get_agent_changes returns them.",
+      run: (a) =>
+        c.workspaces.uncommittedChanges(
+          c.store.get(a.task_id, owner),
+          a.scope,
+          a.cursor,
+        ),
     }),
     remove_user_agent_worktree: tool({
       description:
@@ -370,7 +376,15 @@ export function definitions(
     get_user_agent_changed_file: tool({
       ...tools.get_agent_changed_file,
       description:
-        "User interface only: a changed file's content for the panel's preview, as get_agent_changed_file returns it.",
+        "User interface only: the content now of a file among a task's uncommitted changes, for the panel's preview, as get_agent_changed_file returns it.",
+      run: (a) =>
+        c.workspaces.changedFile(
+          c.store.get(a.task_id, owner),
+          a.path,
+          a.cursor,
+          undefined,
+          true,
+        ),
     }),
   };
 }

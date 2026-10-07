@@ -2023,7 +2023,8 @@ test("the Changes tab reads every page and shows the worktree branch and its com
     ],
   );
 
-  assert.ok(screen.getByText("+1 −1, 2 files"));
+  assert.ok(screen.getByText("+1 −1, 2 files uncommitted"));
+  assert.ok(screen.getByText(/^Uncommitted changes in the worktree/));
   assert.ok(screen.getByText("Binary file changed · 2.0 KB"));
   assert.ok(screen.getByText("git diff abc123...agent/one"));
   assert.ok(screen.getByText("git push -u origin agent/one"));
@@ -2033,7 +2034,7 @@ test("the Changes tab reads every page and shows the worktree branch and its com
 
   await user.click(screen.getByRole("tab", { name: "Details" }));
   assert.ok(screen.getByText("agent/one"));
-  assert.ok(screen.getAllByText("+1 −1, 2 files").length);
+  assert.ok(screen.getAllByText("+1 −1, 2 files uncommitted").length);
 });
 
 test("the Changes tab offers This turn after a second turn and explains empty states", async (t) => {
@@ -2042,13 +2043,15 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   });
 
   await user.click(screen.getByRole("tab", { name: "Changes" }));
-  await screen.findByText("No changes.");
+  // Empty states point at the Git history for committed changes.
+  await screen.findByText(/^No uncommitted changes\. .*Git history/);
   transport.changes = [{ ...transport.changes[0], scope: "turn" }];
   await user.click(screen.getByRole("button", { name: "This turn" }));
-  await screen.findByText("No changes in this turn.");
+  await screen.findByText(/^No uncommitted changes from this turn\./);
   assert.equal(transport.calls.at(-1)?.args.scope, "turn");
 
-  // A removed worktree names the branch and how to check it out.
+  // A removed worktree has nothing uncommitted; it names the branch and how
+  // to check it out.
   transport.changes = [
     {
       ...transport.changes[0],
@@ -2251,7 +2254,7 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
   );
 });
 
-test("a current_repo task's changes say they include edits made outside the task", async (t) => {
+test("a current_repo task's changes say they're the uncommitted ones in its files, including edits made outside the task", async (t) => {
   const { user } = await setup(t, (transport) => {
     transport.tasks = [{ ...task(), workspace_strategy: "current_repo" }];
   });
@@ -2259,28 +2262,28 @@ test("a current_repo task's changes say they include edits made outside the task
   await user.click(screen.getByRole("tab", { name: "Changes" }));
 
   assert.ok(
-    await screen.findByText(/since the task started.*outside the task/),
+    await screen.findByText(
+      /^Uncommitted changes to the files this task changed, including edits to them made outside the task\. Committed changes are in the Git history\.$/,
+    ),
   );
 
   assertAbsent(screen.queryByText(/git push/));
 });
 
-test("a current_repo task's changes say they end with its latest turn once it ends", async (t) => {
+test("a current_repo task that ended without an end snapshot says why it has no changes", async (t) => {
   const { user } = await setup(t, (transport) => {
-    transport.tasks = [
-      {
-        ...task(),
-        workspace_strategy: "current_repo",
-        end_tree: "a".repeat(40),
-      },
+    transport.tasks = [{ ...task(), workspace_strategy: "current_repo" }];
+
+    transport.changes = [
+      { ...transport.changes[0], state: "end_unrecorded", files: [] },
     ];
   });
 
   await user.click(screen.getByRole("tab", { name: "Changes" }));
 
-  assert.ok(
-    await screen.findByText(/to the end of its latest turn.*outside the task/),
-  );
+  assert.ok(await screen.findByText(/ended before its end state was recorded/));
+
+  assertAbsent(screen.queryByText(/including any made outside the task/));
 });
 
 test("dialog focuses task, preserves the draft and field node during refresh, and restores trigger focus", async (t) => {

@@ -14,7 +14,7 @@ import {
 } from "../../shared/contracts.js";
 import { Projects } from "../projects/projects.js";
 import { Settings } from "../settings/settings.js";
-import { Workspaces } from "../workspaces/workspace.js";
+import { headCommit, Workspaces } from "../workspaces/workspace.js";
 import { Forms } from "./forms.js";
 import {
   approvalDecider,
@@ -385,6 +385,8 @@ export class Control {
           : await this.workspaces.snapshot(t.workspace!);
 
       await this.workspaces.pin(t, "turn-start", t.turn_start_tree);
+      // Where the turn's later commits start, for its uncommitted changes.
+      t.turn_head = await headCommit(t.workspace!);
       // Changes are live again until this turn ends.
       delete t.end_tree;
       turnStarted = true;
@@ -510,6 +512,9 @@ export class Control {
 
             try {
               await waitForInputSlot(previous, inputSignal);
+              // The worker is blocked until the input comes, so its changes
+              // stop here while it waits.
+              await this.recordEnd(t);
               if (inputSignal.aborted) throw new Error("Input interrupted");
               t.status = "waiting";
 
@@ -545,6 +550,8 @@ export class Control {
                   a.resolveInput = undefined;
                   delete t.pending_input;
                   delete t.waiting_reason;
+                  // The worker resumes, so its changes are live again.
+                  delete t.end_tree;
                   t.status = "running";
                   this.store.save(t);
 
@@ -601,22 +608,11 @@ export class Control {
       if (!terminationUnconfirmed) delete t.waiting_reason;
       if (t.status === "cancelled") t.completed_at = now();
 
-      // A current_repo task's changes stop where its turn ended, so later
-      // edits to the shared checkout aren't counted. A worker that may still
-      // be running keeps them live, as does a failed snapshot.
-      if (
-        turnStarted &&
-        !terminationUnconfirmed &&
-        t.workspace_strategy === "current_repo"
-      )
-        try {
-          const end = await this.workspaces.snapshot(t.workspace!);
-          await this.workspaces.pin(t, "end", end);
-          t.end_tree = end;
-        } catch {
-          // Left live.
-        }
-
+      // A worker that may still be running keeps its changes live. One
+      // stopped while waiting for input keeps the end from when it began
+      // waiting, since it was blocked from then on.
+      if (turnStarted && !terminationUnconfirmed && !t.end_tree)
+        await this.recordEnd(t);
       this.store.save(t);
 
       this.store.event(t, `task.${t.status}`, {
@@ -626,6 +622,24 @@ export class Control {
 
       this.active.delete(t.id);
       if (!this.stopped) queueMicrotask(() => void this.schedule());
+    }
+  }
+
+  /**
+   * Ends a current_repo task's changes at a pinned snapshot of the checkout
+   * now, when its turn ends or it waits for input, so later edits to the
+   * shared checkout aren't counted. A failed snapshot leaves them as they
+   * were.
+   */
+  private async recordEnd(t: Task) {
+    if (t.workspace_strategy !== "current_repo") return;
+
+    try {
+      const end = await this.workspaces.snapshot(t.workspace!);
+      await this.workspaces.pin(t, "end", end);
+      t.end_tree = end;
+    } catch {
+      // Left as they were.
     }
   }
 
@@ -641,6 +655,10 @@ export class Control {
     if (changes?.state === "branch_deleted")
       return [
         `Dependency ${d.id}'s worktree and branch were deleted, so its changes are unavailable.`,
+      ];
+    if (changes?.state === "end_unrecorded")
+      return [
+        `Dependency ${d.id} ended before its end state was recorded, so its changes can't be told apart from later edits to its checkout.`,
       ];
 
     const removed = changes?.state === "workspace_missing";

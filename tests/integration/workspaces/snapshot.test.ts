@@ -163,16 +163,19 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
     assert.ok(first.start_tree);
     assert.equal(first.turn_start_tree, first.start_tree);
     assert.deepEqual(s.changed("HEAD", first.start_tree), ["user.txt"]);
-    // A running turn's changes are live.
-    assert.equal(first.end_tree, undefined);
 
-    // Each ended turn takes an end snapshot; the next turn clears it.
-    await c.stop("alice", t.id, "interrupted");
-    const paused = c.store.get(t.id, "alice");
-
-    assert.deepEqual(s.changed(paused.start_tree!, paused.end_tree!), [
+    // Waiting for input ends the changes, since the worker is blocked.
+    assert.deepEqual(s.changed(first.start_tree, first.end_tree!), [
       "turn-1.txt",
     ]);
+
+    // Stopping a waiting task keeps that end, leaving out edits made while
+    // it waited; the next turn clears it.
+    await writeFile(join(s.repo, "during-wait.txt"), "user\n");
+    await c.stop("alice", t.id, "interrupted");
+    const paused = c.store.get(t.id, "alice");
+    assert.equal(paused.end_tree, first.end_tree);
+    await rm(join(s.repo, "during-wait.txt"));
 
     await c.continue("alice", t.id);
     await until(() => c.store.get(t.id, "alice").status === "completed");
@@ -180,6 +183,8 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
     assert.equal(done.start_tree, first.start_tree);
     assert.notEqual(done.turn_start_tree, first.turn_start_tree);
     assert.notEqual(done.end_tree, paused.end_tree);
+    // Each turn records the commit HEAD was on.
+    assert.equal(done.turn_head, s.git("rev-parse", "HEAD").trim());
 
     // The turn snapshot scopes a diff to the latest turn; the start snapshot
     // to the whole task. Both end where the turn ended, leaving out later edits.

@@ -270,6 +270,244 @@ test("a removed worktree's changes are its branch's commits, and older tasks get
   }
 });
 
+test("uncommitted changes keep the task's files that differ from HEAD, and drop them once committed", async () => {
+  const s = await setup();
+
+  const commit = (...paths: string[]) => {
+    s.git(s.repo, "add", "--", ...paths);
+
+    s.git(
+      s.repo,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "-qm",
+      "user commit",
+    );
+  };
+
+  // file-0.txt is 20 lines of "line 0"; each edit replaces one line.
+  const lines = Array.from({ length: 20 }, () => "line 0");
+
+  const edit = async (line: number, text: string) => {
+    lines[line] = text;
+    await writeFile(join(s.repo, "file-0.txt"), `${lines.join("\n")}\n`);
+  };
+
+  try {
+    // The user's own uncommitted edits, from before the task: one to a file
+    // the task leaves alone, one to a file it also edits.
+    await writeFile(join(s.repo, "file-2.txt"), "user's\n");
+    await edit(0, "user's edit");
+    const t = await s.task("current_repo");
+    await edit(19, "task's edit");
+    await writeFile(join(s.repo, "task.txt"), "task\n");
+    t.status = "completed";
+    t.end_tree = await s.workspaces.snapshot(s.repo);
+    // An edit after the task ended, to a file it didn't change.
+    await writeFile(join(s.repo, "file-1.txt"), "later\n");
+
+    const uncommitted = () => s.workspaces.uncommittedChanges(t);
+
+    const paths = async () => (await uncommitted()).files.map((f) => f.path);
+
+    assert.deepEqual(await paths(), ["file-0.txt", "task.txt"]);
+
+    // Only the task's edit shows, not the user's earlier one in the same file.
+    assert.match((await uncommitted()).diff, /\+task's edit/);
+    assert.doesNotMatch((await uncommitted()).diff, /user's edit/);
+
+    // Committing a file drops it; the panel previews only what's left.
+    commit("file-0.txt");
+    assert.deepEqual(await paths(), ["task.txt"]);
+
+    await assert.rejects(
+      s.workspaces.changedFile(t, "file-0.txt", undefined, undefined, true),
+      /not among this task's uncommitted changes/,
+    );
+
+    assert.equal(
+      (
+        await s.workspaces.changedFile(
+          t,
+          "task.txt",
+          undefined,
+          undefined,
+          true,
+        )
+      ).content,
+      "task\n",
+    );
+
+    // A later edit to a task's file is uncommitted again, and shows alone:
+    // what was committed stays out.
+    await edit(10, "edited again");
+    assert.deepEqual(await paths(), ["file-0.txt", "task.txt"]);
+
+    const again = (await uncommitted()).files[0];
+    assert.deepEqual([again.additions, again.deletions], [1, 1]);
+    assert.doesNotMatch((await uncommitted()).diff, /task's edit/);
+
+    // A deletion committed since the start leaves the baseline too.
+    await rm(join(s.repo, "file-2.txt"));
+    commit("file-2.txt");
+    assert.deepEqual(await paths(), ["file-0.txt", "task.txt"]);
+
+    // Pages hold whole files, and later pages read the same state.
+    const first = await s.workspaces.uncommittedChanges(
+      t,
+      "task",
+      undefined,
+      1,
+    );
+
+    assert.match(first.diff, /^diff --git a\/file-0.txt/);
+    assert.ok(first.next_cursor);
+    await writeFile(join(s.repo, "task.txt"), "changed between pages\n");
+
+    const second = await s.workspaces.uncommittedChanges(
+      t,
+      "task",
+      first.next_cursor,
+      1,
+    );
+
+    assert.match(second.diff, /^diff --git a\/task.txt[\s\S]*\+task$/m);
+    assert.equal(second.next_cursor, undefined);
+    await writeFile(join(s.repo, "task.txt"), "task\n");
+
+    commit("file-0.txt", "task.txt");
+    assert.deepEqual(await paths(), []);
+
+    // The full view still lists everything the task changed.
+    assert.deepEqual(
+      (await s.workspaces.changes(t)).files.map((f) => f.path),
+      ["file-0.txt", "task.txt"],
+    );
+
+    // This turn measures from the turn's start, and from the commit HEAD was
+    // on then. file-0.txt, committed before the turn, has an edit left
+    // uncommitted when the turn starts; only the turn's own edit shows. A
+    // commit made during the turn drops the files it took.
+    await edit(5, "before the turn");
+    t.turn_start_tree = await s.workspaces.snapshot(s.repo);
+    t.turn_head = s.git(s.repo, "rev-parse", "HEAD").trim();
+    await edit(6, "in the turn");
+    await writeFile(join(s.repo, "turn.txt"), "turn\n");
+    commit("turn.txt");
+    t.end_tree = await s.workspaces.snapshot(s.repo);
+    const turn = await s.workspaces.uncommittedChanges(t, "turn");
+
+    assert.deepEqual(
+      turn.files.map((f) => f.path),
+      ["file-0.txt"],
+    );
+
+    assert.match(turn.diff, /\+in the turn/);
+    // It may be a context line, but isn't added or removed.
+    assert.doesNotMatch(turn.diff, /^[-+].*before the turn/m);
+  } finally {
+    await s.close();
+  }
+});
+
+test("a worktree's uncommitted changes are all of its own, and none once it's removed", async () => {
+  const s = await setup();
+
+  try {
+    const t = await s.task("worktree");
+    const w = t.workspace!;
+    await writeFile(join(w, "committed.txt"), "committed\n");
+    s.git(w, "add", "committed.txt");
+
+    s.git(
+      w,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "-qm",
+      "worker commit",
+    );
+
+    await writeFile(join(w, "file-0.txt"), "draft\n");
+    await writeFile(join(w, "new.txt"), "new\n");
+
+    assert.deepEqual(
+      (await s.workspaces.uncommittedChanges(t)).files.map((f) => f.path),
+      ["file-0.txt", "new.txt"],
+    );
+
+    // This turn keeps the files changed since the turn started.
+    t.turn_start_tree = await s.workspaces.snapshot(w);
+    await writeFile(join(w, "turn.txt"), "turn\n");
+
+    assert.deepEqual(
+      (await s.workspaces.uncommittedChanges(t, "turn")).files.map(
+        (f) => f.path,
+      ),
+      ["turn.txt"],
+    );
+
+    s.git(s.repo, "worktree", "remove", "--force", w);
+
+    assert.deepEqual(await s.workspaces.uncommittedChanges(t), {
+      scope: "task",
+      state: "workspace_missing",
+      branch: t.branch,
+      files: [],
+      additions: 0,
+      deletions: 0,
+      diff: "",
+    });
+  } finally {
+    await s.close();
+  }
+});
+
+test("a current_repo task that ended without an end snapshot has no changes to show", async () => {
+  const s = await setup();
+
+  try {
+    const t = await s.task("current_repo");
+    await writeFile(join(s.repo, "file-0.txt"), "changed\n");
+
+    // While a turn runs, its changes are live.
+    assert.equal((await s.workspaces.changes(t)).files.length, 1);
+
+    // Ended before end snapshots, the checkout now mixes in later edits.
+    t.status = "completed";
+
+    assert.deepEqual(await s.workspaces.changes(t), {
+      scope: "task",
+      state: "end_unrecorded",
+      files: [],
+      additions: 0,
+      deletions: 0,
+      diff: "",
+    });
+
+    await assert.rejects(
+      s.workspaces.changedFile(t, "file-0.txt"),
+      /ended before its end state was recorded/,
+    );
+
+    // With one, its changes end there.
+    t.end_tree = await s.workspaces.snapshot(s.repo);
+    await writeFile(join(s.repo, "file-1.txt"), "later\n");
+
+    assert.deepEqual(
+      (await s.workspaces.changes(t)).files.map((f) => f.path),
+      ["file-0.txt"],
+    );
+  } finally {
+    await s.close();
+  }
+});
+
 test("changed files are read whole or in parts, with images as base64 and other binaries as a size", async () => {
   const s = await setup();
 

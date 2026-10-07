@@ -27,9 +27,9 @@ Check in the browser when a change is large, when seeing it would help, or when 
   - **Convert the test suite to the new runner**: exceeds the 200-event activity tail (trimmed timeline). Use it to test timeline scrolling, since most other timelines are short.
   - **Catalogue the design assets**: rare content blocks and SDK signals (thinking, images, documents, web search, plugin and memory updates).
   - Changes tab, each read from a real Git repository (`ui/dev/preview/change-fixtures.ts`):
-    - **Tighten the task inspector layout**: a worktree task with two committed turns, so **This turn** shows. Clean, so **Remove worktree** removes it at once.
+    - **Tighten the task inspector layout**: a worktree task with two committed turns, so **This turn** shows, with no uncommitted changes (the empty state). Clean, so **Remove worktree** removes it at once.
     - **Refactor the billing module**: `current_repo`, with the user's earlier README edit left out, renames, a deletion and a binary image.
-    - **Fix the flaky retry test**: the worktree was removed; the branch remains, and its commit is the diff (`task.worktree_removed` event).
+    - **Fix the flaky retry test**: the worktree was removed; the branch remains (`task.worktree_removed` event).
     - **Draft the release notes**: the worktree and branch were deleted (`task.branch_deleted` event).
     - **Speed up the production build**: the 60-file diff from `large-files.ts`, uncommitted, so **Remove worktree** asks first.
     - **Profile the production build**: every file in `large-files.ts`, added. Its diff comes in several pages; use it for the previews.

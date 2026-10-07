@@ -209,9 +209,12 @@ export interface Task extends Start {
   start_tree?: string;
   /** Snapshot tree of the workspace when the latest turn started. */
   turn_start_tree?: string;
+  /** The commit the workspace's HEAD was on when the latest turn started. */
+  turn_head?: string;
   /**
    * current_repo: snapshot tree of the checkout when the latest turn ended,
-   * where its changes stop; absent while a turn runs.
+   * or when it began waiting for input, where its changes stop; absent while
+   * the worker runs.
    */
   end_tree?: string;
   session_id?: string;
