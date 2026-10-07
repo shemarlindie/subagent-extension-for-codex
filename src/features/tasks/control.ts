@@ -22,6 +22,7 @@ import { providerMetadata } from "../providers/metadata.js";
 import { assertSelectedProviderOptions } from "../providers/options.js";
 import { Settings } from "../settings/settings.js";
 import { headCommit, Workspaces } from "../workspaces/workspace.js";
+import { Drafts } from "./drafts.js";
 import { Forms } from "./forms.js";
 import { replyExcerpt } from "./reply.js";
 import { Store } from "./store.js";
@@ -58,6 +59,13 @@ async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {
   });
 }
 
+/** The SDK message id a stored worker message carries, which its draft shares. */
+function storedMessageId(data: Record<string, unknown>) {
+  const raw = data.raw_response as { message?: { id?: unknown } } | undefined;
+
+  return typeof raw?.message?.id === "string" ? raw.message.id : undefined;
+}
+
 interface Active {
   /** The task as the turn holds it; changes while it runs go here. */
   task: Task;
@@ -84,6 +92,8 @@ export class Control {
   ownerWorker = hostname();
   settings: Settings;
   forms: Forms;
+  /** Running tasks' unfinished messages, kept in memory. */
+  drafts: Drafts;
   projects?: Projects;
   constructor(
     public store: Store,
@@ -99,6 +109,7 @@ export class Control {
     );
 
     this.forms = new Forms(this);
+    this.drafts = new Drafts(store.bus);
   }
 
   async recover() {
@@ -445,6 +456,8 @@ export class Control {
             this.store.save(t);
             this.store.event(t, "task.steer_taken", { message_id: id });
           },
+          delta: (messageId, text) =>
+            this.drafts.append(t.owner, t.id, messageId, text),
           emit: (type, data) => {
             if (
               type === "agent.completed" &&
@@ -466,6 +479,9 @@ export class Control {
             }
 
             this.store.event(t, type, data);
+            // The stored message replaces its draft.
+            if (type === "agent.message")
+              this.drafts.clear(t.id, storedMessageId(data));
           },
           session: (id, ref) => {
             t.session_id = id;
@@ -623,6 +639,7 @@ export class Control {
         cost_usd: (t.cost_usd ?? 0) - costBefore,
       });
 
+      this.drafts.clear(t.id);
       this.endTurn(t, outcome, a.sendPending);
       this.store.save(t);
 
@@ -909,6 +926,8 @@ export class Control {
     } catch {
       end = undefined;
     }
+
+    this.drafts.clear(t.id);
 
     this.store.event(t, "agent.reply", {
       text,

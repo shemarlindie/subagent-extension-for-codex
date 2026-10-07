@@ -2,6 +2,8 @@ import type { Transport, TransportEvents } from "../../shared/state/types";
 
 export class ConsoleTransport implements Transport {
   readonly embedded = false;
+  // Drafts arrive as `delta` events on the event stream.
+  readonly streamsDrafts = true;
   private events?: TransportEvents;
   private stream?: EventSource;
   private timer?: ReturnType<typeof setTimeout>;
@@ -60,6 +62,10 @@ export class ConsoleTransport implements Transport {
       clearTimeout(this.timer);
       this.timer = setTimeout(() => this.events?.refresh(), 100);
     });
+
+    this.stream.addEventListener("delta", (event) =>
+      this.events?.draft(JSON.parse((event as MessageEvent).data)),
+    );
   }
 
   dispose() {

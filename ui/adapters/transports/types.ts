@@ -1,3 +1,4 @@
+import type { DraftUpdate } from "../../../src/features/tasks/drafts.js";
 import type { PanelData } from "../../shared/state/types.js";
 
 export type HostState = {
@@ -14,10 +15,14 @@ export type TransportEvents = {
   login(): void;
   host(state: HostState): void;
   teardown(): void;
+  /** A streamed change to a running task's draft. */
+  draft(update: DraftUpdate): void;
 };
 
 export interface Transport {
   embedded: boolean;
+  /** Drafts arrive as they're written; otherwise the panel reads them. */
+  streamsDrafts?: boolean;
   connect(events: TransportEvents): Promise<void>;
   tool<T>(name: string, args?: Record<string, unknown>): Promise<T>;
   watch(): void;

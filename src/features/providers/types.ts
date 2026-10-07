@@ -37,6 +37,11 @@ export interface RunContext {
   acceptSteers(sink: (steer: Steer) => boolean): void;
   /** Reports that the turn took a steer. One it never takes is left over. */
   steerTaken(id: string): void;
+  /**
+   * Streams text as the worker writes a message, before the message itself
+   * is emitted. Deltas aren't stored.
+   */
+  delta(messageId: string, text: string): void;
   emit: (type: string, data: Record<string, unknown>) => void;
   session: (id: string, stateRef: string) => void;
   input: (

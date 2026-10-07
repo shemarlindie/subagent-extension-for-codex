@@ -11,6 +11,7 @@ import type {
 } from "../../features/settings/types.js";
 import type { DroppedSummary } from "../../features/tasks/activity/event-history.js";
 import type { ChatState } from "../../features/tasks/chat/chat-state.js";
+import type { DraftState } from "../../features/tasks/chat/draft-state.js";
 import type { Filter, Tab, Task } from "../../features/tasks/types.js";
 
 export type PanelData = {
@@ -103,6 +104,8 @@ export type Snapshot = {
   droppedEvents?: DroppedSummary;
   /** The selected task's Chat, read alongside its events. */
   chat?: ChatState;
+  /** The selected task's message being written, streamed or read. */
+  draft?: DraftState;
   selected?: string;
   conversation?: string;
   repository?: string;

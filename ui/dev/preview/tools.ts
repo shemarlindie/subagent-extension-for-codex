@@ -6,7 +6,28 @@ import {
   roles,
   type Task,
 } from "../../../src/shared/contracts";
-import { previewEvents, previewProjects, previewTasks } from "./fixtures";
+import {
+  previewEvents,
+  previewProjects,
+  previewStreamingDraft,
+  previewTasks,
+} from "./fixtures";
+
+const streamStart = Date.now();
+
+/**
+ * The streaming fixture's draft so far: it grows about 60 characters a
+ * second from when the preview loaded, then starts over after a pause.
+ */
+function streamingDraft() {
+  const { messageId, text } = previewStreamingDraft;
+  const length = ((Date.now() - streamStart) / 1000) * 60;
+
+  return {
+    message_id: messageId,
+    text: text.slice(0, Math.max(1, Math.round(length % (text.length + 300)))),
+  };
+}
 
 const previewModels: ModelChoice[] = [
   {
@@ -256,6 +277,9 @@ export function previewTool(
           task,
           events.slice(-200),
           events.findLast((event) => event.type === "agent.reply"),
+          task.id === previewStreamingDraft.taskId
+            ? streamingDraft()
+            : undefined,
         );
       }),
     get_user_agent_chat: (() => {
@@ -272,6 +296,13 @@ export function previewTool(
         next_cursor: Math.max(after, events.at(-1)?.id ?? 0),
       };
     })(),
+    get_user_agent_draft: {
+      draft:
+        args.task_id === previewStreamingDraft.taskId ? streamingDraft() : null,
+      running: previewTasks.some(
+        (task) => task.id === args.task_id && task.status === "running",
+      ),
+    },
     get_agent_events: previewEvents.filter(
       (event) =>
         event.task_id === args.task_id && event.id > Number(args.after ?? 0),

@@ -47,6 +47,7 @@ async function context() {
   const abort = new AbortController();
   const events: { type: string }[] = [];
   const taken: string[] = [];
+  const deltas: [string, string][] = [];
   let sink: ((steer: Steer) => boolean) | undefined;
 
   const task: Task = {
@@ -84,9 +85,17 @@ async function context() {
     input: async () => ({ approved: false }),
     acceptSteers: (s) => (sink = s),
     steerTaken: (id) => taken.push(id),
+    delta: (id, text) => deltas.push([id, text]),
   };
 
-  return { c, abort, events, taken, steer: (steer: Steer) => sink!(steer) };
+  return {
+    c,
+    abort,
+    events,
+    taken,
+    deltas,
+    steer: (steer: Steer) => sink!(steer),
+  };
 }
 
 /**
@@ -264,4 +273,52 @@ test("an interrupt that fails stops the process instead", async () => {
   );
 
   assert.equal(query.options().abortController!.signal.aborted, true);
+});
+
+test("the main worker's text streams as deltas, and other stream frames are left out", async () => {
+  const ctx = await context();
+
+  const frame = (event: Frame, parent: string | null = null) => ({
+    type: "stream_event",
+    parent_tool_use_id: parent,
+    event,
+  });
+
+  const query = fakeQuery(async function* (next) {
+    await next();
+    yield frame({ type: "message_start", message: { id: "msg_1" } });
+
+    yield frame({
+      type: "content_block_delta",
+      delta: { type: "text_delta", text: "Hel" },
+    });
+
+    // A subagent's text and other deltas don't stream.
+    yield frame(
+      { type: "content_block_delta", delta: { type: "text_delta", text: "x" } },
+      "toolu_1",
+    );
+
+    yield frame({
+      type: "content_block_delta",
+      delta: { type: "input_json_delta", partial_json: "{" },
+    });
+
+    yield frame({
+      type: "content_block_delta",
+      delta: { type: "text_delta", text: "lo" },
+    });
+
+    yield endTurn;
+    yield result("Hello");
+  });
+
+  await new ClaudeAgentProvider(query.launch).run(ctx.c, "Prompt");
+
+  assert.deepEqual(ctx.deltas, [
+    ["msg_1", "Hel"],
+    ["msg_1", "lo"],
+  ]);
+
+  assert.ok(!ctx.events.some((e) => e.type === "claude.activity"));
 });

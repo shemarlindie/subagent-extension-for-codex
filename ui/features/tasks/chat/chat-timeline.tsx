@@ -41,8 +41,19 @@ export function ChatTimeline({ task }: ChatTimelineProps) {
     (item) => !(item.kind === "message" && waiting.has(item.id)),
   );
 
+  // The message being written, until the stored one with its id arrives.
+  const draft =
+    state.draft?.task === task.id
+      ? state.draft
+      : task.draft && { task: task.id, ...task.draft };
+
+  const streaming =
+    draft && !chat?.items.some((item) => item.id === draft.message_id)
+      ? draft
+      : undefined;
+
   const working =
-    composerMode(task) === "busy"
+    composerMode(task) === "busy" && !streaming
       ? task.status === "running" && state.events.length
         ? currentActivityStatus(state.events, task).text
         : statusLabel(task)
@@ -69,7 +80,14 @@ export function ChatTimeline({ task }: ChatTimelineProps) {
   useLayoutEffect(() => {
     const element = ref.current;
     if (element && atEnd.current) element.scrollTop = element.scrollHeight;
-  }, [items?.length, last?.event_id, working, task.pending_input?.id, task.id]);
+  }, [
+    items?.length,
+    last?.event_id,
+    working,
+    streaming?.text.length,
+    task.pending_input?.id,
+    task.id,
+  ]);
 
   return (
     <div
@@ -99,6 +117,21 @@ export function ChatTimeline({ task }: ChatTimelineProps) {
             <ChatNoteRow key={item.id} note={item} />
           ),
         )
+      )}
+      {streaming && (
+        <ChatMessageView
+          message={{
+            id: streaming.message_id,
+            event_id: Infinity,
+            timestamp: "",
+            turn: task.turn,
+            from: "worker",
+            kind: "message",
+            text: streaming.text,
+          }}
+          worker={worker}
+          streaming
+        />
       )}
       {working && (
         <div className="chat-working" role="status">

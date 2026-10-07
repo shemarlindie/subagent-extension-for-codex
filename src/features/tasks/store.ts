@@ -7,7 +7,8 @@ import { type Event, now, type Task } from "../../shared/contracts.js";
 
 export class Store {
   db: DatabaseSync;
-  bus = new EventEmitter();
+  // Long-poll reads each listen while they wait, so there can be many.
+  bus = new EventEmitter().setMaxListeners(0);
   constructor(path: string) {
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     this.db = new DatabaseSync(path);

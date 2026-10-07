@@ -309,6 +309,7 @@ test("run emits result accounting exactly once for success and failure", async (
     context.input = async () => ({ approved: false });
     context.acceptSteers = () => {};
     context.steerTaken = () => {};
+    context.delta = () => {};
 
     const message = {
       type: "result",

@@ -10,7 +10,7 @@ import { FixtureProvider } from "../../../dev/fixture-provider.js";
 import { Control } from "../../features/tasks/control.js";
 import { Store } from "../../features/tasks/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
-import type { Task } from "../../shared/contracts.js";
+import type { Provider, RunContext, Task } from "../../shared/contracts.js";
 import { callTool, definitions } from "./tools.js";
 
 async function until(fn: () => boolean) {
@@ -22,7 +22,7 @@ async function until(fn: () => boolean) {
   throw new Error("Timed out");
 }
 
-async function setup() {
+async function setup(provider: Provider = new FixtureProvider()) {
   const dir = await mkdtemp(join(tmpdir(), "conversation-tools-"));
   const repo = join(dir, "repo");
   await mkdir(repo);
@@ -38,7 +38,7 @@ async function setup() {
   const c = new Control(
     store,
     new Workspaces(join(dir, "worktrees"), [repo]),
-    new Map([["fixture", new FixtureProvider()]]),
+    new Map([["fixture", provider]]),
     repo,
   );
 
@@ -281,6 +281,83 @@ test("interrupt with send_pending sends the pending steers as the next turn", as
     await until(() => store.get(t.id, "alice").status === "completed");
     assert.equal(store.get(t.id, "alice").queue_paused, undefined);
   } finally {
+    await c.close();
+  }
+});
+
+test("a reply streams as a draft the panel and parent can read, and only the finished message is stored", async () => {
+  let finish!: () => void;
+  const finished = new Promise<void>((resolve) => (finish = resolve));
+
+  class Streaming extends FixtureProvider {
+    async run(c: RunContext) {
+      c.delta("msg_live", "Half ");
+      await new Promise((r) => setTimeout(r, 20));
+      c.delta("msg_live", "a reply");
+      await finished;
+
+      c.emit("agent.message", {
+        role: "assistant",
+        text: "Half a reply, done.",
+        raw_response: { message: { id: "msg_live" } },
+      });
+
+      return { reply: "Half a reply, done." };
+    }
+  }
+
+  const { c, store, parent, user, start } = await setup(new Streaming());
+
+  try {
+    const t = await start("Write");
+    await until(() => c.drafts.get(t.id)?.text === "Half ");
+
+    // Waits for the draft to grow past what the panel has.
+    const read = await user<{ draft: unknown; running: boolean }>(
+      "get_user_agent_draft",
+      { task_id: t.id, message_id: "msg_live", after_length: 5, wait_ms: 5000 },
+    );
+
+    assert.deepEqual(read, {
+      draft: { message_id: "msg_live", text: "Half a reply" },
+      running: true,
+    });
+
+    // Task reads include it as a fallback.
+    assert.deepEqual(
+      (await parent<{ draft: unknown }>("get_agent_task", { task_id: t.id }))
+        .draft,
+      read.draft,
+    );
+
+    // A parent's read that waits out its time includes it.
+    const messages = await parent<Messages & { draft?: unknown }>(
+      "get_agent_messages",
+      { task_id: t.id, after: store.lastEventId(t.id), wait_seconds: 0.1 },
+    );
+
+    assert.deepEqual(messages.messages, []);
+    assert.deepEqual(messages.draft, read.draft);
+
+    // Storing the message clears the draft, which a waiting read reports.
+    const cleared = user<{ draft: unknown }>("get_user_agent_draft", {
+      task_id: t.id,
+      message_id: "msg_live",
+      after_length: 12,
+      wait_ms: 5000,
+    });
+
+    finish();
+    assert.equal((await cleared).draft, null);
+    await until(() => store.get(t.id, "alice").status === "completed");
+    assert.equal(c.drafts.get(t.id), undefined);
+
+    // Deltas never reach the event log.
+    assert.ok(
+      !store.events(t.id, "alice").some((e) => e.type.includes("delta")),
+    );
+  } finally {
+    finish();
     await c.close();
   }
 });

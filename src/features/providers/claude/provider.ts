@@ -380,8 +380,9 @@ export class ClaudeAgentProvider implements Provider {
       abortController,
       persistSession: true,
       resume: c.task.session_id,
-      // Stream frames show when the final message ends, which is the last
-      // moment a steer the turn won't take can be withdrawn.
+      // Stream frames carry the reply as it's written, and show when the
+      // final message ends, the last moment a steer the turn won't take can
+      // be withdrawn.
       includePartialMessages: true,
       settingSources: ["user", "project", "local"],
       ...(nativeMode ? { permissionMode: nativeMode } : {}),
@@ -549,6 +550,8 @@ export class ClaudeAgentProvider implements Provider {
     };
 
     let reply: string | undefined;
+    // The main worker's message being streamed.
+    let streaming: string | undefined;
 
     try {
       for await (const m of stream) {
@@ -572,6 +575,19 @@ export class ClaudeAgentProvider implements Provider {
         }
 
         if (m.type === "stream_event") {
+          // The main worker's text streams as deltas; other frames are
+          // left out, and the finished message follows.
+          if (m.parent_tool_use_id === null) {
+            if (m.event.type === "message_start")
+              streaming = m.event.message.id;
+            else if (
+              m.event.type === "content_block_delta" &&
+              m.event.delta.type === "text_delta" &&
+              streaming
+            )
+              c.delta(streaming, m.event.delta.text);
+          }
+
           const stop =
             m.parent_tool_use_id === null &&
             m.event.type === "message_delta" &&

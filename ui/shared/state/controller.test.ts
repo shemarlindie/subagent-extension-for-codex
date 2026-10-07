@@ -1013,3 +1013,54 @@ test("Failed filter shows failed, interrupted and live-failed tasks only", async
     ["failed", "interrupted", "live-failed"],
   );
 });
+
+test("the panel follows a running task's draft by chained reads, then reads the stored message", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a")];
+  const drafts = ["Hel", "Hello", "Hello there"];
+
+  transport.handler = (name, args) => {
+    if (name !== "get_user_agent_draft") return undefined;
+    const text = drafts.shift();
+
+    // After the last piece the message is stored and the turn has ended.
+    return Promise.resolve(
+      text
+        ? { draft: { message_id: "m", text }, running: true }
+        : { draft: null, running: false },
+    ).then((read) => {
+      assert.equal(args.wait_ms, 20000);
+
+      return read;
+    });
+  };
+
+  // A wide panel selects the running task on start.
+  await controller.start();
+  assert.equal(controller.getSnapshot().selected, "a");
+
+  await vi.waitFor(() =>
+    assert.ok(
+      transport.calls.filter((call) => call.name === "get_user_agent_draft")
+        .length >= 4,
+    ),
+  );
+
+  const reads = transport.calls
+    .filter((call) => call.name === "get_user_agent_draft")
+    .map((call) => [call.args.message_id, call.args.after_length])
+    .slice(0, 4);
+
+  // Each read asks only for what follows the draft it has.
+  assert.deepEqual(reads, [
+    [undefined, undefined],
+    ["m", 3],
+    ["m", 5],
+    ["m", 11],
+  ]);
+
+  await vi.waitFor(() =>
+    assert.equal(controller.getSnapshot().draft, undefined),
+  );
+});

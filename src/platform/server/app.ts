@@ -6,6 +6,7 @@ import express from "express";
 
 import { type Events } from "../../features/events/service.js";
 import { type Control } from "../../features/tasks/control.js";
+import type { DraftUpdate } from "../../features/tasks/drafts.js";
 import { type Event } from "../../shared/contracts.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
@@ -214,13 +215,24 @@ export function application(
       res.write(`id: ${e.id}\nevent: activity\ndata: ${JSON.stringify(e)}\n\n`);
     }; // Subscribe before replay so events cannot fall through a connection gap.
 
+    // Drafts stream as `delta` events without an id, so replay ignores them.
+    const sendDraft = (update: DraftUpdate, updateOwner: string) => {
+      if (owner === updateOwner)
+        res.write(`event: delta\ndata: ${JSON.stringify(update)}\n\n`);
+    };
+
     c.store.bus.on("event", send);
+    c.store.bus.on("draft", sendDraft);
     let replay;
 
     do {
       replay = c.store.streamEvents(owner, cursor);
       for (const e of replay) send(e, owner);
     } while (replay.length === 1000);
+
+    // A client that connects mid-message gets the draft so far.
+    for (const draft of c.drafts.forOwner(owner))
+      sendDraft({ ...draft, offset: 0 }, owner);
 
     const heartbeat = setInterval(() => {
       if (!bearer(req) && !auth.ownerFor(req.headers.cookie)) {
@@ -235,6 +247,7 @@ export function application(
     req.on("close", () => {
       clearInterval(heartbeat);
       c.store.bus.off("event", send);
+      c.store.bus.off("draft", sendDraft);
     });
   });
 

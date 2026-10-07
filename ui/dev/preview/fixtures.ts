@@ -1903,6 +1903,27 @@ const liveStates: {
 
 const liveTimelines = liveStates.map((live) => live.timeline);
 
+// --- A reply streaming in: the preview's draft grows with time since load ----
+const streaming = liveTimeline("streaming", 2200).tool(
+  "Read",
+  { file_path: "src/cache.ts" },
+  "1\texport const cache = new Map();",
+);
+
+/** The message the streaming fixture's worker is writing. */
+export const previewStreamingDraft = {
+  taskId: streaming.taskId,
+  messageId: "msg_preview_streaming",
+  text: `The cache never evicts entries, which is why memory grows during long sessions.
+
+I'd fix it in two steps:
+
+1. **Bound the size.** Replace the \`Map\` with a small LRU that keeps the 500 most recent entries.
+2. **Expire stale entries.** Store each entry's write time and drop anything older than ten minutes on read.
+
+The first step alone stops the growth; the second keeps results fresh after the underlying files change. Neither changes the cache's public API, so callers stay as they are.`,
+};
+
 /** Expected inspector status line for each live task, keyed by task id. */
 export const previewLiveStatus = Object.fromEntries(
   liveStates.map((live) => [live.timeline.taskId, live.status]),
@@ -2323,6 +2344,18 @@ export const previewTasks: Task[] = [
     cost_usd: longChatTurns * 0.12,
     ...timestamps(130, 30),
   },
+  {
+    ...taskBase,
+    id: streaming.taskId,
+    title: "Live: streaming reply",
+    description: "Shows a reply streaming into Chat as the worker writes it.",
+    worker_profile: "implementer",
+    status: "running",
+    workspace_strategy: "current_repo",
+    budget: { max_runtime_minutes: null, max_cost_usd: null },
+    run_started_at: liveClock(),
+    ...timestamps(135, 1),
+  },
   ...liveTasks,
 ];
 
@@ -2347,5 +2380,6 @@ export const previewEvents: Event[] = [
   conversationTask,
   budgetTask,
   longChat,
+  streaming,
   ...liveTimelines,
 ].flatMap((timeline) => timeline.events);

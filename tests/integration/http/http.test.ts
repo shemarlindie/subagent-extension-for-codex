@@ -997,7 +997,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
   }
 });
 
-test("SSE requires authentication and replays owned events in global cursor order", async () => {
+test("SSE requires authentication, replays owned events in global cursor order and streams drafts without ids", async () => {
   const dir = await mkdtemp(join(tmpdir(), "ac-sse-"));
 
   const c = new Control(
@@ -1044,6 +1044,9 @@ test("SSE requires authentication and replays owned events in global cursor orde
   const first = c.store.event(a, "test.first");
   c.store.event(b, "test.secret");
   const last = c.store.event(a, "test.last");
+  // A client that connects mid-message gets the draft so far.
+  c.drafts.append("local", "a", "msg_a", "Hel");
+  c.drafts.append("other", "b", "msg_b", "secret draft");
 
   try {
     assert.equal((await fetch(base + "/api/events")).status, 401);
@@ -1065,10 +1068,27 @@ test("SSE requires authentication and replays owned events in global cursor orde
     assert.ok(data.includes("test.last"));
     assert.ok(!data.includes("test.secret"));
     assert.ok(!data.includes("test.first"));
+
+    assert.ok(
+      data.includes(
+        'event: delta\ndata: {"task_id":"a","message_id":"msg_a","text":"Hel","offset":0}\n\n',
+      ),
+    );
+
+    assert.ok(!data.includes("secret draft"));
     const pending = reader.read();
     c.store.event(a, "test.live");
     const live = new TextDecoder().decode((await pending).value);
     assert.ok(live.includes("test.live"));
+    const delta = reader.read();
+    c.drafts.append("local", "a", "msg_a", "lo");
+
+    // A delta has no id, so a reconnect's replay cursor skips it.
+    assert.equal(
+      new TextDecoder().decode((await delta).value),
+      'event: delta\ndata: {"task_id":"a","message_id":"msg_a","offset":3,"text":"lo"}\n\n',
+    );
+
     abort.abort();
     await reader.cancel().catch(() => {});
   } finally {

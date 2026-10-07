@@ -162,6 +162,7 @@ async function context() {
     input: async () => ({ approved: false, message: "User declined" }),
     acceptSteers: () => {},
     steerTaken: () => {},
+    delta: () => {},
   };
 
   return { c, events, sessions, workspace };

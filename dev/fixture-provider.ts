@@ -34,7 +34,8 @@ export class FixtureProvider implements Provider {
   /**
    * Markers in a turn's prompt shape it: `[input]` asks a question, `[fail]`
    * fails, `[slow]` runs several steps that each take pending steers, as at
-   * a tool boundary, and `[late]` takes none, so they're left over.
+   * a tool boundary, and `[late]` takes none, so they're left over. The
+   * reply streams as deltas before it's stored.
    */
   async run(c: RunContext, prompt: string): Promise<TurnOutput> {
     const steers: Steer[] = [];
@@ -85,11 +86,25 @@ export class FixtureProvider implements Provider {
     if (prompt.includes("[late]"))
       await setTimeout(200, undefined, { signal: c.signal });
 
-    return {
-      reply: [
-        "Fixture task completed. No Claude execution occurred.",
-        ...taken.map((text) => `Also took: ${text}`),
-      ].join("\n"),
-    };
+    const reply = [
+      "Fixture task completed. No Claude execution occurred.",
+      ...taken.map((text) => `Also took: ${text}`),
+    ].join("\n");
+
+    // The reply streams in small pieces, then the whole message is stored.
+    const messageId = `fixture_msg_${c.task.id}_${c.task.turn}`;
+
+    for (const piece of reply.match(/\S+\s*/g) ?? []) {
+      c.delta(messageId, piece);
+      await setTimeout(2, undefined, { signal: c.signal });
+    }
+
+    c.emit("agent.message", {
+      role: "assistant",
+      text: reply,
+      raw_response: { message: { id: messageId }, parent_tool_use_id: null },
+    });
+
+    return { reply };
   }
 }

@@ -1,3 +1,4 @@
+import type { Draft, DraftUpdate } from "../../../src/features/tasks/drafts";
 import { pendingInputKind } from "../../../src/features/tasks/model";
 import type { BudgetRaise, Delivery } from "../../../src/shared/contracts";
 import {
@@ -13,7 +14,9 @@ import type {
 } from "../../features/changes/types";
 import { delegationDialog } from "../../features/delegation/delegation";
 import { readEventTail } from "../../features/tasks/activity/event-history";
+import { composerMode } from "../../features/tasks/chat/chat-model";
 import { type ChatRead, mergeChat } from "../../features/tasks/chat/chat-state";
+import { applyDraftUpdate } from "../../features/tasks/chat/draft-state";
 import { persistDialog, sameDialogReference } from "./dialog-persistence";
 import { initialState } from "./initial-state";
 import { filterCounts, selectedTask, terminal } from "./selectors";
@@ -38,6 +41,12 @@ import type {
 } from "./types";
 
 const POLL_INTERVAL_MS = 5000;
+/** How long one draft read waits for the draft to change. */
+const DRAFT_WAIT_MS = 20000;
+/** The least time between draft reads. */
+const DRAFT_READ_GAP_MS = 100;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function availableFilter(state: Snapshot, filter: Filter | null) {
   if (!filter || filter === "all") return filter;
@@ -334,6 +343,7 @@ export class Controller {
         login: () => this.patch({ loginRequired: true }),
         host: (host) => this.patch({ host }),
         teardown: () => this.dispose(),
+        draft: (update) => this.applyDraft(update),
       });
 
       if (this.disposed) return;
@@ -468,7 +478,7 @@ export class Controller {
         selected = undefined;
         this.explicitSelection = false;
         this.generation++;
-        this.patch({ events: [], chat: undefined });
+        this.patch({ events: [], chat: undefined, draft: undefined });
       }
 
       let tab = this.state.tab;
@@ -588,6 +598,8 @@ export class Controller {
       droppedEvents: dropped,
       chat: mergeChat(this.state.chat, id, chat),
     });
+
+    this.followDraft();
   }
 
   async select(id: string) {
@@ -599,6 +611,7 @@ export class Controller {
       selected: id,
       events: [],
       chat: undefined,
+      draft: undefined,
       tab: "chat",
     });
 
@@ -610,7 +623,14 @@ export class Controller {
     this.explicitSelection = false;
     this.browsing = true;
     ++this.generation;
-    this.patch({ selected: undefined, events: [], chat: undefined });
+
+    this.patch({
+      selected: undefined,
+      events: [],
+      chat: undefined,
+      draft: undefined,
+    });
+
     this.run(() => this.share());
   }
 
@@ -624,6 +644,7 @@ export class Controller {
 
   setTab(tab: Snapshot["tab"]) {
     this.patch({ tab });
+    this.followDraft();
     this.run(() => this.loadChangesIfStale());
   }
 
@@ -751,6 +772,7 @@ export class Controller {
       selected: undefined,
       events: [],
       chat: undefined,
+      draft: undefined,
       ...(this.state.busy
         ? {
             formError:
@@ -823,6 +845,7 @@ export class Controller {
         selected: data.panel_selection.task_id,
         events: [],
         chat: undefined,
+        draft: undefined,
         tab: (["chat", "changes", "activity", "details"] as const).includes(
           data.panel_selection.tab as Tab,
         )
@@ -1116,6 +1139,106 @@ export class Controller {
     await this.refresh().catch(this.report);
   }
 
+  /** Applies a streamed draft update for the selected task. */
+  private applyDraft(update: DraftUpdate) {
+    if (update.task_id !== this.state.selected) return;
+    const { draft, stale } = applyDraftUpdate(this.state.draft, update);
+    this.patch({ draft });
+    // The whole message is stored now; read it.
+    if ("cleared" in update) this.run(() => this.refresh());
+    else if (stale) this.run(() => this.readDraft());
+  }
+
+  /** Reads the selected task's draft in full, after a missed update. */
+  private async readDraft() {
+    const id = this.state.selected;
+    if (!id) return;
+
+    const read = await this.tool<{ draft: Draft | null }>(
+      "get_user_agent_draft",
+      { task_id: id },
+    );
+
+    if (this.state.selected === id)
+      this.patch({
+        draft: read.draft ? { task: id, ...read.draft } : undefined,
+      });
+  }
+
+  private followingDraft = false;
+
+  /**
+   * Follows a running task's draft while Chat shows it, where the transport
+   * can't stream it: each read waits until the draft changes, then the next
+   * one starts.
+   */
+  private followDraft() {
+    if (this.transport.streamsDrafts || this.followingDraft) return;
+    this.followingDraft = true;
+
+    void (async () => {
+      try {
+        while (!this.disposed) {
+          const task = selectedTask(this.state);
+
+          if (
+            !task ||
+            composerMode(task) === "idle" ||
+            this.state.tab !== "chat" ||
+            this.environment.hidden()
+          )
+            break;
+
+          const known =
+            this.state.draft?.task === task.id ? this.state.draft : undefined;
+
+          const started = Date.now();
+          let read: { draft: Draft | null; running: boolean };
+
+          try {
+            read = await this.tool("get_user_agent_draft", {
+              task_id: task.id,
+              ...(known
+                ? {
+                    message_id: known.message_id,
+                    after_length: known.text.length,
+                  }
+                : {}),
+              wait_ms: DRAFT_WAIT_MS,
+            });
+          } catch {
+            await sleep(2000);
+            continue;
+          }
+
+          if (this.disposed || this.state.selected !== task.id) continue;
+
+          const draft = read.draft
+            ? { task: task.id, ...read.draft }
+            : undefined;
+
+          const changed =
+            draft?.message_id !== known?.message_id ||
+            draft?.text !== known?.text;
+
+          this.patch({ draft });
+          // The whole message, or the turn's end, is stored now; read it.
+          if (known && !draft) this.run(() => this.refresh());
+          if (!read.running) break;
+          // A read that came back at once with nothing new waits a little,
+          // and reads stay at least DRAFT_READ_GAP_MS apart, so a fast stream
+          // renders at most that often.
+          const elapsed = Date.now() - started;
+          if (!changed && elapsed < 500) await sleep(1000);
+          else if (elapsed < DRAFT_READ_GAP_MS)
+            await sleep(DRAFT_READ_GAP_MS - elapsed);
+        }
+      } finally {
+        this.followingDraft = false;
+      }
+    })();
+  }
+
   /**
    * Runs a Chat action, outside any dialog. Resolves with the failure
    * message, or nothing once it's done and the task has reloaded.
@@ -1237,6 +1360,7 @@ export class Controller {
           selected: task.id,
           events: [],
           chat: undefined,
+          draft: undefined,
           tab: "chat",
           repository: task.repository,
           revision: task.revision,

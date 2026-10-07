@@ -6,13 +6,19 @@ type ChatMessageViewProps = {
   message: ConversationMessage;
   /** The worker's name, such as Claude, for its messages. */
   worker: string;
+  /** Still being written: it shows a caret until the stored message replaces it. */
+  streaming?: boolean;
 };
 
 /**
  * One message: the user's on the right, the parent agent's labelled, and
  * the worker's rendered as Markdown, with its replies standing out.
  */
-export function ChatMessageView({ message, worker }: ChatMessageViewProps) {
+export function ChatMessageView({
+  message,
+  worker,
+  streaming,
+}: ChatMessageViewProps) {
   const sent = message.from !== "worker";
 
   return (
@@ -21,6 +27,8 @@ export function ChatMessageView({ message, worker }: ChatMessageViewProps) {
       data-from={message.from}
       data-kind={message.kind}
       data-message={message.id}
+      data-streaming={streaming || undefined}
+      aria-busy={streaming || undefined}
       aria-label={
         message.from === "worker"
           ? worker

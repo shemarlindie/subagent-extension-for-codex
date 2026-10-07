@@ -10,6 +10,7 @@ function callbacks() {
   const statuses: string[] = [];
   const scopes: unknown[] = [];
   const hosts: unknown[] = [];
+  const drafts: unknown[] = [];
   let refreshes = 0,
     logins = 0,
     teardowns = 0;
@@ -33,6 +34,9 @@ function callbacks() {
     status: (status) => {
       statuses.push(status);
     },
+    draft: (update) => {
+      drafts.push(update);
+    },
   };
 
   return {
@@ -40,6 +44,7 @@ function callbacks() {
     statuses,
     scopes,
     hosts,
+    drafts,
     counts: () => ({ refreshes, logins, teardowns }),
   };
 }
@@ -48,10 +53,12 @@ class FakeStream {
   onopen?: () => void;
   onerror?: () => void;
   activity?: () => void;
+  delta?: (event: { data: string }) => void;
   closes = 0;
   addEventListener(name: string, listener: () => void) {
-    assert.equal(name, "activity");
-    this.activity = listener;
+    assert.ok(name === "activity" || name === "delta", name);
+    if (name === "activity") this.activity = listener;
+    else this.delta = listener;
   }
 
   close() {
@@ -460,4 +467,25 @@ test("host routes user actions through app-only aliases and preserves settings e
   } finally {
     transport.dispose();
   }
+});
+
+test("console SSE delivers draft deltas as they arrive", async () => {
+  const streams: FakeStream[] = [];
+
+  const transport = new ConsoleTransport("", fetch, () => {
+    const stream = new FakeStream();
+    streams.push(stream);
+
+    return stream as unknown as EventSource;
+  });
+
+  const observed = callbacks();
+  await transport.connect(observed.events);
+  transport.watch();
+  assert.equal(transport.streamsDrafts, true);
+
+  const update = { task_id: "t", message_id: "m", offset: 0, text: "Hi" };
+  streams[0].delta?.({ data: JSON.stringify(update) });
+  assert.deepEqual(observed.drafts, [update]);
+  transport.dispose();
 });

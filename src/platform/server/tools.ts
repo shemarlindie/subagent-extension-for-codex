@@ -12,6 +12,7 @@ import {
 } from "../../features/settings/settings.js";
 import { CHAT_EVENTS, chatItems } from "../../features/tasks/chat.js";
 import { Control } from "../../features/tasks/control.js";
+import { MAX_DRAFT_WAIT_MS } from "../../features/tasks/drafts.js";
 import {
   MAX_MESSAGE_WAIT_SECONDS,
   pollMessages,
@@ -195,14 +196,17 @@ export function definitions(
     }),
     get_agent_task: tool({
       description:
-        "Inspect a task: its status and turn (the number of turns started), pending input, pending steers (sent into the running turn and not yet taken), queue (messages waiting for turns of their own, and whether an interrupt paused it) and an excerpt of its latest reply.",
+        "Inspect a task: its draft (the message the worker is writing, if any), its status and turn (the number of turns started), pending input, pending steers (sent into the running turn and not yet taken), queue (messages waiting for turns of their own, and whether an interrupt paused it) and an excerpt of its latest reply.",
       schema: taskId,
       run: (a) => {
         const t = c.store.get(a.task_id, owner);
 
+        const draft = c.drafts.get(t.id);
+
         return {
           ...t,
           reply: replyFrom(c.store.latestEvent(t.id, "agent.reply")) ?? null,
+          ...(draft ? { draft } : {}),
         };
       },
     }),
@@ -226,6 +230,7 @@ export function definitions(
               t,
               t.status === "running" ? c.store.recentEvents(t.id, owner) : [],
               c.store.latestEvent(t.id, "agent.reply"),
+              c.drafts.get(t.id),
             ),
           ),
     }),
@@ -291,7 +296,7 @@ export function definitions(
         ),
     }),
     get_agent_messages: tool({
-      description: `Read a task's conversation after a cursor: its request, the messages you and the user sent, the worker's messages, and each successful turn's reply (kind reply, the text that ended the turn). Pass next_cursor back as after to read only what follows. With wait_seconds (at most ${MAX_MESSAGE_WAIT_SECONDS}), it waits until a message follows the cursor, the turn ends or input is needed. Only complete messages are returned. Also returns the task's status, turn, whether a turn is still running, any pending_input and its number of queued messages. Read what a turn changed with get_agent_changes(scope: "turn").`,
+      description: `Read a task's conversation after a cursor: its request, the messages you and the user sent, the worker's messages, and each successful turn's reply (kind reply, the text that ended the turn). Pass next_cursor back as after to read only what follows. With wait_seconds (at most ${MAX_MESSAGE_WAIT_SECONDS}), it waits until a message follows the cursor, the turn ends or input is needed. Only complete messages are returned; a read that waits out its time includes draft, the text of the message being written. Also returns the task's status, turn, whether a turn is still running, any pending_input and its number of queued messages. Read what a turn changed with get_agent_changes(scope: "turn").`,
       schema: taskId.extend({
         after: z.number().int().nonnegative().default(0),
         wait_seconds: z
@@ -301,7 +306,14 @@ export function definitions(
           .default(0),
       }),
       run: (a) =>
-        pollMessages(c.store, owner, a.task_id, a.after, a.wait_seconds),
+        pollMessages(
+          c.store,
+          c.drafts,
+          owner,
+          a.task_id,
+          a.after,
+          a.wait_seconds,
+        ),
     }),
     get_agent_changes: tool({
       description:
@@ -408,6 +420,33 @@ export function definitions(
         };
       },
     }),
+    get_user_agent_draft: tool({
+      description: `User interface only: the message the worker is writing in a running task. It returns as soon as the draft grows past after_length or becomes another message, the message is stored, or the turn ends, or after wait_ms (at most ${MAX_DRAFT_WAIT_MS}).`,
+      schema: taskId.extend({
+        message_id: z.string().max(200).optional(),
+        after_length: z.number().int().nonnegative().default(0),
+        wait_ms: z.number().int().min(0).max(MAX_DRAFT_WAIT_MS).default(0),
+      }),
+      run: async (a) => {
+        c.store.get(a.task_id, owner);
+
+        const draft = await c.drafts.wait(
+          a.task_id,
+          { message_id: a.message_id, length: a.after_length },
+          a.wait_ms,
+          () => !c.active.has(a.task_id),
+        );
+
+        const t = c.store.get(a.task_id, owner);
+
+        return {
+          draft: draft ?? null,
+          running: ["queued", "starting", "running", "waiting"].includes(
+            t.status,
+          ),
+        };
+      },
+    }),
     edit_user_agent_queued_message: tool({
       description:
         "User interface only: change a queued message's text before its turn starts.",
@@ -505,6 +544,7 @@ export const isUserTool = (name: string) =>
     "submit_user_agent_input",
     "send_user_agent_message",
     "get_user_agent_chat",
+    "get_user_agent_draft",
     "edit_user_agent_queued_message",
     "remove_user_agent_queued_message",
     "resume_user_agent_queue",

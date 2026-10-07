@@ -1,4 +1,5 @@
 import type { Event } from "../../shared/contracts.js";
+import type { Drafts } from "./drafts.js";
 import { conversation, MESSAGE_EVENTS } from "./messages.js";
 import type { Store } from "./store.js";
 
@@ -21,6 +22,7 @@ const WAKE = new Set([
  */
 export async function pollMessages(
   store: Store,
+  drafts: Drafts,
   owner: string,
   id: string,
   after: number,
@@ -47,6 +49,8 @@ export async function pollMessages(
     }
 
     const { task, messages } = result;
+    // A read that waited out its time shows the text written so far.
+    const draft = !result.settled ? drafts.get(id) : undefined;
 
     return {
       messages,
@@ -58,6 +62,7 @@ export async function pollMessages(
       ),
       pending_input: task.pending_input ?? null,
       queued_messages: task.queue.length,
+      ...(draft ? { draft } : {}),
     };
   } finally {
     clearTimeout(timer);

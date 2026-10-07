@@ -104,7 +104,12 @@ export class HostTransport implements Transport {
         name: userTools[name] ?? name,
         arguments: args,
       },
-      name === "browse_user_agent_project" ? { timeout: 150000 } : undefined,
+      name === "browse_user_agent_project"
+        ? { timeout: 150000 }
+        : // A draft read waits as long as it was asked to, plus a margin.
+          name === "get_user_agent_draft"
+          ? { timeout: Number(args.wait_ms ?? 0) + 10000 }
+          : undefined,
     );
 
     if (result.isError)
