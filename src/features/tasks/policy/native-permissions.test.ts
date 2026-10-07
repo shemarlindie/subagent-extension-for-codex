@@ -22,7 +22,27 @@ import {
   exceedsPermission,
   resolveClaudePermission,
   resolveClaudePolicy,
+  taskClaudeMode,
 } from "./permissions.js";
+
+test("stored native inheritance ignores legacy approval defaults while older tasks retain them", () => {
+  for (const [approval_mode, expected] of [
+    ["ask_user", "default"],
+    ["parent_agent", "default"],
+    ["auto_approve", "bypassPermissions"],
+    ["deny", "dontAsk"],
+  ] as const) {
+    const task = { worker_profile: "implementer", approval_mode };
+    assert.equal(taskClaudeMode(task), expected);
+    assert.equal(
+      taskClaudeMode({ ...task, permission_mode: "inherit" }),
+      undefined,
+    );
+    assert.equal(taskClaudeMode({ ...task, permission_mode: "auto" }), "auto");
+  }
+
+  assert.equal(taskClaudeMode({ worker_profile: "reviewer" }), "plan");
+});
 
 test("native permission resolution follows task, setting, then profile or the user's Claude Code settings", () => {
   const task = { worker_profile: "implementer" };

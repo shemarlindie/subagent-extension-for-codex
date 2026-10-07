@@ -156,8 +156,10 @@ export function taskClaudeMode(task: {
   approval_mode?: string;
   worker_profile: string;
 }): ClaudePermissionMode | undefined {
-  if (task.permission_mode && task.permission_mode !== "inherit")
-    return task.permission_mode;
+  if (task.permission_mode)
+    return task.permission_mode === "inherit"
+      ? undefined
+      : task.permission_mode;
 
   // Tasks stored before native modes keep their legacy policy.
   return (

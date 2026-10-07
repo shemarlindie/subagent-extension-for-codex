@@ -1080,6 +1080,7 @@ test("Claude tasks without stored restrictions run with CLI parity defaults", as
   const { c } = await context();
   c.task.worker_profile = "implementer";
   c.task.permission_mode = "inherit";
+  c.task.approval_mode = "ask_user";
   let options: Options | undefined;
 
   await new ClaudeAgentProvider((args) => {
@@ -1101,6 +1102,7 @@ test("Claude tasks without stored restrictions run with CLI parity defaults", as
 
   assert.equal(options!.sandbox, undefined);
   assert.equal(Object.hasOwn(options!, "permissionMode"), false);
+  assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
   assert.deepEqual(options!.tools, { type: "preset", preset: "claude_code" });
   assert.deepEqual(options!.disallowedTools, []);
   assert.equal(options!.env!.PATH, process.env.PATH);
