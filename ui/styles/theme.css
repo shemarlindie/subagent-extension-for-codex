@@ -165,3 +165,8 @@
   );
   --warn: #edbc74;
 }
+
+::selection {
+  background-color: color-mix(in srgb, var(--accent) 24%, transparent);
+  color: inherit;
+}

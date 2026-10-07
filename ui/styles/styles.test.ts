@@ -72,3 +72,12 @@ test("theme accent and success states follow their host color tokens", () => {
     assertRuleUsesSuccess(styles, selector, property);
   }
 });
+
+test("text selection uses host theme colors", () => {
+  const theme = readFileSync("ui/styles/theme.css", "utf8");
+
+  assert.match(
+    theme,
+    /::selection\s*\{[^}]*background-color:\s*color-mix\(in srgb, var\(--accent\) 24%, transparent\);[^}]*color:\s*inherit;/s,
+  );
+});
