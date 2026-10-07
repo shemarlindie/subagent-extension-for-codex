@@ -55,7 +55,7 @@ test("a read that is no longer wanted stops between pages", async () => {
 });
 
 test("changes reload for another task or a new status or turn, not mid-read", () => {
-  const task = { id: "one", status: "running", attempt: 1 } as Task,
+  const task = { id: "one", status: "running", turn: 1 } as Task,
     state = {
       task: "one",
       scope: "task" as const,
@@ -66,11 +66,11 @@ test("changes reload for another task or a new status or turn, not mid-read", ()
   assert.equal(changesStale(undefined, task), true);
   assert.equal(changesStale(state, task), false);
   assert.equal(changesStale({ ...state, task: "two" }, task), true);
-  assert.equal(changesStale(state, { ...task, attempt: 2 }), true);
+  assert.equal(changesStale(state, { ...task, turn: 2 }), true);
   assert.equal(changesStale(state, { ...task, status: "completed" }), true);
 
   assert.equal(
-    changesStale({ ...state, loading: true }, { ...task, attempt: 2 }),
+    changesStale({ ...state, loading: true }, { ...task, turn: 2 }),
     false,
   );
 });

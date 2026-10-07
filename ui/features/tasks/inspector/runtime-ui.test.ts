@@ -31,7 +31,9 @@ const task = (patch: Partial<Task>): Task => ({
   created_at: "",
   updated_at: "",
   instructions: [],
-  attempt: 1,
+  created_by: "user",
+  instructions_sent: 0,
+  turn: 1,
   runtime_ms: 60_000,
   ...patch,
 });
@@ -215,16 +217,10 @@ test("task list shows a fixed final runtime for every terminal status, including
   vi.useFakeTimers();
   const view = render(row(task({ status: "completed" })));
 
-  for (const status of ["completed", "failed", "cancelled"] as const) {
+  for (const status of ["completed", "failed"] as const) {
     for (const runtime_ms of [95_000, 0]) {
       view.rerender(row(task({ status, runtime_ms })));
-
-      const prefix =
-        status === "cancelled"
-          ? "Stopped after"
-          : status === "failed"
-            ? "Failed after"
-            : "Ran for";
+      const prefix = status === "failed" ? "Failed after" : "Ran for";
 
       const expected = `${prefix} ${runtime_ms ? "1m 35s" : "0s"}`;
       assert.equal(rowRuntime(view), expected);
@@ -263,7 +259,6 @@ test("task list status icons expose each task state to assistive technology", (t
     [{ status: "interrupted" }, "Interrupted"],
     [{ status: "completed" }, "Completed"],
     [{ status: "failed" }, "Failed"],
-    [{ status: "cancelled" }, "Cancelled"],
     [
       {
         status: "running",
@@ -342,7 +337,7 @@ test("terminal states and input requests take precedence over stale activity", (
 
   const view = render(row(task({ live_activity })));
 
-  for (const status of ["completed", "failed", "cancelled"] as const) {
+  for (const status of ["completed", "failed"] as const) {
     view.rerender(row(task({ status, live_activity })));
 
     view.getByRole("img", {

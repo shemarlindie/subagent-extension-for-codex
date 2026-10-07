@@ -90,7 +90,6 @@ export const startSchema = z.object({
     ),
   revision: z.string().default("HEAD"),
   conversation_id: z.string().optional(),
-  parent_task_id: z.string().optional(),
   depends_on: z.array(z.string()).max(50).default([]),
   context: z.array(z.string().max(20000)).max(20).default([]),
   workspace_strategy: z
@@ -133,8 +132,33 @@ export type Status =
   | "waiting"
   | "interrupted"
   | "completed"
-  | "failed"
-  | "cancelled";
+  | "failed";
+
+/** Who sent a message: the user through the panel, or the parent agent. */
+export type Sender = InputAuthority;
+
+/** How a message reaches the worker; on an idle task, each starts the next turn. */
+export const deliveries = ["steer", "queue", "interrupt"] as const;
+export type Delivery = (typeof deliveries)[number];
+
+/**
+ * A follow-up's budget change. Each limit can only go up: a higher amount,
+ * or null for no limit.
+ */
+export const budgetRaiseSchema = z
+  .object({
+    max_runtime_minutes: startSchema.shape.budget
+      .removeDefault()
+      .shape.max_runtime_minutes.removeDefault()
+      .optional(),
+    max_cost_usd: startSchema.shape.budget
+      .removeDefault()
+      .shape.max_cost_usd.removeDefault()
+      .optional(),
+  })
+  .strict();
+
+export type BudgetRaise = z.infer<typeof budgetRaiseSchema>;
 
 export interface InputPresentation {
   description: string;
@@ -148,13 +172,18 @@ export interface Task extends Start {
   title: string;
   id: string;
   owner: string;
+  /** Who started the task, and so sent its first message. */
+  created_by: Sender;
   status: Status;
   waiting_reason?: string;
+  /** The dependency a task waiting for one waits on. */
+  waiting_for?: string;
   created_at: string;
   updated_at: string;
   started_at?: string;
   /** Start of the run in progress; `runtime_ms` only counts finished runs. */
   run_started_at?: string;
+  /** When the latest turn ended. */
   completed_at?: string;
   workspace?: string;
   base_commit?: string;
@@ -175,6 +204,11 @@ export interface Task extends Start {
   session_id?: string;
   session_owner?: string;
   session_state_ref?: string;
+  /**
+   * The session's cumulative cost the provider last reported, which a
+   * resumed session's next report includes.
+   */
+  session_cost_usd?: number;
   error?: string;
   pending_input?: {
     id: string;
@@ -183,8 +217,16 @@ export interface Task extends Start {
     presentation?: InputPresentation;
     input: Record<string, unknown>;
   };
+  /** Messages sent after the first, in the order they were sent. */
   instructions: string[];
-  attempt: number;
+  /**
+   * How many of `instructions` the worker's session has received; a resumed
+   * session gets only the rest.
+   */
+  instructions_sent: number;
+  /** The number of turns started, the current one included. */
+  turn: number;
+  /** Sum of the finished turns' run times. */
   runtime_ms: number;
   cost_usd?: number;
 }

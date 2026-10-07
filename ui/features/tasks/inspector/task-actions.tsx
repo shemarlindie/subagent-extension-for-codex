@@ -5,7 +5,7 @@ import {
   useController,
   useSnapshot,
 } from "../../../shared/state/controller-context";
-import { terminal } from "../../../shared/state/selectors";
+import { idle } from "../../../shared/state/selectors";
 import type { ControlAction, Task } from "../../../shared/state/types";
 
 export function TaskActions({ task }: { task: Task }) {
@@ -15,30 +15,17 @@ export function TaskActions({ task }: { task: Task }) {
       (worker) => worker.provider === task.provider,
     )?.capabilities;
 
-  const controls = !terminal(task);
-
-  const actions = [
-    ...(controls
-      ? [
-          "steer",
-          ...(capabilities?.interrupt && task.status !== "interrupted"
-            ? ["interrupt"]
-            : []),
-          ...(task.status === "interrupted" && capabilities?.session_continue
-            ? ["continue"]
-            : []),
-          "cancel",
-        ]
-      : []),
-    ...(["failed", "cancelled"].includes(task.status) ? ["retry"] : []),
-  ] as ControlAction[];
+  // An idle task takes a follow-up; a busy one can be steered or interrupted.
+  const actions = (
+    idle(task)
+      ? ["continue"]
+      : ["steer", ...(capabilities?.interrupt ? ["interrupt"] : [])]
+  ) as ControlAction[];
 
   const labels: Record<string, string> = {
     steer: "Steer",
     interrupt: "Interrupt",
     continue: "Continue",
-    cancel: "Cancel task",
-    retry: "New attempt",
   };
 
   // Keyed so the dot separators can be interleaved between buttons below.

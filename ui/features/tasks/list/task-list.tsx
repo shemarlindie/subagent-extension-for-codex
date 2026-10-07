@@ -94,16 +94,14 @@ function TaskRowRuntime({ task }: { task: Task }) {
   return (
     <span
       className="row-runtime"
-      title={label ? status.label : "Total run time across attempts"}
+      title={label ? status.label : "Total run time across turns"}
     >
       {label ??
-        (task.status === "cancelled"
-          ? `Stopped after ${duration}`
-          : task.status === "failed"
-            ? `Failed after ${duration}`
-            : live
-              ? duration
-              : `${terminal(task) ? "Ran for" : "Run time"} ${duration}`)}
+        (task.status === "failed"
+          ? `Failed after ${duration}`
+          : live
+            ? duration
+            : `${terminal(task) ? "Ran for" : "Run time"} ${duration}`)}
     </span>
   );
 }

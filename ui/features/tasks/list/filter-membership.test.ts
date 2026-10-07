@@ -24,7 +24,9 @@ const task = (patch: Partial<Task>): Task => ({
   created_at: "",
   updated_at: "",
   instructions: [],
-  attempt: 1,
+  created_by: "user",
+  instructions_sent: 0,
+  turn: 1,
   runtime_ms: 0,
   ...patch,
 });
@@ -68,7 +70,6 @@ const cases: [string, Partial<Task>, Filter[]][] = [
   ],
   ["failed", { status: "failed" }, ["all", "failed"]],
   ["completed", { status: "completed" }, ["all", "completed"]],
-  ["cancelled", { status: "cancelled" }, ["all"]],
 ] as never;
 
 test("each task state appears only in its own filter besides All", () => {

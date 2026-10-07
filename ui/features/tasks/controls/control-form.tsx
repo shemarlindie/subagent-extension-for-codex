@@ -15,8 +15,6 @@ export function controlTitle(action: string) {
       {
         steer: "Steer task",
         continue: "Continue task",
-        cancel: "Cancel task?",
-        retry: "Start a new attempt?",
         interrupt: "Interrupt task?",
       } as Record<string, string>
     )[action] ?? "Task action"
@@ -40,10 +38,7 @@ export function ControlForm({ dialog }: ControlFormProps) {
   const descriptions: Record<string, string> = {
     steer:
       "A running turn will be interrupted and continued with your instruction.",
-    continue: "Continue in the existing workspace and native session.",
-    cancel: "Stop this task. Its workspace will be retained.",
-    retry:
-      "Create another task from the original request. This starts a new worker attempt with the original budgets.",
+    continue: "Start the next turn in this task, in its workspace and session.",
     interrupt:
       "Stop current execution and preserve the workspace and session for continuation.",
   };
@@ -51,31 +46,25 @@ export function ControlForm({ dialog }: ControlFormProps) {
   const labels: Record<string, string> = {
     steer: "Send instruction",
     continue: "Continue",
-    cancel: "Cancel task",
-    retry: "Start new attempt",
     interrupt: "Interrupt",
   };
 
   const tools: Record<string, string> = {
     steer: "send_agent_instruction",
     continue: "continue_agent_task",
-    cancel: "cancel_agent_task",
-    retry: "retry_agent_task",
     interrupt: "interrupt_agent_task",
   };
 
   return (
     <form
       onSubmit={handleSubmit((values) =>
-        controller.submit(
-          () =>
-            controller.tool<Task>(tools[action], {
-              task_id: task.id,
-              ...(values.instruction?.trim()
-                ? { message: values.instruction }
-                : {}),
-            }),
-          action === "retry",
+        controller.submit(() =>
+          controller.tool<Task>(tools[action], {
+            task_id: task.id,
+            ...(values.instruction?.trim()
+              ? { message: values.instruction }
+              : {}),
+          }),
         ),
       )}
     >
@@ -97,10 +86,7 @@ export function ControlForm({ dialog }: ControlFormProps) {
       ) : (
         <>
           <p>{task.title}</p>
-          <TaskDescription
-            task={task}
-            defaultOpen={action === "interrupt" || action === "cancel"}
-          />
+          <TaskDescription task={task} defaultOpen={action === "interrupt"} />
         </>
       )}
       <FormFooter label={labels[action]} dismissLabel="Close" />

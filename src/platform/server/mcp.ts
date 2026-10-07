@@ -164,7 +164,6 @@ export function mcp(
         annotations: {
           readOnlyHint: name.startsWith("get_") || name.startsWith("list_"),
           destructiveHint: [
-            "cancel_agent_task",
             "remove_user_agent_worktree",
             "delete_user_agent_task",
             "delete_user_agent_branch",

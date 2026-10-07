@@ -176,6 +176,24 @@ export const previewChanges: Record<string, () => ChangeFixture> = {
     turns: [{ "test/retry.test.ts": "test('retries', { retry: 2 });\n" }],
   }),
 
+  // A worktree recreated from its branch for a second turn.
+  "preview-resumed": (): ChangeFixture => ({
+    base: {
+      "test/retry.test.ts": "test('retries', async () => await sleep(1000));\n",
+    },
+    commit: true,
+    turns: [
+      {
+        "test/retry.test.ts":
+          "test('retries', async () => await clock.tickAsync(1000));\n",
+      },
+      {
+        "test/retry-timeout.test.ts":
+          "test('gives up after three retries', async () => await clock.tickAsync(3000));\n",
+      },
+    ],
+  }),
+
   // Every large file, added, for the file previews: megabytes of diff, so
   // the changes come in several pages.
   "preview-profile": (): ChangeFixture => ({
@@ -186,7 +204,7 @@ export const previewChanges: Record<string, () => ChangeFixture> = {
   }),
 
   // A worktree and branch the user deleted.
-  "preview-cancelled": (): ChangeFixture => ({
+  "preview-release": (): ChangeFixture => ({
     base: { "RELEASE.md": "# Release notes\n" },
     removed: true,
     branchDeleted: true,

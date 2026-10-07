@@ -35,7 +35,7 @@ export async function readChanges(
 }
 
 /** What a task's changes depend on: a new status or turn reloads them. */
-export const changesKey = (task: Task) => `${task.status}:${task.attempt}`;
+export const changesKey = (task: Task) => `${task.status}:${task.turn}`;
 
 /** Whether the selected task's changes need reading. */
 export function changesStale(state: ChangesState | undefined, task: Task) {

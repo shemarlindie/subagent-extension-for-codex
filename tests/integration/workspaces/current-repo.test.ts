@@ -89,7 +89,9 @@ function task(repository: string, revision = "HEAD"): Task {
     instructions: [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    attempt: 0,
+    created_by: "user",
+    instructions_sent: 0,
+    turn: 0,
     runtime_ms: 0,
   };
 }

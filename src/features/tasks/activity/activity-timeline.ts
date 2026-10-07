@@ -52,17 +52,14 @@ const quiet = new Set([
   "agent.turn_started",
   "task.started",
   "task.queued",
-  "task.continued",
 ]);
 
 const boundaries = new Set([
   "task.completed",
   "task.failed",
   "task.interrupted",
-  "task.cancelled",
   "agent.completed",
   "task.started",
-  "task.continued",
 ]);
 
 /** Row titles for service events whose type doesn't read as one. */
@@ -70,6 +67,9 @@ const eventTitles: Record<string, string> = {
   "agent.completed": "Turn completed",
   "agent.reply": "Reply",
   "task.completed": "Task completed",
+  "task.instruction": "Message",
+  "task.session_started": "New session",
+  "task.worktree_recreated": "Worktree recreated",
 };
 
 const thinking = new Set([
@@ -90,7 +90,6 @@ function statusTitle(e: Event) {
     {
       "task.queued": "Queued",
       "task.started": "Task started",
-      "task.continued": "Task continued",
       "agent.started": "Agent connected",
     }[e.type] ?? "Working"
   );
@@ -457,7 +456,7 @@ export function currentActivityStatus(
     if (task.status === "failed") return { text: "Failed", state: "failed" };
     if (task.status === "completed")
       return { text: "Completed", state: "completed" };
-    if (task.status === "cancelled" || task.status === "interrupted")
+    if (task.status === "interrupted")
       return { text: sentence(task.status), state: "info" };
     if (task.status === "waiting" || task.pending_input)
       return {
@@ -487,13 +486,11 @@ export function currentActivityStatus(
       [
         "task.failed",
         "task.completed",
-        "task.cancelled",
         "task.interrupted",
         "agent.completed",
         "agent.input_required",
         "agent.input_submitted",
         "task.started",
-        "task.continued",
         "agent.turn_started",
         ...thinking,
       ].includes(kind) ||
@@ -521,12 +518,9 @@ export function currentActivityStatus(
         state: task?.status === "running" ? "running" : "completed",
       };
     if (
-      [
-        "task.started",
-        "task.continued",
-        "agent.turn_started",
-        "agent.input_submitted",
-      ].includes(kind)
+      ["task.started", "agent.turn_started", "agent.input_submitted"].includes(
+        kind,
+      )
     )
       return { text: "Working", state: "running" };
     if (kind.startsWith("task."))

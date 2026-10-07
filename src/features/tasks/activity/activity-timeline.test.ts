@@ -243,11 +243,9 @@ for (const type of ["workspace.indexed", "thinking_tokens"]) {
 
 for (const type of [
   "task.started",
-  "task.continued",
   "task.completed",
   "task.failed",
   "task.interrupted",
-  "task.cancelled",
   "agent.completed",
   "agent.input_required",
   "agent.input_submitted",
@@ -262,10 +260,7 @@ for (const type of [
   });
 }
 
-for (const [type, title] of [
-  ["task.started", "Task started"],
-  ["task.continued", "Task continued"],
-]) {
+for (const [type, title] of [["task.started", "Task started"]]) {
   test(`${type} has a lifecycle title and stays separate from connection events`, () => {
     const events = [event(1, type), event(2, "agent.started"), sdk(3, "init")];
     const groups = groupActivity(events);
@@ -341,7 +336,9 @@ function task(status: Task["status"]): Task {
     created_at: "",
     updated_at: "",
     instructions: [],
-    attempt: 1,
+    created_by: "user",
+    instructions_sent: 0,
+    turn: 1,
     runtime_ms: 0,
   };
 }
@@ -466,9 +463,8 @@ for (const boundary of [
   "task.completed",
   "task.failed",
   "task.interrupted",
-  "task.cancelled",
 ]) {
-  test(`${boundary} isolates repeated tool IDs in later attempts`, () => {
+  test(`${boundary} isolates repeated tool IDs in later turns`, () => {
     const groups = groupActivity([
       event(1, "tool.started", { id: "reused", name: "Read" }),
       event(2, boundary),
@@ -615,7 +611,6 @@ test("different parent streams do not merge and current status follows the lates
 for (const status of [
   "completed",
   "failed",
-  "cancelled",
   "interrupted",
   "waiting",
   "queued",
@@ -742,7 +737,7 @@ for (const terminal of ["agent.completed", "task.interrupted"]) {
     const current = currentActivityStatus([
       event(1, "tool.started", { id: "old", name: "Read" }),
       event(2, terminal),
-      event(3, "task.continued"),
+      event(3, "task.started", { turn: 2 }),
     ]);
 
     assert.equal(current.text, "Working");

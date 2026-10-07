@@ -28,7 +28,9 @@ const task: Task = {
   created_at: "",
   updated_at: "",
   instructions: [],
-  attempt: 1,
+  created_by: "user",
+  instructions_sent: 0,
+  turn: 1,
   runtime_ms: 0,
 };
 

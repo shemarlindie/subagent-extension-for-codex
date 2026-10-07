@@ -48,7 +48,7 @@ export function TaskDetails({ task, changes }: TaskDetailsProps) {
     "Base commit": task.base_commit ?? task.revision,
     Session: task.session_id ?? "Not started",
     Dependencies: task.depends_on.join(", ") || "None",
-    Attempt: task.attempt,
+    Turns: task.turn,
     "Runtime used": formatDuration(taskRuntimeMs(task, now)),
     "Reported cost":
       task.cost_usd === undefined

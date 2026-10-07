@@ -77,14 +77,14 @@ const serviceTypes = new Set([
   "task.queued",
   "task.started",
   "task.waiting",
-  "task.continued",
   "task.instruction",
   "task.control_requested",
   "task.interrupted",
-  "task.cancelled",
   "task.completed",
   "task.failed",
   "task.worktree_removed",
+  "task.worktree_recreated",
+  "task.session_started",
   "task.branch_deleted",
   "agent.input_required",
   "agent.input_submitted",
@@ -184,7 +184,7 @@ test("service event payloads match what the service emits", () => {
       "request_id",
     ]);
   for (const data of payload("task.started"))
-    assert.deepEqual(Object.keys(data), ["attempt"]);
+    assert.deepEqual(Object.keys(data), ["turn"]);
   for (const data of payload("agent.reply"))
     assert.deepEqual(Object.keys(data), [
       "text",
@@ -197,9 +197,18 @@ test("service event payloads match what the service emits", () => {
   for (const data of payload("task.failed"))
     assert.deepEqual(Object.keys(data), ["error"]);
   for (const data of payload("task.waiting"))
-    assert.deepEqual(Object.keys(data), ["reason"]);
+    assert.deepEqual(Object.keys(data), ["reason", "dependency_id"]);
   for (const data of payload("task.instruction"))
-    assert.deepEqual(Object.keys(data), ["message"]);
+    assert.deepEqual(Object.keys(data), [
+      "message_id",
+      "message",
+      "from",
+      "delivery",
+    ]);
+  for (const data of payload("task.session_started"))
+    assert.deepEqual(Object.keys(data), ["reason"]);
+  for (const data of payload("task.worktree_recreated"))
+    assert.deepEqual(Object.keys(data), ["from"]);
   for (const data of payload("task.control_requested"))
     assert.deepEqual(Object.keys(data), ["status"]);
   for (const data of payload("task.worktree_removed"))

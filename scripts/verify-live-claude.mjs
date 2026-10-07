@@ -156,11 +156,7 @@ if (scenario === "read") {
         previous = current.status;
       }
 
-      if (
-        ["completed", "failed", "cancelled", "interrupted"].includes(
-          current.status,
-        )
-      ) {
+      if (["completed", "failed", "interrupted"].includes(current.status)) {
         assert.equal(current.status, "completed", current.error);
         assert.ok(latestReply(store, task.id).includes("COBALT-27"));
         assert.ok(current.session_id && current.session_state_ref);
@@ -227,9 +223,7 @@ if (scenario === "read") {
       const current = store.get(task.id, "verification");
 
       assert.ok(
-        !["completed", "failed", "cancelled", "interrupted"].includes(
-          current.status,
-        ),
+        !["completed", "failed", "interrupted"].includes(current.status),
         current.error ?? "Task ended before asking",
       );
 
@@ -254,10 +248,11 @@ if (scenario === "read") {
 
     await reopened.recover();
 
-    await reopened.continue(
+    await reopened.followUp(
       "verification",
       task.id,
       "Proceed now. Read README.md with the Read tool and report its exact marker in your reply. Do not ask another question or run commands.",
+      "user",
     );
 
     console.log(
@@ -269,14 +264,10 @@ if (scenario === "read") {
     while (Date.now() < finalDeadline) {
       const current = nextStore.get(task.id, "verification");
 
-      if (
-        ["completed", "failed", "cancelled", "interrupted"].includes(
-          current.status,
-        )
-      ) {
+      if (["completed", "failed", "interrupted"].includes(current.status)) {
         assert.equal(current.status, "completed", current.error);
         assert.equal(current.session_id, session);
-        assert.equal(current.attempt, 2);
+        assert.equal(current.turn, 2);
         assert.ok(latestReply(nextStore, task.id).includes("COBALT-27"));
 
         assert.equal(
@@ -290,7 +281,7 @@ if (scenario === "read") {
           JSON.stringify({
             phase: "verified",
             same_native_session: true,
-            attempt: current.attempt,
+            turn: current.turn,
             cost_reported_usd: current.cost_usd,
             primary_clean: true,
           }),
@@ -385,11 +376,7 @@ if (scenario === "read") {
     while (Date.now() < deadline) {
       const current = await call("get_agent_task", { task_id: task.id });
 
-      if (
-        ["completed", "failed", "cancelled", "interrupted"].includes(
-          current.status,
-        )
-      ) {
+      if (["completed", "failed", "interrupted"].includes(current.status)) {
         assert.equal(current.status, "completed", current.error);
         completed = current;
         break;
@@ -464,11 +451,7 @@ if (scenario === "read") {
     while (Date.now() < deadline) {
       const current = store.get(task.id, "verification");
 
-      if (
-        ["completed", "failed", "cancelled", "interrupted"].includes(
-          current.status,
-        )
-      ) {
+      if (["completed", "failed", "interrupted"].includes(current.status)) {
         ended = current;
         break;
       }
@@ -558,11 +541,7 @@ if (scenario === "read") {
         );
       }
 
-      if (
-        ["completed", "failed", "cancelled", "interrupted"].includes(
-          current.status,
-        )
-      ) {
+      if (["completed", "failed", "interrupted"].includes(current.status)) {
         ended = current;
         break;
       }
@@ -718,11 +697,7 @@ if (scenario === "read") {
         }
       }
 
-      if (
-        ["completed", "failed", "cancelled", "interrupted"].includes(
-          current.status,
-        )
-      ) {
+      if (["completed", "failed", "interrupted"].includes(current.status)) {
         assert.equal(current.status, "completed", current.error);
         assert.equal(approved.length, commands.length);
 

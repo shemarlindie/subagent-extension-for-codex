@@ -94,7 +94,9 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       status: "completed",
       created_at: now(),
       updated_at: now(),
-      attempt: 0,
+      created_by: "user",
+      instructions_sent: 0,
+      turn: 0,
       runtime_ms: 0,
       instructions: [],
     });
@@ -1012,7 +1014,9 @@ test("SSE requires authentication and replays owned events in global cursor orde
     status: "queued" as const,
     created_at: now(),
     updated_at: now(),
-    attempt: 0,
+    created_by: "user" as const,
+    instructions_sent: 0,
+    turn: 0,
     runtime_ms: 0,
     instructions: [],
   });

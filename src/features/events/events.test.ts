@@ -42,7 +42,9 @@ const make = (id = "task-a", owner = "alice"): Task => ({
   created_at: now(),
   updated_at: now(),
   instructions: [],
-  attempt: 1,
+  created_by: "user",
+  instructions_sent: 0,
+  turn: 1,
   runtime_ms: 0,
 });
 
@@ -205,7 +207,7 @@ test("completion events are compact, filtered, signed, idempotent and durable ac
   );
 
   const t = make();
-  t.attempt = 2;
+  t.turn = 2;
   store.save(t);
 
   const event = store.event(t, "task.completed", {

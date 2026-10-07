@@ -59,7 +59,9 @@ async function setup() {
       instructions: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      attempt: 1,
+      created_by: "user",
+      instructions_sent: 0,
+      turn: 1,
       runtime_ms: 0,
     };
 

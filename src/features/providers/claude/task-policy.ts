@@ -70,14 +70,6 @@ export const claudeTaskPolicy: ProviderTaskPolicy = {
   decideInput: () => undefined,
   parentMayApprove: (task) =>
     approvalDecider(readClaudeTaskOptions(task)) === "parent_agent",
-  retryOptions(task) {
-    const { permission_mode, approval_decider } = readClaudeTaskOptions(task);
-
-    return withProviderOptions(undefined, "claude", {
-      permission_mode,
-      approval_decider,
-    });
-  },
   async validateSession(task) {
     if (task.session_state_ref) await access(task.session_state_ref);
   },

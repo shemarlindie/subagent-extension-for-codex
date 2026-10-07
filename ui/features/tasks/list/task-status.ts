@@ -27,7 +27,6 @@ export function rowStatus(task: Task) {
     interrupted: "Interrupted",
     completed: "Done",
     failed: "Failed",
-    cancelled: "Stopped",
     input: "Needs input",
     paused: "Rate limit",
   };

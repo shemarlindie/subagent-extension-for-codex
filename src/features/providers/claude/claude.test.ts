@@ -45,7 +45,9 @@ test("Claude session deletion skips absent ids and forwards existing sessions", 
     created_at: "now",
     updated_at: "now",
     instructions: [],
-    attempt: 1,
+    created_by: "user",
+    instructions_sent: 0,
+    turn: 1,
     runtime_ms: 0,
   };
 
@@ -71,7 +73,9 @@ test("Claude session deletion only tolerates the SDK's missing-session error", a
     created_at: "now",
     updated_at: "now",
     instructions: [],
-    attempt: 1,
+    created_by: "user",
+    instructions_sent: 0,
+    turn: 1,
     runtime_ms: 0,
     session_id: "session-one",
   };
@@ -124,7 +128,9 @@ async function context() {
     created_at: now(),
     updated_at: now(),
     instructions: [],
-    attempt: 1,
+    created_by: "user",
+    instructions_sent: 0,
+    turn: 1,
     runtime_ms: 0,
     provider_options: {
       claude: {

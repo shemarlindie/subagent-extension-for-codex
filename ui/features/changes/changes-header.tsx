@@ -34,7 +34,7 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
     <div className="changes-header">
       <div className="changes-toolbar">
         {/* A task's first turn is the whole task, so the choice waits for a second. */}
-        {task.attempt > 1 && (
+        {task.turn > 1 && (
           <ToggleGroup
             className="view-switch"
             aria-label="Changes to show"

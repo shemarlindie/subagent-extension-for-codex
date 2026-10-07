@@ -60,7 +60,9 @@ function task(
     created_at: "",
     updated_at: "",
     instructions: [],
-    attempt: 1,
+    created_by: "user",
+    instructions_sent: 0,
+    turn: 1,
     runtime_ms: 0,
   };
 }
@@ -999,17 +1001,7 @@ test("Failed filter shows failed, interrupted and live-failed tasks only", async
   liveFailed.live_activity = { text: "Provider failed", state: "failed" };
   const done = task("done");
   done.status = "completed";
-  const cancelled = task("cancelled");
-  cancelled.status = "cancelled";
-
-  transport.tasks = [
-    failed,
-    interrupted,
-    liveFailed,
-    done,
-    cancelled,
-    task("ok"),
-  ];
+  transport.tasks = [failed, interrupted, liveFailed, done, task("ok")];
 
   await controller.start();
   controller.setFilter("failed");

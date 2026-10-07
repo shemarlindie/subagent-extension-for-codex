@@ -12,7 +12,6 @@ const STATUS_ICONS: Record<StatusPresentation["kind"], IconName> = {
   failed: "close",
   interrupted: "close",
   input: "pencil",
-  cancelled: "stop",
   queued: "clock",
 };
 

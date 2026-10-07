@@ -12,7 +12,11 @@ import {
 } from "../../features/settings/settings.js";
 import { Control } from "../../features/tasks/control.js";
 import { listedTask } from "../../features/tasks/task-list.js";
-import { type InputAuthority, startSchema } from "../../shared/contracts.js";
+import {
+  budgetRaiseSchema,
+  type InputAuthority,
+  startSchema,
+} from "../../shared/contracts.js";
 import {
   panelContextInput,
   resolvePanelContext,
@@ -207,31 +211,33 @@ export function definitions(
     }),
     interrupt_agent_task: tool({
       description:
-        "Stop current execution while preserving the session and workspace.",
+        "Stop the current turn while preserving the session and workspace. A later message continues the task.",
       schema: taskId,
-      run: (a) => c.stop(owner, a.task_id, "interrupted"),
+      run: (a) => c.stop(owner, a.task_id),
     }),
     continue_agent_task: tool({
       description:
-        "Continue an interrupted task on the worker owning its session state.",
-      schema: taskId.extend({ message: z.string().max(20000).optional() }),
-      run: (a) => c.continue(owner, a.task_id, a.message),
+        "Send a follow-up message to an idle task (completed, failed or interrupted), which starts its next turn in the same task: it resumes the worker's session, or starts a new one carrying the conversation, and recreates a removed worktree. budget raises the task's limits; each can only go up.",
+      schema: taskId.extend({
+        message: z.string().max(20000).optional(),
+        budget: budgetRaiseSchema.optional(),
+      }),
+      run: async (a) =>
+        (
+          await c.followUp(
+            owner,
+            a.task_id,
+            a.message ?? "Continue the task.",
+            authority,
+            { budget: a.budget },
+          )
+        ).task,
     }),
     send_agent_instruction: tool({
       description:
-        "Steer a task. Running turns are interrupted and continued with this instruction.",
+        "Steer a task. A running turn is interrupted and the next one starts with this instruction; an idle task starts its next turn with it.",
       schema: taskId.extend({ message: z.string().min(1).max(20000) }),
-      run: (a) => c.steer(owner, a.task_id, a.message),
-    }),
-    cancel_agent_task: tool({
-      description: "Cancel a task. Does not delete its workspace.",
-      schema: taskId,
-      run: (a) => c.stop(owner, a.task_id, "cancelled"),
-    }),
-    retry_agent_task: tool({
-      description: "Create a new attempt from a failed or cancelled task.",
-      schema: taskId,
-      run: (a) => c.retry(owner, a.task_id),
+      run: (a) => c.steer(owner, a.task_id, a.message, authority),
     }),
     submit_agent_input: tool({
       description:

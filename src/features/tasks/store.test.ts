@@ -20,7 +20,9 @@ function deletionFixture() {
     created_at: "now",
     updated_at: "now",
     instructions: [],
-    attempt: 1,
+    created_by: "user",
+    instructions_sent: 0,
+    turn: 1,
     runtime_ms: 0,
   };
 
@@ -123,7 +125,9 @@ test("recent events return only the task's latest 200 in chronological order aft
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
     instructions: [],
-    attempt: 1,
+    created_by: "user",
+    instructions_sent: 0,
+    turn: 1,
     runtime_ms: 0,
   };
 

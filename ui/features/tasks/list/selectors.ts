@@ -18,7 +18,11 @@ export const FILTER_LABELS: Record<Filter, string> = {
 const FILTERS = Object.keys(FILTER_LABELS) as Filter[];
 
 export const terminal = (task: Task) =>
-  ["completed", "failed", "cancelled"].includes(task.status);
+  ["completed", "failed"].includes(task.status);
+
+/** No turn is running, starting or about to, so a message starts the next one. */
+export const idle = (task: Task) =>
+  ["completed", "failed", "interrupted"].includes(task.status);
 
 export const statusLabel = (task: Task) =>
   task.pending_input

@@ -5,13 +5,7 @@ import type {
   PersistedDialogDraft,
 } from "./types";
 
-const controlActions = [
-  "steer",
-  "continue",
-  "cancel",
-  "retry",
-  "interrupt",
-] as const;
+const controlActions = ["steer", "continue", "interrupt"] as const;
 
 export const persistedDialogIds = [
   "project",
@@ -19,8 +13,6 @@ export const persistedDialogIds = [
   "delegate",
   "steer",
   "continue",
-  "cancel",
-  "retry",
   "interrupt",
   "permission",
   "handoff",

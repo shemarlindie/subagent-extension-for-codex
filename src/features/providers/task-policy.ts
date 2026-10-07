@@ -26,8 +26,6 @@ export interface ProviderTaskPolicy {
   decideInput(task: Task, tool: string): boolean | undefined;
   parentMayApprove(task: Task): boolean;
   inputKind(tool: string): "question" | "permission";
-  /** Extract start options from persisted state, excluding native session details. */
-  retryOptions?(task: Task): Task["provider_options"];
   validateSession?(task: Task): Promise<void>;
 }
 

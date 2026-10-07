@@ -282,7 +282,9 @@ test("run emits result accounting exactly once for success and failure", async (
       created_at: "",
       updated_at: "",
       instructions: [],
-      attempt: 1,
+      created_by: "user",
+      instructions_sent: 0,
+      turn: 1,
       runtime_ms: 0,
       provider_options: {
         claude: {

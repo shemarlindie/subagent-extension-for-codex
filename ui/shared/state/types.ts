@@ -55,8 +55,7 @@ export type DialogState =
       scope: number;
     };
 
-export type ControlAction =
-  "steer" | "continue" | "cancel" | "retry" | "interrupt";
+export type ControlAction = "steer" | "continue" | "interrupt";
 
 /** Form edits are JSON-safe values keyed by each form's field names. */
 export type PersistedDialogDraft = Record<string, unknown>;

@@ -34,7 +34,6 @@ test("preview tasks cover every task status", () => {
     "interrupted",
     "completed",
     "failed",
-    "cancelled",
   ])
     assert.ok(statuses.has(status as never), `missing ${status} task`);
 });
@@ -73,8 +72,8 @@ test("preview events cover the activity kinds the timeline renders", () => {
     "agent.completed",
     "task.completed",
     "task.failed",
-    "task.cancelled",
-    "task.continued",
+    "task.interrupted",
+    "task.instruction",
     "prompt_suggestion",
     "tool_use_summary",
   ])

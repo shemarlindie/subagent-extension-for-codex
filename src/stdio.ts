@@ -217,7 +217,11 @@ for (const [name, d] of Object.entries(tools)) {
       ...(d.outputSchema ? { outputSchema: d.outputSchema } : {}),
       annotations: {
         readOnlyHint: name.startsWith("get_") || name.startsWith("list_"),
-        destructiveHint: name === "cancel_agent_task",
+        destructiveHint: [
+          "remove_user_agent_worktree",
+          "delete_user_agent_task",
+          "delete_user_agent_branch",
+        ].includes(name),
         openWorldHint: name === "start_agent_task",
       },
       _meta: {

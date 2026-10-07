@@ -73,7 +73,9 @@ function task(id = "one", repository = "/repo/a"): Task {
     created_at: "",
     updated_at: "",
     instructions: [],
-    attempt: 1,
+    created_by: "user",
+    instructions_sent: 0,
+    turn: 1,
     runtime_ms: 0,
   };
 }
@@ -1344,38 +1346,37 @@ function descriptionToggle(root: HTMLElement) {
   )!;
 }
 
-for (const action of ["interrupt", "cancel", "retry"] as const) {
-  test(`${action} confirmation defaults the task description ${action === "retry" ? "closed" : "open"}`, async (t) => {
-    layoutExpandableNotice(true);
+test("interrupt confirmation defaults the task description open", async (t) => {
+  layoutExpandableNotice(true);
 
-    const { controller, transport, user } = await setup(t);
+  const { controller, transport, user } = await setup(t);
 
-    await act(() =>
-      controller.open({ kind: "control", action, task: transport.tasks[0] }),
-    );
+  await act(() =>
+    controller.open({
+      kind: "control",
+      action: "interrupt",
+      task: transport.tasks[0],
+    }),
+  );
 
-    const dialog = await screen.findByRole("dialog");
-    const toggle = descriptionToggle(dialog);
-    const expanded = action !== "retry";
-    assert.equal(toggle.getAttribute("aria-expanded"), String(expanded));
+  const dialog = await screen.findByRole("dialog");
+  const toggle = descriptionToggle(dialog);
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
 
-    if (expanded) {
-      assert.equal(
-        dialog.querySelector(".notice-expand-text")?.textContent,
-        transport.tasks[0].description,
-      );
-    }
+  assert.equal(
+    dialog.querySelector(".notice-expand-text")?.textContent,
+    transport.tasks[0].description,
+  );
 
-    await user.click(toggle);
-    assert.equal(toggle.getAttribute("aria-expanded"), String(!expanded));
+  await user.click(toggle);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
 
-    assert.equal(
-      transport.calls.some((call) => call.name === `${action}_agent_task`),
-      false,
-      "Inspecting the description does not submit the task action",
-    );
-  });
-}
+  assert.equal(
+    transport.calls.some((call) => call.name === "interrupt_agent_task"),
+    false,
+    "Inspecting the description does not submit the task action",
+  );
+});
 
 test("delegation submits the full request without a title and search matches description", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
@@ -2048,7 +2049,7 @@ test("the Changes tab reads every page and shows the worktree branch and its com
 
 test("the Changes tab offers This turn after a second turn and explains empty states", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
-    transport.tasks = [{ ...task(), attempt: 2, branch: "agent/one" }];
+    transport.tasks = [{ ...task(), turn: 2, branch: "agent/one" }];
   });
 
   await user.click(screen.getByRole("tab", { name: "Changes" }));

@@ -428,12 +428,14 @@ test("ownership enforced across dependencies, state, events and controls", async
   await until(() => store.get(t.id, "alice").status === "waiting");
   assert.throws(() => store.get(t.id, "bob"));
   assert.throws(() => store.events(t.id, "bob"));
-  await assert.rejects(c.stop("bob", t.id, "cancelled"));
+  await assert.rejects(c.stop("bob", t.id));
+  await assert.rejects(c.followUp("bob", t.id, "Hi", "user"));
+  await assert.rejects(c.delete("bob", t.id));
   await assert.rejects(c.start("bob", { ...input(), depends_on: [t.id] }));
   await c.close();
 });
 
-test("dependencies wait for completion and failed dependencies never run", async () => {
+test("dependents wait on an interrupted dependency and fail with a failed one, and a follow-up resumes them", async () => {
   const { c, store } = await setup();
   const first = await c.start("alice", input("[input]"));
 
@@ -444,9 +446,38 @@ test("dependencies wait for completion and failed dependencies never run", async
 
   await until(() => store.get(first.id, "alice").status === "waiting");
   await until(() => store.get(second.id, "alice").status === "waiting");
-  await c.stop("alice", first.id, "cancelled");
+  await c.stop("alice", first.id);
+
+  // An interrupted dependency keeps its dependents waiting, and names it.
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(store.get(second.id, "alice").status, "waiting");
+  assert.equal(store.get(second.id, "alice").waiting_for, first.id);
+
+  assert.deepEqual(
+    store
+      .events(second.id, "alice")
+      .filter((e) => e.type === "task.waiting")
+      .at(-1)?.data,
+    { reason: "waiting_for_dependency", dependency_id: first.id },
+  );
+
+  // A failed dependency still fails them.
+  await c.followUp("alice", first.id, "[fail]", "user");
+  await until(() => store.get(first.id, "alice").status === "failed");
   await until(() => store.get(second.id, "alice").status === "failed");
+
+  assert.equal(
+    store.get(second.id, "alice").error,
+    `Dependency ${first.id} failed`,
+  );
+
   assert.equal(store.get(second.id, "alice").workspace, undefined);
+
+  // Once the dependency completes, a follow-up resumes the dependent.
+  await c.followUp("alice", first.id, "Try again", "user");
+  await until(() => store.get(first.id, "alice").status === "completed");
+  await c.followUp("alice", second.id, "Go ahead", "user");
+  await until(() => store.get(second.id, "alice").status === "completed");
   await c.close();
 });
 
@@ -587,19 +618,24 @@ test("human input is durable and stale input IDs are rejected", async () => {
   await c.close();
 });
 
-test("interrupt preserves session; continuation requires worker affinity", async () => {
-  const { c, store } = await setup();
+test("interrupt preserves the session, and a follow-up resumes it with only the new message", async () => {
+  const prompts: string[] = [];
+
+  class Recorder extends FixtureProvider {
+    async run(c: RunContext, p: string) {
+      prompts.push(p);
+
+      return super.run(c, p);
+    }
+  }
+
+  const { c, store } = await setup(new Recorder());
   const t = await c.start("alice", input("[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
-  await c.stop("alice", t.id, "interrupted");
+  await c.stop("alice", t.id);
   const previous = store.get(t.id, "alice").session_id;
-  const moved = store.get(t.id, "alice");
-  moved.session_owner = "another-worker";
-  store.save(moved);
-  await assert.rejects(c.continue("alice", t.id), /another worker/);
-  moved.session_owner = c.ownerWorker;
-  store.save(moved);
-  await c.continue("alice", t.id);
+  assert.ok(store.get(t.id, "alice").completed_at);
+  await c.followUp("alice", t.id, "Carry on [input]", "parent");
   await until(() => !!store.get(t.id, "alice").pending_input);
 
   c.input("alice", t.id, store.get(t.id, "alice").pending_input!.id, true, {
@@ -607,8 +643,221 @@ test("interrupt preserves session; continuation requires worker affinity", async
   });
 
   await until(() => store.get(t.id, "alice").status === "completed");
-  assert.equal(store.get(t.id, "alice").session_id, previous);
-  assert.equal(store.get(t.id, "alice").attempt, 2);
+  const done = store.get(t.id, "alice");
+  assert.equal(done.session_id, previous);
+  assert.equal(done.turn, 2);
+  assert.equal(done.instructions_sent, 1);
+  // The resumed session already holds the request, so it gets only the message.
+  assert.equal(prompts[1], "Carry on [input]");
+
+  assert.ok(
+    !store.events(t.id, "alice").some((e) => e.type === "task.session_started"),
+  );
+
+  await c.close();
+});
+
+test("a follow-up without a resumable session starts a new one carrying the conversation", async () => {
+  const prompts: string[] = [];
+
+  class Recorder extends FixtureProvider {
+    async run(c: RunContext, p: string) {
+      prompts.push(p);
+
+      return super.run(c, p);
+    }
+  }
+
+  const { c, store } = await setup(new Recorder());
+  const t = await c.start("alice", input("Review the parser"));
+  await until(() => store.get(t.id, "alice").status === "completed");
+  await c.followUp("alice", t.id, "Check the lexer too", "parent");
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  // The session is on another worker now, so it can't resume.
+  const moved = store.get(t.id, "alice");
+  moved.session_owner = "another-worker";
+  store.save(moved);
+  await c.followUp("alice", t.id, "Summarise both", "user");
+  await until(() => store.get(t.id, "alice").turn === 3);
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  assert.deepEqual(
+    store
+      .events(t.id, "alice")
+      .filter((e) => e.type === "task.session_started")
+      .map((e) => e.data),
+    [{ reason: "session_unavailable" }],
+  );
+
+  const prompt = prompts[2];
+  // The first turn's prompt, then the earlier conversation, then the message.
+  assert.ok(prompt.startsWith("Review the parser"));
+  assert.match(prompt, /continues in a new session/);
+  assert.match(prompt, /Parent agent:\nCheck the lexer too/);
+  assert.match(prompt, /Your reply:\nFixture task completed/);
+  assert.ok(prompt.endsWith("Summarise both"));
+
+  assert.ok(
+    prompt.indexOf("Check the lexer too") < prompt.indexOf("Summarise both"),
+  );
+
+  assert.equal(store.get(t.id, "alice").session_owner, c.ownerWorker);
+
+  // A task that failed before its session existed starts one, too.
+  const early = await c.start("alice", input("Early"));
+  await until(() => store.get(early.id, "alice").status === "completed");
+  const failed = store.get(early.id, "alice");
+  failed.status = "failed";
+  delete failed.session_id;
+  store.save(failed);
+  await c.followUp("alice", early.id, "Try once more", "user");
+  await until(() => store.get(early.id, "alice").status === "completed");
+
+  assert.deepEqual(
+    store
+      .events(early.id, "alice")
+      .filter((e) => e.type === "task.session_started")
+      .map((e) => e.data),
+    [{ reason: "no_session" }],
+  );
+
+  await c.close();
+});
+
+test("a completed task takes a follow-up as its next turn, with its own turn scope", async () => {
+  class Writer extends FixtureProvider {
+    async run(c: RunContext, p: string) {
+      await writeFile(
+        join(c.task.workspace!, `turn-${c.task.turn}.txt`),
+        `${c.task.turn}\n`,
+      );
+
+      return super.run(c, p);
+    }
+  }
+
+  const { c, store } = await setup(new Writer());
+  const t = await c.start("alice", input("Write"));
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const first = store.get(t.id, "alice");
+  assert.ok(first.completed_at);
+  assert.equal(first.created_by, "user");
+
+  const sent = await c.followUp("alice", t.id, "Write another", "parent");
+  assert.match(sent.message_id, /^msg_/);
+  assert.equal(sent.task.completed_at, undefined);
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const done = store.get(t.id, "alice");
+  assert.ok(done.runtime_ms >= first.runtime_ms);
+
+  const paths = async (scope: "task" | "turn") =>
+    (await c.workspaces.changes(done, scope)).files.map((f) => f.path);
+
+  assert.deepEqual(await paths("turn"), ["turn-2.txt"]);
+  assert.deepEqual(await paths("task"), ["turn-1.txt", "turn-2.txt"]);
+
+  const events = store.events(t.id, "alice");
+
+  assert.deepEqual(events.find((e) => e.type === "task.instruction")?.data, {
+    message_id: sent.message_id,
+    message: "Write another",
+    from: "parent",
+    delivery: "steer",
+  });
+
+  assert.deepEqual(
+    events.filter((e) => e.type === "agent.reply").map((e) => e.data.turn),
+    [1, 2],
+  );
+
+  // A busy task takes no follow-up yet.
+  const busy = await c.start("alice", input("[input]"));
+  await until(() => !!store.get(busy.id, "alice").pending_input);
+  await assert.rejects(c.followUp("alice", busy.id, "Hi", "user"), /busy/);
+  await c.close();
+});
+
+test("a turn stopped by its budget resumes after a follow-up raises it", async () => {
+  const { c, store } = await setup();
+
+  const t = await c.start("alice", {
+    ...input(),
+    budget: { max_runtime_minutes: 20, max_cost_usd: 1 },
+  });
+
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const spent = store.get(t.id, "alice");
+  spent.cost_usd = 1;
+  store.save(spent);
+  await c.followUp("alice", t.id, "More", "user");
+  await until(() => store.get(t.id, "alice").status === "failed");
+  assert.match(store.get(t.id, "alice").error!, /Cost budget exhausted/);
+
+  // Each limit can only go up.
+  await assert.rejects(
+    c.followUp("alice", t.id, "More", "user", {
+      budget: { max_cost_usd: 0.5 },
+    }),
+    /can only be raised/,
+  );
+
+  await assert.rejects(
+    c.followUp("alice", t.id, "More", "user", {
+      budget: { max_runtime_minutes: 500 },
+    }),
+  );
+
+  assert.equal(store.get(t.id, "alice").status, "failed");
+
+  await c.followUp("alice", t.id, "More", "parent", {
+    budget: { max_cost_usd: 2, max_runtime_minutes: null },
+  });
+
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  assert.deepEqual(store.get(t.id, "alice").budget, {
+    max_cost_usd: 2,
+    max_runtime_minutes: null,
+  });
+
+  // No limit can't become a limit again.
+  await assert.rejects(
+    c.followUp("alice", t.id, "More", "user", {
+      budget: { max_runtime_minutes: 30 },
+    }),
+    /can only be raised/,
+  );
+
+  await c.close();
+});
+
+test("cost counts each turn once, though a resumed session reports its running total", async () => {
+  class Costly extends FixtureProvider {
+    totals = [0.5, 0.8, 0.3];
+    async run(c: RunContext, p: string) {
+      c.emit("agent.completed", { cost_usd: this.totals.shift() });
+
+      return super.run(c, p);
+    }
+  }
+
+  const { c, store } = await setup(new Costly());
+  const t = await c.start("alice", input());
+  await until(() => store.get(t.id, "alice").status === "completed");
+  await c.followUp("alice", t.id, "Again", "user");
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  // 0.5, then 0.8 for the session so far: 0.3 more.
+  assert.equal(store.get(t.id, "alice").cost_usd, 0.8);
+
+  // A lower total started counting again, so all of it is new.
+  await c.followUp("alice", t.id, "Again", "user");
+  await until(() => store.get(t.id, "alice").turn === 3);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.ok(Math.abs(store.get(t.id, "alice").cost_usd! - 1.1) < 1e-9);
   await c.close();
 });
 
@@ -616,62 +865,17 @@ test("steering does not lose instructions during active turn", async () => {
   const { c, store } = await setup();
   const t = await c.start("alice", input("[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
-  await c.steer("alice", t.id, "Focus on error handling");
+  await c.steer("alice", t.id, "Focus on error handling [input]", "user");
   await until(() => !!store.get(t.id, "alice").pending_input);
 
   assert.ok(
-    store.get(t.id, "alice").instructions.includes("Focus on error handling"),
+    store
+      .get(t.id, "alice")
+      .instructions.includes("Focus on error handling [input]"),
   );
 
-  await c.stop("alice", t.id, "cancelled");
-  assert.equal(store.get(t.id, "alice").status, "cancelled");
-  const retry = await c.retry("alice", t.id);
-  assert.notEqual(retry.id, t.id);
-  assert.equal(retry.parent_task_id, t.id);
+  assert.equal(store.get(t.id, "alice").turn, 2);
   await c.close();
-});
-
-test("native retries extract start options without carrying resolved policy or session state", async () => {
-  const provider: Provider = new FixtureProvider();
-  provider.id = "claude";
-  provider.taskPolicy = claudeTaskPolicy;
-  provider.metadata = claudeMetadata;
-  const { c, store } = await setup(provider);
-  c.stopped = true;
-
-  try {
-    const task = await c.start("alice", {
-      ...input(),
-      provider: "claude",
-      provider_options: {
-        claude: {
-          permission_mode: "dontAsk",
-          approval_decider: "parent_agent",
-        },
-      },
-    });
-
-    task.status = "failed";
-    task.session_id = "prior-session";
-    task.session_state_ref = "prior-state";
-    store.save(task);
-
-    // Retries preserve selected authority while re-resolving current session restrictions.
-    c.settings.update("alice", { set: { claude_tools: "all" } });
-    const retry = await c.retry("alice", task.id);
-    assert.notEqual(retry.id, task.id);
-    assert.equal(retry.parent_task_id, task.id);
-    assert.equal(retry.session_id, undefined);
-    assert.equal(retry.session_state_ref, undefined);
-
-    const options = retry.provider_options?.claude;
-    assert.equal(options?.permission_mode, "dontAsk");
-    assert.equal(options?.approval_decider, "parent_agent");
-    assert.equal((options?.claude_policy as { tools: string }).tools, "all");
-    assert.equal(store.get(task.id, "alice").session_id, "prior-session");
-  } finally {
-    await c.close();
-  }
 });
 
 test("runtime budget stops a worker waiting for input", async () => {
@@ -711,7 +915,7 @@ test("restart recovery marks live task interrupted and clears stale permissions"
   const { c, store } = await setup();
   const t = await c.start("alice", input("[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
-  await c.stop("alice", t.id, "interrupted");
+  await c.stop("alice", t.id);
   const old = store.get(t.id, "alice");
   old.status = "waiting";
   old.waiting_reason = "waiting_for_permission";
@@ -863,7 +1067,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
       /Wait until the task stops/,
     );
 
-    await c.stop("alice", running.id, "cancelled");
+    await c.stop("alice", running.id);
     const t = store.get(running.id, "alice");
 
     await assert.rejects(
@@ -920,22 +1124,43 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     // Another user can't act on the task.
     await assert.rejects(c.removeWorktree("bob", t.id));
 
-    // An interrupted task can't continue without its worktree.
+    // The next message recreates the worktree: from its branch, or from the
+    // base commit once the branch is gone too.
     const paused = await c.start("alice", input("[input]"));
     await until(() => !!store.get(paused.id, "alice").pending_input);
-    await c.stop("alice", paused.id, "interrupted");
+    await c.stop("alice", paused.id);
     await c.removeWorktree("alice", paused.id);
+    await c.followUp("alice", paused.id, "Carry on", "user");
+    await until(() => store.get(paused.id, "alice").status === "completed");
+    assert.ok(existsSync(store.get(paused.id, "alice").workspace!));
+    await c.removeWorktree("alice", paused.id);
+    await c.deleteBranch("alice", paused.id);
+    await c.followUp("alice", paused.id, "Once more", "user");
+    await until(() => store.get(paused.id, "alice").turn === 3);
+    await until(() => store.get(paused.id, "alice").status === "completed");
+    const recreated = store.get(paused.id, "alice");
+    assert.match(branches(), new RegExp(`agent/${paused.id}`));
 
-    await assert.rejects(
-      c.continue("alice", paused.id),
-      /worktree was removed, so this task can't continue/,
+    assert.equal(
+      execFileSync("git", ["-C", recreated.workspace!, "rev-parse", "HEAD"])
+        .toString()
+        .trim(),
+      recreated.base_commit,
+    );
+
+    assert.deepEqual(
+      store
+        .events(paused.id, "alice")
+        .filter((e) => e.type === "task.worktree_recreated")
+        .map((e) => e.data),
+      [{ from: "branch" }, { from: "base" }],
     );
   } finally {
     await c.close();
   }
 });
 
-test("a stopped task is deleted with everything related to it", async () => {
+test("a task is deleted in any state with everything related to it", async () => {
   const { c, store, repo } = await setup();
 
   const git = (...args: string[]) =>
@@ -952,36 +1177,36 @@ test("a stopped task is deleted with everything related to it", async () => {
   try {
     const t = await c.start("alice", input("[input]"));
     await until(() => !!store.get(t.id, "alice").pending_input);
-
-    await assert.rejects(
-      c.delete("alice", t.id),
-      /Wait until the task stops before deleting it/,
-    );
-
-    await c.stop("alice", t.id, "interrupted");
     const stopped = store.get(t.id, "alice");
     assert.ok(stopped.workspace && existsSync(stopped.workspace));
     assert.match(git("branch", "--list", "agent/*"), new RegExp(t.id));
     assert.match(git("for-each-ref", "refs/agent-tasks"), /turn-start/);
 
-    // A task that is waiting on this one keeps it.
+    // A task that depends on this one keeps it, whatever its state, since a
+    // follow-up could still resume it.
     const dependent = await c.start("alice", {
       ...input("[input]"),
       depends_on: [t.id],
     });
 
+    await until(() => store.get(dependent.id, "alice").status === "waiting");
+    await c.stop("alice", dependent.id);
+
     await assert.rejects(
       c.delete("alice", t.id),
-      new RegExp(`${dependent.id} still depends`),
+      new RegExp(`${dependent.id} depends on this task`),
     );
 
-    await c.stop("alice", dependent.id, "cancelled");
+    await c.delete("alice", dependent.id);
     await assert.rejects(c.delete("bob", t.id), /not found/);
     assert.deepEqual(sessions, []);
 
+    // One waiting for input is interrupted first.
     assert.deepEqual(await c.delete("alice", t.id, true), {
       status: "deleted",
     });
+
+    assert.equal(c.active.has(t.id), false);
 
     assert.deepEqual(sessions, [t.id]);
     assert.throws(() => store.get(t.id, "alice"), /Task not found/);
@@ -998,7 +1223,7 @@ test("a stopped task is deleted with everything related to it", async () => {
     // Without the option, the provider's session is left alone.
     const kept = await c.start("alice", input("[input]"));
     await until(() => !!store.get(kept.id, "alice").pending_input);
-    await c.stop("alice", kept.id, "cancelled");
+    await c.stop("alice", kept.id);
     await c.delete("alice", kept.id);
     assert.deepEqual(sessions, [t.id]);
   } finally {
@@ -1027,7 +1252,7 @@ test("scheduler enforces concurrency and independent branches run together", asy
     1,
   );
 
-  await c.stop("alice", tasks[0].id, "cancelled");
+  await c.stop("alice", tasks[0].id);
   await until(() => !!store.get(tasks[2].id, "alice").pending_input);
   await c.close();
 });
@@ -1120,18 +1345,18 @@ test("no cost limit persists in settings and explicit task limits override it", 
   store.close();
 });
 
-test("continuation revalidates provider budget support before changing an interrupted task", async () => {
+test("a follow-up revalidates provider budget support before changing an interrupted task", async () => {
   const provider = new FixtureProvider();
   const { c } = await setup(provider);
   c.stopped = true;
 
   try {
     const task = await c.start("alice", input());
-    await c.stop("alice", task.id, "interrupted");
+    await c.stop("alice", task.id);
     provider.capabilities.cost_budget = false;
 
     await assert.rejects(
-      c.continue("alice", task.id),
+      c.followUp("alice", task.id, "Continue", "user"),
       /does not support cost budgets/,
     );
 
@@ -1237,16 +1462,21 @@ test("deletion locks execution, dependencies and duplicate cleanup until it fini
   try {
     const task = await c.start("alice", input("[input]"));
     await until(() => !!store.get(task.id, "alice").pending_input);
-    await c.stop("alice", task.id, "interrupted");
+    await c.stop("alice", task.id);
     const deletion = c.delete("alice", task.id, true);
     await until(() => deleting);
-    await assert.rejects(c.continue("alice", task.id), /being deleted/);
-    await assert.rejects(c.steer("alice", task.id, "Resume"), /being deleted/);
 
     await assert.rejects(
-      c.stop("alice", task.id, "cancelled"),
+      c.followUp("alice", task.id, "Resume", "user"),
       /being deleted/,
     );
+
+    await assert.rejects(
+      c.steer("alice", task.id, "Resume", "user"),
+      /being deleted/,
+    );
+
+    await assert.rejects(c.stop("alice", task.id), /being deleted/);
 
     await assert.rejects(c.delete("alice", task.id), /being deleted/);
 
@@ -1274,7 +1504,7 @@ test("provider deletion failures preserve local task resources and release the l
   try {
     const task = await c.start("alice", input("[input]"));
     await until(() => !!store.get(task.id, "alice").pending_input);
-    await c.stop("alice", task.id, "interrupted");
+    await c.stop("alice", task.id);
     await assert.rejects(c.delete("alice", task.id, true), /cleanup failed/);
     const kept = store.get(task.id, "alice");
     assert.equal(existsSync(kept.workspace!), true);
@@ -1286,7 +1516,7 @@ test("provider deletion failures preserve local task resources and release the l
   }
 });
 
-test("a continuation already awaiting project validation cannot resurrect a deleted task", async () => {
+test("a follow-up already awaiting project validation cannot resurrect a deleted task", async () => {
   const { c, store } = await setup();
   let release!: () => void;
 
@@ -1299,7 +1529,7 @@ test("a continuation already awaiting project validation cannot resurrect a dele
   try {
     const task = await c.start("alice", input("[input]"));
     await until(() => !!store.get(task.id, "alice").pending_input);
-    await c.stop("alice", task.id, "interrupted");
+    await c.stop("alice", task.id);
 
     c.projects = {
       resolve: async () => {
@@ -1308,7 +1538,7 @@ test("a continuation already awaiting project validation cannot resurrect a dele
       },
     } as unknown as typeof c.projects;
 
-    const continuation = c.continue("alice", task.id);
+    const continuation = c.followUp("alice", task.id, "Continue", "user");
     // Attach the rejection assertion before cleanup can make filesystem checks fail.
     const rejected = assert.rejects(continuation, /not found|removed|ENOENT/);
     await until(() => validating);
@@ -1507,6 +1737,7 @@ test("a new provider owns native session continuation after a restart", async ()
   try {
     const task = await c.start("alice", { ...input(), provider: provider.id });
     task.status = "running";
+    task.turn = 1;
 
     task.provider_options = {
       ...task.provider_options,
@@ -1519,26 +1750,38 @@ test("a new provider owns native session continuation after a restart", async ()
     store.save(task);
     await c.recover();
     assert.equal(store.get(task.id, "alice").status, "interrupted");
+    c.stopped = false;
 
-    await assert.rejects(
-      c.continue("alice", task.id),
-      /Native session unavailable/,
-    );
-
-    sessionValid = true;
-    const continued = await c.continue("alice", task.id);
-    assert.equal(continued.status, "queued");
+    // A session the provider rejects gives way to a new one.
+    await c.followUp("alice", task.id, "Continue", "user");
+    await until(() => store.get(task.id, "alice").status === "completed");
+    const renewed = store.get(task.id, "alice");
 
     assert.equal(
-      continued.provider_options?.[provider.id]?.native_turn_id,
+      renewed.provider_options?.[provider.id]?.native_turn_id,
       "native-turn",
     );
 
-    assert.equal(continued.session_id, "native-session");
+    assert.equal(renewed.session_id, `fixture_${task.id}`);
+
+    assert.deepEqual(
+      store
+        .events(task.id, "alice")
+        .filter((e) => e.type === "task.session_started")
+        .map((e) => e.data),
+      [{ reason: "session_unavailable" }],
+    );
+
+    // One it accepts resumes.
+    sessionValid = true;
+    await c.followUp("alice", task.id, "Continue", "user");
+    await until(() => store.get(task.id, "alice").turn === 3);
+    await until(() => store.get(task.id, "alice").status === "completed");
+    assert.equal(store.get(task.id, "alice").session_id, `fixture_${task.id}`);
 
     assert.deepEqual(validated, [
       "native:opaque-session",
-      "native:opaque-session",
+      `fixture:${renewed.workspace}`,
     ]);
   } finally {
     await c.close();

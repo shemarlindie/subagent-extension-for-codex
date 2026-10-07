@@ -344,9 +344,16 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
       join(b, ".git"),
     );
 
-    await control.stop("owner", task.id, "interrupted");
+    await control.stop("owner", task.id);
     control.repository = a;
-    const resumed = await control.continue("owner", task.id);
+
+    const { task: resumed } = await control.followUp(
+      "owner",
+      task.id,
+      "Continue [input]",
+      "user",
+    );
+
     assert.equal(resumed.repository, b);
     assert.equal(resumed.workspace, started.workspace);
     await until(() => f.store.get(task.id, "owner").status === "waiting");

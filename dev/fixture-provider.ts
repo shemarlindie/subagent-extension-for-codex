@@ -40,6 +40,8 @@ export class FixtureProvider implements Provider {
       text: "Fixture worker inspecting task (no model call).",
     });
 
+    if (prompt.includes("[fail]")) throw new Error("Fixture failure");
+
     if (prompt.includes("[input]")) {
       const r = await c.input(
         "AskUserQuestion",

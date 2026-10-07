@@ -425,7 +425,7 @@ export class Events {
                 task_id: t.id,
                 provider: t.provider,
                 worker_profile: t.worker_profile,
-                turn: t.attempt,
+                turn: t.turn,
                 ...(name === "agent_task.completed"
                   ? { reply: replyExcerpt(String(e.data.reply ?? "")) }
                   : {

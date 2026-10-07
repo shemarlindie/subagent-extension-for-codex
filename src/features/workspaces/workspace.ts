@@ -132,7 +132,7 @@ async function changedPaths(cwd: string, from: string, to: string) {
 }
 
 /** Statuses in which no turn is running or waiting for input. */
-const TURN_ENDED = ["interrupted", "completed", "failed", "cancelled"];
+const TURN_ENDED = ["interrupted", "completed", "failed"];
 
 /** Where a task's changes are read, or why there's nothing to read. */
 type ChangesSource =
@@ -935,6 +935,45 @@ export class Workspaces {
     }
 
     await this.unpin(t);
+  }
+
+  /** Whether a worktree task's worktree is gone, so its next turn recreates it. */
+  async worktreeMissing(t: Task) {
+    return (
+      t.workspace_strategy === "worktree" &&
+      !!t.workspace &&
+      !(await exists(t.workspace))
+    );
+  }
+
+  /**
+   * Recreates a removed worktree at its path: from the task's branch, or,
+   * when the branch was deleted too, as that branch again from the task's
+   * base commit. Returns which it came from.
+   */
+  async recreateWorktree(t: Task): Promise<"branch" | "base"> {
+    if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch)
+      throw new Error("This task has no worktree to recreate.");
+    // Forget a worktree whose directory was deleted without Git.
+    await git(t.repository, ["worktree", "prune"]);
+    await mkdir(this.root, { recursive: true, mode: 0o700 });
+
+    if (await this.branchExists(t)) {
+      await git(t.repository, ["worktree", "add", t.workspace, t.branch]);
+
+      return "branch";
+    }
+
+    await git(t.repository, [
+      "worktree",
+      "add",
+      "-b",
+      t.branch,
+      t.workspace,
+      t.base_commit!,
+    ]);
+
+    return "base";
   }
 
   /** Whether a worktree task's branch still exists. */

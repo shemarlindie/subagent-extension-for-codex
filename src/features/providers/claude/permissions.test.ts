@@ -298,38 +298,6 @@ test("parent cannot increase native permissions or grant itself decision authori
   assert.equal(taskOptions(approved).approval_decider, "parent_agent");
 });
 
-test("parent task references require ownership and do not pass on the parent's mode", async (t) => {
-  const { c } = await setup(t);
-
-  const parent = await c.start("alice", {
-    ...request,
-    ...withClaudeOptions(request, { permission_mode: "bypassPermissions" }),
-  });
-
-  await assert.rejects(
-    c.start("bob", { ...request, parent_task_id: parent.id }, "parent"),
-  );
-
-  const child = await c.start(
-    "alice",
-    { ...request, parent_task_id: parent.id },
-    "parent",
-  );
-
-  assert.equal(taskOptions(child).permission_mode, "inherit");
-  assert.equal(taskOptions(child).permission_source, "user_config");
-  c.settings.update("alice", { set: { claude_permission_mode: "dontAsk" } });
-
-  const overridden = await c.start(
-    "alice",
-    { ...request, parent_task_id: parent.id },
-    "parent",
-  );
-
-  assert.equal(taskOptions(overridden).permission_mode, "dontAsk");
-  assert.equal(taskOptions(overridden).permission_source, "setting");
-});
-
 class PromptProvider extends FixtureProvider {
   async run(ctx: RunContext): Promise<TurnOutput> {
     const answer = await ctx.input(

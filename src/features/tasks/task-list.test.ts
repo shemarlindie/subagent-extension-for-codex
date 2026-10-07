@@ -51,8 +51,8 @@ test("list summaries recover after subsequent work and disappear when the task s
       id: Math.max(...events.map((event) => event.id)) + 1,
       task_id: task.id,
       timestamp: task.updated_at,
-      type: "task.continued",
-      data: {},
+      type: "task.started",
+      data: { turn: 2 },
     };
 
     assert.deepEqual(listedTask(task, [...events, continued]).live_activity, {
@@ -65,7 +65,6 @@ test("list summaries recover after subsequent work and disappear when the task s
       "interrupted",
       "completed",
       "failed",
-      "cancelled",
     ] as const) {
       assert.equal(
         listedTask({ ...task, status }, events).live_activity,

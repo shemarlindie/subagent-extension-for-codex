@@ -70,8 +70,10 @@ const taskBase = {
   context: [],
   workspace_strategy: "worktree" as const,
   budget: { max_runtime_minutes: 20, max_cost_usd: 5 },
+  created_by: "user" as const,
   instructions: [],
-  attempt: 1,
+  instructions_sent: 0,
+  turn: 1,
   runtime_ms: 0,
 };
 
@@ -478,7 +480,7 @@ class Timeline {
 const begin = (t: Timeline, tools: string[]) =>
   t
     .add("task.queued", {}, 100)
-    .add("task.started", { attempt: 1 }, 300)
+    .add("task.started", { turn: 1 }, 300)
     .init(tools);
 
 const rateLimit = (t: Timeline, status: "allowed" | "rejected" = "allowed") =>
@@ -945,48 +947,52 @@ refactor.streamed(
   false,
 );
 
-// --- Cancelled after a tool was left running ----------------------------------
-const cancelled = new Timeline("preview-cancelled", at(75), 500);
-begin(cancelled, ["Read", "WebFetch"]);
-cancelled.say("Drafting release notes from the merged pull requests.");
+// --- Interrupted while a tool was left running, then discarded ----------------
+const release = new Timeline("preview-release", at(75), 500);
+begin(release, ["Read", "WebFetch"]);
+release.say("Drafting release notes from the merged pull requests.");
 
-const fetch = cancelled.toolStart("WebFetch", {
+const fetch = release.toolStart("WebFetch", {
   url: "https://example.com/releases",
 });
 
-cancelled.toolProgress(fetch, "WebFetch", 5);
-cancelled.add("task.cancelled", {}, 400);
+release.toolProgress(fetch, "WebFetch", 5);
+release.add("task.control_requested", { status: "interrupted" }, 400);
+release.add("task.interrupted", {}, 200);
 
 // The user discarded the work: worktree, then branch.
-cancelled.add(
+release.add(
   "task.worktree_removed",
   {
-    path: "/demo/data/worktrees/preview-cancelled",
-    branch: "agent/preview-cancelled",
+    path: "/demo/data/worktrees/preview-release",
+    branch: "agent/preview-release",
     forced: true,
   },
   30000,
 );
 
-cancelled.add(
-  "task.branch_deleted",
-  { branch: "agent/preview-cancelled" },
-  5000,
-);
+release.add("task.branch_deleted", { branch: "agent/preview-release" }, 5000);
 
 // --- Content blocks and rarer messages ----------------------------------------
 const blocks = new Timeline("preview-blocks", at(90), 600);
 begin(blocks, ["Read", "WebSearch", "mcp__assets__list"]);
 
+blocks.add("task.control_requested", { status: "interrupted" }, 200);
+blocks.add("task.interrupted", {}, 200);
+
 blocks.add(
   "task.instruction",
-  { message: "Also check the vendored icons." },
+  {
+    message_id: "msg_preview_blocks_1",
+    message: "Also check the vendored icons.",
+    from: "user",
+    delivery: "steer",
+  },
   200,
 );
 
-blocks.add("task.control_requested", { status: "interrupted" }, 200);
-blocks.add("task.interrupted", {}, 200);
-blocks.add("task.continued", {}, 200);
+blocks.add("task.queued", {}, 100);
+blocks.add("task.started", { turn: 2 }, 300);
 blocks.user("Also check the vendored icons.");
 
 blocks.assistant(
@@ -1248,13 +1254,21 @@ const interrupted = lifecycle(
   "preview-interrupted",
   20,
   ["task.queued"],
-  ["task.started", { attempt: 1 }],
-  ["task.instruction", { message: "Keep keyboard navigation unchanged." }],
+  ["task.started", { turn: 1 }],
   ["task.control_requested", { status: "interrupted" }],
-  ["task.interrupted", { reason: "service_restart" }],
+  ["task.interrupted"],
   // A second turn, so the Changes tab offers This turn.
-  ["task.continued"],
-  ["task.started", { attempt: 2 }],
+  [
+    "task.instruction",
+    {
+      message_id: "msg_preview_interrupted_1",
+      message: "Keep keyboard navigation unchanged.",
+      from: "parent",
+      delivery: "steer",
+    },
+  ],
+  ["task.queued"],
+  ["task.started", { turn: 2 }],
   ["task.interrupted", { reason: "service_restart" }],
 );
 
@@ -1263,7 +1277,7 @@ const build = lifecycle(
   "preview-build",
   105,
   ["task.queued"],
-  ["task.started", { attempt: 1 }],
+  ["task.started", { turn: 1 }],
   [
     "agent.reply",
     {
@@ -1287,7 +1301,7 @@ const profile = lifecycle(
   "preview-profile",
   107,
   ["task.queued"],
-  ["task.started", { attempt: 1 }],
+  ["task.started", { turn: 1 }],
   [
     "agent.reply",
     {
@@ -1306,11 +1320,66 @@ const profile = lifecycle(
   ],
 );
 
+// --- A follow-up after its worktree was removed: the worktree comes back from
+// its branch, and a new session starts since the old one was unavailable ------
+const resumedReplies = [
+  "Made the retry test wait for the mocked clock instead of real time, so it no longer races the timer.",
+  "Covered the timeout path too: the test now checks that the third retry gives up after the configured delay.",
+];
+
+const resumed = lifecycle(
+  "preview-resumed",
+  112,
+  ["task.queued"],
+  ["task.started", { turn: 1 }],
+  [
+    "agent.reply",
+    {
+      text: resumedReplies[0],
+      turn: 1,
+      start_tree: `${FAKE_TREE}1s`,
+      end_tree: `${FAKE_TREE}1e`,
+    },
+  ],
+  ["task.completed", { reply: resumedReplies[0] }],
+  [
+    "task.worktree_removed",
+    {
+      path: "/demo/data/worktrees/preview-resumed",
+      branch: "agent/preview-resumed",
+      forced: false,
+    },
+  ],
+  [
+    "task.instruction",
+    {
+      message_id: "msg_preview_resumed_1",
+      message: "Also cover the timeout path.",
+      from: "user",
+      delivery: "steer",
+    },
+  ],
+  ["task.queued"],
+  ["task.worktree_recreated", { from: "branch" }],
+  ["task.session_started", { reason: "session_unavailable" }],
+  ["task.started", { turn: 2 }],
+  [
+    "agent.reply",
+    {
+      text: resumedReplies[1],
+      turn: 2,
+      start_tree: `${FAKE_TREE}2s`,
+      end_tree: `${FAKE_TREE}2e`,
+    },
+  ],
+  ["task.completed", { reply: resumedReplies[1] }],
+);
+
 const permission = lifecycle(
   "preview-input",
   25,
   ["task.queued"],
-  ["task.started", { attempt: 1 }],
+  ["task.started", { turn: 1 }],
   [
     "agent.input_required",
     {
@@ -1332,7 +1401,10 @@ const dependent = lifecycle(
   "preview-dependent",
   95,
   ["task.queued"],
-  ["task.waiting", { reason: "waiting_for_dependency" }],
+  [
+    "task.waiting",
+    { reason: "waiting_for_dependency", dependency_id: "preview-interrupted" },
+  ],
 );
 
 // --- Running tasks, one per "latest activity" the inspector can show ----------
@@ -1411,7 +1483,11 @@ const liveStates: {
     name: "working",
     title: "Live: working",
     status: "Working",
-    timeline: liveTimeline("working", 1500).add("task.continued", {}, 800),
+    timeline: liveTimeline("working", 1500).add(
+      "task.started",
+      { turn: 1 },
+      800,
+    ),
   },
   {
     name: "finishing",
@@ -1589,13 +1665,13 @@ export const previewTasks: Task[] = [
   },
   {
     ...taskBase,
-    id: "preview-cancelled",
+    id: "preview-release",
     title: "Draft the release notes",
     description: "Summarise merged pull requests into release notes.",
     conversation_id: OTHER_THREAD,
-    status: "cancelled",
+    status: "interrupted",
     // Its worktree and branch were deleted.
-    ...worktree("preview-cancelled"),
+    ...worktree("preview-release"),
     ...timestamps(75, 1),
   },
   {
@@ -1627,8 +1703,9 @@ export const previewTasks: Task[] = [
       "List the assets in assets/ and compare them with the style guide.",
     repository: WEBSITE,
     status: "completed",
-    attempt: 2,
+    turn: 2,
     instructions: ["Also check the vendored icons."],
+    instructions_sent: 1,
     model: "opus",
     reasoning_effort: "high",
     runtime_ms: 128000,
@@ -1677,7 +1754,9 @@ export const previewTasks: Task[] = [
       },
     },
     status: "interrupted",
-    attempt: 2,
+    turn: 2,
+    instructions: ["Keep keyboard navigation unchanged."],
+    instructions_sent: 1,
     runtime_ms: 125000,
     ...worktree("preview-interrupted"),
     ...timestamps(20, 2),
@@ -1685,12 +1764,14 @@ export const previewTasks: Task[] = [
   {
     ...taskBase,
     id: "preview-dependent",
-    title: "Publish the licence report",
-    description: "Share the audit once the licence audit finishes.",
+    title: "Review the inspector layout change",
+    description:
+      "Review the inspector layout change once it finishes, checking keyboard navigation.",
     worker_profile: "reviewer",
     status: "waiting",
     waiting_reason: "waiting_for_dependency",
-    depends_on: ["preview-audit"],
+    waiting_for: "preview-interrupted",
+    depends_on: ["preview-interrupted"],
     ...timestamps(95, 0),
   },
   {
@@ -1760,6 +1841,22 @@ export const previewTasks: Task[] = [
     ...worktree("preview-profile"),
     ...timestamps(107, 5),
   },
+  {
+    ...taskBase,
+    id: "preview-resumed",
+    title: "Stabilise the retry timer test",
+    description:
+      "Make the retry test independent of real time so it stops failing on slow machines.",
+    worker_profile: "test_engineer",
+    status: "completed",
+    turn: 2,
+    instructions: ["Also cover the timeout path."],
+    instructions_sent: 1,
+    runtime_ms: 186000,
+    cost_usd: 0.88,
+    ...worktree("preview-resumed"),
+    ...timestamps(112, 40),
+  },
   ...liveTasks,
 ];
 
@@ -1769,7 +1866,7 @@ export const previewEvents: Event[] = [
   question,
   stacked,
   refactor,
-  cancelled,
+  release,
   blocks,
   signals,
   long,
@@ -1778,5 +1875,6 @@ export const previewEvents: Event[] = [
   dependent,
   build,
   profile,
+  resumed,
   ...liveTimelines,
 ].flatMap((timeline) => timeline.events);

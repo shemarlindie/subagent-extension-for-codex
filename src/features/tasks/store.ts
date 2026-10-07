@@ -147,6 +147,18 @@ export class Store {
       : undefined;
   }
 
+  /** Every event of the given types for a task, in order, with no page limit. */
+  eventsOfTypes(id: string, types: string[]): Event[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM events WHERE task_id=? AND type IN (${types.map(() => "?").join(",")}) ORDER BY id`,
+      )
+      .all(id, ...types)
+      .map(
+        (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
+      );
+  }
+
   recentEvents(id: string, owner: string): Event[] {
     this.get(id, owner);
 
