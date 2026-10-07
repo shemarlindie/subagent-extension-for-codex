@@ -228,6 +228,7 @@ test("action variants have distinct dialog flags", () => {
     { kind: "control" as const, action: "steer" as const, taskId: "task-1" },
     { kind: "control" as const, action: "retry" as const, taskId: "task-2" },
     { kind: "respond" as const, taskId: "task-1", requestId: "request-1" },
+    { kind: "delete" as const, taskId: "task-3" },
     { kind: "worktree" as const, action: "remove" as const, taskId: "task-1" },
     {
       kind: "worktree" as const,
@@ -242,6 +243,7 @@ test("action variants have distinct dialog flags", () => {
   assert.equal(params.get("dw_dlg_steer"), "1");
   assert.equal(params.get("dw_dlg_retry"), "1");
   assert.equal(params.get("dw_dlg_permission"), "1");
+  assert.equal(params.get("dw_dlg_delete_task"), "1");
   assert.equal(params.get("dw_dlg_worktree_remove"), "1");
   assert.equal(params.get("dw_dlg_worktree_delete_branch"), "1");
   assert.equal(params.has("dw_dlg_control"), false);

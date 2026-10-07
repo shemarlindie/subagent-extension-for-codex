@@ -545,7 +545,15 @@ test("in-flight mutation never selects its returned task after the host changes 
   await controller.delegate();
   const original = controller.getSnapshot().dialog;
   const gate = deferred<Task>();
-  const submitting = controller.submit(() => gate.promise, true);
+  let navigated = false;
+
+  const submitting = controller.submit(
+    () => gate.promise,
+    true,
+    () => {
+      navigated = true;
+    },
+  );
 
   controller.applyScope(
     { panel_scope: { conversation_id: "new-chat", repository: "/repo/b" } },
@@ -559,6 +567,7 @@ test("in-flight mutation never selects its returned task after the host changes 
   assert.equal(controller.getSnapshot().dialog, original);
   assert.equal(controller.getSnapshot().busy, false);
   assert.match(controller.getSnapshot().formError, /original scope/);
+  assert.equal(navigated, false);
   let retryCalls = 0;
 
   await controller.submit(async () => {

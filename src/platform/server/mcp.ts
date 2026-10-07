@@ -167,6 +167,7 @@ export function mcp(
           destructiveHint: [
             "cancel_agent_task",
             "remove_user_agent_worktree",
+            "delete_user_agent_task",
             "delete_user_agent_branch",
           ].includes(name),
           openWorldHint: name === "start_agent_task",

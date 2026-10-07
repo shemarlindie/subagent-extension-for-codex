@@ -254,6 +254,7 @@ export class Controller {
           dialog = { kind: saved.kind, task: task!, scope };
           break;
         case "handoff":
+        case "delete":
           dialog = { kind: saved.kind, task: task!, scope };
           break;
         case "file":
@@ -1041,7 +1042,10 @@ export class Controller {
   open(
     dialog:
       | Omit<Extract<DialogState, { kind: "control" }>, "scope">
-      | Omit<Extract<DialogState, { kind: "respond" | "handoff" }>, "scope">
+      | Omit<
+          Extract<DialogState, { kind: "respond" | "handoff" | "delete" }>,
+          "scope"
+        >
       | Omit<Extract<DialogState, { kind: "file" }>, "scope">
       | Omit<Extract<DialogState, { kind: "worktree" }>, "scope">,
   ) {
@@ -1105,7 +1109,11 @@ export class Controller {
   }
 
   /** All mutations/messages are bound to the scope visible when the dialog opened. */
-  async submit(operation: () => Promise<Task | void>, selectReturned = false) {
+  async submit(
+    operation: () => Promise<Task | void>,
+    selectReturned = false,
+    afterSuccess?: () => void,
+  ) {
     const dialog = this.state.dialog;
     if (!dialog || this.state.busy || this.disposed) return;
 
@@ -1147,6 +1155,7 @@ export class Controller {
         });
       }
 
+      afterSuccess?.();
       this.closeDialog();
       succeeded = true;
     } catch (error) {

@@ -10,6 +10,7 @@ import {
 } from "node:path";
 
 import {
+  deleteSession,
   type Options,
   query,
   type SandboxSettings,
@@ -190,7 +191,28 @@ export class ClaudeAgentProvider implements Provider {
   private catalog?: { expires: number; models: ModelChoice[] };
   private catalogRequest?: Promise<ModelChoice[]>;
   private catalogFailure?: { expires: number; error: unknown };
-  constructor(private launch: typeof query = query) {}
+  constructor(
+    private launch: typeof query = query,
+    private removeSession: typeof deleteSession = deleteSession,
+  ) {}
+
+  async deleteSession(task: Task) {
+    if (!task.session_id) return;
+
+    try {
+      await this.removeSession(task.session_id);
+    } catch (error) {
+      // The SDK reports absence with this message; filesystem/cleanup failures
+      // must propagate even when it already removed the main transcript.
+      if (
+        !(error instanceof Error) ||
+        error.message !==
+          `Session ${task.session_id} not found in any project directory`
+      )
+        throw error;
+    }
+  }
+
   models(): Promise<ModelChoice[]> {
     if (this.catalog && this.catalog.expires > Date.now())
       return Promise.resolve(this.catalog.models);

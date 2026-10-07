@@ -61,6 +61,7 @@ interface Active {
 
 export class Control {
   active = new Map<string, Active>();
+  private deleting = new Set<string>();
   scheduling = false;
   stopped = false;
   ownerWorker = hostname();
@@ -269,6 +270,10 @@ export class Control {
       : await this.workspaces.repository(
           req.repository === "current" ? this.repository : req.repository,
         );
+
+    // Repository resolution can yield while a dependency is being deleted.
+    for (const id of req.depends_on) this.mutableTask(owner, id);
+    if (req.parent_task_id) this.mutableTask(owner, req.parent_task_id);
 
     const t: Task = {
       ...req,
@@ -687,18 +692,71 @@ export class Control {
     ];
   }
 
-  /** Worktree actions wait until the task isn't running or about to. */
-  private idleWorktreeTask(owner: string, id: string) {
-    const t = this.store.get(id, owner);
+  /** Holds execution controls while asynchronous deletion removes task resources. */
+  private mutableTask(owner: string, id: string) {
+    const task = this.store.get(id, owner);
+    if (this.deleting.has(id)) throw new Error("Task is being deleted");
+
+    return task;
+  }
+
+  /** Worktree actions and deletion wait until the task isn't running or about to. */
+  private idleWorktreeTask(
+    owner: string,
+    id: string,
+    action = "changing its worktree",
+  ) {
+    const t = this.mutableTask(owner, id);
     if (
       this.active.has(id) ||
       ["queued", "starting", "running", "waiting"].includes(t.status)
     )
-      throw new Error(
-        "Wait until the task stops before changing its worktree.",
-      );
+      throw new Error(`Wait until the task stops before ${action}.`);
 
     return t;
+  }
+
+  /**
+   * Deletes a stopped task and everything related to it: its events, stored
+   * requests and webhook deliveries, and a worktree task's worktree and
+   * branch, uncommitted changes included. `deleteAgentTask` also deletes the
+   * provider's session, which the task could otherwise continue from.
+   */
+  async delete(owner: string, id: string, deleteAgentTask = false) {
+    const t = this.idleWorktreeTask(owner, id, "deleting it");
+
+    const dependents = this.store
+      .all(owner)
+      .filter(
+        (d) =>
+          d.depends_on.includes(id) &&
+          (this.active.has(d.id) ||
+            !["completed", "failed", "cancelled"].includes(d.status)),
+      );
+
+    if (dependents.length)
+      throw new Error(
+        `Task ${dependents[0].id} still depends on this task. Delete or finish it first.`,
+      );
+
+    this.deleting.add(id);
+
+    try {
+      // Keep the local task available to retry if provider cleanup fails.
+      if (deleteAgentTask && t.session_id) {
+        const provider = this.providers.get(t.provider);
+        if (!provider?.deleteSession)
+          throw new Error("Provider session deletion is unavailable");
+        await provider.deleteSession(t);
+      }
+
+      await this.workspaces.discard(t);
+      this.store.delete(id, owner);
+
+      return { status: "deleted" as const };
+    } finally {
+      this.deleting.delete(id);
+    }
   }
 
   /**
@@ -729,7 +787,7 @@ export class Control {
   }
 
   async stop(owner: string, id: string, status: "interrupted" | "cancelled") {
-    const t = this.store.get(id, owner);
+    const t = this.mutableTask(owner, id);
     if (t.waiting_reason === "termination_unconfirmed")
       throw new Error(
         "Worker termination is unconfirmed; task controls remain locked",
@@ -744,7 +802,7 @@ export class Control {
       this.store.event(t, "task.control_requested", { status });
       a.abort.abort(new Error(status));
       await a.done;
-      const current = this.store.get(id, owner);
+      const current = this.mutableTask(owner, id);
       if (current.waiting_reason === "termination_unconfirmed")
         throw new Error(
           "Worker termination is unconfirmed; task controls remain locked",
@@ -769,7 +827,7 @@ export class Control {
   }
 
   async continue(owner: string, id: string, message = "Continue the task.") {
-    const t = this.store.get(id, owner);
+    const t = this.mutableTask(owner, id);
     if (t.status !== "interrupted")
       throw new Error("Only interrupted tasks can continue");
     if (this.active.has(id)) throw new Error("Task is still finalizing");
@@ -790,6 +848,8 @@ export class Control {
           `The worktree was removed, so this task can't continue; its work is on branch ${t.branch}. Cancel it and start a new attempt.`,
         );
       });
+    // Recheck after filesystem/provider awaits so deletion cannot resurrect a task.
+    this.mutableTask(owner, id);
     t.status = "queued";
     delete t.error;
     delete t.completed_at;
@@ -802,7 +862,7 @@ export class Control {
   }
 
   async steer(owner: string, id: string, message: string) {
-    let t = this.store.get(id, owner);
+    let t = this.mutableTask(owner, id);
     if (t.waiting_reason === "termination_unconfirmed")
       throw new Error(
         "Worker termination is unconfirmed; task controls remain locked",
@@ -812,7 +872,7 @@ export class Control {
 
     if (this.active.has(id)) {
       await this.stop(owner, id, "interrupted");
-      t = this.store.get(id, owner);
+      t = this.mutableTask(owner, id);
     }
 
     t.instructions.push(message);
@@ -834,7 +894,7 @@ export class Control {
     message?: string,
     authority: InputAuthority = "user",
   ) {
-    const t = this.store.get(id, owner);
+    const t = this.mutableTask(owner, id);
     if (t.pending_input?.id !== requestId)
       throw new Error("Input request is stale");
     if (

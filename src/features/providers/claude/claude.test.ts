@@ -28,6 +28,74 @@ const result = {
   recommendations: [],
 };
 
+test("Claude session deletion skips absent ids and forwards existing sessions", async () => {
+  const task: Task = {
+    ...startSchema.parse({ title: "Delete", description: "Delete" }),
+    title: "Delete",
+    id: "delete-task",
+    owner: "alice",
+    status: "completed",
+    created_at: "now",
+    updated_at: "now",
+    instructions: [],
+    attempt: 1,
+    runtime_ms: 0,
+  };
+
+  const calls: string[] = [];
+
+  const provider = new ClaudeAgentProvider(undefined, async (id) => {
+    calls.push(id);
+  });
+
+  await provider.deleteSession(task);
+  assert.deepEqual(calls, []);
+  await provider.deleteSession({ ...task, session_id: "session-one" });
+  assert.deepEqual(calls, ["session-one"]);
+});
+
+test("Claude session deletion only tolerates the SDK's missing-session error", async () => {
+  const task: Task = {
+    ...startSchema.parse({ title: "Delete", description: "Delete" }),
+    title: "Delete",
+    id: "delete-task",
+    owner: "alice",
+    status: "completed",
+    created_at: "now",
+    updated_at: "now",
+    instructions: [],
+    attempt: 1,
+    runtime_ms: 0,
+    session_id: "session-one",
+  };
+
+  const missing = new Error(
+    "Session session-one not found in any project directory",
+  );
+
+  const absent = new ClaudeAgentProvider(undefined, async () => {
+    throw missing;
+  });
+
+  await absent.deleteSession(task);
+
+  for (const error of [
+    new Error("subagent cleanup failed"),
+    new Error("Session other-session not found in any project directory"),
+    "cleanup failed",
+  ]) {
+    const failed = new ClaudeAgentProvider(undefined, async () => {
+      throw error;
+    });
+
+    for (const session_state_ref of [undefined, "/missing/transcript.jsonl"])
+      await assert.rejects(
+        failed.deleteSession({ ...task, session_state_ref }),
+        (actual: unknown) => actual === error,
+      );
+  }
+});
+
 async function context() {
   const workspace = await mkdtemp(join(tmpdir(), "claude-contract-"));
   execFileSync("git", ["init", "-q", workspace]);

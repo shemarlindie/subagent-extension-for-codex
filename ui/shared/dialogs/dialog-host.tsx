@@ -53,9 +53,11 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
           finalFocus={() =>
             suspended
               ? document.getElementById("open-panel")
-              : openedScope.current === controller.getSnapshot().scopeVersion &&
-                  trigger.current?.isConnected
-                ? trigger.current
+              : openedScope.current === controller.getSnapshot().scopeVersion
+                ? trigger.current?.isConnected
+                  ? trigger.current
+                  : (definition?.restoreFocus?.() ??
+                    document.getElementById("delegate"))
                 : document.getElementById("delegate")
           }
         >

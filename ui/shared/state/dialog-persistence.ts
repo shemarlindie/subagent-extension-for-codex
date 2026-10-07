@@ -24,6 +24,7 @@ export const persistedDialogIds = [
   "interrupt",
   "permission",
   "handoff",
+  "delete_task",
   "file",
   "worktree_remove",
   "worktree_delete_branch",
@@ -72,6 +73,8 @@ export function persistDialog(dialog: DialogState): PersistedDialog {
         requestId: dialog.task.pending_input?.id,
       };
     case "handoff":
+      return { kind: dialog.kind, taskId: dialog.task.id };
+    case "delete":
       return { kind: dialog.kind, taskId: dialog.task.id };
     case "file":
       return { kind: dialog.kind, taskId: dialog.task.id, path: dialog.path };
@@ -138,6 +141,7 @@ export function parsePersistedDialog(
         ...(draft ? { draft } : {}),
       };
     case "handoff":
+    case "delete":
       if (!isString(value.taskId) || !value.taskId) return;
 
       return {
@@ -194,6 +198,8 @@ export function persistedDialogId(dialog: PersistedDialog): PersistedDialogId {
       return dialog.action;
     case "respond":
       return "permission";
+    case "delete":
+      return "delete_task";
     case "worktree":
       return dialog.action === "remove"
         ? "worktree_remove"

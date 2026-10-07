@@ -1,11 +1,10 @@
-import type { ReactNode } from "react";
-
 import { changedFileDialog } from "../../features/changes/changed-file-preview";
 import { worktreeDialog } from "../../features/changes/worktree-form";
 import { delegateDialog } from "../../features/delegation/delegate-form";
 import { projectDialog } from "../../features/projects/project-form";
 import { settingsDialog } from "../../features/settings/settings-form";
 import { controlDialog } from "../../features/tasks/controls/control-form";
+import { deleteTaskDialog } from "../../features/tasks/controls/delete-task-form";
 import { handoffDialog } from "../../features/tasks/controls/handoff-form";
 import { permissionDialog } from "../../features/tasks/controls/permission-form";
 import type { DialogState } from "../state/types";
@@ -19,18 +18,12 @@ const registry: { [K in DialogKind]: DialogDefinition<K> } = {
   control: controlDialog,
   respond: permissionDialog,
   handoff: handoffDialog,
+  delete: deleteTaskDialog,
   file: changedFileDialog,
   worktree: worktreeDialog,
 };
 
 /** Looks up by the dialog's kind, which TypeScript cannot correlate with the entry. */
 export function dialogDefinition(dialog: DialogState) {
-  return registry[dialog.kind] as unknown as {
-    title(dialog: DialogState): string;
-    render(dialog: DialogState): ReactNode;
-    initialFocus?(
-      popup: HTMLElement | null,
-      dialog: DialogState,
-    ): HTMLElement | null;
-  };
+  return registry[dialog.kind] as unknown as DialogDefinition<DialogKind>;
 }

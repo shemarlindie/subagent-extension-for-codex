@@ -25,13 +25,22 @@ export class CodexAgentProvider implements Provider {
   constructor(
     private sessions: Pick<
       CodexSessions,
-      "open" | "turn" | "cancel" | "cancelAndWait" | "structuredResult"
+      | "open"
+      | "turn"
+      | "cancel"
+      | "cancelAndWait"
+      | "structuredResult"
+      | "delete"
     >,
     private executors: CodexExecutors,
   ) {}
 
   close() {
     return this.executors.close();
+  }
+
+  deleteSession(task: RunContext["task"]) {
+    return this.sessions.delete(task);
   }
 
   async recover(task: RunContext["task"]) {

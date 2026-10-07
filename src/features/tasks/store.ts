@@ -102,6 +102,59 @@ export class Store {
       .run(t.id, t.owner, JSON.stringify(t));
   }
 
+  /**
+   * Deletes a task with its events and everything else stored under its id:
+   * the executor record, pending forms and queued webhook deliveries.
+   */
+  delete(id: string, owner: string) {
+    this.get(id, owner);
+
+    const tables = new Set(
+      this.db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+        .all()
+        .map((row) => String(row.name)),
+    );
+
+    this.db.exec("BEGIN IMMEDIATE");
+
+    try {
+      if (tables.has("codex_executors"))
+        this.db.prepare("DELETE FROM codex_executors WHERE task_id=?").run(id);
+
+      if (tables.has("form_requests"))
+        this.db
+          .prepare(
+            "DELETE FROM form_requests WHERE json_extract(body,'$.task_id')=?",
+          )
+          .run(id);
+
+      // Outbox event ids are `evt_<task id>_<event id>`.
+      if (tables.has("event_outbox"))
+        this.db
+          .prepare(
+            "DELETE FROM event_outbox WHERE substr(event_id,1,?)=? AND substr(event_id,?) GLOB '[0-9]*' AND substr(event_id,?) NOT GLOB '*[^0-9]*'",
+          )
+          .run(
+            `evt_${id}_`.length,
+            `evt_${id}_`,
+            `evt_${id}_`.length + 1,
+            `evt_${id}_`.length + 1,
+          );
+
+      this.db.prepare("DELETE FROM events WHERE task_id=?").run(id);
+
+      this.db
+        .prepare("DELETE FROM tasks WHERE id=? AND owner=?")
+        .run(id, owner);
+
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
   all(owner?: string): Task[] {
     return (
       owner

@@ -36,3 +36,20 @@
   font-size: 18px;
   line-height: 1;
 }
+
+/* The option to also delete the agent task: its label and help beside a switch. */
+.delete-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 12px 0;
+}
+.delete-option-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.delete-option-text .form-note {
+  margin: 0;
+}

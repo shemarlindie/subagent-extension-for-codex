@@ -9,6 +9,8 @@ export type DialogOf<K extends DialogKind> = Extract<DialogState, { kind: K }>;
 export interface DialogDefinition<K extends DialogKind> {
   title: (dialog: DialogOf<K>) => string;
   render: (dialog: DialogOf<K>) => ReactNode;
+  /** Replacement control when the original trigger was unmounted, such as a menu item. */
+  restoreFocus?: () => HTMLElement | null;
   /** The element to focus on open; defaults to the first focusable one. */
   initialFocus?: (
     popup: HTMLElement | null,

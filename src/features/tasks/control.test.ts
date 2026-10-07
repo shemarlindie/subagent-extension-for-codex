@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -894,6 +895,77 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
   }
 });
 
+test("a stopped task is deleted with everything related to it", async () => {
+  const { c, store, repo } = await setup();
+
+  const git = (...args: string[]) =>
+    execFileSync("git", ["-C", repo, ...args])
+      .toString()
+      .trim();
+
+  const sessions: string[] = [];
+
+  c.providers.get("fixture")!.deleteSession = async (t) => {
+    sessions.push(t.id);
+  };
+
+  try {
+    const t = await c.start("alice", input("[input]"));
+    await until(() => !!store.get(t.id, "alice").pending_input);
+
+    await assert.rejects(
+      c.delete("alice", t.id),
+      /Wait until the task stops before deleting it/,
+    );
+
+    await c.stop("alice", t.id, "interrupted");
+    const stopped = store.get(t.id, "alice");
+    assert.ok(stopped.workspace && existsSync(stopped.workspace));
+    assert.match(git("branch", "--list", "agent/*"), new RegExp(t.id));
+    assert.match(git("for-each-ref", "refs/agent-tasks"), /turn-start/);
+
+    // A task that is waiting on this one keeps it.
+    const dependent = await c.start("alice", {
+      ...input("[input]"),
+      depends_on: [t.id],
+    });
+
+    await assert.rejects(
+      c.delete("alice", t.id),
+      new RegExp(`${dependent.id} still depends`),
+    );
+
+    await c.stop("alice", dependent.id, "cancelled");
+    await assert.rejects(c.delete("bob", t.id), /not found/);
+    assert.deepEqual(sessions, []);
+
+    assert.deepEqual(await c.delete("alice", t.id, true), {
+      status: "deleted",
+    });
+
+    assert.deepEqual(sessions, [t.id]);
+    assert.throws(() => store.get(t.id, "alice"), /Task not found/);
+
+    assert.deepEqual(
+      store.streamEvents("alice", 0).filter((e) => e.task_id === t.id),
+      [],
+    );
+
+    assert.equal(existsSync(stopped.workspace!), false);
+    assert.equal(git("branch", "--list", "agent/*").includes(t.id), false);
+    assert.equal(git("for-each-ref", "refs/agent-tasks").includes(t.id), false);
+
+    // Without the option, the provider's session is left alone.
+    const kept = await c.start("alice", input("[input]"));
+    await until(() => !!store.get(kept.id, "alice").pending_input);
+    await c.stop("alice", kept.id, "cancelled");
+    await c.delete("alice", kept.id);
+    assert.deepEqual(sessions, [t.id]);
+  } finally {
+    await c.close();
+  }
+});
+
 test("scheduler enforces concurrency and independent branches run together", async () => {
   const { c, store } = await setup(undefined, 2);
 
@@ -1226,6 +1298,109 @@ test("cancelled queued input rejects promptly without bypassing the active permi
       ["first", "third"],
     );
   } finally {
+    await c.close();
+  }
+});
+
+test("deletion locks execution, dependencies and duplicate cleanup until it finishes", async () => {
+  const { c, store } = await setup();
+  let release!: () => void;
+
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  let deleting = false;
+
+  c.providers.get("fixture")!.deleteSession = async () => {
+    deleting = true;
+    await pending;
+  };
+
+  try {
+    const task = await c.start("alice", input("[input]"));
+    await until(() => !!store.get(task.id, "alice").pending_input);
+    await c.stop("alice", task.id, "interrupted");
+    const deletion = c.delete("alice", task.id, true);
+    await until(() => deleting);
+    await assert.rejects(c.continue("alice", task.id), /being deleted/);
+    await assert.rejects(c.steer("alice", task.id, "Resume"), /being deleted/);
+
+    await assert.rejects(
+      c.stop("alice", task.id, "cancelled"),
+      /being deleted/,
+    );
+
+    await assert.rejects(c.delete("alice", task.id), /being deleted/);
+
+    await assert.rejects(
+      c.start("alice", { ...input(), depends_on: [task.id] }),
+      /being deleted/,
+    );
+
+    release();
+    await deletion;
+    assert.throws(() => store.get(task.id, "alice"), /not found/);
+  } finally {
+    release?.();
+    await c.close();
+  }
+});
+
+test("provider deletion failures preserve local task resources and release the lock", async () => {
+  const { c, store } = await setup();
+
+  c.providers.get("fixture")!.deleteSession = async () => {
+    throw new Error("cleanup failed");
+  };
+
+  try {
+    const task = await c.start("alice", input("[input]"));
+    await until(() => !!store.get(task.id, "alice").pending_input);
+    await c.stop("alice", task.id, "interrupted");
+    await assert.rejects(c.delete("alice", task.id, true), /cleanup failed/);
+    const kept = store.get(task.id, "alice");
+    assert.equal(existsSync(kept.workspace!), true);
+    assert.ok(store.events(task.id, "alice").length);
+    await c.delete("alice", task.id);
+    assert.throws(() => store.get(task.id, "alice"), /not found/);
+  } finally {
+    await c.close();
+  }
+});
+
+test("a continuation already awaiting project validation cannot resurrect a deleted task", async () => {
+  const { c, store } = await setup();
+  let release!: () => void;
+
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  let validating = false;
+
+  try {
+    const task = await c.start("alice", input("[input]"));
+    await until(() => !!store.get(task.id, "alice").pending_input);
+    await c.stop("alice", task.id, "interrupted");
+
+    c.projects = {
+      resolve: async () => {
+        validating = true;
+        await pending;
+      },
+    } as unknown as typeof c.projects;
+
+    const continuation = c.continue("alice", task.id);
+    // Attach the rejection assertion before cleanup can make filesystem checks fail.
+    const rejected = assert.rejects(continuation, /not found|removed|ENOENT/);
+    await until(() => validating);
+    await c.delete("alice", task.id);
+    release();
+    await rejected;
+    assert.throws(() => store.get(task.id, "alice"), /not found/);
+  } finally {
+    release?.();
     await c.close();
   }
 });

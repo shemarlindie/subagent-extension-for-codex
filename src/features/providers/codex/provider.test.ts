@@ -105,6 +105,9 @@ function setup(
 
       return result;
     },
+    delete: async () => {
+      log.push("delete");
+    },
     cancelAndWait: async () => {
       log.push("confirm");
 
@@ -115,7 +118,7 @@ function setup(
     },
   } as unknown as Pick<
     CodexSessions,
-    "open" | "turn" | "structuredResult" | "cancelAndWait" | "cancel"
+    "open" | "turn" | "structuredResult" | "cancelAndWait" | "cancel" | "delete"
   >;
 
   const abort = new AbortController();
@@ -192,6 +195,13 @@ test("execution approval discloses the full description alongside its concise ti
   } finally {
     await f.pool.close();
   }
+});
+
+test("deleting a task's agent task deletes its native session", async () => {
+  const f = setup();
+  await f.provider.deleteSession(f.c.task);
+  assert.deepEqual(f.log, ["delete"]);
+  await f.pool.close();
 });
 
 test("native execution denial and unsupported budgets cannot create sessions or executors", async () => {

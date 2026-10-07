@@ -916,6 +916,23 @@ export class Workspaces {
     await this.unpin(t);
   }
 
+  /**
+   * Removes everything a task left in its repository: a worktree task's
+   * worktree, uncommitted changes included, its branch and its snapshot refs.
+   * A current_repo task's checkout is the user's own and stays as it is.
+   */
+  async discard(t: Task) {
+    if (t.workspace_strategy === "worktree" && t.workspace) {
+      if (await exists(t.workspace))
+        await git(t.repository, ["worktree", "remove", "--force", t.workspace]);
+
+      if (t.branch && (await this.branchExists(t)))
+        await git(t.repository, ["branch", "-D", "--end-of-options", t.branch]);
+    }
+
+    await this.unpin(t);
+  }
+
   /** Whether a worktree task's branch still exists. */
   async branchExists(t: Task) {
     return git(t.repository, [

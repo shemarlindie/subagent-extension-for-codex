@@ -17,6 +17,7 @@ import { EvidenceTabs } from "../evidence/evidence-tabs";
 import { TaskStatus } from "../shared/status";
 import { TaskActions } from "./task-actions";
 import { TaskDescription } from "./task-description";
+import { TaskMenu } from "./task-menu";
 import { TaskNotices } from "./task-notices";
 
 export function TaskInspector() {
@@ -62,30 +63,33 @@ export function TaskInspector() {
               >
                 ← Tasks
               </Button>
-              <div
-                className="eyebrow"
-                data-live={live && live.state !== "failed" ? "" : undefined}
-              >
-                <span className="eyebrow-status">
-                  <TaskStatus task={displayTask ?? task} activity={live} />
-                </span>
-                <span className="eyebrow-worker">
-                  / {task.provider} · {profileLabel(task.worker_profile)}
-                </span>
-                {/* Trails the line so changing detail never shifts the labels before it. */}
-                <span className="eyebrow-live" role="status">
-                  {live && (
-                    <>
-                      <span aria-hidden="true">· </span>
-                      <MotionContent changeKey={live.text}>
-                        {live.text}
-                      </MotionContent>
-                    </>
-                  )}
-                </span>
+              <div className="task-heading">
+                <div
+                  className="eyebrow"
+                  data-live={live && live.state !== "failed" ? "" : undefined}
+                >
+                  <span className="eyebrow-status">
+                    <TaskStatus task={displayTask ?? task} activity={live} />
+                  </span>
+                  <span className="eyebrow-worker">
+                    / {task.provider} · {profileLabel(task.worker_profile)}
+                  </span>
+                  {/* Trails the line so changing detail never shifts the labels before it. */}
+                  <span className="eyebrow-live" role="status">
+                    {live && (
+                      <>
+                        <span aria-hidden="true">· </span>
+                        <MotionContent changeKey={live.text}>
+                          {live.text}
+                        </MotionContent>
+                      </>
+                    )}
+                  </span>
+                </div>
+                <h1 title={task.title}>{task.title}</h1>
               </div>
+              <TaskMenu task={task} />
             </div>
-            <h1 title={task.title}>{task.title}</h1>
             <TaskDescription task={task} />
             <TaskActions task={task} />
             <TaskNotices task={task} />

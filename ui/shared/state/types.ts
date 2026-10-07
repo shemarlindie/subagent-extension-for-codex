@@ -42,6 +42,8 @@ export type DialogState =
     }
   | { kind: "respond"; task: Task; scope: number }
   | { kind: "handoff"; task: Task; scope: number }
+  // Confirms deleting the task and everything related to it.
+  | { kind: "delete"; task: Task; scope: number }
   // A file the task changed, previewed as it is now.
   | { kind: "file"; task: Task; path: string; scope: number }
   // Confirms removing a worktree with uncommitted `files`, or deleting a branch.
@@ -87,6 +89,7 @@ export type PersistedDialog =
       draft?: PersistedDialogDraft;
     }
   | { kind: "handoff"; taskId: string; draft?: PersistedDialogDraft }
+  | { kind: "delete"; taskId: string; draft?: PersistedDialogDraft }
   | {
       kind: "file";
       taskId: string;

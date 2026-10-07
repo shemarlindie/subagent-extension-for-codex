@@ -225,6 +225,7 @@ test("model calls cannot use any user-only approval tool", async () => {
       "get_user_agent_changes",
       "get_user_agent_changed_file",
       "remove_user_agent_worktree",
+      "delete_user_agent_task",
       "delete_user_agent_branch",
     ]) {
       await assert.rejects(

@@ -180,14 +180,24 @@
   align-items: center;
   gap: 10px;
 }
-.task-topline .eyebrow {
+.task-topline > .back {
+  align-self: flex-start;
+}
+.task-heading {
   flex: 1;
   min-width: 0;
+}
+.task-heading .eyebrow {
   gap: 0.3em;
   /* Clip a long line without cutting off the status dot's halo. */
   overflow: clip;
   overflow-clip-margin: 4px;
   white-space: nowrap;
+}
+/* Stays at the row's end whatever the live detail does. */
+.task-topline .task-menu {
+  flex: none;
+  align-self: flex-start;
 }
 .task-topline .eyebrow-status {
   display: inline-flex;

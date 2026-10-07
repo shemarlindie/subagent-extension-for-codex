@@ -139,6 +139,19 @@ export class CodexSessions {
     );
   }
 
+  /** Deletes the native session; one that is already gone counts as deleted. */
+  async delete(task: Task, signal?: AbortSignal) {
+    if (!task.session_id) return;
+
+    try {
+      await this.client.beta.agents.sessions.delete(task.session_id, {
+        signal,
+      });
+    } catch (error) {
+      if (!(error instanceof OpenAI.NotFoundError)) throw error;
+    }
+  }
+
   /** A 202 response acknowledges cancellation; it does not prove the turn stopped. */
   async cancel(task: Task, signal?: AbortSignal) {
     if (!task.session_id) return;

@@ -24,6 +24,64 @@ const task: Task = {
   updated_at: "now",
 };
 
+test("native session deletion skips tasks without a session and sends DELETE for an existing one", async () => {
+  const calls: { path: string; method: string }[] = [];
+  const abort = new AbortController();
+
+  const runtime = new CodexSessions(
+    new OpenAI({
+      apiKey: "test-placeholder",
+      maxRetries: 0,
+      fetch: async (url, init) => {
+        calls.push({
+          path: new URL(String(url)).pathname,
+          method: init?.method ?? "GET",
+        });
+
+        return new Response(null, { status: 204 });
+      },
+    }),
+    "configured-model",
+  );
+
+  await runtime.delete(task, abort.signal);
+  assert.deepEqual(calls, []);
+  await runtime.delete({ ...task, session_id: "sess-one" }, abort.signal);
+
+  assert.deepEqual(calls, [
+    { path: "/v1/agents/sessions/sess-one", method: "DELETE" },
+  ]);
+});
+
+test("native session deletion tolerates missing sessions and propagates other API failures", async () => {
+  for (const status of [404, 403, 500]) {
+    const runtime = new CodexSessions(
+      new OpenAI({
+        apiKey: "test-placeholder",
+        maxRetries: 0,
+        fetch: async () =>
+          new Response(
+            JSON.stringify({ error: { message: "delete failed" } }),
+            {
+              status,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+      }),
+      "configured-model",
+    );
+
+    const deletion = runtime.delete({ ...task, session_id: "sess-one" });
+    if (status === 404) await deletion;
+    else
+      await assert.rejects(
+        deletion,
+        (error: unknown) =>
+          error instanceof OpenAI.APIError && error.status === status,
+      );
+  }
+});
+
 const session = () => ({
   id: "sess-one",
   status: "idle",
