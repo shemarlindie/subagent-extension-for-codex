@@ -4,6 +4,7 @@ import { Button } from "../../shared/components/button";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { Field } from "../../shared/forms/fields";
 import { FormFooter } from "../../shared/forms/form-footer";
+import { usePersistedDialogField } from "../../shared/forms/use-persisted-dialog-form";
 import {
   useController,
   useSnapshot,
@@ -18,7 +19,12 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
   const controller = useController(),
     state = useSnapshot();
 
-  const [repository, setRepository] = useState(dialog.repository ?? "");
+  const [repository, setRepository] = usePersistedDialogField(
+    "project",
+    "repository",
+    dialog.repository ?? "",
+  );
+
   const [browsing, setBrowsing] = useState(false);
   const [error, setError] = useState("");
   const request = useRef(0);

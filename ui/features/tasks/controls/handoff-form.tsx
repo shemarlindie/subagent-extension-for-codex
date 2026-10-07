@@ -1,11 +1,10 @@
-import { useForm } from "react-hook-form";
-
 import {
   defineDialog,
   firstTextField,
 } from "../../../shared/dialogs/dialog-definition";
 import { Field } from "../../../shared/forms/fields";
 import { FormFooter } from "../../../shared/forms/form-footer";
+import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
 import {
   useController,
   useSnapshot,
@@ -23,8 +22,8 @@ export function HandoffForm({ task }: { task: Task }) {
     // Without a host to send to, a standalone page falls back to the clipboard.
     canCopy = !controller.transport.embedded;
 
-  const { register, handleSubmit } = useForm({
-    defaultValues: { message: handoffMessage(task) },
+  const { register, handleSubmit } = usePersistedDialogForm("handoff", {
+    message: handoffMessage(task),
   });
 
   return (

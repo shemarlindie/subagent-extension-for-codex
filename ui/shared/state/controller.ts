@@ -11,13 +11,17 @@ import type {
 } from "../../features/changes/types";
 import { delegationDialog } from "../../features/delegation/delegation";
 import { readEventTail } from "../../features/tasks/activity/event-history";
+import { persistDialog, sameDialogReference } from "./dialog-persistence";
 import { initialState } from "./initial-state";
-import { selectedTask, terminal } from "./selectors";
+import { filterCounts, selectedTask, terminal } from "./selectors";
 import type {
   Defaults,
   DialogState,
   Filter,
   PanelData,
+  PersistedDialog,
+  PersistedDialogDraft,
+  PersistedViewState,
   Project,
   QuestionDraft,
   SettingsDocument,
@@ -25,10 +29,18 @@ import type {
   Snapshot,
   Task,
   Transport,
+  UiStatePersistence,
   Worker,
 } from "./types";
 
 const POLL_INTERVAL_MS = 5000;
+
+function availableFilter(state: Snapshot, filter: Filter | null) {
+  if (!filter || filter === "all") return filter;
+
+  // Search may have no matches while its chosen status remains valid in scope.
+  return filterCounts({ ...state, search: "" })[filter] > 0 ? filter : null;
+}
 
 /** Owns async lifecycles and reviewed scope; components own presentation and drafts. */
 export class Controller {
@@ -41,6 +53,9 @@ export class Controller {
   private generation = 0;
   private browsing = false;
   private explicitSelection = false;
+  private restoredView?: PersistedViewState;
+  private persistedDialogs: PersistedDialog[];
+  private viewStateReady = false;
   private timer?: ReturnType<typeof setTimeout>;
   /**
    * Question requests the user collapsed. New requests open expanded; a collapsed
@@ -55,8 +70,21 @@ export class Controller {
       hidden: () => document.hidden,
       wide: () => window.innerWidth > 640,
     },
+    private viewState?: UiStatePersistence,
   ) {
-    this.state = initialState();
+    this.restoredView = viewState?.initial.view ?? {};
+    this.persistedDialogs = viewState?.initial.dialogs ?? [];
+    const initial = initialState();
+
+    // Seed URL-backed controls before the first render, then validate task data on load.
+    this.state = {
+      ...initial,
+      filter: this.restoredView.filter ?? initial.filter,
+      search: this.restoredView.search ?? initial.search,
+      tab: this.restoredView.tab ?? initial.tab,
+    };
+
+    this.browsing = this.restoredView.browsing === true;
   }
 
   getSnapshot = () => this.state;
@@ -68,8 +96,217 @@ export class Controller {
 
   private patch(patch: Partial<Snapshot>) {
     if (this.disposed) return;
+
+    if ("dialog" in patch && patch.dialog !== this.state.dialog) {
+      if (patch.dialog) {
+        const descriptor = persistDialog(patch.dialog),
+          previous = this.persistedDialogs.at(-1);
+
+        if (sameDialogReference(previous, descriptor))
+          this.persistedDialogs[this.persistedDialogs.length - 1] = {
+            ...descriptor,
+            ...(previous?.draft ? { draft: previous.draft } : {}),
+          } as PersistedDialog;
+        else this.persistedDialogs = [descriptor];
+      }
+    }
+
     this.state = { ...this.state, ...patch };
     this.listeners.forEach((listener) => listener());
+    if (this.viewStateReady) this.saveViewState();
+  }
+
+  private saveViewState() {
+    this.viewState?.save({
+      view: {
+        ...(this.state.repository ? { repository: this.state.repository } : {}),
+        ...(this.state.selected ? { selected: this.state.selected } : {}),
+        ...(this.state.filter ? { filter: this.state.filter } : {}),
+        ...(this.state.search ? { search: this.state.search } : {}),
+        ...(this.state.selected ? { tab: this.state.tab } : {}),
+        ...(this.browsing && !this.state.selected ? { browsing: true } : {}),
+      },
+      ...(this.persistedDialogs.length
+        ? { dialogs: [...this.persistedDialogs] }
+        : {}),
+    });
+  }
+
+  getDialogDraft(kind: PersistedDialog["kind"]) {
+    const dialog = this.persistedDialogs.at(-1);
+
+    return dialog?.kind === kind ? dialog.draft : undefined;
+  }
+
+  saveDialogDraft(kind: PersistedDialog["kind"], draft: PersistedDialogDraft) {
+    if (this.disposed || this.state.dialog?.kind !== kind) return;
+
+    const descriptor =
+      this.persistedDialogs.at(-1) ?? persistDialog(this.state.dialog);
+
+    if (descriptor.kind !== kind) return;
+
+    if (!this.persistedDialogs.length) this.persistedDialogs.push(descriptor);
+
+    this.persistedDialogs[this.persistedDialogs.length - 1] = {
+      ...descriptor,
+      draft: { ...descriptor.draft, ...draft },
+    } as PersistedDialog;
+
+    if (this.viewStateReady) this.saveViewState();
+  }
+
+  saveDialogField(kind: PersistedDialog["kind"], name: string, value: unknown) {
+    this.saveDialogDraft(kind, {
+      ...this.getDialogDraft(kind),
+      [name]: value,
+    });
+  }
+
+  private async restorePersistedDialog(tasks: Task[], scope: number) {
+    const saved = this.persistedDialogs.at(-1);
+    if (!saved || this.state.dialog) return;
+
+    const task =
+      "taskId" in saved
+        ? tasks.find((item) => item.id === saved.taskId)
+        : undefined;
+
+    if ("taskId" in saved && !task) {
+      await this.discardPersistedDialog(saved, tasks, scope);
+
+      return;
+    }
+
+    try {
+      let dialog: DialogState | undefined;
+
+      switch (saved.kind) {
+        case "project":
+          dialog = {
+            kind: "project",
+            repository: saved.repository,
+            scope,
+          };
+
+          break;
+
+        case "settings": {
+          const settings =
+            await this.tool<SettingsDocument>("get_agent_settings");
+
+          if (!this.canRestoreDialog(saved, scope) || this.state.dialog) return;
+
+          if (!Array.isArray(settings.sections)) {
+            await this.discardPersistedDialog(saved, tasks, scope);
+
+            return;
+          }
+
+          dialog = { kind: "settings", settings, scope };
+          break;
+        }
+
+        case "delegate": {
+          const { values: defaults } = await this.tool<{ values: Defaults }>(
+            "get_agent_settings",
+          );
+
+          if (!this.canRestoreDialog(saved, scope) || this.state.dialog) return;
+
+          const base = delegationDialog(
+            { ...this.state, tasks },
+            this.state.projects,
+            defaults,
+            this.explicitSelection,
+            saved.preferredWorker,
+          );
+
+          dialog = {
+            ...base,
+            repository: saved.repository ?? base.repository,
+            revision: saved.revision ?? base.revision,
+          };
+
+          break;
+        }
+
+        case "control":
+          dialog = {
+            kind: saved.kind,
+            action: saved.action,
+            task: task!,
+            scope,
+          };
+
+          break;
+        case "respond":
+          if (
+            !task!.pending_input ||
+            task!.pending_input.tool === "AskUserQuestion" ||
+            (saved.requestId && task!.pending_input.id !== saved.requestId)
+          ) {
+            await this.discardPersistedDialog(saved, tasks, scope);
+
+            return;
+          }
+
+          dialog = { kind: saved.kind, task: task!, scope };
+          break;
+        case "handoff":
+          dialog = { kind: saved.kind, task: task!, scope };
+          break;
+        case "file":
+          dialog = {
+            kind: saved.kind,
+            task: task!,
+            path: saved.path,
+            scope,
+          };
+
+          break;
+        case "worktree":
+          dialog = {
+            kind: saved.kind,
+            action: saved.action,
+            task: task!,
+            files: saved.files,
+            scope,
+          };
+
+          break;
+      }
+
+      if (dialog && this.canRestoreDialog(saved, scope) && !this.state.dialog)
+        this.patch({ dialog, formError: "" });
+    } catch {
+      // Keep the saved descriptor so a later refresh can retry transient reads.
+    }
+  }
+
+  private canRestoreDialog(saved: PersistedDialog, scope: number) {
+    return (
+      !this.disposed &&
+      scope === this.state.scopeVersion &&
+      sameDialogReference(this.persistedDialogs.at(-1), saved)
+    );
+  }
+
+  private async discardPersistedDialog(
+    saved: PersistedDialog,
+    tasks: Task[],
+    scope: number,
+  ) {
+    if (!this.canRestoreDialog(saved, scope)) return;
+    this.persistedDialogs.pop();
+    this.saveViewState();
+    await this.restorePersistedDialog(tasks, scope);
+  }
+
+  private closeDialog() {
+    this.persistedDialogs.pop();
+    this.patch({ dialog: undefined, formError: "" });
+    void this.restorePersistedDialog(this.state.tasks, this.state.scopeVersion);
   }
 
   report = (error: unknown) => {
@@ -191,6 +428,21 @@ export class Controller {
       if (this.disposed || version !== this.state.scopeVersion) return;
       this.patch({ projects });
 
+      const preferredRepository = this.restoredView?.repository;
+
+      if (
+        preferredRepository &&
+        preferredRepository !== this.state.repository &&
+        projects.some((project) => project.repository === preferredRepository)
+      ) {
+        this.invalidateScope({
+          repository: preferredRepository,
+          revision: "HEAD",
+        });
+
+        version = this.state.scopeVersion;
+      }
+
       if (!this.state.workers.length) {
         const workers = await this.tool<Worker[]>("list_available_workers");
         if (this.disposed || version !== this.state.scopeVersion) return;
@@ -221,6 +473,32 @@ export class Controller {
         this.patch({ events: [] });
       }
 
+      let tab = this.state.tab;
+      const restored = this.restoredView;
+      const search = restored?.search ?? this.state.search;
+
+      const filter = restored
+        ? availableFilter(
+            { ...this.state, tasks, search },
+            restored.filter ?? this.state.filter,
+          )
+        : this.state.filter;
+
+      const restoredTask = restored?.selected
+        ? tasks.find((task) => task.id === restored.selected)
+        : undefined;
+
+      if (restoredTask) {
+        selected = restoredTask.id;
+        this.explicitSelection = true;
+        this.browsing = false;
+        tab = restored?.tab ?? (restoredTask.result ? "result" : "activity");
+      } else if (restored?.browsing) {
+        selected = undefined;
+        this.explicitSelection = false;
+        this.browsing = true;
+      }
+
       if (
         !selected &&
         !this.browsing &&
@@ -232,14 +510,26 @@ export class Controller {
           tasks.find((task) => !terminal(task))?.id ??
           tasks[0].id;
 
-        this.patch({
-          tab: tasks.find((task) => task.id === selected)?.result
-            ? "result"
-            : "activity",
-        });
+        tab = tasks.find((task) => task.id === selected)?.result
+          ? "result"
+          : "activity";
       }
 
-      this.patch({ tasks, selected });
+      // Don't replace URL choices with defaults until their project and task resolve.
+      this.restoredView = undefined;
+      this.viewStateReady = Boolean(this.viewState);
+
+      this.patch({
+        tasks,
+        selected,
+        filter,
+        search,
+        tab,
+      });
+
+      await this.restorePersistedDialog(tasks, version);
+      if (this.disposed || version !== this.state.scopeVersion) return;
+
       await this.loadDetail();
       if (this.disposed || version !== this.state.scopeVersion) return;
       // Changes are read live from Git, which polling would repeat for every
@@ -444,6 +734,7 @@ export class Controller {
     ++this.generation;
     this.explicitSelection = false;
     this.browsing = false;
+    if (!this.restoredView) this.persistedDialogs = [];
 
     this.patch({
       ...patch,
@@ -498,16 +789,23 @@ export class Controller {
         data?.panel_project_candidate?.auto_register === true,
     });
 
-    if (Array.isArray(data?.tasks))
-      this.patch({
-        tasks: data.tasks.filter(
-          (task) =>
-            (!conversation || task.conversation_id === conversation) &&
-            (!repository || task.repository === repository),
-        ),
-      });
+    if (Array.isArray(data?.tasks)) {
+      const tasks = data.tasks.filter(
+        (task) =>
+          (!conversation || task.conversation_id === conversation) &&
+          (!repository || task.repository === repository),
+      );
 
-    if (typeof data?.panel_selection?.task_id === "string") {
+      this.patch({ tasks });
+    }
+
+    const restoredTaskView =
+      this.restoredView?.selected || this.restoredView?.browsing;
+
+    if (
+      typeof data?.panel_selection?.task_id === "string" &&
+      !restoredTaskView
+    ) {
       ++this.generation;
       this.explicitSelection = true;
       this.browsing = false;
@@ -520,8 +818,8 @@ export class Controller {
           data.panel_selection.tab === "changes"
             ? data.panel_selection.tab
             : "activity",
-        filter: null,
-        search: "",
+        filter: this.restoredView?.filter ?? null,
+        search: this.restoredView?.search ?? "",
       });
     }
 
@@ -766,8 +1064,13 @@ export class Controller {
   }
 
   dismiss() {
-    if (this.state.busy || this.dismissGuard?.() === false) return;
-    this.patch({ dialog: undefined, formError: "" });
+    if (
+      this.state.busy ||
+      !this.state.dialog ||
+      this.dismissGuard?.() === false
+    )
+      return;
+    this.closeDialog();
   }
 
   /**
@@ -844,7 +1147,7 @@ export class Controller {
         });
       }
 
-      this.patch({ dialog: undefined });
+      this.closeDialog();
       succeeded = true;
     } catch (error) {
       this.patch({

@@ -8,6 +8,7 @@ import { ControllerContext } from "../shared/state/controller-context";
 import { traceSize } from "../shared/state/size-trace";
 import { detectEnvironment } from "./environment";
 import { AppShell } from "./shells/app-shell";
+import { browserUiState, embeddedDevHostUiState } from "./view-state";
 
 export function mount() {
   const environment = detectEnvironment();
@@ -28,7 +29,15 @@ export function mount() {
       ? new ConsoleTransport(environment.origin)
       : new HostTransport();
 
-  const controller = new Controller(transport);
+  const viewState =
+    environment.kind === "http"
+      ? browserUiState()
+      : environment.kind === "host"
+        ? embeddedDevHostUiState()
+        : undefined;
+
+  const controller = new Controller(transport, undefined, viewState);
+
   const root = createRoot(document.getElementById("root")!);
 
   root.render(
@@ -43,6 +52,7 @@ export function mount() {
   window.addEventListener(
     "pagehide",
     () => {
+      viewState?.flush?.();
       controller.dispose();
       root.unmount();
     },

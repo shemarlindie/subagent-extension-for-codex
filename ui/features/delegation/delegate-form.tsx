@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
-import { FormProvider, useForm, useWatch } from "react-hook-form";
+import { FormProvider, useWatch } from "react-hook-form";
 
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { Field } from "../../shared/forms/fields";
 import { FormFooter } from "../../shared/forms/form-footer";
+import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
 import {
   useController,
   useSnapshot,
@@ -40,31 +41,29 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
 
   const strategyDefault = defaults.default_workspace_strategy ?? "current_repo";
 
-  const form = useForm<DelegateValues>({
-    defaultValues: {
-      permission_mode: "inherit",
-      approval_decider: defaults.default_approval_decider ?? "user",
-      repository: dialog.repository ?? "",
-      revision: strategyDefault === "current_repo" ? "HEAD" : dialog.revision,
-      workspace_strategy: strategyDefault,
-      description: "",
-      model: "",
-      reasoning_effort: "default",
-      worker: choices.includes(preferred) ? preferred : choices[0],
-      runtimeMode:
-        defaults.use_runtime_budget === false ||
-        defaults.max_runtime_minutes === null
-          ? "none"
-          : "limited",
-      runtime: defaults.max_runtime_minutes ?? 20,
-      costMode:
-        defaults.use_cost_budget === false || defaults.max_cost_usd === null
-          ? "none"
-          : "limited",
-      cost: defaults.max_cost_usd ?? 5,
-      context: "",
-      deps: [],
-    },
+  const form = usePersistedDialogForm<DelegateValues>("delegate", {
+    permission_mode: "inherit",
+    approval_decider: defaults.default_approval_decider ?? "user",
+    repository: dialog.repository ?? "",
+    revision: strategyDefault === "current_repo" ? "HEAD" : dialog.revision,
+    workspace_strategy: strategyDefault,
+    description: "",
+    model: "",
+    reasoning_effort: "default",
+    worker: choices.includes(preferred) ? preferred : choices[0],
+    runtimeMode:
+      defaults.use_runtime_budget === false ||
+      defaults.max_runtime_minutes === null
+        ? "none"
+        : "limited",
+    runtime: defaults.max_runtime_minutes ?? 20,
+    costMode:
+      defaults.use_cost_budget === false || defaults.max_cost_usd === null
+        ? "none"
+        : "limited",
+    cost: defaults.max_cost_usd ?? 5,
+    context: "",
+    deps: [],
   });
 
   const repository = useWatch({ control: form.control, name: "repository" }),

@@ -6,7 +6,7 @@ import {
   useSnapshot,
 } from "../../../shared/state/controller-context";
 import { locked, terminal } from "../../../shared/state/selectors";
-import type { Task } from "../../../shared/state/types";
+import type { ControlAction, Task } from "../../../shared/state/types";
 
 export function TaskActions({ task }: { task: Task }) {
   const controller = useController(),
@@ -33,7 +33,7 @@ export function TaskActions({ task }: { task: Task }) {
     ...(["failed", "cancelled"].includes(task.status) && !locked(task)
       ? ["retry"]
       : []),
-  ];
+  ] as ControlAction[];
 
   const labels: Record<string, string> = {
     steer: "Steer",

@@ -44,7 +44,7 @@ export function TaskFilters() {
 
   const filters = Object.entries(FILTER_LABELS) as [Filter, string][];
 
-  // Empty filters hide, except the chosen one, which stays so the list never shows an unmarked selection.
+  // Keep the URL choice visible during loading; the controller drops it when results show no matches.
   // All always shows, which keeps the row reserved.
   const shown = (filter: Filter) =>
     filter === "all" || counts[filter] > 0 || filter === current;

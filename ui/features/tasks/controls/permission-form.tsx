@@ -1,5 +1,4 @@
 import { Dialog } from "@base-ui/react/dialog";
-import { useForm } from "react-hook-form";
 
 import { Button } from "../../../shared/components/button";
 import {
@@ -7,6 +6,7 @@ import {
   firstTextField,
 } from "../../../shared/dialogs/dialog-definition";
 import { Field } from "../../../shared/forms/fields";
+import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
 import {
   useController,
   useSnapshot,
@@ -18,8 +18,8 @@ export function PermissionForm({ task }: { task: Task }) {
     state = useSnapshot(),
     request = task.pending_input!;
 
-  const { register, handleSubmit } = useForm({
-    defaultValues: { response: "" },
+  const { register, handleSubmit } = usePersistedDialogForm("respond", {
+    response: "",
   });
 
   const disabled = state.busy || state.dialog?.scope !== state.scopeVersion;

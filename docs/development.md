@@ -121,6 +121,13 @@ changes. The bridge log records tool calls, messages, model context updates,
 and display-mode requests, including entries recorded while the inspector is
 closed. Open **Inspector** and select **Bridge log** to view them.
 
+The mock host mirrors the panel's project, task or task-list selection, tab,
+search, and status filter into the outer page URL. Open dialogs add a boolean
+`dw_dlg_<name>=1` URL flag; action dialogs use distinct names, such as `steer`
+and `retry`. Ordered dialog references and form drafts stay in local storage.
+Reloading the dev host then restores the panel view and any saved dialogs. Host
+toolbar settings continue to use local storage.
+
 Live mode connects to the service's `/mcp` endpoint through the Vite proxy at
 `/service`. The proxy adds the admin token server-side and drops the browser
 `Origin` header, so the token never reaches the page. It finds the service the

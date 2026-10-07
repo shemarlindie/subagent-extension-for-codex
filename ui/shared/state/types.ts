@@ -34,7 +34,12 @@ export type DialogState =
       revision: string;
       scope: number;
     }
-  | { kind: "control"; action: string; task: Task; scope: number }
+  | {
+      kind: "control";
+      action: ControlAction;
+      task: Task;
+      scope: number;
+    }
   | { kind: "respond"; task: Task; scope: number }
   | { kind: "handoff"; task: Task; scope: number }
   // A file the task changed, previewed as it is now.
@@ -46,6 +51,54 @@ export type DialogState =
       task: Task;
       files?: string[];
       scope: number;
+    };
+
+export type ControlAction =
+  "steer" | "continue" | "cancel" | "retry" | "interrupt";
+
+/** Form edits are JSON-safe values keyed by each form's field names. */
+export type PersistedDialogDraft = Record<string, unknown>;
+
+/** Local dialog descriptors; server-owned task and settings data is reloaded. */
+export type PersistedDialog =
+  | {
+      kind: "project";
+      repository?: string;
+      draft?: PersistedDialogDraft;
+    }
+  | { kind: "settings"; draft?: PersistedDialogDraft }
+  | {
+      kind: "delegate";
+      preferredWorker?: string;
+      repository?: string;
+      revision?: string;
+      draft?: PersistedDialogDraft;
+    }
+  | {
+      kind: "control";
+      action: ControlAction;
+      taskId: string;
+      draft?: PersistedDialogDraft;
+    }
+  | {
+      kind: "respond";
+      taskId: string;
+      requestId?: string;
+      draft?: PersistedDialogDraft;
+    }
+  | { kind: "handoff"; taskId: string; draft?: PersistedDialogDraft }
+  | {
+      kind: "file";
+      taskId: string;
+      path: string;
+      draft?: PersistedDialogDraft;
+    }
+  | {
+      kind: "worktree";
+      action: "remove" | "delete-branch";
+      taskId: string;
+      files?: string[];
+      draft?: PersistedDialogDraft;
     };
 
 /** Something in the selected task that the panel shares with the host's model. */
@@ -80,6 +133,27 @@ export type Snapshot = {
   formError: string;
   scopeVersion: number;
   host: HostState;
+};
+
+/** Shareable view choices restored from the browser URL. */
+export type PersistedViewState = Partial<
+  Pick<Snapshot, "repository" | "selected" | "filter" | "search" | "tab">
+> & {
+  /** The user explicitly returned to the task list instead of selecting a task. */
+  browsing?: boolean;
+};
+
+/** Browser-local UI state that should survive reloads but not appear in copied URLs. */
+export type PersistedUiState = {
+  view: PersistedViewState;
+  /** Oldest to newest; the last dialog is the active one. */
+  dialogs?: PersistedDialog[];
+};
+
+export type UiStatePersistence = {
+  initial: PersistedUiState;
+  save(state: PersistedUiState): void;
+  flush?(): void;
 };
 
 export type { Event } from "../../../src/features/events/types.js";

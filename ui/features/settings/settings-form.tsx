@@ -2,7 +2,7 @@ import { Accordion } from "@base-ui/react/accordion";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { type FieldErrors, useForm, useWatch } from "react-hook-form";
+import { type FieldErrors, useWatch } from "react-hook-form";
 
 import { Button } from "../../shared/components/button";
 import { Chevron } from "../../shared/components/chevron";
@@ -11,6 +11,10 @@ import { reducedMotion } from "../../shared/components/motion-utils";
 import { Notice } from "../../shared/components/notice";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../shared/forms/form-footer";
+import {
+  usePersistedDialogField,
+  usePersistedDialogForm,
+} from "../../shared/forms/use-persisted-dialog-form";
 import { useController } from "../../shared/state/controller-context";
 import type { DialogState } from "../../shared/state/types";
 import { Help, SettingRowView, SettingsContext } from "./settings-fields";
@@ -37,15 +41,18 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
     { sections, values: saved, defaults } = dialog.settings,
     initial = sectionsForm(sections, saved);
 
-  const { control, register, handleSubmit, setValue } = useForm<Values>({
-    defaultValues: initial,
-  });
+  const { control, register, handleSubmit, setValue } =
+    usePersistedDialogForm<Values>("settings", initial);
 
   const form = { ...initial, ...useWatch({ control }) } as Values,
     edits = sections.map((section) => editCount(section, form, initial)),
     total = edits.reduce((sum, count) => sum + count, 0);
 
-  const [open, setOpen] = useState(sections.slice(0, 1).map((s) => s.id)),
+  const [open, setOpen] = usePersistedDialogField(
+      "settings",
+      "openSections",
+      sections.slice(0, 1).map((s) => s.id),
+    ),
     [discarding, setDiscarding] = useState(false),
     element = useRef<HTMLFormElement>(null),
     discardPrompt = useRef<HTMLDivElement>(null);

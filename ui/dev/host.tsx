@@ -16,7 +16,9 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import type { Task } from "../../src/shared/contracts";
+import { browserUiState } from "../app/view-state";
 import { Icon, type IconName, ICONS } from "../shared/components/icons";
+import type { UiStatePersistence } from "../shared/state/types";
 import {
   codexMeta,
   FIXTURE_SERVICE_TOOLS,
@@ -37,6 +39,10 @@ import { previewTool } from "./preview/tools";
 type LogEntry = { id: number; time: string; kind: string; detail: unknown };
 
 type InspectorTab = "bridge-log" | "host-settings" | "icon-catalog";
+
+type DevHostWindow = Window & {
+  __CODEX_SUBAGENT_DEV_UI_STATE__?: UiStatePersistence;
+};
 
 const inspectorTabs: { id: InspectorTab; label: string }[] = [
   { id: "bridge-log", label: "Bridge log" },
@@ -101,6 +107,7 @@ const fixtureThreads = threadsOf(
 // The only export, so Fast Refresh can swap it in place. main.tsx mounts it.
 export function Host() {
   const [settings, setSettings] = useState(loadSettings);
+  const [viewState] = useState(() => browserUiState());
 
   const [activeInspectorTab, setActiveInspectorTab] =
     useState<InspectorTab>("bridge-log");
@@ -176,6 +183,16 @@ export function Host() {
 
     document.documentElement.dataset.theme = settings.theme;
   }, [settings]);
+
+  useEffect(() => {
+    const hostWindow = window as DevHostWindow;
+    hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__ = viewState;
+
+    return () => {
+      if (hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__ === viewState)
+        delete hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__;
+    };
+  }, [viewState]);
 
   // Settings fixed at initialization; changing one starts a new panel session.
   const { source, launch, canSend, canShare, threadId, cwd, autoRegister } =

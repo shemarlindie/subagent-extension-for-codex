@@ -1,11 +1,10 @@
-import { useForm } from "react-hook-form";
-
 import {
   defineDialog,
   firstTextField,
 } from "../../../shared/dialogs/dialog-definition";
 import { Field } from "../../../shared/forms/fields";
 import { FormFooter } from "../../../shared/forms/form-footer";
+import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
 import { useController } from "../../../shared/state/controller-context";
 import type { DialogState, Task } from "../../../shared/state/types";
 import { TaskDescription } from "../inspector/task-description";
@@ -32,7 +31,10 @@ export function ControlForm({ dialog }: ControlFormProps) {
   const controller = useController(),
     { action, task } = dialog;
 
-  const { register, handleSubmit } = useForm<{ instruction: string }>();
+  const { register, handleSubmit } = usePersistedDialogForm<{
+    instruction: string;
+  }>("control", { instruction: "" });
+
   const instruction = action === "steer" || action === "continue";
 
   const descriptions: Record<string, string> = {
