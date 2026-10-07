@@ -94,6 +94,8 @@ export class HostTransport implements Transport {
     const userTools: Record<string, string> = {
       start_agent_task: "start_user_agent_task",
       submit_agent_input: "submit_user_agent_input",
+      send_agent_message: "send_user_agent_message",
+      remove_agent_queued_message: "remove_user_agent_queued_message",
       update_agent_settings: "update_user_agent_settings",
     };
 

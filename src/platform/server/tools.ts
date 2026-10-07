@@ -11,9 +11,14 @@ import {
   settingsUpdateSchema,
 } from "../../features/settings/settings.js";
 import { Control } from "../../features/tasks/control.js";
-import { listedTask } from "../../features/tasks/task-list.js";
+import {
+  MAX_MESSAGE_WAIT_SECONDS,
+  pollMessages,
+} from "../../features/tasks/message-poll.js";
+import { listedTask, replyFrom } from "../../features/tasks/task-list.js";
 import {
   budgetRaiseSchema,
+  deliveries,
   type InputAuthority,
   startSchema,
 } from "../../shared/contracts.js";
@@ -28,6 +33,23 @@ import {
 } from "./mentions.js";
 
 const taskId = z.object({ task_id: z.string() });
+
+const queuedMessage = taskId.extend({ message_id: z.string().max(200) });
+
+const messageInput = taskId.extend({
+  message: z.string().min(1).max(20000),
+  delivery: z
+    .enum(deliveries)
+    .default("steer")
+    .describe(
+      "steer (default): a running turn takes it at its next tool boundary, without stopping. queue: it waits and starts a turn of its own after the current one. interrupt: stop the running turn and start the next one with this message and any pending steers. On an idle task, each starts the next turn. A task waiting for input can't be steered; answer it with submit_agent_input, or queue the message.",
+    ),
+  budget: budgetRaiseSchema
+    .optional()
+    .describe(
+      "Raise the task's budget first, so a turn stopped by its budget can carry on. Each limit can only go up: a higher amount, or null for no limit.",
+    ),
+});
 
 /**
  * A tool whose handler receives its schema's parsed output. `run` uses method
@@ -171,13 +193,21 @@ export function definitions(
       },
     }),
     get_agent_task: tool({
-      description: "Inspect task state and pending input.",
+      description:
+        "Inspect a task: its status and turn (the number of turns started), pending input, pending steers (sent into the running turn and not yet taken), queue (messages waiting for turns of their own, and whether an interrupt paused it) and an excerpt of its latest reply.",
       schema: taskId,
-      run: (a) => c.store.get(a.task_id, owner),
+      run: (a) => {
+        const t = c.store.get(a.task_id, owner);
+
+        return {
+          ...t,
+          reply: replyFrom(c.store.latestEvent(t.id, "agent.reply")) ?? null,
+        };
+      },
     }),
     list_agent_tasks: tool({
       description:
-        "List owned tasks, optionally scoped to a conversation and repository. null conversation_id explicitly requests all conversations.",
+        "List owned tasks, optionally scoped to a conversation and repository. Each includes an excerpt of its latest reply and its number of queued messages. null conversation_id explicitly requests all conversations.",
       schema: z.object({
         conversation_id: z.string().nullable().optional(),
         repository: z.string().optional(),
@@ -194,6 +224,7 @@ export function definitions(
             listedTask(
               t,
               t.status === "running" ? c.store.recentEvents(t.id, owner) : [],
+              c.store.latestEvent(t.id, "agent.reply"),
             ),
           ),
     }),
@@ -211,34 +242,32 @@ export function definitions(
     }),
     interrupt_agent_task: tool({
       description:
-        "Stop the current turn while preserving the session and workspace. A later message continues the task.",
-      schema: taskId,
-      run: (a) => c.interrupt(owner, a.task_id),
+        "Stop the task's running turn, keeping its session and workspace. Steers it hasn't taken wait at the front of its queue, which pauses until the next message is sent. send_pending (interrupt and send now) instead starts the next turn at once with the pending steers.",
+      schema: taskId.extend({ send_pending: z.boolean().default(false) }),
+      run: (a) => c.interrupt(owner, a.task_id, a.send_pending),
     }),
-    continue_agent_task: tool({
+    send_agent_message: tool({
       description:
-        "Send a follow-up message to an idle task (completed, failed or interrupted), which starts its next turn in the same task: it resumes the worker's session, or starts a new one carrying the conversation, and recreates a removed worktree. budget raises the task's limits; each can only go up.",
-      schema: taskId.extend({
-        message: z.string().max(20000).optional(),
-        budget: budgetRaiseSchema.optional(),
-      }),
-      run: async (a) =>
-        (
-          await c.send(
-            owner,
-            a.task_id,
-            a.message ?? "Continue the task.",
-            authority,
-            { budget: a.budget },
-          )
-        ).task,
+        "Send a message to a task's worker, as in a conversation. An idle task (completed, failed or interrupted) starts its next turn: it resumes the worker's session, or starts a new one carrying the conversation, and recreates a removed worktree. While a turn runs, delivery chooses how the message reaches it. Returns the message's id and state: started (it starts or joins the next turn), pending_steer (the running turn takes it at its next tool boundary) or queued. Read replies with get_agent_messages.",
+      schema: messageInput,
+      run: async (a) => {
+        const sent = await c.send(owner, a.task_id, a.message, authority, {
+          delivery: a.delivery,
+          budget: a.budget,
+        });
+
+        return {
+          message_id: sent.message_id,
+          state: sent.state,
+          status: sent.task.status,
+        };
+      },
     }),
-    send_agent_instruction: tool({
+    remove_agent_queued_message: tool({
       description:
-        "Steer a task: a running turn takes the instruction at its next tool boundary, without being interrupted; an idle task starts its next turn with it.",
-      schema: taskId.extend({ message: z.string().min(1).max(20000) }),
-      run: async (a) =>
-        (await c.send(owner, a.task_id, a.message, authority)).task,
+        "Withdraw a message you queued before its turn starts. Messages the user queued stay.",
+      schema: queuedMessage,
+      run: (a) => c.removeQueued(owner, a.task_id, a.message_id, "parent"),
     }),
     submit_agent_input: tool({
       description:
@@ -260,20 +289,18 @@ export function definitions(
           authority,
         ),
     }),
-    get_agent_result: tool({
-      description:
-        "Retrieve the worker's latest reply, the plain text that ended its latest successful turn, or null before it has replied. Read what it changed with get_agent_changes.",
-      schema: taskId,
-      run: (a) => {
-        c.store.get(a.task_id, owner);
-        const reply = c.store.latestEvent(a.task_id, "agent.reply");
-
-        return {
-          reply: reply
-            ? { text: reply.data.text, turn: reply.data.turn }
-            : null,
-        };
-      },
+    get_agent_messages: tool({
+      description: `Read a task's conversation after a cursor: its request, the messages you and the user sent, the worker's messages, and each successful turn's reply (kind reply, the text that ended the turn). Pass next_cursor back as after to read only what follows. With wait_seconds (at most ${MAX_MESSAGE_WAIT_SECONDS}), it waits until a message follows the cursor, the turn ends or input is needed. Only complete messages are returned. Also returns the task's status, turn, whether a turn is still running, any pending_input and its number of queued messages. Read what a turn changed with get_agent_changes(scope: "turn").`,
+      schema: taskId.extend({
+        after: z.number().int().nonnegative().default(0),
+        wait_seconds: z
+          .number()
+          .min(0)
+          .max(MAX_MESSAGE_WAIT_SECONDS)
+          .default(0),
+      }),
+      run: (a) =>
+        pollMessages(c.store, owner, a.task_id, a.after, a.wait_seconds),
     }),
     get_agent_changes: tool({
       description:
@@ -301,7 +328,7 @@ export function definitions(
     }),
     get_agent_events: tool({
       description:
-        "Retrieve ordered execution events after an optional cursor.",
+        "Retrieve the full ordered execution log after an optional cursor: tool calls, worker messages and lifecycle events. For the conversation, use get_agent_messages.",
       schema: taskId.extend({
         after: z.number().int().nonnegative().default(0),
       }),
@@ -343,6 +370,46 @@ export function definitions(
           "user",
         );
       },
+    }),
+    send_user_agent_message: tool({
+      ...tools.send_agent_message,
+      description:
+        "User interface only: send the user's message to a task, as send_agent_message does.",
+      run: async (a) => {
+        const sent = await c.send(owner, a.task_id, a.message, "user", {
+          delivery: a.delivery,
+          budget: a.budget,
+        });
+
+        return {
+          message_id: sent.message_id,
+          state: sent.state,
+          status: sent.task.status,
+        };
+      },
+    }),
+    edit_user_agent_queued_message: tool({
+      description:
+        "User interface only: change a queued message's text before its turn starts.",
+      schema: queuedMessage.extend({ message: z.string().min(1).max(20000) }),
+      run: (a) => c.editQueued(owner, a.task_id, a.message_id, a.message),
+    }),
+    remove_user_agent_queued_message: tool({
+      description:
+        "User interface only: remove a queued message, whoever queued it, before its turn starts.",
+      schema: queuedMessage,
+      run: (a) => c.removeQueued(owner, a.task_id, a.message_id, "user"),
+    }),
+    resume_user_agent_queue: tool({
+      description:
+        "User interface only: resume a task's paused queue; an idle task starts its next queued message.",
+      schema: taskId,
+      run: (a) => c.resumeQueue(owner, a.task_id),
+    }),
+    clear_user_agent_queue: tool({
+      description: "User interface only: remove every queued message.",
+      schema: taskId,
+      run: (a) => c.clearQueue(owner, a.task_id),
     }),
     submit_user_agent_input: tool({
       ...tools.submit_agent_input,
@@ -416,6 +483,11 @@ export const isUserTool = (name: string) =>
     "browse_user_agent_project",
     "start_user_agent_task",
     "submit_user_agent_input",
+    "send_user_agent_message",
+    "edit_user_agent_queued_message",
+    "remove_user_agent_queued_message",
+    "resume_user_agent_queue",
+    "clear_user_agent_queue",
     "update_user_agent_settings",
     "get_user_agent_changes",
     "get_user_agent_changed_file",

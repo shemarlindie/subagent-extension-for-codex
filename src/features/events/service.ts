@@ -210,7 +210,7 @@ export class Events {
         name,
         description: {
           "agent_task.completed":
-            "A delegated task's turn completed; retrieve its full reply through get_agent_result and its changes through get_agent_changes.",
+            "A delegated task finished its turns and is idle, with nothing queued; read its full reply with get_agent_messages and the turn's changes with get_agent_changes(scope: turn).",
           "agent_task.failed": "A delegated task's turn failed.",
           "agent_task.input_required":
             "A delegated task needs user input or permission.",

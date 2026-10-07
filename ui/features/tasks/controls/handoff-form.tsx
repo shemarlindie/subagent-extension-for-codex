@@ -16,7 +16,7 @@ const excerpt = (text: string, max: number) =>
   text.length > max ? `${text.slice(0, max)}… (truncated)` : text;
 
 export function handoffMessage(task: Task, reply?: string) {
-  return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task and the worker's latest reply with get_agent_result using task_id=${JSON.stringify(task.id)}. Read what it changed with get_agent_changes. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\n${task.branch ? `Branch: ${task.branch}\n` : ""}Description excerpt: ${excerpt(task.description, 1500)}\nLatest reply excerpt: ${reply === undefined ? "No reply yet." : excerpt(reply, 2500)}`;
+  return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task and the conversation, including the worker's replies, with get_agent_messages using task_id=${JSON.stringify(task.id)}. Read what it changed with get_agent_changes, and send follow-ups with send_agent_message. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\n${task.branch ? `Branch: ${task.branch}\n` : ""}Description excerpt: ${excerpt(task.description, 1500)}\nLatest reply excerpt: ${reply === undefined ? "No reply yet." : excerpt(reply, 2500)}`;
 }
 
 export function HandoffForm({ task }: { task: Task }) {

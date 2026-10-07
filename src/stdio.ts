@@ -66,6 +66,19 @@ const server = new McpServer(
   },
 );
 
+/**
+ * How long a proxied call may take: the folder picker waits for the user,
+ * and a message read waits as long as it was asked to, plus a margin.
+ */
+function serviceTimeout(name: string, args: Record<string, unknown>) {
+  if (name === "browse_user_agent_project") return 150000;
+
+  if (name === "get_agent_messages")
+    return Math.min(Number(args.wait_seconds) || 0, 50) * 1000 + 10000;
+
+  return 30000;
+}
+
 async function serviceTool(name: string, args: Record<string, unknown>) {
   const response = await fetch(
     `${origin}/api/${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
@@ -253,9 +266,7 @@ for (const [name, d] of Object.entries(tools)) {
                 : {}),
             },
             body: JSON.stringify(withConversation(name, args, extra._meta)),
-            signal: AbortSignal.timeout(
-              name === "browse_user_agent_project" ? 150000 : 30000,
-            ),
+            signal: AbortSignal.timeout(serviceTimeout(name, args)),
             redirect: "error",
           },
         );

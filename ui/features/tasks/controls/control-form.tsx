@@ -50,8 +50,8 @@ export function ControlForm({ dialog }: ControlFormProps) {
   };
 
   const tools: Record<string, string> = {
-    steer: "send_agent_instruction",
-    continue: "continue_agent_task",
+    steer: "send_agent_message",
+    continue: "send_agent_message",
     interrupt: "interrupt_agent_task",
   };
 
@@ -63,7 +63,9 @@ export function ControlForm({ dialog }: ControlFormProps) {
             task_id: task.id,
             ...(values.instruction?.trim()
               ? { message: values.instruction }
-              : {}),
+              : action === "continue"
+                ? { message: "Continue the task." }
+                : {}),
           }),
         ),
       )}

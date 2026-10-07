@@ -246,14 +246,17 @@ export function previewTool(
     list_agent_projects: projectsWith(options),
     list_agent_tasks: newestFirst
       .filter((task) => inScope(task, args))
-      .map((task) =>
-        listedTask(
+      .map((task) => {
+        const events = previewEvents.filter(
+          (event) => event.task_id === task.id,
+        );
+
+        return listedTask(
           task,
-          previewEvents
-            .filter((event) => event.task_id === task.id)
-            .slice(-200),
-        ),
-      ),
+          events.slice(-200),
+          events.findLast((event) => event.type === "agent.reply"),
+        );
+      }),
     get_agent_events: previewEvents.filter(
       (event) =>
         event.task_id === args.task_id && event.id > Number(args.after ?? 0),

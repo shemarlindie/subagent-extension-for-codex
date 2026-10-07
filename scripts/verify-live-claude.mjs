@@ -386,8 +386,14 @@ if (scenario === "read") {
     }
 
     assert.ok(completed, "Native MCP verification timed out");
-    const report = await call("get_agent_result", { task_id: task.id });
-    assert.ok(report.reply.text.includes("COBALT-27"));
+    const report = await call("get_agent_messages", { task_id: task.id });
+
+    assert.ok(
+      report.messages
+        .find((m) => m.kind === "reply")
+        .text.includes("COBALT-27"),
+    );
+
     const events = await call("get_agent_events", { task_id: task.id });
 
     assert.ok(

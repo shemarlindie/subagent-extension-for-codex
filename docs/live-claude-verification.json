@@ -109,15 +109,15 @@
       "verified": "Waiting question interrupted; control plane reopened; a follow-up message resumed the same native session as turn two"
     },
     "mcp": {
-      "task_id": "task_0bc2a2e3-29fe-41b8-a42c-62008dea84db",
+      "task_id": "task_3c2eb748-eb49-4919-bf5e-cd93636c16ae",
       "status": "completed",
       "model": "claude-opus-5-5",
-      "reported_cost_usd": 0.1642798,
+      "reported_cost_usd": 0.1050726,
       "transport": "Authenticated stdio MCP proxy to loopback control plane",
       "verified": [
         "Worker discovery through MCP",
         "Native Claude task created through MCP",
-        "Latest reply retrieved through MCP",
+        "Reply retrieved through get_agent_messages over MCP",
         "Native Read and completion events retrieved through MCP",
         "Primary fixture repository remained clean"
       ]

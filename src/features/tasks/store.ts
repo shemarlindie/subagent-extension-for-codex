@@ -134,6 +134,15 @@ export class Store {
       );
   }
 
+  /** The id of a task's latest event, or 0 before it has any. */
+  lastEventId(id: string): number {
+    const row = this.db
+      .prepare("SELECT MAX(id) AS id FROM events WHERE task_id=?")
+      .get(id);
+
+    return Number(row?.id ?? 0);
+  }
+
   /** A task's latest event of a type, such as its latest `agent.reply`. */
   latestEvent(id: string, type: string): Event | undefined {
     const row = this.db

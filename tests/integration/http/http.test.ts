@@ -697,7 +697,18 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       );
 
       const inventory = await stdio.listTools();
-      assert.ok(inventory.tools.some((t) => t.name === "continue_agent_task"));
+      assert.ok(inventory.tools.some((t) => t.name === "send_agent_message"));
+      assert.ok(inventory.tools.some((t) => t.name === "get_agent_messages"));
+
+      assert.ok(
+        !inventory.tools.some((t) =>
+          [
+            "continue_agent_task",
+            "send_agent_instruction",
+            "get_agent_result",
+          ].includes(t.name),
+        ),
+      );
 
       const proxyMentionTool = inventory.tools.find(
         (tool) => tool.name === "search_mentions",
