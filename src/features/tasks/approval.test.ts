@@ -346,9 +346,9 @@ test("interruption invalidates pending permission IDs across continuation", asyn
     const task = await c.start("alice", request);
     await until(() => !!store.get(task.id, "alice").pending_input);
     const oldId = store.get(task.id, "alice").pending_input!.id;
-    await c.stop("alice", task.id);
+    await c.interrupt("alice", task.id);
     assert.throws(() => c.input("alice", task.id, oldId, true), /stale/);
-    await c.followUp("alice", task.id, "Continue", "user");
+    await c.send("alice", task.id, "Continue", "user");
     await until(() => !!store.get(task.id, "alice").pending_input);
     const currentId = store.get(task.id, "alice").pending_input!.id;
     assert.notEqual(currentId, oldId);

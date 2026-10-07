@@ -284,6 +284,8 @@ test("run emits result accounting exactly once for success and failure", async (
       instructions: [],
       created_by: "user",
       instructions_sent: 0,
+      pending_steers: [],
+      queue: [],
       turn: 1,
       runtime_ms: 0,
       provider_options: {
@@ -305,6 +307,8 @@ test("run emits result accounting exactly once for success and failure", async (
     context.signal = new AbortController().signal;
     context.session = () => {};
     context.input = async () => ({ approved: false });
+    context.acceptSteers = () => {};
+    context.steerTaken = () => {};
 
     const message = {
       type: "result",

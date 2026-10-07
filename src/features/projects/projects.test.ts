@@ -344,10 +344,10 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
       join(b, ".git"),
     );
 
-    await control.stop("owner", task.id);
+    await control.interrupt("owner", task.id);
     control.repository = a;
 
-    const { task: resumed } = await control.followUp(
+    const { task: resumed } = await control.send(
       "owner",
       task.id,
       "Continue [input]",

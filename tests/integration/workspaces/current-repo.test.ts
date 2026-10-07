@@ -12,7 +12,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { Options, Query } from "@anthropic-ai/claude-agent-sdk";
+import type {
+  Options,
+  Query,
+  SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 import type { ServerContext } from "@modelcontextprotocol/server";
 import { test } from "vitest";
 
@@ -91,6 +95,8 @@ function task(repository: string, revision = "HEAD"): Task {
     updated_at: new Date().toISOString(),
     created_by: "user",
     instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
     turn: 0,
     runtime_ms: 0,
   };
@@ -500,14 +506,18 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
     await dirty(s.repo, s.git);
     const status = s.git("status", "--porcelain");
     let options: Options | undefined;
-    let receivedPrompt: string | AsyncIterable<any> | undefined;
+    let receivedPrompt: unknown;
 
     const provider = new ClaudeAgentProvider((args) => {
       options = args.options;
-      receivedPrompt = args.prompt;
+      const prompt = args.prompt as AsyncIterable<SDKUserMessage>;
 
       return Object.assign(
         (async function* () {
+          // The turn's prompt is the first message of its input stream.
+          const first = await prompt[Symbol.asyncIterator]().next();
+          receivedPrompt = (first.value as SDKUserMessage).message.content;
+
           yield {
             type: "result",
             subtype: "success",
@@ -538,6 +548,7 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
 
     assert.equal(options!.cwd, s.repo);
     assert.equal(typeof receivedPrompt, "string");
+
     assert.ok((receivedPrompt as string).includes("unstaged content"));
     assert.ok((receivedPrompt as string).includes("untracked content"));
     assert.ok(Array.isArray(options!.tools));

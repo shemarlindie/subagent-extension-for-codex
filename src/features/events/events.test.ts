@@ -44,6 +44,8 @@ const make = (id = "task-a", owner = "alice"): Task => ({
   instructions: [],
   created_by: "user",
   instructions_sent: 0,
+  pending_steers: [],
+  queue: [],
   turn: 1,
   runtime_ms: 0,
 });

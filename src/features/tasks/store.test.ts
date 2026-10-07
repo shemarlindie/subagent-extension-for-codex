@@ -22,6 +22,8 @@ function deletionFixture() {
     instructions: [],
     created_by: "user",
     instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
     turn: 1,
     runtime_ms: 0,
   };
@@ -127,6 +129,8 @@ test("recent events return only the task's latest 200 in chronological order aft
     instructions: [],
     created_by: "user",
     instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
     turn: 1,
     runtime_ms: 0,
   };

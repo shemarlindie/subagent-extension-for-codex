@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { access, readdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import {
@@ -12,6 +13,7 @@ import {
 import {
   deleteSession,
   type Options,
+  type Query,
   query,
   type SandboxSettings,
   type SDKMessage,
@@ -28,6 +30,7 @@ import {
 import { git } from "../../workspaces/workspace.js";
 import { claudeMetadata } from "../metadata.js";
 import { claudeActivityPresentation } from "./activity.js";
+import { Inbox } from "./inbox.js";
 import {
   claudeOverrideDefaults,
   type ClaudePolicy,
@@ -154,6 +157,29 @@ async function inWorkspace(workspace: string, path: string) {
     rel.startsWith(".git/")
   );
 }
+
+/**
+ * Query controls the installed CLI supports but the SDK (0.3.289) doesn't
+ * declare: an interrupt that also cancels queued messages, and withdrawing
+ * one queued message.
+ */
+type SteerableQuery = Omit<Query, "interrupt"> & {
+  interrupt(options?: { cancelQueued?: boolean }): Promise<unknown>;
+  cancelAsyncMessage?(uuid: string): Promise<boolean>;
+};
+
+/**
+ * A frame the CLI sends that the SDK doesn't declare: where a message sent
+ * while a turn runs has got to. `started` means the turn took it.
+ */
+type CommandLifecycle = {
+  type: "command_lifecycle";
+  command_uuid: string;
+  state: "queued" | "started" | "completed" | "cancelled";
+};
+
+/** How long an interrupt may take before the process is stopped instead. */
+const INTERRUPT_GRACE_MS = 10_000;
 
 /** Tools without workspace paths that run after approval; entries ending in `*` match by prefix. */
 const approvalTools = ["Bash", "Skill", "mcp__*"];
@@ -302,10 +328,8 @@ export class ClaudeAgentProvider implements Provider {
     const policy = taskOptions.claude_policy;
 
     const workspace = c.task.workspace!;
+    // Stops the process: only when an interrupt doesn't end the turn.
     const abortController = new AbortController();
-    const abort = () => abortController.abort();
-    c.signal.addEventListener("abort", abort, { once: true });
-    if (c.signal.aborted) abort();
     // Inherit leaves the native mode to the user's Claude Code settings.
     const nativeMode = taskClaudeMode(taskOptions);
     const restricted = policy.tools === "restricted";
@@ -356,6 +380,9 @@ export class ClaudeAgentProvider implements Provider {
       abortController,
       persistSession: true,
       resume: c.task.session_id,
+      // Stream frames show when the final message ends, which is the last
+      // moment a steer the turn won't take can be withdrawn.
+      includePartialMessages: true,
       settingSources: ["user", "project", "local"],
       ...(nativeMode ? { permissionMode: nativeMode } : {}),
       ...(nativeMode === "bypassPermissions"
@@ -452,7 +479,75 @@ export class ClaudeAgentProvider implements Provider {
       },
     };
 
-    const stream = this.launch({ prompt, options });
+    // Streaming input mode, so steers can follow the prompt while it runs.
+    const inbox = new Inbox<SDKUserMessage>();
+
+    inbox.push({
+      type: "user",
+      message: { role: "user", content: prompt },
+      parent_tool_use_id: null,
+      session_id: "",
+    });
+
+    const stream = this.launch({
+      prompt: inbox,
+      options,
+    }) as unknown as SteerableQuery & AsyncIterable<SDKMessage>;
+
+    // Steers sent into the turn and not yet taken, by the uuid they went with.
+    const steers = new Map<string, string>();
+    // The final message is ending, so the turn takes no more steers.
+    let ending = false;
+    // A steer couldn't be withdrawn, so the CLI runs it after this result.
+    let continuing = false;
+    let fallback: ReturnType<typeof setTimeout> | undefined;
+
+    const interrupt = () => {
+      // Interrupting ends the turn with an interrupted result and keeps the
+      // session; stopping the process is the fallback.
+      fallback = setTimeout(() => abortController.abort(), INTERRUPT_GRACE_MS);
+
+      Promise.resolve()
+        .then(() => stream.interrupt({ cancelQueued: true }))
+        .catch(() => abortController.abort());
+    };
+
+    c.signal.addEventListener("abort", interrupt, { once: true });
+    if (c.signal.aborted) interrupt();
+
+    c.acceptSteers((steer) => {
+      if (ending || c.signal.aborted) return false;
+      const uuid = randomUUID();
+      steers.set(uuid, steer.id);
+
+      inbox.push({
+        type: "user",
+        message: { role: "user", content: steer.text },
+        parent_tool_use_id: null,
+        session_id: "",
+        priority: "next",
+        uuid,
+      });
+
+      return true;
+    });
+
+    // The CLI runs a steer the turn ends without taking as a turn of its
+    // own, so each one is withdrawn as the final message ends; one already
+    // on its way runs, and this turn waits for it.
+    const withdraw = async () => {
+      ending = true;
+
+      for (const uuid of [...steers.keys()]) {
+        const withdrawn = await stream
+          .cancelAsyncMessage?.(uuid)
+          .catch(() => false);
+
+        if (withdrawn) steers.delete(uuid);
+        else continuing = true;
+      }
+    };
+
     let reply: string | undefined;
 
     try {
@@ -462,23 +557,56 @@ export class ClaudeAgentProvider implements Provider {
           c.session(m.session_id, ref);
         }
 
-        this.normalize(c, m);
+        if ((m as { type: string }).type === "command_lifecycle") {
+          const { command_uuid, state } = m as unknown as CommandLifecycle;
+          const id = steers.get(command_uuid);
 
-        if (m.type === "result") {
-          if (m.subtype !== "success" || m.is_error)
-            throw new Error(
-              `Claude result: ${m.subtype}${"errors" in m ? ": " + m.errors.join("; ") : ""}`,
-            );
+          if (id && state === "started") {
+            steers.delete(command_uuid);
+            c.steerTaken(id);
+            // A steer the CLI runs as its own turn can take more.
+            ending = false;
+          }
 
-          reply = m.result;
+          continue;
         }
+
+        if (m.type === "stream_event") {
+          const stop =
+            m.parent_tool_use_id === null &&
+            m.event.type === "message_delta" &&
+            m.event.delta.stop_reason;
+
+          if (stop && stop !== "tool_use" && stop !== "pause_turn")
+            await withdraw();
+          continue;
+        }
+
+        this.normalize(c, m);
+        if (m.type !== "result") continue;
+
+        if (m.subtype !== "success" || m.is_error)
+          throw new Error(
+            `Claude result: ${m.subtype}${"errors" in m ? ": " + m.errors.join("; ") : ""}`,
+          );
+
+        reply = m.result;
+
+        if (continuing) {
+          continuing = false;
+          continue;
+        }
+
+        break;
       }
 
       if (reply === undefined) throw new Error("Claude ended without a result");
 
       return { reply };
     } finally {
-      c.signal.removeEventListener("abort", abort);
+      clearTimeout(fallback);
+      c.signal.removeEventListener("abort", interrupt);
+      inbox.end();
       stream.close();
     }
   }

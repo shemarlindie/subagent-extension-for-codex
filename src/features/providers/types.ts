@@ -19,9 +19,24 @@ export interface Capabilities {
   dynamic_subagents: boolean;
 }
 
+/** A message sent into a running turn. */
+export interface Steer {
+  id: string;
+  text: string;
+}
+
 export interface RunContext {
   task: Task;
+  /** Aborted to interrupt the turn, which then ends as interrupted. */
   signal: AbortSignal;
+  /**
+   * Registers where steers go while the turn runs. Control sends each one
+   * there, including any sent before the provider registered; the sink
+   * returns false when the turn can't take it any more, as it ends.
+   */
+  acceptSteers(sink: (steer: Steer) => boolean): void;
+  /** Reports that the turn took a steer. One it never takes is left over. */
+  steerTaken(id: string): void;
   emit: (type: string, data: Record<string, unknown>) => void;
   session: (id: string, stateRef: string) => void;
   input: (

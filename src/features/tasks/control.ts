@@ -9,10 +9,13 @@ import {
   now,
   pendingInputKind,
   type Provider,
+  type QueuedMessage,
   type Sender,
   type Start,
   startSchema,
+  type Steer,
   type Task,
+  type TaskMessage,
 } from "../../shared/contracts.js";
 import { Projects } from "../projects/projects.js";
 import { providerMetadata } from "../providers/metadata.js";
@@ -56,8 +59,14 @@ async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {
 }
 
 interface Active {
+  /** The task as the turn holds it; changes while it runs go here. */
+  task: Task;
   inputTail?: Promise<void>;
   stopStatus?: "interrupted";
+  /** Interrupt and send now: the pending steers start the next turn. */
+  sendPending?: boolean;
+  /** Where the provider takes steers, once it registers. */
+  sink?: (steer: Steer) => boolean;
   abort: AbortController;
   done: Promise<void>;
   resolveInput?: (r: {
@@ -106,9 +115,15 @@ export class Control {
 
         t.error = "Service restarted; send a message to continue.";
         t.completed_at = now();
+        // Steers still inside the provider were lost with it, so they wait
+        // at the front of the queue, which pauses as after any interrupt.
+        const queue = this.queueSnapshot(t);
+        this.leaveOver(t);
+        if (t.queue.length) t.queue_paused = true;
 
         this.store.save(t);
         this.store.event(t, "task.interrupted", { reason: "service_restart" });
+        this.queueChanged(t, queue);
       }
     }
 
@@ -224,6 +239,8 @@ export class Control {
       status: "queued",
       instructions: [],
       instructions_sent: 0,
+      pending_steers: [],
+      queue: [],
       created_at: now(),
       updated_at: now(),
       turn: 0,
@@ -311,7 +328,7 @@ export class Control {
         t.turn++;
         this.store.save(t);
         const abort = new AbortController();
-        const active: Active = { abort, done: Promise.resolve() };
+        const active: Active = { task: t, abort, done: Promise.resolve() };
         this.active.set(t.id, active);
         active.done = this.execute(t, active);
       }
@@ -325,6 +342,7 @@ export class Control {
     let timer: NodeJS.Timeout | undefined;
     let turnStarted = false;
     let reply: string | undefined;
+    const costBefore = t.cost_usd ?? 0;
 
     try {
       this.validateBudgets(t);
@@ -374,8 +392,6 @@ export class Control {
           this.store.event(t, "task.session_started", { reason: newSession });
       }
 
-      const live = this.store.get(t.id, t.owner);
-      t.instructions = live.instructions;
       t.status = "running";
       t.started_at ??= now();
       t.run_started_at = new Date(begin).toISOString();
@@ -413,6 +429,22 @@ export class Control {
         {
           task: t,
           signal: a.abort.signal,
+          acceptSteers: (sink) => {
+            a.sink = sink;
+            // Steers sent before the provider was ready go now.
+            for (const steer of [...t.pending_steers])
+              this.deliver(t, a, steer);
+          },
+          steerTaken: (id) => {
+            const index = t.pending_steers.findIndex((m) => m.id === id);
+            if (index < 0) return;
+            const [taken] = t.pending_steers.splice(index, 1);
+            // The session has it now, like the turn's prompt.
+            t.instructions.push(taken);
+            t.instructions_sent = t.instructions.length;
+            this.store.save(t);
+            this.store.event(t, "task.steer_taken", { message_id: id });
+          },
           emit: (type, data) => {
             if (
               type === "agent.completed" &&
@@ -565,8 +597,10 @@ export class Control {
       }
     } finally {
       clearTimeout(timer);
-      t.runtime_ms += Date.now() - begin;
+      const runtime = Date.now() - begin;
+      t.runtime_ms += runtime;
       delete t.run_started_at;
+      delete a.sink;
 
       if (a.stopStatus) {
         t.status = a.stopStatus;
@@ -580,19 +614,136 @@ export class Control {
       // One stopped while waiting for input keeps the end from when it began
       // waiting, since it was blocked from then on.
       if (turnStarted && !t.end_tree) await this.recordEnd(t);
+      const outcome = t.status as "completed" | "failed" | "interrupted";
+
+      this.store.event(t, "task.turn_ended", {
+        turn: t.turn,
+        outcome,
+        runtime_ms: runtime,
+        cost_usd: (t.cost_usd ?? 0) - costBefore,
+      });
+
+      this.endTurn(t, outcome, a.sendPending);
       this.store.save(t);
 
       this.store.event(
         t,
         `task.${t.status}`,
-        t.status === "completed" && reply !== undefined
-          ? { reply: replyExcerpt(reply) }
-          : { error: t.error },
+        t.status === "queued"
+          ? {}
+          : t.status === "completed" && reply !== undefined
+            ? { reply: replyExcerpt(reply) }
+            : { error: t.error },
       );
 
       this.active.delete(t.id);
       if (!this.stopped) queueMicrotask(() => void this.schedule());
     }
+  }
+
+  /**
+   * What follows a turn. Interrupt and send now starts the next turn with
+   * the pending steers. Otherwise steers the turn didn't take move to the
+   * front of the queue; an interrupted or failed turn pauses the queue, and
+   * a completed one goes straight on to the next queued message, so the task
+   * never shows as completed in between.
+   */
+  private endTurn(
+    t: Task,
+    outcome: "completed" | "failed" | "interrupted",
+    sendPending?: boolean,
+  ) {
+    const before = this.queueSnapshot(t);
+
+    if (sendPending && t.pending_steers.length) {
+      t.instructions.push(...t.pending_steers);
+      t.pending_steers = [];
+      this.requeue(t);
+    } else {
+      this.leaveOver(t);
+
+      if (outcome !== "completed") {
+        if (t.queue.length) t.queue_paused = true;
+      } else if (t.queue.length && !t.queue_paused) {
+        this.deliverQueued(t, t.queue.shift()!);
+        this.requeue(t);
+      }
+    }
+
+    this.queueChanged(t, before);
+  }
+
+  /** Moves the steers a turn didn't take to the front of the queue. */
+  private leaveOver(t: Task) {
+    t.queue.unshift(
+      ...t.pending_steers.map((m) => ({
+        ...m,
+        delivery: "steer" as const,
+        recorded: true,
+      })),
+    );
+
+    t.pending_steers = [];
+  }
+
+  /** Records a queued message as sent, for the turn it starts. */
+  private deliverQueued(t: Task, m: QueuedMessage) {
+    if (!m.recorded) this.recordMessage(t, m, m.delivery);
+    t.instructions.push({ id: m.id, message: m.message, from: m.from });
+  }
+
+  /** Marks a task as having its next turn ready to start. */
+  private requeue(t: Task) {
+    t.status = "queued";
+    delete t.error;
+    delete t.completed_at;
+  }
+
+  private recordMessage(
+    t: Task,
+    m: TaskMessage,
+    delivery: QueuedMessage["delivery"],
+  ) {
+    this.store.event(t, "task.instruction", {
+      message_id: m.id,
+      message: m.message,
+      from: m.from,
+      delivery,
+    });
+  }
+
+  /** The queue as `task.queue_changed` records it. */
+  private queueSnapshot(t: Task) {
+    return {
+      queue: t.queue.map((m) => ({
+        message_id: m.id,
+        message: m.message,
+        from: m.from,
+      })),
+      paused: !!t.queue_paused,
+    };
+  }
+
+  /** Records the queue when it differs from `before`. */
+  private queueChanged(t: Task, before: ReturnType<Control["queueSnapshot"]>) {
+    const after = this.queueSnapshot(t);
+    if (JSON.stringify(after) !== JSON.stringify(before))
+      this.store.event(t, "task.queue_changed", after);
+  }
+
+  /**
+   * Sends a pending steer to the provider. One the turn can't take any more
+   * waits at the front of the queue instead.
+   */
+  private deliver(t: Task, a: Active, steer: TaskMessage) {
+    if (!a.sink || a.sink({ id: steer.id, text: steer.message })) return true;
+    const before = this.queueSnapshot(t);
+    t.pending_steers = t.pending_steers.filter((m) => m.id !== steer.id);
+    t.queue.unshift({ ...steer, delivery: "steer", recorded: true });
+    this.store.save(t);
+    this.queueChanged(t, before);
+
+    return false;
   }
 
   /**
@@ -670,13 +821,15 @@ export class Control {
       ...t.context,
       ...dependencyContext,
       ...(transcript ? [transcript] : []),
-      ...t.instructions.slice(t.instructions_sent),
+      ...t.instructions.slice(t.instructions_sent).map((m) => m.message),
     ].join("\n\n");
   }
 
   /** A resumed session's prompt: only the messages it hasn't received. */
   private resumedPrompt(t: Task) {
-    const unsent = t.instructions.slice(t.instructions_sent);
+    const unsent = t.instructions
+      .slice(t.instructions_sent)
+      .map((m) => m.message);
 
     return [
       ...(t.workspace_strategy === "current_repo"
@@ -694,7 +847,10 @@ export class Control {
    * received are left out, since the prompt ends with them.
    */
   private transcript(t: Task) {
-    let unsent = t.instructions.length - t.instructions_sent;
+    const received = new Set(
+      t.instructions.slice(0, t.instructions_sent).map((m) => m.id),
+    );
+
     const entries: string[] = [];
     let length = 0;
 
@@ -703,10 +859,11 @@ export class Control {
       .reverse();
 
     for (const e of events) {
-      if (e.type === "task.instruction" && unsent > 0) {
-        unsent--;
+      if (
+        e.type === "task.instruction" &&
+        !received.has(String(e.data.message_id))
+      )
         continue;
-      }
 
       const entry =
         e.type === "agent.reply"
@@ -910,11 +1067,22 @@ export class Control {
     return { status: "deleted" as const };
   }
 
-  /** Interrupts a task's turn, or a queued or waiting task before its turn starts. */
-  async stop(owner: string, id: string) {
+  /**
+   * Interrupts a task's turn, or a queued or waiting task before its turn
+   * starts. A plain interrupt pauses the queue and keeps pending steers at
+   * its front; `sendPending` (interrupt and send now) starts the next turn
+   * with them instead.
+   */
+  async interrupt(owner: string, id: string, sendPending = false) {
     const t = this.mutableTask(owner, id);
     const a = this.active.get(id);
-    if (a) return this.interruptActive(owner, id, a);
+
+    if (a) {
+      a.sendPending = sendPending;
+
+      return this.interruptActive(owner, id, a);
+    }
+
     if (!BUSY.includes(t.status))
       throw new Error(`Cannot interrupt a ${t.status} task`);
 
@@ -922,42 +1090,114 @@ export class Control {
     t.completed_at = now();
     delete t.waiting_reason;
     delete t.waiting_for;
+    const before = this.queueSnapshot(t);
+    if (t.queue.length) t.queue_paused = true;
     this.store.save(t);
     this.store.event(t, "task.interrupted");
+    this.queueChanged(t, before);
     void this.schedule();
 
     return t;
   }
 
-  /** Stops a running turn and waits until it is recorded as interrupted. */
+  /** Stops a running turn and waits until its end is recorded. */
   private async interruptActive(owner: string, id: string, a: Active) {
     // Mark the execution's object through its abort callback, then await
     // durable finalization.
     a.stopStatus = "interrupted";
 
-    this.store.event(this.store.get(id, owner), "task.control_requested", {
+    this.store.event(a.task, "task.control_requested", {
       status: "interrupted",
     });
 
     a.abort.abort(new Error("interrupted"));
     await a.done;
-    const current = this.store.get(id, owner);
-    current.status = "interrupted";
-    delete current.pending_input;
-    delete current.waiting_reason;
-    delete current.error;
-    this.store.save(current);
 
-    return current;
+    return this.store.get(id, owner);
   }
 
   /**
-   * Sends a message to an idle task, which starts its next turn: it resumes
-   * the task's session, or starts a new one when it can't, and recreates a
-   * removed worktree. `budget` raises the task's budget first, so a turn
-   * stopped by its budget can carry on.
+   * Sends a message to a task. On an idle task every delivery starts the
+   * next turn (see `followUp`). While a turn runs, a steer goes into it at
+   * the next tool boundary, a queued message waits for a turn of its own,
+   * and an interrupt stops the turn and starts the next one with it and any
+   * pending steers. A worker waiting for input can't be steered. `budget`
+   * raises the task's budget first.
    */
-  async followUp(
+  async send(
+    owner: string,
+    id: string,
+    message: string,
+    from: Sender,
+    options: { delivery?: Delivery; budget?: BudgetRaise } = {},
+  ) {
+    const delivery = options.delivery ?? "steer";
+    const stored = this.mutableTask(owner, id);
+    const a = this.active.get(id);
+
+    if (!a && !BUSY.includes(stored.status)) {
+      const sent = await this.followUp(owner, id, message, from, options);
+
+      return { ...sent, state: "started" as const };
+    }
+
+    const t = a?.task ?? stored;
+
+    if (t.pending_input && delivery === "steer")
+      throw new Error(
+        "The worker is waiting for input, so it can't be steered. Answer its request, or queue the message.",
+      );
+
+    if (options.budget) this.raiseBudget(t, options.budget);
+    const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
+
+    if (delivery === "queue") {
+      const before = this.queueSnapshot(t);
+      t.queue.push({ ...m, delivery });
+      this.store.save(t);
+      this.queueChanged(t, before);
+
+      return { task: t, message_id: m.id, state: "queued" as const };
+    }
+
+    this.recordMessage(t, m, delivery);
+
+    // A turn that hasn't begun takes the message with its prompt.
+    if (!a) {
+      t.instructions.push(m);
+      this.store.save(t);
+
+      return { task: t, message_id: m.id, state: "started" as const };
+    }
+
+    t.pending_steers.push(m);
+    this.store.save(t);
+
+    if (delivery === "interrupt") {
+      await this.interrupt(owner, id, true);
+
+      return {
+        task: this.store.get(id, owner),
+        message_id: m.id,
+        state: "started" as const,
+      };
+    }
+
+    const pending = this.deliver(t, a, m);
+
+    return {
+      task: t,
+      message_id: m.id,
+      state: pending ? ("pending_steer" as const) : ("queued" as const),
+    };
+  }
+
+  /**
+   * Starts an idle task's next turn with a message: it resumes the task's
+   * session, or starts a new one when it can't, and recreates a removed
+   * worktree. Sending resumes a paused queue, whose messages follow.
+   */
+  private async followUp(
     owner: string,
     id: string,
     message: string,
@@ -972,25 +1212,19 @@ export class Control {
     if (this.projects) await this.projects.resolve(t.repository);
     // Recheck after the awaits, so deletion can't resurrect a task.
     this.mutableTask(owner, id);
-    const message_id = `msg_${randomUUID()}`;
+    const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
+    const before = this.queueSnapshot(t);
 
-    t.instructions.push(message);
-    t.status = "queued";
-    delete t.error;
-    delete t.completed_at;
+    t.instructions.push(m);
+    delete t.queue_paused;
+    this.requeue(t);
     this.store.save(t);
-
-    this.store.event(t, "task.instruction", {
-      message_id,
-      message,
-      from,
-      delivery: options.delivery ?? "steer",
-    });
-
+    this.recordMessage(t, m, options.delivery ?? "steer");
+    this.queueChanged(t, before);
     this.store.event(t, "task.queued");
     void this.schedule();
 
-    return { task: t, message_id };
+    return { task: t, message_id: m.id };
   }
 
   /**
@@ -1013,30 +1247,82 @@ export class Control {
     }
   }
 
-  /**
-   * Steers a task: a running turn is interrupted, and the next turn starts
-   * with the message. A queued or waiting task gets it with its turn.
-   */
-  async steer(owner: string, id: string, message: string, from: Sender) {
-    let t = this.mutableTask(owner, id);
+  /** The task's queue, as Control holds it while a turn runs. */
+  private queueTask(owner: string, id: string) {
+    const stored = this.mutableTask(owner, id);
 
-    if (this.active.has(id)) {
-      await this.stop(owner, id);
-      t = this.mutableTask(owner, id);
+    return this.active.get(id)?.task ?? stored;
+  }
+
+  /** Changes a queued message's text before it's sent. */
+  editQueued(owner: string, id: string, messageId: string, message: string) {
+    const t = this.queueTask(owner, id);
+    const m = t.queue.find((m) => m.id === messageId);
+    if (!m) throw new Error("That message is no longer queued.");
+    if (m.recorded)
+      throw new Error("A steer the worker already has can't be edited.");
+    const before = this.queueSnapshot(t);
+    m.message = message;
+    this.store.save(t);
+    this.queueChanged(t, before);
+
+    return t;
+  }
+
+  /**
+   * Removes a queued message before it's sent. The parent agent can remove
+   * only messages it queued.
+   */
+  removeQueued(owner: string, id: string, messageId: string, by: Sender) {
+    const t = this.queueTask(owner, id);
+    const m = t.queue.find((m) => m.id === messageId);
+    if (!m) throw new Error("That message is no longer queued.");
+    if (by === "parent" && m.from !== "parent")
+      throw new Error("The parent agent can remove only messages it queued.");
+    const before = this.queueSnapshot(t);
+    t.queue = t.queue.filter((q) => q !== m);
+    if (!t.queue.length) delete t.queue_paused;
+    this.store.save(t);
+    this.store.event(t, "task.message_removed", { message_id: m.id });
+    this.queueChanged(t, before);
+
+    return t;
+  }
+
+  /** Removes every queued message. */
+  clearQueue(owner: string, id: string) {
+    const t = this.queueTask(owner, id);
+    const before = this.queueSnapshot(t);
+    const removed = t.queue;
+    t.queue = [];
+    delete t.queue_paused;
+    this.store.save(t);
+    for (const m of removed)
+      this.store.event(t, "task.message_removed", { message_id: m.id });
+    this.queueChanged(t, before);
+
+    return t;
+  }
+
+  /** Resumes a paused queue; an idle task starts its next queued message. */
+  resumeQueue(owner: string, id: string) {
+    const t = this.queueTask(owner, id);
+    const before = this.queueSnapshot(t);
+    delete t.queue_paused;
+
+    if (!this.active.has(id) && !BUSY.includes(t.status) && t.queue.length) {
+      this.deliverQueued(t, t.queue.shift()!);
+      this.requeue(t);
+      this.store.save(t);
+      this.queueChanged(t, before);
+      this.store.event(t, "task.queued");
+      void this.schedule();
+
+      return t;
     }
 
-    if (!BUSY.includes(t.status))
-      return (await this.followUp(owner, id, message, from)).task;
-
-    t.instructions.push(message);
     this.store.save(t);
-
-    this.store.event(t, "task.instruction", {
-      message_id: `msg_${randomUUID()}`,
-      message,
-      from,
-      delivery: "steer",
-    });
+    this.queueChanged(t, before);
 
     return t;
   }
@@ -1084,7 +1370,7 @@ export class Control {
 
         return ["completed", "failed"].includes(t.status)
           ? this.active.get(id)!.done
-          : this.stop(t.owner, id);
+          : this.interrupt(t.owner, id);
       }),
     );
 

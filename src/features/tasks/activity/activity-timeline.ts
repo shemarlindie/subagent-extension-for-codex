@@ -55,12 +55,29 @@ const quiet = new Set([
 ]);
 
 const boundaries = new Set([
+  "task.turn_ended",
   "task.completed",
   "task.failed",
   "task.interrupted",
   "agent.completed",
   "task.started",
 ]);
+
+/** Summaries for service events whose fields don't read as one. */
+function serviceSummary(e: Event) {
+  const d = e.data;
+
+  if (e.type === "task.turn_ended")
+    return `Turn ${String(d.turn)} ${String(d.outcome)}`;
+
+  if (e.type === "task.queue_changed") {
+    const count = Array.isArray(d.queue) ? d.queue.length : 0;
+
+    return `${count} queued${d.paused ? " · paused" : ""}`;
+  }
+
+  return undefined;
+}
 
 /** Row titles for service events whose type doesn't read as one. */
 const eventTitles: Record<string, string> = {
@@ -70,6 +87,10 @@ const eventTitles: Record<string, string> = {
   "task.instruction": "Message",
   "task.session_started": "New session",
   "task.worktree_recreated": "Worktree recreated",
+  "task.turn_ended": "Turn ended",
+  "task.queue_changed": "Queue changed",
+  "task.steer_taken": "Steer taken",
+  "task.message_removed": "Queued message removed",
 };
 
 const thinking = new Set([
@@ -398,6 +419,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     group.summary =
       presentation.summary ??
       (activityFailed(e) ? failureSummary(e) : undefined) ??
+      serviceSummary(e) ??
       string(
         d.text ??
           d.summary ??

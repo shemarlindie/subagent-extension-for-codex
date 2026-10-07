@@ -37,7 +37,7 @@ export function ControlForm({ dialog }: ControlFormProps) {
 
   const descriptions: Record<string, string> = {
     steer:
-      "A running turn will be interrupted and continued with your instruction.",
+      "The running turn takes your instruction after its next tool call, without stopping.",
     continue: "Start the next turn in this task, in its workspace and session.",
     interrupt:
       "Stop current execution and preserve the workspace and session for continuation.",

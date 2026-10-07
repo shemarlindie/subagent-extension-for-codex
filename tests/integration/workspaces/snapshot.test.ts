@@ -172,12 +172,12 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
     // Stopping a waiting task keeps that end, leaving out edits made while
     // it waited; the next turn clears it.
     await writeFile(join(s.repo, "during-wait.txt"), "user\n");
-    await c.stop("alice", t.id);
+    await c.interrupt("alice", t.id);
     const paused = c.store.get(t.id, "alice");
     assert.equal(paused.end_tree, first.end_tree);
     await rm(join(s.repo, "during-wait.txt"));
 
-    await c.followUp("alice", t.id, "Continue", "user");
+    await c.send("alice", t.id, "Continue", "user");
     await until(() => c.store.get(t.id, "alice").status === "completed");
     const done = c.store.get(t.id, "alice");
     assert.equal(done.start_tree, first.start_tree);

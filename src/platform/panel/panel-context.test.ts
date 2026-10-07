@@ -56,6 +56,8 @@ async function fixture(t: TestContext) {
       instructions: [],
       created_by: "user",
       instructions_sent: 0,
+      pending_steers: [],
+      queue: [],
       turn: 0,
       runtime_ms: 0,
       ...overrides,

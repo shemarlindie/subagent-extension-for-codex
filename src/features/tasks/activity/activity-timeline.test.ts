@@ -338,6 +338,8 @@ function task(status: Task["status"]): Task {
     instructions: [],
     created_by: "user",
     instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
     turn: 1,
     runtime_ms: 0,
   };
@@ -1091,6 +1093,29 @@ test("a turn's reply gets its own row with the reply as its summary", () => {
       ["Turn completed", "Done."],
       ["Reply", "Done."],
       ["Task completed", undefined],
+    ],
+  );
+});
+
+test("turn ends and queue changes summarise their outcome and queue", () => {
+  const groups = groupActivity([
+    event(1, "task.turn_ended", {
+      turn: 2,
+      outcome: "interrupted",
+      runtime_ms: 1000,
+      cost_usd: 0,
+    }),
+    event(2, "task.queue_changed", {
+      queue: [{ message_id: "m", message: "Next", from: "user" }],
+      paused: true,
+    }),
+  ]);
+
+  assert.deepEqual(
+    groups.map((group) => [group.title, group.summary]),
+    [
+      ["Turn ended", "Turn 2 interrupted"],
+      ["Queue changed", "1 queued · paused"],
     ],
   );
 });

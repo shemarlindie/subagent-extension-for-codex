@@ -213,7 +213,7 @@ export function definitions(
       description:
         "Stop the current turn while preserving the session and workspace. A later message continues the task.",
       schema: taskId,
-      run: (a) => c.stop(owner, a.task_id),
+      run: (a) => c.interrupt(owner, a.task_id),
     }),
     continue_agent_task: tool({
       description:
@@ -224,7 +224,7 @@ export function definitions(
       }),
       run: async (a) =>
         (
-          await c.followUp(
+          await c.send(
             owner,
             a.task_id,
             a.message ?? "Continue the task.",
@@ -235,9 +235,10 @@ export function definitions(
     }),
     send_agent_instruction: tool({
       description:
-        "Steer a task. A running turn is interrupted and the next one starts with this instruction; an idle task starts its next turn with it.",
+        "Steer a task: a running turn takes the instruction at its next tool boundary, without being interrupted; an idle task starts its next turn with it.",
       schema: taskId.extend({ message: z.string().min(1).max(20000) }),
-      run: (a) => c.steer(owner, a.task_id, a.message, authority),
+      run: async (a) =>
+        (await c.send(owner, a.task_id, a.message, authority)).task,
     }),
     submit_agent_input: tool({
       description:

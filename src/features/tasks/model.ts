@@ -160,6 +160,23 @@ export const budgetRaiseSchema = z
 
 export type BudgetRaise = z.infer<typeof budgetRaiseSchema>;
 
+/** A message after the first, with the id it keeps from when it's sent. */
+export interface TaskMessage {
+  id: string;
+  message: string;
+  from: Sender;
+}
+
+/** A message waiting in the task's queue for a turn of its own. */
+export interface QueuedMessage extends TaskMessage {
+  delivery: Delivery;
+  /**
+   * Its `task.instruction` is already recorded: a steer the turn ended
+   * without taking, moved to the queue.
+   */
+  recorded?: boolean;
+}
+
 export interface InputPresentation {
   description: string;
   approveLabel: string;
@@ -217,13 +234,22 @@ export interface Task extends Start {
     presentation?: InputPresentation;
     input: Record<string, unknown>;
   };
-  /** Messages sent after the first, in the order they were sent. */
-  instructions: string[];
+  /** Messages delivered or about to be, in the order the worker gets them. */
+  instructions: TaskMessage[];
   /**
    * How many of `instructions` the worker's session has received; a resumed
    * session gets only the rest.
    */
   instructions_sent: number;
+  /**
+   * Steers sent into the running turn that it hasn't taken yet. One the turn
+   * ends without taking moves to the front of the queue.
+   */
+  pending_steers: TaskMessage[];
+  /** Messages that each start a turn of their own, in order. */
+  queue: QueuedMessage[];
+  /** An interrupt or failure paused the queue; the next message sent resumes it. */
+  queue_paused?: boolean;
   /** The number of turns started, the current one included. */
   turn: number;
   /** Sum of the finished turns' run times. */

@@ -73,6 +73,8 @@ const taskBase = {
   created_by: "user" as const,
   instructions: [],
   instructions_sent: 0,
+  pending_steers: [],
+  queue: [],
   turn: 1,
   runtime_ms: 0,
 };
@@ -426,7 +428,22 @@ class Timeline {
   ) {
     return this.turnResult(text, fields)
       .reply(text, turn)
+      .turnEnded(turn, "completed", fields.duration_ms, fields.total_cost_usd)
       .add("task.completed", { reply: text }, 200);
+  }
+
+  /** The service's record of how a turn ended, for its outcome row. */
+  turnEnded(
+    turn: number,
+    outcome: "completed" | "failed" | "interrupted",
+    runtime_ms = 64000,
+    cost_usd = 0.42,
+  ) {
+    return this.add(
+      "task.turn_ended",
+      { turn, outcome, runtime_ms, cost_usd },
+      100,
+    );
   }
 
   /** The service's record of a turn's reply, with its snapshots. */
@@ -767,6 +784,8 @@ failed.result({
   session_id: SESSION,
 });
 
+failed.turnEnded(1, "failed", 412000, 1.18);
+
 failed.add(
   "task.failed",
   { error: "Worker stopped: reached the maximum number of turns." },
@@ -958,6 +977,7 @@ const fetch = release.toolStart("WebFetch", {
 
 release.toolProgress(fetch, "WebFetch", 5);
 release.add("task.control_requested", { status: "interrupted" }, 400);
+release.turnEnded(1, "interrupted", 8000, 0.06);
 release.add("task.interrupted", {}, 200);
 
 // The user discarded the work: worktree, then branch.
@@ -978,6 +998,7 @@ const blocks = new Timeline("preview-blocks", at(90), 600);
 begin(blocks, ["Read", "WebSearch", "mcp__assets__list"]);
 
 blocks.add("task.control_requested", { status: "interrupted" }, 200);
+blocks.turnEnded(1, "interrupted", 21000, 0.18);
 blocks.add("task.interrupted", {}, 200);
 
 blocks.add(
@@ -1256,6 +1277,10 @@ const interrupted = lifecycle(
   ["task.queued"],
   ["task.started", { turn: 1 }],
   ["task.control_requested", { status: "interrupted" }],
+  [
+    "task.turn_ended",
+    { turn: 1, outcome: "interrupted", runtime_ms: 70000, cost_usd: 0 },
+  ],
   ["task.interrupted"],
   // A second turn, so the Changes tab offers This turn.
   [
@@ -1269,6 +1294,10 @@ const interrupted = lifecycle(
   ],
   ["task.queued"],
   ["task.started", { turn: 2 }],
+  [
+    "task.turn_ended",
+    { turn: 2, outcome: "interrupted", runtime_ms: 55000, cost_usd: 0 },
+  ],
   ["task.interrupted", { reason: "service_restart" }],
 );
 
@@ -1286,6 +1315,10 @@ const build = lifecycle(
       start_tree: `${FAKE_TREE}1s`,
       end_tree: `${FAKE_TREE}1e`,
     },
+  ],
+  [
+    "task.turn_ended",
+    { turn: 1, outcome: "completed", runtime_ms: 210000, cost_usd: 1.04 },
   ],
   [
     "task.completed",
@@ -1310,6 +1343,10 @@ const profile = lifecycle(
       start_tree: `${FAKE_TREE}1s`,
       end_tree: `${FAKE_TREE}1e`,
     },
+  ],
+  [
+    "task.turn_ended",
+    { turn: 1, outcome: "completed", runtime_ms: 260000, cost_usd: 1.31 },
   ],
   [
     "task.completed",
@@ -1340,6 +1377,10 @@ const resumed = lifecycle(
       start_tree: `${FAKE_TREE}1s`,
       end_tree: `${FAKE_TREE}1e`,
     },
+  ],
+  [
+    "task.turn_ended",
+    { turn: 1, outcome: "completed", runtime_ms: 98000, cost_usd: 0.41 },
   ],
   ["task.completed", { reply: resumedReplies[0] }],
   [
@@ -1372,8 +1413,164 @@ const resumed = lifecycle(
       end_tree: `${FAKE_TREE}2e`,
     },
   ],
+  [
+    "task.turn_ended",
+    { turn: 2, outcome: "completed", runtime_ms: 88000, cost_usd: 0.47 },
+  ],
   ["task.completed", { reply: resumedReplies[1] }],
 );
+
+// --- Steering a running turn: one steer taken, one pending, two queued -------
+const steeringMessages = {
+  taken: {
+    id: "msg_preview_steering_taken",
+    message: "Keep the existing headings.",
+    from: "user" as const,
+  },
+  pending: {
+    id: "msg_preview_steering_pending",
+    message: "Use sentence case in the buttons too.",
+    from: "user" as const,
+  },
+  queued: [
+    {
+      id: "msg_preview_steering_queued_1",
+      message: "Then shorten the empty-state text.",
+      from: "user" as const,
+      delivery: "queue" as const,
+    },
+    {
+      id: "msg_preview_steering_queued_2",
+      message: "Afterwards, list any strings you couldn't change.",
+      from: "parent" as const,
+      delivery: "queue" as const,
+    },
+  ],
+  removed: "msg_preview_steering_removed",
+};
+
+const queueEntry = (m: { id: string; message: string; from: string }) => ({
+  message_id: m.id,
+  message: m.message,
+  from: m.from,
+});
+
+const steering = new Timeline("preview-steering", at(115), 1700);
+begin(steering, ["Read", "Edit"]);
+steering.say("Reviewing the settings copy for consistent wording.");
+
+steering.add(
+  "task.instruction",
+  { ...queueEntry(steeringMessages.taken), delivery: "steer" },
+  2000,
+);
+
+steering.tool(
+  "Read",
+  { file_path: "ui/settings/copy.ts" },
+  "1\texport const title = 'Settings';",
+);
+
+steering.add(
+  "task.steer_taken",
+  { message_id: steeringMessages.taken.id },
+  100,
+);
+
+steering.say("Keeping the headings as they are; tightening the descriptions.");
+
+steering.add(
+  "task.queue_changed",
+  {
+    queue: [
+      queueEntry(steeringMessages.queued[0]!),
+      {
+        message_id: steeringMessages.removed,
+        message: "Check the dark theme too.",
+        from: "user",
+      },
+    ],
+    paused: false,
+  },
+  3000,
+);
+
+steering.add(
+  "task.message_removed",
+  { message_id: steeringMessages.removed },
+  4000,
+);
+
+steering.add(
+  "task.queue_changed",
+  { queue: [queueEntry(steeringMessages.queued[0]!)], paused: false },
+  0,
+);
+
+steering.add(
+  "task.queue_changed",
+  { queue: steeringMessages.queued.map(queueEntry), paused: false },
+  5000,
+);
+
+steering.add(
+  "task.instruction",
+  { ...queueEntry(steeringMessages.pending), delivery: "steer" },
+  2000,
+);
+
+steering.toolStart("Edit", {
+  file_path: "ui/settings/copy.ts",
+  old_string: "Save Changes",
+  new_string: "Save changes",
+});
+
+// --- Interrupted with a steer pending: it waits at the front of a paused queue
+const pausedMessages = {
+  steer: {
+    id: "msg_preview_paused_steer",
+    message: "Rename the flags in the tests as well.",
+    from: "user" as const,
+  },
+  queued: {
+    id: "msg_preview_paused_queued",
+    message: "Then remove the flags that are always on.",
+    from: "parent" as const,
+  },
+};
+
+const paused = new Timeline("preview-paused", at(118), 1800);
+begin(paused, ["Read", "Edit", "Grep"]);
+paused.say("Renaming the feature flags to the new prefix.");
+
+paused.add(
+  "task.queue_changed",
+  { queue: [queueEntry(pausedMessages.queued)], paused: false },
+  4000,
+);
+
+paused.add(
+  "task.instruction",
+  { ...queueEntry(pausedMessages.steer), delivery: "steer" },
+  3000,
+);
+
+paused.add("task.control_requested", { status: "interrupted" }, 2000);
+paused.turnEnded(1, "interrupted", 41000, 0.22);
+
+paused.add(
+  "task.queue_changed",
+  {
+    queue: [
+      queueEntry(pausedMessages.steer),
+      queueEntry(pausedMessages.queued),
+    ],
+    paused: true,
+  },
+  0,
+);
+
+paused.add("task.interrupted", {}, 0);
 
 const permission = lifecycle(
   "preview-input",
@@ -1704,7 +1901,13 @@ export const previewTasks: Task[] = [
     repository: WEBSITE,
     status: "completed",
     turn: 2,
-    instructions: ["Also check the vendored icons."],
+    instructions: [
+      {
+        id: "msg_preview_blocks_1",
+        message: "Also check the vendored icons.",
+        from: "user" as const,
+      },
+    ],
     instructions_sent: 1,
     model: "opus",
     reasoning_effort: "high",
@@ -1755,7 +1958,13 @@ export const previewTasks: Task[] = [
     },
     status: "interrupted",
     turn: 2,
-    instructions: ["Keep keyboard navigation unchanged."],
+    instructions: [
+      {
+        id: "msg_preview_interrupted_1",
+        message: "Keep keyboard navigation unchanged.",
+        from: "parent" as const,
+      },
+    ],
     instructions_sent: 1,
     runtime_ms: 125000,
     ...worktree("preview-interrupted"),
@@ -1850,12 +2059,51 @@ export const previewTasks: Task[] = [
     worker_profile: "test_engineer",
     status: "completed",
     turn: 2,
-    instructions: ["Also cover the timeout path."],
+    instructions: [
+      {
+        id: "msg_preview_resumed_1",
+        message: "Also cover the timeout path.",
+        from: "user" as const,
+      },
+    ],
     instructions_sent: 1,
     runtime_ms: 186000,
     cost_usd: 0.88,
     ...worktree("preview-resumed"),
     ...timestamps(112, 40),
+  },
+  {
+    ...taskBase,
+    id: "preview-steering",
+    title: "Tidy the settings copy",
+    description:
+      "Make the settings screen's wording consistent: sentence case, short descriptions.",
+    worker_profile: "implementer",
+    repository: WEBSITE,
+    status: "running",
+    runtime_ms: 0,
+    instructions: [steeringMessages.taken],
+    instructions_sent: 1,
+    pending_steers: [steeringMessages.pending],
+    queue: steeringMessages.queued,
+    run_started_at: new Date(Date.now() - 95000).toISOString(),
+    ...timestamps(115, 2),
+  },
+  {
+    ...taskBase,
+    id: "preview-paused",
+    title: "Rename the feature flags",
+    description: "Rename every feature flag to the new ff_ prefix.",
+    worker_profile: "implementer",
+    status: "interrupted",
+    runtime_ms: 41000,
+    cost_usd: 0.22,
+    queue: [
+      { ...pausedMessages.steer, delivery: "steer", recorded: true },
+      { ...pausedMessages.queued, delivery: "queue" },
+    ],
+    queue_paused: true,
+    ...timestamps(118, 1),
   },
   ...liveTasks,
 ];
@@ -1876,5 +2124,7 @@ export const previewEvents: Event[] = [
   build,
   profile,
   resumed,
+  steering,
+  paused,
   ...liveTimelines,
 ].flatMap((timeline) => timeline.events);

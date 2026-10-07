@@ -47,6 +47,8 @@ test("Claude session deletion skips absent ids and forwards existing sessions", 
     instructions: [],
     created_by: "user",
     instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
     turn: 1,
     runtime_ms: 0,
   };
@@ -75,6 +77,8 @@ test("Claude session deletion only tolerates the SDK's missing-session error", a
     instructions: [],
     created_by: "user",
     instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
     turn: 1,
     runtime_ms: 0,
     session_id: "session-one",
@@ -130,6 +134,8 @@ async function context() {
     instructions: [],
     created_by: "user",
     instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
     turn: 1,
     runtime_ms: 0,
     provider_options: {
@@ -154,6 +160,8 @@ async function context() {
     emit: (type, data) => events.push({ type, data }),
     session: (id, ref) => sessions.push({ id, ref }),
     input: async () => ({ approved: false, message: "User declined" }),
+    acceptSteers: () => {},
+    steerTaken: () => {},
   };
 
   return { c, events, sessions, workspace };

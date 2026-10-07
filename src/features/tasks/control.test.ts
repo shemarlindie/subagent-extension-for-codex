@@ -428,8 +428,8 @@ test("ownership enforced across dependencies, state, events and controls", async
   await until(() => store.get(t.id, "alice").status === "waiting");
   assert.throws(() => store.get(t.id, "bob"));
   assert.throws(() => store.events(t.id, "bob"));
-  await assert.rejects(c.stop("bob", t.id));
-  await assert.rejects(c.followUp("bob", t.id, "Hi", "user"));
+  await assert.rejects(c.interrupt("bob", t.id));
+  await assert.rejects(c.send("bob", t.id, "Hi", "user"));
   await assert.rejects(c.delete("bob", t.id));
   await assert.rejects(c.start("bob", { ...input(), depends_on: [t.id] }));
   await c.close();
@@ -446,7 +446,7 @@ test("dependents wait on an interrupted dependency and fail with a failed one, a
 
   await until(() => store.get(first.id, "alice").status === "waiting");
   await until(() => store.get(second.id, "alice").status === "waiting");
-  await c.stop("alice", first.id);
+  await c.interrupt("alice", first.id);
 
   // An interrupted dependency keeps its dependents waiting, and names it.
   await new Promise((r) => setTimeout(r, 50));
@@ -462,7 +462,7 @@ test("dependents wait on an interrupted dependency and fail with a failed one, a
   );
 
   // A failed dependency still fails them.
-  await c.followUp("alice", first.id, "[fail]", "user");
+  await c.send("alice", first.id, "[fail]", "user");
   await until(() => store.get(first.id, "alice").status === "failed");
   await until(() => store.get(second.id, "alice").status === "failed");
 
@@ -474,9 +474,9 @@ test("dependents wait on an interrupted dependency and fail with a failed one, a
   assert.equal(store.get(second.id, "alice").workspace, undefined);
 
   // Once the dependency completes, a follow-up resumes the dependent.
-  await c.followUp("alice", first.id, "Try again", "user");
+  await c.send("alice", first.id, "Try again", "user");
   await until(() => store.get(first.id, "alice").status === "completed");
-  await c.followUp("alice", second.id, "Go ahead", "user");
+  await c.send("alice", second.id, "Go ahead", "user");
   await until(() => store.get(second.id, "alice").status === "completed");
   await c.close();
 });
@@ -632,10 +632,10 @@ test("interrupt preserves the session, and a follow-up resumes it with only the 
   const { c, store } = await setup(new Recorder());
   const t = await c.start("alice", input("[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
-  await c.stop("alice", t.id);
+  await c.interrupt("alice", t.id);
   const previous = store.get(t.id, "alice").session_id;
   assert.ok(store.get(t.id, "alice").completed_at);
-  await c.followUp("alice", t.id, "Carry on [input]", "parent");
+  await c.send("alice", t.id, "Carry on [input]", "parent");
   await until(() => !!store.get(t.id, "alice").pending_input);
 
   c.input("alice", t.id, store.get(t.id, "alice").pending_input!.id, true, {
@@ -671,7 +671,7 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   const { c, store } = await setup(new Recorder());
   const t = await c.start("alice", input("Review the parser"));
   await until(() => store.get(t.id, "alice").status === "completed");
-  await c.followUp("alice", t.id, "Check the lexer too", "parent");
+  await c.send("alice", t.id, "Check the lexer too", "parent");
   await until(() => store.get(t.id, "alice").turn === 2);
   await until(() => store.get(t.id, "alice").status === "completed");
 
@@ -679,7 +679,7 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   const moved = store.get(t.id, "alice");
   moved.session_owner = "another-worker";
   store.save(moved);
-  await c.followUp("alice", t.id, "Summarise both", "user");
+  await c.send("alice", t.id, "Summarise both", "user");
   await until(() => store.get(t.id, "alice").turn === 3);
   await until(() => store.get(t.id, "alice").status === "completed");
 
@@ -712,7 +712,7 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   failed.status = "failed";
   delete failed.session_id;
   store.save(failed);
-  await c.followUp("alice", early.id, "Try once more", "user");
+  await c.send("alice", early.id, "Try once more", "user");
   await until(() => store.get(early.id, "alice").status === "completed");
 
   assert.deepEqual(
@@ -745,7 +745,7 @@ test("a completed task takes a follow-up as its next turn, with its own turn sco
   assert.ok(first.completed_at);
   assert.equal(first.created_by, "user");
 
-  const sent = await c.followUp("alice", t.id, "Write another", "parent");
+  const sent = await c.send("alice", t.id, "Write another", "parent");
   assert.match(sent.message_id, /^msg_/);
   assert.equal(sent.task.completed_at, undefined);
   await until(() => store.get(t.id, "alice").turn === 2);
@@ -776,7 +776,12 @@ test("a completed task takes a follow-up as its next turn, with its own turn sco
   // A busy task takes no follow-up yet.
   const busy = await c.start("alice", input("[input]"));
   await until(() => !!store.get(busy.id, "alice").pending_input);
-  await assert.rejects(c.followUp("alice", busy.id, "Hi", "user"), /busy/);
+
+  await assert.rejects(
+    c.send("alice", busy.id, "Hi", "user"),
+    /waiting for input/,
+  );
+
   await c.close();
 });
 
@@ -792,27 +797,27 @@ test("a turn stopped by its budget resumes after a follow-up raises it", async (
   const spent = store.get(t.id, "alice");
   spent.cost_usd = 1;
   store.save(spent);
-  await c.followUp("alice", t.id, "More", "user");
+  await c.send("alice", t.id, "More", "user");
   await until(() => store.get(t.id, "alice").status === "failed");
   assert.match(store.get(t.id, "alice").error!, /Cost budget exhausted/);
 
   // Each limit can only go up.
   await assert.rejects(
-    c.followUp("alice", t.id, "More", "user", {
+    c.send("alice", t.id, "More", "user", {
       budget: { max_cost_usd: 0.5 },
     }),
     /can only be raised/,
   );
 
   await assert.rejects(
-    c.followUp("alice", t.id, "More", "user", {
+    c.send("alice", t.id, "More", "user", {
       budget: { max_runtime_minutes: 500 },
     }),
   );
 
   assert.equal(store.get(t.id, "alice").status, "failed");
 
-  await c.followUp("alice", t.id, "More", "parent", {
+  await c.send("alice", t.id, "More", "parent", {
     budget: { max_cost_usd: 2, max_runtime_minutes: null },
   });
 
@@ -825,7 +830,7 @@ test("a turn stopped by its budget resumes after a follow-up raises it", async (
 
   // No limit can't become a limit again.
   await assert.rejects(
-    c.followUp("alice", t.id, "More", "user", {
+    c.send("alice", t.id, "More", "user", {
       budget: { max_runtime_minutes: 30 },
     }),
     /can only be raised/,
@@ -847,35 +852,381 @@ test("cost counts each turn once, though a resumed session reports its running t
   const { c, store } = await setup(new Costly());
   const t = await c.start("alice", input());
   await until(() => store.get(t.id, "alice").status === "completed");
-  await c.followUp("alice", t.id, "Again", "user");
+  await c.send("alice", t.id, "Again", "user");
   await until(() => store.get(t.id, "alice").turn === 2);
   await until(() => store.get(t.id, "alice").status === "completed");
   // 0.5, then 0.8 for the session so far: 0.3 more.
   assert.equal(store.get(t.id, "alice").cost_usd, 0.8);
 
   // A lower total started counting again, so all of it is new.
-  await c.followUp("alice", t.id, "Again", "user");
+  await c.send("alice", t.id, "Again", "user");
   await until(() => store.get(t.id, "alice").turn === 3);
   await until(() => store.get(t.id, "alice").status === "completed");
   assert.ok(Math.abs(store.get(t.id, "alice").cost_usd! - 1.1) < 1e-9);
   await c.close();
 });
 
-test("steering does not lose instructions during active turn", async () => {
+/** A task's events of one type, as [type, data] pairs or just their data. */
+function eventData(store: Store, id: string, type: string) {
+  return store
+    .events(id, "alice")
+    .filter((e) => e.type === type)
+    .map((e) => e.data);
+}
+
+/** The prompt each turn of a task started with. */
+class PromptRecorder extends FixtureProvider {
+  prompts: string[] = [];
+  async run(c: RunContext, p: string) {
+    this.prompts.push(p);
+
+    return super.run(c, p);
+  }
+}
+
+test("a steer reaches the running turn at its next step without interrupting it", async () => {
+  const { c, store } = await setup();
+  const t = await c.start("alice", input("[slow]"));
+  await until(() => store.get(t.id, "alice").status === "running");
+  const sent = await c.send("alice", t.id, "Mind the edge cases", "user");
+  assert.equal(sent.state, "pending_steer");
+
+  assert.deepEqual(
+    store.get(t.id, "alice").pending_steers.map((m) => m.message),
+    ["Mind the edge cases"],
+  );
+
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const done = store.get(t.id, "alice");
+  assert.equal(done.turn, 1);
+  assert.deepEqual(done.pending_steers, []);
+
+  assert.deepEqual(
+    done.instructions.map((m) => m.message),
+    ["Mind the edge cases"],
+  );
+
+  assert.equal(done.instructions_sent, 1);
+
+  assert.deepEqual(eventData(store, t.id, "task.steer_taken"), [
+    { message_id: sent.message_id },
+  ]);
+
+  assert.match(
+    String(store.latestEvent(t.id, "agent.reply")!.data.text),
+    /Also took: Mind the edge cases/,
+  );
+
+  assert.deepEqual(eventData(store, t.id, "task.turn_ended").length, 1);
+  await c.close();
+});
+
+test("a queued message waits for its own turn, which follows at once", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store } = await setup(recorder);
+  const t = await c.start("alice", input("[slow]"));
+  await until(() => store.get(t.id, "alice").status === "running");
+
+  const sent = await c.send("alice", t.id, "Then write the docs", "parent", {
+    delivery: "queue",
+  });
+
+  assert.equal(sent.state, "queued");
+  // Queued messages have no event until their turn starts.
+  assert.deepEqual(eventData(store, t.id, "task.instruction"), []);
+
+  assert.deepEqual(eventData(store, t.id, "task.queue_changed"), [
+    {
+      queue: [
+        {
+          message_id: sent.message_id,
+          message: "Then write the docs",
+          from: "parent",
+        },
+      ],
+      paused: false,
+    },
+  ]);
+
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.deepEqual(recorder.prompts.slice(1), ["Then write the docs"]);
+
+  // The task never showed as completed between the turns.
+  const types = store
+    .events(t.id, "alice")
+    .map((e) => e.type)
+    .filter((type) =>
+      ["task.turn_ended", "task.completed", "task.started"].includes(type),
+    );
+
+  assert.deepEqual(types, [
+    "task.started",
+    "task.turn_ended",
+    "task.started",
+    "task.turn_ended",
+    "task.completed",
+  ]);
+
+  assert.deepEqual(
+    eventData(store, t.id, "task.turn_ended").map((d) => [d.turn, d.outcome]),
+    [
+      [1, "completed"],
+      [2, "completed"],
+    ],
+  );
+
+  assert.deepEqual(eventData(store, t.id, "task.instruction"), [
+    {
+      message_id: sent.message_id,
+      message: "Then write the docs",
+      from: "parent",
+      delivery: "queue",
+    },
+  ]);
+
+  // On an idle task, a queued message starts the next turn.
+  const idle = await c.send("alice", t.id, "Last bit", "user", {
+    delivery: "queue",
+  });
+
+  assert.equal(idle.state, "started");
+  await until(() => store.get(t.id, "alice").turn === 3);
+  await c.close();
+});
+
+test("a steer the turn ends without taking starts the next turn from the front of the queue", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store } = await setup(recorder);
+  const t = await c.start("alice", input("[late]"));
+  await until(() => store.get(t.id, "alice").status === "running");
+  const steer = await c.send("alice", t.id, "Late thought", "user");
+  assert.equal(steer.state, "pending_steer");
+
+  const queued = await c.send("alice", t.id, "Afterwards", "user", {
+    delivery: "queue",
+  });
+
+  await until(() => store.get(t.id, "alice").turn === 3);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.deepEqual(recorder.prompts.slice(1), ["Late thought", "Afterwards"]);
+  // The steer was recorded once, when it was sent.
+
+  assert.deepEqual(
+    eventData(store, t.id, "task.instruction").map((d) => [
+      d.message_id,
+      d.delivery,
+    ]),
+    [
+      [steer.message_id, "steer"],
+      [queued.message_id, "queue"],
+    ],
+  );
+
+  assert.deepEqual(eventData(store, t.id, "task.steer_taken"), []);
+  await c.close();
+});
+
+test("an interrupt with pending steers sends them at once as one new turn", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store } = await setup(recorder);
+  const t = await c.start("alice", input("[late]"));
+  await until(() => store.get(t.id, "alice").status === "running");
+  await c.send("alice", t.id, "First thought", "user");
+  await c.send("alice", t.id, "Later", "user", { delivery: "queue" });
+
+  const sent = await c.send("alice", t.id, "Stop and do this", "parent", {
+    delivery: "interrupt",
+  });
+
+  assert.equal(sent.state, "started");
+  await until(() => store.get(t.id, "alice").turn === 3);
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  assert.deepEqual(recorder.prompts.slice(1), [
+    "First thought\n\nStop and do this",
+    "Later",
+  ]);
+
+  assert.deepEqual(
+    eventData(store, t.id, "task.turn_ended").map((d) => d.outcome),
+    ["interrupted", "completed", "completed"],
+  );
+
+  assert.equal(store.get(t.id, "alice").queue_paused, undefined);
+  await c.close();
+});
+
+test("a plain interrupt pauses the queue, keeping pending steers at its front, until resumed or a message is sent", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store } = await setup(recorder);
+  const t = await c.start("alice", input("[late]"));
+  await until(() => store.get(t.id, "alice").status === "running");
+  await c.send("alice", t.id, "Pending", "user");
+  await c.send("alice", t.id, "Queued", "user", { delivery: "queue" });
+  await c.interrupt("alice", t.id);
+  const paused = store.get(t.id, "alice");
+  assert.equal(paused.status, "interrupted");
+  assert.equal(paused.queue_paused, true);
+
+  assert.deepEqual(
+    paused.queue.map((m) => m.message),
+    ["Pending", "Queued"],
+  );
+
+  assert.deepEqual(eventData(store, t.id, "task.queue_changed").at(-1), {
+    queue: paused.queue.map((m) => ({
+      message_id: m.id,
+      message: m.message,
+      from: "user",
+    })),
+    paused: true,
+  });
+
+  // The next message sent resumes the queue, which follows it.
+  await c.send("alice", t.id, "New idea", "user");
+  await until(() => store.get(t.id, "alice").turn === 4);
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  assert.deepEqual(recorder.prompts.slice(1), [
+    "New idea",
+    "Pending",
+    "Queued",
+  ]);
+
+  // Resume starts the next queued message on an idle task.
+  await c.send("alice", t.id, "[late] once more", "user");
+  await until(() => store.get(t.id, "alice").status === "running");
+  await c.send("alice", t.id, "Kept", "user", { delivery: "queue" });
+  await c.interrupt("alice", t.id);
+  assert.equal(store.get(t.id, "alice").queue_paused, true);
+  c.resumeQueue("alice", t.id);
+  await until(() => store.get(t.id, "alice").turn === 6);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.equal(recorder.prompts.at(-1), "Kept");
+  await c.close();
+});
+
+test("queued messages can be edited and removed until sent; the parent removes only its own", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store } = await setup(recorder);
+  const t = await c.start("alice", input("[input]"));
+  await until(() => !!store.get(t.id, "alice").pending_input);
+
+  const mine = await c.send("alice", t.id, "Draft", "user", {
+    delivery: "queue",
+  });
+
+  const theirs = await c.send("alice", t.id, "Parent note", "parent", {
+    delivery: "queue",
+  });
+
+  const extra = await c.send("alice", t.id, "Extra", "user", {
+    delivery: "queue",
+  });
+
+  assert.throws(
+    () => c.removeQueued("alice", t.id, mine.message_id, "parent"),
+    /only messages it queued/,
+  );
+
+  c.editQueued("alice", t.id, mine.message_id, "Final text");
+  c.removeQueued("alice", t.id, theirs.message_id, "parent");
+  c.removeQueued("alice", t.id, extra.message_id, "user");
+
+  assert.deepEqual(eventData(store, t.id, "task.message_removed"), [
+    { message_id: theirs.message_id },
+    { message_id: extra.message_id },
+  ]);
+
+  const request = store.get(t.id, "alice").pending_input!;
+  c.input("alice", t.id, request.id, true, { answer: "go" });
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.deepEqual(recorder.prompts.slice(1), ["Final text"]);
+
+  assert.throws(
+    () => c.removeQueued("alice", t.id, mine.message_id, "user"),
+    /no longer queued/,
+  );
+
+  // Clear removes them all.
+  const busy = await c.start("alice", input("[input]"));
+  await until(() => !!store.get(busy.id, "alice").pending_input);
+  await c.send("alice", busy.id, "One", "user", { delivery: "queue" });
+  await c.send("alice", busy.id, "Two", "parent", { delivery: "queue" });
+  c.clearQueue("alice", busy.id);
+  assert.deepEqual(store.get(busy.id, "alice").queue, []);
+  assert.equal(eventData(store, busy.id, "task.message_removed").length, 2);
+  await c.close();
+});
+
+test("a worker waiting for input takes queued messages but no steers", async () => {
   const { c, store } = await setup();
   const t = await c.start("alice", input("[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
-  await c.steer("alice", t.id, "Focus on error handling [input]", "user");
-  await until(() => !!store.get(t.id, "alice").pending_input);
 
-  assert.ok(
-    store
-      .get(t.id, "alice")
-      .instructions.includes("Focus on error handling [input]"),
+  await assert.rejects(
+    c.send("alice", t.id, "Steer", "parent"),
+    /waiting for input/,
   );
 
-  assert.equal(store.get(t.id, "alice").turn, 2);
+  const queued = await c.send("alice", t.id, "Queue", "parent", {
+    delivery: "queue",
+  });
+
+  assert.equal(queued.state, "queued");
+  assert.deepEqual(store.get(t.id, "alice").pending_steers, []);
   await c.close();
+});
+
+test("a restart mid-turn moves pending steers to the front of a paused queue", async () => {
+  const { c, store } = await setup();
+  c.stopped = true;
+
+  try {
+    const t = await c.start("alice", input());
+    t.status = "running";
+    t.turn = 1;
+
+    t.pending_steers = [
+      { id: "msg_pending", message: "Lost in the SDK", from: "user" },
+    ];
+
+    t.queue = [
+      {
+        id: "msg_queued",
+        message: "Queued",
+        from: "parent",
+        delivery: "queue",
+      },
+    ];
+
+    store.save(t);
+    await c.recover();
+    const recovered = store.get(t.id, "alice");
+    assert.equal(recovered.status, "interrupted");
+    assert.equal(recovered.queue_paused, true);
+    assert.deepEqual(recovered.pending_steers, []);
+
+    assert.deepEqual(
+      recovered.queue.map((m) => [m.id, m.recorded ?? false]),
+      [
+        ["msg_pending", true],
+        ["msg_queued", false],
+      ],
+    );
+
+    assert.deepEqual(eventData(store, t.id, "task.queue_changed").at(-1), {
+      queue: [
+        { message_id: "msg_pending", message: "Lost in the SDK", from: "user" },
+        { message_id: "msg_queued", message: "Queued", from: "parent" },
+      ],
+      paused: true,
+    });
+  } finally {
+    await c.close();
+  }
 });
 
 test("runtime budget stops a worker waiting for input", async () => {
@@ -915,7 +1266,7 @@ test("restart recovery marks live task interrupted and clears stale permissions"
   const { c, store } = await setup();
   const t = await c.start("alice", input("[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
-  await c.stop("alice", t.id);
+  await c.interrupt("alice", t.id);
   const old = store.get(t.id, "alice");
   old.status = "waiting";
   old.waiting_reason = "waiting_for_permission";
@@ -1067,7 +1418,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
       /Wait until the task stops/,
     );
 
-    await c.stop("alice", running.id);
+    await c.interrupt("alice", running.id);
     const t = store.get(running.id, "alice");
 
     await assert.rejects(
@@ -1128,14 +1479,14 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     // base commit once the branch is gone too.
     const paused = await c.start("alice", input("[input]"));
     await until(() => !!store.get(paused.id, "alice").pending_input);
-    await c.stop("alice", paused.id);
+    await c.interrupt("alice", paused.id);
     await c.removeWorktree("alice", paused.id);
-    await c.followUp("alice", paused.id, "Carry on", "user");
+    await c.send("alice", paused.id, "Carry on", "user");
     await until(() => store.get(paused.id, "alice").status === "completed");
     assert.ok(existsSync(store.get(paused.id, "alice").workspace!));
     await c.removeWorktree("alice", paused.id);
     await c.deleteBranch("alice", paused.id);
-    await c.followUp("alice", paused.id, "Once more", "user");
+    await c.send("alice", paused.id, "Once more", "user");
     await until(() => store.get(paused.id, "alice").turn === 3);
     await until(() => store.get(paused.id, "alice").status === "completed");
     const recreated = store.get(paused.id, "alice");
@@ -1190,7 +1541,7 @@ test("a task is deleted in any state with everything related to it", async () =>
     });
 
     await until(() => store.get(dependent.id, "alice").status === "waiting");
-    await c.stop("alice", dependent.id);
+    await c.interrupt("alice", dependent.id);
 
     await assert.rejects(
       c.delete("alice", t.id),
@@ -1223,7 +1574,7 @@ test("a task is deleted in any state with everything related to it", async () =>
     // Without the option, the provider's session is left alone.
     const kept = await c.start("alice", input("[input]"));
     await until(() => !!store.get(kept.id, "alice").pending_input);
-    await c.stop("alice", kept.id);
+    await c.interrupt("alice", kept.id);
     await c.delete("alice", kept.id);
     assert.deepEqual(sessions, [t.id]);
   } finally {
@@ -1252,7 +1603,7 @@ test("scheduler enforces concurrency and independent branches run together", asy
     1,
   );
 
-  await c.stop("alice", tasks[0].id);
+  await c.interrupt("alice", tasks[0].id);
   await until(() => !!store.get(tasks[2].id, "alice").pending_input);
   await c.close();
 });
@@ -1352,11 +1703,11 @@ test("a follow-up revalidates provider budget support before changing an interru
 
   try {
     const task = await c.start("alice", input());
-    await c.stop("alice", task.id);
+    await c.interrupt("alice", task.id);
     provider.capabilities.cost_budget = false;
 
     await assert.rejects(
-      c.followUp("alice", task.id, "Continue", "user"),
+      c.send("alice", task.id, "Continue", "user"),
       /does not support cost budgets/,
     );
 
@@ -1462,21 +1813,21 @@ test("deletion locks execution, dependencies and duplicate cleanup until it fini
   try {
     const task = await c.start("alice", input("[input]"));
     await until(() => !!store.get(task.id, "alice").pending_input);
-    await c.stop("alice", task.id);
+    await c.interrupt("alice", task.id);
     const deletion = c.delete("alice", task.id, true);
     await until(() => deleting);
 
     await assert.rejects(
-      c.followUp("alice", task.id, "Resume", "user"),
+      c.send("alice", task.id, "Resume", "user"),
       /being deleted/,
     );
 
     await assert.rejects(
-      c.steer("alice", task.id, "Resume", "user"),
+      c.send("alice", task.id, "Resume", "user", { delivery: "queue" }),
       /being deleted/,
     );
 
-    await assert.rejects(c.stop("alice", task.id), /being deleted/);
+    await assert.rejects(c.interrupt("alice", task.id), /being deleted/);
 
     await assert.rejects(c.delete("alice", task.id), /being deleted/);
 
@@ -1504,7 +1855,7 @@ test("provider deletion failures preserve local task resources and release the l
   try {
     const task = await c.start("alice", input("[input]"));
     await until(() => !!store.get(task.id, "alice").pending_input);
-    await c.stop("alice", task.id);
+    await c.interrupt("alice", task.id);
     await assert.rejects(c.delete("alice", task.id, true), /cleanup failed/);
     const kept = store.get(task.id, "alice");
     assert.equal(existsSync(kept.workspace!), true);
@@ -1529,7 +1880,7 @@ test("a follow-up already awaiting project validation cannot resurrect a deleted
   try {
     const task = await c.start("alice", input("[input]"));
     await until(() => !!store.get(task.id, "alice").pending_input);
-    await c.stop("alice", task.id);
+    await c.interrupt("alice", task.id);
 
     c.projects = {
       resolve: async () => {
@@ -1538,7 +1889,7 @@ test("a follow-up already awaiting project validation cannot resurrect a deleted
       },
     } as unknown as typeof c.projects;
 
-    const continuation = c.followUp("alice", task.id, "Continue", "user");
+    const continuation = c.send("alice", task.id, "Continue", "user");
     // Attach the rejection assertion before cleanup can make filesystem checks fail.
     const rejected = assert.rejects(continuation, /not found|removed|ENOENT/);
     await until(() => validating);
@@ -1753,7 +2104,7 @@ test("a new provider owns native session continuation after a restart", async ()
     c.stopped = false;
 
     // A session the provider rejects gives way to a new one.
-    await c.followUp("alice", task.id, "Continue", "user");
+    await c.send("alice", task.id, "Continue", "user");
     await until(() => store.get(task.id, "alice").status === "completed");
     const renewed = store.get(task.id, "alice");
 
@@ -1774,7 +2125,7 @@ test("a new provider owns native session continuation after a restart", async ()
 
     // One it accepts resumes.
     sessionValid = true;
-    await c.followUp("alice", task.id, "Continue", "user");
+    await c.send("alice", task.id, "Continue", "user");
     await until(() => store.get(task.id, "alice").turn === 3);
     await until(() => store.get(task.id, "alice").status === "completed");
     assert.equal(store.get(task.id, "alice").session_id, `fixture_${task.id}`);

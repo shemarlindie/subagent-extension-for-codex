@@ -5,6 +5,7 @@ import { executionTaskPolicy } from "../src/features/providers/task-policy.js";
 import {
   type Provider,
   type RunContext,
+  type Steer,
   type TurnOutput,
 } from "../src/shared/contracts.js";
 
@@ -30,7 +31,21 @@ export class FixtureProvider implements Provider {
     dynamic_subagents: false,
   };
 
+  /**
+   * Markers in a turn's prompt shape it: `[input]` asks a question, `[fail]`
+   * fails, `[slow]` runs several steps that each take pending steers, as at
+   * a tool boundary, and `[late]` takes none, so they're left over.
+   */
   async run(c: RunContext, prompt: string): Promise<TurnOutput> {
+    const steers: Steer[] = [];
+    const taken: string[] = [];
+
+    c.acceptSteers((steer) => {
+      steers.push(steer);
+
+      return true;
+    });
+
     c.session(
       c.task.session_id ?? `fixture_${c.task.id}`,
       `fixture:${c.task.workspace}`,
@@ -52,10 +67,29 @@ export class FixtureProvider implements Provider {
       c.emit("agent.message", { text: r.message ?? JSON.stringify(r.input) });
     }
 
-    await setTimeout(80, undefined, { signal: c.signal });
+    const steps = prompt.includes("[slow]") ? 8 : 1;
+
+    for (let step = 0; step < steps; step++) {
+      await setTimeout(prompt.includes("[slow]") ? 60 : 80, undefined, {
+        signal: c.signal,
+      });
+
+      if (prompt.includes("[late]")) continue;
+
+      for (const steer of steers.splice(0)) {
+        c.steerTaken(steer.id);
+        taken.push(steer.text);
+      }
+    }
+
+    if (prompt.includes("[late]"))
+      await setTimeout(200, undefined, { signal: c.signal });
 
     return {
-      reply: "Fixture task completed. No Claude execution occurred.",
+      reply: [
+        "Fixture task completed. No Claude execution occurred.",
+        ...taken.map((text) => `Also took: ${text}`),
+      ].join("\n"),
     };
   }
 }
