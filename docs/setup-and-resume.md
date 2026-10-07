@@ -1,6 +1,6 @@
-# Setup and task continuation
+# Setup and conversations
 
-Use the [README](../README.md) for installation, supported providers, configuration, and Codex MCP setup. [Local development](development.md) covers the demo and panel dev host. This guide covers choosing a task workspace and preserving state between sessions.
+Use the [README](../README.md) for installation, supported providers, configuration, and Codex MCP setup. [Local development](development.md) covers the demo and panel dev host. This guide covers choosing a task workspace, continuing a task's conversation and preserving state between sessions.
 
 ## Start a task
 
@@ -11,9 +11,9 @@ Use the [README](../README.md) for installation, supported providers, configurat
 
 ## Continue a task
 
-The service stores task and event records, worktrees, and the event signing key in its data directory. To reconnect, start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value and use the task list to inspect existing work. Keep Claude's native session state on its original machine; continuation uses the original worker and session.
+A task stays open after a turn: a message in Chat, or `send_agent_message` from the parent agent, starts its next turn. The next turn resumes the worker's session on the machine that owns it. When it can't (the task failed before its session existed, the session is on another machine, or Claude rejects it), the turn starts a new session in the same task, whose prompt carries the request and the earlier conversation, newest kept; Chat marks it "New session". A worktree removed with **Remove worktree** comes back from the task's branch, or from its base commit if the branch was deleted too. Deleting a task is the only way to end it.
 
-Before continuing, inspect the task status, recent events, result, and workspace. Continue only when the original worker and session are available. If a submission or shutdown outcome is uncertain, inspect the task state before retrying. The service does not automatically merge worktree changes, and cancellation does not delete a worktree.
+The service stores task and event records, worktrees, and the event signing key in its data directory. To reconnect, start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value and use the task list to inspect existing work. A restart leaves a turn that was running interrupted. Steers it hadn't taken wait at the front of its queue, which is paused until the next message. If a submission or shutdown outcome is uncertain, inspect the task's Chat and Activity before sending again. The service does not merge worktree changes.
 
 ## Preserve service state
 
@@ -25,6 +25,6 @@ Stop the service gracefully before backing up its data. Preserve the full data d
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Service port is in use        | Identify the service on that port and confirm its data directory before starting another service.                                         |
 | MCP proxy cannot authenticate | Set the same absolute `CODEX_SUBAGENT_EXTENSION_DATA` path for the service and MCP client, or configure matching token and URL overrides. |
-| Claude task cannot continue   | Confirm the original service host, worktree, and Claude session state are available.                                                      |
+| A turn starts a new session   | Confirm the original service host and Claude session state are available; otherwise the new session carries the conversation.             |
 
 See [Implementation status](implementation-status.md) for current capability coverage and [Host capabilities](host-capabilities.md) for host-specific integration details.

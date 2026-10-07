@@ -1073,6 +1073,14 @@ The scheduler should evaluate dependencies before starting a task.
 
 # 18. Live UI Events
 
+> **Superseded for the embedded panel.** Codex runs the MCP App under a fixed
+> sandbox CSP that blocks direct connections to the service, so the panel can't
+> use SSE. It reads everything through the MCP Apps bridge and follows a
+> running task's reply with chained `get_user_agent_draft` long polls. The
+> standalone console still uses SSE. See
+> [Host capabilities](host-capabilities.md#panel-network-access) and
+> [the panel guide](codex-panel.md#transport).
+
 The extension UI needs high-frequency progress updates.
 
 These should use a normal application data connection rather than MCP Events.

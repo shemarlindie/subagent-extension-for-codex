@@ -88,7 +88,10 @@ and delivers its result to the panel. The toolbar controls:
 
 - **Data**: fixture results (`ui/dev/preview/tools.ts`, development
   only; never in the production bundle) or the live service. Fixtures need no
-  service; unsupported operations fail explicitly. Tools listed in
+  service; unsupported operations, including sending Chat messages, fail
+  explicitly. Fixture Chat is built from the fixture events by the service's
+  own `chatItems`. The **Live: streaming reply** task's draft grows with time
+  since the page loaded, so Chat shows it streaming in. Tools listed in
   `FIXTURE_SERVICE_TOOLS` (`host-helpers.ts`) are the exception: the Vite
   server answers them with the real service code (`ui/dev/fixture-service.ts`,
   a `Store` in a temporary SQLite file seeded with the fixture tasks), for
@@ -123,8 +126,8 @@ closed. Open **Inspector** and select **Bridge log** to view them.
 
 The mock host mirrors the panel's project, task or task-list selection, tab,
 search, and status filter into the outer page URL. Open dialogs add a boolean
-`dw_dlg_<name>=1` URL flag; action dialogs use distinct names, such as `steer`
-and `retry`. Ordered dialog references and form drafts stay in local storage.
+`dw_dlg_<name>=1` URL flag; action dialogs use distinct names, such as
+`worktree_remove` and `worktree_delete_branch`. Ordered dialog references and form drafts stay in local storage.
 Reloading the dev host then restores the panel view and any saved dialogs. Host
 toolbar settings continue to use local storage.
 
@@ -167,7 +170,10 @@ service on port 4317 first.
 
 The fixture worker (`dev/fixture-provider.ts`) and demo entry
 (`dev/demo-service.ts`, run through `tsx`) are in `dev/`, outside the `src/`
-build. The package contains neither. Tests import the fixture worker from
+build. The fixture worker streams its reply in small pieces before storing it.
+Markers in a turn's prompt shape the turn: `[input]` asks a question, `[fail]`
+fails, `[slow]` runs several steps that each take pending steers, as at a tool
+boundary, and `[late]` takes none, so they're left for the next turn. The package contains neither. Tests import the fixture worker from
 `dev/`. The packaged service supports the `claude` provider.
 
 ## What reloads when

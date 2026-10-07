@@ -43,6 +43,22 @@ The current extension advertises and implements inline/fullscreen only. PiP is
 not implemented or verified here. Its compact inline summary is part of the
 extension's widget, distinct from the host's right pinned summary.
 
+## Panel network access
+
+Tested on the Codex desktop app: Codex runs the Delegated Work panel under a
+fixed sandbox Content Security Policy. It ignores the app's
+`connectDomains` and sets `upgrade-insecure-requests`, so the panel
+can't reach the local service directly. Everything the panel reads and writes goes through the MCP Apps
+bridge, which is why its replies stream by chained `get_user_agent_draft` long
+polls instead of SSE; the standalone console, which talks to the service itself,
+gets them over SSE.
+
+Bridge calls are fast enough for that. Measured on the same app, a bridge call
+round-trips in about 6 ms, and calls run concurrently: calls held open for up to
+110 seconds returned normally without slowing other calls. The panel's draft
+reads wait at most 25 seconds, plus a 10-second margin in the host transport and
+the stdio proxy, whose default service timeout is 30 seconds.
+
 ## Composer mentions
 
 Rechecked October 5, 2026: the [MCP Extensions specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#composer-at-mentions)
@@ -223,9 +239,28 @@ capabilities and direct integration tests rather than product-name assumptions.
 The installed Claude SDK declares `cwd` (defaulting to process cwd), `resume`
 (a specific session ID), and `continue` (the most recent conversation in the
 directory). `src/features/providers/claude/provider.ts` explicitly passes the task workspace as
-`cwd` and its saved session ID as `resume`. Preserve both across continuation;
+`cwd` and its saved session ID as `resume`. Preserve both across a task's turns;
 selecting another project for a new task must not change an existing task's
 repository or workspace.
+
+Each turn runs `query()` in streaming input mode, so messages can follow the
+prompt while it runs. Checked live with SDK 0.3.289 on October 7, 2026:
+
+- A cold `resume` with no `outputFormat` returns a plain `result` in the same
+  session. Its `total_cost_usd` is cumulative for the session, including the
+  turns it resumes, so the service counts only what's new.
+- A user message sent with `priority: "next"` while a turn runs is taken at
+  the next tool boundary, within the same turn. The CLI reports it with a
+  `command_lifecycle` frame (`queued`, `started` once taken, then `completed`
+  or `cancelled`), a frame type the SDK doesn't declare. A message still
+  queued when the turn ends runs as a turn of its own right after the result,
+  too late to stop then; `cancelAsyncMessage(uuid)` withdraws it cleanly as the
+  final message streams its stop reason.
+- `Query.interrupt()` ends the turn with an `error_during_execution` result
+  (`terminal_reason: "aborted_streaming"`) and keeps the session. Its receipt
+  lists queued messages that will still run under `still_queued`;
+  `interrupt({ cancelQueued: true })` cancels them instead. The option and
+  `cancelAsyncMessage` exist at runtime but aren't in the SDK's types.
 
 Current official sessions guidance says history does not persist filesystem
 state, and cross-directory lookup was introduced in Claude Code 2.1.223.
@@ -239,7 +274,7 @@ Installed package evidence (`npm ls --depth=0`, package manifests and types):
 
 | Component             | Installed version | Relevant evidence                                        |
 | --------------------- | ----------------- | -------------------------------------------------------- |
-| Claude Agent SDK      | 0.3.288           | `sdk.d.ts` options; bundled manifest CLI 2.1.288         |
+| Claude Agent SDK      | 0.3.289           | `sdk.d.ts` options; bundled manifest CLI 2.1.289         |
 | MCP SDK v1            | 1.31.0            | `types.js` latest supported handshake version 2025-11-25 |
 | MCP server / node v2  | 2.2.0 / 2.1.0     | Modern 2026-07-28 codec alongside legacy support         |
 | MCP Apps              | 1.7.5             | `spec.types.d.ts` host context lacks repository identity |

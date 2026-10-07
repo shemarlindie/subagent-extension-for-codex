@@ -22,6 +22,15 @@ Check in the browser when a change is large, when seeing it would help, or when 
 - Fixture tasks for specific cases:
   - **Refactor the billing module**: running (live status, running rows).
   - **Live: …** tasks (ten of them): each is running and ends on a different latest activity, such as thinking, a running tool, compaction, a retry, a rate limit, a hook, a background task or a provider failure. Use them to check the live status line and the clocks. **Live: thinking** is the one with an active thinking state.
+  - **Live: streaming reply**: running, with a reply streaming into Chat; its draft grows with time since the page loaded, then starts over.
+  - Chat, which is the default tab (fixtures can't send messages):
+    - **Limit upload sizes**: three turns started by the parent agent, with a user and a parent follow-up and Markdown replies (a list, a table, code).
+    - **Tidy the settings copy**: a running turn with a steer it took, a pending steer and two queued messages (one from the parent).
+    - **Rename the feature flags**: interrupted with a steer pending, so the queue is paused with the leftover steer at its front.
+    - **Move the date helpers**: a turn stopped by its cost budget, so the composer offers to raise it.
+    - **Move the screens to the new layout**: a 14-turn conversation, for scrolling Chat.
+    - **Stabilise the retry timer test**: a second turn after **Remove worktree**, with the worktree recreated from its branch in a new session.
+    - **Migrate the config loader** and **Plan the sign-in rollout** show questions inline at the end of Chat, with the composer in queue-only mode.
   - **Migrate the config loader**: pending question.
   - **Plan the sign-in rollout**: three stacked questions in one request (card deck, single and multiple choice).
   - **Convert the test suite to the new runner**: exceeds the 200-event activity tail (trimmed timeline). Use it to test timeline scrolling, since most other timelines are short.

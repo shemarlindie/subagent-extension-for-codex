@@ -13,7 +13,7 @@ npm ci
 npm run demo
 ```
 
-Open http://127.0.0.1:4317 and enter `local-demo-only-not-a-real-token`. `npm run demo` starts a development-only service with a fixture worker and a disposable sample repository. It makes **no model calls**. The demo entry is `dev/demo-service.ts`; the fixture worker is in `dev/` and is excluded from the package. Add `[input]` to a fixture task to exercise human input, interruption, and continuation. Fixture results identify themselves as fixtures.
+Open http://127.0.0.1:4317 and enter `local-demo-only-not-a-real-token`. `npm run demo` starts a development-only service with a fixture worker and a disposable sample repository. It makes **no model calls**. The demo entry is `dev/demo-service.ts`; the fixture worker is in `dev/` and is excluded from the package. Add `[input]` to a fixture task to exercise human input, `[slow]` to give it time to take steers, or `[late]` to leave steers for the next turn. Fixture replies stream in and identify themselves as fixtures.
 
 ## Run real Claude tasks
 
@@ -62,14 +62,14 @@ The standalone web console uses [token login](#admin-token), HTTP tools and live
 
 - Durable asynchronous tasks, concurrent branches, explicit dependencies, and conversation filtering.
 - Researcher, reviewer, and security reviewer profiles inspect only by default: `plan` mode, a read-only tool set and the workspace path guard. Settings can loosen them. Implementer, debugger, test engineer, and refactorer profiles can write. Claude uses the Agent SDK’s native permission modes and requests a decision when its native checks leave an action unresolved.
-- Start, inspect, steer, interrupt, continue, cancel, and retry. Steering interrupts and starts a new SDK turn with the instruction; retry creates a new task.
+- Each task is a conversation. A completed, failed or interrupted task takes a follow-up message, which starts its next turn in the same task. While a turn runs, a message can steer it (delivered at the next tool boundary, without interrupting it), be queued for a turn of its own, or interrupt it and start the next turn at once, as in Codex. Pending steers and the queue are shown and editable; a plain interrupt pauses the queue. Only deleting a task ends it.
 - Questions and permission requests carry unique request IDs. Stale or duplicate answers are rejected.
-- Structured results, ordered execution events, reports, and Git-generated patches including committed and untracked changes.
-- Session ID, state location, and worker affinity. Continuation checks the original worker and transcript availability. Worktrees and Claude runtime state must remain on that machine. This is session continuation, not instruction-pointer pause/resume.
-- Runtime limits across turns and SDK-native per-turn cost ceilings reduced by observed prior cost. Costs incurred during forcibly interrupted turns may not be reported by the SDK; this is not a billing guarantee. Token limits are unsupported. Claude tasks can start native subagents unless `claude_subagents` is off.
+- A plain reply ends each successful turn and streams in as it's written. The parent agent reads replies with `get_agent_messages`, a long poll, and each turn's changes with `get_agent_changes(scope: "turn")`. Ordered execution events and Git-generated patches, including committed and untracked changes, remain available.
+- Session ID, state location, and worker affinity. A later turn resumes the session when its original worker and transcript are available; otherwise it starts a new session in the same task, carrying the conversation. A removed worktree is recreated from the task's branch. This is session continuation, not instruction-pointer pause/resume.
+- Runtime and cost limits across a task's turns, and SDK-native per-turn cost ceilings reduced by observed prior cost. A follow-up can raise either limit, so a turn stopped by its budget can carry on. An interrupted turn's cost is counted only when a later turn resumes its session; this is not a billing guarantee. Token limits are unsupported. Claude tasks can start native subagents unless `claude_subagents` is off.
 - Authenticated SSE replay and short-lived browser sessions; all task mutations go through the same tool dispatch as MCP.
 
-The task detail offers **Copy for Codex** in the standalone console and **Send to conversation** when embedded. Review or edit the message before submitting. It includes the task identity, short task/result excerpts and references to tools for retrieving full evidence; it does not apply patches. Embedded message delivery depends on host support and is unverified in a registered host.
+The task header's handoff button offers **Copy for Codex** in the standalone console and **Bring to Codex** when embedded. Review or edit the message before submitting. It includes the task identity, short excerpts of the request and the latest reply, and references to `get_agent_messages` and `get_agent_changes` for the full conversation and changes; it does not apply patches. Embedded message delivery depends on host support and is unverified in a registered host.
 
 Worker links such as `/workers/claude.reviewer` show that profile's available capabilities and tasks. Use the sidebar worker picker or **Delegate to this worker** to select a profile for a new task.
 
@@ -88,7 +88,7 @@ A worktree provides code separation, not operating-system containment. With defa
 | `CODEX_SUBAGENT_EXTENSION_ORIGIN`            | `http://127.0.0.1:4317`                   | Standalone service origin and CORS allowlist                                                                                                     |
 | `CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE` | disabled                                  | Set to `1` in the local `.env` to return a sample Claude mention and log searches to `<data-directory>/mention-search.jsonl`; local testing only |
 
-Review a worktree task's changes in the Changes tab, or on its branch, before applying them; its worktree is `<data-directory>/worktrees/<task-id>`. The Changes tab can remove the worktree (keeping the branch) and then delete the branch. Current-repo tasks use the approved repository itself, and any worker edits are already present there. Cancellation never deletes a worktree. Preserve Claude's local runtime state for resumable sessions. One service may own a data directory at a time.
+Review a worktree task's changes in the Changes tab, or on its branch, before applying them; its worktree is `<data-directory>/worktrees/<task-id>`. The Changes tab can remove the worktree (keeping the branch) and then delete the branch. Current-repo tasks use the approved repository itself, and any worker edits are already present there. Removing a worktree doesn't end the task: its next message recreates the worktree from the branch. Preserve Claude's local runtime state for resumable sessions. One service may own a data directory at a time.
 
 ## Project layout
 
@@ -112,9 +112,9 @@ Review a worktree task's changes in the Changes tab, or on its branch, before ap
 
 The console and embedded panel share a feature-oriented React UI, with clear boundaries for state, transports, components, and forms. See [React UI architecture](docs/react-ui.md) for extension boundaries, self-contained HTML builds, and UI verification. [Local development](docs/development.md) covers setup, the service, the `npm run dev:ui` panel dev host with hot reload, what needs a rebuild or restart, and the `npm run typecheck` and `npm test` checks.
 
-The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, and MCP tool/resource calls. Browser verification covers delegation, live completion, interruption, continuation, and input submission in fixture mode. See [implementation status](docs/implementation-status.md).
+The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, and MCP tool/resource calls. Browser verification covers delegation, Chat (follow-ups, steers, the queue, interrupts and streaming replies) and input submission in fixture mode. See [implementation status](docs/implementation-status.md).
 
-Authenticated native Claude read/report execution, input interruption, session continuation after reopening the control plane, SDK cost reporting, the opt-in extension Bash sandbox and CLI parity (project skills, MCP servers, subagents and hooks) are verified on this machine. Sanitized evidence is in [live verification](docs/live-claude-verification.json). Interrupted-turn cost accounting and full-harness containment remain incomplete. Production authentication/deployment remain future work. Native host rendering and event reception also require verification after registration.
+Authenticated native Claude execution with plain replies, input interruption, a follow-up resuming the session after reopening the control plane, SDK cost reporting, the opt-in extension Bash sandbox and CLI parity (project skills, MCP servers, subagents and hooks) are verified on this machine. Sanitized evidence is in [live verification](docs/live-claude-verification.json). Full-harness containment remains unverified. Production authentication/deployment remain future work. Native host rendering and event reception also require verification after registration.
 
 Plugin packaging and entrypoint metadata follow the [OpenAI plugin packaging documentation](https://developers.openai.com/plugins/build/plugins) and [Plugin Extensions documentation](https://developers.openai.com/plugins/build/extensions). The brief is the design reference, not a runtime instruction source.
 
@@ -131,7 +131,7 @@ CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs budge
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs parity
 ```
 
-Each scenario uses a temporary Git fixture and a native task budget of at most $0.25, or $0.50 for parity. The budget scenario deliberately sets $0.001 and expects a budget failure. Claude checks cost after a response, so that response can exceed the configured amount; this is not a hard billing cap. The sandbox scenario enables the extension sandbox, approves only its five exact fixture commands and uses a local listener; unexpected permission requests are denied. The parity scenario uses default settings, a budget of $0.50, and project-local fixtures: a skill, a `.mcp.json` stdio server and a `PreToolUse` hook. It approves only the fixture tools and checks that a subagent runs. Interrupted-turn costs may not be fully captured in the final task record. These checks require configured Claude Code credentials and are excluded from the ordinary test suite.
+Each scenario uses a temporary Git fixture and a native task budget of at most $0.25, or $0.50 for parity. The budget scenario deliberately sets $0.001 and expects a budget failure. Claude checks cost after a response, so that response can exceed the configured amount; this is not a hard billing cap. The sandbox scenario enables the extension sandbox, approves only its five exact fixture commands and uses a local listener; unexpected permission requests are denied. The parity scenario uses default settings, a budget of $0.50, and project-local fixtures: a skill, a `.mcp.json` stdio server and a `PreToolUse` hook. It approves only the fixture tools and checks that a subagent runs. These checks require configured Claude Code credentials and are excluded from the ordinary test suite.
 
 ## Plugin settings
 
@@ -199,7 +199,7 @@ Task and worker-input forms are exposed on the HTTP MCP endpoint. `request_agent
 
 The HTTP endpoint uses the official MCP 2.0 server SDK for protocol revision `2026-07-28`, including `server/discover`, tools and UI resources. It also accepts stateless MCP connections. Event operations are `events/list`, `events/subscribe`, and `events/unsubscribe`.
 
-Supported webhook events are `agent_task.completed`, `agent_task.failed`, and `agent_task.input_required`. Subscriptions can filter by task, conversation, or provider. This channel carries compact notifications; tool output stays in the authenticated console stream and full results remain retrievable through tools.
+Supported webhook events are `agent_task.completed`, `agent_task.failed`, and `agent_task.input_required`. Subscriptions can filter by task, conversation, or provider. `agent_task.completed` fires when a turn ends with nothing queued, so once each time the task goes idle; its payload carries the turn and an excerpt of the reply. This channel carries compact notifications; the full conversation stays retrievable through `get_agent_messages`.
 
 Callbacks must use public HTTPS endpoints on port 443. The service verifies a signed, single-use challenge before activating a subscription, resolves DNS for every delivery, blocks non-public addresses, pins the validated address for TLS, and does not follow redirects. Secrets are encrypted in SQLite using `<data-directory>/events-key`; preserve this file with database backups. Subscriptions, encrypted secrets, and pending deliveries survive service restarts.
 
@@ -312,7 +312,7 @@ elicitation, recent protocol changes and Claude session compatibility.
 
 ## Project and chat awareness
 
-Starting a task returns the panel with the new task selected on Activity. The
+Starting a task returns the panel with the new task selected on Chat, where its reply streams in. The
 thread opener `open_codex_subagent_extension` accepts `repository`, `revision`,
 and `task_id` and advertises only a thread entrypoint. An owned `task_id` uses
 that task's scope rather than ambient chat or directory metadata; explicit
