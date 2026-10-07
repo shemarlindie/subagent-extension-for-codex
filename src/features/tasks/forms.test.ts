@@ -17,7 +17,6 @@ import type {
   RunContext,
 } from "../../shared/contracts.js";
 import { Projects } from "../projects/projects.js";
-import { codexExecutionPresentation } from "../providers/codex/input-presentation.js";
 import { Workspaces } from "../workspaces/workspace.js";
 import { Control } from "./control.js";
 import { Forms } from "./forms.js";
@@ -787,7 +786,7 @@ test("host delegation preserves an explicit or default choice to run without a c
   }
 });
 
-test("Codex execution forms disclose whole-turn authority and bind approval to the pending request", async () => {
+test("provider-owned permission forms disclose whole-turn authority and bind approval to the pending request", async () => {
   const provider: Provider = new FixtureProvider();
   let decision: InputDecision | undefined;
 
@@ -797,12 +796,15 @@ test("Codex execution forms disclose whole-turn authority and bind approval to t
   };
 
   provider.run = async (ctx) => {
-    decision = await ctx.input(
-      "CodexExecution",
-      policy,
-      undefined,
-      codexExecutionPresentation,
-    );
+    decision = await ctx.input("Execution", policy, undefined, {
+      description:
+        "Approval covers the entire execution turn, including shell commands.",
+      approveLabel: "Approve this execution turn",
+      formMessage:
+        "Allow this execution turn? Approval covers the entire turn, including shell commands; there are no separate command approval prompts.",
+      formTitle: "Execution permission",
+      formApproveLabel: "Approve this execution turn",
+    });
 
     return {
       summary: "Turn permission resolved",
@@ -819,8 +821,8 @@ test("Codex execution forms disclose whole-turn authority and bind approval to t
   try {
     const task = await c.start("local", {
       provider: "fixture",
-      title: "Run a Codex turn",
-      description: "Run a Codex turn",
+      title: "Run an execution turn",
+      description: "Run an execution turn",
       worker_profile: "implementer",
     });
 

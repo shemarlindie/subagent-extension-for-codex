@@ -183,8 +183,6 @@ export interface InputPresentation {
 
 export interface Task extends Start {
   title: string;
-  /** Persisted recovery requirement keeps disabled providers locked after a restart. */
-  provider_recovery_required: boolean;
   id: string;
   owner: string;
   status: Status;

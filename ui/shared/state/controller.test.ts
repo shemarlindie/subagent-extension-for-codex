@@ -62,7 +62,6 @@ function task(
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
-    provider_recovery_required: false,
   };
 }
 
@@ -989,14 +988,13 @@ test("New task offers the chat project only when auto-add is on and adds it befo
   }
 });
 
-test("Failed filter shows failed, unconfirmed and live-failed tasks only", async (t) => {
+test("Failed filter shows failed, interrupted and live-failed tasks only", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   const failed = task("failed");
   failed.status = "failed";
-  const unconfirmed = task("unconfirmed");
-  unconfirmed.status = "failed";
-  unconfirmed.waiting_reason = "termination_unconfirmed";
+  const interrupted = task("interrupted");
+  interrupted.status = "interrupted";
   const liveFailed = task("live-failed");
   liveFailed.live_activity = { text: "Provider failed", state: "failed" };
   const done = task("done");
@@ -1006,7 +1004,7 @@ test("Failed filter shows failed, unconfirmed and live-failed tasks only", async
 
   transport.tasks = [
     failed,
-    unconfirmed,
+    interrupted,
     liveFailed,
     done,
     cancelled,
@@ -1018,6 +1016,6 @@ test("Failed filter shows failed, unconfirmed and live-failed tasks only", async
 
   assert.deepEqual(
     visibleTasks(controller.getSnapshot()).map((item) => item.id),
-    ["failed", "unconfirmed", "live-failed"],
+    ["failed", "interrupted", "live-failed"],
   );
 });

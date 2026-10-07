@@ -8,11 +8,7 @@ import {
   useController,
   useSnapshot,
 } from "../../../shared/state/controller-context";
-import {
-  failedStatus,
-  locked,
-  terminal,
-} from "../../../shared/state/selectors";
+import { failedStatus, terminal } from "../../../shared/state/selectors";
 import { traceSize } from "../../../shared/state/size-trace";
 import { TaskStatus } from "../shared/status";
 
@@ -33,7 +29,7 @@ export function InlinePreview() {
     (task) => !state.repository || task.repository === state.repository,
   );
 
-  const attention = tasks.filter((task) => task.pending_input || locked(task));
+  const attention = tasks.filter((task) => task.pending_input);
   const active = tasks.filter((task) => !terminal(task) && !failedStatus(task));
 
   const task =

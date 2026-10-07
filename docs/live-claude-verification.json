@@ -150,7 +150,7 @@
     "Claude model/API harness remains outside the Bash sandbox, and the extension sandbox applies only when enabled",
     "Under parity defaults a delegated task has the authority of the user's Claude Code CLI; approval routing and the user's permission rules are the safety net",
     "Sandbox verification uses disposable files and a loopback listener; it does not establish containment of all native tools or all network configurations",
-    "OpenAI/Codex authenticated execution and registered host behavior remain unverified",
+    "Registered host behavior remains unverified",
     "Native Claude cost budgets are response-boundary stopping thresholds, not hard billing caps; the $0.001 verification threshold produced about $0.021 reported usage"
   ]
 }

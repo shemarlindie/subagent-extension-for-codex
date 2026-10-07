@@ -26,7 +26,6 @@ const task = (patch: Partial<Task>): Task => ({
   instructions: [],
   attempt: 1,
   runtime_ms: 0,
-  provider_recovery_required: false,
   ...patch,
 });
 
@@ -62,11 +61,6 @@ const cases: [string, Partial<Task>, Filter[]][] = [
     ["all", "active", "attention"],
   ],
   ["interrupted", { status: "interrupted" }, ["all", "failed"]],
-  [
-    "unconfirmed shutdown",
-    { status: "waiting", waiting_reason: "termination_unconfirmed" },
-    ["all", "failed"],
-  ],
   [
     "compaction failed",
     { live_activity: { text: "Context compaction failed", state: "failed" } },

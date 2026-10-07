@@ -7,11 +7,7 @@ import {
   useController,
   useSnapshot,
 } from "../../../shared/state/controller-context";
-import {
-  locked,
-  profileLabel,
-  selectedTask,
-} from "../../../shared/state/selectors";
+import { profileLabel, selectedTask } from "../../../shared/state/selectors";
 import { currentActivityStatus } from "../activity/activity-timeline";
 import { EvidenceTabs } from "../evidence/evidence-tabs";
 import { TaskStatus } from "../shared/status";
@@ -30,10 +26,7 @@ export function TaskInspector() {
   // Only a running task has live detail beyond its status label.
   // Events load after selection; until then the label alone is accurate.
   const live =
-    task?.status === "running" &&
-    !task.pending_input &&
-    !locked(task) &&
-    state.events.length
+    task?.status === "running" && !task.pending_input && state.events.length
       ? currentActivityStatus(state.events, task)
       : undefined;
 

@@ -28,7 +28,6 @@ const task = (patch: Partial<Task>): Task => ({
   instructions: [],
   attempt: 1,
   runtime_ms: 60_000,
-  provider_recovery_required: false,
   ...patch,
 });
 

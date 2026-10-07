@@ -30,7 +30,6 @@ function makeTask(): Task {
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
-    provider_recovery_required: false,
   };
 }
 

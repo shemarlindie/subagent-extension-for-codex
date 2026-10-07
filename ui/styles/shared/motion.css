@@ -205,7 +205,7 @@
     box-shadow var(--motion-slow) ease;
 }
 /* Waiting asks for attention, so it sends out rings. */
-.dot.waiting:not(.locked)::after {
+.dot.waiting::after {
   /* The ring's full size: 4px past the dot on each side; a 6px dot in a 14px ring. */
   inset: -4px;
   --ping-start: 0.4286;

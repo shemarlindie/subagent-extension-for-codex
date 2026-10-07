@@ -51,7 +51,6 @@ export interface Provider {
   taskPolicy: ProviderTaskPolicy;
   models?(): Promise<ModelChoice[]>;
   run(context: RunContext, prompt: string): Promise<Result>;
-  recover?(task: Task): Promise<void>;
   /** Deletes the provider-side session a task ran in; one already gone is not an error. */
   deleteSession?(task: Task): Promise<void>;
   close?(): Promise<void>;

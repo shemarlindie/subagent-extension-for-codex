@@ -56,7 +56,6 @@ async function fixture(t: TestContext) {
       instructions: [],
       attempt: 0,
       runtime_ms: 0,
-      provider_recovery_required: false,
       ...overrides,
     };
 

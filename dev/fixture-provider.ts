@@ -43,7 +43,7 @@ export class FixtureProvider implements Provider {
     if (prompt.includes("[input]")) {
       const r = await c.input(
         "AskUserQuestion",
-        { question: "Which approach should the worker use?" },
+        { questions: [{ question: "Which approach should the worker use?" }] },
         c.signal,
       );
 

@@ -18,8 +18,6 @@ export interface ProviderMetadata {
     approvalDecider: boolean;
     approvalDeciderHelp?: string;
   };
-  /** Whether provider model defaults are offered by the settings document. */
-  settings?: { modelDefaults: boolean };
 }
 
 export const claudeMetadata: ProviderMetadata = {
@@ -46,23 +44,15 @@ export const claudeMetadata: ProviderMetadata = {
     approvalDeciderHelp:
       "Who answers permission requests that the SDK leaves unresolved.",
   },
-  settings: { modelDefaults: true },
-};
-
-export const codexMetadata: ProviderMetadata = {
-  displayName: "Codex",
-  settings: { modelDefaults: false },
 };
 
 export const fixtureMetadata: ProviderMetadata = {
   displayName: "Fixture",
-  settings: { modelDefaults: true },
 };
 
 /** Built-in presentation registration, including stored tasks without a live worker. */
 export const builtinProviderMetadata: Record<string, ProviderMetadata> = {
   claude: claudeMetadata,
-  codex: codexMetadata,
   fixture: fixtureMetadata,
 };
 

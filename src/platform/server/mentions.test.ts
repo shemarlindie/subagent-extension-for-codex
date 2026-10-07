@@ -91,7 +91,7 @@ test("composer mention search returns Claude for the server name and provider qu
     (
       await searchAgentMentions(
         "Claude",
-        [{ provider: "codex", profiles: ["reviewer"] }],
+        [{ provider: "fixture", profiles: ["reviewer"] }],
         { [mentionTestModeEnv]: "0" },
       )
     ).items,

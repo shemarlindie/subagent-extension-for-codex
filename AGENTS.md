@@ -2,7 +2,7 @@
 
 ## Running integration tests
 
-- HTTP and executor integration suites need localhost TCP listeners; `mac-executor` also invokes nested macOS `sandbox-exec` profiles. If the default Codex command sandbox reports `listen EPERM` or `sandbox_apply: Operation not permitted`, rerun the affected suites with escalated execution permission. CI needs a macOS runner that permits both operations. Do not skip or weaken these tests.
+- HTTP integration suites need localhost TCP listeners. If the default Codex command sandbox reports `listen EPERM`, rerun the affected suites with escalated execution permission. CI needs a runner that permits it. Do not skip or weaken these tests.
 
 ## Formatting
 

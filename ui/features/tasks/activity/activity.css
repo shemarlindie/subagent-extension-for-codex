@@ -159,8 +159,7 @@
 .row-status-icon.paused,
 .row-status-icon.waiting,
 .row-status-icon.interrupted,
-.row-status-icon.input,
-.row-status-icon.unconfirmed {
+.row-status-icon.input {
   color: var(--status-paused);
 }
 .row-status-icon.failed {

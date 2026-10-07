@@ -29,7 +29,7 @@ import {
   unsupportedEffortWarning,
 } from "./settings-document.js";
 
-// Codex defaults are not supported yet; settings cover these providers only.
+// Settings cover these providers only.
 const settingsProviders = providerModelSettingScopes;
 
 const scopeTitle = (scope: string) =>
@@ -207,12 +207,11 @@ export class Settings {
       provider,
     ) => builtinProviderMetadata[provider],
   ) {
-    // A Codex-only service still needs a valid provider default; tasks can
-    // still choose Codex explicitly.
+    // Settings cover providers with presentation metadata. A service without
+    // any still needs a valid provider default; tasks can still choose other
+    // providers explicitly.
     this.providers = () => {
-      const enabled = providers().filter(
-        (provider) => this.metadata(provider)?.settings?.modelDefaults,
-      );
+      const enabled = providers().filter((provider) => this.metadata(provider));
 
       return enabled.length ? enabled : [providerModelSettingScopes[0]];
     };

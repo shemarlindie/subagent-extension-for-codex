@@ -96,7 +96,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       updated_at: now(),
       attempt: 0,
       runtime_ms: 0,
-      provider_recovery_required: false,
       instructions: [],
     });
   };
@@ -1015,7 +1014,6 @@ test("SSE requires authentication and replays owned events in global cursor orde
     updated_at: now(),
     attempt: 0,
     runtime_ms: 0,
-    provider_recovery_required: false,
     instructions: [],
   });
 

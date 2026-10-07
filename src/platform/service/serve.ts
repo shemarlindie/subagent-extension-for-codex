@@ -17,8 +17,8 @@ import { adminToken } from "./token.js";
 
 export type ServeOptions = {
   /**
-   * The workers to run. Defaults to the configured providers (Claude, and
-   * Codex when enabled); the development demo passes its fixture worker.
+   * The workers to run. Defaults to the configured providers (Claude); the
+   * development demo passes its fixture worker.
    */
   providers?: (store: Store, data: string) => Map<string, Provider>;
 };

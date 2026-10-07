@@ -54,7 +54,6 @@ test("Claude session deletion skips absent ids and forwards existing sessions", 
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
-    provider_recovery_required: false,
   };
 
   const calls: string[] = [];
@@ -81,7 +80,6 @@ test("Claude session deletion only tolerates the SDK's missing-session error", a
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
-    provider_recovery_required: false,
     session_id: "session-one",
   };
 
@@ -135,7 +133,6 @@ async function context() {
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
-    provider_recovery_required: false,
     provider_options: {
       claude: {
         permission_mode: "plan",

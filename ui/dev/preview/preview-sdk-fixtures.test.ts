@@ -84,7 +84,6 @@ const serviceTypes = new Set([
   "task.cancelled",
   "task.completed",
   "task.failed",
-  "task.recovery_required",
   "task.worktree_removed",
   "task.branch_deleted",
   "agent.input_required",

@@ -15,12 +15,8 @@ import type {
   RunContext,
 } from "../../shared/contracts.js";
 import { claudeTaskPolicy } from "../providers/claude/task-policy.js";
-import { codexTaskPolicy } from "../providers/codex/task-policy.js";
 import { claudeMetadata } from "../providers/metadata.js";
-import {
-  executionTaskPolicy,
-  type ProviderTaskPolicy,
-} from "../providers/task-policy.js";
+import { type ProviderTaskPolicy } from "../providers/task-policy.js";
 import { Workspaces } from "../workspaces/workspace.js";
 import { Control } from "./control.js";
 import { Store } from "./store.js";
@@ -612,66 +608,45 @@ test("steering does not lose instructions during active turn", async () => {
 });
 
 test("native retries extract start options without carrying resolved policy or session state", async () => {
-  for (const [id, policy] of [
-    ["claude", claudeTaskPolicy],
-    ["codex", codexTaskPolicy],
-  ] as const) {
-    const provider: Provider = new FixtureProvider();
-    provider.id = id;
-    provider.taskPolicy = policy;
-    provider.metadata = id === "claude" ? claudeMetadata : undefined;
-    const { c, store } = await setup(provider);
-    c.stopped = true;
+  const provider: Provider = new FixtureProvider();
+  provider.id = "claude";
+  provider.taskPolicy = claudeTaskPolicy;
+  provider.metadata = claudeMetadata;
+  const { c, store } = await setup(provider);
+  c.stopped = true;
 
-    try {
-      const task = await c.start("alice", {
-        ...input(),
-        provider: id,
-        ...(id === "claude"
-          ? {
-              provider_options: {
-                claude: {
-                  permission_mode: "dontAsk",
-                  approval_decider: "parent_agent",
-                },
-              },
-            }
-          : { approval_mode: "deny" }),
-      });
+  try {
+    const task = await c.start("alice", {
+      ...input(),
+      provider: "claude",
+      provider_options: {
+        claude: {
+          permission_mode: "dontAsk",
+          approval_decider: "parent_agent",
+        },
+      },
+    });
 
-      task.status = "failed";
-      task.session_id = "prior-session";
-      task.session_state_ref = "prior-state";
-      if (id === "codex")
-        task.provider_options = { codex: { native_turn_id: "prior-turn" } };
-      store.save(task);
+    task.status = "failed";
+    task.session_id = "prior-session";
+    task.session_state_ref = "prior-state";
+    store.save(task);
 
-      // Retries preserve selected authority while re-resolving current session restrictions.
-      c.settings.update("alice", { set: { claude_tools: "all" } });
-      const retry = await c.retry("alice", task.id);
-      assert.notEqual(retry.id, task.id);
-      assert.equal(retry.parent_task_id, task.id);
-      assert.equal(retry.session_id, undefined);
-      assert.equal(retry.session_state_ref, undefined);
+    // Retries preserve selected authority while re-resolving current session restrictions.
+    c.settings.update("alice", { set: { claude_tools: "all" } });
+    const retry = await c.retry("alice", task.id);
+    assert.notEqual(retry.id, task.id);
+    assert.equal(retry.parent_task_id, task.id);
+    assert.equal(retry.session_id, undefined);
+    assert.equal(retry.session_state_ref, undefined);
 
-      if (id === "claude") {
-        const options = retry.provider_options?.claude;
-        assert.equal(options?.permission_mode, "dontAsk");
-        assert.equal(options?.approval_decider, "parent_agent");
-
-        assert.equal(
-          (options?.claude_policy as { tools: string }).tools,
-          "all",
-        );
-      } else {
-        assert.deepEqual(retry.provider_options, {});
-        assert.equal(retry.approval_mode, "deny");
-      }
-
-      assert.equal(store.get(task.id, "alice").session_id, "prior-session");
-    } finally {
-      await c.close();
-    }
+    const options = retry.provider_options?.claude;
+    assert.equal(options?.permission_mode, "dontAsk");
+    assert.equal(options?.approval_decider, "parent_agent");
+    assert.equal((options?.claude_policy as { tools: string }).tools, "all");
+    assert.equal(store.get(task.id, "alice").session_id, "prior-session");
+  } finally {
+    await c.close();
   }
 });
 
@@ -1142,132 +1117,6 @@ test("continuation revalidates provider budget support before changing an interr
   }
 });
 
-test("unconfirmed termination locks task controls and survives service recovery", async () => {
-  const { UnconfirmedTerminationError } =
-    await import("../../shared/contracts.js");
-
-  class UncertainProvider extends FixtureProvider {
-    async run(c: RunContext): Promise<Result> {
-      await writeFile(
-        join(c.task.workspace!, "uncertain.txt"),
-        "unverified work",
-      );
-
-      return await new Promise<Result>((_resolve, reject) => {
-        const fail = () =>
-          reject(
-            new UnconfirmedTerminationError([new Error("cancel timeout")]),
-          );
-
-        if (c.signal.aborted) fail();
-        else c.signal.addEventListener("abort", fail, { once: true });
-      });
-    }
-  }
-
-  const { c, db } = await setup(new UncertainProvider());
-  const task = await c.start("alice", input());
-  await until(() => c.store.get(task.id, "alice").status === "running");
-
-  await assert.rejects(
-    c.stop("alice", task.id, "cancelled"),
-    /termination is unconfirmed/,
-  );
-
-  assert.equal(c.store.get(task.id, "alice").status, "waiting");
-
-  assert.equal(
-    c.store.get(task.id, "alice").waiting_reason,
-    "termination_unconfirmed",
-  );
-
-  await assert.rejects(
-    c.stop("alice", task.id, "interrupted"),
-    /termination is unconfirmed/,
-  );
-
-  await assert.rejects(
-    c.steer("alice", task.id, "Continue"),
-    /termination is unconfirmed/,
-  );
-
-  await assert.rejects(c.retry("alice", task.id), /requires failed/);
-  await c.close();
-  const store = new Store(db);
-  const recovered = new Control(store, c.workspaces, c.providers, c.repository);
-  recovered.stopped = true;
-  await recovered.recover();
-
-  assert.equal(
-    store.get(task.id, "alice").waiting_reason,
-    "termination_unconfirmed",
-  );
-
-  assert.equal(store.get(task.id, "alice").status, "waiting");
-  await recovered.close();
-});
-
-test("Codex recovery locks unknown execution and permits explicit continuation only after provider proof", async () => {
-  class RecoveringProvider extends FixtureProvider {
-    id = "codex";
-    taskPolicy = { ...executionTaskPolicy, recoverBeforeInterrupt: true };
-    proven = false;
-    async recover() {
-      if (!this.proven) throw new Error("executor shutdown unknown");
-    }
-  }
-
-  const provider = new RecoveringProvider();
-  const { c } = await setup(provider);
-  c.stopped = true;
-
-  try {
-    const task = await c.start("alice", {
-      provider: "codex",
-      title: "Recover",
-      description: "Recover",
-      budget: { max_cost_usd: null },
-    });
-
-    task.status = "running";
-
-    task.provider_options = {
-      ...task.provider_options,
-      codex: { native_turn_id: "turn_one" },
-    };
-
-    c.store.save(task);
-    await c.recover();
-
-    assert.equal(
-      c.store.get(task.id, "alice").waiting_reason,
-      "termination_unconfirmed",
-    );
-
-    await assert.rejects(c.continue("alice", task.id), /Only interrupted/);
-    c.providers.delete("codex");
-    await c.recover();
-
-    assert.equal(
-      c.store.get(task.id, "alice").waiting_reason,
-      "termination_unconfirmed",
-    );
-
-    c.providers.set("codex", provider);
-    provider.proven = true;
-    await c.recover();
-    const recovered = c.store.get(task.id, "alice");
-    assert.equal(recovered.status, "interrupted");
-    assert.equal(recovered.waiting_reason, undefined);
-
-    assert.equal(recovered.provider_options?.codex?.native_turn_id, "turn_one");
-
-    assert.equal((await c.continue("alice", task.id)).status, "queued");
-  } finally {
-    await c.close();
-  }
-});
-
 test("cancelled queued input rejects promptly without bypassing the active permission or leaving stale requests", async () => {
   const cancelled = new AbortController();
   let queuedRejected = false;
@@ -1620,12 +1469,10 @@ test("a new provider controls preparation and input policy without built-in iden
   }
 });
 
-test("a new provider owns native recovery and session continuation, including while disabled", async () => {
+test("a new provider owns native session continuation after a restart", async () => {
   const provider: Provider = new FixtureProvider();
   provider.id = "new-native";
-  let proven = false;
   let sessionValid = false;
-  const recovered: string[] = [];
   const validated: string[] = [];
 
   const policy: ProviderTaskPolicy = {
@@ -1633,7 +1480,6 @@ test("a new provider owns native recovery and session continuation, including wh
     decideInput: () => undefined,
     parentMayApprove: () => false,
     inputKind: () => "permission",
-    recoverBeforeInterrupt: true,
     async validateSession(task) {
       validated.push(task.session_state_ref!);
       if (!sessionValid) throw new Error("Native session unavailable");
@@ -1641,18 +1487,11 @@ test("a new provider owns native recovery and session continuation, including wh
   };
 
   provider.taskPolicy = policy;
-
-  provider.recover = async (task) => {
-    recovered.push(task.id);
-    if (!proven) throw new Error("Native termination unknown");
-  };
-
   const { c, store } = await setup(provider);
   c.stopped = true;
 
   try {
     const task = await c.start("alice", { ...input(), provider: provider.id });
-    assert.equal(task.provider_recovery_required, true);
     task.status = "running";
 
     task.provider_options = {
@@ -1665,26 +1504,7 @@ test("a new provider owns native recovery and session continuation, including wh
     task.session_owner = c.ownerWorker;
     store.save(task);
     await c.recover();
-
-    assert.equal(
-      store.get(task.id, "alice").waiting_reason,
-      "termination_unconfirmed",
-    );
-
-    await assert.rejects(c.continue("alice", task.id), /Only interrupted/);
-    c.providers.delete(provider.id);
-    await c.recover();
-
-    assert.equal(
-      store.get(task.id, "alice").waiting_reason,
-      "termination_unconfirmed",
-    );
-
-    c.providers.set(provider.id, provider);
-    proven = true;
-    await c.recover();
     assert.equal(store.get(task.id, "alice").status, "interrupted");
-    assert.deepEqual(recovered, [task.id, task.id]);
 
     await assert.rejects(
       c.continue("alice", task.id),

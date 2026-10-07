@@ -123,7 +123,7 @@ test("providers declare their policy independently of built-in identity", () => 
   assert.equal(provider.taskPolicy, executionTaskPolicy);
   provider.id = "claude";
   assert.equal(provider.taskPolicy, executionTaskPolicy);
-  const custom = { ...executionTaskPolicy, recoverBeforeInterrupt: true };
+  const custom = { ...executionTaskPolicy };
   provider.taskPolicy = custom;
   provider.id = "future-provider";
   assert.equal(provider.taskPolicy, custom);

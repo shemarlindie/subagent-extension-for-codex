@@ -91,7 +91,6 @@ function task(repository: string, revision = "HEAD"): Task {
     updated_at: new Date().toISOString(),
     attempt: 0,
     runtime_ms: 0,
-    provider_recovery_required: false,
   };
 }
 

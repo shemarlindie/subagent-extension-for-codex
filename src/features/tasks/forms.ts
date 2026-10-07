@@ -474,9 +474,7 @@ export class Forms {
       question?: unknown;
       options?: unknown;
       multiSelect?: unknown;
-    }[] = Array.isArray(pending.input.questions)
-      ? pending.input.questions
-      : [{ question: pending.input.question ?? "Your response" }];
+    }[] = Array.isArray(pending.input.questions) ? pending.input.questions : [];
 
     if (!questions.length || questions.length > 20)
       throw new Error("Unsupported worker question; respond in the console");

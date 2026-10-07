@@ -284,7 +284,6 @@ test("run emits result accounting exactly once for success and failure", async (
       instructions: [],
       attempt: 1,
       runtime_ms: 0,
-      provider_recovery_required: false,
       provider_options: {
         claude: {
           permission_mode: "plan",

@@ -56,7 +56,6 @@ const taskBase = {
   owner: "preview",
   provider: "claude" as const,
   worker_profile: "researcher" as const,
-  provider_recovery_required: false,
   provider_options: {
     claude: {
       permission_mode: "plan",
@@ -1171,10 +1170,6 @@ signals.sdk({
   state: "idle",
 });
 
-signals.add("task.recovery_required", {
-  error: "The worker restarted; confirm it stopped before continuing.",
-});
-
 // --- Long run: more events than the activity view keeps (EVENT_TAIL_SIZE) ----
 const longResult: Result = {
   summary:
@@ -1658,18 +1653,6 @@ export const previewTasks: Task[] = [
     runtime_ms: 125000,
     ...worktree("preview-interrupted"),
     ...timestamps(20, 2),
-  },
-  {
-    ...taskBase,
-    id: "preview-locked",
-    title: "Inspect an uncertain shutdown",
-    description:
-      "Determine whether the interrupted worker has stopped before allowing another attempt.",
-    worker_profile: "reviewer",
-    status: "waiting",
-    waiting_reason: "termination_unconfirmed",
-    error: "Worker termination is unconfirmed; controls remain locked.",
-    ...timestamps(22, 2),
   },
   {
     ...taskBase,

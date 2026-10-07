@@ -14,37 +14,31 @@ import {
   useController,
   useSnapshot,
 } from "../../../shared/state/controller-context";
-import { locked, pendingQuestions } from "../../../shared/state/selectors";
+import { pendingQuestions } from "../../../shared/state/selectors";
 import type { Task } from "../../../shared/state/types";
 import { QuestionForm } from "../controls/question-form";
 
 export function TaskNotices({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
-    isLocked = locked(task),
-    pending = !isLocked ? task.pending_input : undefined,
-    error = !isLocked ? task.error : undefined,
+    pending = task.pending_input,
+    error = task.error,
+    isQuestion = Boolean(pending && pendingInputKind(pending) === "question"),
     questions =
-      pending && pendingInputKind(pending) === "question"
+      isQuestion && pendingQuestions(task).length
         ? pendingQuestions(task)
         : undefined;
 
   // Notices fold in and out so the evidence below slides instead of jumping.
   return (
     <>
-      <TaskNotice show={isLocked}>
-        <strong>Worker shutdown needs investigation</strong>
-        <NoticeText>
-          Termination is unconfirmed. Controls are locked. Bring this task to
-          Codex to inspect the worker before continuing.
-        </NoticeText>
-      </TaskNotice>
       <Presence show={Boolean(questions)}>
         {/* Keyed so a new request starts with fresh answers. */}
         <QuestionNotice key={pending?.id} task={task} />
       </Presence>
       <TaskNotice show={Boolean(pending && !questions)}>
-        <strong>Permission needed</strong>
+        {/* A question without a questions list falls back to the generic review. */}
+        <strong>{isQuestion ? "Input needed" : "Permission needed"}</strong>
         <NoticeText>
           {String(pending?.input.description ?? pending?.tool ?? "")}
         </NoticeText>

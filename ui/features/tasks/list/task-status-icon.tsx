@@ -11,7 +11,6 @@ const STATUS_ICONS: Record<StatusPresentation["kind"], IconName> = {
   completed: "check",
   failed: "close",
   interrupted: "close",
-  unconfirmed: "help",
   input: "pencil",
   cancelled: "stop",
   queued: "clock",

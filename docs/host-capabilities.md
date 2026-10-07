@@ -243,7 +243,6 @@ Installed package evidence (`npm ls --depth=0`, package manifests and types):
 | MCP SDK v1            | 1.31.0            | `types.js` latest supported handshake version 2025-11-25 |
 | MCP server / node v2  | 2.2.0 / 2.1.0     | Modern 2026-07-28 codec alongside legacy support         |
 | MCP Apps              | 1.7.5             | `spec.types.d.ts` host context lacks repository identity |
-| OpenAI SDK            | 7.25.0            | Installed dependency, not a Codex host-context API       |
 | OpenAI MCP extensions | 0.1.0             | Installed extension dependency                           |
 
 These observations verify local library contracts, not a live desktop handshake,

@@ -272,7 +272,7 @@ test("disabled providers' model defaults are hidden but kept, and listed models 
 
 test("native model controls scope discovered models and derive reasoning choices from effective SDK metadata", async (t) => {
   const f = await fixture(t);
-  f.setProviders(["claude", "codex"]);
+  f.setProviders(["claude"]);
 
   f.settings.update("alice", {
     set: {
@@ -303,17 +303,6 @@ test("native model controls scope discovered models and derive reasoning choices
         },
       ],
     },
-    {
-      provider: "codex",
-      models: [
-        {
-          value: "codex-model",
-          displayName: "Codex",
-          description: "",
-          supportedEffortLevels: ["medium"],
-        },
-      ],
-    },
   ];
 
   const result = f.settings.read("alice", catalogs);
@@ -325,7 +314,6 @@ test("native model controls scope discovered models and derive reasoning choices
     "default",
   ]);
 
-  assert.equal("codex_default_model" in fields, false);
   assert.deepEqual(fields.default_model.enum, ["", "claude-model", "default"]);
 
   assert.deepEqual(fields.reviewer_default_model.enum, [
@@ -355,8 +343,6 @@ test("native model controls scope discovered models and derive reasoning choices
     "high",
     "max",
   ]);
-
-  assert.equal("codex_default_reasoning_effort" in fields, false);
 
   assert.match(
     String(fields.claude_default_reasoning_effort.description),
@@ -634,7 +620,6 @@ test("invalid model and reasoning updates cannot partially persist other setting
   for (const invalid of [
     { default_model: 123 },
     { default_model: "x".repeat(201) },
-    { codex_default_model: null },
     { default_reasoning_effort: "unsupported" },
     { reviewer_default_reasoning_effort: 1 },
     { unknown_default_model: "unknown" },
@@ -744,7 +729,7 @@ test("removed providers fall back on effective reads without rewriting saved def
   });
 
   const persisted = f.stored();
-  f.setProviders(["fixture", "codex"]);
+  f.setProviders(["fixture"]);
   f.reopen();
   assert.equal(f.settings.read("alice").values.default_provider, "fixture");
 
@@ -792,38 +777,6 @@ test("null budget updates retain their amount and validation is atomic", async (
   f.reopen();
   f.settings.update("alice", { set: { use_cost_budget: true } });
   assert.equal(f.settings.values("alice").max_cost_usd, 13);
-});
-
-test("Codex defaults are not offered in provider settings", async (t) => {
-  const f = await fixture(t);
-  f.setProviders(["claude", "codex"]);
-  const result = f.settings.read("alice");
-  assert.deepEqual(result.schema.properties!.default_provider.enum, ["claude"]);
-
-  assert.equal(
-    Object.keys(result.schema.properties!).some((key) =>
-      key.startsWith("codex_"),
-    ),
-    false,
-  );
-
-  assert.equal(
-    result.sections.flatMap(sectionKeys).some((key) => key.startsWith("codex")),
-    false,
-  );
-
-  for (const set of [
-    { default_provider: "codex" },
-    { codex_default_model: "codex-model" },
-  ])
-    assert.throws(() => f.settings.update("alice", { set }));
-  f.setProviders(["codex"]);
-  assert.equal(f.settings.taskInput("alice", {}).provider, "claude");
-
-  assert.equal(
-    f.settings.taskInput("alice", { provider: "codex" }).provider,
-    "codex",
-  );
 });
 
 test("Claude session restrictions are scalar user-only settings with stored defaults", async (t) => {
@@ -906,7 +859,6 @@ test("settings accept a new built-in's metadata without provider-ID handling", a
     () => ["new-built-in"],
     () => ({
       displayName: "New built-in",
-      settings: { modelDefaults: true },
     }),
   );
 

@@ -10,7 +10,6 @@ import {
 import {
   effectiveFilter,
   FILTER_LABELS,
-  locked,
   profileLabel,
   projectChoices,
   scopedTasks,
@@ -81,8 +80,7 @@ function TaskRowRuntime({ task }: { task: Task }) {
         (status.kind === "failed" ||
           status.kind === "paused" ||
           status.kind === "input")) ||
-      Boolean(task.pending_input) ||
-      locked(task),
+      Boolean(task.pending_input),
     live = runtimeLive(task) && !activityLabel,
     now = useNow(live),
     runtime = taskRuntimeMs(task, now);

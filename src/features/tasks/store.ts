@@ -31,7 +31,7 @@ export class Store {
 
   /**
    * Deletes a task with its events and everything else stored under its id:
-   * the executor record, pending forms and queued webhook deliveries.
+   * pending forms and queued webhook deliveries.
    */
   delete(id: string, owner: string) {
     this.get(id, owner);
@@ -46,9 +46,6 @@ export class Store {
     this.db.exec("BEGIN IMMEDIATE");
 
     try {
-      if (tables.has("codex_executors"))
-        this.db.prepare("DELETE FROM codex_executors WHERE task_id=?").run(id);
-
       if (tables.has("form_requests"))
         this.db
           .prepare(

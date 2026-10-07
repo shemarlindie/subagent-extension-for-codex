@@ -168,7 +168,7 @@ service on port 4317 first.
 The fixture worker (`dev/fixture-provider.ts`) and demo entry
 (`dev/demo-service.ts`, run through `tsx`) are in `dev/`, outside the `src/`
 build. The package contains neither. Tests import the fixture worker from
-`dev/`. The packaged service supports the `claude` and `codex` providers.
+`dev/`. The packaged service supports the `claude` provider.
 
 ## What reloads when
 

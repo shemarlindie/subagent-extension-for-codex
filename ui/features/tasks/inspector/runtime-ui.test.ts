@@ -33,7 +33,6 @@ const task = (patch: Partial<Task>): Task => ({
   instructions: [],
   attempt: 1,
   runtime_ms: 60_000,
-  provider_recovery_required: false,
   ...patch,
 });
 
@@ -136,7 +135,6 @@ test("task list runtime ticks, freezes while stopped, and accumulates after resu
     row(
       task({
         runtime_ms: 95_000,
-        provider_recovery_required: false,
         run_started_at: new Date(Date.now()).toISOString(),
       }),
     ),
@@ -282,10 +280,6 @@ test("task list status icons expose each task state to assistive technology", (t
       { status: "waiting", waiting_reason: "waiting_for_dependency" },
       "Waiting on dependency",
     ],
-    [
-      { status: "interrupted", waiting_reason: "termination_unconfirmed" },
-      "Shutdown unconfirmed",
-    ],
   ];
 
   for (const [patch, label] of states) {
@@ -336,18 +330,6 @@ test("task list icons describe the running task's latest activity", (t) => {
       assert.equal(rowRuntime(view), "Compaction failed");
     }
   }
-});
-
-test("unconfirmed shutdown shows a heavy warning question mark", (t) => {
-  t.onTestFinished(cleanup);
-
-  const view = render(
-    row(task({ status: "waiting", waiting_reason: "termination_unconfirmed" })),
-  );
-
-  const icon = view.getByRole("img", { name: "Shutdown unconfirmed" });
-  assert.ok(icon.classList.contains("unconfirmed"));
-  assert.equal(icon.getAttribute("stroke-width"), "4");
 });
 
 test("terminal states and input requests take precedence over stale activity", (t) => {
@@ -412,14 +394,6 @@ test("task list uses short state labels when no runtime timer is available", (t)
       "Needs input",
     ],
     [
-      { status: "waiting", waiting_reason: "termination_unconfirmed" },
-      "Unconfirmed",
-    ],
-    [
-      { status: "interrupted", waiting_reason: "termination_unconfirmed" },
-      "Unconfirmed",
-    ],
-    [
       {
         live_activity: { text: "Waiting for rate limit reset", state: "info" },
       },
@@ -447,7 +421,6 @@ test("task list replaces its activity fallback with a live timer once the run st
 
   const running = task({
     runtime_ms: 0,
-    provider_recovery_required: false,
     live_activity: { text: "Waiting for rate limit reset", state: "info" },
   });
 

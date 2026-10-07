@@ -5,7 +5,7 @@ import {
   useController,
   useSnapshot,
 } from "../../../shared/state/controller-context";
-import { locked, terminal } from "../../../shared/state/selectors";
+import { terminal } from "../../../shared/state/selectors";
 import type { ControlAction, Task } from "../../../shared/state/types";
 
 export function TaskActions({ task }: { task: Task }) {
@@ -15,7 +15,7 @@ export function TaskActions({ task }: { task: Task }) {
       (worker) => worker.provider === task.provider,
     )?.capabilities;
 
-  const controls = !terminal(task) && !locked(task);
+  const controls = !terminal(task);
 
   const actions = [
     ...(controls
@@ -30,9 +30,7 @@ export function TaskActions({ task }: { task: Task }) {
           "cancel",
         ]
       : []),
-    ...(["failed", "cancelled"].includes(task.status) && !locked(task)
-      ? ["retry"]
-      : []),
+    ...(["failed", "cancelled"].includes(task.status) ? ["retry"] : []),
   ] as ControlAction[];
 
   const labels: Record<string, string> = {

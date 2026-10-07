@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { describe, test, type TestContext, vi } from "vitest";
 
-import { codexExecutionPresentation } from "../../../src/features/providers/codex/input-presentation.js";
+import type { InputPresentation } from "../../../src/features/tasks/model.js";
 import type {
   ChangedFileContent,
   Changes,
@@ -40,6 +40,12 @@ import { SKIPPED_ANSWER } from "../../../ui/features/tasks/controls/question-for
 import { Controller } from "../../../ui/shared/state/controller";
 import { ControllerContext } from "../../../ui/shared/state/controller-context";
 
+const executionPresentation: InputPresentation = {
+  description:
+    "Approval covers the entire execution turn, including shell commands.",
+  approveLabel: "Approve this execution turn",
+};
+
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
 // which never finishes and starves waitFor's timeout.
 function assertAbsent(element: Element | null) {
@@ -69,7 +75,6 @@ function task(id = "one", repository = "/repo/a"): Task {
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
-    provider_recovery_required: false,
   };
 }
 
@@ -129,7 +134,7 @@ class FakeTransport implements Transport {
           capabilities: { cost_budget: true },
         },
         {
-          provider: "codex",
+          provider: "fixture",
           profiles: ["reviewer"],
           capabilities: { cost_budget: false },
         },
@@ -1084,12 +1089,12 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
   assert.equal(call.args.reasoning_effort, "high");
 });
 
-test("model selection retains unsupported Codex effort on Claude and blocks submission until corrected", async (t) => {
+test("model selection retains unsupported effort on Claude and blocks submission until corrected", async (t) => {
   const { transport, user } = await setup(t);
   await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Investigate effort selection");
-  await selectOption(user, "Worker", "codex · reviewer");
+  await selectOption(user, "Worker", "fixture · reviewer");
   await selectOption(user, "Reasoning effort", "none");
   await selectOption(user, "Worker", "claude · reviewer");
 
@@ -1198,7 +1203,7 @@ test("model selection updates role and provider defaults while preserving explic
     /Use default \(medium\)/,
   );
 
-  await selectOption(user, "Worker", "codex · researcher");
+  await selectOption(user, "Worker", "fixture · researcher");
   assert.equal(field.placeholder, "global-model");
 
   assert.match(
@@ -1645,7 +1650,6 @@ test("inline preview summarizes repository scope independently of list filters",
 
       const stopped = task("stopped");
       stopped.status = "failed";
-      stopped.waiting_reason = "termination_unconfirmed";
       const complete = task("complete");
       complete.status = "completed";
 
@@ -1666,7 +1670,7 @@ test("inline preview summarizes repository scope independently of list filters",
 
   assert.equal(
     screen.getByRole("status").textContent,
-    "4 tasks · 2 active · 2 needing attention",
+    "4 tasks · 2 active · 1 needing attention",
   );
 
   assert.ok(screen.getByText("Waiting review"));
@@ -2345,7 +2349,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   );
 
   await enterTask(user, "Investigate failing tests");
-  await selectOption(user, "Worker", "codex · reviewer");
+  await selectOption(user, "Worker", "fixture · reviewer");
   await user.type(screen.getByLabelText("Model"), "selected-model");
   await selectOption(user, "Reasoning effort", "high");
   await selectOption(user, "Cost limit", "Apply cost budget");
@@ -2380,7 +2384,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   });
 
   assert.equal(call.args.conversation_id, null);
-  assert.equal(call.args.provider, "codex");
+  assert.equal(call.args.provider, "fixture");
   assert.equal(call.args.model, "selected-model");
   assert.equal(call.args.reasoning_effort, "high");
 });
@@ -2494,9 +2498,9 @@ test("permission review makes no decision until the user clicks Deny", async (t)
   const { transport, user } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
       id: "permission",
-      tool: "CodexExecution",
+      tool: "Execution",
       kind: "permission",
-      presentation: codexExecutionPresentation,
+      presentation: executionPresentation,
       input: { description: "Execute shell commands" },
     };
   });
@@ -2846,7 +2850,7 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   await waitFor(() =>
     assert.ok(
       document.activeElement ===
-        screen.getByRole("option", { name: "codex · reviewer" }),
+        screen.getByRole("option", { name: "fixture · reviewer" }),
     ),
   );
 
@@ -2856,13 +2860,13 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
     assert.equal(worker.getAttribute("aria-expanded"), "false"),
   );
 
-  assert.match(worker.textContent ?? "", /codex · reviewer/);
+  assert.match(worker.textContent ?? "", /fixture · reviewer/);
   await user.click(worker);
 
   await waitFor(() =>
     assert.ok(
       document.activeElement ===
-        screen.getByRole("option", { name: "codex · reviewer" }),
+        screen.getByRole("option", { name: "fixture · reviewer" }),
     ),
   );
 
@@ -2885,7 +2889,7 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
     assert.equal(
       transport.calls.find((call) => call.name === "start_agent_task")?.args
         .provider,
-      "codex",
+      "fixture",
     ),
   );
 });
@@ -3116,14 +3120,13 @@ test("a skipped stacked question sends an explicit skipped answer", async (t) =>
   );
 });
 
-test("a free-text worker question answers in a text box and shows send failures inline", async (t) => {
+test("a question without options answers in a text box and shows send failures inline", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
-    // Codex workers ask one free-text question rather than a questions list.
     transport.tasks[0].pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",
-      input: { question: "Which branch?" },
+      input: { questions: [{ question: "Which branch?" }] },
     };
 
     const original = transport.tool.bind(transport);
@@ -3163,7 +3166,10 @@ test("a free-text worker question answers in a text box and shows send failures 
   assert.deepEqual(
     transport.calls.findLast((call) => call.name === "submit_agent_input")?.args
       .input,
-    { question: "Which branch?", answers: { "Which branch?": "main" } },
+    {
+      questions: [{ question: "Which branch?" }],
+      answers: { "Which branch?": "main" },
+    },
   );
 });
 
@@ -3457,9 +3463,9 @@ test("permission buttons allow explicit approval without a dropdown", async (t) 
   const { user, transport } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
       id: "permission",
-      tool: "CodexExecution",
+      tool: "Execution",
       kind: "permission",
-      presentation: codexExecutionPresentation,
+      presentation: executionPresentation,
       input: { description: "Execute shell commands" },
     };
   });
@@ -3959,7 +3965,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
   await user.click(screen.getByRole("button", { name: "New Task" }));
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Review this new project with my draft intact");
-  await selectOption(user, "Worker", "codex · reviewer");
+  await selectOption(user, "Worker", "fixture · reviewer");
   const runtime = screen.getByLabelText("Runtime limit · minutes");
   await user.clear(runtime);
   await user.type(runtime, "12.5");
@@ -3985,7 +3991,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
 
   assert.match(
     within(dialog).getByRole("combobox", { name: "Worker" }).textContent ?? "",
-    /codex/,
+    /fixture/,
   );
 
   assert.equal(
@@ -4019,7 +4025,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
     "Review this new project with my draft intact",
   );
 
-  assert.equal(started.args.provider, "codex");
+  assert.equal(started.args.provider, "fixture");
 
   assert.equal(
     (started.args.budget as { max_runtime_minutes: number })

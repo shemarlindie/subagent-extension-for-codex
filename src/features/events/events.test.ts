@@ -44,7 +44,6 @@ const make = (id = "task-a", owner = "alice"): Task => ({
   instructions: [],
   attempt: 1,
   runtime_ms: 0,
-  provider_recovery_required: false,
 });
 
 async function setup(status = 200) {

@@ -20,35 +20,28 @@ const FILTERS = Object.keys(FILTER_LABELS) as Filter[];
 export const terminal = (task: Task) =>
   ["completed", "failed", "cancelled"].includes(task.status);
 
-export const locked = (task: Task) =>
-  task.waiting_reason === "termination_unconfirmed";
-
 export const statusLabel = (task: Task) =>
-  locked(task)
-    ? "Shutdown unconfirmed"
-    : task.pending_input
-      ? "Needs input"
-      : task.waiting_reason === "waiting_for_dependency"
-        ? "Waiting on dependency"
-        : task.status[0].toUpperCase() + task.status.slice(1);
+  task.pending_input
+    ? "Needs input"
+    : task.waiting_reason === "waiting_for_dependency"
+      ? "Waiting on dependency"
+      : task.status[0].toUpperCase() + task.status.slice(1);
 
 export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 
-// A failed row status (including interrupted and unconfirmed shutdown) places
-// a task in Failed alone; the other filters never overlap except through All.
+// A failed row status (including interrupted) places a task in Failed alone;
+// the other filters never overlap except through All.
 export const failedStatus = (task: Task) =>
-  ["failed", "unconfirmed", "interrupted"].includes(rowStatus(task).kind);
+  ["failed", "interrupted"].includes(rowStatus(task).kind);
 
 export const needsInput = (task: Task) => Boolean(task.pending_input);
 
 // One AskUserQuestion call carries every stacked question in `questions`
-// (1-4 in the Claude SDK); Codex workers send a single free-text `question`.
+// (1-4 in the Claude SDK). A request without them has no questions to show.
 export const pendingQuestions = (task: Task): Question[] => {
-  const input = task.pending_input?.input ?? {};
+  const questions = task.pending_input?.input.questions;
 
-  return Array.isArray(input.questions) && input.questions.length
-    ? (input.questions as Question[])
-    : [{ question: String(input.question ?? "Your response") }];
+  return Array.isArray(questions) ? (questions as Question[]) : [];
 };
 
 // Each task lands in one status filter besides All; see failedStatus.

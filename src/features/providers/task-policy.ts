@@ -29,8 +29,6 @@ export interface ProviderTaskPolicy {
   /** Extract start options from persisted state, excluding native session details. */
   retryOptions?(task: Task): Task["provider_options"];
   validateSession?(task: Task): Promise<void>;
-  /** Restart cannot unlock execution until recover() proves native termination. */
-  recoverBeforeInterrupt?: boolean;
 }
 
 /** Whole-execution approval policy for providers without native per-tool permission handling. */

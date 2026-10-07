@@ -22,11 +22,9 @@ function deletionFixture() {
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
-    provider_recovery_required: false,
   };
 
   store.db.exec(`
-    CREATE TABLE codex_executors(task_id TEXT PRIMARY KEY REFERENCES tasks(id), owner TEXT NOT NULL, body TEXT NOT NULL);
     CREATE TABLE form_requests(id TEXT PRIMARY KEY, owner TEXT NOT NULL, expires INTEGER NOT NULL, body TEXT NOT NULL);
     CREATE TABLE event_outbox(subscription_id TEXT NOT NULL,event_id TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'ready',attempts INTEGER NOT NULL DEFAULT 0,next_at INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(subscription_id,event_id));
   `);
@@ -35,10 +33,6 @@ function deletionFixture() {
     const current = { ...task, id };
     store.save(current);
     store.event(current, "task.completed", {});
-
-    store.db
-      .prepare("INSERT INTO codex_executors VALUES(?,?,?)")
-      .run(id, task.owner, "{}");
 
     store.db
       .prepare("INSERT INTO form_requests VALUES(?,?,?,?)")
@@ -54,13 +48,7 @@ function deletionFixture() {
 
   const snapshot = () =>
     Object.fromEntries(
-      [
-        "tasks",
-        "events",
-        "codex_executors",
-        "form_requests",
-        "event_outbox",
-      ].map((table) => [
+      ["tasks", "events", "form_requests", "event_outbox"].map((table) => [
         table,
         store.db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all(),
       ]),
@@ -79,7 +67,7 @@ test("task deletion removes auxiliary records and preserves other tasks, includi
   store.delete(task.id, task.owner);
   assert.throws(() => store.get(task.id, task.owner), /Task not found/);
   const after = snapshot();
-  for (const table of ["tasks", "events", "codex_executors", "form_requests"])
+  for (const table of ["tasks", "events", "form_requests"])
     assert.equal(after[table].length, 2, table);
 
   assert.deepEqual(
@@ -137,7 +125,6 @@ test("recent events return only the task's latest 200 in chronological order aft
     instructions: [],
     attempt: 1,
     runtime_ms: 0,
-    provider_recovery_required: false,
   };
 
   try {

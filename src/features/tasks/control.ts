@@ -10,7 +10,6 @@ import {
   type Start,
   startSchema,
   type Task,
-  UnconfirmedTerminationError,
 } from "../../shared/contracts.js";
 import { Projects } from "../projects/projects.js";
 import { providerMetadata } from "../providers/metadata.js";
@@ -85,31 +84,8 @@ export class Control {
 
     for (const t of this.store.all()) {
       if (
-        t.provider_recovery_required &&
         ["starting", "running", "waiting"].includes(t.status) &&
         t.waiting_reason !== "waiting_for_dependency"
-      ) {
-        try {
-          const provider = this.providers.get(t.provider);
-          if (!provider?.recover)
-            throw new Error("Native provider recovery is unavailable");
-          await provider.recover(t);
-          delete t.waiting_reason;
-        } catch (error) {
-          t.status = "waiting";
-          t.waiting_reason = "termination_unconfirmed";
-          t.error = error instanceof Error ? error.message : String(error);
-          delete t.pending_input;
-          this.store.save(t);
-          this.store.event(t, "task.recovery_required", { error: t.error });
-          continue;
-        }
-      }
-
-      if (
-        ["starting", "running", "waiting"].includes(t.status) &&
-        t.waiting_reason !== "waiting_for_dependency" &&
-        t.waiting_reason !== "termination_unconfirmed"
       ) {
         t.status = "interrupted";
         delete t.pending_input;
@@ -230,7 +206,6 @@ export class Control {
 
     const t: Task = {
       ...req,
-      provider_recovery_required: policy.recoverBeforeInterrupt ?? false,
       repository,
       id: `task_${randomUUID()}`,
       owner,
@@ -318,7 +293,6 @@ export class Control {
   async execute(t: Task, a: Active) {
     const begin = Date.now();
     let timer: NodeJS.Timeout | undefined;
-    let terminationUnconfirmed = false;
     let turnStarted = false;
 
     try {
@@ -541,13 +515,7 @@ export class Control {
       t.status = "completed";
       t.completed_at = now();
     } catch (error) {
-      if (error instanceof UnconfirmedTerminationError) {
-        terminationUnconfirmed = true;
-        t.status = "waiting";
-        t.waiting_reason = "termination_unconfirmed";
-        t.error = error.message;
-        delete t.pending_input;
-      } else if (a.stopStatus) {
+      if (a.stopStatus) {
         t.status = a.stopStatus;
         delete t.error;
         delete t.pending_input;
@@ -565,20 +533,18 @@ export class Control {
       t.runtime_ms += Date.now() - begin;
       delete t.run_started_at;
 
-      if (a.stopStatus && !terminationUnconfirmed) {
+      if (a.stopStatus) {
         t.status = a.stopStatus;
         delete t.error;
       }
 
       delete t.pending_input;
-      if (!terminationUnconfirmed) delete t.waiting_reason;
+      delete t.waiting_reason;
       if (t.status === "cancelled") t.completed_at = now();
 
-      // A worker that may still be running keeps its changes live. One
-      // stopped while waiting for input keeps the end from when it began
+      // One stopped while waiting for input keeps the end from when it began
       // waiting, since it was blocked from then on.
-      if (turnStarted && !terminationUnconfirmed && !t.end_tree)
-        await this.recordEnd(t);
+      if (turnStarted && !t.end_tree) await this.recordEnd(t);
       this.store.save(t);
 
       this.store.event(t, `task.${t.status}`, {
@@ -749,10 +715,6 @@ export class Control {
 
   async stop(owner: string, id: string, status: "interrupted" | "cancelled") {
     const t = this.mutableTask(owner, id);
-    if (t.waiting_reason === "termination_unconfirmed")
-      throw new Error(
-        "Worker termination is unconfirmed; task controls remain locked",
-      );
     if (["completed", "failed", "cancelled"].includes(t.status))
       throw new Error(`Cannot stop ${t.status} task`);
     const a = this.active.get(id);
@@ -764,10 +726,6 @@ export class Control {
       a.abort.abort(new Error(status));
       await a.done;
       const current = this.mutableTask(owner, id);
-      if (current.waiting_reason === "termination_unconfirmed")
-        throw new Error(
-          "Worker termination is unconfirmed; task controls remain locked",
-        );
       current.status = status;
       delete current.pending_input;
       delete current.waiting_reason;
@@ -825,10 +783,6 @@ export class Control {
 
   async steer(owner: string, id: string, message: string) {
     let t = this.mutableTask(owner, id);
-    if (t.waiting_reason === "termination_unconfirmed")
-      throw new Error(
-        "Worker termination is unconfirmed; task controls remain locked",
-      );
     if (["completed", "failed", "cancelled"].includes(t.status))
       throw new Error("Cannot steer a terminal task");
 

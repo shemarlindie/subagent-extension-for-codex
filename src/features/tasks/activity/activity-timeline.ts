@@ -459,12 +459,9 @@ export function currentActivityStatus(
       return { text: sentence(task.status), state: "info" };
     if (task.status === "waiting" || task.pending_input)
       return {
-        text:
-          task.waiting_reason === "termination_unconfirmed"
-            ? "Shutdown unconfirmed"
-            : task.pending_input
-              ? `Needs input · ${task.pending_input.tool}`
-              : "Waiting",
+        text: task.pending_input
+          ? `Needs input · ${task.pending_input.tool}`
+          : "Waiting",
         state: "info",
       };
     if (task.status === "queued" || task.status === "starting")
