@@ -18,7 +18,7 @@
   align-items: flex-start;
   gap: 12px;
   margin: var(--bleed) var(--bleed) 0;
-  padding: var(--dialog-pad) var(--dialog-pad) 4px;
+  padding: var(--dialog-pad) 44px 4px var(--dialog-pad);
   background: var(--bg);
 }
 .dialog-heading h2 {
@@ -26,6 +26,9 @@
   min-width: 0;
 }
 .dialog-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   flex: none;
   width: 28px;
   height: 28px;

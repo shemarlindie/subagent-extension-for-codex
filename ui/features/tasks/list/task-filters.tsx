@@ -111,7 +111,7 @@ export function TaskFilters() {
               searchRef.current?.focus();
             }}
           >
-            <Icon name="close" size={14} />
+            <Icon name="close" size={8} />
           </Button>
         )}
       </div>
