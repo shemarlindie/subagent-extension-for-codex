@@ -62,7 +62,7 @@ export function delegationPanel(
           .object({ repository: z.string(), auto_register: z.boolean() })
           .optional(),
         panel_selection: z
-          .object({ task_id: z.string(), tab: z.enum(["activity", "result"]) })
+          .object({ task_id: z.string(), tab: z.enum(["activity"]) })
           .optional(),
         tasks: z.array(z.record(z.string(), z.unknown())).optional(),
       }),

@@ -17,15 +17,13 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import { z } from "zod";
 
 import {
   type ModelChoice,
   type Provider,
-  type Result,
-  resultSchema,
   type RunContext,
   type Task,
+  type TurnOutput,
 } from "../../../shared/contracts.js";
 import { git } from "../../workspaces/workspace.js";
 import { claudeMetadata } from "../metadata.js";
@@ -122,15 +120,6 @@ export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
     },
   };
 }
-
-const output = z.strictObject({
-  summary: z.string(),
-  findings: z.array(z.string()),
-  evidence: z.array(z.string()),
-  changes: z.array(z.string()),
-  tests: z.array(z.string()),
-  recommendations: z.array(z.string()),
-});
 
 const readTools = ["Read", "Glob", "Grep"];
 const writeTools = ["Edit", "Write"];
@@ -300,7 +289,7 @@ export class ClaudeAgentProvider implements Provider {
     }
   }
 
-  async run(c: RunContext, prompt: string): Promise<Result> {
+  async run(c: RunContext, prompt: string): Promise<TurnOutput> {
     const taskOptions = readClaudeTaskOptions(c.task);
     if (
       !taskOptions.claude_policy ||
@@ -387,11 +376,10 @@ export class ClaudeAgentProvider implements Provider {
         : {
             maxBudgetUsd: c.task.budget.max_cost_usd - (c.task.cost_usd ?? 0),
           }),
-      outputFormat: { type: "json_schema", schema: resultSchema },
       systemPrompt: {
         type: "preset",
         preset: "claude_code",
-        append: `You are an independent ${c.task.worker_profile}. Work only in the provided task workspace. Return structured evidence and results. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Follow the configured native permission mode for tool execution."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
+        append: `You are an independent ${c.task.worker_profile}. Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Follow the configured native permission mode for tool execution."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
       },
       hooks: {
         PreToolUse: [
@@ -410,10 +398,6 @@ export class ClaudeAgentProvider implements Provider {
                   },
                 });
 
-                if (tool === "StructuredOutput")
-                  return output.strict().safeParse(params).success
-                    ? {}
-                    : deny("Invalid structured report");
                 // Enabled restrictions deny before settings rules or modes can approve.
                 // Skills stay available; the tools they call are checked individually.
                 const denial = restrictedDenial(tool);
@@ -431,11 +415,6 @@ export class ClaudeAgentProvider implements Provider {
         ],
       },
       canUseTool: async (tool, input, { signal }) => {
-        if (tool === "StructuredOutput")
-          return output.strict().safeParse(input).success
-            ? { behavior: "allow", updatedInput: input }
-            : { behavior: "deny", message: "Invalid structured report" };
-
         if (tool === "AskUserQuestion") {
           const answer = await c.input(tool, input, signal);
 
@@ -474,7 +453,7 @@ export class ClaudeAgentProvider implements Provider {
     };
 
     const stream = this.launch({ prompt, options });
-    let result: Result | undefined;
+    let reply: string | undefined;
 
     try {
       for await (const m of stream) {
@@ -491,22 +470,13 @@ export class ClaudeAgentProvider implements Provider {
               `Claude result: ${m.subtype}${"errors" in m ? ": " + m.errors.join("; ") : ""}`,
             );
 
-          result = m.structured_output
-            ? output.parse(m.structured_output)
-            : {
-                summary: m.result,
-                findings: [],
-                evidence: [],
-                changes: [],
-                tests: [],
-                recommendations: [],
-              };
+          reply = m.result;
         }
       }
 
-      if (!result) throw new Error("Claude ended without a result");
+      if (reply === undefined) throw new Error("Claude ended without a result");
 
-      return result;
+      return { reply };
     } finally {
       c.signal.removeEventListener("abort", abort);
       stream.close();

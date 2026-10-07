@@ -205,24 +205,15 @@ test("completion events are compact, filtered, signed, idempotent and durable ac
   );
 
   const t = make();
-
-  t.result = {
-    summary: "Review complete",
-    findings: [],
-    evidence: [],
-    changes: [],
-    tests: [],
-    recommendations: [],
-  };
-
+  t.attempt = 2;
   store.save(t);
 
   const event = store.event(t, "task.completed", {
-    summary: "Review complete",
+    reply: "Review complete",
   });
 
   store.save(make("task-other"));
-  store.event(make("task-other"), "task.completed", { summary: "Filtered" });
+  store.event(make("task-other"), "task.completed", { reply: "Filtered" });
   events.capture();
   events.capture();
 
@@ -248,9 +239,16 @@ test("completion events are compact, filtered, signed, idempotent and durable ac
   assert.equal(delivered.length, 1);
   assert.equal(delivered[0].body.eventId, `evt_task-a_${event.id}`);
   assert.equal(delivered[0].body.name, "agent_task.completed");
-  assert.equal(delivered[0].body.data.result_available, true);
+
+  assert.deepEqual(delivered[0].body.data, {
+    task_id: "task-a",
+    provider: t.provider,
+    worker_profile: t.worker_profile,
+    turn: 2,
+    reply: "Review complete",
+  });
+
   assert.equal(delivered[0].body.cursor, null);
-  assert.ok(!JSON.stringify(delivered[0].body).includes("findings"));
   assert.equal(delivered[0].headers["webhook-id"], delivered[0].body.eventId);
   await restarted.close();
   restored.close();

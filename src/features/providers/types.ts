@@ -1,4 +1,4 @@
-import type { InputPresentation, Result, Task } from "../tasks/model.js";
+import type { InputPresentation, Task } from "../tasks/model.js";
 import { reasoningLevels } from "../tasks/policy/reasoning.js";
 import type { ProviderMetadata } from "./metadata.js";
 import type { ProviderTaskPolicy } from "./task-policy.js";
@@ -36,6 +36,11 @@ export interface RunContext {
   }>;
 }
 
+/** What a successful turn returns: the worker's reply, in plain text or Markdown. */
+export interface TurnOutput {
+  reply: string;
+}
+
 export interface ModelChoice {
   value: string;
   displayName: string;
@@ -50,7 +55,7 @@ export interface Provider {
   metadata?: ProviderMetadata;
   taskPolicy: ProviderTaskPolicy;
   models?(): Promise<ModelChoice[]>;
-  run(context: RunContext, prompt: string): Promise<Result>;
+  run(context: RunContext, prompt: string): Promise<TurnOutput>;
   /** Deletes the provider-side session a task ran in; one already gone is not an error. */
   deleteSession?(task: Task): Promise<void>;
   close?(): Promise<void>;

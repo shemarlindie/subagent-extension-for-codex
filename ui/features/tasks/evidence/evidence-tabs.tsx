@@ -11,6 +11,7 @@ import type { Tab, Task } from "../../../shared/state/types";
 import { ChangesPanel } from "../../changes/changes-panel";
 import { EventList } from "../activity/event-list";
 import { TaskDetails } from "../inspector/task-details";
+import { latestReply } from "../reply";
 import { ResultReport } from "./result-report";
 
 const TAB_EDGE_GAP = 12;
@@ -75,7 +76,7 @@ export function EvidenceTabs({ task }: { task: Task }) {
         <Tabs.Indicator className="tab-indicator" />
       </Tabs.List>
       <Tabs.Panel value="result">
-        <ResultReport result={task.result} />
+        <ResultReport reply={latestReply(state.events, task.id)} />
       </Tabs.Panel>
       <Tabs.Panel value="changes">
         <ChangesPanel task={task} />

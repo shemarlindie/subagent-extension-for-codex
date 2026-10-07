@@ -9,7 +9,7 @@ export function initialState(): Snapshot {
     revision: "HEAD",
     filter: null,
     search: "",
-    tab: "result",
+    tab: "activity",
     connected: false,
     scopeKnown: false,
     busy: false,

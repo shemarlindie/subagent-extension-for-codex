@@ -10,9 +10,13 @@ import {
   useSnapshot,
 } from "../../../shared/state/controller-context";
 import type { Task } from "../../../shared/state/types";
+import { latestReply } from "../reply";
 
-export function handoffMessage(task: Task) {
-  return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task and full results with get_agent_result using task_id=${JSON.stringify(task.id)}. Read what it changed with get_agent_changes. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\n${task.branch ? `Branch: ${task.branch}\n` : ""}Description excerpt: ${task.description.slice(0, 1500)}${task.description.length > 1500 ? "… (truncated)" : ""}\nSummary excerpt: ${task.result?.summary.slice(0, 2500) ?? "No result yet."}${(task.result?.summary.length ?? 0) > 2500 ? "… (truncated)" : ""}`;
+const excerpt = (text: string, max: number) =>
+  text.length > max ? `${text.slice(0, max)}… (truncated)` : text;
+
+export function handoffMessage(task: Task, reply?: string) {
+  return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task and the worker's latest reply with get_agent_result using task_id=${JSON.stringify(task.id)}. Read what it changed with get_agent_changes. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\n${task.branch ? `Branch: ${task.branch}\n` : ""}Description excerpt: ${excerpt(task.description, 1500)}\nLatest reply excerpt: ${reply === undefined ? "No reply yet." : excerpt(reply, 2500)}`;
 }
 
 export function HandoffForm({ task }: { task: Task }) {
@@ -23,7 +27,7 @@ export function HandoffForm({ task }: { task: Task }) {
     canCopy = !controller.transport.embedded;
 
   const { register, handleSubmit } = usePersistedDialogForm("handoff", {
-    message: handoffMessage(task),
+    message: handoffMessage(task, latestReply(state.events, task.id)),
   });
 
   return (

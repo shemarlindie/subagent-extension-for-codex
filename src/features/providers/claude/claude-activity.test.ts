@@ -327,7 +327,7 @@ test("run emits result accounting exactly once for success and failure", async (
     if (failed)
       await assert.rejects(provider.run(context, "Review"), /error_max_turns/);
     else
-      assert.equal((await provider.run(context, "Review")).summary, "Finished");
+      assert.equal((await provider.run(context, "Review")).reply, "Finished");
 
     const completed = events.filter(
       (event) => event.type === "agent.completed",

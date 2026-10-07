@@ -89,6 +89,7 @@ const serviceTypes = new Set([
   "agent.input_required",
   "agent.input_submitted",
   "agent.input_decision",
+  "agent.reply",
 ]);
 
 const kindOf = (message: Record<string, unknown>) =>
@@ -184,6 +185,15 @@ test("service event payloads match what the service emits", () => {
     ]);
   for (const data of payload("task.started"))
     assert.deepEqual(Object.keys(data), ["attempt"]);
+  for (const data of payload("agent.reply"))
+    assert.deepEqual(Object.keys(data), [
+      "text",
+      "turn",
+      "start_tree",
+      "end_tree",
+    ]);
+  for (const data of payload("task.completed"))
+    assert.deepEqual(Object.keys(data), ["reply"]);
   for (const data of payload("task.failed"))
     assert.deepEqual(Object.keys(data), ["error"]);
   for (const data of payload("task.waiting"))

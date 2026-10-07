@@ -9,6 +9,7 @@ import {
 import { z } from "zod";
 
 import { type Event } from "../../shared/contracts.js";
+import { REPLY_EXCERPT_CHARS, replyExcerpt } from "../tasks/reply.js";
 import type { Store } from "../tasks/store.js";
 import {
   callbackUrl,
@@ -23,6 +24,25 @@ const names = [
   "agent_task.failed",
   "agent_task.input_required",
 ] as const;
+
+const basePayload = {
+  task_id: { type: "string" },
+  provider: { type: "string" },
+  worker_profile: { type: "string" },
+  turn: { type: "integer" },
+};
+
+/** A completed turn carries its reply; the others say what happened. */
+function payloadSchema(name: (typeof names)[number]) {
+  const detail = name === "agent_task.completed" ? "reply" : "summary";
+
+  return {
+    type: "object",
+    properties: { ...basePayload, [detail]: { type: "string" } },
+    required: [...Object.keys(basePayload), detail],
+    additionalProperties: false,
+  };
+}
 
 const filters = z
   .object({
@@ -190,31 +210,14 @@ export class Events {
         name,
         description: {
           "agent_task.completed":
-            "A delegated task completed; retrieve its full result through get_agent_result.",
-          "agent_task.failed": "A delegated task failed.",
+            "A delegated task's turn completed; retrieve its full reply through get_agent_result and its changes through get_agent_changes.",
+          "agent_task.failed": "A delegated task's turn failed.",
           "agent_task.input_required":
             "A delegated task needs user input or permission.",
         }[name],
         delivery: ["webhook"],
         inputSchema: z.toJSONSchema(filters),
-        payloadSchema: {
-          type: "object",
-          properties: {
-            task_id: { type: "string" },
-            provider: { type: "string" },
-            worker_profile: { type: "string" },
-            summary: { type: "string" },
-            result_available: { type: "boolean" },
-          },
-          required: [
-            "task_id",
-            "provider",
-            "worker_profile",
-            "summary",
-            "result_available",
-          ],
-          additionalProperties: false,
-        },
+        payloadSchema: payloadSchema(name),
       })),
     };
   }
@@ -422,14 +425,17 @@ export class Events {
                 task_id: t.id,
                 provider: t.provider,
                 worker_profile: t.worker_profile,
-                summary: String(
-                  e.data.summary ??
-                    e.data.error ??
-                    (name === "agent_task.input_required"
-                      ? "User input required"
-                      : name),
-                ).slice(0, 1500),
-                result_available: !!t.result,
+                turn: t.attempt,
+                ...(name === "agent_task.completed"
+                  ? { reply: replyExcerpt(String(e.data.reply ?? "")) }
+                  : {
+                      summary: String(
+                        e.data.error ??
+                          (name === "agent_task.input_required"
+                            ? "User input required"
+                            : name),
+                      ).slice(0, REPLY_EXCERPT_CHARS),
+                    }),
               },
               cursor: null,
             };

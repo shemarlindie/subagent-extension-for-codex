@@ -24,14 +24,7 @@ import {
   claudeSandbox,
 } from "./provider.js";
 
-const result = {
-  summary: "Reviewed",
-  findings: ["Missing check"],
-  evidence: ["a.ts:1"],
-  changes: [],
-  tests: [],
-  recommendations: [],
-};
+const reply = "Reviewed: a.ts:1 is missing a check.";
 
 const setClaudeOptions = (task: Task, patch: Record<string, unknown>) => {
   task.provider_options = {
@@ -267,7 +260,7 @@ test("failed Claude model discovery closes the query and retries after a short c
   assert.equal(closes, 2);
 });
 
-test("Claude SDK query uses native harness, resume, structured output, remaining budget and profile restrictions", async () => {
+test("Claude SDK query uses native harness, resume, a plain reply, remaining budget and profile restrictions", async () => {
   const { c, events, sessions } = await context();
   let options: Options | undefined;
   let closed = false;
@@ -304,7 +297,7 @@ test("Claude SDK query uses native harness, resume, structured output, remaining
         subtype: "success",
         is_error: false,
         session_id: "existing-session",
-        structured_output: result,
+        result: reply,
         total_cost_usd: 0.1,
         usage: {},
       };
@@ -315,7 +308,7 @@ test("Claude SDK query uses native harness, resume, structured output, remaining
     }) as unknown as Query;
   });
 
-  assert.deepEqual(await provider.run(c, "Review"), result);
+  assert.deepEqual(await provider.run(c, "Review"), { reply });
   assert.equal(options!.cwd, c.task.workspace);
   assert.equal(options!.resume, "existing-session");
   assert.equal(options!.maxBudgetUsd, 4);
@@ -347,7 +340,7 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
         yield {
           type: "result",
           subtype: "success",
-          structured_output: result,
+          result: reply,
           total_cost_usd: 0,
           usage: {},
         };
@@ -412,7 +405,7 @@ test("Claude forwards the selected model and effort and omits inherited native s
         yield {
           type: "result",
           subtype: "success",
-          structured_output: result,
+          result: reply,
           total_cost_usd: 0,
           usage: {},
         };
@@ -455,7 +448,7 @@ test("write-profile shell commands require human decision and cannot use edited 
         yield {
           type: "result",
           subtype: "success",
-          structured_output: result,
+          result: reply,
           total_cost_usd: 0,
           usage: {},
         };
@@ -530,7 +523,7 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
         yield {
           type: "result",
           subtype: "success",
-          structured_output: result,
+          result: reply,
           total_cost_usd: 0,
           usage: {},
         };
@@ -639,7 +632,7 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
         yield {
           type: "result",
           subtype: "success",
-          structured_output: result,
+          result: reply,
           total_cost_usd: 0,
           usage: {},
         };
@@ -728,7 +721,7 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
         subtype: "success",
         is_error: false,
         session_id: "existing-session",
-        structured_output: result,
+        result: reply,
         total_cost_usd: 0.1,
         usage: {},
       };
@@ -737,7 +730,7 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
     return Object.assign(messages, { close: () => {} }) as unknown as Query;
   });
 
-  assert.deepEqual(await provider.run(c, "Review"), result);
+  assert.deepEqual(await provider.run(c, "Review"), { reply });
   assert.equal(Object.hasOwn(options!, "maxBudgetUsd"), false);
 });
 
@@ -864,7 +857,7 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
   assert.ok(settings.sandbox.filesystem.denyRead.includes(canonicalWorkspace));
 });
 
-test("native StructuredOutput accepts only the result contract while other reporting tools stay denied", async () => {
+test("Claude asks for a plain reply, with no structured output tool", async () => {
   const { c } = await context();
   let options: Options | undefined;
 
@@ -876,7 +869,7 @@ test("native StructuredOutput accepts only the result contract while other repor
         yield {
           type: "result",
           subtype: "success",
-          structured_output: result,
+          result: "Reviewed **a.ts**; one check is missing.",
           total_cost_usd: 0,
           usage: {},
         };
@@ -885,23 +878,16 @@ test("native StructuredOutput accepts only the result contract while other repor
     ) as unknown as Query;
   });
 
-  await provider.run(c, "Report");
-  const hook = options!.hooks!.PreToolUse![0].hooks[0];
+  assert.deepEqual(await provider.run(c, "Report"), {
+    reply: "Reviewed **a.ts**; one check is missing.",
+  });
 
-  const check = (name: string, params: object) =>
-    hook(
-      {
-        hook_event_name: "PreToolUse",
-        tool_name: name,
-        tool_input: params,
-        session_id: "x",
-        transcript_path: "x",
-        cwd: c.task.workspace!,
-        tool_use_id: "x",
-      },
-      "x",
-      { signal: c.signal },
-    );
+  assert.equal(options!.outputFormat, undefined);
+
+  assert.match(
+    (options!.systemPrompt as { append: string }).append,
+    /End each turn with a plain reply/,
+  );
 
   const permission = (name: string, input: object) =>
     options!.canUseTool!(name, input as Record<string, unknown>, {
@@ -910,33 +896,11 @@ test("native StructuredOutput accepts only the result contract while other repor
       requestId: "request",
     });
 
-  assert.deepEqual(await check("StructuredOutput", result), {});
-
-  assert.equal(
-    (await permission("StructuredOutput", result))!.behavior,
-    "allow",
-  );
-
-  for (const invalid of [
-    { summary: "Missing report fields" },
-    { ...result, command: "unrelated shell command" },
-  ]) {
+  for (const tool of ["StructuredOutput", "mcp__unconfigured__report"])
     assert.equal(
-      ((await check("StructuredOutput", invalid)) as any).hookSpecificOutput
-        .permissionDecision,
+      (await permission(tool, { summary: "Report" }))!.behavior,
       "deny",
     );
-
-    assert.equal(
-      (await permission("StructuredOutput", invalid))!.behavior,
-      "deny",
-    );
-  }
-
-  assert.equal(
-    (await permission("mcp__unconfigured__report", result))!.behavior,
-    "deny",
-  );
 });
 
 async function runWithPolicy(
@@ -965,7 +929,7 @@ async function runWithPolicy(
         yield {
           type: "result",
           subtype: "success",
-          structured_output: result,
+          result: reply,
           total_cost_usd: 0,
           usage: {},
         };
@@ -1042,7 +1006,6 @@ test("Claude parity policy leaves sandbox, tools and paths to the user's configu
 
   // Without a path guard, outside reads are not auto-approved.
   assert.deepEqual(asked, ["WebFetch", "Agent", "NotebookEdit", "Read"]);
-  assert.equal(await check("StructuredOutput", { summary: "x" }), "deny");
 });
 
 test("Claude path guard and restricted tools apply independently when enabled", async () => {
@@ -1136,7 +1099,7 @@ test("Claude tasks with resolved default restrictions run with CLI parity", asyn
         yield {
           type: "result",
           subtype: "success",
-          structured_output: result,
+          result: reply,
           total_cost_usd: 0,
           usage: {},
         };

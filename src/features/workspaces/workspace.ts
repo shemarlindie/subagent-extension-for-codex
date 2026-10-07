@@ -93,8 +93,12 @@ function changesBase(t: Task, scope: ChangeScope) {
 /** Where a task's snapshot refs live: `refs/agent-tasks/<task-id>/<name>`. */
 const SNAPSHOT_REFS = "refs/agent-tasks";
 
-/** The snapshots a task keeps: its start, and its latest turn's start and end. */
-export type SnapshotName = "start" | "turn-start" | "end";
+/**
+ * The snapshots a task keeps: its start, its latest turn's start and end, and
+ * each replied turn's start and end, which its `agent.reply` records.
+ */
+export type SnapshotName =
+  "start" | "turn-start" | "end" | `turns/${number}/${"start" | "end"}`;
 
 /** The tree of a checkout's HEAD commit. */
 async function headTree(cwd: string) {

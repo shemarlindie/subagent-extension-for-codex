@@ -12,7 +12,7 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 
 import { claudeActivityPresentation } from "../../../src/features/providers/claude/activity";
-import type { Event, Result, Task } from "../../../src/shared/contracts";
+import type { Event, Task } from "../../../src/shared/contracts";
 
 type Data = Record<string, unknown>;
 
@@ -413,15 +413,31 @@ class Timeline {
     return this;
   }
 
-  /** The turn's result message, then the service's `task.completed`. */
+  /**
+   * The turn's result message, then the service's `agent.reply` and
+   * `task.completed`.
+   */
   finish(
-    summary: string,
+    text: string,
+    turn = 1,
     fields: Partial<Extract<SDKResultMessage, { subtype: "success" }>> = {},
   ) {
-    return this.turnResult(summary, fields).add(
-      "task.completed",
-      { summary },
-      200,
+    return this.turnResult(text, fields)
+      .reply(text, turn)
+      .add("task.completed", { reply: text }, 200);
+  }
+
+  /** The service's record of a turn's reply, with its snapshots. */
+  reply(text: string, turn = 1) {
+    return this.add(
+      "agent.reply",
+      {
+        text,
+        turn,
+        start_tree: `${FAKE_TREE}${turn}s`,
+        end_tree: `${FAKE_TREE}${turn}e`,
+      },
+      100,
     );
   }
 
@@ -484,6 +500,9 @@ const timestamps = (start: number, minutes: number) => ({
   updated_at: at(start + minutes),
 });
 
+// Stand-ins for the snapshot trees a reply records, with a turn suffix.
+const FAKE_TREE = "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0";
+
 // Stand-ins for a worktree task's Git fields. The fixture service replaces
 // them with a real repository's (ui/dev/preview/change-fixtures.ts).
 const FAKE_COMMIT = "4f1c2d9e8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e";
@@ -494,33 +513,18 @@ const worktree = (id: string) => ({
   base_commit: FAKE_COMMIT,
 });
 
-const auditResult: Result = {
-  summary:
-    "Two dependencies use licences that need review before release; the rest are permissive.",
-  findings: [
-    "`legacy-charts` is GPL-3.0 and is imported by the reporting bundle.",
-    "`fast-parse` has no licence field; its repository has no LICENSE file.",
-  ],
-  evidence: [
-    "Read package.json and package-lock.json.",
-    "Searched node_modules/*/package.json for the licence field.",
-  ],
-  changes: [],
-  tests: ["No tests run; read-only audit."],
-  recommendations: [
-    "Replace `legacy-charts` or isolate it behind a separate process.",
-    "Ask the `fast-parse` maintainers to add a licence before adopting it.",
-  ],
-};
+const auditReply = `Two dependencies use licences that need review before release; the rest are permissive.
 
-const blocksResult: Result = {
-  summary: "Catalogued the design assets and flagged one mismatched icon size.",
-  findings: ["`logo-small.png` is 64×64 px; the manifest expects 128×128."],
-  evidence: ["Inspected assets/ and docs/style-guide.pdf."],
-  changes: ["Added assets/README.md describing expected sizes."],
-  tests: ["npm run lint — passed"],
-  recommendations: ["Regenerate the small logo from the vector source."],
-};
+- \`legacy-charts\` is GPL-3.0 and is imported by the reporting bundle.
+- \`fast-parse\` has no licence field, and its repository has no LICENSE file.
+
+I read \`package.json\` and \`package-lock.json\`, and checked the licence field of each installed package. No tests were run, since this was a read-only audit.
+
+**Left to do:** replace \`legacy-charts\` or isolate it behind a separate process, and ask the \`fast-parse\` maintainers to add a licence before adopting it.`;
+
+const blocksReply = `Catalogued the design assets and flagged one mismatched icon size: \`logo-small.png\` is 64×64 px, but the manifest expects 128×128.
+
+I added \`assets/README.md\` with the expected sizes, and \`npm run lint\` passes. The small logo should be regenerated from the vector source.`;
 
 const questionInput = {
   questions: [
@@ -700,7 +704,7 @@ audit.sdk({
   preceding_tool_use_ids: [],
 });
 
-audit.finish(auditResult.summary);
+audit.finish(auditReply);
 
 // --- Failed run: tool error, denied permission, mirror error ------------------
 const failed = new Timeline("preview-failed", at(30), 200);
@@ -1089,7 +1093,7 @@ blocks.say(
   'Done. Summary of sizes:\n\n```json\n{ "logo-small.png": "64x64", "logo.png": "512x512" }\n```',
 );
 
-blocks.finish(blocksResult.summary);
+blocks.finish(blocksReply, 2);
 
 // --- Rare SDK signals and session housekeeping --------------------------------
 const signals = new Timeline("preview-signals", at(100), 700);
@@ -1171,15 +1175,11 @@ signals.sdk({
 });
 
 // --- Long run: more events than the activity view keeps (EVENT_TAIL_SIZE) ----
-const longResult: Result = {
-  summary:
-    "Converted 36 test files to the new runner; one needed a manual fix.",
-  findings: ["`suite-17.test.ts` relied on global state and failed once."],
-  evidence: ["Ran each converted file after editing it."],
-  changes: ["Converted tests/suite-0 … suite-35 to the new runner API."],
-  tests: ["npm test — 36 files passed after the fix to suite-17."],
-  recommendations: ["Remove the legacy runner once CI has run twice."],
-};
+const longReply = `Converted 36 test files to the new runner; one needed a manual fix.
+
+\`suite-17.test.ts\` relied on global state and failed once, so I isolated its setup. \`npm test\` now passes for all 36 files.
+
+The legacy runner can be removed once CI has run twice.`;
 
 const long = new Timeline("preview-long", at(110), 900);
 begin(long, ["Read", "Edit", "Bash"]);
@@ -1230,7 +1230,7 @@ for (let i = 0; i < 36; i++) {
     );
 }
 
-long.finish(longResult.summary);
+long.finish(longReply);
 
 const lifecycle = (id: string, start: number, ...rest: [string, Data?][]) => {
   const t = new Timeline(
@@ -1264,7 +1264,22 @@ const build = lifecycle(
   105,
   ["task.queued"],
   ["task.started", { attempt: 1 }],
-  ["task.completed", { summary: "Cached module compilation in 60 files." }],
+  [
+    "agent.reply",
+    {
+      text: "Cached module compilation in 60 files: every build module now uses the cached compiler.",
+      turn: 1,
+      start_tree: `${FAKE_TREE}1s`,
+      end_tree: `${FAKE_TREE}1e`,
+    },
+  ],
+  [
+    "task.completed",
+    {
+      reply:
+        "Cached module compilation in 60 files: every build module now uses the cached compiler.",
+    },
+  ],
 );
 
 // --- Changes: every file in large-files.ts, for the file previews ----------
@@ -1273,7 +1288,22 @@ const profile = lifecycle(
   107,
   ["task.queued"],
   ["task.started", { attempt: 1 }],
-  ["task.completed", { summary: "Wrote the build profile and its reports." }],
+  [
+    "agent.reply",
+    {
+      text: "Wrote the build profile and its reports: the build log, size reports and a dependency graph.",
+      turn: 1,
+      start_tree: `${FAKE_TREE}1s`,
+      end_tree: `${FAKE_TREE}1e`,
+    },
+  ],
+  [
+    "task.completed",
+    {
+      reply:
+        "Wrote the build profile and its reports: the build log, size reports and a dependency graph.",
+    },
+  ],
 );
 
 const permission = lifecycle(
@@ -1465,7 +1495,6 @@ export const previewTasks: Task[] = [
     runtime_ms: 64000,
     cost_usd: 0.42,
     ...timestamps(0, 2),
-    result: auditResult,
   },
   {
     ...taskBase,
@@ -1605,7 +1634,6 @@ export const previewTasks: Task[] = [
     runtime_ms: 128000,
     cost_usd: 0.91,
     ...timestamps(90, 3),
-    result: blocksResult,
   },
   {
     ...taskBase,
@@ -1692,7 +1720,6 @@ export const previewTasks: Task[] = [
     runtime_ms: 540000,
     cost_usd: 2.37,
     ...timestamps(110, 9),
-    result: longResult,
   },
   {
     ...taskBase,
@@ -1712,14 +1739,6 @@ export const previewTasks: Task[] = [
     cost_usd: 1.04,
     ...worktree("preview-build"),
     ...timestamps(105, 4),
-    result: {
-      summary: "Cached module compilation in 60 files.",
-      findings: [],
-      evidence: [],
-      changes: ["Switched every build module to the cached compiler."],
-      tests: [],
-      recommendations: [],
-    },
   },
   {
     ...taskBase,
@@ -1740,14 +1759,6 @@ export const previewTasks: Task[] = [
     cost_usd: 1.31,
     ...worktree("preview-profile"),
     ...timestamps(107, 5),
-    result: {
-      summary: "Wrote the build profile and its reports.",
-      findings: [],
-      evidence: [],
-      changes: ["Added the build log, size reports and a dependency graph."],
-      tests: [],
-      recommendations: [],
-    },
   },
   ...liveTasks,
 ];

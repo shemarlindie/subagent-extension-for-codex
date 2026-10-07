@@ -14,20 +14,18 @@ import { Store } from "../../../src/features/tasks/store.js";
 import { Workspaces } from "../../../src/features/workspaces/workspace.js";
 import { application } from "../../../src/platform/server/app.js";
 import { Auth } from "../../../src/platform/server/auth.js";
-import { type Result, type RunContext } from "../../../src/shared/contracts.js";
+import {
+  type RunContext,
+  type TurnOutput,
+} from "../../../src/shared/contracts.js";
 import { waitForListening } from "../../support/helpers.js";
 
 class PermissionProvider extends FixtureProvider {
-  async run(ctx: RunContext): Promise<Result> {
+  async run(ctx: RunContext): Promise<TurnOutput> {
     const answer = await ctx.input("Bash", { command: "pwd" }, ctx.signal);
 
     return {
-      summary: JSON.stringify(answer),
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
+      reply: JSON.stringify(answer),
     };
   }
 }
@@ -195,7 +193,8 @@ test("console cookie can configure modes and approve while generic bearer API ca
     await until(() => c.store.get(id, "local").status === "completed");
 
     assert.equal(
-      JSON.parse(c.store.get(id, "local").result!.summary).approved,
+      JSON.parse(String(c.store.latestEvent(id, "agent.reply")!.data.text))
+        .approved,
       true,
     );
   } finally {
@@ -248,7 +247,8 @@ test("authenticated admin user-tools route supports user settings, starts, and d
     await until(() => c.store.get(id, "local").status === "completed");
 
     assert.equal(
-      JSON.parse(c.store.get(id, "local").result!.summary).approved,
+      JSON.parse(String(c.store.latestEvent(id, "agent.reply")!.data.text))
+        .approved,
       true,
     );
 
@@ -369,7 +369,9 @@ test("MCP advertises app-only aliases and enforces approval policy for model-fac
     await until(() => c.store.get(delegatedId, "local").status === "completed");
 
     assert.equal(
-      JSON.parse(c.store.get(delegatedId, "local").result!.summary).approved,
+      JSON.parse(
+        String(c.store.latestEvent(delegatedId, "agent.reply")!.data.text),
+      ).approved,
       true,
     );
   } finally {

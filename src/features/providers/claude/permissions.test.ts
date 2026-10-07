@@ -8,10 +8,10 @@ import { test, type TestContext } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/fixture-provider.js";
 import {
-  type Result,
   type RunContext,
   startSchema,
   type Task,
+  type TurnOutput,
 } from "../../../shared/contracts.js";
 import { Settings } from "../../settings/settings.js";
 import { Control } from "../../tasks/control.js";
@@ -331,7 +331,7 @@ test("parent task references require ownership and do not pass on the parent's m
 });
 
 class PromptProvider extends FixtureProvider {
-  async run(ctx: RunContext): Promise<Result> {
+  async run(ctx: RunContext): Promise<TurnOutput> {
     const answer = await ctx.input(
       "Write",
       { file_path: "README.md" },
@@ -339,12 +339,7 @@ class PromptProvider extends FixtureProvider {
     );
 
     return {
-      summary: JSON.stringify(answer),
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
+      reply: JSON.stringify(answer),
     };
   }
 }
@@ -434,7 +429,8 @@ test("persisted Claude tasks retain native approval routing", async (t) => {
     await until(() => store.get(task.id, "alice").status === "completed");
 
     assert.equal(
-      JSON.parse(store.get(task.id, "alice").result!.summary).approved,
+      JSON.parse(String(store.latestEvent(task.id, "agent.reply")!.data.text))
+        .approved,
       false,
     );
   }
@@ -494,7 +490,9 @@ test("native unresolved approvals honor their decision setting independently of 
   await until(() => store.get(delegated.id, "alice").status === "completed");
 
   assert.equal(
-    JSON.parse(store.get(delegated.id, "alice").result!.summary).approved,
+    JSON.parse(
+      String(store.latestEvent(delegated.id, "agent.reply")!.data.text),
+    ).approved,
     false,
   );
 });

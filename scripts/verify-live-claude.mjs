@@ -4,10 +4,14 @@ import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { Control } from "../dist/core/control.js";
-import { Store } from "../dist/core/store.js";
-import { Workspaces } from "../dist/core/workspace.js";
-import { ClaudeAgentProvider } from "../dist/providers/claude.js";
+import { ClaudeAgentProvider } from "../dist/features/providers/claude/provider.js";
+import { Control } from "../dist/features/tasks/control.js";
+import { Store } from "../dist/features/tasks/store.js";
+import { Workspaces } from "../dist/features/workspaces/workspace.js";
+
+/** A task's latest reply text, or "" before it has replied. */
+const latestReply = (store, id) =>
+  String(store.latestEvent(id, "agent.reply")?.data.text ?? "");
 
 if (process.env.CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY !== "1") {
   console.error(
@@ -134,7 +138,7 @@ if (scenario === "read") {
     worker_profile: "reviewer",
     title: "Read the verification marker",
     description:
-      "Read README.md using the native Read tool. Report the exact verification marker in your structured findings and evidence. Do not ask questions, run commands or edit files.",
+      "Read README.md using the native Read tool. Report the exact verification marker in your reply. Do not ask questions, run commands or edit files.",
     budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
   });
 
@@ -158,7 +162,7 @@ if (scenario === "read") {
         )
       ) {
         assert.equal(current.status, "completed", current.error);
-        assert.ok(current.result.findings.join(" ").includes("COBALT-27"));
+        assert.ok(latestReply(store, task.id).includes("COBALT-27"));
         assert.ok(current.session_id && current.session_state_ref);
         const evidence = store.events(task.id, "verification");
 
@@ -167,8 +171,6 @@ if (scenario === "read") {
             (e) => e.type === "tool.started" && e.data.name === "Read",
           ),
         );
-
-        assert.ok(store.get(task.id, "verification").result);
 
         assert.equal(
           execFileSync("git", ["-C", repo, "status", "--porcelain"], {
@@ -183,7 +185,7 @@ if (scenario === "read") {
             cost_usd: current.cost_usd,
             session_state_available: !!current.session_state_ref,
             read_tool_observed: true,
-            result_persisted: true,
+            reply_persisted: true,
             primary_clean: true,
           }),
         );
@@ -208,7 +210,7 @@ if (scenario === "read") {
     worker_profile: "reviewer",
     title: "Ask before reading README",
     description:
-      "Before reading anything, use the native AskUserQuestion tool to ask: May I inspect README now? Offer Proceed and Wait. Wait for the user response before inspecting README. Afterwards report its exact verification marker in structured findings.",
+      "Before reading anything, use the native AskUserQuestion tool to ask: May I inspect README now? Offer Proceed and Wait. Wait for the user response before inspecting README. Afterwards report its exact verification marker in your reply.",
     budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
   });
 
@@ -255,7 +257,7 @@ if (scenario === "read") {
     await reopened.continue(
       "verification",
       task.id,
-      "Proceed now. Read README.md with the Read tool and report its exact marker in structured findings. Do not ask another question or run commands.",
+      "Proceed now. Read README.md with the Read tool and report its exact marker in your reply. Do not ask another question or run commands.",
     );
 
     console.log(
@@ -275,9 +277,7 @@ if (scenario === "read") {
         assert.equal(current.status, "completed", current.error);
         assert.equal(current.session_id, session);
         assert.equal(current.attempt, 2);
-        assert.ok(current.result.findings.join(" ").includes("COBALT-27"));
-
-        assert.ok(nextStore.get(task.id, "verification").result);
+        assert.ok(latestReply(nextStore, task.id).includes("COBALT-27"));
 
         assert.equal(
           execFileSync("git", ["-C", repo, "status", "--porcelain"], {
@@ -312,8 +312,8 @@ if (scenario === "read") {
     else if (!control.stopped) await control.close();
   }
 } else if (scenario === "mcp") {
-  const { application } = await import("../dist/server/app.js");
-  const { Auth } = await import("../dist/server/auth.js");
+  const { application } = await import("../dist/platform/server/app.js");
+  const { Auth } = await import("../dist/platform/server/auth.js");
   const { randomBytes } = await import("node:crypto");
   const { fileURLToPath } = await import("node:url");
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
@@ -371,7 +371,7 @@ if (scenario === "read") {
       worker_profile: "reviewer",
       title: "Read the verification marker",
       description:
-        "Read README.md with the native Read tool. Include its exact verification marker in your structured findings. Do not ask questions, edit files or run commands.",
+        "Read README.md with the native Read tool. Include its exact verification marker in your reply. Do not ask questions, edit files or run commands.",
       budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
     });
 
@@ -400,7 +400,7 @@ if (scenario === "read") {
 
     assert.ok(completed, "Native MCP verification timed out");
     const report = await call("get_agent_result", { task_id: task.id });
-    assert.ok(report.result.findings.join(" ").includes("COBALT-27"));
+    assert.ok(report.reply.text.includes("COBALT-27"));
     const events = await call("get_agent_events", { task_id: task.id });
 
     assert.ok(
@@ -422,7 +422,7 @@ if (scenario === "read") {
         mcp_transport: "stdio",
         authenticated_service: true,
         native_claude: true,
-        result_retrieved: true,
+        reply_retrieved: true,
         events_retrieved: true,
         cost_usd: completed.cost_usd,
         primary_clean: true,
@@ -444,7 +444,7 @@ if (scenario === "read") {
     worker_profile: "reviewer",
     title: "Read the verification marker",
     description:
-      "Read README.md using Read and report its exact marker in structured findings. Do not ask questions, edit files or run shell commands.",
+      "Read README.md using Read and report its exact marker in your reply. Do not ask questions, edit files or run shell commands.",
     budget: { max_runtime_minutes: 1, max_cost_usd: limit },
   });
 
@@ -480,7 +480,7 @@ if (scenario === "read") {
     assert.equal(ended.status, "failed", ended.error);
     assert.match(ended.error, /error_max_budget_usd/);
     assert.ok(ended.cost_usd >= limit);
-    assert.equal(ended.result, undefined);
+    assert.equal(store.latestEvent(task.id, "agent.reply"), undefined);
 
     assert.ok(
       !store
@@ -502,7 +502,7 @@ if (scenario === "read") {
         cost_retained: true,
         configured_limit_usd: limit,
         reported_cost_usd: ended.cost_usd,
-        no_success_result: true,
+        no_reply: true,
         primary_clean: true,
       }),
     );
@@ -517,7 +517,7 @@ if (scenario === "read") {
     worker_profile: "implementer",
     title: "Use project tools",
     description:
-      "Do exactly these steps and nothing else: 1. Invoke the marker-skill skill with the Skill tool and note its marker. 2. Call the fixture_marker tool of the fixture MCP server and note its marker. 3. Use the Agent tool to start one subagent that reads README.md with the Read tool and returns its verification marker. Report all three markers in your structured findings. Do not edit files or run shell commands.",
+      "Do exactly these steps and nothing else: 1. Invoke the marker-skill skill with the Skill tool and note its marker. 2. Call the fixture_marker tool of the fixture MCP server and note its marker. 3. Use the Agent tool to start one subagent that reads README.md with the Read tool and returns its verification marker. Report all three markers in your reply. Do not edit files or run shell commands.",
     budget: { max_runtime_minutes: 3, max_cost_usd: 0.5 },
   });
 
@@ -578,7 +578,7 @@ if (scenario === "read") {
       .filter((e) => e.type === "tool.started")
       .map((e) => e.data.name);
 
-    const findings = ended.result.findings.join(" ");
+    const findings = latestReply(store, task.id);
 
     const observed = {
       skill_tool: started.includes("Skill"),
@@ -611,7 +611,7 @@ if (scenario === "read") {
       JSON.stringify({
         phase: "verified",
         ...observed,
-        structured_result: true,
+        reply_received: true,
         cost_usd: ended.cost_usd,
         primary_clean: true,
       }),
@@ -655,7 +655,7 @@ if (scenario === "read") {
     provider_options: { claude: { permission_mode: "default" } },
     title: "Verify scoped command permissions",
     description:
-      "Run each of these exact Bash commands once, sequentially. Do not change, combine or retry the commands; do not use other tools. Expected permission failures are evidence, not errors in this verification. Report which commands succeeded or were blocked in your structured tests and evidence. Commands: " +
+      "Run each of these exact Bash commands once, sequentially. Do not change, combine or retry the commands; do not use other tools. Expected permission failures are evidence, not errors in this verification. Report which commands succeeded or were blocked in your reply. Commands: " +
       JSON.stringify(commands),
     budget: { max_runtime_minutes: 2, max_cost_usd: 0.25 },
   });

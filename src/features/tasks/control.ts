@@ -17,6 +17,7 @@ import { assertSelectedProviderOptions } from "../providers/options.js";
 import { Settings } from "../settings/settings.js";
 import { headCommit, Workspaces } from "../workspaces/workspace.js";
 import { Forms } from "./forms.js";
+import { replyExcerpt } from "./reply.js";
 import { Store } from "./store.js";
 import { generateTaskTitle } from "./task-title.js";
 
@@ -294,6 +295,7 @@ export class Control {
     const begin = Date.now();
     let timer: NodeJS.Timeout | undefined;
     let turnStarted = false;
+    let reply: string | undefined;
 
     try {
       this.validateBudgets(t);
@@ -368,10 +370,9 @@ export class Control {
 
       const dependencyContext = await Promise.all(
         deps.map(async (d) =>
-          [
-            `Dependency ${d.id}: ${JSON.stringify(d.result)}`,
-            ...(await this.dependencyChanges(d)),
-          ].join("\n"),
+          [this.dependencyReply(d), ...(await this.dependencyChanges(d))].join(
+            "\n",
+          ),
         ),
       );
 
@@ -383,7 +384,7 @@ export class Control {
         ...t.instructions,
       ].join("\n\n");
 
-      const result = await provider.run(
+      const output = await provider.run(
         {
           task: t,
           signal: a.abort.signal,
@@ -511,7 +512,8 @@ export class Control {
       );
 
       if (a.abort.signal.aborted) throw a.abort.signal.reason;
-      t.result = result;
+      reply = output.reply;
+      await this.recordReply(t, reply);
       t.status = "completed";
       t.completed_at = now();
     } catch (error) {
@@ -547,10 +549,13 @@ export class Control {
       if (turnStarted && !t.end_tree) await this.recordEnd(t);
       this.store.save(t);
 
-      this.store.event(t, `task.${t.status}`, {
-        summary: t.result?.summary,
-        error: t.error,
-      });
+      this.store.event(
+        t,
+        `task.${t.status}`,
+        t.status === "completed" && reply !== undefined
+          ? { reply: replyExcerpt(reply) }
+          : { error: t.error },
+      );
 
       this.active.delete(t.id);
       if (!this.stopped) queueMicrotask(() => void this.schedule());
@@ -573,6 +578,45 @@ export class Control {
     } catch {
       // Left as they were.
     }
+  }
+
+  /**
+   * Records a successful turn's reply with the snapshots its changes start
+   * and end at, each pinned for the turn so a later turn can't replace it.
+   * A current_repo task's end is the one its changes stop at; a worktree's is
+   * taken now. A failed snapshot leaves the end out.
+   */
+  private async recordReply(t: Task, text: string) {
+    const turn = t.attempt;
+    let end: string | undefined;
+
+    try {
+      if (t.workspace_strategy === "current_repo") {
+        await this.recordEnd(t);
+        end = t.end_tree;
+      } else end = await this.workspaces.snapshot(t.workspace!);
+
+      await this.workspaces.pin(t, `turns/${turn}/start`, t.turn_start_tree!);
+      if (end) await this.workspaces.pin(t, `turns/${turn}/end`, end);
+    } catch {
+      end = undefined;
+    }
+
+    this.store.event(t, "agent.reply", {
+      text,
+      turn,
+      start_tree: t.turn_start_tree,
+      ...(end ? { end_tree: end } : {}),
+    });
+  }
+
+  /** A dependency's latest reply for a dependent's prompt. */
+  private dependencyReply(d: Task) {
+    const reply = this.store.latestEvent(d.id, "agent.reply");
+
+    return reply
+      ? `Dependency ${d.id} replied:\n${String(reply.data.text)}`
+      : `Dependency ${d.id} finished without a reply.`;
   }
 
   /**

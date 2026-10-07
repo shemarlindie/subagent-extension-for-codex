@@ -205,7 +205,7 @@ function panelContext(args: Record<string, unknown>, options: PreviewOptions) {
       ? {
           panel_selection: {
             task_id: target.id,
-            tab: target.result ? "result" : "activity",
+            tab: "activity",
           },
         }
       : {}),

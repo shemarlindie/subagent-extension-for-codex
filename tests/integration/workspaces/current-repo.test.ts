@@ -180,12 +180,7 @@ test("current repository review receives the working tree diff in its provider p
       receivedPrompt = prompt;
 
       return {
-        summary: "Reviewed",
-        findings: [],
-        evidence: [],
-        changes: [],
-        tests: [],
-        recommendations: [],
+        reply: "Reviewed",
       };
     };
 
@@ -440,12 +435,7 @@ test("current repository write profiles edit the checkout while preserving unrel
       );
 
       return {
-        summary: "Implemented",
-        findings: [],
-        evidence: [],
-        changes: ["implementation.ts"],
-        tests: [],
-        recommendations: [],
+        reply: "Implemented",
       };
     };
 
@@ -510,15 +500,6 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
     let options: Options | undefined;
     let receivedPrompt: string | AsyncIterable<any> | undefined;
 
-    const result = {
-      summary: "Reviewed",
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
-    };
-
     const provider = new ClaudeAgentProvider((args) => {
       options = args.options;
       receivedPrompt = args.prompt;
@@ -528,7 +509,7 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
           yield {
             type: "result",
             subtype: "success",
-            structured_output: result,
+            result: "Reviewed",
             total_cost_usd: 0,
             usage: {},
           };

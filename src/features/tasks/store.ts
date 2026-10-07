@@ -134,6 +134,19 @@ export class Store {
       );
   }
 
+  /** A task's latest event of a type, such as its latest `agent.reply`. */
+  latestEvent(id: string, type: string): Event | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT * FROM events WHERE task_id=? AND type=? ORDER BY id DESC LIMIT 1",
+      )
+      .get(id, type);
+
+    return row
+      ? ({ ...row, data: JSON.parse(String(row.data)) } as unknown as Event)
+      : undefined;
+  }
+
   recentEvents(id: string, owner: string): Event[] {
     this.get(id, owner);
 

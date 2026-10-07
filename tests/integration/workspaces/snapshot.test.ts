@@ -207,6 +207,11 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
     );
 
     // Refs pin the snapshots, so pruning everything unreferenced keeps them.
+    // The replied turn's are pinned under its number too.
+    const reply = c.store.latestEvent(t.id, "agent.reply")!;
+    assert.equal(reply.data.turn, 2);
+    assert.equal(reply.data.end_tree, done.end_tree);
+
     assert.equal(
       s.git(
         "for-each-ref",
@@ -215,7 +220,9 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
       ),
       `${done.end_tree} refs/agent-tasks/${t.id}/end\n` +
         `${done.start_tree} refs/agent-tasks/${t.id}/start\n` +
-        `${done.turn_start_tree} refs/agent-tasks/${t.id}/turn-start\n`,
+        `${done.turn_start_tree} refs/agent-tasks/${t.id}/turn-start\n` +
+        `${done.end_tree} refs/agent-tasks/${t.id}/turns/2/end\n` +
+        `${done.turn_start_tree} refs/agent-tasks/${t.id}/turns/2/start\n`,
     );
 
     s.git("-c", "gc.pruneExpire=now", "gc", "-q");

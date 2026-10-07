@@ -228,21 +228,13 @@ test("task selection checks ownership and rejects conflicting scope", async (t) 
     taskPanelContext(selected),
   );
 
-  selected.result = {
-    summary: "Done",
-    findings: [],
-    evidence: [],
-    changes: [],
-    tests: [],
-    recommendations: [],
-  };
-
+  selected.status = "completed";
   f.c.store.save(selected);
 
   assert.equal(
     (await resolvePanelContext(f.c, "alice", { task_id: selected.id }))
       .panel_selection?.tab,
-    "result",
+    "activity",
   );
 
   assert.equal(

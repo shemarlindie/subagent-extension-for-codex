@@ -82,6 +82,8 @@ class FakeTransport implements Transport {
   embedded = true;
   events!: TransportEvents;
   tasks = [task()];
+  /** get_agent_events results. */
+  taskEvents: Record<string, unknown>[] = [];
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
   /** get_user_agent_changes pages; a cursor is the next page's index. */
@@ -140,7 +142,7 @@ class FakeTransport implements Transport {
         },
       ],
       list_agent_tasks: this.tasks,
-      get_agent_events: [],
+      get_agent_events: this.taskEvents,
       get_user_agent_changes: this.changes[Number(args.cursor ?? 0)],
       get_user_agent_changed_file: this.changedFiles[String(args.path)],
       get_agent_settings: {
@@ -2577,20 +2579,21 @@ test("handoff sends only after explicit submit and uses the edited message", asy
   );
 });
 
-test("task and result text render literally without HTML interpretation", async (t) => {
+test("task and reply text render literally without HTML interpretation", async (t) => {
   const injection = '<img src=x onerror="window.injected=true">';
 
   const { user } = await setup(t, (transport) => {
     transport.tasks[0].title = injection;
 
-    transport.tasks[0].result = {
-      summary: "<script>window.injected=true</script>",
-      findings: [injection],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
-    };
+    transport.taskEvents = [
+      {
+        id: 1,
+        task_id: transport.tasks[0].id,
+        type: "agent.reply",
+        timestamp: "",
+        data: { text: "<script>window.injected=true</script>", turn: 1 },
+      },
+    ];
   });
 
   assert.equal(
@@ -2599,7 +2602,12 @@ test("task and result text render literally without HTML interpretation", async 
   );
 
   await user.click(screen.getByRole("tab", { name: "Result" }));
-  assert.ok(screen.getByText("<script>window.injected=true</script>"));
+
+  assert.equal(
+    document.querySelector(".report")?.textContent,
+    "<script>window.injected=true</script>",
+  );
+
   assert.ok(document.querySelector("img, script") === null);
   assert.equal((window as any).injected, undefined);
 });

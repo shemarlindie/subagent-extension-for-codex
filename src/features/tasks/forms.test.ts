@@ -543,12 +543,7 @@ test("shell permission forms default to deny, preserve original commands, and ne
     });
 
     return {
-      summary: "Permission resolved",
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
+      reply: "Permission resolved",
     };
   };
 
@@ -632,12 +627,7 @@ test("rich question forms preserve titled choices and multiple selections for na
     });
 
     return {
-      summary: "Questions resolved",
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
+      reply: "Questions resolved",
     };
   };
 
@@ -807,12 +797,7 @@ test("provider-owned permission forms disclose whole-turn authority and bind app
     });
 
     return {
-      summary: "Turn permission resolved",
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
+      reply: "Turn permission resolved",
     };
   };
 

@@ -254,11 +254,19 @@ export function definitions(
         ),
     }),
     get_agent_result: tool({
-      description: "Retrieve structured results when available.",
+      description:
+        "Retrieve the worker's latest reply, the plain text that ended its latest successful turn, or null before it has replied. Read what it changed with get_agent_changes.",
       schema: taskId,
-      run: (a) => ({
-        result: c.store.get(a.task_id, owner).result ?? null,
-      }),
+      run: (a) => {
+        c.store.get(a.task_id, owner);
+        const reply = c.store.latestEvent(a.task_id, "agent.reply");
+
+        return {
+          reply: reply
+            ? { text: reply.data.text, turn: reply.data.turn }
+            : null,
+        };
+      },
     }),
     get_agent_changes: tool({
       description:

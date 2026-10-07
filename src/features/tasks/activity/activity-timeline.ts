@@ -65,6 +65,13 @@ const boundaries = new Set([
   "task.continued",
 ]);
 
+/** Row titles for service events whose type doesn't read as one. */
+const eventTitles: Record<string, string> = {
+  "agent.completed": "Turn completed",
+  "agent.reply": "Reply",
+  "task.completed": "Task completed",
+};
+
 const thinking = new Set([
   "thinking_tokens",
   "thinking.tokens",
@@ -384,13 +391,8 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
           ? statusTitle(e)
           : sentence(key === "agent.completed" ? "Agent failed" : key)
         : (presentation.title ??
-            (key === "agent.completed"
-              ? "Turn completed"
-              : key === "task.completed"
-                ? "Task completed"
-                : thinkingSignal(e)
-                  ? "Thinking…"
-                  : sentence(key))),
+            eventTitles[key] ??
+            (thinkingSignal(e) ? "Thinking…" : sentence(key))),
       activityFailed(e) ? "failed" : "info",
     );
 

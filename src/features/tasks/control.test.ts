@@ -11,8 +11,8 @@ import { FixtureProvider } from "../../../dev/fixture-provider.js";
 import type {
   ModelChoice,
   Provider,
-  Result,
   RunContext,
+  TurnOutput,
 } from "../../shared/contracts.js";
 import { claudeTaskPolicy } from "../providers/claude/task-policy.js";
 import { claudeMetadata } from "../providers/metadata.js";
@@ -383,7 +383,7 @@ test("settings reject unsupported providers, invalid budgets, unknown fields and
   await c.close();
 });
 
-test("durable task completes in isolated worktree and produces a structured result", async () => {
+test("durable task completes in isolated worktree and records its reply", async () => {
   const { c, store, repo, db } = await setup();
   const t = await c.start("alice", input());
   await until(() => store.get(t.id, "alice").status === "completed");
@@ -391,7 +391,31 @@ test("durable task completes in isolated worktree and produces a structured resu
   assert.notEqual(done.workspace, repo);
   assert.equal(done.session_owner, c.ownerWorker);
   assert.ok(done.session_state_ref);
-  assert.ok(done.result?.summary.includes("Fixture"));
+  const reply = store.latestEvent(t.id, "agent.reply")!;
+  assert.ok(String(reply.data.text).includes("Fixture"));
+  assert.equal(reply.data.turn, 1);
+  assert.equal(reply.data.start_tree, done.turn_start_tree);
+  assert.match(String(reply.data.end_tree), /^[0-9a-f]{40}$/);
+
+  // Each replied turn's snapshots are pinned under the turn.
+  for (const name of ["start", "end"])
+    assert.equal(
+      execFileSync("git", [
+        "-C",
+        repo,
+        "rev-parse",
+        `refs/agent-tasks/${t.id}/turns/1/${name}`,
+      ])
+        .toString()
+        .trim(),
+      reply.data[`${name}_tree`],
+    );
+
+  const completed = store
+    .events(t.id, "alice")
+    .find((e) => e.type === "task.completed")!;
+
+  assert.deepEqual(completed.data, { reply: reply.data.text });
   await c.close();
   const reopened = new Store(db);
   assert.equal(reopened.get(t.id, "alice").status, "completed");
@@ -426,7 +450,7 @@ test("dependencies wait for completion and failed dependencies never run", async
   await c.close();
 });
 
-test("dependent prompts include each dependency's result and workspace diff", async () => {
+test("dependent prompts include each dependency's reply and workspace diff", async () => {
   const prompts = new Map<string, string>();
 
   class Writer extends FixtureProvider {
@@ -456,7 +480,7 @@ test("dependent prompts include each dependency's result and workspace diff", as
 
   assert.ok(
     prompt.includes(
-      `Dependency ${first.id}: ${JSON.stringify(store.get(first.id, "alice").result)}`,
+      `Dependency ${first.id} replied:\nFixture task completed. No Claude execution occurred.`,
     ),
   );
 
@@ -515,7 +539,7 @@ test("current_repo dependents see only the dependency's own changes", async () =
 
   const [, dependency] = prompts
     .get(second.id)!
-    .split(`Dependency ${first.id}:`);
+    .split(`Dependency ${first.id} changes`);
 
   assert.match(dependency, /\+worker/);
   assert.doesNotMatch(dependency, /\+user/);
@@ -1010,19 +1034,14 @@ test("scheduler enforces concurrency and independent branches run together", asy
 
 test("parallel permission requests are serialized without losing the first response", async () => {
   class Parallel extends FixtureProvider {
-    async run(c: RunContext, _prompt: string): Promise<Result> {
+    async run(c: RunContext, _prompt: string): Promise<TurnOutput> {
       const [first, second] = await Promise.all([
         c.input("Bash", { command: "first" }, c.signal),
         c.input("Bash", { command: "second" }, c.signal),
       ]);
 
       return {
-        summary: JSON.stringify([first.approved, second.approved]),
-        findings: [],
-        evidence: [],
-        changes: [],
-        tests: [],
-        recommendations: [],
+        reply: JSON.stringify([first.approved, second.approved]),
       };
     }
   }
@@ -1041,7 +1060,12 @@ test("parallel permission requests are serialized without losing the first respo
   request = store.get(t.id, "alice").pending_input!;
   c.input("alice", t.id, request.id, false);
   await until(() => store.get(t.id, "alice").status === "completed");
-  assert.equal(store.get(t.id, "alice").result?.summary, "[true,false]");
+
+  assert.equal(
+    store.latestEvent(t.id, "agent.reply")?.data.text,
+    "[true,false]",
+  );
+
   await c.close();
 });
 
@@ -1147,12 +1171,7 @@ test("cancelled queued input rejects promptly without bypassing the active permi
     );
 
     return {
-      summary: "Cancelled inputs skipped",
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
+      reply: "Cancelled inputs skipped",
     };
   };
 
@@ -1347,12 +1366,7 @@ test("a new provider controls preparation and input policy without built-in iden
     decisions.push(manual.approved);
 
     return {
-      summary: "Done",
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
+      reply: "Done",
     };
   };
 

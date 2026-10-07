@@ -136,43 +136,6 @@ export type Status =
   | "failed"
   | "cancelled";
 
-export interface Result {
-  summary: string;
-  findings: string[];
-  evidence: string[];
-  changes: string[];
-  tests: string[];
-  recommendations: string[];
-}
-
-export const resultSchema = {
-  type: "object",
-  properties: Object.fromEntries(
-    [
-      "summary",
-      "findings",
-      "evidence",
-      "changes",
-      "tests",
-      "recommendations",
-    ].map((k) => [
-      k,
-      k === "summary"
-        ? { type: "string" }
-        : { type: "array", items: { type: "string" } },
-    ]),
-  ),
-  required: [
-    "summary",
-    "findings",
-    "evidence",
-    "changes",
-    "tests",
-    "recommendations",
-  ],
-  additionalProperties: false,
-};
-
 export interface InputPresentation {
   description: string;
   approveLabel: string;
@@ -212,7 +175,6 @@ export interface Task extends Start {
   session_id?: string;
   session_owner?: string;
   session_state_ref?: string;
-  result?: Result;
   error?: string;
   pending_input?: {
     id: string;

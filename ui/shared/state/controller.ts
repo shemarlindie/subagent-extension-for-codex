@@ -494,7 +494,7 @@ export class Controller {
         selected = restoredTask.id;
         this.explicitSelection = true;
         this.browsing = false;
-        tab = restored?.tab ?? (restoredTask.result ? "result" : "activity");
+        tab = restored?.tab ?? "activity";
       } else if (restored?.browsing) {
         selected = undefined;
         this.explicitSelection = false;
@@ -512,9 +512,7 @@ export class Controller {
           tasks.find((task) => !terminal(task))?.id ??
           tasks[0].id;
 
-        tab = tasks.find((task) => task.id === selected)?.result
-          ? "result"
-          : "activity";
+        tab = "activity";
       }
 
       // Don't replace URL choices with defaults until their project and task resolve.
@@ -591,9 +589,7 @@ export class Controller {
     this.patch({
       selected: id,
       events: [],
-      tab: this.state.tasks.find((task) => task.id === id)?.result
-        ? "result"
-        : "activity",
+      tab: "activity",
     });
 
     await this.loadDetail();

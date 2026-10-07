@@ -4,8 +4,8 @@ import { fixtureMetadata } from "../src/features/providers/metadata.js";
 import { executionTaskPolicy } from "../src/features/providers/task-policy.js";
 import {
   type Provider,
-  type Result,
   type RunContext,
+  type TurnOutput,
 } from "../src/shared/contracts.js";
 
 /**
@@ -30,7 +30,7 @@ export class FixtureProvider implements Provider {
     dynamic_subagents: false,
   };
 
-  async run(c: RunContext, prompt: string): Promise<Result> {
+  async run(c: RunContext, prompt: string): Promise<TurnOutput> {
     c.session(
       c.task.session_id ?? `fixture_${c.task.id}`,
       `fixture:${c.task.workspace}`,
@@ -53,12 +53,7 @@ export class FixtureProvider implements Provider {
     await setTimeout(80, undefined, { signal: c.signal });
 
     return {
-      summary: "Fixture task completed. No Claude execution occurred.",
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: ["Lifecycle fixture"],
-      recommendations: [],
+      reply: "Fixture task completed. No Claude execution occurred.",
     };
   }
 }

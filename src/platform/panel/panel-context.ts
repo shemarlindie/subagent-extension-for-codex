@@ -107,7 +107,7 @@ export async function resolvePanelContext(
       ? {
           panel_selection: {
             task_id: target.id,
-            tab: target.result ? ("result" as const) : ("activity" as const),
+            tab: "activity" as const,
           },
         }
       : {}),

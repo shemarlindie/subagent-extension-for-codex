@@ -10,9 +10,9 @@ import { FixtureProvider } from "../../../dev/fixture-provider.js";
 import { callTool } from "../../platform/server/tools.js";
 import {
   approvalModes,
-  type Result,
   type RunContext,
   type Task,
+  type TurnOutput,
 } from "../../shared/contracts.js";
 import { Workspaces } from "../workspaces/workspace.js";
 import { Control } from "./control.js";
@@ -38,7 +38,7 @@ class PermissionProvider extends FixtureProvider {
     super();
   }
 
-  async run(ctx: RunContext): Promise<Result> {
+  async run(ctx: RunContext): Promise<TurnOutput> {
     const response = await ctx.input(
       this.tool,
       { command: "pwd", question: "Which approach?" },
@@ -46,12 +46,7 @@ class PermissionProvider extends FixtureProvider {
     );
 
     return {
-      summary: JSON.stringify(response),
-      findings: [],
-      evidence: [],
-      changes: [],
-      tests: [],
-      recommendations: [],
+      reply: JSON.stringify(response),
     };
   }
 }
@@ -133,7 +128,8 @@ test("ask_user blocks parent approval and accepts an owner user decision", async
     await until(() => store.get(task.id, "alice").status === "completed");
 
     assert.equal(
-      JSON.parse(store.get(task.id, "alice").result!.summary).approved,
+      JSON.parse(String(store.latestEvent(task.id, "agent.reply")!.data.text))
+        .approved,
       true,
     );
 
@@ -172,7 +168,8 @@ test("parent_agent permits parent decisions only after user configuration", asyn
     await until(() => store.get(task.id, "alice").status === "completed");
 
     assert.equal(
-      JSON.parse(store.get(task.id, "alice").result!.summary).approved,
+      JSON.parse(String(store.latestEvent(task.id, "agent.reply")!.data.text))
+        .approved,
       true,
     );
   } finally {
@@ -275,7 +272,9 @@ for (const mode of approvalModes) {
         await until(() => store.get(task.id, "alice").status === "completed");
 
         assert.equal(
-          JSON.parse(store.get(task.id, "alice").result!.summary).approved,
+          JSON.parse(
+            String(store.latestEvent(task.id, "agent.reply")!.data.text),
+          ).approved,
           mode === "auto_approve",
         );
 
@@ -330,7 +329,8 @@ for (const mode of ["auto_approve", "deny"] as const) {
       await until(() => store.get(task.id, "alice").status === "completed");
 
       assert.deepEqual(
-        JSON.parse(store.get(task.id, "alice").result!.summary).input,
+        JSON.parse(String(store.latestEvent(task.id, "agent.reply")!.data.text))
+          .input,
         { answer: "Option A" },
       );
     } finally {
@@ -357,7 +357,8 @@ test("interruption invalidates pending permission IDs across continuation", asyn
     await until(() => store.get(task.id, "alice").status === "completed");
 
     assert.equal(
-      JSON.parse(store.get(task.id, "alice").result!.summary).approved,
+      JSON.parse(String(store.latestEvent(task.id, "agent.reply")!.data.text))
+        .approved,
       false,
     );
   } finally {

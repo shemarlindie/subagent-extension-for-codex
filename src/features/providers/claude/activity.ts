@@ -193,7 +193,6 @@ export function claudeActivityPresentation(
       (activityFailed(e) ? failureSummary(e) : undefined) ??
       string(
         d.compact_error ??
-          object(d.structured_output).summary ??
           d.text ??
           d.summary ??
           d.description ??
