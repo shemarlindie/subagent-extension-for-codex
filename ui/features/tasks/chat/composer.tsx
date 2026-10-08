@@ -9,7 +9,12 @@ import {
 } from "../../../shared/state/controller-context";
 import type { Task } from "../../../shared/state/types";
 import { BudgetRaiseFields } from "./budget-raise-fields";
-import { composerMode, spentBudget, suggestedRaise } from "./chat-model";
+import {
+  budgetRaised,
+  composerMode,
+  spentBudget,
+  suggestedRaise,
+} from "./chat-model";
 
 const PLACEHOLDERS = {
   idle: "Message the worker to start its next turn",
@@ -42,6 +47,7 @@ export function Composer({ task }: ComposerProps) {
     // The user's changes to the suggested raise.
     [raise, setRaise] = useState<BudgetRaise>({}),
     budget = spent ? { ...suggestedRaise(spent), ...raise } : undefined,
+    canContinue = !spent || budgetRaised(spent, budget ?? {}),
     [error, setError] = useState<string>(),
     message = text.trim();
 
@@ -52,7 +58,7 @@ export function Composer({ task }: ComposerProps) {
   };
 
   const send = async (delivery: Delivery) => {
-    if (!message || busy) return;
+    if (!message || busy || !canContinue) return;
 
     const failure = await controller.sendMessage(
       task,
@@ -136,7 +142,7 @@ export function Composer({ task }: ComposerProps) {
                   ? "Send into the running turn (Enter)"
                   : "Send (Enter)"
               }
-              disabled={busy || !message}
+              disabled={busy || !message || !canContinue}
               onClick={() => send("steer")}
             >
               <Icon name="arrow-up" size={14} />

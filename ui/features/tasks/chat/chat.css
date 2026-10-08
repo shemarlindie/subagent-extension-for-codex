@@ -113,6 +113,9 @@
   flex: 1;
   border-top: 1px solid var(--line);
 }
+.chat-note[data-note="failure"] {
+  color: var(--danger);
+}
 .chat-working {
   display: flex;
   align-items: center;
@@ -251,7 +254,13 @@
 .chat-budget-fields {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 12px;
+}
+.chat-budget-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
 }
 .chat-budget label {
   display: flex;
@@ -259,6 +268,16 @@
   gap: 2px;
   font-size: 11px;
   color: var(--muted);
+}
+.chat-budget label.chat-budget-unlimited {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 2px;
+}
+.chat-budget label.chat-budget-unlimited input {
+  width: auto;
+  margin: 0;
 }
 .chat-budget input {
   width: 9em;

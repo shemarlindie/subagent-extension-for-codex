@@ -32,7 +32,7 @@ export type ChatNote = {
   id: string;
   event_id: number;
   timestamp: string;
-  note: "session" | "worktree" | "compaction";
+  note: "session" | "worktree" | "compaction" | "failure";
   text: string;
 };
 
@@ -81,6 +81,13 @@ function note(e: Event): ChatNote | undefined {
           : "Worktree recreated from its branch",
     };
 
+  if (e.type === "task.failed")
+    return {
+      ...base,
+      note: "failure",
+      text: `Task failed: ${String(e.data.error ?? "Unknown error")}`,
+    };
+
   if (isCompaction(e))
     return { ...base, note: "compaction", text: "Context compacted" };
 
@@ -89,14 +96,16 @@ function note(e: Event): ChatNote | undefined {
 
 /**
  * Chat for a task, in order: its conversation (see `conversation`), an
- * outcome row where each turn ended, with a failed turn's error, and small
- * notes for a new session, a recreated worktree and compaction.
+ * outcome row where each turn ended, with a failed turn's error, standalone
+ * task failures, and small notes for a new session, worktree recreation and
+ * compaction.
  */
 export function chatItems(task: Task, events: Event[]): ChatItem[] {
   const sorted = [...events].sort((a, b) => a.id - b.id);
   const messages = conversation(task, sorted);
   const items: ChatItem[] = [];
   let next = 0;
+  let failedOutcome: TurnOutcome | undefined;
 
   // Messages are in event order, so they interleave with the rest by event id.
   const flush = (until: number) => {
@@ -116,7 +125,7 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
     if (e.type === "task.turn_ended") {
       flush(e.id);
 
-      items.push({
+      const outcome: TurnOutcome = {
         kind: "outcome",
         id: `turn_${String(e.data.turn)}_${e.id}`,
         event_id: e.id,
@@ -125,17 +134,25 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
         outcome: e.data.outcome as TurnOutcome["outcome"],
         runtime_ms: Number(e.data.runtime_ms ?? 0),
         cost_usd: Number(e.data.cost_usd ?? 0),
-      });
-    } else if (e.type === "task.failed") {
-      // The failure follows its turn's outcome row.
-      const outcome = items.findLast((item) => item.kind === "outcome");
+      };
 
-      if (outcome?.kind === "outcome" && outcome.outcome === "failed") {
-        outcome.error = String(e.data.error ?? "");
+      items.push(outcome);
+      failedOutcome = outcome.outcome === "failed" ? outcome : undefined;
+    } else if (e.type === "task.failed") {
+      if (failedOutcome) {
+        failedOutcome.error = String(e.data.error ?? "");
         // A read after the outcome row gets it again, with its error.
-        outcome.event_id = e.id;
+        failedOutcome.event_id = e.id;
+      } else {
+        flush(e.id);
+        items.push(note(e)!);
       }
+
+      failedOutcome = undefined;
     } else {
+      if (["task.instruction", "task.queued", "task.started"].includes(e.type))
+        failedOutcome = undefined;
+
       const marker = note(e);
 
       if (marker) {

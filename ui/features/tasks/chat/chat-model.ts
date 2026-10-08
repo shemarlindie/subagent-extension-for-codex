@@ -1,3 +1,4 @@
+import type { BudgetRaise } from "../../../../src/shared/contracts";
 import type { Task } from "../../../shared/state/types";
 
 /** Statuses in which a turn is running, starting or about to. */
@@ -66,6 +67,18 @@ export function suggestedRaise(spent: SpentBudget) {
         }
       : {}),
   };
+}
+
+/** Every exhausted limit must be raised or explicitly removed to continue. */
+export function budgetRaised(spent: SpentBudget, raise: BudgetRaise) {
+  const raised = (next: number | null | undefined, current: number) =>
+    next === null || (typeof next === "number" && next > current);
+
+  return (
+    (!spent.cost || raised(raise.max_cost_usd, spent.cost.allowed)) &&
+    (!spent.runtime ||
+      raised(raise.max_runtime_minutes, spent.runtime.allowedMinutes))
+  );
 }
 
 export const formatCost = (usd: number) =>

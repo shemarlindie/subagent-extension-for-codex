@@ -32,44 +32,78 @@ export function BudgetRaiseFields({
       </p>
       <div className="chat-budget-fields">
         {spent.cost && (
-          <label>
-            Cost limit ($)
-            <input
-              type="number"
-              min={spent.cost.allowed}
-              max={100}
-              step="any"
-              value={value.max_cost_usd ?? ""}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  max_cost_usd: event.target.value
-                    ? Number(event.target.value)
-                    : undefined,
-                })
-              }
-            />
-          </label>
+          <div className="chat-budget-field">
+            <label>
+              Cost limit ($)
+              <input
+                type="number"
+                min={spent.cost.allowed}
+                max={100}
+                step="any"
+                disabled={value.max_cost_usd === null}
+                value={value.max_cost_usd ?? ""}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    max_cost_usd: event.target.value
+                      ? Number(event.target.value)
+                      : undefined,
+                  })
+                }
+              />
+            </label>
+            <label className="chat-budget-unlimited">
+              <input
+                type="checkbox"
+                checked={value.max_cost_usd === null}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    max_cost_usd: event.target.checked ? null : undefined,
+                  })
+                }
+              />
+              No cost limit
+            </label>
+          </div>
         )}
         {spent.runtime && (
-          <label>
-            Runtime limit (minutes)
-            <input
-              type="number"
-              min={spent.runtime.allowedMinutes}
-              max={120}
-              step="any"
-              value={value.max_runtime_minutes ?? ""}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  max_runtime_minutes: event.target.value
-                    ? Number(event.target.value)
-                    : undefined,
-                })
-              }
-            />
-          </label>
+          <div className="chat-budget-field">
+            <label>
+              Runtime limit (minutes)
+              <input
+                type="number"
+                min={spent.runtime.allowedMinutes}
+                max={120}
+                step="any"
+                disabled={value.max_runtime_minutes === null}
+                value={value.max_runtime_minutes ?? ""}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    max_runtime_minutes: event.target.value
+                      ? Number(event.target.value)
+                      : undefined,
+                  })
+                }
+              />
+            </label>
+            <label className="chat-budget-unlimited">
+              <input
+                type="checkbox"
+                checked={value.max_runtime_minutes === null}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    max_runtime_minutes: event.target.checked
+                      ? null
+                      : undefined,
+                  })
+                }
+              />
+              No runtime limit
+            </label>
+          </div>
         )}
       </div>
     </div>
