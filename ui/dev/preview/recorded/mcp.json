@@ -1,0 +1,876 @@
+{
+  "task": {
+    "provider": "claude",
+    "worker_profile": "reviewer",
+    "description": "Read README.md with the native Read tool. Include its exact verification marker in your reply. Do not ask questions, edit files or run commands.",
+    "repository": "/demo/project",
+    "revision": "HEAD",
+    "depends_on": [],
+    "context": [],
+    "workspace_strategy": "current_repo",
+    "budget": {
+      "max_runtime_minutes": 1,
+      "max_cost_usd": 0.25
+    },
+    "provider_options": {
+      "claude": {
+        "approval_decider": "user",
+        "permission_mode": "plan",
+        "permission_source": "task_profile",
+        "claude_policy": {
+          "sandbox": "user_config",
+          "environment": "inherit",
+          "tools": "restricted",
+          "path_guard": true,
+          "subagents": true
+        }
+      }
+    },
+    "title": "Recorded: a read-only review over MCP",
+    "id": "preview-recorded-mcp",
+    "owner": "preview",
+    "created_by": "parent",
+    "status": "completed",
+    "instructions": [],
+    "instructions_sent": 0,
+    "pending_steers": [],
+    "queue": [],
+    "created_at": "2026-10-02T11:30:00.000Z",
+    "updated_at": "2026-10-02T11:30:06.634Z",
+    "turn": 1,
+    "runtime_ms": 6633,
+    "started_at": "2026-10-02T11:30:00.065Z",
+    "session_owner": "preview-host",
+    "session_id": "preview-session",
+    "cost_usd": 0.1050726,
+    "session_cost_usd": 0.1050726,
+    "completed_at": "2026-10-02T11:30:06.634Z",
+    "conversation_id": "dev-thread"
+  },
+  "events": [
+    {
+      "id": 3300,
+      "task_id": "preview-recorded-mcp",
+      "type": "task.queued",
+      "timestamp": "2026-10-02T11:30:00.000Z",
+      "data": {}
+    },
+    {
+      "id": 3301,
+      "task_id": "preview-recorded-mcp",
+      "type": "task.started",
+      "timestamp": "2026-10-02T11:30:00.065Z",
+      "data": {
+        "turn": 1
+      }
+    },
+    {
+      "id": 3302,
+      "task_id": "preview-recorded-mcp",
+      "type": "agent.started",
+      "timestamp": "2026-10-02T11:30:01.249Z",
+      "data": {
+        "model": "claude-opus-5-5",
+        "tools": [
+          "AskUserQuestion",
+          "Glob",
+          "Grep",
+          "Read",
+          "Skill",
+          "mcp__claude_ai_Claude_Docs__batch",
+          "mcp__claude_ai_Claude_Docs__create",
+          "mcp__claude_ai_Claude_Docs__delete",
+          "mcp__claude_ai_Claude_Docs__export",
+          "mcp__claude_ai_Claude_Docs__guide",
+          "mcp__claude_ai_Claude_Docs__query",
+          "mcp__claude_ai_Claude_Docs__read",
+          "mcp__claude_ai_Claude_Docs__update"
+        ],
+        "raw_response": {
+          "type": "system",
+          "subtype": "init",
+          "cwd": "/demo/project",
+          "session_id": "preview-session",
+          "tools": [
+            "AskUserQuestion",
+            "Glob",
+            "Grep",
+            "Read",
+            "Skill",
+            "mcp__claude_ai_Claude_Docs__batch",
+            "mcp__claude_ai_Claude_Docs__create",
+            "mcp__claude_ai_Claude_Docs__delete",
+            "mcp__claude_ai_Claude_Docs__export",
+            "mcp__claude_ai_Claude_Docs__guide",
+            "mcp__claude_ai_Claude_Docs__query",
+            "mcp__claude_ai_Claude_Docs__read",
+            "mcp__claude_ai_Claude_Docs__update"
+          ],
+          "mcp_servers": [],
+          "model": "claude-opus-5-5",
+          "permissionMode": "plan",
+          "slash_commands": [],
+          "terminal_slash_commands": [],
+          "apiKeySource": "none",
+          "claude_code_version": "2.1.289",
+          "output_style": "default",
+          "agents": ["general-purpose"],
+          "skills": [],
+          "plugins": [],
+          "capabilities": [
+            "interrupt_receipt_v1",
+            "interrupt_cancel_queued_v1",
+            "interrupt_send_now_v1",
+            "msg_lifecycle_v1",
+            "sdk_mcp_tools_list_changed",
+            "sdk_mcp_manifests",
+            "mcp_read_resource_v1",
+            "mcp_tool_ui_meta_v1",
+            "ui_surface_v1"
+          ],
+          "analytics_disabled": false,
+          "product_feedback_disabled": false,
+          "uuid": "7b60d5bf-617d-4f27-b571-c94be8f10099",
+          "fast_mode_state": "off",
+          "fast_mode_disabled_reason": "sdk_opt_in_required",
+          "per_turn_effort_active": true,
+          "view_mode": "default"
+        },
+        "activity": {
+          "kind": "agent.started",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "statusTitle": "Claude connected",
+          "messageId": "7b60d5bf-617d-4f27-b571-c94be8f10099",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3303,
+      "task_id": "preview-recorded-mcp",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:30:01.253Z",
+      "data": {
+        "type": "system",
+        "subtype": "status",
+        "status": "requesting",
+        "session_id": "preview-session",
+        "uuid": "85d71d1c-8b8f-4bec-9a45-95f92914e39f",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "85d71d1c-8b8f-4bec-9a45-95f92914e39f"
+        },
+        "activity": {
+          "kind": "status",
+          "quiet": true,
+          "failed": false,
+          "thinking": true,
+          "liveStatus": true,
+          "statusTitle": "Thinking…",
+          "title": "Claude status",
+          "messageId": "85d71d1c-8b8f-4bec-9a45-95f92914e39f",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3304,
+      "task_id": "preview-recorded-mcp",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:30:02.292Z",
+      "data": {
+        "type": "system",
+        "subtype": "thinking_tokens",
+        "estimated_tokens": 50,
+        "estimated_tokens_delta": 50,
+        "session_id": "preview-session",
+        "uuid": "0a716bbb-3040-4fb8-ac89-bbf1f00e6dd8",
+        "raw_response": {
+          "type": "system",
+          "subtype": "thinking_tokens",
+          "estimated_tokens": 50,
+          "estimated_tokens_delta": 50,
+          "session_id": "preview-session",
+          "uuid": "0a716bbb-3040-4fb8-ac89-bbf1f00e6dd8"
+        },
+        "activity": {
+          "kind": "thinking_tokens",
+          "quiet": false,
+          "failed": false,
+          "thinking": true,
+          "liveStatus": true,
+          "statusTitle": "Thinking…",
+          "title": "Thinking tokens",
+          "messageId": "0a716bbb-3040-4fb8-ac89-bbf1f00e6dd8",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3305,
+      "task_id": "preview-recorded-mcp",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:30:02.511Z",
+      "data": {
+        "type": "system",
+        "subtype": "thinking_tokens",
+        "estimated_tokens": 194,
+        "estimated_tokens_delta": 144,
+        "session_id": "preview-session",
+        "uuid": "f41a6c30-fec1-4767-8f94-025fe60b6e62",
+        "raw_response": {
+          "type": "system",
+          "subtype": "thinking_tokens",
+          "estimated_tokens": 194,
+          "estimated_tokens_delta": 144,
+          "session_id": "preview-session",
+          "uuid": "f41a6c30-fec1-4767-8f94-025fe60b6e62"
+        },
+        "activity": {
+          "kind": "thinking_tokens",
+          "quiet": false,
+          "failed": false,
+          "thinking": true,
+          "liveStatus": true,
+          "statusTitle": "Thinking…",
+          "title": "Thinking tokens",
+          "messageId": "f41a6c30-fec1-4767-8f94-025fe60b6e62",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3306,
+      "task_id": "preview-recorded-mcp",
+      "type": "agent.content",
+      "timestamp": "2026-10-02T11:30:02.514Z",
+      "data": {
+        "role": "assistant",
+        "content": {
+          "type": "thinking",
+          "thinking": "",
+          "signature": "CAQS/gUKEAgSGAI4AUIIdGhpbmtpbmcSDCpOPwXmH7BK3ha6yhoMnJZzONZpnRaXoVAAIjBK43o/N26NudTxNfffWdgwFlVvmmuWwree7YCEA+bhNGjRSRt8wbEq6/i9ynj+FPAqmwUL2WTnGVHzutC2N8vJhlRdQxS52j9NbHwCucRLsDV4CYFmut2rKXdUOf4A+pnNnKL2Pr0lbnLi+9Yy7eqHUf4Cgw2Fcg0Yv0EaFDe7VH97MsVwM8C799vTZ6IVCUwSx4sOYR8Haj8N/Tv69NfwitSbFwSg6l5CwFOoVoudL/6WWRoBX+RL/spmnlAhWq3h9Ij1Lr4lmR1r/jsdQ9IJW3PWsJIBYfoD5LCWKo3QXWOmMG2CXItfTWa8DgBOYrkvHUadM0UFuXsovqEarFraS0rerWIHf5jjZChJx98Vp3kwIjRXwiDGJgSahRhSZiuZ0aXGylM+wd9hRBCozu3BljnUDmDRJIsx+llsMwoz+/+dUsioPuaYkyHzsXBoXEw8rvlEHfgll+Gokhm2xiRfAidc8T8FGc9NPk/VsKu6isoXVXGtltEv3v9BMZFMmVRRDG1eG9w3Ank0gU8ws11a9O/4N6Fnvg52NI/AbZMwogH1EjCYujFbfZbZnCRZx+HTO3slTRYA+HKh3MdAbBsCpOzV9KwxvoKutD6H2BZKzYX2MSuJKqyHOpz+6MKhCGWDuY8dnB1I7daXZgzCXQiY4+sQeRGw0tsgu5dF7wxqoJRpOAbKzaiyqs/W2P9VJjdUCVEaPCVAtS8090UOvmR+Dwnf8QAEwg5tgxuW8uz2FZkGY+7EVbZkkADFkAb2myEDnTJAH5VQVzmoLQvSOrnlMGkC4oZ2dIAnUf1QdhvfirZ8dAm348Q0f1XNtqVUS94xans354fmvs+q9JDjsWFmOETTqIQSrIqujQ1u4GhDQqvizlPiUbqxT2dcvoVuyPdrD/GxQNzxm6jy49vBBGcbi+BuIII1UzD8k/nmqP+nWjYJgwpcXElXz5LdLV07GAE="
+        },
+        "raw_response": {
+          "type": "assistant",
+          "message": {
+            "model": "claude-opus-5-5",
+            "id": "msg_011CfoJMkvXozN1cdRxH11ms",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "thinking",
+                "thinking": "",
+                "signature": "CAQS/gUKEAgSGAI4AUIIdGhpbmtpbmcSDCpOPwXmH7BK3ha6yhoMnJZzONZpnRaXoVAAIjBK43o/N26NudTxNfffWdgwFlVvmmuWwree7YCEA+bhNGjRSRt8wbEq6/i9ynj+FPAqmwUL2WTnGVHzutC2N8vJhlRdQxS52j9NbHwCucRLsDV4CYFmut2rKXdUOf4A+pnNnKL2Pr0lbnLi+9Yy7eqHUf4Cgw2Fcg0Yv0EaFDe7VH97MsVwM8C799vTZ6IVCUwSx4sOYR8Haj8N/Tv69NfwitSbFwSg6l5CwFOoVoudL/6WWRoBX+RL/spmnlAhWq3h9Ij1Lr4lmR1r/jsdQ9IJW3PWsJIBYfoD5LCWKo3QXWOmMG2CXItfTWa8DgBOYrkvHUadM0UFuXsovqEarFraS0rerWIHf5jjZChJx98Vp3kwIjRXwiDGJgSahRhSZiuZ0aXGylM+wd9hRBCozu3BljnUDmDRJIsx+llsMwoz+/+dUsioPuaYkyHzsXBoXEw8rvlEHfgll+Gokhm2xiRfAidc8T8FGc9NPk/VsKu6isoXVXGtltEv3v9BMZFMmVRRDG1eG9w3Ank0gU8ws11a9O/4N6Fnvg52NI/AbZMwogH1EjCYujFbfZbZnCRZx+HTO3slTRYA+HKh3MdAbBsCpOzV9KwxvoKutD6H2BZKzYX2MSuJKqyHOpz+6MKhCGWDuY8dnB1I7daXZgzCXQiY4+sQeRGw0tsgu5dF7wxqoJRpOAbKzaiyqs/W2P9VJjdUCVEaPCVAtS8090UOvmR+Dwnf8QAEwg5tgxuW8uz2FZkGY+7EVbZkkADFkAb2myEDnTJAH5VQVzmoLQvSOrnlMGkC4oZ2dIAnUf1QdhvfirZ8dAm348Q0f1XNtqVUS94xans354fmvs+q9JDjsWFmOETTqIQSrIqujQ1u4GhDQqvizlPiUbqxT2dcvoVuyPdrD/GxQNzxm6jy49vBBGcbi+BuIII1UzD8k/nmqP+nWjYJgwpcXElXz5LdLV07GAE="
+              }
+            ],
+            "container": null,
+            "stop_reason": null,
+            "stop_sequence": null,
+            "stop_details": null,
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 11441,
+              "cache_read_input_tokens": 7401,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 11441
+              },
+              "output_tokens": 7,
+              "service_tier": "standard",
+              "inference_geo": "not_available"
+            },
+            "input_transformations": [],
+            "diagnostics": null,
+            "context_management": null
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "06758585-dea7-4084-9f42-3a1257a2cc2d",
+          "timestamp": "2026-10-07T17:50:23.843Z",
+          "request_id": "req_preview_0001",
+          "thinking_duration_ms": 614
+        },
+        "activity": {
+          "kind": "agent.content",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Claude content",
+          "messageId": "msg_011CfoJMkvXozN1cdRxH11ms",
+          "hasThinking": true
+        }
+      }
+    },
+    {
+      "id": 3307,
+      "task_id": "preview-recorded-mcp",
+      "type": "tool.started",
+      "timestamp": "2026-10-02T11:30:03.096Z",
+      "data": {
+        "id": "toolu_01CbH8PdS1B4W2nbZkAAtWEp",
+        "name": "Read",
+        "input": {
+          "file_path": "/demo/project/README.md"
+        },
+        "raw_response": {
+          "type": "assistant",
+          "message": {
+            "model": "claude-opus-5-5",
+            "id": "msg_011CfoJMkvXozN1cdRxH11ms",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_01CbH8PdS1B4W2nbZkAAtWEp",
+                "name": "Read",
+                "input": {
+                  "file_path": "/demo/project/README.md"
+                },
+                "caller": {
+                  "type": "direct"
+                }
+              }
+            ],
+            "container": null,
+            "stop_reason": null,
+            "stop_sequence": null,
+            "stop_details": null,
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 11441,
+              "cache_read_input_tokens": 7401,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 11441
+              },
+              "output_tokens": 7,
+              "service_tier": "standard",
+              "inference_geo": "not_available"
+            },
+            "input_transformations": [],
+            "diagnostics": null,
+            "context_management": null
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "82b7093b-8ed2-43cf-b144-8dc1ef15b65e",
+          "timestamp": "2026-10-07T17:50:24.429Z",
+          "request_id": "req_preview_0001",
+          "wire_tool_inputs": {
+            "toolu_01CbH8PdS1B4W2nbZkAAtWEp": {
+              "file_path": "/demo/project/README.md"
+            }
+          }
+        },
+        "activity": {
+          "kind": "tool.started",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoJMkvXozN1cdRxH11ms",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3308,
+      "task_id": "preview-recorded-mcp",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:30:03.112Z",
+      "data": {
+        "type": "rate_limit_event",
+        "rate_limit_info": {
+          "status": "allowed",
+          "rateLimitType": "five_hour",
+          "resetsAt": 1790958600
+        },
+        "uuid": "2978b8bb-b385-4e25-9493-dfe2844f6a80",
+        "session_id": "preview-session",
+        "raw_response": {
+          "type": "rate_limit_event",
+          "rate_limit_info": {
+            "status": "allowed",
+            "rateLimitType": "five_hour",
+            "resetsAt": 1790958600
+          },
+          "uuid": "2978b8bb-b385-4e25-9493-dfe2844f6a80",
+          "session_id": "preview-session"
+        },
+        "activity": {
+          "kind": "rate_limit_event",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": true,
+          "statusTitle": "Rate limit updated",
+          "title": "Rate limit update",
+          "messageId": "2978b8bb-b385-4e25-9493-dfe2844f6a80",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3309,
+      "task_id": "preview-recorded-mcp",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:30:03.114Z",
+      "data": {
+        "type": "system",
+        "subtype": "task_summary",
+        "detail": "Reading README.md",
+        "uuid": "0237b95d-fc4f-4601-8747-8510785ca0c0",
+        "session_id": "preview-session",
+        "raw_response": {
+          "type": "system",
+          "subtype": "task_summary",
+          "detail": "Reading README.md",
+          "uuid": "0237b95d-fc4f-4601-8747-8510785ca0c0",
+          "session_id": "preview-session"
+        },
+        "activity": {
+          "kind": "task_summary",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Task summary",
+          "messageId": "0237b95d-fc4f-4601-8747-8510785ca0c0",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3310,
+      "task_id": "preview-recorded-mcp",
+      "type": "tool.completed",
+      "timestamp": "2026-10-02T11:30:03.125Z",
+      "data": {
+        "id": "toolu_01CbH8PdS1B4W2nbZkAAtWEp",
+        "content": "1\t# Native verification\n2\t\n3\tThe verification marker is COBALT-27.\n4\t",
+        "raw_response": {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "tool_use_id": "toolu_01CbH8PdS1B4W2nbZkAAtWEp",
+                "type": "tool_result",
+                "content": "1\t# Native verification\n2\t\n3\tThe verification marker is COBALT-27.\n4\t"
+              }
+            ]
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "bd406802-af4a-41fa-97ff-6f1e3acc71a4",
+          "timestamp": "2026-10-07T17:50:24.460Z",
+          "tool_use_result": {
+            "type": "text",
+            "file": {
+              "filePath": "/demo/project/README.md",
+              "content": "# Native verification\n\nThe verification marker is COBALT-27.\n",
+              "numLines": 4,
+              "startLine": 1,
+              "totalLines": 4
+            }
+          }
+        },
+        "activity": {
+          "kind": "tool.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "bd406802-af4a-41fa-97ff-6f1e3acc71a4",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3311,
+      "task_id": "preview-recorded-mcp",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:30:03.128Z",
+      "data": {
+        "type": "system",
+        "subtype": "status",
+        "status": "requesting",
+        "session_id": "preview-session",
+        "uuid": "80467446-def6-4d92-bb7a-993596778600",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "80467446-def6-4d92-bb7a-993596778600"
+        },
+        "activity": {
+          "kind": "status",
+          "quiet": true,
+          "failed": false,
+          "thinking": true,
+          "liveStatus": true,
+          "statusTitle": "Thinking…",
+          "title": "Claude status",
+          "messageId": "80467446-def6-4d92-bb7a-993596778600",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3312,
+      "task_id": "preview-recorded-mcp",
+      "type": "agent.message",
+      "timestamp": "2026-10-02T11:30:05.322Z",
+      "data": {
+        "role": "assistant",
+        "text": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do.",
+        "content": {
+          "type": "text",
+          "text": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do."
+        },
+        "raw_response": {
+          "type": "assistant",
+          "message": {
+            "model": "claude-opus-5-5",
+            "id": "msg_011CfoJMtkaEsj3eKNxMCvXY",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do."
+              }
+            ],
+            "container": null,
+            "stop_reason": null,
+            "stop_sequence": null,
+            "stop_details": null,
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 255,
+              "cache_read_input_tokens": 18842,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 255
+              },
+              "output_tokens": 146,
+              "service_tier": "standard",
+              "inference_geo": "not_available"
+            },
+            "input_transformations": [],
+            "diagnostics": null,
+            "context_management": null
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "df1cece5-97ee-40d1-80d9-2be0d3528fa1",
+          "timestamp": "2026-10-07T17:50:26.630Z",
+          "request_id": "req_preview_0002"
+        },
+        "activity": {
+          "kind": "agent.message",
+          "quiet": false,
+          "failed": false,
+          "summary": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do.",
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoJMtkaEsj3eKNxMCvXY",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3313,
+      "task_id": "preview-recorded-mcp",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:30:06.072Z",
+      "data": {
+        "type": "system",
+        "subtype": "post_turn_summary",
+        "summarizes_uuid": "df1cece5-97ee-40d1-80d9-2be0d3528fa1",
+        "status_category": "completed",
+        "status_detail": "README.md read; verification marker COBALT-27",
+        "needs_action": "",
+        "uuid": "b5748a46-b4c3-4dba-827a-95b98f103edb",
+        "session_id": "preview-session",
+        "raw_response": {
+          "type": "system",
+          "subtype": "post_turn_summary",
+          "summarizes_uuid": "df1cece5-97ee-40d1-80d9-2be0d3528fa1",
+          "status_category": "completed",
+          "status_detail": "README.md read; verification marker COBALT-27",
+          "needs_action": "",
+          "uuid": "b5748a46-b4c3-4dba-827a-95b98f103edb",
+          "session_id": "preview-session"
+        },
+        "activity": {
+          "kind": "post_turn_summary",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Post turn summary",
+          "messageId": "b5748a46-b4c3-4dba-827a-95b98f103edb",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3314,
+      "task_id": "preview-recorded-mcp",
+      "type": "agent.completed",
+      "timestamp": "2026-10-02T11:30:06.081Z",
+      "data": {
+        "duration_api_ms": 3980,
+        "stop_reason": "end_turn",
+        "session_id": "preview-session",
+        "total_cost_usd": 0.1050726,
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 11696,
+          "cache_read_input_tokens": 26243,
+          "output_tokens": 312,
+          "output_tokens_details": {
+            "thinking_tokens": 55
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 11696,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 146,
+              "cache_read_input_tokens": 18842,
+              "cache_creation_input_tokens": 255,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 255
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard",
+          "fallback_credit": null
+        },
+        "modelUsage": {
+          "claude-opus-5-5": {
+            "inputTokens": 4,
+            "outputTokens": 312,
+            "cacheReadInputTokens": 26243,
+            "cacheCreationInputTokens": 11696,
+            "webSearchRequests": 0,
+            "costUSD": 0.1050726,
+            "contextWindow": 1000000,
+            "maxOutputTokens": 128000,
+            "thinkingTokens": 55,
+            "canonicalModel": "claude-opus-5-5",
+            "provider": "firstParty",
+            "costBasis": "list"
+          }
+        },
+        "permission_denials": [],
+        "terminal_reason": "completed",
+        "fast_mode_state": "off",
+        "fast_mode_disabled_reason": "sdk_opt_in_required",
+        "subagent_stats": {
+          "spawned": 0,
+          "requested": {
+            "background": 0,
+            "foreground": 0,
+            "unset": 0
+          },
+          "started_in_background": 0,
+          "max_depth": 0,
+          "spawned_by_subagents": 0,
+          "completed": 0,
+          "failed": 0,
+          "killed": {
+            "parent": 0,
+            "user": 0,
+            "system": 0
+          },
+          "refused": {
+            "depth_limit": 0,
+            "concurrency_limit": 0,
+            "budget": 0
+          },
+          "by_type": {}
+        },
+        "is_error": false,
+        "num_turns": 2,
+        "subtype": "success",
+        "api_error_status": null,
+        "result": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do.",
+        "ttft_ms": 1276,
+        "type": "result",
+        "duration_ms": 4844,
+        "uuid": "b2fe3631-286e-4e12-9963-68c15cb2d216",
+        "ttft_stream_ms": 660,
+        "time_to_request_ms": 60,
+        "first_content_frame_ms": 661,
+        "queued_turn_count": 0,
+        "result_index": 0,
+        "cost_usd": 0.1050726,
+        "raw_response": {
+          "duration_api_ms": 3980,
+          "stop_reason": "end_turn",
+          "session_id": "preview-session",
+          "total_cost_usd": 0.1050726,
+          "usage": {
+            "input_tokens": 4,
+            "cache_creation_input_tokens": 11696,
+            "cache_read_input_tokens": 26243,
+            "output_tokens": 312,
+            "output_tokens_details": {
+              "thinking_tokens": 55
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 11696,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "not_available",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 146,
+                "cache_read_input_tokens": 18842,
+                "cache_creation_input_tokens": 255,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 255
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard",
+            "fallback_credit": null
+          },
+          "modelUsage": {
+            "claude-opus-5-5": {
+              "inputTokens": 4,
+              "outputTokens": 312,
+              "cacheReadInputTokens": 26243,
+              "cacheCreationInputTokens": 11696,
+              "webSearchRequests": 0,
+              "costUSD": 0.1050726,
+              "contextWindow": 1000000,
+              "maxOutputTokens": 128000,
+              "thinkingTokens": 55,
+              "canonicalModel": "claude-opus-5-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "permission_denials": [],
+          "terminal_reason": "completed",
+          "fast_mode_state": "off",
+          "fast_mode_disabled_reason": "sdk_opt_in_required",
+          "subagent_stats": {
+            "spawned": 0,
+            "requested": {
+              "background": 0,
+              "foreground": 0,
+              "unset": 0
+            },
+            "started_in_background": 0,
+            "max_depth": 0,
+            "spawned_by_subagents": 0,
+            "completed": 0,
+            "failed": 0,
+            "killed": {
+              "parent": 0,
+              "user": 0,
+              "system": 0
+            },
+            "refused": {
+              "depth_limit": 0,
+              "concurrency_limit": 0,
+              "budget": 0
+            },
+            "by_type": {}
+          },
+          "is_error": false,
+          "num_turns": 2,
+          "subtype": "success",
+          "api_error_status": null,
+          "result": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do.",
+          "ttft_ms": 1276,
+          "type": "result",
+          "duration_ms": 4844,
+          "uuid": "b2fe3631-286e-4e12-9963-68c15cb2d216",
+          "ttft_stream_ms": 660,
+          "time_to_request_ms": 60,
+          "first_content_frame_ms": 661,
+          "queued_turn_count": 0,
+          "result_index": 0
+        },
+        "activity": {
+          "kind": "agent.completed",
+          "quiet": false,
+          "failed": false,
+          "summary": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do.",
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "b2fe3631-286e-4e12-9963-68c15cb2d216",
+          "hasThinking": false
+        }
+      }
+    },
+    {
+      "id": 3315,
+      "task_id": "preview-recorded-mcp",
+      "type": "agent.reply",
+      "timestamp": "2026-10-02T11:30:06.634Z",
+      "data": {
+        "text": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do.",
+        "turn": 1,
+        "start_tree": "883bbc4761832cbb0d347702e84ace59e3c59918",
+        "end_tree": "883bbc4761832cbb0d347702e84ace59e3c59918"
+      }
+    },
+    {
+      "id": 3316,
+      "task_id": "preview-recorded-mcp",
+      "type": "task.turn_ended",
+      "timestamp": "2026-10-02T11:30:06.634Z",
+      "data": {
+        "turn": 1,
+        "outcome": "completed",
+        "runtime_ms": 6633,
+        "cost_usd": 0.1050726
+      }
+    },
+    {
+      "id": 3317,
+      "task_id": "preview-recorded-mcp",
+      "type": "task.completed",
+      "timestamp": "2026-10-02T11:30:06.634Z",
+      "data": {
+        "reply": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do."
+      }
+    }
+  ]
+}

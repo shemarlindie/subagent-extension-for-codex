@@ -134,9 +134,13 @@ test("fixture events match what the provider derives from their SDK message", ()
     assert.ok(
       derived.some((candidate) => {
         try {
+          // As the service stores it: JSON drops undefined fields, which
+          // recorded fixtures (ui/dev/preview/recorded) don't have.
           assert.deepEqual(
-            { type: candidate.type, data: candidate.data },
-            { type: event.type, data: event.data },
+            JSON.parse(
+              JSON.stringify({ type: candidate.type, data: candidate.data }),
+            ),
+            JSON.parse(JSON.stringify({ type: event.type, data: event.data })),
           );
 
           return true;

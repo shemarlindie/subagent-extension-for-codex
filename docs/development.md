@@ -151,6 +151,55 @@ CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev PORT=4399 npm run dev:ui
 Codex's iframe sandbox, CSP, real host styles, and native placement are not
 reproduced, so confirm layout-sensitive changes in Codex before release.
 
+## Recorded fixtures
+
+Besides the fixtures built with the typed builder in `ui/dev/preview/fixtures.ts`,
+the preview can show tasks recorded from real runs, in `ui/dev/preview/recorded/`.
+Their SDK messages come from a real Claude run, so they show exactly what the
+SDK sends, which built fixtures can only approximate.
+`ui/dev/preview/preview-sdk-fixtures.test.ts` replays them through the provider
+like the built ones.
+
+Record a task from any service database (the service's, the demo's, or a
+temporary one such as `scripts/verify-live-claude.mjs` creates):
+
+```bash
+npm run fixture:record -- --db <tasks.sqlite> --task <task id> --name <name> --title "Recorded: <what it shows>" --start 2026-10-02T11:40:00.000Z --first-id 3400
+```
+
+It writes `ui/dev/preview/recorded/<name>.json` for task `preview-recorded-<name>`
+in the `dev-thread` thread and the `/demo/project` project. Then import the file
+in `fixtures.ts` and add it to `recordedFixtures`. Choose a `--first-id` past the
+other fixtures' event ids (the recorded ones start at 3000, a hundred apart), and
+a `--start` that keeps the task where you want it in the newest-first list.
+
+Recording (`recordFixture` in `ui/dev/preview/recording.ts`) sanitizes the run so
+the file can be committed:
+
+- Paths (the repository, the workspace and the run's directory, the home and
+  temporary directories), including Claude's dash-encoded project paths, become
+  `/demo/...` paths. The host name, the task and session ids, and API request ids
+  become fixture values.
+- `system/init` messages lose your skills, plugins, MCP servers, commands and
+  local paths, and rate-limit events keep only their status and window, not your
+  usage or your organization's overage policy.
+- Events are renumbered and moved to `--start`, keeping their spacing. Provider
+  events get their presentation again from the sanitized SDK message.
+- The task belongs to the preview owner, is renamed with `--title`, and has no
+  workspace, so its Changes tab is empty. A record from before the current task
+  shape (strings for messages, `attempt` for `turn`) gets the current fields.
+
+It refuses to write a file that still contains your home directory, the
+temporary directory, the host name or your user name, as they are or
+dash-encoded. Replace anything else the run added, or what a refusal names, with
+`--replace <from>=<to>` (repeatable). Read the file before committing it anyway:
+a task's own content, such as its prompt or the files it read, is kept as it is.
+
+Replacement values are literal text. Quote the whole argument when it contains
+spaces or shell characters, for example `--replace 'internal-name=/demo/name'`.
+Claude's encoded project paths get the corresponding dash-encoded replacement;
+ordinary text keeps the replacement as written.
+
 ## Codex
 
 With the MCP configuration above, reload the MCP connection in Codex and open

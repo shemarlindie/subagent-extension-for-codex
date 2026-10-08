@@ -13,6 +13,11 @@ import type {
 
 import { claudeActivityPresentation } from "../../../src/features/providers/claude/activity";
 import type { Event, Task } from "../../../src/shared/contracts";
+import recordedMcp from "./recorded/mcp.json";
+import recordedResume from "./recorded/resume.json";
+import recordedSteer from "./recorded/steer.json";
+import recordedStream from "./recorded/stream.json";
+import type { RecordedFixture } from "./recording";
 
 type Data = Record<string, unknown>;
 
@@ -1949,6 +1954,18 @@ const liveTasks: Task[] = liveStates.map((live, index) => ({
   ...timestamps(120 + index, 1),
 }));
 
+/**
+ * Tasks recorded from real Claude runs and sanitized by `npm run
+ * fixture:record` (ui/dev/preview/record-fixture.ts). Their SDK messages are
+ * real, so the replay test checks them like the built ones.
+ */
+const recordedFixtures = [
+  recordedSteer,
+  recordedStream,
+  recordedResume,
+  recordedMcp,
+] as unknown as RecordedFixture[];
+
 export const previewTasks: Task[] = [
   {
     ...taskBase,
@@ -2357,6 +2374,7 @@ export const previewTasks: Task[] = [
     ...timestamps(135, 1),
   },
   ...liveTasks,
+  ...recordedFixtures.map((recorded) => recorded.task),
 ];
 
 export const previewEvents: Event[] = [
@@ -2382,4 +2400,6 @@ export const previewEvents: Event[] = [
   longChat,
   streaming,
   ...liveTimelines,
-].flatMap((timeline) => timeline.events);
+]
+  .flatMap((timeline) => timeline.events)
+  .concat(recordedFixtures.flatMap((recorded) => recorded.events));
