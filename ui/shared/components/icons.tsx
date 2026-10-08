@@ -46,6 +46,7 @@ const ICON_NAMES = [
   "arrow-up",
   "copy",
   "enter",
+  "reply",
   "stop-solid",
 ] as const;
 

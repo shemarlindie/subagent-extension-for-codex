@@ -2542,6 +2542,99 @@ test("handoff sends only after explicit submit and uses the edited message", asy
   );
 });
 
+test("completed chat turns show a quiet summary with a completion time on hover", async (t) => {
+  const timestamp = "2026-10-08T18:30:00.000Z";
+
+  const { user, controller, transport } = await setup(t, (transport) => {
+    transport.tasks[0].status = "completed";
+    transport.host.locale = "en-US";
+    transport.host.timeZone = "America/Los_Angeles";
+
+    transport.chat = [
+      {
+        kind: "outcome",
+        id: "completed-turn",
+        event_id: 1,
+        timestamp,
+        turn: 1,
+        outcome: "completed",
+        runtime_ms: 95_000,
+        cost_usd: 0,
+      },
+    ];
+  });
+
+  const row = document.querySelector(".chat-outcome")!;
+  const label = row.querySelector(".chat-outcome-label")!;
+  const duration = row.querySelector("time")!;
+  const turn = row.querySelector<HTMLElement>(".chat-outcome-line-turn")!;
+
+  assert.equal(label.tagName, "SPAN");
+  assert.equal(label.textContent, "1");
+  assert.equal(row.querySelector("svg")?.getAttribute("width"), "12");
+  assert.equal(duration.textContent, "1m 35s");
+  assert.equal(duration.getAttribute("datetime"), timestamp);
+  assert.equal(duration.title, "Response took 1m 35s");
+  assert.equal(turn.title, "Responded at Oct 8, 2026, 11:30:00 AM PDT");
+
+  assert.equal(
+    within(row as HTMLElement).getByText("$0.00").title,
+    "Reported cost",
+  );
+
+  assertAbsent(within(row as HTMLElement).queryByRole("separator"));
+
+  await act(() =>
+    transport.events.host({
+      ...transport.host,
+      timeZone: "America/New_York",
+    }),
+  );
+
+  assert.equal(turn.title, "Responded at Oct 8, 2026, 2:30:00 PM EDT");
+  assert.equal(duration.title, "Response took 1m 35s");
+
+  await user.click(screen.getByRole("button", { name: "View activity" }));
+  assert.equal(controller.getSnapshot().tab, "activity");
+});
+
+for (const outcome of ["failed", "interrupted"] as const)
+  test(`${outcome} chat turns retain their status and error beside the compact summary`, async (t) => {
+    const error = outcome === "failed" ? "Worker failed <script>" : undefined;
+
+    await setup(t, (transport) => {
+      transport.tasks[0].status = outcome;
+
+      transport.chat = [
+        {
+          kind: "outcome",
+          id: `${outcome}-turn`,
+          event_id: 1,
+          timestamp: "2026-10-08T18:30:00.000Z",
+          turn: 2,
+          outcome,
+          runtime_ms: 95_000,
+          error,
+        },
+      ];
+    });
+
+    const row = document.querySelector<HTMLElement>(".chat-outcome")!;
+    assert.equal(row.dataset.outcome, outcome);
+
+    assert.equal(
+      within(row).getByRole("separator").textContent,
+      outcome === "failed" ? "Failed" : "Interrupted",
+    );
+
+    assert.equal(row.querySelector(".chat-outcome-label")?.textContent, "2");
+    assert.equal(row.querySelector("time")?.textContent, "1m 35s");
+    assert.equal(row.querySelector(".chat-outcome-error")?.textContent, error);
+    assertAbsent(row.querySelector("script"));
+    assertAbsent(row.querySelector('[title="Reported cost"]'));
+    assert.ok(within(row).getByRole("button", { name: "View activity" }));
+  });
+
 test("task and reply text render literally without HTML interpretation", async (t) => {
   const injection = '<img src=x onerror="window.injected=true">';
 

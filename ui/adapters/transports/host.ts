@@ -77,6 +77,8 @@ export class HostTransport implements Transport {
     const capabilities = this.app.getHostCapabilities();
 
     this.events?.host({
+      ...(context?.locale ? { locale: context.locale } : {}),
+      ...(context?.timeZone ? { timeZone: context.timeZone } : {}),
       displayMode,
       canExpand: Boolean(
         context?.availableDisplayModes?.includes(

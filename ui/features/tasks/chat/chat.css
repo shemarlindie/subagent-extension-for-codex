@@ -1,3 +1,7 @@
+:root {
+  --chat-outcome-line-item-gap: 6px;
+}
+
 /* Chat: the conversation scrolls; the queue and composer stay at the bottom. */
 .chat {
   display: flex;
@@ -83,10 +87,18 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--chat-outcome-line-item-gap);
 }
-.chat-outcome-label {
-  color: var(--text);
+.chat-outcome .chat-outcome-note {
+  margin-bottom: 6px;
+  color: var(--warn);
+}
+.chat-outcome[data-outcome="failed"] .chat-outcome-note {
+  color: var(--danger);
+}
+.chat-outcome-line-turn {
+  display: flex;
+  gap: var(--chat-outcome-line-item-gap);
 }
 .chat-outcome-activity {
   margin-left: auto;
@@ -96,9 +108,6 @@
   margin: 4px 0 0;
   color: var(--danger);
   overflow-wrap: anywhere;
-}
-.chat-outcome[data-outcome="interrupted"] .dot {
-  background: var(--muted);
 }
 .chat-note {
   display: flex;

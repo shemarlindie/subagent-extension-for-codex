@@ -4,6 +4,8 @@ import { statusLabel } from "../../../shared/state/selectors";
 import type { Task } from "../../../shared/state/types";
 import { useSessionState } from "../../../shared/state/use-session-state";
 import { currentActivityStatus } from "../activity/activity-timeline";
+import { rowStatus } from "../list/task-status";
+import { TaskStatusIcon } from "../list/task-status-icon";
 import { ChatMessageView } from "./chat-message-view";
 import { composerMode } from "./chat-model";
 import { ChatNoteRow } from "./chat-note-row";
@@ -47,12 +49,22 @@ export function ChatTimeline({ task }: ChatTimelineProps) {
       ? draft
       : undefined;
 
+  const activity =
+    task.status === "running" && state.events.length
+      ? currentActivityStatus(state.events, task)
+      : task.live_activity;
+
+  const presentation = rowStatus({ ...task, live_activity: activity });
+
   const working =
     composerMode(task) === "busy" && !streaming
-      ? task.status === "running" && state.events.length
-        ? currentActivityStatus(state.events, task).text
+      ? task.status === "running" && activity
+        ? activity.text
         : statusLabel(task)
       : undefined;
+
+  const latest = items?.at(-1);
+  const workingShownInNote = latest?.kind === "note" && latest.text === working;
 
   const [reading] = useSessionState(
     "task",
@@ -96,9 +108,9 @@ export function ChatTimeline({ task }: ChatTimelineProps) {
           streaming
         />
       )}
-      {working && (
+      {working && !workingShownInNote && (
         <div className="chat-working" role="status">
-          <span className="dot running" aria-hidden="true" />
+          <TaskStatusIcon kind={presentation.kind} label={working} decorative />
           <span>{working}</span>
         </div>
       )}

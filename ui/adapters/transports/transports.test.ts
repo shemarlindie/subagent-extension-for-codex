@@ -312,6 +312,48 @@ test("host preserves structured settings envelopes and unwraps other tools", asy
   transport.dispose();
 });
 
+test("host forwards locale and time zone on connect and context changes", async () => {
+  const fake = hostApp();
+  let preferences = {
+    locale: "en-US",
+    timeZone: "America/Los_Angeles",
+  };
+
+  fake.app.getHostContext = () => ({
+    displayMode: "inline",
+    availableDisplayModes: ["inline", "fullscreen"],
+    ...preferences,
+  });
+
+  const transport = new HostTransport(fake.app as any);
+  const observed = callbacks();
+  await transport.connect(observed.events);
+
+  assert.deepEqual(observed.hosts, [
+    {
+      ...preferences,
+      displayMode: "inline",
+      canExpand: true,
+      canSend: true,
+      canShare: true,
+    },
+  ]);
+
+  preferences = { locale: "ja-JP", timeZone: "Asia/Tokyo" };
+  fake.app.onhostcontextchanged();
+
+  assert.deepEqual(observed.hosts.at(-1), {
+    ...preferences,
+    displayMode: "inline",
+    canExpand: true,
+    canSend: true,
+    canShare: true,
+  });
+
+  assert.equal(observed.hosts.length, 2);
+  transport.dispose();
+});
+
 test("host tool errors and missing structured output surface meaningful failures", async () => {
   const fake = hostApp();
   const transport = new HostTransport(fake.app as any);

@@ -10,9 +10,10 @@ import {
 } from "@testing-library/react";
 import { onTestFinished, test, vi } from "vitest";
 
+import { previewEvents } from "../../../dev/preview/fixtures";
 import { Controller } from "../../../shared/state/controller";
 import { ControllerContext } from "../../../shared/state/controller-context";
-import type { Task, Transport } from "../../../shared/state/types";
+import type { Event, Task, Transport } from "../../../shared/state/types";
 import { ChatPanel } from "./chat-panel";
 
 const base: Task = {
@@ -41,7 +42,7 @@ const base: Task = {
   cost_usd: 1,
 };
 
-function setup(patch: Partial<Task> = {}) {
+function setup(patch: Partial<Task> = {}, events: Event[] = []) {
   onTestFinished(cleanup);
   const task = { ...base, ...patch };
 
@@ -53,6 +54,8 @@ function setup(patch: Partial<Task> = {}) {
   onTestFinished(() => controller.dispose());
   const tool = vi.spyOn(controller, "tool").mockResolvedValue({});
   vi.spyOn(controller, "refresh").mockResolvedValue();
+  const snapshot = { ...controller.getSnapshot(), events };
+  vi.spyOn(controller, "getSnapshot").mockReturnValue(snapshot);
 
   const panel = (current: Task) => (
     <ControllerContext.Provider value={controller}>
@@ -75,6 +78,49 @@ function setup(patch: Partial<Task> = {}) {
 
 const sent = (tool: ReturnType<typeof setup>["tool"]) =>
   tool.mock.calls.map(([name, args]) => [name, args]);
+
+test("dependency waiting shows a paused status instead of the running indicator", () => {
+  const { view } = setup({
+    status: "waiting",
+    waiting_reason: "waiting_for_dependency",
+  });
+
+  const status = view.getByRole("status");
+
+  assert.equal(status.textContent, "Waiting on dependency");
+  assert.ok(status.querySelector(".row-status-icon.waiting"));
+  assert.equal(status.querySelector(".running"), null);
+
+  assert.equal(
+    status.querySelector("svg")?.getAttribute("aria-hidden"),
+    "true",
+  );
+});
+
+for (const source of ["live activity", "events"] as const) {
+  test(`rate-limit waiting shows a paused status from ${source}`, () => {
+    const { view } = setup(
+      {
+        status: "running",
+        live_activity:
+          source === "live activity"
+            ? { text: "Waiting for rate limit reset", state: "info" }
+            : undefined,
+      },
+      source === "events"
+        ? previewEvents.filter(
+            (event) => event.task_id === "preview-live-rate-limited",
+          )
+        : [],
+    );
+
+    const status = view.getByRole("status");
+
+    assert.equal(status.textContent, "Waiting for rate limit reset");
+    assert.ok(status.querySelector(".row-status-icon.paused"));
+    assert.equal(status.querySelector(".running"), null);
+  });
+}
 
 test("on an idle task, Enter sends the message, which starts the next turn", async () => {
   const { tool, composer, type, view } = setup();

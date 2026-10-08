@@ -2,6 +2,8 @@ import type { DraftUpdate } from "../../../src/features/tasks/drafts.js";
 import type { PanelData } from "../../shared/state/types.js";
 
 export type HostState = {
+  locale?: string;
+  timeZone?: string;
   canSend: boolean;
   canShare: boolean;
   canExpand: boolean;
