@@ -64,8 +64,8 @@ export function useActivityScroll(events: Event[], active = true) {
     const top = container.getBoundingClientRect().top;
     const next = new Map<string, Position>();
 
-    for (const element of viewport.querySelectorAll<HTMLElement>(
-      "[data-activity-id]",
+    for (const element of Array.from(
+      viewport.querySelectorAll<HTMLElement>("[data-activity-id]"),
     )) {
       const rect = element.getBoundingClientRect();
 

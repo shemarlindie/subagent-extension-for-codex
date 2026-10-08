@@ -91,6 +91,15 @@ function note(e: Event): ChatNote | undefined {
   if (isCompaction(e))
     return { ...base, note: "compaction", text: "Context compacted" };
 
+  const raw = e.data.raw_response as Record<string, unknown> | undefined;
+
+  if (
+    e.type === "claude.activity" &&
+    raw?.type === "system" &&
+    raw.compact_result === "failed"
+  )
+    return { ...base, note: "failure", text: "Context compaction failed" };
+
   return undefined;
 }
 

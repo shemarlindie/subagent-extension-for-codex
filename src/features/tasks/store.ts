@@ -176,7 +176,7 @@ export class Store {
   chatEvents(id: string, types: string[]): Event[] {
     return this.db
       .prepare(
-        `SELECT * FROM events WHERE task_id=? AND (type IN (${types.map(() => "?").join(",")}) OR (type='claude.activity' AND json_extract(data,'$.raw_response.subtype')='compact_boundary')) ORDER BY id`,
+        `SELECT * FROM events WHERE task_id=? AND (type IN (${types.map(() => "?").join(",")}) OR (type='claude.activity' AND (json_extract(data,'$.raw_response.subtype')='compact_boundary' OR json_extract(data,'$.raw_response.compact_result')='failed'))) ORDER BY id`,
       )
       .all(id, ...types)
       .map(

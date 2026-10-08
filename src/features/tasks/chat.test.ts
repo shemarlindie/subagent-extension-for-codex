@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { type Event, startSchema, type Task } from "../../shared/contracts.js";
-import { chatItems } from "./chat.js";
+import { CHAT_EVENTS, chatItems } from "./chat.js";
+import { Store } from "./store.js";
 
 const task: Task = {
   ...startSchema.parse({ description: "Move the helpers" }),
@@ -24,6 +25,57 @@ const task: Task = {
 
 const event = (id: number, type: string, data: Record<string, unknown> = {}) =>
   ({ id, task_id: "task", type, timestamp: "", data }) as Event;
+
+test("stored Chat events include compaction failures and exclude ordinary statuses", (t) => {
+  const store = new Store(":memory:");
+
+  t.onTestFinished(() => store.close());
+  store.save(task);
+
+  store.event(task, "claude.activity", {
+    raw_response: { type: "system", subtype: "status", status: "compacting" },
+  });
+
+  const failure = store.event(task, "claude.activity", {
+    raw_response: {
+      type: "system",
+      subtype: "status",
+      compact_result: "failed",
+    },
+  });
+
+  assert.deepEqual(store.chatEvents(task.id, CHAT_EVENTS), [failure]);
+});
+
+test("Chat shows a compaction failure between replies without ending the turn", () => {
+  const items = chatItems(task, [
+    event(1, "agent.reply", { text: "Before compaction", turn: 1 }),
+    event(2, "claude.activity", {
+      raw_response: {
+        type: "system",
+        subtype: "status",
+        status: null,
+        compact_result: "failed",
+        compact_error: "The summary exceeded the context window.",
+      },
+    }),
+    event(3, "agent.reply", { text: "Continued", turn: 1 }),
+  ]);
+
+  assert.deepEqual(
+    items.map((item) => item.kind),
+    ["message", "message", "note", "message"],
+  );
+
+  assert.deepEqual(items[2], {
+    kind: "note",
+    id: "evt_2",
+    event_id: 2,
+    timestamp: "",
+    note: "failure",
+    text: "Context compaction failed",
+  });
+});
 
 test("Chat puts outcome rows where turns end, with a failure's error, and notes between messages", () => {
   const items = chatItems(task, [

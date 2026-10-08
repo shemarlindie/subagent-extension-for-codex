@@ -211,8 +211,8 @@ export function useListMotion(
       // Relative to the list, so layout shifts above it never read as row movement.
       origin = container.getBoundingClientRect().top - container.scrollTop;
 
-    for (const element of container.querySelectorAll<HTMLElement>(
-      `[${attribute}]`,
+    for (const element of Array.from(
+      container.querySelectorAll<HTMLElement>(`[${attribute}]`),
     )) {
       const id = element.getAttribute(attribute)!,
         top = element.getBoundingClientRect().top - origin;
