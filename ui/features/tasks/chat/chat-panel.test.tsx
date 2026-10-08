@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  waitFor,
+} from "@testing-library/react";
 import { onTestFinished, test, vi } from "vitest";
 
 import { Controller } from "../../../shared/state/controller";
@@ -48,18 +54,23 @@ function setup(patch: Partial<Task> = {}) {
   const tool = vi.spyOn(controller, "tool").mockResolvedValue({});
   vi.spyOn(controller, "refresh").mockResolvedValue();
 
-  const view = render(
+  const panel = (current: Task) => (
     <ControllerContext.Provider value={controller}>
-      <ChatPanel task={task} />
-    </ControllerContext.Provider>,
+      <ChatPanel task={current} />
+    </ControllerContext.Provider>
   );
+
+  const view = render(panel(task));
+
+  const updateTask = (patch: Partial<Task>) =>
+    view.rerender(panel({ ...task, ...patch }));
 
   const composer = view.getByRole("textbox", { name: "Message" });
 
   const type = (text: string) =>
     fireEvent.change(composer, { target: { value: text } });
 
-  return { controller, task, tool, view, composer, type };
+  return { controller, task, tool, view, composer, type, updateTask };
 }
 
 const sent = (tool: ReturnType<typeof setup>["tool"]) =>
@@ -144,6 +155,408 @@ test("while the worker waits for input, Enter only queues", async () => {
       ],
     ]),
   );
+});
+
+const questionInput = (id: string): Task["pending_input"] => ({
+  id,
+  tool: "AskUserQuestion",
+  kind: "question",
+  input: { questions: [{ question: "Which approach?" }] },
+});
+
+test("composer expansion and collapse animate directly between their heights without stacking variants", () => {
+  const animations: {
+    element: HTMLElement;
+    frames: Keyframe[];
+    animation: { onfinish: (() => void) | null; cancel(): void };
+  }[] = [];
+
+  const animateDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "animate",
+  );
+
+  Object.defineProperty(HTMLElement.prototype, "animate", {
+    configurable: true,
+    value(this: HTMLElement, frames: Keyframe[]) {
+      const animation = { onfinish: null, cancel() {} };
+
+      animations.push({ element: this, frames, animation });
+
+      return animation;
+    },
+  });
+
+  const height = vi
+    .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+    .mockImplementation(function (this: HTMLElement) {
+      if (!this.classList.contains("chat-composer")) return 0;
+
+      return (
+        (this.querySelector(".chat-composer-toggle-row") ? 28 : 0) +
+        (this.querySelector(".chat-composer-body") ? 64 : 0)
+      );
+    });
+
+  vi.stubGlobal("matchMedia", () => ({ matches: false }));
+
+  onTestFinished(() => {
+    height.mockRestore();
+    vi.unstubAllGlobals();
+
+    if (animateDescriptor)
+      Object.defineProperty(
+        HTMLElement.prototype,
+        "animate",
+        animateDescriptor,
+      );
+    else Reflect.deleteProperty(HTMLElement.prototype, "animate");
+  });
+
+  const { view, updateTask } = setup({ status: "running" });
+  const composer = view.container.querySelector(".chat-composer");
+
+  updateTask({ status: "waiting", pending_input: questionInput("request") });
+
+  const composerAnimations = () =>
+    animations.filter(({ frames }) => frames.some((frame) => frame.height));
+
+  const initialCollapse = composerAnimations().at(-1)!;
+
+  act(() => initialCollapse.animation.onfinish?.());
+  animations.length = 0;
+
+  fireEvent.click(view.getByRole("button", { name: "Show composer" }));
+  assert.equal(view.container.querySelector(".chat-composer"), composer);
+  assert.equal(composer?.querySelector(".chat-composer-toggle-row"), null);
+  assert.ok(composer?.querySelector(".chat-composer-body"));
+
+  const [expansion] = composerAnimations();
+
+  assert.equal(composerAnimations().length, 1);
+  assert.equal(expansion.element, composer);
+
+  assert.deepEqual(
+    expansion.frames.map((frame) => frame.height),
+    ["28px", "64px"],
+  );
+
+  act(() => expansion.animation.onfinish?.());
+  animations.length = 0;
+
+  fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+  assert.equal(view.container.querySelector(".chat-composer"), composer);
+  assert.ok(composer?.querySelector(".chat-composer-toggle-row"));
+  assert.equal(composer?.querySelector(".chat-composer-body"), null);
+
+  const [collapse] = composerAnimations();
+
+  assert.equal(composerAnimations().length, 1);
+  assert.equal(collapse.element, composer);
+
+  assert.deepEqual(
+    collapse.frames.map((frame) => frame.height),
+    ["64px", "28px"],
+  );
+});
+
+test("Stop moves continuously between expanded and collapsed composer layouts and stays operational", async () => {
+  const animations: {
+    element: HTMLElement;
+    frames: Keyframe[];
+    timing: KeyframeAnimationOptions;
+  }[] = [];
+
+  const animateDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "animate",
+  );
+
+  Object.defineProperty(HTMLElement.prototype, "animate", {
+    configurable: true,
+    value(
+      this: HTMLElement,
+      frames: Keyframe[],
+      timing: KeyframeAnimationOptions,
+    ) {
+      animations.push({ element: this, frames, timing });
+
+      return { cancel() {} };
+    },
+  });
+
+  const bounds = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: HTMLElement) {
+      const composer = this.closest(".chat-composer");
+      const expanded = !!composer?.querySelector(".chat-composer-body");
+      // The composer itself shifts during its height transition. Only the
+      // control's position relative to that container should be compensated.
+      const origin = expanded ? 100 : 140;
+
+      const top =
+        origin +
+        (this.getAttribute("data-action") === "stop" && expanded ? 7 : 0);
+
+      return { top, left: 0, width: 28, height: 28 } as DOMRect;
+    });
+
+  vi.stubGlobal("matchMedia", () => ({ matches: false }));
+
+  onTestFinished(() => {
+    bounds.mockRestore();
+    vi.unstubAllGlobals();
+
+    if (animateDescriptor)
+      Object.defineProperty(
+        HTMLElement.prototype,
+        "animate",
+        animateDescriptor,
+      );
+    else Reflect.deleteProperty(HTMLElement.prototype, "animate");
+  });
+
+  const { view, tool } = setup({ status: "running" });
+
+  const stopAnimations = () =>
+    animations.filter(
+      ({ element }) => element.getAttribute("data-action") === "stop",
+    );
+
+  const assertSingleStop = () => {
+    assert.equal(
+      view.getAllByRole("button", { name: "Stop the turn" }).length,
+      1,
+    );
+
+    assert.equal(
+      view.container.querySelectorAll('[data-action="stop"]').length,
+      1,
+    );
+  };
+
+  assertSingleStop();
+  animations.length = 0;
+  fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+  assertSingleStop();
+  assert.equal(stopAnimations().length, 1);
+  assert.equal(stopAnimations()[0].timing.duration, 180);
+
+  assert.deepEqual(stopAnimations()[0].frames, [
+    { transform: "translateY(7px)" },
+    { transform: "none" },
+  ]);
+
+  fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
+
+  await waitFor(() => assert.equal(tool.mock.calls.length, 1));
+
+  animations.length = 0;
+  fireEvent.click(view.getByRole("button", { name: "Show composer" }));
+  assertSingleStop();
+  assert.equal(stopAnimations().length, 1);
+  assert.equal(stopAnimations()[0].timing.duration, 180);
+
+  assert.deepEqual(stopAnimations()[0].frames, [
+    { transform: "translateY(-7px)" },
+    { transform: "none" },
+  ]);
+
+  fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
+
+  await waitFor(() =>
+    assert.deepEqual(sent(tool), [
+      ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
+      ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
+    ]),
+  );
+});
+
+test("an idle composer can hide and reopen its draft without offering Stop", () => {
+  const { view, type } = setup();
+  type("Keep the next turn draft");
+
+  fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+
+  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+  assert.equal(view.queryByRole("button", { name: "Stop the turn" }), null);
+
+  fireEvent.click(view.getByRole("button", { name: "Show composer (draft)" }));
+
+  const composer = view.getByRole("textbox", { name: "Message" });
+
+  assert.equal(
+    (composer as HTMLTextAreaElement).value,
+    "Keep the next turn draft",
+  );
+
+  assert.equal(document.activeElement, composer);
+});
+
+for (const pending_input of [
+  undefined,
+  { id: "permission", tool: "Bash", kind: "permission" as const, input: {} },
+]) {
+  test(`a hidden ${pending_input ? "permission" : "running"} composer keeps Stop available`, async () => {
+    const { view, tool } = setup({
+      status: pending_input ? "waiting" : "running",
+      pending_input,
+    });
+
+    fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+
+    assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+    assert.ok(view.getByRole("button", { name: "Show composer" }));
+
+    fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
+
+    await waitFor(() =>
+      assert.deepEqual(sent(tool), [
+        ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
+      ]),
+    );
+  });
+}
+
+test("composer visibility is remembered separately for each task", () => {
+  const { view, type, updateTask } = setup();
+  type("First task draft");
+  fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+
+  updateTask({ id: "task-2" });
+  assert.ok(view.getByRole("textbox", { name: "Message" }));
+  assert.ok(view.getByRole("button", { name: "Hide composer" }));
+
+  updateTask({ id: "task-1" });
+  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+
+  fireEvent.click(view.getByRole("button", { name: "Show composer (draft)" }));
+
+  assert.equal(
+    (view.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement)
+      .value,
+    "First task draft",
+  );
+});
+
+test("question toggles preserve the ordinary composer's hidden preference", () => {
+  const { view, updateTask } = setup({ status: "running" });
+  fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+
+  updateTask({ status: "waiting", pending_input: questionInput("request") });
+  fireEvent.click(view.getByRole("button", { name: "Show composer" }));
+  assert.ok(view.getByRole("textbox", { name: "Message" }));
+
+  updateTask({ status: "running", pending_input: undefined });
+  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+  assert.ok(view.getByRole("button", { name: "Show composer" }));
+});
+
+test("questions collapse the composer while preserving its draft and Stop action", async () => {
+  const focus = vi.spyOn(HTMLElement.prototype, "focus");
+  onTestFinished(() => focus.mockRestore());
+  const { tool, view, type, updateTask } = setup({ status: "running" });
+  type("Keep this draft");
+  updateTask({ status: "waiting", pending_input: questionInput("request") });
+
+  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+  assert.equal(view.queryByText(/Enter to queue/), null);
+
+  const show = view.getByRole("button", { name: "Show composer (draft)" });
+
+  const controlled = document.getElementById(
+    show.getAttribute("aria-controls")!,
+  );
+
+  assert.ok(controlled);
+  fireEvent.click(show);
+
+  const composer = view.getByRole("textbox", { name: "Message" });
+
+  assert.equal(document.activeElement, composer);
+  assert.equal(focus.mock.instances.at(-1), composer);
+  assert.deepEqual(focus.mock.lastCall, [{ preventScroll: true }]);
+  assert.equal((composer as HTMLTextAreaElement).value, "Keep this draft");
+  const collapse = view.getByRole("button", { name: "Hide composer" });
+  const composerBox = composer.closest(".chat-composer-box");
+
+  assert.equal(
+    document.getElementById(collapse.getAttribute("aria-controls")!),
+    controlled,
+  );
+
+  assert.equal(collapse.closest(".chat-composer-box"), null);
+  assert.equal(collapse.parentElement, composerBox?.parentElement);
+
+  assert.ok(
+    collapse.compareDocumentPosition(composer) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+
+  assert.equal(collapse.textContent, "");
+  fireEvent.change(composer, { target: { value: "After the answer" } });
+  fireEvent.click(collapse);
+  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+
+  assert.equal(
+    document.activeElement,
+    view.getByRole("button", { name: "Show composer (draft)" }),
+  );
+
+  assert.equal(
+    document.getElementById(
+      document.activeElement!.getAttribute("aria-controls")!,
+    ),
+    controlled,
+  );
+
+  assert.equal(focus.mock.instances.at(-1), document.activeElement);
+  assert.deepEqual(focus.mock.lastCall, [{ preventScroll: true }]);
+
+  fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
+
+  await waitFor(() =>
+    assert.deepEqual(sent(tool), [
+      ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
+    ]),
+  );
+
+  updateTask({ status: "running", pending_input: undefined });
+
+  assert.equal(
+    (view.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement)
+      .value,
+    "After the answer",
+  );
+
+  assert.ok(view.getByRole("button", { name: "Steer" }));
+  assert.ok(view.getByRole("button", { name: "Hide composer" }));
+});
+
+test("the expanded question composer queues messages and each new request starts collapsed", async () => {
+  const { tool, view, updateTask } = setup({ status: "running" });
+  updateTask({ status: "waiting", pending_input: questionInput("first") });
+  fireEvent.click(view.getByRole("button", { name: "Show composer" }));
+  const composer = view.getByRole("textbox", { name: "Message" });
+  fireEvent.change(composer, { target: { value: "Next, add tests" } });
+  fireEvent.keyDown(composer, { key: "Enter" });
+
+  await waitFor(() =>
+    assert.deepEqual(sent(tool), [
+      [
+        "send_user_agent_message",
+        { task_id: "task-1", message: "Next, add tests", delivery: "queue" },
+      ],
+    ]),
+  );
+
+  await waitFor(() =>
+    assert.equal((composer as HTMLTextAreaElement).value, ""),
+  );
+
+  updateTask({ status: "waiting", pending_input: questionInput("second") });
+  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+  assert.ok(view.getByRole("button", { name: "Show composer" }));
 });
 
 test("pending steers can be sent now, and a paused queue resumed, cleared, edited and trimmed", async () => {

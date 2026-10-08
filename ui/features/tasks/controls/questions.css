@@ -8,7 +8,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
-  margin: 4px 0 12px;
+  margin: 0 0 8px;
 }
 .question-count {
   font-size: 12px;
@@ -48,7 +48,6 @@
 .question-deck {
   --peek-step: 7px;
   display: grid;
-  margin-top: 8px;
   padding-bottom: calc(var(--peek) * var(--peek-step));
 }
 .question-card {
@@ -57,7 +56,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--bg);
@@ -105,7 +104,7 @@
   display: flex;
   align-items: baseline;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .question-header {
   align-self: flex-start;
@@ -141,7 +140,7 @@
   align-items: center;
   gap: 10px;
   margin: 0;
-  padding: 9px 11px;
+  padding: 7px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: inherit;
@@ -170,9 +169,15 @@
   accent-color: var(--accent);
 }
 .question-option-text {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
   min-width: 0;
+}
+.question-option-text > * {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .question-option-label {
   font-weight: 500;
@@ -188,7 +193,7 @@
 .question-other input {
   border: 0;
   background: transparent;
-  padding: 9px 11px;
+  padding: 7px 10px;
 }
 /* The option row carries the focus ring for its input. */
 .question-option input:focus-visible {
@@ -197,13 +202,12 @@
 .question-card textarea {
   display: block;
 }
-/* Skip sits on the left; navigation and sending sit on the right. */
 /* The front card's actions: skip on the left, navigation and sending on the right. */
 .question-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 .question-actions > :is([role="status"], .text-button) {
   font-size: 12px;
@@ -228,6 +232,10 @@
 }
 .question-step[data-skipped] {
   border-style: dashed;
+}
+
+.question-form .question-error {
+  margin: 10px 0 0;
 }
 
 .settings-group {

@@ -71,11 +71,6 @@ export class Controller {
   private persistedDialogs: PersistedDialog[];
   private viewStateReady = false;
   private timer?: ReturnType<typeof setTimeout>;
-  /**
-   * Question requests the user collapsed. New requests open expanded; a collapsed
-   * one stays collapsed when its task is shown again during this session.
-   */
-  readonly collapsedQuestions = new Set<string>();
   constructor(
     readonly transport: Transport,
     private environment = {
@@ -1135,7 +1130,6 @@ export class Controller {
 
     // The request is answered, so nothing about it needs remembering.
     this.session.remove("question", request.id);
-    this.collapsedQuestions.delete(request.id);
     await this.refresh().catch(this.report);
   }
 

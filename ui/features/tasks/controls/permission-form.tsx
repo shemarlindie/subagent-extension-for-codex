@@ -69,7 +69,7 @@ export function PermissionForm({ task }: { task: Task }) {
 
 export const permissionDialog = defineDialog<"respond">({
   title: () => "Review permission request",
-  // Worker questions answer inline in the task notice instead.
+  // Worker questions answer inline in Chat instead.
   render: ({ task }) => <PermissionForm task={task} />,
   initialFocus: firstTextField,
 });

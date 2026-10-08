@@ -8,7 +8,7 @@ import {
 } from "../../../shared/state/controller-context";
 import { pendingQuestions } from "../../../shared/state/selectors";
 import type { Task } from "../../../shared/state/types";
-import { QuestionNotice } from "./question-notice";
+import { QuestionForm } from "../controls/question-form";
 
 type PendingInputProps = { task: Task };
 
@@ -26,12 +26,12 @@ export function PendingInput({ task }: PendingInputProps) {
         ? pendingQuestions(task)
         : undefined;
 
-  // Notices fold in and out so the messages above don't jump.
+  // Pending requests fold in and out so the messages above don't jump.
   return (
     <>
       <Presence show={Boolean(questions)}>
         {/* Keyed so a new request starts with fresh answers. */}
-        <QuestionNotice key={pending?.id} task={task} />
+        <QuestionForm key={pending?.id} task={task} />
       </Presence>
       <Presence show={Boolean(pending && !questions)}>
         <Notice>

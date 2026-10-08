@@ -196,6 +196,7 @@ export function useListMotion(
   ref: RefObject<HTMLElement | null>,
   attribute: string,
   key: unknown,
+  duration: number = MOTION.slow,
 ) {
   const tops = useRef(new Map<string, number>());
 
@@ -224,7 +225,7 @@ export function useListMotion(
       animations.push(
         element.animate(
           [{ transform: `translateY(${old - top}px)` }, { transform: "none" }],
-          { duration: MOTION.slow, easing: MOTION.easing },
+          { duration, easing: MOTION.easing },
         ),
       );
     }
@@ -232,7 +233,7 @@ export function useListMotion(
     tops.current = next;
 
     return () => animations.forEach((animation) => animation.cancel());
-  }, [ref, attribute, key]);
+  }, [ref, attribute, key, duration]);
 }
 
 /**

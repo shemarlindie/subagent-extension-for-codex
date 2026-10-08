@@ -45,6 +45,8 @@ const ICON_NAMES = [
   "bug",
   "arrow-up",
   "copy",
+  "enter",
+  "stop-solid",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

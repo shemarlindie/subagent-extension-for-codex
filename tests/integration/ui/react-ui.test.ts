@@ -2385,10 +2385,35 @@ test("worker question accepts a custom answer with no preset selection", async (
     };
   });
 
-  // A new question opens expanded, with its choices inline rather than in a dialog.
-  const toggle = screen.getByRole("button", { name: /Claude has a question/ });
-  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  // Questions show their choices directly, without a notice or dialog.
+  assertAbsent(screen.queryByRole("button", { name: /Claude has a question/ }));
+  assertAbsent(screen.getByText("Which approach?").closest(".notice"));
   assertAbsent(screen.queryByRole("dialog"));
+  assertAbsent(screen.queryByRole("textbox", { name: "Message" }));
+  await user.click(screen.getByRole("button", { name: "Show composer" }));
+  const composer = screen.getByRole("textbox", { name: "Message" });
+  const collapse = screen.getByRole("button", { name: "Hide composer" });
+
+  assert.equal(collapse.closest(".chat-composer-box"), null);
+
+  assert.equal(
+    collapse.parentElement,
+    composer.closest(".chat-composer-input-row"),
+  );
+
+  assert.ok(
+    collapse.compareDocumentPosition(composer) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+
+  await user.click(collapse);
+  assertAbsent(screen.queryByRole("textbox", { name: "Message" }));
+
+  assert.equal(
+    document.activeElement,
+    screen.getByRole("button", { name: "Show composer" }),
+  );
+
   await user.click(screen.getByRole("radio", { name: "Preset" }));
 
   await user.type(
@@ -2402,7 +2427,7 @@ test("worker question accepts a custom answer with no preset selection", async (
     false,
   );
 
-  await user.click(screen.getByRole("button", { name: "Send answer" }));
+  await user.click(screen.getByRole("button", { name: "Respond" }));
 
   await waitFor(() =>
     assert.equal(
@@ -2951,7 +2976,7 @@ test("worker questions submit preset multiple answers and a custom override toge
     "Expanded scope",
   );
 
-  await user.click(screen.getByRole("button", { name: "Send answers" }));
+  await user.click(screen.getByRole("button", { name: "Respond" }));
 
   await waitFor(() =>
     assert.deepEqual(
@@ -2986,7 +3011,7 @@ test("a single worker question can be skipped and the skip undone", async (t) =>
   await user.click(screen.getByRole("button", { name: "Undo" }));
   assert.ok(screen.getByRole("button", { name: "Skip this question" }));
   await user.click(screen.getByRole("button", { name: "Skip this question" }));
-  await user.click(screen.getByRole("button", { name: "Send answer" }));
+  await user.click(screen.getByRole("button", { name: "Respond" }));
 
   await waitFor(() =>
     assert.deepEqual(
@@ -3050,7 +3075,7 @@ test("a skipped stacked question sends an explicit skipped answer", async (t) =>
   assertAbsent(screen.queryByText("Skipped", { selector: "[role=status]" }));
   await user.click(screen.getByRole("button", { name: "Skip this question" }));
   await user.click(screen.getByRole("radio", { name: "Changed" }));
-  await user.click(screen.getByRole("button", { name: "Send answers" }));
+  await user.click(screen.getByRole("button", { name: "Respond" }));
 
   await waitFor(() =>
     assert.deepEqual(
@@ -3093,10 +3118,10 @@ test("a question without options answers in a text box and shows send failures i
     "main",
   );
 
-  await user.click(screen.getByRole("button", { name: "Send answer" }));
+  await user.click(screen.getByRole("button", { name: "Respond" }));
   // The failure stays beside the answer, which is kept for a retry.
   await screen.findByText("Input request is stale");
-  await user.click(screen.getByRole("button", { name: "Send answer" }));
+  await user.click(screen.getByRole("button", { name: "Respond" }));
 
   await waitFor(() =>
     assert.equal(
@@ -3174,7 +3199,7 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
     controller.back();
 
     await waitFor(() =>
-      assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
+      assertAbsent(screen.queryByRole("button", { name: "Respond" })),
     );
 
     await controller.select("one");
@@ -3206,7 +3231,7 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
     true,
   );
 
-  await user.click(screen.getByRole("button", { name: "Send answers" }));
+  await user.click(screen.getByRole("button", { name: "Respond" }));
 
   await waitFor(() =>
     assert.deepEqual(
@@ -3224,7 +3249,7 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
 
   // An answered request leaves no draft, even though the form unmounts afterwards.
   await waitFor(() =>
-    assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
+    assertAbsent(screen.queryByRole("button", { name: "Respond" })),
   );
 
   assert.equal(controller.session.get("question", "request").draft, undefined);
@@ -3268,7 +3293,7 @@ test("keyboard focus follows the stacked question cards", async (t) => {
 
   assert.equal(
     document.activeElement,
-    screen.getByRole("button", { name: "Send answers" }),
+    screen.getByRole("button", { name: "Respond" }),
   );
 });
 
@@ -3296,27 +3321,24 @@ test("stacked worker questions return to the first unanswered card before sendin
     };
   });
 
-  // Headers summarize stacked questions; clicking the summary collapses the notice.
-  await user.click(screen.getByText("Format · Extras"));
+  assert.ok(screen.getByText("Question 1 of 2"));
 
-  const toggle = () =>
-    screen.getByRole("button", { name: /Claude has 2 questions/ });
+  assertAbsent(
+    screen.queryByRole("button", { name: /Claude has 2 questions/ }),
+  );
 
-  assert.equal(toggle().getAttribute("aria-expanded"), "false");
-  // A collapsed question stays collapsed when its task is shown again.
+  assertAbsent(screen.getByText("Which format?").closest(".notice"));
+
+  // Returning to the task shows the question directly again.
   controller.back();
 
   await waitFor(() =>
-    assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
+    assertAbsent(screen.queryByRole("button", { name: "Respond" })),
   );
 
   await controller.select("one");
+  await screen.findByText("Question 1 of 2");
 
-  await waitFor(() =>
-    assert.equal(toggle().getAttribute("aria-expanded"), "false"),
-  );
-
-  await user.click(toggle());
   await user.click(screen.getByRole("button", { name: "Extras" }));
   assert.ok(screen.getByText("Question 2 of 2"));
   await user.click(screen.getByRole("checkbox", { name: "Docs" }));
@@ -3327,7 +3349,7 @@ test("stacked worker questions return to the first unanswered card before sendin
     "Examples",
   );
 
-  await user.click(screen.getByRole("button", { name: "Send answers" }));
+  await user.click(screen.getByRole("button", { name: "Respond" }));
 
   assert.equal(
     screen
@@ -3344,7 +3366,7 @@ test("stacked worker questions return to the first unanswered card before sendin
   );
 
   await user.click(screen.getByRole("radio", { name: "JSON" }));
-  await user.click(screen.getByRole("button", { name: "Send answers" }));
+  await user.click(screen.getByRole("button", { name: "Respond" }));
 
   await waitFor(() =>
     assert.deepEqual(

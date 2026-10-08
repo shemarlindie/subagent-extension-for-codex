@@ -249,7 +249,6 @@ export function QuestionForm({ task }: { task: Task }) {
   }, [active]);
 
   // Leaving the task unmounts the form; keep its unsent answers as a draft to restore.
-  // (Collapsing the notice keeps the form mounted, so it needs no draft.)
   useEffect(() => {
     view.current = { active, skipped };
   });
@@ -390,7 +389,7 @@ export function QuestionForm({ task }: { task: Task }) {
           />
         ))}
       </div>
-      {/* One action row for the front card, at the bottom of the notice. */}
+      {/* One action row for the front card, below the cards. */}
       <div className="question-actions">
         {skipped.has(active) && (
           <span role="status" title="Claude will use its best judgment">
@@ -425,13 +424,7 @@ export function QuestionForm({ task }: { task: Task }) {
             variant="primary"
             disabled={state.busy}
           >
-            {state.busy
-              ? "Sending…"
-              : sending
-                ? stacked
-                  ? "Send answers"
-                  : "Send answer"
-                : "Next"}
+            {state.busy ? "Sending…" : sending ? "Respond" : "Next"}
           </Button>
         </div>
       </div>
