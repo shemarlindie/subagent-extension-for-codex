@@ -56,7 +56,11 @@ npm run build && npm start
 directly with `tsx`. Either way the service runs in the foreground at
 `http://127.0.0.1:4317`; stop it with Ctrl-C. If Codex is open with the plugin
 enabled, its stdio proxy may already have started one; a second service cannot
-own the same data directory.
+own the same data directory. On macOS and Linux, an interactive startup reports
+process details and asks before sending SIGTERM to a verified service owner. If
+it remains alive after five seconds, a second confirmation is required before
+SIGKILL. Non-interactive launches and Windows do not stop processes here. A
+service started before identity metadata was added must also be stopped manually.
 
 Check it from another terminal:
 

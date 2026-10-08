@@ -230,7 +230,8 @@ directory. Concurrent launchers share the PID lease; losing processes cannot
 recover tasks or own workers. The HTTP listener is reserved before recovery;
 health and API requests return 503 until recovery completes, and a bind failure
 leaves task state unchanged. Client disconnection leaves the service and tasks
-running. Stop the PID recorded in `service.pid` gracefully with SIGTERM when needed.
+running. See [Run the service](docs/development.md#run-the-service) for startup
+conflict handling and manual cleanup.
 An incompatible process on the configured port is rejected, never replaced.
 
 Use **Add project** in the global task UI or a global panel launch. A panel
