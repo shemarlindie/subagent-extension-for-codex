@@ -3,6 +3,11 @@
   /* A quiet ring: visible to keyboard users without shouting. */
   --focus-ring: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
 }
+/* Native thin scrollbars retain the browser's overlay and idle-hiding behavior. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) transparent;
+}
 .brand,
 .toolbar {
   display: flex;

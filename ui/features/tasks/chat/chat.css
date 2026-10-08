@@ -2,6 +2,17 @@
   --chat-outcome-line-item-gap: 6px;
 }
 
+/* Chat content and its footer own their padding within the full-width panel. */
+.evidence > [role="tabpanel"].chat-panel {
+  padding-inline: 0;
+}
+body[data-expanded-panel="true"]
+  .detail[data-stacked]
+  .evidence
+  > .chat-panel:not([hidden]) {
+  padding-inline: 0;
+}
+
 /* Chat: the conversation scrolls; the queue and composer stay at the bottom. */
 .chat {
   display: flex;
@@ -12,7 +23,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding-bottom: 14px;
+  padding: 0 var(--detail-pad, 24px) 14px;
   overflow-anchor: none;
 }
 .chat-message {
@@ -141,6 +152,9 @@
   gap: 8px;
   padding: 10px 0 2px;
   background: var(--bg);
+}
+.chat-footer > .chat-queue {
+  padding-inline: var(--detail-pad, 24px);
 }
 .chat-queue {
   display: flex;
@@ -354,7 +368,8 @@ body[data-expanded-panel="true"]
   display: flex;
   flex-direction: column;
   overflow: visible;
-  padding-bottom: 12px;
+  margin: 0;
+  padding: 0 0 12px;
 }
 body[data-expanded-panel="true"] .detail:not([data-stacked]) .chat-panel .chat {
   flex: 1;
@@ -367,6 +382,6 @@ body[data-expanded-panel="true"]
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  margin: 0 calc(-1 * var(--detail-pad));
-  padding: 0 var(--detail-pad) 14px;
+  margin: 0;
+  padding: 14px var(--detail-pad);
 }

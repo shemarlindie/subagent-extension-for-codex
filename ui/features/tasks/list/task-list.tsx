@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { Button } from "../../../shared/components/button";
 import { useListMotion } from "../../../shared/components/motion";
@@ -17,6 +17,7 @@ import {
   visibleTasks,
 } from "../../../shared/state/selectors";
 import type { Filter, Task } from "../../../shared/state/types";
+import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
 import { rowStatus } from "./task-status";
 import { TaskStatusIcon } from "./task-status-icon";
@@ -130,9 +131,34 @@ export function TaskList() {
           project.repository,
       ]),
     ),
-    listRef = useRef<HTMLDivElement>(null);
+    listRef = useRef<HTMLDivElement>(null),
+    scrolledOnLoad = useRef(false),
+    cancelScroll = useRef<(() => void) | undefined>(undefined);
 
   useListMotion(listRef, "data-task", tasks.map((task) => task.id).join());
+
+  // Selection and task data can arrive after mount; scroll once the row exists.
+  useLayoutEffect(() => {
+    if (scrolledOnLoad.current) return;
+
+    const row = listRef.current?.querySelector<HTMLElement>(
+      '[data-task][aria-current="true"]',
+    );
+
+    if (!row) return;
+
+    cancelScroll.current = animateScrollIntoView(row);
+
+    scrolledOnLoad.current = true;
+  });
+
+  useEffect(
+    () => () => {
+      cancelScroll.current?.();
+      scrolledOnLoad.current = false;
+    },
+    [],
+  );
 
   const resetFilters = () => {
     controller.setSearch("");

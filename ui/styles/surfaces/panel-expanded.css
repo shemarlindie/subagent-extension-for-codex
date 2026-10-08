@@ -33,8 +33,6 @@ body[data-expanded-panel="true"] .detail {
  * so the inspector never nests a scroller inside another.
  */
 body[data-expanded-panel="true"] .detail.has-task {
-  --detail-pad: 24px;
-  padding: 0;
   /* The activity hook restores the reading position itself. */
   overflow-anchor: none;
 }
@@ -42,7 +40,7 @@ body[data-expanded-panel="true"] .task-view {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 18px var(--detail-pad) 0;
+  padding: 8px 0 0;
 }
 body[data-expanded-panel="true"] .task-header {
   flex: none;
@@ -108,8 +106,7 @@ body[data-expanded-panel="true"] .evidence > [role="tabpanel"]:not([hidden]) {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* Bleed to the inspector edge so the scrollbar sits against it. */
-  margin: 0 calc(-1 * var(--detail-pad));
+  margin: 0;
   padding: 14px var(--detail-pad) 18px;
 }
 body[data-expanded-panel="true"] .evidence > .activity-panel:not([hidden]) {
@@ -128,7 +125,7 @@ body[data-expanded-panel="true"] .activity-panel .activity-timeline {
 body[data-expanded-panel="true"] .activity-panel .activity-viewport {
   flex: 1;
   max-height: none;
-  margin: 0 calc(-1 * var(--detail-pad));
+  margin: 0;
   padding: var(--activity-top-pad) var(--detail-pad) 18px;
 }
 body[data-expanded-panel="true"] .activity-panel .activity-scroll-top {
@@ -161,18 +158,19 @@ body[data-expanded-panel="true"]
   > [role="tabpanel"]:not([hidden]) {
   overflow: visible;
   margin: 0;
-  padding: 14px 0 0;
+  padding: 14px var(--detail-pad) 0;
 }
 body[data-expanded-panel="true"] .detail[data-stacked] .activity-viewport {
   overflow: visible;
   margin: 0;
-  padding: 0;
+  padding: 0 var(--detail-pad);
 }
 body[data-expanded-panel="true"]
   .detail[data-stacked]
   .evidence
   > .activity-panel:not([hidden]) {
   padding-top: var(--activity-top-pad);
+  padding-inline: 0;
 }
 body[data-expanded-panel="true"] .detail[data-stacked] .activity-timeline {
   display: block;

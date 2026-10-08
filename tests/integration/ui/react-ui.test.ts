@@ -24,6 +24,12 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
 });
 
+// jsdom has no layout or native scrolling.
+Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+  configurable: true,
+  value() {},
+});
+
 import {
   act,
   cleanup,
@@ -832,7 +838,8 @@ test("closing settings with unsaved edits asks before discarding them", async (t
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
     configurable: true,
     value(this: HTMLElement, options?: boolean | ScrollIntoViewOptions) {
-      scrolls.push({ element: this, options });
+      if (!this.matches("[data-task]"))
+        scrolls.push({ element: this, options });
     },
   });
 

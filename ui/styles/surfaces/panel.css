@@ -217,8 +217,24 @@ aside {
   background: var(--danger);
 }
 .detail {
-  padding: 22px 24px;
+  padding: 8px 24px 22px;
   min-width: 0;
+}
+.detail.has-task {
+  --detail-pad: 24px;
+  padding: 0;
+}
+.task-view {
+  padding: 8px 0 22px;
+}
+.task-header {
+  padding-inline: var(--detail-pad);
+}
+.evidence > .tabs {
+  margin-inline: var(--detail-pad);
+}
+.evidence > [role="tabpanel"] {
+  padding-inline: var(--detail-pad);
 }
 .detail:not(.has-task) {
   display: grid;
