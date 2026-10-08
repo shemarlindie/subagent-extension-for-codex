@@ -282,14 +282,6 @@
 .chat-budget input {
   width: 9em;
 }
-/* The header's handoff action sits beside the more-actions menu. */
-.task-tools {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: none;
-  align-self: flex-start;
-}
 /* A page that scrolls as a whole keeps the composer in reach. */
 .chat-panel .chat-footer {
   position: sticky;

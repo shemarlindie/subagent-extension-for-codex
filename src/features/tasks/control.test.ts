@@ -2138,3 +2138,68 @@ test("a new provider owns native session continuation after a restart", async ()
     await c.close();
   }
 });
+
+test("user task renaming checks ownership and persists across active turn updates", async () => {
+  const { c, store } = await setup();
+  const { callTool } = await import("../../platform/server/tools.js");
+  const task = await c.start("alice", input("[input]"));
+
+  try {
+    await until(() => store.get(task.id, "alice").status === "waiting");
+
+    await assert.rejects(
+      callTool(c, "alice", "rename_user_agent_task", {
+        task_id: task.id,
+        title: "New title",
+      }),
+      /User tools require a user interface/,
+    );
+
+    await assert.rejects(
+      callTool(
+        c,
+        "bob",
+        "rename_user_agent_task",
+        {
+          task_id: task.id,
+          title: "New title",
+        },
+        "user",
+      ),
+      /Task not found/,
+    );
+
+    for (const title of ["   ", "x".repeat(201)])
+      await assert.rejects(
+        callTool(
+          c,
+          "alice",
+          "rename_user_agent_task",
+          {
+            task_id: task.id,
+            title,
+          },
+          "user",
+        ),
+      );
+
+    await callTool(
+      c,
+      "alice",
+      "rename_user_agent_task",
+      {
+        task_id: task.id,
+        title: "  New title  ",
+      },
+      "user",
+    );
+
+    assert.equal(store.get(task.id, "alice").title, "New title");
+    assert.equal(c.active.get(task.id)?.task.title, "New title");
+    await c.interrupt("alice", task.id);
+    assert.equal(store.get(task.id, "alice").title, "New title");
+    assert.equal(store.get(task.id, "alice").description, task.description);
+  } finally {
+    await c.close();
+  }
+});

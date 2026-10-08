@@ -33,6 +33,7 @@ export function TaskDetails({ task, changes }: TaskDetailsProps) {
 
   const facts = {
     "Task ID": task.id,
+    Description: task.description,
     Worker: `${task.provider} · ${profileLabel(task.worker_profile)}`,
     ...providerTaskFacts(task),
     Model: task.model || "Provider runtime default",
@@ -80,7 +81,13 @@ export function TaskDetails({ task, changes }: TaskDetailsProps) {
         {Object.entries(facts).map(([label, value]) => (
           <div className="fact" key={label}>
             <dt>{label}</dt>
-            <dd>{value}</dd>
+            <dd
+              className={
+                label === "Description" ? "task-full-description" : undefined
+              }
+            >
+              {value}
+            </dd>
           </div>
         ))}
       </dl>

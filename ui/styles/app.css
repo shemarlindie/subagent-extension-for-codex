@@ -18,3 +18,4 @@
 @import "../features/file-preview/file-preview.css";
 @import "../features/changes/changes.css";
 @import "../features/tasks/chat/chat.css";
+@import "../shared/components/editable-text.css";

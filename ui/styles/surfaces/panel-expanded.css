@@ -47,7 +47,7 @@ body[data-expanded-panel="true"] .task-view {
 body[data-expanded-panel="true"] .task-header {
   flex: none;
 }
-body[data-expanded-panel="true"] .task-header h1 {
+body[data-expanded-panel="true"] .task-header h1:not(.task-title) {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
@@ -181,4 +181,8 @@ body[data-expanded-panel="true"] .detail[data-stacked] .activity-scroll-top {
   position: sticky;
   bottom: 16px;
   margin: -40px 4px 0 auto;
+}
+
+body[data-expanded-panel="true"] .task-header .task-title {
+  margin: 0 0 6px;
 }

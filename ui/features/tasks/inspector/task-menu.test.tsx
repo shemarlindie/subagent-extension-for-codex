@@ -76,7 +76,7 @@ test.each([
 
   const user = userEvent.setup();
   await user.click(view.getByRole("button", { name: /More/ }));
-  const action = await view.findByRole("menuitem");
+  const action = await view.findByRole("menuitem", { name: "Delete task" });
   // Deleting interrupts a running task first; only another action waits.
   const enabled = status !== "busy";
   assert.equal(action.getAttribute("aria-disabled") === "true", !enabled);
@@ -90,4 +90,28 @@ test.each([
       task.id,
     );
   } else assert.equal(controller.getSnapshot().dialog, undefined);
+});
+
+test("task menu does not offer renaming", async () => {
+  onTestFinished(cleanup);
+
+  const controller = new Controller(
+    { embedded: true, dispose() {} } as unknown as Transport,
+    { hidden: () => false, wide: () => false },
+  );
+
+  onTestFinished(() => controller.dispose());
+
+  const view = render(
+    <ControllerContext.Provider value={controller}>
+      <Tooltip.Provider>
+        <TaskMenu task={task} />
+      </Tooltip.Provider>
+    </ControllerContext.Provider>,
+  );
+
+  const user = userEvent.setup();
+  await user.click(view.getByRole("button", { name: /More/ }));
+  await view.findByRole("menuitem", { name: "Delete task" });
+  assert.equal(view.queryByRole("menuitem", { name: /Rename/ }), null);
 });

@@ -1,0 +1,83 @@
+.editable-text {
+  position: relative;
+  display: block;
+}
+.editable-text-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.editable-text-measure::before {
+  content: attr(data-value);
+}
+.editable-text-trigger {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.editable-text-trigger:hover {
+  background: transparent;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.editable-text-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.editable-text-editor {
+  display: flex;
+  width: 100%;
+  border-radius: 5px;
+}
+.editable-text[data-editing] .editable-text-editor {
+  transition: height var(--motion-base) var(--ease-out);
+}
+.editable-text-editor :is(input, textarea) {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 5px;
+  box-shadow: none;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  resize: none;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.editable-text[data-editing] .editable-text-editor {
+  box-shadow: 0 0 0 1px var(--line);
+}
+.editable-text-editor input {
+  height: calc(1lh + 4px);
+}
+.editable-text-editor :is(input, textarea):focus {
+  outline: none;
+}
+.editable-text[data-editing] .editable-text-editor:focus-within {
+  outline: var(--focus-ring);
+  outline-offset: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .editable-text[data-editing] .editable-text-editor {
+    transition: none;
+  }
+}

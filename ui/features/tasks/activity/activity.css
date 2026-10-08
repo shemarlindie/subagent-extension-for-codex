@@ -179,14 +179,11 @@
   align-items: center;
   gap: 10px;
 }
-.task-topline > .back {
-  align-self: flex-start;
-}
-.task-heading {
+.task-meta {
   flex: 1;
   min-width: 0;
 }
-.task-heading .eyebrow {
+.task-meta .eyebrow {
   gap: 0.3em;
   /* Clip a long line without cutting off the status dot's halo. */
   overflow: clip;

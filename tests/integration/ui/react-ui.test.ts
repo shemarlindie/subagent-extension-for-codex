@@ -1249,9 +1249,7 @@ test("model selection updates role and provider defaults while preserving explic
   assert.equal(call.args.reasoning_effort, "high");
 });
 
-test("description toggles literally, survives refresh, and resets for another task", async (t) => {
-  layoutExpandableNotice(true);
-
+test("the inspector omits task descriptions across refresh and task selection", async (t) => {
   const literal =
     '<img src=x onerror="window.injected=true">\nFull worker instructions.';
 
@@ -1265,16 +1263,10 @@ test("description toggles literally, survives refresh, and resets for another ta
     });
   });
 
-  const toggle = descriptionToggle(document.body);
+  const header = () => document.querySelector(".task-header")!;
 
-  assert.equal(toggle.getAttribute("aria-expanded"), "false");
-  await user.click(toggle);
-  assert.equal(toggle.getAttribute("aria-expanded"), "true");
-
-  const panel = toggle.querySelector(".notice-expand-text")!;
-
-  assert.equal(panel.textContent, literal);
-  assertAbsent(panel.querySelector("img"));
+  assert.ok(!header().textContent?.includes(literal));
+  assertAbsent(header().querySelector(".notice-collapsible, img"));
 
   transport.tasks[0] = {
     ...transport.tasks[0],
@@ -1282,74 +1274,40 @@ test("description toggles literally, survives refresh, and resets for another ta
   };
 
   await act(() => controller.refresh());
+  assert.ok(!header().textContent?.includes("Full worker instructions"));
+  await act(() => controller.select("two"));
+
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    "Second task",
+  );
+
+  assert.ok(!header().textContent?.includes("Second instructions"));
+  await user.click(screen.getByRole("tab", { name: "Details" }));
+  assert.equal(screen.getByText("Second instructions").tagName, "DD");
+  await act(() => controller.select("one"));
+  await user.click(screen.getByRole("tab", { name: "Details" }));
+
+  const description = screen.getByText(literal + " Updated.", {
+    normalizer: (text) => text,
+  });
+
+  assert.equal(description.tagName, "DD");
+  assertAbsent(description.querySelector("img"));
+});
+
+test("short task descriptions are omitted from the inspector header", async (t) => {
+  await setup(t);
+  const header = document.querySelector(".task-header")!;
 
   assert.ok(
-    descriptionToggle(document.body) === toggle,
-    "Refresh retains the description toggle node",
+    !header.textContent?.includes(
+      "Review authentication and report relevant findings.",
+    ),
   );
 
-  assert.equal(toggle.getAttribute("aria-expanded"), "true");
-  assert.equal(panel.textContent, literal + " Updated.");
-  await user.click(toggle);
-  assert.equal(toggle.getAttribute("aria-expanded"), "false");
-  await user.click(toggle);
-  await act(() => controller.select("two"));
-  const next = descriptionToggle(document.body);
-  assert.equal(next.getAttribute("aria-expanded"), "false");
-  await user.click(next);
-
-  assert.equal(
-    next.querySelector(".notice-expand-text")!.textContent,
-    "Second instructions",
-  );
+  assertAbsent(header.querySelector(".notice-expand-text, .notice-trigger"));
 });
-
-test("a description that fits on one line has no toggle", async (t) => {
-  layoutExpandableNotice(false);
-
-  await setup(t);
-
-  assert.equal(
-    document.querySelector(".notice-expand-text")?.textContent,
-    "Review authentication and report relevant findings.",
-  );
-
-  assertAbsent(descriptionToggle(document.body));
-});
-
-// jsdom has no layout; model visible text and its measured expanded height.
-function layoutExpandableNotice(overflowing: boolean) {
-  vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(
-    function (this: HTMLElement) {
-      return this.matches(".notice-expand-text")
-        ? ({ length: 1, item: () => null } as unknown as DOMRectList)
-        : ({ length: 0, item: () => null } as unknown as DOMRectList);
-    },
-  );
-
-  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
-    function (this: HTMLElement) {
-      return this.matches(".notice-expand-text[data-open]")
-        ? overflowing
-          ? 80
-          : 18
-        : 0;
-    },
-  );
-
-  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
-    function (this: HTMLElement) {
-      return this.matches(".notice-expand-text") ? 18 : 0;
-    },
-  );
-}
-
-// The toggle's name is the description's first line, so find it by tone.
-function descriptionToggle(root: HTMLElement) {
-  return root.querySelector<HTMLElement>(
-    '[data-tone="plain"] button.notice-trigger',
-  )!;
-}
 
 test("delegation submits the full request without a title and search matches description", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
@@ -2527,7 +2485,13 @@ test("handoff sends only after explicit submit and uses the edited message", asy
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "Bring to Codex" }));
+  assertAbsent(screen.queryByRole("button", { name: "Bring to Codex" }));
+  await user.click(screen.getByRole("button", { name: "More task actions" }));
+
+  await user.click(
+    await screen.findByRole("menuitem", { name: "Bring to Codex" }),
+  );
+
   await screen.findByRole("dialog");
 
   await waitFor(() =>
@@ -2712,28 +2676,20 @@ test("the inspector stacks when its fixed header would squeeze the evidence", as
   assert.equal(detail.hasAttribute("data-stacked"), true, "260px is not");
 });
 
-test("refresh preserves disclosure and inspector scroll, while Back stays on the task list", async (t) => {
-  layoutExpandableNotice(true);
-
+test("refresh preserves the inspector and its scroll, while Back stays on the task list", async (t) => {
   const { controller, user } = await setup(t);
   const detail = screen.getByRole("region", { name: "Task inspector" });
-  const disclosure = descriptionToggle(document.body);
-  const root = disclosure.closest(".notice-collapsible");
-  await user.click(disclosure);
-  assert.equal(disclosure.getAttribute("aria-expanded"), "true");
+  const header = detail.querySelector(".task-header");
   detail.scrollTop = 160;
   await act(() => controller.refresh());
-  assert.ok(descriptionToggle(document.body) === disclosure);
-  assert.ok(disclosure.closest(".notice-collapsible") === root);
-  assert.equal(disclosure.getAttribute("aria-expanded"), "true");
+
+  assert.ok(screen.getByRole("region", { name: "Task inspector" }) === detail);
+  assert.ok(detail.querySelector(".task-header") === header);
   assert.equal(detail.scrollTop, 160);
   await user.click(screen.getByRole("button", { name: "← Tasks" }));
   await act(() => controller.refresh());
   assert.equal(controller.getSnapshot().selected, undefined);
-
-  assert.ok(
-    document.querySelector('[data-tone="plain"] .notice-trigger') === null,
-  );
+  assertAbsent(detail.querySelector(".task-header"));
 });
 
 test("narrow scoped panel Back keeps the task list visible across refresh", async (t) => {

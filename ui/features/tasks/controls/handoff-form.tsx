@@ -68,4 +68,5 @@ export const handoffDialog = defineDialog<"handoff">({
   title: () => "Bring task to Codex",
   render: ({ task }) => <HandoffForm task={task} />,
   initialFocus: firstTextField,
+  restoreFocus: () => document.getElementById("task-menu"),
 });

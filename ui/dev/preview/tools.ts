@@ -258,6 +258,17 @@ export function previewTool(
   if (name === "register_user_agent_project")
     return registerProject(args.repository, options);
 
+  if (name === "rename_user_agent_task") {
+    const task = previewTasks.find((task) => task.id === args.task_id);
+    if (!task) throw new Error("Task not found");
+    const title = typeof args.title === "string" ? args.title.trim() : "";
+    if (!title || title.length > 200)
+      throw new Error("Task title must contain 1 to 200 characters");
+    task.title = title;
+
+    return task;
+  }
+
   const fixtures: Record<string, unknown> = {
     open_codex_subagent_extension: openPanel(args, options),
     open_codex_subagent_extension_global: openPanel(

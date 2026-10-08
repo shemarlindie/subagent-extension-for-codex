@@ -998,6 +998,19 @@ export class Control {
     return task;
   }
 
+  /** Changes the display title, including the task held by an active turn. */
+  rename(owner: string, id: string, title: string) {
+    const current = this.mutableTask(owner, id);
+    const normalized = title.trim();
+    if (!normalized || normalized.length > 200)
+      throw new Error("Task title must contain 1 to 200 characters");
+    const task = this.active.get(id)?.task ?? current;
+    task.title = normalized;
+    this.store.save(task);
+
+    return task;
+  }
+
   /** Worktree actions and deletion wait until the task isn't running or about to. */
   private idleWorktreeTask(
     owner: string,

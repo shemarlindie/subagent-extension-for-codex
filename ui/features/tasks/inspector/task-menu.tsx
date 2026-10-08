@@ -14,7 +14,12 @@ type TaskMenuProps = { task: Task };
 /** More actions for the open task, beside its title and status. */
 export function TaskMenu({ task }: TaskMenuProps) {
   const controller = useController(),
-    state = useSnapshot();
+    state = useSnapshot(),
+    handoffLabel = state.host.canSend
+      ? "Bring to Codex"
+      : !controller.transport.embedded
+        ? "Copy for Codex"
+        : "Prepare handoff";
 
   return (
     <Menu.Root>
@@ -32,6 +37,14 @@ export function TaskMenu({ task }: TaskMenuProps) {
       <Menu.Portal>
         <Menu.Positioner className="menu-positioner" align="end" sideOffset={4}>
           <Menu.Popup className="menu-popup">
+            <Menu.Item
+              className="menu-item"
+              data-action="handoff"
+              disabled={state.busy}
+              onClick={() => controller.open({ kind: "handoff", task })}
+            >
+              {handoffLabel}
+            </Menu.Item>
             <Menu.Item
               className="menu-item"
               data-action="delete"

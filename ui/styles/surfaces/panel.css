@@ -239,6 +239,10 @@ h1 {
   margin: 10px 0 12px;
   overflow-wrap: anywhere;
 }
+.task-header .task-title {
+  font-size: 16px;
+  margin-top: 0;
+}
 h2 {
   font-size: 15px;
   font-weight: 600;
@@ -420,6 +424,9 @@ pre {
 .facts dd {
   margin: 0;
   color: var(--text);
+}
+.task-full-description {
+  white-space: pre-wrap;
 }
 #error {
   color: var(--warn);

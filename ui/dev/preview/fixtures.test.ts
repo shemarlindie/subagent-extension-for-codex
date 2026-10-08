@@ -355,3 +355,35 @@ test("an explicit revision scopes the panel to that revision", () => {
 
   assert.equal(context({ conversation_id: PREVIEW_THREAD }).revision, "HEAD");
 });
+
+test("fixture task renaming updates listed titles and validates input", () => {
+  const task = previewTasks[0],
+    originalTitle = task.title;
+
+  try {
+    previewTool("rename_user_agent_task", {
+      task_id: task.id,
+      title: "  Renamed task  ",
+    });
+
+    const tasks = previewTool("list_agent_tasks") as typeof previewTasks;
+
+    assert.equal(
+      tasks.find((entry) => entry.id === task.id)?.title,
+      "Renamed task",
+    );
+
+    assert.throws(() =>
+      previewTool("rename_user_agent_task", { task_id: task.id, title: " " }),
+    );
+
+    assert.throws(() =>
+      previewTool("rename_user_agent_task", {
+        task_id: "missing",
+        title: "Title",
+      }),
+    );
+  } finally {
+    task.title = originalTitle;
+  }
+});

@@ -11,9 +11,8 @@ import { profileLabel, selectedTask } from "../../../shared/state/selectors";
 import { currentActivityStatus } from "../activity/activity-timeline";
 import { EvidenceTabs } from "../evidence/evidence-tabs";
 import { TaskStatus } from "../shared/status";
-import { HandoffButton } from "./handoff-button";
-import { TaskDescription } from "./task-description";
 import { TaskMenu } from "./task-menu";
+import { TaskTitle } from "./task-title";
 
 export function TaskInspector() {
   const controller = useController(),
@@ -55,7 +54,7 @@ export function TaskInspector() {
               >
                 ← Tasks
               </Button>
-              <div className="task-heading">
+              <div className="task-meta">
                 <div
                   className="eyebrow"
                   data-live={live && live.state !== "failed" ? "" : undefined}
@@ -78,14 +77,10 @@ export function TaskInspector() {
                     )}
                   </span>
                 </div>
-                <h1 title={task.title}>{task.title}</h1>
               </div>
-              <div className="task-tools">
-                <HandoffButton task={task} />
-                <TaskMenu task={task} />
-              </div>
+              <TaskMenu task={task} />
             </div>
-            <TaskDescription task={task} />
+            <TaskTitle task={task} />
           </div>
           <EvidenceTabs task={task} />
         </div>

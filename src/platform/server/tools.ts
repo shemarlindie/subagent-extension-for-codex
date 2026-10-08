@@ -508,6 +508,11 @@ export function definitions(
       schema: taskId.extend({ force: z.boolean().default(false) }),
       run: (a) => c.removeWorktree(owner, a.task_id, a.force),
     }),
+    rename_user_agent_task: tool({
+      description: "User interface only: change a task's display title.",
+      schema: taskId.extend({ title: z.string().trim().min(1).max(200) }),
+      run: (a) => c.rename(owner, a.task_id, a.title),
+    }),
     delete_user_agent_task: tool({
       description:
         "User interface only: delete a stopped task with its events, requests, worktree and branch. With delete_agent_task it also deletes the provider's session for the task. This can't be undone.",
@@ -553,6 +558,7 @@ export const isUserTool = (name: string) =>
     "get_user_agent_changes",
     "get_user_agent_changed_file",
     "remove_user_agent_worktree",
+    "rename_user_agent_task",
     "delete_user_agent_task",
     "delete_user_agent_branch",
   ].includes(name);
