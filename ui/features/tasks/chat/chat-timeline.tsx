@@ -1,18 +1,15 @@
-import { useLayoutEffect, useRef } from "react";
-
 import { providerMetadata } from "../../../../src/features/providers/metadata.js";
 import { useSnapshot } from "../../../shared/state/controller-context";
 import { statusLabel } from "../../../shared/state/selectors";
 import type { Task } from "../../../shared/state/types";
+import { useSessionState } from "../../../shared/state/use-session-state";
 import { currentActivityStatus } from "../activity/activity-timeline";
 import { ChatMessageView } from "./chat-message-view";
 import { composerMode } from "./chat-model";
 import { ChatNoteRow } from "./chat-note-row";
 import { PendingInput } from "./pending-input";
 import { TurnOutcomeRow } from "./turn-outcome-row";
-
-/** How close to the end counts as reading the latest messages. */
-const END_SLACK_PX = 48;
+import { useChatScroll } from "./use-chat-scroll";
 
 type ChatTimelineProps = { task: Task };
 
@@ -24,8 +21,6 @@ type ChatTimelineProps = { task: Task };
 export function ChatTimeline({ task }: ChatTimelineProps) {
   const state = useSnapshot(),
     chat = state.chat?.task === task.id ? state.chat : undefined,
-    ref = useRef<HTMLDivElement>(null),
-    atEnd = useRef(true),
     worker =
       providerMetadata(
         task.provider,
@@ -59,48 +54,16 @@ export function ChatTimeline({ task }: ChatTimelineProps) {
         : statusLabel(task)
       : undefined;
 
-  const last = items?.at(-1);
-
-  // The layout can settle after the first render, such as when the
-  // inspector stops stacking, so the timeline sticks to its end as its box
-  // changes too.
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element || typeof ResizeObserver === "undefined") return;
-
-    const observer = new ResizeObserver(() => {
-      if (atEnd.current) element.scrollTop = element.scrollHeight;
-    });
-
-    observer.observe(element);
-
-    return () => observer.disconnect();
-  }, [task.id]);
-
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (element && atEnd.current) element.scrollTop = element.scrollHeight;
-  }, [
-    items?.length,
-    last?.event_id,
-    working,
-    streaming?.text.length,
-    task.pending_input?.id,
+  const [reading] = useSessionState(
+    "task",
     task.id,
-  ]);
+    (state) => state.reading.chat,
+  );
+
+  const ref = useChatScroll(reading, state.tab === "chat", items !== undefined);
 
   return (
-    <div
-      ref={ref}
-      className="chat-timeline"
-      onScroll={(event) => {
-        const element = event.currentTarget;
-
-        atEnd.current =
-          element.scrollHeight - element.scrollTop - element.clientHeight <
-          END_SLACK_PX;
-      }}
-    >
+    <div ref={ref} className="chat-timeline">
       {!items ? (
         <p className="help">Loading the conversation…</p>
       ) : (

@@ -8,6 +8,7 @@ import {
   useSnapshot,
 } from "../../../shared/state/controller-context";
 import type { Tab, Task } from "../../../shared/state/types";
+import { useSessionState } from "../../../shared/state/use-session-state";
 import { ChangesPanel } from "../../changes/changes-panel";
 import { EventList } from "../activity/event-list";
 import { ChatPanel } from "../chat/chat-panel";
@@ -46,6 +47,11 @@ function TabCount({ value }: { value: number }) {
 export function EvidenceTabs({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
+    [reading] = useSessionState(
+      "task",
+      task.id,
+      (state) => state.reading.activity,
+    ),
     listRef = useActiveTabInView(state.tab);
 
   return (
@@ -84,6 +90,7 @@ export function EvidenceTabs({ task }: { task: Task }) {
       {/* Stays mounted so the reading position survives tab switches. */}
       <Tabs.Panel value="activity" className="activity-panel" keepMounted>
         <EventList
+          reading={reading}
           events={state.events}
           runtimeMs={task.runtime_ms}
           dropped={state.droppedEvents}

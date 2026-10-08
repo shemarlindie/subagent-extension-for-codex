@@ -428,6 +428,102 @@ test("delayed detail from a previous selection cannot replace current events", a
   );
 });
 
+test("each task remembers its tab across switching tasks and closing the inspector", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a"), task("b"), task("new")];
+  await controller.start();
+
+  await controller.select("a");
+  controller.setTab("activity");
+  await controller.select("b");
+  assert.equal(controller.getSnapshot().tab, "chat");
+
+  await controller.select("a");
+  assert.equal(controller.getSnapshot().tab, "activity");
+  controller.back();
+  await controller.select("a");
+  assert.equal(controller.getSnapshot().tab, "activity");
+
+  await controller.select("new");
+  assert.equal(controller.getSnapshot().tab, "chat");
+  await controller.select("b");
+  assert.equal(controller.getSnapshot().tab, "chat");
+});
+
+test("host selections restore a task's remembered tab unless they explicitly request another", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a"), task("b")];
+  await controller.start();
+  await controller.select("a");
+  controller.setTab("activity");
+  await controller.select("b");
+
+  controller.applyScope(
+    {
+      panel_scope: { conversation_id: null },
+      panel_selection: { task_id: "a" },
+    },
+    false,
+  );
+
+  assert.equal(controller.getSnapshot().tab, "activity");
+
+  controller.applyScope(
+    {
+      panel_scope: { conversation_id: null },
+      panel_selection: { task_id: "a", tab: "chat" },
+    },
+    false,
+  );
+
+  assert.equal(controller.getSnapshot().tab, "chat");
+  await controller.select("b");
+  await controller.select("a");
+  assert.equal(controller.getSnapshot().tab, "chat");
+});
+
+for (const tab of ["changes", "details"] as const)
+  test(`returning to a remembered ${tab} tab loads changes for that task`, async (t) => {
+    const { controller, transport } = setup();
+    t.onTestFinished(() => controller.dispose());
+    transport.tasks = [task("a"), task("b")];
+
+    transport.handler = (name, args) =>
+      name === "get_user_agent_changes"
+        ? {
+            scope: "task",
+            files: [],
+            additions: args.task_id === "a" ? 1 : 2,
+            deletions: 0,
+            diff: "",
+          }
+        : undefined;
+
+    await controller.start();
+    await controller.select("a");
+    controller.setTab(tab);
+    await flush();
+    await controller.select("b");
+    controller.setTab(tab);
+    await flush();
+    transport.calls = [];
+
+    await controller.select("a");
+
+    assert.equal(controller.getSnapshot().tab, tab);
+    assert.equal(controller.getSnapshot().changes?.task, "a");
+    assert.equal(controller.getSnapshot().changes?.data?.additions, 1);
+
+    assert.deepEqual(
+      transport.calls
+        .filter((call) => call.name === "get_user_agent_changes")
+        .map((call) => call.args.task_id),
+      ["a"],
+    );
+  });
+
 test("a host link opens the Changes tab, and a read for a replaced task is dropped", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());

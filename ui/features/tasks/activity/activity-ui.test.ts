@@ -22,6 +22,7 @@ import {
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import type { ReadingState } from "../evidence/reading-state";
 import { ActivityContent, ActivityValue } from "./activity-content";
 import { EVENT_TAIL_SIZE } from "./event-history";
 import {
@@ -2171,4 +2172,184 @@ test("task completion activity includes the accumulated runtime", (t) => {
     view.container.querySelector(".activity-group-title strong")?.textContent,
     "Task completed",
   );
+});
+
+test("activity restores the visible group after remount with newer activity", (t) => {
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
+  const reading: ReadingState = {};
+  const events = activityMessages("restore-reading", 6);
+  const view = render(createElement(GroupedEventList, { events, reading }));
+  const viewport = view.getByRole("region", { name: "Activity history" });
+  viewport.scrollTop = 175;
+  fireEvent.scroll(viewport);
+  const anchor = reading.position?.anchor;
+  assert.equal(reading.position?.pinned, false);
+  view.unmount();
+
+  const restored = render(
+    createElement(GroupedEventList, {
+      events: [...events, ...activityMessages("restore-new", 1)],
+      reading,
+    }),
+  );
+
+  assert.equal(
+    restored.getByRole("region", { name: "Activity history" }).scrollTop,
+    275,
+  );
+
+  assert.deepEqual(reading.position?.anchor, anchor);
+
+  assert.ok(
+    restored.getByRole("button", { name: "Scroll to latest activity" }),
+  );
+});
+
+test("activity pinned reading follows updates received while unmounted", (t) => {
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
+  const reading: ReadingState = {};
+  const events = activityMessages("restore-pinned", 6);
+  const view = render(createElement(GroupedEventList, { events, reading }));
+  assert.equal(reading.position?.pinned, true);
+  view.unmount();
+
+  const restored = render(
+    createElement(GroupedEventList, {
+      events: [...events, ...activityMessages("restore-pinned-new", 1)],
+      reading,
+    }),
+  );
+
+  assert.equal(
+    restored.getByRole("region", { name: "Activity history" }).scrollTop,
+    0,
+  );
+
+  assertAbsent(
+    restored.queryByRole("button", { name: "Scroll to latest activity" }),
+  );
+});
+
+test("hidden activity preserves persistent reading state until revealed", (t) => {
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
+  const reading: ReadingState = {};
+  const events = activityMessages("hidden-reading", 6);
+
+  const view = render(
+    createElement(GroupedEventList, { events, reading, active: true }),
+  );
+
+  const viewport = view.getByRole("region", { name: "Activity history" });
+  viewport.scrollTop = 175;
+  fireEvent.scroll(viewport);
+  const saved = reading.position;
+  const updated = [...events, ...activityMessages("hidden-reading-new", 1)];
+
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: updated,
+      reading,
+      active: false,
+    }),
+  );
+
+  viewport.scrollTop = 0;
+  fireEvent.scroll(viewport);
+  assert.equal(reading.position, saved);
+
+  view.rerender(
+    createElement(GroupedEventList, { events: updated, reading, active: true }),
+  );
+
+  assert.equal(viewport.scrollTop, 275);
+  assert.deepEqual(reading.position?.anchor, saved?.anchor);
+});
+
+test("pinned activity remount returns to latest after another tab moved the shared inspector", (t) => {
+  t.onTestFinished(cleanup);
+  const inspector = document.body.appendChild(document.createElement("div"));
+  inspector.style.overflowY = "auto";
+  inspector.scrollTop = 500;
+  t.onTestFinished(() => inspector.remove());
+
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    function (this: HTMLElement) {
+      let top = 100;
+      let height = 300;
+
+      if (this.matches(".activity-viewport")) top = 300 - inspector.scrollTop;
+
+      if (this.matches("[data-activity-id]")) {
+        const groups = Array.from(
+          inspector.querySelectorAll("[data-activity-id]"),
+        );
+
+        top = 340 - inspector.scrollTop + groups.indexOf(this) * 100;
+        height = 100;
+      }
+
+      return {
+        top,
+        bottom: top + height,
+        left: 0,
+        right: 400,
+        width: 400,
+        height,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      };
+    },
+  );
+
+  const reading: ReadingState = {
+    position: { top: 200, pinned: true },
+  };
+
+  const view = render(
+    createElement(GroupedEventList, {
+      events: activityMessages("shared-pinned-remount", 6),
+      reading,
+    }),
+    { container: inspector },
+  );
+
+  assert.equal(inspector.scrollTop, 200);
+  assert.equal(reading.position?.pinned, true);
+
+  assertAbsent(
+    view.queryByRole("button", { name: "Scroll to latest activity" }),
+  );
+});
+
+test("activity waits for loaded history before restoring a saved reading position", (t) => {
+  t.onTestFinished(cleanup);
+  mockActivityGeometry();
+
+  const reading: ReadingState = {
+    position: { top: 175, pinned: false },
+  };
+
+  const saved = reading.position;
+  const view = render(createElement(GroupedEventList, { events: [], reading }));
+
+  assert.equal(reading.position, saved);
+
+  view.rerender(
+    createElement(GroupedEventList, {
+      events: activityMessages("restore-after-load", 6),
+      reading,
+    }),
+  );
+
+  assert.equal(
+    view.getByRole("region", { name: "Activity history" }).scrollTop,
+    175,
+  );
+
+  assert.equal(reading.position?.pinned, false);
+  assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
 });

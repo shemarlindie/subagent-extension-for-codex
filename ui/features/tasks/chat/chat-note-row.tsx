@@ -8,6 +8,7 @@ export function ChatNoteRow({ note }: ChatNoteRowProps) {
 
   return (
     <div
+      data-chat-item={note.id}
       className="chat-note"
       data-note={note.note}
       role={failure ? "alert" : "separator"}

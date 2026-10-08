@@ -3,6 +3,7 @@ import { memo } from "react";
 import { Icon } from "../../../shared/components/icons";
 import { Presence } from "../../../shared/components/motion";
 import type { Event } from "../../../shared/state/types";
+import type { ReadingState } from "../evidence/reading-state";
 import { ActivityGroupCard } from "./activity-group-card";
 import { groupActivity, thinkingSpan } from "./activity-timeline";
 import {
@@ -29,6 +30,7 @@ function DroppedNote({ summary }: { summary: DroppedSummary }) {
 
 interface EventListProps {
   events: Event[];
+  reading?: ReadingState;
   active?: boolean;
   runtimeMs?: number;
   /** What fell off the front of `events`, tallied by the event reader. */
@@ -40,6 +42,7 @@ interface EventListProps {
 // Polls keep the same events array when nothing changed, so a hidden tab skips work.
 export const EventList = memo(function EventList({
   events,
+  reading,
   active,
   running = false,
   runtimeMs,
@@ -52,6 +55,7 @@ export const EventList = memo(function EventList({
   const { viewportRef, pinned, scrollToTop } = useActivityScroll(
     events,
     active,
+    reading,
   );
 
   return (

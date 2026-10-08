@@ -12,7 +12,7 @@ export function ChatPanel({ task }: ChatPanelProps) {
       <ChatTimeline task={task} />
       <div className="chat-footer">
         <MessageQueue task={task} />
-        {/* Keyed so each task keeps its own draft. */}
+        {/* Keyed so budget edits and errors stay with their task. */}
         <Composer key={task.id} task={task} />
       </div>
     </div>

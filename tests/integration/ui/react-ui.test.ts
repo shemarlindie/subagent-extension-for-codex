@@ -3227,7 +3227,7 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
     assertAbsent(screen.queryByRole("button", { name: /Claude has/ })),
   );
 
-  assert.equal(controller.questionDrafts.size, 0);
+  assert.equal(controller.session.get("question", "request").draft, undefined);
 });
 
 test("keyboard focus follows the stacked question cards", async (t) => {

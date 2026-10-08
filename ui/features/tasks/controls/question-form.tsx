@@ -20,6 +20,7 @@ import type {
   QuestionDraft,
   Task,
 } from "../../../shared/state/types";
+import { useSessionState } from "../../../shared/state/use-session-state";
 
 // Cards further back than this stay hidden so the stack reads as a stack, not a pile.
 const MAX_PEEK = 2;
@@ -181,7 +182,11 @@ export function QuestionForm({ task }: { task: Task }) {
     stacked = questions.length > 1,
     request = task.pending_input!.id,
     // Answers left unsent when this request was last on screen.
-    draft = controller.questionDrafts.get(request);
+    [draft, updateSession] = useSessionState(
+      "question",
+      request,
+      (state) => state.draft,
+    );
 
   const { register, control, setValue, getValues, handleSubmit } =
     useForm<Answers>({
@@ -259,9 +264,9 @@ export function QuestionForm({ task }: { task: Task }) {
         active: view.current.active,
       };
 
-      controller.questionDrafts.set(request, draft);
+      updateSession({ draft });
     },
-    [controller, request, getValues],
+    [updateSession, getValues],
   );
 
   // A skipped card drops its partial answer and moves on to the next card.

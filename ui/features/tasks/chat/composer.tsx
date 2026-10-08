@@ -8,6 +8,7 @@ import {
   useSnapshot,
 } from "../../../shared/state/controller-context";
 import type { Task } from "../../../shared/state/types";
+import { useSessionState } from "../../../shared/state/use-session-state";
 import { BudgetRaiseFields } from "./budget-raise-fields";
 import {
   budgetRaised,
@@ -41,8 +42,10 @@ export function Composer({ task }: ComposerProps) {
     busy = useSnapshot().busy,
     mode = composerMode(task),
     spent = spentBudget(task),
-    [text, setText] = useState(
-      () => controller.composerDrafts.get(task.id) ?? "",
+    [text, updateSession] = useSessionState(
+      "task",
+      task.id,
+      (state) => state.composerDraft,
     ),
     // The user's changes to the suggested raise.
     [raise, setRaise] = useState<BudgetRaise>({}),
@@ -52,9 +55,7 @@ export function Composer({ task }: ComposerProps) {
     message = text.trim();
 
   const edit = (value: string) => {
-    setText(value);
-    if (value) controller.composerDrafts.set(task.id, value);
-    else controller.composerDrafts.delete(task.id);
+    updateSession({ composerDraft: value });
   };
 
   const send = async (delivery: Delivery) => {

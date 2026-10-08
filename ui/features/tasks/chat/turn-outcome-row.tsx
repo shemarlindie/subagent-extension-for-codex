@@ -17,7 +17,11 @@ export function TurnOutcomeRow({ outcome }: TurnOutcomeRowProps) {
   const controller = useController();
 
   return (
-    <div className="chat-outcome" data-outcome={outcome.outcome}>
+    <div
+      className="chat-outcome"
+      data-outcome={outcome.outcome}
+      data-chat-item={outcome.id}
+    >
       <div className="chat-outcome-line">
         <span className={`dot ${outcome.outcome}`} aria-hidden="true" />
         <span className="chat-outcome-label">

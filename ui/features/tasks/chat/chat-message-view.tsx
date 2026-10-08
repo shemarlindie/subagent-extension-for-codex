@@ -27,6 +27,7 @@ export function ChatMessageView({
       data-from={message.from}
       data-kind={message.kind}
       data-message={message.id}
+      data-chat-item={message.id}
       data-streaming={streaming || undefined}
       aria-busy={streaming || undefined}
       aria-label={

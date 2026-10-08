@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useEffectEvent,
   useLayoutEffect,
@@ -8,22 +9,14 @@ import {
 
 import { MOTION, reducedMotion } from "../../../shared/components/motion-utils";
 import type { Event } from "../../../shared/state/types";
+import { scrollContainer as scroller } from "../../../shared/utils/scroll-container";
+import type { ReadingState } from "../evidence/reading-state";
 
 const TOP_BUFFER = 48;
 // How long a smooth return may go without progress before it counts as stopped.
 const GLIDE_STALL = 1500;
 
 type Position = { element: HTMLElement; top: number; bottom: number };
-
-// The timeline scrolls itself unless a short layout hands scrolling to the inspector.
-function scroller(viewport: HTMLElement) {
-  for (let element: HTMLElement | null = viewport; element;) {
-    if (/auto|scroll/.test(getComputedStyle(element).overflowY)) return element;
-    element = element.parentElement;
-  }
-
-  return viewport;
-}
 
 // How far the reader has scrolled past the newest activity.
 function offset(viewport: HTMLElement, container: HTMLElement) {
@@ -36,7 +29,11 @@ function offset(viewport: HTMLElement, container: HTMLElement) {
   );
 }
 
-export function useActivityScroll(events: Event[], active = true) {
+export function useActivityScroll(
+  events: Event[],
+  active = true,
+  reading?: ReadingState,
+) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef(active);
   const wasActive = useRef(active);
@@ -57,7 +54,7 @@ export function useActivityScroll(events: Event[], active = true) {
 
   const glideTimer = useRef<number | undefined>(undefined);
 
-  function remember() {
+  const remember = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     const container = scroller(viewport);
@@ -79,7 +76,19 @@ export function useActivityScroll(events: Event[], active = true) {
     positions.current = next;
     rememberedScrollTop.current = container.scrollTop;
     anchor.current = [...next.values()].find((position) => position.bottom > 0);
-  }
+
+    if (reading) {
+      const entry = [...next.entries()].find(
+        ([, position]) => position.bottom > 0,
+      );
+
+      reading.position = {
+        top: container.scrollTop,
+        pinned: pinnedRef.current,
+        anchor: entry && { id: entry[0], top: entry[1].top },
+      };
+    }
+  }, [reading]);
 
   const onScroll = useEffectEvent(() => {
     const viewport = viewportRef.current;
@@ -188,10 +197,35 @@ export function useActivityScroll(events: Event[], active = true) {
     wasActive.current = active;
     // A hidden tab has no layout; keep the last baseline until it is shown again.
     if (!viewport || !active) return;
+    // Task selection loads its event history asynchronously.
+    if (!mounted.current && reading?.position && !events.length) return;
     // Measure without an in-flight transform before restoring the reading position.
     for (const animation of animations.current) animation.cancel();
     animations.current = [];
     const container = scroller(viewport);
+
+    if (!mounted.current && reading?.position) {
+      const saved = reading.position;
+      pinnedRef.current = saved.pinned;
+      setPinned(saved.pinned);
+
+      if (!saved.pinned) {
+        container.scrollTop = saved.top;
+
+        const row = Array.from(
+          viewport.querySelectorAll<HTMLElement>("[data-activity-id]"),
+        ).find((element) => element.dataset.activityId === saved.anchor?.id);
+
+        if (row && saved.anchor)
+          container.scrollTop +=
+            row.getBoundingClientRect().top -
+            container.getBoundingClientRect().top -
+            saved.anchor.top;
+      }
+
+      remember();
+    }
+
     const previous = positions.current;
     const previousScrollTop = container.scrollTop;
     const previousOffset = offset(viewport, container);
@@ -202,6 +236,7 @@ export function useActivityScroll(events: Event[], active = true) {
     glide.current = undefined;
 
     if (
+      mounted.current &&
       pinnedRef.current &&
       !revealed &&
       !gliding &&
@@ -263,7 +298,7 @@ export function useActivityScroll(events: Event[], active = true) {
     }
 
     mounted.current = true;
-  }, [events, active]);
+  }, [events, active, reading, remember]);
 
   // Scroll events do not bubble, so capture them from whichever element scrolls.
   useEffect(() => {

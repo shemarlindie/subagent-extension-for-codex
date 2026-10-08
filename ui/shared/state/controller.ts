@@ -20,6 +20,7 @@ import { applyDraftUpdate } from "../../features/tasks/chat/draft-state";
 import { persistDialog, sameDialogReference } from "./dialog-persistence";
 import { initialState } from "./initial-state";
 import { filterCounts, selectedTask, terminal } from "./selectors";
+import { SessionStateStore } from "./session-state";
 import type {
   Defaults,
   DialogState,
@@ -29,7 +30,6 @@ import type {
   PersistedDialogDraft,
   PersistedViewState,
   Project,
-  QuestionDraft,
   SettingsDocument,
   SharedItem,
   Snapshot,
@@ -59,6 +59,7 @@ function availableFilter(state: Snapshot, filter: Filter | null) {
 export class Controller {
   private state: Snapshot;
   private listeners = new Set<() => void>();
+  readonly session = new SessionStateStore();
   private disposed = false;
   private started = false;
   private refreshing = false;
@@ -75,10 +76,6 @@ export class Controller {
    * one stays collapsed when its task is shown again during this session.
    */
   readonly collapsedQuestions = new Set<string>();
-  /** Unsent answers by question request, so switching tasks does not discard them. */
-  readonly questionDrafts = new Map<string, QuestionDraft>();
-  /** Unsent Chat messages by task, so switching tasks does not discard them. */
-  readonly composerDrafts = new Map<string, string>();
   constructor(
     readonly transport: Transport,
     private environment = {
@@ -127,6 +124,8 @@ export class Controller {
     }
 
     this.state = { ...this.state, ...patch };
+    if (this.state.selected)
+      this.session.update("task", this.state.selected, { tab: this.state.tab });
     this.listeners.forEach((listener) => listener());
     if (this.viewStateReady) this.saveViewState();
   }
@@ -500,7 +499,7 @@ export class Controller {
         selected = restoredTask.id;
         this.explicitSelection = true;
         this.browsing = false;
-        tab = restored?.tab ?? "chat";
+        tab = restored?.tab ?? this.session.get("task", selected).tab;
       } else if (restored?.browsing) {
         selected = undefined;
         this.explicitSelection = false;
@@ -518,7 +517,7 @@ export class Controller {
           tasks.find((task) => !terminal(task))?.id ??
           tasks[0].id;
 
-        tab = "chat";
+        tab = this.session.get("task", selected).tab;
       }
 
       // Don't replace URL choices with defaults until their project and task resolve.
@@ -612,10 +611,11 @@ export class Controller {
       events: [],
       chat: undefined,
       draft: undefined,
-      tab: "chat",
+      tab: this.session.get("task", id).tab,
     });
 
     await this.loadDetail();
+    await this.loadChangesIfStale();
     await this.share();
   }
 
@@ -850,7 +850,7 @@ export class Controller {
           data.panel_selection.tab as Tab,
         )
           ? (data.panel_selection.tab as Tab)
-          : "chat",
+          : this.session.get("task", data.panel_selection.task_id).tab,
         filter: this.restoredView?.filter ?? null,
         search: this.restoredView?.search ?? "",
       });
@@ -1134,7 +1134,7 @@ export class Controller {
     }
 
     // The request is answered, so nothing about it needs remembering.
-    this.questionDrafts.delete(request.id);
+    this.session.remove("question", request.id);
     this.collapsedQuestions.delete(request.id);
     await this.refresh().catch(this.report);
   }
@@ -1361,7 +1361,7 @@ export class Controller {
           events: [],
           chat: undefined,
           draft: undefined,
-          tab: "chat",
+          tab: this.session.get("task", task.id).tab,
           repository: task.repository,
           revision: task.revision,
         });
