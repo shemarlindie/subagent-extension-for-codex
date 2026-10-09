@@ -1,7 +1,11 @@
 import { and, asc, eq, lte } from "drizzle-orm";
+import { createSelectSchema } from "drizzle-orm/zod";
 
 import { type Database } from "../../platform/database/database.js";
+import { checkStored } from "../../platform/database/decode.js";
 import { eventCheckpoint, eventOutbox, eventSubscriptions } from "./schema.js";
+
+const outboxRowSchema = createSelectSchema(eventOutbox);
 
 /** A queued webhook delivery. */
 export type OutboxRow = typeof eventOutbox.$inferSelect;
@@ -110,7 +114,14 @@ export class EventStorage {
       )
       .orderBy(asc(eventOutbox.next_at))
       .limit(100)
-      .all();
+      .all()
+      .map((row) =>
+        checkStored(
+          outboxRowSchema,
+          row,
+          `webhook delivery ${row.subscription_id}/${row.event_id}`,
+        ),
+      );
   }
 
   retry(row: OutboxRow, attempts: number, nextAt: number) {

@@ -1,6 +1,7 @@
+import { createSelectSchema } from "drizzle-orm/zod";
 import { z } from "zod";
 
-import { decodeStored } from "../../platform/database/decode.js";
+import { checkStored, decodeStored } from "../../platform/database/decode.js";
 import { type Event } from "../events/types.js";
 import {
   approvalModeSchema,
@@ -10,6 +11,9 @@ import {
   statuses,
   type Task,
 } from "./model.js";
+import { events } from "./schema.js";
+
+const eventRowSchema = createSelectSchema(events);
 
 // Stored records are checked for the fields that ownership, scheduling and
 // the queue depend on. Other fields, such as provider state, pass through
@@ -73,13 +77,15 @@ export function decodeTask(id: string, body: string): Task {
 }
 
 /** A stored event row, whose data is any JSON object. */
-export function decodeEvent(row: Omit<Event, "data"> & { data: string }) {
+export function decodeEvent(row: typeof events.$inferSelect) {
+  const stored = checkStored(eventRowSchema, row, `event ${row.id}`);
+
   return {
-    ...row,
+    ...stored,
     data: decodeStored(
       z.record(z.string(), z.unknown()),
-      row.data,
-      `event ${row.id}`,
+      stored.data,
+      `event ${stored.id}`,
     ),
   } satisfies Event;
 }

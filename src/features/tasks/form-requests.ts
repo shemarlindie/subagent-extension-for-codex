@@ -4,7 +4,10 @@ import { type Database } from "../../platform/database/database.js";
 import { formRequests } from "./schema.js";
 
 /** A stored form request: its hashed token id and JSON body. */
-export type FormRequestRow = { id: string; body: string };
+export type FormRequestRow = Pick<
+  typeof formRequests.$inferSelect,
+  "id" | "body"
+>;
 
 /** Persistence for pending form requests, keyed by their hashed token. */
 export class FormRequests {

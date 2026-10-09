@@ -1,0 +1,69 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { expect, test, type TestContext } from "vitest";
+
+import { openDatabase } from "../../platform/database/database.js";
+import { events, tasks } from "./schema.js";
+import { decodeEvent } from "./stored.js";
+
+function storedEvent(t: TestContext, data = '{"future":{"nested":[1,null]}}') {
+  const dir = mkdtempSync(join(tmpdir(), "stored-event-"));
+  const db = openDatabase(join(dir, "console.sqlite"));
+
+  t.onTestFinished(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  db.orm
+    .insert(tasks)
+    .values({ id: "task-1", owner: "chat-1", body: "{}" })
+    .run();
+
+  db.orm
+    .insert(events)
+    .values({
+      task_id: "task-1",
+      type: "task.started",
+      timestamp: "2026-10-09T00:00:00.000Z",
+      data,
+    })
+    .run();
+
+  return db.orm.select().from(events).get()!;
+}
+
+test("decodes migrated event rows without changing metadata or arbitrary JSON fields", (t) => {
+  const row = storedEvent(t);
+
+  expect(decodeEvent(row)).toEqual({
+    ...row,
+    data: { future: { nested: [1, null] } },
+  });
+});
+
+test("names an event with corrupt row metadata before decoding its JSON", (t) => {
+  const row = storedEvent(t, "invalid JSON");
+
+  expect(() =>
+    decodeEvent({ ...row, type: 42 } as unknown as typeof events.$inferSelect),
+  ).toThrow(`Stored event ${row.id} is malformed:`);
+});
+
+test("retains the named invalid JSON error for an otherwise valid event row", (t) => {
+  const row = storedEvent(t, "invalid JSON");
+
+  expect(() => decodeEvent(row)).toThrow(
+    `Stored event ${row.id} is not valid JSON`,
+  );
+});
+
+test("retains named body validation for valid JSON that is not an object", (t) => {
+  const row = storedEvent(t, "[]");
+
+  expect(() => decodeEvent(row)).toThrow(
+    `Stored event ${row.id} is malformed:`,
+  );
+});
