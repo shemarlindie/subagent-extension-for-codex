@@ -15,7 +15,11 @@ import { createElement } from "react";
 
 import type { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
-import type { PreviewFile } from "./file-format";
+import {
+  type ParsedDiffFile,
+  parseDiffFiles,
+  type PreviewFile,
+} from "./file-format";
 import { FilePreview } from "./file-preview";
 
 const controller = {
@@ -23,11 +27,11 @@ const controller = {
   report: () => {},
 } as unknown as Controller;
 
-const preview = (file: PreviewFile) =>
+const preview = (file: PreviewFile, diff?: ParsedDiffFile) =>
   createElement(
     ControllerContext.Provider,
     { value: controller },
-    createElement(FilePreview, { file }),
+    createElement(FilePreview, { file, diff }),
   );
 
 const show = (file: PreviewFile) => render(preview(file));
@@ -98,6 +102,34 @@ test("diffs render each file with old and new line numbers", (t) => {
       ["diff-row del", "1−const ttl = 59;"],
       ["diff-row add", "1+const ttl = 60;"],
     ],
+  );
+});
+
+test("a file with its own diff adds a Diff view after its format's views", async (t) => {
+  t.onTestFinished(cleanup);
+
+  const [diff] = parseDiffFiles(
+    "diff --git a/notes.md b/notes.md\n--- a/notes.md\n+++ b/notes.md\n@@ -1 +1 @@\n-# Old\n+# Notes",
+  );
+
+  const view = render(preview({ path: "notes.md", content: "# Notes" }, diff));
+
+  assert.deepEqual(
+    screen.getAllByRole("button").map((button) => button.textContent),
+    ["Preview", "Source", "Diff"],
+  );
+
+  assert.ok(view.container.querySelector(".markdown-body h1"));
+
+  await userEvent.click(screen.getByRole("button", { name: "Diff" }));
+
+  await waitFor(() =>
+    assert.deepEqual(
+      [...view.container.querySelectorAll(".diff-row")].map(
+        (row) => row.textContent,
+      ),
+      ["1−# Old", "1+# Notes"],
+    ),
   );
 });
 

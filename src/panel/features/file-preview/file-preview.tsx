@@ -15,6 +15,7 @@ import {
   formatName,
   isLargeSvg,
   MAX_SVG_IMAGE_BYTES,
+  type ParsedDiffFile,
   type PreviewFile,
   viewLabel,
 } from "./file-format";
@@ -25,16 +26,22 @@ type FilePreviewProps = {
   file: PreviewFile;
   /** Extra toolbar buttons, after Copy. */
   actions?: ReactNode;
+  /** The file's own diff; adds a Diff view after the format's views. */
+  diff?: ParsedDiffFile;
 };
 
 /** A file with a switcher between the views its format offers. */
-export function FilePreview({ file, actions }: FilePreviewProps) {
+export function FilePreview({ file, actions, diff }: FilePreviewProps) {
   const controller = useController(),
     canCopy =
       !controller.transport.embedded &&
       typeof navigator.clipboard?.writeText === "function",
     format = fileFormat(file),
-    views = useMemo(() => fileViews(file), [file]),
+    views = useMemo(
+      (): FileView[] =>
+        diff ? [...fileViews(file), "changes"] : fileViews(file),
+      [file, diff],
+    ),
     // Sizing reads the whole content, so it runs once per file, not per render.
     size = useMemo(() => fileBytes(file), [file]),
     largeSvg = useMemo(() => isLargeSvg(file), [file]),
@@ -88,7 +95,7 @@ export function FilePreview({ file, actions }: FilePreviewProps) {
             as source only.
           </p>
         )}
-        <FileViewer file={file} view={shown} />
+        <FileViewer file={file} view={shown} diff={diff} />
       </div>
     </div>
   );

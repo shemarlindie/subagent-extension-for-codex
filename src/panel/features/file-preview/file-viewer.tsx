@@ -1,12 +1,14 @@
 import { memo, useMemo } from "react";
 
 import { CodeView } from "./code/code-view";
+import { DiffFile } from "./diff/diff-file";
 import { DiffView } from "./diff/diff-view";
 import {
   delimiterOf,
   fileSource,
   type FileView,
   imageSource,
+  type ParsedDiffFile,
   parseDelimited,
   type PreviewFile,
 } from "./file-format";
@@ -16,12 +18,15 @@ import { TableView } from "./table/table-view";
 type FileViewerProps = {
   file: PreviewFile;
   view: FileView;
+  /** The file's own diff, for the `changes` view. */
+  diff?: ParsedDiffFile;
 };
 
 // Skip rebuilding a large view tree during urgent tab switches.
 export const FileViewer = memo(function FileViewer({
   file,
   view,
+  diff,
 }: FileViewerProps) {
   const rows = useMemo(
     () =>
@@ -49,5 +54,13 @@ export const FileViewer = memo(function FileViewer({
       );
     case "source":
       return <CodeView {...source!} />;
+    case "changes":
+      return (
+        diff && (
+          <div className="diff-view">
+            <DiffFile file={diff} initiallyOpen />
+          </div>
+        )
+      );
   }
 });

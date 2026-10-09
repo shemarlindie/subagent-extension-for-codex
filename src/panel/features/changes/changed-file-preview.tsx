@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { useController } from "../../app/state/controller-context";
+import { useController, useSnapshot } from "../../app/state/controller-context";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { formatBytes } from "../../shared/utils/format";
 import { fileName } from "../file-preview/file-format";
 import { FilePreview } from "../file-preview/file-preview";
 import { Progress } from "../file-preview/progress";
 import type { Task } from "../tasks/types";
+import { changedFileDiff } from "./changed-file-diff";
 import { readChangedFile } from "./read-changes";
 import { ShareFileButton } from "./share-file-button";
 import type { ChangedFileContent } from "./types";
@@ -44,6 +45,14 @@ function useChangedFile(task: Task, path: string) {
   return loaded;
 }
 
+/** The file's part of the task's changes, as the Changes tab last read them. */
+function useChangedFileDiff(task: Task, path: string) {
+  const { changes } = useSnapshot(),
+    data = changes?.task === task.id ? changes.data : undefined;
+
+  return useMemo(() => data && changedFileDiff(data, path), [data, path]);
+}
+
 type ChangedFilePreviewProps = {
   task: Task;
   path: string;
@@ -52,6 +61,7 @@ type ChangedFilePreviewProps = {
 /** A changed file as it is now: a preview, or why there is none. */
 export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
   const loaded = useChangedFile(task, path),
+    diff = useChangedFileDiff(task, path),
     file = loaded.status === "ready" ? loaded.file : undefined;
 
   if (file?.state === "present")
@@ -59,6 +69,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
       <FilePreview
         file={{ path, content: file.content ?? "", mime_type: file.mime_type }}
         actions={<ShareFileButton path={path} />}
+        diff={diff}
       />
     );
 

@@ -15,7 +15,9 @@ export type PreviewFile = {
 export type FileFormat =
   "diff" | "json" | "markdown" | "csv" | "image" | "code" | "text";
 
-export type FileView = "preview" | "diff" | "table" | "image" | "source";
+/** `diff` renders a diff file's content; `changes` renders the previewed file's own diff. */
+export type FileView =
+  "preview" | "diff" | "table" | "image" | "source" | "changes";
 
 export type ParsedDiffFile = ReturnType<typeof parseDiff>[number];
 
@@ -109,6 +111,7 @@ const VIEW_LABELS: Record<FileView, string> = {
   table: "Table",
   image: "Image",
   source: "Source",
+  changes: "Diff",
 };
 
 function extensionOf(path: string) {

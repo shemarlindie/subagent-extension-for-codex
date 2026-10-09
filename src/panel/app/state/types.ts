@@ -40,7 +40,7 @@ export type DialogState =
   | { kind: "handoff"; task: Task; scope: number }
   // Confirms deleting the task and everything related to it.
   | { kind: "delete"; task: Task; scope: number }
-  // A file the task changed, previewed as it is now.
+  // A file the task changed, previewed as it is now and as its diff.
   | { kind: "file"; task: Task; path: string; scope: number }
   // Confirms removing a worktree with uncommitted `files`, or deleting a branch.
   | {

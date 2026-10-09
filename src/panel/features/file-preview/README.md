@@ -21,7 +21,7 @@ owning format; keep feature styling in `file-preview.css`.
 | Images                   | Image; an SVG adds Source, and one over 64 KB shows as source only |
 | JSON, code and text      | Source (minified JSON is pretty-printed)                           |
 
-`FilePreview` takes a loaded file and shows the switcher, the file's size and an optional Copy button. Callers own loading and errors: the Changes tab's `ChangedFilePreview` shows `Progress` while a file loads and the error in place of the body. Images arrive as base64.
+`FilePreview` takes a loaded file and shows the switcher, the file's size and an optional Copy button. Given the file's own parsed diff, it adds a **Diff** view after the format's views; the Changes tab's preview passes the file's part of the task's loaded changes. Callers own loading and errors: the Changes tab's `ChangedFilePreview` shows `Progress` while a file loads and the error in place of the body. Images arrive as base64.
 
 ## Large content
 
