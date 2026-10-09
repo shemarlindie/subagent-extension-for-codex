@@ -11,7 +11,7 @@ import { isAbsolute, join, win32 } from "node:path";
  */
 export const claudeCliSupport = {
   sdk: "0.3.293",
-  minimum: "2.1.286",
+  minimum: "2.1.285",
   maximum: "2.1.295",
 } as const;
 

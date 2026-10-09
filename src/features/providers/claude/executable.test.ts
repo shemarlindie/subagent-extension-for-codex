@@ -182,7 +182,7 @@ test("validation accepts the range boundaries and rejects versions outside it", 
     assert.equal(status.version, version);
   }
 
-  const old = await check("2.1.285");
+  const old = await check("2.1.284");
   assert.equal(old.ready, false);
   assert.equal(!old.ready && old.problem, "too_old");
   assert.match(!old.ready ? old.message : "", /claude update/);

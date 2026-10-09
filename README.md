@@ -30,7 +30,7 @@ Stop the demo service before starting Claude on the same port.
 
 ### Claude Code CLI
 
-Claude tasks need a supported Claude Code CLI, 2.1.286–2.1.295, on the service host; [install it](https://code.claude.com/docs/en/setup) if you haven't. The service runs the first `claude` on its own `PATH`, or the absolute path in `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`. Without a supported CLI, Claude tasks can't start but the rest of the service works. See [Claude Code CLI](docs/claude-cli.md) for release channels, how the executable is chosen and checked, and what each readiness message means.
+Claude tasks need a supported Claude Code CLI, 2.1.285–2.1.295, on the service host; [install it](https://code.claude.com/docs/en/setup) if you haven't. The service runs the first `claude` on its own `PATH`, or the absolute path in `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`. Without a supported CLI, Claude tasks can't start but the rest of the service works. See [Claude Code CLI](docs/claude-cli.md) for release channels, how the executable is chosen and checked, and what each readiness message means.
 
 ### Admin token
 

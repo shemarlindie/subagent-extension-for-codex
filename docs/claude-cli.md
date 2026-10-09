@@ -4,7 +4,7 @@ Claude tasks run your installed `claude`. The package doesn't include one, and t
 
 ## Supported versions
 
-The service supports Claude Code 2.1.286–2.1.295. The range covers the version the bundled Agent SDK pairs with, and the stable and latest releases when the range was qualified. [Qualifying Claude Code versions](development.md#qualifying-claude-code-versions) describes how the range is widened.
+The service supports Claude Code 2.1.285–2.1.295. The range covers the version the bundled Agent SDK pairs with, the stable and latest releases when the range was qualified, plus 2.1.285. [Qualifying Claude Code versions](development.md#qualifying-claude-code-versions) describes how the range is widened.
 
 | Install                                | Channel | Updates                           |
 | -------------------------------------- | ------- | --------------------------------- |
