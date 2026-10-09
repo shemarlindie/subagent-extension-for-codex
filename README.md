@@ -120,15 +120,15 @@ Plugin packaging and entrypoint metadata follow the [OpenAI plugin packaging doc
 
 ### Live Claude checks
 
-To reproduce authenticated Claude checks after building, explicitly opt into model calls:
+To reproduce authenticated Claude checks after building, explicitly opt into model calls. The script runs the service code from `src/` through `tsx`; the `mcp` scenario also uses the built `dist/stdio.js` and `dist/app.html`:
 
 ```sh
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs read
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs resume
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs sandbox
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs mcp
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs budget
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 node scripts/verify-live-claude.mjs parity
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs read
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs resume
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs sandbox
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs mcp
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs budget
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs parity
 ```
 
 Each scenario uses a temporary Git fixture and a native task budget of at most $0.25, or $0.50 for parity. The budget scenario deliberately sets $0.001 and expects a budget failure. Claude checks cost after a response, so that response can exceed the configured amount; this is not a hard billing cap. The sandbox scenario enables the extension sandbox, approves only its five exact fixture commands and uses a local listener; unexpected permission requests are denied. The parity scenario uses default settings, a budget of $0.50, and project-local fixtures: a skill, a `.mcp.json` stdio server and a `PreToolUse` hook. It approves only the fixture tools and checks that a subagent runs. These checks require configured Claude Code credentials and are excluded from the ordinary test suite.

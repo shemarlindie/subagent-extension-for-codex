@@ -4,10 +4,10 @@ import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ClaudeAgentProvider } from "../dist/features/providers/claude/provider.js";
-import { Control } from "../dist/features/tasks/control.js";
-import { Store } from "../dist/features/tasks/store.js";
-import { Workspaces } from "../dist/features/workspaces/workspace.js";
+import { ClaudeAgentProvider } from "../src/features/providers/claude/provider.ts";
+import { Control } from "../src/features/tasks/control.ts";
+import { Store } from "../src/features/tasks/store.ts";
+import { Workspaces } from "../src/features/workspaces/workspace.ts";
 
 /** A task's latest reply text, or "" before it has replied. */
 const latestReply = (store, id) =>
@@ -303,8 +303,8 @@ if (scenario === "read") {
     else if (!control.stopped) await control.close();
   }
 } else if (scenario === "mcp") {
-  const { application } = await import("../dist/platform/server/app.js");
-  const { Auth } = await import("../dist/platform/server/auth.js");
+  const { application } = await import("../src/platform/server/app.ts");
+  const { Auth } = await import("../src/platform/server/auth.ts");
   const { randomBytes } = await import("node:crypto");
   const { fileURLToPath } = await import("node:url");
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");

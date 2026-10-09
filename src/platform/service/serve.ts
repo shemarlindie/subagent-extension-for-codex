@@ -19,7 +19,7 @@ import { application } from "../server/app.js";
 import { Auth } from "../server/auth.js";
 import { lease } from "./lease.js";
 import { inspectProcessIdentity } from "./process-info.js";
-import { dataDirectory, installRoot } from "./runtime.js";
+import { dataDirectory, packagePath } from "./runtime.js";
 import { adminToken } from "./token.js";
 
 export type ServeOptions = {
@@ -112,9 +112,9 @@ export async function serve({
     c,
     auth,
     origin,
-    join(installRoot, "dist/app.html"),
+    packagePath("dist/app.html"),
     events,
-    join(installRoot, "dist/app.html"),
+    packagePath("dist/app.html"),
   );
 
   // Reserve the listener before recovery can change durable tasks or launch workers.

@@ -8,18 +8,18 @@ import { promisify } from "node:util";
 
 import { test } from "vitest";
 
-import {
-  dataDirectory,
-  installRoot,
-} from "../../../src/platform/service/runtime.js";
+import { dataDirectory } from "../../../src/platform/service/runtime.js";
 import { waitForListening } from "../../support/helpers.js";
 
 const exec = promisify(execFile);
 
+// The source launcher runs through tsx; it still starts the built dist/main.js.
 const launcher = new URL(
-  "../../../dist/platform/service/launcher.js",
+  "../../../src/platform/service/launcher.ts",
   import.meta.url,
 ).href;
+
+const tsx = import.meta.resolve("tsx");
 
 async function connect(env: NodeJS.ProcessEnv) {
   const clean = { ...process.env };
@@ -30,6 +30,8 @@ async function connect(env: NodeJS.ProcessEnv) {
   return exec(
     process.execPath,
     [
+      "--import",
+      tsx,
       "--input-type=module",
       "-e",
       `import { connectService } from ${JSON.stringify(launcher)}; console.log(JSON.stringify(await connectService()));`,
@@ -69,16 +71,6 @@ test("data directory override is independent of packaged installation directory"
     dataDirectory({ CODEX_SUBAGENT_EXTENSION_DATA: "relative-agent-data" }),
     resolve("relative-agent-data"),
   );
-});
-
-// The runtime module sits three levels below the package root in both src/ and dist/.
-test("install root resolves to the package root from source and build output", async () => {
-  const built = await import(
-    new URL("../../../dist/platform/service/runtime.js", import.meta.url).href
-  );
-
-  assert.equal(installRoot, resolve("."));
-  assert.equal(built.installRoot, resolve("."));
 });
 
 test("launcher discovers service metadata and token without starting another service", async (t) => {

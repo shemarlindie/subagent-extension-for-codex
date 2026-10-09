@@ -1,6 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -32,19 +30,18 @@ import {
   withConversation,
 } from "./platform/server/tools.js";
 import { connectService } from "./platform/service/launcher.js";
+import { installRoot, packagePath } from "./platform/service/runtime.js";
 import type { Task } from "./shared/contracts.js";
 
-const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-let mentionSearchEnv = resolveMentionSearchEnv(process.env, {}, packageRoot);
+let mentionSearchEnv = resolveMentionSearchEnv(process.env, {}, installRoot);
 
 try {
-  const envPath = resolve(packageRoot, ".env");
-  const envFile = await readFile(envPath, "utf8");
+  const envFile = await readFile(packagePath(".env"), "utf8");
 
   mentionSearchEnv = resolveMentionSearchEnv(
     process.env,
     parseEnv(envFile),
-    packageRoot,
+    installRoot,
   );
 } catch (error) {
   if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
@@ -312,7 +309,7 @@ for (const [name, d] of Object.entries(tools)) {
 }
 
 const panel = delegationPanel(
-  resolve(dirname(fileURLToPath(import.meta.url)), "../dist/app.html"),
+  packagePath("dist/app.html"),
   undefined,
   async (args) => {
     const response = await fetch(

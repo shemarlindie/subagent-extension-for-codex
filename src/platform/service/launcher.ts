@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { dataDirectory, installRoot } from "./runtime.js";
+import { dataDirectory, installRoot, packagePath } from "./runtime.js";
 
 class ServiceStartingError extends Error {}
 
@@ -105,7 +105,7 @@ export async function connectService() {
     mkdirSync(data, { recursive: true, mode: 0o700 });
     const log = openSync(join(data, "service.log"), "a", 0o600);
 
-    const child = spawn(process.execPath, [join(installRoot, "dist/main.js")], {
+    const child = spawn(process.execPath, [packagePath("dist/main.js")], {
       cwd: installRoot,
       detached: true,
       stdio: ["ignore", log, log],
