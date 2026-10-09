@@ -242,6 +242,37 @@ boundary, and `[late]` takes none, so they're left for the next turn. The packag
 The service reads panel HTML from `dist/` on each resource request, so rebuilt
 UI needs no service restart.
 
+## Build
+
+`npm run build` cleans `dist/`, type checks the service with `tsc --noEmit`,
+then runs two builds that write into `dist/` without removing each other's
+output:
+
+- `scripts/build-backend.mjs` bundles `src/main.ts`, `src/stdio.ts` and
+  `src/projects-cli.ts` with esbuild into `dist/main.js`, `dist/stdio.js`,
+  `dist/projects-cli.js` and shared `dist/chunks/`. Every package, the Claude
+  Agent SDK included, is bundled; only Node built-ins stay external, so the
+  package needs no `node_modules`. The build fails if code from `dev/`, `ui/`,
+  `tests/` or a test file reaches the bundle, or if anything else is left
+  external. It writes the bundled packages' licenses to
+  `dist/THIRD_PARTY_LICENSES.txt`.
+- `scripts/build-ui.mjs` builds the panel into `dist/app.html`.
+
+The backend build also copies the host's Claude Code binary from the SDK's
+platform package into `dist/claude/`, failing if its version differs from the
+SDK's. Built code passes that path to the SDK; `npm run dev` runs from `src/`,
+where the SDK finds its own platform package in `node_modules`. The binary
+matches the build host, so a package runs only on that OS and architecture.
+
+The bundle ships source maps without embedded sources. `npm start`, `mcp.json`
+and the launcher pass `--enable-source-maps`, so stack traces point to `src/`
+files and lines.
+
+`tests/integration/package/packed-artifact.test.ts` packs the current `dist/`,
+extracts it outside the checkout and runs the projects CLI, the stdio proxy
+with launcher auto-start, the panel, the packaged `.env` and a service restart
+against the extracted copy.
+
 ## Checks
 
 ```sh

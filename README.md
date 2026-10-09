@@ -112,7 +112,7 @@ Review a worktree task's changes in the Changes tab, or on its branch, before ap
 
 The console and embedded panel share a feature-oriented React UI, with clear boundaries for state, transports, components, and forms. See [React UI architecture](docs/react-ui.md) for extension boundaries, self-contained HTML builds, and UI verification. [Local development](docs/development.md) covers setup, the service, the `npm run dev:ui` panel dev host with hot reload, what needs a rebuild or restart, and the `npm run typecheck` and `npm test` checks.
 
-The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, and MCP tool/resource calls. Browser verification covers delegation, Chat (follow-ups, steers, the queue, interrupts and streaming replies) and input submission in fixture mode. See [implementation status](docs/implementation-status.md).
+The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, MCP tool/resource calls, and the packed tarball run from outside the checkout. Browser verification covers delegation, Chat (follow-ups, steers, the queue, interrupts and streaming replies) and input submission in fixture mode. See [implementation status](docs/implementation-status.md).
 
 Authenticated native Claude execution with plain replies, input interruption, a follow-up resuming the session after reopening the control plane, SDK cost reporting, the opt-in extension Bash sandbox and CLI parity (project skills, MCP servers, subagents and hooks) are verified on this machine. Sanitized evidence is in [live verification](docs/live-claude-verification.json). Full-harness containment remains unverified. Production authentication/deployment remain future work. Native host rendering and event reception also require verification after registration.
 
@@ -219,7 +219,8 @@ Build with `npm run build`. `npm run package:plugin` creates an npm tarball
 containing the bundled service/proxy code with its dependencies, both HTML panels,
 the delegation skill and the Claude Code binary in `dist/claude/`. It has no
 `node_modules`. Extract its `package/` directory as the plugin root for a local
-installation. Node 24+ must be available on the execution host. The Claude Code
+installation. Node 24+ must be available on the execution host. See
+[Build](docs/development.md#build) for how the bundle and package are made. The Claude Code
 binary matches the build host; build on the destination OS/architecture rather
 than copying a package between platforms. Ordinary source checkouts require
 `npm ci` before building.
