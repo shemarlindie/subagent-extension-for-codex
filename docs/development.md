@@ -471,6 +471,8 @@ panel, shared modules, development tooling, tests, and Vite configs. `npm test` 
 `pretest` checks schema freshness, formatting, and linting, then builds. Fix
 formatting with `npm run format`. ESLint (`eslint.config.js`) checks TypeScript
 code quality and React hook rules; explicit `any` is allowed only in tests.
+It also checks Markdown with `@eslint/markdown`'s recommended rules, such as
+missing link fragments, code fences without a language and malformed tables.
 The `project/source-boundaries` rule in `scripts/lint/source-boundaries.mjs`
 resolves import targets before enforcing the runtime ownership described in
 [Architecture](architecture.md#code-ownership). Service-owned panel integration

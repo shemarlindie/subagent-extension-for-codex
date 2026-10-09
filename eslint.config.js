@@ -1,6 +1,7 @@
 // Code-quality lint only; formatting belongs to Prettier (eslint-config-prettier
 // turns off conflicting rules).
 import js from "@eslint/js";
+import markdown from "@eslint/markdown";
 import stylistic from "@stylistic/eslint-plugin";
 import { defineConfig } from "eslint/config";
 import prettier from "eslint-config-prettier/flat";
@@ -11,11 +12,14 @@ import tseslint from "typescript-eslint";
 
 import { sourceBoundaries } from "./scripts/lint/source-boundaries.mjs";
 
+// Code rules expect a JavaScript syntax tree, so they stay off Markdown.
+const CODE = ["**/*.{js,mjs,cjs,ts,mts,cts,tsx}"];
+
 export default defineConfig(
   { ignores: ["dist/", ".codex-subagent-extension/", "node_modules/"] },
-  js.configs.recommended,
-  tseslint.configs.recommended,
   {
+    files: CODE,
+    extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: { globals: { ...globals.node } },
     rules: {
       "@typescript-eslint/no-unused-vars": [
@@ -32,6 +36,7 @@ export default defineConfig(
   },
   {
     // Blank-line layout is the one formatting concern Prettier leaves alone.
+    files: CODE,
     plugins: {
       "@stylistic": stylistic,
       "simple-import-sort": simpleImportSort,
@@ -116,4 +121,12 @@ export default defineConfig(
     rules: { "project/source-boundaries": "error" },
   },
   prettier,
+  {
+    // Docs: broken links and fragments, empty links, duplicate headings and
+    // similar Markdown mistakes. GitHub-flavored for tables.
+    files: ["**/*.md"],
+    plugins: { markdown },
+    language: "markdown/gfm",
+    extends: ["markdown/recommended"],
+  },
 );
