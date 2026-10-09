@@ -104,6 +104,36 @@ deleted file mode 100644
   assert.deepEqual(parseDiffFiles("not a diff"), []);
 });
 
+test("paths Git quoted in a diff parse as the paths themselves", () => {
+  // As Git writes them: a tab, a quote and backslashes, then octal UTF-8.
+  const files =
+    parseDiffFiles(String.raw`diff --git "a/tab\tname.ts" "b/tab\tname.ts"
+--- "a/tab\tname.ts"
++++ "b/tab\tname.ts"
+@@ -1 +1 @@
+-y
++y2
+diff --git "a/we\"ird\\\\na me.ts" "b/we\"ird\\\\na me.ts"
+--- "a/we\"ird\\\\na me.ts"${"\t"}
++++ "b/we\"ird\\\\na me.ts"${"\t"}
+@@ -1 +1 @@
+-x
++x2
+diff --git "a/caf\303\251.ts" "b/caf\303\251.ts"
+--- "a/caf\303\251.ts"
++++ "b/caf\303\251.ts"
+@@ -1 +1 @@
+-z
++z2
+`);
+
+  assert.deepEqual(files.map(diffPath), [
+    "tab\tname.ts",
+    'we"ird\\\\na me.ts',
+    "café.ts",
+  ]);
+});
+
 test("views follow the format, best first", () => {
   assert.deepEqual(fileViews(file("a.json", "{}")), ["source"]);
   assert.deepEqual(fileViews(file("a.md")), ["preview", "source"]);

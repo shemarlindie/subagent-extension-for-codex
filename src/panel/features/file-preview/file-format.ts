@@ -258,9 +258,57 @@ export function parseDelimited(content: string, separator = ","): string[][] {
   return rows;
 }
 
+const ESCAPES: Record<string, string> = {
+  a: "\x07",
+  b: "\b",
+  t: "\t",
+  n: "\n",
+  v: "\v",
+  f: "\f",
+  r: "\r",
+  '"': '"',
+  "\\": "\\",
+};
+
+/**
+ * A path as Git wrote it in a quoted header, unescaped. The parser drops the
+ * quotes but keeps C escapes; octal escapes are UTF-8 bytes. Git quotes every
+ * path with a backslash, so a backslash always starts an escape.
+ */
+export function unquoteDiffPath(path: string) {
+  if (!path.includes("\\")) return path;
+
+  const bytes: number[] = [],
+    encoder = new TextEncoder();
+
+  for (let index = 0; index < path.length;) {
+    const octal = /^\\([0-3][0-7]{2})/.exec(path.slice(index, index + 4));
+
+    if (octal) {
+      bytes.push(parseInt(octal[1], 8));
+      index += 4;
+    } else if (path[index] === "\\" && path[index + 1] in ESCAPES) {
+      bytes.push(...encoder.encode(ESCAPES[path[index + 1]]));
+      index += 2;
+    } else {
+      const char = String.fromCodePoint(path.codePointAt(index)!);
+      bytes.push(...encoder.encode(char));
+      index += char.length;
+    }
+  }
+
+  return new TextDecoder().decode(new Uint8Array(bytes));
+}
+
 export function parseDiffFiles(content: string): ParsedDiffFile[] {
   try {
-    return parseDiff(content).filter((file) => file.chunks.length || file.from);
+    return parseDiff(content)
+      .filter((file) => file.chunks.length || file.from)
+      .map((file) => ({
+        ...file,
+        ...(file.from ? { from: unquoteDiffPath(file.from) } : {}),
+        ...(file.to ? { to: unquoteDiffPath(file.to) } : {}),
+      }));
   } catch {
     return [];
   }
