@@ -2244,3 +2244,22 @@ test("user task renaming checks ownership and persists across active turn update
     await c.close();
   }
 });
+
+test("a task whose first event can't be written is never created", async () => {
+  const { store, c } = await setup();
+
+  try {
+    const heard: string[] = [];
+    store.bus.on("event", (e: { type: string }) => heard.push(e.type));
+
+    store.db.exec(
+      "CREATE TRIGGER reject_queued BEFORE INSERT ON events WHEN NEW.type='task.queued' BEGIN SELECT RAISE(ABORT, 'event write failed'); END",
+    );
+
+    await assert.rejects(c.start("local", input()), /event write failed/);
+    assert.deepEqual(store.all(), []);
+    assert.deepEqual(heard, []);
+  } finally {
+    await c.close();
+  }
+});

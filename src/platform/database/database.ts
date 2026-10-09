@@ -47,8 +47,64 @@ function useWal(client: DatabaseSync) {
 export type Database = {
   client: DatabaseSync;
   orm: NodeSQLiteDatabase;
+  /**
+   * Runs `fn` in one `BEGIN IMMEDIATE` transaction and returns its result.
+   * `fn` must be synchronous, and transactions don't nest: work that belongs
+   * to an open transaction runs inside its callback.
+   */
+  transaction<T>(fn: () => T): T;
+  /**
+   * Runs `notify` once the open transaction commits, in the order queued, or
+   * at once outside a transaction. A rollback discards it.
+   */
+  afterCommit(notify: () => void): void;
   close(): void;
 };
+
+function thenable(value: unknown): value is PromiseLike<unknown> {
+  return typeof (value as PromiseLike<unknown> | null)?.then === "function";
+}
+
+function transactions(client: DatabaseSync) {
+  let queued: (() => void)[] | undefined;
+
+  return {
+    transaction<T>(fn: () => T): T {
+      if (queued)
+        throw new Error(
+          "A transaction is already open; run this work inside it",
+        );
+
+      const notifications: (() => void)[] = [];
+      queued = notifications;
+      let result: T;
+      client.exec("BEGIN IMMEDIATE");
+
+      try {
+        result = fn();
+
+        // Work after an await would run outside the transaction.
+        if (thenable(result))
+          throw new Error("Database transactions must be synchronous");
+
+        client.exec("COMMIT");
+      } catch (error) {
+        client.exec("ROLLBACK");
+        throw error;
+      } finally {
+        queued = undefined;
+      }
+
+      for (const notify of notifications) notify();
+
+      return result;
+    },
+    afterCommit(notify: () => void) {
+      if (queued) queued.push(notify);
+      else notify();
+    },
+  };
+}
 
 /**
  * Opens the database at `path`, configures the connection and applies
@@ -72,5 +128,10 @@ export function openDatabase(
     throw error;
   }
 
-  return { client, orm: drizzle({ client }), close: () => client.close() };
+  return {
+    client,
+    orm: drizzle({ client }),
+    ...transactions(client),
+    close: () => client.close(),
+  };
 }

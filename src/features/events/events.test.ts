@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { Webhook } from "standardwebhooks";
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
 import { now, startSchema, type Task } from "../../shared/contracts.js";
 import { Store } from "../tasks/store.js";
@@ -521,6 +521,40 @@ test("expired subscriptions and subscriptions recreated after unsubscribe never 
     await events.flush();
     assert.equal(posts.filter((p) => !p.body.type).length, 0);
   } finally {
+    await events.close();
+    store.close();
+  }
+});
+
+test("capture runs from the listener after a task transaction commits, and the timer catches up on a missed notification", async () => {
+  const { store, events } = await setup();
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+
+  try {
+    await events.handle("alice", "events/subscribe", request());
+    events.start();
+    const task = make();
+
+    const outbox = () =>
+      Number(
+        store.db.prepare("SELECT COUNT(*) AS n FROM event_outbox").get()!.n,
+      );
+
+    store.transaction(() => {
+      store.save(task);
+      store.event(task, "task.completed", {});
+    });
+
+    assert.equal(outbox(), 1);
+
+    // An event written while the listener is away still reaches the outbox.
+    store.bus.removeAllListeners("event");
+    store.event(task, "task.completed", {});
+    assert.equal(outbox(), 1);
+    vi.advanceTimersByTime(1000);
+    assert.equal(outbox(), 2);
+  } finally {
+    vi.useRealTimers();
     await events.close();
     store.close();
   }

@@ -9,6 +9,8 @@ import { type Event, now, type Task } from "../../shared/contracts.js";
 
 export class Store {
   private database: Database;
+  /** The tasks saved in the open transaction, with the `updated_at` to restore on rollback. */
+  private saved?: [Task, string][];
   db: DatabaseSync;
   // Long-poll reads each listen while they wait, so there can be many.
   bus = new EventEmitter().setMaxListeners(0);
@@ -17,14 +19,49 @@ export class Store {
     this.db = this.database.client;
   }
 
+  /**
+   * Runs `fn` in one transaction, so the task state and events it writes
+   * commit together. Listeners hear its events only after the commit; on a
+   * rollback they hear nothing, and saved tasks get back their `updated_at`.
+   */
+  transaction<T>(fn: () => T): T {
+    if (this.saved)
+      throw new Error("A transaction is already open; run this work inside it");
+
+    const saved: [Task, string][] = [];
+    this.saved = saved;
+
+    try {
+      return this.database.transaction(() => {
+        try {
+          return fn();
+        } finally {
+          // Closed before the commit's listeners run, so they can open their own.
+          this.saved = undefined;
+        }
+      });
+    } catch (error) {
+      for (const [t, updated] of saved.reverse()) t.updated_at = updated;
+      throw error;
+    }
+  }
+
   save(t: Task) {
+    const updated = t.updated_at;
     t.updated_at = now();
 
-    this.db
-      .prepare(
-        "INSERT INTO tasks VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
-      )
-      .run(t.id, t.owner, JSON.stringify(t));
+    try {
+      this.db
+        .prepare(
+          "INSERT INTO tasks VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
+        )
+        .run(t.id, t.owner, JSON.stringify(t));
+    } catch (error) {
+      t.updated_at = updated;
+      throw error;
+    }
+
+    this.saved?.push([t, updated]);
   }
 
   /**
@@ -73,9 +110,23 @@ export class Store {
       data,
     };
 
-    this.bus.emit("event", e, t.owner);
+    this.database.afterCommit(() => this.notify(e, t.owner));
 
     return e;
+  }
+
+  /**
+   * Tells each event listener about a committed event. A notification is a
+   * hint that rows exist, so a failing listener is logged and the others
+   * still run; consumers catch up on what they missed from the database.
+   */
+  private notify(e: Event, owner: string) {
+    for (const listener of this.bus.listeners("event"))
+      try {
+        listener(e, owner);
+      } catch (error) {
+        console.error("Event listener failed", error);
+      }
   }
 
   events(id: string, owner: string, after = 0): Event[] {

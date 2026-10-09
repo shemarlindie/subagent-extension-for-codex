@@ -3,9 +3,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
-import { startSchema, type Task } from "../../shared/contracts.js";
+import { type Event, startSchema, type Task } from "../../shared/contracts.js";
 import { Store } from "./store.js";
 
 function deletionFixture() {
@@ -159,4 +159,121 @@ test("recent events return only the task's latest 200 in chronological order aft
     store.close();
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+function transactionFixture(t: { onTestFinished(fn: () => void): void }) {
+  const store = new Store(":memory:");
+  t.onTestFinished(() => store.close());
+
+  const task: Task = {
+    ...startSchema.parse({ description: "Transact" }),
+    title: "Transact",
+    id: "transact",
+    owner: "alice",
+    status: "queued",
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    instructions: [],
+    created_by: "user",
+    instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
+    turn: 0,
+    runtime_ms: 0,
+  };
+
+  store.save(task);
+  const heard: string[] = [];
+  store.bus.on("event", (e: Event) => heard.push(e.type));
+
+  return { store, task, heard };
+}
+
+test("a transaction commits task state with its events and notifies in order afterwards", (t) => {
+  const { store, task, heard } = transactionFixture(t);
+
+  store.transaction(() => {
+    task.status = "running";
+    store.save(task);
+    store.event(task, "task.started");
+    store.event(task, "task.queue_changed");
+    // Listeners hear nothing until the commit.
+    assert.deepEqual(heard, []);
+  });
+
+  assert.deepEqual(heard, ["task.started", "task.queue_changed"]);
+  assert.equal(store.get(task.id, task.owner).status, "running");
+
+  assert.deepEqual(
+    store.events(task.id, task.owner).map((e) => e.type),
+    ["task.started", "task.queue_changed"],
+  );
+});
+
+test("a failed transaction leaves state and events unwritten, notifies nobody and restores updated_at", (t) => {
+  const { store, task, heard } = transactionFixture(t);
+  const updated = task.updated_at;
+
+  assert.throws(
+    () =>
+      store.transaction(() => {
+        task.status = "running";
+        store.save(task);
+        store.event(task, "task.started");
+        throw new Error("write failed");
+      }),
+    /write failed/,
+  );
+
+  assert.equal(task.updated_at, updated);
+  assert.equal(store.get(task.id, task.owner).status, "queued");
+  assert.deepEqual(store.events(task.id, task.owner), []);
+  assert.deepEqual(heard, []);
+});
+
+test("transactions reject nesting and asynchronous callbacks", (t) => {
+  const { store, task, heard } = transactionFixture(t);
+
+  assert.throws(
+    () =>
+      store.transaction(() => {
+        store.event(task, "task.started");
+        store.transaction(() => {});
+      }),
+    /already open/,
+  );
+
+  assert.throws(
+    () =>
+      store.transaction(async () => {
+        store.event(task, "task.started");
+      }),
+    /must be synchronous/,
+  );
+
+  assert.deepEqual(store.events(task.id, task.owner), []);
+  assert.deepEqual(heard, []);
+
+  // The store is usable again after both.
+  store.transaction(() => store.event(task, "task.started"));
+  assert.deepEqual(heard, ["task.started"]);
+});
+
+test("a failing listener neither undoes the commit nor stops other listeners", (t) => {
+  const { store, task, heard } = transactionFixture(t);
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+
+  store.bus.prependListener("event", () => {
+    throw new Error("listener failed");
+  });
+
+  store.transaction(() => {
+    store.save(task);
+    store.event(task, "task.started");
+  });
+
+  store.event(task, "task.completed");
+  assert.deepEqual(heard, ["task.started", "task.completed"]);
+  assert.equal(store.events(task.id, task.owner).length, 2);
+  assert.equal(errors.mock.calls.length, 2);
 });

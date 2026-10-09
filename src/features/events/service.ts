@@ -354,7 +354,7 @@ export class Events {
   }
 
   capture() {
-    let cursor = Number(
+    const cursor = Number(
       this.store.db
         .prepare("SELECT cursor FROM event_checkpoint WHERE id=1")
         .get()!.cursor,
@@ -383,9 +383,8 @@ export class Events {
         } as Record<string, string>
       )[e.type];
 
-      this.store.db.exec("BEGIN IMMEDIATE");
-
-      try {
+      // The deliveries and the checkpoint past this event commit together.
+      this.store.transaction(() => {
         if (name)
           for (const s of subscriptions) {
             if (
@@ -444,13 +443,7 @@ export class Events {
         this.store.db
           .prepare("UPDATE event_checkpoint SET cursor=? WHERE id=1")
           .run(e.id);
-
-        this.store.db.exec("COMMIT");
-        cursor = e.id;
-      } catch (error) {
-        this.store.db.exec("ROLLBACK");
-        throw error;
-      }
+      });
     }
 
     if (rows.length === 1000) this.capture();

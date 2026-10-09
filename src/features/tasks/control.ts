@@ -132,9 +132,15 @@ export class Control {
         this.leaveOver(t);
         if (t.queue.length) t.queue_paused = true;
 
-        this.store.save(t);
-        this.store.event(t, "task.interrupted", { reason: "service_restart" });
-        this.queueChanged(t, queue);
+        this.store.transaction(() => {
+          this.store.save(t);
+
+          this.store.event(t, "task.interrupted", {
+            reason: "service_restart",
+          });
+
+          this.queueChanged(t, queue);
+        });
       }
     }
 
@@ -263,8 +269,11 @@ export class Control {
       runtime_ms: 0,
     };
 
-    this.store.save(t);
-    this.store.event(t, "task.queued");
+    this.store.transaction(() => {
+      this.store.save(t);
+      this.store.event(t, "task.queued");
+    });
+
     void this.schedule();
 
     return t;
@@ -308,8 +317,12 @@ export class Control {
           t.completed_at = now();
           delete t.waiting_reason;
           delete t.waiting_for;
-          this.store.save(t);
-          this.store.event(t, "task.failed", { error: t.error });
+
+          this.store.transaction(() => {
+            this.store.save(t);
+            this.store.event(t, "task.failed", { error: t.error });
+          });
+
           continue;
         }
 
@@ -327,11 +340,14 @@ export class Control {
             t.status = "waiting";
             t.waiting_reason = "waiting_for_dependency";
             t.waiting_for = pending.id;
-            this.store.save(t);
 
-            this.store.event(t, "task.waiting", {
-              reason: t.waiting_reason,
-              dependency_id: pending.id,
+            this.store.transaction(() => {
+              this.store.save(t);
+
+              this.store.event(t, "task.waiting", {
+                reason: t.waiting_reason,
+                dependency_id: pending.id,
+              });
             });
           }
 
@@ -376,8 +392,11 @@ export class Control {
       } else if (await this.workspaces.worktreeMissing(t)) {
         // Remove worktree only frees disk space; the next turn brings it back.
         const from = await this.workspaces.recreateWorktree(t);
-        this.store.save(t);
-        this.store.event(t, "task.worktree_recreated", { from });
+
+        this.store.transaction(() => {
+          this.store.save(t);
+          this.store.event(t, "task.worktree_recreated", { from });
+        });
       }
 
       // Every turn replaces the turn snapshot. A new current_repo task's
@@ -403,17 +422,20 @@ export class Control {
         delete t.session_id;
         delete t.session_state_ref;
         delete t.session_cost_usd;
-
-        if (t.turn > 1)
-          this.store.event(t, "task.session_started", { reason: newSession });
       }
 
       t.status = "running";
       t.started_at ??= now();
       t.run_started_at = new Date(begin).toISOString();
       t.session_owner = this.ownerWorker;
-      this.store.save(t);
-      this.store.event(t, "task.started", { turn: t.turn });
+
+      this.store.transaction(() => {
+        if (newSession && t.turn > 1)
+          this.store.event(t, "task.session_started", { reason: newSession });
+
+        this.store.save(t);
+        this.store.event(t, "task.started", { turn: t.turn });
+      });
 
       const remaining =
         t.budget.max_runtime_minutes === null
@@ -458,32 +480,38 @@ export class Control {
             // The session has it now, like the turn's prompt.
             t.instructions.push(taken);
             t.instructions_sent = t.instructions.length;
-            this.store.save(t);
-            this.store.event(t, "task.steer_taken", { message_id: id });
+
+            this.store.transaction(() => {
+              this.store.save(t);
+              this.store.event(t, "task.steer_taken", { message_id: id });
+            });
           },
           delta: (messageId, text) =>
             this.drafts.append(t.owner, t.id, messageId, text),
           emit: (type, data) => {
-            if (
-              type === "agent.completed" &&
-              typeof data.cost_usd === "number"
-            ) {
-              // The provider reports the session's cumulative cost, which
-              // includes the turns a resumed session already ran. One lower
-              // than before started counting again.
-              const before = t.session_cost_usd ?? 0;
+            this.store.transaction(() => {
+              if (
+                type === "agent.completed" &&
+                typeof data.cost_usd === "number"
+              ) {
+                // The provider reports the session's cumulative cost, which
+                // includes the turns a resumed session already ran. One lower
+                // than before started counting again.
+                const before = t.session_cost_usd ?? 0;
 
-              t.cost_usd =
-                (t.cost_usd ?? 0) +
-                (data.cost_usd >= before
-                  ? data.cost_usd - before
-                  : data.cost_usd);
+                t.cost_usd =
+                  (t.cost_usd ?? 0) +
+                  (data.cost_usd >= before
+                    ? data.cost_usd - before
+                    : data.cost_usd);
 
-              t.session_cost_usd = data.cost_usd;
-              this.store.save(t);
-            }
+                t.session_cost_usd = data.cost_usd;
+                this.store.save(t);
+              }
 
-            this.store.event(t, type, data);
+              this.store.event(t, type, data);
+            });
+
             // The stored message replaces its draft.
             if (type === "agent.message")
               this.drafts.clear(t.id, storedMessageId(data));
@@ -554,10 +582,12 @@ export class Control {
                 ...(presentation ? { presentation } : {}),
               };
 
-              this.store.save(t);
+              this.store.transaction(() => {
+                this.store.save(t);
 
-              this.store.event(t, "agent.input_required", {
-                request: t.pending_input,
+                this.store.event(t, "agent.input_required", {
+                  request: t.pending_input,
+                });
               });
 
               return await new Promise((resolve, reject) => {
@@ -583,10 +613,13 @@ export class Control {
                   // The worker resumes, so its changes are live again.
                   delete t.end_tree;
                   t.status = "running";
-                  this.store.save(t);
 
-                  this.store.event(t, "agent.input_submitted", {
-                    approved: r.approved,
+                  this.store.transaction(() => {
+                    this.store.save(t);
+
+                    this.store.event(t, "agent.input_submitted", {
+                      approved: r.approved,
+                    });
                   });
 
                   resolve(r);
@@ -632,34 +665,40 @@ export class Control {
       delete t.waiting_reason;
       t.completed_at = now();
 
-      // One stopped while waiting for input keeps the end from when it began
-      // waiting, since it was blocked from then on.
-      if (turnStarted && !t.end_tree) await this.recordEnd(t);
-      const outcome = t.status as "completed" | "failed" | "interrupted";
+      try {
+        // One stopped while waiting for input keeps the end from when it
+        // began waiting, since it was blocked from then on.
+        if (turnStarted && !t.end_tree) await this.recordEnd(t);
+        const outcome = t.status as "completed" | "failed" | "interrupted";
+        this.drafts.clear(t.id);
 
-      this.store.event(t, "task.turn_ended", {
-        turn: t.turn,
-        outcome,
-        runtime_ms: runtime,
-        cost_usd: (t.cost_usd ?? 0) - costBefore,
-      });
+        // The turn's end, what follows it and the task's new status commit together.
+        this.store.transaction(() => {
+          this.store.event(t, "task.turn_ended", {
+            turn: t.turn,
+            outcome,
+            runtime_ms: runtime,
+            cost_usd: (t.cost_usd ?? 0) - costBefore,
+          });
 
-      this.drafts.clear(t.id);
-      this.endTurn(t, outcome, a.sendPending);
-      this.store.save(t);
+          this.endTurn(t, outcome, a.sendPending);
+          this.store.save(t);
 
-      this.store.event(
-        t,
-        `task.${t.status}`,
-        t.status === "queued"
-          ? {}
-          : t.status === "completed" && reply !== undefined
-            ? { reply: replyExcerpt(reply) }
-            : { error: t.error },
-      );
-
-      this.active.delete(t.id);
-      if (!this.stopped) queueMicrotask(() => void this.schedule());
+          this.store.event(
+            t,
+            `task.${t.status}`,
+            t.status === "queued"
+              ? {}
+              : t.status === "completed" && reply !== undefined
+                ? { reply: replyExcerpt(reply) }
+                : { error: t.error },
+          );
+        });
+      } finally {
+        // A failed write must not leave the task held as running.
+        this.active.delete(t.id);
+        if (!this.stopped) queueMicrotask(() => void this.schedule());
+      }
     }
   }
 
@@ -762,8 +801,11 @@ export class Control {
     const before = this.queueSnapshot(t);
     t.pending_steers = t.pending_steers.filter((m) => m.id !== steer.id);
     t.queue.unshift({ ...steer, delivery: "steer", recorded: true });
-    this.store.save(t);
-    this.queueChanged(t, before);
+
+    this.store.transaction(() => {
+      this.store.save(t);
+      this.queueChanged(t, before);
+    });
 
     return false;
   }
@@ -1129,9 +1171,13 @@ export class Control {
     delete t.waiting_for;
     const before = this.queueSnapshot(t);
     if (t.queue.length) t.queue_paused = true;
-    this.store.save(t);
-    this.store.event(t, "task.interrupted");
-    this.queueChanged(t, before);
+
+    this.store.transaction(() => {
+      this.store.save(t);
+      this.store.event(t, "task.interrupted");
+      this.queueChanged(t, before);
+    });
+
     void this.schedule();
 
     return t;
@@ -1191,24 +1237,25 @@ export class Control {
     if (delivery === "queue") {
       const before = this.queueSnapshot(t);
       t.queue.push({ ...m, delivery });
-      this.store.save(t);
-      this.queueChanged(t, before);
+
+      this.store.transaction(() => {
+        this.store.save(t);
+        this.queueChanged(t, before);
+      });
 
       return { task: t, message_id: m.id, state: "queued" as const };
     }
 
-    this.recordMessage(t, m, delivery);
-
     // A turn that hasn't begun takes the message with its prompt.
-    if (!a) {
-      t.instructions.push(m);
+    if (!a) t.instructions.push(m);
+    else t.pending_steers.push(m);
+
+    this.store.transaction(() => {
+      this.recordMessage(t, m, delivery);
       this.store.save(t);
+    });
 
-      return { task: t, message_id: m.id, state: "started" as const };
-    }
-
-    t.pending_steers.push(m);
-    this.store.save(t);
+    if (!a) return { task: t, message_id: m.id, state: "started" as const };
 
     if (delivery === "interrupt") {
       await this.interrupt(owner, id, true);
@@ -1255,10 +1302,14 @@ export class Control {
     t.instructions.push(m);
     delete t.queue_paused;
     this.requeue(t);
-    this.store.save(t);
-    this.recordMessage(t, m, options.delivery ?? "steer");
-    this.queueChanged(t, before);
-    this.store.event(t, "task.queued");
+
+    this.store.transaction(() => {
+      this.store.save(t);
+      this.recordMessage(t, m, options.delivery ?? "steer");
+      this.queueChanged(t, before);
+      this.store.event(t, "task.queued");
+    });
+
     void this.schedule();
 
     return { task: t, message_id: m.id };
@@ -1300,8 +1351,11 @@ export class Control {
       throw new Error("A steer the worker already has can't be edited.");
     const before = this.queueSnapshot(t);
     m.message = message;
-    this.store.save(t);
-    this.queueChanged(t, before);
+
+    this.store.transaction(() => {
+      this.store.save(t);
+      this.queueChanged(t, before);
+    });
 
     return t;
   }
@@ -1319,9 +1373,12 @@ export class Control {
     const before = this.queueSnapshot(t);
     t.queue = t.queue.filter((q) => q !== m);
     if (!t.queue.length) delete t.queue_paused;
-    this.store.save(t);
-    this.store.event(t, "task.message_removed", { message_id: m.id });
-    this.queueChanged(t, before);
+
+    this.store.transaction(() => {
+      this.store.save(t);
+      this.store.event(t, "task.message_removed", { message_id: m.id });
+      this.queueChanged(t, before);
+    });
 
     return t;
   }
@@ -1333,10 +1390,13 @@ export class Control {
     const removed = t.queue;
     t.queue = [];
     delete t.queue_paused;
-    this.store.save(t);
-    for (const m of removed)
-      this.store.event(t, "task.message_removed", { message_id: m.id });
-    this.queueChanged(t, before);
+
+    this.store.transaction(() => {
+      this.store.save(t);
+      for (const m of removed)
+        this.store.event(t, "task.message_removed", { message_id: m.id });
+      this.queueChanged(t, before);
+    });
 
     return t;
   }
@@ -1348,18 +1408,25 @@ export class Control {
     delete t.queue_paused;
 
     if (!this.active.has(id) && !BUSY.includes(t.status) && t.queue.length) {
-      this.deliverQueued(t, t.queue.shift()!);
+      const next = t.queue.shift()!;
       this.requeue(t);
-      this.store.save(t);
-      this.queueChanged(t, before);
-      this.store.event(t, "task.queued");
+
+      this.store.transaction(() => {
+        this.deliverQueued(t, next);
+        this.store.save(t);
+        this.queueChanged(t, before);
+        this.store.event(t, "task.queued");
+      });
+
       void this.schedule();
 
       return t;
     }
 
-    this.store.save(t);
-    this.queueChanged(t, before);
+    this.store.transaction(() => {
+      this.store.save(t);
+      this.queueChanged(t, before);
+    });
 
     return t;
   }

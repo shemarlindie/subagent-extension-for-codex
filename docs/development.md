@@ -301,6 +301,19 @@ before any feature reads it.
 - `migrations/` ships in the package and is read with `packagePath`, so
   source checkouts and installed packages use the same folder.
 
+Write a task change and the events that record it in one
+`store.transaction(() => …)`, so they commit together. Transactions are
+synchronous and don't nest: run Git, provider and network work before
+opening one, and call helpers that write events inside it rather than opening
+another.
+
+Event listeners on `store.bus` hear an event only after its transaction
+commits, in order, and never one that rolled back. A notification is a hint
+that rows exist: a listener that throws is logged without affecting the
+commit or other listeners, and consumers recover what they miss from the
+database (webhook capture from its checkpoint, long polls by re-reading, SSE
+clients through `Last-Event-ID`).
+
 ### Qualifying Claude Code versions
 
 `claudeCliSupport` in `src/features/providers/claude/executable.ts` holds the
