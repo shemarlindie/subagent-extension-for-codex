@@ -1,0 +1,21 @@
+/* Owners set the position; this sets the look. */
+.scroll-latest-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 4px 12px #0003;
+  cursor: pointer;
+}
+.scroll-latest-button[data-direction="up"] > svg {
+  transform: rotate(180deg);
+}
+.scroll-latest-button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 0;
+}

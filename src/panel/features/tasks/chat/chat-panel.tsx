@@ -1,8 +1,7 @@
 import { useSnapshot } from "../../../app/state/controller-context";
 import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { Task } from "../../../app/state/types";
-import { Icon } from "../../../shared/components/icons/icons";
-import { Presence } from "../../../shared/components/motion/motion";
+import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
 import { Composer } from "./composer/composer";
 import { MessageQueue } from "./queue/message-queue";
 import { ChatTimeline } from "./timeline/chat-timeline";
@@ -32,17 +31,13 @@ export function ChatPanel({ task }: ChatPanelProps) {
       <ChatTimeline task={task} viewportRef={viewportRef} />
       <div className="chat-footer">
         {/* Never replace a saved reading position with the empty loading layout. */}
-        <Presence show={ready && !pinned} variant="pop">
-          <button
-            type="button"
-            className="chat-scroll-latest"
-            aria-label="Scroll to latest message"
-            title="Scroll to latest message"
-            onClick={scrollToLatest}
-          >
-            <Icon name="chevron-down" size={12} />
-          </button>
-        </Presence>
+        <ScrollLatestButton
+          show={ready && !pinned}
+          direction="down"
+          label="Scroll to latest message"
+          className="chat-scroll-latest"
+          onClick={scrollToLatest}
+        />
         <MessageQueue task={task} />
         {/* Keyed so budget edits and errors stay with their task. */}
         <Composer key={task.id} task={task} />

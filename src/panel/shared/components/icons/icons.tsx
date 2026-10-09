@@ -43,7 +43,6 @@ const ICON_NAMES = [
   "dot",
   "chevron-down",
   "bug",
-  "arrow-up",
   "copy",
   "enter",
   "reply",

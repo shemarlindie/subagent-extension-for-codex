@@ -86,22 +86,6 @@
   position: absolute;
   right: 20px;
   bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 4px 12px #0003;
-  cursor: pointer;
-}
-.activity-scroll-top:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 0;
 }
 /* Every status dot wears a faint halo in its own colour (the motion section makes a running task's breathe). */
 .dot {

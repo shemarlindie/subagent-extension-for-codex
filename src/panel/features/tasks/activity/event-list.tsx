@@ -1,8 +1,7 @@
 import { memo } from "react";
 
 import type { Event } from "../../../app/state/types";
-import { Icon } from "../../../shared/components/icons/icons";
-import { Presence } from "../../../shared/components/motion/motion";
+import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
 import type { ReadingState } from "../evidence/reading-state";
 import { ActivityGroupCard } from "./activity-group-card";
 import { groupActivity, thinkingSpan } from "./activity-timeline";
@@ -90,17 +89,13 @@ export const EventList = memo(function EventList({
           </p>
         )}
       </div>
-      <Presence show={!pinned} variant="pop">
-        <button
-          type="button"
-          className="activity-scroll-top"
-          aria-label="Scroll to latest activity"
-          title="Scroll to latest activity"
-          onClick={scrollToTop}
-        >
-          <Icon name="arrow-up" size={10} />
-        </button>
-      </Presence>
+      <ScrollLatestButton
+        show={!pinned}
+        direction="up"
+        label="Scroll to latest activity"
+        className="activity-scroll-top"
+        onClick={scrollToTop}
+      />
     </section>
   );
 });
