@@ -137,12 +137,20 @@ export const previewChanges: Record<string, () => ChangeFixture> = {
   }),
 
   // A current_repo task: the user's earlier edit to README.md is left out.
+  // Legacy and tax code moves (renames); the currency helper is deleted.
   "preview-refactor": (): ChangeFixture => ({
     base: {
       "README.md": "# Billing\n",
       "billing/index.ts": billingIndex,
       "billing/legacy.ts": legacyBilling,
       "billing/tax.ts": tax,
+      "billing/currency.ts": lines(
+        'const symbols: Record<string, string> = { USD: "$", EUR: "€" };',
+        "",
+        'export function formatCurrency(amount: number, code = "USD") {',
+        "  return `${symbols[code] ?? code}${amount.toLocaleString()}`;",
+        "}",
+      ),
       "assets/logo.png": "placeholder\n",
     },
     before: { "README.md": "# Billing\n\nWork in progress.\n" },
@@ -154,6 +162,7 @@ export const previewChanges: Record<string, () => ChangeFixture> = {
         ),
         "billing/legacy.ts": null,
         "billing/tax.ts": null,
+        "billing/currency.ts": null,
         "billing/invoices/tax.ts": tax,
         "billing/invoices.ts": lines(
           'export { taxFor } from "./invoices/tax";',

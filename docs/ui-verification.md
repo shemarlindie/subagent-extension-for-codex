@@ -47,7 +47,7 @@ recorded fixtures through the provider.
 
 | Task                                     | Scenario                                                                                                                                         |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Refactor the billing module              | Running status; current-repo changes omit a pre-existing README edit and include renames, deletion and a binary image.                           |
+| Refactor the billing module              | Running status; current-repo changes omit a pre-existing README edit and include renames, a deleted file and a binary image.                     |
 | Live: …                                  | Latest activity and clocks: thinking, tool, compaction, retry, rate limit, ordinary work, finishing, hook, background task and provider failure. |
 | Live: streaming reply                    | Chat draft grows over time and restarts.                                                                                                         |
 | Recorded: …                              | Real SDK runs: steer/interrupt/send-now, streamed reply, question interrupted and resumed, read-only MCP review.                                 |
