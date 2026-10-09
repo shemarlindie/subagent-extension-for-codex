@@ -1,7 +1,8 @@
+import type { RefObject } from "react";
+
 import { providerMetadata } from "../../../../../shared/providers/metadata.js";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import { statusLabel } from "../../../../app/state/selectors";
-import { useSessionState } from "../../../../app/state/session/use-session-state";
 import type { Task } from "../../../../app/state/types";
 import { currentActivityStatus } from "../../activity/activity-timeline";
 import { rowStatus } from "../../list/task-status";
@@ -11,16 +12,18 @@ import { PendingInput } from "../composer/pending-input";
 import { ChatMessageView } from "./chat-message-view";
 import { ChatNoteRow } from "./chat-note-row";
 import { TurnOutcomeRow } from "./turn-outcome-row";
-import { useChatScroll } from "./use-chat-scroll";
 
-type ChatTimelineProps = { task: Task };
+type ChatTimelineProps = {
+  task: Task;
+  viewportRef: RefObject<HTMLDivElement | null>;
+};
 
 /**
  * The conversation: messages, turn outcomes and notes, then what the worker
  * is doing now or the input it waits for. It follows new messages while the
  * reader is at the end.
  */
-export function ChatTimeline({ task }: ChatTimelineProps) {
+export function ChatTimeline({ task, viewportRef }: ChatTimelineProps) {
   const state = useSnapshot(),
     chat = state.chat?.task === task.id ? state.chat : undefined,
     worker =
@@ -66,16 +69,14 @@ export function ChatTimeline({ task }: ChatTimelineProps) {
   const latest = items?.at(-1);
   const workingShownInNote = latest?.kind === "note" && latest.text === working;
 
-  const [reading] = useSessionState(
-    "task",
-    task.id,
-    (state) => state.reading.chat,
-  );
-
-  const ref = useChatScroll(reading, state.tab === "chat", items !== undefined);
-
   return (
-    <div ref={ref} className="chat-timeline">
+    <div
+      ref={viewportRef}
+      className="chat-timeline"
+      tabIndex={0}
+      role="region"
+      aria-label="Chat history"
+    >
       {!items ? (
         <p className="help">Loading the conversation…</p>
       ) : (

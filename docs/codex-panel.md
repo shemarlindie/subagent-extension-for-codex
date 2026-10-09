@@ -100,6 +100,11 @@ preserves unsent answers until reload. Permissions show the complete payload
 and default to deny. Replies include the exact request ID; the service rejects
 stale answers. Mutations are never automatically retried.
 
+Chat follows new messages while the reader is at the end. Scrolling into history
+preserves the visible message as replies stream or earlier pages load, and a
+button above the composer returns to the latest message. Reduced motion turns
+that return into an immediate jump.
+
 Chat reads cursor-paged `get_user_agent_chat`; sending, queue editing and draft
 reads use app-only tools. Stop uses `interrupt_agent_task`. See the
 [MCP reference](mcp-reference.md) for tool contracts.

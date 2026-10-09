@@ -26,6 +26,10 @@ body[data-expanded-panel="true"]
   padding: 0 var(--detail-pad, 24px) 14px;
   overflow-anchor: none;
 }
+.chat-timeline:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 0;
+}
 .chat-message {
   display: flex;
   flex-direction: column;
@@ -148,11 +152,33 @@ body[data-expanded-panel="true"]
   margin: 0;
 }
 .chat-footer {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 10px 0 2px;
   background: var(--bg);
+}
+.chat-scroll-latest {
+  position: absolute;
+  right: var(--detail-pad, 24px);
+  bottom: calc(100% + 8px);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 4px 12px #0003;
+  cursor: pointer;
+}
+.chat-scroll-latest:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 0;
 }
 .chat-footer > .chat-queue {
   padding-inline: var(--detail-pad, 24px);

@@ -29,13 +29,20 @@ function Chat({
   ready = true,
   stacked = false,
 }: ChatProps) {
-  const ref = useChatScroll(reading, active, ready);
+  const { viewportRef, pinned, scrollToLatest } = useChatScroll(
+    reading,
+    active,
+    ready,
+  );
 
   const timeline = createElement(
     "div",
     {
-      ref,
+      ref: viewportRef,
       "data-testid": "chat",
+      role: "region",
+      "aria-label": "Chat history",
+      tabIndex: 0,
       style: { overflowY: stacked ? "visible" : "auto" },
     },
     items.map((id) =>
@@ -43,13 +50,23 @@ function Chat({
     ),
   );
 
+  const button =
+    ready && !pinned
+      ? createElement(
+          "button",
+          { type: "button", onClick: scrollToLatest },
+          "Scroll to latest message",
+        )
+      : undefined;
+
   return stacked
     ? createElement(
         "div",
         { "data-testid": "inspector", style: { overflowY: "auto" } },
         timeline,
+        button,
       )
-    : timeline;
+    : createElement("div", null, timeline, button);
 }
 
 let viewportHeight = 200;
@@ -247,6 +264,187 @@ test("chat follows new replies and remounted updates only while pinned", () => {
   assert.equal(restored.getByTestId("chat").scrollTop, 700);
 });
 
+test("scroll to latest returns to the end, restores focus and follows later replies", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByRole("region", { name: "Chat history" });
+
+  const button = () =>
+    view.queryByRole("button", { name: "Scroll to latest message" });
+
+  assert.equal(viewport.scrollTop, 400);
+  assert.equal(button(), null);
+  viewport.scrollTop = 151;
+  fireEvent.scroll(viewport);
+  assert.ok(button());
+
+  fireEvent.click(button()!);
+
+  assert.equal(viewport.scrollTop, 400);
+  assert.equal(button(), null);
+  assert.equal(document.activeElement, viewport);
+
+  assert.deepEqual(reading.position, {
+    top: 400,
+    pinned: true,
+    anchor: { id: "e", top: 0 },
+  });
+
+  view.rerender(createElement(Chat, { reading, items: [...items, "g"] }));
+  assert.equal(viewport.scrollTop, 500);
+});
+
+test("the end slack includes its 48px boundary", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+
+  viewport.scrollTop = 351;
+  fireEvent.scroll(viewport);
+
+  assert.ok(view.getByRole("button", { name: "Scroll to latest message" }));
+
+  viewport.scrollTop = 352;
+  fireEvent.scroll(viewport);
+
+  assert.equal(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+    null,
+  );
+});
+
+test("scroll to latest uses the shared inspector scroller", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items, stacked: true }));
+  const viewport = view.getByRole("region", { name: "Chat history" });
+  const inspector = view.getByTestId("inspector");
+  inspector.scrollTop = 125;
+  fireEvent.scroll(inspector);
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to latest message" }),
+  );
+
+  assert.equal(inspector.scrollTop, 400);
+  assert.equal(viewport.scrollTop, 0);
+  assert.equal(document.activeElement, viewport);
+
+  view.rerender(
+    createElement(Chat, { reading, items: [...items, "g"], stacked: true }),
+  );
+
+  assert.equal(inspector.scrollTop, 500);
+});
+
+test("a smooth return stays pinned until the reader takes over", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+  const scrollTo = vi.fn();
+
+  Object.defineProperty(viewport, "scrollTo", {
+    configurable: true,
+    value: scrollTo,
+  });
+
+  const button = () =>
+    view.queryByRole("button", { name: "Scroll to latest message" });
+
+  const scrollAt = (top: number) => {
+    viewport.scrollTop = top;
+    fireEvent.scroll(viewport);
+  };
+
+  scrollAt(100);
+  fireEvent.click(button()!);
+
+  assert.deepEqual(scrollTo.mock.calls.at(-1), [
+    { top: 400, behavior: "smooth" },
+  ]);
+
+  assert.equal(viewport.scrollTop, 100, "The browser owns the glide");
+  assert.equal(button(), null);
+
+  scrollAt(250);
+  assert.equal(button(), null, "Progress toward the end stays pinned");
+  scrollAt(200);
+  assert.ok(button(), "Moving away hands control back to the reader");
+
+  fireEvent.click(button()!);
+  fireEvent(viewport, new Event("scrollend"));
+  assert.equal(button(), null, "An old scroll end cannot cancel a new glide");
+  scrollAt(300);
+  fireEvent(viewport, new Event("scrollend"));
+  assert.ok(button(), "A glide that stops short is judged where it stopped");
+
+  fireEvent.click(button()!);
+  view.rerender(createElement(Chat, { reading, items: [...items, "g"] }));
+
+  assert.equal(
+    viewport.scrollTop,
+    500,
+    "New content finishes at the live edge",
+  );
+
+  assert.equal(button(), null);
+});
+
+test("a smooth return that never moves is judged where it stopped", (t) => {
+  vi.useFakeTimers();
+
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+
+  Object.defineProperty(viewport, "scrollTo", {
+    configurable: true,
+    value: vi.fn(),
+  });
+
+  viewport.scrollTop = 100;
+  fireEvent.scroll(viewport);
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to latest message" }),
+  );
+
+  act(() => vi.advanceTimersByTime(1500));
+
+  assert.ok(view.getByRole("button", { name: "Scroll to latest message" }));
+});
+
+test("reduced motion returns to latest without a smooth glide", () => {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: true })),
+  );
+
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+  const scrollTo = vi.fn();
+
+  Object.defineProperty(viewport, "scrollTo", {
+    configurable: true,
+    value: scrollTo,
+  });
+
+  viewport.scrollTop = 100;
+  fireEvent.scroll(viewport);
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to latest message" }),
+  );
+
+  assert.equal(scrollTo.mock.calls.length, 0);
+  assert.equal(viewport.scrollTop, 400);
+  assert.equal(document.activeElement, viewport);
+});
+
 test("hidden chat updates preserve its anchor until revealed", () => {
   const reading: ReadingState = {};
   const view = render(createElement(Chat, { reading, items }));
@@ -278,6 +476,46 @@ test("hidden chat updates preserve its anchor until revealed", () => {
   assert.equal(viewport.scrollTop, 225);
 });
 
+test("a pinned hidden chat returns to latest after another tab moves the shared scroller", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items, stacked: true }));
+  const inspector = view.getByTestId("inspector");
+  assert.equal(inspector.scrollTop, 400);
+
+  view.rerender(
+    createElement(Chat, { reading, items, stacked: true, active: false }),
+  );
+
+  inspector.scrollTop = 125;
+  fireEvent.scroll(inspector);
+
+  view.rerender(
+    createElement(Chat, {
+      reading,
+      items: [...items, "g"],
+      stacked: true,
+      active: false,
+    }),
+  );
+
+  view.rerender(
+    createElement(Chat, {
+      reading,
+      items: [...items, "g"],
+      stacked: true,
+      active: true,
+    }),
+  );
+
+  assert.equal(inspector.scrollTop, 500);
+  assert.equal(reading.position?.pinned, true);
+
+  assert.equal(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+    null,
+  );
+});
+
 test("chat waits for loaded history before restoring a saved position", () => {
   const reading: ReadingState = {
     position: { top: 125, pinned: false, anchor: { id: "b", top: -25 } },
@@ -288,8 +526,15 @@ test("chat waits for loaded history before restoring a saved position", () => {
   );
 
   assert.equal(reading.position?.top, 125);
+
+  assert.equal(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+    null,
+  );
+
   view.rerender(createElement(Chat, { reading, items, ready: true }));
   assert.equal(view.getByTestId("chat").scrollTop, 125);
+  assert.ok(view.getByRole("button", { name: "Scroll to latest message" }));
 });
 
 test("stacked chat restores its anchor through the inspector's shared scroller", () => {

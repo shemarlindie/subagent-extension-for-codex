@@ -11,6 +11,7 @@ import {
 import { onTestFinished, test, vi } from "vitest";
 
 import { previewEvents } from "../../../../../dev/panel/scenarios/fixtures";
+import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import type { Event, Task, Transport } from "../../../app/state/types";
@@ -42,7 +43,11 @@ const base: Task = {
   cost_usd: 1,
 };
 
-function setup(patch: Partial<Task> = {}, events: Event[] = []) {
+function setup(
+  patch: Partial<Task> = {},
+  events: Event[] = [],
+  chatItems?: ChatItem[],
+) {
   onTestFinished(cleanup);
   const task = { ...base, ...patch };
 
@@ -54,7 +59,16 @@ function setup(patch: Partial<Task> = {}, events: Event[] = []) {
   onTestFinished(() => controller.dispose());
   const tool = vi.spyOn(controller, "tool").mockResolvedValue({});
   vi.spyOn(controller, "refresh").mockResolvedValue();
-  const snapshot = { ...controller.getSnapshot(), events };
+
+  const snapshot = {
+    ...controller.getSnapshot(),
+    events,
+    chat:
+      chatItems === undefined
+        ? undefined
+        : { task: task.id, items: chatItems, cursor: chatItems.length },
+  };
+
   vi.spyOn(controller, "getSnapshot").mockReturnValue(snapshot);
 
   const panel = (current: Task) => (
@@ -78,6 +92,48 @@ function setup(patch: Partial<Task> = {}, events: Event[] = []) {
 
 const sent = (tool: ReturnType<typeof setup>["tool"]) =>
   tool.mock.calls.map(([name, args]) => [name, args]);
+
+test("Chat exposes a scroll-to-latest control and returns focus to its history", () => {
+  const notes: ChatItem[] = Array.from({ length: 6 }, (_, index) => ({
+    kind: "note",
+    id: `note-${index}`,
+    event_id: index,
+    timestamp: "",
+    note: "compaction",
+    text: `Note ${index}`,
+  }));
+
+  const { view } = setup({}, [], notes);
+  const history = view.getByRole("region", { name: "Chat history" });
+  let scrollTop = 400;
+
+  Object.defineProperties(history, {
+    clientHeight: { configurable: true, value: 200 },
+    scrollHeight: { configurable: true, value: 600 },
+    scrollTop: {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value: number) => {
+        scrollTop = value;
+      },
+    },
+  });
+
+  history.scrollTop = 100;
+  fireEvent.scroll(history);
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to latest message" }),
+  );
+
+  assert.equal(history.scrollTop, 400);
+  assert.equal(document.activeElement, history);
+
+  assert.equal(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+    null,
+  );
+});
 
 test("dependency waiting shows a paused status instead of the running indicator", () => {
   const { view } = setup({
