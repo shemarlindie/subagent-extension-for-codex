@@ -260,7 +260,7 @@ output:
 
 The package ships no Claude Code binary. Every Claude launch, `npm run dev`
 included, runs the installed CLI that `src/features/providers/claude/executable.ts`
-finds and validates; see [Claude Code CLI](../README.md#claude-code-cli).
+finds and validates; see [Claude Code CLI](claude-cli.md).
 
 The bundle ships source maps without embedded sources. `npm start`, `mcp.json`
 and the launcher pass `--enable-source-maps`, so stack traces point to `src/`

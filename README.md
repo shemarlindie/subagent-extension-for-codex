@@ -30,13 +30,7 @@ Stop the demo service before starting Claude on the same port.
 
 ### Claude Code CLI
 
-Claude tasks need Node.js 24+, Git and a supported Claude Code CLI on the service host. The service runs your installed `claude`; the package doesn't include one, and the service never installs, updates or signs in to Claude Code. Install it from the [Claude Code setup guide](https://code.claude.com/docs/en/setup).
-
-- **Supported versions:** 2.1.286–2.1.295. The range covers the version the bundled Agent SDK pairs with, and the stable and latest releases when it was qualified. The Homebrew `claude-code` cask and npm's `@anthropic-ai/claude-code@stable` follow the stable channel; npm's `latest` tag and the native installer's default follow latest. Homebrew installs don't update themselves.
-- **Selection:** `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`, when set, names the executable as an absolute path. Otherwise the service takes the first `claude` on its own `PATH`, without a shell, so shell aliases and interactive shell init don't apply. Either path is resolved through symlinks.
-- **Validation:** before each new session, the service runs `claude --version` and checks the version against the range. It checks again when the file changes, as an auto-update does; running sessions keep their process.
-
-A missing or unsupported CLI blocks starting Claude tasks and new turns with a message that names the fix: the install or update step, the release channel and the path override. `list_available_workers` and the delegate form report the selected path, its version and the supported range. Projects, task history and the panel stay usable.
+Claude tasks need a supported Claude Code CLI, 2.1.286–2.1.295, on the service host; [install it](https://code.claude.com/docs/en/setup) if you haven't. The service runs the first `claude` on its own `PATH`, or the absolute path in `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`. Without a supported CLI, Claude tasks can't start but the rest of the service works. See [Claude Code CLI](docs/claude-cli.md) for release channels, how the executable is chosen and checked, and what each readiness message means.
 
 ### Admin token
 
@@ -231,7 +225,7 @@ containing the bundled service/proxy code with its dependencies, both HTML panel
 and the delegation skill. It has no `node_modules` and no native binaries, so one
 tarball works on every platform. Extract its `package/` directory as the plugin
 root for a local installation. The execution host needs Node 24+ and a
-[supported Claude Code CLI](#claude-code-cli). See
+[supported Claude Code CLI](docs/claude-cli.md). See
 [Build](docs/development.md#build) for how the bundle and package are made.
 Ordinary source checkouts require `npm ci` before building.
 The packaged black and white `assets/product-glyph-{black,white}.svg` files supply the

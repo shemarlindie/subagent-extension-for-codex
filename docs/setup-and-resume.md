@@ -25,6 +25,7 @@ Stop the service gracefully before backing up its data. Preserve the full data d
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Service port is in use        | Identify the service on that port and confirm its data directory before starting another service.                                         |
 | MCP proxy cannot authenticate | Set the same absolute `CODEX_SUBAGENT_EXTENSION_DATA` path for the service and MCP client, or configure matching token and URL overrides. |
+| Claude tasks can't start      | Read the worker's readiness message; [Claude Code CLI](claude-cli.md) lists each message and its fix.                                     |
 | A turn starts a new session   | Confirm the original service host and Claude session state are available; otherwise the new session carries the conversation.             |
 
 See [Implementation status](implementation-status.md) for current capability coverage and [Host capabilities](host-capabilities.md) for host-specific integration details.
