@@ -1,3 +1,4 @@
+import type { ChangesReading } from "../../../features/changes/changes-reading";
 import type { ReadingState } from "../../../features/tasks/evidence/reading-state";
 import type { QuestionDraft, Tab } from "../types";
 
@@ -6,7 +7,11 @@ export type TaskSessionState = {
   composerDraft: string;
   composerCollapsed: boolean;
   // Scroll hooks mutate these stable cells without rendering on every scroll event.
-  reading: { chat: ReadingState; activity: ReadingState };
+  reading: {
+    chat: ReadingState;
+    activity: ReadingState;
+    changes: ChangesReading;
+  };
 };
 
 export type QuestionSessionState = {
@@ -32,7 +37,7 @@ const defaults = {
     tab: "chat",
     composerDraft: "",
     composerCollapsed: false,
-    reading: { chat: {}, activity: {} },
+    reading: { chat: {}, activity: {}, changes: { open: new Map() } },
   }),
   question: (): QuestionSessionState => ({}),
 };

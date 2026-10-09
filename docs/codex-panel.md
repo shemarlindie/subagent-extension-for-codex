@@ -65,10 +65,10 @@ validates budgets, and asks before discarding unsaved edits. Saving sends only
 changed fields through the app-only `update_user_agent_settings`. Permission and
 approval defaults are described in [Configuration](configuration.md).
 
-Per-task tabs, composer drafts/visibility, question answers and Chat/Activity
-reading positions last for the panel session. Browser view state and dialog
-form drafts have separate reload persistence; see
-[State and persistence](react-ui.md#state-and-persistence).
+Per-task tabs, composer drafts/visibility, question answers, Chat/Activity
+reading positions and the Changes position and opened files last for the panel
+session. Browser view state and dialog form drafts have separate reload
+persistence; see [State and persistence](react-ui.md#state-and-persistence).
 
 ## Chat tab
 

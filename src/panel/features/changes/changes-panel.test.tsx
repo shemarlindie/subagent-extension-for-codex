@@ -204,3 +204,26 @@ test("switching scopes hides old results and a failed initial read stops loading
   assert.equal(view.container.querySelector(".diff-file"), null);
   assert.equal(view.getByRole("status").textContent, "");
 });
+
+test("a collapsed file stays collapsed when the tab shows again", async () => {
+  const { view, update } = setup(loaded);
+  const file = view.container.querySelector<HTMLDetailsElement>(".diff-file");
+
+  assert.ok(file);
+  // jsdom has no scrolling.
+  file.scrollIntoView = vi.fn();
+
+  await act(async () => {
+    file.open = false;
+    fireEvent(file, new Event("toggle"));
+  });
+
+  // Leaving the tab unmounts the panel; showing it mounts a new one.
+  view.rerender(<></>);
+  update(loaded);
+
+  const shown = view.container.querySelector<HTMLDetailsElement>(".diff-file");
+
+  assert.notEqual(shown, file);
+  assert.equal(shown?.open, false);
+});

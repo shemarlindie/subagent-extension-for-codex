@@ -24,6 +24,10 @@ type DiffFileProps = {
   emptyNote?: string;
   /** Buttons in the file's header; using them doesn't toggle the file. */
   actions?: ReactNode;
+  /** Called when the reader opens or closes the file. */
+  onOpenChange?: (open: boolean) => void;
+  /** Data attributes for the file's section, such as an identifying key. */
+  [data: `data-${string}`]: string | undefined;
 };
 
 export function DiffFile({
@@ -31,6 +35,8 @@ export function DiffFile({
   initiallyOpen,
   emptyNote = "No content changes",
   actions,
+  onOpenChange,
+  ...data
 }: DiffFileProps) {
   const [open, setOpen] = useState(initiallyOpen),
     deferredOpen = useDeferredValue(open),
@@ -45,11 +51,15 @@ export function DiffFile({
 
   return (
     <details
+      {...data}
       className="diff-file"
       open={open}
       onToggle={(event) => {
         const details = event.currentTarget;
+        // A file that renders open also fires toggle; only report a change.
+        if (details.open === open) return;
         setOpen(details.open);
+        onOpenChange?.(details.open);
         // Collapsing from a header stuck at the top would leave the file above
         // the view; bring it back.
         if (!details.open) details.scrollIntoView({ block: "nearest" });

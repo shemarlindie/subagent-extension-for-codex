@@ -1,18 +1,27 @@
 import { END_UNRECORDED } from "../../../shared/workspaces/changes";
 import { useSnapshot } from "../../app/state/controller-context";
+import { useSessionState } from "../../app/state/session/use-session-state";
 import type { Task } from "../tasks/types";
 import { ChangesHeader } from "./changes-header";
 import { ChangesView } from "./changes-view";
+import { useChangesScroll } from "./use-changes-scroll";
 
 /** The Changes tab: what the task changed, read live from Git. */
 export function ChangesPanel({ task }: { task: Task }) {
   const state = useSnapshot(),
     changes = state.changes?.task === task.id ? state.changes : undefined,
     data = changes?.data,
-    loading = changes?.loading ?? (!data && !changes?.error);
+    loading = changes?.loading ?? (!data && !changes?.error),
+    // Kept per task, so the reader's place survives tab and task switches.
+    [reading] = useSessionState(
+      "task",
+      task.id,
+      (state) => state.reading.changes,
+    ),
+    viewportRef = useChangesScroll(reading, Boolean(data));
 
   return (
-    <div className="changes">
+    <div className="changes" ref={viewportRef}>
       <ChangesHeader task={task} changes={changes} />
       {changes?.error && (
         <p className="form-error changes-error" role="alert">
@@ -40,7 +49,7 @@ export function ChangesPanel({ task }: { task: Task }) {
             on branch <code>{data.branch}</code>.
           </p>
         ) : data.files.length ? (
-          <ChangesView task={task} changes={data} />
+          <ChangesView task={task} changes={data} reading={reading} />
         ) : (
           <p className="help changes-empty">
             {data.scope === "turn"

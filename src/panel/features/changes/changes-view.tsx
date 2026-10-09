@@ -8,6 +8,7 @@ import { formatBytes } from "../../shared/utils/format";
 import { DiffFile } from "../file-preview/diff/diff-file";
 import { parseDiffFiles } from "../file-preview/file-format";
 import type { Task } from "../tasks/types";
+import { type ChangesReading, FILE_ATTRIBUTE } from "./changes-reading";
 import type { ChangedFile, Changes } from "./types";
 
 /** Files start collapsed past this many, so a long list stays scannable. */
@@ -16,6 +17,8 @@ const OPEN_FILES = 8;
 type ChangesViewProps = {
   task: Task;
   changes: Changes;
+  /** Remembers which files the reader opened or closed. */
+  reading: ChangesReading;
 };
 
 /** A binary file has no lines to show; an image can still be previewed. */
@@ -29,7 +32,7 @@ const previewable = (file: ChangedFile) =>
   !file.binary || Boolean(imageMime(file.path));
 
 /** Every changed file's diff, in Git's order, each collapsible. */
-export function ChangesView({ task, changes }: ChangesViewProps) {
+export function ChangesView({ task, changes, reading }: ChangesViewProps) {
   const controller = useController(),
     files = useMemo(() => parseDiffFiles(changes.diff), [changes.diff]);
 
@@ -42,8 +45,16 @@ export function ChangesView({ task, changes }: ChangesViewProps) {
         return (
           <DiffFile
             key={changed?.path ?? index}
+            // Names the file, so the tab can return to it.
+            {...{ [FILE_ATTRIBUTE]: changed?.path }}
             file={file}
-            initiallyOpen={files.length <= OPEN_FILES}
+            initiallyOpen={
+              (changed && reading.open.get(changed.path)) ??
+              files.length <= OPEN_FILES
+            }
+            onOpenChange={(open) => {
+              if (changed) reading.open.set(changed.path, open);
+            }}
             emptyNote={
               changed?.binary ? binaryNote(changed) : "No content changes"
             }
