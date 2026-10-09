@@ -5,8 +5,8 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, beforeEach, test, vi } from "vitest";
 
-import type { ReadingState } from "../../evidence/reading-state";
-import { useChatScroll } from "./use-chat-scroll";
+import type { ReadingState } from "./reading-state";
+import { useReadingScroll } from "./use-reading-scroll";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
@@ -29,11 +29,12 @@ function Chat({
   ready = true,
   stacked = false,
 }: ChatProps) {
-  const { viewportRef, pinned, scrollToLatest } = useChatScroll(
+  const { viewportRef, pinned, scrollToLatest } = useReadingScroll({
     reading,
     active,
     ready,
-  );
+    itemAttribute: "data-chat-item",
+  });
 
   const timeline = createElement(
     "div",
@@ -240,6 +241,41 @@ test("updates respect a reader scroll before the browser delivers its scroll eve
 
   assert.equal(viewport.scrollTop, 275);
   assert.deepEqual(reading.position?.anchor, { id: "b", top: -75 });
+});
+
+test("a reader scroll to the end before its event repins once the event arrives", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+  viewport.scrollTop = 125;
+  fireEvent.scroll(viewport);
+  viewport.scrollTop = 400;
+
+  view.rerender(createElement(Chat, { reading, items: ["earlier", ...items] }));
+
+  assert.equal(viewport.scrollTop, 500);
+  fireEvent.scroll(viewport);
+  assert.equal(reading.position?.pinned, true);
+});
+
+test("a dropped anchor falls back to the next row that was visible", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+  viewport.scrollTop = 125;
+  fireEvent.scroll(viewport);
+  assert.deepEqual(reading.position?.anchor, { id: "b", top: -25 });
+
+  view.rerender(
+    createElement(Chat, {
+      reading,
+      items: items.filter((id) => id !== "b"),
+    }),
+  );
+
+  // "c" stays 75px below the top, where it was before "b" was removed.
+  assert.equal(viewport.scrollTop, 25);
+  assert.equal(reading.position?.pinned, false);
 });
 
 test("chat follows new replies and remounted updates only while pinned", () => {

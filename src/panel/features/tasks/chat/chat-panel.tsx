@@ -2,10 +2,10 @@ import { useSnapshot } from "../../../app/state/controller-context";
 import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { Task } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
+import { useReadingScroll } from "../evidence/use-reading-scroll";
 import { Composer } from "./composer/composer";
 import { MessageQueue } from "./queue/message-queue";
 import { ChatTimeline } from "./timeline/chat-timeline";
-import { useChatScroll } from "./timeline/use-chat-scroll";
 
 type ChatPanelProps = { task: Task };
 
@@ -20,11 +20,12 @@ export function ChatPanel({ task }: ChatPanelProps) {
     (state) => state.reading.chat,
   );
 
-  const { viewportRef, pinned, scrollToLatest } = useChatScroll(
+  const { viewportRef, pinned, scrollToLatest } = useReadingScroll({
     reading,
-    state.tab === "chat",
+    active: state.tab === "chat",
     ready,
-  );
+    itemAttribute: "data-chat-item",
+  });
 
   return (
     <div className="chat">

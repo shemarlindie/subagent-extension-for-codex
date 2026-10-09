@@ -82,7 +82,7 @@
   outline: var(--focus-ring);
   outline-offset: 0;
 }
-.activity-scroll-top {
+.activity-scroll-latest {
   position: absolute;
   right: 20px;
   bottom: 16px;
@@ -254,16 +254,20 @@
 .timeline-item[data-first][data-last]::before {
   display: none;
 }
-/* Older items were dropped, so the rail runs on past the last item and fades out. */
+/* Older items were dropped, so the rail fades in above the first item. */
 .timeline[data-trimmed] {
   --timeline-fade: 32px;
-  padding-bottom: var(--timeline-fade);
+  padding-top: var(--timeline-fade);
 }
-.timeline[data-trimmed] .timeline-item[data-last]::before {
+.timeline[data-trimmed] .timeline-item[data-first]::before {
   display: block;
-  bottom: calc(-1 * var(--timeline-fade));
+  top: calc(-1 * var(--timeline-fade));
+  bottom: 0;
   height: auto;
-  background: linear-gradient(var(--line), transparent);
+  background: linear-gradient(transparent, var(--line));
+}
+.timeline[data-trimmed] .timeline-item[data-first][data-last]::before {
+  bottom: calc(100% - var(--timeline-marker-y));
 }
 .activity-trimmed-note {
   /* Lines up with the row titles beside the dots. */

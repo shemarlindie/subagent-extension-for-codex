@@ -128,7 +128,7 @@ body[data-expanded-panel="true"] .activity-panel .activity-viewport {
   margin: 0;
   padding: var(--activity-top-pad) var(--detail-pad) 18px;
 }
-body[data-expanded-panel="true"] .activity-panel .activity-scroll-top {
+body[data-expanded-panel="true"] .activity-panel .activity-scroll-latest {
   right: calc(var(--detail-pad) - 4px);
 }
 @media (max-width: 640px) {
@@ -175,7 +175,7 @@ body[data-expanded-panel="true"]
 body[data-expanded-panel="true"] .detail[data-stacked] .activity-timeline {
   display: block;
 }
-body[data-expanded-panel="true"] .detail[data-stacked] .activity-scroll-top {
+body[data-expanded-panel="true"] .detail[data-stacked] .activity-scroll-latest {
   position: sticky;
   bottom: 16px;
   margin: -40px 4px 0 auto;

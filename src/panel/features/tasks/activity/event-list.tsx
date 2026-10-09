@@ -3,6 +3,7 @@ import { memo } from "react";
 import type { Event } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
 import type { ReadingState } from "../evidence/reading-state";
+import { useReadingScroll } from "../evidence/use-reading-scroll";
 import { ActivityGroupCard } from "./activity-group-card";
 import { groupActivity, thinkingSpan } from "./activity-timeline";
 import {
@@ -11,7 +12,6 @@ import {
   EVENT_TAIL_SIZE,
 } from "./event-history";
 import { Timeline } from "./timeline";
-import { useActivityScroll } from "./use-activity-scroll";
 
 export { EventDetails } from "./event-details";
 
@@ -42,20 +42,26 @@ interface EventListProps {
 export const EventList = memo(function EventList({
   events,
   reading,
-  active,
+  active = true,
   running = false,
   runtimeMs,
   dropped,
 }: EventListProps) {
+  // Oldest first, like Chat; progress moves an operation to the end.
   const groups = groupActivity(events).sort(
-    (a, b) => b.events.at(-1)!.id - a.events.at(-1)!.id,
+    (a, b) => a.events.at(-1)!.id - b.events.at(-1)!.id,
   );
 
-  const { viewportRef, pinned, scrollToTop } = useActivityScroll(
-    events,
-    active,
+  const ready = events.length > 0;
+  const trimmed = events.length === EVENT_TAIL_SIZE;
+
+  const { viewportRef, pinned, scrollToLatest } = useReadingScroll({
     reading,
-  );
+    active,
+    ready,
+    itemAttribute: "data-activity-id",
+    animateRows: true,
+  });
 
   return (
     <section className="activity-timeline" aria-label="Worker activity">
@@ -66,7 +72,16 @@ export const EventList = memo(function EventList({
         role="region"
         aria-label="Activity history"
       >
-        <Timeline trimmed={events.length === EVENT_TAIL_SIZE}>
+        {/* Sits where the rail fades in, since the oldest rows are the ones dropped. */}
+        {trimmed && (
+          <p className="help activity-trimmed-note">
+            Showing the most recent {EVENT_TAIL_SIZE} events.
+            {dropped && dropped.task_id === events[0].task_id && (
+              <DroppedNote summary={dropped} />
+            )}
+          </p>
+        )}
+        <Timeline trimmed={trimmed}>
           {groups.map((group, index) => (
             <ActivityGroupCard
               key={group.id}
@@ -79,22 +94,13 @@ export const EventList = memo(function EventList({
             />
           ))}
         </Timeline>
-        {/* Sits where the rail fades out, since the oldest rows are the ones dropped. */}
-        {events.length === EVENT_TAIL_SIZE && (
-          <p className="help activity-trimmed-note">
-            Showing the most recent {EVENT_TAIL_SIZE} events.
-            {dropped && dropped.task_id === events[0].task_id && (
-              <DroppedNote summary={dropped} />
-            )}
-          </p>
-        )}
       </div>
       <ScrollLatestButton
-        show={!pinned}
-        direction="up"
+        show={ready && !pinned}
+        direction="down"
         label="Scroll to latest activity"
-        className="activity-scroll-top"
-        onClick={scrollToTop}
+        className="activity-scroll-latest"
+        onClick={scrollToLatest}
       />
     </section>
   );

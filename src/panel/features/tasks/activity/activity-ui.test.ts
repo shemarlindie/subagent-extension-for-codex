@@ -71,9 +71,39 @@ function markup(events: ActivityEvent[]) {
   return parseHtml(html);
 }
 
-// Model real document flow: each activity occupies 100px after the status row.
-// Reordering or prepending DOM nodes changes their measured position automatically.
+type ScrollSize = { scrollHeight: number; clientHeight: number };
+
+function groupCount(element: HTMLElement) {
+  return element.querySelectorAll("[data-activity-id]").length;
+}
+
+// jsdom has no layout, so give scroll containers their content and visible heights.
+function mockScrollSize(
+  size: (element: HTMLElement) => ScrollSize | undefined,
+) {
+  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return size(this)?.scrollHeight ?? 0;
+    },
+  );
+
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return size(this)?.clientHeight ?? 0;
+    },
+  );
+}
+
+// Model real document flow: each activity occupies 100px after the status row,
+// and the viewport shows 200px, so its end is at 40 + groups * 100 - 200.
+// Reordering, adding or removing DOM nodes changes their measured position automatically.
 function mockActivityGeometry() {
+  mockScrollSize((element) =>
+    element.matches(".activity-viewport")
+      ? { scrollHeight: 40 + groupCount(element) * 100, clientHeight: 200 }
+      : undefined,
+  );
+
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
       let top = 100;
@@ -115,7 +145,7 @@ function activityMessages(prefix: string, count = 4) {
   );
 }
 
-test("latest group is first and fresh progress moves an older tool to the top without resetting inspection", (t) => {
+test("latest group is last and fresh progress moves an older tool to the end without resetting inspection", (t) => {
   t.onTestFinished(cleanup);
 
   const started = event(
@@ -137,8 +167,8 @@ test("latest group is first and fresh progress moves an older tool to the top wi
   const groups = () =>
     Array.from(view.container.querySelectorAll(".activity-group"));
 
-  assert.match(groups()[0].textContent ?? "", /Newer message/);
-  const tool = groups()[1];
+  assert.match(groups()[1].textContent ?? "", /Newer message/);
+  const tool = groups()[0];
   const debug = view.getByRole("button", { name: "Debug activity: Read" });
   fireEvent.click(debug);
   const raw = tool.querySelector("details.activity-raw") as HTMLDetailsElement;
@@ -163,7 +193,8 @@ test("latest group is first and fresh progress moves an older tool to the top wi
     createElement(GroupedEventList, { events: [started, newer, progress] }),
   );
 
-  assert.equal(groups()[0], tool, "The updated group moves without remounting");
+  assert.equal(groups()[1], tool, "The updated group moves without remounting");
+  assert.match(groups()[0].textContent ?? "", /Newer message/);
 
   assert.ok(
     Array.from(tool.querySelectorAll("details.activity-raw")).includes(raw),
@@ -293,7 +324,7 @@ test("grouped event counts update without closing debug or remounting raw inspec
   }
 });
 
-test("pinned updates stay at zero and manually returning within the 48px buffer repins", (t) => {
+test("pinned updates stay at the end and manually returning within the 48px buffer repins", (t) => {
   t.onTestFinished(cleanup);
   mockActivityGeometry();
   const initial = activityMessages("pin-buffer");
@@ -303,22 +334,15 @@ test("pinned updates stay at zero and manually returning within the 48px buffer 
   const fab = () =>
     view.queryByRole("button", { name: "Scroll to latest activity" });
 
-  assert.equal(viewport.scrollTop, 0);
+  assert.equal(viewport.scrollTop, 240, "Activity opens at its latest row");
   assertAbsent(fab());
-  viewport.scrollTop = 30;
   const next = [...initial, ...activityMessages("pin-buffer-next", 1)];
   view.rerender(createElement(GroupedEventList, { events: next }));
-
-  assert.equal(
-    viewport.scrollTop,
-    0,
-    "Pinned updates undo browser scroll anchoring",
-  );
-
-  viewport.scrollTop = 49;
+  assert.equal(viewport.scrollTop, 340, "Pinned updates follow the new end");
+  viewport.scrollTop = 291;
   fireEvent.scroll(viewport);
   assert.ok(fab(), "Beyond the buffer, the reader controls scrolling");
-  viewport.scrollTop = 48;
+  viewport.scrollTop = 292;
   fireEvent.scroll(viewport);
   assertAbsent(fab(), "The edge of the buffer repins");
 
@@ -328,23 +352,24 @@ test("pinned updates stay at zero and manually returning within the 48px buffer 
     }),
   );
 
-  assert.equal(viewport.scrollTop, 0);
+  assert.equal(viewport.scrollTop, 440);
 });
 
-test("scroll to latest FAB returns to zero and keeps subsequent activity pinned", (t) => {
+test("scroll to latest FAB returns to the end and keeps subsequent activity pinned", (t) => {
   t.onTestFinished(cleanup);
   mockActivityGeometry();
   const initial = activityMessages("fab-pin");
   const view = render(createElement(GroupedEventList, { events: initial }));
   const viewport = view.getByRole("region", { name: "Activity history" });
-  viewport.scrollTop = 240;
+  viewport.scrollTop = 0;
   fireEvent.scroll(viewport);
 
-  fireEvent.click(
-    view.getByRole("button", { name: "Scroll to latest activity" }),
-  );
+  const fab = view.getByRole("button", { name: "Scroll to latest activity" });
+  assert.ok(fab.classList.contains("activity-scroll-latest"));
+  assert.equal(fab.dataset.direction, "down", "The chevron points to the end");
+  fireEvent.click(fab);
 
-  assert.equal(viewport.scrollTop, 0);
+  assert.equal(viewport.scrollTop, 240);
 
   assert.ok(
     document.activeElement === viewport,
@@ -361,7 +386,7 @@ test("scroll to latest FAB returns to zero and keeps subsequent activity pinned"
     }),
   );
 
-  assert.equal(viewport.scrollTop, 0);
+  assert.equal(viewport.scrollTop, 340);
 });
 
 test("scroll to latest glides back and stays pinned until the reader takes over", (t) => {
@@ -383,7 +408,7 @@ test("scroll to latest glides back and stays pinned until the reader takes over"
   };
 
   const glide = () => {
-    scrollAt(240);
+    scrollAt(0);
     assert.ok(fab());
     fireEvent.click(fab()!);
     assertAbsent(fab(), "The button leaves as the glide starts");
@@ -392,30 +417,30 @@ test("scroll to latest glides back and stays pinned until the reader takes over"
   glide();
 
   assert.deepEqual(scrollTo.mock.calls.at(-1), [
-    { top: 0, behavior: "smooth" },
+    { top: 240, behavior: "smooth" },
   ]);
 
-  assert.equal(viewport.scrollTop, 240, "The browser animates the scroll");
+  assert.equal(viewport.scrollTop, 0, "The browser animates the scroll");
   scrollAt(120);
   assertAbsent(fab(), "Scroll events while closing in keep the feed pinned");
-  scrollAt(0);
+  scrollAt(240);
   assertAbsent(fab());
 
   glide();
-  scrollAt(200);
-  scrollAt(260);
+  scrollAt(40);
+  scrollAt(0);
   assert.ok(fab(), "Scrolling away during the glide hands control back");
 
-  scrollAt(240);
+  scrollAt(0);
   fireEvent.click(fab()!);
   fireEvent(viewport, new Event("scrollend"));
   assertAbsent(fab(), "A scroll end from before the glide is ignored");
-  scrollAt(150);
+  scrollAt(90);
   fireEvent(viewport, new Event("scrollend"));
   assert.ok(fab(), "A glide that stops short is judged by where it stopped");
 
   glide();
-  scrollAt(150);
+  scrollAt(90);
 
   view.rerender(
     createElement(GroupedEventList, {
@@ -423,7 +448,7 @@ test("scroll to latest glides back and stays pinned until the reader takes over"
     }),
   );
 
-  assert.equal(viewport.scrollTop, 0, "New activity finishes the glide");
+  assert.equal(viewport.scrollTop, 340, "New activity finishes the glide");
   assertAbsent(fab());
 
   vi.useFakeTimers();
@@ -441,6 +466,8 @@ test("scroll to latest glides back and stays pinned until the reader takes over"
   assert.ok(fab(), "A glide that never moves is judged where it stopped");
 });
 
+// The tail window drops the oldest activity as new activity arrives, removing
+// rows above the reader. Rows are 100px, so the reader moves up by 100px.
 test("new activity preserves the visible reader anchor while unpinned", (t) => {
   t.onTestFinished(cleanup);
   mockActivityGeometry();
@@ -457,7 +484,10 @@ test("new activity preserves the visible reader anchor while unpinned", (t) => {
 
   view.rerender(
     createElement(GroupedEventList, {
-      events: [...initial, ...activityMessages("reader-anchor-next", 1)],
+      events: [
+        ...initial.slice(1),
+        ...activityMessages("reader-anchor-next", 1),
+      ],
     }),
   );
 
@@ -465,8 +495,8 @@ test("new activity preserves the visible reader anchor while unpinned", (t) => {
 
   assert.equal(
     viewport.scrollTop,
-    275,
-    "Compensate for the prepended 100px group",
+    75,
+    "Compensate for the dropped 100px group above",
   );
 
   assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
@@ -478,6 +508,7 @@ test("new activity preserves a reader scroll before its scroll event fires", (t)
   const initial = activityMessages("reader-scroll-race");
   const view = render(createElement(GroupedEventList, { events: initial }));
   const viewport = view.getByRole("region", { name: "Activity history" });
+  assert.equal(viewport.scrollTop, 240);
   viewport.scrollTop = 175;
 
   const anchor =
@@ -487,12 +518,15 @@ test("new activity preserves a reader scroll before its scroll event fires", (t)
 
   view.rerender(
     createElement(GroupedEventList, {
-      events: [...initial, ...activityMessages("reader-scroll-race-next", 1)],
+      events: [
+        ...initial.slice(1),
+        ...activityMessages("reader-scroll-race-next", 1),
+      ],
     }),
   );
 
   assert.equal(anchor.getBoundingClientRect().top, before);
-  assert.equal(viewport.scrollTop, 275);
+  assert.equal(viewport.scrollTop, 75);
   assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
 });
 
@@ -509,7 +543,8 @@ test("a hidden activity tab keeps its reading anchor through new activity", (t) 
     view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
 
   const before = anchor.getBoundingClientRect().top;
-  const next = [...initial, ...activityMessages("hidden-tab-next", 1)];
+
+  const next = [...initial.slice(1), ...activityMessages("hidden-tab-next", 1)];
 
   view.rerender(
     createElement(GroupedEventList, { events: initial, active: false }),
@@ -526,7 +561,7 @@ test("a hidden activity tab keeps its reading anchor through new activity", (t) 
   viewport.scrollTop = 175;
   view.rerender(createElement(GroupedEventList, { events: next }));
   assert.equal(anchor.getBoundingClientRect().top, before);
-  assert.equal(viewport.scrollTop, 275);
+  assert.equal(viewport.scrollTop, 75);
   assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
 });
 
@@ -536,7 +571,14 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
   inspector.style.overflowY = "auto";
   t.onTestFinished(() => inspector.remove());
 
-  // The inspector starts at 100px with a 200px header above the timeline.
+  // The inspector starts at 100px and shows 300px, with a 200px header above
+  // the timeline, so its end is at 240 + groups * 100 - 300.
+  mockScrollSize((element) =>
+    element === inspector
+      ? { scrollHeight: 240 + groupCount(inspector) * 100, clientHeight: 300 }
+      : undefined,
+  );
+
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
       const timeline = 300 - inspector.scrollTop;
@@ -576,41 +618,41 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
     container: inspector,
   });
 
-  inspector.scrollTop = 150;
+  assert.equal(inspector.scrollTop, 340, "The inspector opens at the latest");
+  inspector.scrollTop = 300;
   fireEvent.scroll(inspector);
-  assertAbsent(fab(), "Scrolling past the header keeps the latest pinned");
+  assertAbsent(fab(), "Scrolling within the buffer keeps the latest pinned");
+  const pinned = activityMessages("inspector-scroll-pinned", 1);
 
   view.rerender(
-    createElement(GroupedEventList, {
-      events: [...initial, ...activityMessages("inspector-scroll-pinned", 1)],
-    }),
+    createElement(GroupedEventList, { events: [...initial, ...pinned] }),
   );
 
-  assert.equal(inspector.scrollTop, 150, "Pinned updates leave the header");
-  inspector.scrollTop = 400;
+  assert.equal(inspector.scrollTop, 440, "Pinned updates follow the new end");
+  inspector.scrollTop = 350;
   fireEvent.scroll(inspector);
   assert.ok(fab(), "Scrolling into history unpins");
-  const anchor = inspector.querySelectorAll<HTMLElement>(".activity-group")[2];
+  const anchor = inspector.querySelectorAll<HTMLElement>(".activity-group")[1];
   const before = anchor.getBoundingClientRect().top;
 
   view.rerender(
     createElement(GroupedEventList, {
       events: [
-        ...initial,
-        ...activityMessages("inspector-scroll-pinned", 1),
+        ...initial.slice(1),
+        ...pinned,
         ...activityMessages("inspector-scroll-next", 1),
       ],
     }),
   );
 
   assert.equal(anchor.getBoundingClientRect().top, before);
-  assert.equal(inspector.scrollTop, 500);
+  assert.equal(inspector.scrollTop, 250);
   fireEvent.click(fab()!);
 
   assert.equal(
     inspector.scrollTop,
-    200,
-    "The timeline returns to the top of the inspector",
+    440,
+    "The inspector returns to the end of the timeline",
   );
 
   assertAbsent(fab());
@@ -658,10 +700,22 @@ test("timeline items mark their rail ends, status and trimmed history as data at
   assert.equal(trimmed.hasAttribute("data-trimmed"), true);
 
   assert.match(
-    trimmed.nextElementSibling?.textContent ?? "",
+    trimmed.previousElementSibling?.textContent ?? "",
     /Showing the most recent/,
-    "The note follows the rail where the oldest rows were dropped",
+    "The note precedes the rail where the oldest rows were dropped",
   );
+
+  const trimmedItems = [
+    ...trimmed.querySelectorAll<HTMLElement>(".timeline-item"),
+  ];
+
+  assert.equal(
+    trimmedItems[0].hasAttribute("data-first"),
+    true,
+    "The rail fades in above the oldest remaining item",
+  );
+
+  assert.equal(trimmedItems.at(-1)!.hasAttribute("data-last"), true);
 });
 
 test("new groups animate in and movement animations respect reduced motion", (t) => {
@@ -718,7 +772,7 @@ test("new groups animate in and movement animations respect reduced motion", (t)
     else delete (window as any).matchMedia;
   });
 
-  const initial = activityMessages("animation", 2);
+  const initial = activityMessages("animation", 4);
   const view = render(createElement(GroupedEventList, { events: [] }));
   const viewport = view.getByRole("region", { name: "Activity history" });
 
@@ -731,24 +785,27 @@ test("new groups animate in and movement animations respect reduced motion", (t)
 
   assert.equal(
     calls.length,
-    2,
-    "First activity arriving in an empty feed animates",
+    0,
+    "History loading into an empty feed appears in place",
   );
 
-  calls.length = 0;
-  viewport.scrollTop = 30;
+  // 440px of content in a 300px viewport puts the end at 140; stay within the buffer.
+  assert.equal(viewport.scrollTop, 140);
+  viewport.scrollTop = 110;
   fireEvent.scroll(viewport);
   const next = [...initial, ...activityMessages("animation-next", 1)];
   view.rerender(createElement(GroupedEventList, { events: next }));
-  const newest = view.container.querySelector(".activity-group");
+  assert.equal(viewport.scrollTop, 240, "Pinned activity follows the new end");
+  const newest = [...view.container.querySelectorAll(".activity-group")].at(-1);
   const entrance = calls.find((call) => call.element === newest);
 
   assert.ok(
     entrance,
-    "A newly inserted visible group receives an entrance animation",
+    "A newly appended visible group receives an entrance animation",
   );
 
   assert.equal(entrance.frames[0].opacity, 0);
+  assert.equal(entrance.frames[0].transform, "translateY(12px)");
   assert.equal(entrance.frames[1].opacity, 1);
   assert.equal(entrance.frames[1].transform, "translateY(0)");
   assert.ok(Number(entrance.options.duration) > 0);
@@ -759,7 +816,7 @@ test("new groups animate in and movement animations respect reduced motion", (t)
     "Existing visible groups animate to their new positions",
   );
 
-  assert.equal(retainedMovement.frames[0].transform, "translateY(-130px)");
+  assert.equal(retainedMovement.frames[0].transform, "translateY(130px)");
   assert.equal(retainedMovement.frames[0].opacity, 1);
   const cancelledBeforeScroll = cancellations;
   fireEvent.scroll(viewport);
@@ -767,7 +824,7 @@ test("new groups animate in and movement animations respect reduced motion", (t)
   assert.equal(
     cancellations,
     cancelledBeforeScroll,
-    "Restoring the top must not cancel new animations",
+    "Following the end must not cancel new animations",
   );
 
   viewport.scrollTop = 80;
@@ -2187,16 +2244,17 @@ test("activity restores the visible group after remount with newer activity", (t
   assert.equal(reading.position?.pinned, false);
   view.unmount();
 
+  // The tail window dropped the oldest group above the reader while unmounted.
   const restored = render(
     createElement(GroupedEventList, {
-      events: [...events, ...activityMessages("restore-new", 1)],
+      events: [...events.slice(1), ...activityMessages("restore-new", 1)],
       reading,
     }),
   );
 
   assert.equal(
     restored.getByRole("region", { name: "Activity history" }).scrollTop,
-    275,
+    75,
   );
 
   assert.deepEqual(reading.position?.anchor, anchor);
@@ -2213,6 +2271,7 @@ test("activity pinned reading follows updates received while unmounted", (t) => 
   const events = activityMessages("restore-pinned", 6);
   const view = render(createElement(GroupedEventList, { events, reading }));
   assert.equal(reading.position?.pinned, true);
+  assert.equal(reading.position?.top, 440);
   view.unmount();
 
   const restored = render(
@@ -2224,7 +2283,7 @@ test("activity pinned reading follows updates received while unmounted", (t) => 
 
   assert.equal(
     restored.getByRole("region", { name: "Activity history" }).scrollTop,
-    0,
+    540,
   );
 
   assertAbsent(
@@ -2246,7 +2305,11 @@ test("hidden activity preserves persistent reading state until revealed", (t) =>
   viewport.scrollTop = 175;
   fireEvent.scroll(viewport);
   const saved = reading.position;
-  const updated = [...events, ...activityMessages("hidden-reading-new", 1)];
+
+  const updated = [
+    ...events.slice(1),
+    ...activityMessages("hidden-reading-new", 1),
+  ];
 
   view.rerender(
     createElement(GroupedEventList, {
@@ -2264,7 +2327,7 @@ test("hidden activity preserves persistent reading state until revealed", (t) =>
     createElement(GroupedEventList, { events: updated, reading, active: true }),
   );
 
-  assert.equal(viewport.scrollTop, 275);
+  assert.equal(viewport.scrollTop, 75);
   assert.deepEqual(reading.position?.anchor, saved?.anchor);
 });
 
@@ -2272,8 +2335,17 @@ test("pinned activity remount returns to latest after another tab moved the shar
   t.onTestFinished(cleanup);
   const inspector = document.body.appendChild(document.createElement("div"));
   inspector.style.overflowY = "auto";
-  inspector.scrollTop = 500;
+  // Another tab left the shared inspector far from this timeline's end.
+  inspector.scrollTop = 100;
   t.onTestFinished(() => inspector.remove());
+
+  // A 200px header sits above the timeline in a 300px inspector, so with six
+  // groups the end is at 240 + 600 - 300.
+  mockScrollSize((element) =>
+    element === inspector
+      ? { scrollHeight: 240 + groupCount(inspector) * 100, clientHeight: 300 }
+      : undefined,
+  );
 
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
@@ -2317,7 +2389,7 @@ test("pinned activity remount returns to latest after another tab moved the shar
     { container: inspector },
   );
 
-  assert.equal(inspector.scrollTop, 200);
+  assert.equal(inspector.scrollTop, 540);
   assert.equal(reading.position?.pinned, true);
 
   assertAbsent(

@@ -111,15 +111,16 @@ reads use app-only tools. Stop uses `interrupt_agent_task`. See the
 
 ## Activity timeline
 
-The newest-first timeline groups tools, hooks, background tasks, streamed
-responses and adjacent routine updates while keeping original SDK events for
-inspection. Progress moves an operation's row to the top. Messages, failures
-and lifecycle transitions remain distinct; stopped/cancelled operations are
-not shown as successful. Thinking shows a live clock, then its elapsed time.
+The timeline lists activity oldest first, like Chat. It groups tools, hooks,
+background tasks, streamed responses and adjacent routine updates while keeping
+original SDK events for inspection. Progress moves an operation's row to the
+end. Messages, failures and lifecycle transitions remain distinct;
+stopped/cancelled operations are not shown as successful. Thinking shows a live clock, then its elapsed time.
 
-Scrolling near the top follows new events; scrolling away preserves the
-reading position, with a button to return to latest. The task header and tabs
-stay fixed when enough height remains; a short frame scrolls the whole inspector.
+Activity scrolls like Chat: it follows new events while the reader is at the
+end, preserves the visible row while they read history, and shows the same
+button to return to the latest activity. The task header and tabs stay fixed
+when enough height remains; a short frame scrolls the whole inspector.
 Chat and Activity keep separate positions. Reduced motion suppresses animation.
 
 Each row's debug button exposes readable event content, metadata and a raw SDK
