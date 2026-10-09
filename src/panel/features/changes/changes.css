@@ -161,26 +161,60 @@ body[data-expanded-panel="true"]
   font-size: 12px;
 }
 
-/* Viewed: a checkbox-like box and label, in file headers and the preview. */
+/* Viewed: a checkbox and label in a quiet pill, in file headers and the preview. */
 .viewed-toggle {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 5px;
-  padding: 2px 6px;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px 0 6px;
+  color: var(--muted);
   font-size: 11px;
+  font-weight: 500;
+  transition:
+    color 0.12s,
+    border-color 0.12s,
+    background-color 0.12s;
+}
+.viewed-toggle:hover {
+  color: var(--text);
+}
+.viewed-toggle[aria-checked="true"] {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
 }
 .viewed-box {
   display: inline-grid;
   place-items: center;
-  width: 12px;
-  height: 12px;
-  border: 1px solid var(--muted);
-  border-radius: 3px;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid color-mix(in srgb, var(--muted) 70%, transparent);
+  border-radius: 4px;
+  transition:
+    border-color 0.12s,
+    background-color 0.12s;
+}
+.viewed-toggle:hover .viewed-box {
+  border-color: var(--text);
+}
+.viewed-box svg {
+  opacity: 0;
+  scale: 0.5;
+  transition:
+    opacity 0.12s,
+    scale 0.12s;
 }
 .viewed-toggle[aria-checked="true"] .viewed-box {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--bg);
+}
+.viewed-toggle[aria-checked="true"] .viewed-box svg {
+  opacity: 1;
+  scale: 1;
 }
 /* A viewed file's header recedes, so what is left to read stands out. */
 .diff-file[data-viewed="true"] > summary .diff-path {

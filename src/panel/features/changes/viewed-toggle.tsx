@@ -14,7 +14,6 @@ type ViewedToggleProps = {
 export function ViewedToggle({ path, viewed, onChange }: ViewedToggleProps) {
   return (
     <Button
-      variant="ghost"
       role="checkbox"
       className="viewed-toggle"
       aria-checked={viewed}
@@ -22,7 +21,8 @@ export function ViewedToggle({ path, viewed, onChange }: ViewedToggleProps) {
       onClick={() => onChange(!viewed)}
     >
       <span className="viewed-box" aria-hidden="true">
-        {viewed && <Icon name="check" size={10} strokeWidth={3} />}
+        {/* Always there, so checking it can fade the mark in. */}
+        <Icon name="check" size={10} strokeWidth={3} />
       </span>
       Viewed
     </Button>
