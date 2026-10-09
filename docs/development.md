@@ -131,15 +131,17 @@ change database migrations.
 npm run build && npm start
 ```
 
-`npm start` runs the built `dist/main.js`; `npm run dev` runs `src/service/main.ts`
-directly with `tsx`. Either way the service runs in the foreground at
-`http://127.0.0.1:4317`; stop it with Ctrl-C. If Codex is open with the plugin
-enabled, its stdio proxy may already have started one; a second service cannot
-own the same data directory. On macOS and Linux, an interactive startup reports
-process details and asks before sending SIGTERM to a verified service owner. If
-it remains alive after five seconds, a second confirmation is required before
-SIGKILL. Non-interactive launches and Windows do not stop processes here. A
-service started before identity metadata was added must also be stopped manually.
+`npm start` runs the built `dist/main.js`; `npm run dev` runs
+`src/service/main.ts` through `tsx` and Node's watch mode, restarting it when an
+imported source file changes. A restart interrupts active tasks; send a follow-up
+after the service returns to continue them. Either way the service runs in the
+foreground at `http://127.0.0.1:4317`; stop it with Ctrl-C. If Codex is open with
+the plugin enabled, its stdio proxy may already have started one; a second service
+cannot own the same data directory. On macOS and Linux, an interactive startup
+reports process details and asks before sending SIGTERM to a verified service
+owner. If it remains alive after five seconds, a second confirmation is required
+before SIGKILL. Non-interactive launches and Windows do not stop processes here.
+A service started before identity metadata was added must also be stopped manually.
 
 Check it from another terminal:
 
@@ -305,14 +307,14 @@ boundary, and `[late]` takes none, so they're left for the next turn.
 
 ## What reloads when
 
-| Change                               | To see it                                                         |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| `src/panel/` in the dev host         | Nothing: Fast Refresh applies it                                  |
-| `src/panel/` in Codex or the console | `npm run build`, then reopen the panel or reload the page         |
-| `src/service/`                       | Restart the service (`npm start` after a build, or `npm run dev`) |
-| `src/shared/`                        | Refresh the panel as above and restart the service                |
-| Tool metadata or panel resource URI  | Restart the service, then reload the MCP connection in Codex      |
-| `.env` or `vite.config.ts`           | Restart the affected processes                                    |
+| Change                               | To see it                                                               |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| `src/panel/` in the dev host         | Nothing: Fast Refresh applies it                                        |
+| `src/panel/` in Codex or the console | `npm run build`, then reopen the panel or reload the page               |
+| `src/service/`                       | `npm run dev` restarts automatically; restart `npm start` after a build |
+| `src/shared/`                        | Refresh the panel as above; `npm run dev` restarts automatically        |
+| Tool metadata or panel resource URI  | Restart the service, then reload the MCP connection in Codex            |
+| `.env` or `vite.config.ts`           | Restart the affected processes                                          |
 
 The service reads panel HTML from `dist/` on each resource request, so rebuilt
 UI needs no service restart.

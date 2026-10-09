@@ -8,7 +8,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "tsx --env-file-if-exists=.env src/service/main.ts",
+    "dev": "node --watch --import tsx --env-file-if-exists=.env src/service/main.ts",
     "start": "node --enable-source-maps --env-file-if-exists=.env dist/main.js",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run schemas:generate && npm run clean && tsc --noEmit && node scripts/build-service.mjs && node scripts/build-panel.mjs",
