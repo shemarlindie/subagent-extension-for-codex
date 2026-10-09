@@ -65,6 +65,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
             <Dialog.Title id="dialog-title">
               {dialog && definition?.title(dialog)}
             </Dialog.Title>
+            {dialog && definition?.headingActions?.(dialog)}
             <Dialog.Close
               type="button"
               className={buttonClass("ghost", { className: "dialog-close" })}

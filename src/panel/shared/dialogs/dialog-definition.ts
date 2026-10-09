@@ -7,8 +7,10 @@ export type DialogOf<K extends DialogKind> = Extract<DialogState, { kind: K }>;
 
 /** What a dialog variant contributes to the shared `DialogHost` shell. */
 export interface DialogDefinition<K extends DialogKind> {
-  title: (dialog: DialogOf<K>) => string;
+  title: (dialog: DialogOf<K>) => ReactNode;
   render: (dialog: DialogOf<K>) => ReactNode;
+  /** Controls beside the title, which stay mounted as the dialog's content changes. */
+  headingActions?: (dialog: DialogOf<K>) => ReactNode;
   /** Replacement control when the original trigger was unmounted, such as a menu item. */
   restoreFocus?: () => HTMLElement | null;
   /** The element to focus on open; defaults to the first focusable one. */
