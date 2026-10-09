@@ -14,8 +14,9 @@ const root = import.meta.dirname;
 // Same optional .env as npm run dev/start; shell variables take precedence.
 if (existsSync(join(root, ".env"))) process.loadEnvFile(join(root, ".env"));
 
-// Mirrors dataDirectory() and connectService(). The origin is read at startup
-// (restart Vite if the service moves); the token is read per request.
+// Mirrors dataDirectory() and connectService(), except PORT: in this process
+// it is the dev host's own port, which launchers set. The origin is read at
+// startup (restart Vite if the service moves); the token is read per request.
 function dataDirectory() {
   if (process.env.CODEX_SUBAGENT_EXTENSION_DATA)
     return resolve(process.env.CODEX_SUBAGENT_EXTENSION_DATA);
@@ -30,14 +31,13 @@ function serviceOrigin() {
 
   if (configured) return configured;
 
-  if (!process.env.PORT)
-    try {
-      return JSON.parse(
-        readFileSync(join(dataDirectory(), "service.json"), "utf8"),
-      ).origin as string;
-    } catch {}
+  try {
+    return JSON.parse(
+      readFileSync(join(dataDirectory(), "service.json"), "utf8"),
+    ).origin as string;
+  } catch {}
 
-  return `http://127.0.0.1:${process.env.PORT ?? 4317}`;
+  return "http://127.0.0.1:4317";
 }
 
 function serviceToken() {

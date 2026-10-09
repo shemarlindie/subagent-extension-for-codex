@@ -137,19 +137,21 @@ toolbar settings continue to use local storage.
 
 Live mode connects to the service's `/mcp` endpoint through the Vite proxy at
 `/service`. The proxy adds the admin token server-side and drops the browser
-`Origin` header, so the token never reaches the page. It finds the service the
-same way the stdio launcher does: `CODEX_SUBAGENT_EXTENSION_URL`,
+`Origin` header, so the token never reaches the page. It finds the service much
+as the stdio launcher does: `CODEX_SUBAGENT_EXTENSION_URL`,
 `CODEX_SUBAGENT_EXTENSION_ORIGIN`, the data directory's `service.json`, then
-`PORT` (default 4317). It reads the token from `CODEX_SUBAGENT_EXTENSION_TOKEN`
-or the data directory's `admin-token`. Start the service first, or restart Vite
-after it moves ports.
+port 4317. It ignores `PORT`, which in the dev host's process is its own port
+(the `.claude/launch.json` launcher sets it). It reads the token from
+`CODEX_SUBAGENT_EXTENSION_TOKEN` or the data directory's `admin-token`. Start
+the service first, or restart Vite after it moves ports.
 
 Live mode performs real actions: starting a task from the panel runs a worker.
-To work against throwaway data, give both processes the same overrides:
+To work against throwaway data, give both processes the same data directory;
+the dev host finds the service's port in its `service.json`:
 
 ```sh
 CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev PORT=4399 npm run dev
-CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev PORT=4399 npm run dev:ui
+CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev npm run dev:ui
 ```
 
 Codex's iframe sandbox, CSP, real host styles, and native placement are not
