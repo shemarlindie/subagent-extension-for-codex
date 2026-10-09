@@ -85,7 +85,8 @@ const subscriptionSchema = z.looseObject({
 
 type Subscription = z.infer<typeof subscriptionSchema>;
 
-const decodeSubscription = (id: string, body: string) =>
+/** A stored webhook subscription body, named by its row's id when malformed. */
+export const decodeSubscription = (id: string, body: string) =>
   decodeStored(subscriptionSchema, body, `webhook subscription ${id}`);
 
 export class EventProtocolError extends Error {

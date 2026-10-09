@@ -127,7 +127,8 @@ const storedRequestSchema = z.looseObject({
     .optional(),
 });
 
-const decodeRequest = (id: string, body: string) =>
+/** A stored form request body, named by its row's id when malformed. */
+export const decodeRequest = (id: string, body: string) =>
   decodeStored(
     storedRequestSchema,
     body,

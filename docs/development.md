@@ -312,7 +312,15 @@ before any feature reads it.
   migrate once. It refuses a database whose ledger names a migration this
   build lacks.
 - Databases from before versioned migrations are not upgraded: startup
-  refuses them and asks for the data directory to be deleted.
+  refuses them and asks for the data directory to be deleted. In a checkout,
+  `npm run db:migrate-legacy -- [--dry-run] [<data directory>]` converts one
+  instead (`dev/migrate-legacy-database.ts`). Stop the service first. It
+  copies every record into a new database, keeping event ids and filling in
+  the task references,
+  checks each record as the service would, and keeps the old file as
+  `console.sqlite.pre-migration`. Forms and webhook deliveries whose task is
+  gone, and the retired `artifacts` and `codex_executors` tables, are dropped
+  and reported. Worktrees and keys are untouched.
 - `migrations/` ships in the package and is read with `packagePath`, so
   source checkouts and installed packages use the same folder.
 

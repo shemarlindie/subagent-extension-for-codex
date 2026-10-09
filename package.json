@@ -26,7 +26,8 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "fixture:record": "tsx ui/dev/preview/record-fixture.ts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate-legacy": "tsx --env-file-if-exists=.env dev/migrate-legacy-database.ts"
   },
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.293",
