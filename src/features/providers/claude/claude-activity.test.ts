@@ -7,6 +7,7 @@ import { join } from "node:path";
 import type { Query, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { test } from "vitest";
 
+import { readyClaudeCli } from "../../../../tests/support/claude-cli.js";
 import {
   type RunContext,
   startSchema,
@@ -329,6 +330,8 @@ test("run emits result accounting exactly once for success and failure", async (
           })(),
           { close() {} },
         ) as unknown as Query,
+      undefined,
+      readyClaudeCli,
     );
 
     if (failed)

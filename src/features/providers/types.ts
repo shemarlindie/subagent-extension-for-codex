@@ -69,11 +69,22 @@ export interface ModelChoice {
   supportedEffortLevels?: (typeof reasoningLevels)[number][];
 }
 
+/** Whether a provider can start work. */
+export interface ProviderReadiness {
+  ready: boolean;
+  /** What is wrong and how to fix it, when not ready. */
+  message?: string;
+  /** Facts for diagnostics, such as the executable path and version. */
+  details: Record<string, string>;
+}
+
 export interface Provider {
   id: string;
   capabilities: Capabilities;
   metadata?: ProviderMetadata;
   taskPolicy: ProviderTaskPolicy;
+  /** Checks the local runtime the provider launches; auth and network failures surface later. */
+  readiness?(): Promise<ProviderReadiness>;
   models?(): Promise<ModelChoice[]>;
   run(context: RunContext, prompt: string): Promise<TurnOutput>;
   /** Deletes the provider-side session a task ran in; one already gone is not an error. */

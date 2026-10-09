@@ -236,7 +236,7 @@ export function definitions(
     }),
     list_available_workers: tool({
       description:
-        "Discover installed providers, profiles, and supported capabilities.",
+        "Discover installed providers, profiles, supported capabilities, and whether each provider's runtime is ready to start tasks.",
       schema: z.object({}),
       run: () => c.availableWorkers(),
     }),

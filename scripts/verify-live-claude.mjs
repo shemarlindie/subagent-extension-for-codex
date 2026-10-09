@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { ClaudeCli } from "../src/features/providers/claude/executable.ts";
 import { ClaudeAgentProvider } from "../src/features/providers/claude/provider.ts";
 import { Control } from "../src/features/tasks/control.ts";
 import { Store } from "../src/features/tasks/store.ts";
@@ -27,6 +28,21 @@ assert.ok(
   ["read", "resume", "sandbox", "mcp", "budget", "parity"].includes(scenario),
   "Choose read, resume, sandbox, mcp, budget, or parity",
 );
+
+// Every scenario runs the installed CLI the service would pick, passed to the SDK as pathToClaudeCodeExecutable.
+const cli = new ClaudeCli();
+const executable = await cli.status();
+
+if (!executable.ready) {
+  console.error(executable.message);
+  process.exit(1);
+}
+
+console.log(
+  `Claude Code ${executable.version} at ${executable.path} (supported ${executable.supported})`,
+);
+
+const provider = () => new ClaudeAgentProvider(undefined, undefined, cli);
 
 const root = await realpath(
   await mkdtemp(join(tmpdir(), "codex-subagent-extension-native-proof-")),
@@ -128,7 +144,7 @@ const store = new Store(join(root, "tasks.sqlite"));
 const control = new Control(
   store,
   new Workspaces(join(root, "worktrees"), [repo]),
-  new Map([["claude", new ClaudeAgentProvider()]]),
+  new Map([["claude", provider()]]),
   repo,
 );
 
@@ -242,7 +258,7 @@ if (scenario === "read") {
     reopened = new Control(
       nextStore,
       new Workspaces(join(root, "worktrees"), [repo]),
-      new Map([["claude", new ClaudeAgentProvider()]]),
+      new Map([["claude", provider()]]),
       repo,
     );
 

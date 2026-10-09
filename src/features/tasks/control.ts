@@ -162,13 +162,16 @@ export class Control {
     return Promise.all(
       this.workers().map(async (worker) => {
         const provider = this.providers.get(worker.provider)!;
-        if (!provider.models) return worker;
+        const readiness = await provider.readiness?.();
+        const known = readiness ? { ...worker, readiness } : worker;
+        // Model discovery launches the runtime, so it waits until that is ready.
+        if (!provider.models || readiness?.ready === false) return known;
 
         try {
-          return { ...worker, models: await provider.models() };
+          return { ...known, models: await provider.models() };
         } catch {
           return {
-            ...worker,
+            ...known,
             model_discovery_error:
               "Model discovery unavailable; enter a model ID or retry later.",
           };
@@ -186,6 +189,8 @@ export class Control {
     assertSelectedProviderOptions(parsed.provider, parsed.provider_options);
     const provider = this.providers.get(parsed.provider);
     if (!provider) throw new Error("Provider is not enabled");
+    const readiness = await provider.readiness?.();
+    if (readiness?.ready === false) throw new Error(readiness.message);
     const policy = provider.taskPolicy;
 
     const options = policy.prepareStart({

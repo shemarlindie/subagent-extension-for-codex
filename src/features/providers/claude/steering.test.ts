@@ -7,6 +7,7 @@ import { join } from "node:path";
 import type { Options, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { test } from "vitest";
 
+import { readyClaudeCli } from "../../../../tests/support/claude-cli.js";
 import {
   now,
   type RunContext,
@@ -145,10 +146,11 @@ test("a steer goes into the running turn as a priority next message, and is take
     yield result("Done");
   });
 
-  const reply = await new ClaudeAgentProvider(query.launch).run(
-    ctx.c,
-    "Prompt",
-  );
+  const reply = await new ClaudeAgentProvider(
+    query.launch,
+    undefined,
+    readyClaudeCli,
+  ).run(ctx.c, "Prompt");
 
   assert.deepEqual(reply, { reply: "Done" });
   assert.equal(steerMessage?.priority, "next");
@@ -183,7 +185,11 @@ test("a steer the turn won't take is withdrawn as the final message ends, and no
     },
   );
 
-  await new ClaudeAgentProvider(query.launch).run(ctx.c, "Prompt");
+  await new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+    ctx.c,
+    "Prompt",
+  );
+
   assert.deepEqual(cancelled, [uuid]);
   assert.deepEqual(ctx.taken, []);
 });
@@ -205,10 +211,11 @@ test("a steer that can't be withdrawn runs after the result, and the turn ends w
     { cancelAsyncMessage: async () => false },
   );
 
-  const reply = await new ClaudeAgentProvider(query.launch).run(
-    ctx.c,
-    "Prompt",
-  );
+  const reply = await new ClaudeAgentProvider(
+    query.launch,
+    undefined,
+    readyClaudeCli,
+  ).run(ctx.c, "Prompt");
 
   assert.deepEqual(reply, { reply: "Second" });
   assert.deepEqual(ctx.taken, ["msg_late"]);
@@ -236,7 +243,10 @@ test("an interrupt ends the turn through the query, cancelling queued messages, 
   );
 
   await assert.rejects(
-    new ClaudeAgentProvider(query.launch).run(ctx.c, "Prompt"),
+    new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+      ctx.c,
+      "Prompt",
+    ),
     /error_during_execution/,
   );
 
@@ -268,7 +278,10 @@ test("an interrupt that fails stops the process instead", async () => {
   );
 
   await assert.rejects(
-    new ClaudeAgentProvider(query.launch).run(ctx.c, "Prompt"),
+    new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+      ctx.c,
+      "Prompt",
+    ),
     /error_during_execution/,
   );
 
@@ -313,7 +326,10 @@ test("the main worker's text streams as deltas, and other stream frames are left
     yield result("Hello");
   });
 
-  await new ClaudeAgentProvider(query.launch).run(ctx.c, "Prompt");
+  await new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+    ctx.c,
+    "Prompt",
+  );
 
   assert.deepEqual(ctx.deltas, [
     ["msg_1", "Hel"],

@@ -109,6 +109,47 @@ test("worker discovery exposes SDK metadata and falls back when discovery fails"
   }
 });
 
+test("an unready provider blocks task starts and model discovery but stays listed", async () => {
+  const provider: Provider = new FixtureProvider();
+  let discoveries = 0;
+
+  provider.models = async () => {
+    discoveries++;
+
+    return [];
+  };
+
+  provider.readiness = async () => ({
+    ready: false,
+    message: "Claude Code was not found on the service's PATH.",
+    details: { supported_versions: "2.1.286–2.1.295" },
+  });
+
+  const { c, store } = await setup(provider);
+
+  try {
+    const [worker] = (await c.availableWorkers()) as any[];
+    assert.equal(worker.readiness.ready, false);
+    assert.equal(worker.models, undefined);
+    assert.equal(worker.model_discovery_error, undefined);
+    assert.equal(discoveries, 0);
+
+    await assert.rejects(c.start("alice", input()), /not found on the service/);
+    assert.deepEqual(store.all("alice"), []);
+
+    provider.readiness = async () => ({ ready: true, details: {} });
+
+    assert.equal(
+      ((await c.availableWorkers())[0] as any).readiness.ready,
+      true,
+    );
+
+    assert.equal(discoveries, 1);
+  } finally {
+    await c.close();
+  }
+});
+
 test("known model effort metadata rejects invalid work before queueing while unknown metadata permits execution", async () => {
   const provider: Provider = new FixtureProvider();
 

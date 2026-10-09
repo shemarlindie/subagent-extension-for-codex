@@ -23,6 +23,7 @@ import {
 import {
   type ModelChoice,
   type Provider,
+  type ProviderReadiness,
   type RunContext,
   type Task,
   type TurnOutput,
@@ -30,7 +31,7 @@ import {
 import { git } from "../../workspaces/workspace.js";
 import { claudeMetadata } from "../metadata.js";
 import { claudeActivityPresentation } from "./activity.js";
-import { claudeExecutable } from "./executable.js";
+import { ClaudeCli } from "./executable.js";
 import { Inbox } from "./inbox.js";
 import {
   claudeOverrideDefaults,
@@ -190,13 +191,6 @@ const approvalTool = (tool: string) =>
     entry.endsWith("*") ? tool.startsWith(entry.slice(0, -1)) : tool === entry,
   );
 
-/** Points the SDK at this installation's Claude Code binary, when it has one. */
-function executableOption(): Pick<Options, "pathToClaudeCodeExecutable"> {
-  const path = claudeExecutable();
-
-  return path ? { pathToClaudeCodeExecutable: path } : {};
-}
-
 export class ClaudeAgentProvider implements Provider {
   id = "claude";
   taskPolicy = claudeTaskPolicy;
@@ -222,7 +216,22 @@ export class ClaudeAgentProvider implements Provider {
   constructor(
     private launch: typeof query = query,
     private removeSession: typeof deleteSession = deleteSession,
+    private cli: Pick<ClaudeCli, "status" | "executable"> = new ClaudeCli(),
   ) {}
+
+  async readiness(): Promise<ProviderReadiness> {
+    const status = await this.cli.status();
+
+    const details = {
+      ...(status.path ? { executable: status.path } : {}),
+      ...(status.version ? { version: status.version } : {}),
+      supported_versions: status.supported,
+    };
+
+    return status.ready
+      ? { ready: true, details }
+      : { ready: false, message: status.message, details };
+  }
 
   async deleteSession(task: Task) {
     if (!task.session_id) return;
@@ -260,6 +269,7 @@ export class ClaudeAgentProvider implements Provider {
   }
 
   private async discoverModels(): Promise<ModelChoice[]> {
+    const pathToClaudeCodeExecutable = await this.cli.executable();
     const abortController = new AbortController();
     let release!: () => void;
 
@@ -276,7 +286,7 @@ export class ClaudeAgentProvider implements Provider {
     const session = this.launch({
       prompt,
       options: {
-        ...executableOption(),
+        pathToClaudeCodeExecutable,
         // Match the default task environment so discovery sees the same provider configuration.
         env: claudeEnvironment(
           process.env,
@@ -379,7 +389,7 @@ export class ClaudeAgentProvider implements Provider {
           };
 
     const options: Options = {
-      ...executableOption(),
+      pathToClaudeCodeExecutable: await this.cli.executable(),
       cwd: workspace,
       ...(c.task.model ? { model: c.task.model } : {}),
       ...(c.task.reasoning_effort && c.task.reasoning_effort !== "default"

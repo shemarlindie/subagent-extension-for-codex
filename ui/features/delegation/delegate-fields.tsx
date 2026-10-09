@@ -117,6 +117,11 @@ export function WorkspaceField() {
 export function WorkerFields({ workers }: { workers: Worker[] }) {
   const { register, control } = useFormContext<DelegateValues>();
   const strategy = useWatch({ control, name: "workspace_strategy" });
+  const selected = useWatch({ control, name: "worker" });
+
+  const readiness = workers.find(
+    (worker) => worker.provider === selected?.split(":")[0],
+  )?.readiness;
 
   return (
     <div className="two">
@@ -134,6 +139,11 @@ export function WorkerFields({ workers }: { workers: Worker[] }) {
               })),
             )}
           />
+          {readiness?.ready === false && (
+            <p id="worker-error" className="form-error" role="alert">
+              {readiness.message}
+            </p>
+          )}
         </Field>
       </div>
       <div>

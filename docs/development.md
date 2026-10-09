@@ -260,8 +260,9 @@ output:
 
 The backend build also copies the host's Claude Code binary from the SDK's
 platform package into `dist/claude/`, failing if its version differs from the
-SDK's. Built code passes that path to the SDK; `npm run dev` runs from `src/`,
-where the SDK finds its own platform package in `node_modules`. The binary
+SDK's. The service doesn't run it: every Claude launch, `npm run dev`
+included, runs the installed Claude Code CLI that
+`src/features/providers/claude/executable.ts` finds and validates. The binary
 matches the build host, so a package runs only on that OS and architecture.
 
 The bundle ships source maps without embedded sources. `npm start`, `mcp.json`

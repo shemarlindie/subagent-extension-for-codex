@@ -26,6 +26,7 @@ import { Control } from "../../../src/features/tasks/control.js";
 import { Store } from "../../../src/features/tasks/store.js";
 import { Workspaces } from "../../../src/features/workspaces/workspace.js";
 import { startSchema, type Task } from "../../../src/shared/contracts.js";
+import { readyClaudeCli } from "../../support/claude-cli.js";
 
 async function setup() {
   const dir = await realpath(
@@ -508,27 +509,31 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
     let options: Options | undefined;
     let receivedPrompt: unknown;
 
-    const provider = new ClaudeAgentProvider((args) => {
-      options = args.options;
-      const prompt = args.prompt as AsyncIterable<SDKUserMessage>;
+    const provider = new ClaudeAgentProvider(
+      (args) => {
+        options = args.options;
+        const prompt = args.prompt as AsyncIterable<SDKUserMessage>;
 
-      return Object.assign(
-        (async function* () {
-          // The turn's prompt is the first message of its input stream.
-          const first = await prompt[Symbol.asyncIterator]().next();
-          receivedPrompt = (first.value as SDKUserMessage).message.content;
+        return Object.assign(
+          (async function* () {
+            // The turn's prompt is the first message of its input stream.
+            const first = await prompt[Symbol.asyncIterator]().next();
+            receivedPrompt = (first.value as SDKUserMessage).message.content;
 
-          yield {
-            type: "result",
-            subtype: "success",
-            result: "Reviewed",
-            total_cost_usd: 0,
-            usage: {},
-          };
-        })(),
-        { close: () => {} },
-      ) as unknown as Query;
-    });
+            yield {
+              type: "result",
+              subtype: "success",
+              result: "Reviewed",
+              total_cost_usd: 0,
+              usage: {},
+            };
+          })(),
+          { close: () => {} },
+        ) as unknown as Query;
+      },
+      undefined,
+      readyClaudeCli,
+    );
 
     s.c.providers.set("claude", provider);
 

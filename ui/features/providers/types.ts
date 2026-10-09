@@ -2,6 +2,7 @@ import type { ProviderMetadata } from "../../../src/features/providers/metadata.
 import type {
   Capabilities,
   ModelChoice,
+  ProviderReadiness,
 } from "../../../src/features/providers/types.js";
 
 export type Worker = {
@@ -10,5 +11,6 @@ export type Worker = {
   profiles: string[];
   models?: ModelChoice[];
   model_discovery_error?: string;
+  readiness?: ProviderReadiness;
   capabilities: Partial<Capabilities>;
 };
