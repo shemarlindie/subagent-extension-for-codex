@@ -13,8 +13,8 @@ import { join } from "node:path";
 
 import { test, vi } from "vitest";
 
-import { Workspaces } from "../../../src/features/workspaces/workspace.js";
-import { startSchema, type Task } from "../../../src/shared/contracts.js";
+import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
+import { startSchema, type Task } from "../../../src/shared/tasks/model.js";
 
 async function setup() {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "agent-changes-")));

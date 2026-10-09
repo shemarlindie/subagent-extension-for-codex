@@ -20,12 +20,12 @@ import type {
 import type { ServerContext } from "@modelcontextprotocol/server";
 import { test } from "vitest";
 
-import { FixtureProvider } from "../../../dev/fixture-provider.js";
-import { ClaudeAgentProvider } from "../../../src/features/providers/claude/provider.js";
-import { Control } from "../../../src/features/tasks/control.js";
-import { Store } from "../../../src/features/tasks/store.js";
-import { Workspaces } from "../../../src/features/workspaces/workspace.js";
-import { startSchema, type Task } from "../../../src/shared/contracts.js";
+import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import { ClaudeAgentProvider } from "../../../src/service/features/providers/claude/runtime/provider.js";
+import { Control } from "../../../src/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
+import { startSchema, type Task } from "../../../src/shared/tasks/model.js";
 import { readyClaudeCli } from "../../support/claude-cli.js";
 
 async function setup() {
@@ -286,7 +286,7 @@ test("current repository settings persist, are owner-scoped, and allow task over
     assert.equal(overridden.workspace_strategy, "current_repo");
 
     const { Settings } =
-      await import("../../../src/features/settings/settings.js");
+      await import("../../../src/service/features/settings/settings.js");
 
     assert.equal(
       new Settings(s.c.store.database, () => ["fixture"]).values("alice")

@@ -73,7 +73,7 @@ files and `*-contract.test.ts`. No central registration is needed, and imports
 between discovered contracts resolve to their generated validators.
 
 To add a contract, put exported types in a feature-owned file such as
-`src/features/<feature>/message-contract.ts`:
+`src/service/features/<feature>/message-contract.ts`:
 
 ```ts
 /** @strict */
@@ -131,7 +131,7 @@ change database migrations.
 npm run build && npm start
 ```
 
-`npm start` runs the built `dist/main.js`; `npm run dev` runs `src/main.ts`
+`npm start` runs the built `dist/main.js`; `npm run dev` runs `src/service/main.ts`
 directly with `tsx`. Either way the service runs in the foreground at
 `http://127.0.0.1:4317`; stop it with Ctrl-C. If Codex is open with the plugin
 enabled, its stdio proxy may already have started one; a second service cannot
@@ -174,7 +174,7 @@ npm run dev:ui
 
 This starts a Vite server at `http://127.0.0.1:5317` with React Fast Refresh and
 CSS hot replacement, for development only; production HTML comes from
-`scripts/build-ui.mjs`.
+`scripts/build-panel.mjs`.
 
 The page embeds the real panel in an iframe through the official `AppBridge`.
 Use **Data: fixtures** for UI checks without a service; prepared fixtures cannot
@@ -183,7 +183,7 @@ scope; theme, display mode, width and host capabilities can be varied. The
 **Inspector** exposes the bridge log, host settings and icon catalog.
 
 [UI verification](ui-verification.md) documents the browser workflow, fixture
-catalogue and host controls. Fixtures in `ui/dev/preview/` are excluded from the
+catalogue and host controls. Fixtures in `dev/panel/scenarios/` are excluded from the
 production bundle. Most calls use browser fixtures; Changes and worktree calls
 in `FIXTURE_SERVICE_TOOLS` run real service code against disposable repositories
 on Vite. Source edits rebuild these repositories on the next call, and the
@@ -212,11 +212,13 @@ reproduced, so confirm layout-sensitive changes in Codex before release.
 
 ## Recorded fixtures
 
-Besides the fixtures built with the typed builder in `ui/dev/preview/fixtures.ts`,
-the preview can show tasks recorded from real runs, in `ui/dev/preview/recorded/`.
+Besides the fixtures built with the typed builder in `dev/panel/scenarios/timeline.ts`,
+the preview can show tasks recorded from real runs, in `dev/panel/recorded/`.
+Scenario modules live in `dev/panel/scenarios/`; `fixtures.ts` assembles the
+registry used by the dev host and replay tests.
 Their SDK messages come from a real Claude run, so they show exactly what the
 SDK sends, which built fixtures can only approximate.
-`ui/dev/preview/preview-sdk-fixtures.test.ts` replays them through the provider
+`dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays them through the provider
 like the built ones.
 
 Record a task from any service database (the service's, the demo's, or a
@@ -226,13 +228,13 @@ temporary one such as `scripts/verify-live-claude.mjs` creates):
 npm run fixture:record -- --db <tasks.sqlite> --task <task id> --name <name> --title "Recorded: <what it shows>" --start 2026-10-02T11:40:00.000Z --first-id 3400
 ```
 
-It writes `ui/dev/preview/recorded/<name>.json` for task `preview-recorded-<name>`
+It writes `dev/panel/recorded/<name>.json` for task `preview-recorded-<name>`
 in the `dev-thread` thread and the `/demo/project` project. Then import the file
 in `fixtures.ts` and add it to `recordedFixtures`. Choose a `--first-id` past the
 other fixtures' event ids (the recorded ones start at 3000, a hundred apart), and
 a `--start` that keeps the task where you want it in the newest-first list.
 
-Recording (`recordFixture` in `ui/dev/preview/recording.ts`) sanitizes the run so
+Recording (`recordFixture` in `dev/panel/recording/recording.ts`) sanitizes the run so
 the file can be committed:
 
 - Paths (the repository, the workspace and the run's directory, the home and
@@ -293,9 +295,9 @@ requests: create tasks, send follow-ups, answer questions and interrupt turns.
 The explicit connection overrides keep Vite from using a different service
 configured in `.env`.
 
-The fixture worker (`dev/fixture-provider.ts`) and demo entry
-(`dev/demo-service.ts`, run through `tsx`) are in `dev/`, outside the `src/`
-build and the distributed package. Tests also import the fixture worker.
+The fixture worker (`dev/service/fixture-provider.ts`) and demo entry
+(`dev/service/demo-service.ts`, run through `tsx`) are in `dev/`, excluded from
+production bundles and the distributed package. Tests also import the fixture worker.
 It streams its reply in small pieces before storing it.
 Markers in a turn's prompt shape the turn: `[input]` asks a question, `[fail]`
 fails, `[slow]` runs several steps that each take pending steers, as at a tool
@@ -303,13 +305,14 @@ boundary, and `[late]` takes none, so they're left for the next turn.
 
 ## What reloads when
 
-| Change                              | To see it                                                         |
-| ----------------------------------- | ----------------------------------------------------------------- |
-| `ui/` in the dev host               | Nothing: Fast Refresh applies it                                  |
-| `ui/` in Codex or the console       | `npm run build`, then reopen the panel or reload the page         |
-| `src/`                              | Restart the service (`npm start` after a build, or `npm run dev`) |
-| Tool metadata or panel resource URI | Restart the service, then reload the MCP connection in Codex      |
-| `.env` or `vite.config.ts`          | Restart the affected processes                                    |
+| Change                               | To see it                                                         |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| `src/panel/` in the dev host         | Nothing: Fast Refresh applies it                                  |
+| `src/panel/` in Codex or the console | `npm run build`, then reopen the panel or reload the page         |
+| `src/service/`                       | Restart the service (`npm start` after a build, or `npm run dev`) |
+| `src/shared/`                        | Refresh the panel as above and restart the service                |
+| Tool metadata or panel resource URI  | Restart the service, then reload the MCP connection in Codex      |
+| `.env` or `vite.config.ts`           | Restart the affected processes                                    |
 
 The service reads panel HTML from `dist/` on each resource request, so rebuilt
 UI needs no service restart.
@@ -320,18 +323,19 @@ UI needs no service restart.
 the service with `tsc --noEmit`, then runs two builds that write into `dist/` without removing each other's
 output:
 
-- `scripts/build-backend.mjs` bundles `src/main.ts`, `src/stdio.ts` and
-  `src/projects-cli.ts` with esbuild into `dist/main.js`, `dist/stdio.js`,
+- `scripts/build-service.mjs` bundles `src/service/main.ts`, `src/service/stdio.ts` and
+  `src/service/projects-cli.ts` with esbuild into `dist/main.js`, `dist/stdio.js`,
   `dist/projects-cli.js` and shared `dist/chunks/`. Every package, the Claude
   Agent SDK included, is bundled; only Node built-ins stay external, so the
-  package needs no `node_modules`. The build fails if code from `dev/`, `ui/`,
+  package needs no `node_modules`. The build fails if code from `dev/`, `src/panel/`,
   `tests/` or a test file reaches the bundle, or if anything else is left
   external. It writes the bundled packages' licenses to
   `dist/THIRD_PARTY_LICENSES.txt`.
-- `scripts/build-ui.mjs` builds the panel into `dist/app.html`.
+- `scripts/build-panel.mjs` builds the panel into `dist/app.html`. It rejects
+  service, development and test code in the production bundle.
 
 The package ships no Claude Code binary. Every Claude launch, `npm run dev`
-included, runs the installed CLI that `src/features/providers/claude/executable.ts`
+included, runs the installed CLI that `src/service/features/providers/claude/configuration/executable.ts`
 finds and validates; see [Claude Code CLI](claude-cli.md).
 
 The bundle ships source maps without embedded sources. `npm start`, `mcp.json`
@@ -349,12 +353,12 @@ runs model discovery through it.
 ## Database
 
 The service and the projects CLI share `<data directory>/console.sqlite`.
-`openDatabase` in `src/platform/database/database.ts` opens it, sets WAL,
+`openDatabase` in `src/service/platform/database/database.ts` opens it, sets WAL,
 foreign keys and a 5-second busy timeout, and applies pending migrations
 before any feature reads it.
 
 - Each feature declares its tables with Drizzle in its own `schema.ts`;
-  `src/platform/database/schema.ts` collects them for drizzle-kit.
+  `src/service/platform/database/schema.ts` collects them for drizzle-kit.
 - Each feature queries only its own tables, through the shared `Database`:
   tasks and events in `tasks/store.ts`, form requests in
   `tasks/form-requests.ts`, webhooks in `events/storage.ts`, and settings and
@@ -362,7 +366,7 @@ before any feature reads it.
   through `Store`. Queries use Drizzle; raw SQL is kept where it is clearer,
   such as the JSON predicates in `Store.chatEvents`.
 - JSON columns are checked when read (`decodeStored` in
-  `src/platform/database/decode.ts`, with each feature's schema). A malformed
+  `src/service/platform/database/decode.ts`, with each feature's schema). A malformed
   record fails with an error naming it, and is never dropped or given
   defaults. The schemas check the fields ownership and control flow rely on
   and pass the rest, such as provider state and event data, through
@@ -375,7 +379,7 @@ before any feature reads it.
   table for many column changes, and data backfills need a custom migration
   (`npx drizzle-kit generate --custom --name <change>`). Never edit a
   migration once it is committed.
-- `src/platform/database/migrate.ts` applies migrations in one
+- `src/service/platform/database/migrate.ts` applies migrations in one
   `BEGIN IMMEDIATE` transaction and records them in Drizzle's
   `__drizzle_migrations` ledger, so a service and a CLI starting together
   migrate once. It refuses a database whose ledger names a migration this
@@ -383,7 +387,7 @@ before any feature reads it.
 - Databases from before versioned migrations are not upgraded: startup
   refuses them and asks for the data directory to be deleted. In a checkout,
   `npm run db:migrate-legacy -- [--dry-run] [<data directory>]` converts one
-  instead (`dev/migrate-legacy-database.ts`). Stop the service first. It
+  instead (`dev/database/migrate-legacy-database.ts`). Stop the service first. It
   copies every record into a new database, keeping event ids and filling in
   the task references,
   checks each record as the service would, and keeps the old file as
@@ -408,7 +412,7 @@ clients through `Last-Event-ID`).
 
 ### Qualifying Claude Code versions
 
-`claudeCliSupport` in `src/features/providers/claude/executable.ts` holds the
+`claudeCliSupport` in `src/service/features/providers/claude/configuration/executable.ts` holds the
 supported range beside the Agent SDK version it was qualified with. A test fails
 when the installed SDK no longer matches that version, so an SDK update
 re-qualifies the range. Qualify a version before adding it:
@@ -461,10 +465,15 @@ npm test
 ```
 
 `npm run typecheck` runs the read-only `schemas:check` before checking the service,
-UI, tests, and Vite configs. `npm test` uses Vitest (`vitest.config.ts`); its
+panel, shared modules, development tooling, tests, and Vite configs. `npm test` uses Vitest (`vitest.config.ts`); its
 `pretest` checks schema freshness, formatting, and linting, then builds. Fix
 formatting with `npm run format`. ESLint (`eslint.config.js`) checks TypeScript
 code quality and React hook rules; explicit `any` is allowed only in tests.
+The `project/source-boundaries` rule in `scripts/lint/source-boundaries.mjs`
+resolves import targets before enforcing the runtime ownership described in
+[Architecture](architecture.md#code-ownership). Service-owned panel integration
+under `src/service/platform/panel/` remains service code. Run `npm run lint`
+after moving modules to catch accidental imports across runtime boundaries.
 
 `npm run dev` regenerates schemas at startup. `npm run test:watch` reruns affected
 tests on save without the preflight: run `npm run schemas:generate` after contract

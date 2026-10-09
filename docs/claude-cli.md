@@ -6,7 +6,7 @@ Claude tasks run your installed `claude`. The package doesn't include one, and t
 
 The service supports Claude Code 2.1.285–2.1.295. The range covers the version the bundled Agent SDK pairs with, the stable and latest releases when the range was qualified, plus 2.1.285. This checkout qualifies the range against Agent SDK 0.3.293. [Qualifying Claude Code versions](development.md#qualifying-claude-code-versions) describes how the range is widened.
 
-The supported range is defined in `src/features/providers/claude/executable.ts`; it is an extension compatibility boundary, not a claim about the latest upstream release. Both older and newer versions are rejected. Use the readiness message to choose an installation or path override.
+The supported range is defined in `src/service/features/providers/claude/configuration/executable.ts`; it is an extension compatibility boundary, not a claim about the latest upstream release. Both older and newer versions are rejected. Use the readiness message to choose an installation or path override.
 
 ## Which `claude` runs
 

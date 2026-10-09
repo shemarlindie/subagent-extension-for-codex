@@ -10,7 +10,7 @@ behavior and activation see [Codex panel](codex-panel.md).
 
 ## Display modes and native extension surfaces
 
-`src/platform/panel/panel.ts` advertises `inline` and `fullscreen` and prefers
+`src/service/platform/panel/panel.ts` advertises `inline` and `fullscreen` and prefers
 `inline`. `open_codex_subagent_extension` exposes the thread entrypoint;
 `open_codex_subagent_extension_global` is app-only and exposes the global
 entrypoint. Task creation also attaches the panel resource and selects the new

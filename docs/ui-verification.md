@@ -20,9 +20,10 @@ recording are in [Local development](development.md#panel-dev-host).
    checking them. Worktree actions mutate temporary fixture repositories; a
    Vite restart or service-source edit rebuilds them.
 
-Build new events with the typed builder in `ui/dev/preview/fixtures.ts`, or
+Build new events with the typed builder in `dev/panel/scenarios/timeline.ts`, or
 [record them](development.md#recorded-fixtures). Add a fixture for every new
-activity row/event kind. `preview-sdk-fixtures.test.ts` replays built and
+activity row/event kind in its owning scenario module, and register it in
+`dev/panel/scenarios/fixtures.ts`. `preview-sdk-fixtures.test.ts` replays built and
 recorded fixtures through the provider.
 
 ## Scope and host controls
@@ -66,7 +67,7 @@ recorded fixtures through the provider.
 | Speed up the production build            | 60-file uncommitted diff; removal asks before discarding changes.                                                                                |
 | Profile the production build             | Large added files and multiple pages of diff/file previews.                                                                                      |
 
-Changes fixtures in `ui/dev/preview/change-fixtures.ts` use real temporary Git
+Changes fixtures in `dev/panel/scenarios/change-fixtures.ts` use real temporary Git
 repositories. `large-files.ts` supplies the 60-file diff, minified JSON,
 20,000-row CSV, 30,000-line log, long Markdown, single 250 KB line, and SVG over
 64 KiB that displays as source.

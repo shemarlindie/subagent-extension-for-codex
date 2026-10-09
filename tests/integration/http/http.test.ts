@@ -10,14 +10,15 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { test } from "vitest";
 
-import { FixtureProvider } from "../../../dev/fixture-provider.js";
-import { Control } from "../../../src/features/tasks/control.js";
-import { Store } from "../../../src/features/tasks/store.js";
-import { Workspaces } from "../../../src/features/workspaces/workspace.js";
-import { application } from "../../../src/platform/server/app.js";
-import { Auth } from "../../../src/platform/server/auth.js";
-import type { ModelChoice } from "../../../src/shared/contracts.js";
-import { now, startSchema } from "../../../src/shared/contracts.js";
+import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import { Control } from "../../../src/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
+import { application } from "../../../src/service/platform/server/app.js";
+import { Auth } from "../../../src/service/platform/server/auth.js";
+import type { ModelChoice } from "../../../src/shared/providers/types.js";
+import { startSchema } from "../../../src/shared/tasks/model.js";
+import { now } from "../../../src/shared/time.js";
 import { waitForListening } from "../../support/helpers.js";
 
 // Panel tools return loosely shaped structured content; tests narrow each field.
@@ -1099,7 +1100,9 @@ test("SSE requires authentication, replays owned events in global cursor order a
 });
 
 test("MCP 2.0 discovers events and serves tools/resources on the same authenticated endpoint", async () => {
-  const { Events } = await import("../../../src/features/events/service.js");
+  const { Events } =
+    await import("../../../src/service/features/events/service.js");
+
   const dir = await mkdtemp(join(tmpdir(), "ac-modern-"));
 
   const provider = Object.assign(new FixtureProvider(), {

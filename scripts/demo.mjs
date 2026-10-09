@@ -51,10 +51,10 @@ execFileSync(process.execPath, ["dist/projects-cli.js", "register", repo], {
 });
 
 // The fixture worker is development-only, so the demo runs the dev entry
-// (dev/demo-service.ts) through tsx rather than the shipped dist/main.js.
+// (dev/service/demo-service.ts) through tsx rather than the shipped dist/main.js.
 const child = spawn(
   process.execPath,
-  ["--import", "tsx", "dev/demo-service.ts"],
+  ["--import", "tsx", "dev/service/demo-service.ts"],
   { stdio: "inherit", env },
 );
 

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { Task } from "../../../src/shared/contracts";
 import {
   codexMeta,
   fixtureCall,
@@ -12,8 +11,9 @@ import {
   settingsFrom,
   threadLabel,
   threadsOf,
-} from "../../../ui/dev/host-helpers";
-import { PREVIEW_THREAD } from "../../../ui/dev/preview/fixtures";
+} from "../../../dev/panel/host/host-helpers";
+import { PREVIEW_THREAD } from "../../../dev/panel/scenarios/fixtures";
+import type { Task } from "../../../src/shared/tasks/model";
 
 const defaults: Settings = {
   source: "fixtures",

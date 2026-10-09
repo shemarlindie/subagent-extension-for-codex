@@ -8,11 +8,11 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "tsx --env-file-if-exists=.env src/main.ts",
+    "dev": "tsx --env-file-if-exists=.env src/service/main.ts",
     "start": "node --enable-source-maps --env-file-if-exists=.env dist/main.js",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "build": "npm run schemas:generate && npm run clean && tsc --noEmit && node scripts/build-backend.mjs && node scripts/build-ui.mjs",
-    "typecheck": "npm run schemas:check && tsc --noEmit && tsc -p ui/tsconfig.json && tsc -p tsconfig.test.json",
+    "build": "npm run schemas:generate && npm run clean && tsc --noEmit && node scripts/build-service.mjs && node scripts/build-panel.mjs",
+    "typecheck": "npm run schemas:check && tsc --noEmit && tsc -p tsconfig.panel.json && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "mcp": "node --enable-source-maps dist/stdio.js",
     "demo": "npm run build && node scripts/demo.mjs",
@@ -25,9 +25,9 @@
     "format:check": "prettier --check .",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "fixture:record": "tsx ui/dev/preview/record-fixture.ts",
+    "fixture:record": "tsx dev/panel/recording/record-fixture.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate-legacy": "tsx --env-file-if-exists=.env dev/migrate-legacy-database.ts",
+    "db:migrate-legacy": "tsx --env-file-if-exists=.env dev/database/migrate-legacy-database.ts",
     "schemas:generate": "node scripts/generate-schemas.mjs",
     "schemas:check": "node scripts/generate-schemas.mjs --check",
     "predev": "npm run schemas:generate"
@@ -90,6 +90,7 @@
   ],
   "allowScripts": {
     "esbuild@0.28.2": true,
-    "fsevents@2.3.3": true
+    "fsevents@2.3.3": true,
+    "esbuild@0.25.12": true
   }
 }

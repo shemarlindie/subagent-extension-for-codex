@@ -3,11 +3,6 @@ import assert from "node:assert/strict";
 
 import { describe, test, type TestContext, vi } from "vitest";
 
-import type { InputPresentation } from "../../../src/features/tasks/model.js";
-import type {
-  ChangedFileContent,
-  Changes,
-} from "../../../ui/features/changes/types";
 import type {
   HostState,
   Project,
@@ -15,7 +10,12 @@ import type {
   Task,
   Transport,
   TransportEvents,
-} from "../../../ui/shared/state/types";
+} from "../../../src/panel/app/state/types";
+import type {
+  ChangedFileContent,
+  Changes,
+} from "../../../src/panel/features/changes/types";
+import type { InputPresentation } from "../../../src/shared/tasks/model.js";
 
 // UI primitives read browser capabilities at module initialization.
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -41,10 +41,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 
-import { AppShell } from "../../../ui/app/shells/app-shell";
-import { SKIPPED_ANSWER } from "../../../ui/features/tasks/controls/question-form";
-import { Controller } from "../../../ui/shared/state/controller";
-import { ControllerContext } from "../../../ui/shared/state/controller-context";
+import { AppShell } from "../../../src/panel/app/app-shell";
+import { Controller } from "../../../src/panel/app/state/controller";
+import { ControllerContext } from "../../../src/panel/app/state/controller-context";
+import { SKIPPED_ANSWER } from "../../../src/panel/features/tasks/controls/question-form";
 
 const executionPresentation: InputPresentation = {
   description:

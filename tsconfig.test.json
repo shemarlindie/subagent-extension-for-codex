@@ -1,5 +1,5 @@
 {
-  "extends": "./ui/tsconfig.json",
+  "extends": "./tsconfig.panel.json",
   "compilerOptions": {
     "lib": ["ES2024", "DOM"],
     // vite.config.ts imports its plugin with the extension Node's native loader needs.
@@ -7,13 +7,12 @@
   },
   "exclude": [],
   "include": [
-    "tests/**/*.ts",
+    "tests",
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
-    "ui/**/*.test.ts",
-    "ui/**/*.test.tsx",
-    "dev/**/*.ts",
+    "dev",
     "vite.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "drizzle.config.ts"
   ]
 }

@@ -6,11 +6,11 @@ import { DatabaseSync } from "node:sqlite";
 
 import { test, type TestContext } from "vitest";
 
-import { migrateLegacyDatabase } from "../../../dev/migrate-legacy-database.js";
-import { Settings } from "../../../src/features/settings/settings.js";
-import { Store } from "../../../src/features/tasks/store.js";
-import { openDatabase } from "../../../src/platform/database/database.js";
-import { startSchema, type Task } from "../../../src/shared/contracts.js";
+import { migrateLegacyDatabase } from "../../../dev/database/migrate-legacy-database.js";
+import { Settings } from "../../../src/service/features/settings/settings.js";
+import { Store } from "../../../src/service/features/tasks/storage/store.js";
+import { openDatabase } from "../../../src/service/platform/database/database.js";
+import { startSchema, type Task } from "../../../src/shared/tasks/model.js";
 
 // The schema every feature created in its constructor before versioned
 // migrations (commit c40cb73).

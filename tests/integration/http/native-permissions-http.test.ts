@@ -8,14 +8,14 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { test, type TestContext } from "vitest";
 
-import { FixtureProvider } from "../../../dev/fixture-provider.js";
-import { claudeTaskPolicy } from "../../../src/features/providers/claude/task-policy.js";
-import { claudeMetadata } from "../../../src/features/providers/metadata.js";
-import { Control } from "../../../src/features/tasks/control.js";
-import { Store } from "../../../src/features/tasks/store.js";
-import { Workspaces } from "../../../src/features/workspaces/workspace.js";
-import { application } from "../../../src/platform/server/app.js";
-import { Auth } from "../../../src/platform/server/auth.js";
+import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import { claudeTaskPolicy } from "../../../src/service/features/providers/claude/configuration/task-policy.js";
+import { Control } from "../../../src/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
+import { application } from "../../../src/service/platform/server/app.js";
+import { Auth } from "../../../src/service/platform/server/auth.js";
+import { claudeMetadata } from "../../../src/shared/providers/metadata.js";
 import { waitForListening } from "../../support/helpers.js";
 
 const parentMeta = {
@@ -274,7 +274,7 @@ test("stdio proxy starts tasks through the bearer-authenticated HTTP boundary wi
     await client.connect(
       new StdioClientTransport({
         command: process.execPath,
-        args: ["--import", "tsx", resolve("src/stdio.ts")],
+        args: ["--import", "tsx", resolve("src/service/stdio.ts")],
         env: {
           ...Object.fromEntries(
             Object.entries(process.env).filter(

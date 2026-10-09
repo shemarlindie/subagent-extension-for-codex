@@ -4,15 +4,19 @@ import { resolve } from "node:path";
 import { createServer } from "vite";
 import { afterAll, test } from "vitest";
 
-import { fixtureServicePlugin } from "../../../dev/fixture-service-plugin.js";
+import { fixtureServicePlugin } from "../../../dev/panel/fixture-service/plugin.js";
+import { largeFiles } from "../../../dev/panel/scenarios/large-files.js";
 import type {
   ChangedFileContent,
   Changes,
-} from "../../../src/features/workspaces/changes.js";
-import { largeFiles } from "../../../ui/dev/preview/large-files.js";
+} from "../../../src/shared/workspaces/changes.js";
 
 const projectRoot = resolve(import.meta.dirname, "../../..");
-const serviceModule = resolve(projectRoot, "ui/dev/fixture-service.ts");
+
+const serviceModule = resolve(
+  projectRoot,
+  "dev/panel/fixture-service/service.ts",
+);
 
 let server: Awaited<ReturnType<typeof createServer>> | undefined;
 let origin: string;
@@ -34,7 +38,7 @@ async function fixtureServer() {
   const created = await createServer({
     configFile: false,
     appType: "custom",
-    root: resolve(projectRoot, "ui/dev"),
+    root: resolve(projectRoot, "dev/panel/host"),
     plugins: [fixtureServicePlugin()],
     server: { host: "127.0.0.1", port: 0, strictPort: true },
   });
@@ -58,7 +62,7 @@ test("the Vite fixture-service route parses requests and returns tool results", 
 
   // No tool is served yet, so serve one for this test in the server's module graph.
   const helpers = (await created.ssrLoadModule(
-    resolve(projectRoot, "ui/dev/host-helpers.ts"),
+    resolve(projectRoot, "dev/panel/host/host-helpers.ts"),
   )) as { FIXTURE_SERVICE_TOOLS: string[] };
 
   helpers.FIXTURE_SERVICE_TOOLS.push("list_agent_tasks");

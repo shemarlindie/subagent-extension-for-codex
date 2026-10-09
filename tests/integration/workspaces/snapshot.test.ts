@@ -14,11 +14,11 @@ import { join } from "node:path";
 
 import { test } from "vitest";
 
-import { FixtureProvider } from "../../../dev/fixture-provider.js";
-import { Control } from "../../../src/features/tasks/control.js";
-import { Store } from "../../../src/features/tasks/store.js";
-import { Workspaces } from "../../../src/features/workspaces/workspace.js";
-import type { RunContext } from "../../../src/shared/contracts.js";
+import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import type { RunContext } from "../../../src/service/features/providers/types.js";
+import { Control } from "../../../src/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 
 async function setup() {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "agent-snapshot-")));

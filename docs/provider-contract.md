@@ -1,6 +1,6 @@
 # Built-in provider contract
 
-Providers implement `Provider` in `src/features/providers/types.ts`. Registration is explicit in `src/features/providers/config.ts`; this is an internal contract, not a dynamic plugin API.
+Providers implement `Provider` in `src/service/features/providers/types.ts`. Registration is explicit in `src/service/features/providers/config.ts`; this is an internal contract, not a dynamic plugin API.
 
 The shared control plane owns queues, dependencies, concurrency, workspace creation and snapshots, budget checks, task ownership, persistence, input serialization, and the conversation: messages, pending steers, the queue and drafts. Providers own model discovery, native execution, session creation/deletion, and native permissions.
 

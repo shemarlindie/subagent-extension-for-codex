@@ -36,23 +36,59 @@ provider; provider discovery reports actual enabled capabilities.
 
 ## Code ownership
 
-| Area                       | Responsibility                                                    |
-| -------------------------- | ----------------------------------------------------------------- |
-| `src/features/tasks`       | Task lifecycle, scheduling, messages, replies, forms and activity |
-| `src/features/providers`   | Provider contracts, settings, task policy and Claude integration  |
-| `src/features/projects`    | Approved roots, registration and host-project policy              |
-| `src/features/workspaces`  | Git workspaces, snapshots and change inspection                   |
-| `src/features/events`      | Durable events, subscriptions and webhook delivery                |
-| `src/features/settings`    | User defaults and settings document                               |
-| `src/platform/server`      | HTTP/MCP authentication, transport and tool dispatch              |
-| `src/platform/panel`       | Embedded resource, launch scope and optional host context         |
-| `src/platform/service`     | Local runtime paths, launcher, lease and startup                  |
-| `src/platform/database`    | SQLite connection, migrations and transactions                    |
-| `ui/features`, `ui/shared` | Feature UI and shared platform integrations                       |
+| Area                                     | Responsibility                                                               |
+| ---------------------------------------- | ---------------------------------------------------------------------------- |
+| `src/service/features/tasks`             | Task lifecycle, scheduling, draft delivery, input and storage                |
+| `src/service/features/providers`         | Provider contracts, settings, task policy and Claude integration             |
+| `src/service/features/projects`          | Approved roots, registration and host-project policy                         |
+| `src/service/features/workspaces`        | Git workspaces, snapshots and change inspection                              |
+| `src/service/features/events`            | Durable events, subscriptions and webhook delivery                           |
+| `src/service/features/settings`          | User defaults and settings document                                          |
+| `src/service/platform/server`            | HTTP/MCP authentication, transport and tool dispatch                         |
+| `src/service/platform/panel`             | Embedded resource, launch scope and optional host context                    |
+| `src/service/platform/service`           | Local runtime paths, launcher, lease and startup                             |
+| `src/service/platform/database`          | SQLite connection, migrations and transactions                               |
+| `src/panel/features`, `src/panel/shared` | Feature UI and reusable panel components and integrations                    |
+| `src/shared/<feature>`                   | Browser-safe contracts and pure domain functions shared by service and panel |
 
-Features own their domain types and focused tests. Shared code should contain
-stable cross-feature concepts or platform boundaries. See [React UI](react-ui.md)
-for client architecture and [Provider contract](provider-contract.md) for adapters.
+Production source lives under `src/`, with separate runtime boundaries:
+
+- `src/service/` owns Node execution, persistence, Git operations and server
+  transports. Its entrypoints build the existing `dist/main.js`, `dist/stdio.js`
+  and `dist/projects-cli.js` outputs.
+- `src/panel/` owns the browser application. Application composition and state
+  live in `app/`; domain presentation lives in `features/`; reusable panel
+  primitives and helpers live in `shared/`.
+- `src/shared/<feature>/` owns browser-safe contracts and pure domain functions
+  used by both runtimes. Import these feature modules directly. Shared modules
+  must not depend on service execution or panel rendering. Panel and shared
+  modules cannot import Node built-ins; shared modules also exclude Claude SDK
+  execution and database runtime dependencies.
+
+ESLint enforces these production import boundaries against resolved source
+paths, including re-exports, dynamic imports and type imports. Neither runtime
+imports development or test code. Colocated tests can cross these boundaries
+for fixtures and verification. Production builds also reject dependencies from
+the opposing runtime, development tooling and tests. See
+[Checks](development.md#checks) for the validation commands.
+
+The service task feature groups scheduling and execution in `runtime/`,
+questions, permissions and forms in `input/`, durable records in `storage/`,
+and draft delivery and message polling in `conversation/`. Input can be answered
+by the user or an authorized parent agent. Claude integration groups execution
+and session handling in `runtime/`, SDK event translation in `events/`, and
+executable selection and policy in `configuration/`. Browser-safe provider
+options, settings and presentation remain in `src/shared/providers/`.
+
+Development tooling lives outside production source. `dev/panel/` separates
+host controls, scenarios, recording, recorded data and the fixture service.
+`dev/service/` owns the demo worker and service, and `dev/database/` owns the
+legacy migration utility. Focused tests stay beside their owning modules;
+`tests/integration/` covers runtime and environment boundaries.
+
+See [React UI](react-ui.md) for panel architecture,
+[Local development](development.md) for tooling and
+[Provider contract](provider-contract.md) for adapters.
 
 ## Durable tasks and turns
 

@@ -144,8 +144,9 @@ be distinguished from later edits and the service reports that limitation.
 Snapshots use a temporary Git index without changing the user's index or files.
 They write blob/tree objects and pin task baselines under
 `refs/agent-tasks/<task-id>/`; deleting a worktree task's branch removes its
-snapshot refs. See `src/features/workspaces/changes.ts` for snapshot and paging
-implementation.
+snapshot refs. See `src/service/features/workspaces/changes.ts` for snapshot and paging
+implementation; the browser-safe change contract lives in
+`src/shared/workspaces/changes.ts`.
 
 Files expand into complete diffs and previews. Binary files show size; images
 can preview, deleted files show Deleted. Large content renders in deferred row

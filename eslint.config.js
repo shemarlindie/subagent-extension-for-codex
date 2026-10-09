@@ -9,6 +9,8 @@ import simpleImportSort from "eslint-plugin-simple-import-sort";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+import { sourceBoundaries } from "./scripts/lint/source-boundaries.mjs";
+
 export default defineConfig(
   { ignores: ["dist/", ".codex-subagent-extension/", "node_modules/"] },
   js.configs.recommended,
@@ -87,7 +89,7 @@ export default defineConfig(
     },
   },
   {
-    files: ["ui/**/*.{ts,tsx}"],
+    files: ["src/panel/**/*.{ts,tsx}", "dev/panel/host/**/*.{ts,tsx}"],
     languageOptions: { globals: { ...globals.browser } },
     // Classic hook rules only: the React Compiler rules misread
     // react-hook-form's field objects as refs, and the compiler is not used.
@@ -103,10 +105,15 @@ export default defineConfig(
       "tests/**/*.ts",
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
-      "ui/**/*.test.ts",
-      "ui/**/*.test.tsx",
+      "dev/**/*.test.ts",
+      "dev/**/*.test.tsx",
     ],
     rules: { "@typescript-eslint/no-explicit-any": "off" },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: { project: { rules: { "source-boundaries": sourceBoundaries } } },
+    rules: { "project/source-boundaries": "error" },
   },
   prettier,
 );

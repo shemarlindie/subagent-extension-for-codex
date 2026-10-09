@@ -33,7 +33,7 @@ Read the matching guide's relevant sections before working in an area; unrelated
 Check in the browser when a change is large, when seeing it would help, or when the user asks. Skip small changes that tests cover.
 
 - Follow [UI verification](docs/ui-verification.md) for dev-server setup, fixture cases, host controls and browser measurements. Use fixture data; use live data only for behavior fixtures cannot show, and do not start tasks in live mode.
-- Build preview events with the typed builder or [record them](docs/development.md#recorded-fixtures) with `npm run fixture:record`. Add a fixture for every new event or activity row kind; `ui/dev/preview/preview-sdk-fixtures.test.ts` replays synthetic and recorded events through the provider.
+- Build preview events with the typed builder in `dev/panel/scenarios/timeline.ts` or [record them](docs/development.md#recorded-fixtures) with `npm run fixture:record`. Add a fixture for every new event or activity row kind; `dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays synthetic and recorded events through the provider.
 - Start or restart a needed dev server without asking for permission and notify the user. Otherwise leave existing servers running.
 
 ## Documentation style
@@ -46,7 +46,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
 
 ## Component and change conventions
 
-- Organize modules around feature ownership and reasons to change. Keep feature logic, types, UI and styles together; group subfolders by responsibility rather than file type. Put UI domain logic in `ui/features` and reusable generic helpers in `ui/shared/utils`. Limit shared code to stable cross-feature concepts and platform integrations.
+- Organize modules around feature ownership and reasons to change. Keep feature logic, types, UI and styles together; group subfolders by responsibility rather than file type. Put UI domain logic in `src/panel/features` and reusable generic helpers in `src/panel/shared/utils`. Keep browser-safe contracts and domain functions used by both runtimes in feature-scoped `src/shared` modules; these must not import service execution or panel rendering. Keep application composition and state in `src/panel/app/state`. Limit panel shared code to stable cross-feature concepts and platform integrations.
 - Keep focused tests beside their owning modules; reserve integration suites for behavior that crosses feature, process, host, or environment boundaries.
 - Keep components focused on rendering; extract reusable helpers into their owning modules. Split oversized files by responsibility and keep one React component per file unless splitting adds needless indirection. Use kebab-case component filenames.
 - Prefer named prop and state types over inline object types.

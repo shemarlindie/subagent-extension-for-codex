@@ -20,13 +20,13 @@ import { test, type TestContext } from "vitest";
 const repository = fileURLToPath(new URL("../../../", import.meta.url));
 
 const contracts = [
-  "src/features/events/subscription-contract",
-  "src/features/settings/document-contract",
-  "src/platform/panel/panel-contract",
-  "src/features/providers/claude/task-options-contract",
+  "src/service/features/events/subscription-contract",
+  "src/shared/settings/document-contract",
+  "src/shared/panel/panel-contract",
+  "src/shared/providers/claude/task-options-contract",
 ];
 
-const panelContract = "src/platform/panel/panel-contract.ts";
+const panelContract = "src/shared/panel/panel-contract.ts";
 
 function fixture(t: TestContext) {
   const directory = mkdtempSync(join(tmpdir(), "schema-generation-"));
@@ -36,10 +36,11 @@ function fixture(t: TestContext) {
   for (const file of [
     "scripts/generate-schemas.mjs",
     "eslint.config.js",
+    "scripts/lint/source-boundaries.mjs",
     "package.json",
     ...contracts.map((contract) => `${contract}.ts`),
-    "src/features/providers/claude/permissions.ts",
-    "src/features/providers/claude/schema-generation.mjs",
+    "src/shared/providers/claude/permissions.ts",
+    "src/shared/providers/claude/schema-generation.mjs",
   ]) {
     const destination = join(directory, file);
 
@@ -156,7 +157,7 @@ test("maps cross-folder contract imports to generated validators using module se
 
   writeFileSync(
     file,
-    `import type { SettingOption } from "../../features/settings/document-contract.js";\n${source.replace(
+    `import type { SettingOption } from "../settings/document-contract.js";\n${source.replace(
       "export interface PanelOutput {",
       "export interface PanelOutput {\n  options?: SettingOption[];",
     )}`,
@@ -173,7 +174,7 @@ test("maps cross-folder contract imports to generated validators using module se
 
   assert.match(
     output,
-    /import \{ settingOptionSchema \} from "\.\.\/\.\.\/features\/settings\/document-contract\.generated\.js"/,
+    /import \{ settingOptionSchema \} from "\.\.\/settings\/document-contract\.generated\.js"/,
   );
 
   assert.match(
@@ -188,7 +189,7 @@ test("maps cross-folder contract imports to generated validators using module se
 
 test("discovers nested feature contracts and reports missing outputs without writing in check mode", (t) => {
   const directory = fixture(t);
-  const feature = join(directory, "src/features/new-feature/nested");
+  const feature = join(directory, "src/service/features/new-feature/nested");
   const output = join(feature, "message-contract.generated.ts");
   const initial = generate(directory);
 
@@ -248,7 +249,7 @@ test("rejects checking from a directory without discovered contracts", (t) => {
 
 test("uses feature-owned custom schema names for handwritten validators", (t) => {
   const directory = fixture(t);
-  const feature = join(directory, "src/features/custom");
+  const feature = join(directory, "src/service/features/custom");
 
   mkdirSync(feature, { recursive: true });
 
@@ -303,7 +304,7 @@ export const externalValidator = z.string().min(1);
       "--input-type=module",
       "--eval",
       `import assert from "node:assert/strict";
-import { messageSchema } from "./src/features/custom/message-contract.generated.ts";
+import { messageSchema } from "./src/service/features/custom/message-contract.generated.ts";
 assert.deepEqual(messageSchema.parse({ value: "valid" }), { value: "valid" });
 assert.equal(messageSchema.safeParse({ value: "" }).success, false);
 `,
@@ -324,7 +325,7 @@ test("resolves feature-owned handwritten validator mappings without overwriting 
 
   const permissions = join(
     directory,
-    "src/features/providers/claude/permissions.ts",
+    "src/shared/providers/claude/permissions.ts",
   );
 
   const before = readFileSync(permissions, "utf8");
@@ -351,10 +352,7 @@ test("resolves feature-owned handwritten validator mappings without overwriting 
 test("rejects duplicate mapping inputs through relative aliases before writing outputs", (t) => {
   const directory = fixture(t);
 
-  const config = join(
-    directory,
-    "src/features/duplicate/schema-generation.mjs",
-  );
+  const config = join(directory, "src/shared/duplicate/schema-generation.mjs");
 
   mkdirSync(dirname(config), { recursive: true });
 
@@ -383,10 +381,7 @@ test("rejects duplicate mapping inputs through relative aliases before writing o
 test("rejects handwritten mappings to generated outputs before writing outputs", (t) => {
   const directory = fixture(t);
 
-  const config = join(
-    directory,
-    "src/features/duplicate/schema-generation.mjs",
-  );
+  const config = join(directory, "src/shared/duplicate/schema-generation.mjs");
 
   mkdirSync(dirname(config), { recursive: true });
 
@@ -395,7 +390,7 @@ test("rejects handwritten mappings to generated outputs before writing outputs",
     `export default {
   mappings: [{
     input: "./handwritten.ts",
-    output: "../../platform/panel/panel-contract.generated.ts",
+    output: "../panel/panel-contract.generated.ts",
   }],
 };\n`,
   );

@@ -8,14 +8,14 @@ import { promisify } from "node:util";
 
 import { test } from "vitest";
 
-import { dataDirectory } from "../../../src/platform/service/runtime.js";
+import { dataDirectory } from "../../../src/service/platform/service/runtime.js";
 import { waitForListening } from "../../support/helpers.js";
 
 const exec = promisify(execFile);
 
 // The source launcher runs through tsx; it still starts the built dist/main.js.
 const launcher = new URL(
-  "../../../src/platform/service/launcher.ts",
+  "../../../src/service/platform/service/launcher.ts",
   import.meta.url,
 ).href;
 

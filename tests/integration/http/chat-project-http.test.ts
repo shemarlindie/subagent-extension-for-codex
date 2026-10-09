@@ -11,12 +11,12 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { test, type TestContext } from "vitest";
 
-import { Projects } from "../../../src/features/projects/projects.js";
-import { Control } from "../../../src/features/tasks/control.js";
-import { Store } from "../../../src/features/tasks/store.js";
-import { Workspaces } from "../../../src/features/workspaces/workspace.js";
-import { application } from "../../../src/platform/server/app.js";
-import { Auth } from "../../../src/platform/server/auth.js";
+import { Projects } from "../../../src/service/features/projects/projects.js";
+import { Control } from "../../../src/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
+import { application } from "../../../src/service/platform/server/app.js";
+import { Auth } from "../../../src/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
 
 async function fixture(t: TestContext) {

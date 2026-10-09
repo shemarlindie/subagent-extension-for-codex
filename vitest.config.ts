@@ -11,8 +11,8 @@ export default defineConfig({
       "tests/**/*.test.ts",
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
-      "ui/**/*.test.ts",
-      "ui/**/*.test.tsx",
+      "dev/**/*.test.ts",
+      "dev/**/*.test.tsx",
     ],
     environment: "node",
     environmentOptions: {

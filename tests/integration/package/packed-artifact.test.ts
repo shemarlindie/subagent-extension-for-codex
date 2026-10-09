@@ -22,7 +22,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { afterAll, beforeAll, describe, test, type TestContext } from "vitest";
 
-import type { ProviderReadiness } from "../../../src/features/providers/types.js";
+import type { ProviderReadiness } from "../../../src/shared/providers/types.js";
 import { waitForListening } from "../../support/helpers.js";
 
 const exec = promisify(execFile);
