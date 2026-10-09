@@ -46,6 +46,85 @@ Projects need no startup registration. A chat's project is added when a task
 starts from that chat, and **Add project** or `npm run projects` covers the
 rest (see [Multiple projects](../README.md#multiple-projects-and-packaged-startup)).
 
+## Generated validation schemas
+
+Choose the source of validation according to what the contract owns:
+
+- Plain boundary data shapes use TypeScript contracts and generated Zod schemas.
+  This covers event subscription identity, settings documents, panel output,
+  and Claude start/task options. Edit the feature-owned source types rather
+  than the generated validators.
+- Inputs with transformations, defaults, or substantial validation behavior use
+  handwritten Zod and inferred TypeScript types. Task start, tool inputs,
+  settings updates, stored task validation, and forms/SDK contracts keep this
+  approach.
+- Database row validators derive from Drizzle tables at deserialization
+  boundaries. Internal types that need no runtime validation remain plain
+  TypeScript.
+
+JSDoc supplies rules that ordinary TypeScript types cannot express. For example,
+the subscription contract uses `@strict` to reject extra properties,
+`@format url` to validate URLs, and `@default {}` to fill in omitted filters.
+Contracts describe parsed output; defaults can make an input property optional
+even when it is required in that output.
+
+The runner discovers `src/**/*-contract.ts` automatically, excluding generated
+files and `*-contract.test.ts`. No central registration is needed, and imports
+between discovered contracts resolve to their generated validators.
+
+To add a contract, put exported types in a feature-owned file such as
+`src/features/<feature>/message-contract.ts`:
+
+```ts
+/** @strict */
+export interface Message {
+  body: string;
+}
+```
+
+Run `npm run schemas:generate`. This creates the adjacent
+`message-contract.generated.ts`, exporting `messageSchema`. Call the generated
+validator at the boundary and use the source type for internal code:
+
+```ts
+import { messageSchema } from "./message-contract.generated.js";
+import type { Message } from "./message-contract.js";
+
+export function decodeMessage(input: unknown): Message {
+  return messageSchema.parse(input);
+}
+```
+
+Add focused tests beside the contract for accepted and rejected data and any
+annotation behavior. Run `npm run typecheck`, then commit the source, generated
+file, and tests together. See [Checks](#checks) for the build and watch workflows.
+
+For a handwritten validator, add a feature-owned `schema-generation.mjs` with
+paths relative to that configuration file. Claude's configuration, for example,
+keeps its permission policy in `permissions.ts`:
+
+```js
+export default {
+  mappings: [{ input: "./permissions.ts", output: "./permissions.ts" }],
+};
+```
+
+These configurations run only during schema generation. Each imported type maps
+to its usual camel-case schema name (for example, `PermissionMode` maps to
+`permissionModeSchema`); a mapping can supply `getSchemaName` for another naming
+convention. The runner rejects duplicate mappings, conflicts with generated
+outputs, and permissive `z.any()` fallbacks; see [Troubleshooting](#troubleshooting).
+Do not feed Drizzle inferred types into this generator.
+
+For database rows, `createSelectSchema` from `drizzle-orm/zod` validates returned
+rows at deserialization boundaries, including task event and webhook outbox
+rows. Use `createInsertSchema` when insert validation is needed; it allows fields
+with database defaults to be omitted. These use the same Zod 4 runtime as the
+generated protocol validators. JSON bodies are decoded and validated separately:
+an event subscription's `body` column stores serialized JSON, so its table schema
+validates the string, not the subscription inside it. Schema generation does not
+change database migrations.
+
 ## Run the service
 
 ```sh
@@ -247,8 +326,8 @@ UI needs no service restart.
 
 ## Build
 
-`npm run build` cleans `dist/`, type checks the service with `tsc --noEmit`,
-then runs two builds that write into `dist/` without removing each other's
+`npm run build` regenerates validation schemas, cleans `dist/`, and type checks
+the service with `tsc --noEmit`, then runs two builds that write into `dist/` without removing each other's
 output:
 
 - `scripts/build-backend.mjs` bundles `src/main.ts`, `src/stdio.ts` and
@@ -363,19 +442,31 @@ npm run typecheck
 npm test
 ```
 
-Tests run with Vitest (`vitest.config.ts`). `npm test` runs `npm run format:check`, `npm run lint`, and the build first through `pretest`; `npm run test:watch` reruns affected tests on save without those steps, so run `npm run build` first when a test reads `dist/`.
-Fix formatting failures with `npm run format`. Linting (`eslint.config.js`) checks code quality only: TypeScript recommended rules, React hook rules in `ui/`, and permits explicit `any` only in test files. `npm run typecheck` also covers the tests and Vite configs. The suite is described in the
-[README](../README.md#verification-and-remaining-plan) and
-[React UI architecture](react-ui.md#build-and-verification). Opt-in checks
+`npm run typecheck` runs the read-only `schemas:check` before checking the service,
+UI, tests, and Vite configs. `npm test` uses Vitest (`vitest.config.ts`); its
+`pretest` checks schema freshness, formatting, and linting, then builds. Fix
+formatting with `npm run format`. ESLint (`eslint.config.js`) checks TypeScript
+code quality and React hook rules; explicit `any` is allowed only in tests.
+
+`npm run dev` regenerates schemas at startup. `npm run test:watch` reruns affected
+tests on save without the preflight: run `npm run schemas:generate` after contract
+edits, and build first when a test reads `dist/`.
+
+For suite coverage, see the [README](../README.md#verification-and-remaining-plan)
+and [React UI architecture](react-ui.md#build-and-verification). Opt-in tests
 against real Claude make model calls; see
 [Live Claude checks](../README.md#live-claude-checks).
 
 ## Troubleshooting
 
-| Symptom                                       | Cause                                                                                 |
-| --------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Dev host live mode logs 502                   | The service is not running, or not on the port Vite resolved at startup               |
-| Dev host live mode logs 401                   | Vite and the service use different data directories, so the token does not match      |
-| Codex shows different tasks than the dev host | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                           |
-| Service exits on start                        | Another service owns the data directory, or the port is taken (for example, the demo) |
-| `npm test` fails before running tests         | Formatting (`npm run format`) or lint (`npm run lint`)                                |
+| Symptom                                        | Cause                                                                                               |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Dev host live mode logs 502                    | The service is not running, or not on the port Vite resolved at startup                             |
+| Dev host live mode logs 401                    | Vite and the service use different data directories, so the token does not match                    |
+| Codex shows different tasks than the dev host  | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                                         |
+| Service exits on start                         | Another service owns the data directory, or the port is taken (for example, the demo)               |
+| `npm test` fails before running tests          | Schema freshness, formatting, lint, or build preflight failed; run the checks individually          |
+| Missing or stale generated schema              | Run `npm run schemas:generate`, then `npm run schemas:check`                                        |
+| No schema contracts found under `src`          | Run the command from the project root; check that source files use `*-contract.ts`                  |
+| Permissive validator rejected                  | Put imported types in a discovered `*-contract.ts` file, or add a feature-owned handwritten mapping |
+| Duplicate mapping or generated-output conflict | Remove the duplicate mapping; discovered contracts already map to their generated validators        |

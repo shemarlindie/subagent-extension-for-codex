@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { Task } from "../../shared/contracts.js";
 import { productGlyphIcons } from "../server/product-glyph.js";
 import { type PanelContextInput, panelContextInput } from "./panel-context.js";
+import { panelOutputSchema } from "./panel-contract.generated.js";
 
 // Bump the URI when resource metadata changes to invalidate host caches.
 export const panelUri = "ui://codex-subagent-extension/app-v6";
@@ -51,21 +52,7 @@ export function delegationPanel(
       title: "Delegated Work",
       icons: productGlyphIcons,
       inputSchema: panelContextInput,
-      outputSchema: z.object({
-        conversation_id: z.string().nullable().optional(),
-        panel_scope: z.object({
-          conversation_id: z.string().nullable(),
-          repository: z.string().optional(),
-          revision: z.string().optional(),
-        }),
-        panel_project_candidate: z
-          .object({ repository: z.string(), auto_register: z.boolean() })
-          .optional(),
-        panel_selection: z
-          .object({ task_id: z.string(), tab: z.enum(["chat"]) })
-          .optional(),
-        tasks: z.array(z.record(z.string(), z.unknown())).optional(),
-      }),
+      outputSchema: panelOutputSchema,
       annotations: { readOnlyHint: true, openWorldHint: false },
       _meta: {
         ui: { resourceUri: panelUri },

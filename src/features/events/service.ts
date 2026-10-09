@@ -13,6 +13,12 @@ import { REPLY_EXCERPT_CHARS, replyExcerpt } from "../tasks/reply.js";
 import type { Store } from "../tasks/store.js";
 import { EventStorage, type OutboxRow } from "./storage.js";
 import {
+  eventNameSchema,
+  filtersSchema as filters,
+  identitySchema as identity,
+} from "./subscription-contract.generated.js";
+import type { EventName, Filters, Identity } from "./subscription-contract.js";
+import {
   callbackUrl,
   signedHeaders,
   validSecret,
@@ -20,11 +26,7 @@ import {
   webhookPost,
 } from "./webhook.js";
 
-const names = [
-  "agent_task.completed",
-  "agent_task.failed",
-  "agent_task.input_required",
-] as const;
+const names = eventNameSchema.options.map((option) => option.value);
 
 const basePayload = {
   task_id: { type: "string" },
@@ -34,7 +36,7 @@ const basePayload = {
 };
 
 /** A completed turn carries its reply; the others say what happened. */
-function payloadSchema(name: (typeof names)[number]) {
+function payloadSchema(name: EventName) {
   const detail = name === "agent_task.completed" ? "reply" : "summary";
 
   return {
@@ -44,24 +46,6 @@ function payloadSchema(name: (typeof names)[number]) {
     additionalProperties: false,
   };
 }
-
-const filters = z
-  .object({
-    task_id: z.string().optional(),
-    conversation_id: z.string().optional(),
-    provider: z.string().optional(),
-  })
-  .strict();
-
-const identity = z
-  .object({
-    name: z.enum(names),
-    arguments: filters.default({}),
-    delivery: z
-      .object({ mode: z.literal("webhook"), url: z.string().url() })
-      .strict(),
-  })
-  .strict();
 
 const subscribe = identity.extend({
   delivery: identity.shape.delivery.extend({ secret: z.string() }),
@@ -183,7 +167,7 @@ export class Events {
     this.storage.saveSubscription(s.id, s.owner, JSON.stringify(s));
   }
 
-  private id(owner: string, request: z.infer<typeof identity>) {
+  private id(owner: string, request: Identity) {
     return (
       "sub_" +
       createHash("sha256")
@@ -199,7 +183,7 @@ export class Events {
     );
   }
 
-  private visible(owner: string, args: z.infer<typeof filters>) {
+  private visible(owner: string, args: Filters) {
     if (args.task_id) this.store.get(args.task_id, owner);
   }
 

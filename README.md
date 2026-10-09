@@ -115,7 +115,7 @@ Review a worktree task's changes in the Changes tab, or on its branch, before ap
 
 ## Verification and remaining plan
 
-The console and embedded panel share a feature-oriented React UI, with clear boundaries for state, transports, components, and forms. See [React UI architecture](docs/react-ui.md) for extension boundaries, self-contained HTML builds, and UI verification. [Local development](docs/development.md) covers setup, the service, the `npm run dev:ui` panel dev host with hot reload, what needs a rebuild or restart, and the `npm run typecheck` and `npm test` checks.
+The console and embedded panel share a feature-oriented React UI. See [React UI architecture](docs/react-ui.md) for UI boundaries and verification, [Local development](docs/development.md) for setup, previews, builds, and checks, and [Generated validation schemas](docs/development.md#generated-validation-schemas) for adding contracts and reusing handwritten validators.
 
 The suite verifies scheduling, real Git worktrees and patches, ownership, input, recovery, concurrency, budgets, SDK configuration and permission hooks, HTTP authentication, MCP tool/resource calls, and the packed tarball run from outside the checkout. Browser verification covers delegation, Chat (follow-ups, steers, the queue, interrupts and streaming replies) and input submission in fixture mode. See [implementation status](docs/implementation-status.md).
 

@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import {
   type ModelChoice,
   reasoningLevels,
@@ -10,91 +8,23 @@ import {
   providerRestrictionSections,
   providerSettingHelp,
 } from "../providers/settings.js";
+import { settingSectionSchema } from "./document-contract.generated.js";
+import type {
+  HelpPart,
+  ModelScope,
+  SettingOption,
+  SettingSection,
+} from "./document-contract.js";
 
-/**
- * The settings dialog's description of each section and row. The panel
- * renders it as given; nothing about layout or labels is inferred there.
- */
+export const sectionSchema = settingSectionSchema;
 
-/** Help text in order: plain text, or a link naming the setting it opens. */
-const helpPartSchema = z.union([
-  z.string(),
-  z.object({ text: z.string(), setting: z.string() }),
-]);
-
-export type HelpPart = z.infer<typeof helpPartSchema>;
-
-const optionSchema = z.object({
-  value: z.string(),
-  label: z.string(),
-  description: z.string().optional(),
-});
-
-export type SettingOption = z.infer<typeof optionSchema>;
-
-const base = {
-  key: z.string(),
-  label: z.string(),
-  help: z.array(helpPartSchema).optional(),
-};
-
-const modelScopeSchema = z.object({
-  label: z.string(),
-  model: z.object({
-    key: z.string(),
-    label: z.string(),
-    // Without a discovered catalog the model ID is typed instead.
-    options: z.array(optionSchema).optional(),
-  }),
-  effort: z.object({
-    key: z.string(),
-    label: z.string(),
-    options: z.array(optionSchema),
-    // The saved effort is not supported by the scope's effective model.
-    unsupported: z.boolean(),
-  }),
-});
-
-export type ModelScope = z.infer<typeof modelScopeSchema>;
-
-const rowSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("select"),
-    ...base,
-    options: z.array(optionSchema),
-  }),
-  z.object({ kind: z.literal("switch"), ...base }),
-  z.object({
-    kind: z.literal("text"),
-    ...base,
-    maxLength: z.number(),
-    // A regular expression the whole value must match.
-    pattern: z.string(),
-  }),
-  z.object({
-    kind: z.literal("budget"),
-    ...base,
-    // The update tool's on/off key for this limit.
-    toggle: z.string(),
-    unit: z.string(),
-    min: z.number(),
-    max: z.number(),
-    // The amount shown while the limit is off, restored when it turns on.
-    amount: z.number(),
-  }),
-  z.object({ kind: z.literal("models"), scopes: z.array(modelScopeSchema) }),
-]);
-
-export type SettingRow = z.infer<typeof rowSchema>;
-
-export const sectionSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  help: z.array(helpPartSchema).optional(),
-  rows: z.array(rowSchema),
-});
-
-export type SettingSection = z.infer<typeof sectionSchema>;
+export type {
+  HelpPart,
+  ModelScope,
+  SettingOption,
+  SettingRow,
+  SettingSection,
+} from "./document-contract.js";
 
 /**
  * Plain help shared by a setting's row and its schema description, so agents
