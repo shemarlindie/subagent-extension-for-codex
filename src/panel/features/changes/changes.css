@@ -221,27 +221,27 @@ body[data-expanded-panel="true"]
   color: var(--muted);
 }
 
-/* Navigation above the preview's toolbar; its controls hold still as files switch. */
-.changed-file-preview {
-  --file-nav-height: 36px;
+/* The preview's title stays one line, cut from the start so the file name shows. */
+.dialog[data-kind="file"] .dialog-heading h2 {
+  overflow: hidden;
+  direction: rtl;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+/* Position and steps in the preview's title row, beside the close button. */
 .changed-file-nav {
-  position: sticky;
-  /* Under the sticky dialog heading, like the toolbar. */
-  top: 28px;
-  z-index: 2;
   display: flex;
+  flex: none;
   align-items: center;
-  gap: 4px;
-  box-sizing: border-box;
-  height: var(--file-nav-height);
-  margin: 0 calc(-1 * var(--dialog-pad));
-  padding: 4px var(--dialog-pad) 0;
-  background: var(--bg);
+  gap: 2px;
+  /* Centred on the title's first line. */
+  margin-top: -3px;
   font-size: 12px;
 }
-.changed-file-nav ~ .file-preview > .file-preview-toolbar {
-  top: calc(28px + var(--file-nav-height));
+.changed-file-nav .changed-file-step {
+  width: 28px;
+  height: 28px;
 }
 .changed-file-step svg {
   rotate: 90deg;
@@ -250,19 +250,11 @@ body[data-expanded-panel="true"]
   rotate: -90deg;
 }
 .changed-file-position {
-  /* Room for "999 / 999", so stepping doesn't move the next button. */
+  /* Room for "999 / 999", so stepping doesn't move the buttons. */
   min-width: 9ch;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.changed-file-viewed-count {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  margin-right: 2px;
   color: var(--muted);
-  font-size: 11px;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 /* Matches a disabled button's look while keeping focus. */

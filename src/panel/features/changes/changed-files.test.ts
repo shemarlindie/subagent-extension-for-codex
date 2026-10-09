@@ -4,6 +4,7 @@ import { test } from "vitest";
 
 import { changedFileDiff, changedFileEntries } from "./changed-files";
 import type { Changes } from "./types";
+import { nextUnviewed } from "./use-viewed-files";
 
 const changes: Changes = {
   scope: "task",
@@ -132,4 +133,16 @@ test("a path Git quoted in the diff matches its file by path, not place", () => 
   assert.equal(tabbed.diff.to, "tab\tname.ts");
   assert.equal(tabbed.missing, undefined);
   assert.equal(a.diff.to, "a.ts");
+});
+
+test("the next unread file follows the current one, wrapping to the start", () => {
+  const [a, logo, b] = changedFileEntries(changes),
+    viewed = (...entries: (typeof a)[]) =>
+      new Map(entries.map((entry) => [entry.file.path, entry.signature]));
+
+  assert.equal(nextUnviewed(viewed(), [a, logo, b], a), logo);
+  assert.equal(nextUnviewed(viewed(logo), [a, logo, b], a), b);
+  assert.equal(nextUnviewed(viewed(a), [a, logo, b], b), logo);
+  // None left but the current file.
+  assert.equal(nextUnviewed(viewed(logo, b), [a, logo, b], a), undefined);
 });

@@ -8,6 +8,7 @@ import { onTestFinished, test, vi } from "vitest";
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
 import type { Task, Transport } from "../../app/state/types";
+import { ChangedFileNav } from "./changed-file-nav";
 import { ChangedFilePreview } from "./changed-file-preview";
 import type { ChangedFileContent, Changes } from "./types";
 
@@ -32,7 +33,7 @@ const data: Changes = {
   diff: paths.map((path) => diffOf(path, `${path} content`)).join(""),
 };
 
-function setup(path: string) {
+function setup(path: string, changes: Changes = data) {
   onTestFinished(cleanup);
 
   const controller = new Controller(
@@ -49,7 +50,7 @@ function setup(path: string) {
       scope: "task" as const,
       key: "",
       loading: false,
-      data,
+      data: changes,
     },
   };
 
@@ -82,6 +83,8 @@ function setup(path: string) {
   const preview = (path: string) => (
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
+        {/* As the dialog places them: the nav in its title row. */}
+        <ChangedFileNav task={task} path={path} />
         <ChangedFilePreview task={task} path={path} />
       </Tooltip.Provider>
     </ControllerContext.Provider>
@@ -145,26 +148,70 @@ test("the preview steps through the changed files in order", async () => {
   assert.deepEqual(show.mock.lastCall, ["b.ts"]);
 });
 
-test("marking a file viewed from its preview counts it", async () => {
-  const { view } = setup("a.ts");
+test("marking a file viewed moves on to the next unread one", async () => {
+  const { view, show, moveTo } = setup("a.ts");
 
   await act(async () => {});
 
-  const toggle = view.getByRole("checkbox", { name: "Viewed a.ts" });
+  const toggle = (path: string) =>
+    view.getByRole("checkbox", { name: `Viewed ${path}` });
 
-  assert.equal(
-    view.container.querySelector(".changed-file-viewed-count")?.textContent,
-    "0 of 3 viewed",
-  );
+  await act(async () => fireEvent.click(toggle("a.ts")));
+  assert.equal(toggle("a.ts").getAttribute("aria-checked"), "true");
+  assert.deepEqual(show.mock.lastCall, ["b.ts"]);
 
-  await act(async () => fireEvent.click(toggle));
+  // From the last file, it wraps to the first one still unread.
+  await moveTo("c.ts");
+  await act(async () => fireEvent.click(toggle("c.ts")));
+  assert.deepEqual(show.mock.lastCall, ["b.ts"]);
 
-  assert.equal(toggle.getAttribute("aria-checked"), "true");
+  // Unmarking stays put.
+  const calls = show.mock.calls.length;
 
-  assert.equal(
-    view.container.querySelector(".changed-file-viewed-count")?.textContent,
-    "1 of 3 viewed",
-  );
+  await act(async () => fireEvent.click(toggle("c.ts")));
+  assert.equal(toggle("c.ts").getAttribute("aria-checked"), "false");
+  assert.equal(show.mock.calls.length, calls);
+});
+
+test("moving on from Viewed keeps focus on Viewed, unless the user moved it", async () => {
+  // A deleted file among them, so moving on remounts the toolbar.
+  const { view, moveTo } = setup("gone.ts", {
+    ...data,
+    files: [
+      ...data.files,
+      {
+        path: "gone.ts",
+        status: "deleted",
+        additions: 0,
+        deletions: 1,
+        binary: false,
+      },
+    ],
+    diff: `${data.diff}diff --git a/gone.ts b/gone.ts\ndeleted file mode 100644\n--- a/gone.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone\n`,
+  });
+
+  await act(async () => {});
+
+  const toggle = (path: string) =>
+      view.getByRole("checkbox", { name: `Viewed ${path}` }),
+    // By name, so a failure prints the name rather than the whole element.
+    focused = () => document.activeElement?.getAttribute("aria-label");
+
+  toggle("gone.ts").focus();
+  await act(async () => fireEvent.click(toggle("gone.ts")));
+  await moveTo("c.ts");
+  await act(async () => {});
+  assert.equal(focused(), "Viewed c.ts");
+
+  // Focus taken to Previous while the next file loads stays there.
+  await act(async () => fireEvent.click(toggle("c.ts")));
+
+  const previous = view.getByRole("button", { name: "Previous file" });
+
+  previous.focus();
+  await moveTo("a.ts");
+  await act(async () => {});
+  assert.equal(focused(), "Previous file");
 });
 
 test("every file holds the view switcher's place, so the toolbar keeps its shape", async () => {

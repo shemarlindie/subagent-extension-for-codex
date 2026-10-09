@@ -15,10 +15,12 @@ import { FilePreview } from "../file-preview/file-preview";
 import { Progress } from "../file-preview/progress";
 import type { Task } from "../tasks/types";
 import { ChangedFileNav } from "./changed-file-nav";
-import { changedFileDiff } from "./changed-files";
+import { changedFileDiff, changedFileEntries } from "./changed-files";
 import { readChangedFile } from "./read-changes";
 import { ShareFileButton } from "./share-file-button";
 import type { ChangedFileContent } from "./types";
+import { isViewed, nextUnviewed, useViewedFiles } from "./use-viewed-files";
+import { ViewedToggle } from "./viewed-toggle";
 
 type Settled =
   | { status: "ready"; file: ChangedFileContent }
@@ -56,12 +58,43 @@ function useChangedFile(task: Task, path: string) {
   return read;
 }
 
-/** The file's part of the task's changes, as the Changes tab last read them. */
-function useChangedFileDiff(task: Task, path: string) {
-  const { changes } = useSnapshot(),
-    data = changes?.task === task.id ? changes.data : undefined;
+/** The task's changes, as the Changes tab last read them. */
+function useChanges(task: Task) {
+  const { changes } = useSnapshot();
 
-  return useMemo(() => data && changedFileDiff(data, path), [data, path]);
+  return changes?.task === task.id ? changes.data : undefined;
+}
+
+type ChangedFileActionsProps = {
+  task: Task;
+  path: string;
+  /** Called once the file is marked viewed, to move on to the next unread one. */
+  onViewed: (next?: string) => void;
+};
+
+/** The shown file's toolbar actions: Viewed, when it is a changed file, and Share. */
+function ChangedFileActions({ task, path, onViewed }: ChangedFileActionsProps) {
+  const data = useChanges(task),
+    entries = data ? changedFileEntries(data) : [],
+    [viewed, setViewed] = useViewedFiles(task.id),
+    entry = entries.find((entry) => entry.file.path === path);
+
+  return (
+    <>
+      {entry && (
+        <ViewedToggle
+          path={path}
+          viewed={isViewed(viewed, entry)}
+          onChange={(value) => {
+            setViewed(entry, value);
+            if (value)
+              onViewed(nextUnviewed(viewed, entries, entry)?.file.path);
+          }}
+        />
+      )}
+      <ShareFileButton path={path} />
+    </>
+  );
 }
 
 type ChangedFilePreviewProps = {
@@ -75,20 +108,49 @@ type ChangedFilePreviewProps = {
  * changes once rather than through a loading state.
  */
 export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
-  const read = useChangedFile(task, path),
+  const controller = useController(),
+    read = useChangedFile(task, path),
     // The file showing: the one asked for once read, until then the last one.
     shown = read?.path ?? path,
     loading = read?.path !== path,
-    diff = useChangedFileDiff(task, shown),
+    data = useChanges(task),
+    diff = useMemo(() => data && changedFileDiff(data, shown), [data, shown]),
     file = read?.status === "ready" ? read.file : undefined,
     progress = loading && <Progress label={`Loading ${path}`} />,
     // Kept across files, so stepping through them stays in, say, Diff.
     [view, setView] = useState<FileView>(),
-    root = useRef<HTMLDivElement>(null);
+    root = useRef<HTMLDivElement>(null),
+    // Viewed was used to move on, so the next file's Viewed takes focus.
+    refocusViewed = useRef(false),
+    actions = (
+      <ChangedFileActions
+        task={task}
+        path={shown}
+        onViewed={(next) => {
+          if (!next) return;
+          refocusViewed.current = true;
+          controller.showChangedFile(next);
+        }}
+      />
+    );
 
   // Each file starts at its top.
   useLayoutEffect(() => {
     if (root.current) scrollContainer(root.current).scrollTop = 0;
+
+    // A file of another kind remounts the toolbar, which drops focus. Only
+    // dropped focus moves, not focus the user took elsewhere meanwhile.
+    if (refocusViewed.current) {
+      const active = document.activeElement;
+
+      refocusViewed.current = false;
+      if (
+        !active ||
+        active === document.body ||
+        active.getAttribute("role") === "dialog"
+      )
+        root.current?.querySelector<HTMLElement>(".viewed-toggle")?.focus();
+    }
   }, [shown]);
 
   return (
@@ -98,8 +160,6 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
       aria-busy={loading}
       data-stale={loading && Boolean(read)}
     >
-      {/* Outside the file's states, so its controls stay put and keep focus. */}
-      <ChangedFileNav task={task} path={path} />
       {file?.state === "present" ? (
         <FilePreview
           file={{
@@ -107,7 +167,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             content: file.content ?? "",
             mime_type: file.mime_type,
           }}
-          actions={<ShareFileButton path={shown} />}
+          actions={actions}
           diff={diff}
           view={view}
           onViewChange={setView}
@@ -133,9 +193,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             <span className="view-switch view-switch-placeholder" aria-hidden>
               <span className="view-option">Source</span>
             </span>
-            <span className="toolbar-actions">
-              <ShareFileButton path={shown} />
-            </span>
+            <span className="toolbar-actions">{actions}</span>
             {progress}
           </div>
           <div className="file-preview-body">
@@ -166,6 +224,11 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
 }
 
 export const changedFileDialog = defineDialog<"file">({
-  title: ({ path }) => path,
+  // Isolated, so a path's leading dot stays put when cut from the start.
+  title: ({ path }) => <bdi title={path}>{path}</bdi>,
   render: ({ task, path }) => <ChangedFilePreview task={task} path={path} />,
+  // In the title row, so they stay put and keep focus as files switch.
+  headingActions: ({ task, path }) => (
+    <ChangedFileNav task={task} path={path} />
+  ),
 });

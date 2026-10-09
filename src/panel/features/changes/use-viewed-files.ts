@@ -34,6 +34,21 @@ export function firstUnviewed(
 }
 
 /**
+ * The next file not yet viewed after `from`, wrapping to the start, or none
+ * once every other file is viewed.
+ */
+export function nextUnviewed(
+  viewed: ReadonlyMap<string, string>,
+  entries: ChangedFileEntry[],
+  from: ChangedFileEntry,
+) {
+  const index = entries.indexOf(from),
+    rest = [...entries.slice(index + 1), ...entries.slice(0, index)];
+
+  return rest.find((entry) => !isViewed(viewed, entry));
+}
+
+/**
  * The task's viewed files, kept for the panel session. Marking a file viewed
  * collapses it in the Changes list; unmarking opens it again.
  */
