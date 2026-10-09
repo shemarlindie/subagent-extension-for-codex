@@ -7,7 +7,7 @@ import { fileName } from "../file-preview/file-format";
 import { FilePreview } from "../file-preview/file-preview";
 import { Progress } from "../file-preview/progress";
 import type { Task } from "../tasks/types";
-import { changedFileDiff } from "./changed-file-diff";
+import { changedFileDiff } from "./changed-files";
 import { readChangedFile } from "./read-changes";
 import { ShareFileButton } from "./share-file-button";
 import type { ChangedFileContent } from "./types";

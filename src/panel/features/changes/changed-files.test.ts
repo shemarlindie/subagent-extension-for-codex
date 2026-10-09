@@ -1,0 +1,118 @@
+import assert from "node:assert/strict";
+
+import { test } from "vitest";
+
+import { changedFileDiff, changedFileEntries } from "./changed-files";
+import type { Changes } from "./types";
+
+const changes: Changes = {
+  scope: "task",
+  files: [
+    {
+      path: "a.ts",
+      status: "modified",
+      additions: 1,
+      deletions: 1,
+      binary: false,
+    },
+    {
+      path: "logo.png",
+      status: "modified",
+      additions: 0,
+      deletions: 0,
+      binary: true,
+    },
+    {
+      path: "b.ts",
+      status: "added",
+      additions: 1,
+      deletions: 0,
+      binary: false,
+    },
+  ],
+  additions: 2,
+  deletions: 1,
+  diff: [
+    "diff --git a/a.ts b/a.ts\n--- a/a.ts\n+++ b/a.ts\n@@ -1 +1 @@\n-old\n+new\n",
+    "diff --git a/logo.png b/logo.png\nBinary files a/logo.png and b/logo.png differ\n",
+    "diff --git a/b.ts b/b.ts\nnew file mode 100644\n--- /dev/null\n+++ b/b.ts\n@@ -0,0 +1 @@\n+added\n",
+  ].join(""),
+};
+
+test("a changed file's diff is its part of the task's diff", () => {
+  assert.equal(changedFileDiff(changes, "a.ts")?.to, "a.ts");
+  assert.equal(changedFileDiff(changes, "b.ts")?.to, "b.ts");
+});
+
+test("binary and unlisted files have no diff", () => {
+  assert.equal(changedFileDiff(changes, "logo.png"), undefined);
+  assert.equal(changedFileDiff(changes, "missing.ts"), undefined);
+});
+
+test("each read's diff is parsed once, however many views ask", () => {
+  assert.equal(changedFileEntries(changes), changedFileEntries(changes));
+
+  assert.notEqual(
+    changedFileEntries({ ...changes }),
+    changedFileEntries(changes),
+  );
+});
+
+const [aDiff, logoDiff, bDiff] = [
+  "diff --git a/a.ts b/a.ts\n--- a/a.ts\n+++ b/a.ts\n@@ -1 +1 @@\n-old\n+new\n",
+  "diff --git a/logo.png b/logo.png\nBinary files a/logo.png and b/logo.png differ\n",
+  "diff --git a/b.ts b/b.ts\nnew file mode 100644\n--- /dev/null\n+++ b/b.ts\n@@ -0,0 +1 @@\n+added\n",
+];
+
+const diffs = (changes: Changes) =>
+  changedFileEntries(changes).map((entry) => ({
+    path: entry.diff.to,
+    lines: entry.diff.chunks.length,
+    missing: entry.missing ?? false,
+  }));
+
+test("files take their own part of the diff, whatever its order", () => {
+  assert.deepEqual(diffs({ ...changes, diff: bDiff + aDiff + logoDiff }), [
+    { path: "a.ts", lines: 1, missing: false },
+    { path: "logo.png", lines: 0, missing: false },
+    { path: "b.ts", lines: 1, missing: false },
+  ]);
+});
+
+test("a file the diff leaves out gets a stand-in without shifting the rest", () => {
+  const partial = { ...changes, diff: aDiff + bDiff };
+
+  assert.deepEqual(diffs(partial), [
+    { path: "a.ts", lines: 1, missing: false },
+    { path: "logo.png", lines: 0, missing: true },
+    { path: "b.ts", lines: 1, missing: false },
+  ]);
+
+  const b = changedFileEntries({ ...partial, diff: "" })[2];
+
+  // A stand-in keeps the file's status, and offers no Diff view.
+  assert.equal(b.diff.new, true);
+  assert.equal(b.diff.additions, 1);
+  assert.equal(changedFileDiff({ ...partial, diff: "" }, "b.ts"), undefined);
+});
+
+test("a path Git quoted in the diff matches its file by path, not place", () => {
+  // As Git writes it: the tab as the two characters \t.
+  const quoted = String.raw`diff --git "a/tab\tname.ts" "b/tab\tname.ts"
+--- "a/tab\tname.ts"
++++ "b/tab\tname.ts"
+@@ -1 +1 @@
+-old
++new
+`,
+    [tabbed, a] = changedFileEntries({
+      ...changes,
+      files: [{ ...changes.files[0], path: "tab\tname.ts" }, changes.files[0]],
+      // Out of order, so only the path can pair them.
+      diff: aDiff + quoted,
+    });
+
+  assert.equal(tabbed.diff.to, "tab\tname.ts");
+  assert.equal(tabbed.missing, undefined);
+  assert.equal(a.diff.to, "a.ts");
+});

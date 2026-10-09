@@ -1,13 +1,11 @@
-import { useMemo } from "react";
-
 import { imageMime } from "../../../shared/workspaces/changes";
 import { useController } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
 import { formatBytes } from "../../shared/utils/format";
 import { DiffFile } from "../file-preview/diff/diff-file";
-import { parseDiffFiles } from "../file-preview/file-format";
 import type { Task } from "../tasks/types";
+import { changedFileEntries } from "./changed-files";
 import { type ChangesReading, FILE_ATTRIBUTE } from "./changes-reading";
 import type { ChangedFile, Changes } from "./types";
 
@@ -34,49 +32,44 @@ const previewable = (file: ChangedFile) =>
 /** Every changed file's diff, in Git's order, each collapsible. */
 export function ChangesView({ task, changes, reading }: ChangesViewProps) {
   const controller = useController(),
-    files = useMemo(() => parseDiffFiles(changes.diff), [changes.diff]);
+    entries = changedFileEntries(changes);
 
   return (
     <div className="diff-view">
-      {files.map((file, index) => {
-        // Git lists files in the same order in the diff and the file list.
-        const changed = changes.files[index];
-
-        return (
-          <DiffFile
-            key={changed?.path ?? index}
-            // Names the file, so the tab can return to it.
-            {...{ [FILE_ATTRIBUTE]: changed?.path }}
-            file={file}
-            initiallyOpen={
-              (changed && reading.open.get(changed.path)) ??
-              files.length <= OPEN_FILES
-            }
-            onOpenChange={(open) => {
-              if (changed) reading.open.set(changed.path, open);
-            }}
-            emptyNote={
-              changed?.binary ? binaryNote(changed) : "No content changes"
-            }
-            actions={
-              changed &&
-              previewable(changed) && (
-                <Button
-                  variant="ghost"
-                  className="diff-preview"
-                  aria-label={`Preview ${changed.path}`}
-                  onClick={() =>
-                    controller.open({ kind: "file", task, path: changed.path })
-                  }
-                >
-                  <Icon name="eye" size={14} />
-                  Preview
-                </Button>
-              )
-            }
-          />
-        );
-      })}
+      {entries.map(({ file: changed, diff, missing }) => (
+        <DiffFile
+          key={changed.path}
+          // Names the file, so the tab can return to it.
+          {...{ [FILE_ATTRIBUTE]: changed.path }}
+          file={diff}
+          initiallyOpen={
+            reading.open.get(changed.path) ?? entries.length <= OPEN_FILES
+          }
+          onOpenChange={(open) => reading.open.set(changed.path, open)}
+          emptyNote={
+            changed.binary
+              ? binaryNote(changed)
+              : missing
+                ? "Diff unavailable"
+                : "No content changes"
+          }
+          actions={
+            previewable(changed) && (
+              <Button
+                variant="ghost"
+                className="diff-preview"
+                aria-label={`Preview ${changed.path}`}
+                onClick={() =>
+                  controller.open({ kind: "file", task, path: changed.path })
+                }
+              >
+                <Icon name="eye" size={14} />
+                Preview
+              </Button>
+            )
+          }
+        />
+      ))}
     </div>
   );
 }

@@ -157,7 +157,8 @@ implementation; the browser-safe change contract lives in
 Files expand into complete diffs and previews; a text file's preview adds a
 **Diff** view of its changes. The header of the file being read stays pinned at
 the top while it scrolls. Binary files show size; images can preview, deleted
-files show Deleted. Once changes are read, the tab shows the changed file count.
+files show Deleted. A file the diff has no part for still gets a section, marked
+Diff unavailable. Once changes are read, the tab shows the changed file count.
 Large content renders in deferred row blocks, collapsed files unmount rows, and
 cursor pages are read to completion. Refresh retains the last result; failures
 mark it stale. Switching comparison scope clears the old result while loading.

@@ -227,3 +227,32 @@ test("a collapsed file stays collapsed when the tab shows again", async () => {
   assert.notEqual(shown, file);
   assert.equal(shown?.open, false);
 });
+
+const twoFiles: Changes = {
+  ...data,
+  files: [
+    ...data.files,
+    {
+      path: "src/b.ts",
+      status: "added",
+      additions: 1,
+      deletions: 0,
+      binary: false,
+    },
+  ],
+  diff:
+    data.diff +
+    "diff --git a/src/b.ts b/src/b.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/b.ts\n@@ -0,0 +1 @@\n+added\n",
+};
+
+test("a file missing from the diff still has a section", () => {
+  // The diff has no part for src/b.ts.
+  const { view } = setup({ ...loaded, data: { ...twoFiles, diff: data.diff } });
+
+  const missing = view.container.querySelector<HTMLDetailsElement>(
+    '[data-changed-file="src/b.ts"]',
+  );
+
+  assert.equal(view.container.querySelectorAll(".diff-file").length, 2);
+  assert.match(missing?.textContent ?? "", /Diff unavailable/);
+});
