@@ -20,6 +20,8 @@ const ROW_HEIGHT = 17.6;
 type DiffFileProps = {
   file: ParsedDiffFile;
   initiallyOpen: boolean;
+  /** Controls whether the file is open; it otherwise keeps its own state. */
+  open?: boolean;
   /** Shown instead of rows when the file has none. */
   emptyNote?: string;
   /** Buttons in the file's header; using them doesn't toggle the file. */
@@ -33,12 +35,14 @@ type DiffFileProps = {
 export function DiffFile({
   file,
   initiallyOpen,
+  open: controlledOpen,
   emptyNote = "No content changes",
   actions,
   onOpenChange,
   ...data
 }: DiffFileProps) {
-  const [open, setOpen] = useState(initiallyOpen),
+  const [ownOpen, setOpen] = useState(initiallyOpen),
+    open = controlledOpen ?? ownOpen,
     deferredOpen = useDeferredValue(open),
     renderRows = open && deferredOpen,
     language = pathLanguage(diffPath(file)),
@@ -56,10 +60,13 @@ export function DiffFile({
       open={open}
       onToggle={(event) => {
         const details = event.currentTarget;
+
         // A file that renders open also fires toggle; only report a change.
-        if (details.open === open) return;
-        setOpen(details.open);
-        onOpenChange?.(details.open);
+        if (details.open !== open) {
+          setOpen(details.open);
+          onOpenChange?.(details.open);
+        }
+
         // Collapsing from a header stuck at the top would leave the file above
         // the view; bring it back.
         if (!details.open) details.scrollIntoView({ block: "nearest" });

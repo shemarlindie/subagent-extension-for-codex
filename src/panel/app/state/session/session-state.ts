@@ -12,6 +12,8 @@ export type TaskSessionState = {
     activity: ReadingState;
     changes: ChangesReading;
   };
+  /** Changed files the reader marked viewed: each path's change signature. */
+  viewedChanges: ReadonlyMap<string, string>;
 };
 
 export type QuestionSessionState = {
@@ -38,6 +40,7 @@ const defaults = {
     composerDraft: "",
     composerCollapsed: false,
     reading: { chat: {}, activity: {}, changes: { open: new Map() } },
+    viewedChanges: new Map(),
   }),
   question: (): QuestionSessionState => ({}),
 };

@@ -58,6 +58,23 @@ test("each read's diff is parsed once, however many views ask", () => {
   );
 });
 
+test("a file's signature changes only when its changes do", () => {
+  const signature = (diff: string) =>
+    changedFileEntries({ ...changes, diff }).map((entry) => entry.signature);
+
+  const [a, logo, b] = signature(changes.diff);
+
+  assert.deepEqual(signature(changes.diff), [a, logo, b]);
+
+  const [changedA, sameLogo, sameB] = signature(
+    changes.diff.replace("+new", "+newer"),
+  );
+
+  assert.notEqual(changedA, a);
+  assert.equal(sameLogo, logo);
+  assert.equal(sameB, b);
+});
+
 const [aDiff, logoDiff, bDiff] = [
   "diff --git a/a.ts b/a.ts\n--- a/a.ts\n+++ b/a.ts\n@@ -1 +1 @@\n-old\n+new\n",
   "diff --git a/logo.png b/logo.png\nBinary files a/logo.png and b/logo.png differ\n",

@@ -66,9 +66,9 @@ changed fields through the app-only `update_user_agent_settings`. Permission and
 approval defaults are described in [Configuration](configuration.md).
 
 Per-task tabs, composer drafts/visibility, question answers, Chat/Activity
-reading positions and the Changes position and opened files last for the panel
-session. Browser view state and dialog form drafts have separate reload
-persistence; see [State and persistence](react-ui.md#state-and-persistence).
+reading positions and the Changes position, opened files and viewed files last
+for the panel session. Browser view state and dialog form drafts have separate
+reload persistence; see [State and persistence](react-ui.md#state-and-persistence).
 
 ## Chat tab
 
@@ -162,6 +162,10 @@ Diff unavailable. Once changes are read, the tab shows the changed file count.
 Large content renders in deferred row blocks, collapsed files unmount rows, and
 cursor pages are read to completion. Refresh retains the last result; failures
 mark it stale. Switching comparison scope clears the old result while loading.
+
+**Viewed** in a file's header marks the file read and collapses it; the header
+counts viewed files. A mark lasts until that file's changes change; the file
+then opens again, unread.
 
 Worktree headers offer branch/path and copyable checkout/diff/push commands.
 **Remove worktree** keeps the branch and asks before discarding uncommitted

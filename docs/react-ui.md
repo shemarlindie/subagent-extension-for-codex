@@ -86,8 +86,8 @@ Keep scope handling centralized. Task/detail generation checks discard delayed r
 The controller separates session memory from recoverable view state:
 
 - `controller.session` stores per-task tabs, composer drafts/visibility, reading
-  positions (including Changes' opened files), and question answers until the
-  controller is replaced.
+  positions (including Changes' opened files), viewed changed files, and
+  question answers until the controller is replaced.
 - Browser URL state stores scope, selected task/list, tab, search and status
   filter. The dev host mirrors it into its outer URL; Codex has no URL-state
   bridge. Search and form drafts persist after a 250 ms debounce, flushed on

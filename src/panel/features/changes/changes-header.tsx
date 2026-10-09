@@ -7,9 +7,11 @@ import { Icon } from "../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 import { Progress } from "../file-preview/progress";
 import type { Task } from "../tasks/types";
+import { changedFileEntries } from "./changed-files";
 import { CommandLine } from "./command-line";
 import { changesSummary } from "./read-changes";
 import type { ChangeScope, ChangesState } from "./types";
+import { isViewed, useViewedFiles } from "./use-viewed-files";
 import { WorktreeActions } from "./worktree-actions";
 
 type ChangesHeaderProps = {
@@ -30,7 +32,10 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
       data?.state === "workspace_missing" || data?.state === "branch_deleted",
     loading = changes?.loading ?? (!data && !changes?.error),
     summary = data && !data.state ? `${changesSummary(data)} uncommitted` : "",
-    branch = task.branch;
+    branch = task.branch,
+    [viewed] = useViewedFiles(task.id),
+    entries = data && !data.state ? changedFileEntries(data) : [],
+    viewedCount = entries.filter((entry) => isViewed(viewed, entry)).length;
 
   return (
     <div className="changes-header">
@@ -60,6 +65,11 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
           <span className="changes-summary" title={summary}>
             {summary}
           </span>
+          {entries.length > 0 && (
+            <span className="changes-viewed">
+              {viewedCount} of {entries.length} viewed
+            </span>
+          )}
           <span className="changes-status" role="status" data-initial={!data}>
             {loading ? (data ? "Refreshing changes…" : "Reading changes…") : ""}
           </span>

@@ -245,14 +245,122 @@ const twoFiles: Changes = {
     "diff --git a/src/b.ts b/src/b.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/b.ts\n@@ -0,0 +1 @@\n+added\n",
 };
 
-test("a file missing from the diff still has a section", () => {
+test("marking a file viewed collapses it until its changes change", async () => {
+  const { view, update } = setup({ ...loaded, data: twoFiles });
+
+  const [file] =
+    view.container.querySelectorAll<HTMLDetailsElement>(".diff-file");
+
+  const toggle = view.getByRole("checkbox", { name: "Viewed src/a.ts" });
+
+  // jsdom has no scrolling.
+  file.scrollIntoView = vi.fn();
+  assert.equal(file.open, true);
+
+  await act(async () => fireEvent.click(toggle));
+
+  assert.equal(toggle.getAttribute("aria-checked"), "true");
+  assert.equal(file.open, false);
+  assert.equal(file.dataset.viewed, "true");
+
+  assert.equal(
+    view.container.querySelector(".changes-viewed")?.textContent,
+    "1 of 2 viewed",
+  );
+
+  // A refresh with the same changes keeps the mark.
+  update({ ...loaded, data: { ...twoFiles } });
+  assert.equal(toggle.getAttribute("aria-checked"), "true");
+
+  const shownFile = () =>
+    view.container.querySelector<HTMLDetailsElement>(
+      '[data-changed-file="src/a.ts"]',
+    );
+
+  // Showing the tab again keeps a viewed file collapsed.
+  view.rerender(<></>);
+  update({ ...loaded, data: { ...twoFiles } });
+  assert.equal(shownFile()?.open, false);
+
+  // Changed since, the file needs reading again, here and after a remount.
+  const changed = {
+    ...loaded,
+    data: { ...twoFiles, diff: twoFiles.diff.replace("+new", "+newer") },
+  };
+
+  update(changed);
+  assert.equal(shownFile()?.dataset.viewed, "false");
+  assert.equal(shownFile()?.open, true);
+
+  view.rerender(<></>);
+  update(changed);
+  assert.equal(shownFile()?.open, true);
+});
+
+test("in a long list, a file changed since viewed stays open after a remount", async () => {
+  const paths = Array.from({ length: 9 }, (_, index) => `src/${index}.ts`);
+
+  const long = (line: string): Changes => ({
+    ...data,
+    files: paths.map((path) => ({ ...data.files[0], path })),
+    diff: paths
+      .map(
+        (path) =>
+          `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n-old\n+${line}\n`,
+      )
+      .join(""),
+  });
+
+  const { view, update } = setup({ ...loaded, data: long("new") });
+
+  const first = () =>
+    view.container.querySelector<HTMLDetailsElement>(
+      '[data-changed-file="src/0.ts"]',
+    )!;
+
+  // Past eight files, files start collapsed.
+  assert.equal(first().open, false);
+
+  first().scrollIntoView = vi.fn();
+
+  await act(async () =>
+    fireEvent.click(view.getByRole("checkbox", { name: "Viewed src/0.ts" })),
+  );
+
+  const changed = { ...loaded, data: long("newer") };
+
+  update(changed);
+  assert.equal(first().open, true);
+
+  view.rerender(<></>);
+  update(changed);
+  assert.equal(first().open, true);
+
+  // Unviewed files keep the long list's default.
+  assert.equal(
+    view.container.querySelector<HTMLDetailsElement>(
+      '[data-changed-file="src/1.ts"]',
+    )?.open,
+    false,
+  );
+});
+
+test("a file missing from the diff still has a section to read and mark", () => {
   // The diff has no part for src/b.ts.
   const { view } = setup({ ...loaded, data: { ...twoFiles, diff: data.diff } });
 
-  const missing = view.container.querySelector<HTMLDetailsElement>(
-    '[data-changed-file="src/b.ts"]',
+  const sections = view.container.querySelectorAll(".diff-file"),
+    missing = view.container.querySelector<HTMLDetailsElement>(
+      '[data-changed-file="src/b.ts"]',
+    );
+
+  assert.equal(sections.length, 2);
+
+  assert.equal(
+    view.container.querySelector(".changes-viewed")?.textContent,
+    "0 of 2 viewed",
   );
 
-  assert.equal(view.container.querySelectorAll(".diff-file").length, 2);
   assert.match(missing?.textContent ?? "", /Diff unavailable/);
+  assert.ok(view.getByRole("checkbox", { name: "Viewed src/b.ts" }));
 });
