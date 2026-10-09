@@ -4,7 +4,7 @@
     "codex-subagent-extension": {
       "type": "stdio",
       "command": "node",
-      "args": ["${PLUGIN_ROOT}/dist/stdio.js"]
+      "args": ["--enable-source-maps", "${PLUGIN_ROOT}/dist/stdio.js"]
     }
   }
 }

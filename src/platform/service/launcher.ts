@@ -105,26 +105,30 @@ export async function connectService() {
     mkdirSync(data, { recursive: true, mode: 0o700 });
     const log = openSync(join(data, "service.log"), "a", 0o600);
 
-    const child = spawn(process.execPath, [packagePath("dist/main.js")], {
-      cwd: installRoot,
-      detached: true,
-      stdio: ["ignore", log, log],
-      env: {
-        ...process.env,
-        CODEX_SUBAGENT_EXTENSION_DATA: data,
-        ...(process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS
-          ? {
-              CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS: JSON.stringify(
-                JSON.parse(
-                  process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS,
-                ).map((root: string) => resolve(root)),
-              ),
-            }
-          : {}),
-        PORT: url.port || "80",
-        CODEX_SUBAGENT_EXTENSION_ORIGIN: origin,
+    const child = spawn(
+      process.execPath,
+      ["--enable-source-maps", packagePath("dist/main.js")],
+      {
+        cwd: installRoot,
+        detached: true,
+        stdio: ["ignore", log, log],
+        env: {
+          ...process.env,
+          CODEX_SUBAGENT_EXTENSION_DATA: data,
+          ...(process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS
+            ? {
+                CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS: JSON.stringify(
+                  JSON.parse(
+                    process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS,
+                  ).map((root: string) => resolve(root)),
+                ),
+              }
+            : {}),
+          PORT: url.port || "80",
+          CODEX_SUBAGENT_EXTENSION_ORIGIN: origin,
+        },
       },
-    });
+    );
 
     child.on("error", (e) => {
       spawnError = e;
