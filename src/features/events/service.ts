@@ -8,6 +8,7 @@ import {
 
 import { z } from "zod";
 
+import { decodeStored } from "../../platform/database/decode.js";
 import { REPLY_EXCERPT_CHARS, replyExcerpt } from "../tasks/reply.js";
 import type { Store } from "../tasks/store.js";
 import { EventStorage, type OutboxRow } from "./storage.js";
@@ -68,19 +69,24 @@ const subscribe = identity.extend({
   ttlMs: z.number().int().positive().nullable().optional(),
 });
 
-type Subscription = {
-  id: string;
-  owner: string;
-  name: string;
-  arguments: z.infer<typeof filters>;
-  url: string;
-  secret: string;
-  previous?: string;
-  rotation_until?: number;
-  expires: number;
-  after_event: number;
-  active: boolean;
-};
+const subscriptionSchema = z.looseObject({
+  id: z.string().min(1),
+  owner: z.string().min(1),
+  name: z.enum(names),
+  arguments: filters,
+  url: z.string(),
+  secret: z.string(),
+  previous: z.string().optional(),
+  rotation_until: z.number().optional(),
+  expires: z.number(),
+  after_event: z.number(),
+  active: z.boolean(),
+});
+
+type Subscription = z.infer<typeof subscriptionSchema>;
+
+const decodeSubscription = (id: string, body: string) =>
+  decodeStored(subscriptionSchema, body, `webhook subscription ${id}`);
 
 export class EventProtocolError extends Error {
   constructor(
@@ -293,7 +299,7 @@ export class Events {
       const stored = this.storage.subscription(id, owner);
 
       const old: Subscription | undefined = stored
-        ? JSON.parse(stored)
+        ? decodeSubscription(id, stored)
         : undefined;
 
       const expires = Date.now() + Math.min(r.ttlMs ?? 86400000, 7 * 86400000);
@@ -340,7 +346,7 @@ export class Events {
 
     const subscriptions = this.storage
       .subscriptions()
-      .map((body) => JSON.parse(body) as Subscription);
+      .map((row) => decodeSubscription(row.id, row.body));
 
     for (const e of rows) {
       const name = (
@@ -436,14 +442,13 @@ export class Events {
       const subscription = this.storage.subscription(row.subscription_id);
 
       const s: Subscription | undefined = subscription
-        ? JSON.parse(subscription)
+        ? decodeSubscription(row.subscription_id, subscription)
         : undefined;
 
-      const envelope = JSON.parse(row.body);
       let permitted = false;
 
       try {
-        if (s) this.store.get(envelope.data.task_id, s.owner);
+        if (s) this.store.get(row.task_id, s.owner);
         permitted = !!s && s.active && s.expires > Date.now();
       } catch {}
 

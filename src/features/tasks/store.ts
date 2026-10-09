@@ -8,18 +8,13 @@ import {
 } from "../../platform/database/database.js";
 import { type Event, now, type Task } from "../../shared/contracts.js";
 import { events, tasks } from "./schema.js";
-
-type EventRow = typeof events.$inferSelect;
+import { decodeEvent, decodeTask } from "./stored.js";
 
 /** The 1,000-event page that event reads return at most. */
 const PAGE = 1000;
 
-const toEvent = (row: EventRow): Event => ({
-  ...row,
-  data: JSON.parse(row.data),
-});
-
-const toTask = (row: { body: string }) => JSON.parse(row.body) as Task;
+const toTask = (row: { id: string; body: string }) =>
+  decodeTask(row.id, row.body);
 
 /**
  * Task and event persistence, and the bus that announces committed events.
@@ -103,7 +98,7 @@ export class Store {
   /** An owner's tasks, or every task without one, newest first. */
   all(owner?: string): Task[] {
     return this.orm
-      .select({ body: tasks.body })
+      .select({ id: tasks.id, body: tasks.body })
       .from(tasks)
       .where(owner ? eq(tasks.owner, owner) : undefined)
       .all()
@@ -113,7 +108,7 @@ export class Store {
 
   get(id: string, owner: string): Task {
     const row = this.orm
-      .select({ body: tasks.body })
+      .select({ id: tasks.id, body: tasks.body })
       .from(tasks)
       .where(and(eq(tasks.id, id), eq(tasks.owner, owner)))
       .get();
@@ -162,7 +157,7 @@ export class Store {
       .orderBy(events.id)
       .limit(PAGE)
       .all()
-      .map(toEvent);
+      .map(decodeEvent);
   }
 
   recentEvents(id: string, owner: string): Event[] {
@@ -176,7 +171,7 @@ export class Store {
       .limit(200)
       .all()
       .reverse()
-      .map(toEvent);
+      .map(decodeEvent);
   }
 
   /** An owner's events across tasks, after a cursor, a page at a time. */
@@ -195,7 +190,7 @@ export class Store {
       .orderBy(events.id)
       .limit(PAGE)
       .all()
-      .map(toEvent);
+      .map(decodeEvent);
   }
 
   /** Every task's events after a cursor, a page at a time, for webhook capture. */
@@ -207,7 +202,7 @@ export class Store {
       .orderBy(events.id)
       .limit(PAGE)
       .all()
-      .map(toEvent);
+      .map(decodeEvent);
   }
 
   /** The id of the latest event, or of a task's latest one; 0 before any. */
@@ -231,7 +226,7 @@ export class Store {
       .limit(1)
       .get();
 
-    return row && toEvent(row);
+    return row && decodeEvent(row);
   }
 
   /** Every event of the given types for a task, in order, with no page limit. */
@@ -242,7 +237,7 @@ export class Store {
       .where(and(eq(events.task_id, id), inArray(events.type, types)))
       .orderBy(events.id)
       .all()
-      .map(toEvent);
+      .map(decodeEvent);
   }
 
   /**
@@ -266,7 +261,7 @@ export class Store {
       )
       .orderBy(events.id)
       .all()
-      .map(toEvent);
+      .map(decodeEvent);
   }
 
   close() {

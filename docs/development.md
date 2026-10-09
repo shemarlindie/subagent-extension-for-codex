@@ -292,6 +292,12 @@ before any feature reads it.
   project roots in their services. Other features read tasks and events
   through `Store`. Queries use Drizzle; raw SQL is kept where it is clearer,
   such as the JSON predicates in `Store.chatEvents`.
+- JSON columns are checked when read (`decodeStored` in
+  `src/platform/database/decode.ts`, with each feature's schema). A malformed
+  record fails with an error naming it, and is never dropped or given
+  defaults. The schemas check the fields ownership and control flow rely on
+  and pass the rest, such as provider state and event data, through
+  unchanged.
 - Drizzle query failures throw SQLite's own error (such as
   `FOREIGN KEY constraint failed`), not Drizzle's wrapper, whose message
   holds the SQL and its parameters.

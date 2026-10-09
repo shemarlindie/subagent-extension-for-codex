@@ -911,3 +911,27 @@ test("execution approval defaults do not change native Claude settings", async (
     "deny",
   );
 });
+
+test("malformed stored settings fail with their owner instead of resetting to defaults", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "settings-malformed-"));
+  const store = new Store(join(dir, "settings.sqlite"));
+
+  t.onTestFinished(async () => {
+    store.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  store.database.client
+    .prepare("INSERT INTO user_settings(owner,body) VALUES(?,?)")
+    .run(
+      "alice",
+      JSON.stringify({ default_provider: "fixture", max_cost_usd: "lots" }),
+    );
+
+  const settings = new Settings(store.database, () => ["fixture"]);
+
+  assert.throws(
+    () => settings.values("alice"),
+    /Stored settings for alice is malformed/,
+  );
+});

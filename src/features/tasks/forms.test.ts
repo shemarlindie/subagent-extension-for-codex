@@ -1082,3 +1082,27 @@ test("project registration prefills host metadata without changing continuation 
     await close();
   }
 });
+
+test("a malformed stored form request fails recovery with an error naming it", async () => {
+  const { c, close } = await setup();
+
+  try {
+    c.store.database.client
+      .prepare(
+        "INSERT INTO form_requests(id,owner,expires,body) VALUES(?,?,?,?)",
+      )
+      .run(
+        "bad-form",
+        "local",
+        Date.now() + 60000,
+        JSON.stringify({ kind: "unknown" }),
+      );
+
+    assert.throws(
+      () => c.forms.recover(),
+      /Stored form request bad-form is malformed/,
+    );
+  } finally {
+    await close();
+  }
+});

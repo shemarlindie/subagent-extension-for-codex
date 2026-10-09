@@ -36,12 +36,11 @@ export class EventStorage {
       .get()?.body;
   }
 
-  subscriptions(): string[] {
+  subscriptions(): { id: string; body: string }[] {
     return this.orm
-      .select({ body: eventSubscriptions.body })
+      .select({ id: eventSubscriptions.id, body: eventSubscriptions.body })
       .from(eventSubscriptions)
-      .all()
-      .map((row) => row.body);
+      .all();
   }
 
   /** Deletes an owner's subscription and stops its queued deliveries. */

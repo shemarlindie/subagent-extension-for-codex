@@ -125,14 +125,17 @@ export const startSchema = z.object({
 
 export type Start = z.infer<typeof startSchema>;
 
-export type Status =
-  | "queued"
-  | "starting"
-  | "running"
-  | "waiting"
-  | "interrupted"
-  | "completed"
-  | "failed";
+export const statuses = [
+  "queued",
+  "starting",
+  "running",
+  "waiting",
+  "interrupted",
+  "completed",
+  "failed",
+] as const;
+
+export type Status = (typeof statuses)[number];
 
 /** Who sent a message: the user through the panel, or the parent agent. */
 export type Sender = InputAuthority;

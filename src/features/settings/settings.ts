@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { type Database } from "../../platform/database/database.js";
+import { checkStored, decodeStored } from "../../platform/database/decode.js";
 import {
   approvalModeSchema,
   type InputAuthority,
@@ -239,12 +240,13 @@ export class Settings {
 
     if (!row) return initialValuesSchema.parse(this.initialBody());
 
-    const body = JSON.parse(String(row.body));
+    const record = `settings for ${owner}`;
+    const body = decodeStored(z.looseObject({}), row.body, record);
 
-    if (!this.providers().includes(body.default_provider))
+    if (!this.providers().includes(body.default_provider as string))
       body.default_provider = this.providers()[0];
 
-    return persistedValuesSchema.parse(body);
+    return checkStored(persistedValuesSchema, body, record);
   }
 
   values(owner: string): SettingsValues {

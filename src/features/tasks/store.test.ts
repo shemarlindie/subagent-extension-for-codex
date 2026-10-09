@@ -279,3 +279,56 @@ test("a failing listener neither undoes the commit nor stops other listeners", (
   assert.equal(store.events(task.id, task.owner).length, 2);
   assert.equal(errors.mock.calls.length, 2);
 });
+
+test("stored tasks round-trip open provider state, and malformed ones fail with their id", (t) => {
+  const { store, task } = transactionFixture(t);
+
+  const withState = {
+    ...task,
+    provider_options: { claude: { approval_decider: "user" } },
+    provider_state: { nested: [1, { kept: true }] },
+  };
+
+  store.save(withState);
+  assert.deepEqual(store.get(task.id, task.owner), withState);
+
+  const insert = store.database.client.prepare(
+    "INSERT INTO tasks(id,owner,body) VALUES(?,?,?)",
+  );
+
+  const { owner: _owner, ...ownerless } = task;
+
+  insert.run(
+    "ownerless",
+    "alice",
+    JSON.stringify({ ...ownerless, id: "ownerless" }),
+  );
+
+  insert.run("garbled", "bob", "{not json");
+
+  assert.throws(
+    () => store.get("ownerless", "alice"),
+    /Stored task ownerless is malformed: .*owner/s,
+  );
+
+  // A list reports the bad record rather than hiding it.
+  assert.throws(() => store.all("alice"), /Stored task ownerless/);
+
+  assert.throws(
+    () => store.get("garbled", "bob"),
+    /Stored task garbled is not valid JSON/,
+  );
+});
+
+test("stored events whose data isn't a JSON object fail with their id", (t) => {
+  const { store, task } = transactionFixture(t);
+
+  const { lastInsertRowid } = store.database.client
+    .prepare("INSERT INTO events(task_id,type,timestamp,data) VALUES(?,?,?,?)")
+    .run(task.id, "task.started", "now", "[1]");
+
+  assert.throws(
+    () => store.events(task.id, task.owner),
+    new RegExp(`Stored event ${lastInsertRowid} is malformed`),
+  );
+});

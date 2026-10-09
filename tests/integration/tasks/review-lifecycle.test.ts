@@ -58,7 +58,7 @@ test(
     const formBody = JSON.stringify({
       kind: "request_agent_task",
       args: { description: "Review" },
-      form: { fields: [] },
+      form: { type: "object", properties: {} },
       message: "Choose task",
       status: "processing",
     });

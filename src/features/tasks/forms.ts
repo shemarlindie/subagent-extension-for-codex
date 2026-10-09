@@ -12,7 +12,9 @@ import {
   OpenAIFormResultSchema,
   OpenAIFormSchema,
 } from "@openai/mcp-extensions/server";
+import { z } from "zod";
 
+import { decodeStored } from "../../platform/database/decode.js";
 import { hostProjectCandidate } from "../../platform/panel/host-context.js";
 import { reasoningLevels } from "../../shared/contracts.js";
 import { inputPresentation } from "../providers/input-presentation.js";
@@ -106,6 +108,32 @@ interface Request {
   result?: CallToolResult;
 }
 
+const storedRequestSchema = z.looseObject({
+  kind: z.enum([
+    "request_agent_task",
+    "request_agent_input",
+    "request_agent_project",
+  ]),
+  args: z.record(z.string(), z.unknown()),
+  form: OpenAIFormSchema,
+  message: z.string(),
+  task_id: z.string().optional(),
+  request_id: z.string().optional(),
+  questions: z.array(z.string()).optional(),
+  status: z.enum(["pending", "processing", "complete"]),
+  answer: z.string().optional(),
+  result: z
+    .custom<CallToolResult>((v) => typeof v === "object" && v !== null)
+    .optional(),
+});
+
+const decodeRequest = (id: string, body: string) =>
+  decodeStored(
+    storedRequestSchema,
+    body,
+    `form request ${id}`,
+  ) satisfies Request;
+
 const canonical = (v: unknown): string =>
   JSON.stringify(v, (_k, value) =>
     value && typeof value === "object" && !Array.isArray(value)
@@ -141,7 +169,7 @@ export class Forms {
   /** Recover submissions only after the service has secured its listener. */
   recover() {
     for (const row of this.requests.all()) {
-      const r: Request = JSON.parse(row.body);
+      const r = decodeRequest(row.id, row.body);
 
       if (r.status === "processing") {
         r.status = "complete";
@@ -167,10 +195,11 @@ export class Forms {
     if (!/^[A-Za-z0-9_-]{43}$/.test(token))
       throw new Error("Invalid or expired form state");
 
-    const body = this.requests.body(hash(token), owner, this.now());
+    const id = hash(token);
+    const body = this.requests.body(id, owner, this.now());
     if (!body) throw new Error("Invalid or expired form state");
 
-    return JSON.parse(body);
+    return decodeRequest(id, body);
   }
 
   private save(id: string, r: Request) {

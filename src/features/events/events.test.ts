@@ -580,3 +580,25 @@ test("capture runs from the listener after a task transaction commits, and the t
     store.close();
   }
 });
+
+test("a malformed stored subscription stops capture with an error naming it", async () => {
+  const { store, events } = await setup();
+
+  try {
+    store.database.client
+      .prepare("INSERT INTO event_subscriptions(id,owner,body) VALUES(?,?,?)")
+      .run(
+        "sub_bad",
+        "alice",
+        JSON.stringify({ id: "sub_bad", owner: "alice" }),
+      );
+
+    assert.throws(
+      () => events.capture(),
+      /Stored webhook subscription sub_bad is malformed/,
+    );
+  } finally {
+    await events.close();
+    store.close();
+  }
+});
