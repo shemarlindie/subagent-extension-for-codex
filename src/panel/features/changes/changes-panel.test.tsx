@@ -297,6 +297,41 @@ test("marking a file viewed collapses it until its changes change", async () => 
   assert.equal(shownFile()?.open, true);
 });
 
+test("Preview all resumes at the first file not yet viewed", async () => {
+  const { view } = setup({ ...loaded, data: twoFiles });
+
+  const open = vi
+    .spyOn(Controller.prototype, "open")
+    .mockImplementation(() => {});
+
+  const previewAll = view.getByRole("button", { name: "Preview all changes" });
+
+  fireEvent.click(previewAll);
+
+  assert.deepEqual(open.mock.lastCall?.[0], {
+    kind: "file",
+    task,
+    path: "src/a.ts",
+  });
+
+  const [file] =
+    view.container.querySelectorAll<HTMLDetailsElement>(".diff-file");
+
+  file.scrollIntoView = vi.fn();
+
+  await act(async () =>
+    fireEvent.click(view.getByRole("checkbox", { name: "Viewed src/a.ts" })),
+  );
+
+  fireEvent.click(previewAll);
+
+  assert.deepEqual(open.mock.lastCall?.[0], {
+    kind: "file",
+    task,
+    path: "src/b.ts",
+  });
+});
+
 test("in a long list, a file changed since viewed stays open after a remount", async () => {
   const paths = Array.from({ length: 9 }, (_, index) => `src/${index}.ts`);
 

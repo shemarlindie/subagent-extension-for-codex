@@ -1298,3 +1298,33 @@ test("workers are read again each refresh while one can't start tasks, and other
   assert.equal(workerReads(), 4);
   assert.equal(controller.getSnapshot().workers[0].readiness?.ready, false);
 });
+
+test("the file preview moves between changed files and saves where it is", async (t) => {
+  const transport = new FakeTransport();
+  transport.tasks = [task("task-1")];
+  const saved: UiStatePersistence["initial"][] = [];
+
+  const controller = new Controller(
+    transport,
+    { hidden: () => false, wide: () => true },
+    { initial: { view: {} }, save: (state) => saved.push(state) },
+  );
+
+  t.onTestFinished(() => controller.dispose());
+  await controller.start();
+
+  // Only an open file preview moves.
+  controller.showChangedFile("src/b.ts");
+  assert.equal(controller.getSnapshot().dialog, undefined);
+
+  controller.open({ kind: "file", task: task("task-1"), path: "src/a.ts" });
+  controller.showChangedFile("src/b.ts");
+
+  const dialog = controller.getSnapshot().dialog;
+
+  assert.equal(dialog?.kind === "file" && dialog.path, "src/b.ts");
+
+  assert.deepEqual(saved.at(-1)?.dialogs, [
+    { kind: "file", taskId: "task-1", path: "src/b.ts" },
+  ]);
+});

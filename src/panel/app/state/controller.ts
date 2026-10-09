@@ -1030,6 +1030,14 @@ export class Controller {
     });
   }
 
+  /** Moves the open file preview to another of its task's changed files. */
+  showChangedFile(path: string) {
+    const { dialog } = this.state;
+    if (dialog?.kind !== "file" || dialog.path === path) return;
+
+    this.patch({ dialog: { ...dialog, path } });
+  }
+
   /**
    * Lets the open form veto closing, such as to confirm discarding edits.
    * The guard returns false to stay open. Saving closes without asking it.

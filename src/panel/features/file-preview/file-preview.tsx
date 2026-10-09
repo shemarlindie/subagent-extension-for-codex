@@ -28,10 +28,25 @@ type FilePreviewProps = {
   actions?: ReactNode;
   /** The file's own diff; adds a Diff view after the format's views. */
   diff?: ParsedDiffFile;
+  /** The chosen view, when the owner keeps it across files. */
+  view?: FileView;
+  onViewChange?: (view: FileView) => void;
+  /** The owner's progress, such as reading the next file; replaces the view's. */
+  progress?: ReactNode;
+  /** Shows the switcher with a single view too, so files share one layout. */
+  alwaysShowViews?: boolean;
 };
 
 /** A file with a switcher between the views its format offers. */
-export function FilePreview({ file, actions, diff }: FilePreviewProps) {
+export function FilePreview({
+  file,
+  actions,
+  diff,
+  view: chosenView,
+  onViewChange,
+  progress,
+  alwaysShowViews = false,
+}: FilePreviewProps) {
   const controller = useController(),
     canCopy =
       !controller.transport.embedded &&
@@ -45,7 +60,9 @@ export function FilePreview({ file, actions, diff }: FilePreviewProps) {
     // Sizing reads the whole content, so it runs once per file, not per render.
     size = useMemo(() => fileBytes(file), [file]),
     largeSvg = useMemo(() => isLargeSvg(file), [file]),
-    [chosen, setView] = useState<FileView>(views[0]),
+    [ownView, setOwnView] = useState<FileView>(views[0]),
+    chosen = chosenView ?? ownView,
+    setView = onViewChange ?? setOwnView,
     // A new file may not offer the chosen view; it then opens in its best one.
     view = views.includes(chosen) ? chosen : views[0],
     // The switcher follows `view` at once; the body renders `shown` in the
@@ -63,7 +80,7 @@ export function FilePreview({ file, actions, diff }: FilePreviewProps) {
           <span>{formatName(format)}</span>
           <span>{formatBytes(size)}</span>
         </span>
-        {views.length > 1 && (
+        {(views.length > 1 || alwaysShowViews) && (
           <ToggleGroup
             className="view-switch"
             aria-label="View"
@@ -82,7 +99,8 @@ export function FilePreview({ file, actions, diff }: FilePreviewProps) {
           {canCopy && format !== "image" && <CopyButton text={file.content} />}
           {actions}
         </span>
-        {rendering && <Progress label={`Showing ${viewLabel(view)}`} />}
+        {progress ||
+          (rendering && <Progress label={`Showing ${viewLabel(view)}`} />)}
       </div>
       <div
         className="file-preview-body"

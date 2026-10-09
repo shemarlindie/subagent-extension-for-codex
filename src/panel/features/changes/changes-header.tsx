@@ -11,7 +11,7 @@ import { changedFileEntries } from "./changed-files";
 import { CommandLine } from "./command-line";
 import { changesSummary } from "./read-changes";
 import type { ChangeScope, ChangesState } from "./types";
-import { isViewed, useViewedFiles } from "./use-viewed-files";
+import { firstUnviewed, isViewed, useViewedFiles } from "./use-viewed-files";
 import { WorktreeActions } from "./worktree-actions";
 
 type ChangesHeaderProps = {
@@ -35,7 +35,9 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
     branch = task.branch,
     [viewed] = useViewedFiles(task.id),
     entries = data && !data.state ? changedFileEntries(data) : [],
-    viewedCount = entries.filter((entry) => isViewed(viewed, entry)).length;
+    viewedCount = entries.filter((entry) => isViewed(viewed, entry)).length,
+    // Preview all picks up where the reader left off.
+    resumeAt = firstUnviewed(viewed, entries);
 
   return (
     <div className="changes-header">
@@ -74,6 +76,19 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
             {loading ? (data ? "Refreshing changes…" : "Reading changes…") : ""}
           </span>
         </div>
+        {resumeAt && (
+          <Button
+            variant="ghost"
+            className="changes-preview-all"
+            aria-label="Preview all changes"
+            onClick={() =>
+              controller.open({ kind: "file", task, path: resumeAt.file.path })
+            }
+          >
+            <Icon name="eye" size={14} />
+            Preview all
+          </Button>
+        )}
         <TooltipWrapper label="Refresh changes">
           <Button
             variant="ghost"

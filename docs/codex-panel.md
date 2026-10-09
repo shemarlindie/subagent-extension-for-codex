@@ -157,15 +157,20 @@ implementation; the browser-safe change contract lives in
 Files expand into complete diffs and previews; a text file's preview adds a
 **Diff** view of its changes. The header of the file being read stays pinned at
 the top while it scrolls. Binary files show size; images can preview, deleted
-files show Deleted. A file the diff has no part for still gets a section, marked
-Diff unavailable. Once changes are read, the tab shows the changed file count.
-Large content renders in deferred row blocks, collapsed files unmount rows, and
-cursor pages are read to completion. Refresh retains the last result; failures
-mark it stale. Switching comparison scope clears the old result while loading.
+files show Deleted and their removed lines. A file the diff has no part for
+still gets a section, marked Diff unavailable. Once changes are read, the tab
+shows the changed file count. Large content renders in deferred row blocks,
+collapsed files unmount rows, and cursor pages are read to completion. Refresh
+retains the last result; failures mark it stale. Switching comparison scope
+clears the old result while loading.
 
-**Viewed** in a file's header marks the file read and collapses it; the header
-counts viewed files. A mark lasts until that file's changes change; the file
-then opens again, unread.
+**Viewed** in a file's header, or in its preview, marks the file read and
+collapses it in the list; the header counts viewed files. A mark lasts until
+that file's changes change; the file then opens again, unread. **Preview all**
+opens the preview at the first file not yet viewed. In the preview, the previous
+and next buttons step through the files in list order and show the position,
+such as `3 / 12`. The controls stay in place and the chosen view carries over;
+the last file shows until the next one is read.
 
 Worktree headers offer branch/path and copyable checkout/diff/push commands.
 **Remove worktree** keeps the branch and asks before discarding uncommitted

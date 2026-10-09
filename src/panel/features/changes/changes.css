@@ -11,14 +11,14 @@
 .changes-toolbar {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "summary refresh";
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "summary review refresh";
   align-items: center;
   gap: 8px;
   min-height: 32px;
 }
 .changes-toolbar[data-has-scope="true"] {
-  grid-template-areas: "scope refresh" "summary summary";
+  grid-template-areas: "scope review refresh" "summary summary summary";
   padding-bottom: 6px;
 }
 .changes-toolbar > .view-switch {
@@ -27,6 +27,14 @@
 }
 .changes-refresh {
   grid-area: refresh;
+}
+.changes-preview-all {
+  grid-area: review;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
 }
 .changes-summary-row {
   grid-area: summary;
@@ -153,7 +161,7 @@ body[data-expanded-panel="true"]
   font-size: 12px;
 }
 
-/* Viewed: a checkbox-like box and label, in file headers. */
+/* Viewed: a checkbox-like box and label, in file headers and the preview. */
 .viewed-toggle {
   display: inline-flex;
   align-items: center;
@@ -177,4 +185,105 @@ body[data-expanded-panel="true"]
 /* A viewed file's header recedes, so what is left to read stands out. */
 .diff-file[data-viewed="true"] > summary .diff-path {
   color: var(--muted);
+}
+
+/* Navigation above the preview's toolbar; its controls hold still as files switch. */
+.changed-file-preview {
+  --file-nav-height: 36px;
+}
+.changed-file-nav {
+  position: sticky;
+  /* Under the sticky dialog heading, like the toolbar. */
+  top: 28px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  height: var(--file-nav-height);
+  margin: 0 calc(-1 * var(--dialog-pad));
+  padding: 4px var(--dialog-pad) 0;
+  background: var(--bg);
+  font-size: 12px;
+}
+.changed-file-nav ~ .file-preview > .file-preview-toolbar {
+  top: calc(28px + var(--file-nav-height));
+}
+.changed-file-step svg {
+  rotate: 90deg;
+}
+.changed-file-step[data-direction="next"] svg {
+  rotate: -90deg;
+}
+.changed-file-position {
+  /* Room for "999 / 999", so stepping doesn't move the next button. */
+  min-width: 9ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.changed-file-viewed-count {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+/* Matches a disabled button's look while keeping focus. */
+.changed-file-step[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
+}
+/* The last file shows until the next is read; dim it if that takes a moment. */
+.changed-file-preview[data-stale="true"] .file-preview-body {
+  opacity: 0.6;
+  transition: opacity 0.15s 0.15s;
+}
+
+/*
+ * The preview's toolbar is laid out by its width alone, so stepping between
+ * files never changes its height: one row when wide, two when narrow. Details
+ * that don't fit are cut off rather than wrapped.
+ */
+.changed-file-preview {
+  container-type: inline-size;
+}
+.changed-file-preview .file-preview-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "badge meta views actions";
+}
+.changed-file-preview .file-preview-toolbar > .file-badge {
+  grid-area: badge;
+}
+.changed-file-preview .file-preview-toolbar > .file-meta {
+  grid-area: meta;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.changed-file-preview .file-preview-toolbar > .file-meta > :not(.file-name) {
+  flex: none;
+}
+.changed-file-preview .file-preview-toolbar > .view-switch {
+  grid-area: views;
+  justify-self: start;
+}
+.changed-file-preview .file-preview-toolbar > .toolbar-actions {
+  grid-area: actions;
+  justify-self: end;
+}
+.view-switch-placeholder {
+  visibility: hidden;
+}
+@container (max-width: 640px) {
+  .changed-file-preview .file-preview-toolbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "badge meta meta"
+      "views views actions";
+  }
 }

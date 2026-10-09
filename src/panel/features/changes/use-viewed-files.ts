@@ -25,6 +25,14 @@ export function changedSinceViewed(
   return signature !== undefined && signature !== entry.signature;
 }
 
+/** The first file not yet viewed, or the first file once all are. */
+export function firstUnviewed(
+  viewed: ReadonlyMap<string, string>,
+  entries: ChangedFileEntry[],
+) {
+  return entries.find((entry) => !isViewed(viewed, entry)) ?? entries[0];
+}
+
 /**
  * The task's viewed files, kept for the panel session. Marking a file viewed
  * collapses it in the Changes list; unmarking opens it again.
