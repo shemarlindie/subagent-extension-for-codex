@@ -216,12 +216,13 @@ startup registration: chat projects are added when a task starts from that chat
 `npm run projects` covers the rest.
 
 Build with `npm run build`. `npm run package:plugin` creates an npm tarball
-containing compiled service/proxy code, both HTML panels, the delegation skill and bundled production
-dependencies, including installed native Claude runtime assets. Extract its
-`package/` directory as the plugin root for a local installation. Node 24+ must
-be available on the execution host. Native assets match the build host; build
-on the destination OS/architecture rather than copying a native bundle between
-platforms. Ordinary source checkouts require `npm ci` before building.
+containing the bundled service/proxy code with its dependencies, both HTML panels,
+the delegation skill and the Claude Code binary in `dist/claude/`. It has no
+`node_modules`. Extract its `package/` directory as the plugin root for a local
+installation. Node 24+ must be available on the execution host. The Claude Code
+binary matches the build host; build on the destination OS/architecture rather
+than copying a package between platforms. Ordinary source checkouts require
+`npm ci` before building.
 The packaged black and white `assets/product-glyph-{black,white}.svg` files supply the
 composer, listing, MCP server, and mention-result icons.
 The stdio launcher connects to the authenticated local service or starts it when
