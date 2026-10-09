@@ -1,7 +1,9 @@
 {
   "extends": "./ui/tsconfig.json",
   "compilerOptions": {
-    "lib": ["ES2024", "DOM"]
+    "lib": ["ES2024", "DOM"],
+    // vite.config.ts imports its plugin with the extension Node's native loader needs.
+    "allowImportingTsExtensions": true
   },
   "exclude": [],
   "include": [

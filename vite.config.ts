@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-import { fixtureServicePlugin } from "./dev/fixture-service-plugin";
+import { fixtureServicePlugin } from "./dev/fixture-service-plugin.ts";
 
 const root = import.meta.dirname;
 // Same optional .env as npm run dev/start; shell variables take precedence.
