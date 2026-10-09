@@ -52,7 +52,8 @@ export function EvidenceTabs({ task }: { task: Task }) {
       task.id,
       (state) => state.reading.activity,
     ),
-    listRef = useActiveTabInView(state.tab);
+    listRef = useActiveTabInView(state.tab),
+    changes = state.changes?.task === task.id ? state.changes : undefined;
 
   return (
     <Tabs.Root
@@ -71,6 +72,13 @@ export function EvidenceTabs({ task }: { task: Task }) {
         </Tabs.Tab>
         <Tabs.Tab value="changes" id="tab-changes">
           Changes
+          {/* Changes are read only while Changes or Details is open, so the count waits for that read. */}
+          {changes?.data && (
+            <>
+              {" "}
+              <TabCount value={changes.data.files.length} />
+            </>
+          )}
         </Tabs.Tab>
         <Tabs.Tab value="activity" id="tab-activity">
           Activity <TabCount value={state.events.length} />
@@ -99,10 +107,7 @@ export function EvidenceTabs({ task }: { task: Task }) {
         />
       </Tabs.Panel>
       <Tabs.Panel value="details">
-        <TaskDetails
-          task={task}
-          changes={state.changes?.task === task.id ? state.changes : undefined}
-        />
+        <TaskDetails task={task} changes={changes} />
       </Tabs.Panel>
     </Tabs.Root>
   );

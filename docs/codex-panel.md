@@ -156,10 +156,11 @@ implementation; the browser-safe change contract lives in
 
 Files expand into complete diffs and previews; a text file's preview adds a
 **Diff** view of its changes. Binary files show size; images can preview,
-deleted files show Deleted. Large content renders in deferred row blocks,
-collapsed files unmount rows, and cursor pages are read to completion. Refresh
-retains the last result; failures mark it stale. Switching comparison scope
-clears the old result while loading.
+deleted files show Deleted. Once changes are read, the tab shows the changed
+file count. Large content renders in deferred row blocks, collapsed files
+unmount rows, and cursor pages are read to completion. Refresh retains the last
+result; failures mark it stale. Switching comparison scope clears the old result
+while loading.
 
 Worktree headers offer branch/path and copyable checkout/diff/push commands.
 **Remove worktree** keeps the branch and asks before discarding uncommitted
