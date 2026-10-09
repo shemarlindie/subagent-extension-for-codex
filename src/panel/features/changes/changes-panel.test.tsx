@@ -120,6 +120,8 @@ test("refresh keeps the mounted file and its collapsed state through loading, fa
   const file = view.container.querySelector<HTMLDetailsElement>(".diff-file");
 
   assert.ok(file);
+  // jsdom has no scrolling.
+  file.scrollIntoView = vi.fn();
 
   await act(async () => {
     file.open = false;
@@ -127,6 +129,12 @@ test("refresh keeps the mounted file and its collapsed state through loading, fa
   });
 
   assert.equal(file.open, false);
+
+  // A collapsed file whose header was stuck at the top comes back into view.
+  assert.deepEqual(vi.mocked(file.scrollIntoView).mock.lastCall, [
+    { block: "nearest" },
+  ]);
+
   update({ ...loaded, loading: true });
 
   assert.equal(view.getAllByRole("progressbar").length, 1);

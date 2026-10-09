@@ -368,7 +368,9 @@ h3 {
   }
 }
 [role="tabpanel"] {
-  padding-top: 14px;
+  /* Content can offset by this, such as a header sticking above the padding. */
+  --tab-panel-top-pad: 14px;
+  padding-top: var(--tab-panel-top-pad);
 }
 [role="tabpanel"] > :first-child {
   margin-top: 0;

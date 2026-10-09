@@ -108,6 +108,20 @@
   font-family: var(--font-mono);
   user-select: all;
 }
+/* The file being read keeps its header at the top until the next file's reaches it. */
+.changes .diff-file > summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+/* Where the tab panel scrolls on its own, stick above its top padding. */
+body[data-expanded-panel="true"]
+  .detail:not([data-stacked])
+  .changes
+  .diff-file
+  > summary {
+  top: calc(-1 * var(--tab-panel-top-pad));
+}
 /* Preview sits at the end of each file's header. */
 .diff-preview {
   display: inline-flex;

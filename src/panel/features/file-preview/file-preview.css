@@ -93,7 +93,10 @@
 .diff-file {
   border: 1px solid var(--line);
   border-radius: 6px;
-  overflow: hidden;
+  /* Clips to the rounded border without becoming a scroller, so a header can stick. */
+  overflow: clip;
+  /* Not being a scroller, it would otherwise widen to fit its longest line. */
+  min-width: 0;
 }
 .diff-file > summary {
   display: flex;

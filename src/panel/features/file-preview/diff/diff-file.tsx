@@ -47,7 +47,13 @@ export function DiffFile({
     <details
       className="diff-file"
       open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
+      onToggle={(event) => {
+        const details = event.currentTarget;
+        setOpen(details.open);
+        // Collapsing from a header stuck at the top would leave the file above
+        // the view; bring it back.
+        if (!details.open) details.scrollIntoView({ block: "nearest" });
+      }}
     >
       <summary>
         <span className="diff-path">
