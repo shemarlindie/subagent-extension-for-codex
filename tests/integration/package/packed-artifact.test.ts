@@ -2,24 +2,27 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import {
   access,
-  constants,
+  chmod,
   mkdir,
   mkdtemp,
   readdir,
   readFile,
   realpath,
   rm,
+  symlink,
+  unlink,
   writeFile,
 } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { afterAll, beforeAll, describe, test } from "vitest";
+import { afterAll, beforeAll, describe, test, type TestContext } from "vitest";
 
+import type { ProviderReadiness } from "../../../src/features/providers/types.js";
 import { waitForListening } from "../../support/helpers.js";
 
 const exec = promisify(execFile);
@@ -28,13 +31,27 @@ const exec = promisify(execFile);
 // the checkout, so no import can resolve from the checkout's node_modules.
 let root: string;
 let pkg: string;
-let data: string;
 let repository: string;
 let serviceRepository: string;
-let port: number;
+
+/** A packaged service's data directory and loopback port. */
+type Service = { data: string; port: number };
+
+/** The service most tests share; it runs whatever Claude Code the host has. */
+let main: Service;
+/** Every service a test started, so each one is stopped even when a test fails. */
+const services: Service[] = [];
+
+/** A further packaged service with its own data directory and port. */
+async function extraService(name: string): Promise<Service> {
+  const service = { data: join(root, name), port: await freePort() };
+  services.push(service);
+
+  return service;
+}
 
 /** The environment without this service's overrides, so tests never reach the user's live service. */
-function cleanEnv() {
+function cleanEnv(service = main, overrides: Record<string, string> = {}) {
   const env: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(process.env))
@@ -47,8 +64,43 @@ function cleanEnv() {
 
   return {
     ...env,
-    CODEX_SUBAGENT_EXTENSION_DATA: data,
-    PORT: String(port),
+    CODEX_SUBAGENT_EXTENSION_DATA: service.data,
+    PORT: String(service.port),
+    ...overrides,
+  };
+}
+
+/** Whether a file starts like an ELF, Mach-O or Windows PE binary. */
+function nativeExecutable(bytes: Buffer) {
+  const magic = bytes.subarray(0, 4).toString("hex");
+
+  return (
+    magic === "7f454c46" ||
+    ["feedface", "feedfacf", "cefaedfe", "cffaedfe", "cafebabe"].includes(
+      magic,
+    ) ||
+    bytes.subarray(0, 2).toString("latin1") === "MZ"
+  );
+}
+
+/** A fake `claude` that prints the given `--version` output. */
+async function fakeClaude(path: string, version: string) {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `#!/bin/sh\necho '${version} (Claude Code)'\n`);
+  await chmod(path, 0o755);
+
+  return path;
+}
+
+async function claudeWorker(client: Client) {
+  const { result: workers } = await callJson(client, "list_available_workers");
+
+  return workers.find(
+    (worker: { provider: string }) => worker.provider === "claude",
+  ) as {
+    readiness: ProviderReadiness;
+    models?: { value: string }[];
+    model_discovery_error?: string;
   };
 }
 
@@ -62,7 +114,10 @@ async function freePort() {
 }
 
 /** Connects over the packaged stdio entry, which starts the packaged service when none is running. */
-async function connectStdio() {
+async function connectStdio(
+  service = main,
+  overrides: Record<string, string> = {},
+) {
   const client = new Client({ name: "packed-artifact-test", version: "1" });
 
   await client.connect(
@@ -70,7 +125,7 @@ async function connectStdio() {
       command: process.execPath,
       args: ["--enable-source-maps", join(pkg, "dist/stdio.js")],
       cwd: root,
-      env: cleanEnv(),
+      env: cleanEnv(service, overrides),
       stderr: "pipe",
     }),
   );
@@ -85,11 +140,20 @@ async function callJson(client: Client, name: string, args = {}) {
   return JSON.parse((result.content as { text: string }[])[0].text);
 }
 
-const health = () =>
-  fetch(`http://127.0.0.1:${port}/health`).then((response) => response.json());
+async function callError(client: Client, name: string, args = {}) {
+  const result = await client.callTool({ name, arguments: args });
+  assert.ok(result.isError, JSON.stringify(result.content));
 
-async function stopService() {
-  const pid = Number(await readFile(join(data, "service.pid"), "utf8"));
+  return (result.content as { text: string }[])[0].text;
+}
+
+const health = () =>
+  fetch(`http://127.0.0.1:${main.port}/health`).then((response) =>
+    response.json(),
+  );
+
+async function stopService(service = main) {
+  const pid = Number(await readFile(join(service.data, "service.pid"), "utf8"));
 
   try {
     process.kill(pid, "SIGTERM");
@@ -112,10 +176,9 @@ async function stopService() {
 
 beforeAll(async () => {
   root = await realpath(await mkdtemp(join(tmpdir(), "packed-artifact-")));
-  data = join(root, "data");
+  main = { data: join(root, "data"), port: await freePort() };
   repository = join(root, "repository");
   serviceRepository = join(root, "service-repository");
-  port = await freePort();
 
   // Pack the existing build (pretest builds it) instead of rebuilding through prepack.
   await access(resolve("dist/main.js"));
@@ -143,12 +206,14 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
-  await stopService().catch(() => {});
+  for (const service of [main, ...services])
+    await stopService(service).catch(() => {});
+
   await rm(root, { recursive: true, force: true });
 });
 
 describe("packed artifact", () => {
-  test("contains the bundled entries and the Claude binary, and no node_modules", async () => {
+  test("contains the bundled entries and no node_modules or native executables", async () => {
     const top = await readdir(pkg);
 
     assert.ok(
@@ -162,30 +227,22 @@ describe("packed artifact", () => {
       "dist/projects-cli.js",
       "dist/app.html",
       "dist/THIRD_PARTY_LICENSES.txt",
-      "dist/claude/LICENSE.md",
       "assets/product-glyph-black.svg",
       "mcp.json",
     ])
       await access(join(pkg, file));
 
-    const binary = join(
-      pkg,
-      "dist/claude",
-      process.platform === "win32" ? "claude.exe" : "claude",
-    );
+    const files = (await readdir(pkg, { recursive: true, withFileTypes: true }))
+      .filter((entry) => entry.isFile())
+      .map((entry) => join(entry.parentPath, entry.name));
 
-    await access(binary, constants.X_OK);
+    const native = [];
 
-    // The binary is the one the bundled SDK was built against.
-    const sdk = JSON.parse(
-      await readFile(
-        resolve("node_modules/@anthropic-ai/claude-agent-sdk/package.json"),
-        "utf8",
-      ),
-    );
+    for (const file of files)
+      if (nativeExecutable(await readFile(file)))
+        native.push(relative(pkg, file));
 
-    const { stdout } = await exec(binary, ["--version"]);
-    assert.equal(stdout.trim(), `${sdk.claudeCodeVersion} (Claude Code)`);
+    assert.deepEqual(native, []);
   });
 
   test("the projects CLI registers and lists a repository from an unrelated directory", async () => {
@@ -236,7 +293,7 @@ describe("packed artifact", () => {
         arguments: { query: "review" },
       });
 
-      await access(join(data, "mention-search.jsonl"));
+      await access(join(main.data, "mention-search.jsonl"));
     } finally {
       await client.close();
     }
@@ -245,7 +302,10 @@ describe("packed artifact", () => {
 
     // The launcher started the extracted dist/main.js, not the checkout's.
     if (process.platform !== "win32") {
-      const pid = (await readFile(join(data, "service.pid"), "utf8")).trim();
+      const pid = (
+        await readFile(join(main.data, "service.pid"), "utf8")
+      ).trim();
+
       const { stdout } = await exec("ps", ["-ww", "-p", pid, "-o", "args="]);
       assert.ok(stdout.includes(join(pkg, "dist/main.js")), stdout);
     }
@@ -268,4 +328,108 @@ describe("packed artifact", () => {
       await client.close();
     }
   });
+
+  test("the packaged service runs the host's Claude Code for model discovery", async (context: TestContext) => {
+    const client = await connectStdio();
+
+    try {
+      const worker = await claudeWorker(client);
+
+      if (!worker.readiness.ready)
+        context.skip(
+          `No supported Claude Code on this host: ${worker.readiness.message}`,
+        );
+
+      assert.equal(worker.model_discovery_error, undefined);
+      assert.ok(worker.models?.some((model) => model.value === "default"));
+    } finally {
+      await client.close();
+    }
+  });
+
+  // Fake CLIs are shell scripts.
+  test.skipIf(process.platform === "win32")(
+    "an unsupported or missing Claude Code blocks Claude tasks and nothing else",
+    async () => {
+      const bin = join(root, "claude-versions");
+      const supported = await fakeClaude(join(bin, "supported"), "2.1.293");
+      const old = await fakeClaude(join(bin, "old"), "2.0.0");
+      const newer = await fakeClaude(join(bin, "newer"), "9.0.0");
+      // The override is a symlink, as installers make, retargeted between checks.
+      const link = join(root, "claude-link");
+      await symlink(supported, link);
+      const overridden = await extraService("data-override");
+
+      const client = await connectStdio(overridden, {
+        CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH: link,
+      });
+
+      const retarget = async (target: string) => {
+        await unlink(link);
+        await symlink(target, link);
+      };
+
+      try {
+        let worker = await claudeWorker(client);
+        assert.equal(worker.readiness.ready, true);
+
+        assert.deepEqual(worker.readiness.details, {
+          executable: supported,
+          version: "2.1.293",
+          supported_versions: worker.readiness.details.supported_versions,
+        });
+
+        await retarget(old);
+        worker = await claudeWorker(client);
+        assert.equal(worker.readiness.ready, false);
+        assert.match(worker.readiness.message!, /2\.0\.0 .* older than/);
+        assert.equal(worker.models, undefined);
+
+        const refused = await callError(client, "start_agent_task", {
+          provider: "claude",
+          description: "Review the README",
+          worker_profile: "reviewer",
+          repository,
+        });
+
+        assert.match(refused, /older than the supported/);
+        // Projects and task history stay available.
+        await callJson(client, "list_agent_projects");
+        await callJson(client, "list_agent_tasks");
+
+        await retarget(newer);
+        worker = await claudeWorker(client);
+        assert.match(worker.readiness.message!, /9\.0\.0 .* newer than/);
+
+        // A configured path that stops resolving is an error, not a PATH fallback.
+        await unlink(link);
+        worker = await claudeWorker(client);
+
+        assert.match(
+          worker.readiness.message!,
+          /CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH points to/,
+        );
+      } finally {
+        await client.close();
+      }
+
+      // Without an override or a claude on PATH, the service reports it missing.
+      const empty = join(root, "empty-bin");
+      await mkdir(empty);
+      const missing = await extraService("data-missing");
+      const bare = await connectStdio(missing, { PATH: empty });
+
+      try {
+        const worker = await claudeWorker(bare);
+        assert.equal(worker.readiness.ready, false);
+
+        assert.match(
+          worker.readiness.message!,
+          /not found on the service's PATH/,
+        );
+      } finally {
+        await bare.close();
+      }
+    },
+  );
 });

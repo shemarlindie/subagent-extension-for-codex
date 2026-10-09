@@ -28,6 +28,16 @@ Run the command from the project root. Settings come from the shell or an option
 
 Stop the demo service before starting Claude on the same port.
 
+### Claude Code CLI
+
+Claude tasks need Node.js 24+, Git and a supported Claude Code CLI on the service host. The service runs your installed `claude`; the package doesn't include one, and the service never installs, updates or signs in to Claude Code. Install it from the [Claude Code setup guide](https://code.claude.com/docs/en/setup).
+
+- **Supported versions:** 2.1.286–2.1.295. The range covers the version the bundled Agent SDK pairs with, and the stable and latest releases when it was qualified. The Homebrew `claude-code` cask and npm's `@anthropic-ai/claude-code@stable` follow the stable channel; npm's `latest` tag and the native installer's default follow latest. Homebrew installs don't update themselves.
+- **Selection:** `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`, when set, names the executable as an absolute path. Otherwise the service takes the first `claude` on its own `PATH`, without a shell, so shell aliases and interactive shell init don't apply. Either path is resolved through symlinks.
+- **Validation:** before each new session, the service runs `claude --version` and checks the version against the range. It checks again when the file changes, as an auto-update does; running sessions keep their process.
+
+A missing or unsupported CLI blocks starting Claude tasks and new turns with a message that names the fix: the install or update step, the release channel and the path override. `list_available_workers` and the delegate form report the selected path, its version and the supported range. Projects, task history and the panel stay usable.
+
 ### Admin token
 
 The service listens only on loopback, but loopback is not private: other local processes and users can connect to the port, and any web page open in your browser can send it requests. Because the API starts workers that edit repositories and run commands, every API request must present a secret that only your account can read.
@@ -217,14 +227,13 @@ startup registration: chat projects are added when a task starts from that chat
 `npm run projects` covers the rest.
 
 Build with `npm run build`. `npm run package:plugin` creates an npm tarball
-containing the bundled service/proxy code with its dependencies, both HTML panels,
-the delegation skill and the Claude Code binary in `dist/claude/`. It has no
-`node_modules`. Extract its `package/` directory as the plugin root for a local
-installation. Node 24+ must be available on the execution host. See
-[Build](docs/development.md#build) for how the bundle and package are made. The Claude Code
-binary matches the build host; build on the destination OS/architecture rather
-than copying a package between platforms. Ordinary source checkouts require
-`npm ci` before building.
+containing the bundled service/proxy code with its dependencies, both HTML panels
+and the delegation skill. It has no `node_modules` and no native binaries, so one
+tarball works on every platform. Extract its `package/` directory as the plugin
+root for a local installation. The execution host needs Node 24+ and a
+[supported Claude Code CLI](#claude-code-cli). See
+[Build](docs/development.md#build) for how the bundle and package are made.
+Ordinary source checkouts require `npm ci` before building.
 The packaged black and white `assets/product-glyph-{black,white}.svg` files supply the
 composer, listing, MCP server, and mention-result icons.
 The stdio launcher connects to the authenticated local service or starts it when

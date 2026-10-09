@@ -258,12 +258,9 @@ output:
   `dist/THIRD_PARTY_LICENSES.txt`.
 - `scripts/build-ui.mjs` builds the panel into `dist/app.html`.
 
-The backend build also copies the host's Claude Code binary from the SDK's
-platform package into `dist/claude/`, failing if its version differs from the
-SDK's. The service doesn't run it: every Claude launch, `npm run dev`
-included, runs the installed Claude Code CLI that
-`src/features/providers/claude/executable.ts` finds and validates. The binary
-matches the build host, so a package runs only on that OS and architecture.
+The package ships no Claude Code binary. Every Claude launch, `npm run dev`
+included, runs the installed CLI that `src/features/providers/claude/executable.ts`
+finds and validates; see [Claude Code CLI](../README.md#claude-code-cli).
 
 The bundle ships source maps without embedded sources. `npm start`, `mcp.json`
 and the launcher pass `--enable-source-maps`, so stack traces point to `src/`
@@ -272,7 +269,29 @@ files and lines.
 `tests/integration/package/packed-artifact.test.ts` packs the current `dist/`,
 extracts it outside the checkout and runs the projects CLI, the stdio proxy
 with launcher auto-start, the panel, the packaged `.env` and a service restart
-against the extracted copy.
+against the extracted copy. It also checks that the archive holds no native
+binaries, drives Claude readiness with fake CLIs (supported, too old, too new,
+a broken override and none on `PATH`) and, when the host has a supported CLI,
+runs model discovery through it.
+
+### Qualifying Claude Code versions
+
+`claudeCliSupport` in `src/features/providers/claude/executable.ts` holds the
+supported range beside the Agent SDK version it was qualified with. A test fails
+when the installed SDK no longer matches that version, so an SDK update
+re-qualifies the range. Qualify a version before adding it:
+
+1. Run `npm test`. Recorded fixtures cover the SDK message mapping, and the
+   packed-artifact suite runs model discovery through the host's CLI.
+2. Run the [live Claude checks](../README.md#live-claude-checks) with that
+   version selected (through `PATH` or `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`).
+   They cover reads, resume, the sandbox, MCP, budgets and CLI parity
+   (project settings, hooks, skills and MCP servers).
+3. In a live task from the panel, steer, interrupt and answer a question.
+
+Keep the range covering the SDK's paired version (`claudeCodeVersion` in its
+`package.json`) and the current stable and latest releases
+(`npm view @anthropic-ai/claude-code dist-tags`).
 
 ## Checks
 

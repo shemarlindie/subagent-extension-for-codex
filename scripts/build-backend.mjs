@@ -1,14 +1,6 @@
-import {
-  chmodSync,
-  copyFileSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
-import { builtinModules, createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { builtinModules } from "node:module";
+import { join } from "node:path";
 
 import { build } from "esbuild";
 
@@ -109,65 +101,6 @@ writeFileSync(
     .join("\n")}`,
 );
 
-// The SDK's platform package holds the Claude Code binary for this host; it ships as a plain file.
-const require = createRequire(import.meta.url);
-const sdkEntry = require.resolve("@anthropic-ai/claude-agent-sdk");
-
-const sdkVersion = JSON.parse(
-  readFileSync(join(dirname(sdkEntry), "package.json"), "utf8"),
-).version;
-
-const musl =
-  process.platform === "linux" &&
-  !process.report.getReport().header.glibcVersionRuntime;
-
-const platformPackages =
-  process.platform === "linux"
-    ? musl
-      ? [`linux-${process.arch}-musl`, `linux-${process.arch}`]
-      : [`linux-${process.arch}`, `linux-${process.arch}-musl`]
-    : [`${process.platform}-${process.arch}`];
-
-const sdkRequire = createRequire(sdkEntry);
-
-const platformDirectory = platformPackages
-  .map((suffix) => {
-    try {
-      return dirname(
-        sdkRequire.resolve(
-          `@anthropic-ai/claude-agent-sdk-${suffix}/package.json`,
-        ),
-      );
-    } catch {
-      return undefined;
-    }
-  })
-  .find(Boolean);
-
-if (!platformDirectory)
-  throw new Error(
-    `No Claude Code platform package for ${process.platform}-${process.arch}; reinstall without --omit=optional`,
-  );
-
-const platformVersion = JSON.parse(
-  readFileSync(join(platformDirectory, "package.json"), "utf8"),
-).version;
-
-if (platformVersion !== sdkVersion)
-  throw new Error(
-    `Claude Code platform package ${platformVersion} does not match the bundled SDK ${sdkVersion}; reinstall dependencies`,
-  );
-
-const binary = process.platform === "win32" ? "claude.exe" : "claude";
-mkdirSync(join(outdir, "claude"), { recursive: true });
-copyFileSync(join(platformDirectory, binary), join(outdir, "claude", binary));
-chmodSync(join(outdir, "claude", binary), 0o755);
-
-copyFileSync(
-  join(platformDirectory, "LICENSE.md"),
-  join(outdir, "claude", "LICENSE.md"),
-);
-
 const javascript = Object.entries(outputs)
   .filter(([path]) => path.endsWith(".js"))
   .reduce((total, [, output]) => total + output.bytes, 0);
@@ -175,5 +108,5 @@ const javascript = Object.entries(outputs)
 const mb = (bytes) => `${(bytes / 1e6).toFixed(1)} MB`;
 
 console.log(
-  `Backend: ${mb(javascript)} JavaScript, ${packages.length} bundled packages, Claude Code binary from SDK ${sdkVersion} ${mb(statSync(join(outdir, "claude", binary)).size)}`,
+  `Backend: ${mb(javascript)} JavaScript, ${packages.length} bundled packages`,
 );
