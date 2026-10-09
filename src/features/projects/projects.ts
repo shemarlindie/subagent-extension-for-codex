@@ -1,23 +1,25 @@
 import { realpath, stat } from "node:fs/promises";
 import { basename, isAbsolute, relative } from "node:path";
 
-import { type Store } from "../tasks/store.js";
+import { type Database } from "../../platform/database/database.js";
 import { git, Workspaces } from "../workspaces/workspace.js";
+import { projectRoots } from "./schema.js";
 
 /** Only explicit user registration (UI/CLI) or configuration grants roots, never task arguments. */
 export class Projects {
   constructor(
-    private store: Store,
+    private database: Database,
     private workspaces: Workspaces,
   ) {
     this.refresh();
   }
 
   refresh() {
-    this.workspaces.allowedRoots = this.store.db
-      .prepare("SELECT path FROM project_roots")
+    this.workspaces.allowedRoots = this.database.orm
+      .select({ path: projectRoots.path })
+      .from(projectRoots)
       .all()
-      .map((r) => String(r.path));
+      .map((r) => r.path);
   }
 
   async register(path: string, kind: "repository" | "parent" = "repository") {
@@ -32,11 +34,11 @@ export class Projects {
     )
       throw new Error("Use repository root");
 
-    this.store.db
-      .prepare(
-        "INSERT INTO project_roots VALUES(?,?) ON CONFLICT(path) DO UPDATE SET kind=excluded.kind",
-      )
-      .run(actual, kind);
+    this.database.orm
+      .insert(projectRoots)
+      .values({ path: actual, kind })
+      .onConflictDoUpdate({ target: projectRoots.path, set: { kind } })
+      .run();
 
     this.refresh();
 
@@ -46,13 +48,15 @@ export class Projects {
   list() {
     this.refresh();
 
-    return this.store.db
-      .prepare("SELECT path,kind FROM project_roots ORDER BY path")
+    return this.database.orm
+      .select()
+      .from(projectRoots)
+      .orderBy(projectRoots.path)
       .all()
       .map((r) => ({
-        repository: String(r.path),
-        name: basename(String(r.path)),
-        kind: String(r.kind),
+        repository: r.path,
+        name: basename(r.path),
+        kind: r.kind,
       }));
   }
 

@@ -31,7 +31,7 @@ async function fixture(t: TestContext) {
     dir,
   );
 
-  c.projects = new Projects(c.store, c.workspaces);
+  c.projects = new Projects(c.store.database, c.workspaces);
   const html = join(dir, "app.html");
   await writeFile(html, "<!doctype html><title>Project registration</title>");
 

@@ -141,13 +141,16 @@ test("subscribe identity is canonical, owner-scoped, encrypted and refreshable w
     assert.equal(a.cursor, null);
 
     assert.equal(
-      store.db.prepare("SELECT COUNT(*) AS n FROM event_subscriptions").get()!
-        .n,
+      store.database.client
+        .prepare("SELECT COUNT(*) AS n FROM event_subscriptions")
+        .get()!.n,
       1,
     );
 
     const body = String(
-      store.db.prepare("SELECT body FROM event_subscriptions").get()!.body,
+      store.database.client
+        .prepare("SELECT body FROM event_subscriptions")
+        .get()!.body,
     );
 
     assert.ok(!body.includes(secret));
@@ -189,8 +192,9 @@ test("failed callback verification never creates a subscription or exposes the s
     );
 
     assert.equal(
-      store.db.prepare("SELECT COUNT(*) AS n FROM event_subscriptions").get()!
-        .n,
+      store.database.client
+        .prepare("SELECT COUNT(*) AS n FROM event_subscriptions")
+        .get()!.n,
       0,
     );
   } finally {
@@ -222,7 +226,9 @@ test("completion events are compact, filtered, signed, idempotent and durable ac
   events.capture();
 
   assert.equal(
-    store.db.prepare("SELECT COUNT(*) AS n FROM event_outbox").get()!.n,
+    store.database.client
+      .prepare("SELECT COUNT(*) AS n FROM event_outbox")
+      .get()!.n,
     1,
   );
 
@@ -266,10 +272,14 @@ test("transient failures retry with stable event IDs; permanent failures stop de
     store.event(make(), "task.completed", {});
     events.capture();
     await events.flush();
-    const first = store.db.prepare("SELECT * FROM event_outbox").get()!;
+
+    const first = store.database.client
+      .prepare("SELECT * FROM event_outbox")
+      .get()!;
+
     assert.equal(first.attempts, 1);
     assert.ok(Number(first.next_at) > Date.now());
-    store.db.exec("UPDATE event_outbox SET next_at=0");
+    store.database.client.exec("UPDATE event_outbox SET next_at=0");
     setStatus(200);
     await events.flush();
     assert.equal(posts.filter((p) => !p.body.type).length, 2);
@@ -281,14 +291,16 @@ test("transient failures retry with stable event IDs; permanent failures stop de
 
     const sub = JSON.parse(
       String(
-        store.db.prepare("SELECT body FROM event_subscriptions").get()!.body,
+        store.database.client
+          .prepare("SELECT body FROM event_subscriptions")
+          .get()!.body,
       ),
     );
 
     assert.equal(sub.active, false);
 
     assert.equal(
-      store.db
+      store.database.client
         .prepare("SELECT COUNT(*) AS n FROM event_outbox WHERE status='ready'")
         .get()!.n,
       0,
@@ -298,7 +310,7 @@ test("transient failures retry with stable event IDs; permanent failures stop de
     const task = make();
 
     assert.deepEqual(
-      store.db
+      store.database.client
         .prepare("SELECT DISTINCT task_id FROM event_outbox")
         .all()
         .map((row) => row.task_id),
@@ -308,7 +320,9 @@ test("transient failures retry with stable event IDs; permanent failures stop de
     store.delete(task.id, task.owner);
 
     assert.equal(
-      store.db.prepare("SELECT COUNT(*) AS n FROM event_outbox").get()!.n,
+      store.database.client
+        .prepare("SELECT COUNT(*) AS n FROM event_outbox")
+        .get()!.n,
       0,
     );
   } finally {
@@ -326,7 +340,7 @@ test("unsubscribe is idempotent and revoked ownership prevents queued delivery",
     store.event(make(), "task.completed", {});
     events.capture();
 
-    store.db
+    store.database.client
       .prepare("UPDATE tasks SET owner=? WHERE id=?")
       .run("bob", "task-a");
 
@@ -347,8 +361,9 @@ test("unsubscribe is idempotent and revoked ownership prevents queued delivery",
     });
 
     assert.equal(
-      store.db.prepare("SELECT COUNT(*) AS n FROM event_subscriptions").get()!
-        .n,
+      store.database.client
+        .prepare("SELECT COUNT(*) AS n FROM event_subscriptions")
+        .get()!.n,
       0,
     );
   } finally {
@@ -498,11 +513,15 @@ test("expired subscriptions and subscriptions recreated after unsubscribe never 
     await events.handle("alice", "events/subscribe", request());
     store.event(make(), "task.completed", {});
     events.capture();
-    const row = store.db.prepare("SELECT body FROM event_subscriptions").get()!;
+
+    const row = store.database.client
+      .prepare("SELECT body FROM event_subscriptions")
+      .get()!;
+
     const s = JSON.parse(String(row.body));
     s.expires = 0;
 
-    store.db
+    store.database.client
       .prepare("UPDATE event_subscriptions SET body=?")
       .run(JSON.stringify(s));
 
@@ -537,7 +556,9 @@ test("capture runs from the listener after a task transaction commits, and the t
 
     const outbox = () =>
       Number(
-        store.db.prepare("SELECT COUNT(*) AS n FROM event_outbox").get()!.n,
+        store.database.client
+          .prepare("SELECT COUNT(*) AS n FROM event_outbox")
+          .get()!.n,
       );
 
     store.transaction(() => {

@@ -1,22 +1,44 @@
 import { EventEmitter } from "node:events";
-import { type DatabaseSync } from "node:sqlite";
+
+import { and, desc, eq, gt, inArray, max, or, sql } from "drizzle-orm";
 
 import {
   type Database,
   openDatabase,
 } from "../../platform/database/database.js";
 import { type Event, now, type Task } from "../../shared/contracts.js";
+import { events, tasks } from "./schema.js";
 
+type EventRow = typeof events.$inferSelect;
+
+/** The 1,000-event page that event reads return at most. */
+const PAGE = 1000;
+
+const toEvent = (row: EventRow): Event => ({
+  ...row,
+  data: JSON.parse(row.data),
+});
+
+const toTask = (row: { body: string }) => JSON.parse(row.body) as Task;
+
+/**
+ * Task and event persistence, and the bus that announces committed events.
+ * Methods taking an owner are the public, owner-checked reads; the others
+ * are internal reads for code that already holds the task.
+ */
 export class Store {
-  private database: Database;
+  /** The shared connection, which other features' storage also uses. */
+  readonly database: Database;
   /** The tasks saved in the open transaction, with the `updated_at` to restore on rollback. */
   private saved?: [Task, string][];
-  db: DatabaseSync;
   // Long-poll reads each listen while they wait, so there can be many.
   bus = new EventEmitter().setMaxListeners(0);
   constructor(path: string) {
     this.database = openDatabase(path);
-    this.db = this.database.client;
+  }
+
+  private get orm() {
+    return this.database.orm;
   }
 
   /**
@@ -49,13 +71,14 @@ export class Store {
   save(t: Task) {
     const updated = t.updated_at;
     t.updated_at = now();
+    const body = JSON.stringify(t);
 
     try {
-      this.db
-        .prepare(
-          "INSERT INTO tasks VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
-        )
-        .run(t.id, t.owner, JSON.stringify(t));
+      this.orm
+        .insert(tasks)
+        .values({ id: t.id, owner: t.owner, body })
+        .onConflictDoUpdate({ target: tasks.id, set: { body } })
+        .run();
     } catch (error) {
       t.updated_at = updated;
       throw error;
@@ -70,46 +93,46 @@ export class Store {
    */
   delete(id: string, owner: string) {
     this.get(id, owner);
-    this.db.prepare("DELETE FROM tasks WHERE id=? AND owner=?").run(id, owner);
+
+    this.orm
+      .delete(tasks)
+      .where(and(eq(tasks.id, id), eq(tasks.owner, owner)))
+      .run();
   }
 
+  /** An owner's tasks, or every task without one, newest first. */
   all(owner?: string): Task[] {
-    return (
-      owner
-        ? this.db.prepare("SELECT body FROM tasks WHERE owner=?").all(owner)
-        : this.db.prepare("SELECT body FROM tasks").all()
-    )
-      .map((r) => JSON.parse(String(r.body)) as Task)
+    return this.orm
+      .select({ body: tasks.body })
+      .from(tasks)
+      .where(owner ? eq(tasks.owner, owner) : undefined)
+      .all()
+      .map(toTask)
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
   }
 
   get(id: string, owner: string): Task {
-    const row = this.db
-      .prepare("SELECT body FROM tasks WHERE id=? AND owner=?")
-      .get(id, owner);
+    const row = this.orm
+      .select({ body: tasks.body })
+      .from(tasks)
+      .where(and(eq(tasks.id, id), eq(tasks.owner, owner)))
+      .get();
 
     if (!row) throw new Error("Task not found");
 
-    return JSON.parse(String(row.body)) as Task;
+    return toTask(row);
   }
 
   event(t: Task, type: string, data: Record<string, unknown> = {}): Event {
     const timestamp = now();
 
-    const r = this.db
-      .prepare(
-        "INSERT INTO events(task_id,type,timestamp,data) VALUES(?,?,?,?)",
-      )
-      .run(t.id, type, timestamp, JSON.stringify(data));
+    const { id } = this.orm
+      .insert(events)
+      .values({ task_id: t.id, type, timestamp, data: JSON.stringify(data) })
+      .returning({ id: events.id })
+      .get()!;
 
-    const e = {
-      id: Number(r.lastInsertRowid),
-      task_id: t.id,
-      type,
-      timestamp,
-      data,
-    };
-
+    const e = { id, task_id: t.id, type, timestamp, data };
     this.database.afterCommit(() => this.notify(e, t.owner));
 
     return e;
@@ -132,48 +155,94 @@ export class Store {
   events(id: string, owner: string, after = 0): Event[] {
     this.get(id, owner);
 
-    return this.db
-      .prepare(
-        "SELECT * FROM events WHERE task_id=? AND id>? ORDER BY id LIMIT 1000",
-      )
-      .all(id, after)
-      .map(
-        (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
-      );
+    return this.orm
+      .select()
+      .from(events)
+      .where(and(eq(events.task_id, id), gt(events.id, after)))
+      .orderBy(events.id)
+      .limit(PAGE)
+      .all()
+      .map(toEvent);
   }
 
-  /** The id of a task's latest event, or 0 before it has any. */
-  lastEventId(id: string): number {
-    const row = this.db
-      .prepare("SELECT MAX(id) AS id FROM events WHERE task_id=?")
-      .get(id);
+  recentEvents(id: string, owner: string): Event[] {
+    this.get(id, owner);
 
-    return Number(row?.id ?? 0);
+    return this.orm
+      .select()
+      .from(events)
+      .where(eq(events.task_id, id))
+      .orderBy(desc(events.id))
+      .limit(200)
+      .all()
+      .reverse()
+      .map(toEvent);
+  }
+
+  /** An owner's events across tasks, after a cursor, a page at a time. */
+  streamEvents(owner: string, after: number): Event[] {
+    return this.orm
+      .select({
+        id: events.id,
+        task_id: events.task_id,
+        type: events.type,
+        timestamp: events.timestamp,
+        data: events.data,
+      })
+      .from(events)
+      .innerJoin(tasks, eq(tasks.id, events.task_id))
+      .where(and(eq(tasks.owner, owner), gt(events.id, after)))
+      .orderBy(events.id)
+      .limit(PAGE)
+      .all()
+      .map(toEvent);
+  }
+
+  /** Every task's events after a cursor, a page at a time, for webhook capture. */
+  eventsAfter(after: number): Event[] {
+    return this.orm
+      .select()
+      .from(events)
+      .where(gt(events.id, after))
+      .orderBy(events.id)
+      .limit(PAGE)
+      .all()
+      .map(toEvent);
+  }
+
+  /** The id of the latest event, or of a task's latest one; 0 before any. */
+  lastEventId(id?: string): number {
+    const row = this.orm
+      .select({ id: max(events.id) })
+      .from(events)
+      .where(id === undefined ? undefined : eq(events.task_id, id))
+      .get();
+
+    return row?.id ?? 0;
   }
 
   /** A task's latest event of a type, such as its latest `agent.reply`. */
   latestEvent(id: string, type: string): Event | undefined {
-    const row = this.db
-      .prepare(
-        "SELECT * FROM events WHERE task_id=? AND type=? ORDER BY id DESC LIMIT 1",
-      )
-      .get(id, type);
+    const row = this.orm
+      .select()
+      .from(events)
+      .where(and(eq(events.task_id, id), eq(events.type, type)))
+      .orderBy(desc(events.id))
+      .limit(1)
+      .get();
 
-    return row
-      ? ({ ...row, data: JSON.parse(String(row.data)) } as unknown as Event)
-      : undefined;
+    return row && toEvent(row);
   }
 
   /** Every event of the given types for a task, in order, with no page limit. */
   eventsOfTypes(id: string, types: string[]): Event[] {
-    return this.db
-      .prepare(
-        `SELECT * FROM events WHERE task_id=? AND type IN (${types.map(() => "?").join(",")}) ORDER BY id`,
-      )
-      .all(id, ...types)
-      .map(
-        (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
-      );
+    return this.orm
+      .select()
+      .from(events)
+      .where(and(eq(events.task_id, id), inArray(events.type, types)))
+      .orderBy(events.id)
+      .all()
+      .map(toEvent);
   }
 
   /**
@@ -181,39 +250,23 @@ export class Store {
    * compactions, which Claude reports among its other system messages.
    */
   chatEvents(id: string, types: string[]): Event[] {
-    return this.db
-      .prepare(
-        `SELECT * FROM events WHERE task_id=? AND (type IN (${types.map(() => "?").join(",")}) OR (type='claude.activity' AND (json_extract(data,'$.raw_response.subtype')='compact_boundary' OR json_extract(data,'$.raw_response.compact_result')='failed'))) ORDER BY id`,
-      )
-      .all(id, ...types)
-      .map(
-        (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
-      );
-  }
+    const compaction = and(
+      eq(events.type, "claude.activity"),
+      sql`(json_extract(${events.data},'$.raw_response.subtype')='compact_boundary' OR json_extract(${events.data},'$.raw_response.compact_result')='failed')`,
+    );
 
-  recentEvents(id: string, owner: string): Event[] {
-    this.get(id, owner);
-
-    return this.db
-      .prepare(
-        "SELECT * FROM events WHERE task_id=? ORDER BY id DESC LIMIT 200",
+    return this.orm
+      .select()
+      .from(events)
+      .where(
+        and(
+          eq(events.task_id, id),
+          or(inArray(events.type, types), compaction),
+        ),
       )
-      .all(id)
-      .reverse()
-      .map(
-        (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
-      );
-  }
-
-  streamEvents(owner: string, after: number): Event[] {
-    return this.db
-      .prepare(
-        "SELECT events.* FROM events JOIN tasks ON tasks.id=events.task_id WHERE tasks.owner=? AND events.id>? ORDER BY events.id LIMIT 1000",
-      )
-      .all(owner, after)
-      .map(
-        (r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event,
-      );
+      .orderBy(events.id)
+      .all()
+      .map(toEvent);
   }
 
   close() {

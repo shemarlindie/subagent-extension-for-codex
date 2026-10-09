@@ -21,7 +21,7 @@ async function fixture(t: TestContext) {
   const store = new Store(join(dir, "test.sqlite"));
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
   const c = new Control(store, workspaces, new Map(), dir);
-  c.projects = new Projects(store, workspaces);
+  c.projects = new Projects(store.database, workspaces);
 
   t.onTestFinished(async () => {
     await c.close();
@@ -158,7 +158,10 @@ test("an unavailable history default does not prevent choosing a different proje
     active = await f.repo("active");
 
   f.seed("old-task", old, { conversation_id: "chat-a" });
-  f.c.store.db.prepare("DELETE FROM project_roots WHERE path=?").run(old);
+
+  f.c.store.database.client
+    .prepare("DELETE FROM project_roots WHERE path=?")
+    .run(old);
 
   assert.deepEqual(
     await resolvePanelContext(f.c, "alice", { conversation_id: "chat-a" }),

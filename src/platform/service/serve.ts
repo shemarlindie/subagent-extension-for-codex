@@ -89,7 +89,7 @@ export async function serve({
     concurrency,
   );
 
-  c.projects = new Projects(store, c.workspaces);
+  c.projects = new Projects(store.database, c.workspaces);
   for (const root of JSON.parse(
     process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS ?? "[]",
   ))

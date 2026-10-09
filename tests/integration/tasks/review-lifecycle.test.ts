@@ -63,14 +63,14 @@ test(
       status: "processing",
     });
 
-    store.db
+    store.database.client
       .prepare(
         "INSERT INTO form_requests(id,owner,expires,body) VALUES(?,?,?,?)",
       )
       .run("processing-form", "owner", Date.now() + 60000, formBody);
 
     const projects = new Projects(
-      store,
+      store.database,
       new Workspaces(join(data, "worktrees"), []),
     );
 
@@ -157,7 +157,7 @@ test(
       );
 
       const formRow = () =>
-        reopened.db
+        reopened.database.client
           .prepare("SELECT body FROM form_requests WHERE id=?")
           .get("processing-form");
 
@@ -187,7 +187,7 @@ test(
         /Service restarted during form submission/,
       );
 
-      const changes = reopened.db
+      const changes = reopened.database.client
         .prepare("SELECT total_changes() AS count")
         .get()!.count;
 
@@ -195,7 +195,9 @@ test(
       assert.equal(formRow()!.body, completed);
 
       assert.equal(
-        reopened.db.prepare("SELECT total_changes() AS count").get()!.count,
+        reopened.database.client
+          .prepare("SELECT total_changes() AS count")
+          .get()!.count,
         changes,
         "repeated recovery must not rewrite a completed submission",
       );

@@ -183,7 +183,7 @@ test("settings expose all SDK permission modes, persist overrides, and require u
     },
   });
 
-  const reloaded = new Settings(store, () => ["claude"]);
+  const reloaded = new Settings(store.database, () => ["claude"]);
   assert.equal(reloaded.values("alice").claude_permission_mode, "dontAsk");
 
   assert.equal(

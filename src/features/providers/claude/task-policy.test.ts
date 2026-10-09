@@ -18,7 +18,9 @@ test("Claude preparation preserves native modes and restrictions independently o
   const store = new Store(":memory:");
 
   try {
-    const defaults = new Settings(store, () => ["claude"]).values("alice");
+    const defaults = new Settings(store.database, () => ["claude"]).values(
+      "alice",
+    );
 
     const input = startSchema.parse({
       description: "Review",
@@ -65,7 +67,10 @@ test("Claude preparation checks native permission, approval decider, and effort 
   const store = new Store(":memory:");
 
   try {
-    const defaults = new Settings(store, () => ["claude"]).values("alice");
+    const defaults = new Settings(store.database, () => ["claude"]).values(
+      "alice",
+    );
+
     const input = startSchema.parse({ description: "Review" });
 
     const prepare = (overrides: Partial<typeof input>) =>

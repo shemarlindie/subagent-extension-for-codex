@@ -12,7 +12,7 @@ const store = new Store(join(data, "console.sqlite"));
 
 try {
   const projects = new Projects(
-    store,
+    store.database,
     new Workspaces(join(data, "worktrees"), []),
   );
 

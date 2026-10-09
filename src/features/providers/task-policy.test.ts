@@ -45,7 +45,10 @@ test("execution policy prevents parent escalation but lets users choose approval
   const store = new Store(":memory:");
 
   try {
-    const defaults = new Settings(store, () => ["fixture"]).values("alice");
+    const defaults = new Settings(store.database, () => ["fixture"]).values(
+      "alice",
+    );
+
     defaults.default_approval_mode = "ask_user";
 
     const input = startSchema.parse({

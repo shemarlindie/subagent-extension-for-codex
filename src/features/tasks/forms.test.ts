@@ -482,7 +482,7 @@ test("worker question forms bind the exact input ID and reject stale answers", a
 
     // Input forms reference their task, so deleting it removes them.
     assert.deepEqual(
-      c.store.db
+      c.store.database.client
         .prepare("SELECT DISTINCT task_id FROM form_requests")
         .all()
         .map((row) => row.task_id),
@@ -855,7 +855,7 @@ test("provider-owned permission forms disclose whole-turn authority and bind app
 
 test("project registration form requires explicit allow and replays durably without starting tasks", async () => {
   const { c, rpc, close } = await setup();
-  c.projects = new Projects(c.store, c.workspaces);
+  c.projects = new Projects(c.store.database, c.workspaces);
   const register = c.projects.register.bind(c.projects);
   let registrations = 0;
 
@@ -938,7 +938,7 @@ test("project registration form requires explicit allow and replays durably with
 
 test("project registration cancellation and accepted deny never grant access", async () => {
   const { c, rpc, close } = await setup();
-  c.projects = new Projects(c.store, c.workspaces);
+  c.projects = new Projects(c.store.database, c.workspaces);
 
   try {
     for (const response of [
@@ -970,7 +970,7 @@ test("project registration cancellation and accepted deny never grant access", a
 
 test("project registration validates repository roots and does not trust unsolicited responses", async () => {
   const { c, rpc, close } = await setup();
-  c.projects = new Projects(c.store, c.workspaces);
+  c.projects = new Projects(c.store.database, c.workspaces);
 
   try {
     const response = {
@@ -1033,7 +1033,7 @@ test("project registration validates repository roots and does not trust unsolic
 
 test("project registration prefills host metadata without changing continuation arguments", async () => {
   const { c, rpc, close } = await setup();
-  c.projects = new Projects(c.store, c.workspaces);
+  c.projects = new Projects(c.store.database, c.workspaces);
 
   try {
     const requested = await rpc(
@@ -1056,7 +1056,10 @@ test("project registration prefills host metadata without changing continuation 
     );
 
     const stored = JSON.parse(
-      String(c.store.db.prepare("SELECT body FROM form_requests").get()!.body),
+      String(
+        c.store.database.client.prepare("SELECT body FROM form_requests").get()!
+          .body,
+      ),
     );
 
     assert.deepEqual(stored.args, {});

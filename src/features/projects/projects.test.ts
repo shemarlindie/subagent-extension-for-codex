@@ -25,10 +25,10 @@ async function fixture(t: import("vitest").TestContext) {
   const db = join(dir, "registry.sqlite");
   const store = new Store(db);
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
-  const projects = new Projects(store, workspaces);
+  const projects = new Projects(store.database, workspaces);
 
   t.onTestFinished(async () => {
-    if (store.db.isOpen) store.close();
+    if (store.database.client.isOpen) store.close();
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -97,7 +97,7 @@ test("project registration requires user authority and grants live persistent ac
 
   try {
     const registry = new Projects(
-      reopened,
+      reopened.database,
       new Workspaces(join(f.dir, "reopened-worktrees"), []),
     );
 
@@ -120,7 +120,7 @@ test("registration persists and a running registry sees CLI database updates", a
 
   try {
     const cli = new Projects(
-      cliStore,
+      cliStore.database,
       new Workspaces(join(f.dir, "unused"), []),
     );
 

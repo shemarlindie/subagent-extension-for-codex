@@ -103,7 +103,7 @@ export class Control {
     public concurrency = 3,
   ) {
     this.settings = new Settings(
-      store,
+      store.database,
       () => [...providers.keys()],
       (id) => providerMetadata(id, providers.get(id)?.metadata),
     );

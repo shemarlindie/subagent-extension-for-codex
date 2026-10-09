@@ -18,7 +18,7 @@ async function fixture(t: TestContext) {
   const store = new Store(join(dir, "db.sqlite"));
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
   const control = new Control(store, workspaces, new Map(), dir);
-  control.projects = new Projects(store, workspaces);
+  control.projects = new Projects(store.database, workspaces);
 
   t.onTestFinished(async () => {
     await control.close();

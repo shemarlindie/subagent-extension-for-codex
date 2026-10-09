@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 
 import { test } from "vitest";
 
+import { events } from "../../features/tasks/schema.js";
 import { migrationsFolder, openDatabase } from "./database.js";
 
 function scratch(t: { onTestFinished(fn: () => void): void }) {
@@ -186,5 +187,26 @@ test("processes opening a new database together migrate it once", async (t) => {
   assert.deepEqual(
     ledger(db),
     readdirSync(migrationsFolder).filter((name) => /^\d{14}_/.test(name)),
+  );
+});
+
+test("a failed Drizzle query throws SQLite's error, without the query's values", (t) => {
+  const db = openDatabase(join(scratch(t), "console.sqlite"));
+  t.onTestFinished(() => db.close());
+
+  assert.throws(
+    () =>
+      db.orm
+        .insert(events)
+        .values({
+          task_id: "missing",
+          type: "task.queued",
+          timestamp: "secret-timestamp",
+          data: "{}",
+        })
+        .run(),
+    (error: Error) =>
+      error.message === "FOREIGN KEY constraint failed" &&
+      !error.message.includes("secret-timestamp"),
   );
 });

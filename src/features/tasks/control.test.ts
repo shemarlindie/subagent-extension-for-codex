@@ -366,7 +366,7 @@ test("user defaults persist across restart, preserve omitted fields and remain o
   await c.close();
   const reopened = new Store(db);
   const { Settings } = await import("../settings/settings.js");
-  const settings = new Settings(reopened, () => ["fixture"]);
+  const settings = new Settings(reopened.database, () => ["fixture"]);
   assert.equal(settings.values("alice").default_worker_profile, "implementer");
   assert.equal(settings.values("alice").max_cost_usd, 2);
   reopened.close();
@@ -1730,7 +1730,8 @@ test("no cost limit persists in settings and explicit task limits override it", 
   const { Settings } = await import("../settings/settings.js");
 
   assert.equal(
-    new Settings(store, () => ["fixture"]).values("alice").max_cost_usd,
+    new Settings(store.database, () => ["fixture"]).values("alice")
+      .max_cost_usd,
     null,
   );
 
@@ -2252,7 +2253,7 @@ test("a task whose first event can't be written is never created", async () => {
     const heard: string[] = [];
     store.bus.on("event", (e: { type: string }) => heard.push(e.type));
 
-    store.db.exec(
+    store.database.client.exec(
       "CREATE TRIGGER reject_queued BEFORE INSERT ON events WHEN NEW.type='task.queued' BEGIN SELECT RAISE(ABORT, 'event write failed'); END",
     );
 

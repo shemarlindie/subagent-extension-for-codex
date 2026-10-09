@@ -286,6 +286,15 @@ before any feature reads it.
 
 - Each feature declares its tables with Drizzle in its own `schema.ts`;
   `src/platform/database/schema.ts` collects them for drizzle-kit.
+- Each feature queries only its own tables, through the shared `Database`:
+  tasks and events in `tasks/store.ts`, form requests in
+  `tasks/form-requests.ts`, webhooks in `events/storage.ts`, and settings and
+  project roots in their services. Other features read tasks and events
+  through `Store`. Queries use Drizzle; raw SQL is kept where it is clearer,
+  such as the JSON predicates in `Store.chatEvents`.
+- Drizzle query failures throw SQLite's own error (such as
+  `FOREIGN KEY constraint failed`), not Drizzle's wrapper, whose message
+  holds the SQL and its parameters.
 - After changing a schema, run `npm run db:generate -- --name <change>` and
   commit the new folder under `migrations/`. Review the SQL: SQLite rebuilds a
   table for many column changes, and data backfills need a custom migration

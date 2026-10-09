@@ -8,9 +8,9 @@ import {
 
 import { z } from "zod";
 
-import { type Event } from "../../shared/contracts.js";
 import { REPLY_EXCERPT_CHARS, replyExcerpt } from "../tasks/reply.js";
 import type { Store } from "../tasks/store.js";
+import { EventStorage, type OutboxRow } from "./storage.js";
 import {
   callbackUrl,
   signedHeaders,
@@ -108,6 +108,7 @@ export function canonical(value: unknown): string {
 }
 
 export class Events {
+  private storage: EventStorage;
   private stopped = false;
   private verified = new Map<string, number>();
   private timer?: NodeJS.Timeout;
@@ -124,6 +125,7 @@ export class Events {
   ) {
     if (key.length !== 32)
       throw new Error("Events encryption key must be 32 bytes");
+    this.storage = new EventStorage(store.database);
   }
 
   start() {
@@ -171,11 +173,7 @@ export class Events {
   }
 
   private save(s: Subscription) {
-    this.store.db
-      .prepare(
-        "INSERT INTO event_subscriptions VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
-      )
-      .run(s.id, s.owner, JSON.stringify(s));
+    this.storage.saveSubscription(s.id, s.owner, JSON.stringify(s));
   }
 
   private id(owner: string, request: z.infer<typeof identity>) {
@@ -230,15 +228,7 @@ export class Events {
         const r = identity.parse(params);
         const id = this.id(owner, r);
 
-        this.store.db
-          .prepare("DELETE FROM event_subscriptions WHERE id=? AND owner=?")
-          .run(id, owner);
-
-        this.store.db
-          .prepare(
-            "UPDATE event_outbox SET status='dead' WHERE subscription_id=?",
-          )
-          .run(id);
+        this.storage.unsubscribe(id, owner);
 
         return {};
       }
@@ -300,12 +290,10 @@ export class Events {
 
       this.visible(owner, r.arguments);
 
-      const row = this.store.db
-        .prepare("SELECT body FROM event_subscriptions WHERE id=? AND owner=?")
-        .get(id, owner);
+      const stored = this.storage.subscription(id, owner);
 
-      const old: Subscription | undefined = row
-        ? JSON.parse(String(row.body))
+      const old: Subscription | undefined = stored
+        ? JSON.parse(stored)
         : undefined;
 
       const expires = Date.now() + Math.min(r.ttlMs ?? 86400000, 7 * 86400000);
@@ -318,13 +306,7 @@ export class Events {
         url: r.delivery.url,
         secret: this.seal(r.delivery.secret),
         expires,
-        after_event:
-          old?.after_event ??
-          Number(
-            this.store.db
-              .prepare("SELECT COALESCE(MAX(id),0) AS id FROM events")
-              .get()!.id,
-          ),
+        after_event: old?.after_event ?? this.store.lastEventId(),
         active: true,
       };
 
@@ -354,27 +336,13 @@ export class Events {
   }
 
   capture() {
-    const cursor = Number(
-      this.store.db
-        .prepare("SELECT cursor FROM event_checkpoint WHERE id=1")
-        .get()!.cursor,
-    );
+    const rows = this.store.eventsAfter(this.storage.cursor());
 
-    const rows = this.store.db
-      .prepare("SELECT * FROM events WHERE id>? ORDER BY id LIMIT 1000")
-      .all(cursor);
+    const subscriptions = this.storage
+      .subscriptions()
+      .map((body) => JSON.parse(body) as Subscription);
 
-    const subscriptions = this.store.db
-      .prepare("SELECT body FROM event_subscriptions")
-      .all()
-      .map((r) => JSON.parse(String(r.body)) as Subscription);
-
-    for (const row of rows) {
-      const e = {
-        ...row,
-        data: JSON.parse(String(row.data)),
-      } as unknown as Event;
-
+    for (const e of rows) {
       const name = (
         {
           "task.completed": "agent_task.completed",
@@ -433,16 +401,15 @@ export class Events {
               cursor: null,
             };
 
-            this.store.db
-              .prepare(
-                "INSERT OR IGNORE INTO event_outbox(subscription_id,event_id,task_id,body) VALUES(?,?,?,?)",
-              )
-              .run(s.id, envelope.eventId, t.id, JSON.stringify(envelope));
+            this.storage.enqueue(
+              s.id,
+              envelope.eventId,
+              t.id,
+              JSON.stringify(envelope),
+            );
           }
 
-        this.store.db
-          .prepare("UPDATE event_checkpoint SET cursor=? WHERE id=1")
-          .run(e.id);
+        this.storage.advance(e.id);
       });
     }
 
@@ -461,24 +428,18 @@ export class Events {
   }
 
   private async deliver() {
-    const rows = this.store.db
-      .prepare(
-        "SELECT * FROM event_outbox WHERE status='ready' AND next_at<=? ORDER BY next_at LIMIT 100",
-      )
-      .all(Date.now());
+    const rows = this.storage.ready(Date.now());
 
     for (const row of rows) {
       if (this.stopped) break;
 
-      const subscription = this.store.db
-        .prepare("SELECT body FROM event_subscriptions WHERE id=?")
-        .get(row.subscription_id);
+      const subscription = this.storage.subscription(row.subscription_id);
 
       const s: Subscription | undefined = subscription
-        ? JSON.parse(String(subscription.body))
+        ? JSON.parse(subscription)
         : undefined;
 
-      const envelope = JSON.parse(String(row.body));
+      const envelope = JSON.parse(row.body);
       let permitted = false;
 
       try {
@@ -492,13 +453,13 @@ export class Events {
       }
 
       const sub = s!;
-      const attempts = Number(row.attempts) + 1;
+      const attempts = row.attempts + 1;
       let status = 0;
 
       try {
         const headers = signedHeaders(
-          String(row.event_id),
-          String(row.body),
+          row.event_id,
+          row.body,
           this.unseal(sub.secret),
           sub.id,
           sub.previous && sub.rotation_until! > Date.now()
@@ -506,7 +467,7 @@ export class Events {
             : undefined,
         );
 
-        status = (await this.post(sub.url, String(row.body), headers)).status;
+        status = (await this.post(sub.url, row.body, headers)).status;
       } catch {}
 
       if (status >= 200 && status < 300) this.finish(row, "delivered");
@@ -521,24 +482,15 @@ export class Events {
       )
         this.finish(row, "dead");
       else
-        this.store.db
-          .prepare(
-            "UPDATE event_outbox SET attempts=?,next_at=? WHERE subscription_id=? AND event_id=?",
-          )
-          .run(
-            attempts,
-            Date.now() + Math.min(1000 * 2 ** (attempts - 1), 3600000),
-            row.subscription_id,
-            row.event_id,
-          );
+        this.storage.retry(
+          row,
+          attempts,
+          Date.now() + Math.min(1000 * 2 ** (attempts - 1), 3600000),
+        );
     }
   }
 
-  private finish(row: Record<string, unknown>, status: string) {
-    this.store.db
-      .prepare(
-        "UPDATE event_outbox SET status=? WHERE subscription_id=? AND event_id=?",
-      )
-      .run(status, row.subscription_id as string, row.event_id as string);
+  private finish(row: OutboxRow, status: string) {
+    this.storage.finish(row, status);
   }
 }

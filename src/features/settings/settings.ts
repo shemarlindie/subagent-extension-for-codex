@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { type Database } from "../../platform/database/database.js";
 import {
   approvalModeSchema,
   type InputAuthority,
@@ -19,7 +21,7 @@ import {
   providerStoredSettingsShape,
   validateProviderSettingsUpdate,
 } from "../providers/settings.js";
-import { type Store } from "../tasks/store.js";
+import { userSettings } from "./schema.js";
 import {
   branchPrefixPattern,
   modelScope,
@@ -201,7 +203,7 @@ export type SettingsValues = z.infer<typeof valuesSchema>;
 export class Settings {
   private providers: () => string[];
   constructor(
-    private store: Store,
+    private database: Database,
     providers: () => string[],
     private metadata: (provider: string) => ProviderMetadata | undefined = (
       provider,
@@ -229,9 +231,11 @@ export class Settings {
   }
 
   private saved(owner: string) {
-    const row = this.store.db
-      .prepare("SELECT body FROM user_settings WHERE owner=?")
-      .get(owner);
+    const row = this.database.orm
+      .select({ body: userSettings.body })
+      .from(userSettings)
+      .where(eq(userSettings.owner, owner))
+      .get();
 
     if (!row) return initialValuesSchema.parse(this.initialBody());
 
@@ -426,11 +430,13 @@ export class Settings {
       runtime_budget_amount: runtimeAmountValue,
     });
 
-    this.store.db
-      .prepare(
-        "INSERT INTO user_settings VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET body=excluded.body",
-      )
-      .run(owner, JSON.stringify(values));
+    const body = JSON.stringify(values);
+
+    this.database.orm
+      .insert(userSettings)
+      .values({ owner, body })
+      .onConflictDoUpdate({ target: userSettings.owner, set: { body } })
+      .run();
 
     return { values: this.panelValues(this.values(owner)) };
   }

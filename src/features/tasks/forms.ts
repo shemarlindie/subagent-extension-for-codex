@@ -18,6 +18,7 @@ import { reasoningLevels } from "../../shared/contracts.js";
 import { inputPresentation } from "../providers/input-presentation.js";
 import { providerMetadata } from "../providers/metadata.js";
 import { type Control } from "./control.js";
+import { FormRequests } from "./form-requests.js";
 import { pendingInputKind } from "./model.js";
 
 type Kind =
@@ -129,17 +130,18 @@ const failed = (error: unknown): CallToolResult => ({
 /** Durable opaque MRTR state: clients cannot change its owner, args or input request. */
 export class Forms {
   private inFlight = new Map<string, Promise<CallToolResult>>();
+  private requests: FormRequests;
   constructor(
     private c: Control,
     private now = () => Date.now(),
-  ) {}
+  ) {
+    this.requests = new FormRequests(c.store.database);
+  }
 
   /** Recover submissions only after the service has secured its listener. */
   recover() {
-    for (const row of this.c.store.db
-      .prepare("SELECT id,body FROM form_requests")
-      .all()) {
-      const r: Request = JSON.parse(String(row.body));
+    for (const row of this.requests.all()) {
+      const r: Request = JSON.parse(row.body);
 
       if (r.status === "processing") {
         r.status = "complete";
@@ -150,7 +152,7 @@ export class Forms {
             : "Service restarted during form submission. Inspect tasks before starting another request.",
         );
 
-        this.save(String(row.id), r);
+        this.save(row.id, r);
       }
     }
   }
@@ -165,21 +167,14 @@ export class Forms {
     if (!/^[A-Za-z0-9_-]{43}$/.test(token))
       throw new Error("Invalid or expired form state");
 
-    const row = this.c.store.db
-      .prepare(
-        "SELECT body FROM form_requests WHERE id=? AND owner=? AND expires>?",
-      )
-      .get(hash(token), owner, this.now());
+    const body = this.requests.body(hash(token), owner, this.now());
+    if (!body) throw new Error("Invalid or expired form state");
 
-    if (!row) throw new Error("Invalid or expired form state");
-
-    return JSON.parse(String(row.body));
+    return JSON.parse(body);
   }
 
   private save(id: string, r: Request) {
-    this.c.store.db
-      .prepare("UPDATE form_requests SET body=? WHERE id=?")
-      .run(JSON.stringify(r), id);
+    this.requests.update(id, JSON.stringify(r));
   }
 
   private checkInput(owner: string, r: Request) {
@@ -551,29 +546,17 @@ export class Forms {
 
       r = await this.build(owner, kind, args, repositoryHint);
 
-      this.c.store.db
-        .prepare("DELETE FROM form_requests WHERE expires<=?")
-        .run(this.now());
-
-      const count = this.c.store.db
-        .prepare("SELECT COUNT(*) AS n FROM form_requests WHERE owner=?")
-        .get(owner)!;
-
-      if (Number(count.n) >= 500)
+      if (this.requests.pending(owner, this.now()) >= 500)
         throw new Error("Too many pending form requests");
       token = randomBytes(32).toString("base64url");
 
-      this.c.store.db
-        .prepare(
-          "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
-        )
-        .run(
-          hash(token),
-          owner,
-          this.now() + 10 * 60000,
-          r.task_id ?? null,
-          JSON.stringify(r),
-        );
+      this.requests.add(
+        hash(token),
+        owner,
+        this.now() + 10 * 60000,
+        r.task_id,
+        JSON.stringify(r),
+      );
     } else {
       r = this.load(owner, token);
       if (r.kind !== kind || canonical(r.args) !== canonical(args))

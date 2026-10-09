@@ -289,7 +289,7 @@ test("current repository settings persist, are owner-scoped, and allow task over
       await import("../../../src/features/settings/settings.js");
 
     assert.equal(
-      new Settings(s.c.store, () => ["fixture"]).values("alice")
+      new Settings(s.c.store.database, () => ["fixture"]).values("alice")
         .default_workspace_strategy,
       "worktree",
     );

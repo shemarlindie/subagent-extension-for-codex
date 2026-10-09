@@ -33,10 +33,10 @@ async function fixture(t: TestContext) {
   const path = join(dir, "settings.sqlite");
   let store = new Store(path);
   let providers = ["fixture"];
-  let settings = new Settings(store, () => providers);
+  let settings = new Settings(store.database, () => providers);
 
   t.onTestFinished(async () => {
-    if (store.db.isOpen) store.close();
+    if (store.database.client.isOpen) store.close();
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -48,14 +48,14 @@ async function fixture(t: TestContext) {
       providers = available;
     },
     stored() {
-      return store.db
+      return store.database.client
         .prepare("SELECT body FROM user_settings ORDER BY owner")
         .all();
     },
     reopen() {
       store.close();
       store = new Store(path);
-      settings = new Settings(store, () => providers);
+      settings = new Settings(store.database, () => providers);
     },
   };
 }
@@ -855,7 +855,7 @@ test("settings accept a new built-in's metadata without provider-ID handling", a
   });
 
   const settings = new Settings(
-    store,
+    store.database,
     () => ["new-built-in"],
     () => ({
       displayName: "New built-in",

@@ -2,13 +2,40 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { drizzle, type NodeSQLiteDatabase } from "drizzle-orm/node-sqlite";
+import { SQLiteAsyncPreparedQuery } from "drizzle-orm/sqlite-core/async/session";
 
 import { packagePath } from "../service/runtime.js";
 import { migrate } from "./migrate.js";
 
 /** The package's migrations, the same folder in source checkouts and installed packages. */
 export const migrationsFolder = packagePath("migrations");
+
+/**
+ * Drizzle replaces a failed query's SQLite error with one whose message is
+ * the SQL and its parameters, which hides the reason (a constraint, a lock)
+ * and copies stored values into API errors and logs. Its synchronous
+ * executors rethrow the SQLite error instead.
+ */
+for (const method of ["run", "all", "get", "values"] as const) {
+  const prototype = SQLiteAsyncPreparedQuery.prototype as unknown as Record<
+    string,
+    (...args: unknown[]) => unknown
+  >;
+
+  const execute = prototype[method];
+
+  prototype[method] = function (this: unknown, ...args: unknown[]) {
+    try {
+      return execute.apply(this, args);
+    } catch (error) {
+      throw error instanceof DrizzleQueryError && error.cause instanceof Error
+        ? error.cause
+        : error;
+    }
+  };
+}
 
 const BUSY_TIMEOUT_MS = 5000;
 const SQLITE_BUSY = 5;

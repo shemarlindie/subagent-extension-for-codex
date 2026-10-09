@@ -33,14 +33,14 @@ function deletionFixture() {
     store.save(current);
     store.event(current, "task.completed", {});
 
-    store.db
+    store.database.client
       .prepare(
         "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
       )
       .run(id, task.owner, 0, id, JSON.stringify({ task_id: id }));
 
     for (const subscription of ["first", "second"])
-      store.db
+      store.database.client
         .prepare(
           "INSERT INTO event_outbox(subscription_id,event_id,task_id,body) VALUES(?,?,?,?)",
         )
@@ -48,7 +48,7 @@ function deletionFixture() {
   }
 
   // Forms that register a project or start a task belong to no task.
-  store.db
+  store.database.client
     .prepare(
       "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
     )
@@ -58,7 +58,9 @@ function deletionFixture() {
     Object.fromEntries(
       ["tasks", "events", "form_requests", "event_outbox"].map((table) => [
         table,
-        store.db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all(),
+        store.database.client
+          .prepare(`SELECT * FROM ${table} ORDER BY rowid`)
+          .all(),
       ]),
     );
 
@@ -97,13 +99,13 @@ test("task deletion leaves every record in place if deleting the task fails", (t
   t.onTestFinished(() => store.close());
   const before = snapshot();
 
-  store.db.exec(
+  store.database.client.exec(
     "CREATE TRIGGER reject_task_delete BEFORE DELETE ON tasks BEGIN SELECT RAISE(ABORT, 'delete failed'); END",
   );
 
   assert.throws(() => store.delete(task.id, task.owner), /delete failed/);
   assert.deepEqual(snapshot(), before);
-  store.db.exec("DROP TRIGGER reject_task_delete");
+  store.database.client.exec("DROP TRIGGER reject_task_delete");
   store.delete(task.id, task.owner);
   assert.throws(() => store.get(task.id, task.owner), /Task not found/);
 });
