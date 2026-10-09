@@ -10,10 +10,31 @@
 }
 .changes-toolbar {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "summary refresh";
   align-items: center;
   gap: 8px;
   min-height: 32px;
+}
+.changes-toolbar[data-has-scope="true"] {
+  grid-template-areas: "scope refresh" "summary summary";
+  padding-bottom: 6px;
+}
+.changes-toolbar > .view-switch {
+  grid-area: scope;
+  justify-self: start;
+}
+.changes-refresh {
+  grid-area: refresh;
+}
+.changes-summary-row {
+  grid-area: summary;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 18px;
 }
 .changes-summary {
   flex: 1;
@@ -22,11 +43,33 @@
   font-size: 11px;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-/* Before the first read, the bar stands in for the diff. */
-.file-progress.changes-loading {
-  position: relative;
-  inset: auto;
+.changes-status {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+/* The first-read message is visible in the body; announce it from this live region. */
+.changes-status[data-initial="true"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Loading and empty states hold space instead of collapsing to a thin bar. */
+.changes-content {
+  min-height: 96px;
+  min-width: 0;
+}
+/* Keep the diff's top edge steady when the first read enables worktree actions. */
+.changes-worktree-actions {
+  /* The button inherits one line of text, plus 12px padding and 2px border. */
+  min-height: calc(1lh + 14px);
 }
 .changes-note,
 .changes-empty,
@@ -37,10 +80,10 @@
   display: grid;
   gap: 4px;
 }
-/* Label, command, then Copy where the clipboard is available. */
+/* Each value and its copy action share one surface. */
 .command-line {
   display: grid;
-  grid-template-columns: 9ch minmax(0, 1fr) auto;
+  grid-template-columns: 9ch minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   font-size: 11px;
@@ -48,14 +91,20 @@
 .command-label {
   color: var(--muted);
 }
+.command-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  border-radius: 4px;
+  background: var(--surface);
+}
 .command {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--surface);
   font-family: var(--font-mono);
   user-select: all;
 }

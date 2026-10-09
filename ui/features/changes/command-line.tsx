@@ -1,4 +1,3 @@
-import { useController } from "../../shared/state/controller-context";
 import { CopyButton } from "../file-preview/components/copy-button";
 
 type CommandLineProps = {
@@ -6,21 +5,19 @@ type CommandLineProps = {
   command: string;
 };
 
-/**
- * A command to run in a terminal. It selects as a whole on click; Copy shows
- * only where the browser grants clipboard access, as in file previews.
- */
+/** A complete value to copy, with a compact action and whole-value selection. */
 export function CommandLine({ label, command }: CommandLineProps) {
-  const controller = useController(),
-    canCopy =
-      !controller.transport.embedded &&
-      typeof navigator.clipboard?.writeText === "function";
-
   return (
     <div className="command-line">
       <span className="command-label">{label}</span>
-      <code className="command">{command}</code>
-      {canCopy && <CopyButton text={command} />}
+      <div className="command-value">
+        <code className="command">{command}</code>
+        <CopyButton
+          text={command}
+          label={`Copy ${label.toLowerCase()}`}
+          iconOnly
+        />
+      </div>
     </div>
   );
 }

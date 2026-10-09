@@ -381,6 +381,12 @@
   padding: 4px 10px;
   font-size: 12px;
 }
+.file-action.file-copy-inline {
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 3px;
+}
 .view-switch {
   display: inline-flex;
   padding: 2px;

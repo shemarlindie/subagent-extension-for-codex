@@ -2012,7 +2012,8 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   await screen.findByText(/The worktree was removed/);
   assert.ok(screen.getByText("git checkout agent/one"));
 
-  // A finished turn reloads them; an error replaces them.
+  // A finished turn reloads changes; a failed read labels and retains the
+  // last loaded result, so the worktree's branch remains visible.
   const tool = transport.tool.bind(transport);
 
   transport.tool = async <T>(name: string, args?: Record<string, unknown>) => {
@@ -2024,7 +2025,13 @@ test("the Changes tab offers This turn after a second turn and explains empty st
 
   transport.tasks = [{ ...transport.tasks[0], status: "completed" }];
   await act(() => controller.refresh());
-  await screen.findByText("This task predates change tracking.");
+  const alert = await screen.findByRole("alert");
+
+  assert.match(alert.textContent ?? "", /This task predates change tracking\./);
+  assert.match(alert.textContent ?? "", /last.*loaded/i);
+  assert.ok(screen.getByText(/The worktree was removed/));
+  assert.ok(screen.getByText("git checkout agent/one"));
+  assertAbsent(screen.queryByRole("progressbar"));
 });
 
 test("Preview opens a changed file, and the host can be asked about it", async (t) => {

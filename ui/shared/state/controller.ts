@@ -657,7 +657,8 @@ export class Controller {
 
   /**
    * Reads the selected task's changes, every page, for `scope` (the current
-   * one by default). The last result stays shown while a reload runs.
+   * one by default). A same-scope reload keeps the last result during the
+   * read and after failure; changing scope clears it.
    */
   async loadChanges(scope?: ChangeScope) {
     const task = selectedTask(this.state);
@@ -699,7 +700,6 @@ export class Controller {
       current = {
         ...changes,
         loading: false,
-        data: undefined,
         error: error instanceof Error ? error.message : String(error),
       };
 

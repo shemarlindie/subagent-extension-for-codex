@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { test, vi } from "vitest";
 
+import type { Changes } from "../../features/changes/types";
 import { Controller } from "./controller";
 import { effectiveFilter, visibleTasks } from "./selectors";
 import type {
@@ -564,6 +565,91 @@ test("a host link opens the Changes tab, and a read for a replaced task is dropp
   await first;
 
   assert.equal(controller.getSnapshot().changes?.task, "b");
+  assert.equal(controller.getSnapshot().changes?.data?.additions, 2);
+});
+
+test("same-scope refresh retains the last changes while reading and after failure; scope switches clear them", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a")];
+
+  const data: Changes = {
+    scope: "task",
+    files: [],
+    additions: 3,
+    deletions: 0,
+    diff: "",
+  };
+
+  transport.handler = (name) =>
+    name === "get_user_agent_changes" ? data : undefined;
+
+  await controller.start();
+  await controller.select("a");
+  await controller.loadChanges();
+  const lastLoaded = controller.getSnapshot().changes?.data;
+  const refreshGate = deferred<Changes>();
+
+  transport.handler = (name) =>
+    name === "get_user_agent_changes" ? refreshGate.promise : undefined;
+
+  const refresh = controller.loadChanges();
+
+  assert.equal(controller.getSnapshot().changes?.loading, true);
+  assert.equal(controller.getSnapshot().changes?.data, lastLoaded);
+  refreshGate.reject(new Error("Git read failed"));
+  await refresh;
+  assert.equal(controller.getSnapshot().changes?.loading, false);
+  assert.equal(controller.getSnapshot().changes?.data, lastLoaded);
+  assert.equal(controller.getSnapshot().changes?.error, "Git read failed");
+
+  const scopeGate = deferred<Changes>();
+
+  transport.handler = (name) =>
+    name === "get_user_agent_changes" ? scopeGate.promise : undefined;
+
+  const switching = controller.loadChanges("turn");
+
+  assert.equal(controller.getSnapshot().changes?.scope, "turn");
+  assert.equal(controller.getSnapshot().changes?.loading, true);
+  assert.equal(controller.getSnapshot().changes?.data, undefined);
+  assert.equal(controller.getSnapshot().changes?.error, undefined);
+  scopeGate.reject(new Error("Turn read failed"));
+  await switching;
+  assert.equal(controller.getSnapshot().changes?.loading, false);
+  assert.equal(controller.getSnapshot().changes?.data, undefined);
+  assert.equal(controller.getSnapshot().changes?.error, "Turn read failed");
+});
+
+test("a delayed changes refresh cannot replace a newer scope read", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a")];
+  await controller.start();
+  await controller.select("a");
+  const gate = deferred<Changes>();
+
+  const turn: Changes = {
+    scope: "turn",
+    files: [],
+    additions: 2,
+    deletions: 0,
+    diff: "",
+  };
+
+  transport.handler = (name, args) =>
+    name === "get_user_agent_changes"
+      ? args.scope === "task"
+        ? gate.promise
+        : turn
+      : undefined;
+
+  const oldRead = controller.loadChanges("task");
+  await controller.loadChanges("turn");
+  gate.resolve({ ...turn, scope: "task", additions: 99 });
+  await oldRead;
+
+  assert.equal(controller.getSnapshot().changes?.scope, "turn");
   assert.equal(controller.getSnapshot().changes?.data?.additions, 2);
 });
 

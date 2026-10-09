@@ -18,7 +18,7 @@ export type ChangesState = {
   /** The task's status and turn when read; either changing reloads them. */
   key: string;
   loading: boolean;
-  /** Every page, merged; kept while a reload runs. */
+  /** Every page, merged; kept during a same-scope reload and after failure. */
   data?: Changes;
   error?: string;
 };

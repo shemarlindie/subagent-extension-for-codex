@@ -28,11 +28,13 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
     data = changes?.data,
     removed =
       data?.state === "workspace_missing" || data?.state === "branch_deleted",
+    loading = changes?.loading ?? (!data && !changes?.error),
+    summary = data && !data.state ? `${changesSummary(data)} uncommitted` : "",
     branch = task.branch;
 
   return (
     <div className="changes-header">
-      <div className="changes-toolbar">
+      <div className="changes-toolbar" data-has-scope={task.turn > 1}>
         {/* A task's first turn is the whole task, so the choice waits for a second. */}
         {task.turn > 1 && (
           <ToggleGroup
@@ -54,23 +56,28 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
             ))}
           </ToggleGroup>
         )}
-        <span className="changes-summary">
-          {data && !data.state && data.files.length
-            ? `${changesSummary(data)} uncommitted`
-            : ""}
-        </span>
+        <div className="changes-summary-row">
+          <span className="changes-summary" title={summary}>
+            {summary}
+          </span>
+          <span className="changes-status" role="status" data-initial={!data}>
+            {loading ? (data ? "Refreshing changes…" : "Reading changes…") : ""}
+          </span>
+        </div>
         <TooltipWrapper label="Refresh changes">
           <Button
             variant="ghost"
-            className="toolbar-icon-button"
+            className="toolbar-icon-button changes-refresh"
             aria-label="Refresh changes"
-            disabled={changes?.loading}
+            disabled={loading}
             onClick={() => controller.run(() => controller.loadChanges())}
           >
             <Icon name="refresh" size={14} />
           </Button>
         </TooltipWrapper>
-        {changes?.loading && <Progress label="Reading changes" />}
+        {loading && (
+          <Progress label={data ? "Refreshing changes" : "Reading changes"} />
+        )}
       </div>
       {task.workspace_strategy === "current_repo"
         ? data?.state !== "end_unrecorded" && (
@@ -116,7 +123,13 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
               )}
             </div>
           )}
-      <WorktreeActions task={task} changes={changes} />
+      {task.workspace_strategy === "worktree" &&
+        branch &&
+        data?.state !== "branch_deleted" && (
+          <div className="changes-worktree-actions">
+            <WorktreeActions task={task} changes={changes} />
+          </div>
+        )}
     </div>
   );
 }
