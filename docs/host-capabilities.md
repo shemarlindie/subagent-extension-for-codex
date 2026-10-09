@@ -1,310 +1,132 @@
-# Host capabilities and integration decisions
+# Host capabilities
 
-Checked against official documentation and the installed packages on October 2, 2026. This distinguishes documented capabilities from behavior verified in this
-repository; it is not a claim that every host/version implements every feature.
+This guide separates integration implemented in this repository from capabilities
+that depend on the connected host. Local code was reviewed on October 9, 2026.
+External references below retain the scope of the October 2–5 documentation/source
+review; they are not a fresh compatibility claim for every desktop release.
+
+For system responsibilities see [Architecture](architecture.md); for panel
+behavior and activation see [Codex panel](codex-panel.md).
 
 ## Display modes and native extension surfaces
 
-Rechecked October 2, 2026 against the official OpenAI developer documentation
-and its linked OpenAI extension specification and SDK. In this project, the
-target host is **Codex inside the ChatGPT desktop app**. The user has confirmed
-that the thread-specific Delegated Work app is present and works there. This
-confirms that surface in their installation, not every mode or bridge feature.
+`src/platform/panel/panel.ts` advertises `inline` and `fullscreen` and prefers
+`inline`. `open_codex_subagent_extension` exposes the thread entrypoint;
+`open_codex_subagent_extension_global` is app-only and exposes the global
+entrypoint. Task creation also attaches the panel resource and selects the new
+task on Chat. Display-mode preferences are hints; the host owns physical placement.
 
-| Mode         | Presentation                                                      | Current documentation evidence                                                                                     |
-| ------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `inline`     | A compact widget in the conversation                              | Listed by the developer reference and extension specification                                                      |
-| `fullscreen` | An expanded app view; native entrypoints use this mode            | Listed by both sources; the mode name does not determine desktop pane geometry                                     |
-| `pip`        | A persistent picture-in-picture widget alongside the conversation | Listed by the developer reference, UI guide and SDK, but explicitly excluded by the linked extension specification |
-
-The [developer reference](https://developers.openai.com/plugins/reference#component-resource-_meta-fields)
-lists all three as supported values of resource
-`_meta["openai/ui"].availableDisplayModes`. Its
-[presentation request example](https://developers.openai.com/plugins/reference#request-another-presentation-mode)
-also describes requesting inline, picture-in-picture or fullscreen, with a
-possible fullscreen fallback for PiP on mobile. The
-[UI implementation guide](https://developers.openai.com/plugins/build/chatgpt-ui#picture-in-picture)
-and [UI guidelines](https://developers.openai.com/plugins/concepts/ui-guidelines#picture-in-picture-pip)
-describe PiP workflows. This is more than a value accepted by SDK types.
-
-However, the linked
-[extension specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#display-modes)
-still explicitly limits ChatGPT to inline/fullscreen and excludes PiP. The
-[SDK resource schema](https://github.com/openai/mcp-extensions/blob/main/typescript/src/server/ui.ts)
-accepts all three, while tool `preferredModelDisplayMode` accepts only inline
-and fullscreen. These sources conflict; neither a categorical claim that
-ChatGPT cannot use PiP nor a guarantee that every ChatGPT/Codex installation
-supports it is justified. No separate Codex mode-support matrix was found in
-the checked developer pages. Do not invent a Codex exclusion from the ChatGPT
-wording. Check the actual host's `availableDisplayModes` and returned mode when
-requesting a change.
-
-The current extension advertises and implements inline/fullscreen only. PiP is
-not implemented or verified here. Its compact inline summary is part of the
-extension's widget, distinct from the host's right pinned summary.
+The extension does not advertise PiP or a native pinned-summary surface. Its compact inline summary is part of the widget; display-mode requests do not guarantee desktop pane geometry.
 
 ## Panel network access
 
-Tested on the Codex desktop app: Codex runs the Delegated Work panel under a
-fixed sandbox Content Security Policy. It ignores the app's
-`connectDomains` and sets `upgrade-insecure-requests`, so the panel
-can't reach the local service directly. Everything the panel reads and writes goes through the MCP Apps
-bridge, which is why its replies stream by chained `get_user_agent_draft` long
-polls instead of SSE; the standalone console, which talks to the service itself,
-gets them over SSE.
+Observed in the target Codex desktop installation: the embedded panel uses a
+fixed sandbox CSP and cannot connect directly to the loopback service. All panel
+reads and writes therefore use the authenticated MCP Apps bridge. Streaming
+replies use chained `get_user_agent_draft` polls; the standalone console uses
+HTTP and SSE.
 
-Bridge calls are fast enough for that. Measured on the same app, a bridge call
-round-trips in about 6 ms, and calls run concurrently: calls held open for up to
-110 seconds returned normally without slowing other calls. The panel's draft
-reads wait at most 25 seconds, plus a 10-second margin in the host transport and
-the stdio proxy, whose default service timeout is 30 seconds.
-
-## Composer mentions
-
-Rechecked October 5, 2026: the [MCP Extensions specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#composer-at-mentions)
-defines a typeahead tool that returns resource-link items and lists the surface
-as supported on desktop in its expected-support table. The [extension guide](https://developers.openai.com/plugins/build/extensions)
-says composer mentions are available only in the ChatGPT desktop app. In this
-project, the target is Codex's composer inside that desktop app. The MCP server
-row appears in the composer picker, but the first selected-server search
-returned no item. Search now accepts the server name as a query alias; the
-Claude result, selected-item delivery to the model, and subsequent delegation
-flow still need validation after reloading the service. Treat mentions as an
-optional enhancement; the existing MCP tools and delegation skill remain the
-fallback.
-
-The [extension guide](https://developers.openai.com/plugins/build/extensions)
-documents global/sidebar, thread/conversation and file entrypoints, settings,
-composer mentions, forms and onboarding. The SDK additionally accepts a settings
-entrypoint. None of the checked docs exposes a custom section or action in the
-right pinned summary. Thread entrypoints and display-mode preferences cannot
-request that placement. This is a documentation finding, not proof that an
-undocumented or future host API cannot exist.
-
-## Project and chat adapter update
-
-The later [integration research](project-thread-integration-research.md) pins the
-public Codex source to `c5d242fa` and the released `rust-v0.160.0`. That source
-supplies `_meta.threadId` and supports opt-in `codex/sandbox-state-meta` through
-server `capabilities.experimental`. Its `sandboxCwd` field is a file URI for the
-execution directory. This is a concrete, optional version-specific adapter,
-distinct from the portable MCP Apps context discussed below. The desktop UI is
-closed source; public CLI/core/app-server code does not prove desktop behavior.
-
-Both transports now advertise that capability and consume only the directory
-hint, resolve its Git root and validate it against approved projects. Explicit
-repository/task arguments take precedence; missing, remote, malformed or
-unapproved hints fall back to explicit selection or same-chat history. A valid
-unregistered local Git root is returned as an **Add chat project** suggestion;
-showing or prefilling it never registers it. Leaving the chat with **All chats**
-clears that suggestion while retaining the repository/revision filter. Optional
-`threadId` is used after explicit conversation and documented `openai/session`
-correlation. Permission metadata is neither retained nor treated as an access
-grant. Native metadata delivery still needs a live target-host check.
-
-The `app-v6` panel is attached to successful task creation as well as the opener,
-with repository/revision/chat scope and immediate task selection on Activity.
-The model-visible `open_codex_subagent_extension` advertises only the thread
-entrypoint and accepts repository/revision/task ID. An owned task ID supplies
-its own scope instead of ambient chat/directory metadata; explicit conflicts
-still reject. Other launches preserve explicit or host chat context. The separate app-only `open_codex_subagent_extension_global`
-advertises the global entrypoint and always opens all chats and all projects.
-Unscoped panel bootstrap explicitly requests a null conversation; **All chats**
-expands a scoped panel's chat filter while retaining repository/revision.
-Task creation accepts `conversation_id: null` to opt out of host chat correlation
-and normalizes it to an absent persisted Task conversation ID. The stdio opener
-fetches resolved context from the service and requires its availability.
-The context reader recovers only same-chat history defaults. Global history never
-silently supplies a project. The project registry refreshes on polling and manual
-refresh while preserving drafts and stable options. Panel HTML is read from
-`dist` per resource request, so UI rebuilds can appear without a service restart.
-Server code changes require a service restart; reload the MCP connection to
-discover changed opener metadata and resource URIs. Inline model preference and
-resource display modes are hints, not forced native placement.
-
-## Plugin startup and hooks
-
-Codex supports command-based lifecycle hooks, including `SessionStart`, and
-plugin hooks are discovered from `hooks/hooks.json` or the OpenAI extension in
-the root manifest. Users must review and trust plugin hooks. Scripts must exist
-in the execution environment; installation on the web does not deploy them.
-Plugin hook commands receive `PLUGIN_ROOT` and writable `PLUGIN_DATA` variables.
-The portable package keeps `plugin.json`, `mcp.json`, and assets at its root.
-[Official plugin packaging documentation](https://developers.openai.com/plugins/build/plugins).
-
-Hook input contains `session_id` and session `cwd`. Commands run in that working
-directory. This is a supported way for a future trusted hook to capture session
-context, but a hook payload is not automatically supplied to an MCP tool. A
-shared service needs an explicit session binding if it consumes this information;
-one global “current repository” is insufficient for concurrent chats.
-[Official hook input and execution documentation](https://learn.chatgpt.com/docs/hooks).
-
-STDIO MCP configuration supplies a command, arguments, environment, and optional
-launch `cwd`. That launches the configured executable, not a separately managed
-HTTP service. Launch `cwd` is not documented as a per-tool-call project identifier.
-Starting the local service from the packaged STDIO launcher is therefore an
-application responsibility. Disconnecting a client should close its proxy
-without terminating work owned by a shared service.
-[Official MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+Draft polls wait at most 25 seconds. Transport timeouts add a 10-second margin
+for these calls; the stdio proxy's ordinary service timeout is 30 seconds.
+These limits are implemented contracts, not a guarantee that every host permits
+long-lived calls. The panel requires no browser bearer token.
 
 ## Project context and registration
 
-MCP Apps host context describes presentation, locale, device capabilities, and
-the initiating tool; it does not standardize a repository path or Codex project
-ID. Its fields are optional. The installed `@modelcontextprotocol/ext-apps`
-1.7.5 `McpUiHostContext` likewise has no declared repository field, although it
-permits additional properties. No documented, guaranteed per-call active-project
-field was established by this review. Explicit project selection is the reliable
-fallback, and an undocumented extra property must not become an access grant.
-[Official MCP Apps host-context reference](https://apps.extensions.modelcontextprotocol.io/api/interfaces/types.McpUiHostContext.html).
+Portable MCP Apps host context has presentation fields but no standardized
+repository identity. See the [host-context reference](https://apps.extensions.modelcontextprotocol.io/api/interfaces/types.McpUiHostContext.html).
+An extra host property, a model-supplied directory, and a conversation identifier
+are not access grants.
 
-Legacy MCP roots are optional: supporting clients declare the capability and
-servers can request `roots/list`. The protocol does not mandate a project-picker
-interaction or identify which root is active for a particular chat. A root list
-is consequently not a replacement for explicit task project identity or the
-service's own containment validation.
-[MCP 2025-11-25 roots specification](https://modelcontextprotocol.io/specification/2025-11-25/client/roots).
+The implemented optional Codex adapter advertises
+`capabilities.experimental["codex/sandbox-state-meta"]`. It consumes
+`sandboxCwd` as a local `file:` URI, resolves its canonical Git root, and validates
+it against approved projects. Unsupported, malformed, unavailable and unapproved
+hints fall back to explicit project selection or same-chat task history.
 
-Elicitation can collect a missing repository or an explicit approval, when the
-connected client supports the requested mode. For legacy connections, an empty
-elicitation capability means form support; absent capability does not. Servers
-must not send unsupported modes, and user decline/cancel must be respected.
-This allows a capability-gated registration flow; a model-supplied path alone
-does not establish user consent.
-[MCP elicitation specification](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation).
+The adapter is backed by public Codex source pinned to
+[`c5d242fa`](https://github.com/openai/codex/commit/c5d242fa7907bff1b7a7e26e95febc548c0a6963)
+and the reviewed `rust-v0.160.0` release:
 
-OpenAI recommends elicitation for missing structured information and explicitly
-states that tool annotations do not replace server authorization or validation.
-Registration should use a direct user action or accepted elicitation and retain
-canonical-path containment checks for all subsequent task requests.
-[Official MCP server guidance](https://developers.openai.com/plugins/build/mcp-server).
+- [MCP tool metadata](https://github.com/openai/codex/blob/c5d242fa7907bff1b7a7e26e95febc548c0a6963/codex-rs/core/src/mcp_tool_call.rs)
+  supplies optional `threadId` and `sessionId`.
+- [MCP client capability detection](https://github.com/openai/codex/blob/c5d242fa7907bff1b7a7e26e95febc548c0a6963/codex-rs/codex-mcp/src/rmcp_client.rs)
+  opts into sandbox metadata through `experimental`.
+- [Sandbox serialization](https://github.com/openai/codex/blob/c5d242fa7907bff1b7a7e26e95febc548c0a6963/codex-rs/codex-mcp/src/runtime.rs)
+  and [PathUri](https://github.com/openai/codex/blob/c5d242fa7907bff1b7a7e26e95febc548c0a6963/codex-rs/utils/path-uri/src/lib.rs)
+  establish the camelCase cwd field and file-URI representation.
 
-The panel now registers repositories through app-only user tools. **Add project**
-accepts an absolute path or a native macOS folder selection followed by explicit
-submission. **Browse…** beside the New task Project selector registers the chosen
-repository immediately, selects it for that draft, and leaves task creation to
-**Start task**. The native dialog opens on the service host, and other platforms
-can use the Add project path field. MCP hosts must enforce app-only tool visibility;
-the generic model-facing API rejects these user tools. Registration retains
-canonical Git-root validation and does not grant parent or nested-repository access.
-The native script has been compiled and its result/error paths tested with an
-injected executor; interactive dialog behavior and target-host delivery remain
-unverified.
+Public CLI/core source does not prove metadata delivery in a particular closed
+source desktop installation. This adapter reads directory context only; it does
+not inherit a host permission profile.
 
-The model-visible, read-only `get_current_agent_project` reports the current root
-and whether it is registered, using only original host `_meta["codex/sandbox-state-meta"].sandboxCwd`.
-`request_agent_project` asks the user to confirm registration, optionally prefilling
-an explicit repository or that host root. Its decision defaults to deny; only an
-accepted allow registers the canonical Git root. HTTP uses durable Multi Round-Trip
-Requests; stdio uses legacy SDK form elicitation when the host advertises support.
-Unsupported hosts receive guidance to register through the panel. Cancellation and
-decline never register or start work.
+Conversation correlation prefers an explicit argument, then the documented
+optional [`openai/session`](https://developers.openai.com/plugins/reference), then
+Codex `threadId`. `sessionId` is not used as a substitute for `threadId`.
+An explicitly selected owned task supplies its own scope; conflicting explicit
+repository, revision or conversation arguments reject. Explicit
+`conversation_id: null` bypasses host correlation and means all chats.
+Global launches ignore ambient chat/directory context. Same-chat history can
+supply defaults; unrelated global task history cannot.
 
-**Automatically add chat projects** (`auto_register_chat_project`) is a persistent,
-user-only setting available in panel Settings, defaulting to true.
-It registers the current local host Git root only when a task is started from the
-chat for that root; project listing, context resolution and the panel openers
-remain read-only. Explicit/model `host_directory` and task paths cannot trigger
-this grant, and roots already covered by a grant are not registered again. The
-panel's New task offers the unregistered chat project only while the setting is
-on, and adds it when the user starts a task with it.
-Disabling the policy keeps existing registrations. These implemented flows do not
-establish live desktop metadata delivery or native form rendering.
+Read-only context resolution may return an **Add chat project** suggestion but
+never registers it. Registration is available through:
 
-## Recent releases and compatibility
+- Panel **Add project**, the local projects CLI, or configured approved roots.
+- **Browse…** in New task: the native macOS folder picker registers the selected
+  root and selects it for the draft. It does not start the task. The dialog runs
+  on the service machine; other platforms use the path field.
+- `request_agent_project`: explicit accepted allow through supported elicitation.
+  Decline/cancel never registers or starts work. HTTP uses durable multi-round-trip
+  requests; stdio uses legacy SDK form elicitation when advertised by the host.
+- **Automatically add chat projects**, a user-only persistent setting, enabled
+  by default. It registers the host's local Git root when a task starts for that
+  root from the chat. Only original transport directory metadata can trigger
+  this policy; task paths and `host_directory` arguments cannot. Read-only calls
+  never trigger it. Disabling it retains existing registrations.
 
-The July 28, 2026 MCP release introduces stateless per-request capabilities,
-Multi Round-Trip Requests for user input, and explicit application handles.
-Roots, Sampling, and Logging are deprecated with at least twelve months of
-continued support. New code should not depend on roots being a future universal
-project-context API. Installed legacy SDK behavior and modern v2 behavior must
-be assessed separately; the published latest protocol does not prove a host
-negotiates it.
-[Official MCP release announcement](https://blog.modelcontextprotocol.io/posts/2026-07-28/).
+`get_current_agent_project` is read-only and reports whether the host root is
+registered and whether task-start registration is enabled. All registration
+routes preserve canonical-path and Git-root validation. A repository grant
+covers that root; an explicitly approved parent grant can cover child repositories.
+MCP hosts must enforce app-only visibility; the generic model API rejects
+user-only operations.
 
-OpenAI's May 28, 2026 plugin update added host style variables and host-context
-theme notifications; May 27 updated approved-tool input delivery. These are
-UI capabilities, not a documented repository binding.
-[Official plugin UI changelog](https://developers.openai.com/plugins/changelog).
+## Composer mentions
 
-The current OpenAI changelog includes CLI 0.160.0 on October 1, 2026, and the
-May 8 desktop 26.506 release added hook trust review. Published release notes
-establish that hooks and elicitation are evolving capabilities, but do not
-verify which runtime a particular installed desktop app uses. Use handshake
-capabilities and direct integration tests rather than product-name assumptions.
-[Official ChatGPT and Codex changelog](https://learn.chatgpt.com/docs/changelog).
+Both transports expose app-only `search_mentions` and the Claude resource link.
+Search accepts worker/profile terms and the server name as an alias, and returns
+Claude when the reviewer profile is available. A selected mention is a provider
+hint; it selects no repository and changes no permissions.
 
-## Claude task continuity
+The prior review confirmed the server appeared in the desktop picker; delivery
+of the selected item and the full delegation flow still need a live host check.
+Use ordinary MCP tools and the delegation skill when mentions are unavailable.
+The [extension guide](https://developers.openai.com/plugins/build/extensions)
+and [mention specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#composer-at-mentions)
+describe the intended host surface.
 
-The installed Claude SDK declares `cwd` (defaulting to process cwd), `resume`
-(a specific session ID), and `continue` (the most recent conversation in the
-directory). `src/features/providers/claude/provider.ts` explicitly passes the task workspace as
-`cwd` and its saved session ID as `resume`. Preserve both across a task's turns;
-selecting another project for a new task must not change an existing task's
-repository or workspace.
+## Plugin startup and hooks
 
-Each turn runs `query()` in streaming input mode, so messages can follow the
-prompt while it runs. Checked live with SDK 0.3.289 on October 7, 2026:
+The distributable includes root `plugin.json`, `mcp.json`, compiled `dist`,
+migrations, assets and `skills`. `mcp.json` launches `dist/stdio.js`, which connects
+to or starts the shared local service. Disconnecting stdio does not stop the
+service or its tasks. The launcher's cwd belongs to the installed package and
+cannot identify the current chat project. A local install does not deploy a
+service to an unrelated cloud machine.
 
-- A cold `resume` with no `outputFormat` returns a plain `result` in the same
-  session. Its `total_cost_usd` is cumulative for the session, including the
-  turns it resumes, so the service counts only what's new.
-- A user message sent with `priority: "next"` while a turn runs is taken at
-  the next tool boundary, within the same turn. The CLI reports it with a
-  `command_lifecycle` frame (`queued`, `started` once taken, then `completed`
-  or `cancelled`), a frame type the SDK doesn't declare. A message still
-  queued when the turn ends runs as a turn of its own right after the result,
-  too late to stop then; `cancelAsyncMessage(uuid)` withdraws it cleanly as the
-  final message streams its stop reason.
-- `Query.interrupt()` ends the turn with an `error_during_execution` result
-  (`terminal_reason: "aborted_streaming"`) and keeps the session. Its receipt
-  lists queued messages that will still run under `still_queued`;
-  `interrupt({ cancelQueued: true })` cancels them instead. The option and
-  `cancelAsyncMessage` exist at runtime but aren't in the SDK's types.
+There are no packaged lifecycle hooks or native settings entrypoint. The panel is the settings editor. Project context comes from the explicit and validated metadata paths described above. See [plugin packaging](https://developers.openai.com/plugins/build/plugins).
 
-Current official sessions guidance says history does not persist filesystem
-state, and cross-directory lookup was introduced in Claude Code 2.1.223.
-The installed SDK bundles 2.1.141, so that newer lookup guarantee cannot be
-assumed here. Resume also requires locally available session data. Using
-`continue: true` in a concurrent service risks selecting a different session;
-explicit IDs and stable workspaces avoid that ambiguity.
-[Official Claude Agent SDK sessions documentation](https://code.claude.com/docs/en/agent-sdk/sessions).
+## Verification boundary
 
-Installed package evidence (`npm ls --depth=0`, package manifests and types):
+Transport/context tests establish explicit precedence, scope isolation, validation
+and protocol behavior. Browser fixtures establish rendering without paid workers.
+They do not establish native desktop placement, selected-mention delivery,
+elicitation rendering, folder-picker interaction, or sandbox metadata delivery.
 
-| Component             | Installed version | Relevant evidence                                        |
-| --------------------- | ----------------- | -------------------------------------------------------- |
-| Claude Agent SDK      | 0.3.289           | `sdk.d.ts` options; bundled manifest CLI 2.1.289         |
-| MCP SDK v1            | 1.31.0            | `types.js` latest supported handshake version 2025-11-25 |
-| MCP server / node v2  | 2.2.0 / 2.1.0     | Modern 2026-07-28 codec alongside legacy support         |
-| MCP Apps              | 1.7.5             | `spec.types.d.ts` host context lacks repository identity |
-| OpenAI MCP extensions | 0.1.0             | Installed extension dependency                           |
-
-These observations verify local library contracts, not a live desktop handshake,
-hook trust state, or access to another host's filesystem. A local plugin cannot
-make its service available to an unrelated cloud machine merely by installing
-the package.
-
-## Review corrections
-
-The server no longer advertises the `openai/settings` extension. No host was
-confirmed to render native settings, and its strict layout format (groups
-without IDs, scalar fields only) constrained the panel's settings dialog, which
-is now the only settings editor. The read and update tools keep their output
-schemas. See the [official extension specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#structured-settings)
-if native settings are reconsidered.
-
-`_meta["openai/session"]` is a documented optional anonymized conversation
-identifier. Both transports now use it for panel/task/list correlation when no
-explicit conversation ID is supplied. It is not a repository ID or an authorization
-claim. Metadata absence still works; no active-project access is inferred from it.
-[Official plugin UI reference](https://developers.openai.com/plugins/reference).
-
-Portable skills are discovered from the root `skills/` directory, which is now
-included in the distributable package. Registry installs do not execute package
-lifecycle scripts, so compiled assets and production dependencies must already
-be present in the archive. Public publication additionally needs an approved
-endpoint and complete submission metadata/assets; local package validation and
-protocol tests do not establish universal-directory eligibility.
-[Official packaging documentation](https://developers.openai.com/plugins/build/plugins),
-[submission requirements](https://developers.openai.com/plugins/deploy/submission).
+For changes in these areas, reload the MCP connection and verify the affected
+flow on the target host, including two concurrent chats/projects. UI resource
+HTML is read from `dist` on each request, so rebuilding UI can update it without a
+service restart. Server changes require restart; changed discovery metadata or
+resource URIs require MCP reload. Do not infer support from a product name or an
+installed library version alone.

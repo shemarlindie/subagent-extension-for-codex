@@ -16,7 +16,7 @@ precedence. The stdio proxy reads the mention-test setting from `.env` and uses
 its `CODEX_SUBAGENT_EXTENSION_DATA` only as a fallback destination for the test
 search log. Service connection settings come from its MCP environment.
 The example keeps data in `.codex-subagent-extension/live`. See the
-[configuration table](../README.md#configuration) for every variable.
+[configuration table](configuration.md#environment-variables) for every variable.
 
 **One data directory.** The service, the panel dev host, and Codex must all use
 the same `CODEX_SUBAGENT_EXTENSION_DATA`; it holds the database and the admin
@@ -44,7 +44,7 @@ is available.
 
 Projects need no startup registration. A chat's project is added when a task
 starts from that chat, and **Add project** or `npm run projects` covers the
-rest (see [Multiple projects](../README.md#multiple-projects-and-packaged-startup)).
+rest (see [Multiple projects](configuration.md#repository-access)).
 
 ## Generated validation schemas
 
@@ -96,8 +96,8 @@ export function decodeMessage(input: unknown): Message {
 ```
 
 Add focused tests beside the contract for accepted and rejected data and any
-annotation behavior. Run `npm run typecheck`, then commit the source, generated
-file, and tests together. See [Checks](#checks) for the build and watch workflows.
+annotation behavior. Run `npm run typecheck`. Keep the source, generated file, and tests together
+in any requested commit. See [Checks](#checks) for the build and watch workflows.
 
 For a handwritten validator, add a feature-owned `schema-generation.mjs` with
 paths relative to that configuration file. Claude's configuration, for example,
@@ -152,6 +152,20 @@ The standalone console is at `http://127.0.0.1:4317`. Sign in with the contents
 of `<data-directory>/admin-token`, for example
 `pbcopy < .codex-subagent-extension/live/admin-token` on macOS.
 
+## Choosing a development tool
+
+| Command          | Use for                                                      | Worker                                                  |
+| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
+| `npm run dev:ui` | UI development, prepared scenarios and host/layout controls. | Prepared fixtures, or a connected backend in live mode. |
+| `npm run demo`   | Interactive service testing with disposable data.            | Fake worker; no model calls.                            |
+| `npm run dev`    | Backend development and Claude execution.                    | Claude; model calls can incur costs.                    |
+
+**Data: live** means a
+backend connection; the connected service determines whether its worker is
+fake or Claude. The [Demo](#demo) instructions show how to combine it with the
+[panel dev host](#panel-dev-host). See [What reloads when](#what-reloads-when)
+for applying source changes.
+
 ## Panel dev host
 
 ```sh
@@ -162,58 +176,18 @@ This starts a Vite server at `http://127.0.0.1:5317` with React Fast Refresh and
 CSS hot replacement, for development only; production HTML comes from
 `scripts/build-ui.mjs`.
 
-The page is a mock MCP Apps host (`ui/dev/host.tsx`, mounted by `main.tsx`;
-its pure helpers are in `host-helpers.ts` and tested in
-`tests/integration/development/dev-host.test.ts`). It embeds the panel in an
-iframe through the official `AppBridge`, so the panel runs its real
-`HostTransport`, as it does in Codex. Like Codex, the host calls the launch tool
-and delivers its result to the panel. The toolbar controls:
+The page embeds the real panel in an iframe through the official `AppBridge`.
+Use **Data: fixtures** for UI checks without a service; prepared fixtures cannot
+create tasks or send Chat messages. **Launch** chooses thread or global
+scope; theme, display mode, width and host capabilities can be varied. The
+**Inspector** exposes the bridge log, host settings and icon catalog.
 
-- **Data**: fixture results (`ui/dev/preview/tools.ts`, development
-  only; never in the production bundle) or the live service. Fixtures need no
-  service; unsupported operations, including sending Chat messages, fail
-  explicitly. Fixture Chat is built from the fixture events by the service's
-  own `chatItems`. The **Live: streaming reply** task's draft grows with time
-  since the page loaded, so Chat shows it streaming in. Tools listed in
-  `FIXTURE_SERVICE_TOOLS` (`host-helpers.ts`) are the exception: the Vite
-  server answers them with the real service code (`ui/dev/fixture-service.ts`,
-  a `Store` in a temporary SQLite file seeded with the fixture tasks), for
-  behavior the browser fixtures cannot fake. They are the Changes tab's tools:
-  changes, changed files and worktree actions. Tasks with a change fixture
-  (`ui/dev/preview/change-fixtures.ts`) get a real Git repository each, with a
-  base commit and then each turn's edits, so their diffs come from Git. Edits
-  to `src/` rebuild that store, and its repositories, on the next call. The **Bridge log** marks each
-  call `served` by `fixture service`, `browser fixtures` or `service`.
-- **Launch**: thread (`open_codex_subagent_extension` with Codex's `threadId`
-  and `codex/sandbox-state-meta` request metadata) or global. With fixtures,
-  `ui/dev/preview/tools.ts` resolves the thread's scope the way the service does.
-- **Thread** (thread launches only): the threads that have tasks, from the
-  fixtures or the live service.
-- **Theme**, **Display** (inline or fullscreen; the panel's **Open panel** and
-  **Collapse** requests switch it), and **Width**.
-- **Send messages** and **Update context** host capabilities.
-- **Inspector**: the toolbar button opens a right-side pane with **Bridge log**,
-  **Host settings**, and **Icon catalog** tabs. Host settings include **Thread
-  ID** (accepts any ID), **Sandbox cwd** (the chat's directory, sent as a
-  `file://` URI; a typed path is converted), auto-adding chat projects,
-  **Claude Code unavailable** (fixtures report Claude as not ready, as an
-  unsupported CLI does) and resetting fixture projects, plus optional host
-  style variables as JSON. An unregistered directory shows **Add chat
-  project**. Fixture registrations persist across relaunches and reloads until
-  reset; starting a task fails. The icon catalog lists every panel glyph.
-
-Changing data, launch, capabilities, or host metadata starts a new panel
-session; theme, display mode, width, and styles are pushed as host context
-changes. The bridge log records tool calls, messages, model context updates,
-and display-mode requests, including entries recorded while the inspector is
-closed. Open **Inspector** and select **Bridge log** to view them.
-
-The mock host mirrors the panel's project, task or task-list selection, tab,
-search, and status filter into the outer page URL. Open dialogs add a boolean
-`dw_dlg_<name>=1` URL flag; action dialogs use distinct names, such as
-`worktree_remove` and `worktree_delete_branch`. Ordered dialog references and form drafts stay in local storage.
-Reloading the dev host then restores the panel view and any saved dialogs. Host
-toolbar settings continue to use local storage.
+[UI verification](ui-verification.md) documents the browser workflow, fixture
+catalogue and host controls. Fixtures in `ui/dev/preview/` are excluded from the
+production bundle. Most calls use browser fixtures; Changes and worktree calls
+in `FIXTURE_SERVICE_TOOLS` run real service code against disposable repositories
+on Vite. Source edits rebuild these repositories on the next call, and the
+bridge log identifies the source that served each call.
 
 Live mode connects to the service's `/mcp` endpoint through the Vite proxy at
 `/service`. The proxy adds the admin token server-side and drops the browser
@@ -225,8 +199,7 @@ port 4317. It ignores `PORT`, which in the dev host's process is its own port
 `CODEX_SUBAGENT_EXTENSION_TOKEN` or the data directory's `admin-token`. Start
 the service first, or restart Vite after it moves ports.
 
-Live mode performs real actions: starting a task from the panel runs a worker.
-To work against throwaway data, give both processes the same data directory;
+For Claude execution against throwaway data, give both processes the same data directory;
 the dev host finds the service's port in its `service.json`:
 
 ```sh
@@ -298,18 +271,35 @@ live mode.
 npm run demo
 ```
 
-The development service runs a fixture worker with a disposable sample
-repository in `.codex-subagent-extension/demo`; it makes no model calls. Sign in at
+The script builds the project, registers a disposable repository at
+`.codex-subagent-extension/demo-repository`, and starts the real service with
+only the fixture worker. Its data directory is `.codex-subagent-extension/demo`;
+it makes no model calls. Sign in at
 `http://127.0.0.1:4317` with `local-demo-only-not-a-real-token`. Stop any other
 service on port 4317 first.
 
+To combine interactive fake-worker tasks with UI hot reload, run `npm run demo`
+in one terminal, then start Vite in another with the demo connection:
+
+```sh
+CODEX_SUBAGENT_EXTENSION_DATA="$PWD/.codex-subagent-extension/demo" \
+CODEX_SUBAGENT_EXTENSION_TOKEN=local-demo-only-not-a-real-token \
+CODEX_SUBAGENT_EXTENSION_URL=http://127.0.0.1:4317 npm run dev:ui
+```
+
+Open `http://127.0.0.1:5317`, choose **Data: live** and **Launch: global**, and
+**Relaunch**. Select the demo repository in New task. The panel sends actual
+requests: create tasks, send follow-ups, answer questions and interrupt turns.
+The explicit connection overrides keep Vite from using a different service
+configured in `.env`.
+
 The fixture worker (`dev/fixture-provider.ts`) and demo entry
 (`dev/demo-service.ts`, run through `tsx`) are in `dev/`, outside the `src/`
-build. The fixture worker streams its reply in small pieces before storing it.
+build and the distributed package. Tests also import the fixture worker.
+It streams its reply in small pieces before storing it.
 Markers in a turn's prompt shape the turn: `[input]` asks a question, `[fail]`
 fails, `[slow]` runs several steps that each take pending steers, as at a tool
-boundary, and `[late]` takes none, so they're left for the next turn. The package contains neither. Tests import the fixture worker from
-`dev/`. The packaged service supports the `claude` provider.
+boundary, and `[late]` takes none, so they're left for the next turn.
 
 ## What reloads when
 
@@ -425,7 +415,7 @@ re-qualifies the range. Qualify a version before adding it:
 
 1. Run `npm test`. Recorded fixtures cover the SDK message mapping, and the
    packed-artifact suite runs model discovery through the host's CLI.
-2. Run the [live Claude checks](../README.md#live-claude-checks) with that
+2. Run the [live Claude checks](#live-claude-checks) with that
    version selected (through `PATH` or `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`).
    They cover reads, resume, the sandbox, MCP, budgets and CLI parity
    (project settings, hooks, skills and MCP servers).
@@ -434,6 +424,34 @@ re-qualifies the range. Qualify a version before adding it:
 Keep the range covering the SDK's paired version (`claudeCodeVersion` in its
 `package.json`) and the current stable and latest releases
 (`npm view @anthropic-ai/claude-code dist-tags`).
+
+## Live Claude checks
+
+These checks make authenticated model calls and require configured Claude Code
+credentials. Build first: the script runs service source through `tsx`, while
+the `mcp` scenario also reads `dist/stdio.js` and `dist/app.html`. Explicitly opt
+in for each scenario:
+
+```sh
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs read
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs resume
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs sandbox
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs mcp
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs budget
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs parity
+```
+
+Each uses a temporary Git fixture and a native cost limit of $0.25, or $0.50 for
+parity. The budget scenario sets $0.001 and expects budget failure. Claude checks
+cost after a response, so it can exceed the configured amount; this is not a
+hard billing cap. These checks are excluded from the ordinary test suite.
+
+The sandbox scenario enables the extension sandbox, approves only its five
+exact fixture commands, denies unexpected permissions and uses a local listener.
+Parity uses default settings and project-local skill, `.mcp.json` stdio server
+and `PreToolUse` hook fixtures; it approves only fixture tools and checks a
+subagent run. Select a CLI with `PATH` or
+`CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH` when qualifying versions.
 
 ## Checks
 
@@ -452,10 +470,10 @@ code quality and React hook rules; explicit `any` is allowed only in tests.
 tests on save without the preflight: run `npm run schemas:generate` after contract
 edits, and build first when a test reads `dist/`.
 
-For suite coverage, see the [README](../README.md#verification-and-remaining-plan)
-and [React UI architecture](react-ui.md#build-and-verification). Opt-in tests
+For scope and remaining gaps, see [Implementation status](implementation-status.md).
+UI checks are described in [React UI architecture](react-ui.md#build-and-verification). Opt-in tests
 against real Claude make model calls; see
-[Live Claude checks](../README.md#live-claude-checks).
+[Live Claude checks](#live-claude-checks).
 
 ## Troubleshooting
 

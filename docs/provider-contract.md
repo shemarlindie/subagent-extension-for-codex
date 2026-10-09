@@ -23,7 +23,7 @@ While a turn runs, `RunContext` connects it to the conversation:
 - `decideInput` can approve or deny execution requests under provider policy. Returning `undefined` queues an interactive request. Questions always remain interactive.
 - `parentMayApprove` selects whether the parent can answer an unresolved permission request. Claude uses its independent approval decider; whole-execution providers use their execution approval policy.
 - `inputKind` classifies provider tool names as questions or permissions. The persisted kind lets forms and presentation use a common distinction.
-- `validateSession` checks provider-owned session state before a later turn resumes it. A session it rejects, or one on another worker, gives way to a new session in the same task, whose prompt carries the earlier conversation.
+- Optional `validateSession` checks provider-owned session state before a later turn resumes it. A session it rejects, or one owned by another service worker, gives way to a new session in the same task, whose prompt carries the earlier conversation.
 
 `executionTaskPolicy` resolves whole-execution approval defaults from user settings and supplies the existing approval behavior. Native policies resolve their own defaults; presentation metadata does not select lifecycle policy. Claude supplies a native policy. A new built-in supplies its own policy without editing lifecycle branches in `Control`.
 

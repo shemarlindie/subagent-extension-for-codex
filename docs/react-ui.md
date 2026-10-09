@@ -19,7 +19,11 @@ Delegated Work is the only UI. It runs embedded in a host and in a regular brows
 
 The controller owns UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.
 
-Session memory lives in `controller.session`, a typed `SessionStateStore`. Task entries hold the selected evidence tab, composer draft and visibility, and separate Chat and Activity reading positions; question entries hold unsent answers. Components use `useSessionState(scope, id, select?)` and partial updates. Select a stable field or reference to avoid rendering for unrelated changes. Scroll hooks mutate stable reading cells without notifying subscribers on every scroll. Answered questions clear their entry. Session memory lasts until the controller is replaced; URL view state and recoverable dialog forms use their existing persistence separately.
+Components read session memory with `useSessionState(scope, id, select?)` and
+partial updates. Select a stable field/reference to avoid unrelated rerenders.
+Scroll hooks mutate stable reading cells without notifying on every scroll;
+answered questions clear their entry. See [State and persistence](#state-and-persistence)
+for lifetime and storage boundaries.
 
 Use Base UI (`@base-ui/react`) primitives for dialogs, tabs (with an animated indicator), the task filter radio group, single and multiple selection, project suggestions, the settings accordion and its switches, including focus management and keyboard navigation. `SelectField` and `MultiSelectField` share dropdown structure and styling; `FormSelect` connects selection to React Hook Form. The project autocomplete accepts both registered projects and explicit absolute paths. Keep simple buttons, text inputs, and textareas as native controls. Base UI provides unstyled components; keep their styling in this project's stylesheets and application decisions in the controller/forms. React, React DOM, React Hook Form, and the official MCP Apps bridge supply existing infrastructure rather than custom equivalents.
 
@@ -55,43 +59,49 @@ Buttons use `<Button>` from `ui/shared/components/button.tsx`, with a `variant`:
 - Add a selector for a pure calculation shared across views. Keep transport calls and mutation outside selectors.
 - Add a transport when the connection mechanism changes. Implement `Transport` and deliver `TransportEvents`; select it in bootstrap. Rendering and forms should not branch on HTTP versus MCP tool envelopes.
 
-Keep scope handling centralized. Changing the project or conversation invalidates outstanding reads and stale dialogs. A submission already in flight must not be silently repeated in the new scope. Task/detail generation checks discard delayed responses after selection changes, and disposal cancels refresh scheduling and connection resources.
+Keep scope handling centralized. Task/detail generation checks discard delayed responses after selection changes, and disposal cancels refresh scheduling and connection resources. See [State and persistence](#state-and-persistence) for scope changes and dialog lifetime.
 
-## Console, host, and preview behavior
+## State and persistence
 
-In a browser tab the page uses credentialed HTTP requests, token login, and SSE for activity refreshes and streamed drafts; the page has a single URL and no routes. The URL keeps the current project, selected task or task-list view, task tab, search, and status filter, so reloads and copied links restore the view. Search filters apply as the user types; the search URL value and dialog form drafts are saved after a 250 ms pause, with pending changes flushed when the page leaves. If the saved status filter has no tasks in the current scope, the UI uses the first nonempty filter in its default order. The development host mirrors this state into its outer browser URL for iframe reloads. The current Codex host integration does not expose a URL-state bridge; it supplies scope and any initial task selection when the panel opens. Embedded views use the MCP Apps bridge for tools, theme variables, selection context, display modes, and optional message delivery. The host determines which actions are available (send, share, expand). Opening the panel outside a host reports that MCP is required.
+The controller separates session memory from recoverable view state:
 
-Each task dialog has its own boolean URL flag, such as `dw_dlg_delegate=1`. The flag records that the dialog is open; its task reference and recoverable form values stay in local storage. Dialog variants with different actions have distinct names, such as `dw_dlg_worktree_remove=1` and `dw_dlg_worktree_delete_branch=1`. If more than one descriptor is saved, the single-dialog host restores the newest first, then reveals earlier entries as each dialog closes. Cancel, Close, Escape, and successful submission remove the dismissed dialog and its draft; settings keeps its confirmation prompt when edits need explicit discard approval. The shared `usePersistedDialogForm` hook restores compatible form fields, while server-owned task and settings data is reloaded before a dialog is shown. Authentication remains driven by the host's login state, and its token is never saved as a dialog draft.
+- `controller.session` stores per-task tabs, composer drafts/visibility, reading
+  positions, and question answers until the controller is replaced.
+- Browser URL state stores scope, selected task/list, tab, search and status
+  filter. The dev host mirrors it into its outer URL; Codex has no URL-state
+  bridge. Search and form drafts persist after a 250 ms debounce, flushed on
+  page exit.
+- Boolean `dw_dlg_<name>=1` flags record open dialogs. Ordered descriptors and
+  compatible form drafts live in local storage. The newest dialog restores
+  first. Closing or successful submission removes its descriptor and draft.
+  Server-owned data is reloaded; authentication tokens are never form drafts.
 
-The embedded panel renders a compact summary in `inline` mode: project/chat scope, task counts, and the selected task's status. Counts cover the current scope even when the full panel has search or status filters applied. **Open panel** requests `fullscreen` when the host advertises it; the host controls placement. The full interface appears in expanded mode. Collapsing preserves task selection and hides any open dialog while retaining its draft for expansion. Scope changes discard stale dialogs. A standalone browser tab always uses the full layout.
+Changing scope invalidates outstanding reads and closes stale dialogs. A
+submitted mutation is never repeated automatically. Collapsing the embedded
+panel hides dialogs while preserving their drafts for expansion.
 
-Delegation forms collect the full request as the description without a manual title field. The service generates a title from the description's first line or sentence, up to 120 characters. Task rows and the inline preview show the concise title. The inspector shows an editable title; the full description remains in Details. `EditableText` keeps the native field in place, supports wrapped titles, saves changed text on Enter or an outside click, and discards it on Escape. Blank titles and failed saves keep the draft for correction or retry. Inline editing uses `rename_user_agent_task` with a trimmed title of 1–200 characters.
+## Feature integration points
 
-Chat (`ui/features/tasks/chat/`) is the inspector's first tab. The controller reads it with `get_user_agent_chat` alongside the activity tail, by cursor, and `mergeChat` replaces an item read again in place, so a message the turn's reply takes over, or an outcome row given its error, doesn't move. The items come from `chatItems` in `src/features/tasks/chat.ts`, which the service and the preview fixtures share. A running task's draft arrives as SSE `delta` events in the console, or by the controller's chained `get_user_agent_draft` reads in a host (`followDraft`, which stops when the task is idle, another tab is shown or the page is hidden); `applyDraftUpdate` keeps it, and the timeline renders it with a caret until the stored message with its id arrives. The composer's mode (`composerMode`: idle, busy, or waiting for input) decides what Enter, Tab and Esc do and which buttons show; its drafts are kept per task in the session store. The composer sits outside the padded timeline and owns its left and right padding. It can be hidden in any chat and remembers its visibility per task. Structured question requests collapse it by default; the toggle reopens it for the current request while the composer stays mounted. A new request or remount collapses it again without changing the ordinary per-task visibility preference. Stop stays visible while a turn is active. Chat actions go through `controller.sendMessage`, `interruptTask` and the queue actions, which run outside dialogs, report a failure inline and reload the task.
+- **Chat:** `src/features/tasks/chat.ts` supplies `chatItems` to both the service
+  and preview. `mergeChat` updates repeated items in place. HTTP transports use
+  SSE drafts; host transports use chained `get_user_agent_draft` reads. The
+  controller handles queue/send/interrupt actions and inline failures.
+- **Settings:** `src/features/settings/settings-document.ts` supplies typed
+  sections and rows. `ui/features/settings/settings-layout.ts` owns form logic.
+  Save only changed fields; preserve disabled budget amounts. Closed sections
+  remain mounted for validation, and invalid fields open their section.
+- **Activity:** grouping and presentation retain original events for debug
+  inspection. `Timeline`, `TimelineItem` and `TimelineDot` use Base UI `useRender`
+  and expose state attributes for styling. Expensive raw response rendering
+  starts only when its inspector opens.
+- **File preview:** `ui/features/file-preview/` owns format detection and
+  Markdown, source, diff, table and image views. Render the whole file with
+  deferred row blocks for large content. Syntax highlighting stops above
+  200,000 characters; SVG images over 64 KiB show as source only.
 
-**Settings** opens the panel's settings dialog; the server does not advertise native host settings. `get_agent_settings` returns current `values`, the `defaults` a reset restores, and `sections` built by `src/features/settings/settings-document.ts`. Each section has a stable `id`, a title, optional intro `help`, and typed rows: `select` with labelled options, `switch`, `budget` with a switch, amount, unit and bounds, or `models` with model and effort choices per scope and an `unsupported` effort flag. A model without discovered choices uses a text input. The dialog renders these rows as given; the JSON `schema` is for agents. `ui/features/settings/settings-layout.ts` holds the form logic.
-
-Sections form an accordion: the first starts open, and opening another closes it. Collapsed sections summarize their values; model sections show only overrides. A badge counts edited rows. **Reset to defaults** appears in sections with nondefault values and resets only that section. Help parts are plain strings or `{ text, setting }` links to exact setting keys. A link names the target section in its tooltip, opens it and focuses the field; links within the current section stay plain text.
-
-A disabled budget shows its remembered amount. Turning its switch on enables editing. Closed sections stay mounted for validation. Saving an invalid amount shows an error and opens its section; focus moves to the amount, or to its switch if disabled. Saving sends only changed fields through `update_agent_settings`, with budgets sent as switch and amount. Cancel, × and Escape ask before discarding unsaved edits. The dialog keeps its full available height as sections change, and its title and footer stay visible while the form scrolls.
-
-Model selection shows each discovered model's display name with its description as secondary text. The delegation Model field is free text, so custom IDs and aliases work.
-
-The activity timeline groups tool lifecycles and streamed responses. Thinking-token updates show **Thinking…** with a ticking clock while it is the latest activity, then **Thought for 7s** once something follows (`thinkingSpan`; only the clock ticks, through `useNow`). Other consecutive updates with the same event kind and summary share a row with an event count. Messages, failures, input requests, lifecycle transitions, and events without summaries keep separate rows. Routine status updates continue to share a row showing the latest status. Messages appear as cards while tools and status stay as compact rows, and fenced code blocks in message text render as code (no other markdown is interpreted). Each row's debug button, a Base UI collapsible, exposes every original event; grouping changes presentation only. Rows render through the reusable `Timeline`, `TimelineItem` and `TimelineDot` components in `ui/features/tasks/activity/timeline.tsx`. They use Base UI's `useRender`, so each accepts a `render` prop and exposes its state as `data-trimmed`, `data-first`, `data-last` and `data-status` for styling.
-
-`FilePreview` (`ui/features/file-preview/`) shows a file from its path and content, with an optional MIME type; otherwise the format comes from the extension. It offers the views the format supports (Preview and Source for Markdown, Changes for diffs, Table for CSV and TSV, Image for images) and always renders the whole file. Highlighting stops above 200,000 characters, where text shows without colors. An SVG over 64 KB shows as Source only.
-
-Opening a row's debug details expands its newest raw response. Older responses stay collapsed initially, and manually changed disclosures survive refreshes and reopening the debug panel.
-
-For panel work, use the panel dev host (`npm run dev:ui`, see [Local development](development.md#panel-dev-host)): it runs the panel through the host bridge on fixture or live data, with thread or global launches and host capabilities. Fixture data does not execute workers; unsupported fixture operations fail explicitly. Native host rendering and delivery require verification in a registered host.
-
-![Panel with a task's conversation on the Chat tab](images/react-panel-preview.png)
-
-![Panel showing project selection and a pending permission request](images/react-project-picker.png)
-
-## Panel dev host
-
-`npm run dev:ui` runs the panel inside a mock MCP Apps host with hot reload, against fixtures or the live service. See [Local development](development.md#panel-dev-host).
+For user-visible behavior and host scope rules, see the
+[panel guide](codex-panel.md). For fixture scenarios and browser checks, see
+[UI verification](ui-verification.md).
 
 ## Build and verification
 
