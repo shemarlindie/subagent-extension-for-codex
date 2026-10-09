@@ -10,6 +10,7 @@ import {
 } from "../../../shared/state/controller-context";
 import { failedStatus, terminal } from "../../../shared/state/selectors";
 import { traceSize } from "../../../shared/state/size-trace";
+import { WorkerReadinessNotice } from "../../providers/worker-readiness-notice";
 import { TaskStatus } from "../shared/status";
 
 export function InlinePreview() {
@@ -101,6 +102,7 @@ export function InlinePreview() {
           )}
         </>
       )}
+      <WorkerReadinessNotice />
       {state.error && (
         <p className="error" role="alert">
           {state.error}

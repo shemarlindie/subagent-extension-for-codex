@@ -28,7 +28,7 @@ Before each new Claude session, the service runs `claude --version` and checks t
 
 ## When the CLI isn't ready
 
-A missing or unsupported CLI blocks starting Claude tasks and new turns. The message names the fix: the install or update step, the release channel and the path override. The delegate form shows it under **Worker**, and `list_available_workers` reports each provider's `readiness` with the selected path, its version and the supported range. Projects, task history and the panel stay usable.
+A missing or unsupported CLI blocks starting Claude tasks and new turns. The message names the fix: the install or update step, the release channel and the path override. The panel shows it above the task list and in the inline preview. It appears within an hour of the CLI breaking and clears on the next refresh after the fix; the delegate form also shows it under **Worker**. `list_available_workers` reports each provider's `readiness` with the selected path, its version and the supported range. Projects, task history and the panel stay usable.
 
 | Message                                    | Fix                                                                                                            |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |

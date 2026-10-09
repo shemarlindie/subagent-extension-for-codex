@@ -1246,3 +1246,55 @@ test("the panel follows a running task's draft by chained reads, then reads the 
     assert.equal(controller.getSnapshot().draft, undefined),
   );
 });
+
+test("workers are read again each refresh while one can't start tasks, and otherwise each hour", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+
+  let ready = false;
+
+  transport.handler = (name) =>
+    name === "list_available_workers"
+      ? [
+          {
+            provider: "claude",
+            profiles: ["reviewer"],
+            capabilities: {},
+            readiness: ready
+              ? { ready: true, details: {} }
+              : { ready: false, message: "Claude Code not found", details: {} },
+          },
+        ]
+      : undefined;
+
+  const workerReads = () =>
+    transport.calls.filter((call) => call.name === "list_available_workers")
+      .length;
+
+  await controller.start();
+  await controller.refresh();
+  assert.equal(workerReads(), 2);
+
+  ready = true;
+  await controller.refresh();
+  assert.equal(workerReads(), 3);
+  assert.equal(controller.getSnapshot().workers[0].readiness?.ready, true);
+
+  await controller.refresh();
+  assert.equal(workerReads(), 3);
+
+  // Within the hour, a ready list is reused.
+  const start = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start + 59 * 60_000);
+  await controller.refresh();
+  assert.equal(workerReads(), 3);
+  clock.mockRestore();
+
+  // A ready list is still read again after an hour, so a runtime that breaks shows.
+  const now = Date.now();
+  vi.spyOn(Date, "now").mockReturnValue(now + 60 * 60_000 + 1000);
+  ready = false;
+  await controller.refresh();
+  assert.equal(workerReads(), 4);
+  assert.equal(controller.getSnapshot().workers[0].readiness?.ready, false);
+});

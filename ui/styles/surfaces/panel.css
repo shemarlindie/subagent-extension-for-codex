@@ -93,6 +93,16 @@ header .brand-global {
   padding: 8px;
   border-bottom: 1px solid var(--line);
 }
+.worker-readiness .notice {
+  margin: 8px;
+}
+.inline-preview .worker-readiness .notice {
+  margin: 8px 0;
+}
+.worker-readiness .notice p {
+  margin-bottom: 0;
+  overflow-wrap: anywhere;
+}
 .context-error {
   flex: 1;
   min-width: 0;

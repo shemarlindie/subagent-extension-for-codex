@@ -55,6 +55,9 @@ function availableFilter(state: Snapshot, filter: Filter | null) {
   return filterCounts({ ...state, search: "" })[filter] > 0 ? filter : null;
 }
 
+/** How long a ready worker list is reused before it is read again. */
+const WORKERS_FRESH_MS = 60 * 60_000;
+
 /** Owns async lifecycles and reviewed scope; components own presentation and drafts. */
 export class Controller {
   private state: Snapshot;
@@ -71,6 +74,8 @@ export class Controller {
   private persistedDialogs: PersistedDialog[];
   private viewStateReady = false;
   private timer?: ReturnType<typeof setTimeout>;
+  /** When workers were last read, so a CLI that breaks mid-session still shows. */
+  private workersReadAt = 0;
   constructor(
     readonly transport: Transport,
     private environment = {
@@ -445,9 +450,19 @@ export class Controller {
         version = this.state.scopeVersion;
       }
 
-      if (!this.state.workers.length) {
+      // Workers are read again on every refresh while one can't start tasks,
+      // so its notice clears once fixed, and otherwise once an hour, so a
+      // runtime that breaks mid-session shows.
+      if (
+        !this.state.workers.length ||
+        this.state.workers.some(
+          (worker) => worker.readiness?.ready === false,
+        ) ||
+        Date.now() - this.workersReadAt >= WORKERS_FRESH_MS
+      ) {
         const workers = await this.tool<Worker[]>("list_available_workers");
         if (this.disposed || version !== this.state.scopeVersion) return;
+        this.workersReadAt = Date.now();
         this.patch({ workers });
       }
 

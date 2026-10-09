@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { LoginForm } from "../../features/auth/login-form";
 import { ProjectScope } from "../../features/projects/project-scope";
+import { WorkerReadinessNotice } from "../../features/providers/worker-readiness-notice";
 import { TaskInspector } from "../../features/tasks/inspector/task-inspector";
 import { InlinePreview } from "../../features/tasks/list/inline-preview";
 import { TaskFilters } from "../../features/tasks/list/task-filters";
@@ -36,6 +37,7 @@ export function AppShell() {
         <>
           <Header />
           <ProjectScope />
+          <WorkerReadinessNotice />
           <div className="shell">
             <aside aria-label="Delegated tasks">
               <TaskFilters />
