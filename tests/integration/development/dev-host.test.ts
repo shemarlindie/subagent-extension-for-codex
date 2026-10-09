@@ -27,6 +27,7 @@ const defaults: Settings = {
   threadId: PREVIEW_THREAD,
   cwd: "file:///repo",
   autoRegister: true,
+  claudeUnavailable: false,
   addedProjects: [],
   styles: "",
 };

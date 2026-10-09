@@ -116,11 +116,12 @@ and delivers its result to the panel. The toolbar controls:
 - **Inspector**: the toolbar button opens a right-side pane with **Bridge log**,
   **Host settings**, and **Icon catalog** tabs. Host settings include **Thread
   ID** (accepts any ID), **Sandbox cwd** (the chat's directory, sent as a
-  `file://` URI; a typed path is converted), auto-adding chat projects, and
-  resetting fixture projects, plus optional host style variables as JSON. An
-  unregistered directory shows **Add chat project**. Fixture registrations
-  persist across relaunches and reloads until reset; starting a task
-  fails. The icon catalog lists every panel glyph.
+  `file://` URI; a typed path is converted), auto-adding chat projects,
+  **Claude Code unavailable** (fixtures report Claude as not ready, as an
+  unsupported CLI does) and resetting fixture projects, plus optional host
+  style variables as JSON. An unregistered directory shows **Add chat
+  project**. Fixture registrations persist across relaunches and reloads until
+  reset; starting a task fails. The icon catalog lists every panel glyph.
 
 Changing data, launch, capabilities, or host metadata starts a new panel
 session; theme, display mode, width, and styles are pushed as host context

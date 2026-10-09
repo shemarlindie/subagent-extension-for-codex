@@ -67,6 +67,7 @@ const defaults: Settings = {
   threadId: PREVIEW_THREAD,
   cwd: __DEV_HOST_CWD__,
   autoRegister: true,
+  claudeUnavailable: false,
   addedProjects: [],
   styles: "",
 };
@@ -195,8 +196,16 @@ export function Host() {
   }, [viewState]);
 
   // Settings fixed at initialization; changing one starts a new panel session.
-  const { source, launch, canSend, canShare, threadId, cwd, autoRegister } =
-    settings;
+  const {
+    source,
+    launch,
+    canSend,
+    canShare,
+    threadId,
+    cwd,
+    autoRegister,
+    claudeUnavailable,
+  } = settings;
 
   const sessionKey = JSON.stringify([
     session,
@@ -207,6 +216,7 @@ export function Host() {
     threadId,
     cwd,
     autoRegister,
+    claudeUnavailable,
   ]);
 
   useEffect(() => {
@@ -288,6 +298,7 @@ export function Host() {
             ? await fixtureServiceCall(name, args)
             : fixtureCall(name, args, {
                 autoRegisterChatProject: current.autoRegister,
+                claudeUnavailable: current.claudeUnavailable,
                 addedProjects: added.current,
               });
 
@@ -647,6 +658,25 @@ export function Host() {
                   }
                 >
                   Automatically add chat projects
+                </span>
+              </label>
+              <label className="settings-check">
+                <input
+                  type="checkbox"
+                  checked={claudeUnavailable}
+                  disabled={source === "live"}
+                  onChange={(e) =>
+                    update({ claudeUnavailable: e.target.checked })
+                  }
+                />
+                <span
+                  title={
+                    source === "live"
+                      ? "The live service checks your installed Claude Code."
+                      : undefined
+                  }
+                >
+                  Claude Code unavailable
                 </span>
               </label>
               <div className="added-projects">

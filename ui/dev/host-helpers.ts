@@ -19,6 +19,8 @@ export type Settings = {
   cwd: string;
   /** Fixtures only; the live service uses the user's own setting. */
   autoRegister: boolean;
+  /** Fixtures only; the live service checks the installed Claude Code. */
+  claudeUnavailable: boolean;
   /** Projects registered in fixtures mode, kept until Reset. */
   addedProjects: string[];
   styles: string;

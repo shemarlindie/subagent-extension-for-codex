@@ -97,9 +97,34 @@ const inScope = (
   (typeof scope.repository !== "string" ||
     task.repository === scope.repository);
 
+const previewClaudeDetails = { supported_versions: "2.1.285–2.1.295" };
+
+const previewClaudeReady = {
+  ready: true,
+  details: {
+    executable: "/opt/homebrew/Caskroom/claude-code/2.1.290/claude",
+    version: "2.1.290",
+    ...previewClaudeDetails,
+  },
+};
+
+/** A Homebrew install older than the supported range, worded as the service words it. */
+const previewClaudeUnavailable = {
+  ready: false,
+  message:
+    "Claude Code 2.1.200 at /opt/homebrew/Caskroom/claude-code/2.1.200/claude is older than the supported 2.1.285–2.1.295. Update it with brew upgrade --cask claude-code (Homebrew installs don't update themselves), or set CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH to a supported copy.",
+  details: {
+    executable: "/opt/homebrew/Caskroom/claude-code/2.1.200/claude",
+    version: "2.1.200",
+    ...previewClaudeDetails,
+  },
+};
+
 /** Settings the dev host controls; the service reads them from user settings. */
 export type PreviewOptions = {
   autoRegisterChatProject?: boolean;
+  /** Reports Claude as not ready, as the service does for an unsupported CLI. */
+  claudeUnavailable?: boolean;
   /** Repositories registered during the preview; the dev host keeps them. */
   addedProjects?: string[];
 };
@@ -322,7 +347,10 @@ export function previewTool(
       {
         provider: "claude",
         profiles: ["reviewer", "researcher", "implementer", "debugger"],
-        models: previewModels,
+        // The service skips model discovery while the CLI isn't ready.
+        ...(options.claudeUnavailable
+          ? { readiness: previewClaudeUnavailable }
+          : { models: previewModels, readiness: previewClaudeReady }),
         capabilities: {
           cost_budget: true,
           interrupt: true,

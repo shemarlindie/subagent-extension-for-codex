@@ -5,6 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "vitest";
 
+import { claudeCliSupport } from "../../../src/features/providers/claude/executable";
 import {
   activityKind,
   currentActivityStatus,
@@ -386,4 +387,37 @@ test("fixture task renaming updates listed titles and validates input", () => {
   } finally {
     task.title = originalTitle;
   }
+});
+
+test("the Claude unavailable option reports the worker not ready and skips its models", () => {
+  type Worker = {
+    models?: unknown[];
+    readiness: {
+      ready: boolean;
+      message?: string;
+      details: Record<string, string>;
+    };
+  };
+
+  const [ready] = previewTool("list_available_workers", {}) as Worker[];
+  assert.equal(ready.readiness.ready, true);
+  assert.ok(ready.models?.length);
+
+  const [unavailable] = previewTool(
+    "list_available_workers",
+    {},
+    { claudeUnavailable: true },
+  ) as Worker[];
+
+  assert.equal(unavailable.readiness.ready, false);
+  assert.match(unavailable.readiness.message!, /older than the supported/);
+  assert.equal(unavailable.models, undefined);
+
+  // The fixtures repeat the supported range, which must follow the service's.
+  const range = `${claudeCliSupport.minimum}–${claudeCliSupport.maximum}`;
+
+  for (const worker of [ready, unavailable])
+    assert.equal(worker.readiness.details.supported_versions, range);
+
+  assert.ok(unavailable.readiness.message!.includes(range));
 });
