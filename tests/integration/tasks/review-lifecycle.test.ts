@@ -64,7 +64,9 @@ test(
     });
 
     store.db
-      .prepare("INSERT INTO form_requests VALUES(?,?,?,?)")
+      .prepare(
+        "INSERT INTO form_requests(id,owner,expires,body) VALUES(?,?,?,?)",
+      )
       .run("processing-form", "owner", Date.now() + 60000, formBody);
 
     const projects = new Projects(

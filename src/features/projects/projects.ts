@@ -10,10 +10,6 @@ export class Projects {
     private store: Store,
     private workspaces: Workspaces,
   ) {
-    store.db.exec(
-      "CREATE TABLE IF NOT EXISTS project_roots(path TEXT PRIMARY KEY, kind TEXT NOT NULL)",
-    );
-
     this.refresh();
   }
 

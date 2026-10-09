@@ -132,11 +132,7 @@ export class Forms {
   constructor(
     private c: Control,
     private now = () => Date.now(),
-  ) {
-    c.store.db.exec(
-      "CREATE TABLE IF NOT EXISTS form_requests(id TEXT PRIMARY KEY, owner TEXT NOT NULL, expires INTEGER NOT NULL, body TEXT NOT NULL)",
-    );
-  }
+  ) {}
 
   /** Recover submissions only after the service has secured its listener. */
   recover() {
@@ -568,8 +564,16 @@ export class Forms {
       token = randomBytes(32).toString("base64url");
 
       this.c.store.db
-        .prepare("INSERT INTO form_requests VALUES(?,?,?,?)")
-        .run(hash(token), owner, this.now() + 10 * 60000, JSON.stringify(r));
+        .prepare(
+          "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
+        )
+        .run(
+          hash(token),
+          owner,
+          this.now() + 10 * 60000,
+          r.task_id ?? null,
+          JSON.stringify(r),
+        );
     } else {
       r = this.load(owner, token);
       if (r.kind !== kind || canonical(r.args) !== canonical(args))

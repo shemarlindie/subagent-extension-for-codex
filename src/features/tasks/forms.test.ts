@@ -480,6 +480,15 @@ test("worker question forms bind the exact input ID and reject stale answers", a
     const first = await rpc("request_agent_input", args);
     const stale = await rpc("request_agent_input", args);
 
+    // Input forms reference their task, so deleting it removes them.
+    assert.deepEqual(
+      c.store.db
+        .prepare("SELECT DISTINCT task_id FROM form_requests")
+        .all()
+        .map((row) => row.task_id),
+      [task.id],
+    );
+
     assert.equal(
       first.result.inputRequests.form.params.requestedSchema.properties.q0.type,
       "string",

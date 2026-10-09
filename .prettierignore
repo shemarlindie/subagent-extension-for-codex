@@ -1,2 +1,4 @@
 # Prettier also skips everything in .gitignore.
 package-lock.json
+# drizzle-kit writes these snapshots; keep them as generated.
+migrations/*/snapshot.json

@@ -124,12 +124,6 @@ export class Events {
   ) {
     if (key.length !== 32)
       throw new Error("Events encryption key must be 32 bytes");
-
-    store.db
-      .exec(`CREATE TABLE IF NOT EXISTS event_subscriptions(id TEXT PRIMARY KEY,owner TEXT NOT NULL,body TEXT NOT NULL);
- CREATE TABLE IF NOT EXISTS event_outbox(subscription_id TEXT NOT NULL,event_id TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'ready',attempts INTEGER NOT NULL DEFAULT 0,next_at INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(subscription_id,event_id));
- CREATE TABLE IF NOT EXISTS event_checkpoint(id INTEGER PRIMARY KEY CHECK(id=1),cursor INTEGER NOT NULL);
- INSERT OR IGNORE INTO event_checkpoint VALUES(1,0);`);
   }
 
   start() {
@@ -442,9 +436,9 @@ export class Events {
 
             this.store.db
               .prepare(
-                "INSERT OR IGNORE INTO event_outbox(subscription_id,event_id,body) VALUES(?,?,?)",
+                "INSERT OR IGNORE INTO event_outbox(subscription_id,event_id,task_id,body) VALUES(?,?,?,?)",
               )
-              .run(s.id, envelope.eventId, JSON.stringify(envelope));
+              .run(s.id, envelope.eventId, t.id, JSON.stringify(envelope));
           }
 
         this.store.db

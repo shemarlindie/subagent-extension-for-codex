@@ -215,10 +215,6 @@ export class Settings {
 
       return enabled.length ? enabled : [providerModelSettingScopes[0]];
     };
-
-    store.db.exec(
-      "CREATE TABLE IF NOT EXISTS user_settings(owner TEXT PRIMARY KEY, body TEXT NOT NULL)",
-    );
   }
 
   // A new user's settings; schema defaults fill in the rest.

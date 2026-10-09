@@ -28,27 +28,31 @@ function deletionFixture() {
     runtime_ms: 0,
   };
 
-  store.db.exec(`
-    CREATE TABLE form_requests(id TEXT PRIMARY KEY, owner TEXT NOT NULL, expires INTEGER NOT NULL, body TEXT NOT NULL);
-    CREATE TABLE event_outbox(subscription_id TEXT NOT NULL,event_id TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'ready',attempts INTEGER NOT NULL DEFAULT 0,next_at INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(subscription_id,event_id));
-  `);
-
   for (const id of [task.id, `${task.id}_1`, "unrelated"]) {
     const current = { ...task, id };
     store.save(current);
     store.event(current, "task.completed", {});
 
     store.db
-      .prepare("INSERT INTO form_requests VALUES(?,?,?,?)")
-      .run(id, task.owner, 0, JSON.stringify({ task_id: id }));
+      .prepare(
+        "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
+      )
+      .run(id, task.owner, 0, id, JSON.stringify({ task_id: id }));
 
     for (const subscription of ["first", "second"])
       store.db
         .prepare(
-          "INSERT INTO event_outbox(subscription_id,event_id,body) VALUES(?,?,?)",
+          "INSERT INTO event_outbox(subscription_id,event_id,task_id,body) VALUES(?,?,?,?)",
         )
-        .run(subscription, `evt_${id}_42`, "{}");
+        .run(subscription, `evt_${id}_42`, id, "{}");
   }
+
+  // Forms that register a project or start a task belong to no task.
+  store.db
+    .prepare(
+      "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
+    )
+    .run("taskless", task.owner, 0, null, "{}");
 
   const snapshot = () =>
     Object.fromEntries(
@@ -71,8 +75,13 @@ test("task deletion removes auxiliary records and preserves other tasks, includi
   store.delete(task.id, task.owner);
   assert.throws(() => store.get(task.id, task.owner), /Task not found/);
   const after = snapshot();
-  for (const table of ["tasks", "events", "form_requests"])
+  for (const table of ["tasks", "events"])
     assert.equal(after[table].length, 2, table);
+
+  assert.deepEqual(
+    after.form_requests.map((row) => row.id),
+    [`${task.id}_1`, "unrelated", "taskless"],
+  );
 
   assert.deepEqual(
     after.event_outbox,
@@ -83,7 +92,7 @@ test("task deletion removes auxiliary records and preserves other tasks, includi
   assert.equal(store.events(`${task.id}_1`, task.owner).length, 1);
 });
 
-test("task deletion rolls back auxiliary cleanup if deleting the task fails", (t) => {
+test("task deletion leaves every record in place if deleting the task fails", (t) => {
   const { store, task, snapshot } = deletionFixture();
   t.onTestFinished(() => store.close());
   const before = snapshot();
@@ -97,18 +106,6 @@ test("task deletion rolls back auxiliary cleanup if deleting the task fails", (t
   store.db.exec("DROP TRIGGER reject_task_delete");
   store.delete(task.id, task.owner);
   assert.throws(() => store.get(task.id, task.owner), /Task not found/);
-});
-
-test("task deletion works before optional auxiliary tables are initialized", (t) => {
-  const store = new Store(":memory:");
-  t.onTestFinished(() => store.close());
-
-  store.db
-    .prepare("INSERT INTO tasks VALUES(?,?,?)")
-    .run("plain", "alice", JSON.stringify({ id: "plain", owner: "alice" }));
-
-  store.delete("plain", "alice");
-  assert.deepEqual(store.all(), []);
 });
 
 test("recent events return only the task's latest 200 in chronological order after owner checks", async () => {

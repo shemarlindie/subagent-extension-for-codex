@@ -1,23 +1,20 @@
 import { EventEmitter } from "node:events";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { type DatabaseSync } from "node:sqlite";
 
+import {
+  type Database,
+  openDatabase,
+} from "../../platform/database/database.js";
 import { type Event, now, type Task } from "../../shared/contracts.js";
 
 export class Store {
+  private database: Database;
   db: DatabaseSync;
   // Long-poll reads each listen while they wait, so there can be many.
   bus = new EventEmitter().setMaxListeners(0);
   constructor(path: string) {
-    mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-    this.db = new DatabaseSync(path);
-
-    this.db
-      .exec(`PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
-    CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, owner TEXT NOT NULL, body TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL REFERENCES tasks(id),type TEXT NOT NULL,timestamp TEXT NOT NULL,data TEXT NOT NULL);
-    CREATE INDEX IF NOT EXISTS events_task ON events(task_id,id);`);
+    this.database = openDatabase(path);
+    this.db = this.database.client;
   }
 
   save(t: Task) {
@@ -31,53 +28,12 @@ export class Store {
   }
 
   /**
-   * Deletes a task with its events and everything else stored under its id:
-   * pending forms and queued webhook deliveries.
+   * Deletes a task. Its events, pending forms and queued webhook deliveries
+   * reference it and are deleted with it.
    */
   delete(id: string, owner: string) {
     this.get(id, owner);
-
-    const tables = new Set(
-      this.db
-        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
-        .all()
-        .map((row) => String(row.name)),
-    );
-
-    this.db.exec("BEGIN IMMEDIATE");
-
-    try {
-      if (tables.has("form_requests"))
-        this.db
-          .prepare(
-            "DELETE FROM form_requests WHERE json_extract(body,'$.task_id')=?",
-          )
-          .run(id);
-
-      // Outbox event ids are `evt_<task id>_<event id>`.
-      if (tables.has("event_outbox"))
-        this.db
-          .prepare(
-            "DELETE FROM event_outbox WHERE substr(event_id,1,?)=? AND substr(event_id,?) GLOB '[0-9]*' AND substr(event_id,?) NOT GLOB '*[^0-9]*'",
-          )
-          .run(
-            `evt_${id}_`.length,
-            `evt_${id}_`,
-            `evt_${id}_`.length + 1,
-            `evt_${id}_`.length + 1,
-          );
-
-      this.db.prepare("DELETE FROM events WHERE task_id=?").run(id);
-
-      this.db
-        .prepare("DELETE FROM tasks WHERE id=? AND owner=?")
-        .run(id, owner);
-
-      this.db.exec("COMMIT");
-    } catch (error) {
-      this.db.exec("ROLLBACK");
-      throw error;
-    }
+    this.db.prepare("DELETE FROM tasks WHERE id=? AND owner=?").run(id, owner);
   }
 
   all(owner?: string): Task[] {
@@ -210,6 +166,6 @@ export class Store {
   }
 
   close() {
-    this.db.close();
+    this.database.close();
   }
 }

@@ -277,6 +277,30 @@ binaries, drives Claude readiness with fake CLIs (supported, too old, too new,
 a broken override and none on `PATH`) and, when the host has a supported CLI,
 runs model discovery through it.
 
+## Database
+
+The service and the projects CLI share `<data directory>/console.sqlite`.
+`openDatabase` in `src/platform/database/database.ts` opens it, sets WAL,
+foreign keys and a 5-second busy timeout, and applies pending migrations
+before any feature reads it.
+
+- Each feature declares its tables with Drizzle in its own `schema.ts`;
+  `src/platform/database/schema.ts` collects them for drizzle-kit.
+- After changing a schema, run `npm run db:generate -- --name <change>` and
+  commit the new folder under `migrations/`. Review the SQL: SQLite rebuilds a
+  table for many column changes, and data backfills need a custom migration
+  (`npx drizzle-kit generate --custom --name <change>`). Never edit a
+  migration once it is committed.
+- `src/platform/database/migrate.ts` applies migrations in one
+  `BEGIN IMMEDIATE` transaction and records them in Drizzle's
+  `__drizzle_migrations` ledger, so a service and a CLI starting together
+  migrate once. It refuses a database whose ledger names a migration this
+  build lacks.
+- Databases from before versioned migrations are not upgraded: startup
+  refuses them and asks for the data directory to be deleted.
+- `migrations/` ships in the package and is read with `packagePath`, so
+  source checkouts and installed packages use the same folder.
+
 ### Qualifying Claude Code versions
 
 `claudeCliSupport` in `src/features/providers/claude/executable.ts` holds the

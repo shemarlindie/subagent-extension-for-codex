@@ -232,6 +232,13 @@ describe("packed artifact", () => {
     ])
       await access(join(pkg, file));
 
+    // The service and projects CLI migrate the database from these at startup.
+    const migrations = await readdir(join(process.cwd(), "migrations"));
+    assert.ok(migrations.length);
+
+    for (const migration of migrations)
+      await access(join(pkg, "migrations", migration, "migration.sql"));
+
     const files = (await readdir(pkg, { recursive: true, withFileTypes: true }))
       .filter((entry) => entry.isFile())
       .map((entry) => join(entry.parentPath, entry.name));

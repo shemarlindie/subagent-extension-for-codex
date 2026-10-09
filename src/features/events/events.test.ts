@@ -293,6 +293,24 @@ test("transient failures retry with stable event IDs; permanent failures stop de
         .get()!.n,
       0,
     );
+
+    // Deliveries reference their task, so deleting it removes them.
+    const task = make();
+
+    assert.deepEqual(
+      store.db
+        .prepare("SELECT DISTINCT task_id FROM event_outbox")
+        .all()
+        .map((row) => row.task_id),
+      [task.id],
+    );
+
+    store.delete(task.id, task.owner);
+
+    assert.equal(
+      store.db.prepare("SELECT COUNT(*) AS n FROM event_outbox").get()!.n,
+      0,
+    );
   } finally {
     await events.close();
     store.close();
