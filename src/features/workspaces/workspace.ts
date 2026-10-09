@@ -52,10 +52,21 @@ export async function git(
     ...(env ? { env: { ...process.env, ...env } } : {}),
   });
 
+  // Git may exit before reading its input, so writing to it fails with EPIPE.
+  // Its exit status and stderr report the command's outcome instead.
+  let stdinError: Error | undefined;
+
+  run.child.stdin?.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code !== "EPIPE") stdinError = error;
+  });
+
   // Closed even without input, so no command waits on it.
   run.child.stdin?.end(input ?? "");
 
-  return (await run).stdout;
+  const { stdout } = await run;
+  if (stdinError) throw stdinError;
+
+  return stdout;
 }
 
 /** Git output as bytes, for file contents that may be binary. */
