@@ -17,6 +17,7 @@ import {
   cleanup,
   fireEvent,
   render,
+  screen,
   waitFor,
 } from "@testing-library/react";
 import { createElement } from "react";
@@ -34,6 +35,17 @@ import {
 
 function parseHtml(html: string) {
   return new DOMParser().parseFromString(html, "text/html");
+}
+
+/** A trigger's hover tooltip, closed again afterward. */
+async function tooltipText(trigger: Element) {
+  const user = userEvent.setup();
+  await user.hover(trigger);
+  const text = (await screen.findByRole("tooltip")).textContent;
+  await user.unhover(trigger);
+  await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
+
+  return text;
 }
 
 const eventIds = new Map<string, number>();
@@ -301,7 +313,7 @@ test("grouped event counts update without closing debug or remounting raw inspec
     ).toBe(debug);
 
     assert.equal(debug.getAttribute("aria-expanded"), "true");
-    assert.equal(debug.getAttribute("title"), `Inspect ${count} raw responses`);
+    assert.equal(await tooltipText(debug), `Inspect ${count} raw responses`);
     assert.equal(panel.hidden, false);
 
     const inspectors = Array.from(
@@ -1418,7 +1430,9 @@ test("grouped tool activity retains individual raw inspections while progress re
   );
 });
 
-test("grouped streams accumulate readable blocks and preserve every frame for inspection", () => {
+test("grouped streams accumulate readable blocks and preserve every frame for inspection", async (t) => {
+  t.onTestFinished(cleanup);
+
   const frames = [
     { type: "message_start", message: { id: "stream-message" } },
     {
@@ -1489,8 +1503,13 @@ test("grouped streams accumulate readable blocks and preserve every frame for in
   assert.match(content?.textContent ?? "", /\{"file_path":"a.ts"\}/);
   assert.equal(doc.querySelectorAll("details.activity-raw").length, 0);
 
+  // Static markup has no tooltip, so count the frames on a live render.
+  const live = render(createElement(GroupedEventList, { events }));
+
   assert.equal(
-    doc.querySelector("button.activity-debug-toggle")?.getAttribute("title"),
+    await tooltipText(
+      live.container.querySelector("button.activity-debug-toggle")!,
+    ),
     "Inspect 10 raw responses",
   );
 
@@ -1574,7 +1593,7 @@ test("a compact accessible debug toggle hides inspection until opened and preser
 
   assert.equal(toggle.tagName, "BUTTON");
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
-  assert.equal(toggle.getAttribute("title"), "Inspect 1 raw response");
+  assert.equal(await tooltipText(toggle), "Inspect 1 raw response");
   assert.ok(toggle.classList.contains("activity-debug-toggle"));
   const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
   assert.ok(panel.classList.contains("activity-debug-panel"));
@@ -2653,4 +2672,142 @@ test("an assistant message body is Markdown and a user message body stays plain"
   expect(body("user").querySelector(".activity-text")?.textContent).toBe(
     "**bold**",
   );
+});
+
+test("an expanded row hides its heading time beside the debug caption's", (t) => {
+  t.onTestFinished(cleanup);
+
+  const read = event("tool.started", { name: "Read", id: "read-hide" });
+
+  const view = render(
+    createElement(GroupedEventList, { events: [read] }),
+  ).container;
+
+  const group = view.querySelector(".activity-group")!;
+  assert.equal(group.hasAttribute("data-debug-open"), false);
+
+  fireEvent.click(view.querySelector(".activity-debug-toggle")!);
+  assert.equal(group.hasAttribute("data-debug-open"), true);
+});
+
+test("a turn completion shows its stats and a shortened result", (t) => {
+  t.onTestFinished(cleanup);
+  const result = "Done. ".repeat(30);
+
+  const view = render(
+    createElement(GroupedEventList, {
+      events: [
+        event("agent.completed", {
+          type: "result",
+          subtype: "success",
+          result,
+          duration_ms: 65_000,
+          cost_usd: 0.5,
+          usage: {
+            input_tokens: 2,
+            cache_creation_input_tokens: 15_874,
+            cache_read_input_tokens: 0,
+            output_tokens: 426,
+          },
+        }),
+        event("agent.reply", { text: result, turn: 1 }),
+      ],
+    }),
+  ).container;
+
+  const cost = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 4,
+  }).format(0.5);
+
+  const compact = (value: number) =>
+    new Intl.NumberFormat(undefined, {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(value);
+
+  const completion = [...view.querySelectorAll(".activity-group")].find(
+    (group) => group.textContent?.includes("Turn completed"),
+  )!;
+
+  assert.equal(
+    completion.querySelector(".activity-group-stats")?.textContent,
+    `1m 05s · ${compact(15_876)} in · ${compact(426)} out tokens · ${cost} session cost`,
+  );
+
+  fireEvent.click(completion.querySelector(".activity-debug-toggle")!);
+
+  // The raw response keeps the whole result; the readable body shortens it.
+  const debug = completion.querySelector(".activity-debug-body")!;
+  debug.querySelector(".activity-raw")?.remove();
+  const body = debug.textContent!;
+  assert.ok(body.includes(`${result.slice(0, 100).trimEnd()}...`));
+  assert.ok(!body.includes(result.trimEnd()));
+
+  const toggle = debug.querySelector<HTMLButtonElement>(
+    ".activity-result-toggle",
+  )!;
+
+  assert.equal(toggle.textContent, "More");
+  fireEvent.click(toggle);
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  assert.equal(toggle.textContent, "Less");
+  assert.ok(debug.textContent!.includes(result.trimEnd()));
+});
+
+test("the debug panel's collapse button closes it and brings its row back", async (t) => {
+  t.onTestFinished(cleanup);
+  const scrolled: string[] = [];
+
+  const previousScroll = Object.getOwnPropertyDescriptor(
+    Element.prototype,
+    "scrollIntoView",
+  );
+
+  Object.defineProperty(Element.prototype, "scrollIntoView", {
+    configurable: true,
+    value(this: Element) {
+      scrolled.push(this.className);
+    },
+  });
+
+  t.onTestFinished(() => {
+    if (previousScroll)
+      Object.defineProperty(
+        Element.prototype,
+        "scrollIntoView",
+        previousScroll,
+      );
+    else delete (Element.prototype as any).scrollIntoView;
+  });
+
+  const read = event(
+    "tool.started",
+    { name: "Read", id: "collapse-read" },
+    "collapse-read",
+  );
+
+  const view = render(createElement(GroupedEventList, { events: [read] }));
+  const toggle = view.getByRole("button", { name: "Debug activity: Read" });
+  fireEvent.click(toggle);
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+
+  const collapse = view.getByRole("button", {
+    name: "Collapse debug activity: Read",
+  });
+
+  assert.equal(
+    collapse.getAttribute("aria-controls"),
+    toggle.getAttribute("aria-controls"),
+  );
+
+  // The caret follows the panel's time.
+  assert.equal(collapse.previousElementSibling?.tagName, "TIME");
+
+  scrolled.length = 0;
+  fireEvent.click(collapse);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  expect(document.activeElement).toBe(toggle);
+  await waitFor(() => assert.deepEqual(scrolled, ["activity-group-heading"]));
 });

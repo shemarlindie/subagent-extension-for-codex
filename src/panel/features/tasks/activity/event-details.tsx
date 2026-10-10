@@ -2,9 +2,10 @@ import { useState } from "react";
 
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
 import type { Event } from "../../../app/state/types";
+import { Button } from "../../../shared/components/button/button";
 import { ActivityContent } from "./activity-content";
 import { activityFailed } from "./activity-timeline";
-import { eventTitle, label } from "./activity-utils";
+import { eventTitle, label, resultPreview } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
 import { EVENT_TAIL_SIZE } from "./event-history";
 
@@ -39,6 +40,30 @@ function RawResponse({ event, defaultOpen }: RawResponseProps) {
         </pre>
       )}
     </details>
+  );
+}
+
+/** A turn's result opens shortened; the reply row already shows it in full. */
+function TurnResult({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const preview = resultPreview(text);
+  const shortened = preview !== text;
+
+  return (
+    <>
+      <ActivityContent content={expanded ? text : preview} />
+      {shortened && (
+        <Button
+          variant="text"
+          underline
+          className="activity-result-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Less" : "More"}
+        </Button>
+      )}
+    </>
   );
 }
 
@@ -95,9 +120,13 @@ export function EventBody({ event }: { event: Event }) {
 
   return (
     <>
-      {prose.map((key) => (
-        <ActivityContent key={key} content={data[key]} />
-      ))}
+      {prose.map((key) =>
+        key === "result" && event.type === "agent.completed" ? (
+          <TurnResult key={key} text={String(data[key])} />
+        ) : (
+          <ActivityContent key={key} content={data[key]} />
+        ),
+      )}
       <ActivityValue
         value={Object.fromEntries(
           Object.entries(data).filter(

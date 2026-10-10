@@ -144,10 +144,18 @@ stopped/cancelled operations are not shown as successful. Thinking shows a live 
 The worker's text, thinking and replies render as Markdown, as in Chat; tool
 input and output stay plain text, with fenced blocks shown as code.
 
+A turn's **Turn completed** row shows its duration, input and output tokens
+(input includes cached tokens) and the session's cumulative cost. When the
+**Reply** row that follows repeats the turn's result, only the reply shows the
+text. The completed row's debug view shows the result's first 100 characters,
+with **More** to show the rest.
+
 Times follow the host's locale and time zone. A group heading shows the clock,
 and its tooltip is the full date and time without a timezone label. An expanded
-group shows its first event's timestamp, in Chat's format, at the right of the
-**Debug details** line. Its tooltip is the full date and time, like the heading's.
+group fades out the heading's clock and shows its first event's timestamp, in
+Chat's format, at the right of the **Debug details** line, followed by a button
+that collapses the group and scrolls its heading back into view. The timestamp's
+tooltip is the full date and time, like the heading's.
 Tooltips across the panel close as soon as anything scrolls, so they never point
 at a control that has moved.
 

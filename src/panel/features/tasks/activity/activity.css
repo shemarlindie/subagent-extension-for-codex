@@ -28,8 +28,26 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+/* Nested fields put each value beside its label; nested groups and blocks wrap below it. */
+.activity-fields .activity-fields {
+  margin: 0;
+}
 .activity-fields .activity-fields > div {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin: 4px 0;
+}
+.activity-fields
+  .activity-fields
+  > div
+  > dd:has(> .activity-fields, > .activity-values, > pre) {
+  flex-basis: 100%;
+  padding-left: 12px;
+}
+.activity-result-toggle {
+  font-size: 12px;
 }
 .activity-values {
   margin: 0;
@@ -331,6 +349,20 @@
   margin-left: auto;
   white-space: nowrap;
   font-size: 10px;
+  transition:
+    opacity var(--motion-base) var(--ease-out),
+    visibility var(--motion-base) var(--ease-out);
+}
+/* The open debug view shows the full date; hiding keeps the toggle in place. */
+.activity-group[data-debug-open] .activity-group-heading time {
+  opacity: 0;
+  visibility: hidden;
+}
+.activity-group-stats {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 .activity-group-title {
   min-width: 0;
@@ -452,6 +484,39 @@
   margin: 0;
   font-size: 11px;
   color: var(--muted);
+}
+/*
+ * The debug toggle's twin at the panel's end. Negative margins keep its hit area
+ * from growing the header: the caret's ink meets the content edge and rests on
+ * the first line's baseline, even when the caption wraps.
+ */
+.activity-debug-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 22px;
+  align-self: flex-start;
+  margin: -2.5px -5px -5px 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.activity-debug-collapse svg {
+  transform: rotate(180deg);
+}
+.activity-debug-collapse:hover,
+.activity-debug-collapse:focus-visible {
+  color: var(--text);
+  background: var(--surface);
+}
+.activity-debug-collapse:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 0;
 }
 @media (hover: none) {
   .activity-group-heading .activity-debug-toggle {

@@ -1,6 +1,7 @@
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
 import type { Event } from "../../../app/state/types";
 import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
+import { formatDuration } from "../list/duration";
 
 // Keep prose blocks and structured metadata within the same nesting budget.
 export const MAX_ACTIVITY_DEPTH = 6;
@@ -104,4 +105,58 @@ export function summaryIsResponse(events: Event[], summary: string) {
       event.type === "agent.reply" ||
       (event.data.type === "result" && event.data.result === summary),
   );
+}
+
+const RESULT_PREVIEW_LENGTH = 100;
+
+/** A turn result's opening characters; the reply row shows it in full. */
+export function resultPreview(text: string) {
+  const chars = Array.from(text);
+
+  return chars.length > RESULT_PREVIEW_LENGTH
+    ? `${chars.slice(0, RESULT_PREVIEW_LENGTH).join("").trimEnd()}...`
+    : text;
+}
+
+const tokenCount = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) ? value : 0;
+
+const compactNumber = (value: number) =>
+  new Intl.NumberFormat(undefined, {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+
+/** Headline numbers of a completed turn, readable without opening its debug view. */
+export function turnStats(event: Event) {
+  const data = event.data;
+  const usage = record(data.usage);
+  const stats: string[] = [];
+
+  if (typeof data.duration_ms === "number" && Number.isFinite(data.duration_ms))
+    stats.push(formatDuration(data.duration_ms));
+
+  const input =
+    tokenCount(usage.input_tokens) +
+    tokenCount(usage.cache_creation_input_tokens) +
+    tokenCount(usage.cache_read_input_tokens);
+
+  const output = tokenCount(usage.output_tokens);
+
+  if (input || output)
+    stats.push(
+      `${compactNumber(input)} in · ${compactNumber(output)} out tokens`,
+    );
+
+  // Providers report the session's cumulative cost, not this turn's.
+  if (typeof data.cost_usd === "number" && Number.isFinite(data.cost_usd))
+    stats.push(
+      `${new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 4,
+      }).format(data.cost_usd)} session cost`,
+    );
+
+  return stats;
 }
