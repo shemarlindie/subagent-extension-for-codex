@@ -37,6 +37,7 @@
     "@base-ui/react": "^1.8.0",
     "@eslint/js": "^10.0.1",
     "@eslint/markdown": "^8.0.3",
+    "@formkit/auto-animate": "^0.10.0",
     "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@modelcontextprotocol/node": "^2.1.1",
     "@modelcontextprotocol/sdk": "^1.32.1",

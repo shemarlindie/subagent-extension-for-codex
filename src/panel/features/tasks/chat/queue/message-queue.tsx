@@ -6,10 +6,8 @@ import {
 } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
-import {
-  Presence,
-  useListPresence,
-} from "../../../../shared/components/motion/motion";
+import { useAutoList } from "../../../../shared/components/motion/auto-list";
+import { Presence } from "../../../../shared/components/motion/motion";
 import { QueuedMessageRow } from "./queued-message-row";
 
 type MessageQueueProps = { task: Task };
@@ -33,9 +31,9 @@ export function MessageQueue({ task }: MessageQueueProps) {
     first = queue.filter((message) => message.recorded).length,
     reorderable = queue.length - first > 1,
     positions = new Map(queue.map((message, index) => [message.id, index])),
-    // Rows fold in when added and out when sent or removed.
-    pendingRows = useListPresence(pending, messageId),
-    queueRows = useListPresence(queue, messageId);
+    // Rows fade in when added, out when sent or removed, and slide when reordered.
+    [pendingList] = useAutoList<HTMLUListElement>(),
+    [queueList] = useAutoList<HTMLUListElement>();
 
   const move = async (messageId: string, index: number) => {
     const error = await controller.moveQueued(task, messageId, index);
@@ -73,13 +71,13 @@ export function MessageQueue({ task }: MessageQueueProps) {
                 Interrupt and send now
               </Button>
             </div>
-            <ul>
-              {pendingRows.map(({ item, key, present, added }) => (
-                <Presence key={key} as="li" show={present} appear={added}>
-                  <div className="chat-queue-item" data-message={key}>
+            <ul ref={pendingList}>
+              {pending.map((item) => (
+                <li key={item.id}>
+                  <div className="chat-queue-item" data-message={item.id}>
                     <p className="chat-queue-text">{item.message}</p>
                   </div>
-                </Presence>
+                </li>
               ))}
             </ul>
           </div>
@@ -120,6 +118,7 @@ export function MessageQueue({ task }: MessageQueueProps) {
               )}
             </div>
             <ul
+              ref={queueList}
               onDragOver={(event) => {
                 if (drag) event.preventDefault();
               }}
@@ -128,46 +127,44 @@ export function MessageQueue({ task }: MessageQueueProps) {
                 drop();
               }}
             >
-              {queueRows.map(({ item: message, key, present, added }) => {
-                // A row playing its exit keeps the content it last showed.
-                const index = positions.get(key) ?? -1;
+              {queue.map((message) => {
+                const key = message.id,
+                  index = positions.get(key) ?? -1;
 
                 return (
-                  <Presence key={key} as="li" show={present} appear={added}>
-                    {present && (
-                      <QueuedMessageRow
-                        task={task}
-                        message={message}
-                        onError={setError}
-                        reorderable={reorderable}
-                        movable={reorderable && !message.recorded}
-                        dragging={drag?.id === key}
-                        dropAt={
-                          drag?.over === index
-                            ? "before"
-                            : drag?.over === index + 1 &&
-                                index === queue.length - 1
-                              ? "after"
-                              : undefined
-                        }
-                        onMove={(offset) => {
-                          const to = index + offset;
+                  <li key={key}>
+                    <QueuedMessageRow
+                      task={task}
+                      message={message}
+                      onError={setError}
+                      reorderable={reorderable}
+                      movable={reorderable && !message.recorded}
+                      dragging={drag?.id === key}
+                      dropAt={
+                        drag?.over === index
+                          ? "before"
+                          : drag?.over === index + 1 &&
+                              index === queue.length - 1
+                            ? "after"
+                            : undefined
+                      }
+                      onMove={(offset) => {
+                        const to = index + offset;
 
-                          return to >= first && to < queue.length
-                            ? move(key, to)
-                            : Promise.resolve(false);
-                        }}
-                        onDragStart={() => setDrag({ id: key })}
-                        onDragOver={(after) => {
-                          const over = Math.max(index + (after ? 1 : 0), first);
+                        return to >= first && to < queue.length
+                          ? move(key, to)
+                          : Promise.resolve(false);
+                      }}
+                      onDragStart={() => setDrag({ id: key })}
+                      onDragOver={(after) => {
+                        const over = Math.max(index + (after ? 1 : 0), first);
 
-                          if (drag && drag.over !== over)
-                            setDrag({ ...drag, over });
-                        }}
-                        onDragEnd={() => setDrag(undefined)}
-                      />
-                    )}
-                  </Presence>
+                        if (drag && drag.over !== over)
+                          setDrag({ ...drag, over });
+                      }}
+                      onDragEnd={() => setDrag(undefined)}
+                    />
+                  </li>
                 );
               })}
             </ul>
@@ -182,5 +179,3 @@ export function MessageQueue({ task }: MessageQueueProps) {
     </Presence>
   );
 }
-
-const messageId = (message: { id: string }) => message.id;
