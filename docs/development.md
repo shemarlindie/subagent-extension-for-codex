@@ -479,6 +479,16 @@ resolves import targets before enforcing the runtime ownership described in
 under `src/service/platform/panel/` remains service code. Run `npm run lint`
 after moving modules to catch accidental imports across runtime boundaries.
 
+Vitest has two projects. Unit tests time out after 15 seconds, and
+`tests/integration` gets 60 seconds because those suites spawn processes and
+worktrees. Keep a unit test under the shorter limit, and move a suite that
+needs longer into `tests/integration`.
+
+Compare DOM nodes with Vitest's `expect`, not `assert.deepEqual`. `toEqual`
+compares nodes with `isEqualNode()`, but deep equality walks jsdom's document
+graph and can block the worker until it is killed, which a timeout cannot
+interrupt. Use `toBe` when identity matters.
+
 `npm run dev` regenerates schemas at startup. `npm run test:watch` reruns affected
 tests on save without the preflight: run `npm run schemas:generate` after contract
 edits, and build first when a test reads `dist/`.

@@ -4,25 +4,50 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+const integration = ["tests/integration/**/*.test.ts"];
+
+// Unit tests fail fast: a stall should surface in seconds. Integration suites
+// spawn processes and Git worktrees, so they keep a longer limit.
+const unitTimeout = 15_000;
+const integrationTimeout = 60_000;
+
 export default defineConfig({
   plugins: [react()],
   test: {
-    include: [
-      "tests/**/*.test.ts",
-      "src/**/*.test.ts",
-      "src/**/*.test.tsx",
-      "dev/**/*.test.ts",
-      "dev/**/*.test.tsx",
-    ],
-    environment: "node",
     environmentOptions: {
       jsdom: { url: "http://localhost/", pretendToBeVisual: true },
     },
-    // Integration tests spawn processes and Git worktrees.
-    testTimeout: 60_000,
-    hookTimeout: 60_000,
     // Undo vi.spyOn and vi.stubEnv after each test, like node:test's t.mock.
     restoreMocks: true,
     unstubEnvs: true,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          include: [
+            "tests/**/*.test.ts",
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+            "dev/**/*.test.ts",
+            "dev/**/*.test.tsx",
+          ],
+          exclude: [...integration, "**/node_modules/**"],
+          environment: "node",
+          testTimeout: unitTimeout,
+          hookTimeout: unitTimeout,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "integration",
+          include: integration,
+          environment: "node",
+          testTimeout: integrationTimeout,
+          hookTimeout: integrationTimeout,
+        },
+      },
+    ],
   },
 });
