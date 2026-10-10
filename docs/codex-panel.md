@@ -15,8 +15,9 @@ change the conversation.
 
 - **Thread launch:** scopes tasks to the conversation, with a read-only project
   name/path beside **Delegated Work** in the header. The project name is bold,
-  separated from the extension name by a pipe. **Add chat project** is the first
-  header action when registration is needed.
+  separated from the extension name by a pipe. **Settings** remains available
+  in the header. **Add chat project** is the first header action when
+  registration is needed.
 - **Global launch:** shows all conversations and offers the project selector,
   **All chats** and **Browse** to register a repository. The project selector and
   **Browse** sit directly below the connection status within the header.
@@ -31,8 +32,8 @@ change the conversation.
   Conversation correlation uses explicit arguments, `threadId` and
   `openai/session`. Actual desktop delivery must be checked in the host.
 
-On narrow panels, header actions move into **Panel actions**, with **Add chat
-project** first when registration is needed.
+On narrow panels, header actions move into **Panel actions**, including
+**Settings**, with **Add chat project** first when registration is needed.
 
 Changing scope invalidates reads, clears old evidence and closes unsent forms.
 A mutation already submitted cannot be retracted or automatically retried; its
@@ -88,7 +89,8 @@ same turn. Outcome rows show duration, cost and the timestamp on the left, with
 The timestamp omits seconds and the timezone. Responses from earlier days
 include the date, with the year shown only when it differs from the current year.
 Hover over the timestamp for the full date and time, including year and seconds,
-without a timezone label.
+without a timezone label. The duration tooltip identifies whether the turn was
+**Responded**, **Failed** or **Interrupted** after that time.
 Failures retain their error. Notes mark compaction, new sessions and recreated worktrees.
 Draft text streams with a caret and is replaced by its stored message.
 
@@ -130,6 +132,13 @@ original SDK events for inspection. Progress moves an operation's row to the
 end. Messages, failures and lifecycle transitions remain distinct;
 stopped/cancelled operations are not shown as successful. Thinking shows a live clock, then its elapsed time.
 
+Times follow the host's locale and time zone. A group heading shows the clock,
+and its tooltip is the full date and time without a timezone label. An expanded
+group shows its first event's timestamp, in Chat's format, at the right of the
+**Debug details** line. Its tooltip is the full date and time, like the heading's.
+Tooltips across the panel close as soon as anything scrolls, so they never point
+at a control that has moved.
+
 Activity scrolls like Chat: it follows new events while the reader is at the
 end, preserves the visible row while they read history, and shows the same
 button to return to the latest activity. The task header and tabs stay fixed
@@ -138,22 +147,27 @@ Chat and Activity keep separate positions. Reduced motion suppresses animation.
 
 Each row's debug button exposes readable event content, metadata and a raw SDK
 response inspector. Raw JSON renders only when opened. Open disclosures survive
-refreshes while their row remains in the most recent 200 events. A trimmed-tail
-summary describes earlier events the panel has read; `get_agent_events` exposes
-full stored history.
+refreshes while their row remains in the most recent 200 events. The service
+(`get_user_agent_activity`) gives the trimmed-tail note as a tally of the events
+before that window. The Activity tab shows no count.
+The panel reads only new events on each refresh. `get_agent_events` exposes full stored history.
 
 ## Changes tab
 
 Changes shows uncommitted task changes from Git, including untracked files and
-excluding ignored files. It refreshes when opened, when status/turn changes, or
-on **Refresh changes**. Committed work stays in Git history. **Whole task** is
-the default; **This turn** appears after multiple turns.
+excluding ignored files. The selected task's changes are read in the background
+so the tab count appears before Changes is opened. Data refreshes when the task's
+status/turn changes, when Changes opens with stale data, or on **Refresh changes**.
+The tab count and Details read only the totals (`get_user_agent_change_counts`),
+without the file list or diff, so the full change read happens when Changes opens.
+Committed work stays in Git history. **Whole task** is the default; **This turn**
+appears after multiple turns.
 
 The panel and agent APIs answer different questions:
 
 | Consumer                                      | Comparison                                                                                                                                                                                                                        |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Panel (`get_user_agent_changes`)              | Uncommitted changes. Worktrees include all changed files; current-repo tasks include only files attributed to the task and omit pre-existing edits. Later outside edits to those files can also appear.                           |
+| Panel (`get_user_agent_changes` and counts)   | Uncommitted changes. Worktrees include all changed files; current-repo tasks include only files attributed to the task and omit pre-existing edits. Later outside edits to those files can also appear.                           |
 | Agents (`get_agent_changes`) and dependencies | All attributed changes, committed or not. Worktrees compare base to current tree, or retained branch after removal. Current-repo tasks compare start snapshot to the live tree while running and recorded end snapshot otherwise. |
 
 **Current-repo limit:** other edits between task start and its recorded end can
@@ -171,11 +185,17 @@ Files expand into complete diffs and previews; a text file's preview adds a
 **Diff** view of its changes. The header of the file being read stays pinned at
 the top while it scrolls. Binary files show size; images can preview, deleted
 files show Deleted and their removed lines. A file the diff has no part for
-still gets a section, marked Diff unavailable. Once changes are read, the tab
-shows the changed file count. Large content renders in deferred row blocks,
-collapsed files unmount rows, and cursor pages are read to completion. Refresh
-retains the last result; failures mark it stale. Switching comparison scope
-clears the old result while loading.
+still gets a section, marked Diff unavailable. The tab shows the changed-file count as a
+circular superscript badge beside its label, and only when at least one file changed.
+The badge pops in when a count first appears.
+Counts above 999 abbreviate, such as 1.1K or 2K. The badge sits outside the tab's layout,
+so the count never changes the tab's width. A reload keeps the count already shown.
+Large content renders in deferred row blocks, collapsed files unmount rows, and
+cursor pages are read to completion. Refresh retains the last result; failures
+mark it stale. Switching comparison scope clears the old result while loading.
+
+When you scroll down the Changes tab, **Scroll to top** returns to its beginning.
+The control respects reduced-motion settings.
 
 The **Viewed** checkbox in a file's header, in the list or the preview, marks
 the file read and collapses it in the list; the header counts viewed files. It

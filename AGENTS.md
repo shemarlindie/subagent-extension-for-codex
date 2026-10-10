@@ -26,6 +26,7 @@ Read the matching guide's relevant sections before working in an area; unrelated
 - Match checks to the change and prefer focused checks during iteration. You may skip or defer expensive checks when their runtime outweighs the confidence they add; report what was skipped and why.
 - Before committing, run the relevant formatting, lint, type, test, build and browser checks against the final changes being committed. Unrelated checks do not need to run.
 - Format changed files with `npx eslint --fix <files> && npx prettier --write <files>`. ESLint enforces blank-line layout.
+- Unit tests time out after 15 seconds, and only `tests/integration` gets longer. Compare DOM nodes with `expect`, never `assert.deepEqual`; see [Checks](docs/development.md#checks).
 - HTTP integration suites need localhost TCP listeners. If the default Codex command sandbox reports `listen EPERM`, rerun the affected suites with escalated execution permission. CI needs a runner that permits it. Listener permission errors are not a reason to skip or weaken affected tests.
 
 ### Browser checks
