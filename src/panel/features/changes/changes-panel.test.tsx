@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { Tooltip } from "@base-ui/react/tooltip";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
-import { onTestFinished, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
@@ -111,7 +111,7 @@ test.each([undefined, { ...loaded, data: undefined, loading: true }])(
       "true",
     );
 
-    assert.equal(view.queryByRole("alert"), null);
+    expect(view.queryByRole("alert")).toBeNull();
   },
 );
 
@@ -134,7 +134,7 @@ test("scrolling changes shows a control that returns to the top", () => {
   fireEvent.click(scrollToTop);
 
   assert.equal(scroller.scrollTop, 0);
-  assert.equal(view.queryByRole("button", { name: "Scroll to top" }), null);
+  expect(view.queryByRole("button", { name: "Scroll to top" })).toBeNull();
 });
 
 test("refresh keeps the mounted file and its collapsed state through loading, failure and recovery", async () => {
@@ -161,7 +161,7 @@ test("refresh keeps the mounted file and its collapsed state through loading, fa
 
   assert.equal(view.getAllByRole("progressbar").length, 1);
   assert.equal(view.getByRole("status").textContent, "Refreshing changes…");
-  assert.equal(view.container.querySelector(".diff-file"), file);
+  expect(view.container.querySelector(".diff-file")).toBe(file);
   assert.equal(file.open, false);
 
   assert.equal(
@@ -179,8 +179,8 @@ test("refresh keeps the mounted file and its collapsed state through loading, fa
   );
 
   assert.match(view.getByRole("alert").textContent ?? "", /last.*loaded/i);
-  assert.equal(view.queryByRole("progressbar"), null);
-  assert.equal(view.container.querySelector(".diff-file"), file);
+  expect(view.queryByRole("progressbar")).toBeNull();
+  expect(view.container.querySelector(".diff-file")).toBe(file);
   assert.equal(file.open, false);
 
   assert.equal(
@@ -199,9 +199,9 @@ test("refresh keeps the mounted file and its collapsed state through loading, fa
 
   update({ ...loaded, data: { ...data } });
 
-  assert.equal(view.container.querySelector(".diff-file"), file);
+  expect(view.container.querySelector(".diff-file")).toBe(file);
   assert.equal(file.open, false);
-  assert.equal(view.queryByRole("alert"), null);
+  expect(view.queryByRole("alert")).toBeNull();
   assert.equal(view.getByRole("status").textContent, "");
 
   assert.equal(
@@ -215,15 +215,15 @@ test("switching scopes hides old results and a failed initial read stops loading
 
   update({ ...loaded, scope: "turn", loading: true, data: undefined });
 
-  assert.equal(view.container.querySelector(".diff-file"), null);
+  expect(view.container.querySelector(".diff-file")).toBeNull();
   assert.equal(view.getAllByRole("progressbar").length, 1);
   assert.equal(view.getByRole("status").textContent, "Reading changes…");
 
   update({ ...loaded, scope: "turn", data: undefined, error: "Read failed" });
 
-  assert.equal(view.queryByRole("progressbar"), null);
+  expect(view.queryByRole("progressbar")).toBeNull();
   assert.equal(view.getByRole("alert").textContent, "Read failed");
-  assert.equal(view.container.querySelector(".diff-file"), null);
+  expect(view.container.querySelector(".diff-file")).toBeNull();
   assert.equal(view.getByRole("status").textContent, "");
 });
 
@@ -246,7 +246,7 @@ test("a collapsed file stays collapsed when the tab shows again", async () => {
 
   const shown = view.container.querySelector<HTMLDetailsElement>(".diff-file");
 
-  assert.notEqual(shown, file);
+  expect(shown).not.toBe(file);
   assert.equal(shown?.open, false);
 });
 

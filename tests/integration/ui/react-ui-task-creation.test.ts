@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { expect } from "vitest";
+
 import {
   act,
   assert,
@@ -68,10 +70,10 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
   const field = await screen.findByLabelText("Description");
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement === field,
+    expect(
+      document.activeElement,
       "Task field should receive dialog focus",
-    ),
+    ).toBe(field),
   );
 
   await user.type(field, "Keep this draft");
@@ -83,19 +85,18 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
 
   await act(() => controller.refresh());
 
-  assert.ok(
-    screen.getByLabelText("Description") === field,
+  expect(
+    screen.getByLabelText("Description"),
     "Polling should retain the task field",
-  );
+  ).toBe(field);
 
   assert.equal((field as HTMLTextAreaElement).value, "Keep this draft");
   await user.click(screen.getByRole("button", { name: "Cancel" }));
-  await waitFor(() => assert.ok(screen.queryByRole("dialog") === null));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement === trigger,
-      "Dialog should restore trigger focus",
+    expect(document.activeElement, "Dialog should restore trigger focus").toBe(
+      trigger,
     ),
   );
 });
@@ -214,18 +215,16 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   await user.click(worker);
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement ===
-        screen.getByRole("option", { name: "claude · reviewer" }),
+    expect(document.activeElement).toBe(
+      screen.getByRole("option", { name: "claude · reviewer" }),
     ),
   );
 
   await user.keyboard("{End}");
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement ===
-        screen.getByRole("option", { name: "fixture · reviewer" }),
+    expect(document.activeElement).toBe(
+      screen.getByRole("option", { name: "fixture · reviewer" }),
     ),
   );
 
@@ -239,9 +238,8 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   await user.click(worker);
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement ===
-        screen.getByRole("option", { name: "fixture · reviewer" }),
+    expect(document.activeElement).toBe(
+      screen.getByRole("option", { name: "fixture · reviewer" }),
     ),
   );
 
@@ -251,7 +249,7 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
     assert.equal(worker.getAttribute("aria-expanded"), "false"),
   );
 
-  assert.ok(screen.getByRole("dialog") === dialog);
+  expect(screen.getByRole("dialog")).toBe(dialog);
 
   assert.equal(
     (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
@@ -394,7 +392,7 @@ test("permission buttons allow explicit inline approval without a dropdown", asy
     };
   });
 
-  assert.equal(screen.queryByRole("dialog"), null);
+  expect(screen.queryByRole("dialog")).toBeNull();
 
   await user.click(
     screen.getByRole("button", { name: "Approve this execution turn" }),

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
@@ -91,10 +91,8 @@ test("MotionContent replaces keyed content with the selected entrance style", (t
   const next = view.container.querySelector("strong");
   assert.ok(next);
 
-  assert.notEqual(
-    next,
+  expect(next, "A changed key remounts the presentation element").not.toBe(
     first,
-    "A changed key remounts the presentation element",
   );
 
   assert.equal(next.textContent, "Thought");
@@ -106,7 +104,7 @@ test("Presence removes content at once without animation support", (t) => {
   const view = render(notice(true));
   assert.ok(view.container.querySelector(".notice"));
   view.rerender(notice(false));
-  assert.equal(view.container.querySelector(".notice"), null);
+  expect(view.container.querySelector(".notice")).toBeNull();
 });
 
 test("Presence folds content out, keeping the last content until it finishes", (t) => {
@@ -125,13 +123,13 @@ test("Presence folds content out, keeping the last content until it finishes", (
   );
 
   const exit = motion.calls.at(-1)!;
-  assert.equal(exit.element, element);
+  expect(exit.element).toBe(element);
   assert.equal(exit.frames[0].opacity, 1);
   assert.equal(exit.frames.at(-1)!.height, "0px");
   assert.equal(exit.frames.at(-1)!.marginTop, "0px");
   assert.equal(exit.options.fill, "forwards");
   act(() => exit.animation.onfinish!());
-  assert.equal(view.container.querySelector(".notice"), null);
+  expect(view.container.querySelector(".notice")).toBeNull();
 
   view.rerender(notice(true, "Claude has a question"));
   const entrance = motion.calls.at(-1)!;
@@ -158,7 +156,7 @@ test("Presence pop variant scales and respects reduced motion", (t) => {
   const count = motion.calls.length;
   view.rerender(button(false));
   assert.equal(motion.calls.length, count, "Reduced motion skips the exit");
-  assert.equal(view.container.querySelector("button"), null);
+  expect(view.container.querySelector("button")).toBeNull();
 });
 
 function Grow({ open }: { open: boolean }) {

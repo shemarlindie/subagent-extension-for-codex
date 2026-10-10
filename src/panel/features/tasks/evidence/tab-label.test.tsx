@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 
 import { cleanup, render } from "@testing-library/react";
-import { onTestFinished, test } from "vitest";
+import { expect, onTestFinished, test } from "vitest";
 
 import { TabLabel } from "./tab-label";
 
@@ -23,7 +23,7 @@ test("a zero count shows no count", () => {
 
   const view = render(<TabLabel count={0}>Activity</TabLabel>);
 
-  assert.equal(view.container.querySelector(".tab-count"), null);
+  expect(view.container.querySelector(".tab-count")).toBeNull();
   assert.equal(label(view.container)?.textContent?.trim(), "Activity");
 });
 

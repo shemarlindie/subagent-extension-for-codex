@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { expect } from "vitest";
+
 import {
   act,
   assert,
@@ -132,18 +134,18 @@ test("search clears with Escape and focuses with the slash key", async (t) => {
   const { user } = await setup(t);
   const search = screen.getByRole("searchbox", { name: "Search tasks" });
   await user.keyboard("/");
-  assert.equal(document.activeElement, search);
+  expect(document.activeElement).toBe(search);
   await user.keyboard("abc");
   assert.equal((search as HTMLInputElement).value, "abc");
   await user.keyboard("{Escape}");
   assert.equal((search as HTMLInputElement).value, "");
-  assert.equal(document.activeElement, search);
+  expect(document.activeElement).toBe(search);
   await user.keyboard("{Escape}");
-  assert.notEqual(document.activeElement, search);
+  expect(document.activeElement).not.toBe(search);
   // Typing a slash in another text field leaves the shortcut alone.
   await user.click(screen.getByRole("button", { name: "New Task" }));
   await enterTask(user, "a/b");
-  assert.notEqual(document.activeElement, search);
+  expect(document.activeElement).not.toBe(search);
 });
 
 test("selecting a tab scrolls it into view in an overflowing tab list", async (t) => {
@@ -236,16 +238,16 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
   );
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement === screen.getByRole("tab", { name: /Activity/ }),
+    expect(document.activeElement).toBe(
+      screen.getByRole("tab", { name: /Activity/ }),
     ),
   );
 
   await act(() => controller.refresh());
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement === screen.getByRole("tab", { name: /Activity/ }),
+    expect(document.activeElement).toBe(
+      screen.getByRole("tab", { name: /Activity/ }),
     ),
   );
 

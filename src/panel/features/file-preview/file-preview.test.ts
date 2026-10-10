@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
@@ -48,7 +48,7 @@ test("a file opens in its best view and switches to Source", async (t) => {
   view.getByText("Markdown");
   assert.ok(view.container.querySelector(".markdown-body h1"));
   // Only the active view renders.
-  assert.equal(view.container.querySelector(".code-view"), null);
+  expect(view.container.querySelector(".code-view")).toBeNull();
 
   await userEvent.click(screen.getByRole("button", { name: "Source" }));
 
@@ -61,7 +61,7 @@ test("a file opens in its best view and switches to Source", async (t) => {
     ),
   );
 
-  assert.equal(view.container.querySelector(".markdown-body"), null);
+  expect(view.container.querySelector(".markdown-body")).toBeNull();
   assert.equal(view.container.querySelectorAll(".code-line").length, 3);
 });
 
@@ -155,9 +155,9 @@ test("an SVG over 64 KB shows as source with a note, never as an image", (t) => 
   });
 
   view.getByText(/over 64 KB, so it is shown as source only/);
-  assert.equal(view.container.querySelector("img"), null);
+  expect(view.container.querySelector("img")).toBeNull();
   assert.ok(view.container.querySelector(".code-view"));
-  assert.equal(screen.queryByRole("button", { name: "Image" }), null);
+  expect(screen.queryByRole("button", { name: "Image" })).toBeNull();
 });
 
 test("raster images render from base64 without a Source view", (t) => {
@@ -170,5 +170,5 @@ test("raster images render from base64 without a Source view", (t) => {
     "data:image/png;base64,AAAA",
   );
 
-  assert.equal(screen.queryByRole("button", { name: "Source" }), null);
+  expect(screen.queryByRole("button", { name: "Source" })).toBeNull();
 });

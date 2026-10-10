@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
-import { afterEach, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
@@ -68,7 +68,7 @@ test("inline title saves trimmed text through the rename tool before refreshing"
   t.onTestFinished(() => controller.dispose());
   fireEvent.change(input, { target: { value: "  Updated title  " } });
   fireEvent.keyDown(input, { key: "Enter" });
-  await waitFor(() => assert.ok(view.queryByRole("textbox") === null));
+  await waitFor(() => expect(view.queryByRole("textbox")).toBeNull());
 
   assert.deepEqual(tool.mock.calls, [
     ["rename_user_agent_task", { task_id: task.id, title: "Updated title" }],
@@ -98,7 +98,7 @@ test("inline title keeps a failed edit for retry and refreshes only after succes
   assert.equal(input.value, "Retry title");
   assert.equal(refresh.mock.calls.length, 0);
   fireEvent.keyDown(input, { key: "Enter" });
-  await waitFor(() => assert.ok(view.queryByRole("textbox") === null));
+  await waitFor(() => expect(view.queryByRole("textbox")).toBeNull());
   assert.equal(tool.mock.calls.length, 2);
   assert.equal(refresh.mock.calls.length, 1);
 });

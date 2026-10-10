@@ -35,10 +35,9 @@ test("worker question accepts a custom answer with no preset selection", async (
   const composer = screen.getByRole("textbox", { name: "Message" });
   const collapse = screen.getByRole("button", { name: "Hide composer" });
 
-  assert.equal(collapse.closest(".chat-composer-box"), null);
+  expect(collapse.closest(".chat-composer-box")).toBeNull();
 
-  assert.equal(
-    collapse.parentElement,
+  expect(collapse.parentElement).toBe(
     composer.closest(".chat-composer-input-row"),
   );
 

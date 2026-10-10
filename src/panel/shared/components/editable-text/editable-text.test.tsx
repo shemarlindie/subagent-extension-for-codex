@@ -8,7 +8,7 @@ import {
   render,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { EditableText } from "./editable-text";
 
@@ -77,7 +77,7 @@ function setup(
 test("clicking text focuses an editor and Enter saves trimmed text", async () => {
   const { view, input, onSave } = setup();
 
-  assert.equal(document.activeElement, input);
+  expect(document.activeElement).toBe(input);
   assert.equal(input.value, "Original title");
   assert.equal(view.container.querySelectorAll("button").length, 0);
   fireEvent.change(input, { target: { value: "  Updated title  " } });
@@ -120,7 +120,7 @@ test("blank titles cannot save and unchanged titles finish without a request", (
 
   fireEvent.keyDown(input, { key: "Enter" });
   assert.equal(onSave.mock.calls.length, 0);
-  assert.equal(view.getByRole("textbox"), input);
+  expect(view.getByRole("textbox")).toBe(input);
   fireEvent.change(input, { target: { value: "  Original title  " } });
   fireEvent.keyDown(input, { key: "Enter" });
   assert.equal(onSave.mock.calls.length, 0);
@@ -153,7 +153,7 @@ test("failed saves retain the draft and allow retry", async () => {
     ["Retry this title"],
   ]);
 
-  assert.equal(view.queryByRole("alert"), null);
+  expect(view.queryByRole("alert")).toBeNull();
 });
 
 test("a pending save suppresses duplicate submissions and cancellation", async () => {
@@ -177,7 +177,7 @@ test("a pending save suppresses duplicate submissions and cancellation", async (
   assert.equal(onSave.mock.calls.length, 1);
   assert.equal(input.disabled, true);
 
-  assert.equal(view.getByRole("textbox"), input);
+  expect(view.getByRole("textbox")).toBe(input);
 
   await act(async () => resolveSave());
   assert.equal(view.queryByRole("textbox") === null, true);
@@ -201,7 +201,7 @@ test("Enter while composing text does not submit", () => {
   fireEvent.keyDown(input, { key: "Escape", isComposing: true });
 
   assert.equal(onSave.mock.calls.length, 0);
-  assert.equal(view.getByRole("textbox"), input);
+  expect(view.getByRole("textbox")).toBe(input);
 });
 
 test("clicking outside saves the latest trimmed draft without stealing focus", async () => {

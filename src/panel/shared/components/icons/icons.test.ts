@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { cleanup, render } from "@testing-library/react";
 import { createElement } from "react";
-import { afterEach, describe, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { TaskStatusIcon } from "../../../features/tasks/list/task-status-icon";
 import { Chevron } from "../chevron";
@@ -28,7 +28,7 @@ describe("Icon", () => {
       assert.equal(svg.getAttribute("viewBox"), "0 0 24 24", name);
       assert.equal(svg.getAttribute("width"), "16", name);
       assert.equal(svg.getAttribute("height"), "16", name);
-      assert.equal(svg.querySelector("g[transform]"), null, name);
+      expect(svg.querySelector("g[transform]")).toBeNull();
       assert.ok(svg.querySelector("path, circle, rect"), name);
       cleanup();
     }
@@ -68,7 +68,7 @@ describe("Icon", () => {
 
     const svg = svgOf(container);
     assert.equal(svg.querySelector("title")?.textContent, label);
-    assert.equal(svg.querySelector("title path"), null);
+    expect(svg.querySelector("title path")).toBeNull();
   });
 
   test("size and strokeWidth override the catalog", () => {
@@ -93,7 +93,7 @@ describe("TaskStatusIcon", () => {
     assert.ok(svg.classList.contains("row-status-icon"));
     assert.ok(svg.classList.contains("running"));
     assert.ok(svg.querySelector(".row-status-glow"));
-    assert.equal(svg.querySelector("path"), null);
+    expect(svg.querySelector("path")).toBeNull();
   });
 
   test("queued draws a circle around the clock hands", () => {
@@ -117,6 +117,6 @@ describe("TaskStatusIcon", () => {
 
     const svg = svgOf(container);
     assert.equal(svg.getAttribute("aria-hidden"), "true");
-    assert.equal(svg.querySelector("title"), null);
+    expect(svg.querySelector("title")).toBeNull();
   });
 });

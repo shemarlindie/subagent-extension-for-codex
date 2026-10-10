@@ -9,7 +9,7 @@ import {
   render,
   waitFor,
 } from "@testing-library/react";
-import { onTestFinished, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
@@ -117,12 +117,11 @@ test("a blocked embedded clipboard keeps the copy action available and reports m
   assert.match(String(report.mock.calls[0][0]), /select.*copy|copy.*manually/i);
   assert.ok(view.getByRole("button", { name: "Copy branch" }));
 
-  assert.equal(
+  expect(
     view.queryByRole("button", { name: "Copy branch — copied" }),
-    null,
-  );
+  ).toBeNull();
 
-  assert.equal(document.querySelector("textarea"), null);
+  expect(document.querySelector("textarea")).toBeNull();
 });
 
 test("copying again restarts the feedback duration", async () => {
@@ -160,10 +159,9 @@ test("a new command does not inherit the previous command's copied feedback", as
   update("agent/new");
   assert.ok(view.getByRole("button", { name: "Copy branch" }));
 
-  assert.equal(
+  expect(
     view.queryByRole("button", { name: "Copy branch — copied" }),
-    null,
-  );
+  ).toBeNull();
 });
 
 test.each(["success", "failure"])(

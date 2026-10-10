@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
@@ -57,5 +57,5 @@ test("ready workers, and workers that don't report readiness, show nothing", () 
     { provider: "other", profiles: ["reviewer"], capabilities: {} },
   ]);
 
-  assert.equal(view.queryByRole("alert"), null);
+  expect(view.queryByRole("alert")).toBeNull();
 });

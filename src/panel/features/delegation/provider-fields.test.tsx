@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { cleanup, render } from "@testing-library/react";
 import { FormProvider, useForm } from "react-hook-form";
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import type { Worker } from "../providers/types";
 import {
@@ -93,7 +93,7 @@ test("workers without native mode selection do not offer approval delegation", (
     />,
   );
 
-  assert.equal(view.container.querySelector("#approval-decider"), null);
+  expect(view.container.querySelector("#approval-decider")).toBeNull();
 
   assert.match(
     view.container.textContent ?? "",

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { Tooltip } from "@base-ui/react/tooltip";
 import { cleanup, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { onTestFinished, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
@@ -113,5 +113,5 @@ test("task menu does not offer renaming", async () => {
   const user = userEvent.setup();
   await user.click(view.getByRole("button", { name: "Task actions" }));
   await view.findByRole("menuitem", { name: "Delete task" });
-  assert.equal(view.queryByRole("menuitem", { name: /Rename/ }), null);
+  expect(view.queryByRole("menuitem", { name: /Rename/ })).toBeNull();
 });

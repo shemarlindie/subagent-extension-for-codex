@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { expect } from "vitest";
+
 import type { Event } from "../../../src/shared/events/types.js";
 import { windowActivity } from "../../../src/shared/tasks/activity/activity-tail.js";
 import {
@@ -167,7 +169,7 @@ test("a thread panel keeps Settings available and leaves other global actions to
 
   const items = await screen.findAllByRole("menuitem");
   assert.ok(items.some((item) => item.textContent === "Settings"));
-  assert.equal(screen.queryByRole("menuitem", { name: "New Task" }), null);
+  expect(screen.queryByRole("menuitem", { name: "New Task" })).toBeNull();
 });
 
 test("inline host without expansion offers the chat controls fallback", async (t) => {
@@ -223,10 +225,10 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   await screen.findByRole("dialog");
 
-  assert.ok(
-    screen.getByLabelText("Description") === field,
+  expect(
+    screen.getByLabelText("Description"),
     "Host expansion retains the draft field node",
-  );
+  ).toBe(field);
 
   assert.equal(
     (field as HTMLTextAreaElement).value,
@@ -506,8 +508,8 @@ test("refresh preserves the inspector and its scroll, while Back stays on the ta
   detail.scrollTop = 160;
   await act(() => controller.refresh());
 
-  assert.ok(screen.getByRole("region", { name: "Task inspector" }) === detail);
-  assert.ok(detail.querySelector(".task-header") === header);
+  expect(screen.getByRole("region", { name: "Task inspector" })).toBe(detail);
+  expect(detail.querySelector(".task-header")).toBe(header);
   assert.equal(detail.scrollTop, 160);
   await user.click(screen.getByRole("button", { name: "← Tasks" }));
   await act(() => controller.refresh());

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { claudeActivityPresentation } from "../../../../service/features/providers/claude/events/activity";
 import type { Event as ActivityEvent } from "../../../app/state/types";
@@ -61,10 +61,7 @@ function event(
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
 // which never finishes and starves waitFor's timeout.
 function assertAbsent(element: Element | null, message = "Unexpected element") {
-  assert.ok(
-    element === null,
-    `${message}: ${element?.outerHTML.slice(0, 200)}`,
-  );
+  expect(element, message).toBeNull();
 }
 
 function markup(events: ActivityEvent[]) {
@@ -195,13 +192,13 @@ test("latest group is last and fresh progress moves an older tool to the end wit
     createElement(GroupedEventList, { events: [started, newer, progress] }),
   );
 
-  assert.equal(groups()[1], tool, "The updated group moves without remounting");
+  expect(groups()[1], "The updated group moves without remounting").toBe(tool);
   assert.match(groups()[0].textContent ?? "", /Newer message/);
 
-  assert.ok(
-    Array.from(tool.querySelectorAll("details.activity-raw")).includes(raw),
+  expect(
+    Array.from(tool.querySelectorAll("details.activity-raw")),
     "The original response inspector survives newly prepended debug events",
-  );
+  ).toContain(raw);
 
   assert.equal(raw.open, true);
   assert.ok(raw.querySelector("pre"));
@@ -253,8 +250,7 @@ test("tool debug opens only the newest raw response and preserves a manual colla
     }),
   );
 
-  assert.equal(
-    view.container.querySelector("details.activity-raw"),
+  expect(view.container.querySelector("details.activity-raw")).toBe(
     inspectors[0],
   );
 
@@ -298,12 +294,11 @@ test("grouped event counts update without closing debug or remounting raw inspec
       createElement(GroupedEventList, { events: events.slice(0, count) }),
     );
 
-    assert.equal(
+    expect(
       view.getByRole("button", {
         name: `Debug activity: Workspace indexed · ${count} events`,
       }),
-      debug,
-    );
+    ).toBe(debug);
 
     assert.equal(debug.getAttribute("aria-expanded"), "true");
     assert.equal(debug.getAttribute("title"), `Inspect ${count} raw responses`);
@@ -314,7 +309,7 @@ test("grouped event counts update without closing debug or remounting raw inspec
     );
 
     assert.equal(inspectors.length, count);
-    assert.ok(inspectors.includes(raw));
+    expect(inspectors).toContain(raw);
     assert.equal(raw.open, true);
 
     assert.equal(
@@ -373,10 +368,10 @@ test("scroll to latest FAB returns to the end and keeps subsequent activity pinn
 
   assert.equal(viewport.scrollTop, 240);
 
-  assert.ok(
-    document.activeElement === viewport,
+  expect(
+    document.activeElement,
     "Focus returns to the activity region when the FAB disappears",
-  );
+  ).toBe(viewport);
 
   assertAbsent(
     view.queryByRole("button", { name: "Scroll to latest activity" }),
@@ -1110,7 +1105,7 @@ test("opening raw response shows the original full JSON and preserves disclosure
   );
 
   view.rerender(createElement(EventList, { events: [{ ...activity }] }));
-  assert.equal(view.container.querySelector("details.activity-raw"), details);
+  expect(view.container.querySelector("details.activity-raw")).toBe(details);
   assert.equal(details.open, true);
 
   assert.equal(
@@ -1605,10 +1600,10 @@ test("a compact accessible debug toggle hides inspection until opened and preser
 
   toggle.focus();
 
-  assert.ok(
-    document.activeElement === toggle,
+  expect(
+    document.activeElement,
     "Native debug button participates in keyboard focus",
-  );
+  ).toBe(toggle);
 
   await userEvent.setup({ document: document }).keyboard("{Enter}");
   assert.equal(panel.hidden, false);
@@ -1624,10 +1619,10 @@ test("a compact accessible debug toggle hides inspection until opened and preser
 
   view.rerender(createElement(GroupedEventList, { events: [{ ...activity }] }));
 
-  assert.ok(
-    view.getByRole("button", { name: "Debug activity: Assistant" }) === toggle,
+  expect(
+    view.getByRole("button", { name: "Debug activity: Assistant" }),
     "Debug toggle keeps its identity",
-  );
+  ).toBe(toggle);
 
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
   assert.equal(raw.open, true);
@@ -1912,13 +1907,13 @@ test("tool result image previews and individual responses mount on first debug a
 
   fireEvent.click(toggle);
   assert.equal(panel.hidden, true);
-  assert.equal(panel.querySelector("img.activity-image"), image);
+  expect(panel.querySelector("img.activity-image")).toBe(image);
   view.rerender(createElement(GroupedEventList, { events: [...events] }));
   assert.equal(panel.hidden, true);
-  assert.equal(panel.querySelector("img.activity-image"), image);
+  expect(panel.querySelector("img.activity-image")).toBe(image);
   fireEvent.click(toggle);
   assert.equal(panel.hidden, false);
-  assert.equal(panel.querySelector("img.activity-image"), image);
+  expect(panel.querySelector("img.activity-image")).toBe(image);
 });
 
 const nestedContentNotice = "Nested content omitted · inspect raw response";

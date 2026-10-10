@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { describe, test, type TestContext, vi } from "vitest";
+import { describe, expect, test, type TestContext, vi } from "vitest";
 
 import type {
   HostState,
@@ -108,10 +108,7 @@ export const executionPresentation: InputPresentation = {
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
 // which never finishes and starves waitFor's timeout.
 export function assertAbsent(element: Element | null) {
-  assert.ok(
-    element === null,
-    `Unexpected element: ${element?.outerHTML.slice(0, 200)}`,
-  );
+  expect(element).toBeNull();
 }
 
 export function task(id = "one", repository = "/repo/a"): Task {

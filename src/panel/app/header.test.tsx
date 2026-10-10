@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { Tooltip } from "@base-ui/react/tooltip";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { onTestFinished, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 
 import { Header } from "./header";
 import { Controller } from "./state/controller";
@@ -57,7 +57,7 @@ test("global header offers project scope and Browse without the thread title", (
   assert.equal(view.getByRole("status").textContent, "Connected");
   assert.ok(view.getByRole("combobox", { name: "Project scope" }));
   assert.ok(view.getByRole("button", { name: "Browse" }));
-  assert.equal(view.queryByText("Delegated Work"), null);
+  expect(view.queryByText("Delegated Work")).toBeNull();
 });
 
 test("thread header shows settings and omits other global controls", async () => {
@@ -65,10 +65,10 @@ test("thread header shows settings and omits other global controls", async () =>
 
   assert.ok(view.getByText("Delegated Work"));
   assert.equal(view.getByText("My project").tagName, "STRONG");
-  assert.equal(view.queryByRole("combobox", { name: "Project scope" }), null);
-  assert.equal(view.queryByRole("button", { name: "Browse" }), null);
+  expect(view.queryByRole("combobox", { name: "Project scope" })).toBeNull();
+  expect(view.queryByRole("button", { name: "Browse" })).toBeNull();
   const settingsButton = view.getByRole("button", { name: "Settings" });
-  assert.equal(view.queryByRole("button", { name: "New Task" }), null);
+  expect(view.queryByRole("button", { name: "New Task" })).toBeNull();
 
   await user.click(settingsButton);
   await waitFor(() => assert.equal(settings.mock.calls.length, 1));
@@ -76,7 +76,7 @@ test("thread header shows settings and omits other global controls", async () =>
   await user.click(view.getByRole("button", { name: "Panel actions" }));
   await view.findByRole("menuitem", { name: "Refresh" });
   const settingsItem = view.getByRole("menuitem", { name: "Settings" });
-  assert.equal(view.queryByRole("menuitem", { name: "New Task" }), null);
+  expect(view.queryByRole("menuitem", { name: "New Task" })).toBeNull();
 
   await user.click(settingsItem);
   await waitFor(() => assert.equal(settings.mock.calls.length, 2));
@@ -100,7 +100,7 @@ test("Add chat project is the first menu action and invokes registration", async
     name: "Add chat project",
   });
 
-  assert.equal(view.getAllByRole("menuitem")[0], action);
+  expect(view.getAllByRole("menuitem")[0]).toBe(action);
   await user.click(action);
   assert.equal(addProject.mock.calls.length, 1);
 });
@@ -140,17 +140,16 @@ test.each(["Settings", "New Task"] as const)(
   async (label) => {
     const { view, user, delegate, settings } = setup();
 
-    assert.equal(view.queryByRole("button", { name: "Expand" }), null);
+    expect(view.queryByRole("button", { name: "Expand" })).toBeNull();
     await user.click(view.getByRole("button", { name: "Panel actions" }));
 
     const action = await view.findByRole("menuitem", { name: label });
 
-    assert.equal(view.queryByRole("menuitem", { name: "Expand" }), null);
+    expect(view.queryByRole("menuitem", { name: "Expand" })).toBeNull();
 
-    assert.equal(
+    expect(
       view.queryByRole("menuitem", { name: "Add chat project" }),
-      null,
-    );
+    ).toBeNull();
 
     await user.click(action);
 

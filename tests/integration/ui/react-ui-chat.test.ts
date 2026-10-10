@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { expect } from "vitest";
+
 import {
   act,
   assert,
@@ -45,10 +47,10 @@ test("handoff sends only after explicit submit and uses the edited message", asy
   await screen.findByRole("dialog");
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement === document.getElementById("handoff-message"),
+    expect(
+      document.activeElement,
       "Handoff dialog should focus its message field",
-    ),
+    ).toBe(document.getElementById("handoff-message")),
   );
 
   assert.deepEqual(transport.messages, []);
@@ -119,8 +121,7 @@ test("completed chat turns show a quiet summary with a completion time on hover"
     "Responded on Oct 8, 2026, 11:30:00 AM",
   );
 
-  assert.equal(
-    row.querySelector(".chat-outcome-line")?.lastElementChild,
+  expect(row.querySelector(".chat-outcome-line")?.lastElementChild).toBe(
     within(row as HTMLElement).getByRole("button", { name: "View activity" }),
   );
 
@@ -250,6 +251,6 @@ test("task and reply text render literally without HTML interpretation", async (
     "<script>window.injected=true</script>",
   );
 
-  assert.ok(document.querySelector("img, script") === null);
+  expect(document.querySelector("img, script")).toBeNull();
   assert.equal((window as any).injected, undefined);
 });

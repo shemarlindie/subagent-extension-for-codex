@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { expect } from "vitest";
+
 import {
   assert,
   assertAbsent,
@@ -225,7 +227,7 @@ test("settings dialog validates hidden budgets, types uncatalogued models, and f
     "true",
   );
 
-  await waitFor(() => assert.equal(document.activeElement, amount));
+  await waitFor(() => expect(document.activeElement).toBe(amount));
 
   assert.equal(
     transport.calls.some((call) => call.name === "update_agent_settings"),
@@ -268,7 +270,7 @@ test("settings explain invalid disabled budgets and let the user restore editing
   await user.click(screen.getByRole("button", { name: "Save 1 change" }));
   await screen.findByText("Enter an amount from 0.01 to 100 USD.");
   assert.equal(amount.getAttribute("aria-invalid"), "true");
-  await waitFor(() => assert.equal(document.activeElement, toggle));
+  await waitFor(() => expect(document.activeElement).toBe(toggle));
 
   assert.equal(
     transport.calls.some((call) => call.name === "update_agent_settings"),
@@ -335,8 +337,7 @@ test("settings help links show the setting they name, except within their own se
   assert.equal(expanded(/^Profiles/), "true");
   assert.equal(expanded(/^Defaults/), "false");
 
-  assert.equal(
-    document.activeElement,
+  expect(document.activeElement).toBe(
     screen.getByRole("textbox", { name: "reviewer_default model" }),
   );
 
@@ -344,8 +345,7 @@ test("settings help links show the setting they name, except within their own se
   await user.click(screen.getByRole("button", { name: "defaults" }));
   assert.equal(expanded(/^Defaults/), "true");
 
-  assert.equal(
-    document.activeElement,
+  expect(document.activeElement).toBe(
     screen.getByRole("textbox", { name: "default model" }),
   );
 });
@@ -530,12 +530,11 @@ test("closing settings with unsaved edits asks before discarding them", async (t
 
     assert.equal(notice?.getAttribute("data-tone"), "warning");
 
-    assert.equal(
-      document.activeElement,
+    expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Keep editing" }),
     );
 
-    assert.equal(scrolls.at(-1)?.element, anchor);
+    expect(scrolls.at(-1)?.element).toBe(anchor);
     assert.deepEqual(scrolls.at(-1)?.options, { block: "end", behavior });
   };
 

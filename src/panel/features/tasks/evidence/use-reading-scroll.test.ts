@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { createElement } from "react";
-import { afterEach, beforeEach, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import type { ReadingState } from "./reading-state";
 import { useReadingScroll } from "./use-reading-scroll";
@@ -309,7 +309,7 @@ test("scroll to latest returns to the end, restores focus and follows later repl
     view.queryByRole("button", { name: "Scroll to latest message" });
 
   assert.equal(viewport.scrollTop, 400);
-  assert.equal(button(), null);
+  expect(button()).toBeNull();
   viewport.scrollTop = 151;
   fireEvent.scroll(viewport);
   assert.ok(button());
@@ -317,8 +317,8 @@ test("scroll to latest returns to the end, restores focus and follows later repl
   fireEvent.click(button()!);
 
   assert.equal(viewport.scrollTop, 400);
-  assert.equal(button(), null);
-  assert.equal(document.activeElement, viewport);
+  expect(button()).toBeNull();
+  expect(document.activeElement).toBe(viewport);
 
   assert.deepEqual(reading.position, {
     top: 400,
@@ -343,10 +343,9 @@ test("the end slack includes its 48px boundary", () => {
   viewport.scrollTop = 352;
   fireEvent.scroll(viewport);
 
-  assert.equal(
+  expect(
     view.queryByRole("button", { name: "Scroll to latest message" }),
-    null,
-  );
+  ).toBeNull();
 });
 
 test("scroll to latest uses the shared inspector scroller", () => {
@@ -363,7 +362,7 @@ test("scroll to latest uses the shared inspector scroller", () => {
 
   assert.equal(inspector.scrollTop, 400);
   assert.equal(viewport.scrollTop, 0);
-  assert.equal(document.activeElement, viewport);
+  expect(document.activeElement).toBe(viewport);
 
   view.rerender(
     createElement(Chat, { reading, items: [...items, "g"], stacked: true }),
@@ -399,16 +398,16 @@ test("a smooth return stays pinned until the reader takes over", () => {
   ]);
 
   assert.equal(viewport.scrollTop, 100, "The browser owns the glide");
-  assert.equal(button(), null);
+  expect(button()).toBeNull();
 
   scrollAt(250);
-  assert.equal(button(), null, "Progress toward the end stays pinned");
+  expect(button()).toBeNull();
   scrollAt(200);
   assert.ok(button(), "Moving away hands control back to the reader");
 
   fireEvent.click(button()!);
   fireEvent(viewport, new Event("scrollend"));
-  assert.equal(button(), null, "An old scroll end cannot cancel a new glide");
+  expect(button()).toBeNull();
   scrollAt(300);
   fireEvent(viewport, new Event("scrollend"));
   assert.ok(button(), "A glide that stops short is judged where it stopped");
@@ -422,7 +421,7 @@ test("a smooth return stays pinned until the reader takes over", () => {
     "New content finishes at the live edge",
   );
 
-  assert.equal(button(), null);
+  expect(button()).toBeNull();
 });
 
 test("a smooth return that never moves is judged where it stopped", (t) => {
@@ -478,7 +477,7 @@ test("reduced motion returns to latest without a smooth glide", () => {
 
   assert.equal(scrollTo.mock.calls.length, 0);
   assert.equal(viewport.scrollTop, 400);
-  assert.equal(document.activeElement, viewport);
+  expect(document.activeElement).toBe(viewport);
 });
 
 test("hidden chat updates preserve its anchor until revealed", () => {
@@ -546,10 +545,9 @@ test("a pinned hidden chat returns to latest after another tab moves the shared 
   assert.equal(inspector.scrollTop, 500);
   assert.equal(reading.position?.pinned, true);
 
-  assert.equal(
+  expect(
     view.queryByRole("button", { name: "Scroll to latest message" }),
-    null,
-  );
+  ).toBeNull();
 });
 
 test("chat waits for loaded history before restoring a saved position", () => {
@@ -563,10 +561,9 @@ test("chat waits for loaded history before restoring a saved position", () => {
 
   assert.equal(reading.position?.top, 125);
 
-  assert.equal(
+  expect(
     view.queryByRole("button", { name: "Scroll to latest message" }),
-    null,
-  );
+  ).toBeNull();
 
   view.rerender(createElement(Chat, { reading, items, ready: true }));
   assert.equal(view.getByTestId("chat").scrollTop, 125);

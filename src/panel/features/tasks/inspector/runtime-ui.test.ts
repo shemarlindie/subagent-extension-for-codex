@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
@@ -346,7 +346,7 @@ test("terminal states and input requests take precedence over stale activity", (
       name: status[0].toUpperCase() + status.slice(1),
     });
 
-    assert.equal(view.queryByRole("img", { name: live_activity.text }), null);
+    expect(view.queryByRole("img", { name: live_activity.text })).toBeNull();
   }
 
   view.rerender(
@@ -368,7 +368,7 @@ test("terminal states and input requests take precedence over stale activity", (
     view.getByRole("img", { name: "Needs input" }).classList.contains("input"),
   );
 
-  assert.equal(view.queryByRole("img", { name: live_activity.text }), null);
+  expect(view.queryByRole("img", { name: live_activity.text })).toBeNull();
 });
 
 test("task list uses short state labels when no runtime timer is available", (t) => {

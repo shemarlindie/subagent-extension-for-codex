@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { onTestFinished, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 
 import { writeClipboardText } from "./write-clipboard";
 
@@ -36,9 +36,9 @@ function selection() {
   });
 
   return () => {
-    assert.equal(document.activeElement, input);
+    expect(document.activeElement).toBe(input);
     assert.equal(document.getSelection()?.toString(), "Keep this selected");
-    assert.equal(document.querySelector("textarea"), null);
+    expect(document.querySelector("textarea")).toBeNull();
   };
 }
 
@@ -52,7 +52,7 @@ test("native clipboard writes the complete value without a fallback", async () =
   await writeClipboardText(text);
   assert.deepEqual(writeText.mock.calls, [[text]]);
   assert.equal(execCommand.mock.calls.length, 0);
-  assert.equal(document.querySelector("textarea"), null);
+  expect(document.querySelector("textarea")).toBeNull();
 });
 
 test.each(["missing", "rejected"])(

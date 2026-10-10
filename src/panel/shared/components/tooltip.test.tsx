@@ -9,7 +9,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { onTestFinished, test } from "vitest";
+import { expect, onTestFinished, test } from "vitest";
 
 import { TooltipWrapper } from "./tooltip";
 
@@ -30,5 +30,5 @@ test("scrolling closes an open tooltip at once, even inside a nested container",
   // Scroll events do not bubble, so this checks the capture listener on the document.
   fireEvent.scroll(view.getByTestId("scroller"));
 
-  assert.equal(screen.queryByRole("tooltip"), null);
+  expect(screen.queryByRole("tooltip")).toBeNull();
 });

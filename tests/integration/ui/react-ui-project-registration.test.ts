@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { expect } from "vitest";
+
 import {
   act,
   assert,
@@ -20,18 +22,17 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
   const all = await screen.findByRole("option", { name: "All projects" });
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement === all,
+    expect(
+      document.activeElement,
       "All projects should receive opening focus",
-    ),
+    ).toBe(all),
   );
 
   await user.keyboard("{End}");
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement === screen.getByRole("option", { name: "a" }),
-      "Project option should receive focus",
+    expect(document.activeElement, "Project option should receive focus").toBe(
+      screen.getByRole("option", { name: "a" }),
     ),
   );
 
@@ -48,28 +49,26 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
   assert.match(picker.textContent ?? "", /a/);
   await act(() => controller.refresh());
 
-  assert.ok(
-    screen.getByRole("combobox", { name: "Project scope" }) === picker,
+  expect(
+    screen.getByRole("combobox", { name: "Project scope" }),
     "Polling should retain the picker trigger",
-  );
+  ).toBe(picker);
 
   await user.click(picker);
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement === screen.getByRole("option", { name: "a" }),
-      "Project option should receive focus",
+    expect(document.activeElement, "Project option should receive focus").toBe(
+      screen.getByRole("option", { name: "a" }),
     ),
   );
 
   await user.keyboard("{Home}");
 
   await waitFor(() =>
-    assert.ok(
-      document.activeElement ===
-        screen.getByRole("option", { name: "All projects" }),
+    expect(
+      document.activeElement,
       "All projects should receive Home focus",
-    ),
+    ).toBe(screen.getByRole("option", { name: "All projects" })),
   );
 
   await user.keyboard("{Enter}");

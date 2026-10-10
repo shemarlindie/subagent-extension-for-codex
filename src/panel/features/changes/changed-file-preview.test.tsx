@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { Tooltip } from "@base-ui/react/tooltip";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
-import { onTestFinished, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
@@ -244,10 +244,9 @@ test("the view switcher takes the title's place when the file has views", async 
 
   assert.equal(switcher()?.textContent, "Source");
 
-  assert.equal(
+  expect(
     view.container.querySelector(".file-preview-toolbar .view-switch"),
-    null,
-  );
+  ).toBeNull();
 
   assert.ok(
     view.getByRole("button", { name: "Source" }).hasAttribute("data-pressed"),
@@ -258,7 +257,7 @@ test("the view switcher takes the title's place when the file has views", async 
   await act(async () => {});
 
   assert.match(view.container.textContent ?? "", /Deleted/);
-  assert.equal(switcher(), null);
+  expect(switcher()).toBeNull();
 });
 
 test("view tabs replace the title while Ask Codex and Viewed stay in the toolbar", async () => {
@@ -301,10 +300,9 @@ test("view tabs replace the title while Ask Codex and Viewed stay in the toolbar
   // A deleted file still keeps its actions in the toolbar.
   await moveTo("gone.ts");
 
-  assert.equal(
+  expect(
     heading?.querySelector(".changed-file-view-switcher-target .view-switch"),
-    null,
-  );
+  ).toBeNull();
 
   assert.deepEqual(toolbarActions(), [
     "Ask Codex about this file",
@@ -369,10 +367,9 @@ test("hosts without sharing keep file navigation available", async () => {
 
   await act(async () => {});
 
-  assert.equal(
+  expect(
     view.queryByRole("button", { name: "Ask Codex about this file" }),
-    null,
-  );
+  ).toBeNull();
 
   fireEvent.click(view.getByRole("button", { name: "Next file" }));
   assert.deepEqual(show.mock.lastCall, ["b.ts"]);

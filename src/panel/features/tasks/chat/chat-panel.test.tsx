@@ -9,7 +9,7 @@ import {
   render,
   waitFor,
 } from "@testing-library/react";
-import { onTestFinished, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 
 import { previewEvents } from "../../../../../dev/panel/scenarios/fixtures";
 import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
@@ -217,12 +217,11 @@ test("Chat exposes a scroll-to-latest control and returns focus to its history",
   );
 
   assert.equal(history.scrollTop, 400);
-  assert.equal(document.activeElement, history);
+  expect(document.activeElement).toBe(history);
 
-  assert.equal(
+  expect(
     view.queryByRole("button", { name: "Scroll to latest message" }),
-    null,
-  );
+  ).toBeNull();
 });
 
 test("dependency waiting shows a paused status instead of the running indicator", () => {
@@ -235,7 +234,7 @@ test("dependency waiting shows a paused status instead of the running indicator"
 
   assert.equal(status.textContent, "Waiting on dependency");
   assert.ok(status.querySelector(".row-status-icon.waiting"));
-  assert.equal(status.querySelector(".running"), null);
+  expect(status.querySelector(".running")).toBeNull();
 
   assert.equal(
     status.querySelector("svg")?.getAttribute("aria-hidden"),
@@ -264,7 +263,7 @@ for (const source of ["live activity", "events"] as const) {
 
     assert.equal(status.textContent, "Waiting for rate limit reset");
     assert.ok(status.querySelector(".row-status-icon.paused"));
-    assert.equal(status.querySelector(".running"), null);
+    expect(status.querySelector(".running")).toBeNull();
   });
 }
 
@@ -336,7 +335,7 @@ test("while the worker waits for input, Enter only queues", async () => {
   });
 
   type("Later");
-  assert.equal(view.queryByRole("button", { name: "Steer" }), null);
+  expect(view.queryByRole("button", { name: "Steer" })).toBeNull();
   fireEvent.keyDown(composer, { key: "Enter" });
 
   await waitFor(() =>
@@ -419,14 +418,14 @@ test("composer expansion and collapse animate directly between their heights wit
   animations.length = 0;
 
   fireEvent.click(view.getByRole("button", { name: "Show composer" }));
-  assert.equal(view.container.querySelector(".chat-composer"), composer);
-  assert.equal(composer?.querySelector(".chat-composer-toggle-row"), null);
+  expect(view.container.querySelector(".chat-composer")).toBe(composer);
+  expect(composer?.querySelector(".chat-composer-toggle-row")).toBeNull();
   assert.ok(composer?.querySelector(".chat-composer-body"));
 
   const [expansion] = composerAnimations();
 
   assert.equal(composerAnimations().length, 1);
-  assert.equal(expansion.element, composer);
+  expect(expansion.element).toBe(composer);
 
   assert.deepEqual(
     expansion.frames.map((frame) => frame.height),
@@ -437,14 +436,14 @@ test("composer expansion and collapse animate directly between their heights wit
   animations.length = 0;
 
   fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
-  assert.equal(view.container.querySelector(".chat-composer"), composer);
+  expect(view.container.querySelector(".chat-composer")).toBe(composer);
   assert.ok(composer?.querySelector(".chat-composer-toggle-row"));
-  assert.equal(composer?.querySelector(".chat-composer-body"), null);
+  expect(composer?.querySelector(".chat-composer-body")).toBeNull();
 
   const [collapse] = composerAnimations();
 
   assert.equal(composerAnimations().length, 1);
-  assert.equal(collapse.element, composer);
+  expect(collapse.element).toBe(composer);
 
   assert.deepEqual(
     collapse.frames.map((frame) => frame.height),
@@ -570,8 +569,8 @@ test("an idle composer can hide and reopen its draft without offering Stop", () 
 
   fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
 
-  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
-  assert.equal(view.queryByRole("button", { name: "Stop the turn" }), null);
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+  expect(view.queryByRole("button", { name: "Stop the turn" })).toBeNull();
 
   fireEvent.click(view.getByRole("button", { name: "Show composer (draft)" }));
 
@@ -582,7 +581,7 @@ test("an idle composer can hide and reopen its draft without offering Stop", () 
     "Keep the next turn draft",
   );
 
-  assert.equal(document.activeElement, composer);
+  expect(document.activeElement).toBe(composer);
 });
 
 for (const pending_input of [
@@ -597,7 +596,7 @@ for (const pending_input of [
 
     fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
 
-    assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
     assert.ok(view.getByRole("button", { name: "Show composer" }));
 
     fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
@@ -620,7 +619,7 @@ test("composer visibility is remembered separately for each task", () => {
   assert.ok(view.getByRole("button", { name: "Hide composer" }));
 
   updateTask({ id: "task-1" });
-  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
 
   fireEvent.click(view.getByRole("button", { name: "Show composer (draft)" }));
 
@@ -640,7 +639,7 @@ test("question toggles preserve the ordinary composer's hidden preference", () =
   assert.ok(view.getByRole("textbox", { name: "Message" }));
 
   updateTask({ status: "running", pending_input: undefined });
-  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
   assert.ok(view.getByRole("button", { name: "Show composer" }));
 });
 
@@ -651,8 +650,8 @@ test("questions collapse the composer while preserving its draft and Stop action
   type("Keep this draft");
   updateTask({ status: "waiting", pending_input: questionInput("request") });
 
-  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
-  assert.equal(view.queryByText(/Enter to queue/), null);
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+  expect(view.queryByText(/Enter to queue/)).toBeNull();
 
   const show = view.getByRole("button", { name: "Show composer (draft)" });
 
@@ -665,20 +664,19 @@ test("questions collapse the composer while preserving its draft and Stop action
 
   const composer = view.getByRole("textbox", { name: "Message" });
 
-  assert.equal(document.activeElement, composer);
-  assert.equal(focus.mock.instances.at(-1), composer);
+  expect(document.activeElement).toBe(composer);
+  expect(focus.mock.instances.at(-1)).toBe(composer);
   assert.deepEqual(focus.mock.lastCall, [{ preventScroll: true }]);
   assert.equal((composer as HTMLTextAreaElement).value, "Keep this draft");
   const collapse = view.getByRole("button", { name: "Hide composer" });
   const composerBox = composer.closest(".chat-composer-box");
 
-  assert.equal(
-    document.getElementById(collapse.getAttribute("aria-controls")!),
+  expect(document.getElementById(collapse.getAttribute("aria-controls")!)).toBe(
     controlled,
   );
 
-  assert.equal(collapse.closest(".chat-composer-box"), null);
-  assert.equal(collapse.parentElement, composerBox?.parentElement);
+  expect(collapse.closest(".chat-composer-box")).toBeNull();
+  expect(collapse.parentElement).toBe(composerBox?.parentElement);
 
   assert.ok(
     collapse.compareDocumentPosition(composer) &
@@ -688,21 +686,19 @@ test("questions collapse the composer while preserving its draft and Stop action
   assert.equal(collapse.textContent, "");
   fireEvent.change(composer, { target: { value: "After the answer" } });
   fireEvent.click(collapse);
-  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
 
-  assert.equal(
-    document.activeElement,
+  expect(document.activeElement).toBe(
     view.getByRole("button", { name: "Show composer (draft)" }),
   );
 
-  assert.equal(
+  expect(
     document.getElementById(
       document.activeElement!.getAttribute("aria-controls")!,
     ),
-    controlled,
-  );
+  ).toBe(controlled);
 
-  assert.equal(focus.mock.instances.at(-1), document.activeElement);
+  expect(focus.mock.instances.at(-1)).toBe(document.activeElement);
   assert.deepEqual(focus.mock.lastCall, [{ preventScroll: true }]);
 
   fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
@@ -747,7 +743,7 @@ test("the expanded question composer queues messages and each new request starts
   );
 
   updateTask({ status: "waiting", pending_input: questionInput("second") });
-  assert.equal(view.queryByRole("textbox", { name: "Message" }), null);
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
   assert.ok(view.getByRole("button", { name: "Show composer" }));
 });
 

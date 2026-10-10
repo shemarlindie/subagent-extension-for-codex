@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
@@ -125,8 +125,8 @@ test("the scroll area is the nearest ancestor that overflows, else the viewport"
   inner.append(element);
   outer.append(inner);
   document.body.append(outer);
-  assert.equal(scrollParent(element), outer);
-  assert.equal(scrollParent(outer), null);
+  expect(scrollParent(element)).toBe(outer);
+  expect(scrollParent(outer)).toBeNull();
   outer.remove();
 });
 
@@ -171,7 +171,7 @@ test("after a resize changes which box scrolls, blocks watch the new one", (t) =
     container: inner.element,
   });
 
-  assert.equal(observers.at(-1)?.root, inner.element);
+  expect(observers.at(-1)?.root).toBe(inner.element);
 
   // A resize that leaves the same box scrolling keeps the observer.
   window.dispatchEvent(new Event("resize"));
@@ -183,7 +183,7 @@ test("after a resize changes which box scrolls, blocks watch the new one", (t) =
   window.dispatchEvent(new Event("resize"));
   assert.equal(observers.length, 2);
   assert.equal(observers[0].disconnected, true);
-  assert.equal(observers[1].root, outer.element);
+  expect(observers[1].root).toBe(outer.element);
 });
 
 test("a scroll area changing size, without a window resize, also re-finds it", (t) => {
@@ -257,7 +257,7 @@ test("a scroll area changing size, without a window resize, also re-finds it", (
   inner.overflow(false);
   outer.overflow(true);
   report();
-  assert.equal(observers.at(-1)?.root, outer.element);
+  expect(observers.at(-1)?.root).toBe(outer.element);
   assert.equal(watched.size, 1);
   assert.ok(watched.has(outer.element));
 
