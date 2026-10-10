@@ -151,6 +151,12 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* Aligned with the code column: two line numbers, the sign and their gaps. */
+.diff-note {
+  padding: 0 12px 0 calc(9.5ch + 24px);
+  color: var(--muted);
+  font-style: italic;
+}
 .diff-row {
   display: grid;
   grid-template-columns: 4ch 4ch 1.5ch minmax(0, 1fr);

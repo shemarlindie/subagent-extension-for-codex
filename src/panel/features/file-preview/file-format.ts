@@ -64,6 +64,8 @@ const LANGUAGES: Record<string, string> = {
   css: "css",
   diff: "diff",
   go: "go",
+  gql: "graphql",
+  graphql: "graphql",
   h: "c",
   hpp: "cpp",
   htm: "xml",
@@ -74,10 +76,12 @@ const LANGUAGES: Record<string, string> = {
   json: "json",
   jsx: "javascript",
   kt: "kotlin",
+  mk: "makefile",
   md: "markdown",
   mjs: "javascript",
   patch: "diff",
   php: "php",
+  ps1: "powershell",
   py: "python",
   rb: "ruby",
   rs: "rust",
@@ -129,9 +133,19 @@ export function baseMime(file: Pick<PreviewFile, "path" | "mime_type">) {
   return EXTENSION_MIMES[extensionOf(file.path) ?? ""] ?? "text/plain";
 }
 
+/** Files known by name rather than extension. */
+const NAMED_LANGUAGES: Record<string, string> = {
+  dockerfile: "dockerfile",
+  gnumakefile: "makefile",
+  makefile: "makefile",
+};
+
 /** The highlight.js language for a path, if one is known. */
 export function pathLanguage(path: string | undefined) {
-  return LANGUAGES[extensionOf(path ?? "") ?? ""];
+  return (
+    LANGUAGES[extensionOf(path ?? "") ?? ""] ??
+    NAMED_LANGUAGES[fileName(path ?? "").toLowerCase()]
+  );
 }
 
 export function fileFormat(file: PreviewFile): FileFormat {
@@ -228,7 +242,12 @@ export function parseDelimited(content: string, separator = ","): string[][] {
     field = "",
     quoted = false;
 
-  for (let index = 0; index < content.length; index++) {
+  // A byte order mark would otherwise prefix the first header.
+  for (
+    let index = content.startsWith("\uFEFF") ? 1 : 0;
+    index < content.length;
+    index++
+  ) {
     const char = content[index];
 
     if (quoted) {
@@ -323,6 +342,8 @@ export function diffPath(file: ParsedDiffFile) {
 
 export type DiffRow =
   | { kind: "hunk"; content: string }
+  /** Git's markers between lines, such as "No newline at end of file". */
+  | { kind: "note"; content: string }
   | {
       kind: "line";
       type: "add" | "del" | "normal";
@@ -331,27 +352,41 @@ export type DiffRow =
       text: string;
     };
 
+/** A line without its CRLF ending's carriage return. */
+function withoutCr(text: string) {
+  return text.endsWith("\r") ? text.slice(0, -1) : text;
+}
+
 /** A diff file's hunk headers and lines, in order, with line numbers. */
 export function diffRows(file: ParsedDiffFile): DiffRow[] {
   return file.chunks.flatMap((chunk): DiffRow[] => [
-    { kind: "hunk", content: chunk.content },
-    ...chunk.changes.map((change): DiffRow => ({
-      kind: "line",
-      type: change.type,
-      oldLine:
-        change.type === "normal"
-          ? change.ln1
-          : change.type === "del"
-            ? change.ln
-            : undefined,
-      newLine:
-        change.type === "normal"
-          ? change.ln2
-          : change.type === "add"
-            ? change.ln
-            : undefined,
-      text: change.content.slice(1),
-    })),
+    { kind: "hunk", content: withoutCr(chunk.content) },
+    ...chunk.changes.map((change): DiffRow => {
+      // The parser files a "\ No newline" marker as a change of the line before.
+      if (change.content.startsWith("\\"))
+        return {
+          kind: "note",
+          content: withoutCr(change.content.slice(1).trim()),
+        };
+
+      return {
+        kind: "line",
+        type: change.type,
+        oldLine:
+          change.type === "normal"
+            ? change.ln1
+            : change.type === "del"
+              ? change.ln
+              : undefined,
+        newLine:
+          change.type === "normal"
+            ? change.ln2
+            : change.type === "add"
+              ? change.ln
+              : undefined,
+        text: withoutCr(change.content.slice(1)),
+      };
+    }),
   ]);
 }
 

@@ -127,6 +127,10 @@ function DiffRows({ file, language, emptyNote }: DiffRowsProps) {
               <div className="diff-hunk" key={index}>
                 {row.content}
               </div>
+            ) : row.kind === "note" ? (
+              <div className="diff-note" key={index}>
+                {row.content}
+              </div>
             ) : (
               <div className={`diff-row ${row.type}`} key={index}>
                 <span className="line-number" aria-hidden>

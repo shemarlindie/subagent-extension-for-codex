@@ -23,6 +23,10 @@ owning format; keep feature styling in `file-preview.css`.
 
 `FilePreview` takes a loaded file and shows the switcher in its toolbar by default. A caller can pass `viewSwitcherTarget` to place it elsewhere, as the Changes preview does in the dialog title row. It also shows the file's size and an optional Copy button. Given the file's own parsed diff, it adds a **Diff** view after the format's views; the Changes tab's preview passes the file's part of the task's loaded changes. Callers own loading and errors: the Changes tab's `ChangedFilePreview` shows the error in place of the body. When it moves to another changed file, it keeps the last file showing with its own `progress` until the next is read, and keeps the chosen `view` across files. It sets `alwaysShowViews` so a single-view file still shows its switcher, and lays the toolbar out by width alone, so stepping between files never changes its height. Images arrive as base64.
 
+Tables keep every cell of a row wider than the header and drop a leading byte
+order mark. Diffs show Git's `\ No newline at end of file` as a note between
+lines and ignore CRLF line endings.
+
 ## Large content
 
 Nothing is truncated. Long content stays light in the DOM instead:

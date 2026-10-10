@@ -19,15 +19,24 @@ type TableViewProps = {
  */
 export function TableView({ rows }: TableViewProps) {
   const head = rows[0] ?? [],
-    blocks = useMemo(() => chunks(rows.slice(1), BLOCK_ROWS), [rows]);
+    blocks = useMemo(() => chunks(rows.slice(1), BLOCK_ROWS), [rows]),
+    // Ragged rows keep every cell; columns past the header have no name.
+    columns = useMemo(
+      // A reduce, since spreading tens of thousands of rows overflows the stack.
+      () =>
+        Array.from({
+          length: rows.reduce((most, row) => Math.max(most, row.length), 0),
+        }),
+      [rows],
+    );
 
   return (
     <div className="table-view">
       <table>
         <thead>
           <tr>
-            {head.map((cell, index) => (
-              <th key={index}>{cell}</th>
+            {columns.map((_, index) => (
+              <th key={index}>{head[index] ?? ""}</th>
             ))}
           </tr>
         </thead>
@@ -40,7 +49,7 @@ export function TableView({ rows }: TableViewProps) {
           >
             {block.map((row, rowIndex) => (
               <tr key={rowIndex}>
-                {head.map((_, index) => (
+                {columns.map((_, index) => (
                   <td key={index}>{row[index] ?? ""}</td>
                 ))}
               </tr>

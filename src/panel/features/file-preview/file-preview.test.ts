@@ -172,3 +172,34 @@ test("raster images render from base64 without a Source view", (t) => {
 
   expect(screen.queryByRole("button", { name: "Source" })).toBeNull();
 });
+
+test("table rows wider than the header keep every cell", (t) => {
+  t.onTestFinished(cleanup);
+  const table = show({ path: "ragged.csv", content: "a,b\n1,2,3\n4" });
+
+  expect(
+    [...table.container.querySelectorAll("tr")].map((row) =>
+      [...row.children].map((cell) => cell.textContent),
+    ),
+  ).toEqual([
+    ["a", "b", ""],
+    ["1", "2", "3"],
+    ["4", "", ""],
+  ]);
+});
+
+test("a diff's no-newline marker shows as a note, not a changed line", (t) => {
+  t.onTestFinished(cleanup);
+
+  const view = show({
+    path: "change.diff",
+    content:
+      "diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n\\ No newline at end of file\n+b\n",
+  });
+
+  expect(view.container.querySelectorAll(".diff-row")).toHaveLength(2);
+
+  expect(view.container.querySelector(".diff-note")?.textContent).toBe(
+    "No newline at end of file",
+  );
+});

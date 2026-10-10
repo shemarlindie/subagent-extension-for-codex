@@ -5,6 +5,7 @@ import { test } from "vitest";
 import {
   baseMime,
   diffPath,
+  diffRows,
   fileBadge,
   fileBytes,
   fileFormat,
@@ -14,6 +15,7 @@ import {
   imageSource,
   parseDelimited,
   parseDiffFiles,
+  pathLanguage,
   prettyJson,
   type PreviewFile,
 } from "./file-format";
@@ -170,4 +172,40 @@ test("the source view reformats minified JSON and picks a language", () => {
 test("JSON is pretty-printed only when it parses", () => {
   assert.equal(prettyJson('{"a":1}'), '{\n  "a": 1\n}');
   assert.equal(prettyJson("{oops"), "{oops");
+});
+
+test("delimited text drops a byte order mark", () => {
+  assert.deepEqual(parseDelimited("\uFEFFa,b\r\n1,2\r\n"), [
+    ["a", "b"],
+    ["1", "2"],
+  ]);
+});
+
+test("diff markers between lines are notes, and CRLF endings are dropped", () => {
+  const [noNewline] = parseDiffFiles(
+    "diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n\\ No newline at end of file\n+b\n",
+  );
+
+  assert.deepEqual(diffRows(noNewline), [
+    { kind: "hunk", content: "@@ -1 +1 @@" },
+    { kind: "line", type: "del", oldLine: 1, newLine: undefined, text: "a" },
+    { kind: "note", content: "No newline at end of file" },
+    { kind: "line", type: "add", oldLine: undefined, newLine: 1, text: "b" },
+  ]);
+
+  const [crlf] = parseDiffFiles(
+    "diff --git a/y b/y\r\n--- a/y\r\n+++ b/y\r\n@@ -1 +1 @@\r\n-a\r\n+b\r\n",
+  );
+
+  assert.deepEqual(
+    diffRows(crlf).map((row) => ("text" in row ? row.text : row.content)),
+    ["@@ -1 +1 @@", "a", "b"],
+  );
+});
+
+test("files known by name get a language", () => {
+  assert.equal(pathLanguage("build/Dockerfile"), "dockerfile");
+  assert.equal(pathLanguage("Makefile"), "makefile");
+  assert.equal(pathLanguage("deploy.ps1"), "powershell");
+  assert.equal(pathLanguage("README"), undefined);
 });
