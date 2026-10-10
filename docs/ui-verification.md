@@ -73,8 +73,8 @@ recorded fixtures through the provider.
 
 Changes fixtures in `dev/panel/scenarios/change-fixtures.ts` use real temporary Git
 repositories. `large-files.ts` supplies the 60-file diff, minified JSON,
-20,000-row CSV, 30,000-line log, long Markdown, single 250 KB line, and SVG over
-64 KiB that displays as source.
+20,000-row CSV, 30,000-line log, long Markdown whose contents links jump to
+headings, single 250 KB line, and SVG over 64 KiB that displays as source.
 
 ## Measurement and native host checks
 

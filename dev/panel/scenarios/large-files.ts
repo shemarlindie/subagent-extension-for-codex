@@ -144,15 +144,36 @@ const buildLog = lazy(() => {
   return lines.join("\n") + "\n";
 });
 
-/** Over 100 KB of Markdown: many sections, tables and code blocks. */
+/** A section's heading text; its GitHub-style slug is `<number>-<module>`. */
+const perfSection = (index: number) =>
+  `${index + 1}. ${MODULES[index % MODULES.length]}`;
+
+const perfSlug = (index: number) =>
+  `${index + 1}-${MODULES[index % MODULES.length]}`;
+
+/**
+ * Over 100 KB of Markdown: many sections, tables and code blocks. Contents
+ * links jump to headings far down the preview, one written in capitals, and
+ * every 60th section links back up.
+ */
 const perfNotes = lazy(() => {
-  const sections = ["# Build performance notes", ""];
+  const sections = [
+    "# Build performance notes",
+    "",
+    "## Contents",
+    "",
+    ...[0, 89, 179, 359].map(
+      (index) => `- [${perfSection(index)}](#${perfSlug(index)})`,
+    ),
+    `- [${perfSection(270)} (link in capitals)](#${perfSlug(270).toUpperCase()})`,
+    "",
+  ];
 
   for (let index = 0; index < 360; index++) {
     const name = MODULES[index % MODULES.length];
 
     sections.push(
-      `## ${index + 1}. ${name}`,
+      `## ${perfSection(index)}`,
       "",
       `The **${name}** chunk grew by ${(index * 13) % 400} KB. See [the profile](https://example.com/profile/${index}) for details.`,
       "",
@@ -169,6 +190,9 @@ const perfNotes = lazy(() => {
       `- [${index % 2 ? "x" : " "}] Split ${name} into its own chunk`,
       "",
     );
+
+    if ((index + 1) % 60 === 0)
+      sections.push("[Back to contents](#contents)", "");
   }
 
   return sections.join("\n");
