@@ -40,6 +40,7 @@ const ICON_NAMES = [
   "inspector-panel",
   "handoff",
   "pencil",
+  "pencil-simple",
   "circle",
   "dot",
   "chevron-down",
@@ -49,6 +50,9 @@ const ICON_NAMES = [
   "enter",
   "reply",
   "stop-solid",
+  // The task list resizer draws its own narrower grip inline.
+  "grip-vertical",
+  "grip-vertical-double",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];
