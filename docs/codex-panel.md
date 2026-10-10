@@ -116,8 +116,10 @@ Questions collapse it automatically for the current request.
 
 Questions appear as inline cards, with single/multiple choices, custom answers,
 skips and **Respond**. Several questions form a navigable stack. Switching tasks
-preserves unsent answers until reload. Permissions show the complete payload
-and default to deny. Replies include the exact request ID; the service rejects
+preserves unsent answers until reload. Permission requests show their complete
+payload in Chat, with commands formatted as code and **Deny**/**Approve** actions
+available inline. An optional message can be added before deciding. Requests
+default to deny. Replies include the exact request ID; the service rejects
 stale answers. Mutations are never automatically retried.
 
 Chat follows new messages while the reader is at the end. Scrolling into history

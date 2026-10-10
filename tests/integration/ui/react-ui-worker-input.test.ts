@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { expect } from "vitest";
+
 import {
   assert,
   assertAbsent,
@@ -48,8 +50,7 @@ test("worker question accepts a custom answer with no preset selection", async (
   await user.click(collapse);
   assertAbsent(screen.queryByRole("textbox", { name: "Message" }));
 
-  assert.equal(
-    document.activeElement,
+  expect(document.activeElement).toBe(
     screen.getByRole("button", { name: "Show composer" }),
   );
 
@@ -92,7 +93,7 @@ test("worker question accepts a custom answer with no preset selection", async (
   );
 });
 
-test("permission review makes no decision until the user clicks Deny", async (t) => {
+test("permission requests can be denied inline", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
       id: "permission",
@@ -103,17 +104,7 @@ test("permission review makes no decision until the user clicks Deny", async (t)
     };
   });
 
-  await user.click(screen.getByRole("button", { name: "Review request" }));
-  await screen.findByRole("dialog");
-
-  await waitFor(() =>
-    assert.ok(
-      document.activeElement === screen.getByLabelText("Message (optional)"),
-      "Permission dialog should focus its message field",
-    ),
-  );
-
-  assert.equal(screen.queryByRole("combobox", { name: "Decision" }), null);
+  assertAbsent(screen.queryByRole("dialog"));
 
   assert.equal(
     transport.calls.filter((call) => call.name === "submit_agent_input").length,
@@ -484,8 +475,7 @@ test("keyboard focus follows the stacked question cards", async (t) => {
 
   assert.ok(screen.getByText("Question 2 of 2"));
 
-  assert.equal(
-    document.activeElement,
+  expect(document.activeElement).toBe(
     screen.getByRole("radio", { name: "All" }),
   );
 
@@ -493,12 +483,11 @@ test("keyboard focus follows the stacked question cards", async (t) => {
   const toggle = screen.getByRole("button", { name: "Skip this question" });
   await user.click(toggle);
   assert.equal(toggle.textContent, "Undo");
-  assert.equal(document.activeElement, toggle);
+  expect(document.activeElement).toBe(toggle);
   // Back disappears on the first card, so focus moves to the send button.
   await user.click(screen.getByRole("button", { name: "Back" }));
 
-  assert.equal(
-    document.activeElement,
+  expect(document.activeElement).toBe(
     screen.getByRole("button", { name: "Respond" }),
   );
 });
@@ -585,7 +574,7 @@ test("stacked worker questions return to the first unanswered card before sendin
   );
 });
 
-test("permission cancellation keeps the request pending and approval includes the optional message", async (t) => {
+test("permission approval includes the optional message after an explicit decision", async (t) => {
   const { user, transport } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
       id: "message-request",
@@ -595,16 +584,7 @@ test("permission cancellation keeps the request pending and approval includes th
     };
   });
 
-  await user.click(screen.getByRole("button", { name: "Review request" }));
-  await screen.findByRole("dialog");
-
-  await user.type(
-    screen.getByLabelText("Message (optional)"),
-    "Draft decision",
-  );
-
-  await user.click(screen.getByText("Close", { selector: "footer button" }));
-  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  assertAbsent(screen.queryByRole("dialog"));
 
   assert.equal(
     transport.calls.filter((call) => call.name === "submit_agent_input").length,
@@ -612,11 +592,10 @@ test("permission cancellation keeps the request pending and approval includes th
   );
 
   assert.equal(transport.tasks[0].pending_input?.id, "message-request");
-  await user.click(screen.getByRole("button", { name: "Review request" }));
-  await screen.findByRole("dialog");
+  await user.click(screen.getByRole("button", { name: "Add a message" }));
 
   await user.type(
-    screen.getByLabelText("Message (optional)"),
+    screen.getByRole("textbox", { name: "Optional message to worker" }),
     "Only run this command",
   );
 

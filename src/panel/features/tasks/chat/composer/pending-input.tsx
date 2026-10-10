@@ -11,19 +11,23 @@ import {
   Notice,
   NoticeText,
 } from "../../../../shared/components/notice/notice";
+import { InlinePermissionRequest } from "../../controls/inline-permission-request";
 import { QuestionForm } from "../../controls/question-form";
 
 type PendingInputProps = { task: Task };
 
 /**
- * The worker's question or permission request, at the end of Chat: the
- * question cards in place, or a permission to review.
+ * The worker's question or permission request at the end of Chat. Questions
+ * render as cards and permissions include their review details and actions.
  */
 export function PendingInput({ task }: PendingInputProps) {
   const controller = useController(),
     state = useSnapshot(),
     pending = task.pending_input,
     isQuestion = Boolean(pending && pendingInputKind(pending) === "question"),
+    isPermission = Boolean(
+      pending && pendingInputKind(pending) === "permission",
+    ),
     questions =
       isQuestion && pendingQuestions(task).length
         ? pendingQuestions(task)
@@ -36,7 +40,10 @@ export function PendingInput({ task }: PendingInputProps) {
         {/* Keyed so a new request starts with fresh answers. */}
         <QuestionForm key={pending?.id} task={task} />
       </Presence>
-      <Presence show={Boolean(pending && !questions)}>
+      <Presence show={Boolean(pending && !questions && isPermission)}>
+        <InlinePermissionRequest key={pending?.id} task={task} />
+      </Presence>
+      <Presence show={Boolean(pending && !questions && !isPermission)}>
         <Notice>
           {/* A question without a questions list falls back to the generic review. */}
           <strong>{isQuestion ? "Input needed" : "Permission needed"}</strong>

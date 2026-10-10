@@ -1387,3 +1387,36 @@ test("the file preview moves between changed files and saves where it is", async
     { kind: "file", taskId: "task-1", path: "src/b.ts" },
   ]);
 });
+
+test("permission decisions submit the request id and optional worker message", async (t) => {
+  const { controller, transport } = setup();
+
+  t.onTestFinished(() => controller.dispose());
+
+  transport.handler = (name) =>
+    name === "submit_agent_input" ? {} : undefined;
+
+  const pendingTask: Task = {
+    ...task("task-1"),
+    pending_input: {
+      id: "request-1",
+      tool: "Bash",
+      kind: "permission",
+      input: { command: "npm run typecheck" },
+    },
+  };
+
+  await controller.decidePermission(pendingTask, true, "Run only the checks.");
+
+  assert.deepEqual(transport.calls, [
+    {
+      name: "submit_agent_input",
+      args: {
+        task_id: "task-1",
+        request_id: "request-1",
+        approved: true,
+        message: "Run only the checks.",
+      },
+    },
+  ]);
+});

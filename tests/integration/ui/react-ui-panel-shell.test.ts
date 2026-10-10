@@ -441,9 +441,9 @@ test("long notices clamp behind Show more and expand on demand", async (t) => {
 
     transport.tasks[0].pending_input = {
       id: "request",
-      tool: "Bash",
-      kind: "permission",
-      input: { description: "Run the migration script. ".repeat(20) },
+      tool: "AskUserQuestion",
+      kind: "question",
+      input: { description: "Please clarify the request. ".repeat(20) },
     };
   });
 

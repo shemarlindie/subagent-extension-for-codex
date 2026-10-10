@@ -1,0 +1,175 @@
+.permission-request {
+  min-width: 0;
+  margin: 12px 0 16px;
+  padding: 12px;
+}
+.permission-request-form {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.permission-request-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+.permission-request-label {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+.permission-request-heading h3 {
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.permission-request .permission-request-description,
+.permission-request .permission-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.permission-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.permission-details,
+.permission-nested-details {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+.permission-details > div,
+.permission-nested-details > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.permission-details dt,
+.permission-nested-details dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.permission-details dd,
+.permission-nested-details dd {
+  min-width: 0;
+  margin: 0;
+}
+.permission-value-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.permission-command {
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    12px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.permission-command code,
+.permission-request-heading code {
+  font: inherit;
+}
+.permission-scalar {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 12px;
+}
+.permission-value-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+.permission-nested-details {
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+.permission-message {
+  display: grid;
+  min-width: 0;
+}
+.permission-message-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: left;
+}
+.permission-message-trigger:hover {
+  background: transparent;
+  color: var(--text);
+}
+.permission-message-chevron {
+  flex: none;
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.permission-message-trigger[data-panel-open] .permission-message-chevron {
+  transform: rotate(180deg);
+}
+.permission-message-content {
+  padding: 8px 2px 2px;
+}
+.permission-message-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  min-height: 36px;
+  padding: 8px;
+  line-height: 18px;
+}
+.permission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 0;
+}
+@media (max-width: 440px) {
+  .permission-request {
+    padding: 12px;
+  }
+  .permission-actions {
+    justify-content: stretch;
+    margin-top: 8px;
+  }
+  .permission-actions button {
+    flex: 1 1 auto;
+  }
+}

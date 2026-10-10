@@ -1159,6 +1159,22 @@ export class Controller {
     await this.refresh().catch(this.report);
   }
 
+  /** Resolves a permission request directly from the task's Chat card. */
+  decidePermission(task: Task, approved: boolean, message = "") {
+    const request = task.pending_input;
+    if (!request || request.kind !== "permission")
+      return Promise.resolve("The permission request is no longer available.");
+
+    return this.chatAction(() =>
+      this.tool("submit_agent_input", {
+        task_id: task.id,
+        request_id: request.id,
+        approved,
+        message,
+      }),
+    );
+  }
+
   /**
    * Runs a Chat action, outside any dialog. Resolves with the failure
    * message, or nothing once it's done and the task has reloaded.

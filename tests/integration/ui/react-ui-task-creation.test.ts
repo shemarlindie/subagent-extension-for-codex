@@ -383,7 +383,7 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   );
 });
 
-test("permission buttons allow explicit approval without a dropdown", async (t) => {
+test("permission buttons allow explicit inline approval without a dropdown", async (t) => {
   const { user, transport } = await setup(t, (transport) => {
     transport.tasks[0].pending_input = {
       id: "permission",
@@ -394,9 +394,7 @@ test("permission buttons allow explicit approval without a dropdown", async (t) 
     };
   });
 
-  await user.click(screen.getByRole("button", { name: "Review request" }));
-  await screen.findByRole("dialog");
-  assert.equal(screen.queryByRole("combobox", { name: "Decision" }), null);
+  assert.equal(screen.queryByRole("dialog"), null);
 
   await user.click(
     screen.getByRole("button", { name: "Approve this execution turn" }),

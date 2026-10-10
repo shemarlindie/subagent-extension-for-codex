@@ -13,6 +13,7 @@ import {
 } from "../../../shared/dialogs/dialog-definition";
 import { Field } from "../../../shared/forms/fields";
 import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
+import { PermissionInputDetails } from "./permission-input-details";
 
 export function PermissionForm({ task }: { task: Task }) {
   const controller = useController(),
@@ -41,7 +42,10 @@ export function PermissionForm({ task }: { task: Task }) {
   return (
     <form onSubmit={(event) => event.preventDefault()}>
       <p className="form-note">{presentation.description}</p>
-      <pre>{JSON.stringify(request.input, null, 2)}</pre>
+      <p className="form-note">
+        Tool: <code>{request.tool}</code>
+      </p>
+      <PermissionInputDetails input={request.input} />
       <Field id="response" label="Message (optional)">
         <textarea id="response" maxLength={20000} {...register("response")} />
       </Field>

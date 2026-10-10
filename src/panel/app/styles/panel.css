@@ -431,7 +431,7 @@ h3 {
 /* Notices differ only by tone: the accent colors the left bar and nothing else. */
 .notice {
   --notice-accent: var(--warn);
-  border-left: 3px solid var(--notice-accent);
+  border-left: 2px solid var(--notice-accent);
   border-radius: var(--radius);
   padding: 12px 14px;
   margin: 16px 0;

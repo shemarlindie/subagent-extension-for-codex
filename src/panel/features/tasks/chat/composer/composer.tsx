@@ -49,6 +49,11 @@ export function Composer({ task }: ComposerProps) {
   const controller = useController(),
     busy = useSnapshot().busy,
     mode = composerMode(task),
+    inputHint =
+      task.pending_input &&
+      pendingInputKind(task.pending_input) === "permission"
+        ? "Enter to queue · Esc to stop"
+        : HINTS.input,
     questionRequest =
       task.pending_input &&
       pendingInputKind(task.pending_input) === "question" &&
@@ -257,7 +262,7 @@ export function Composer({ task }: ComposerProps) {
             </div>
           </div>
           <p id="chat-composer-hint" className="chat-composer-hint">
-            {HINTS[mode]}
+            {mode === "input" ? inputHint : HINTS[mode]}
           </p>
         </div>
       )}
