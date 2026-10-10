@@ -53,7 +53,7 @@ recorded fixtures through the provider.
 | Live: …                                     | Latest activity and clocks: thinking, tool, compaction, retry, rate limit, ordinary work, finishing, hook, background task and provider failure. |
 | Live: streaming reply                       | Chat draft grows over time and restarts.                                                                                                         |
 | Recorded: …                                 | Real SDK runs: steer/interrupt/send-now, streamed reply, question interrupted and resumed, read-only MCP review.                                 |
-| Limit upload sizes                          | Parent-started turns, user and parent follow-ups, Markdown lists/tables/code.                                                                    |
+| Limit upload sizes                          | Parent-started turns, user and parent follow-ups, Markdown lists/tables/code, footnotes, relative links and images, HTML-like prose.             |
 | Tidy the settings copy                      | Taken and pending steers, queued messages including one from the parent.                                                                         |
 | Rename the feature flags                    | Interrupted task with a paused queue and leftover steer.                                                                                         |
 | Move the date helpers                       | Cost budget exhausted; the warning notice applies a higher limit without sending a message.                                                      |

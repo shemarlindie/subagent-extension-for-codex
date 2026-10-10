@@ -53,6 +53,8 @@ body[data-expanded-panel="true"]
 .chat-message[data-from="parent"] .chat-bubble {
   border: 1px dashed var(--line);
   background: transparent;
+  /* Markdown keeps its own wrapping; pre-wrap would double its line breaks. */
+  white-space: normal;
 }
 .chat-sender {
   font-size: 11px;

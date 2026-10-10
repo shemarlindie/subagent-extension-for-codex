@@ -486,3 +486,17 @@
   flex: none;
   color: var(--accent);
 }
+
+/* The worker's Markdown sits in activity at the activity text size. */
+.activity-markdown .markdown-body {
+  font-size: inherit;
+}
+.activity-markdown {
+  margin: 8px 0;
+}
+/* A response summary wraps itself and may hold blocks wider than a line. */
+.activity-group .activity-group-summary.activity-markdown {
+  overflow: visible;
+  white-space: normal;
+  color: inherit;
+}

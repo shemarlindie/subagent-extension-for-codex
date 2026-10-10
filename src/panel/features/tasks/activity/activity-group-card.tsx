@@ -7,11 +7,16 @@ import { reducedMotion } from "../../../shared/components/motion/motion-utils";
 import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
 import { useNow } from "../../../shared/utils/use-now";
 import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
+import { MarkdownView } from "../../file-preview/markdown/markdown-view";
 import { formatDuration } from "../list/duration";
 import { ActivityContent } from "./activity-content";
 import { ActivityTime } from "./activity-time";
 import type { ActivityGroup } from "./activity-timeline";
-import { streamContent, thinkingOnly } from "./activity-utils";
+import {
+  streamContent,
+  summaryIsResponse,
+  thinkingOnly,
+} from "./activity-utils";
 import { EventBody, EventDetails } from "./event-details";
 import { TimelineDot, TimelineItem } from "./timeline";
 
@@ -72,6 +77,10 @@ export function ActivityGroupCard({
     conversational ||
     ((group.kind === "event" || group.kind === "status") &&
       group.summary !== undefined);
+
+  const markdownSummary =
+    group.summary !== undefined &&
+    summaryIsResponse(group.events, group.summary);
 
   const contentEvents = group.events.filter(
     (event) => event.type === "agent.message" || event.type === "agent.content",
@@ -157,11 +166,17 @@ export function ActivityGroupCard({
           <Icon name="bug" size={12} />
         </Collapsible.Trigger>
       </div>
-      {group.summary && (
-        <p className="activity-group-summary" title={group.summary}>
-          {group.summary}
-        </p>
-      )}
+      {group.summary &&
+        (markdownSummary ? (
+          // A reply's summary is the worker's whole response, written in Markdown.
+          <div className="activity-group-summary activity-markdown">
+            <MarkdownView content={group.summary} />
+          </div>
+        ) : (
+          <p className="activity-group-summary" title={group.summary}>
+            {group.summary}
+          </p>
+        ))}
       {conversational && !quietThinking && (
         <div className="activity-body">
           {contentEvents.length ? (
@@ -169,7 +184,7 @@ export function ActivityGroupCard({
               <EventBody key={event.id} event={event} />
             ))
           ) : (
-            <ActivityContent content={streamContent(group.events)} />
+            <ActivityContent content={streamContent(group.events)} markdown />
           )}
         </div>
       )}

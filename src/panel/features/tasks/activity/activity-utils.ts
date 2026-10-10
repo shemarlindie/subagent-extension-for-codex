@@ -93,3 +93,15 @@ export function thinkingOnly(events: Event[]) {
     })
   );
 }
+
+/**
+ * Whether a row's summary is the worker's Markdown response: a reply, or the
+ * SDK result that repeats it. Other summaries are plain status text.
+ */
+export function summaryIsResponse(events: Event[], summary: string) {
+  return events.some(
+    (event) =>
+      event.type === "agent.reply" ||
+      (event.data.type === "result" && event.data.result === summary),
+  );
+}

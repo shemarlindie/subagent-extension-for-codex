@@ -2111,7 +2111,7 @@ test("stream blocks ignore invalid indexes while default and numeric indexes acc
   );
 
   const blocks = Array.from(
-    doc.querySelectorAll(".activity-stream > .activity-body p.activity-text"),
+    doc.querySelectorAll(".activity-stream > .activity-body .markdown-body p"),
     (node) => node.textContent,
   );
 
@@ -2565,4 +2565,92 @@ test("activity waits for loaded history before restoring a saved reading positio
 
   assert.equal(reading.position?.pinned, false);
   assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
+});
+
+test("the worker's text renders as Markdown while tool output stays plain", () => {
+  const markdown = parseHtml(
+    renderToStaticMarkup(
+      createElement(ActivityContent, {
+        content: [
+          { type: "text", text: "**Done.**\n\n- one\n- two" },
+          { type: "tool_result", content: "**not bold**\n- not a list" },
+        ],
+        markdown: true,
+      }),
+    ),
+  );
+
+  expect(markdown.querySelector(".activity-markdown strong")?.textContent).toBe(
+    "Done.",
+  );
+
+  expect(markdown.querySelectorAll(".activity-markdown li")).toHaveLength(2);
+
+  expect(markdown.querySelector(".activity-text")?.textContent).toBe(
+    "**not bold**\n- not a list",
+  );
+
+  const plain = contentMarkup({ type: "text", text: "**literal**" });
+  expect(plain.querySelector("strong")).toBeNull();
+});
+
+test("a reply row and the result that repeats it render the response as Markdown", () => {
+  const text = "**Done.**\n\n- one";
+
+  const doc = parseHtml(
+    renderToStaticMarkup(
+      createElement(GroupedEventList, {
+        events: [
+          event(
+            "claude.activity",
+            {
+              type: "result",
+              subtype: "success",
+              is_error: false,
+              result: text,
+            },
+            "markdown-result",
+          ),
+          event("agent.reply", { text, turn: 1 }, "markdown-reply"),
+          event("task.note", { summary: "**plain status**" }, "plain-note"),
+        ],
+      }),
+    ),
+  );
+
+  const summaries = [...doc.querySelectorAll(".activity-group-summary")];
+
+  const rendered = summaries.filter((summary) =>
+    summary.querySelector("strong"),
+  );
+
+  expect(rendered).toHaveLength(2);
+  expect(rendered.every((summary) => summary.querySelector("li"))).toBe(true);
+
+  expect(summaries.some((s) => s.textContent === "**plain status**")).toBe(
+    true,
+  );
+});
+
+test("an assistant message body is Markdown and a user message body stays plain", () => {
+  const content = [{ type: "text", text: "**bold**" }];
+
+  const body = (type: "assistant" | "user") =>
+    markup([
+      event(
+        "claude.activity",
+        { type, message: { role: type, content } },
+        `body-${type}`,
+      ),
+    ]);
+
+  expect(body("assistant").querySelector(".markdown-body strong")).not.toBe(
+    null,
+  );
+
+  expect(body("user").querySelector(".markdown-body")).toBeNull();
+
+  expect(body("user").querySelector(".activity-text")?.textContent).toBe(
+    "**bold**",
+  );
 });

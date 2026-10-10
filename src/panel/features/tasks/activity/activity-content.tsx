@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { MarkdownView } from "../../file-preview/markdown/markdown-view";
 import { label, MAX_ACTIVITY_DEPTH, record } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
 import { NestedContentOmitted } from "./nested-content-omitted";
@@ -45,14 +46,28 @@ function Prose({ text }: { text: string }): ReactNode {
   return <>{parts}</>;
 }
 
+/** The worker's own writing is Markdown; tool output and other text stay plain. */
+function Text({ text, markdown }: { text: string; markdown: boolean }) {
+  return markdown ? (
+    <div className="activity-markdown">
+      <MarkdownView content={text} />
+    </div>
+  ) : (
+    <Prose text={text} />
+  );
+}
+
 interface ActivityContentProps {
   content: unknown;
   depth?: number;
+  /** Renders text and thinking as Markdown; tool results inside stay plain. */
+  markdown?: boolean;
 }
 
 export function ActivityContent({
   content,
   depth = 0,
+  markdown = false,
 }: ActivityContentProps): ReactNode {
   if (
     content !== null &&
@@ -64,17 +79,23 @@ export function ActivityContent({
     return (
       <>
         {content.map((block, i) => (
-          <ActivityContent key={i} content={block} depth={depth + 1} />
+          <ActivityContent
+            key={i}
+            content={block}
+            depth={depth + 1}
+            markdown={markdown}
+          />
         ))}
       </>
     );
-  if (typeof content === "string") return <Prose text={content} />;
+  if (typeof content === "string")
+    return <Text text={content} markdown={markdown} />;
   const block = record(content);
   const type = block.type;
   if (type === "text" || type === "text_delta")
     return (
       <>
-        <Prose text={String(block.text ?? "")} />
+        <Text text={String(block.text ?? "")} markdown={markdown} />
         {block.citations != null && (
           <details>
             <summary>Citations</summary>
@@ -87,7 +108,7 @@ export function ActivityContent({
     return (
       <details className="activity-thinking">
         <summary>Thinking</summary>
-        <p className="activity-text">{String(block.thinking ?? "")}</p>
+        <Text text={String(block.thinking ?? "")} markdown={markdown} />
       </details>
     );
   if (type === "redacted_thinking")

@@ -86,8 +86,9 @@ reload persistence; see [State and persistence](react-ui.md#state-and-persistenc
 
 Chat is the first inspector tab, followed by Changes, Activity and Details.
 It shows requests, follow-ups, worker messages, replies and turn outcomes.
-Worker text renders as Markdown; a reply that repeats the last message replaces
-it. An outcome stays with the preceding worker response when both belong to the
+Worker and parent-agent text renders as Markdown, following the
+[Markdown rules](../src/panel/features/file-preview/README.md#markdown); what the
+user typed shows as typed. A reply that repeats the last message replaces it. An outcome stays with the preceding worker response when both belong to the
 same turn. Outcome rows show duration, cost and the timestamp on the left, with
 **Copy response** before the duration when a response is available and
 **View activity** on the right, moving below the details when space is tight.
@@ -140,6 +141,8 @@ background tasks, streamed responses and adjacent routine updates while keeping
 original SDK events for inspection. Progress moves an operation's row to the
 end. Messages, failures and lifecycle transitions remain distinct;
 stopped/cancelled operations are not shown as successful. Thinking shows a live clock, then its elapsed time.
+The worker's text, thinking and replies render as Markdown, as in Chat; tool
+input and output stay plain text, with fenced blocks shown as code.
 
 Times follow the host's locale and time zone. A group heading shows the clock,
 and its tooltip is the full date and time without a timezone label. An expanded

@@ -14,8 +14,8 @@ type ChatMessageViewProps = {
 };
 
 /**
- * One message: the user's on the right, the parent agent's labelled, and
- * the worker's rendered as Markdown, with its replies standing out.
+ * One message: the user's on the right as typed, the parent agent's labelled,
+ * and the agents' rendered as Markdown, with the worker's replies standing out.
  */
 export function ChatMessageView({
   message,
@@ -23,8 +23,6 @@ export function ChatMessageView({
   streaming,
   outcome,
 }: ChatMessageViewProps) {
-  const sent = message.from !== "worker";
-
   return (
     <article
       className="chat-message"
@@ -45,8 +43,13 @@ export function ChatMessageView({
       {message.from === "parent" && (
         <div className="chat-sender">Parent agent</div>
       )}
-      {sent ? (
+      {message.from === "user" ? (
         <p className="chat-bubble">{message.text}</p>
+      ) : message.from === "parent" ? (
+        // The parent agent writes Markdown briefs; what the user typed stays literal.
+        <div className="chat-bubble">
+          <MarkdownView content={message.text} />
+        </div>
       ) : (
         <div className="chat-worker-text">
           <MarkdownView content={message.text} />

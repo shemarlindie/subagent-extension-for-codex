@@ -45,7 +45,7 @@ function RawResponse({ event, defaultOpen }: RawResponseProps) {
 export function EventBody({ event }: { event: Event }) {
   const data = event.data;
   if (event.type === "agent.message" || event.type === "agent.content")
-    return <ActivityContent content={data.content ?? data.text} />;
+    return <ActivityContent content={data.content ?? data.text} markdown />;
   if (event.type === "tool.started")
     return <ActivityValue value={data.input} />;
   if (event.type === "tool.completed")
@@ -60,7 +60,7 @@ export function EventBody({ event }: { event: Event }) {
       <>
         <p className="muted">{label(stream.title ?? "Streaming")}</p>
         {stream.content ? (
-          <ActivityContent content={stream.content} />
+          <ActivityContent content={stream.content} markdown />
         ) : (
           <ActivityValue value={stream.details} />
         )}
@@ -71,7 +71,11 @@ export function EventBody({ event }: { event: Event }) {
   if (presentation.body)
     return (
       <>
-        <ActivityContent content={presentation.body.content} />
+        {/* The worker's messages are Markdown; user messages carry tool results. */}
+        <ActivityContent
+          content={presentation.body.content}
+          markdown={data.type === "assistant"}
+        />
         {presentation.body.error != null && (
           <p className="error">{String(presentation.body.error)}</p>
         )}

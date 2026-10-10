@@ -206,7 +206,18 @@ const conversationReplies = [
 | \`.png\` | PDF | rejected |
 
 The tests cover both cases.`,
-  "Only the endpoint calls `saveUpload`; the import job uses its own writer, so it isn't affected.",
+  // Exercises response formats that need care: a footnote, a relative file
+  // link, prose that looks like HTML, a relative image and a console session.
+  `Only the endpoint calls \`saveUpload\`[^1]; the import job uses its own writer in [import/writer.ts](server/import/writer.ts:12), so it isn't affected. It returns a Promise<UploadResult> either way.
+
+![Call graph](docs/call-graph.png)
+
+\`\`\`console
+$ grep -rn saveUpload server
+server/upload.ts:14:  await saveUpload(file)
+\`\`\`
+
+[^1]: Searched with [ripgrep](https://github.com/BurntSushi/ripgrep), including tests.`,
 ];
 
 const conversationTask = new Timeline("preview-conversation", at(120), 1900);
