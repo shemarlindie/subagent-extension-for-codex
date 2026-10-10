@@ -466,6 +466,14 @@ export function definitions(
       schema: queuedMessage.extend({ message: z.string().min(1).max(20000) }),
       run: (a) => c.editQueued(owner, a.task_id, a.message_id, a.message),
     }),
+    move_user_agent_queued_message: tool({
+      description:
+        "User interface only: move a queued message to a zero-based position in the queue, after any steers the worker already has.",
+      schema: queuedMessage.extend({
+        index: z.number().int().nonnegative(),
+      }),
+      run: (a) => c.moveQueued(owner, a.task_id, a.message_id, a.index),
+    }),
     remove_user_agent_queued_message: tool({
       description:
         "User interface only: remove a queued message, whoever queued it, before its turn starts.",
@@ -593,6 +601,7 @@ export const isUserTool = (name: string) =>
     "get_user_agent_chat",
     "get_user_agent_draft",
     "edit_user_agent_queued_message",
+    "move_user_agent_queued_message",
     "remove_user_agent_queued_message",
     "resume_user_agent_queue",
     "clear_user_agent_queue",

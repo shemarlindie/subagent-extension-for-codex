@@ -1119,6 +1119,30 @@ export class Control {
   }
 
   /**
+   * Moves a queued message to `index` in the queue. Steers the worker already
+   * has stay at the front, so nothing moves ahead of them.
+   */
+  moveQueued(owner: string, id: string, messageId: string, index: number) {
+    const t = this.queueTask(owner, id);
+    const m = t.queue.find((m) => m.id === messageId);
+    if (!m) throw new Error("That message is no longer queued.");
+    if (m.recorded)
+      throw new Error("A steer the worker already has stays at the front.");
+    const before = this.queueSnapshot(t);
+    const rest = t.queue.filter((q) => q !== m);
+    const first = rest.filter((q) => q.recorded).length;
+    rest.splice(Math.min(Math.max(index, first), rest.length), 0, m);
+    t.queue = rest;
+
+    this.store.transaction(() => {
+      this.store.save(t);
+      this.queueChanged(t, before);
+    });
+
+    return t;
+  }
+
+  /**
    * Removes a queued message before it's sent. The parent agent can remove
    * only messages it queued.
    */

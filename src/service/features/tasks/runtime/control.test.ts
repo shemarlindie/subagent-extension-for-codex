@@ -1231,6 +1231,57 @@ test("a plain interrupt pauses the queue, keeping pending steers at its front, u
   await c.close();
 });
 
+test("queued messages can be reordered behind the steers the worker already has", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store } = await setup(recorder);
+  const t = await c.start("alice", input("[late]"));
+  await until(() => store.get(t.id, "alice").status === "running");
+  await c.send("alice", t.id, "Pending", "user");
+
+  const [a, , last] = [
+    await c.send("alice", t.id, "A", "user", { delivery: "queue" }),
+    await c.send("alice", t.id, "B", "user", { delivery: "queue" }),
+    await c.send("alice", t.id, "C", "user", { delivery: "queue" }),
+  ];
+
+  await c.interrupt("alice", t.id);
+  const order = () => store.get(t.id, "alice").queue.map((m) => m.message);
+  assert.deepEqual(order(), ["Pending", "A", "B", "C"]);
+
+  // Nothing moves ahead of the left-over steer, and indexes clamp.
+  c.moveQueued("alice", t.id, last.message_id, 0);
+  assert.deepEqual(order(), ["Pending", "C", "A", "B"]);
+  c.moveQueued("alice", t.id, a.message_id, 99);
+  assert.deepEqual(order(), ["Pending", "C", "B", "A"]);
+
+  const changed = eventData(store, t.id, "task.queue_changed").at(-1) as {
+    queue: { message: string }[];
+  };
+
+  assert.deepEqual(
+    changed.queue.map((m) => m.message),
+    ["Pending", "C", "B", "A"],
+  );
+
+  const pending = store.get(t.id, "alice").queue[0];
+
+  assert.throws(
+    () => c.moveQueued("alice", t.id, pending.id, 2),
+    /stays at the front/,
+  );
+
+  assert.throws(
+    () => c.moveQueued("alice", t.id, "msg_gone", 0),
+    /no longer queued/,
+  );
+
+  c.resumeQueue("alice", t.id);
+  await until(() => store.get(t.id, "alice").turn === 5);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.deepEqual(recorder.prompts.slice(1), ["Pending", "C", "B", "A"]);
+  await c.close();
+});
+
 test("queued messages can be edited and removed until sent; the parent removes only its own", async () => {
   const recorder = new PromptRecorder();
   const { c, store } = await setup(recorder);
