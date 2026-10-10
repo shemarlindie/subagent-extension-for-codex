@@ -223,6 +223,8 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
   const operations = new Map<string, ActivityGroup>();
   const messages = new Map<string, ActivityGroup>();
   const streams = new Map<string, ActivityGroup>();
+  // A turn's result row, by task, until the service records the reply that repeats it.
+  const completedTurns = new Map<string, ActivityGroup>();
 
   const add = (
     event: Event,
@@ -387,6 +389,15 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       continue;
     }
 
+    if (e.type === "agent.reply") {
+      const completed = completedTurns.get(e.task_id);
+      completedTurns.delete(e.task_id);
+
+      // The reply repeats the result its turn completed with; only the reply shows it.
+      if (completed && completed.summary === string(d.text))
+        completed.summary = undefined;
+    }
+
     if (isQuiet(e) && !activityFailed(e)) {
       const previous = adjacentStatus;
       // Only adjacent housekeeping bursts combine; messages remain in sequence.
@@ -432,6 +443,10 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
     if (thinkingSignal(e)) group.summary = undefined;
+
+    if (e.type === "agent.completed" && !activityFailed(e))
+      completedTurns.set(e.task_id, group);
+    else if (boundaries.has(key)) completedTurns.delete(e.task_id);
 
     // Generic updates need matching readable summaries; SDK messages and actionable
     // transitions retain their own rows. Every raw event remains inspectable.

@@ -1077,7 +1077,7 @@ test("housekeeping before the first thinking signal does not count as thinking",
   assert.deepEqual(thinkingSpan(group, events), { start: 12000, end: 20000 });
 });
 
-test("a turn's reply gets its own row with the reply as its summary", () => {
+test("a turn's reply gets its own row and its completion row omits the repeated text", () => {
   const groups = groupActivity([
     event(1, "agent.completed", { result: "Done." }),
     event(2, "agent.reply", { text: "Done.", turn: 1 }),
@@ -1087,9 +1087,26 @@ test("a turn's reply gets its own row with the reply as its summary", () => {
   assert.deepEqual(
     groups.map((group) => [group.title, group.summary]),
     [
-      ["Turn completed", "Done."],
+      ["Turn completed", undefined],
       ["Reply", "Done."],
       ["Task completed", undefined],
+    ],
+  );
+});
+
+test("a turn completion keeps its result when no matching reply follows", () => {
+  const groups = groupActivity([
+    event(1, "agent.completed", { result: "Done." }),
+    event(2, "agent.reply", { text: "Something else.", turn: 1 }),
+    event(3, "agent.completed", { result: "Later." }),
+  ]);
+
+  assert.deepEqual(
+    groups.map((group) => [group.title, group.summary]),
+    [
+      ["Turn completed", "Done."],
+      ["Reply", "Something else."],
+      ["Turn completed", "Later."],
     ],
   );
 });
