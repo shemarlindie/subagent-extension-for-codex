@@ -105,7 +105,7 @@ function setup(path: string, changes: Changes = data) {
   };
 }
 
-test("the preview steps through the changed files in order", async () => {
+test("the preview steps through the changed files in order, wrapping at the ends", async () => {
   const { view, show, moveTo } = setup("a.ts");
 
   await act(async () => {});
@@ -117,10 +117,9 @@ test("the preview steps through the changed files in order", async () => {
     next = view.getByRole("button", { name: "Next file" });
 
   assert.equal(position(), "1 / 3");
-  // Still focusable at the ends, so stepping there doesn't drop focus.
-  assert.equal(previous.getAttribute("aria-disabled"), "true");
+  // Back from the first file goes round to the last.
   fireEvent.click(previous);
-  assert.equal(show.mock.calls.length, 0);
+  assert.deepEqual(show.mock.lastCall, ["c.ts"]);
 
   fireEvent.click(next);
   assert.deepEqual(show.mock.lastCall, ["b.ts"]);
@@ -141,7 +140,9 @@ test("the preview steps through the changed files in order", async () => {
   assert.equal(position(), "3 / 3");
   assert.equal(root?.getAttribute("data-stale"), "false");
   assert.match(view.container.textContent ?? "", /c\.ts content/);
-  assert.equal(next.getAttribute("aria-disabled"), "true");
+  // On from the last file goes round to the first.
+  fireEvent.click(next);
+  assert.deepEqual(show.mock.lastCall, ["a.ts"]);
 
   assert.equal(
     view.getByRole("button", { name: "Diff" }).hasAttribute("data-pressed"),
@@ -270,6 +271,20 @@ test("the toolbar starts with Ask Codex and ends with Viewed", async () => {
   // A deleted file's toolbar keeps the same order.
   await moveTo("gone.ts");
   assert.deepEqual(actions(), ["Ask Codex about this file", "Viewed gone.ts"]);
+});
+
+test("a lone changed file shows its position without step buttons", async () => {
+  const { view } = setup("a.ts", { ...data, files: data.files.slice(0, 1) });
+
+  await act(async () => {});
+
+  assert.equal(
+    view.container.querySelector(".changed-file-position")?.textContent,
+    "1 / 1",
+  );
+
+  // Counted, not compared: a failing compare of elements exhausts memory.
+  assert.equal(view.container.querySelectorAll(".changed-file-step").length, 0);
 });
 
 test("sharing one file doesn't mark the next one shared", async () => {

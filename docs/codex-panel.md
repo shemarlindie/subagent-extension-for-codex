@@ -164,14 +164,18 @@ collapsed files unmount rows, and cursor pages are read to completion. Refresh
 retains the last result; failures mark it stale. Switching comparison scope
 clears the old result while loading.
 
-**Viewed** in a file's header, in the list or the preview, marks the file read
-and collapses it in the list; the header counts viewed files. A mark lasts until
-that file's changes change; the file then opens again, unread. **Preview all**
-opens the preview at the first file not yet viewed. In the preview, marking a
-file viewed moves on to the next unread one, wrapping to the start. The title
-row shows the position, such as `3 / 12`, before previous and next buttons that
-step through the files in list order. The controls stay in place and the chosen
-view carries over; the last file shows until the next one is read.
+The **Viewed** checkbox in a file's header, in the list or the preview, marks
+the file read and collapses it in the list; the header counts viewed files. It
+shows only a box, with a Mark as viewed tooltip. A mark lasts until that file's
+changes change; the file then opens again, unread. **Preview all** opens the
+preview at the first file not yet viewed.
+
+In the preview, the toolbar starts with **Ask Codex about this file** and ends
+with Viewed. Marking a file viewed moves on to the next unread one, wrapping to
+the start. The title row shows the position, such as `3 / 12`, before previous
+and next buttons that step through the files in list order, wrapping at either
+end; a lone file shows only its position. The controls stay in place and the
+chosen view carries over; the last file shows until the next one is read.
 
 Worktree headers offer branch/path and copyable checkout/diff/push commands.
 **Remove worktree** keeps the branch and asks before discarding uncommitted

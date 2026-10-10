@@ -242,12 +242,6 @@ body[data-expanded-panel="true"]
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-/* Matches a disabled button's look while keeping focus. */
-.changed-file-step[aria-disabled="true"] {
-  opacity: 0.4;
-  cursor: default;
-  background: transparent;
-}
 /* The last file shows until the next is read; dim it if that takes a moment. */
 .changed-file-preview[data-stale="true"] .file-preview-body {
   opacity: 0.6;
