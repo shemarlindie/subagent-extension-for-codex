@@ -3,10 +3,19 @@
   /* A quiet ring: visible to keyboard users without shouting. */
   --focus-ring: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
 }
-/* Native thin scrollbars retain the browser's overlay and idle-hiding behavior. */
+/* Custom thumbs disappear on idle without changing the scrollbar's width. */
 * {
   scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+[data-scrollbar-active] {
   scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) transparent;
+}
+@media (forced-colors: active) {
+  *,
+  [data-scrollbar-active] {
+    scrollbar-color: auto;
+  }
 }
 .brand,
 .toolbar {

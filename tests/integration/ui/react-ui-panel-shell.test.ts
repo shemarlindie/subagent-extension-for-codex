@@ -468,8 +468,8 @@ test("the inspector stacks when its fixed header would squeeze the evidence", as
   vi.stubGlobal(
     "ResizeObserver",
     class {
-      constructor(callback: () => void) {
-        notify.push(callback);
+      constructor(callback: ResizeObserverCallback) {
+        notify.push(() => callback([], this as unknown as ResizeObserver));
       }
 
       observe() {}

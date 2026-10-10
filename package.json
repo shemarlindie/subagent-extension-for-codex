@@ -69,6 +69,7 @@
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.89.0",
     "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^4.14.3",
     "remark-gfm": "^4.0.1",
     "standardwebhooks": "^1.1.1",
     "ts-to-zod": "5.1.0",

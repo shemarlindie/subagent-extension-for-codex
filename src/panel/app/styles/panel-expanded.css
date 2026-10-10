@@ -14,15 +14,6 @@ body[data-expanded-panel="true"] .shell {
   min-height: 0;
   grid-template-rows: minmax(0, 1fr);
 }
-body[data-expanded-panel="true"] aside {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-body[data-expanded-panel="true"] #task-list {
-  flex: 1;
-}
-body[data-expanded-panel="true"] #task-list,
 body[data-expanded-panel="true"] .detail {
   min-height: 0;
   overflow-y: auto;

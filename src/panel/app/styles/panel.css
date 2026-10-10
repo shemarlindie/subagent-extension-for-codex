@@ -140,16 +140,79 @@ header .toolbar {
   white-space: nowrap;
 }
 .shell {
-  display: grid;
-  grid-template-columns: 245px minmax(0, 1fr);
   min-height: 540px;
 }
-aside {
-  min-width: 0;
+.task-list-resizer {
+  --task-list-resizer-hover-delay: 300ms;
+  position: relative;
+  z-index: 2;
+  flex: none;
+  width: 4px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.task-list-resizer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-right: 1px solid var(--color-background-secondary);
   background: var(--sidebar-bg);
-  border-right: 1px solid var(--line);
+  transition: background-color 100ms ease-out;
+}
+.task-list-resizer-grip {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  fill: currentColor;
+  pointer-events: none;
+  transition: color 100ms ease-out;
+}
+.task-list-resizer:hover .task-list-resizer-grip,
+.task-list-resizer:focus-visible .task-list-resizer-grip,
+.task-list-resizer[data-separator="active"] .task-list-resizer-grip {
+  color: var(--text);
+}
+.task-list-resizer:hover .task-list-resizer-grip,
+.task-list-resizer:hover::after {
+  transition-delay: var(--task-list-resizer-hover-delay);
+}
+.task-list-resizer[data-separator="active"] .task-list-resizer-grip,
+.task-list-resizer[data-separator="active"]::after {
+  transition-delay: 0s;
+}
+.task-list-resizer:hover::after,
+.task-list-resizer[data-separator="active"]::after {
+  background: var(--accent);
+}
+.task-list-resizer:focus-visible {
+  outline: none;
+}
+.task-list-resizer:focus-visible .task-list-resizer-grip {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+.task-layout-panel {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.task-layout-panel > aside,
+.task-layout-panel > .detail {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+#task-rail {
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar-bg);
   /* No side padding: children inset themselves so #task-list's scrollbar can reach the edge. */
-  padding: 12px 0;
+  padding: 12px 0 0;
 }
 .search {
   background: transparent;
@@ -181,12 +244,30 @@ aside {
 .list-label {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
   padding: 9px 16px;
   color: var(--muted);
   font-size: 11px;
 }
+#scope {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 #task-list {
-  padding: 0 8px;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 var(--task-list-scrollbar-gutter) 4px 8px;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+#task-list::-webkit-scrollbar {
+  display: none;
 }
 #task-list > .empty-state {
   padding: 8px 10px;
@@ -199,6 +280,55 @@ aside {
   border-color: transparent;
   padding: 10px;
   margin: 2px 0;
+}
+.task-list-scroll-area {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  --task-list-scrollbar-width: 9px;
+  --task-list-scrollbar-gutter: 5px;
+}
+.task-list-scrollbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: var(--task-list-scrollbar-width);
+  pointer-events: none;
+}
+.task-list-scrollbar-thumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 3px;
+  min-height: 24px;
+  border: 0;
+  border-radius: 3px;
+  padding: 0;
+  background: var(--muted);
+  opacity: 0;
+  touch-action: none;
+  cursor: grab;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-out);
+}
+#task-list[data-scrollbar-active]
+  + .task-list-scrollbar
+  .task-list-scrollbar-thumb,
+.task-list-scrollbar-thumb:focus-visible {
+  opacity: 0.7;
+  pointer-events: auto;
+}
+.task-list-scrollbar-thumb:active {
+  opacity: 1;
+  cursor: grabbing;
+}
+.task-list-scrollbar-thumb:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
 }
 .row[aria-current="true"] {
   background: var(--sidebar-selected);

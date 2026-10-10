@@ -1,11 +1,24 @@
 /* Narrow panels (640px and under): single-column list/detail, folded header actions. */
 @media (max-width: 640px) {
   .shell {
+    /* The library owns desktop flex sizing; narrow panels use one column. */
+    display: grid !important;
     grid-template-columns: minmax(0, 1fr);
     min-height: 420px;
   }
-  aside {
-    border-right: 0;
+  .shell > [data-panel],
+  .task-layout-panel {
+    display: contents !important;
+  }
+  .task-layout-panel > #task-rail,
+  .task-layout-panel > .detail {
+    height: auto;
+  }
+  .task-list-resizer {
+    display: none;
+  }
+  .task-list-scroll-area {
+    --task-list-scrollbar-gutter: var(--task-list-scrollbar-width);
   }
   .detail {
     padding: 18px;
@@ -13,17 +26,17 @@
   .detail.has-task {
     --detail-pad: 18px;
   }
-  body[data-selected="true"] aside {
+  body[data-selected="true"] #task-rail {
     display: none;
   }
-  body[data-selected="false"] .detail {
+  body[data-selected="false"] #detail {
     display: none;
   }
   /* Moving between the list and a task slides in the direction of travel. */
-  body[data-selected="true"] .detail {
+  body[data-selected="true"] #detail {
     animation: motion-slide-end var(--motion-base) var(--ease-out);
   }
-  body[data-selected="false"] aside {
+  body[data-selected="false"] #task-rail {
     animation: motion-slide-start var(--motion-base) var(--ease-out);
   }
   .back {

@@ -19,6 +19,7 @@ import { useListMotion } from "../../../shared/components/motion/motion";
 import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
 import { useNow } from "../../../shared/utils/use-now";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
+import { TaskListScrollbar } from "./task-list-scrollbar";
 import { rowStatus } from "./task-status";
 import { TaskStatusIcon } from "./task-status-icon";
 import { WorkerProfileIcon } from "./worker-profile-icon";
@@ -182,36 +183,44 @@ export function TaskList() {
           </span>
         </span>
       </div>
-      <div id="task-list" ref={listRef}>
-        {!state.connected ? (
-          <p className="help">
-            {state.connection === "Open through MCP"
-              ? "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui."
-              : "Waiting for the host connection."}
-          </p>
-        ) : tasks.length ? (
-          tasks.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              projectName={
-                state.repository
-                  ? undefined
-                  : ((projectNames.get(task.repository) ||
-                      task.repository.split(/[\\/]/).filter(Boolean).at(-1)) ??
-                    task.repository)
-              }
-              selected={task.id === state.selected}
-              onSelect={() => controller.run(() => controller.select(task.id))}
-            />
-          ))
-        ) : (
-          <p className="help empty-state">
-            {state.search
-              ? `No tasks match “${state.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
-              : EMPTY_FILTER[filter]}
-          </p>
-        )}
+      <div className="task-list-scroll-area">
+        <div id="task-list" ref={listRef}>
+          {!state.connected ? (
+            <p className="help">
+              {state.connection === "Open through MCP"
+                ? "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui."
+                : "Waiting for the host connection."}
+            </p>
+          ) : tasks.length ? (
+            tasks.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                projectName={
+                  state.repository
+                    ? undefined
+                    : ((projectNames.get(task.repository) ||
+                        task.repository
+                          .split(/[\\/]/)
+                          .filter(Boolean)
+                          .at(-1)) ??
+                      task.repository)
+                }
+                selected={task.id === state.selected}
+                onSelect={() =>
+                  controller.run(() => controller.select(task.id))
+                }
+              />
+            ))
+          ) : (
+            <p className="help empty-state">
+              {state.search
+                ? `No tasks match “${state.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
+                : EMPTY_FILTER[filter]}
+            </p>
+          )}
+        </div>
+        <TaskListScrollbar scrollerRef={listRef} />
       </div>
     </>
   );

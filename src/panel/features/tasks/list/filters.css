@@ -42,6 +42,8 @@
 }
 .list-count {
   display: inline-flex;
+  flex: none;
   align-items: baseline;
   gap: 8px;
+  white-space: nowrap;
 }

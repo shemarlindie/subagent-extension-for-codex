@@ -33,6 +33,56 @@ Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
   value() {},
 });
 
+if (typeof window.matchMedia !== "function") {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () =>
+      ({
+        matches: false,
+        media: "",
+        onchange: null,
+        addListener() {},
+        removeListener() {},
+        addEventListener() {},
+        removeEventListener() {},
+        dispatchEvent() {
+          return false;
+        },
+      }) as MediaQueryList,
+  });
+}
+
+if (typeof window.ResizeObserver !== "function") {
+  Object.defineProperty(window, "ResizeObserver", {
+    configurable: true,
+    value: class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+
+      observe(target: Element) {
+        const contentRect = target.getBoundingClientRect();
+
+        const size = {
+          inlineSize: contentRect.width,
+          blockSize: contentRect.height,
+        };
+
+        const entry = {
+          target,
+          contentRect,
+          borderBoxSize: [size],
+          contentBoxSize: [size],
+          devicePixelContentBoxSize: [size],
+        } as ResizeObserverEntry;
+
+        this.callback([entry], this as unknown as ResizeObserver);
+      }
+
+      unobserve(_target: Element) {}
+      disconnect() {}
+    },
+  });
+}
+
 import {
   act,
   cleanup,
@@ -265,16 +315,55 @@ export async function setup(
     );
   }
 
-  render(createElement(Harness));
+  const restorePanelGeometry = mockPanelGeometry();
 
   t.onTestFinished(() => {
     cleanup();
     controller.dispose();
+    restorePanelGeometry();
   });
+
+  render(createElement(Harness));
 
   const user = userEvent.setup({ document: document });
 
   return { controller, transport, user };
+}
+
+function mockPanelGeometry() {
+  const offsetWidth = vi
+    .spyOn(HTMLElement.prototype, "offsetWidth", "get")
+    .mockImplementation(function (this: HTMLElement) {
+      if (this.id === "task-rail-panel") return 245;
+      if (this.id === "task-inspector-panel") return 755;
+
+      return this.hasAttribute("data-separator") ? 4 : 0;
+    });
+
+  const clientWidth = vi
+    .spyOn(HTMLElement.prototype, "clientWidth", "get")
+    .mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute("data-group") ? 1004 : this.offsetWidth;
+    });
+
+  const getBoundingClientRect = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: HTMLElement) {
+      if (this.hasAttribute("data-group")) return new DOMRect(0, 0, 1004, 600);
+      if (this.id === "task-rail-panel") return new DOMRect(0, 0, 245, 600);
+      if (this.hasAttribute("data-separator"))
+        return new DOMRect(245, 0, 4, 600);
+      if (this.id === "task-inspector-panel")
+        return new DOMRect(249, 0, 755, 600);
+
+      return new DOMRect(0, 0, 0, 0);
+    });
+
+  return () => {
+    offsetWidth.mockRestore();
+    clientWidth.mockRestore();
+    getBoundingClientRect.mockRestore();
+  };
 }
 
 export async function selectOption(
