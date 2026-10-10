@@ -118,9 +118,6 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
     root = useRef<HTMLDivElement>(null),
     // Viewed was used to move on, so the next file's Viewed takes focus.
     refocusViewed = useRef(false),
-    // Ask Codex leads the toolbar; Viewed ends it, at the far right. Share is
-    // keyed by file, so "Shared with Codex" doesn't carry over to the next.
-    share = <ShareFileButton key={shown} path={shown} />,
     viewedToggle = (
       <ChangedFileViewed
         task={task}
@@ -166,7 +163,6 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             content: file.content ?? "",
             mime_type: file.mime_type,
           }}
-          leadingActions={share}
           actions={viewedToggle}
           diff={diff}
           view={view}
@@ -193,10 +189,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             <span className="view-switch view-switch-placeholder" aria-hidden>
               <span className="view-option">Source</span>
             </span>
-            <span className="toolbar-actions">
-              {share}
-              {viewedToggle}
-            </span>
+            <span className="toolbar-actions">{viewedToggle}</span>
             {progress}
           </div>
           <div className="file-preview-body">
@@ -230,8 +223,11 @@ export const changedFileDialog = defineDialog<"file">({
   // Isolated, so a path's leading dot stays put when cut from the start.
   title: ({ path }) => <bdi title={path}>{path}</bdi>,
   render: ({ task, path }) => <ChangedFilePreview task={task} path={path} />,
-  // In the title row, so they stay put and keep focus as files switch.
+  // Keep navigation mounted across files; reset sharing feedback for each path.
   headingActions: ({ task, path }) => (
-    <ChangedFileNav task={task} path={path} />
+    <div className="changed-file-heading-actions">
+      <ShareFileButton key={path} path={path} />
+      <ChangedFileNav task={task} path={path} />
+    </div>
   ),
 });

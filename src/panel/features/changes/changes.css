@@ -140,9 +140,10 @@ body[data-expanded-panel="true"]
 .diff-preview {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  font-size: 11px;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
 }
 .worktree-actions {
   display: flex;
@@ -215,13 +216,54 @@ body[data-expanded-panel="true"]
   white-space: nowrap;
 }
 /* Position and steps in the preview's title row, beside the close button. */
+.changed-file-heading-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: -3px;
+}
+@media (max-width: 640px) {
+  .dialog[data-kind="file"] .dialog-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-right: var(--dialog-pad);
+  }
+  .dialog[data-kind="file"] .dialog-heading h2 {
+    flex-basis: 100%;
+    margin-bottom: 0;
+    padding-right: 26px;
+    line-height: 20px;
+  }
+  .changed-file-heading-actions {
+    min-width: 0;
+    max-width: 100%;
+    /* Keep the sticky toolbar aligned even without sharing or step buttons. */
+    min-height: 28px;
+    margin-top: 0;
+    margin-left: auto;
+  }
+  .changed-file-heading-actions > .file-action {
+    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .changed-file-preview .file-preview-toolbar {
+    /* Title, gap, controls and bottom padding, below the sticky heading. */
+    top: 60px;
+  }
+  .changed-file-heading-actions .changed-file-position {
+    min-width: 6ch;
+  }
+}
 .changed-file-nav {
   display: flex;
   flex: none;
   align-items: center;
   gap: 2px;
-  /* Centred on the title's first line. */
-  margin-top: -3px;
   font-size: 12px;
 }
 .changed-file-nav .changed-file-step {
@@ -249,9 +291,8 @@ body[data-expanded-panel="true"]
 }
 
 /*
- * The preview's toolbar is laid out by its width alone, so stepping between
- * files never changes its height: one row when wide, two when narrow. Details
- * that don't fit are cut off rather than wrapped.
+ * The preview's toolbar uses one row when wide and two when narrow. File
+ * details are cut off; view options wrap when needed to keep actions clear.
  */
 .changed-file-preview {
   container-type: inline-size;
@@ -280,6 +321,7 @@ body[data-expanded-panel="true"]
 .changed-file-preview .file-preview-toolbar > .toolbar-actions {
   grid-area: actions;
   justify-self: end;
+  align-items: center;
 }
 .view-switch-placeholder {
   visibility: hidden;
@@ -290,5 +332,10 @@ body[data-expanded-panel="true"]
     grid-template-areas:
       "badge meta meta"
       "views views actions";
+  }
+  .changed-file-preview .file-preview-toolbar > .view-switch {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
   }
 }

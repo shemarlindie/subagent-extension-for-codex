@@ -3,6 +3,7 @@ import { useState } from "react";
 import { imageMime } from "../../../shared/workspaces/changes";
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
+import { TooltipWrapper } from "../../shared/components/tooltip";
 import { formatBytes } from "../../shared/utils/format";
 import { DiffFile } from "../file-preview/diff/diff-file";
 import type { ChangedFileEntry } from "./changed-files";
@@ -78,15 +79,15 @@ export function ChangedFileSection({
       actions={
         <>
           {previewable(file) && (
-            <Button
-              variant="ghost"
-              className="diff-preview"
-              aria-label={`Preview ${file.path}`}
-              onClick={onPreview}
-            >
-              <Icon name="eye" size={14} />
-              Preview
-            </Button>
+            <TooltipWrapper label={`Preview ${file.path}`}>
+              <Button
+                variant="ghost"
+                className="diff-preview"
+                onClick={onPreview}
+              >
+                <Icon name="eye" size={14} />
+              </Button>
+            </TooltipWrapper>
           )}
           <ViewedToggle
             path={file.path}
