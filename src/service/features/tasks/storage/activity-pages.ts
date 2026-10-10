@@ -13,8 +13,8 @@ const TALLY_CACHE_SIZE = 32;
 type Tally = { through: number; summary?: DroppedSummary };
 
 /**
- * A task's activity for the panel: the newest events after a cursor, the
- * task's event total, and a tally of the events older than the window. Tallies
+ * A task's activity for the panel: the newest events after a cursor, and a
+ * tally of the events older than the window. Tallies
  * are kept per task and extended as the log grows, so a poll counts only the
  * events that are new, not the whole history.
  */
@@ -31,7 +31,6 @@ export class ActivityPages {
     return {
       // The window holds at most EVENT_TAIL_SIZE events, so one page covers it.
       events: this.store.taskEvents(taskId, Math.max(after, start - 1)),
-      total: this.store.eventCount(taskId),
       ...(dropped ? { dropped } : {}),
     };
   }

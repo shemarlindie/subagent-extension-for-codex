@@ -35,7 +35,6 @@ test("an empty page keeps the same events array", () => {
 
   const view = mergeActivity({ events: previous }, "task", {
     events: [],
-    total: 2,
   });
 
   assert.ok(view.events === previous, "Unchanged views can skip rendering");
@@ -47,7 +46,6 @@ test("new events append and keep only the most recent tail", () => {
 
   const view = mergeActivity({ events: previous }, "task", {
     events: page,
-    total: EVENT_TAIL_SIZE + 1,
   });
 
   assert.equal(view.events.length, EVENT_TAIL_SIZE);
@@ -59,7 +57,6 @@ test("new events append and keep only the most recent tail", () => {
 test("events from another task are dropped rather than reused", () => {
   const view = mergeActivity({ events: [event(1, "other")] }, "task", {
     events: [],
-    total: 0,
   });
 
   assert.deepEqual(view.events, []);
@@ -71,7 +68,6 @@ test("the tally is the service's, and an unchanged one keeps its identity", () =
 
   const same = mergeActivity(previous, "task", {
     events: [],
-    total: 6,
     dropped: { ...dropped },
   });
 
@@ -82,7 +78,6 @@ test("the tally is the service's, and an unchanged one keeps its identity", () =
 
   const grown = mergeActivity(previous, "task", {
     events: [],
-    total: 7,
     dropped: { ...dropped, count: 6 },
   });
 
@@ -92,7 +87,6 @@ test("the tally is the service's, and an unchanged one keeps its identity", () =
 test("a page without a tally clears the note", () => {
   const view = mergeActivity({ events: [event(1)], dropped }, "task", {
     events: [],
-    total: 1,
   });
 
   assert.equal(view.dropped, undefined);

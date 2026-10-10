@@ -513,7 +513,7 @@ export function definitions(
     }),
     get_user_agent_activity: tool({
       description:
-        "User interface only: a task's activity for the panel's Activity tab: its newest events after a cursor, its event total, and a tally of the older events outside the window (the summary's count, timestamps, tool calls, messages, failures and retries).",
+        "User interface only: a task's activity for the panel's Activity tab: its newest events after a cursor, and a tally of the older events outside the window (the summary's count, timestamps, tool calls, messages, failures and retries).",
       schema: taskId.extend({
         after: z.number().int().nonnegative().default(0),
       }),

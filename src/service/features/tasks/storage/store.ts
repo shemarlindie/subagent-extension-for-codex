@@ -1,17 +1,6 @@
 import { EventEmitter } from "node:events";
 
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gt,
-  inArray,
-  lt,
-  max,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, max, or, sql } from "drizzle-orm";
 
 import { type Event } from "../../../../shared/events/types.js";
 import { type Task } from "../../../../shared/tasks/model.js";
@@ -171,17 +160,6 @@ export class Store {
       .limit(PAGE)
       .all()
       .map(decodeEvent);
-  }
-
-  /** How many events a task has, however many a page would return. */
-  eventCount(id: string): number {
-    return (
-      this.orm
-        .select({ count: count() })
-        .from(events)
-        .where(eq(events.task_id, id))
-        .get()?.count ?? 0
-    );
   }
 
   /**

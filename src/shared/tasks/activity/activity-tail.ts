@@ -20,13 +20,11 @@ export type DroppedSummary = {
 };
 
 /**
- * get_user_agent_activity's result: the newest events after a cursor, the
- * task's event total, and a tally of the older events outside the window.
+ * get_user_agent_activity's result: the newest events after a cursor, and a
+ * tally of the older events outside the window.
  */
 export type ActivityPage = {
   events: Event[];
-  /** Every event the task has, not only the ones returned. */
-  total: number;
   /** Absent when no event has fallen outside the window. */
   dropped?: DroppedSummary;
 };
@@ -84,7 +82,6 @@ export function windowActivity(events: Event[], after = 0): ActivityPage {
 
   return {
     events: events.slice(start).filter((event) => event.id > after),
-    total: events.length,
     ...(dropped ? { dropped } : {}),
   };
 }

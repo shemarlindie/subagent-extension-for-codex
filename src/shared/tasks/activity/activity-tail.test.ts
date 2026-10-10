@@ -51,7 +51,6 @@ test("a window keeps the newest events and tallies the rest", () => {
 
   const page = windowActivity(log);
 
-  assert.equal(page.total, EVENT_TAIL_SIZE + 3);
   assert.equal(page.events.length, EVENT_TAIL_SIZE);
   assert.equal(page.events[0].id, 4);
   assert.equal(page.dropped?.count, 3);
@@ -67,6 +66,5 @@ test("a window reads only the events after its cursor, and has no tally when not
     [3],
   );
 
-  assert.equal(page.total, 3);
   assert.equal(page.dropped, undefined);
 });

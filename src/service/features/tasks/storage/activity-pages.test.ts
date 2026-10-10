@@ -33,9 +33,12 @@ function fixture() {
 
   store.save(task);
 
+  // Every third event is a tool call, so the tally has both kinds to count.
+  let written = 0;
+
   const write = (count: number) => {
     for (let i = 0; i < count; i++) {
-      const n = store.eventCount(task.id);
+      const n = written++;
 
       if (n % 3 === 0) store.event(task, "tool.started", { name: "Bash" });
       else store.event(task, "agent.message", { role: "assistant" });
@@ -58,7 +61,7 @@ function everything(store: Store, id: string) {
   }
 }
 
-test("a page is the newest window, the event total, and the tally of the rest", () => {
+test("a page is the newest window and the tally of the rest", () => {
   const { store, task, write } = fixture();
   write(EVENT_TAIL_SIZE + 250);
 
@@ -66,7 +69,6 @@ test("a page is the newest window, the event total, and the tally of the rest", 
     log = everything(store, task.id);
 
   assert.deepEqual(page, windowActivity(log));
-  assert.equal(page.total, EVENT_TAIL_SIZE + 250);
   assert.equal(page.events.length, EVENT_TAIL_SIZE);
   assert.equal(page.dropped?.count, 250);
 });
@@ -86,7 +88,6 @@ test("a poll returns only the events after its cursor and extends the tally", ()
 
   assert.deepEqual(next, windowActivity(log, cursor));
   assert.equal(next.events.length, EVENT_TAIL_SIZE);
-  assert.equal(next.total, EVENT_TAIL_SIZE + 10 + 1200);
 });
 
 test("a poll with nothing new does not count the history again", () => {

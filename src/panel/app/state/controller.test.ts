@@ -99,7 +99,7 @@ class FakeTransport implements Transport {
         { provider: "claude", profiles: ["reviewer"], capabilities: {} },
       ],
       list_agent_tasks: this.tasks,
-      get_user_agent_activity: { events: [], total: 0 },
+      get_user_agent_activity: { events: [] },
       get_user_agent_change_counts: {
         scope: "task",
         files: 0,
@@ -424,7 +424,6 @@ test("delayed detail from a previous selection cannot replace current events", a
             events: [
               { id: 2, task_id: "b", type: "log", timestamp: "", data: {} },
             ],
-            total: 1,
           }
       : undefined;
 
@@ -433,7 +432,6 @@ test("delayed detail from a previous selection cannot replace current events", a
 
   gate.resolve({
     events: [{ id: 1, task_id: "a", type: "log", timestamp: "", data: {} }],
-    total: 1,
   });
 
   await first;
