@@ -116,6 +116,7 @@ function frames(variant: Variant, element: HTMLElement): Keyframe[] {
 
 interface PresenceProps {
   show: boolean;
+  as?: "div" | "span";
   variant?: Variant;
   /** False applies this change at once, for batches such as a first load that should not play. */
   animate?: boolean;
@@ -129,11 +130,13 @@ interface PresenceProps {
  */
 export function Presence({
   show,
+  as = "div",
   variant = "collapse",
   animate = true,
   children,
 }: PresenceProps) {
-  const wrapper = useRef<HTMLDivElement>(null);
+  const wrapper = useRef<HTMLElement>(null);
+  const Wrapper = as;
   const [previous, setPrevious] = useState(show);
   const [exiting, setExiting] = useState(false);
 
@@ -181,9 +184,15 @@ export function Presence({
   if (!show && !exiting) return null;
 
   return (
-    <div ref={wrapper} className="presence" inert={!show}>
+    <Wrapper
+      ref={(element) => {
+        wrapper.current = element;
+      }}
+      className="presence"
+      inert={!show}
+    >
       {show ? children : last.current}
-    </div>
+    </Wrapper>
   );
 }
 

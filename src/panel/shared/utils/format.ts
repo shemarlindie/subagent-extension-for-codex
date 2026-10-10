@@ -1,3 +1,13 @@
+const compactCount = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+/** Counts up to 999 as digits; larger counts abbreviate, such as 1.1K or 2K. */
+export function formatCount(count: number) {
+  return compactCount.format(count);
+}
+
 export function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KB", "MB", "GB"];

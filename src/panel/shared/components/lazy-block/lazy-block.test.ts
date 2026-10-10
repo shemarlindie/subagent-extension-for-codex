@@ -248,7 +248,9 @@ test("a scroll area changing size, without a window resize, also re-finds it", (
     { container: inner.element },
   );
 
-  assert.deepEqual([...watched], [inner.element]);
+  // Identity, not deep equality: deep-comparing jsdom nodes walks the document.
+  assert.equal(watched.size, 1);
+  assert.ok(watched.has(inner.element));
 
   // A taller header leaves the inner box without room, and the outer one
   // scrolls instead; only the inner box's size changed.
@@ -256,8 +258,9 @@ test("a scroll area changing size, without a window resize, also re-finds it", (
   outer.overflow(true);
   report();
   assert.equal(observers.at(-1)?.root, outer.element);
-  assert.deepEqual([...watched], [outer.element]);
+  assert.equal(watched.size, 1);
+  assert.ok(watched.has(outer.element));
 
   view.unmount();
-  assert.deepEqual([...watched], []);
+  assert.equal(watched.size, 0);
 });

@@ -18,7 +18,9 @@
   z-index: 20;
 }
 .tooltip-popup {
-  max-width: 220px;
+  /* Keep a label on one line up to the cap, so timestamps don't wrap. */
+  width: max-content;
+  max-width: 320px;
   padding: 4px 8px;
   border: 1px solid var(--line);
   border-radius: 5px;
