@@ -1311,6 +1311,16 @@ export class Controller {
     );
   }
 
+  moveQueued(task: Task, messageId: string, index: number) {
+    return this.chatAction(() =>
+      this.tool("move_user_agent_queued_message", {
+        task_id: task.id,
+        message_id: messageId,
+        index,
+      }),
+    );
+  }
+
   removeQueued(task: Task, messageId: string) {
     return this.chatAction(() =>
       this.tool("remove_user_agent_queued_message", {

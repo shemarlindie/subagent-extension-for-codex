@@ -75,7 +75,8 @@ export function ChatPanel({ task }: ChatPanelProps) {
           className="chat-scroll-latest"
           onClick={scrollToLatest}
         />
-        <MessageQueue task={task} />
+        {/* Keyed so switching tasks swaps the queue instead of animating its rows. */}
+        <MessageQueue key={task.id} task={task} />
         {/* Keyed so draft and errors stay with their task. */}
         <Composer
           key={task.id}

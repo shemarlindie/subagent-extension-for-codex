@@ -227,6 +227,7 @@ body[data-expanded-panel="true"]
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-inline: 4px;
 }
 .chat-queue-group {
   border: 1px solid var(--line);
@@ -244,10 +245,13 @@ body[data-expanded-panel="true"]
   font-size: 11px;
   color: var(--muted);
 }
-.chat-queue-controls,
-.chat-queue-actions {
+.chat-queue-controls {
   display: flex;
   gap: 10px;
+}
+.chat-queue-actions {
+  display: flex;
+  gap: 2px;
 }
 .chat-queue ul {
   list-style: none;
@@ -259,6 +263,35 @@ body[data-expanded-panel="true"]
   align-items: flex-start;
   gap: 10px;
   padding: 3px 0;
+}
+.chat-queue-item[draggable="true"] {
+  cursor: grab;
+}
+.chat-queue-item[data-dragging] {
+  opacity: 0.5;
+}
+.chat-queue-item[data-drop="before"] {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.chat-queue-item[data-drop="after"] {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+/* A fixed slot keeps text aligned on rows that can't move. */
+.chat-queue-grip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: 10px;
+  height: 1lh;
+  margin-right: -4px;
+  color: var(--muted);
+}
+.chat-queue-item[draggable="true"]:hover .chat-queue-grip {
+  color: var(--text);
+}
+.chat-queue-item:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 0;
 }
 .chat-queue-text {
   flex: 1;
@@ -280,9 +313,22 @@ body[data-expanded-panel="true"]
   field-sizing: content;
   max-height: 160px;
 }
-.chat-queue-actions button,
 .chat-queue-header button {
   font-size: 11px;
+}
+/*
+ * Edit, Remove, Save and Cancel sit on the message's first line; the slight
+ * negative margin fits the 20px button to the 19.5px line.
+ */
+.chat-queue-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-block: -0.25px;
+  padding: 0;
+  color: var(--muted);
 }
 .chat-composer {
   --composer-caret-size: 28px;

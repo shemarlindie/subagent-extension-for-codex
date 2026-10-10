@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import type { QueuedMessage } from "../../../../../shared/tasks/model";
 import {
@@ -7,34 +7,115 @@ import {
 } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
+import { Icon } from "../../../../shared/components/icons/icons";
+import { useAnimatedHeight } from "../../../../shared/components/motion/motion";
+import { TooltipWrapper } from "../../../../shared/components/tooltip";
 
 type QueuedMessageRowProps = {
   task: Task;
   message: QueuedMessage;
   onError: (error?: string) => void;
+  /** Whether the queue can be reordered, so every row keeps a grip slot. */
+  reorderable: boolean;
+  /** Whether the row can change places with another queued message. */
+  movable: boolean;
+  dragging: boolean;
+  /** Where a dragged message would land relative to this row. */
+  dropAt?: "before" | "after";
+  /** Moves the message by `offset` places; resolves whether it moved. */
+  onMove: (offset: number) => Promise<boolean>;
+  onDragStart: () => void;
+  /** Reports the pointer over the row's top or bottom half. */
+  onDragOver: (after: boolean) => void;
+  onDragEnd: () => void;
 };
 
-/** A message waiting for its turn, which can be edited or removed until then. */
+/**
+ * A message waiting for its turn, which can be edited, moved or removed until
+ * then.
+ */
 export function QueuedMessageRow({
   task,
   message,
   onError,
+  reorderable,
+  movable,
+  dragging,
+  dropAt,
+  onMove,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
 }: QueuedMessageRowProps) {
   const controller = useController(),
     busy = useSnapshot().busy,
-    [draft, setDraft] = useState<string>();
+    [draft, setDraft] = useState<string>(),
+    // Only a switch between reading and editing fades, not the first render.
+    [switched, setSwitched] = useState(false),
+    row = useRef<HTMLDivElement>(null),
+    editing = draft !== undefined,
+    canMove = movable && !editing,
+    swap = switched ? " motion-swap" : "";
+
+  useAnimatedHeight(row, editing);
+
+  /** Starts editing with `text`, or stops with nothing. */
+  const toggleEditing = (text?: string) => {
+    setSwitched(true);
+    setDraft(text);
+  };
 
   const save = async () => {
     if (!draft?.trim()) return;
     const error = await controller.editQueued(task, message.id, draft.trim());
     onError(error);
-    if (!error) setDraft(undefined);
+    if (!error) toggleEditing();
   };
 
   return (
-    <li className="chat-queue-item" data-message={message.id}>
-      {draft === undefined ? (
-        <p className="chat-queue-text">
+    <div
+      ref={row}
+      className="chat-queue-item"
+      data-message={message.id}
+      data-dragging={dragging || undefined}
+      data-drop={dropAt}
+      draggable={canMove && !busy}
+      // Stays focusable while busy, so a move in flight keeps focus.
+      tabIndex={canMove ? 0 : undefined}
+      aria-keyshortcuts={canMove ? "Alt+ArrowUp Alt+ArrowDown" : undefined}
+      onDragStart={(event) => {
+        if (!canMove || busy) return;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", message.message);
+        onDragStart();
+      }}
+      onDragOver={(event) => {
+        const box = event.currentTarget.getBoundingClientRect();
+        onDragOver(event.clientY > box.top + box.height / 2);
+      }}
+      onDragEnd={onDragEnd}
+      onKeyDown={async (event) => {
+        if (
+          !canMove ||
+          event.target !== event.currentTarget ||
+          !event.altKey ||
+          (event.key !== "ArrowUp" && event.key !== "ArrowDown")
+        )
+          return;
+        event.preventDefault();
+        if (busy) return;
+        // Reordering can move the focused row out of the DOM and back.
+        if (await onMove(event.key === "ArrowUp" ? -1 : 1))
+          row.current?.focus();
+      }}
+    >
+      {reorderable && (
+        <span className="chat-queue-grip">
+          {canMove && <Icon name="grip-vertical-double" size={10} />}
+        </span>
+      )}
+      {!editing ? (
+        <p className={`chat-queue-text${swap}`}>
           {message.from === "parent" && (
             <span className="chat-queue-sender">Parent agent · </span>
           )}
@@ -42,7 +123,7 @@ export function QueuedMessageRow({
         </p>
       ) : (
         <textarea
-          className="chat-queue-edit"
+          className={`chat-queue-edit${swap}`}
           aria-label="Queued message"
           value={draft}
           maxLength={20000}
@@ -51,7 +132,7 @@ export function QueuedMessageRow({
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();
-              setDraft(undefined);
+              toggleEditing();
             } else if (
               event.key === "Enter" &&
               !event.shiftKey &&
@@ -63,46 +144,64 @@ export function QueuedMessageRow({
           }}
         />
       )}
-      <div className="chat-queue-actions">
-        {draft === undefined ? (
+      {/* Keyed so the other action set fades in after a switch. */}
+      <div key={String(editing)} className={`chat-queue-actions${swap}`}>
+        {!editing ? (
           <>
             {/* A steer the worker already has keeps its text. */}
             {!message.recorded && (
-              <Button
-                variant="text"
-                underline
-                disabled={busy}
-                onClick={() => setDraft(message.message)}
-              >
-                Edit
-              </Button>
+              <TooltipWrapper label="Edit">
+                <Button
+                  variant="ghost"
+                  className="chat-queue-icon-button"
+                  aria-label="Edit"
+                  disabled={busy}
+                  onClick={() => toggleEditing(message.message)}
+                >
+                  <Icon name="pencil-simple" size={10} />
+                </Button>
+              </TooltipWrapper>
             )}
-            <Button
-              variant="text"
-              underline
-              disabled={busy}
-              onClick={async () =>
-                onError(await controller.removeQueued(task, message.id))
-              }
-            >
-              Remove
-            </Button>
+            <TooltipWrapper label="Remove">
+              <Button
+                variant="ghost"
+                className="chat-queue-icon-button"
+                aria-label="Remove"
+                disabled={busy}
+                onClick={async () =>
+                  onError(await controller.removeQueued(task, message.id))
+                }
+              >
+                <Icon name="close" size={10} />
+              </Button>
+            </TooltipWrapper>
           </>
         ) : (
           <>
-            <Button variant="text" underline disabled={busy} onClick={save}>
-              Save
-            </Button>
-            <Button
-              variant="text"
-              underline
-              onClick={() => setDraft(undefined)}
-            >
-              Cancel
-            </Button>
+            <TooltipWrapper label="Save">
+              <Button
+                variant="ghost"
+                className="chat-queue-icon-button"
+                aria-label="Save"
+                disabled={busy}
+                onClick={save}
+              >
+                <Icon name="check" size={10} />
+              </Button>
+            </TooltipWrapper>
+            <TooltipWrapper label="Cancel">
+              <Button
+                variant="ghost"
+                className="chat-queue-icon-button"
+                aria-label="Cancel"
+                onClick={() => toggleEditing()}
+              >
+                <Icon name="minus" size={10} />
+              </Button>
+            </TooltipWrapper>
           </>
         )}
       </div>
-    </li>
+    </div>
   );
 }

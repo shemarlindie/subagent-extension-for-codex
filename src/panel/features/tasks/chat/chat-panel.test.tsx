@@ -777,7 +777,7 @@ test("pending steers can be sent now, and a paused queue resumed, cleared, edite
     queue_paused: true,
   });
 
-  assert.ok(view.getByText("Sent after the next tool call"));
+  assert.ok(view.getByText("Steer"));
   assert.ok(view.getByText("Queue paused · 2"));
   // A steer the worker already has keeps its text.
   assert.equal(view.getAllByRole("button", { name: "Edit" }).length, 1);
@@ -809,6 +809,70 @@ test("pending steers can be sent now, and a paused queue resumed, cleared, edite
     [
       "edit_user_agent_queued_message",
       { task_id: "task-1", message_id: "msg_q", message: "Edited" },
+    ],
+  ]);
+});
+
+test("queued messages reorder by dragging or Alt+arrows, behind a left-over steer", async () => {
+  const queued = (id: string, message: string) => ({
+    id,
+    message,
+    from: "user" as const,
+    delivery: "queue" as const,
+  });
+
+  const { tool, view } = setup({
+    status: "running",
+    queue: [
+      { ...queued("msg_l", "Left over"), delivery: "steer", recorded: true },
+      queued("msg_a", "A"),
+      queued("msg_b", "B"),
+      queued("msg_c", "C"),
+    ],
+  });
+
+  const row = (id: string) =>
+    view.container.querySelector<HTMLElement>(`[data-message="${id}"]`)!;
+
+  // The left-over steer can't move, so its grip slot stays empty.
+  assert.equal(row("msg_l").getAttribute("draggable"), "false");
+  assert.equal(row("msg_a").getAttribute("draggable"), "true");
+  expect(row("msg_l").querySelector(".chat-queue-grip svg")).toBeNull();
+  expect(row("msg_a").querySelector(".chat-queue-grip svg")).toBeTruthy();
+
+  const moved = async (count: number) =>
+    waitFor(() => assert.equal(tool.mock.calls.length, count));
+
+  // At the top of the movable rows, Alt+Up does nothing.
+  fireEvent.keyDown(row("msg_a"), { key: "ArrowUp", altKey: true });
+  fireEvent.keyDown(row("msg_a"), { key: "ArrowDown" });
+  fireEvent.keyDown(row("msg_a"), { key: "ArrowDown", altKey: true });
+  await moved(1);
+
+  // Dropping C over the lower half of the steer lands it first after it.
+  const dataTransfer = { setData: vi.fn(), effectAllowed: "" };
+  fireEvent.dragStart(row("msg_c"), { dataTransfer });
+  assert.ok(row("msg_c").hasAttribute("data-dragging"));
+  fireEvent.dragOver(row("msg_l"), { clientY: 100 });
+  assert.equal(row("msg_a").dataset.drop, "before");
+  fireEvent.drop(row("msg_a"));
+  await moved(2);
+
+  // Dropping a row where it already is sends nothing.
+  fireEvent.dragStart(row("msg_b"), { dataTransfer });
+  fireEvent.dragOver(row("msg_b"), { clientY: 0 });
+  fireEvent.drop(row("msg_b"));
+  fireEvent.dragEnd(row("msg_b"));
+  expect(view.container.querySelector("[data-drop]")).toBeNull();
+
+  assert.deepEqual(sent(tool), [
+    [
+      "move_user_agent_queued_message",
+      { task_id: "task-1", message_id: "msg_a", index: 2 },
+    ],
+    [
+      "move_user_agent_queued_message",
+      { task_id: "task-1", message_id: "msg_c", index: 1 },
     ],
   ]);
 });
