@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { beforeEach, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   serve: vi.fn(async () => undefined),
@@ -148,7 +148,9 @@ test("sends SIGTERM only after confirmation and retries startup", async (t) => {
   const { readline, stderrWrite } = await setup(t, "yes", owner);
   const kill = vi.spyOn(process, "kill").mockReturnValue(true);
 
-  await startService();
+  await startService({ network: true });
+  expect(mocks.serve).toHaveBeenNthCalledWith(1, { network: true });
+  expect(mocks.serve).toHaveBeenNthCalledWith(2, { network: true });
 
   assert.equal(
     readline.question.mock.calls[0]?.[0],

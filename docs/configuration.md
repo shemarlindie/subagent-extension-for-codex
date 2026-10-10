@@ -14,7 +14,7 @@ Checkout commands load an optional `.env`; shell variables take precedence. The 
 | `CODEX_SUBAGENT_EXTENSION_CONCURRENCY`       | `3`                                       | Maximum active tasks, 1–20.                                                                                           |
 | `CODEX_SUBAGENT_EXTENSION_TOKEN`             | Generated locally                         | Admin token override, at least 32 characters.                                                                         |
 | `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`       | First `claude` on service `PATH`          | Absolute executable override; failed validation is an error rather than a fallback.                                   |
-| `PORT`                                       | `4317`                                    | Loopback listener port.                                                                                               |
+| `PORT`                                       | `4317`                                    | Service listener port (loopback by default).                                                                          |
 | `CODEX_SUBAGENT_EXTENSION_ORIGIN`            | `http://127.0.0.1:<PORT>`                 | Standalone origin and CORS allowlist.                                                                                 |
 | `CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE` | Disabled                                  | `1` returns a sample Claude mention and logs searches to `<data-directory>/mention-search.jsonl`; local testing only. |
 
@@ -119,4 +119,4 @@ Claude continues to load user, project and local Claude Code settings, including
 
 Missing sandbox dependencies or unsupported platforms fail rather than running unsandboxed. Claude Code sandbox list settings, such as excluded commands and allowed domains, can add to extension policy; `extension_locked` blocks this only for network domains.
 
-A worktree provides code separation rather than operating-system containment. Default write-profile tasks have the host user's Claude Code capabilities. The model/API harness is outside the Bash sandbox, and full-harness containment is unverified. See [implementation status](implementation-status.md) for tested boundaries. Keep this service on loopback; remote or multi-user use needs separate deployment and authentication.
+A worktree provides code separation rather than operating-system containment. Default write-profile tasks have the host user's Claude Code capabilities. The model/API harness is outside the Bash sandbox, and full-harness containment is unverified. See [implementation status](implementation-status.md) for tested boundaries. Keep this service on loopback by default. For trusted LAN development, see [local network access](development.md#access-from-your-local-network); public or multi-user use needs separate deployment and authentication.

@@ -212,6 +212,30 @@ CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev npm run dev:ui
 Codex's iframe sandbox, CSP, real host styles, and native placement are not
 reproduced, so confirm layout-sensitive changes in Codex before release.
 
+### Access from your local network
+
+Pass `--host` to either command to listen on network interfaces. Without it,
+both commands keep their existing loopback listeners:
+
+```sh
+npm run dev -- --host
+npm run dev:ui -- --host
+```
+
+On the other computer, open `http://<service-computer-LAN-IP>:5317` for the
+dev UI or `http://<service-computer-LAN-IP>:4317` for the standalone console.
+The service binds all IPv4 interfaces and prints its network URLs at startup.
+The console still requires the admin token; LAN console origins use the service computer's interface
+addresses discovered at startup. Restart after those addresses change.
+Codex and the UI proxy continue connecting through loopback.
+
+For dev UI live mode alone, only `dev:ui` needs `--host`; the service can stay
+on loopback. The dev UI proxy adds the admin token automatically, so anyone
+who can reach that UI can control the service in live mode. Use these flags
+only on a trusted local network. They bind all interfaces; firewall rules
+determine which computers can connect. Public and multi-user hosting are
+outside this development option.
+
 ## Recorded fixtures
 
 Besides the fixtures built with the typed builder in `dev/panel/scenarios/timeline.ts`,

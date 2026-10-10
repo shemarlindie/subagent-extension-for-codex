@@ -10,19 +10,19 @@ import {
   isSameProcess,
   type ProcessInfo,
 } from "./process-info.js";
-import { serve } from "./serve.js";
+import { serve, type ServeOptions } from "./serve.js";
 import {
   formatStartupOutput,
   formatStartupPrompt,
   type StartupOutputBlock,
 } from "./startup-output.js";
 
-export async function startService() {
+export async function startService(options: ServeOptions = {}) {
   try {
-    await serve();
+    await serve(options);
   } catch (error) {
     if (!(error instanceof ExistingServiceError)) throw error;
-    if (await handleExistingService(error)) await retryService();
+    if (await handleExistingService(error)) await retryService(options);
   }
 }
 
@@ -391,12 +391,12 @@ async function handleExistingService(error: ExistingServiceError) {
   }
 }
 
-async function retryService() {
+async function retryService(options: ServeOptions) {
   // Separate the retried service banner from the process-conflict output above.
   process.stderr.write("\n");
 
   try {
-    await serve();
+    await serve(options);
   } catch (error) {
     if (!(error instanceof ExistingServiceError)) throw error;
 

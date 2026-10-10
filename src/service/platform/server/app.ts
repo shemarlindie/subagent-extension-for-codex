@@ -32,9 +32,10 @@ export function application(
   htmlPath: string,
   events?: Events,
   nativeHtmlPath = htmlPath,
+  additionalOrigins: string[] = [],
 ) {
   const app = express();
-  const allowed = new Set([origin]);
+  const allowed = new Set([origin, ...additionalOrigins]);
   app.disable("x-powered-by");
 
   app.use((req, res, next) => {
@@ -82,10 +83,17 @@ export function application(
     next();
   });
 
-  const cookie = (res: express.Response, key: string) =>
+  // Use a LAN page's origin only when startup explicitly allowed its address.
+  const consoleOrigin = (req: express.Request) => {
+    const pageOrigin = `${req.protocol}://${req.get("host")}`;
+
+    return allowed.has(pageOrigin) ? pageOrigin : origin;
+  };
+
+  const cookie = (res: express.Response, key: string, sessionOrigin: string) =>
     res.setHeader(
       "Set-Cookie",
-      `ac_session=${key}; HttpOnly; Path=/; Max-Age=3600; SameSite=${origin.startsWith("https:") ? "None; Secure" : "Strict"}`,
+      `ac_session=${key}; HttpOnly; Path=/; Max-Age=3600; SameSite=${sessionOrigin.startsWith("https:") ? "None; Secure" : "Strict"}`,
     );
 
   app.get("/health", (_req, res) =>
@@ -96,11 +104,14 @@ export function application(
     }),
   );
 
-  app.get("/", async (_req, res) => {
+  app.get("/", async (req, res) => {
     res
       .type("html")
       .send(
-        (await readFile(htmlPath, "utf8")).replaceAll("__API_ORIGIN__", origin),
+        (await readFile(htmlPath, "utf8")).replaceAll(
+          "__API_ORIGIN__",
+          consoleOrigin(req),
+        ),
       );
   });
 
@@ -111,7 +122,14 @@ export function application(
       return;
     }
 
-    cookie(res, auth.session(auth.owner));
+    // Origin passed the allowlist above; an HTTP LAN login needs an HTTP cookie
+    // even when the canonical console origin is configured for HTTPS.
+    cookie(
+      res,
+      auth.session(auth.owner),
+      req.headers.origin ?? consoleOrigin(req),
+    );
+
     res.json({ ok: true });
   });
 

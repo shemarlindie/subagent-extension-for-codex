@@ -45,7 +45,7 @@ The authenticated HTTP endpoint `/mcp` serves the same task tools and MCP App fo
 
 Questions and permissions wait for an answer tied to the exact request ID. Permissions route to the user by default; user-approved settings can route them to the parent. Claude's own permission rules can allow or deny an action before it reaches that route.
 
-Use [the panel guide](docs/codex-panel.md) for delegation, Chat, Changes and project scope, and [the continuation guide](docs/setup-and-resume.md) for recovery and backups. This is a single-user loopback service; public or multi-user hosting needs separate authentication and deployment work.
+Use [the panel guide](docs/codex-panel.md) for delegation, Chat, Changes and project scope, and [the continuation guide](docs/setup-and-resume.md) for recovery and backups. This single-user service defaults to loopback. See [local network access](docs/development.md#access-from-your-local-network) for trusted LAN development; public or multi-user hosting needs separate authentication and deployment work.
 
 ## Documentation
 

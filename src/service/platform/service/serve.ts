@@ -18,11 +18,14 @@ import { Workspaces } from "../../features/workspaces/workspace.js";
 import { application } from "../server/app.js";
 import { Auth } from "../server/auth.js";
 import { lease } from "./lease.js";
+import { networkOrigins } from "./network.js";
 import { inspectProcessIdentity } from "./process-info.js";
 import { dataDirectory, packagePath } from "./runtime.js";
 import { adminToken } from "./token.js";
 
 export type ServeOptions = {
+  /** Opt in to an IPv4 listener reachable from other computers. */
+  network?: boolean;
   /**
    * The workers to run. Defaults to the configured providers (Claude); the
    * development demo passes its fixture worker.
@@ -33,11 +36,14 @@ export type ServeOptions = {
 /** Starts the HTTP service and runs it until SIGINT or SIGTERM. */
 export async function serve({
   providers: makeProviders = configuredProviders,
+  network = false,
 }: ServeOptions = {}) {
   const port = Number(process.env.PORT ?? 4317);
 
   const origin =
     process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN ?? `http://127.0.0.1:${port}`;
+
+  const lanOrigins = network ? networkOrigins(port) : [];
 
   const data = dataDirectory();
   mkdirSync(data, { recursive: true, mode: 0o700 });
@@ -115,11 +121,12 @@ export async function serve({
     packagePath("dist/app.html"),
     events,
     packagePath("dist/app.html"),
+    lanOrigins,
   );
 
   // Reserve the listener before recovery can change durable tasks or launch workers.
   app.locals.ready = false;
-  const server = app.listen(port, "127.0.0.1");
+  const server = app.listen(port, network ? "0.0.0.0" : "127.0.0.1");
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -150,6 +157,11 @@ export async function serve({
   console.error(
     `Codex subagent extension service: ${origin}\nLogin token ${tokenSource}`,
   );
+
+  if (network)
+    console.error(
+      `Network listener: 0.0.0.0:${port}\n${lanOrigins.join("\n")}`,
+    );
 
   const prune = setInterval(() => auth.prune(), 60000);
   let closing: Promise<void> | undefined;

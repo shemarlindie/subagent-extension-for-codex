@@ -1,3 +1,7 @@
+import { parseArgs } from "node:util";
+
 import { startService } from "./platform/service/startup.js";
 
-await startService();
+const { values } = parseArgs({ options: { host: { type: "boolean" } } });
+
+await startService({ network: values.host });
