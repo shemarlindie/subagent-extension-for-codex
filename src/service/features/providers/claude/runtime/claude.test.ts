@@ -304,6 +304,7 @@ test("failed Claude model discovery closes the query and retries after a short c
 
 test("Claude SDK query uses native harness, resume, a plain reply, remaining budget and profile restrictions", async () => {
   const { c, events, sessions } = await context();
+  c.task.budget.max_cost_usd = 5;
   let options: Options | undefined;
   let closed = false;
 

@@ -201,7 +201,6 @@ export function BudgetFields({ workers }: { workers: Worker[] }) {
             id="cost"
             type="number"
             min="0.01"
-            max="100"
             step="0.01"
             disabled={mode === "none"}
             required={mode !== "none"}
@@ -210,8 +209,8 @@ export function BudgetFields({ workers }: { workers: Worker[] }) {
               valueAsNumber: true,
               validate: (value) =>
                 mode === "none" ||
-                (Number.isFinite(value) && value > 0 && value <= 100) ||
-                "Cost budget must be greater than zero and at most $100.",
+                (Number.isFinite(value) && value > 0) ||
+                "Cost budget must be greater than zero.",
             })}
           />
         </Field>
@@ -247,7 +246,6 @@ export function BudgetFields({ workers }: { workers: Worker[] }) {
             id="runtime"
             type="number"
             min="0"
-            max="120"
             step="any"
             disabled={runtimeMode === "none"}
             required={runtimeMode !== "none"}
@@ -256,8 +254,8 @@ export function BudgetFields({ workers }: { workers: Worker[] }) {
               valueAsNumber: true,
               validate: (value) =>
                 runtimeMode === "none" ||
-                (Number.isFinite(value) && value > 0 && value <= 120) ||
-                "Runtime limit must be greater than zero and at most 120 minutes.",
+                (Number.isFinite(value) && value > 0) ||
+                "Runtime limit must be greater than zero.",
             })}
           />
         </Field>

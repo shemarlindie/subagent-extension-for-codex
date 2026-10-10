@@ -415,7 +415,6 @@ export class Forms {
               type: "number",
               title: "Runtime budget (minutes)",
               minimum: 0.01,
-              maximum: 120,
               default: defaults.budget.max_runtime_minutes ?? 20,
             },
             use_runtime_budget: {
@@ -429,7 +428,6 @@ export class Forms {
               description:
                 "Claude checks this budget after a response, which can exceed the amount. Interrupted usage may be missing.",
               minimum: 0.01,
-              maximum: 100,
               default: defaults.budget.max_cost_usd ?? 5,
             },
             use_cost_budget: {

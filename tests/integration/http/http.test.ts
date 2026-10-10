@@ -1241,7 +1241,7 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
 
     const updated = await rpc("tools/call", {
       name: "update_agent_settings",
-      arguments: { set: { max_cost_usd: 2 } },
+      arguments: { set: { max_cost_usd: 2, use_cost_budget: true } },
     });
 
     assert.equal(updated.json.result.structuredContent.values.max_cost_usd, 2);

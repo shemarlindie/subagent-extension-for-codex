@@ -350,12 +350,19 @@ test("user defaults persist across restart, preserve omitted fields and remain o
   const { c, db } = await setup();
 
   c.settings.update("alice", {
-    set: { max_runtime_minutes: 8, default_worker_profile: "implementer" },
+    set: {
+      max_runtime_minutes: 8,
+      use_runtime_budget: true,
+      default_worker_profile: "implementer",
+    },
   });
 
-  c.settings.update("alice", { set: { max_cost_usd: 2 } });
+  c.settings.update("alice", {
+    set: { max_cost_usd: 2, use_cost_budget: true },
+  });
+
   assert.equal(c.settings.values("alice").max_runtime_minutes, 8);
-  assert.equal(c.settings.values("bob").max_runtime_minutes, 20);
+  assert.equal(c.settings.values("bob").max_runtime_minutes, null);
   const read = c.settings.read("alice");
   assert.equal(read.values.max_cost_usd, 2);
 
@@ -379,7 +386,9 @@ test("task tools honor defaults and explicit overrides without changing existing
   c.settings.update("alice", {
     set: {
       max_runtime_minutes: 9,
+      use_runtime_budget: true,
       max_cost_usd: 3,
+      use_cost_budget: true,
       default_worker_profile: "implementer",
     },
   });
@@ -402,7 +411,8 @@ test("task tools honor defaults and explicit overrides without changing existing
   });
 
   assert.equal(other.worker_profile, "reviewer");
-  assert.equal(other.budget.max_runtime_minutes, 20);
+  assert.equal(other.budget.max_runtime_minutes, null);
+  assert.equal(other.budget.max_cost_usd, null);
   await c.close();
 });
 
@@ -413,7 +423,7 @@ test("settings reject unsupported providers, invalid budgets, unknown fields and
   for (const set of [
     { default_provider: "claude", max_cost_usd: 1 },
     { max_runtime_minutes: 0 },
-    { max_cost_usd: 101 },
+    { max_cost_usd: 0 },
     { approval_policy: "allow_all" },
     {},
   ]) {
@@ -852,8 +862,9 @@ test("a turn stopped by its budget resumes after a follow-up raises it", async (
 
   await assert.rejects(
     c.send("alice", t.id, "More", "user", {
-      budget: { max_runtime_minutes: 500 },
+      budget: { max_runtime_minutes: 19 },
     }),
+    /can only be raised/,
   );
 
   assert.equal(store.get(t.id, "alice").status, "failed");
@@ -1693,7 +1704,10 @@ test("unsupported cost limits fail before task persistence and explicit null all
 
   try {
     await assert.rejects(
-      c.start("alice", input()),
+      c.start("alice", {
+        ...input(),
+        budget: { max_runtime_minutes: null, max_cost_usd: 1 },
+      }),
       /does not support cost budgets/,
     );
 
@@ -1724,7 +1738,7 @@ test("no cost limit persists in settings and explicit task limits override it", 
   });
 
   assert.equal(limited.budget.max_cost_usd, 2);
-  assert.equal(c.settings.values("bob").max_cost_usd, 5);
+  assert.equal(c.settings.values("bob").max_cost_usd, null);
   await c.close();
   const store = new Store(db);
   const { Settings } = await import("../../settings/settings.js");
@@ -1744,7 +1758,11 @@ test("a follow-up revalidates provider budget support before changing an interru
   c.stopped = true;
 
   try {
-    const task = await c.start("alice", input());
+    const task = await c.start("alice", {
+      ...input(),
+      budget: { max_runtime_minutes: null, max_cost_usd: 1 },
+    });
+
     await c.interrupt("alice", task.id);
     provider.capabilities.cost_budget = false;
 

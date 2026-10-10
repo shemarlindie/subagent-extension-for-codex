@@ -56,7 +56,7 @@ export const budgetSettingRowSchema = settingRowBaseSchema.extend({
   toggle: z.string(),
   unit: z.string(),
   min: z.number(),
-  max: z.number(),
+  max: z.number().optional(),
   amount: z.number(),
 });
 

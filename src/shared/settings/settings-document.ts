@@ -257,7 +257,6 @@ export function settingsSections(input: SectionInput): SettingSection[] {
           label: "Cost limit",
           unit: "USD",
           min: 0.01,
-          max: 100,
           amount: remembered.max_cost_usd,
         },
         {
@@ -267,7 +266,6 @@ export function settingsSections(input: SectionInput): SettingSection[] {
           label: "Runtime limit",
           unit: "mins",
           min: 0.01,
-          max: 120,
           amount: remembered.max_runtime_minutes,
         },
       ],

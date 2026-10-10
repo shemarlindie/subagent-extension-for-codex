@@ -61,14 +61,14 @@ Open **Settings** in the panel header. Values persist per user in SQLite and app
 | Worker profile          | `reviewer`                                            |
 | Workspace strategy      | `current_repo`                                        |
 | Worktree branch prefix  | `agent/`                                              |
-| Runtime limit           | 20 minutes                                            |
-| Cost limit              | $5                                                    |
+| Runtime limit           | No limit                                              |
+| Cost limit              | No limit                                              |
 | Claude permission mode  | `default`                                             |
 | Approval decision maker | `user`                                                |
 
 `get_agent_settings` returns values, reset defaults, field schemas and the sections used by the panel. `update_agent_settings` accepts ordinary defaults as `{ "set": { "max_runtime_minutes": 10 } }`, preserving omitted fields. Unknown settings, unavailable providers and invalid budgets are rejected. User-only settings require app-only `update_user_agent_settings` or authenticated console authority. Hosts must enforce app-only visibility; this is not cryptographic proof of a human decision.
 
-A budget reads as a positive number or `null` for no limit. Updates can use `use_cost_budget` and `use_runtime_budget` to disable a limit while remembering its amount. Changing an amount while disabled leaves the limit disabled; enabling restores it. Runtime bounds are 120 minutes and cost bounds are $100. Providers that cannot enforce a numeric limit reject it before execution. See [continuation and budgets](setup-and-resume.md#raise-a-task-budget) for raising limits on existing tasks.
+A budget reads as a positive number or `null` for no limit. Updates can use `use_cost_budget` and `use_runtime_budget` to disable a limit while remembering its amount. Changing an amount while disabled leaves the limit disabled; enabling restores it. The app does not impose a maximum runtime or cost limit. Providers that cannot enforce a numeric limit reject it before execution. See [continuation and budgets](setup-and-resume.md#raise-a-task-budget) for raising limits on existing tasks.
 
 Disabled providers' model defaults remain saved but hidden; an unavailable saved provider falls back to the first enabled provider.
 

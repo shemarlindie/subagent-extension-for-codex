@@ -100,27 +100,21 @@ const valuesSchema = z.strictObject({
       title: "Worktree branch prefix",
       description: settingHelp.worktree_branch_prefix,
     }),
-  max_runtime_minutes: z.number().positive().max(120).nullable().meta({
+  max_runtime_minutes: z.number().positive().nullable().meta({
     title: "Runtime limit (minutes; null means no limit)",
   }),
   max_cost_usd: z
     .number()
     .positive()
-    .max(100)
     .nullable()
     .meta({ title: "Cost limit (USD; null means no limit)" }),
 });
 
-const costAmount = z
-  .number()
-  .positive()
-  .max(100)
-  .meta({ title: "Cost limit (USD)" });
+const costAmount = z.number().positive().meta({ title: "Cost limit (USD)" });
 
 const runtimeAmount = z
   .number()
   .positive()
-  .max(120)
   .meta({ title: "Runtime limit (minutes)" });
 
 type ProviderModelKey =
@@ -226,8 +220,8 @@ export class Settings {
       default_provider: preferredSettingsProvider(this.providers()),
       default_worker_profile: "reviewer",
       default_workspace_strategy: "current_repo",
-      max_runtime_minutes: 20,
-      max_cost_usd: 5,
+      max_runtime_minutes: null,
+      max_cost_usd: null,
     };
   }
 

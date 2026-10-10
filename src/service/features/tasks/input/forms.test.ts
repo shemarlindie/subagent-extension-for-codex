@@ -192,6 +192,8 @@ test("native host delegation requests user input before starting and retries com
         repository,
         model: "accepted-model",
         reasoning_effort: "high",
+        use_runtime_budget: true,
+        use_cost_budget: true,
         description:
           "Edited complete instructions [input]\nKeep all details and evidence.",
       },
@@ -721,7 +723,13 @@ test("host delegation preserves an explicit or default choice to run without a c
     assert.equal(
       requested.result.inputRequests.form.params.requestedSchema.properties
         .use_cost_budget.default,
-      true,
+      false,
+    );
+
+    assert.equal(
+      requested.result.inputRequests.form.params.requestedSchema.properties
+        .use_runtime_budget.default,
+      false,
     );
 
     const response = {

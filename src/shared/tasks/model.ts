@@ -103,24 +103,22 @@ export const startSchema = z.object({
       max_runtime_minutes: z
         .number()
         .positive()
-        .max(120)
         .nullable()
-        .default(20)
+        .default(null)
         .describe(
-          "Runtime budget in minutes. Explicit null disables the limit.",
+          "Runtime budget in minutes. Null disables the limit; new tasks have no runtime limit by default.",
         ),
       max_cost_usd: z
         .number()
         .positive()
-        .max(100)
         .nullable()
-        .default(5)
+        .default(null)
         .describe(
-          "Provider-native cost budget in USD. Claude stops after a response reaches the budget, so a response can exceed it and interrupted usage may be missing. Explicit null disables the budget; unsupported providers reject numeric limits.",
+          "Provider-native cost budget in USD. New tasks have no cost limit by default. Claude stops after a response reaches the budget, so a response can exceed it and interrupted usage may be missing. Null disables the budget; unsupported providers reject numeric limits.",
         ),
       max_tokens: z.number().int().positive().optional(),
     })
-    .default({ max_runtime_minutes: 20, max_cost_usd: 5 }),
+    .default({ max_runtime_minutes: null, max_cost_usd: null }),
 });
 
 export type Start = z.infer<typeof startSchema>;

@@ -22,7 +22,6 @@ const budget: SettingRow = {
   label: "Cost limit",
   unit: "USD",
   min: 0.01,
-  max: 100,
   amount: 7,
 };
 

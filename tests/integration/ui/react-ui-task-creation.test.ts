@@ -346,9 +346,7 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   await user.type(runtime, "0");
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  await screen.findByText(
-    "Runtime limit must be greater than zero and at most 120 minutes.",
-  );
+  await screen.findByText("Runtime limit must be greater than zero.");
 
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,

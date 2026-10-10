@@ -52,7 +52,7 @@ export interface BudgetSettingRow extends SettingRowBase {
   toggle: string;
   unit: string;
   min: number;
-  max: number;
+  max?: number;
   /** The amount shown while the limit is off, restored when it turns on. */
   amount: number;
 }

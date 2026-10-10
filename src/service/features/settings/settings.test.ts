@@ -73,7 +73,10 @@ test("settings expose only enabled providers, nullable budgets, and a default pe
 
   // Budgets read as a number or null; the on/off switches are update-only.
   assert.equal("use_cost_budget" in result.values, false);
-  assert.equal(result.values.max_cost_usd, 5);
+  assert.equal(result.values.max_cost_usd, null);
+  assert.equal(result.values.max_runtime_minutes, null);
+  assert.equal(result.defaults.max_cost_usd, null);
+  assert.equal(result.defaults.max_runtime_minutes, null);
 
   assert.deepEqual(
     Object.keys(result.defaults).sort(),
@@ -154,7 +157,7 @@ test("settings sections have unique IDs and cover every shown value once", async
   assert.equal(new Set(listed).size, listed.length);
   assert.deepEqual([...listed].sort(), Object.keys(result.values).sort());
 
-  // Budget rows carry inclusive input bounds and the amount to show when off.
+  // Budget rows carry their input minimum and the amount to show when off.
   const budget = result.sections[0].rows.find(
     (row) => row.kind === "budget" && row.key === "max_cost_usd",
   );
@@ -164,10 +167,9 @@ test("settings sections have unique IDs and cover every shown value once", async
       budget.toggle,
       budget.unit,
       budget.min,
-      budget.max,
       budget.amount,
     ],
-    ["use_cost_budget", "USD", 0.01, 100, 5],
+    ["use_cost_budget", "USD", 0.01, 5],
   );
 
   // Agents read the same help in each field's schema description.
@@ -656,7 +658,12 @@ test("native budget toggles preserve the numeric amount across edits and restart
   const f = await fixture(t);
 
   f.settings.update("alice", {
-    set: { max_cost_usd: 7, max_runtime_minutes: 9 },
+    set: {
+      max_cost_usd: 7,
+      use_cost_budget: true,
+      max_runtime_minutes: 9,
+      use_runtime_budget: true,
+    },
   });
 
   const disabled = f.settings.update("alice", {
@@ -717,7 +724,7 @@ test("native budget toggles preserve the numeric amount across edits and restart
     "implementer",
   );
 
-  assert.equal(f.settings.read("bob").values.max_cost_usd, 5);
+  assert.equal(f.settings.read("bob").values.max_cost_usd, null);
 });
 
 test("removed providers fall back on effective reads without rewriting saved defaults", async (t) => {
@@ -725,7 +732,11 @@ test("removed providers fall back on effective reads without rewriting saved def
   f.setProviders(["claude", "fixture"]);
 
   f.settings.update("alice", {
-    set: { default_provider: "claude", max_runtime_minutes: 7 },
+    set: {
+      default_provider: "claude",
+      max_runtime_minutes: 7,
+      use_runtime_budget: true,
+    },
   });
 
   const persisted = f.stored();
@@ -752,6 +763,13 @@ test("removed providers fall back on effective reads without rewriting saved def
 
 test("null budget updates retain their amount and validation is atomic", async (t) => {
   const f = await fixture(t);
+
+  f.settings.update("alice", {
+    set: { max_cost_usd: 101, use_cost_budget: true },
+  });
+
+  assert.equal(f.settings.values("alice").max_cost_usd, 101);
+
   f.settings.update("alice", { set: { max_cost_usd: 13 } });
   f.settings.update("alice", { set: { max_cost_usd: null } });
 
@@ -760,12 +778,17 @@ test("null budget updates retain their amount and validation is atomic", async (
     13,
   ]);
 
+  f.settings.update("alice", {
+    set: { max_runtime_minutes: 121, use_runtime_budget: true },
+  });
+
+  assert.equal(f.settings.values("alice").max_runtime_minutes, 121);
+
   const original = f.settings.read("alice");
 
   for (const set of [
     { default_provider: "claude", max_runtime_minutes: 10 },
     { use_cost_budget: true, max_cost_usd: 0 },
-    { max_runtime_minutes: 121 },
     { use_cost_budget: "yes" },
     { unknown: true },
     {},
@@ -838,7 +861,7 @@ test("Claude session restrictions are scalar user-only settings with stored defa
   assert.equal(after.claude_sandbox, "extension_locked");
   assert.equal(after.claude_tools, "profile");
   assert.equal(after.claude_subagents, true);
-  assert.equal(after.max_runtime_minutes, 20);
+  assert.equal(after.max_runtime_minutes, null);
 
   assert.throws(() =>
     f.settings.update("alice", { set: { claude_tools: "none" } }),
