@@ -1,12 +1,5 @@
 /* Narrow panels (640px and under): single-column list/detail, folded header actions. */
 @media (max-width: 640px) {
-  /* The dropdown takes the row, and an error wraps onto its own line. */
-  .context-bar .select-trigger {
-    flex: 1 1 0;
-  }
-  .context-error {
-    flex-basis: 100%;
-  }
   .shell {
     grid-template-columns: minmax(0, 1fr);
     min-height: 420px;
@@ -42,7 +35,7 @@
     padding-inline: var(--detail-pad);
   }
   header {
-    padding: 12px;
+    padding: 6px 12px;
   }
   .toolbar .connection {
     display: none;
@@ -50,8 +43,9 @@
   header button {
     font-size: 12px;
   }
-  /* Expand/Collapse stays on the bar; the rest fold into the menu. */
-  header .toolbar-inline > :not(#expand) {
+  /* Header actions share one menu so the project controls have room. */
+  header .toolbar-inline,
+  header #delegate {
     display: none;
   }
   header .toolbar-menu {

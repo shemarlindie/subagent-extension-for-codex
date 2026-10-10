@@ -1,19 +1,20 @@
-/* Panel layout: header, context bar, task list, inspector, forms and the narrow-width base. */
+/* Panel layout: header, project controls, task list, inspector, forms and the narrow-width base. */
 header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
-  padding: 14px 18px;
+  padding: 8px 18px;
   border-bottom: 1px solid var(--line);
+}
+header[data-mode="thread"],
+header[data-mode="thread"] .toolbar {
+  align-items: center;
 }
 header strong {
   font-weight: 600;
 }
 header .mark {
   flex: none;
-}
-header .grow {
-  flex: 1;
 }
 header button {
   white-space: nowrap;
@@ -33,18 +34,17 @@ small {
   font-size: 11px;
 }
 header .brand {
+  flex: 1;
   min-width: 0;
 }
-/* Center the global status against the toolbar actions. */
-header .brand-global {
-  align-self: stretch;
-}
 .brand-text {
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 .brand-text .connection {
+  padding-bottom: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -85,13 +85,11 @@ header .brand-global {
 .inline-preview .error {
   overflow-wrap: anywhere;
 }
-.context-bar {
+.project-scope {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 8px;
-  padding: 8px;
-  border-bottom: 1px solid var(--line);
+  min-width: 0;
 }
 .worker-readiness .notice {
   margin: 8px;
@@ -104,25 +102,39 @@ header .brand-global {
   overflow-wrap: anywhere;
 }
 .context-error {
-  flex: 1;
+  padding: 8px 12px;
   min-width: 0;
   color: var(--warn);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
-.context-bar .select-trigger {
-  /* The sidebar's width less its border and the search box's margins, so the two match. */
+.project-scope .select-trigger {
   flex: 0 1 228px;
   min-width: 0;
   width: auto;
   padding: 7px 8px;
 }
-.context-bar > button {
+.project-scope > button {
   flex: none;
   align-self: stretch;
 }
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.brand-title > span {
+  flex: none;
+}
+header > .toolbar {
+  flex: none;
+}
+header .toolbar {
+  align-items: flex-end;
+}
 #project-name {
-  max-width: 45%;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

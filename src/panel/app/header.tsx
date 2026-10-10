@@ -1,12 +1,14 @@
 import { Menu } from "@base-ui/react/menu";
 import { useRef } from "react";
 
+import { ProjectScope } from "../features/projects/project-scope";
 import { Button, buttonClass } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
 import { MotionContent } from "../shared/components/motion/motion";
 import { canAnimate, MOTION } from "../shared/components/motion/motion-utils";
 import { TooltipWrapper } from "../shared/components/tooltip";
 import { useController, useSnapshot } from "./state/controller-context";
+import { projectChoices } from "./state/selectors";
 
 export function Header() {
   const controller = useController(),
@@ -34,6 +36,13 @@ export function Header() {
       }),
     settings = () => controller.run(() => controller.settings());
 
+  const projectName =
+    projectChoices(state).find(
+      (project) => project.repository === state.repository,
+    )?.name ??
+    state.repository?.split("/").at(-1) ??
+    "All projects";
+
   const status = (
     <span id="connection" className="connection muted" role="status">
       <MotionContent changeKey={state.connection}>
@@ -43,18 +52,43 @@ export function Header() {
   );
 
   return (
-    <header>
-      <div className={`brand${threadMode ? "" : " brand-global"}`}>
+    <header data-mode={threadMode ? "thread" : "global"}>
+      <div className="brand">
         {threadMode && <Icon name="worker" size={20} className="mark" />}
         <div className="brand-text">
-          {threadMode && <strong>Delegated Work</strong>}
+          {threadMode && (
+            <div className="brand-title">
+              <span>Delegated Work</span>
+              <span className="muted" aria-hidden="true">
+                |
+              </span>
+              <strong id="project-name" title={state.repository}>
+                {projectName}
+              </strong>
+            </div>
+          )}
           {status}
+          {!threadMode && <ProjectScope />}
         </div>
       </div>
-      <span className="grow" />
       <div className="toolbar">
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
+          {state.projectCandidate && (
+            <TooltipWrapper label="Add chat project">
+              <Button
+                id="add-chat-project"
+                variant="ghost"
+                className="toolbar-icon-button"
+                aria-label="Add chat project"
+                title={state.projectCandidate}
+                disabled={!state.connected || !state.scopeKnown || state.busy}
+                onClick={() => controller.addProject()}
+              >
+                <Icon name="plus" size={14} />
+              </Button>
+            </TooltipWrapper>
+          )}
           <TooltipWrapper label="Refresh tasks">
             <Button
               id="refresh"
@@ -121,9 +155,25 @@ export function Header() {
               sideOffset={4}
             >
               <Menu.Popup className="menu-popup">
+                {state.projectCandidate && (
+                  <Menu.Item
+                    className="menu-item"
+                    disabled={
+                      !state.connected || !state.scopeKnown || state.busy
+                    }
+                    onClick={() => controller.addProject()}
+                  >
+                    Add chat project
+                  </Menu.Item>
+                )}
                 <Menu.Item className="menu-item" onClick={refresh}>
                   Refresh
                 </Menu.Item>
+                {state.host.canExpand && (
+                  <Menu.Item className="menu-item" onClick={expand}>
+                    {expandLabel}
+                  </Menu.Item>
+                )}
                 {!threadMode && (
                   <Menu.Item
                     className="menu-item"
@@ -131,6 +181,15 @@ export function Header() {
                     onClick={settings}
                   >
                     Settings
+                  </Menu.Item>
+                )}
+                {!threadMode && (
+                  <Menu.Item
+                    className="menu-item"
+                    disabled={blocked}
+                    onClick={() => controller.run(() => controller.delegate())}
+                  >
+                    New Task
                   </Menu.Item>
                 )}
               </Menu.Popup>

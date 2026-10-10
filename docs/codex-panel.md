@@ -14,9 +14,12 @@ Only explicit opener scope changes are applied; unrelated tool results do not
 change the conversation.
 
 - **Thread launch:** scopes tasks to the conversation, with a read-only project
-  name/path and **Add chat project** when registration is needed.
+  name/path beside **Delegated Work** in the header. The project name is bold,
+  separated from the extension name by a pipe. **Add chat project** is the first
+  header action when registration is needed.
 - **Global launch:** shows all conversations and offers the project selector,
-  **All chats** and **Browse** to register a repository.
+  **All chats** and **Browse** to register a repository. The project selector and
+  **Browse** sit directly below the connection status within the header.
 - An explicit owned task supplies its own scope. Conflicting explicit task,
   conversation, repository or revision arguments are rejected.
 - Context resolution prefers explicit arguments, then validated optional Codex
@@ -27,6 +30,9 @@ change the conversation.
   `codex/sandbox-state-meta`; explicit context wins and invalid hints fall back.
   Conversation correlation uses explicit arguments, `threadId` and
   `openai/session`. Actual desktop delivery must be checked in the host.
+
+On narrow panels, header actions move into **More actions**, with **Add chat
+project** first when registration is needed.
 
 Changing scope invalidates reads, clears old evidence and closes unsent forms.
 A mutation already submitted cannot be retracted or automatically retried; its

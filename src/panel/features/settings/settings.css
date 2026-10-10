@@ -238,9 +238,6 @@ input[type="number"]::-webkit-inner-spin-button {
   flex-shrink: 0;
 }
 
-#project-scope {
-  min-width: 160px;
-}
 .project-selection {
   display: flex;
   align-items: center;
