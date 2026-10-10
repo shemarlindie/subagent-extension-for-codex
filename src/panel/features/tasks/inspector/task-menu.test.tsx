@@ -75,7 +75,7 @@ test.each([
   );
 
   const user = userEvent.setup();
-  await user.click(view.getByRole("button", { name: /More/ }));
+  await user.click(view.getByRole("button", { name: "Task actions" }));
   const action = await view.findByRole("menuitem", { name: "Delete task" });
   // Deleting interrupts a running task first; only another action waits.
   const enabled = status !== "busy";
@@ -111,7 +111,7 @@ test("task menu does not offer renaming", async () => {
   );
 
   const user = userEvent.setup();
-  await user.click(view.getByRole("button", { name: /More/ }));
+  await user.click(view.getByRole("button", { name: "Task actions" }));
   await view.findByRole("menuitem", { name: "Delete task" });
   assert.equal(view.queryByRole("menuitem", { name: /Rename/ }), null);
 });

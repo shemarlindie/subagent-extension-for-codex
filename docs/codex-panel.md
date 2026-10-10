@@ -31,7 +31,7 @@ change the conversation.
   Conversation correlation uses explicit arguments, `threadId` and
   `openai/session`. Actual desktop delivery must be checked in the host.
 
-On narrow panels, header actions move into **More actions**, with **Add chat
+On narrow panels, header actions move into **Panel actions**, with **Add chat
 project** first when registration is needed.
 
 Changing scope invalidates reads, clears old evidence and closes unsent forms.
@@ -81,8 +81,15 @@ reload persistence; see [State and persistence](react-ui.md#state-and-persistenc
 Chat is the first inspector tab, followed by Changes, Activity and Details.
 It shows requests, follow-ups, worker messages, replies and turn outcomes.
 Worker text renders as Markdown; a reply that repeats the last message replaces
-it. Outcome rows show turn, duration, cost and **View activity**; failures retain
-their error. Notes mark compaction, new sessions and recreated worktrees.
+it. An outcome stays with the preceding worker response when both belong to the
+same turn. Outcome rows show duration, cost and the timestamp on the left, with
+**Copy response** before the duration when a response is available and
+**View activity** on the right, moving below the details when space is tight.
+The timestamp omits seconds and the timezone. Responses from earlier days
+include the date, with the year shown only when it differs from the current year.
+Hover over the timestamp for the full date and time, including year and seconds,
+without a timezone label.
+Failures retain their error. Notes mark compaction, new sessions and recreated worktrees.
 Draft text streams with a caret and is replaced by its stored message.
 
 | Composer action                         | Behavior                                                |
@@ -202,7 +209,8 @@ text. Selecting a task can share its identity; **Ask Codex about this file/reply
 adds structured selection only when supported. Context sharing never blocks
 inspection or triggers an automatic follow-up.
 
-**Delete task** in the task's more menu stops running/queued/waiting work, then
+The circled ellipsis beside the task status opens **Task actions**, including handoff
+and deletion. **Delete task** stops running/queued/waiting work, then
 removes task history, requests, webhook deliveries and its worktree/branch/refs.
 Current-repo files stay intact. **Also delete the agent task**, off by default,
 also removes the provider session. Provider cleanup failure retains the local

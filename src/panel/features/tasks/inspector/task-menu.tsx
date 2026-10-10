@@ -11,7 +11,7 @@ import { TooltipWrapper } from "../../../shared/components/tooltip";
 
 type TaskMenuProps = { task: Task };
 
-/** More actions for the open task, beside its title and status. */
+/** Task actions beside the open task's title and status. */
 export function TaskMenu({ task }: TaskMenuProps) {
   const controller = useController(),
     state = useSnapshot(),
@@ -23,15 +23,15 @@ export function TaskMenu({ task }: TaskMenuProps) {
 
   return (
     <Menu.Root>
-      <TooltipWrapper label="More actions">
+      <TooltipWrapper label="Task actions">
         <Menu.Trigger
           id="task-menu"
           className={buttonClass("ghost", {
             className: "toolbar-icon-button task-menu",
           })}
-          aria-label="More task actions"
+          aria-label="Task actions"
         >
-          <Icon name="more-horizontal" size={14} />
+          <Icon name="more-circle" size={14} />
         </Menu.Trigger>
       </TooltipWrapper>
       <Menu.Portal>

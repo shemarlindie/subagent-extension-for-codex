@@ -162,6 +162,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  /* The 14px icon is centered in a 32px button: allow 9px beyond the content edge. */
+  padding-inline: var(--detail-pad) calc(var(--detail-pad) - 9px);
+}
+@media (max-width: 640px) {
+  .task-topline {
+    padding-inline-start: calc(var(--detail-pad) - 3px);
+  }
 }
 .task-meta {
   flex: 1;

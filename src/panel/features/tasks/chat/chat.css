@@ -92,17 +92,41 @@ body[data-expanded-panel="true"]
   }
 }
 .chat-share {
+  margin-block-start: 4px;
   font-size: 11px;
 }
 .chat-outcome {
   font-size: 11px;
   color: var(--muted);
 }
+.chat-message > .chat-outcome {
+  align-self: stretch;
+}
 .chat-outcome-line {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--chat-outcome-line-item-gap);
+}
+.chat-outcome-details {
+  display: flex;
+  flex-wrap: wrap;
+  flex: none;
+  align-items: center;
+  max-width: 100%;
+  gap: var(--chat-outcome-line-item-gap);
+}
+/* Wrap whole details so separators stay with their button or value. */
+.chat-outcome-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--chat-outcome-line-item-gap);
+  white-space: nowrap;
+}
+.chat-outcome-copy-separator {
+  /* Balance an 8px visual gap, including the copy icon's 5px button inset. */
+  margin-inline: -3px 2px;
+  opacity: 0.4;
 }
 .chat-outcome .chat-outcome-note {
   margin-bottom: 6px;
@@ -111,12 +135,8 @@ body[data-expanded-panel="true"]
 .chat-outcome[data-outcome="failed"] .chat-outcome-note {
   color: var(--danger);
 }
-.chat-outcome-line-turn {
-  display: flex;
-  align-items: center;
-  gap: var(--chat-outcome-line-item-gap);
-}
 .chat-outcome-activity {
+  flex: none;
   margin-left: auto;
   font-size: 11px;
 }
@@ -381,7 +401,7 @@ body[data-expanded-panel="true"]
   flex-direction: column;
   overflow: visible;
   margin: 0;
-  padding: 0 0 12px;
+  padding: 0 0 6px;
 }
 body[data-expanded-panel="true"] .detail:not([data-stacked]) .chat-panel .chat {
   flex: 1;

@@ -138,12 +138,12 @@ export function Header() {
           )}
         </div>
         <Menu.Root>
-          <TooltipWrapper label="More actions">
+          <TooltipWrapper label="Panel actions">
             <Menu.Trigger
               className={buttonClass("ghost", {
                 className: "toolbar-menu toolbar-icon-button",
               })}
-              aria-label="More actions"
+              aria-label="Panel actions"
             >
               <Icon name="more-horizontal" size={14} />
             </Menu.Trigger>

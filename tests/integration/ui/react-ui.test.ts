@@ -1405,12 +1405,12 @@ test("inline preview expands and collapses while preserving the selected task", 
 
 test("the header menu offers the secondary actions and runs them", async (t) => {
   const { transport, user } = await setup(t);
-  const trigger = screen.getByRole("button", { name: "More actions" });
+  const trigger = screen.getByRole("button", { name: "Panel actions" });
   await user.hover(trigger);
 
   assert.equal(
     (await screen.findByRole("tooltip")).textContent,
-    "More actions",
+    "Panel actions",
   );
 
   await user.unhover(trigger);
@@ -1453,7 +1453,7 @@ test("a thread panel leaves global actions to global launches", async (t) => {
   assertAbsent(screen.queryByRole("button", { name: "Project" }));
   assertAbsent(screen.queryByRole("button", { name: "Settings" }));
   assertAbsent(screen.queryByRole("button", { name: "New Task" }));
-  await user.click(screen.getByRole("button", { name: "More actions" }));
+  await user.click(screen.getByRole("button", { name: "Panel actions" }));
 
   assert.deepEqual(
     (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
@@ -2525,7 +2525,7 @@ test("handoff sends only after explicit submit and uses the edited message", asy
   );
 
   assertAbsent(screen.queryByRole("button", { name: "Bring to Codex" }));
-  await user.click(screen.getByRole("button", { name: "More task actions" }));
+  await user.click(screen.getByRole("button", { name: "Task actions" }));
 
   await user.click(
     await screen.findByRole("menuitem", { name: "Bring to Codex" }),
@@ -2557,6 +2557,14 @@ test("handoff sends only after explicit submit and uses the edited message", asy
 });
 
 test("completed chat turns show a quiet summary with a completion time on hover", async (t) => {
+  // Freeze the calendar without replacing the timers used by async UI interactions.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-09T18:00:00Z"));
+
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
   const timestamp = "2026-10-08T18:30:00.000Z";
 
   const { user, controller, transport } = await setup(t, (transport) => {
@@ -2581,15 +2589,24 @@ test("completed chat turns show a quiet summary with a completion time on hover"
   const row = document.querySelector(".chat-outcome")!;
   const label = row.querySelector(".chat-outcome-label")!;
   const duration = row.querySelector("time")!;
-  const turn = row.querySelector<HTMLElement>(".chat-outcome-line-turn")!;
+  const turn = row.querySelector<HTMLElement>(".chat-outcome-timestamp")!;
 
   assert.equal(label.tagName, "SPAN");
-  assert.equal(label.textContent, "1");
-  assert.equal(row.querySelector("svg")?.getAttribute("width"), "12");
+  assert.equal(label.textContent, "Oct 8, 11:30 AM");
+
+  assertAbsent(
+    within(row as HTMLElement).queryByRole("button", { name: "Copy response" }),
+  );
+
   assert.equal(duration.textContent, "1m 35s");
   assert.equal(duration.getAttribute("datetime"), timestamp);
   assert.equal(duration.title, "Response took 1m 35s");
-  assert.equal(turn.title, "Responded at Oct 8, 2026, 11:30:00 AM PDT");
+  assert.equal(turn.title, "Responded on Oct 8, 2026, 11:30:00 AM");
+
+  assert.equal(
+    row.querySelector(".chat-outcome-line")?.lastElementChild,
+    within(row as HTMLElement).getByRole("button", { name: "View activity" }),
+  );
 
   assert.equal(
     within(row as HTMLElement).getByText("$0.00").title,
@@ -2605,7 +2622,8 @@ test("completed chat turns show a quiet summary with a completion time on hover"
     }),
   );
 
-  assert.equal(turn.title, "Responded at Oct 8, 2026, 2:30:00 PM EDT");
+  assert.equal(turn.title, "Responded on Oct 8, 2026, 2:30:00 PM");
+  assert.equal(label.textContent, "Oct 8, 2:30 PM");
   assert.equal(duration.title, "Response took 1m 35s");
 
   await user.click(screen.getByRole("button", { name: "View activity" }));
@@ -2614,10 +2632,19 @@ test("completed chat turns show a quiet summary with a completion time on hover"
 
 for (const outcome of ["failed", "interrupted"] as const)
   test(`${outcome} chat turns retain their status and error beside the compact summary`, async (t) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-09T18:00:00Z"));
+
+    t.onTestFinished(() => {
+      vi.useRealTimers();
+    });
+
     const error = outcome === "failed" ? "Worker failed <script>" : undefined;
 
     await setup(t, (transport) => {
       transport.tasks[0].status = outcome;
+      transport.host.locale = "en-US";
+      transport.host.timeZone = "America/Los_Angeles";
 
       transport.chat = [
         {
@@ -2641,7 +2668,11 @@ for (const outcome of ["failed", "interrupted"] as const)
       outcome === "failed" ? "Failed" : "Interrupted",
     );
 
-    assert.equal(row.querySelector(".chat-outcome-label")?.textContent, "2");
+    assert.equal(
+      row.querySelector(".chat-outcome-label")?.textContent,
+      "Oct 8, 11:30 AM",
+    );
+
     assert.equal(row.querySelector("time")?.textContent, "1m 35s");
     assert.equal(row.querySelector(".chat-outcome-error")?.textContent, error);
     assertAbsent(row.querySelector("script"));

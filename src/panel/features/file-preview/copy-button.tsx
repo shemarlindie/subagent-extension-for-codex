@@ -11,12 +11,14 @@ type CopyButtonProps = {
   text: string;
   label?: string;
   iconOnly?: boolean;
+  iconSize?: number;
 };
 
 export function CopyButton({
   text,
   label = "Copy",
   iconOnly = false,
+  iconSize,
 }: CopyButtonProps) {
   const controller = useController();
 
@@ -61,7 +63,10 @@ export function CopyButton({
       aria-label={feedbackLabel}
       onClick={() => void copy()}
     >
-      <Icon name={copied ? "check" : "copy"} size={iconOnly ? 8 : 14} />
+      <Icon
+        name={copied ? "check" : "copy"}
+        size={iconSize ?? (iconOnly ? 8 : 14)}
+      />
       {!iconOnly && (copied ? "Copied" : "Copy")}
     </Button>
   );

@@ -70,7 +70,7 @@ test("thread header shows the named project and omits global controls", async ()
   assert.equal(view.queryByRole("button", { name: "Settings" }), null);
   assert.equal(view.queryByRole("button", { name: "New Task" }), null);
 
-  await user.click(view.getByRole("button", { name: "More actions" }));
+  await user.click(view.getByRole("button", { name: "Panel actions" }));
   await view.findByRole("menuitem", { name: "Refresh" });
   assert.equal(view.queryByRole("menuitem", { name: "Settings" }), null);
   assert.equal(view.queryByRole("menuitem", { name: "New Task" }), null);
@@ -88,7 +88,7 @@ test("Add chat project is the first menu action and invokes registration", async
     projectCandidate: "/repo",
   });
 
-  await user.click(view.getByRole("button", { name: "More actions" }));
+  await user.click(view.getByRole("button", { name: "Panel actions" }));
 
   const action = await view.findByRole("menuitem", {
     name: "Add chat project",
@@ -117,7 +117,7 @@ test.each([{ connected: false }, { scopeKnown: false }, { busy: true }])(
       true,
     );
 
-    await user.click(view.getByRole("button", { name: "More actions" }));
+    await user.click(view.getByRole("button", { name: "Panel actions" }));
 
     const action = await view.findByRole("menuitem", {
       name: "Add chat project",
@@ -135,7 +135,7 @@ test.each(["Settings", "New Task"] as const)(
     const { view, user, delegate, settings } = setup();
 
     assert.equal(view.queryByRole("button", { name: "Expand" }), null);
-    await user.click(view.getByRole("button", { name: "More actions" }));
+    await user.click(view.getByRole("button", { name: "Panel actions" }));
 
     const action = await view.findByRole("menuitem", { name: label });
 

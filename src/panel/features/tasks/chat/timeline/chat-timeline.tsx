@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 
 import { providerMetadata } from "../../../../../shared/providers/metadata.js";
+import type { ChatItem } from "../../../../../shared/tasks/conversation/chat.js";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import { statusLabel } from "../../../../app/state/selectors";
 import type { Task } from "../../../../app/state/types";
@@ -80,15 +81,18 @@ export function ChatTimeline({ task, viewportRef }: ChatTimelineProps) {
       {!items ? (
         <p className="help">Loading the conversation…</p>
       ) : (
-        items.map((item) =>
+        items.map((item, index) =>
           item.kind === "message" ? (
             <ChatMessageView
               key={item.id}
               message={item.message}
               worker={worker}
+              outcome={responseOutcome(item, items[index + 1])}
             />
           ) : item.kind === "outcome" ? (
-            <TurnOutcomeRow key={item.id} outcome={item} />
+            responseOutcome(items[index - 1], item) ? null : (
+              <TurnOutcomeRow key={item.id} outcome={item} />
+            )
           ) : (
             <ChatNoteRow key={item.id} note={item} />
           ),
@@ -118,4 +122,14 @@ export function ChatTimeline({ task, viewportRef }: ChatTimelineProps) {
       <PendingInput task={task} />
     </div>
   );
+}
+
+// Keep an adjacent outcome with the worker response from the same turn.
+function responseOutcome(message?: ChatItem, outcome?: ChatItem) {
+  return message?.kind === "message" &&
+    message.message.from === "worker" &&
+    outcome?.kind === "outcome" &&
+    message.message.turn === outcome.turn
+    ? outcome
+    : undefined;
 }

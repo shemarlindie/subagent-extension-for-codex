@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
+import { Tooltip } from "@base-ui/react/tooltip";
 import {
   act,
   cleanup,
@@ -73,7 +74,9 @@ function setup(
 
   const panel = (current: Task) => (
     <ControllerContext.Provider value={controller}>
-      <ChatPanel task={current} />
+      <Tooltip.Provider>
+        <ChatPanel task={current} />
+      </Tooltip.Provider>
     </ControllerContext.Provider>
   );
 
@@ -92,6 +95,93 @@ function setup(
 
 const sent = (tool: ReturnType<typeof setup>["tool"]) =>
   tool.mock.calls.map(([name, args]) => [name, args]);
+
+test.each([
+  { from: "worker" as const, turn: 1, grouped: true, note: false },
+  { from: "worker" as const, turn: 2, grouped: false, note: false },
+  { from: "user" as const, turn: 1, grouped: false, note: false },
+  { from: "worker" as const, turn: 1, grouped: false, note: true },
+])(
+  "outcomes group only with the preceding worker response: %j",
+  async (scenario) => {
+    const items: ChatItem[] = [
+      {
+        kind: "message",
+        id: "response",
+        event_id: 1,
+        message: {
+          id: "response",
+          event_id: 1,
+          timestamp: "2026-10-09T12:00:00Z",
+          turn: scenario.turn,
+          from: scenario.from,
+          kind: "message",
+          text: "Response text",
+        },
+      },
+      {
+        kind: "outcome",
+        id: "outcome",
+        event_id: 2,
+        timestamp: "2026-10-09T12:00:01Z",
+        turn: 1,
+        outcome: "completed",
+        runtime_ms: 1000,
+        cost_usd: 0,
+      },
+    ];
+
+    if (scenario.note) {
+      items.splice(1, 0, {
+        kind: "note",
+        id: "note",
+        event_id: 2,
+        timestamp: "2026-10-09T12:00:00Z",
+        note: "compaction",
+        text: "Context compacted",
+      });
+    }
+
+    const { view } = setup({}, [], items);
+    const outcome = view.container.querySelector('[data-chat-item="outcome"]');
+
+    assert.ok(outcome);
+    assert.equal(view.container.querySelectorAll(".chat-outcome").length, 1);
+    assert.equal(!!outcome.closest(".chat-message"), scenario.grouped);
+
+    assert.equal(
+      !!view.queryByRole("button", { name: "Copy response" }),
+      scenario.grouped,
+    );
+
+    assert.ok(view.getByRole("button", { name: "View activity" }));
+
+    if (scenario.grouped) {
+      const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+      const writeText = vi.fn(async () => {});
+
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText },
+      });
+
+      onTestFinished(() => {
+        if (original) Object.defineProperty(navigator, "clipboard", original);
+        else Reflect.deleteProperty(navigator, "clipboard");
+      });
+
+      fireEvent.click(view.getByRole("button", { name: "Copy response" }));
+
+      await waitFor(() =>
+        assert.deepEqual(writeText.mock.calls, [["Response text"]]),
+      );
+
+      assert.ok(
+        await view.findByRole("button", { name: "Copy response — copied" }),
+      );
+    }
+  },
+);
 
 test("Chat exposes a scroll-to-latest control and returns focus to its history", () => {
   const notes: ChatItem[] = Array.from({ length: 6 }, (_, index) => ({

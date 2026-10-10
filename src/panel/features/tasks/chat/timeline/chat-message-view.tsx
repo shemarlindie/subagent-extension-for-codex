@@ -1,6 +1,8 @@
+import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
 import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
 import { ShareMessageButton } from "./share-message-button";
+import { TurnOutcomeRow } from "./turn-outcome-row";
 
 type ChatMessageViewProps = {
   message: ConversationMessage;
@@ -8,6 +10,7 @@ type ChatMessageViewProps = {
   worker: string;
   /** Still being written: it shows a caret until the stored message replaces it. */
   streaming?: boolean;
+  outcome?: TurnOutcome;
 };
 
 /**
@@ -18,6 +21,7 @@ export function ChatMessageView({
   message,
   worker,
   streaming,
+  outcome,
 }: ChatMessageViewProps) {
   const sent = message.from !== "worker";
 
@@ -49,6 +53,7 @@ export function ChatMessageView({
         </div>
       )}
       {message.kind === "reply" && <ShareMessageButton id={message.id} />}
+      {outcome && <TurnOutcomeRow outcome={outcome} response={message.text} />}
     </article>
   );
 }

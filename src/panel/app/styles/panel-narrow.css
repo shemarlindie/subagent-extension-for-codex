@@ -35,7 +35,7 @@
     padding-inline: var(--detail-pad);
   }
   header {
-    padding: 6px 12px;
+    padding: 6px 10px 6px 18px;
   }
   .toolbar .connection {
     display: none;
