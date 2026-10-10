@@ -115,6 +115,28 @@ test.each([undefined, { ...loaded, data: undefined, loading: true }])(
   },
 );
 
+test("scrolling changes shows a control that returns to the top", () => {
+  const { view } = setup(loaded);
+  const scroller = view.container.querySelector<HTMLElement>(".changes");
+
+  assert.ok(scroller);
+  scroller.style.overflowY = "auto";
+
+  Object.defineProperties(scroller, {
+    scrollHeight: { configurable: true, value: 1000 },
+    clientHeight: { configurable: true, value: 200 },
+  });
+
+  scroller.scrollTop = 120;
+  fireEvent.scroll(scroller);
+
+  const scrollToTop = view.getByRole("button", { name: "Scroll to top" });
+  fireEvent.click(scrollToTop);
+
+  assert.equal(scroller.scrollTop, 0);
+  assert.equal(view.queryByRole("button", { name: "Scroll to top" }), null);
+});
+
 test("refresh keeps the mounted file and its collapsed state through loading, failure and recovery", async () => {
   const { view, update } = setup(loaded);
   const file = view.container.querySelector<HTMLDetailsElement>(".diff-file");

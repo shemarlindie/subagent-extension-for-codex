@@ -235,7 +235,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
 }
 
 export const changedFileDialog = defineDialog<"file">({
-  title: () => "File preview",
+  title: ({ path }) => path,
   render: ({ task, path }) => <ChangedFilePreview task={task} path={path} />,
   // Keep navigation mounted across files.
   headingActions: ({ task, path }) => (

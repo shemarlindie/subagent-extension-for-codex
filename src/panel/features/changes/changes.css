@@ -1,8 +1,26 @@
 /* The Changes tab: where the work is, how to reach it, and its diff. */
 .changes {
+  min-width: 0;
+}
+.changes-body {
   display: grid;
   gap: 10px;
   min-width: 0;
+}
+.changes-scroll-top-anchor {
+  position: sticky;
+  top: calc(100% - 56px);
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  height: 0;
+  pointer-events: none;
+}
+.changes-scroll-top-anchor .scroll-latest-button {
+  pointer-events: auto;
+}
+.changes-scroll-top {
+  margin-right: 4px;
 }
 .changes-header {
   display: grid;

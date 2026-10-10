@@ -88,7 +88,9 @@ function setup(path: string, changes: Changes = data, canShare = true) {
       <Tooltip.Provider>
         <div className="dialog" data-kind="file">
           <div className="dialog-heading">
-            <h2>File preview</h2>
+            <h2>
+              {changedFileDialog.title({ kind: "file", task, path, scope: 0 })}
+            </h2>
             {/* Mirror DialogHost: views and navigation share the title row. */}
             {changedFileDialog.headingActions?.({
               kind: "file",

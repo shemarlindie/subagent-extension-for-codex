@@ -1,11 +1,14 @@
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
+import { reducedMotion } from "../../shared/components/motion/motion-utils";
 import { scrollContainer } from "../../shared/utils/scroll-container";
 import {
   type ChangesReading,
   measurePosition,
   restorePosition,
 } from "./changes-reading";
+
+const TOP_SLACK_PX = 48;
 
 /**
  * Returns the reader to their place in a task's changes when the tab shows
@@ -15,6 +18,8 @@ export function useChangesScroll(reading: ChangesReading, ready: boolean) {
   const viewportRef = useRef<HTMLDivElement>(null),
     // The reader scrolled since the tab showed, so their place is current.
     scrolled = useRef(false);
+
+  const [atTop, setAtTop] = useState(true);
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
@@ -28,9 +33,11 @@ export function useChangesScroll(reading: ChangesReading, ready: boolean) {
     // restore again as the layout settles, until the reader scrolls.
     const restore = () => {
       const container = scrollContainer(viewport);
+      setAtTop(container.scrollTop <= TOP_SLACK_PX);
       if (!reading.position || container.scrollHeight <= container.clientHeight)
         return;
       restorePosition(viewport, container, reading.position);
+      setAtTop(container.scrollTop <= TOP_SLACK_PX);
       corrected = { container, top: container.scrollTop };
     };
 
@@ -52,6 +59,7 @@ export function useChangesScroll(reading: ChangesReading, ready: boolean) {
       if (!(target instanceof Node) || !target.contains(viewport)) return;
       const container = scrollContainer(viewport);
       if (target !== container) return;
+      setAtTop(container.scrollTop <= TOP_SLACK_PX);
 
       // The first event after a restore is the restore's own; consume it.
       const own =
@@ -79,5 +87,26 @@ export function useChangesScroll(reading: ChangesReading, ready: boolean) {
     };
   }, [reading, ready]);
 
-  return viewportRef;
+  const scrollToTop = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const container = scrollContainer(viewport);
+
+    if (
+      container.scrollTop > 0 &&
+      typeof container.scrollTo === "function" &&
+      !reducedMotion(container)
+    ) {
+      container.scrollTo({ top: 0, behavior: "smooth" });
+
+      return;
+    }
+
+    container.scrollTop = 0;
+    reading.position = measurePosition(viewport, container);
+    setAtTop(true);
+  }, [reading]);
+
+  return { viewportRef, scrolled: !atTop, scrollToTop };
 }

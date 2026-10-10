@@ -10,7 +10,7 @@ import { useChangesScroll } from "./use-changes-scroll";
 type HarnessProps = { reading: ChangesReading };
 
 function Harness({ reading }: HarnessProps) {
-  const viewportRef = useChangesScroll(reading, true);
+  const { viewportRef } = useChangesScroll(reading, true);
 
   return (
     <div data-testid="scroller" style={{ overflowY: "auto" }}>
