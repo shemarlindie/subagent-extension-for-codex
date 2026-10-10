@@ -347,16 +347,20 @@ signals.sdk({
 });
 
 // --- Long run: more events than the activity view keeps (EVENT_TAIL_SIZE) ----
-const longReply = `Converted 36 test files to the new runner; one needed a manual fix.
-
-\`suite-17.test.ts\` relied on global state and failed once, so I isolated its setup. \`npm test\` now passes for all 36 files.
+const longReply = `Converted the remaining 18 test files to the new runner. \`npm test\` now passes for all 36 files.
 
 The legacy runner can be removed once CI has run twice.`;
+
+const longFirstReply = `Converted the first 18 test files to the new runner. \`suite-17.test.ts\` failed once, so I isolated its setup.`;
+
+const longFollowUp = "Convert the remaining test files too.";
 
 const long = new Timeline("preview-long", at(110), 900);
 begin(long, ["Read", "Edit", "Bash"]);
 
-for (let i = 0; i < 36; i++) {
+// Two turns, so the first one falls outside the activity window and View
+// activity reads it on its own.
+function convert(i: number) {
   const file = `tests/suite-${i}.test.ts`;
   if (i % 12 === 0) rateLimit(long);
   if (i === 18)
@@ -402,7 +406,135 @@ for (let i = 0; i < 36; i++) {
     );
 }
 
-long.finish(longReply);
+for (let i = 0; i < 18; i++) convert(i);
+long.finish(longFirstReply, 1, { duration_ms: 180000, total_cost_usd: 0.81 });
+
+long.add(
+  "task.instruction",
+  {
+    message_id: "msg_preview_long_1",
+    message: longFollowUp,
+    from: "user",
+    delivery: "queue",
+  },
+  200,
+);
+
+long.add("task.queued", {}, 100);
+long.add("task.started", { turn: 2 }, 300);
+long.user(longFollowUp);
+for (let i = 18; i < 36; i++) convert(i);
+long.finish(longReply, 2, { duration_ms: 360000, total_cost_usd: 1.56 });
+
+// --- Many turns: 15 turns and about 580 events, so most turns fall outside
+// the activity window and View activity reads them on their own. ------------
+const manyTurnModules = [
+  "auth",
+  "billing",
+  "search",
+  "uploads",
+  "webhooks",
+  "reports",
+  "exports",
+  "sessions",
+  "sessions",
+  "notifications",
+  "audit-log",
+  "rate-limits",
+  "feature-flags",
+  "invoices",
+  "teams",
+];
+
+const manyTurnRequest = (turn: number) =>
+  turn === 9
+    ? "Try the sessions client again; the test server is back up."
+    : `Now move the ${manyTurnModules[turn - 1]} client onto the retry wrapper.`;
+
+const manyTurnFollowUps = Array.from({ length: 14 }, (_, i) => ({
+  id: `msg_preview_many_turns_${i + 2}`,
+  message: manyTurnRequest(i + 2),
+  from: "user" as const,
+}));
+
+const manyTurns = new Timeline("preview-many-turns", at(112), 4000);
+begin(manyTurns, ["Read", "Edit", "Bash"]);
+
+for (let turn = 1; turn <= 15; turn++) {
+  const module = manyTurnModules[turn - 1],
+    file = `src/api/${module}-client.ts`;
+
+  if (turn > 1) {
+    const followUp = manyTurnFollowUps[turn - 2];
+
+    manyTurns
+      .add(
+        "task.instruction",
+        {
+          message_id: followUp.id,
+          message: followUp.message,
+          from: "user",
+          delivery: "queue",
+        },
+        60000,
+      )
+      .add("task.queued", {}, 100)
+      .add("task.started", { turn }, 300)
+      .user(followUp.message);
+  }
+
+  if (turn === 6) rateLimit(manyTurns);
+
+  // Three passes per turn: the client, its test, then the client again.
+  for (const target of [file, file.replace(".ts", ".test.ts"), file]) {
+    manyTurns.ticks(30 + turn, 90 + turn);
+    manyTurns.think(`Check how ${target} handles failed requests.`);
+    manyTurns.say(`Updating ${target}.`);
+
+    manyTurns.tool(
+      "Read",
+      { file_path: target },
+      `1\texport async function request() {\n2\t  return fetch(url);\n3\t}`,
+      { progress: [1] },
+    );
+
+    manyTurns.tool(
+      "Edit",
+      {
+        file_path: target,
+        old_string: "return fetch(url);",
+        new_string: "return withRetry(() => fetch(url));",
+      },
+      `The file ${target} has been updated.`,
+    );
+  }
+
+  const failed = turn === 8;
+
+  manyTurns.tool(
+    "Bash",
+    { command: `npm test -- ${module}` },
+    failed
+      ? `FAIL src/api/${module}-client.test.ts\n  connect ECONNREFUSED 127.0.0.1:4010`
+      : `PASS src/api/${module}-client.test.ts`,
+    { progress: [2, 4], error: failed },
+  );
+
+  if (failed)
+    manyTurns
+      .turnEnded(turn, "failed", 52000, 0.09)
+      .add(
+        "task.failed",
+        { error: "The test server refused connections." },
+        200,
+      );
+  else
+    manyTurns.finish(
+      `Moved the ${module} client onto the retry wrapper; its tests pass.`,
+      turn,
+      { duration_ms: 40000 + turn * 3000, total_cost_usd: 0.05 + turn * 0.01 },
+    );
+}
 
 export const activityTasks: Task[] = [
   {
@@ -464,10 +596,34 @@ export const activityTasks: Task[] = [
       },
     },
     status: "completed",
+    turn: 2,
+    instructions: [
+      {
+        id: "msg_preview_long_1",
+        message: longFollowUp,
+        from: "user" as const,
+      },
+    ],
+    instructions_sent: 1,
     runtime_ms: 540000,
     cost_usd: 2.37,
     ...timestamps(110, 9),
   },
+  {
+    ...taskBase,
+    id: "preview-many-turns",
+    title: "Move the API clients onto the retry wrapper",
+    description:
+      "Wrap each API client's requests in the shared retry helper and run its tests.",
+    worker_profile: "implementer",
+    status: "completed",
+    turn: 15,
+    instructions: manyTurnFollowUps,
+    instructions_sent: manyTurnFollowUps.length,
+    runtime_ms: 1290000,
+    cost_usd: 1.95,
+    ...timestamps(112, 30),
+  },
 ];
 
-export const activityTimelines = [audit, blocks, signals, long];
+export const activityTimelines = [audit, blocks, signals, long, manyTurns];
