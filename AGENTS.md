@@ -12,7 +12,7 @@ Read the matching guide's relevant sections before working in an area; unrelated
 
 | Work area                                                  | Read                                                                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| UI components, styles or client state                      | [React UI architecture](docs/react-ui.md); [Panel behavior](docs/codex-panel.md) when changing user interactions.                  |
+| UI components, styles or client state                      | Prefer Base UI where suitable; see [React UI architecture](docs/react-ui.md) and [Panel behavior](docs/codex-panel.md).            |
 | Provider execution, permissions or session policy          | [Provider contract](docs/provider-contract.md) and relevant [Configuration](docs/configuration.md) sections.                       |
 | Claude executable selection, readiness or SDK/CLI upgrades | [Claude Code CLI](docs/claude-cli.md) and [version qualification](docs/development.md#qualifying-claude-code-versions).            |
 | Settings, budgets or repository access                     | Relevant [Configuration](docs/configuration.md) sections.                                                                          |
@@ -27,7 +27,7 @@ Read the matching guide's relevant sections before working in an area; unrelated
 - Before committing, run the relevant formatting, lint, type, test, build and browser checks against the final changes being committed. Unrelated checks do not need to run.
 - Format changed files with `npx eslint --fix <files> && npx prettier --write <files>`. ESLint enforces blank-line layout.
 - Unit tests time out after 15 seconds, and only `tests/integration` gets longer. Compare DOM nodes with `expect`, never `assert.deepEqual`; see [Checks](docs/development.md#checks).
-- HTTP integration suites need localhost TCP listeners. If the default Codex command sandbox reports `listen EPERM`, rerun the affected suites with escalated execution permission. CI needs a runner that permits it. Listener permission errors are not a reason to skip or weaken affected tests.
+- Before running HTTP integration suites, ensure the sandbox permits localhost TCP listeners (`127.0.0.1`); request escalation up front if needed. CI runners need the same access. Do not skip these tests because listener binding is denied.
 
 ### Browser checks
 
