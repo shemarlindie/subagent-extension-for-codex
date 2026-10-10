@@ -193,7 +193,8 @@
 .detail > .empty,
 [role="tabpanel"]:not([hidden]),
 .row,
-.form-error:not(:empty) {
+/* Presence owns both phases for shared field errors, so skip the global fade. */
+.form-error:not(:empty):not(.form-field-error) {
   animation: motion-fade var(--motion-base) var(--ease-out);
 }
 

@@ -10,6 +10,7 @@ import {
   SelectField,
   type SelectFieldProps,
 } from "../components/select/select-field";
+import { FormFieldError } from "./form-field-error";
 
 /** Connect library controls through RHF's supported controlled-field integration. */
 export function FormSelect<T extends FieldValues, N extends FieldPath<T>>({
@@ -52,11 +53,13 @@ export function FormSelect<T extends FieldValues, N extends FieldPath<T>>({
           onValueChange={field.onChange}
         />
       )}
-      {fieldState.error && (
-        <p id={errorId} className="form-error" role="alert">
-          {fieldState.error.message ?? "Choose a value before continuing."}
-        </p>
-      )}
+      <FormFieldError
+        id={errorId}
+        message={
+          fieldState.error?.message ??
+          (fieldState.error ? "Choose a value before continuing." : undefined)
+        }
+      />
     </>
   );
 }

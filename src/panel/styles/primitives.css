@@ -104,6 +104,11 @@
 .form-error:empty {
   display: none;
 }
+.form-field-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
 [role="tabpanel"]:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 0;

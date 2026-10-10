@@ -8,7 +8,7 @@ import {
 } from "react-hook-form";
 
 import { Button } from "../../shared/components/button/button";
-import { Presence } from "../../shared/components/motion/motion";
+import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormSelect } from "../../shared/forms/form-select";
 import { workerProfileIconName } from "../tasks/list/worker-profile-icon";
 import {
@@ -186,11 +186,11 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
             })}
           />
         </div>
-        <Presence show={Boolean(error)}>
-          <p id={errorId} className="form-error setting-error" role="alert">
-            {error?.message}
-          </p>
-        </Presence>
+        <FormFieldError
+          id={errorId}
+          className="setting-error"
+          message={error?.message}
+        />
       </div>
     );
 
@@ -229,8 +229,12 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
                 validate: (value, all) =>
                   (value === ""
                     ? all[onKey(row.key)] !== "true"
-                    : Number(value) >= row.min && Number(value) <= row.max) ||
-                  `Enter an amount from ${row.min} to ${row.max} ${row.unit}.`,
+                    : Number.isFinite(Number(value)) &&
+                      Number(value) >= row.min &&
+                      (row.max === undefined || Number(value) <= row.max)) ||
+                  (row.max === undefined
+                    ? `Enter an amount of at least ${row.min} ${row.unit}.`
+                    : `Enter an amount from ${row.min} to ${row.max} ${row.unit}.`),
               })}
             />
             <span className="setting-unit">{row.unit}</span>
@@ -246,11 +250,11 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
           control={control}
         />
       </div>
-      <Presence show={Boolean(error)}>
-        <p id={errorId} className="form-error setting-error" role="alert">
-          {error?.message}
-        </p>
-      </Presence>
+      <FormFieldError
+        id={errorId}
+        className="setting-error"
+        message={error?.message}
+      />
     </div>
   );
 }

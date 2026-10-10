@@ -1,0 +1,182 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.demo-shell {
+  width: min(100%, 920px);
+  margin-inline: auto;
+}
+
+.demo-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.demo-eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.demo-header h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.demo-intro {
+  max-width: 620px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 10px;
+}
+
+.demo-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.demo-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.demo-card-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.demo-card h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.demo-mode-tag {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.demo-preview-button {
+  flex: none;
+  padding: 5px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.demo-description {
+  min-height: 34px;
+  margin: 4px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.demo-field-example label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.demo-input {
+  display: flex;
+  align-items: center;
+  width: min(100%, 150px);
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.demo-input span {
+  padding-inline-start: 8px;
+}
+
+.demo-input input {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 7px 6px 3px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-input.is-invalid {
+  border-color: var(--danger);
+}
+
+.demo-error {
+  margin: 8px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.demo-collapse-panel {
+  margin-top: 0;
+}
+
+.demo-collapse-content {
+  padding-top: 8px;
+}
+
+.demo-collapse-content .demo-error {
+  margin: 0;
+}
+
+/* Fade the text away first so the closing height never squeezes visible glyphs. */
+.demo-collapse-panel[data-ending-style] {
+  transition-duration: var(--motion-base), var(--motion-fast);
+}
+
+@media (max-width: 560px) {
+  body {
+    padding: 16px;
+  }
+
+  .demo-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .demo-description {
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-collapse-panel {
+    transition-duration: 0ms, 0ms;
+  }
+}
