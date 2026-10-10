@@ -149,6 +149,12 @@ export class HostTransport implements Transport {
     await this.app.updateModelContext({ structuredContent });
   }
 
+  async openLink(url: string) {
+    if (this.disposed) throw new Error("The console has closed.");
+    const result = await this.app.openLink({ url });
+    if (result.isError) throw new Error("The host declined to open the link.");
+  }
+
   async expand() {
     if (this.disposed) throw new Error("The console has closed.");
     const context = this.app.getHostContext();

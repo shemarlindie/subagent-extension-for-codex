@@ -230,6 +230,11 @@ function hostApp() {
     requestDisplayMode: async (args: unknown) => {
       calls.push(args);
     },
+    openLink: async (args: { url: string }) => {
+      calls.push(args);
+
+      return { isError: args.url.includes("blocked") };
+    },
   };
 
   return {
@@ -264,6 +269,21 @@ test("host folder browsing allows native interaction time while ordinary tools u
   });
 
   assert.deepEqual(fake.toolOptions.slice(1), [undefined, undefined]);
+  transport.dispose();
+});
+
+test("host opens links through the host and reports a refusal", async () => {
+  const fake = hostApp();
+  const transport = new HostTransport(fake.app as any);
+
+  await transport.openLink("https://example.com/");
+  assert.deepEqual(fake.calls, [{ url: "https://example.com/" }]);
+
+  await assert.rejects(
+    transport.openLink("https://blocked.example.com/"),
+    /declined to open the link/,
+  );
+
   transport.dispose();
 });
 

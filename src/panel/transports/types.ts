@@ -32,5 +32,7 @@ export interface Transport {
   send?(message: string): Promise<void>;
   share?(data: Record<string, unknown>): Promise<void>;
   expand?(): Promise<void>;
+  /** Opens an external link through the host, which may block new windows. */
+  openLink?(url: string): Promise<void>;
   login?(token: string): Promise<void>;
 }
