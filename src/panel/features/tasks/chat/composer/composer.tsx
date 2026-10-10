@@ -244,20 +244,6 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
                 onKeyDown={keys}
               />
               <div className="chat-composer-actions">
-                {mode !== "idle" && message && (
-                  <TooltipWrapper
-                    label="Send after this turn (Enter)"
-                    triggerLabel="Queue"
-                  >
-                    <Button
-                      data-action="queue"
-                      disabled={busy}
-                      onClick={() => send("queue")}
-                    >
-                      Queue
-                    </Button>
-                  </TooltipWrapper>
-                )}
                 {/* While a turn runs, an empty composer's button stops it. */}
                 {mode === "idle" || (mode === "busy" && message) ? (
                   <TooltipWrapper

@@ -313,7 +313,8 @@ test("while a turn runs, Cmd/Ctrl+Enter steers, Enter queues, and an empty compo
 
   type("Mind the edge cases");
   assert.ok(view.getByRole("button", { name: "Steer" }));
-  assert.ok(view.getByRole("button", { name: "Queue" }));
+  // Enter queues, so there's no separate Queue button.
+  expect(view.queryByRole("button", { name: "Queue" })).toBeNull();
   fireEvent.keyDown(composer, { key: "Enter", metaKey: true });
   await waitFor(() => assert.equal(tool.mock.calls.length, 1));
 
