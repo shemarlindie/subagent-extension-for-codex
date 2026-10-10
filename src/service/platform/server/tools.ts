@@ -404,6 +404,16 @@ export function definitions(
         };
       },
     }),
+    raise_user_agent_budget: tool({
+      description:
+        "User interface only: apply higher task budget limits without sending a message or starting a turn. Each limit can only increase or be set to null to remove the limit.",
+      schema: taskId.extend({ budget: budgetRaiseSchema }),
+      run: (a) => {
+        const task = c.applyBudget(owner, a.task_id, a.budget);
+
+        return { budget: task.budget, status: task.status };
+      },
+    }),
     get_user_agent_chat: tool({
       description:
         "User interface only: a task's Chat after a cursor: its messages, an outcome row for each turn's end, and notes for a new session, a recreated worktree and compaction. An item read again replaces the earlier one with its id.",
@@ -569,6 +579,7 @@ export const isUserTool = (name: string) =>
     "start_user_agent_task",
     "submit_user_agent_input",
     "send_user_agent_message",
+    "raise_user_agent_budget",
     "get_user_agent_chat",
     "get_user_agent_draft",
     "edit_user_agent_queued_message",

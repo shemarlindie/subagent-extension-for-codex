@@ -17,7 +17,7 @@ The service stores its database, task worktrees, admin token and event signing k
 
 ## Raise a task budget
 
-Runtime and cost limits accumulate across turns. When a task stops at a limit, raise it in Chat or pass `budget` with the next `send_agent_message`. Each limit can only increase; `null` removes it. This updates that task, while Settings changes defaults for new tasks. Cost thresholds stop execution at response boundaries and can be exceeded by the response that triggers them.
+Runtime and cost limits accumulate across turns. When a task stops at a limit, use `raise_user_agent_budget` in Chat to apply a higher limit without sending a message, or pass `budget` with the next `send_agent_message`. Each limit can only increase; `null` removes it. This updates that task, while Settings changes defaults for new tasks. Cost thresholds stop execution at response boundaries and can be exceeded by the response that triggers them.
 
 ## Preserve service state
 

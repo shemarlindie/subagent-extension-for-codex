@@ -1196,19 +1196,23 @@ export class Controller {
     await this.refresh().catch(this.report);
   }
 
+  /** Applies a new task budget without starting the next turn. */
+  applyBudget(task: Task, budget: BudgetRaise) {
+    return this.chatAction(() =>
+      this.tool("raise_user_agent_budget", {
+        task_id: task.id,
+        budget,
+      }),
+    );
+  }
+
   /** Sends the user's message to a task, as steer, queue or interrupt. */
-  sendMessage(
-    task: Task,
-    message: string,
-    delivery: Delivery,
-    budget?: BudgetRaise,
-  ) {
+  sendMessage(task: Task, message: string, delivery: Delivery) {
     return this.chatAction(() =>
       this.tool("send_user_agent_message", {
         task_id: task.id,
         message,
         delivery,
-        ...(budget ? { budget } : {}),
       }),
     );
   }

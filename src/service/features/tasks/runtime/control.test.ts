@@ -891,6 +891,78 @@ test("a turn stopped by its budget resumes after a follow-up raises it", async (
   await c.close();
 });
 
+test("applying an increased limit persists without starting a turn", async () => {
+  const { c, store } = await setup();
+
+  const task = await c.start("alice", {
+    ...input(),
+    budget: { max_runtime_minutes: 20, max_cost_usd: 1 },
+  });
+
+  await until(() => store.get(task.id, "alice").status === "completed");
+  const failed = store.get(task.id, "alice");
+  const turn = failed.turn;
+  failed.status = "failed";
+  failed.error = "Cost budget exhausted";
+  failed.cost_usd = 0.8;
+  store.save(failed);
+
+  const updated = c.applyBudget("alice", task.id, { max_cost_usd: 2 });
+  assert.equal(updated.status, "failed");
+  assert.equal(updated.turn, turn);
+  assert.equal(updated.budget.max_cost_usd, 2);
+
+  assert.deepEqual(updated.budget_raised_for_turn, {
+    turn,
+    cost: true,
+  });
+
+  const persisted = store.get(task.id, "alice");
+  assert.equal(persisted.budget.max_cost_usd, 2);
+
+  assert.deepEqual(persisted.budget_raised_for_turn, {
+    turn,
+    cost: true,
+  });
+
+  await assert.rejects(
+    Promise.resolve().then(() =>
+      c.applyBudget("alice", task.id, { max_cost_usd: 1 }),
+    ),
+    /can only be raised/,
+  );
+
+  await c.close();
+});
+
+test("a mixed budget update only marks limits that increased", async () => {
+  const { c, store } = await setup();
+
+  const task = await c.start("alice", {
+    ...input(),
+    budget: { max_runtime_minutes: 20, max_cost_usd: 1 },
+  });
+
+  await until(() => store.get(task.id, "alice").status === "completed");
+  const failed = store.get(task.id, "alice");
+  failed.status = "failed";
+  failed.error = "Cost and runtime budget exhausted";
+  failed.cost_usd = 0.8;
+  store.save(failed);
+
+  const updated = c.applyBudget("alice", task.id, {
+    max_cost_usd: 1,
+    max_runtime_minutes: 30,
+  });
+
+  assert.deepEqual(updated.budget_raised_for_turn, {
+    turn: updated.turn,
+    runtime: true,
+  });
+
+  await c.close();
+});
+
 test("cost counts each turn once, though a resumed session reports its running total", async () => {
   class Costly extends FixtureProvider {
     totals = [0.5, 0.8, 0.3];

@@ -49,6 +49,13 @@ const storedTaskSchema = z.looseObject({
     max_cost_usd: z.number().nullable(),
     max_tokens: z.number().optional(),
   }),
+  budget_raised_for_turn: z
+    .looseObject({
+      turn: z.number().int().nonnegative(),
+      cost: z.literal(true).optional(),
+      runtime: z.literal(true).optional(),
+    })
+    .optional(),
   created_by: sender,
   status: z.enum(statuses),
   created_at: z.string(),

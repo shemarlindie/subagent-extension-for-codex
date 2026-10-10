@@ -49,12 +49,13 @@ async function setup(provider: Provider = new FixtureProvider()) {
   const user = <T>(name: string, args: Record<string, unknown>) =>
     callTool(c, "alice", name, args, "user") as Promise<T>;
 
-  const start = (description: string) =>
+  const start = (description: string, budget?: Task["budget"]) =>
     parent<Task>("start_agent_task", {
       provider: "fixture",
       description,
       workspace_strategy: "worktree",
       repository: repo,
+      ...(budget ? { budget } : {}),
     });
 
   return { c, store, parent, user, start };
@@ -78,6 +79,7 @@ test("the old one-shot tools are gone and the conversation tools replace them", 
     "get_agent_messages",
     "remove_agent_queued_message",
     "send_user_agent_message",
+    "raise_user_agent_budget",
     "edit_user_agent_queued_message",
     "remove_user_agent_queued_message",
     "resume_user_agent_queue",
@@ -185,7 +187,11 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
   const { c, store, parent, user, start } = await setup();
 
   try {
-    const t = await start("[input]");
+    const t = await start("[input]", {
+      max_runtime_minutes: null,
+      max_cost_usd: 5,
+    });
+
     await until(() => !!store.get(t.id, "alice").pending_input);
 
     await assert.rejects(
@@ -254,6 +260,25 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
       parent("send_user_agent_message", { task_id: t.id, message: "Hi" }),
       /user interface/,
     );
+
+    await assert.rejects(
+      parent("raise_user_agent_budget", {
+        task_id: t.id,
+        budget: { max_cost_usd: 6 },
+      }),
+      /user interface/,
+    );
+
+    const beforeBudgetApply = store.get(t.id, "alice");
+
+    const updated = await user<{ budget: Task["budget"]; status: string }>(
+      "raise_user_agent_budget",
+      { task_id: t.id, budget: { max_cost_usd: 6 } },
+    );
+
+    assert.equal(updated.status, beforeBudgetApply.status);
+    assert.equal(updated.budget.max_cost_usd, 6);
+    assert.equal(store.get(t.id, "alice").turn, beforeBudgetApply.turn);
   } finally {
     await c.close();
   }

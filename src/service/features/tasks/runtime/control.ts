@@ -908,6 +908,55 @@ export class Control {
     return this.store.get(id, owner);
   }
 
+  /** Applies a budget increase to an idle task without starting a turn. */
+  applyBudget(owner: string, id: string, raise: BudgetRaise) {
+    const task = this.mutableTask(owner, id);
+    if (this.active.has(id) || BUSY.includes(task.status))
+      throw new Error("A task's budget can only be changed while it is idle.");
+
+    const originalBudget = task.budget;
+    const budget = { ...originalBudget };
+    const candidate = { ...task, budget };
+    this.raiseBudget(candidate, raise);
+
+    if (
+      budget.max_runtime_minutes === task.budget.max_runtime_minutes &&
+      budget.max_cost_usd === task.budget.max_cost_usd
+    )
+      throw new Error("Choose a changed budget limit to apply.");
+
+    const costRaised =
+      budget.max_cost_usd !== null &&
+      originalBudget.max_cost_usd !== null &&
+      budget.max_cost_usd > originalBudget.max_cost_usd;
+
+    const runtimeRaised =
+      budget.max_runtime_minutes !== null &&
+      originalBudget.max_runtime_minutes !== null &&
+      budget.max_runtime_minutes > originalBudget.max_runtime_minutes;
+
+    this.validateBudgets(candidate);
+    task.budget = budget;
+
+    const previousRaise =
+      task.budget_raised_for_turn?.turn === task.turn
+        ? task.budget_raised_for_turn
+        : undefined;
+
+    // Keep a mixed-limit failure visible until each exhausted limit is changed.
+    task.budget_raised_for_turn = {
+      turn: task.turn,
+      ...(previousRaise?.cost ? { cost: true } : {}),
+      ...(previousRaise?.runtime ? { runtime: true } : {}),
+      ...(costRaised ? { cost: true } : {}),
+      ...(runtimeRaised ? { runtime: true } : {}),
+    };
+
+    this.store.save(task);
+
+    return task;
+  }
+
   /**
    * Sends a message to a task. On an idle task every delivery starts the
    * next turn (see `followUp`). While a turn runs, a steer goes into it at

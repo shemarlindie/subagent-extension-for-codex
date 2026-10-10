@@ -193,6 +193,12 @@ export interface Task extends Start {
   /** Who started the task, and so sent its first message. */
   created_by: Sender;
   status: Status;
+  /** Limits raised after this turn stopped at a budget. */
+  budget_raised_for_turn?: {
+    turn: number;
+    cost?: true;
+    runtime?: true;
+  };
   waiting_reason?: string;
   /** The dependency a task waiting for one waits on. */
   waiting_for?: string;
