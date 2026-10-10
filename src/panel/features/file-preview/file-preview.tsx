@@ -1,6 +1,7 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { type ReactNode, useDeferredValue, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useController } from "../../app/state/controller-context";
 import { formatBytes } from "../../shared/utils/format";
@@ -24,8 +25,10 @@ import { Progress } from "./progress";
 
 type FilePreviewProps = {
   file: PreviewFile;
-  /** Extra toolbar buttons, before Copy. */
-  leadingActions?: ReactNode;
+  /** Where to render the view tabs instead of keeping them in the toolbar. */
+  viewSwitcherTarget?: HTMLElement | null;
+  /** Toolbar content before Copy. */
+  beforeActions?: ReactNode;
   /** Extra toolbar buttons, after Copy. */
   actions?: ReactNode;
   /** The file's own diff; adds a Diff view after the format's views. */
@@ -42,7 +45,8 @@ type FilePreviewProps = {
 /** A file with a switcher between the views its format offers. */
 export function FilePreview({
   file,
-  leadingActions,
+  viewSwitcherTarget,
+  beforeActions,
   actions,
   diff,
   view: chosenView,
@@ -71,7 +75,25 @@ export function FilePreview({
     // The switcher follows `view` at once; the body renders `shown` in the
     // background, keeping the previous view until the new one is ready.
     shown = useDeferredValue(view),
-    rendering = shown !== view;
+    rendering = shown !== view,
+    switcher =
+      views.length > 1 || alwaysShowViews ? (
+        <ToggleGroup
+          className="view-switch"
+          aria-label="View"
+          value={[view]}
+          onValueChange={(value) => value[0] && setView(value[0])}
+        >
+          {views.map((option) => (
+            <Toggle key={option} value={option} className="view-option">
+              {viewLabel(option)}
+            </Toggle>
+          ))}
+        </ToggleGroup>
+      ) : null,
+    renderedSwitcher = viewSwitcherTarget
+      ? switcher && createPortal(switcher, viewSwitcherTarget)
+      : switcher;
 
   return (
     // Read-only, so there is no footer: the close button and Escape dismiss it.
@@ -83,22 +105,9 @@ export function FilePreview({
           <span>{formatName(format)}</span>
           <span>{formatBytes(size)}</span>
         </span>
-        {(views.length > 1 || alwaysShowViews) && (
-          <ToggleGroup
-            className="view-switch"
-            aria-label="View"
-            value={[view]}
-            onValueChange={(value) => value[0] && setView(value[0])}
-          >
-            {views.map((option) => (
-              <Toggle key={option} value={option} className="view-option">
-                {viewLabel(option)}
-              </Toggle>
-            ))}
-          </ToggleGroup>
-        )}
+        {renderedSwitcher}
         <span className="toolbar-actions">
-          {leadingActions}
+          {beforeActions}
           {/* Only show Copy where the browser exposes clipboard access. */}
           {canCopy && format !== "image" && <CopyButton text={file.content} />}
           {actions}

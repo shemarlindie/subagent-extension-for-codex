@@ -207,53 +207,55 @@ body[data-expanded-panel="true"]
   color: var(--muted);
 }
 
-/* The preview's title stays one line, cut from the start so the file name shows. */
-.dialog[data-kind="file"] .dialog-heading h2 {
+/* The view switcher takes the visible title's place; keep a dialog name for AT. */
+.dialog[data-kind="file"] .dialog-heading > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  direction: rtl;
-  text-align: left;
-  text-overflow: ellipsis;
+  clip-path: inset(50%);
   white-space: nowrap;
 }
-/* Position and steps in the preview's title row, beside the close button. */
+/* View selection and file steps replace the visible title. */
 .changed-file-heading-actions {
   display: flex;
-  flex: none;
+  flex: 1;
+  min-width: 0;
   align-items: center;
   gap: 8px;
-  margin-top: -3px;
+}
+.changed-file-view-switcher-target {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.changed-file-view-switcher-target > .view-switch {
+  min-width: 0;
+  max-width: 100%;
+}
+.changed-file-nav {
+  margin-left: auto;
 }
 @media (max-width: 640px) {
   .dialog[data-kind="file"] .dialog-heading {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
-    padding-right: var(--dialog-pad);
-  }
-  .dialog[data-kind="file"] .dialog-heading h2 {
-    flex-basis: 100%;
-    margin-bottom: 0;
-    padding-right: 26px;
-    line-height: 20px;
+    padding-right: 44px;
   }
   .changed-file-heading-actions {
     min-width: 0;
     max-width: 100%;
     /* Keep the sticky toolbar aligned even without sharing or step buttons. */
     min-height: 28px;
-    margin-top: 0;
-    margin-left: auto;
   }
-  .changed-file-heading-actions > .file-action {
-    display: block;
-    flex: 0 1 auto;
+  .changed-file-view-switcher-target > .view-switch {
+    flex-wrap: nowrap;
+  }
+  .changed-file-view-switcher-target .view-option {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding-right: 6px;
+    padding-left: 6px;
     white-space: nowrap;
-  }
-  .changed-file-preview .file-preview-toolbar {
-    /* Title, gap, controls and bottom padding, below the sticky heading. */
-    top: 60px;
   }
   .changed-file-heading-actions .changed-file-position {
     min-width: 6ch;
@@ -291,16 +293,18 @@ body[data-expanded-panel="true"]
 }
 
 /*
- * The preview's toolbar uses one row when wide and two when narrow. File
- * details are cut off; view options wrap when needed to keep actions clear.
+ * The view tabs replace the visible title. The preview toolbar keeps file
+ * details and actions together below it.
  */
 .changed-file-preview {
   container-type: inline-size;
 }
 .changed-file-preview .file-preview-toolbar {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  grid-template-areas: "badge meta views actions";
+  /* Match the heading's occupied height, so sticking adds no initial shift. */
+  top: 32px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "badge meta actions";
 }
 .changed-file-preview .file-preview-toolbar > .file-badge {
   grid-area: badge;
@@ -314,28 +318,31 @@ body[data-expanded-panel="true"]
 .changed-file-preview .file-preview-toolbar > .file-meta > :not(.file-name) {
   flex: none;
 }
-.changed-file-preview .file-preview-toolbar > .view-switch {
-  grid-area: views;
-  justify-self: start;
-}
 .changed-file-preview .file-preview-toolbar > .toolbar-actions {
   grid-area: actions;
   justify-self: end;
   align-items: center;
 }
-.view-switch-placeholder {
-  visibility: hidden;
-}
 @container (max-width: 640px) {
   .changed-file-preview .file-preview-toolbar {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
-      "badge meta meta"
-      "views views actions";
+      "badge meta"
+      "actions actions";
   }
-  .changed-file-preview .file-preview-toolbar > .view-switch {
+  .changed-file-preview .file-preview-toolbar > .toolbar-actions {
     min-width: 0;
     max-width: 100%;
-    flex-wrap: wrap;
+  }
+  .changed-file-preview .toolbar-actions > .file-action {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .changed-file-preview .toolbar-actions .file-action-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

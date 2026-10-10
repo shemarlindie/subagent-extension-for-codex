@@ -86,14 +86,19 @@ function setup(path: string, changes: Changes = data, canShare = true) {
   const preview = (path: string) => (
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
-        {/* As the dialog places them: sharing and navigation in its title row. */}
-        {changedFileDialog.headingActions?.({
-          kind: "file",
-          task,
-          path,
-          scope: 0,
-        })}
-        <ChangedFilePreview task={task} path={path} />
+        <div className="dialog" data-kind="file">
+          <div className="dialog-heading">
+            <h2>File preview</h2>
+            {/* Mirror DialogHost: views and navigation share the title row. */}
+            {changedFileDialog.headingActions?.({
+              kind: "file",
+              task,
+              path,
+              scope: 0,
+            })}
+          </div>
+          <ChangedFilePreview task={task} path={path} />
+        </div>
       </Tooltip.Provider>
     </ControllerContext.Provider>
   );
@@ -224,7 +229,7 @@ test("moving on from Viewed keeps focus on Viewed, unless the user moved it", as
   assert.equal(focused(), "Previous file");
 });
 
-test("every file holds the view switcher's place, so the toolbar keeps its shape", async () => {
+test("the view switcher takes the title's place when the file has views", async () => {
   // Plain text outside the loaded changes offers one view, and no Diff.
   const { view, moveTo } = setup("notes.txt");
 
@@ -232,25 +237,29 @@ test("every file holds the view switcher's place, so the toolbar keeps its shape
 
   const switcher = () =>
     view.container.querySelector<HTMLElement>(
-      ".file-preview-toolbar .view-switch",
+      ".changed-file-view-switcher-target .view-switch",
     );
 
   assert.equal(switcher()?.textContent, "Source");
+
+  assert.equal(
+    view.container.querySelector(".file-preview-toolbar .view-switch"),
+    null,
+  );
 
   assert.ok(
     view.getByRole("button", { name: "Source" }).hasAttribute("data-pressed"),
   );
 
-  // A deleted file has no views; a hidden stand-in takes the switcher's place.
+  // A deleted file has no views, so the title slot contains no switcher.
   await moveTo("gone.ts");
   await act(async () => {});
 
   assert.match(view.container.textContent ?? "", /Deleted/);
-  assert.ok(switcher()?.classList.contains("view-switch-placeholder"));
-  assert.equal(switcher()?.getAttribute("aria-hidden"), "true");
+  assert.equal(switcher(), null);
 });
 
-test("Ask Codex leads the heading actions and Viewed stays in the toolbar", async () => {
+test("view tabs replace the title while Ask Codex and Viewed stay in the toolbar", async () => {
   const { view, moveTo } = setup("a.ts", {
     ...data,
     files: [
@@ -265,25 +274,40 @@ test("Ask Codex leads the heading actions and Viewed stays in the toolbar", asyn
     ],
   });
 
-  const actions = () =>
+  const toolbarActions = () =>
     [...view.container.querySelectorAll(".toolbar-actions > button")].map(
       (button) => button.getAttribute("aria-label") ?? button.textContent,
     );
 
   await act(async () => {});
-  const heading = view.container.querySelector(".changed-file-heading-actions");
 
-  assert.equal(
-    heading?.firstElementChild?.textContent,
-    "Ask Codex about this file",
+  const heading = view.container.querySelector<HTMLElement>(
+    ".changed-file-heading-actions",
+  );
+
+  assert.ok(
+    heading?.querySelector(".changed-file-view-switcher-target .view-switch"),
   );
 
   assert.ok(heading?.lastElementChild?.classList.contains("changed-file-nav"));
-  assert.deepEqual(actions(), ["Viewed a.ts"]);
 
-  // A deleted file's toolbar keeps the same order.
+  assert.deepEqual(toolbarActions(), [
+    "Ask Codex about this file",
+    "Viewed a.ts",
+  ]);
+
+  // A deleted file still keeps its actions in the toolbar.
   await moveTo("gone.ts");
-  assert.deepEqual(actions(), ["Viewed gone.ts"]);
+
+  assert.equal(
+    heading?.querySelector(".changed-file-view-switcher-target .view-switch"),
+    null,
+  );
+
+  assert.deepEqual(toolbarActions(), [
+    "Ask Codex about this file",
+    "Viewed gone.ts",
+  ]);
 });
 
 test("a lone changed file shows its position without step buttons", async () => {

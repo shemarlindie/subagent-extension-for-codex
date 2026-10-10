@@ -170,14 +170,15 @@ shows only a box, with a Mark as viewed tooltip. A mark lasts until that file's
 changes change; the file then opens again, unread. **Preview all** opens the
 preview at the first file not yet viewed.
 
-In the preview, **Ask Codex about this file** is the first action on the right
-of the title row, before file navigation. In narrow panels, these actions sit
-below the title. Viewed sits at the end of the toolbar. Marking a file viewed
-moves on to the next unread one, wrapping to the start. The heading shows the
-position, such as `3 / 12`, before previous and next buttons that step through
-the files in list order, wrapping at either
-end; a lone file shows only its position. The controls stay in place and the
-chosen view carries over; the last file shows until the next one is read.
+In the preview, view tabs replace the visible dialog title, and file navigation
+stays on that row, even in narrow panels. **Ask Codex about this file** is the
+first action in the file toolbar, before Copy when clipboard access is
+available; Viewed is last. On narrow panels, the toolbar actions move below
+file details. Marking a file viewed moves on to the next unread one, wrapping
+to the start. The heading shows the position, such as `3 / 12`, before previous
+and next buttons that step through the files in list order, wrapping at either
+end; a lone file shows only its position. The chosen view carries over, and the
+last file stays visible until the next one is read.
 
 Worktree headers offer branch/path and copyable checkout/diff/push commands.
 **Remove worktree** keeps the branch and asks before discarding uncommitted

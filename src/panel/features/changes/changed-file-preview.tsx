@@ -115,6 +115,9 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
     progress = loading && <Progress label={`Loading ${path}`} />,
     // Kept across files, so stepping through them stays in, say, Diff.
     [view, setView] = useState<FileView>(),
+    [viewSwitcherTarget, setViewSwitcherTarget] = useState<HTMLElement | null>(
+      null,
+    ),
     root = useRef<HTMLDivElement>(null),
     // Viewed was used to move on, so the next file's Viewed takes focus.
     refocusViewed = useRef(false),
@@ -128,11 +131,22 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           controller.showChangedFile(next);
         }}
       />
-    );
+    ),
+    shareButton = <ShareFileButton key={path} path={path} />;
 
   // Each file starts at its top.
   useLayoutEffect(() => {
-    if (root.current) scrollContainer(root.current).scrollTop = 0;
+    if (root.current) {
+      scrollContainer(root.current).scrollTop = 0;
+      // A preview portals its tabs only into its own dialog's title row.
+      const dialog = root.current.closest(".dialog");
+
+      setViewSwitcherTarget(
+        dialog?.querySelector<HTMLElement>(
+          "[data-file-preview-view-switcher]",
+        ) ?? null,
+      );
+    }
 
     // A file of another kind remounts the toolbar, which drops focus. Only
     // dropped focus moves, not focus the user took elsewhere meanwhile.
@@ -163,6 +177,8 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             content: file.content ?? "",
             mime_type: file.mime_type,
           }}
+          viewSwitcherTarget={viewSwitcherTarget}
+          beforeActions={shareButton}
           actions={viewedToggle}
           diff={diff}
           view={view}
@@ -185,11 +201,10 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             <span className="file-meta">
               <span className="file-name">{fileName(shown)}</span>
             </span>
-            {/* Holds the switcher's place, which a file with no views lacks. */}
-            <span className="view-switch view-switch-placeholder" aria-hidden>
-              <span className="view-option">Source</span>
+            <span className="toolbar-actions">
+              {shareButton}
+              {viewedToggle}
             </span>
-            <span className="toolbar-actions">{viewedToggle}</span>
             {progress}
           </div>
           <div className="file-preview-body">
@@ -220,13 +235,15 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
 }
 
 export const changedFileDialog = defineDialog<"file">({
-  // Isolated, so a path's leading dot stays put when cut from the start.
-  title: ({ path }) => <bdi title={path}>{path}</bdi>,
+  title: () => "File preview",
   render: ({ task, path }) => <ChangedFilePreview task={task} path={path} />,
-  // Keep navigation mounted across files; reset sharing feedback for each path.
+  // Keep navigation mounted across files.
   headingActions: ({ task, path }) => (
     <div className="changed-file-heading-actions">
-      <ShareFileButton key={path} path={path} />
+      <span
+        className="changed-file-view-switcher-target"
+        data-file-preview-view-switcher
+      />
       <ChangedFileNav task={task} path={path} />
     </div>
   ),
