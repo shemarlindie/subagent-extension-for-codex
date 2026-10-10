@@ -227,7 +227,7 @@ export class ClaudeAgentProvider implements Provider {
     const workspace = c.task.workspace!;
     // Stops the process: only when an interrupt doesn't end the turn.
     const abortController = new AbortController();
-    // Inherit leaves the native mode to the user's Claude Code settings.
+    // Task policy resolves the extension setting to an explicit native mode.
     const nativeMode = taskClaudeMode(taskOptions);
     const restricted = policy.tools === "restricted";
 
@@ -283,7 +283,7 @@ export class ClaudeAgentProvider implements Provider {
       // be withdrawn.
       includePartialMessages: true,
       settingSources: ["user", "project", "local"],
-      ...(nativeMode ? { permissionMode: nativeMode } : {}),
+      permissionMode: nativeMode,
       ...(nativeMode === "bypassPermissions"
         ? { allowDangerouslySkipPermissions: true }
         : {}),

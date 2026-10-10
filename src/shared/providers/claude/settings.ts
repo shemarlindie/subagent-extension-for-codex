@@ -10,15 +10,16 @@ import {
   claudeOverrideDefaults,
   claudeOverrideLabels,
   claudePathGuardSchema,
+  claudePermissionModes,
+  claudePermissionSettingSchema,
   claudeSandboxSchema,
   claudeToolsSchema,
-  permissionLabels,
-  permissionModeSchema,
+  permissionLabel,
 } from "./permissions.js";
 
 export const claudeSettingHelp = {
   claude_permission_mode:
-    "Your Claude Code settings decide the mode, except plan for read-only worker profiles. Any other mode applies to every task.",
+    "The extension passes this mode by default; task-level permission selections can override it. Claude Code's other user, project and local settings still apply.",
   claude_sandbox:
     "Your Claude Code settings decide the sandbox by default. The extension sandbox allows writes only in the workspace and blocks home and sibling reads and the network. Locking its network also ignores domains your Claude Code settings allow.",
   claude_environment:
@@ -40,7 +41,7 @@ const options = (labels: Record<string, string>) =>
   Object.entries(labels).map(([value, label]) => ({ value, label }));
 
 export const claudeSettingsShape = {
-  claude_permission_mode: permissionModeSchema.meta({
+  claude_permission_mode: claudePermissionSettingSchema.meta({
     title: "Claude permission mode",
     description: settingHelp.claude_permission_mode,
   }),
@@ -72,7 +73,7 @@ export const claudeSettingsShape = {
 };
 
 export const claudeStoredSettingsShape = {
-  claude_permission_mode: permissionModeSchema.default("inherit"),
+  claude_permission_mode: claudePermissionSettingSchema.default("default"),
   default_approval_decider: approvalDeciderSchema.default("user"),
   claude_sandbox: claudeSandboxSchema.default(
     claudeOverrideDefaults.claude_sandbox,
@@ -95,7 +96,10 @@ export const claudeApprovalRows: SettingRow[] = [
     key: "claude_permission_mode",
     label: "Claude permission mode",
     help: [settingHelp.claude_permission_mode],
-    options: options(permissionLabels),
+    options: claudePermissionModes.map((mode) => ({
+      value: mode,
+      label: permissionLabel(mode),
+    })),
   },
   {
     kind: "select",

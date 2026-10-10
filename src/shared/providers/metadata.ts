@@ -1,5 +1,8 @@
 import { reasoningLevels } from "../tasks/reasoning.js";
-import { permissionLabels } from "./claude/permissions.js";
+import {
+  claudePermissionModes,
+  permissionLabel,
+} from "./claude/permissions.js";
 
 /** Serializable presentation contract for built-in providers; no SDK objects. */
 export interface ProviderMetadata {
@@ -34,12 +37,15 @@ export const claudeMetadata: ProviderMetadata = {
     approvalDeciderSetting: "default_approval_decider",
     formTitle: "Claude permission mode",
     formHelp:
-      "Claude native SDK mode. Other workers use their existing permissions. Inherit uses your Claude Code settings, or plan for read-only profiles.",
-    options: Object.entries(permissionLabels).map(([value, label]) => ({
-      value,
-      label,
-    })),
-    help: "Claude native SDK mode. Inherit uses your Claude Code settings, or plan for read-only profiles; settings can override it.",
+      "Claude native SDK mode. Use extension setting follows the configured Claude permission mode.",
+    options: [
+      { value: "inherit", label: permissionLabel("inherit") },
+      ...claudePermissionModes.map((value) => ({
+        value,
+        label: permissionLabel(value),
+      })),
+    ],
+    help: "Claude native SDK mode. Use extension setting follows the configured Claude permission mode.",
     approvalDecider: true,
     approvalDeciderHelp:
       "Who answers permission requests that the SDK leaves unresolved.",

@@ -63,7 +63,7 @@ Open **Settings** in the panel header. Values persist per user in SQLite and app
 | Worktree branch prefix  | `agent/`                                              |
 | Runtime limit           | 20 minutes                                            |
 | Cost limit              | $5                                                    |
-| Claude permission mode  | `inherit`                                             |
+| Claude permission mode  | `default`                                             |
 | Approval decision maker | `user`                                                |
 
 `get_agent_settings` returns values, reset defaults, field schemas and the sections used by the panel. `update_agent_settings` accepts ordinary defaults as `{ "set": { "max_runtime_minutes": 10 } }`, preserving omitted fields. Unknown settings, unavailable providers and invalid budgets are rejected. User-only settings require app-only `update_user_agent_settings` or authenticated console authority. Hosts must enforce app-only visibility; this is not cryptographic proof of a human decision.
@@ -87,19 +87,19 @@ Claude model suggestions use SDK `supportedModels()` metadata. Discovery starts 
 
 ## Claude permissions
 
-`provider_options.claude.permission_mode` overrides saved `claude_permission_mode`. When both inherit, researcher, reviewer and security reviewer use `plan`; write profiles leave the mode to Claude Code settings. The parent agent's permission mode is not inherited. The resolved value and its source (`task`, `setting`, `task_profile` or `user_config`) are stored on the task.
+The extension owns Claude's native permission mode. `claude_permission_mode` applies to new tasks and defaults to `default`; the SDK receives the resolved mode explicitly. Choosing `auto` in extension settings therefore selects Auto even when Claude Code's own `permissions.defaultMode` is different. `provider_options.claude.permission_mode` overrides the saved setting when it selects a mode. For new tasks, `inherit` means use the saved extension setting. Older saved settings and task options that used `inherit` now resolve to `default`. The parent agent's permission mode is not inherited. The resolved value and its source are stored on the task.
 
-| Mode                | Behavior                                                         |
-| ------------------- | ---------------------------------------------------------------- |
-| `inherit`           | Defer to Claude Code settings, or `plan` for read-only profiles. |
-| `default`           | Standard native permission checks.                               |
-| `acceptEdits`       | Automatically approve file edits.                                |
-| `plan`              | Plan and inspect without ordinary mutating tools.                |
-| `dontAsk`           | Deny actions that require permission instead of prompting.       |
-| `auto`              | Use the native classifier for permission decisions.              |
-| `bypassPermissions` | Skip ordinary native approval checks.                            |
+| Mode                | Behavior                                                             |
+| ------------------- | -------------------------------------------------------------------- |
+| `inherit`           | Task-level option: use the extension's saved Claude permission mode. |
+| `default`           | Standard native permission checks.                                   |
+| `acceptEdits`       | Automatically approve file edits.                                    |
+| `plan`              | Plan and inspect without ordinary mutating tools.                    |
+| `dontAsk`           | Deny actions that require permission instead of prompting.           |
+| `auto`              | Use the native classifier for permission decisions.                  |
+| `bypassPermissions` | Skip ordinary native approval checks.                                |
 
-Enabled session restrictions apply in every mode. Model-selected overrides cannot increase authority beyond the user-approved baseline; with unknown inherited authority, they can choose only `plan` or `dontAsk` beyond preserving `inherit`. A trusted panel task submission or user-confirmed host form can authorize a broader override.
+Enabled session restrictions apply in every mode. Model-selected overrides cannot increase authority beyond the user-approved baseline. A trusted panel task submission or user-confirmed host form can authorize a broader task-level override.
 
 Approval routing is separate: `provider_options.claude.approval_decider` accepts `user` or `parent_agent`, inheriting `default_approval_decider`. It handles requests left unresolved by native checks; it does not force every action to prompt. User permission decisions require panel **Approve**/**Deny** or a host form. Model-visible `submit_agent_input` can decide permissions only when the parent is the approver. Stale request IDs and cross-owner answers are rejected. `dontAsk` may deny questions without invoking the callback.
 
@@ -107,7 +107,7 @@ There is no extension-wide auto-approval policy for Claude. Repository approval 
 
 ## Claude session restrictions
 
-Claude loads user, project and local Claude Code settings, including `CLAUDE.md`, rules, skills, hooks, permission rules, MCP servers and connectors. Settings-file permission rules may resolve a call before extension routing. Use these user-only settings to restrict delegated sessions; each task stores its resolved policy.
+Claude continues to load user, project and local Claude Code settings, including `CLAUDE.md`, rules, skills, hooks, permission allow/deny rules, MCP servers and connectors. These sources also supply sandbox configuration and environment settings where applicable. The extension's explicit permission mode controls the native mode; Claude Code's `permissions.defaultMode` does not select it. Permission allow/deny rules still apply and may resolve a call before extension routing. Use the user-only extension settings below to restrict delegated sessions; each task stores its resolved policy.
 
 | Setting              | Default       | Choices                                                                                                                                                                                                                                                        |
 | -------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

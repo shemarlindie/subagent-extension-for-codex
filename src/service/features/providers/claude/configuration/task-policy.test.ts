@@ -33,8 +33,8 @@ test("Claude preparation preserves native modes and restrictions independently o
     });
 
     const preparedOptions = claudeOptions(prepared);
-    assert.equal(preparedOptions.permission_mode, "plan");
-    assert.equal(preparedOptions.permission_source, "task_profile");
+    assert.equal(preparedOptions.permission_mode, "default");
+    assert.equal(preparedOptions.permission_source, "setting");
     assert.equal(preparedOptions.claude_policy?.tools, "restricted");
     assert.equal(preparedOptions.claude_policy?.path_guard, true);
 
@@ -58,6 +58,35 @@ test("Claude preparation preserves native modes and restrictions independently o
       } as unknown as Task),
       false,
     );
+  } finally {
+    store.close();
+  }
+});
+
+test("Claude task-level inherit resolves to the configured extension Auto mode", () => {
+  const store = new Store(":memory:");
+
+  try {
+    const settings = new Settings(store.database, () => ["claude"]);
+    settings.update("alice", { set: { claude_permission_mode: "auto" } });
+
+    const input = startSchema.parse({
+      description: "Implement",
+      worker_profile: "reviewer",
+      provider_options: { claude: { permission_mode: "inherit" } },
+    });
+
+    const prepared = claudeTaskPolicy.prepareStart({
+      input,
+      defaults: settings.values("alice"),
+      authority: "user",
+    });
+
+    const options = claudeOptions(prepared);
+    assert.equal(options.permission_mode, "auto");
+    assert.equal(options.permission_source, "setting");
+    assert.equal(options.claude_policy?.tools, "restricted");
+    assert.equal(options.claude_policy?.path_guard, true);
   } finally {
     store.close();
   }

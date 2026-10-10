@@ -29,12 +29,12 @@ export const claudeTaskPolicy: ProviderTaskPolicy = {
     );
 
     const baseline = resolveClaudePermission(
-      { worker_profile: input.worker_profile },
+      {},
       defaults.claude_permission_mode,
     );
 
     const resolved = resolveClaudePermission(
-      { ...requested, worker_profile: input.worker_profile },
+      requested,
       defaults.claude_permission_mode,
     );
 

@@ -2,7 +2,7 @@ import type { Task } from "../../tasks/model.js";
 import {
   approvalDecider,
   claudeOverrideLabels,
-  permissionLabels,
+  permissionLabel,
 } from "./permissions.js";
 import { taskClaudeMode } from "./permissions.js";
 import { readClaudeTaskOptions } from "./task-options.js";
@@ -12,7 +12,7 @@ export const claudeTaskFacts = (task: Task): Record<string, string> => {
     policy = options.claude_policy;
 
   return {
-    "Permission mode": permissionLabels[taskClaudeMode(options) ?? "inherit"],
+    "Permission mode": permissionLabel(taskClaudeMode(options)),
     "Permission source": options.permission_source ?? "Provider default",
     "Approval decision maker":
       approvalDecider(options) === "parent_agent" ? "Parent agent" : "User",

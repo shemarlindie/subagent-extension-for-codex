@@ -22,65 +22,64 @@ import {
   claudeOverrideDefaults,
   claudePermissionModes,
   exceedsPermission,
+  permissionLabel,
   resolveClaudePermission,
   resolveClaudePolicy,
   taskClaudeMode,
 } from "./permissions.js";
 import { readClaudeTaskOptions } from "./task-options.js";
 
-test("stored native modes preserve explicit inheritance and native approval", () => {
+test("task-level inherit stays available and legacy stored modes become Default", () => {
   assert.equal(
     taskClaudeMode({
       permission_mode: "inherit",
     }),
-    undefined,
+    "default",
   );
+
+  assert.equal(taskClaudeMode({}), "default");
 
   for (const mode of claudePermissionModes)
     assert.equal(taskClaudeMode({ permission_mode: mode }), mode);
 });
 
-test("native permission resolution follows task, setting, then profile or the user's Claude Code settings", () => {
-  const task = { worker_profile: "implementer" };
+test("an SDK mode without a custom label uses its raw value", () => {
+  const futureMode = "futureMode" as (typeof claudePermissionModes)[number];
 
-  assert.deepEqual(resolveClaudePermission(task, "inherit"), {
-    mode: "inherit",
-    source: "user_config",
-  });
+  assert.equal(permissionLabel(futureMode), "futureMode");
+});
 
-  assert.deepEqual(
-    resolveClaudePermission({ worker_profile: "reviewer" }, "inherit"),
-    { mode: "plan", source: "task_profile" },
-  );
+test("native permission resolution uses the task mode or the concrete extension setting", () => {
+  const task = {};
 
-  assert.deepEqual(
-    resolveClaudePermission({ worker_profile: "reviewer" }, "acceptEdits"),
-    { mode: "acceptEdits", source: "setting" },
-  );
-
-  assert.deepEqual(resolveClaudePermission(task, "dontAsk"), {
-    mode: "dontAsk",
+  assert.deepEqual(resolveClaudePermission(task, "default"), {
+    mode: "default",
     source: "setting",
   });
 
   assert.deepEqual(
-    resolveClaudePermission({ ...task, permission_mode: "default" }, "dontAsk"),
+    resolveClaudePermission({ permission_mode: "inherit" }, "auto"),
+    { mode: "auto", source: "setting" },
+  );
+
+  assert.deepEqual(resolveClaudePermission(task, "auto"), {
+    mode: "auto",
+    source: "setting",
+  });
+
+  assert.deepEqual(
+    resolveClaudePermission({ permission_mode: "default" }, "dontAsk"),
     { mode: "default", source: "task" },
   );
 });
 
-test("model-selected modes cannot exceed a known baseline or the unknown authority of Claude Code settings", () => {
-  assert.equal(exceedsPermission("inherit", "inherit"), false);
-  for (const mode of ["plan", "dontAsk"] as const)
-    assert.equal(exceedsPermission(mode, "inherit"), false, mode);
-  for (const mode of [
-    "default",
-    "acceptEdits",
-    "auto",
-    "bypassPermissions",
-  ] as const)
-    assert.equal(exceedsPermission(mode, "inherit"), true, mode);
-  assert.equal(exceedsPermission("inherit", "bypassPermissions"), true);
+test("model-selected modes cannot exceed the concrete extension setting", () => {
+  for (const mode of ["plan", "dontAsk", "default"] as const)
+    assert.equal(exceedsPermission(mode, "default"), false, mode);
+
+  for (const mode of ["acceptEdits", "auto", "bypassPermissions"] as const)
+    assert.equal(exceedsPermission(mode, "default"), true, mode);
+
   assert.equal(exceedsPermission("default", "acceptEdits"), false);
   assert.equal(exceedsPermission("auto", "acceptEdits"), true);
 });
@@ -147,16 +146,16 @@ const withClaudeOptions = (
 
 const taskOptions = (task: Task) => readClaudeTaskOptions(task);
 
-test("settings expose all SDK permission modes, persist overrides, and require user authority", async (t) => {
+test("settings default to Default, expose only SDK permission modes, persist overrides, and require user authority", async (t) => {
   const { c, store } = await setup(t);
   const settings = c.settings;
-  assert.equal(settings.values("alice").claude_permission_mode, "inherit");
+  assert.equal(settings.values("alice").claude_permission_mode, "default");
   const properties = settings.read("alice").schema.properties!;
 
-  assert.deepEqual(properties.claude_permission_mode.enum, [
-    "inherit",
-    ...claudePermissionModes,
-  ]);
+  assert.deepEqual(
+    properties.claude_permission_mode.enum,
+    claudePermissionModes,
+  );
 
   assert.equal(Object.hasOwn(properties, "default_approval_mode"), false);
   for (const key of Object.keys(settings.read("alice").values))
@@ -190,7 +189,28 @@ test("settings expose all SDK permission modes, persist overrides, and require u
     "parent_agent",
   );
 
-  assert.equal(reloaded.values("bob").claude_permission_mode, "inherit");
+  assert.equal(reloaded.values("bob").claude_permission_mode, "default");
+});
+
+test("legacy persisted Claude setting inherit is read as Default", async (t) => {
+  const { c, store } = await setup(t);
+
+  c.settings.update("legacy", {
+    set: { claude_permission_mode: "default" },
+  });
+
+  const stored = store.database.client
+    .prepare("SELECT body FROM user_settings WHERE owner = ?")
+    .get("legacy") as { body: string };
+
+  const body = JSON.parse(stored.body) as Record<string, unknown>;
+  body.claude_permission_mode = "inherit";
+
+  store.database.client
+    .prepare("UPDATE user_settings SET body = ? WHERE owner = ?")
+    .run(JSON.stringify(body), "legacy");
+
+  assert.equal(c.settings.values("legacy").claude_permission_mode, "default");
 });
 
 test("task arguments cannot spoof parent permissions and resolved source is stored", async (t) => {
@@ -208,11 +228,11 @@ test("task arguments cannot spoof parent permissions and resolved source is stor
     "parent",
   );
 
-  assert.equal(taskOptions(task).permission_mode, "inherit");
+  assert.equal(taskOptions(task).permission_mode, "default");
 
   assert.equal(
     taskOptions(store.get(task.id, "alice")).permission_source,
-    "user_config",
+    "setting",
   );
 
   assert.equal(
@@ -225,6 +245,20 @@ test("task arguments cannot spoof parent permissions and resolved source is stor
     ),
     false,
   );
+});
+
+test("task-level inherit uses the extension's configured Auto mode", async (t) => {
+  const { c } = await setup(t);
+  c.settings.update("alice", { set: { claude_permission_mode: "auto" } });
+
+  const task = await c.start(
+    "alice",
+    withClaudeOptions(request, { permission_mode: "inherit" }),
+    "user",
+  );
+
+  assert.equal(taskOptions(task).permission_mode, "auto");
+  assert.equal(taskOptions(task).permission_source, "setting");
 });
 
 test("parent cannot increase native permissions or grant itself decision authority", async (t) => {
@@ -265,12 +299,23 @@ test("parent cannot increase native permissions or grant itself decision authori
 
   assert.equal(taskOptions(restricted).permission_mode, "dontAsk");
 
+  const readOnlyLowerMode = await c.start(
+    "alice",
+    withClaudeOptions(
+      { ...request, worker_profile: "reviewer" },
+      { permission_mode: "dontAsk" },
+    ),
+    "parent",
+  );
+
+  assert.equal(taskOptions(readOnlyLowerMode).permission_mode, "dontAsk");
+
   await assert.rejects(
     c.start(
       "alice",
       withClaudeOptions(
         { ...request, worker_profile: "reviewer" },
-        { permission_mode: "dontAsk" },
+        { permission_mode: "auto" },
       ),
       "parent",
     ),

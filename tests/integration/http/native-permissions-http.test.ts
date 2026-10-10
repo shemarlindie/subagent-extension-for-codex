@@ -151,17 +151,18 @@ async function setup(t: TestContext) {
   return { c, base, dir, rpc, post, request };
 }
 
-test("HTTP MCP inherits the user's Claude Code settings regardless of host or argument permission metadata", async (t) => {
+test("HTTP MCP resolves the extension permission setting regardless of host or argument permission metadata", async (t) => {
   const { c, rpc, request } = await setup(t);
+  c.settings.update("local", { set: { claude_permission_mode: "auto" } });
   const started = await rpc("start_agent_task", request, parentMeta);
   assert.equal(started.result.isError, undefined, JSON.stringify(started));
   const task = started.result.structuredContent.result;
-  assert.equal(task.provider_options.claude.permission_mode, "inherit");
-  assert.equal(task.provider_options.claude.permission_source, "user_config");
+  assert.equal(task.provider_options.claude.permission_mode, "auto");
+  assert.equal(task.provider_options.claude.permission_source, "setting");
 
   assert.equal(
     c.store.get(task.id, "local").provider_options?.claude?.permission_mode,
-    "inherit",
+    "auto",
   );
 
   const spoofed = await rpc("start_agent_task", {
@@ -178,25 +179,23 @@ test("HTTP MCP inherits the user's Claude Code settings regardless of host or ar
   assert.equal(
     spoofed.result.structuredContent.result.provider_options.claude
       .permission_mode,
-    "inherit",
+    "auto",
   );
 
   assert.equal(
     spoofed.result.structuredContent.result.provider_options.claude
       .permission_source,
-    "user_config",
+    "setting",
   );
 });
 
-test("cookie-authenticated user tasks resolve inherit by profile and ignore permission headers", async (t) => {
-  const { post, request } = await setup(t);
+test("cookie-authenticated user tasks use the extension permission setting across profiles", async (t) => {
+  const { c, post, request } = await setup(t);
+  c.settings.update("local", { set: { claude_permission_mode: "auto" } });
   const login = await post("/api/login", { token: "test-token" });
   const cookie = login.headers.get("set-cookie")!.split(";")[0];
 
-  for (const [worker_profile, expected, source] of [
-    ["reviewer", "plan", "task_profile"],
-    ["implementer", "inherit", "user_config"],
-  ]) {
+  for (const worker_profile of ["reviewer", "implementer"]) {
     const res = await post(
       "/api/user-tools/start_user_agent_task",
       { ...request, worker_profile },
@@ -212,13 +211,14 @@ test("cookie-authenticated user tasks resolve inherit by profile and ignore perm
 
     assert.equal(res.status, 200);
     const { result } = await res.json();
-    assert.equal(result.provider_options.claude.permission_mode, expected);
-    assert.equal(result.provider_options.claude.permission_source, source);
+    assert.equal(result.provider_options.claude.permission_mode, "auto");
+    assert.equal(result.provider_options.claude.permission_source, "setting");
   }
 });
 
-test("host delegation forms resolve inherit to the user's Claude Code settings on submission", async (t) => {
+test("host delegation forms resolve inherit to the extension permission setting on submission", async (t) => {
   const { c, dir, rpc, request } = await setup(t);
+  c.settings.update("local", { set: { claude_permission_mode: "auto" } });
 
   const args = {
     ...request,
@@ -257,17 +257,18 @@ test("host delegation forms resolve inherit to the user's Claude Code settings o
   );
 
   const task = submission.result.structuredContent.result;
-  assert.equal(task.provider_options.claude.permission_mode, "inherit");
-  assert.equal(task.provider_options.claude.permission_source, "user_config");
+  assert.equal(task.provider_options.claude.permission_mode, "auto");
+  assert.equal(task.provider_options.claude.permission_source, "setting");
 
   assert.equal(
     c.store.get(task.id, "local").provider_options?.claude?.permission_source,
-    "user_config",
+    "setting",
   );
 });
 
-test("stdio proxy starts tasks through the bearer-authenticated HTTP boundary without host permission inheritance", async (t) => {
+test("stdio proxy starts tasks with the extension permission setting", async (t) => {
   const { base, c, request } = await setup(t);
+  c.settings.update("local", { set: { claude_permission_mode: "auto" } });
   const client = new Client({ name: "permission-stdio-test", version: "1" });
 
   try {
@@ -297,12 +298,12 @@ test("stdio proxy starts tasks through the bearer-authenticated HTTP boundary wi
 
     assert.equal(response.isError, false, JSON.stringify(response));
     const task = (response.structuredContent as any).result;
-    assert.equal(task.provider_options.claude.permission_mode, "inherit");
-    assert.equal(task.provider_options.claude.permission_source, "user_config");
+    assert.equal(task.provider_options.claude.permission_mode, "auto");
+    assert.equal(task.provider_options.claude.permission_source, "setting");
 
     assert.equal(
       c.store.get(task.id, "local").provider_options?.claude?.permission_mode,
-      "inherit",
+      "auto",
     );
   } finally {
     await client.close();
