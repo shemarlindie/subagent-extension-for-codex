@@ -43,16 +43,18 @@ function setup(path: string, changes: Changes = data) {
 
   onTestFinished(() => controller.dispose());
 
-  const snapshot = {
-    ...controller.getSnapshot(),
-    changes: {
-      task: task.id,
-      scope: "task" as const,
-      key: "",
-      loading: false,
-      data: changes,
-    },
-  };
+  const initial = controller.getSnapshot(),
+    snapshot = {
+      ...initial,
+      host: { ...initial.host, canShare: true },
+      changes: {
+        task: task.id,
+        scope: "task" as const,
+        key: "",
+        loading: false,
+        data: changes,
+      },
+    };
 
   vi.spyOn(controller, "getSnapshot").mockImplementation(() => snapshot);
 
@@ -79,6 +81,8 @@ function setup(path: string, changes: Changes = data) {
   const show = vi
     .spyOn(controller, "showChangedFile")
     .mockImplementation(() => {});
+
+  vi.spyOn(controller, "share").mockResolvedValue(undefined);
 
   const preview = (path: string) => (
     <ControllerContext.Provider value={controller}>
@@ -238,4 +242,49 @@ test("every file holds the view switcher's place, so the toolbar keeps its shape
   assert.match(view.container.textContent ?? "", /Deleted/);
   assert.ok(switcher()?.classList.contains("view-switch-placeholder"));
   assert.equal(switcher()?.getAttribute("aria-hidden"), "true");
+});
+
+test("the toolbar starts with Ask Codex and ends with Viewed", async () => {
+  const { view, moveTo } = setup("a.ts", {
+    ...data,
+    files: [
+      ...data.files,
+      {
+        path: "gone.ts",
+        status: "deleted",
+        additions: 0,
+        deletions: 1,
+        binary: false,
+      },
+    ],
+  });
+
+  const actions = () =>
+    [...view.container.querySelectorAll(".toolbar-actions > button")].map(
+      (button) => button.getAttribute("aria-label") ?? button.textContent,
+    );
+
+  await act(async () => {});
+  assert.deepEqual(actions(), ["Ask Codex about this file", "Viewed a.ts"]);
+
+  // A deleted file's toolbar keeps the same order.
+  await moveTo("gone.ts");
+  assert.deepEqual(actions(), ["Ask Codex about this file", "Viewed gone.ts"]);
+});
+
+test("sharing one file doesn't mark the next one shared", async () => {
+  const { view, moveTo } = setup("a.ts");
+
+  await act(async () => {});
+
+  await act(async () =>
+    fireEvent.click(
+      view.getByRole("button", { name: "Ask Codex about this file" }),
+    ),
+  );
+
+  assert.ok(view.getByRole("button", { name: "Shared with Codex" }));
+
+  await moveTo("c.ts");
+  assert.ok(view.getByRole("button", { name: "Ask Codex about this file" }));
 });

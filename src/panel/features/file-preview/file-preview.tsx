@@ -24,6 +24,8 @@ import { Progress } from "./progress";
 
 type FilePreviewProps = {
   file: PreviewFile;
+  /** Extra toolbar buttons, before Copy. */
+  leadingActions?: ReactNode;
   /** Extra toolbar buttons, after Copy. */
   actions?: ReactNode;
   /** The file's own diff; adds a Diff view after the format's views. */
@@ -40,6 +42,7 @@ type FilePreviewProps = {
 /** A file with a switcher between the views its format offers. */
 export function FilePreview({
   file,
+  leadingActions,
   actions,
   diff,
   view: chosenView,
@@ -95,6 +98,7 @@ export function FilePreview({
           </ToggleGroup>
         )}
         <span className="toolbar-actions">
+          {leadingActions}
           {/* Only show Copy where the browser exposes clipboard access. */}
           {canCopy && format !== "image" && <CopyButton text={file.content} />}
           {actions}

@@ -65,35 +65,31 @@ function useChanges(task: Task) {
   return changes?.task === task.id ? changes.data : undefined;
 }
 
-type ChangedFileActionsProps = {
+type ChangedFileViewedProps = {
   task: Task;
   path: string;
   /** Called once the file is marked viewed, to move on to the next unread one. */
   onViewed: (next?: string) => void;
 };
 
-/** The shown file's toolbar actions: Viewed, when it is a changed file, and Share. */
-function ChangedFileActions({ task, path, onViewed }: ChangedFileActionsProps) {
+/** The shown file's Viewed checkbox, when it is a changed file. */
+function ChangedFileViewed({ task, path, onViewed }: ChangedFileViewedProps) {
   const data = useChanges(task),
     entries = data ? changedFileEntries(data) : [],
     [viewed, setViewed] = useViewedFiles(task.id),
     entry = entries.find((entry) => entry.file.path === path);
 
+  if (!entry) return null;
+
   return (
-    <>
-      {entry && (
-        <ViewedToggle
-          path={path}
-          viewed={isViewed(viewed, entry)}
-          onChange={(value) => {
-            setViewed(entry, value);
-            if (value)
-              onViewed(nextUnviewed(viewed, entries, entry)?.file.path);
-          }}
-        />
-      )}
-      <ShareFileButton path={path} />
-    </>
+    <ViewedToggle
+      path={path}
+      viewed={isViewed(viewed, entry)}
+      onChange={(value) => {
+        setViewed(entry, value);
+        if (value) onViewed(nextUnviewed(viewed, entries, entry)?.file.path);
+      }}
+    />
   );
 }
 
@@ -122,8 +118,11 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
     root = useRef<HTMLDivElement>(null),
     // Viewed was used to move on, so the next file's Viewed takes focus.
     refocusViewed = useRef(false),
-    actions = (
-      <ChangedFileActions
+    // Ask Codex leads the toolbar; Viewed ends it, at the far right. Share is
+    // keyed by file, so "Shared with Codex" doesn't carry over to the next.
+    share = <ShareFileButton key={shown} path={shown} />,
+    viewedToggle = (
+      <ChangedFileViewed
         task={task}
         path={shown}
         onViewed={(next) => {
@@ -167,7 +166,8 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             content: file.content ?? "",
             mime_type: file.mime_type,
           }}
-          actions={actions}
+          leadingActions={share}
+          actions={viewedToggle}
           diff={diff}
           view={view}
           onViewChange={setView}
@@ -193,7 +193,10 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             <span className="view-switch view-switch-placeholder" aria-hidden>
               <span className="view-option">Source</span>
             </span>
-            <span className="toolbar-actions">{actions}</span>
+            <span className="toolbar-actions">
+              {share}
+              {viewedToggle}
+            </span>
             {progress}
           </div>
           <div className="file-preview-body">
