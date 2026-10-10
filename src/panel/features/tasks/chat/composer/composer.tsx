@@ -23,14 +23,18 @@ import { composerMode, spentBudget } from "../chat-model";
 
 const PLACEHOLDERS = {
   idle: "What's next?",
-  busy: "Steer",
+  busy: "Queue",
   input: "Queue",
 };
 
+const STEER_KEY = /Mac|iPhone|iPad/.test(globalThis.navigator?.userAgent ?? "")
+  ? "⌘ + Enter"
+  : "Ctrl + Enter";
+
 const HINTS = {
-  idle: "Enter to send · Shift+Enter for a new line",
-  busy: "Enter to steer · Tab to queue · Esc to stop",
-  input: "Answer the question above, or Enter to queue · Esc to stop",
+  idle: "Enter to send · Shift + Enter for a new line",
+  busy: `Enter to queue · ${STEER_KEY} to steer`,
+  input: "Answer the question above, or Enter to queue",
 };
 
 type ComposerProps = {
@@ -39,10 +43,9 @@ type ComposerProps = {
 };
 
 /**
- * Sends the user's messages with the Codex keys: Enter sends, or steers a
- * running turn after its next tool call; Tab queues while a turn runs; Esc
- * stops the turn. While the worker waits for input, messages can only be
- * queued. Apply a spent budget increase before sending the next message.
+ * Sends the user's messages: Enter sends, or queues while a turn runs;
+ * Cmd/Ctrl+Enter steers a running turn after its next tool call. While the
+ * worker waits for input, messages can only be queued. Apply a spent budget increase before sending the next message.
  */
 export function Composer({ task, budgetApplyVersion }: ComposerProps) {
   const controller = useController(),
@@ -51,7 +54,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
     inputHint =
       task.pending_input &&
       pendingInputKind(task.pending_input) === "permission"
-        ? "Enter to queue · Esc to stop"
+        ? "Enter to queue"
         : HINTS.input,
     questionRequest =
       task.pending_input &&
@@ -153,25 +156,17 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
 
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      void send(mode === "input" ? "queue" : "steer");
-    } else if (
-      event.key === "Tab" &&
-      !event.shiftKey &&
-      mode !== "idle" &&
-      message
-    ) {
-      // Otherwise Tab moves focus as usual.
-      event.preventDefault();
-      void send("queue");
-    } else if (event.key === "Escape" && mode !== "idle") {
-      event.preventDefault();
-      event.stopPropagation();
-      void stop();
+      const steer = event.metaKey || event.ctrlKey;
+
+      // A worker waiting for input can't be steered, so every Enter queues.
+      void send(
+        mode === "idle" || (mode === "busy" && steer) ? "steer" : "queue",
+      );
     }
   };
 
   const stopButton = (
-    <TooltipWrapper label="Stop the turn (Esc)">
+    <TooltipWrapper label="Stop the turn">
       <Button
         variant="ghost"
         className="chat-icon-button"
@@ -250,13 +245,18 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
               />
               <div className="chat-composer-actions">
                 {mode !== "idle" && message && (
-                  <Button
-                    data-action="queue"
-                    disabled={busy}
-                    onClick={() => send("queue")}
+                  <TooltipWrapper
+                    label="Send after this turn (Enter)"
+                    triggerLabel="Queue"
                   >
-                    Queue
-                  </Button>
+                    <Button
+                      data-action="queue"
+                      disabled={busy}
+                      onClick={() => send("queue")}
+                    >
+                      Queue
+                    </Button>
+                  </TooltipWrapper>
                 )}
                 {/* While a turn runs, an empty composer's button stops it. */}
                 {mode === "idle" || (mode === "busy" && message) ? (
@@ -265,7 +265,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
                       showContinuePrompt
                         ? "Press ENTER to continue"
                         : mode === "busy"
-                          ? "Send into the running turn (Enter)"
+                          ? `Send into the running turn (${STEER_KEY})`
                           : "Send (Enter)"
                     }
                     triggerLabel={

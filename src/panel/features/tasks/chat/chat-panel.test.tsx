@@ -307,14 +307,14 @@ test("on an idle task, Enter sends the message, which starts the next turn", asy
   assert.ok(view.getByRole("button", { name: "Send" }));
 });
 
-test("while a turn runs, Enter steers, Tab queues and Esc stops, and an empty composer offers Stop", async () => {
+test("while a turn runs, Cmd/Ctrl+Enter steers, Enter queues, and an empty composer offers Stop", async () => {
   const { tool, composer, type, view } = setup({ status: "running" });
   assert.ok(view.getByRole("button", { name: "Stop the turn" }));
 
   type("Mind the edge cases");
   assert.ok(view.getByRole("button", { name: "Steer" }));
   assert.ok(view.getByRole("button", { name: "Queue" }));
-  fireEvent.keyDown(composer, { key: "Enter" });
+  fireEvent.keyDown(composer, { key: "Enter", metaKey: true });
   await waitFor(() => assert.equal(tool.mock.calls.length, 1));
 
   await waitFor(() =>
@@ -322,10 +322,13 @@ test("while a turn runs, Enter steers, Tab queues and Esc stops, and an empty co
   );
 
   type("Afterwards, the docs");
-  fireEvent.keyDown(composer, { key: "Tab" });
+  fireEvent.keyDown(composer, { key: "Enter" });
   await waitFor(() => assert.equal(tool.mock.calls.length, 2));
 
+  // Esc keeps its usual role; only the Stop button stops the turn.
   fireEvent.keyDown(composer, { key: "Escape" });
+  assert.equal(tool.mock.calls.length, 2);
+  fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
   await waitFor(() => assert.equal(tool.mock.calls.length, 3));
 
   assert.deepEqual(sent(tool), [
@@ -341,7 +344,7 @@ test("while a turn runs, Enter steers, Tab queues and Esc stops, and an empty co
   ]);
 });
 
-test("while the worker waits for input, Enter only queues", async () => {
+test("while the worker waits for input, Enter and Ctrl+Enter only queue", async () => {
   const { tool, composer, type, view } = setup({
     status: "waiting",
     pending_input: { id: "r", tool: "Bash", kind: "permission", input: {} },
@@ -349,7 +352,7 @@ test("while the worker waits for input, Enter only queues", async () => {
 
   type("Later");
   expect(view.queryByRole("button", { name: "Steer" })).toBeNull();
-  fireEvent.keyDown(composer, { key: "Enter" });
+  fireEvent.keyDown(composer, { key: "Enter", ctrlKey: true });
 
   await waitFor(() =>
     assert.deepEqual(sent(tool), [

@@ -100,13 +100,12 @@ without a timezone label. The duration tooltip identifies whether the turn was
 Failures retain their error. Notes mark compaction, new sessions and recreated worktrees.
 Draft text streams with a caret and is replaced by its stored message.
 
-| Composer action                         | Behavior                                                |
-| --------------------------------------- | ------------------------------------------------------- |
-| Enter                                   | Start an idle task's next turn or steer a running turn. |
-| Shift+Enter                             | Insert a newline.                                       |
-| Tab with text during a run              | Queue a message.                                        |
-| Escape with composer focus during a run | Stop the turn.                                          |
-| Waiting for a question/permission       | Messages can only be queued.                            |
+| Composer action                   | Behavior                                               |
+| --------------------------------- | ------------------------------------------------------ |
+| Enter                             | Start an idle task's next turn, or queue during a run. |
+| Cmd/Ctrl+Enter during a run       | Steer the running turn after its next tool call.       |
+| Shift+Enter                       | Insert a newline.                                      |
+| Waiting for a question/permission | Messages can only be queued.                           |
 
 Pending steers offer **Interrupt and send now**. Queued messages offer Edit and
 Remove, and can be reordered by dragging or with Alt+Up/Alt+Down on a focused
