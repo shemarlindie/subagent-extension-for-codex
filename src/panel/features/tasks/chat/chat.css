@@ -276,15 +276,21 @@ body[data-expanded-panel="true"]
 .chat-queue-item[data-drop="after"] {
   box-shadow: inset 0 -2px 0 var(--accent);
 }
-/* A fixed slot keeps text aligned on rows that can't move. */
+/*
+ * A fixed slot keeps text aligned on rows that can't move. It fits the grip's
+ * ink, which is about 6px wide; the icon's empty sides overflow it, centred.
+ */
 .chat-queue-grip {
   display: flex;
   flex: none;
   align-items: center;
-  width: 10px;
+  justify-content: center;
+  width: 6px;
   height: 1lh;
-  margin-right: -4px;
   color: var(--muted);
+}
+.chat-queue-grip svg {
+  flex: none;
 }
 .chat-queue-item[draggable="true"]:hover .chat-queue-grip {
   color: var(--text);

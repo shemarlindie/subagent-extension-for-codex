@@ -8,7 +8,10 @@ import {
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
 import { Icon } from "../../../../shared/components/icons/icons";
-import { useAnimatedHeight } from "../../../../shared/components/motion/motion";
+import {
+  Presence,
+  useAnimatedHeight,
+} from "../../../../shared/components/motion/motion";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 
 type QueuedMessageRowProps = {
@@ -109,11 +112,14 @@ export function QueuedMessageRow({
           row.current?.focus();
       }}
     >
-      {reorderable && (
+      {/* The slot folds with reordering, and the handle pops with movability. */}
+      <Presence show={reorderable} as="span" variant="fold">
         <span className="chat-queue-grip">
-          {canMove && <Icon name="grip-vertical-double" size={10} />}
+          <Presence show={canMove} as="span" variant="pop">
+            <Icon name="grip-vertical-double" size={10} />
+          </Presence>
         </span>
-      )}
+      </Presence>
       {!editing ? (
         <p className={`chat-queue-text${swap}`}>
           {message.from === "parent" && (
