@@ -54,13 +54,13 @@ recorded fixtures through the provider.
 | Live: streaming reply                       | Chat draft grows over time and restarts.                                                                                                         |
 | Recorded: …                                 | Real SDK runs: steer/interrupt/send-now, streamed reply, question interrupted and resumed, read-only MCP review.                                 |
 | Limit upload sizes                          | Parent-started turns, user and parent follow-ups, Markdown lists/tables/code, footnotes, relative links and images, HTML-like prose.             |
-| Tidy the settings copy                      | Taken and pending steers, queued messages including one from the parent.                                                                         |
-| Rename the feature flags                    | Interrupted task with a paused queue and leftover steer.                                                                                         |
+| Tidy the settings copy                      | Taken and pending steers, queued messages including one from the parent; new steers and queued messages stay until reload.                       |
+| Rename the feature flags                    | Interrupted task with a paused queue: a leftover steer, then two messages to reorder, edit or remove until reload.                               |
 | Move the date helpers                       | Cost budget exhausted; the warning notice applies a higher limit without sending a message.                                                      |
 | Finish the date helper migration            | Runtime-only budget exhausted; the warning notice applies the higher runtime limit without sending a message.                                    |
 | Move the screens to the new layout          | Long Chat conversation for scrolling.                                                                                                            |
 | Stabilise the retry timer test              | Worktree recreated from its branch in a new session.                                                                                             |
-| Migrate the config loader                   | Pending inline question and queue-only composer.                                                                                                 |
+| Migrate the config loader                   | Pending inline question and queue-only composer; queued messages stay until reload.                                                              |
 | Plan the sign-in rollout                    | Three stacked questions, single/multiple choices and queue-only composer.                                                                        |
 | Convert the test suite to the new runner    | More than 200 events in two turns; trimmed timeline, scrolling, and View activity for a turn inside (2) and outside (1) the window.              |
 | Move the API clients onto the retry wrapper | 15 turns and about 580 events, with a failed turn 8; View activity reads turns 1–10 on their own and scrolls to turns 11–15.                     |

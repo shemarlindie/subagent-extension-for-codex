@@ -119,6 +119,12 @@ const pausedMessages = {
     message: "Then remove the flags that are always on.",
     from: "parent" as const,
   },
+  // A second movable message, so the queue can be reordered behind the steer.
+  later: {
+    id: "msg_preview_paused_later",
+    message: "Update the flag docs last.",
+    from: "user" as const,
+  },
 };
 
 const paused = new Timeline("preview-paused", at(118), 1800);
@@ -129,6 +135,18 @@ paused.add(
   "task.queue_changed",
   { queue: [queueEntry(pausedMessages.queued)], paused: false },
   4000,
+);
+
+paused.add(
+  "task.queue_changed",
+  {
+    queue: [
+      queueEntry(pausedMessages.queued),
+      queueEntry(pausedMessages.later),
+    ],
+    paused: false,
+  },
+  1000,
 );
 
 paused.add(
@@ -146,6 +164,7 @@ paused.add(
     queue: [
       queueEntry(pausedMessages.steer),
       queueEntry(pausedMessages.queued),
+      queueEntry(pausedMessages.later),
     ],
     paused: true,
   },
@@ -386,6 +405,7 @@ export const conversationTasks: Task[] = [
     queue: [
       { ...pausedMessages.steer, delivery: "steer", recorded: true },
       { ...pausedMessages.queued, delivery: "queue" },
+      { ...pausedMessages.later, delivery: "queue" },
     ],
     queue_paused: true,
     ...timestamps(118, 1),

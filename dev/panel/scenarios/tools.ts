@@ -17,6 +17,7 @@ import {
   previewStreamingDraft,
   previewTasks,
 } from "./fixtures";
+import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
 
 const streamStart = Date.now();
 
@@ -355,6 +356,13 @@ export function previewTool(
 
   if (name === "register_user_agent_project")
     return registerProject(args.repository, options);
+
+  if (PREVIEW_QUEUE_TOOLS.includes(name))
+    return previewQueueTool(
+      previewTasks.find((task) => task.id === args.task_id),
+      name,
+      args,
+    );
 
   if (name === "rename_user_agent_task") {
     const task = previewTasks.find((task) => task.id === args.task_id);

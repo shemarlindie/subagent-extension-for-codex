@@ -390,6 +390,96 @@ test("fixture task renaming updates listed titles and validates input", () => {
   }
 });
 
+test("fixture queues reorder, edit and remove in memory behind a left-over steer", () => {
+  const task = previewTasks.find(
+      (candidate) => candidate.id === "preview-paused",
+    )!,
+    original = structuredClone(task.queue);
+
+  const order = () =>
+    (previewTool("list_agent_tasks") as Task[])
+      .find((entry) => entry.id === task.id)!
+      .queue.map((m) => m.id);
+
+  const call = (name: string, args: Record<string, unknown>) =>
+    previewTool(name, { task_id: task.id, ...args });
+
+  try {
+    const [steer, queued, later] = original.map((m) => m.id);
+    assert.deepEqual(order(), [steer, queued, later]);
+
+    call("move_user_agent_queued_message", { message_id: later, index: 0 });
+    assert.deepEqual(order(), [steer, later, queued]);
+
+    assert.throws(
+      () =>
+        call("move_user_agent_queued_message", { message_id: steer, index: 2 }),
+      /stays at the front/,
+    );
+
+    call("edit_user_agent_queued_message", {
+      message_id: later,
+      message: "Edited",
+    });
+
+    assert.equal(task.queue[1].message, "Edited");
+    call("remove_user_agent_queued_message", { message_id: later });
+    assert.deepEqual(order(), [steer, queued]);
+    call("clear_user_agent_queue", {});
+    assert.deepEqual(order(), []);
+    assert.equal(task.queue_paused, undefined);
+
+    assert.throws(
+      () => call("resume_user_agent_queue", {}),
+      /Design preview only/,
+    );
+  } finally {
+    task.queue = original;
+    task.queue_paused = true;
+  }
+});
+
+test("fixture sends queue or steer a busy task in memory, never starting a turn", () => {
+  const find = (id: string) => previewTasks.find((task) => task.id === id)!,
+    running = find("preview-steering"),
+    input = find("preview-input"),
+    saved = [running, input].map((task) => ({
+      task,
+      queue: structuredClone(task.queue),
+      steers: structuredClone(task.pending_steers),
+    }));
+
+  const send = (task: Task, delivery: string) =>
+    previewTool("send_user_agent_message", {
+      task_id: task.id,
+      message: `To ${task.id} by ${delivery}`,
+      delivery,
+    }) as { message_id: string; state: string };
+
+  try {
+    const queued = send(running, "queue");
+    assert.equal(queued.state, "queued");
+    assert.equal(running.queue.at(-1)!.id, queued.message_id);
+    assert.equal(running.queue.at(-1)!.message, "To preview-steering by queue");
+    const steered = send(running, "steer");
+    assert.equal(steered.state, "started");
+    assert.equal(running.pending_steers.at(-1)!.id, steered.message_id);
+    assert.throws(() => send(running, "interrupt"), /Design preview only/);
+    assert.throws(() => send(input, "steer"), /waiting for input/);
+    assert.equal(send(input, "queue").state, "queued");
+
+    assert.throws(
+      () => send(find("preview-paused"), "queue"),
+      /Design preview only/,
+    );
+  } finally {
+    for (const { task, queue, steers } of saved) {
+      task.queue = queue;
+      task.pending_steers = steers;
+    }
+  }
+});
+
 test("successful budget updates can be enabled for preview fixtures", () => {
   const cases = [
     {
