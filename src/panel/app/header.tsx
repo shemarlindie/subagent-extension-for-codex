@@ -14,7 +14,7 @@ export function Header() {
   const controller = useController(),
     state = useSnapshot(),
     blocked = !state.connected || state.busy,
-    // Thread mode scopes the panel to the conversation, so global actions go.
+    // Thread mode scopes the panel to the conversation; Settings stays available.
     threadMode = !!state.conversation,
     expandLabel =
       state.host.displayMode === "fullscreen" ? "Collapse" : "Expand";
@@ -122,20 +122,18 @@ export function Header() {
               </Button>
             </TooltipWrapper>
           )}
-          {!threadMode && (
-            <TooltipWrapper label="Settings">
-              <Button
-                id="settings"
-                variant="ghost"
-                className="toolbar-icon-button"
-                aria-label="Settings"
-                disabled={blocked}
-                onClick={settings}
-              >
-                <Icon name="settings" size={14} />
-              </Button>
-            </TooltipWrapper>
-          )}
+          <TooltipWrapper label="Settings">
+            <Button
+              id="settings"
+              variant="ghost"
+              className="toolbar-icon-button"
+              aria-label="Settings"
+              disabled={blocked}
+              onClick={settings}
+            >
+              <Icon name="settings" size={14} />
+            </Button>
+          </TooltipWrapper>
         </div>
         <Menu.Root>
           <TooltipWrapper label="Panel actions">
@@ -174,15 +172,13 @@ export function Header() {
                     {expandLabel}
                   </Menu.Item>
                 )}
-                {!threadMode && (
-                  <Menu.Item
-                    className="menu-item"
-                    disabled={blocked}
-                    onClick={settings}
-                  >
-                    Settings
-                  </Menu.Item>
-                )}
+                <Menu.Item
+                  className="menu-item"
+                  disabled={blocked}
+                  onClick={settings}
+                >
+                  Settings
+                </Menu.Item>
                 {!threadMode && (
                   <Menu.Item
                     className="menu-item"

@@ -60,20 +60,26 @@ test("global header offers project scope and Browse without the thread title", (
   assert.equal(view.queryByText("Delegated Work"), null);
 });
 
-test("thread header shows the named project and omits global controls", async () => {
-  const { view, user } = setup({ conversation: "chat-1" });
+test("thread header shows settings and omits other global controls", async () => {
+  const { view, user, settings } = setup({ conversation: "chat-1" });
 
   assert.ok(view.getByText("Delegated Work"));
   assert.equal(view.getByText("My project").tagName, "STRONG");
   assert.equal(view.queryByRole("combobox", { name: "Project scope" }), null);
   assert.equal(view.queryByRole("button", { name: "Browse" }), null);
-  assert.equal(view.queryByRole("button", { name: "Settings" }), null);
+  const settingsButton = view.getByRole("button", { name: "Settings" });
   assert.equal(view.queryByRole("button", { name: "New Task" }), null);
+
+  await user.click(settingsButton);
+  await waitFor(() => assert.equal(settings.mock.calls.length, 1));
 
   await user.click(view.getByRole("button", { name: "Panel actions" }));
   await view.findByRole("menuitem", { name: "Refresh" });
-  assert.equal(view.queryByRole("menuitem", { name: "Settings" }), null);
+  const settingsItem = view.getByRole("menuitem", { name: "Settings" });
   assert.equal(view.queryByRole("menuitem", { name: "New Task" }), null);
+
+  await user.click(settingsItem);
+  await waitFor(() => assert.equal(settings.mock.calls.length, 2));
 });
 
 test("thread header uses the repository basename for an unnamed project", () => {
