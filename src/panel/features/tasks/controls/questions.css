@@ -106,16 +106,6 @@
   gap: 12px;
   margin-bottom: 8px;
 }
-.question-header {
-  align-self: flex-start;
-  margin-bottom: 8px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent);
-}
 .question-hint {
   flex: none;
   margin-left: auto;

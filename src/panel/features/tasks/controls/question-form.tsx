@@ -47,7 +47,6 @@ interface QuestionCardProps {
   index: number;
   position: "behind" | "active" | "ahead";
   depth: number;
-  stacked: boolean;
   register: UseFormRegister<Answers>;
   setValue: UseFormSetValue<Answers>;
   custom: string;
@@ -61,7 +60,6 @@ function QuestionCard({
   index,
   position,
   depth,
-  stacked,
   register,
   setValue,
   custom,
@@ -88,10 +86,6 @@ function QuestionCard({
       aria-hidden={!active || undefined}
       inert={!active}
     >
-      {/* Stacked questions already name each card in the step chips above. */}
-      {question.header && !stacked && (
-        <span className="question-header">{question.header}</span>
-      )}
       <div className="question-heading">
         <p id={`${id}-text`} className="question-text">
           {question.question}
@@ -371,7 +365,6 @@ export function QuestionForm({ task }: { task: Task }) {
               index < active ? "behind" : index > active ? "ahead" : "active"
             }
             depth={Math.abs(index - active)}
-            stacked={stacked}
             register={register}
             setValue={setValue}
             custom={customs[index] ?? ""}
