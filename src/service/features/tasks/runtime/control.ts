@@ -26,6 +26,7 @@ import { Drafts } from "../conversation/drafts.js";
 import { SessionPrompts } from "../conversation/session-prompts.js";
 import { Forms } from "../input/forms.js";
 import { PendingInput } from "../input/pending-input.js";
+import { ActivityPages } from "../storage/activity-pages.js";
 import { Store } from "../storage/store.js";
 import { generateTaskTitle } from "./task-title.js";
 
@@ -63,6 +64,8 @@ export class Control {
   forms: Forms;
   /** Running tasks' unfinished messages, kept in memory. */
   drafts: Drafts;
+  /** The panel's activity pages, with each task's tally of older events. */
+  activity: ActivityPages;
   projects?: Projects;
   constructor(
     public store: Store,
@@ -80,6 +83,7 @@ export class Control {
     this.prompts = new SessionPrompts(store, workspaces);
     this.forms = new Forms(this);
     this.drafts = new Drafts(store.bus);
+    this.activity = new ActivityPages(store);
   }
 
   async recover() {

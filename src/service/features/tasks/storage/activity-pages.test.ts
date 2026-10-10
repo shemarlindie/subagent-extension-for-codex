@@ -1,0 +1,107 @@
+import assert from "node:assert/strict";
+
+import { test, vi } from "vitest";
+
+import { type Event } from "../../../../shared/events/types.js";
+import {
+  EVENT_TAIL_SIZE,
+  windowActivity,
+} from "../../../../shared/tasks/activity/activity-tail.js";
+import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+import { ActivityPages } from "./activity-pages.js";
+import { Store } from "./store.js";
+
+function fixture() {
+  const store = new Store(":memory:");
+
+  const task: Task = {
+    ...startSchema.parse({ description: "Activity" }),
+    title: "Activity",
+    id: "activity",
+    owner: "alice",
+    status: "running",
+    created_at: "now",
+    updated_at: "now",
+    instructions: [],
+    created_by: "user",
+    instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
+    turn: 1,
+    runtime_ms: 0,
+  };
+
+  store.save(task);
+
+  const write = (count: number) => {
+    for (let i = 0; i < count; i++) {
+      const n = store.eventCount(task.id);
+
+      if (n % 3 === 0) store.event(task, "tool.started", { name: "Bash" });
+      else store.event(task, "agent.message", { role: "assistant" });
+    }
+  };
+
+  return { store, task, write };
+}
+
+/** Every event of a task, read a page at a time. */
+function everything(store: Store, id: string) {
+  const all: Event[] = [];
+
+  for (let after = 0; ;) {
+    const page = store.taskEvents(id, after);
+    if (!page.length) return all;
+
+    all.push(...page);
+    after = page.at(-1)!.id;
+  }
+}
+
+test("a page is the newest window, the event total, and the tally of the rest", () => {
+  const { store, task, write } = fixture();
+  write(EVENT_TAIL_SIZE + 250);
+
+  const page = new ActivityPages(store).page(task.id, 0),
+    log = everything(store, task.id);
+
+  assert.deepEqual(page, windowActivity(log));
+  assert.equal(page.total, EVENT_TAIL_SIZE + 250);
+  assert.equal(page.events.length, EVENT_TAIL_SIZE);
+  assert.equal(page.dropped?.count, 250);
+});
+
+test("a poll returns only the events after its cursor and extends the tally", () => {
+  const { store, task, write } = fixture();
+  write(EVENT_TAIL_SIZE + 10);
+
+  const pages = new ActivityPages(store),
+    first = pages.page(task.id, 0),
+    cursor = first.events.at(-1)!.id;
+
+  write(1200);
+
+  const next = pages.page(task.id, cursor),
+    log = everything(store, task.id);
+
+  assert.deepEqual(next, windowActivity(log, cursor));
+  assert.equal(next.events.length, EVENT_TAIL_SIZE);
+  assert.equal(next.total, EVENT_TAIL_SIZE + 10 + 1200);
+});
+
+test("a poll with nothing new does not count the history again", () => {
+  const { store, task, write } = fixture();
+  write(EVENT_TAIL_SIZE + 500);
+
+  const pages = new ActivityPages(store),
+    first = pages.page(task.id, 0),
+    cursor = first.events.at(-1)!.id,
+    read = vi.spyOn(store, "taskEvents");
+
+  const again = pages.page(task.id, cursor);
+
+  // One probe for events past the tally, and one read of the window.
+  assert.equal(read.mock.calls.length, 2);
+  assert.deepEqual(again.dropped, first.dropped);
+  assert.deepEqual(again.events, []);
+});

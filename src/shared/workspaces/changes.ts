@@ -41,6 +41,21 @@ export interface Changes {
   next_cursor?: string;
 }
 
+/** A task's change totals: the file count and line stats, without the file list or diff. */
+export type ChangeCounts = Omit<Changes, "files" | "diff" | "next_cursor"> & {
+  files: number;
+};
+
+/** The totals of a read, for the tab count and Details; any page gives the same ones. */
+export function changeCounts({
+  files,
+  diff: _diff,
+  next_cursor: _next,
+  ...totals
+}: Changes): ChangeCounts {
+  return { ...totals, files: files.length };
+}
+
 /** Why an "end_unrecorded" task has no changes. */
 export const END_UNRECORDED =
   "This task ended before its end state was recorded, so its changes can't be told apart from later edits to this checkout.";

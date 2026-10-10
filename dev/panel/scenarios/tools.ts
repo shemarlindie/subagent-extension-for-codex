@@ -1,5 +1,6 @@
 import { type ModelChoice } from "../../../src/shared/providers/types";
 import { settingsSections } from "../../../src/shared/settings/settings-document";
+import { windowActivity } from "../../../src/shared/tasks/activity/activity-tail";
 import { chatItems } from "../../../src/shared/tasks/conversation/chat";
 import { roles, type Task } from "../../../src/shared/tasks/model";
 import { listedTask } from "../../../src/shared/tasks/task-list";
@@ -60,7 +61,7 @@ const previewSettingsDefaults = {
   default_workspace_strategy: "current_repo",
   worktree_branch_prefix: "agent/",
   auto_register_chat_project: true,
-  claude_permission_mode: "inherit",
+  claude_permission_mode: "default",
   default_approval_decider: "user",
   claude_sandbox: "user_config",
   claude_environment: "inherit",
@@ -336,9 +337,9 @@ export function previewTool(
         (task) => task.id === args.task_id && task.status === "running",
       ),
     },
-    get_agent_events: previewEvents.filter(
-      (event) =>
-        event.task_id === args.task_id && event.id > Number(args.after ?? 0),
+    get_user_agent_activity: windowActivity(
+      previewEvents.filter((event) => event.task_id === args.task_id),
+      Number(args.after ?? 0),
     ),
     list_available_workers: [
       {

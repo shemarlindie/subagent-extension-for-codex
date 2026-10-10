@@ -1,6 +1,17 @@
 import { EventEmitter } from "node:events";
 
-import { and, desc, eq, gt, inArray, max, or, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  lt,
+  max,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { type Event } from "../../../../shared/events/types.js";
 import { type Task } from "../../../../shared/tasks/model.js";
@@ -156,6 +167,56 @@ export class Store {
       .select()
       .from(events)
       .where(and(eq(events.task_id, id), gt(events.id, after)))
+      .orderBy(events.id)
+      .limit(PAGE)
+      .all()
+      .map(decodeEvent);
+  }
+
+  /** How many events a task has, however many a page would return. */
+  eventCount(id: string): number {
+    return (
+      this.orm
+        .select({ count: count() })
+        .from(events)
+        .where(eq(events.task_id, id))
+        .get()?.count ?? 0
+    );
+  }
+
+  /**
+   * The id of a task's event `depth` places from its newest, so the newest
+   * `depth` events are those from it on; 0 when there are fewer than that.
+   * `depth` is at least 1: the query offsets by `depth - 1`.
+   */
+  eventWindowStart(id: string, depth: number): number {
+    return (
+      this.orm
+        .select({ id: events.id })
+        .from(events)
+        .where(eq(events.task_id, id))
+        .orderBy(desc(events.id))
+        .limit(1)
+        .offset(depth - 1)
+        .get()?.id ?? 0
+    );
+  }
+
+  /**
+   * A task's events after `after`, and before `before` when given, a page at a
+   * time. Internal: callers check the task's owner first.
+   */
+  taskEvents(id: string, after: number, before?: number): Event[] {
+    return this.orm
+      .select()
+      .from(events)
+      .where(
+        and(
+          eq(events.task_id, id),
+          gt(events.id, after),
+          before === undefined ? undefined : lt(events.id, before),
+        ),
+      )
       .orderBy(events.id)
       .limit(PAGE)
       .all()

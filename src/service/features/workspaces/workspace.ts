@@ -12,6 +12,8 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { type Task } from "../../../shared/tasks/model.js";
 import {
+  type ChangeCounts,
+  changeCounts,
   type ChangedFile,
   type ChangedFileContent,
   type Changes,
@@ -481,6 +483,14 @@ export class Workspaces {
         ? { next_cursor: encodeCursor(head, now, end) }
         : {}),
     };
+  }
+
+  /**
+   * A task's uncommitted change totals, as the Changes tab reads them, without
+   * its file list or diff text. Git and the cached diff still run once.
+   */
+  async uncommittedCounts(t: Task): Promise<ChangeCounts> {
+    return changeCounts(await this.uncommittedChanges(t));
   }
 
   /**

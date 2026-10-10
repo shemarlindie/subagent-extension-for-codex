@@ -505,6 +505,24 @@ export function definitions(
           a.cursor,
         ),
     }),
+    get_user_agent_change_counts: tool({
+      description:
+        "User interface only: a task's uncommitted change totals (file count and line stats) for the panel's tab count and Details, without the file list or diff. Otherwise as get_user_agent_changes counts them.",
+      schema: taskId,
+      run: (a) => c.workspaces.uncommittedCounts(c.store.get(a.task_id, owner)),
+    }),
+    get_user_agent_activity: tool({
+      description:
+        "User interface only: a task's activity for the panel's Activity tab: its newest events after a cursor, its event total, and a tally of the older events outside the window (the summary's count, timestamps, tool calls, messages, failures and retries).",
+      schema: taskId.extend({
+        after: z.number().int().nonnegative().default(0),
+      }),
+      run: (a) => {
+        c.store.get(a.task_id, owner);
+
+        return c.activity.page(a.task_id, a.after);
+      },
+    }),
     remove_user_agent_worktree: tool({
       description:
         "User interface only: remove a stopped worktree task's worktree and keep its branch. With uncommitted changes it removes nothing and returns status uncommitted with the files, unless force discards them.",
@@ -559,7 +577,9 @@ export const isUserTool = (name: string) =>
     "clear_user_agent_queue",
     "update_user_agent_settings",
     "get_user_agent_changes",
+    "get_user_agent_change_counts",
     "get_user_agent_changed_file",
+    "get_user_agent_activity",
     "remove_user_agent_worktree",
     "rename_user_agent_task",
     "delete_user_agent_task",
