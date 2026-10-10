@@ -1,107 +1,51 @@
+import {
+  type ActivityPage,
+  type DroppedSummary,
+  EVENT_TAIL_SIZE,
+} from "../../../../shared/tasks/activity/activity-tail";
 import type { Event } from "../../../app/state/types";
 import { formatDuration } from "../list/duration";
-import { activityFailed, activityKind } from "./activity-timeline";
 
-export const EVENT_TAIL_SIZE = 200;
+export {
+  addDropped,
+  type DroppedSummary,
+  EVENT_TAIL_SIZE,
+} from "../../../../shared/tasks/activity/activity-tail";
 
-/** What fell off the front of a task's activity once it outgrew the tail. */
-export type DroppedSummary = {
-  task_id: string;
-  count: number;
-  /** Timestamps of the first and last dropped event. */
-  from: string;
-  to: string;
-  toolCalls: number;
-  /** Tool calls by tool name. */
-  tools: Record<string, number>;
-  messages: number;
-  failures: number;
-  retries: number;
-};
+/** The events and dropped tally the Activity tab shows for a task. */
+export type ActivityView = { events: Event[]; dropped?: DroppedSummary };
 
-export type EventTail = { events: Event[]; dropped?: DroppedSummary };
-
-/** Tally dropped events onto a running summary without mutating the previous one. */
-export function addDropped(
-  previous: DroppedSummary | undefined,
-  dropped: Event[],
-): DroppedSummary | undefined {
-  if (!dropped.length) return previous;
-
-  const summary: DroppedSummary = previous
-    ? { ...previous, tools: { ...previous.tools } }
-    : {
-        task_id: dropped[0].task_id,
-        count: 0,
-        from: dropped[0].timestamp,
-        to: dropped[0].timestamp,
-        toolCalls: 0,
-        tools: {},
-        messages: 0,
-        failures: 0,
-        retries: 0,
-      };
-
-  for (const event of dropped) {
-    summary.count++;
-    summary.to = event.timestamp;
-
-    if (event.type === "tool.started") {
-      summary.toolCalls++;
-
-      const name =
-        typeof event.data.name === "string" ? event.data.name : "Tool";
-
-      summary.tools[name] = (summary.tools[name] ?? 0) + 1;
-    }
-
-    if (event.type === "agent.message" && event.data.role !== "user")
-      summary.messages++;
-    if (activityFailed(event)) summary.failures++;
-    if (activityKind(event) === "api_retry") summary.retries++;
-  }
-
-  return summary;
+/** The cursor for the next page: the last event the view shows for the task. */
+export function activityCursor(events: Event[], taskId: string) {
+  return events.filter((event) => event.task_id === taskId).at(-1)?.id ?? 0;
 }
 
-/** Drain service pages without retaining unbounded history or advancing a stale view. */
-export async function readEventTail(
+/**
+ * Merges a page from get_user_agent_activity into the view. The page holds the
+ * newest events after the cursor, so appending them and keeping the last
+ * EVENT_TAIL_SIZE matches the service's window. The tally is the service's
+ * own, so it replaces the previous one. Unchanged parts keep their identity,
+ * so an unchanged view skips rendering.
+ */
+export function mergeActivity(
+  previous: ActivityView,
   taskId: string,
-  previous: Event[],
-  read: (after: number) => Promise<Event[]>,
-  isCurrent: () => boolean,
-  previousDropped?: DroppedSummary,
-): Promise<EventTail> {
-  let recent = previous.filter((event) => event.task_id === taskId),
-    after = recent.at(-1)?.id ?? 0,
-    // A summary only continues the history it was tallied from.
-    dropped =
-      recent.length && previousDropped?.task_id === taskId
-        ? previousDropped
-        : undefined;
+  page: ActivityPage,
+): ActivityView {
+  const recent = previous.events.filter((event) => event.task_id === taskId),
+    events = page.events.length
+      ? [...recent, ...page.events].slice(-EVENT_TAIL_SIZE)
+      : recent.length === previous.events.length
+        ? previous.events
+        : recent;
 
-  for (;;) {
-    const page = await read(after);
-    if (!isCurrent()) return { events: [] };
-    // Keep the same array when nothing arrived so unchanged views skip rendering.
-    if (!page.length)
-      return {
-        events: recent.length === previous.length ? previous : recent,
-        dropped,
-      };
-    recent = [...recent, ...page];
+  const dropped =
+    page.dropped &&
+    JSON.stringify(page.dropped) === JSON.stringify(previous.dropped)
+      ? previous.dropped
+      : page.dropped;
 
-    if (recent.length > EVENT_TAIL_SIZE) {
-      const overflow = recent.length - EVENT_TAIL_SIZE;
-      dropped = addDropped(dropped, recent.slice(0, overflow));
-      recent = recent.slice(overflow);
-    }
-
-    const cursor = page.at(-1)!.id;
-    if (page.length < 1000 || cursor <= after)
-      return { events: recent, dropped };
-    after = cursor;
-  }
+  return { events, dropped };
 }
 
 const plural = (count: number, noun: string) =>

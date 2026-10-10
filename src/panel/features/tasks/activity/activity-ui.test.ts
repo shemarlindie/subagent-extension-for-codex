@@ -22,6 +22,8 @@ import {
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { formatUserDateTime } from "../../../shared/utils/user-date-time";
+import { formatOutcomeTimestamp } from "../chat/timeline/outcome-timestamp";
 import type { ReadingState } from "../evidence/reading-state";
 import { ActivityContent, ActivityValue } from "./activity-content";
 import { EVENT_TAIL_SIZE } from "./event-history";
@@ -1647,6 +1649,90 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   );
 });
 
+test("opening debug scrolls its panel into view once the height transition settles", async (t) => {
+  t.onTestFinished(cleanup);
+  const scrolled: string[] = [];
+  let reducedMotion = false;
+
+  const previousScroll = Object.getOwnPropertyDescriptor(
+    Element.prototype,
+    "scrollIntoView",
+  );
+
+  const previousMatchMedia = Object.getOwnPropertyDescriptor(
+    window,
+    "matchMedia",
+  );
+
+  Object.defineProperty(Element.prototype, "scrollIntoView", {
+    configurable: true,
+    value(this: Element) {
+      scrolled.push(this.id);
+    },
+  });
+
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({ matches: reducedMotion }),
+  });
+
+  t.onTestFinished(() => {
+    if (previousScroll)
+      Object.defineProperty(
+        Element.prototype,
+        "scrollIntoView",
+        previousScroll,
+      );
+    else delete (Element.prototype as any).scrollIntoView;
+    if (previousMatchMedia)
+      Object.defineProperty(window, "matchMedia", previousMatchMedia);
+    else delete (window as any).matchMedia;
+  });
+
+  const read = event(
+    "tool.started",
+    { name: "Read", id: "reveal-read" },
+    "reveal-read",
+  );
+
+  const view = render(createElement(GroupedEventList, { events: [read] }));
+  const toggle = view.getByRole("button", { name: "Debug activity: Read" });
+  const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+
+  fireEvent.click(toggle);
+
+  // Child transitions and other properties bubble up but do not reveal the panel.
+  fireEvent.transitionEnd(panel.querySelector(".activity-debug-caption")!, {
+    propertyName: "height",
+  });
+
+  fireEvent.transitionEnd(panel, { propertyName: "opacity" });
+  // A reveal would scroll on a later frame, so give one time to land.
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.deepEqual(scrolled, []);
+
+  fireEvent.transitionEnd(panel, { propertyName: "height" });
+  // Compare ids: deep-equal on jsdom nodes walks the whole document graph.
+  await waitFor(() => assert.deepEqual(scrolled, [panel.id]));
+
+  cleanup();
+
+  reducedMotion = true;
+  const reduced = render(createElement(GroupedEventList, { events: [read] }));
+
+  const reducedToggle = reduced.getByRole("button", {
+    name: "Debug activity: Read",
+  });
+
+  scrolled.length = 0;
+  fireEvent.click(reducedToggle);
+
+  // Reduced motion has no height transition, so the panel is revealed without one.
+  await waitFor(() =>
+    assert.deepEqual(scrolled, [reducedToggle.getAttribute("aria-controls")]),
+  );
+});
+
 test("operation failure messages remain visible outside collapsed debug details", () => {
   const events = [
     event(
@@ -2150,6 +2236,66 @@ test("the trimmed note summarizes dropped events only for the task being shown",
   assert.doesNotMatch(
     note({ ...dropped, task_id: "other" })!,
     /earlier events/,
+  );
+});
+
+test("activity times use Chat's format and tooltip", (t) => {
+  t.onTestFinished(cleanup);
+  const preferences = { locale: "en-US", timeZone: "UTC" };
+
+  const read = event(
+    "tool.started",
+    { name: "Read", id: "read-time" },
+    "read-time",
+  );
+
+  const date = formatUserDateTime(read.timestamp, preferences, {
+    timeZoneName: undefined,
+  });
+
+  // Expanded: the time shares the debug caption's line, in Chat's format.
+  const expanded = render(
+    createElement(GroupedEventList, { events: [read], preferences }),
+  ).container;
+
+  fireEvent.click(expanded.querySelector(".activity-debug-toggle")!);
+
+  const time = expanded.querySelector(".activity-debug-head time")!;
+
+  assert.equal(
+    time.textContent,
+    formatOutcomeTimestamp(read.timestamp, preferences),
+  );
+
+  assert.equal(time.getAttribute("aria-label"), date);
+
+  assert.ok(
+    expanded
+      .querySelector(".activity-debug-caption")!
+      .compareDocumentPosition(time) & Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+
+  cleanup();
+
+  // Top level: the clock stays as it was, and its tooltip is the date alone.
+  const heading = render(
+    createElement(GroupedEventList, { events: [read], preferences }),
+  ).container.querySelector(".activity-group-heading time")!;
+
+  assert.equal(
+    heading.getAttribute("aria-label"),
+    formatUserDateTime(read.timestamp, preferences, {
+      timeZoneName: undefined,
+    }),
+  );
+
+  assert.equal(
+    heading.textContent,
+    new Date(read.timestamp).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    }),
   );
 });
 

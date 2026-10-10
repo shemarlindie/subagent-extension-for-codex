@@ -1,17 +1,24 @@
 import type {
+  ChangeCounts,
   ChangedFile,
   ChangedFileContent,
   Changes,
   ChangeScope,
 } from "../../../shared/workspaces/changes.js";
 
-export type { ChangedFile, ChangedFileContent, Changes, ChangeScope };
+export type {
+  ChangeCounts,
+  ChangedFile,
+  ChangedFileContent,
+  Changes,
+  ChangeScope,
+};
 
 /** remove_user_agent_worktree's result: removed, or kept for its changes. */
 export type WorktreeRemoval =
   { status: "removed" } | { status: "uncommitted"; files: string[] };
 
-/** The selected task's changes, as the Changes tab and Details read them. */
+/** The selected task's changes, read while the Changes tab is open. */
 export type ChangesState = {
   task: string;
   scope: ChangeScope;
@@ -20,5 +27,15 @@ export type ChangesState = {
   loading: boolean;
   /** Every page, merged; kept during a same-scope reload and after failure. */
   data?: Changes;
+  error?: string;
+};
+
+/** The selected task's change totals, for its tab count and Details. */
+export type ChangeCountsState = {
+  task: string;
+  /** The task's status and turn when read; either changing reloads them. */
+  key: string;
+  loading: boolean;
+  data?: ChangeCounts;
   error?: string;
 };

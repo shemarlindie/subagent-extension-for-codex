@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 
 import { test, vi } from "vitest";
 
+import { windowActivity } from "../../../shared/tasks/activity/activity-tail";
 import type { Changes } from "../../features/changes/types";
 import { Controller } from "./controller";
 import { effectiveFilter, visibleTasks } from "./selectors";
 import type {
   Defaults,
-  Event,
   PanelData,
   Task,
   Transport,
@@ -99,7 +99,13 @@ class FakeTransport implements Transport {
         { provider: "claude", profiles: ["reviewer"], capabilities: {} },
       ],
       list_agent_tasks: this.tasks,
-      get_agent_events: [],
+      get_user_agent_activity: { events: [], total: 0 },
+      get_user_agent_change_counts: {
+        scope: "task",
+        files: 0,
+        additions: 0,
+        deletions: 0,
+      },
       get_user_agent_chat: { items: [], next_cursor: 0 },
       get_agent_settings: { values: defaults },
     };
@@ -408,18 +414,28 @@ test("delayed detail from a previous selection cannot replace current events", a
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a"), task("b")];
   await controller.start();
-  const gate = deferred<Event[]>();
+  const gate = deferred<unknown>();
 
   transport.handler = (name, args) =>
-    name === "get_agent_events"
+    name === "get_user_agent_activity"
       ? args.task_id === "a"
         ? gate.promise
-        : [{ id: 2, task_id: "b", type: "log", timestamp: "", data: {} }]
+        : {
+            events: [
+              { id: 2, task_id: "b", type: "log", timestamp: "", data: {} },
+            ],
+            total: 1,
+          }
       : undefined;
 
   const first = controller.select("a");
   await controller.select("b");
-  gate.resolve([{ id: 1, task_id: "a", type: "log", timestamp: "", data: {} }]);
+
+  gate.resolve({
+    events: [{ id: 1, task_id: "a", type: "log", timestamp: "", data: {} }],
+    total: 1,
+  });
+
   await first;
   assert.equal(controller.getSnapshot().selected, "b");
 
@@ -485,8 +501,9 @@ test("host selections restore a task's remembered tab unless they explicitly req
   assert.equal(controller.getSnapshot().tab, "chat");
 });
 
+// The Changes tab reads every change; Details reads only the totals.
 for (const tab of ["changes", "details"] as const)
-  test(`returning to a remembered ${tab} tab loads changes for that task`, async (t) => {
+  test(`returning to a remembered ${tab} tab reads that task's changes`, async (t) => {
     const { controller, transport } = setup();
     t.onTestFinished(() => controller.dispose());
     transport.tasks = [task("a"), task("b")];
@@ -500,7 +517,14 @@ for (const tab of ["changes", "details"] as const)
             deletions: 0,
             diff: "",
           }
-        : undefined;
+        : name === "get_user_agent_change_counts"
+          ? {
+              scope: "task",
+              files: 0,
+              additions: args.task_id === "a" ? 1 : 2,
+              deletions: 0,
+            }
+          : undefined;
 
     await controller.start();
     await controller.select("a");
@@ -512,16 +536,27 @@ for (const tab of ["changes", "details"] as const)
     transport.calls = [];
 
     await controller.select("a");
+    await flush();
 
     assert.equal(controller.getSnapshot().tab, tab);
-    assert.equal(controller.getSnapshot().changes?.task, "a");
-    assert.equal(controller.getSnapshot().changes?.data?.additions, 1);
+    assert.equal(controller.getSnapshot().changeCounts?.task, "a");
+    assert.equal(controller.getSnapshot().changeCounts?.data?.additions, 1);
+
+    assert.equal(
+      controller.getSnapshot().changes?.task,
+      tab === "changes" ? "a" : undefined,
+    );
+
+    const readsOf = (name: string) =>
+      transport.calls
+        .filter((call) => call.name === name)
+        .map((call) => call.args.task_id);
+
+    assert.deepEqual(readsOf("get_user_agent_change_counts"), ["a"]);
 
     assert.deepEqual(
-      transport.calls
-        .filter((call) => call.name === "get_user_agent_changes")
-        .map((call) => call.args.task_id),
-      ["a"],
+      readsOf("get_user_agent_changes"),
+      tab === "changes" ? ["a"] : [],
     );
   });
 
@@ -821,7 +856,7 @@ test("automatic global history does not prefill delegation, while an intentional
   );
 });
 
-test("event pagination follows the server cursor and retains the latest 200 events", async (t) => {
+test("the activity view shows the service's window and its tally, and polls for new events", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a")];
@@ -836,8 +871,8 @@ test("event pagination follows the server cursor and retains the latest 200 even
   }));
 
   transport.handler = (name, args) =>
-    name === "get_agent_events"
-      ? events.filter((item) => item.id > Number(args.after)).slice(0, 1000)
+    name === "get_user_agent_activity"
+      ? windowActivity(events, Number(args.after))
       : undefined;
 
   await controller.select("a");
@@ -847,22 +882,48 @@ test("event pagination follows the server cursor and retains the latest 200 even
     events.slice(-200).map((item) => item.id),
   );
 
+  assert.equal(controller.getSnapshot().droppedEvents?.count, 805);
+
   assert.deepEqual(
     transport.calls
-      .filter((call) => call.name === "get_agent_events")
+      .filter((call) => call.name === "get_user_agent_activity")
       .map((call) => call.args.after),
-    [0, 1000],
+    [0],
   );
 
   await controller.refresh();
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "get_agent_events").at(-1)
-      ?.args.after,
+    transport.calls
+      .filter((call) => call.name === "get_user_agent_activity")
+      .at(-1)?.args.after,
     1005,
   );
 
   assert.equal(controller.getSnapshot().events.length, 200);
+});
+
+test("tab counts load without reading the event log or the Changes tab", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a")];
+
+  transport.handler = (name) =>
+    name === "get_user_agent_change_counts"
+      ? { scope: "task", files: 4, additions: 9, deletions: 2 }
+      : undefined;
+
+  await controller.start();
+  await controller.select("a");
+  await flush();
+
+  assert.equal(controller.getSnapshot().changeCounts?.data?.files, 4);
+  assert.equal(controller.getSnapshot().changes, undefined);
+
+  const names = transport.calls.map((call) => call.name);
+
+  assert.ok(names.includes("get_user_agent_change_counts"));
+  assert.ok(!names.includes("get_user_agent_changes"));
 });
 
 test("Back keeps scoped narrow panels on the task list through refresh", async (t) => {

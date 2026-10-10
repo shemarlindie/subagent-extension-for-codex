@@ -1,6 +1,7 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 
+import { changeCounts } from "../../../shared/workspaces/changes";
 import { useController } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
@@ -31,7 +32,10 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
     removed =
       data?.state === "workspace_missing" || data?.state === "branch_deleted",
     loading = changes?.loading ?? (!data && !changes?.error),
-    summary = data && !data.state ? `${changesSummary(data)} uncommitted` : "",
+    summary =
+      data && !data.state
+        ? `${changesSummary(changeCounts(data))} uncommitted`
+        : "",
     branch = task.branch,
     [viewed] = useViewedFiles(task.id),
     entries = data && !data.state ? changedFileEntries(data) : [],

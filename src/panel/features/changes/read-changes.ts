@@ -1,9 +1,9 @@
 import type { Task } from "../tasks/types";
 import type {
+  ChangeCounts,
   ChangedFileContent,
   Changes,
   ChangeScope,
-  ChangesState,
 } from "./types";
 
 type ReadPage = (args: Record<string, unknown>) => Promise<Changes>;
@@ -37,8 +37,11 @@ export async function readChanges(
 /** What a task's changes depend on: a new status or turn reloads them. */
 export const changesKey = (task: Task) => `${task.status}:${task.turn}`;
 
-/** Whether the selected task's changes need reading. */
-export function changesStale(state: ChangesState | undefined, task: Task) {
+/** Whether a task's change read, full or counts, needs reading. */
+export function changesStale(
+  state: { task: string; key: string; loading: boolean } | undefined,
+  task: Task,
+) {
   return (
     !state ||
     state.task !== task.id ||
@@ -47,8 +50,12 @@ export function changesStale(state: ChangesState | undefined, task: Task) {
 }
 
 /** "+12 −3, 4 files" */
-export function changesSummary({ additions, deletions, files }: Changes) {
-  return `+${additions} −${deletions}, ${files.length} ${files.length === 1 ? "file" : "files"}`;
+export function changesSummary({
+  additions,
+  deletions,
+  files,
+}: Pick<ChangeCounts, "additions" | "deletions" | "files">) {
+  return `+${additions} −${deletions}, ${files} ${files === 1 ? "file" : "files"}`;
 }
 
 type ReadFilePart = (

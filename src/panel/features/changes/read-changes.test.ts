@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { changeCounts } from "../../../shared/workspaces/changes";
 import type { Task } from "../tasks/types";
 import {
   changesKey,
@@ -76,23 +77,41 @@ test("changes reload for another task or a new status or turn, not mid-read", ()
 });
 
 test("summaries count lines and files", () => {
-  assert.equal(changesSummary(page("")), "+3 −1, 0 files");
+  assert.equal(changesSummary(changeCounts(page(""))), "+3 −1, 0 files");
 
   assert.equal(
-    changesSummary({
-      ...page(""),
-      files: [
-        {
-          path: "a",
-          status: "added",
-          additions: 3,
-          deletions: 1,
-          binary: false,
-        },
-      ],
-    }),
+    changesSummary(
+      changeCounts({
+        ...page(""),
+        files: [
+          {
+            path: "a",
+            status: "added",
+            additions: 3,
+            deletions: 1,
+            binary: false,
+          },
+        ],
+      }),
+    ),
     "+3 −1, 1 file",
   );
+});
+
+test("change counts keep the totals and drop the file list and diff", () => {
+  const counts = changeCounts({
+    ...page("diff --git a/a b/a", "2"),
+    files: [
+      { path: "a", status: "added", additions: 3, deletions: 1, binary: false },
+    ],
+  });
+
+  assert.deepEqual(counts, {
+    scope: "task",
+    files: 1,
+    additions: 3,
+    deletions: 1,
+  });
 });
 
 test("a changed file's parts are joined; a deleted file has no content", async () => {

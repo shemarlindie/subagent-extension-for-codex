@@ -37,7 +37,9 @@ test("the position names the first file still showing at the top", () => {
   const { container, viewport } = setup();
   container.scrollTop = 130;
 
-  assert.deepEqual(measurePosition(viewport, container), {
+  const position = measurePosition(viewport, container);
+
+  assert.deepEqual(position, {
     top: 130,
     anchor: { path: "b.ts", top: -30 },
   });

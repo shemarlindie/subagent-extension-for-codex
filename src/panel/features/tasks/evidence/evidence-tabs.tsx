@@ -7,12 +7,12 @@ import {
 } from "../../../app/state/controller-context";
 import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { Tab, Task } from "../../../app/state/types";
-import { MotionContent } from "../../../shared/components/motion/motion";
 import { scrollChildIntoView } from "../../../shared/utils/scroll-into-view";
 import { ChangesPanel } from "../../changes/changes-panel";
 import { EventList } from "../activity/event-list";
 import { ChatPanel } from "../chat/chat-panel";
 import { TaskDetails } from "../inspector/task-details";
+import { TabLabel } from "./tab-label";
 
 const TAB_EDGE_GAP = 12;
 
@@ -33,17 +33,6 @@ function useActiveTabInView(tab: Tab) {
   return listRef;
 }
 
-// A changed count rises into place so new evidence is noticed without moving the tabs.
-function TabCount({ value }: { value: number }) {
-  return (
-    <span className="tab-count">
-      <MotionContent changeKey={value} variant="rise">
-        {value}
-      </MotionContent>
-    </span>
-  );
-}
-
 export function EvidenceTabs({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
@@ -53,7 +42,8 @@ export function EvidenceTabs({ task }: { task: Task }) {
       (state) => state.reading.activity,
     ),
     listRef = useActiveTabInView(state.tab),
-    changes = state.changes?.task === task.id ? state.changes : undefined;
+    counts =
+      state.changeCounts?.task === task.id ? state.changeCounts : undefined;
 
   return (
     <Tabs.Root
@@ -71,17 +61,10 @@ export function EvidenceTabs({ task }: { task: Task }) {
           Chat
         </Tabs.Tab>
         <Tabs.Tab value="changes" id="tab-changes">
-          Changes
-          {/* Changes are read only while Changes or Details is open, so the count waits for that read. */}
-          {changes?.data && (
-            <>
-              {" "}
-              <TabCount value={changes.data.files.length} />
-            </>
-          )}
+          <TabLabel count={counts?.data?.files ?? 0}>Changes</TabLabel>
         </Tabs.Tab>
         <Tabs.Tab value="activity" id="tab-activity">
-          Activity <TabCount value={state.events.length} />
+          Activity
         </Tabs.Tab>
         <Tabs.Tab value="details" id="tab-details">
           Details
@@ -102,12 +85,13 @@ export function EvidenceTabs({ task }: { task: Task }) {
           events={state.events}
           runtimeMs={task.runtime_ms}
           dropped={state.droppedEvents}
+          preferences={state.host}
           active={state.tab === "activity"}
           running={task.status === "running" && !task.pending_input}
         />
       </Tabs.Panel>
       <Tabs.Panel value="details">
-        <TaskDetails task={task} changes={changes} />
+        <TaskDetails task={task} counts={counts} />
       </Tabs.Panel>
     </Tabs.Root>
   );

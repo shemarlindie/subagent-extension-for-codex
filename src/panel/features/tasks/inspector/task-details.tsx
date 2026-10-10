@@ -3,32 +3,32 @@ import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
 import { useNow } from "../../../shared/utils/use-now";
 import { changesSummary } from "../../changes/read-changes";
-import type { ChangesState } from "../../changes/types";
+import type { ChangeCountsState } from "../../changes/types";
 import { WorktreeActions } from "../../changes/worktree-actions";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../list/duration";
 
 type TaskDetailsProps = {
   task: Task;
-  /** The task's changes, read live when Details opens. */
-  changes?: ChangesState;
+  /** The selected task's change totals, read live for the tab count and Details. */
+  counts?: ChangeCountsState;
 };
 
 /** The changes fact: a live summary, or why there is none. */
-function changesFact(changes?: ChangesState) {
-  if (changes?.error) return changes.error;
-  if (!changes?.data) return "Reading…";
-  if (changes.data.state === "branch_deleted")
+function changesFact(counts?: ChangeCountsState) {
+  if (counts?.error) return counts.error;
+  if (!counts?.data) return "Reading…";
+  if (counts.data.state === "branch_deleted")
     return "The worktree and its branch were deleted";
-  if (changes.data.state === "end_unrecorded")
+  if (counts.data.state === "end_unrecorded")
     return "Unavailable; the task ended before its end state was recorded";
 
-  if (changes.data.state === "workspace_missing")
-    return `On branch ${changes.data.branch}; the worktree was removed`;
+  if (counts.data.state === "workspace_missing")
+    return `On branch ${counts.data.branch}; the worktree was removed`;
 
-  return `${changesSummary(changes.data)} uncommitted${changes.scope === "turn" ? " in this turn" : ""}`;
+  return `${changesSummary(counts.data)} uncommitted`;
 }
 
-export function TaskDetails({ task, changes }: TaskDetailsProps) {
+export function TaskDetails({ task, counts }: TaskDetailsProps) {
   const now = useNow(runtimeLive(task));
 
   const facts = {
@@ -40,7 +40,7 @@ export function TaskDetails({ task, changes }: TaskDetailsProps) {
     "Reasoning effort": task.reasoning_effort || "Provider runtime default",
     Workspace: task.workspace ?? "Preparing",
     ...(task.branch ? { Branch: task.branch } : {}),
-    Changes: changesFact(changes),
+    Changes: changesFact(counts),
     Repository: task.repository,
     "Workspace strategy":
       task.workspace_strategy === "current_repo"
@@ -91,7 +91,7 @@ export function TaskDetails({ task, changes }: TaskDetailsProps) {
           </div>
         ))}
       </dl>
-      {changes?.data && <WorktreeActions task={task} changes={changes} />}
+      {counts?.data && <WorktreeActions task={task} changes={counts} />}
     </div>
   );
 }

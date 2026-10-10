@@ -28,6 +28,7 @@ export function WorktreeForm({ dialog }: WorktreeFormProps) {
         await controller.tool("delete_user_agent_branch", { task_id: task.id });
 
       await controller.loadChanges();
+      await controller.loadCounts();
     });
   };
 

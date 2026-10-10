@@ -332,11 +332,10 @@ h3 {
 .tabs button {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
   border: 0;
   border-radius: 6px 6px 0 0;
   background: none;
-  padding: 9px 12px;
+  padding: 9px 16px;
   white-space: nowrap;
   color: var(--muted);
   cursor: pointer;
@@ -352,13 +351,30 @@ h3 {
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
+/* The badge is absolutely positioned at the label's upper right, like a superscript.
+   It takes no space in the tab, so the count never changes its width. */
+.tab-label {
+  position: relative;
+}
+.tab-badge {
+  position: absolute;
+  top: -5px;
+  left: 100%;
+  margin-left: 2px;
+  display: inline-grid;
+  place-items: center;
+  pointer-events: none;
+}
+/* A full circle for one digit; wider counts stretch into a pill. */
 .tab-count {
-  min-width: 18px;
-  padding: 1px 6px;
-  border-radius: 9px;
+  box-sizing: border-box;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--text) 10%, transparent);
-  font-size: 11px;
-  line-height: 16px;
+  font-size: 10px;
+  line-height: 14px;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -422,14 +438,8 @@ h3 {
   color: var(--muted);
 }
 .event {
-  display: grid;
-  grid-template-columns: 65px minmax(0, 1fr);
-  gap: 12px;
   padding: 9px 0;
   border-bottom: 1px solid var(--line);
-}
-.event > time {
-  padding-top: 2px;
 }
 time {
   font-size: 11px;

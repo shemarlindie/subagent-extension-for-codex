@@ -1,7 +1,10 @@
 /* eslint-disable simple-import-sort/exports */
 
 import type { Event } from "../../../shared/events/types.js";
-import type { ChangesState } from "../../features/changes/types.js";
+import type {
+  ChangeCountsState,
+  ChangesState,
+} from "../../features/changes/types.js";
 import type { Project } from "../../features/projects/types.js";
 import type { Worker } from "../../features/providers/types.js";
 import type {
@@ -116,7 +119,9 @@ export type Snapshot = {
   filter: Filter | null;
   search: string;
   tab: Tab;
-  /** The selected task's changes, read when Changes or Details opens. */
+  /** The selected task's change totals, for its tab count and Details. */
+  changeCounts?: ChangeCountsState;
+  /** The selected task's changes, read while the Changes tab is open. */
   changes?: ChangesState;
   connected: boolean;
   scopeKnown: boolean;

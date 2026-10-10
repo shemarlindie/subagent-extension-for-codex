@@ -1,11 +1,18 @@
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import type { Task } from "../tasks/types";
-import type { ChangesState } from "./types";
+import type { ChangeCounts } from "./types";
+
+/** A change read, full or counts, as far as the worktree actions need it. */
+type WorktreeRead = {
+  loading: boolean;
+  error?: string;
+  data?: Pick<ChangeCounts, "state">;
+};
 
 type WorktreeActionsProps = {
   task: Task;
-  changes?: ChangesState;
+  changes?: WorktreeRead;
 };
 
 /** States in which a task is running or about to, so its worktree is in use. */
@@ -13,7 +20,7 @@ const ACTIVE = ["queued", "starting", "running", "waiting"];
 
 /**
  * Remove worktree, then Delete branch once it is gone, for a worktree task.
- * Which one shows follows the task's last read changes.
+ * Which one shows follows the task's last read of its changes.
  */
 export function WorktreeActions({ task, changes }: WorktreeActionsProps) {
   const controller = useController(),

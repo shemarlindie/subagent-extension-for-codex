@@ -1,3 +1,4 @@
+import type { ActivityPage } from "../../../shared/tasks/activity/activity-tail";
 import type { BudgetRaise, Delivery } from "../../../shared/tasks/model";
 import {
   changesKey,
@@ -5,13 +6,18 @@ import {
   readChanges,
 } from "../../features/changes/read-changes";
 import type {
+  ChangeCounts,
+  ChangeCountsState,
   Changes,
   ChangeScope,
   ChangesState,
   WorktreeRemoval,
 } from "../../features/changes/types";
 import { delegationDialog } from "../../features/delegation/delegation";
-import { readEventTail } from "../../features/tasks/activity/event-history";
+import {
+  activityCursor,
+  mergeActivity,
+} from "../../features/tasks/activity/event-history";
 import { type ChatRead, mergeChat } from "../../features/tasks/chat/chat-state";
 import { DraftFollower } from "../../features/tasks/chat/drafts/draft-follower";
 import { initialState } from "./initial-state";
@@ -479,9 +485,10 @@ export class Controller {
 
       await this.loadDetail();
       if (this.disposed || version !== this.state.scopeVersion) return;
-      // Changes are read live from Git, which polling would repeat for every
-      // task in view, so they reload only when the task's status or turn moves.
-      await this.loadChangesIfStale();
+      // Prefetch the selected task's change totals for the tab count. Do not hold
+      // up the task list while Git reads in the background.
+      this.run(() => this.loadCountsIfStale());
+      this.run(() => this.loadChangesIfStale());
       if (this.disposed || version !== this.state.scopeVersion) return;
 
       this.patch({
@@ -513,14 +520,11 @@ export class Controller {
 
     const previousChat = this.state.chat;
 
-    const [{ events, dropped }, chat] = await Promise.all([
-      readEventTail(
-        id,
-        this.state.events,
-        (after) => this.tool("get_agent_events", { task_id: id, after }),
-        () => !this.disposed && generation === this.generation,
-        this.state.droppedEvents,
-      ),
+    const [activity, chat] = await Promise.all([
+      this.tool<ActivityPage>("get_user_agent_activity", {
+        task_id: id,
+        after: activityCursor(this.state.events, id),
+      }),
       this.tool<ChatRead>("get_user_agent_chat", {
         task_id: id,
         after: previousChat?.task === id ? previousChat.cursor : 0,
@@ -534,9 +538,15 @@ export class Controller {
     )
       return;
 
+    const view = mergeActivity(
+      { events: this.state.events, dropped: this.state.droppedEvents },
+      id,
+      activity,
+    );
+
     this.patch({
-      events,
-      droppedEvents: dropped,
+      events: view.events,
+      droppedEvents: view.dropped,
       chat: mergeChat(this.state.chat, id, chat),
     });
 
@@ -551,13 +561,15 @@ export class Controller {
     this.patch({
       selected: id,
       events: [],
+      droppedEvents: undefined,
       chat: undefined,
       draft: undefined,
       tab: this.session.get("task", id).tab,
     });
 
     await this.loadDetail();
-    await this.loadChangesIfStale();
+    this.run(() => this.loadCountsIfStale());
+    this.run(() => this.loadChangesIfStale());
     await this.share();
   }
 
@@ -569,6 +581,7 @@ export class Controller {
     this.patch({
       selected: undefined,
       events: [],
+      droppedEvents: undefined,
       chat: undefined,
       draft: undefined,
     });
@@ -590,16 +603,73 @@ export class Controller {
     this.run(() => this.loadChangesIfStale());
   }
 
-  /** Reads the selected task's changes when a tab showing them is open. */
+  /** Reads the selected task's change totals when its status or turn has moved on. */
+  private async loadCountsIfStale() {
+    const task = selectedTask(this.state);
+
+    if (task && changesStale(this.state.changeCounts, task))
+      await this.loadCounts();
+  }
+
+  /** Reads the selected task's full changes while the Changes tab is open. */
   private async loadChangesIfStale() {
     const task = selectedTask(this.state);
 
     if (
       task &&
-      (this.state.tab === "changes" || this.state.tab === "details") &&
+      this.state.tab === "changes" &&
       changesStale(this.state.changes, task)
     )
       await this.loadChanges();
+  }
+
+  /**
+   * Reads the selected task's change totals for its tab count and Details: the
+   * counts alone, so the file list and diff stay on the service until Changes
+   * opens. A reload keeps the last totals during the read and after failure.
+   */
+  async loadCounts() {
+    const task = selectedTask(this.state);
+    if (!task || this.disposed) return;
+
+    const previous =
+      this.state.changeCounts?.task === task.id
+        ? this.state.changeCounts
+        : undefined;
+
+    const counts: ChangeCountsState = {
+      task: task.id,
+      key: changesKey(task),
+      loading: true,
+      data: previous?.data,
+    };
+
+    let current = counts;
+    this.patch({ changeCounts: counts });
+    // A newer read, or another task, replaces this one.
+    const live = () => !this.disposed && this.state.changeCounts === current;
+
+    try {
+      const data = await this.tool<ChangeCounts>(
+        "get_user_agent_change_counts",
+        { task_id: task.id },
+      );
+
+      if (live()) {
+        current = { ...counts, loading: false, data };
+        this.patch({ changeCounts: current });
+      }
+    } catch (error) {
+      if (!live()) return;
+
+      current = {
+        ...counts,
+        loading: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+
+      this.patch({ changeCounts: current });
+    }
   }
 
   /**
@@ -681,9 +751,10 @@ export class Controller {
     else await this.afterWorktreeChange();
   }
 
-  /** The Changes tab reads the removed worktree or branch at once. */
+  /** The Changes tab and the tab count read the removed worktree or branch at once. */
   async afterWorktreeChange() {
     await this.loadChanges();
+    await this.loadCounts();
     await this.refresh();
   }
 
