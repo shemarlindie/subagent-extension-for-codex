@@ -5,12 +5,12 @@
   height="24"
   fill="none"
   stroke="currentColor"
-  stroke-width="1.8"
+  stroke-width="2.077"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <rect x="2.5" y="3" width="19" height="18" rx="2"></rect>
+  <rect x="1.038" y="1.615" width="21.923" height="20.769" rx="2.308"></rect>
   <path
-    d="M2.5 7.5h19M9 7.5V21M5 5.25h.01M7 5.25h.01m5 5.75h5.5m-5.5 3.5h5.5m-5.5 3.5h4"
+    d="M1.038 6.808h21.923M8.538 6.808V22.385M3.923 4.212h.012M6.231 4.212h.012m5.769 6.635h6.346m-6.346 4.038h6.346m-6.346 4.038h4.615"
   ></path>
 </svg>

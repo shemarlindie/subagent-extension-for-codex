@@ -5,11 +5,11 @@
   height="24"
   fill="none"
   stroke="currentColor"
-  stroke-width="1.8"
+  stroke-width="1.895"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <circle cx="4" cy="12" r="2.5"></circle>
-  <circle cx="20" cy="12" r="2.5"></circle>
-  <path d="M7 12h10.5m-3-3 3 3-3 3"></path>
+  <circle cx="3.579" cy="12" r="2.632"></circle>
+  <circle cx="20.421" cy="12" r="2.632"></circle>
+  <path d="M6.737 12h11.053m-3.158-3.158 3.158 3.158-3.158 3.158"></path>
 </svg>

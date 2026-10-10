@@ -86,7 +86,7 @@ export function TaskInspector() {
         </div>
       ) : (
         <div className="empty">
-          <Icon name="task-card" size={40} className="empty-icon" />
+          <Icon name="task-card" size={33} className="empty-icon" />
           <p>Task details will show here.</p>
         </div>
       )}

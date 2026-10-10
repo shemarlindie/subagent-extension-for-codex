@@ -180,7 +180,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
         disabled={busy}
         onClick={stop}
       >
-        <Icon name="stop-solid" size={14} />
+        <Icon name="stop-solid" size={9} />
       </Button>
     </TooltipWrapper>
   );
@@ -293,7 +293,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
                       disabled={busy || !message || !canContinue}
                       onClick={() => send("steer")}
                     >
-                      <Icon name="enter" size={16} />
+                      <Icon name="enter" size={12} />
                     </Button>
                   </TooltipWrapper>
                 ) : (
