@@ -85,3 +85,63 @@ export function windowActivity(events: Event[], after = 0): ActivityPage {
     ...(dropped ? { dropped } : {}),
   };
 }
+
+/**
+ * get_user_agent_turn_activity's result: one turn's events, after the previous
+ * turn closed through this turn's close, windowed and tallied like a page.
+ */
+export type TurnActivityPage = ActivityPage & { turn: number };
+
+/**
+ * The task status events that close a turn. The service writes one after
+ * `task.turn_ended`, with any queue changes between, in the same transaction.
+ */
+export const TURN_CLOSING_EVENTS = [
+  "task.completed",
+  "task.failed",
+  "task.interrupted",
+  "task.queued",
+];
+
+/** Events that begin something else, so a closing event can't follow them. */
+export const TURN_CLOSE_STOPS = ["task.started", "task.turn_ended"];
+
+export const isTurnEnded = (event: Event, turn: number) =>
+  event.type === "task.turn_ended" && Number(event.data.turn) === turn;
+
+/**
+ * The index of the event that closes a turn: its closing status event, or
+ * its `task.turn_ended` when none follows; -1 when the turn has not ended.
+ */
+export function turnCloseIndex(events: Event[], turn: number) {
+  const ended = events.findIndex((event) => isTurnEnded(event, turn));
+  if (ended === -1) return -1;
+
+  for (let i = ended + 1; i < events.length; i++) {
+    if (TURN_CLOSE_STOPS.includes(events[i].type)) break;
+    if (TURN_CLOSING_EVENTS.includes(events[i].type)) return i;
+  }
+
+  return ended;
+}
+
+/**
+ * One turn's activity from an in-memory log. Matches the service's reads, for
+ * fixtures. A turn that has not ended runs to the end of the log.
+ */
+export function windowTurnActivity(
+  events: Event[],
+  turn: number,
+): TurnActivityPage {
+  const previous = turnCloseIndex(events, turn - 1),
+    end = turnCloseIndex(events, turn),
+    range = events.slice(previous + 1, end === -1 ? undefined : end + 1),
+    start = Math.max(0, range.length - EVENT_TAIL_SIZE),
+    dropped = addDropped(undefined, range.slice(0, start));
+
+  return {
+    turn,
+    events: range.slice(start),
+    ...(dropped ? { dropped } : {}),
+  };
+}

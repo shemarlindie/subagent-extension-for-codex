@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 
-import { and, desc, eq, gt, inArray, lt, max, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, lte, max, or, sql } from "drizzle-orm";
 
 import { type Event } from "../../../../shared/events/types.js";
 import { type Task } from "../../../../shared/tasks/model.js";
@@ -178,6 +178,69 @@ export class Store {
         .offset(depth - 1)
         .get()?.id ?? 0
     );
+  }
+
+  /**
+   * The id of the `depth`th newest of a task's events after `after` and
+   * through `through`, so those events from it on are the newest `depth`;
+   * `after + 1` when there are fewer than that.
+   */
+  rangeWindowStart(
+    id: string,
+    after: number,
+    through: number,
+    depth: number,
+  ): number {
+    return (
+      this.orm
+        .select({ id: events.id })
+        .from(events)
+        .where(
+          and(
+            eq(events.task_id, id),
+            gt(events.id, after),
+            lte(events.id, through),
+          ),
+        )
+        .orderBy(desc(events.id))
+        .limit(1)
+        .offset(depth - 1)
+        .get()?.id ?? after + 1
+    );
+  }
+
+  /** The id of a task's `task.turn_ended` event for a turn; absent until it ends. */
+  turnEnded(id: string, turn: number): number | undefined {
+    return this.orm
+      .select({ id: events.id })
+      .from(events)
+      .where(
+        and(
+          eq(events.task_id, id),
+          eq(events.type, "task.turn_ended"),
+          eq(sql`json_extract(${events.data}, '$.turn')`, turn),
+        ),
+      )
+      .orderBy(events.id)
+      .limit(1)
+      .get()?.id;
+  }
+
+  /** A task's first event after `after` with one of `types`. */
+  nextEventOfType(id: string, after: number, types: string[]) {
+    return this.orm
+      .select({ id: events.id, type: events.type })
+      .from(events)
+      .where(
+        and(
+          eq(events.task_id, id),
+          gt(events.id, after),
+          inArray(events.type, types),
+        ),
+      )
+      .orderBy(events.id)
+      .limit(1)
+      .get();
   }
 
   /**

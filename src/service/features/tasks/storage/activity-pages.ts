@@ -3,6 +3,9 @@ import {
   addDropped,
   type DroppedSummary,
   EVENT_TAIL_SIZE,
+  TURN_CLOSE_STOPS,
+  TURN_CLOSING_EVENTS,
+  type TurnActivityPage,
 } from "../../../../shared/tasks/activity/activity-tail.js";
 import type { Store } from "./store.js";
 
@@ -33,6 +36,55 @@ export class ActivityPages {
       events: this.store.taskEvents(taskId, Math.max(after, start - 1)),
       ...(dropped ? { dropped } : {}),
     };
+  }
+
+  /**
+   * One turn's activity: the events after the previous turn closed through
+   * this turn's close, the newest EVENT_TAIL_SIZE of them with a tally of the
+   * rest. A turn that has not ended runs to the newest event.
+   */
+  turn(taskId: string, turn: number): TurnActivityPage {
+    const after = this.turnClose(taskId, turn - 1) ?? 0,
+      through = this.turnClose(taskId, turn) ?? Number.MAX_SAFE_INTEGER,
+      start = this.store.rangeWindowStart(
+        taskId,
+        after,
+        through,
+        EVENT_TAIL_SIZE,
+      );
+
+    let dropped: DroppedSummary | undefined;
+
+    for (let cursor = after; ;) {
+      const older = this.store.taskEvents(taskId, cursor, start);
+      if (!older.length) break;
+
+      dropped = addDropped(dropped, older);
+      cursor = older.at(-1)!.id;
+    }
+
+    return {
+      turn,
+      // The window holds at most EVENT_TAIL_SIZE events, so one page covers it.
+      events: this.store.taskEvents(taskId, start - 1, through + 1),
+      ...(dropped ? { dropped } : {}),
+    };
+  }
+
+  /**
+   * The id of the event that closes a turn, as `turnCloseIndex` finds it:
+   * its closing status event, or its `task.turn_ended` when none follows.
+   */
+  private turnClose(taskId: string, turn: number) {
+    const ended = this.store.turnEnded(taskId, turn);
+    if (ended === undefined) return undefined;
+
+    const next = this.store.nextEventOfType(taskId, ended, [
+      ...TURN_CLOSING_EVENTS,
+      ...TURN_CLOSE_STOPS,
+    ]);
+
+    return next && TURN_CLOSING_EVENTS.includes(next.type) ? next.id : ended;
   }
 
   /** Counts the events between the last tallied one and the window's start. */

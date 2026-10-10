@@ -6,6 +6,7 @@ import { type Event } from "../../../../shared/events/types.js";
 import {
   EVENT_TAIL_SIZE,
   windowActivity,
+  windowTurnActivity,
 } from "../../../../shared/tasks/activity/activity-tail.js";
 import { startSchema, type Task } from "../../../../shared/tasks/model.js";
 import { ActivityPages } from "./activity-pages.js";
@@ -105,4 +106,41 @@ test("a poll with nothing new does not count the history again", () => {
   assert.equal(read.mock.calls.length, 2);
   assert.deepEqual(again.dropped, first.dropped);
   assert.deepEqual(again.events, []);
+});
+
+test("a turn reads from the previous turn's close through its own close", () => {
+  const { store, task, write } = fixture();
+
+  const end = (turn: number) => {
+    store.event(task, "task.turn_ended", { turn, outcome: "completed" });
+    // Queue changes can come between the end and the status that closes it.
+    store.event(task, "agent.message", { role: "user" });
+    store.event(task, "task.completed", {});
+  };
+
+  write(5);
+  end(1);
+  write(EVENT_TAIL_SIZE + 30);
+  end(2);
+  write(4);
+  end(3);
+  write(3);
+
+  const pages = new ActivityPages(store),
+    log = everything(store, task.id),
+    second = pages.turn(task.id, 2);
+
+  assert.deepEqual(second, windowTurnActivity(log, 2));
+  assert.equal(second.events.length, EVENT_TAIL_SIZE);
+  assert.equal(second.dropped?.count, 33);
+  assert.equal(second.events.at(-1)!.type, "task.completed");
+
+  assert.deepEqual(pages.turn(task.id, 1), windowTurnActivity(log, 1));
+  assert.equal(pages.turn(task.id, 1).events.length, 8);
+  assert.equal(pages.turn(task.id, 3).events.length, 7);
+  assert.equal(pages.turn(task.id, 3).dropped, undefined);
+
+  // A turn that has not ended runs to the newest event.
+  assert.deepEqual(pages.turn(task.id, 4), windowTurnActivity(log, 4));
+  assert.equal(pages.turn(task.id, 4).events.length, 3);
 });

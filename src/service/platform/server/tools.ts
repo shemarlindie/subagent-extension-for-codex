@@ -533,6 +533,16 @@ export function definitions(
         return c.activity.page(a.task_id, a.after);
       },
     }),
+    get_user_agent_turn_activity: tool({
+      description:
+        "User interface only: one turn's activity for the panel's Activity tab: the events after the previous turn's closing status event through this turn's, or to the newest event while the turn runs. Its newest events come with a tally of the older ones, as get_user_agent_activity gives them.",
+      schema: taskId.extend({ turn: z.number().int().positive() }),
+      run: (a) => {
+        c.store.get(a.task_id, owner);
+
+        return c.activity.turn(a.task_id, a.turn);
+      },
+    }),
     remove_user_agent_worktree: tool({
       description:
         "User interface only: remove a stopped worktree task's worktree and keep its branch. With uncommitted changes it removes nothing and returns status uncommitted with the files, unless force discards them.",
@@ -591,6 +601,7 @@ export const isUserTool = (name: string) =>
     "get_user_agent_change_counts",
     "get_user_agent_changed_file",
     "get_user_agent_activity",
+    "get_user_agent_turn_activity",
     "remove_user_agent_worktree",
     "rename_user_agent_task",
     "delete_user_agent_task",
