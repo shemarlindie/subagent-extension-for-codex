@@ -116,10 +116,13 @@ function frames(variant: Variant, element: HTMLElement): Keyframe[] {
 
 interface PresenceProps {
   show: boolean;
-  as?: "div" | "span";
+  /** `li` wraps a list row, so the list keeps valid children. */
+  as?: "div" | "span" | "li";
   variant?: Variant;
   /** False applies this change at once, for batches such as a first load that should not play. */
   animate?: boolean;
+  /** Animates in on first render too, for an item arriving in a list that is already showing. */
+  appear?: boolean;
   children?: ReactNode;
 }
 
@@ -133,6 +136,7 @@ export function Presence({
   as = "div",
   variant = "collapse",
   animate = true,
+  appear = false,
   children,
 }: PresenceProps) {
   const wrapper = useRef<HTMLElement>(null);
@@ -148,7 +152,7 @@ export function Presence({
   // The exit animation shows the content that was last visible.
   const last = useRef(children);
   if (show) last.current = children;
-  const first = useRef(true);
+  const first = useRef(!appear);
 
   useLayoutEffect(() => {
     const skip = first.current;
@@ -185,7 +189,7 @@ export function Presence({
 
   return (
     <Wrapper
-      ref={(element) => {
+      ref={(element: HTMLElement | null) => {
         wrapper.current = element;
       }}
       className="presence"
@@ -194,6 +198,72 @@ export function Presence({
       {show ? children : last.current}
     </Wrapper>
   );
+}
+
+export interface ListPresenceEntry<T> {
+  item: T;
+  key: string;
+  /** False while a removed item plays its exit. */
+  present: boolean;
+  /** Arrived after the list first rendered, so it animates in. */
+  added: boolean;
+}
+
+/**
+ * Pairs a list with `Presence`. A removed item stays at its last position,
+ * marked absent, until the list changes again, and items that arrive after the
+ * first render are marked added. Items arriving in an empty list are not: the
+ * container showing the list animates them in, and a second fold inside it
+ * would clip.
+ */
+export function useListPresence<T>(
+  items: readonly T[],
+  keyOf: (item: T) => string,
+): ListPresenceEntry<T>[] {
+  const [state, setState] = useState(() => ({
+    items,
+    entries: items.map((item) => ({
+      item,
+      key: keyOf(item),
+      present: true,
+      added: false,
+    })),
+  }));
+
+  if (state.items === items) return state.entries;
+
+  // Exits from the last change have finished or are cut short by this one.
+  const previous = state.entries.filter((entry) => entry.present),
+    known = new Set(previous.map((entry) => entry.key)),
+    current = new Set(items.map(keyOf)),
+    entries: ListPresenceEntry<T>[] = [];
+
+  let next = 0;
+
+  const take = (item: T) => {
+    const key = keyOf(item);
+
+    entries.push({
+      item,
+      key,
+      present: true,
+      added: known.size > 0 && !known.has(key),
+    });
+
+    return key;
+  };
+
+  // Walk the old order so each removed item keeps its place among the new ones.
+  for (const entry of previous) {
+    if (!current.has(entry.key)) entries.push({ ...entry, present: false });
+    else
+      while (next < items.length) if (take(items[next++]) === entry.key) break;
+  }
+
+  while (next < items.length) take(items[next++]);
+  setState({ items, entries });
+
+  return entries;
 }
 
 /**

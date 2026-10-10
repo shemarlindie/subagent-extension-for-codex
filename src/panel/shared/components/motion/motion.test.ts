@@ -12,7 +12,12 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 import { act, cleanup, render } from "@testing-library/react";
 import { createElement, useRef } from "react";
 
-import { MotionContent, Presence, useAnimatedHeight } from "./motion";
+import {
+  MotionContent,
+  Presence,
+  useAnimatedHeight,
+  useListPresence,
+} from "./motion";
 
 type Call = {
   element: HTMLElement;
@@ -192,4 +197,63 @@ test("useAnimatedHeight eases between the old and new height", (t) => {
   const shrink = motion.calls.at(-1)!;
   assert.equal(shrink.frames[0].height, "120px");
   assert.equal(shrink.frames[1].height, "40px");
+});
+
+test("useListPresence keeps removed items in place and folds new ones in", (t) => {
+  t.onTestFinished(cleanup);
+  const motion = mockMotion(t);
+
+  function List({ items }: { items: string[] }) {
+    const rows = useListPresence(items, (item) => item);
+
+    return createElement(
+      "ul",
+      null,
+      rows.map(({ key, present, added }) =>
+        createElement(
+          Presence,
+          { key, as: "li", show: present, appear: added },
+          createElement("div", { "data-row": key }, key),
+        ),
+      ),
+    );
+  }
+
+  const order = () =>
+    Array.from(
+      view.container.querySelectorAll<HTMLElement>("li > [data-row]"),
+      (row) => row.dataset.row,
+    );
+
+  const view = render(createElement(List, { items: ["a", "b", "c"] }));
+  assert.equal(motion.calls.length, 0, "The first list appears in place");
+
+  view.rerender(createElement(List, { items: ["a", "c", "d"] }));
+  assert.deepEqual(order(), ["a", "b", "c", "d"], "b exits where it was");
+
+  const [exit, entrance] = motion.calls;
+  assert.equal(exit.element.dataset.row, "b");
+  assert.equal(exit.frames.at(-1)!.height, "0px");
+  assert.equal(entrance.element.dataset.row, "d");
+  assert.equal(entrance.frames[0].height, "0px");
+
+  act(() => exit.animation.onfinish!());
+  assert.deepEqual(order(), ["a", "c", "d"]);
+
+  // A reorder moves rows without folding any.
+  const count = motion.calls.length;
+  view.rerender(createElement(List, { items: ["d", "a", "c"] }));
+  assert.deepEqual(order(), ["d", "a", "c"]);
+  assert.equal(motion.calls.length, count);
+
+  // Items arriving in an empty list are left to whatever shows the list.
+  view.rerender(createElement(List, { items: [] }));
+  for (const call of motion.calls.slice(count))
+    act(() => call.animation.onfinish!());
+  // The next change drops the finished exits, leaving the list empty.
+  view.rerender(createElement(List, { items: [] }));
+  const emptied = motion.calls.length;
+  view.rerender(createElement(List, { items: ["e"] }));
+  assert.deepEqual(order(), ["e"]);
+  assert.equal(motion.calls.length, emptied);
 });

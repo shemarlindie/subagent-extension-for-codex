@@ -49,7 +49,8 @@ Use Base UI (`@base-ui/react`) primitives for dialogs, tabs (with an animated in
 
 Motion is short and quiet. Its purpose is to show what changed and to ease layout shifts. Timing tokens (`--motion-fast`, `--motion-base`, `--motion-slow`, `--ease-out`) live in `src/panel/shared/components/motion/motion.css` and match `MOTION` in `src/panel/shared/components/motion/motion-utils.ts`. Base UI dialogs, popups, and collapsible panels animate through their `data-starting-style` and `data-ending-style` attributes. A collapsible panel uses the `collapse-panel` class and puts its padding and border on an inner element, so the height animation stays smooth. For other content, use the primitives in `src/panel/shared/components/motion/motion.tsx` and the reduced-motion helpers in `src/panel/shared/components/motion/motion-utils.ts`:
 
-- `Presence` folds content in or out, or pops it, and keeps the last content mounted while it leaves.
+- `Presence` folds content in or out, or pops it, and keeps the last content mounted while it leaves. Content present on its first render appears in place unless you pass `appear`.
+- `useListPresence` pairs a keyed list with `Presence` (use `as="li"` inside lists): removed items stay in place while they exit, and items added after the first render are marked to appear.
 - `useAnimatedHeight` eases a size change in place.
 - `useListMotion` slides keyed rows to their new positions.
 - `MotionContent` keys changing text or counts and applies a fade or rise without moving surrounding content.
