@@ -15,8 +15,10 @@
     border-right: 0;
   }
   .detail {
-    --detail-pad: 18px;
     padding: 18px;
+  }
+  .detail.has-task {
+    --detail-pad: 18px;
   }
   body[data-selected="true"] aside {
     display: none;
@@ -35,8 +37,8 @@
     display: inline-block;
   }
   /* Tabs run edge to edge, scrolling past the content margin and resting inside it. */
-  .tabs {
-    margin-inline: calc(-1 * var(--detail-pad));
+  .evidence > .tabs {
+    margin-inline: 0;
     padding-inline: var(--detail-pad);
   }
   header {
