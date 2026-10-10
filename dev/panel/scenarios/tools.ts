@@ -2,7 +2,11 @@ import { type ModelChoice } from "../../../src/shared/providers/types";
 import { settingsSections } from "../../../src/shared/settings/settings-document";
 import { windowActivity } from "../../../src/shared/tasks/activity/activity-tail";
 import { chatItems } from "../../../src/shared/tasks/conversation/chat";
-import { roles, type Task } from "../../../src/shared/tasks/model";
+import {
+  budgetRaiseSchema,
+  roles,
+  type Task,
+} from "../../../src/shared/tasks/model";
 import { listedTask } from "../../../src/shared/tasks/task-list";
 import {
   previewEvents,
@@ -68,8 +72,8 @@ const previewSettingsDefaults = {
   claude_tools: "profile",
   claude_path_guard: "profile",
   claude_subagents: true,
-  max_cost_usd: 5,
-  max_runtime_minutes: 20,
+  max_cost_usd: null,
+  max_runtime_minutes: null,
   ...Object.fromEntries(
     [
       "default",
@@ -123,6 +127,8 @@ export type PreviewOptions = {
   autoRegisterChatProject?: boolean;
   /** Reports Claude as not ready, as the service does for an unsupported CLI. */
   claudeUnavailable?: boolean;
+  /** Applies budget changes to fixture tasks instead of rejecting the action. */
+  successfulBudgetUpdates?: boolean;
   /** Repositories registered during the preview; the dev host keeps them. */
   addedProjects?: string[];
 };
@@ -268,6 +274,63 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
   };
 }
 
+/** Applies a budget increase to an idle preview task, matching the service. */
+function raisePreviewBudget(taskId: unknown, value: unknown) {
+  const task = previewTasks.find((candidate) => candidate.id === taskId);
+  if (!task) throw new Error("Task not found");
+  if (["queued", "starting", "running", "waiting"].includes(task.status))
+    throw new Error("A task's budget can only be changed while it is idle.");
+
+  const raise = budgetRaiseSchema.parse(value);
+  const originalBudget = task.budget;
+  const budget = { ...originalBudget };
+
+  for (const key of ["max_runtime_minutes", "max_cost_usd"] as const) {
+    const next = raise[key],
+      current = task.budget[key];
+
+    if (next === undefined) continue;
+    if (next !== null && (current === null || next < current))
+      throw new Error(
+        `The budget can only be raised: ${key} is ${current ?? "unlimited"}`,
+      );
+    budget[key] = next;
+  }
+
+  if (
+    budget.max_runtime_minutes === task.budget.max_runtime_minutes &&
+    budget.max_cost_usd === task.budget.max_cost_usd
+  )
+    throw new Error("Choose a changed budget limit to apply.");
+
+  task.budget = budget;
+
+  const previousRaise =
+    task.budget_raised_for_turn?.turn === task.turn
+      ? task.budget_raised_for_turn
+      : undefined;
+
+  const costRaised =
+    budget.max_cost_usd !== null &&
+    originalBudget.max_cost_usd !== null &&
+    budget.max_cost_usd > originalBudget.max_cost_usd;
+
+  const runtimeRaised =
+    budget.max_runtime_minutes !== null &&
+    originalBudget.max_runtime_minutes !== null &&
+    budget.max_runtime_minutes > originalBudget.max_runtime_minutes;
+
+  task.budget_raised_for_turn = {
+    turn: task.turn,
+    ...(previousRaise?.cost ? { cost: true } : {}),
+    ...(previousRaise?.runtime ? { runtime: true } : {}),
+    ...(costRaised ? { cost: true } : {}),
+    ...(runtimeRaised ? { runtime: true } : {}),
+  };
+
+  return { budget: task.budget, status: task.status };
+}
+
 /**
  * Fixture tool results for the panel dev host. Tools in FIXTURE_SERVICE_TOOLS
  * are not here: the dev host sends them to the fixture service
@@ -278,6 +341,15 @@ export function previewTool(
   args: Record<string, unknown> = {},
   options: PreviewOptions = {},
 ): unknown {
+  if (name === "raise_user_agent_budget") {
+    if (!options.successfulBudgetUpdates)
+      throw new Error(
+        "Design preview only. No worker or service action was executed.",
+      );
+
+    return raisePreviewBudget(args.task_id, args.budget);
+  }
+
   if (name === "register_user_agent_project")
     return registerProject(args.repository, options);
 

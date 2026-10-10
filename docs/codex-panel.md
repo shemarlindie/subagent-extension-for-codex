@@ -110,7 +110,9 @@ Draft text streams with a caret and is replaced by its stored message.
 Pending steers offer **Interrupt and send now**. Queued messages offer Edit and
 Remove; a paused queue offers Resume and Clear. An unconsumed steer stays at
 its front. Sending the next message also resumes a paused queue. When a budget
-is exhausted, the composer offers to raise its limit; limits can only increase.
+is exhausted, Chat shows the relevant cost and runtime controls together in the
+warning notice. **Apply** saves a higher limit without sending a message; limits
+can only increase.
 The composer can be hidden while retaining its draft; Stop remains available.
 Questions collapse it automatically for the current request.
 

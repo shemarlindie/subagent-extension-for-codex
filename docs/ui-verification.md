@@ -37,6 +37,8 @@ recorded fixtures through the provider.
   across reloads until **Reset projects**.
 - **Claude Code unavailable** checks readiness notices in the panel and New
   task form. **Send messages** and **Update context** vary host capabilities.
+- **Successful limit updates** enables the fixture's Apply, Continue-prefill
+  and send-button tooltip flow without calling a service.
 - **Width** offers 360, 480, 760 and Fill. A short 360px frame can make the whole
   inspector scroll; use 480 or Fill to check the fixed-header layout.
 - **Bridge log** shows tools, message/context requests and display-mode changes,
@@ -54,7 +56,8 @@ recorded fixtures through the provider.
 | Limit upload sizes                       | Parent-started turns, user and parent follow-ups, Markdown lists/tables/code.                                                                    |
 | Tidy the settings copy                   | Taken and pending steers, queued messages including one from the parent.                                                                         |
 | Rename the feature flags                 | Interrupted task with a paused queue and leftover steer.                                                                                         |
-| Move the date helpers                    | Cost budget exhausted; composer offers to raise it.                                                                                              |
+| Move the date helpers                    | Cost budget exhausted; the warning notice applies a higher limit without sending a message.                                                      |
+| Finish the date helper migration         | Runtime-only budget exhausted; the warning notice applies the higher runtime limit without sending a message.                                    |
 | Move the screens to the new layout       | Long Chat conversation for scrolling.                                                                                                            |
 | Stabilise the retry timer test           | Worktree recreated from its branch in a new session.                                                                                             |
 | Migrate the config loader                | Pending inline question and queue-only composer.                                                                                                 |

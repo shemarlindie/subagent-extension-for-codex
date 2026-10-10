@@ -14,6 +14,7 @@ import {
 import { EVENT_TAIL_SIZE } from "../../../src/panel/features/tasks/activity/event-history";
 import { EventList } from "../../../src/panel/features/tasks/activity/event-list";
 import { claudeCliSupport } from "../../../src/service/features/providers/claude/configuration/executable";
+import type { Task } from "../../../src/shared/tasks/model";
 import {
   PREVIEW_THREAD,
   previewEvents,
@@ -386,6 +387,99 @@ test("fixture task renaming updates listed titles and validates input", () => {
     );
   } finally {
     task.title = originalTitle;
+  }
+});
+
+test("successful budget updates can be enabled for preview fixtures", () => {
+  const cases = [
+    {
+      id: "preview-budget",
+      raise: { max_cost_usd: 8 },
+      raised: { turn: 1, cost: true },
+    },
+    {
+      id: "preview-runtime-budget",
+      raise: { max_runtime_minutes: 30 },
+      raised: { turn: 1, runtime: true },
+    },
+  ] as const;
+
+  for (const { id, raise, raised } of cases) {
+    const task = previewTasks.find((candidate) => candidate.id === id)!;
+    const originalBudget = { ...task.budget };
+    const originalRaise = task.budget_raised_for_turn;
+
+    try {
+      const args = { task_id: id, budget: raise };
+
+      assert.throws(
+        () => previewTool("raise_user_agent_budget", args),
+        /Design preview only/,
+      );
+
+      const result = previewTool("raise_user_agent_budget", args, {
+        successfulBudgetUpdates: true,
+      }) as { budget: Task["budget"]; status: Task["status"] };
+
+      assert.equal(result.status, task.status);
+      assert.deepEqual(result.budget, { ...originalBudget, ...raise });
+      assert.deepEqual(task.budget_raised_for_turn, raised);
+
+      const listed = (previewTool("list_agent_tasks") as Task[]).find(
+        (candidate) => candidate.id === id,
+      );
+
+      assert.deepEqual(listed?.budget, task.budget);
+
+      assert.throws(
+        () =>
+          previewTool(
+            "raise_user_agent_budget",
+            {
+              task_id: id,
+              budget:
+                id === "preview-budget"
+                  ? { max_cost_usd: originalBudget.max_cost_usd }
+                  : { max_runtime_minutes: originalBudget.max_runtime_minutes },
+            },
+            { successfulBudgetUpdates: true },
+          ),
+        /can only be raised/,
+      );
+    } finally {
+      task.budget = originalBudget;
+      if (originalRaise) task.budget_raised_for_turn = originalRaise;
+      else delete task.budget_raised_for_turn;
+    }
+  }
+});
+
+test("preview updates only mark limits that actually increased", () => {
+  const task = previewTasks.find(
+    (candidate) => candidate.id === "preview-budget",
+  )!;
+
+  const originalBudget = { ...task.budget };
+  const originalRaise = task.budget_raised_for_turn;
+
+  try {
+    previewTool(
+      "raise_user_agent_budget",
+      {
+        task_id: task.id,
+        budget: { max_cost_usd: 2, max_runtime_minutes: 30 },
+      },
+      { successfulBudgetUpdates: true },
+    );
+
+    assert.deepEqual(task.budget_raised_for_turn, {
+      turn: task.turn,
+      runtime: true,
+    });
+  } finally {
+    task.budget = originalBudget;
+    if (originalRaise) task.budget_raised_for_turn = originalRaise;
+    else delete task.budget_raised_for_turn;
   }
 });
 

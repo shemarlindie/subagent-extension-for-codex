@@ -72,6 +72,7 @@ const defaults: Settings = {
   cwd: __DEV_HOST_CWD__,
   autoRegister: true,
   claudeUnavailable: false,
+  successfulBudgetUpdates: false,
   addedProjects: [],
   styles: "",
 };
@@ -209,6 +210,7 @@ export function Host() {
     cwd,
     autoRegister,
     claudeUnavailable,
+    successfulBudgetUpdates,
   } = settings;
 
   const sessionKey = JSON.stringify([
@@ -221,6 +223,7 @@ export function Host() {
     cwd,
     autoRegister,
     claudeUnavailable,
+    successfulBudgetUpdates,
   ]);
 
   useEffect(() => {
@@ -303,6 +306,7 @@ export function Host() {
             : fixtureCall(name, args, {
                 autoRegisterChatProject: current.autoRegister,
                 claudeUnavailable: current.claudeUnavailable,
+                successfulBudgetUpdates: current.successfulBudgetUpdates,
                 addedProjects: added.current,
               });
 
@@ -526,6 +530,21 @@ export function Host() {
           />
           Update context
         </label>
+        {source === "fixtures" && (
+          <label
+            className="check"
+            title="Simulates successful limit updates in preview fixtures."
+          >
+            <input
+              type="checkbox"
+              checked={successfulBudgetUpdates}
+              onChange={(e) =>
+                update({ successfulBudgetUpdates: e.target.checked })
+              }
+            />
+            Successful limit updates
+          </label>
+        )}
         <button type="button" onClick={() => setSession((n) => n + 1)}>
           Relaunch
         </button>

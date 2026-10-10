@@ -296,6 +296,25 @@ budgetTask.add(
   200,
 );
 
+// A runtime-only limit failure, with its control in the warning notice.
+const runtimeBudgetTask = new Timeline("preview-runtime-budget", at(127), 2050);
+begin(runtimeBudgetTask, ["Read", "Edit"]);
+runtimeBudgetTask.say("Finishing the migration and checking all call sites.");
+
+runtimeBudgetTask.tool(
+  "Read",
+  { file_path: "src/dates.ts" },
+  "1\texport function formatDate(d: Date) {",
+);
+
+runtimeBudgetTask.turnEnded(1, "failed", 22 * 60000, 0.44);
+
+runtimeBudgetTask.add(
+  "task.failed",
+  { error: "Runtime budget exhausted" },
+  200,
+);
+
 // A long conversation, for scrolling Chat.
 const longChat = new Timeline("preview-long-chat", at(130), 2100);
 begin(longChat, ["Read", "Edit"]);
@@ -406,6 +425,19 @@ export const conversationTasks: Task[] = [
     cost_usd: longChatTurns * 0.12,
     ...timestamps(130, 30),
   },
+  {
+    ...taskBase,
+    id: "preview-runtime-budget",
+    title: "Finish the date helper migration",
+    description: "Finish moving date helpers and update every call site.",
+    worker_profile: "implementer",
+    status: "failed",
+    error: "Runtime budget exhausted",
+    budget: { max_runtime_minutes: 20, max_cost_usd: null },
+    runtime_ms: 22 * 60000,
+    cost_usd: 0.44,
+    ...timestamps(127, 22),
+  },
 ];
 
 export const conversationTimelines = [
@@ -414,4 +446,5 @@ export const conversationTimelines = [
   conversationTask,
   budgetTask,
   longChat,
+  runtimeBudgetTask,
 ];

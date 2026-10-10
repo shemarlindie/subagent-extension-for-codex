@@ -1,6 +1,6 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
-import type { BudgetRaise, Delivery } from "../../../../../shared/tasks/model";
+import type { Delivery } from "../../../../../shared/tasks/model";
 import { pendingInputKind } from "../../../../../shared/tasks/model.js";
 import {
   useController,
@@ -17,13 +17,9 @@ import {
 } from "../../../../shared/components/motion/motion";
 import { MOTION } from "../../../../shared/components/motion/motion-utils";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
-import {
-  budgetRaised,
-  composerMode,
-  spentBudget,
-  suggestedRaise,
-} from "../chat-model";
-import { BudgetRaiseFields } from "./budget-raise-fields";
+import { FormFieldError } from "../../../../shared/forms/form-field-error";
+import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
+import { composerMode, spentBudget } from "../chat-model";
 
 const PLACEHOLDERS = {
   idle: "What's next?",
@@ -37,15 +33,18 @@ const HINTS = {
   input: "Answer the question above, or Enter to queue · Esc to stop",
 };
 
-type ComposerProps = { task: Task };
+type ComposerProps = {
+  task: Task;
+  budgetApplyVersion: number;
+};
 
 /**
  * Sends the user's messages with the Codex keys: Enter sends, or steers a
  * running turn after its next tool call; Tab queues while a turn runs; Esc
  * stops the turn. While the worker waits for input, messages can only be
- * queued. A spent budget can be raised with the next message.
+ * queued. Apply a spent budget increase before sending the next message.
  */
-export function Composer({ task }: ComposerProps) {
+export function Composer({ task, budgetApplyVersion }: ComposerProps) {
   const controller = useController(),
     busy = useSnapshot().busy,
     mode = composerMode(task),
@@ -66,6 +65,7 @@ export function Composer({ task }: ComposerProps) {
       task.id,
       (state) => state.composerCollapsed,
     ),
+    spent = spentBudget(task),
     collapsed = questionRequest
       ? expandedRequest !== questionRequest
       : manuallyCollapsed,
@@ -73,17 +73,15 @@ export function Composer({ task }: ComposerProps) {
     input = useRef<HTMLTextAreaElement>(null),
     showComposer = useRef<HTMLButtonElement>(null),
     focusAfterToggle = useRef<"input" | "toggle" | undefined>(undefined),
-    spent = spentBudget(task),
     [text, updateSession] = useSessionState(
       "task",
       task.id,
       (state) => state.composerDraft,
     ),
-    // The user's changes to the suggested raise.
-    [raise, setRaise] = useState<BudgetRaise>({}),
-    budget = spent ? { ...suggestedRaise(spent), ...raise } : undefined,
-    canContinue = !spent || budgetRaised(spent, budget ?? {}),
+    canContinue = !spent,
     [error, setError] = useState<string>(),
+    [showContinuePrompt, setShowContinuePrompt] = useState(false),
+    previousBudgetApply = useRef(budgetApplyVersion),
     message = text.trim();
 
   // Animate one footprint so switching layouts never reserves both heights.
@@ -111,15 +109,34 @@ export function Composer({ task }: ComposerProps) {
     updateSession({ composerDraft: value });
   };
 
+  useEffect(() => {
+    if (previousBudgetApply.current === budgetApplyVersion || !canContinue)
+      return;
+
+    previousBudgetApply.current = budgetApplyVersion;
+    if (!message) updateSession({ composerDraft: "Continue" });
+    setShowContinuePrompt(true);
+
+    if (collapsed) {
+      focusAfterToggle.current = "input";
+      if (questionRequest) setExpandedRequest(questionRequest);
+      else updateComposerSession({ composerCollapsed: false });
+    } else input.current?.focus({ preventScroll: true });
+  }, [
+    budgetApplyVersion,
+    canContinue,
+    collapsed,
+    message,
+    questionRequest,
+    updateComposerSession,
+    updateSession,
+  ]);
+
   const send = async (delivery: Delivery) => {
     if (!message || busy || !canContinue) return;
 
-    const failure = await controller.sendMessage(
-      task,
-      message,
-      delivery,
-      budget,
-    );
+    setShowContinuePrompt(false);
+    const failure = await controller.sendMessage(task, message, delivery);
 
     setError(failure);
     if (!failure) edit("");
@@ -186,19 +203,18 @@ export function Composer({ task }: ComposerProps) {
             onClick={() => toggle(false)}
           >
             <Icon name="chevron-down" size={12} />
-            <span>{message ? "Show composer (draft)" : "Show composer"}</span>
+            <span>
+              {spent
+                ? "Show composer (limit reached)"
+                : message
+                  ? "Show composer (draft)"
+                  : "Show composer"}
+            </span>
           </Button>
           {mode !== "idle" && stopButton}
         </div>
       ) : (
         <div className="chat-composer-body motion-swap">
-          {spent && (
-            <BudgetRaiseFields
-              spent={spent}
-              value={budget ?? {}}
-              onChange={setRaise}
-            />
-          )}
           <div className="chat-composer-input-row">
             <TooltipWrapper label="Hide composer">
               <Button
@@ -217,7 +233,14 @@ export function Composer({ task }: ComposerProps) {
                 ref={input}
                 id="chat-composer"
                 aria-label="Message"
-                aria-describedby="chat-composer-hint"
+                aria-describedby={
+                  [
+                    spent ? undefined : "chat-composer-hint",
+                    error ? "chat-composer-error" : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(" ") || undefined
+                }
                 rows={1}
                 maxLength={20000}
                 placeholder={PLACEHOLDERS[mode]}
@@ -239,10 +262,28 @@ export function Composer({ task }: ComposerProps) {
                 {mode === "idle" || (mode === "busy" && message) ? (
                   <TooltipWrapper
                     label={
-                      mode === "busy"
-                        ? "Send into the running turn (Enter)"
-                        : "Send (Enter)"
+                      showContinuePrompt
+                        ? "Press ENTER to continue"
+                        : mode === "busy"
+                          ? "Send into the running turn (Enter)"
+                          : "Send (Enter)"
                     }
+                    triggerLabel={
+                      showContinuePrompt
+                        ? mode === "busy"
+                          ? "Steer"
+                          : "Send"
+                        : undefined
+                    }
+                    open={showContinuePrompt ? true : undefined}
+                    onOpenChange={
+                      showContinuePrompt ? setShowContinuePrompt : undefined
+                    }
+                    popupClassName={
+                      showContinuePrompt ? "chat-continue-tooltip" : undefined
+                    }
+                    arrow={showContinuePrompt}
+                    sideOffset={showContinuePrompt ? 14 : undefined}
                   >
                     <Button
                       variant="primary"
@@ -261,16 +302,20 @@ export function Composer({ task }: ComposerProps) {
               </div>
             </div>
           </div>
-          <p id="chat-composer-hint" className="chat-composer-hint">
-            {mode === "input" ? inputHint : HINTS[mode]}
-          </p>
+          <FormFieldHint
+            id="chat-composer-hint"
+            className="chat-composer-field-feedback"
+            message={
+              spent ? undefined : mode === "input" ? inputHint : HINTS[mode]
+            }
+          />
         </div>
       )}
-      {error && (
-        <p className="chat-error error" role="alert">
-          {error}
-        </p>
-      )}
+      <FormFieldError
+        id="chat-composer-error"
+        className="chat-error chat-composer-field-feedback"
+        message={error}
+      />
     </div>
   );
 }

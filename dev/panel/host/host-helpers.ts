@@ -21,6 +21,8 @@ export type Settings = {
   autoRegister: boolean;
   /** Fixtures only; the live service checks the installed Claude Code. */
   claudeUnavailable: boolean;
+  /** Fixtures only; lets the preview simulate successful budget updates. */
+  successfulBudgetUpdates: boolean;
   /** Projects registered in fixtures mode, kept until Reset. */
   addedProjects: string[];
   styles: string;

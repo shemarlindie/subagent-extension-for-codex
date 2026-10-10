@@ -26,7 +26,7 @@ export const taskBase = {
   depends_on: [],
   context: [],
   workspace_strategy: "worktree" as const,
-  budget: { max_runtime_minutes: 20, max_cost_usd: 5 },
+  budget: { max_runtime_minutes: null, max_cost_usd: null },
   created_by: "user" as const,
   instructions: [],
   instructions_sent: 0,

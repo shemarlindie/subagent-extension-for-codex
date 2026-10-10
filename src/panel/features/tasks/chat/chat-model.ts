@@ -1,4 +1,3 @@
-import type { BudgetRaise } from "../../../../shared/tasks/model";
 import type { Task } from "../../../app/state/types";
 
 /** Statuses in which a turn is running, starting or about to. */
@@ -33,16 +32,21 @@ export function spentBudget(task: Task): SpentBudget | undefined {
 
   const cost = task.cost_usd ?? 0,
     minutes = task.runtime_ms / 60000,
-    failed = task.status === "failed" && /budget/i.test(task.error ?? "");
+    failed = task.status === "failed" && /budget/i.test(task.error ?? ""),
+    budgetRaise =
+      task.budget_raised_for_turn?.turn === task.turn
+        ? task.budget_raised_for_turn
+        : undefined;
 
   const spent: SpentBudget = {
     ...(max_cost_usd !== null &&
-    (cost >= max_cost_usd || (failed && /cost|usd/i.test(task.error ?? "")))
+    (cost >= max_cost_usd ||
+      (failed && !budgetRaise?.cost && /cost|usd/i.test(task.error ?? "")))
       ? { cost: { used: cost, allowed: max_cost_usd } }
       : {}),
     ...(max_runtime_minutes !== null &&
     (minutes >= max_runtime_minutes ||
-      (failed && /runtime/i.test(task.error ?? "")))
+      (failed && !budgetRaise?.runtime && /runtime/i.test(task.error ?? "")))
       ? {
           runtime: {
             usedMinutes: minutes,
@@ -53,32 +57,6 @@ export function spentBudget(task: Task): SpentBudget | undefined {
   };
 
   return spent.cost || spent.runtime ? spent : undefined;
-}
-
-/** A raise that doubles each spent limit, within the allowed maximums. */
-export function suggestedRaise(spent: SpentBudget) {
-  return {
-    ...(spent.cost
-      ? { max_cost_usd: Math.min(spent.cost.allowed * 2, 100) }
-      : {}),
-    ...(spent.runtime
-      ? {
-          max_runtime_minutes: Math.min(spent.runtime.allowedMinutes * 2, 120),
-        }
-      : {}),
-  };
-}
-
-/** Every exhausted limit must be raised or explicitly removed to continue. */
-export function budgetRaised(spent: SpentBudget, raise: BudgetRaise) {
-  const raised = (next: number | null | undefined, current: number) =>
-    next === null || (typeof next === "number" && next > current);
-
-  return (
-    (!spent.cost || raised(raise.max_cost_usd, spent.cost.allowed)) &&
-    (!spent.runtime ||
-      raised(raise.max_runtime_minutes, spent.runtime.allowedMinutes))
-  );
 }
 
 export const formatCost = (usd: number) =>

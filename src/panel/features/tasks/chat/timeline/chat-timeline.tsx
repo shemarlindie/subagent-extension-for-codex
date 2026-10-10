@@ -2,14 +2,16 @@ import type { RefObject } from "react";
 
 import { providerMetadata } from "../../../../../shared/providers/metadata.js";
 import type { ChatItem } from "../../../../../shared/tasks/conversation/chat.js";
+import type { BudgetRaise } from "../../../../../shared/tasks/model";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import { statusLabel } from "../../../../app/state/selectors";
 import type { Task } from "../../../../app/state/types";
 import { currentActivityStatus } from "../../activity/activity-timeline";
 import { rowStatus } from "../../list/task-status";
 import { TaskStatusIcon } from "../../list/task-status-icon";
-import { composerMode } from "../chat-model";
+import { composerMode, spentBudget } from "../chat-model";
 import { PendingInput } from "../composer/pending-input";
+import { BudgetLimitNotice } from "./budget-limit-notice";
 import { ChatMessageView } from "./chat-message-view";
 import { ChatNoteRow } from "./chat-note-row";
 import { TurnOutcomeRow } from "./turn-outcome-row";
@@ -17,6 +19,9 @@ import { TurnOutcomeRow } from "./turn-outcome-row";
 type ChatTimelineProps = {
   task: Task;
   viewportRef: RefObject<HTMLDivElement | null>;
+  budgetRaise: BudgetRaise;
+  onBudgetRaiseChange: (value: BudgetRaise) => void;
+  onBudgetApply: (value: BudgetRaise) => Promise<string | undefined>;
 };
 
 /**
@@ -24,7 +29,13 @@ type ChatTimelineProps = {
  * is doing now or the input it waits for. It follows new messages while the
  * reader is at the end.
  */
-export function ChatTimeline({ task, viewportRef }: ChatTimelineProps) {
+export function ChatTimeline({
+  task,
+  viewportRef,
+  budgetRaise,
+  onBudgetRaiseChange,
+  onBudgetApply,
+}: ChatTimelineProps) {
   const state = useSnapshot(),
     chat = state.chat?.task === task.id ? state.chat : undefined,
     worker =
@@ -69,6 +80,7 @@ export function ChatTimeline({ task, viewportRef }: ChatTimelineProps) {
 
   const latest = items?.at(-1);
   const workingShownInNote = latest?.kind === "note" && latest.text === working;
+  const spent = spentBudget(task);
 
   return (
     <div
@@ -118,6 +130,15 @@ export function ChatTimeline({ task, viewportRef }: ChatTimelineProps) {
           <TaskStatusIcon kind={presentation.kind} label={working} decorative />
           <span>{working}</span>
         </div>
+      )}
+      {spent && (
+        <BudgetLimitNotice
+          taskId={task.id}
+          spent={spent}
+          value={budgetRaise}
+          onChange={onBudgetRaiseChange}
+          onApply={onBudgetApply}
+        />
       )}
       <PendingInput task={task} />
     </div>

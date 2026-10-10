@@ -62,6 +62,7 @@ export const previewTasks: Task[] = [
   "preview-paused",
   "preview-conversation",
   "preview-budget",
+  "preview-runtime-budget",
   "preview-long-chat",
   "preview-live-streaming",
 ]
@@ -101,6 +102,7 @@ export const previewEvents: Event[] = [
   "preview-paused",
   "preview-conversation",
   "preview-budget",
+  "preview-runtime-budget",
   "preview-long-chat",
   "preview-live-streaming",
 ]

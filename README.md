@@ -41,7 +41,7 @@ The authenticated HTTP endpoint `/mcp` serves the same task tools and MCP App fo
 - **Conversation:** completed, failed and interrupted tasks accept follow-ups. During a turn, messages can steer at the next tool boundary, queue another turn, or interrupt and start a new turn. A plain interrupt pauses the queue.
 - **Review:** replies stream into Chat. The Changes tab reads live Git changes; `get_agent_messages` and `get_agent_changes` let the parent retrieve replies and patches. Concurrent edits to files touched by the task can also appear in its changes.
 - **Continuation:** a later turn resumes the Claude session when its original worker and transcript are available; otherwise it starts a fresh session carrying the conversation. Removing a worktree keeps its branch, and the next turn recreates it.
-- **Limits:** runtime and cost budgets span turns and can be raised by a follow-up. Token budgets are unsupported. Cost ceilings are checked after responses and are not a hard billing cap.
+- **Limits:** runtime and cost budgets span turns and can be raised from the Chat warning notice before continuing. Token budgets are unsupported. Cost ceilings are checked after responses and are not a hard billing cap.
 
 Questions and permissions wait for an answer tied to the exact request ID. Permissions route to the user by default; user-approved settings can route them to the parent. Claude's own permission rules can allow or deny an action before it reaches that route.
 

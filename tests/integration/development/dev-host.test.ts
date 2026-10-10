@@ -28,6 +28,7 @@ const defaults: Settings = {
   cwd: "file:///repo",
   autoRegister: true,
   claudeUnavailable: false,
+  successfulBudgetUpdates: false,
   addedProjects: [],
   styles: "",
 };
