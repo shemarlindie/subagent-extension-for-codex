@@ -1,4 +1,7 @@
-import type { ActivityPage } from "../../../shared/tasks/activity/activity-tail";
+import type {
+  ActivityPage,
+  TurnActivityPage,
+} from "../../../shared/tasks/activity/activity-tail";
 import type { BudgetRaise, Delivery } from "../../../shared/tasks/model";
 import {
   changesKey,
@@ -17,6 +20,7 @@ import { delegationDialog } from "../../features/delegation/delegation";
 import {
   activityCursor,
   mergeActivity,
+  turnStart,
 } from "../../features/tasks/activity/event-history";
 import { type ChatRead, mergeChat } from "../../features/tasks/chat/chat-state";
 import { DraftFollower } from "../../features/tasks/chat/drafts/draft-follower";
@@ -425,7 +429,13 @@ export class Controller {
         selected = undefined;
         this.explicitSelection = false;
         this.generation++;
-        this.patch({ events: [], chat: undefined, draft: undefined });
+
+        this.patch({
+          events: [],
+          activityFocus: undefined,
+          chat: undefined,
+          draft: undefined,
+        });
       }
 
       let tab = this.state.tab;
@@ -562,6 +572,7 @@ export class Controller {
       selected: id,
       events: [],
       droppedEvents: undefined,
+      activityFocus: undefined,
       chat: undefined,
       draft: undefined,
       tab: this.session.get("task", id).tab,
@@ -582,6 +593,7 @@ export class Controller {
       selected: undefined,
       events: [],
       droppedEvents: undefined,
+      activityFocus: undefined,
       chat: undefined,
       draft: undefined,
     });
@@ -601,6 +613,66 @@ export class Controller {
     this.patch({ tab });
     this.draftFollower.follow();
     this.run(() => this.loadChangesIfStale());
+  }
+
+  /**
+   * Opens Activity at a turn. A turn the latest activity holds scrolls into
+   * view there; otherwise its own events are read and shown until
+   * `showLatestActivity`.
+   */
+  async viewTurnActivity(turn: number) {
+    const task = this.state.selected;
+    if (!task) return;
+
+    const request = (this.state.activityFocus?.request ?? 0) + 1,
+      shown =
+        turnStart(
+          { events: this.state.events, dropped: this.state.droppedEvents },
+          turn,
+        ) !== undefined;
+
+    this.patch({
+      activityFocus: {
+        task,
+        turn,
+        request,
+        ...(shown ? {} : { range: "loading" as const }),
+      },
+    });
+
+    this.setTab("activity");
+    if (shown) return;
+
+    // A newer request, another task or disposal makes this read stale.
+    const current = () =>
+      !this.disposed &&
+      this.state.selected === task &&
+      this.state.activityFocus?.request === request;
+
+    try {
+      const page = await this.tool<TurnActivityPage>(
+        "get_user_agent_turn_activity",
+        { task_id: task, turn },
+      );
+
+      if (current())
+        this.patch({
+          activityFocus: {
+            task,
+            turn,
+            request,
+            range: { events: page.events, dropped: page.dropped },
+          },
+        });
+    } catch (error) {
+      if (current()) this.patch({ activityFocus: undefined });
+      throw error;
+    }
+  }
+
+  /** Returns Activity from a turn's own events to the latest activity. */
+  showLatestActivity() {
+    this.patch({ activityFocus: undefined });
   }
 
   /** Reads the selected task's change totals when its status or turn has moved on. */
@@ -784,6 +856,7 @@ export class Controller {
       tasks: [],
       selected: undefined,
       events: [],
+      activityFocus: undefined,
       chat: undefined,
       draft: undefined,
       ...(this.state.busy
@@ -857,6 +930,7 @@ export class Controller {
       this.patch({
         selected: data.panel_selection.task_id,
         events: [],
+        activityFocus: undefined,
         chat: undefined,
         draft: undefined,
         tab: (["chat", "changes", "activity", "details"] as const).includes(
@@ -1299,6 +1373,7 @@ export class Controller {
           ],
           selected: task.id,
           events: [],
+          activityFocus: undefined,
           chat: undefined,
           draft: undefined,
           tab: this.session.get("task", task.id).tab,

@@ -8,6 +8,7 @@ import {
   describeDropped,
   EVENT_TAIL_SIZE,
   mergeActivity,
+  turnStart,
 } from "./event-history";
 
 const event = (id: number, task_id = "task"): Event => ({
@@ -113,4 +114,34 @@ test("the dropped note names the span, tools and trouble", () => {
     "1 failure",
     "2 retries",
   ]);
+});
+
+test("a turn starts after the event that closed the previous turn", () => {
+  const typed = (id: number, type: string, data = {}): Event => ({
+    ...event(id),
+    type,
+    data,
+  });
+
+  const events = [
+    typed(1, "task.started", { turn: 1 }),
+    typed(2, "task.turn_ended", { turn: 1 }),
+    // A queued message delivered as turn 1 ends, before the status that closes it.
+    typed(3, "task.instruction"),
+    typed(4, "task.completed"),
+    typed(5, "task.instruction"),
+    typed(6, "task.queued"),
+    typed(7, "task.started", { turn: 2 }),
+    typed(8, "task.turn_ended", { turn: 2 }),
+    typed(9, "task.started", { turn: 3 }),
+  ];
+
+  assert.equal(turnStart({ events }, 1), 1);
+  assert.equal(turnStart({ events }, 2), 5);
+  assert.equal(turnStart({ events }, 3), undefined, "Turn 3 has not ended");
+
+  // With earlier events dropped, the first turn's start may be among them.
+  assert.equal(turnStart({ events: events.slice(1), dropped }, 1), undefined);
+  assert.equal(turnStart({ events: events.slice(1), dropped }, 2), 5);
+  assert.equal(turnStart({ events: events.slice(2), dropped }, 2), undefined);
 });

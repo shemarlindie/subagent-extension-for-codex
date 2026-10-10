@@ -11,7 +11,10 @@ import type {
   Defaults,
   SettingsDocument,
 } from "../../features/settings/types.js";
-import type { DroppedSummary } from "../../features/tasks/activity/event-history.js";
+import type {
+  ActivityFocus,
+  DroppedSummary,
+} from "../../features/tasks/activity/event-history.js";
 import type { ChatState } from "../../features/tasks/chat/chat-state.js";
 import type { DraftState } from "../../features/tasks/chat/drafts/draft-state.js";
 import type { Filter, Tab, Task } from "../../features/tasks/types.js";
@@ -105,6 +108,8 @@ export type Snapshot = {
   events: Event[];
   /** Tally of the selected task's events that fell off the front of `events`. */
   droppedEvents?: DroppedSummary;
+  /** A turn whose activity Chat's View activity asked to show. */
+  activityFocus?: ActivityFocus;
   /** The selected task's Chat, read alongside its events. */
   chat?: ChatState;
   /** The selected task's message being written, streamed or read. */

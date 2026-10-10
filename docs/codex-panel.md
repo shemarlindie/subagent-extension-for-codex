@@ -154,6 +154,14 @@ button to return to the latest activity. The task header and tabs stay fixed
 when enough height remains; a short frame scrolls the whole inspector.
 Chat and Activity keep separate positions. Reduced motion suppresses animation.
 
+**View activity** on a Chat outcome row opens Activity at that turn. When the
+turn is among the most recent events, Activity scrolls to its first row.
+Otherwise the panel reads that turn's events (`get_user_agent_turn_activity`)
+and shows them, trimmed and tallied like the latest view, under **Showing
+activity for turn n** until **Show latest activity** or another task is
+selected. A turn runs from after the previous turn's closing status event
+through its own, so a queued message delivered as a turn ends stays with it.
+
 Each row's debug button exposes readable event content, metadata and a raw SDK
 response inspector. Raw JSON renders only when opened. Open disclosures survive
 refreshes while their row remains in the most recent 200 events. The service

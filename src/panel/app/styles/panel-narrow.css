@@ -43,8 +43,11 @@
     display: inline-block;
   }
   /* Tabs run edge to edge, scrolling past the content margin and resting inside it. */
+  .evidence {
+    --tab-strip-inset: 0px;
+    --tab-strip-pad: var(--detail-pad);
+  }
   .evidence > .tabs {
-    margin-inline: 0;
     padding-inline: var(--detail-pad);
   }
   header {

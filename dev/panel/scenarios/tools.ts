@@ -1,6 +1,9 @@
 import { type ModelChoice } from "../../../src/shared/providers/types";
 import { settingsSections } from "../../../src/shared/settings/settings-document";
-import { windowActivity } from "../../../src/shared/tasks/activity/activity-tail";
+import {
+  windowActivity,
+  windowTurnActivity,
+} from "../../../src/shared/tasks/activity/activity-tail";
 import { chatItems } from "../../../src/shared/tasks/conversation/chat";
 import {
   budgetRaiseSchema,
@@ -412,6 +415,10 @@ export function previewTool(
     get_user_agent_activity: windowActivity(
       previewEvents.filter((event) => event.task_id === args.task_id),
       Number(args.after ?? 0),
+    ),
+    get_user_agent_turn_activity: windowTurnActivity(
+      previewEvents.filter((event) => event.task_id === args.task_id),
+      Number(args.turn),
     ),
     list_available_workers: [
       {

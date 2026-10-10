@@ -2,6 +2,7 @@ import {
   type ActivityPage,
   type DroppedSummary,
   EVENT_TAIL_SIZE,
+  turnCloseIndex,
 } from "../../../../shared/tasks/activity/activity-tail";
 import type { Event } from "../../../app/state/types";
 import { formatDuration } from "../list/duration";
@@ -14,6 +15,33 @@ export {
 
 /** The events and dropped tally the Activity tab shows for a task. */
 export type ActivityView = { events: Event[]; dropped?: DroppedSummary };
+
+/** A request to show one turn's activity, from a Chat outcome row. */
+export type ActivityFocus = {
+  task: string;
+  turn: number;
+  /** Counts requests, so asking for the same turn again scrolls to it again. */
+  request: number;
+  /**
+   * The turn's own events, read when the latest activity does not hold all of
+   * them. Absent when the turn shows in the latest activity.
+   */
+  range?: ActivityView | "loading";
+};
+
+/**
+ * The id of a turn's first event when the view holds all of the turn: it has
+ * ended there, and the previous turn closed there too or nothing was dropped.
+ */
+export function turnStart({ events, dropped }: ActivityView, turn: number) {
+  if (turnCloseIndex(events, turn) === -1) return undefined;
+
+  const previous = turnCloseIndex(events, turn - 1);
+
+  if (previous !== -1) return events[previous + 1]?.id;
+
+  return dropped ? undefined : events[0]?.id;
+}
 
 /** The cursor for the next page: the last event the view shows for the task. */
 export function activityCursor(events: Event[], taskId: string) {

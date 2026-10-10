@@ -98,7 +98,9 @@ export function TurnOutcomeRow({ outcome, response }: TurnOutcomeRowProps) {
           variant="text"
           underline
           className="chat-outcome-activity"
-          onClick={() => controller.setTab("activity")}
+          onClick={() =>
+            controller.run(() => controller.viewTurnActivity(outcome.turn))
+          }
         >
           View activity
         </Button>

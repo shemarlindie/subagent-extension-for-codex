@@ -1,5 +1,5 @@
 import { Tabs } from "@base-ui/react/tabs";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import {
   useController,
@@ -9,7 +9,9 @@ import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { Tab, Task } from "../../../app/state/types";
 import { scrollChildIntoView } from "../../../shared/utils/scroll-into-view";
 import { ChangesPanel } from "../../changes/changes-panel";
+import { turnStart } from "../activity/event-history";
 import { EventList } from "../activity/event-list";
+import { TurnActivityBanner } from "../activity/turn-activity-banner";
 import { ChatPanel } from "../chat/chat-panel";
 import { TaskDetails } from "../inspector/task-details";
 import { TabLabel } from "./tab-label";
@@ -43,7 +45,33 @@ export function EvidenceTabs({ task }: { task: Task }) {
     ),
     listRef = useActiveTabInView(state.tab),
     counts =
-      state.changeCounts?.task === task.id ? state.changeCounts : undefined;
+      state.changeCounts?.task === task.id ? state.changeCounts : undefined,
+    focus =
+      state.activityFocus?.task === task.id ? state.activityFocus : undefined,
+    range = focus?.range;
+
+  // A turn the latest activity holds scrolls into view there; a turn read on
+  // its own opens at its first row. Stable objects keep the list memoized.
+  const focusEventId = !focus
+    ? undefined
+    : range
+      ? range === "loading"
+        ? undefined
+        : range.events[0]?.id
+      : turnStart(
+          { events: state.events, dropped: state.droppedEvents },
+          focus.turn,
+        );
+
+  const request = focus?.request;
+
+  const rowFocus = useMemo(
+    () =>
+      focusEventId === undefined || request === undefined
+        ? undefined
+        : { eventId: focusEventId, request },
+    [focusEventId, request],
+  );
 
   return (
     <Tabs.Root
@@ -80,15 +108,38 @@ export function EvidenceTabs({ task }: { task: Task }) {
       </Tabs.Panel>
       {/* Stays mounted so the reading position survives tab switches. */}
       <Tabs.Panel value="activity" className="activity-panel" keepMounted>
-        <EventList
-          reading={reading}
-          events={state.events}
-          runtimeMs={task.runtime_ms}
-          dropped={state.droppedEvents}
-          preferences={state.host}
-          active={state.tab === "activity"}
-          running={task.status === "running" && !task.pending_input}
-        />
+        {focus && range ? (
+          <>
+            <TurnActivityBanner
+              turn={focus.turn}
+              loading={range === "loading"}
+              onShowLatest={() => controller.showLatestActivity()}
+            />
+            {range !== "loading" && (
+              <EventList
+                key={focus.request}
+                turn={focus.turn}
+                events={range.events}
+                dropped={range.dropped}
+                runtimeMs={task.runtime_ms}
+                preferences={state.host}
+                active={state.tab === "activity"}
+                focus={rowFocus}
+              />
+            )}
+          </>
+        ) : (
+          <EventList
+            reading={reading}
+            events={state.events}
+            runtimeMs={task.runtime_ms}
+            dropped={state.droppedEvents}
+            preferences={state.host}
+            active={state.tab === "activity"}
+            running={task.status === "running" && !task.pending_input}
+            focus={rowFocus}
+          />
+        )}
       </Tabs.Panel>
       <Tabs.Panel value="details">
         <TaskDetails task={task} counts={counts} />

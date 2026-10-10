@@ -119,6 +119,10 @@ body[data-expanded-panel="true"] .activity-panel .activity-viewport {
   margin: 0;
   padding: var(--activity-top-pad) var(--detail-pad) 18px;
 }
+/* The activity panel has no inline padding here, so the banner insets itself. */
+body[data-expanded-panel="true"] .activity-panel .activity-turn-banner {
+  margin-inline: var(--tab-strip-inset);
+}
 body[data-expanded-panel="true"] .activity-panel .activity-scroll-latest {
   right: calc(var(--detail-pad) - 4px);
 }
@@ -162,6 +166,10 @@ body[data-expanded-panel="true"]
   > .activity-panel:not([hidden]) {
   padding-top: var(--activity-top-pad);
   padding-inline: 0;
+}
+/* The banner stays flush under the tabs; the panel's top gap moves below it. */
+body[data-expanded-panel="true"] .detail[data-stacked] .activity-turn-banner {
+  margin-block: calc(-1 * var(--activity-top-pad)) var(--activity-top-pad);
 }
 body[data-expanded-panel="true"] .detail[data-stacked] .activity-timeline {
   display: block;

@@ -152,6 +152,72 @@ test("completed chat turns show a quiet summary with a completion time on hover"
   assert.equal(controller.getSnapshot().tab, "activity");
 });
 
+test("View activity scrolls to a recent turn and reads an older one on its own", async (t) => {
+  const { controller, user } = await setup(t, (transport) => {
+    const events: Record<string, unknown>[] = [];
+
+    const add = (type: string, data: Record<string, unknown> = {}) =>
+      events.push({
+        id: events.length + 1,
+        task_id: "one",
+        timestamp: "2026-10-08T18:30:00.000Z",
+        type,
+        data,
+      });
+
+    // Turn 1 is longer than the window, so only turn 2 is in the latest view.
+    for (const [turn, count] of [
+      [1, 250],
+      [2, 5],
+    ]) {
+      add("task.started", { turn });
+      for (let i = 0; i < count; i++)
+        add("agent.message", { role: "assistant", text: `turn ${turn}` });
+      add("task.turn_ended", { turn, outcome: "completed" });
+      add("task.completed");
+    }
+
+    transport.taskEvents = events;
+
+    transport.chat = [1, 2].map((turn) => ({
+      kind: "outcome",
+      id: `turn-${turn}`,
+      event_id: turn === 1 ? 253 : 261,
+      timestamp: "2026-10-08T18:30:00.000Z",
+      turn,
+      outcome: "completed",
+      runtime_ms: 1000,
+      cost_usd: 0,
+    }));
+  });
+
+  const [first, second] = screen.getAllByRole("button", {
+    name: "View activity",
+  });
+
+  await user.click(second);
+  assert.equal(controller.getSnapshot().tab, "activity");
+  assertAbsent(screen.queryByText(/Showing activity for/));
+
+  await user.click(screen.getByRole("tab", { name: "Chat" }));
+  await user.click(first);
+
+  assert.ok(await screen.findByText("Showing activity for"));
+  assert.ok(screen.getByText("turn 1", { selector: "strong" }));
+
+  assert.ok(
+    screen.getByText(/Showing the last 200 events of turn 1\./),
+    "A turn longer than the window says it is trimmed",
+  );
+
+  await user.click(
+    screen.getByRole("button", { name: "Show latest activity" }),
+  );
+
+  assertAbsent(screen.queryByText(/Showing activity for/));
+  assert.ok(screen.getByText(/Showing the most recent 200 events\./));
+});
+
 for (const outcome of ["failed", "interrupted"] as const)
   test(`${outcome} chat turns retain their status and error beside the compact summary`, async (t) => {
     vi.useFakeTimers({ toFake: ["Date"] });

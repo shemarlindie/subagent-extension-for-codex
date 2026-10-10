@@ -39,7 +39,13 @@ interface EventListProps {
   running?: boolean;
   /** The host's locale and time zone, which Chat's timestamps follow too. */
   preferences?: UserDateTimePreferences;
+  /** The turn whose own events these are, rather than the latest activity. */
+  turn?: number;
+  /** An event whose row to bring to the top; a new request asks again. */
+  focus?: ActivityRowFocus;
 }
+
+export type ActivityRowFocus = { eventId: number; request: number };
 
 // Polls keep the same events array when nothing changed, so a hidden tab skips work.
 export const EventList = memo(function EventList({
@@ -50,6 +56,8 @@ export const EventList = memo(function EventList({
   runtimeMs,
   dropped,
   preferences,
+  turn,
+  focus,
 }: EventListProps) {
   // Oldest first, like Chat; progress moves an operation to the end.
   const groups = groupActivity(events).sort(
@@ -59,12 +67,18 @@ export const EventList = memo(function EventList({
   const ready = events.length > 0;
   const trimmed = events.length === EVENT_TAIL_SIZE;
 
+  // Progress moves an operation's row, so the first row ending at or after
+  // the event is where that event's part of the timeline begins.
+  const focusGroup =
+    focus && groups.find((group) => group.events.at(-1)!.id >= focus.eventId);
+
   const { viewportRef, pinned, scrollToLatest } = useReadingScroll({
     reading,
     active,
     ready,
     itemAttribute: "data-activity-id",
     animateRows: true,
+    focus: focusGroup && { id: focusGroup.id, request: focus.request },
   });
 
   return (
@@ -80,7 +94,9 @@ export const EventList = memo(function EventList({
         {trimmed && (
           <p className="help activity-trimmed-note">
             <span className="activity-trimmed-lead">
-              Showing the most recent {EVENT_TAIL_SIZE} events.
+              {turn === undefined
+                ? `Showing the most recent ${EVENT_TAIL_SIZE} events.`
+                : `Showing the last ${EVENT_TAIL_SIZE} events of turn ${turn}.`}
             </span>
             {dropped && dropped.task_id === events[0].task_id && (
               <DroppedNote summary={dropped} />
@@ -105,7 +121,11 @@ export const EventList = memo(function EventList({
       <ScrollLatestButton
         show={ready && !pinned}
         direction="down"
-        label="Scroll to latest activity"
+        label={
+          turn === undefined
+            ? "Scroll to latest activity"
+            : `Scroll to the end of turn ${turn}`
+        }
         className="activity-scroll-latest"
         onClick={scrollToLatest}
       />

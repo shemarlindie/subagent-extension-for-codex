@@ -35,7 +35,14 @@ export type ReadingScrollOptions = {
   itemAttribute: string;
   /** Slide moved rows to their new place and fade new rows in. */
   animateRows?: boolean;
+  /**
+   * A row to bring to the top once it renders. A new `request` asks again,
+   * even for the same row.
+   */
+  focus?: ReadingFocus;
 };
+
+export type ReadingFocus = { id: string; request: number };
 
 /**
  * Keep an oldest-first timeline at its latest row while the reader is there,
@@ -47,6 +54,7 @@ export function useReadingScroll({
   ready,
   itemAttribute,
   animateRows: animate = false,
+  focus,
 }: ReadingScrollOptions) {
   const [local] = useState<ReadingState>(() => ({}));
   const reading = owned ?? local;
@@ -182,6 +190,50 @@ export function useReadingScroll({
         container.clientHeight,
       );
   });
+
+  const focused = useRef<number | undefined>(undefined),
+    focusId = focus?.id,
+    focusRequest = focus?.request;
+
+  // After the restore above, so the requested row wins over the saved place.
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (focusId === undefined || focused.current === focusRequest) return;
+    if (!viewport || !active || !ready) return;
+
+    const element = Array.from(
+      viewport.querySelectorAll<HTMLElement>(`[${itemAttribute}]`),
+    ).find((element) => element.getAttribute(itemAttribute) === focusId);
+
+    if (!element) return;
+    focused.current = focusRequest;
+    const container = scrollContainer(viewport);
+    window.clearTimeout(glideTimer.current);
+    glide.current = undefined;
+    stopAnimations();
+    const before = container.scrollTop;
+
+    container.scrollTop +=
+      element.getBoundingClientRect().top -
+      container.getBoundingClientRect().top;
+
+    if (Math.abs(container.scrollTop - before) >= 1)
+      correctedScrollTop.current = container.scrollTop;
+
+    // Reading from the row unpins, unless the row already sits at the end.
+    const next = distanceFromEnd(container) <= END_SLACK_PX;
+    pinnedRef.current = next;
+    setPinned(next);
+    remember(viewport, container);
+  }, [
+    focusId,
+    focusRequest,
+    active,
+    ready,
+    itemAttribute,
+    remember,
+    stopAnimations,
+  ]);
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;

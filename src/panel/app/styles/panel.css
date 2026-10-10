@@ -382,8 +382,14 @@ header .toolbar {
 .task-header .task-title {
   padding-inline: var(--detail-pad);
 }
+/* How far the tab bar sits in from the panel's edge, and the padding that lines
+   its text up with the content; strips under the tabs match it. */
+.evidence {
+  --tab-strip-inset: var(--detail-pad);
+  --tab-strip-pad: 12px;
+}
 .evidence > .tabs {
-  margin-inline: var(--detail-pad);
+  margin-inline: var(--tab-strip-inset);
 }
 .evidence > [role="tabpanel"] {
   padding-inline: var(--detail-pad);

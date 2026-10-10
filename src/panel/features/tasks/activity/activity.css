@@ -458,3 +458,31 @@
     opacity: 0.75;
   }
 }
+/* A strip flush under the tab bar and as wide as it, while Activity shows one turn. */
+.activity-turn-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  /* The tab panel pads by --detail-pad; step out to the tab bar's edges. */
+  margin-inline: calc(var(--tab-strip-inset) - var(--detail-pad));
+  padding: 8px var(--tab-strip-pad);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  font-size: 12px;
+}
+.activity-turn-banner-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.activity-turn-banner-label strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.activity-turn-banner-icon {
+  flex: none;
+  color: var(--accent);
+}

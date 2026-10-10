@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 
 import { test, vi } from "vitest";
 
-import { windowActivity } from "../../../shared/tasks/activity/activity-tail";
+import {
+  windowActivity,
+  windowTurnActivity,
+} from "../../../shared/tasks/activity/activity-tail";
 import type { Changes } from "../../features/changes/types";
 import { Controller } from "./controller";
 import { effectiveFilter, visibleTasks } from "./selectors";
 import type {
   Defaults,
+  Event,
   PanelData,
   Task,
   Transport,
@@ -898,6 +902,82 @@ test("the activity view shows the service's window and its tally, and polls for 
     1005,
   );
 
+  assert.equal(controller.getSnapshot().events.length, 200);
+});
+
+test("View activity scrolls to a turn in the window and reads one outside it", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a")];
+  await controller.start();
+
+  const events: Event[] = [];
+
+  const add = (type: string, data: Record<string, unknown> = {}) =>
+    events.push({
+      id: events.length + 1,
+      task_id: "a",
+      type,
+      timestamp: "",
+      data,
+    });
+
+  for (const [turn, count] of [
+    [1, 300],
+    [2, 10],
+  ]) {
+    add("task.started", { turn });
+    for (let i = 0; i < count; i++) add("log");
+    add("task.turn_ended", { turn, outcome: "completed" });
+    add("task.completed");
+  }
+
+  transport.handler = (name, args) =>
+    name === "get_user_agent_activity"
+      ? windowActivity(events, Number(args.after))
+      : name === "get_user_agent_turn_activity"
+        ? windowTurnActivity(events, Number(args.turn))
+        : undefined;
+
+  await controller.select("a");
+  await controller.viewTurnActivity(2);
+
+  assert.equal(controller.getSnapshot().tab, "activity");
+
+  assert.deepEqual(controller.getSnapshot().activityFocus, {
+    task: "a",
+    turn: 2,
+    request: 1,
+  });
+
+  assert.ok(
+    !transport.calls.some(
+      (call) => call.name === "get_user_agent_turn_activity",
+    ),
+    "A turn in the window needs no read",
+  );
+
+  await controller.viewTurnActivity(1);
+  const page = windowTurnActivity(events, 1);
+
+  assert.deepEqual(
+    transport.calls.find((call) => call.name === "get_user_agent_turn_activity")
+      ?.args,
+    { task_id: "a", turn: 1 },
+  );
+
+  assert.deepEqual(controller.getSnapshot().activityFocus, {
+    task: "a",
+    turn: 1,
+    request: 2,
+    range: { events: page.events, dropped: page.dropped },
+  });
+
+  assert.equal(page.events.at(0)?.type, "log");
+  assert.equal(page.dropped?.count, 103);
+
+  controller.showLatestActivity();
+  assert.equal(controller.getSnapshot().activityFocus, undefined);
   assert.equal(controller.getSnapshot().events.length, 200);
 });
 

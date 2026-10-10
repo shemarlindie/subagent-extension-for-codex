@@ -16,7 +16,10 @@ import type {
   Changes,
 } from "../../../src/panel/features/changes/types";
 import type { Event } from "../../../src/shared/events/types.js";
-import { windowActivity } from "../../../src/shared/tasks/activity/activity-tail.js";
+import {
+  windowActivity,
+  windowTurnActivity,
+} from "../../../src/shared/tasks/activity/activity-tail.js";
 import type { InputPresentation } from "../../../src/shared/tasks/model.js";
 import { changeCounts } from "../../../src/shared/workspaces/changes.js";
 
@@ -207,6 +210,10 @@ export class FakeTransport implements Transport {
       get_user_agent_activity: windowActivity(
         this.taskEvents as unknown as Event[],
         Number(args.after ?? 0),
+      ),
+      get_user_agent_turn_activity: windowTurnActivity(
+        this.taskEvents as unknown as Event[],
+        Number(args.turn),
       ),
       get_user_agent_chat: { items: this.chat, next_cursor: 0 },
       get_user_agent_change_counts: changeCounts(this.changes[0]),
