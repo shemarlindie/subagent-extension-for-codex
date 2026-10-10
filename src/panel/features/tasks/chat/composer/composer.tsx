@@ -16,6 +16,7 @@ import {
   useListMotion,
 } from "../../../../shared/components/motion/motion";
 import { MOTION } from "../../../../shared/components/motion/motion-utils";
+import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import {
   budgetRaised,
   composerMode,
@@ -148,17 +149,18 @@ export function Composer({ task }: ComposerProps) {
   };
 
   const stopButton = (
-    <Button
-      variant="ghost"
-      className="chat-icon-button"
-      data-action="stop"
-      aria-label="Stop the turn"
-      title="Stop the turn (Esc)"
-      disabled={busy}
-      onClick={stop}
-    >
-      <Icon name="stop-solid" size={14} />
-    </Button>
+    <TooltipWrapper label="Stop the turn (Esc)">
+      <Button
+        variant="ghost"
+        className="chat-icon-button"
+        data-action="stop"
+        aria-label="Stop the turn"
+        disabled={busy}
+        onClick={stop}
+      >
+        <Icon name="stop-solid" size={14} />
+      </Button>
+    </TooltipWrapper>
   );
 
   return (
@@ -193,17 +195,18 @@ export function Composer({ task }: ComposerProps) {
             />
           )}
           <div className="chat-composer-input-row">
-            <Button
-              variant="ghost"
-              className="chat-icon-button chat-composer-collapse"
-              aria-label="Hide composer"
-              title="Hide composer"
-              aria-expanded={true}
-              aria-controls="chat-composer-body"
-              onClick={() => toggle(true)}
-            >
-              <Icon name="chevron-down" size={12} />
-            </Button>
+            <TooltipWrapper label="Hide composer">
+              <Button
+                variant="ghost"
+                className="chat-icon-button chat-composer-collapse"
+                aria-label="Hide composer"
+                aria-expanded={true}
+                aria-controls="chat-composer-body"
+                onClick={() => toggle(true)}
+              >
+                <Icon name="chevron-down" size={12} />
+              </Button>
+            </TooltipWrapper>
             <div className="chat-composer-box">
               <textarea
                 ref={input}
@@ -229,21 +232,24 @@ export function Composer({ task }: ComposerProps) {
                 )}
                 {/* While a turn runs, an empty composer's button stops it. */}
                 {mode === "idle" || (mode === "busy" && message) ? (
-                  <Button
-                    variant="primary"
-                    className="chat-icon-button"
-                    data-action="send"
-                    aria-label={mode === "busy" ? "Steer" : "Send"}
-                    title={
+                  <TooltipWrapper
+                    label={
                       mode === "busy"
                         ? "Send into the running turn (Enter)"
                         : "Send (Enter)"
                     }
-                    disabled={busy || !message || !canContinue}
-                    onClick={() => send("steer")}
                   >
-                    <Icon name="enter" size={16} />
-                  </Button>
+                    <Button
+                      variant="primary"
+                      className="chat-icon-button"
+                      data-action="send"
+                      aria-label={mode === "busy" ? "Steer" : "Send"}
+                      disabled={busy || !message || !canContinue}
+                      onClick={() => send("steer")}
+                    >
+                      <Icon name="enter" size={16} />
+                    </Button>
+                  </TooltipWrapper>
                 ) : (
                   stopButton
                 )}
