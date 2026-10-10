@@ -1,5 +1,6 @@
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
 import type { Event } from "../../../app/state/types";
+import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
 
 // Keep prose blocks and structured metadata within the same nesting budget.
 export const MAX_ACTIVITY_DEPTH = 6;
@@ -15,11 +16,23 @@ export const label = (key: string) => {
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
-export function formatActivityTime(timestamp: string) {
-  return new Date(timestamp).toLocaleTimeString([], {
+export function formatActivityTime(
+  timestamp: string,
+  preferences: UserDateTimePreferences = {},
+) {
+  const options: Intl.DateTimeFormatOptions = {
     hour: "2-digit",
     minute: "2-digit",
-  });
+  };
+
+  try {
+    return new Date(timestamp).toLocaleTimeString(preferences.locale, {
+      ...options,
+      timeZone: preferences.timeZone,
+    });
+  } catch {
+    return new Date(timestamp).toLocaleTimeString(undefined, options);
+  }
 }
 
 export function eventTitle(event: Event, failed: boolean, toolName?: string) {

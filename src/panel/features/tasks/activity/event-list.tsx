@@ -2,6 +2,7 @@ import { memo } from "react";
 
 import type { Event } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
+import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
 import type { ReadingState } from "../evidence/reading-state";
 import { useReadingScroll } from "../evidence/use-reading-scroll";
 import { ActivityGroupCard } from "./activity-group-card";
@@ -36,6 +37,8 @@ interface EventListProps {
   dropped?: DroppedSummary;
   /** The worker is mid-turn, so a thinking row with nothing after it is still going. */
   running?: boolean;
+  /** The host's locale and time zone, which Chat's timestamps follow too. */
+  preferences?: UserDateTimePreferences;
 }
 
 // Polls keep the same events array when nothing changed, so a hidden tab skips work.
@@ -46,6 +49,7 @@ export const EventList = memo(function EventList({
   running = false,
   runtimeMs,
   dropped,
+  preferences,
 }: EventListProps) {
   // Oldest first, like Chat; progress moves an operation to the end.
   const groups = groupActivity(events).sort(
@@ -75,7 +79,9 @@ export const EventList = memo(function EventList({
         {/* Sits where the rail fades in, since the oldest rows are the ones dropped. */}
         {trimmed && (
           <p className="help activity-trimmed-note">
-            Showing the most recent {EVENT_TAIL_SIZE} events.
+            <span className="activity-trimmed-lead">
+              Showing the most recent {EVENT_TAIL_SIZE} events.
+            </span>
             {dropped && dropped.task_id === events[0].task_id && (
               <DroppedNote summary={dropped} />
             )}
@@ -91,6 +97,7 @@ export const EventList = memo(function EventList({
               span={thinkingSpan(group, events)}
               running={running}
               runtimeMs={runtimeMs}
+              preferences={preferences}
             />
           ))}
         </Timeline>

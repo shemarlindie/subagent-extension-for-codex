@@ -3,7 +3,6 @@ import { useState } from "react";
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
 import type { Event } from "../../../app/state/types";
 import { ActivityContent } from "./activity-content";
-import { ActivityTime } from "./activity-time";
 import { activityFailed } from "./activity-timeline";
 import { eventTitle, label } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
@@ -121,7 +120,6 @@ function EventCard({ event, toolName, rawOnly, expandRaw }: EventCardProps) {
 
   return (
     <article className={`event${failed ? " activity-error" : ""}`}>
-      <ActivityTime timestamp={event.timestamp} />
       <div className="activity-body">
         {!rawOnly && <strong>{eventTitle(event, failed, toolName)}</strong>}
         {!rawOnly && <EventBody event={event} />}

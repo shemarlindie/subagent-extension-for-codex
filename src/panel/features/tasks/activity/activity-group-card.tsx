@@ -1,9 +1,12 @@
 import { Collapsible } from "@base-ui/react/collapsible";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Icon } from "../../../shared/components/icons/icons";
 import { MotionContent } from "../../../shared/components/motion/motion";
+import { reducedMotion } from "../../../shared/components/motion/motion-utils";
+import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
 import { useNow } from "../../../shared/utils/use-now";
+import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
 import { formatDuration } from "../list/duration";
 import { ActivityContent } from "./activity-content";
 import { ActivityTime } from "./activity-time";
@@ -30,6 +33,7 @@ interface ActivityGroupCardProps {
   span?: { start: number; end: number | null };
   running: boolean;
   runtimeMs?: number;
+  preferences?: UserDateTimePreferences;
 }
 
 export function ActivityGroupCard({
@@ -39,12 +43,28 @@ export function ActivityGroupCard({
   span,
   running,
   runtimeMs,
+  preferences,
 }: ActivityGroupCardProps) {
   const [debugOpen, setDebugOpen] = useState(false);
   // Avoid hidden content work until inspection; retain it afterward to keep disclosures open.
   const [debugMounted, setDebugMounted] = useState(false);
   const debugId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const cancelReveal = useRef<(() => void) | undefined>(undefined);
   const conversational = group.kind === "message" || group.kind === "stream";
+
+  const revealPanel = () => {
+    cancelReveal.current?.();
+    if (panelRef.current)
+      cancelReveal.current = animateScrollIntoView(panelRef.current);
+  };
+
+  // Reduced motion skips the height transition, so the panel is full height at once.
+  useEffect(() => {
+    if (debugOpen && reducedMotion(panelRef.current)) revealPanel();
+  }, [debugOpen]);
+
+  useEffect(() => () => cancelReveal.current?.(), []);
 
   // Messages, and event/status rows with a summary, already show their text above;
   // tools and operations keep the structured debug body for their input and output.
@@ -100,7 +120,10 @@ export function ActivityGroupCard({
         />
       }
       open={debugOpen}
-      onOpenChange={setDebugOpen}
+      onOpenChange={(open) => {
+        if (!open) cancelReveal.current?.();
+        setDebugOpen(open);
+      }}
       data-activity-id={group.id}
       className={`activity-group activity-${group.kind}${quietThinking ? " activity-thinking-only" : ""}${group.state === "failed" ? " activity-error" : ""}`}
     >
@@ -120,7 +143,10 @@ export function ActivityGroupCard({
             <ThinkingClock start={span.start} />
           )}
         </span>
-        <ActivityTime timestamp={group.events[0].timestamp} />
+        <ActivityTime
+          timestamp={group.events[0].timestamp}
+          preferences={preferences}
+        />
         <Collapsible.Trigger
           className="activity-debug-toggle"
           aria-label={`Debug activity: ${title}`}
@@ -150,15 +176,33 @@ export function ActivityGroupCard({
       {/* Always mounted so the toggle's aria-controls resolves while closed. */}
       <Collapsible.Panel
         keepMounted
+        ref={panelRef}
         id={debugId}
         className="activity-debug-panel collapse-panel"
+        onTransitionEnd={(event) => {
+          // Child transitions bubble here; only the panel's own height settling
+          // means it has finished opening.
+          if (
+            debugOpen &&
+            event.target === event.currentTarget &&
+            event.propertyName === "height"
+          )
+            revealPanel();
+        }}
       >
         {debugMounted && (
           <div className="activity-debug-body">
-            <p className="activity-debug-caption">
-              Debug details · {group.events.length}{" "}
-              {group.events.length === 1 ? "event" : "events"}
-            </p>
+            <div className="activity-debug-head">
+              <p className="activity-debug-caption">
+                Debug details · {group.events.length}{" "}
+                {group.events.length === 1 ? "event" : "events"}
+              </p>
+              <ActivityTime
+                timestamp={group.events[0].timestamp}
+                preferences={preferences}
+                format="chat"
+              />
+            </div>
             <EventDetails
               events={group.events}
               rawOnly={showsOwnText}

@@ -280,6 +280,9 @@
   /* Lines up with the row titles beside the dots. */
   margin: 0 0 0 15px;
 }
+.activity-trimmed-lead {
+  display: block;
+}
 .timeline-dot {
   position: relative;
   z-index: 1;
@@ -349,8 +352,17 @@
 }
 .activity-debug-body > .event {
   padding: 10px 0;
-  /* Keep the timestamp on the same line as the first line of the body. */
+}
+/* The debug caption shares its line with the expanded date, at the right edge. */
+.activity-debug-head {
+  display: flex;
   align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.activity-debug-head time {
+  margin-left: auto;
+  white-space: nowrap;
 }
 /* Raw-only events start with the disclosure, so it needs no top gap. */
 .activity-debug-panel .activity-body > .activity-raw:first-child {
@@ -391,12 +403,6 @@
 }
 .activity-status {
   color: var(--muted);
-}
-@media (max-width: 480px) {
-  .activity-debug-body > .event {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 3px;
-  }
 }
 
 .activity-event .activity-group-summary,
