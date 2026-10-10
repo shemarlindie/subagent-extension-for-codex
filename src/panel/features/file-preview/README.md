@@ -1,6 +1,7 @@
 # File previews
 
 Viewers for one file, used by the Changes tab's diffs and its **Preview** modal.
+Chat and Activity also render messages with its [Markdown view](#markdown).
 
 ## Ownership
 
@@ -26,6 +27,25 @@ owning format; keep feature styling in `file-preview.css`.
 Tables keep every cell of a row wider than the header and drop a leading byte
 order mark. Diffs show Git's `\ No newline at end of file` as a note between
 lines and ignore CRLF line endings.
+
+## Markdown
+
+`MarkdownView` renders GitHub-flavored Markdown with `react-markdown` and
+`remark-gfm` for Chat, Activity and Markdown previews:
+
+- **HTML.** Embedded HTML always shows as literal text, in messages and
+  Markdown previews alike, so prose such as `Promise<Result>` stays visible.
+- **Links.** `http`, `https` and `mailto` links open outside the panel; embedded
+  hosts open them through the host bridge. `#` links to footnotes and headings
+  scroll within the same view; headings get GitHub-style ids from
+  `rehype-slug`, prefixed so each view's ids are unique. Other targets,
+  such as relative file paths, have nowhere to go from the panel and show as
+  dotted text with the target as a tooltip.
+- **Images.** Only web and `data:image/` sources load. A relative path or an
+  image that fails to load shows its alt text.
+- **Code.** Fenced blocks highlight with the languages registered in
+  `highlight.ts`, including highlight.js aliases such as `c++`, `tsx` and
+  `console`. Unknown languages render as plain code.
 
 ## Large content
 
