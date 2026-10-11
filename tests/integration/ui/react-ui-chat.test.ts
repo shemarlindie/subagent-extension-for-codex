@@ -69,6 +69,186 @@ test("handoff sends only after explicit submit and uses the edited message", asy
   );
 });
 
+test("Ask Codex about an older reply prepares that reply and sends only the edited draft", async (t) => {
+  const { controller, transport, user } = await setup(
+    t,
+    (transport) => {
+      transport.host.canSend = true;
+      transport.host.canShare = false;
+
+      transport.tasks[0].reply = {
+        text: "Latest reply is unrelated to the selected reply.",
+      } as (typeof transport.tasks)[0]["reply"];
+
+      transport.chat = [
+        {
+          kind: "message",
+          id: "older-reply",
+          event_id: 1,
+          message: {
+            id: "older-reply",
+            event_id: 1,
+            timestamp: "",
+            turn: 1,
+            from: "worker",
+            kind: "reply",
+            text: "Earlier reply about the authentication bug.",
+          },
+        },
+      ];
+    },
+    { conversation: "thread-one" },
+  );
+
+  await user.click(
+    screen.getByRole("button", { name: "Ask Codex about this reply" }),
+  );
+
+  const dialog = await screen.findByRole("dialog", {
+    name: "Ask Codex about this reply",
+  });
+
+  const field = within(dialog).getByRole("textbox", {
+    name: "Message",
+  }) as HTMLTextAreaElement;
+
+  expect(field.value).toContain("older-reply");
+  expect(field.value).toContain("Earlier reply about the authentication bug.");
+  expect(field.value).not.toContain("Latest reply is unrelated");
+  expect(field.value).toContain("/repo/a");
+  expect(field.value).toContain("get_agent_messages");
+  expect(transport.messages).toEqual([]);
+  const sharedBeforeRefresh = [...transport.shared];
+  await act(() => controller.refresh());
+  expect(transport.messages).toEqual([]);
+  expect(transport.shared).toEqual(sharedBeforeRefresh);
+
+  await user.clear(field);
+  await user.type(field, "Explain the earlier authentication finding.");
+
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: "Send to conversation",
+    }),
+  );
+
+  await waitFor(() =>
+    expect(transport.messages).toEqual([
+      "Explain the earlier authentication finding.",
+    ]),
+  );
+});
+
+test("closing a reply handoff sends nothing and hosts without message support can prepare it", async (t) => {
+  const { transport, user } = await setup(
+    t,
+    (transport) => {
+      transport.chat = [
+        {
+          kind: "message",
+          id: "reply",
+          event_id: 1,
+          message: {
+            id: "reply",
+            event_id: 1,
+            timestamp: "",
+            turn: 1,
+            from: "worker",
+            kind: "reply",
+            text: "A reply to ask about.",
+          },
+        },
+      ];
+    },
+    { conversation: "thread-one" },
+  );
+
+  const sharedBeforeClick = [...transport.shared];
+
+  await user.click(
+    screen.getByRole("button", {
+      name: "Ask Codex about this reply",
+    }),
+  );
+
+  const dialog = await screen.findByRole("dialog", {
+    name: "Ask Codex about this reply",
+  });
+
+  expect(
+    within(dialog).queryByRole("button", {
+      name: "Send to conversation",
+    }),
+  ).toBeNull();
+
+  expect(
+    (
+      within(dialog).getByRole("textbox", {
+        name: "Message",
+      }) as HTMLTextAreaElement
+    ).value,
+  ).toContain("A reply to ask about.");
+
+  await user.click(within(dialog).getAllByRole("button", { name: "Close" })[0]);
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(transport.messages).toEqual([]);
+  expect(transport.shared).toEqual(sharedBeforeClick);
+});
+
+test("a standalone reply handoff copies the edited message without sending", async (t) => {
+  const { transport, user } = await setup(
+    t,
+    (transport) => {
+      transport.embedded = false;
+
+      transport.chat = [
+        {
+          kind: "message",
+          id: "reply",
+          event_id: 1,
+          message: {
+            id: "reply",
+            event_id: 1,
+            timestamp: "",
+            turn: 1,
+            from: "worker",
+            kind: "reply",
+            text: "Copy this reply's context.",
+          },
+        },
+      ];
+    },
+    { conversation: "thread-one" },
+  );
+
+  const writeText = vi.spyOn(navigator.clipboard, "writeText");
+  t.onTestFinished(() => writeText.mockRestore());
+
+  await user.click(
+    screen.getByRole("button", {
+      name: "Ask Codex about this reply",
+    }),
+  );
+
+  const dialog = await screen.findByRole("dialog", {
+    name: "Ask Codex about this reply",
+  });
+
+  const field = within(dialog).getByRole("textbox", { name: "Message" });
+  await user.clear(field);
+  await user.type(field, "Copied question for Codex.");
+
+  await user.click(
+    within(dialog).getByRole("button", { name: "Copy message" }),
+  );
+
+  await waitFor(() =>
+    expect(writeText).toHaveBeenCalledWith("Copied question for Codex."),
+  );
+
+  expect(transport.messages).toEqual([]);
+});
+
 test("completed chat turns show a quiet summary with a completion time on hover", async (t) => {
   // Freeze the calendar without replacing the timers used by async UI interactions.
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -319,4 +499,39 @@ test("task and reply text render literally without HTML interpretation", async (
 
   expect(document.querySelector("img, script")).toBeNull();
   assert.equal((window as any).injected, undefined);
+});
+
+test("global mode hides Ask Codex about this reply even when the host can send", async (t) => {
+  const { user } = await setup(t, (transport) => {
+    transport.host.canSend = true;
+
+    transport.chat = [
+      {
+        kind: "message",
+        id: "reply",
+        event_id: 1,
+        message: {
+          id: "reply",
+          event_id: 1,
+          timestamp: "",
+          turn: 1,
+          from: "worker",
+          kind: "reply",
+          text: "A global reply.",
+        },
+      },
+    ];
+  });
+
+  expect(screen.getByText("A global reply.")).toBeTruthy();
+
+  expect(
+    screen.queryByRole("button", { name: "Ask Codex about this reply" }),
+  ).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "Task actions" }));
+
+  expect(
+    await screen.findByRole("menuitem", { name: "Bring to Codex" }),
+  ).toBeTruthy();
 });

@@ -349,8 +349,14 @@ body[data-expanded-panel="true"]
       "actions actions";
   }
   .changed-file-preview .file-preview-toolbar > .toolbar-actions {
+    justify-self: stretch;
+    justify-content: space-between;
     min-width: 0;
     max-width: 100%;
+  }
+  /* Ask Codex is hidden in global mode; keep a lone checkbox at the row's end. */
+  .changed-file-preview .toolbar-actions > .viewed-toggle:only-child {
+    margin-inline-start: auto;
   }
   .changed-file-preview .toolbar-actions > .file-action {
     flex: 0 1 auto;

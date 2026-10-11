@@ -97,6 +97,7 @@ export function ChatTimeline({
           item.kind === "message" ? (
             <ChatMessageView
               key={item.id}
+              task={task}
               message={item.message}
               worker={worker}
               outcome={responseOutcome(item, items[index + 1])}

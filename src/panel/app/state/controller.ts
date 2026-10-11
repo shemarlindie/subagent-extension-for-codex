@@ -24,6 +24,10 @@ import {
 } from "../../features/tasks/activity/event-history";
 import { type ChatRead, mergeChat } from "../../features/tasks/chat/chat-state";
 import { DraftFollower } from "../../features/tasks/chat/drafts/draft-follower";
+import {
+  handoffMessage,
+  type HandoffTarget,
+} from "../../features/tasks/controls/handoff-message";
 import { initialState } from "./initial-state";
 import {
   persistDialog,
@@ -42,7 +46,6 @@ import type {
   PersistedViewState,
   Project,
   SettingsDocument,
-  SharedItem,
   Snapshot,
   Tab,
   Task,
@@ -830,14 +833,14 @@ export class Controller {
     await this.refresh();
   }
 
-  /** Shares the selected task, and optionally one item in it, with the host's model. */
-  async share(item?: SharedItem) {
+  /** Shares the selected task with the host's model. */
+  async share() {
     if (this.disposed || !this.state.host.canShare) return;
     const task = selectedTask(this.state);
 
     await this.transport.share?.({
       selected_task: this.state.selected ?? null,
-      selected_item: item ?? null,
+      selected_item: null,
       conversation_id: this.state.conversation ?? null,
       repository: task?.repository ?? this.state.repository ?? null,
       revision: task?.revision ?? this.state.revision,
@@ -1173,6 +1176,40 @@ export class Controller {
       dialog: { ...dialog, scope: this.state.scopeVersion } as DialogState,
       formError: "",
     });
+  }
+
+  /** Prepares an editable Codex message; delivery happens only when the user submits. */
+  prepareHandoff(task: Task, target: HandoffTarget, contextText?: string) {
+    const previous = this.state.dialog;
+    if (this.disposed || this.state.busy || !this.state.conversation) return;
+    if (
+      previous &&
+      (previous.kind !== "file" ||
+        previous.task.id !== task.id ||
+        previous.scope !== this.state.scopeVersion)
+    )
+      return;
+    if (!this.state.tasks.some((current) => current.id === task.id)) return;
+
+    const dialog: DialogState = {
+      kind: "handoff",
+      task,
+      target,
+      scope: this.state.scopeVersion,
+    };
+
+    const descriptor = persistDialog(dialog);
+
+    // Seed the form before publishing it and keep its file preview underneath.
+    this.persistedDialogs = [
+      ...(previous ? this.persistedDialogs : []),
+      {
+        ...descriptor,
+        draft: { message: handoffMessage(task, target, contextText) },
+      },
+    ];
+
+    this.patch({ dialog, formError: "" });
   }
 
   /** Moves the open file preview to another of its task's changed files. */

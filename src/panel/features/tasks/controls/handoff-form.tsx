@@ -10,17 +10,16 @@ import {
 import { Field } from "../../../shared/forms/fields";
 import { FormFooter } from "../../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
+import { handoffMessage, type HandoffTarget } from "./handoff-message";
 
-const excerpt = (text: string, max: number) =>
-  text.length > max ? `${text.slice(0, max)}… (truncated)` : text;
+export { handoffMessage } from "./handoff-message";
 
-export function handoffMessage(task: Task) {
-  const reply = task.reply?.text;
+type HandoffFormProps = {
+  task: Task;
+  target?: HandoffTarget;
+};
 
-  return `Review delegated task ${task.id}: ${task.title} (${task.provider}, ${task.status}).\nRetrieve current state with get_agent_task and the conversation, including the worker's replies, with get_agent_messages using task_id=${JSON.stringify(task.id)}. Read what it changed with get_agent_changes, and send follow-ups with send_agent_message. Inspect the evidence before proposing next steps or applying changes.\n\nRepository: ${task.repository}\nRevision: ${task.revision}\n${task.branch ? `Branch: ${task.branch}\n` : ""}Description excerpt: ${excerpt(task.description, 1500)}\nLatest reply excerpt: ${reply === undefined ? "No reply yet." : excerpt(reply, 2500)}`;
-}
-
-export function HandoffForm({ task }: { task: Task }) {
+export function HandoffForm({ task, target }: HandoffFormProps) {
   const controller = useController(),
     state = useSnapshot(),
     canSend = state.host.canSend,
@@ -28,7 +27,7 @@ export function HandoffForm({ task }: { task: Task }) {
     canCopy = !controller.transport.embedded;
 
   const { register, handleSubmit } = usePersistedDialogForm("handoff", {
-    message: handoffMessage(task),
+    message: handoffMessage(task, target),
   });
 
   return (
@@ -65,8 +64,9 @@ export function HandoffForm({ task }: { task: Task }) {
 }
 
 export const handoffDialog = defineDialog<"handoff">({
-  title: () => "Bring task to Codex",
-  render: ({ task }) => <HandoffForm task={task} />,
+  title: ({ target }) =>
+    target ? `Ask Codex about this ${target.kind}` : "Bring task to Codex",
+  render: ({ task, target }) => <HandoffForm task={task} target={target} />,
   initialFocus: firstTextField,
   restoreFocus: () => document.getElementById("task-menu"),
 });

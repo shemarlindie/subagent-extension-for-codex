@@ -17,6 +17,7 @@ import type {
 } from "../../features/tasks/activity/event-history.js";
 import type { ChatState } from "../../features/tasks/chat/chat-state.js";
 import type { DraftState } from "../../features/tasks/chat/drafts/draft-state.js";
+import type { HandoffTarget } from "../../features/tasks/controls/handoff-message.js";
 import type { Filter, Tab, Task } from "../../features/tasks/types.js";
 import type { HostState } from "../../transports/types.js";
 
@@ -43,7 +44,7 @@ export type DialogState =
       scope: number;
     }
   | { kind: "respond"; task: Task; scope: number }
-  | { kind: "handoff"; task: Task; scope: number }
+  | { kind: "handoff"; task: Task; target?: HandoffTarget; scope: number }
   // Confirms deleting the task and everything related to it.
   | { kind: "delete"; task: Task; scope: number }
   // A file the task changed, previewed as it is now and as its diff.
@@ -81,7 +82,12 @@ export type PersistedDialog =
       requestId?: string;
       draft?: PersistedDialogDraft;
     }
-  | { kind: "handoff"; taskId: string; draft?: PersistedDialogDraft }
+  | {
+      kind: "handoff";
+      taskId: string;
+      target?: HandoffTarget;
+      draft?: PersistedDialogDraft;
+    }
   | { kind: "delete"; taskId: string; draft?: PersistedDialogDraft }
   | {
       kind: "file";
@@ -96,10 +102,6 @@ export type PersistedDialog =
       files?: string[];
       draft?: PersistedDialogDraft;
     };
-
-/** Something in the selected task that the panel shares with the host's model. */
-export type SharedItem =
-  { kind: "file"; path: string } | { kind: "message"; id: string };
 
 export type Snapshot = {
   tasks: Task[];

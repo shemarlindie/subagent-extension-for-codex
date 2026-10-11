@@ -14,10 +14,10 @@ import {
 import { FilePreview } from "../file-preview/file-preview";
 import { Progress } from "../file-preview/progress";
 import type { Task } from "../tasks/types";
+import { AskFileButton } from "./ask-file-button";
 import { ChangedFileNav } from "./changed-file-nav";
 import { changedFileDiff, changedFileEntries } from "./changed-files";
 import { readChangedFile } from "./read-changes";
-import { ShareFileButton } from "./share-file-button";
 import type { ChangedFileContent } from "./types";
 import { isViewed, nextUnviewed, useViewedFiles } from "./use-viewed-files";
 import { ViewedToggle } from "./viewed-toggle";
@@ -132,7 +132,22 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
         }}
       />
     ),
-    shareButton = <ShareFileButton key={path} path={path} />;
+    askButton = (
+      <AskFileButton
+        task={task}
+        path={shown}
+        disabled={loading}
+        contextText={
+          file?.content ??
+          diff?.chunks
+            .flatMap((chunk) => [
+              chunk.content,
+              ...chunk.changes.map((change) => change.content),
+            ])
+            .join("\n")
+        }
+      />
+    );
 
   // Each file starts at its top.
   useLayoutEffect(() => {
@@ -178,7 +193,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             mime_type: file.mime_type,
           }}
           viewSwitcherTarget={viewSwitcherTarget}
-          beforeActions={shareButton}
+          beforeActions={askButton}
           actions={viewedToggle}
           diff={diff}
           view={view}
@@ -202,7 +217,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
               <span className="file-name">{fileName(shown)}</span>
             </span>
             <span className="toolbar-actions">
-              {shareButton}
+              {askButton}
               {viewedToggle}
             </span>
             {progress}

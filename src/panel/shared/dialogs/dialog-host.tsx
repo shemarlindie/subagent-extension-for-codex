@@ -1,5 +1,5 @@
 import { Dialog } from "@base-ui/react/dialog";
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { buttonClass } from "../components/button/button";
@@ -18,7 +18,32 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
 
   const trigger = useRef<HTMLElement | null>(null),
     openedScope = useRef(0),
-    popup = useRef<HTMLDivElement>(null);
+    popup = useRef<HTMLDivElement>(null),
+    previousKind = useRef(state.dialog?.kind);
+
+  // Replacing a dialog's contents keeps the popup open, so Base UI's opening
+  // focus does not run again. Focus the replacement form or restored preview.
+  useLayoutEffect(() => {
+    const activeDialog = state.dialog;
+    const previous = previousKind.current;
+    previousKind.current = activeDialog?.kind;
+    if (
+      !activeDialog ||
+      !previous ||
+      activeDialog.kind === previous ||
+      suspended
+    )
+      return;
+
+    const focus =
+      definition?.initialFocus?.(popup.current, activeDialog) ??
+      popup.current?.querySelector<HTMLElement>(
+        "button:not([disabled]), input, textarea, [tabindex='0']",
+      ) ??
+      popup.current;
+
+    focus?.focus();
+  }, [state.dialog, definition, suspended]);
 
   // Switching forms or showing an error eases the height instead of snapping it.
   useAnimatedHeight(popup, `${dialog?.kind}:${state.formError ?? ""}`);

@@ -232,11 +232,12 @@ changes change; the file then opens again, unread. **Preview all** opens the
 preview at the first file not yet viewed.
 
 In the preview, view tabs replace the visible dialog title, and file navigation
-stays on that row, even in narrow panels. **Ask Codex about this file** is the
-first action in the file toolbar, before Copy when clipboard access is
-available; Viewed is last. On narrow panels, the toolbar actions move below
-file details. Marking a file viewed moves on to the next unread one, wrapping
-to the start. The heading shows the position, such as `3 / 12`, before previous
+stays on that row, even in narrow panels. **Ask Codex about this file** is first
+in the file toolbar, followed by Copy when clipboard access is available; Viewed
+is last. On narrow panels, the actions move below file details, with Ask Codex
+at the start and Viewed at the end of the row. A lone Viewed checkbox stays at
+the end. Marking a file viewed moves on to the next unread one, wrapping to the
+start. The heading shows the position, such as `3 / 12`, before previous
 and next buttons that step through the files in list order, wrapping at either
 end; a lone file shows only its position. The chosen view carries over, and the
 last file stays visible until the next one is read.
@@ -253,9 +254,14 @@ The panel does not apply or push changes.
 **Bring to Codex** (console: **Copy for Codex**) prepares an editable message
 with the latest reply and pointers to message/change tools. Delivery is offered
 only when supported by the host and requires submission. Otherwise copy the
-text. Selecting a task can share its identity; **Ask Codex about this file/reply**
-adds structured selection only when supported. Context sharing never blocks
-inspection or triggers an automatic follow-up.
+text. In thread mode, **Ask Codex about this reply/file** opens the same editable
+message flow for the exact reply or file selected. It includes an excerpt and
+identifiers for retrieving the full conversation or file changes. Nothing sends until you submit;
+closing or sending a file handoff returns to the file preview. Hosts without
+message delivery offer text to copy manually.
+
+Selecting a task can share its identity when supported. Context sharing never
+blocks inspection or triggers an automatic follow-up.
 
 The circled ellipsis beside the task status opens **Task actions**, including handoff
 and deletion. **Delete task** stops running/queued/waiting work, then

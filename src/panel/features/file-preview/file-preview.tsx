@@ -27,7 +27,7 @@ type FilePreviewProps = {
   file: PreviewFile;
   /** Where to render the view tabs instead of keeping them in the toolbar. */
   viewSwitcherTarget?: HTMLElement | null;
-  /** Toolbar content before Copy. */
+  /** Extra toolbar buttons, before Copy. */
   beforeActions?: ReactNode;
   /** Extra toolbar buttons, after Copy. */
   actions?: ReactNode;

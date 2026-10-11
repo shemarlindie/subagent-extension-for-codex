@@ -1,3 +1,4 @@
+import type { HandoffTarget } from "../../../features/tasks/controls/handoff-message";
 import type {
   DialogState,
   PersistedDialog,
@@ -24,6 +25,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
+}
+
+function handoffTargetOf(value: unknown): HandoffTarget | undefined {
+  if (!isRecord(value)) return;
+  if (value.kind === "reply" && isString(value.id) && value.id)
+    return { kind: "reply", id: value.id };
+  if (value.kind === "file" && isString(value.path) && value.path)
+    return { kind: "file", path: value.path };
 }
 
 function draftOf(
@@ -53,7 +62,11 @@ export function persistDialog(dialog: DialogState): PersistedDialog {
         requestId: dialog.task.pending_input?.id,
       };
     case "handoff":
-      return { kind: dialog.kind, taskId: dialog.task.id };
+      return {
+        kind: dialog.kind,
+        taskId: dialog.task.id,
+        ...(dialog.target ? { target: dialog.target } : {}),
+      };
     case "delete":
       return { kind: dialog.kind, taskId: dialog.task.id };
     case "file":
@@ -104,7 +117,20 @@ export function parsePersistedDialog(
         ...(isString(value.requestId) ? { requestId: value.requestId } : {}),
         ...(draft ? { draft } : {}),
       };
-    case "handoff":
+
+    case "handoff": {
+      if (!isString(value.taskId) || !value.taskId) return;
+      const target = handoffTargetOf(value.target);
+      if (value.target !== undefined && !target) return;
+
+      return {
+        kind: value.kind,
+        taskId: value.taskId,
+        ...(target ? { target } : {}),
+        ...(draft ? { draft } : {}),
+      };
+    }
+
     case "delete":
       if (!isString(value.taskId) || !value.taskId) return;
 

@@ -93,7 +93,7 @@ body[data-expanded-panel="true"]
     animation: none;
   }
 }
-.chat-share {
+.chat-handoff {
   margin-block-start: 4px;
   font-size: 11px;
 }

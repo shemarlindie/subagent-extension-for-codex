@@ -32,7 +32,11 @@ const data: Changes = {
   diff: paths.map((path) => diffOf(path, `${path} content`)).join(""),
 };
 
-function setup(path: string, changes: Changes = data, canShare = true) {
+function setup(
+  path: string,
+  changes: Changes = data,
+  conversation: string | undefined = "thread-one",
+) {
   onTestFinished(cleanup);
 
   const controller = new Controller(
@@ -45,7 +49,7 @@ function setup(path: string, changes: Changes = data, canShare = true) {
   const initial = controller.getSnapshot(),
     snapshot = {
       ...initial,
-      host: { ...initial.host, canShare },
+      conversation,
       changes: {
         task: task.id,
         scope: "task" as const,
@@ -81,8 +85,6 @@ function setup(path: string, changes: Changes = data, canShare = true) {
     .spyOn(controller, "showChangedFile")
     .mockImplementation(() => {});
 
-  const share = vi.spyOn(controller, "share").mockResolvedValue(undefined);
-
   const preview = (path: string) => (
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
@@ -110,7 +112,6 @@ function setup(path: string, changes: Changes = data, canShare = true) {
   return {
     view,
     show,
-    share,
     async moveTo(path: string) {
       await act(async () => view.rerender(preview(path)));
     },
@@ -324,55 +325,9 @@ test("a lone changed file shows its position without step buttons", async () => 
   assert.equal(view.container.querySelectorAll(".changed-file-step").length, 0);
 });
 
-test("sharing one file doesn't mark the next one shared", async () => {
-  const { view, share, moveTo } = setup("a.ts");
-
+test("global mode omits the file handoff from the preview toolbar", async () => {
+  const { view } = setup("a.ts", data, "");
   await act(async () => {});
-
-  await act(async () =>
-    fireEvent.click(
-      view.getByRole("button", { name: "Ask Codex about this file" }),
-    ),
-  );
-
-  assert.ok(view.getByRole("button", { name: "Shared with Codex" }));
-  assert.deepEqual(share.mock.lastCall, [{ kind: "file", path: "a.ts" }]);
-
-  await moveTo("b.ts");
-  assert.ok(view.getByRole("progressbar", { name: "Loading b.ts" }));
-  assert.match(view.container.textContent ?? "", /a\.ts content/);
-
-  await act(async () =>
-    fireEvent.click(
-      view.getByRole("button", { name: "Ask Codex about this file" }),
-    ),
-  );
-
-  assert.deepEqual(share.mock.lastCall, [{ kind: "file", path: "b.ts" }]);
-
-  await moveTo("c.ts");
-  assert.ok(view.getByRole("button", { name: "Ask Codex about this file" }));
-
-  await act(async () =>
-    fireEvent.click(
-      view.getByRole("button", { name: "Ask Codex about this file" }),
-    ),
-  );
-
-  assert.deepEqual(share.mock.lastCall, [{ kind: "file", path: "c.ts" }]);
-});
-
-test("hosts without sharing keep file navigation available", async () => {
-  const { view, show } = setup("a.ts", data, false);
-
-  await act(async () => {});
-
-  expect(
-    view.queryByRole("button", { name: "Ask Codex about this file" }),
-  ).toBeNull();
-
-  fireEvent.click(view.getByRole("button", { name: "Next file" }));
-  assert.deepEqual(show.mock.lastCall, ["b.ts"]);
-  fireEvent.click(view.getByRole("button", { name: "Previous file" }));
-  assert.deepEqual(show.mock.lastCall, ["c.ts"]);
+  expect(view.container.querySelector(".file-action-label")).toBeNull();
+  assert.ok(view.container.querySelector('[aria-label="Viewed a.ts"]'));
 });

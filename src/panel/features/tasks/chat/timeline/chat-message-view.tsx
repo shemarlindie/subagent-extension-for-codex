@@ -1,10 +1,12 @@
 import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
 import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
+import type { Task } from "../../../../app/state/types";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
-import { ShareMessageButton } from "./share-message-button";
+import { AskReplyButton } from "./ask-reply-button";
 import { TurnOutcomeRow } from "./turn-outcome-row";
 
 type ChatMessageViewProps = {
+  task?: Task;
   message: ConversationMessage;
   /** The worker's name, such as Claude, for its messages. */
   worker: string;
@@ -18,6 +20,7 @@ type ChatMessageViewProps = {
  * and the agents' rendered as Markdown, with the worker's replies standing out.
  */
 export function ChatMessageView({
+  task,
   message,
   worker,
   streaming,
@@ -55,7 +58,9 @@ export function ChatMessageView({
           <MarkdownView content={message.text} />
         </div>
       )}
-      {message.kind === "reply" && <ShareMessageButton id={message.id} />}
+      {task && message.kind === "reply" && !streaming && (
+        <AskReplyButton task={task} message={message} />
+      )}
       {outcome && <TurnOutcomeRow outcome={outcome} response={message.text} />}
     </article>
   );

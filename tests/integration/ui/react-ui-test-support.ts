@@ -290,6 +290,7 @@ export async function setup(
   options: {
     wide?: boolean;
     scoped?: boolean;
+    conversation?: string;
     displayMode?: HostState["displayMode"];
     start?: boolean;
   } = {},
@@ -298,15 +299,25 @@ export async function setup(
 
   if (options.displayMode) transport.host.displayMode = options.displayMode;
   configure?.(transport);
+  if (options.conversation)
+    transport.tasks = transport.tasks.map((task) => ({
+      ...task,
+      conversation_id: options.conversation,
+    }));
 
   const controller = new Controller(transport, {
     hidden: () => false,
     wide: () => options.wide ?? true,
   });
 
-  if (options.scoped)
+  if (options.scoped || options.conversation)
     controller.applyScope(
-      { panel_scope: { conversation_id: null, repository: "/repo/a" } },
+      {
+        panel_scope: {
+          conversation_id: options.conversation ?? null,
+          repository: "/repo/a",
+        },
+      },
       false,
     );
   if (options.start !== false) await controller.start();

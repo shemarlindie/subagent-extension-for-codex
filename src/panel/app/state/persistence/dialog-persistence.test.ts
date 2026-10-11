@@ -66,3 +66,73 @@ test("dialog identity ignores draft edits but includes the dialog target", () =>
     false,
   );
 });
+
+for (const target of [
+  { kind: "reply", id: "older-reply" },
+  { kind: "file", path: "src/auth.ts" },
+] as const)
+  test(`targeted ${target.kind} handoffs round-trip their target and edited draft`, () => {
+    const dialog = {
+      kind: "handoff",
+      task: { id: "task-1" },
+      scope: 1,
+      target,
+    } as Extract<DialogState, { kind: "handoff" }>;
+
+    const persisted = persistDialog(dialog);
+    if (persisted.kind !== "handoff")
+      throw new Error("Expected handoff descriptor");
+    const draft = { message: "Edited question about the selected context." };
+
+    assert.deepEqual(parsePersistedDialog({ ...persisted, draft }), {
+      kind: "handoff",
+      taskId: "task-1",
+      target,
+      draft,
+    });
+
+    assert.equal(sameDialogReference(persisted, { ...persisted, draft }), true);
+
+    assert.equal(
+      sameDialogReference(persisted, {
+        kind: "handoff",
+        taskId: "task-1",
+      }),
+      false,
+    );
+
+    assert.equal(
+      sameDialogReference(persisted, {
+        ...persisted,
+        target:
+          target.kind === "reply"
+            ? { kind: "reply", id: "another-reply" }
+            : { kind: "file", path: "src/another.ts" },
+      }),
+      false,
+    );
+  });
+
+test("malformed handoff targets are rejected instead of becoming whole-task handoffs", () => {
+  for (const target of [
+    null,
+    [],
+    "reply",
+    { kind: "reply" },
+    { kind: "reply", id: "" },
+    { kind: "reply", id: 42 },
+    { kind: "file", path: "" },
+    { kind: "file", path: ["src/auth.ts"] },
+    { kind: "message", id: "reply" },
+  ]) {
+    assert.equal(
+      parsePersistedDialog({
+        kind: "handoff",
+        taskId: "task-1",
+        target,
+        draft: { message: "An edited question." },
+      }),
+      undefined,
+    );
+  }
+});

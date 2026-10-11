@@ -95,6 +95,8 @@ export function restoreDialog(
       dialog = { kind: saved.kind, task: task!, scope };
       break;
     case "handoff":
+      dialog = { kind: saved.kind, task: task!, target: saved.target, scope };
+      break;
     case "delete":
       dialog = { kind: saved.kind, task: task!, scope };
       break;

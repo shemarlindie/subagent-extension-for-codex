@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { expect } from "vitest";
+
 import {
   act,
   assert,
@@ -108,9 +110,8 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   assertAbsent(screen.queryByRole("progressbar"));
 });
 
-test("Preview opens a changed file, and the host can be asked about it", async (t) => {
-  const { transport, user } = await setup(t, (transport) => {
-    transport.host.canShare = true;
+test("Preview opens a changed file", async (t) => {
+  const { user } = await setup(t, (transport) => {
     transport.changes = changePages("data.bin");
 
     transport.changedFiles = {
@@ -140,17 +141,6 @@ test("Preview opens a changed file, and the host can be asked about it", async (
       /new line/,
     ),
   );
-
-  await user.click(
-    within(dialog).getByRole("button", { name: "Ask Codex about this file" }),
-  );
-
-  await within(dialog).findByRole("button", { name: "Shared with Codex" });
-
-  assert.deepEqual(transport.shared.at(-1)?.selected_item, {
-    kind: "file",
-    path: "src/a.ts",
-  });
 });
 
 test("previews say when a file was deleted, is binary, or can't be read", async (t) => {
@@ -313,4 +303,139 @@ test("a current_repo task that ended without an end snapshot says why it has no 
   assert.ok(await screen.findByText(/ended before its end state was recorded/));
 
   assertAbsent(screen.queryByText(/including any made outside the task/));
+});
+
+test("Ask Codex about a previewed file prepares its context and restores the preview after sending", async (t) => {
+  const { transport, user } = await setup(
+    t,
+    (transport) => {
+      transport.host.canSend = true;
+      transport.host.canShare = false;
+      transport.changes = changePages("data.bin");
+
+      transport.changedFiles = {
+        "src/a.ts": {
+          path: "src/a.ts",
+          state: "present",
+          size: 9,
+          encoding: "utf8",
+          content: "new line\n",
+        },
+      };
+    },
+    { conversation: "thread-one" },
+  );
+
+  await user.click(screen.getByRole("tab", { name: /^Changes/ }));
+
+  await user.click(
+    await screen.findByRole("button", { name: "Preview src/a.ts" }),
+  );
+
+  const preview = await screen.findByRole("dialog", { name: "src/a.ts" });
+
+  const ask = within(preview).getByRole("button", {
+    name: "Ask Codex about this file",
+  });
+
+  await waitFor(() => expect((ask as HTMLButtonElement).disabled).toBe(false));
+  const sharedBeforeClick = [...transport.shared];
+  await user.click(ask);
+
+  const dialog = await screen.findByRole("dialog", {
+    name: "Ask Codex about this file",
+  });
+
+  const field = within(dialog).getByRole("textbox", {
+    name: "Message",
+  }) as HTMLTextAreaElement;
+
+  await waitFor(() => expect(document.activeElement).toBe(field));
+  expect(field.value).toContain("src/a.ts");
+  expect(field.value).toContain("/repo/a");
+  expect(field.value).toContain("one");
+  expect(field.value).toContain("new line");
+  expect(field.value).toContain("get_agent_changes");
+  expect(transport.messages).toEqual([]);
+  expect(transport.shared).toEqual(sharedBeforeClick);
+  await user.clear(field);
+  await user.type(field, "Explain the change in src/a.ts.");
+
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: "Send to conversation",
+    }),
+  );
+
+  await waitFor(() =>
+    expect(transport.messages).toEqual(["Explain the change in src/a.ts."]),
+  );
+
+  const restoredPreview = await screen.findByRole("dialog", {
+    name: "src/a.ts",
+  });
+
+  await waitFor(() =>
+    expect(restoredPreview.contains(document.activeElement)).toBe(true),
+  );
+
+  await user.click(
+    within(restoredPreview).getByRole("button", {
+      name: "Ask Codex about this file",
+    }),
+  );
+
+  const reopenedHandoff = await screen.findByRole("dialog", {
+    name: "Ask Codex about this file",
+  });
+
+  await user.click(
+    within(reopenedHandoff).getAllByRole("button", { name: "Close" })[0],
+  );
+
+  const closedHandoffPreview = await screen.findByRole("dialog", {
+    name: "src/a.ts",
+  });
+
+  await waitFor(() =>
+    expect(closedHandoffPreview.contains(document.activeElement)).toBe(true),
+  );
+});
+
+test("global mode hides Ask Codex about a previewed file even when the host can send", async (t) => {
+  const { controller } = await setup(t, (transport) => {
+    transport.host.canSend = true;
+
+    transport.changedFiles = {
+      "src/a.ts": {
+        path: "src/a.ts",
+        state: "present",
+        size: 9,
+        encoding: "utf8",
+        content: "new line\n",
+      },
+    };
+  });
+
+  act(() =>
+    controller.open({
+      kind: "file",
+      task: controller.getSnapshot().tasks[0],
+      path: "src/a.ts",
+    }),
+  );
+
+  const preview = await screen.findByRole("dialog", { name: "src/a.ts" });
+
+  await waitFor(() =>
+    expect(preview.querySelector(".code-view")?.textContent).toContain(
+      "new line",
+    ),
+  );
+
+  expect(
+    within(preview).queryByRole("button", {
+      name: "Ask Codex about this file",
+    }),
+  ).toBeNull();
 });
