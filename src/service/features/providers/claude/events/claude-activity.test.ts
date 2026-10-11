@@ -4,7 +4,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { Query, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type {
+  Query,
+  SDKAssistantMessageError,
+  SDKMessage,
+  SDKResultMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 import { test } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
@@ -31,30 +36,42 @@ function recorder() {
   return { events, context, normalize };
 }
 
-const systemSubtypes = [
-  "status",
-  "api_retry",
-  "compact_boundary",
-  "local_command_output",
-  "hook_started",
-  "hook_progress",
-  "hook_response",
-  "plugin_install",
-  "task_notification",
-  "task_started",
-  "task_updated",
-  "task_progress",
-  "session_state_changed",
-  "notification",
-  "files_persisted",
-  "memory_recall",
-  "elicitation_complete",
-  "permission_denied",
-  "mirror_error",
-  "future_subtype",
-];
+type SdkSystemSubtype = Exclude<
+  Extract<SDKMessage, { type: "system" }>["subtype"],
+  "init"
+>;
 
-for (const subtype of systemSubtypes) {
+const systemSubtypes: Record<SdkSystemSubtype, true> = {
+  status: true,
+  api_retry: true,
+  compact_boundary: true,
+  control_request_progress: true,
+  model_refusal_fallback: true,
+  model_refusal_no_fallback: true,
+  local_command_output: true,
+  hook_started: true,
+  hook_progress: true,
+  hook_response: true,
+  plugin_install: true,
+  task_notification: true,
+  task_started: true,
+  task_updated: true,
+  task_progress: true,
+  background_tasks_changed: true,
+  thinking_tokens: true,
+  session_state_changed: true,
+  worker_shutting_down: true,
+  commands_changed: true,
+  notification: true,
+  files_persisted: true,
+  memory_recall: true,
+  elicitation_complete: true,
+  permission_denied: true,
+  mirror_error: true,
+  informational: true,
+};
+
+for (const subtype of [...Object.keys(systemSubtypes), "future_subtype"]) {
   test(`Claude preserves system ${subtype} as inspectable activity`, () => {
     const message = {
       type: "system",
@@ -72,13 +89,23 @@ for (const subtype of systemSubtypes) {
   });
 }
 
+type SdkTopLevelActivity = Exclude<
+  SDKMessage["type"],
+  "assistant" | "user" | "result" | "system"
+>;
+
+const topLevelActivityTypes: Record<SdkTopLevelActivity, true> = {
+  stream_event: true,
+  tool_progress: true,
+  tool_use_summary: true,
+  auth_status: true,
+  rate_limit_event: true,
+  prompt_suggestion: true,
+  conversation_reset: true,
+};
+
 for (const type of [
-  "stream_event",
-  "tool_progress",
-  "tool_use_summary",
-  "auth_status",
-  "rate_limit_event",
-  "prompt_suggestion",
+  ...Object.keys(topLevelActivityTypes),
   "future_sdk_message",
 ]) {
   test(`Claude preserves ${type} and unknown fields`, () => {
@@ -228,13 +255,48 @@ test("empty or error assistant messages and user string messages remain inspecta
   }
 });
 
-for (const subtype of [
-  "success",
-  "error_max_turns",
-  "error_during_execution",
-  "error_max_budget_usd",
-  "error_max_structured_output_retries",
-]) {
+const assistantErrors: Record<SDKAssistantMessageError, true> = {
+  authentication_failed: true,
+  oauth_org_not_allowed: true,
+  account_on_hold: true,
+  verification_required: true,
+  billing_error: true,
+  rate_limit: true,
+  overloaded: true,
+  invalid_request: true,
+  model_not_found: true,
+  server_error: true,
+  unknown: true,
+  max_output_tokens: true,
+  cloud_credential_error: true,
+};
+
+for (const error of Object.keys(assistantErrors)) {
+  test(`Claude preserves assistant error ${error}`, () => {
+    const message = {
+      type: "assistant",
+      error,
+      message: { content: [] },
+    };
+
+    assert.deepEqual(recorder().normalize(message), [
+      {
+        type: "claude.activity",
+        data: { ...message, raw_response: message },
+      },
+    ]);
+  });
+}
+
+const resultSubtypes: Record<SDKResultMessage["subtype"], true> = {
+  success: true,
+  error_max_turns: true,
+  error_during_execution: true,
+  error_max_budget_usd: true,
+  error_max_structured_output_retries: true,
+};
+
+for (const subtype of Object.keys(resultSubtypes)) {
   test(`Claude ${subtype} result retains accounting and full result`, () => {
     const message = {
       type: "result",

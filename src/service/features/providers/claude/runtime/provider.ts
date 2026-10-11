@@ -47,8 +47,8 @@ import { claudeActivityPresentation } from "../events/activity.js";
 import { Inbox } from "./inbox.js";
 
 /**
- * Query controls the installed CLI supports but the SDK (0.3.289) doesn't
- * declare: an interrupt that also cancels queued messages, and withdrawing
+ * The installed SDK's Query declaration omits two controls supported by the
+ * CLI runtime: an interrupt that also cancels queued messages, and withdrawing
  * one queued message.
  */
 type SteerableQuery = Omit<Query, "interrupt"> & {

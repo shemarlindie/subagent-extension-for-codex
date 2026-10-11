@@ -473,6 +473,29 @@ test("durable task completes in isolated worktree and records its reply", async 
   reopened.close();
 });
 
+test("fixture invalid-session marker triggers the normal continuation recovery path", async () => {
+  const { c, store } = await setup();
+
+  const t = await c.start("alice", input("[fixture:session state=invalid]"));
+
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.match(store.get(t.id, "alice").session_state_ref!, /:invalid$/);
+
+  await c.send("alice", t.id, "Continue", "user");
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  assert.deepEqual(
+    store
+      .events(t.id, "alice")
+      .find((event) => event.type === "task.session_started")?.data,
+    { reason: "session_unavailable" },
+  );
+
+  assert.doesNotMatch(store.get(t.id, "alice").session_state_ref!, /:invalid$/);
+  await c.close();
+});
+
 test("ownership enforced across dependencies, state, events and controls", async () => {
   const { c, store } = await setup();
   const t = await c.start("alice", input("[input]"));
@@ -969,7 +992,15 @@ test("cost counts each turn once, though a resumed session reports its running t
     async run(c: RunContext, p: string) {
       c.emit("agent.completed", { cost_usd: this.totals.shift() });
 
-      return super.run(c, p);
+      return super.run(
+        {
+          ...c,
+          emit: (type, data) => {
+            if (type !== "agent.completed") c.emit(type, data);
+          },
+        },
+        p,
+      );
     }
   }
 

@@ -321,13 +321,8 @@ requests: create tasks, send follow-ups, answer questions and interrupt turns.
 The explicit connection overrides keep Vite from using a different service
 configured in `.env`.
 
-The fixture worker (`dev/service/fixture-provider.ts`) and demo entry
-(`dev/service/demo-service.ts`, run through `tsx`) are in `dev/`, excluded from
-production bundles and the distributed package. Tests also import the fixture worker.
-It streams its reply in small pieces before storing it.
-Markers in a turn's prompt shape the turn: `[input]` asks a question, `[fail]`
-fails, `[slow]` runs several steps that each take pending steers, as at a tool
-boundary, and `[late]` takes none, so they're left for the next turn.
+For the full fixture trigger catalog, expected outcomes, queue controls, and
+failure cases, see [Fixture provider scenarios](fixture-provider.md).
 
 ## What reloads when
 

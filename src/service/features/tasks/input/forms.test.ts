@@ -145,7 +145,9 @@ async function until(fn: () => boolean) {
 }
 
 test("native host delegation requests user input before starting and retries complete idempotently", async () => {
-  const { c, rpc, close } = await setup();
+  const { c, rpc, close } = await setup(
+    new FixtureProvider({ models: "empty" }),
+  );
 
   try {
     const args = {
@@ -360,7 +362,9 @@ test("host delegation names providers and flags workers without a model list", a
     { id: "claude" },
   );
 
-  const { rpc, close } = await setup(claude, [new FixtureProvider()]);
+  const { rpc, close } = await setup(claude, [
+    new FixtureProvider({ models: "empty" }),
+  ]);
 
   try {
     const requested = await rpc("request_agent_task", {});
@@ -1082,6 +1086,61 @@ test("project registration prefills host metadata without changing continuation 
 
     assert.ok(!submitted.result.isError, JSON.stringify(submitted));
     assert.equal(c.projects.list().length, 1);
+    assert.equal(c.store.all().length, 0);
+  } finally {
+    await close();
+  }
+});
+
+test("form recovery marks a response interrupted after durable submission", async () => {
+  const { c, rpc, close } = await setup();
+
+  try {
+    const requested = await rpc("request_agent_task", {});
+    const state = requested.result.requestState;
+
+    const repository =
+      requested.result.inputRequests.form.params.requestedSchema.properties
+        .repository.oneOf[0].const;
+
+    const response = {
+      ...accepted,
+      content: { ...accepted.content, repository },
+    };
+
+    const answer = JSON.stringify(response, (_key, value) =>
+      value && typeof value === "object" && !Array.isArray(value)
+        ? Object.fromEntries(
+            Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
+          )
+        : value,
+    );
+
+    const row = c.store.database.client
+      .prepare("SELECT id, body FROM form_requests WHERE owner = ?")
+      .get("local") as { id: string; body: string };
+
+    const body = JSON.parse(row.body) as Record<string, unknown>;
+
+    body.status = "processing";
+    body.answer = answer;
+
+    c.store.database.client
+      .prepare("UPDATE form_requests SET body = ? WHERE id = ?")
+      .run(JSON.stringify(body), row.id);
+
+    c.forms = new Forms(c);
+    c.forms.recover();
+
+    const replay = await rpc("request_agent_task", {}, state, response);
+
+    assert.equal(replay.result.isError, true);
+
+    assert.match(
+      JSON.stringify(replay),
+      /Service restarted during form submission/,
+    );
+
     assert.equal(c.store.all().length, 0);
   } finally {
     await close();

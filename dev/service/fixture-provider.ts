@@ -1,13 +1,38 @@
 import { setTimeout } from "node:timers/promises";
 
-import { executionTaskPolicy } from "../../src/service/features/providers/task-policy.js";
-import {
-  type Provider,
-  type RunContext,
-  type Steer,
-  type TurnOutput,
+import type { ProviderTaskPolicy } from "../../src/service/features/providers/task-policy.js";
+import type {
+  Provider,
+  RunContext,
+  TurnOutput,
 } from "../../src/service/features/providers/types.js";
-import { fixtureMetadata } from "../../src/shared/providers/metadata.js";
+import type { ProviderMetadata } from "../../src/shared/providers/metadata.js";
+import type {
+  ModelChoice,
+  ProviderReadiness,
+} from "../../src/shared/providers/types.js";
+import type { Task } from "../../src/shared/tasks/model.js";
+import {
+  cloneFixtureModel,
+  createFixtureProviderMetadata,
+  fixtureModels,
+  fixtureProviderCapabilities,
+} from "./fixture-provider-metadata.js";
+import { fixtureTaskPolicy } from "./fixture-provider-policy.js";
+import {
+  type FixtureProviderRunState,
+  runFixtureTurn,
+} from "./fixture-provider-runner.js";
+
+export interface FixtureProviderOptions {
+  readiness?: "ready" | "unavailable" | "error";
+  readinessDelayMs?: number;
+  models?: "default" | "empty" | "error" | "error-once";
+  modelsDelayMs?: number;
+  modelChoices?: ModelChoice[];
+  deleteSessionError?: boolean;
+  closeError?: boolean;
+}
 
 /**
  * A development-only worker that makes no model calls, for the demo service
@@ -15,96 +40,101 @@ import { fixtureMetadata } from "../../src/shared/providers/metadata.js";
  */
 export class FixtureProvider implements Provider {
   id = "fixture";
-  taskPolicy = executionTaskPolicy;
-  metadata = fixtureMetadata;
-  capabilities = {
-    interrupt: true,
-    session_continue: true,
-    session_state_portable: false,
-    interactive_input: true,
-    worktree: true,
-    cost_budget: true,
-    runtime_budget: true,
-    token_budget: false,
-    subagents: false,
-    parallel_subagents: false,
-    dynamic_subagents: false,
+  metadata: ProviderMetadata = createFixtureProviderMetadata();
+  capabilities = { ...fixtureProviderCapabilities };
+
+  private runState: FixtureProviderRunState = {
+    sessions: new Map(),
+    invalidatedTasks: new Set(),
   };
 
-  /**
-   * Markers in a turn's prompt shape it: `[input]` asks a question, `[fail]`
-   * fails, `[slow]` runs several steps that each take pending steers, as at
-   * a tool boundary, and `[late]` takes none, so they're left over. The
-   * reply streams as deltas before it's stored.
-   */
-  async run(c: RunContext, prompt: string): Promise<TurnOutput> {
-    const steers: Steer[] = [];
-    const taken: string[] = [];
+  taskPolicy: ProviderTaskPolicy;
+  private modelsMode: NonNullable<FixtureProviderOptions["models"]>;
+  private readinessMode: NonNullable<FixtureProviderOptions["readiness"]>;
+  private readinessDelayMs: number;
+  private modelsDelayMs: number;
+  private modelChoices: ModelChoice[];
+  private modelFailurePending: boolean;
+  private deleteSessionError: boolean;
+  private closeError: boolean;
 
-    c.acceptSteers((steer) => {
-      steers.push(steer);
+  constructor(options: FixtureProviderOptions = {}) {
+    this.modelsMode = options.models ?? "default";
+    this.readinessMode = options.readiness ?? "ready";
+    this.readinessDelayMs = Math.max(0, options.readinessDelayMs ?? 0);
+    this.modelsDelayMs = Math.max(0, options.modelsDelayMs ?? 0);
 
-      return true;
-    });
-
-    c.session(
-      c.task.session_id ?? `fixture_${c.task.id}`,
-      `fixture:${c.task.workspace}`,
+    this.modelChoices = (options.modelChoices ?? fixtureModels).map(
+      cloneFixtureModel,
     );
 
-    c.emit("agent.message", {
-      text: "Fixture worker inspecting task (no model call).",
-    });
+    this.modelFailurePending = this.modelsMode === "error-once";
+    this.deleteSessionError = options.deleteSessionError ?? false;
+    this.closeError = options.closeError ?? false;
 
-    if (prompt.includes("[fail]")) throw new Error("Fixture failure");
+    this.taskPolicy = {
+      ...fixtureTaskPolicy,
+      validateSession: async (task) => {
+        const session = task.session_id
+          ? this.runState.sessions.get(task.session_id)
+          : undefined;
 
-    if (prompt.includes("[input]")) {
-      const r = await c.input(
-        "AskUserQuestion",
-        { questions: [{ question: "Which approach should the worker use?" }] },
-        c.signal,
-      );
+        if (!session || session.stateRef !== task.session_state_ref)
+          throw new Error(
+            "Fixture session is unavailable in this service process",
+          );
+      },
+    };
+  }
 
-      c.emit("agent.message", { text: r.message ?? JSON.stringify(r.input) });
+  async readiness(): Promise<ProviderReadiness> {
+    if (this.readinessDelayMs) await setTimeout(this.readinessDelayMs);
+    if (this.readinessMode === "error")
+      throw new Error("Fixture readiness check failed.");
+
+    if (this.readinessMode === "unavailable")
+      return {
+        ready: false,
+        message: "Fixture readiness was configured as unavailable.",
+        details: { runtime: "fixture", configured: "unavailable" },
+      };
+
+    return {
+      ready: true,
+      details: { runtime: "fixture", model_calls: "none" },
+    };
+  }
+
+  async models() {
+    if (this.modelsDelayMs) await setTimeout(this.modelsDelayMs);
+
+    if (this.modelsMode === "error")
+      throw new Error("Fixture model discovery failed.");
+
+    if (this.modelsMode === "error-once" && this.modelFailurePending) {
+      this.modelFailurePending = false;
+      throw new Error("Fixture model discovery failed once.");
     }
 
-    const steps = prompt.includes("[slow]") ? 8 : 1;
+    if (this.modelsMode === "empty") return [];
 
-    for (let step = 0; step < steps; step++) {
-      await setTimeout(prompt.includes("[slow]") ? 60 : 80, undefined, {
-        signal: c.signal,
-      });
+    return this.modelChoices.map(cloneFixtureModel);
+  }
 
-      if (prompt.includes("[late]")) continue;
+  async deleteSession(task: Task) {
+    if (this.deleteSessionError)
+      throw new Error("Fixture session deletion failed.");
+    if (task.session_id) this.runState.sessions.delete(task.session_id);
+    this.runState.invalidatedTasks.delete(task.id);
+  }
 
-      for (const steer of steers.splice(0)) {
-        c.steerTaken(steer.id);
-        taken.push(steer.text);
-      }
-    }
+  async close() {
+    if (this.closeError) throw new Error("Fixture provider close failed.");
+    this.runState.sessions.clear();
+    this.runState.invalidatedTasks.clear();
+  }
 
-    if (prompt.includes("[late]"))
-      await setTimeout(200, undefined, { signal: c.signal });
-
-    const reply = [
-      "Fixture task completed. No Claude execution occurred.",
-      ...taken.map((text) => `Also took: ${text}`),
-    ].join("\n");
-
-    // The reply streams in small pieces, then the whole message is stored.
-    const messageId = `fixture_msg_${c.task.id}_${c.task.turn}`;
-
-    for (const piece of reply.match(/\S+\s*/g) ?? []) {
-      c.delta(messageId, piece);
-      await setTimeout(2, undefined, { signal: c.signal });
-    }
-
-    c.emit("agent.message", {
-      role: "assistant",
-      text: reply,
-      raw_response: { message: { id: messageId }, parent_tool_use_id: null },
-    });
-
-    return { reply };
+  async run(c: RunContext, prompt: string): Promise<TurnOutput> {
+    return runFixtureTurn(c, prompt, this.runState);
   }
 }

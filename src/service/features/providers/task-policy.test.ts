@@ -7,6 +7,7 @@ import { assertSelectedProviderOptions } from "../../../shared/providers/options
 import { startSchema, type Task } from "../../../shared/tasks/model.js";
 import { Settings } from "../settings/settings.js";
 import { Store } from "../tasks/storage/store.js";
+import { ClaudeAgentProvider } from "./claude/runtime/provider.js";
 import { executionTaskPolicy } from "./task-policy.js";
 
 const task = (approval_mode: Task["approval_mode"]) =>
@@ -123,13 +124,49 @@ test("task options are isolated to the selected provider namespace", () => {
 
 test("providers declare their policy independently of built-in identity", () => {
   const provider = new FixtureProvider();
-  assert.equal(provider.taskPolicy, executionTaskPolicy);
+  const fixturePolicy = provider.taskPolicy;
+
+  assert.notEqual(fixturePolicy, executionTaskPolicy);
   provider.id = "claude";
-  assert.equal(provider.taskPolicy, executionTaskPolicy);
+  assert.equal(provider.taskPolicy, fixturePolicy);
   const custom = { ...executionTaskPolicy };
   provider.taskPolicy = custom;
   provider.id = "future-provider";
   assert.equal(provider.taskPolicy, custom);
   assert.equal(provider.taskPolicy.inputKind("AskUserQuestion"), "question");
   assert.equal(provider.taskPolicy.inputKind("Bash"), "permission");
+});
+
+test("fixture advertises Claude's task capabilities and native permission modes", () => {
+  const fixture = new FixtureProvider();
+  const claude = new ClaudeAgentProvider();
+
+  assert.deepEqual(fixture.capabilities, claude.capabilities);
+  const fixturePermissions = fixture.metadata.nativePermissions!;
+  const claudePermissions = claude.metadata.nativePermissions!;
+
+  assert.deepEqual(fixturePermissions.options, claudePermissions.options);
+
+  assert.equal(
+    fixturePermissions.approvalDecider,
+    claudePermissions.approvalDecider,
+  );
+
+  assert.equal(
+    fixturePermissions.approvalDeciderOption,
+    claudePermissions.approvalDeciderOption,
+  );
+
+  assert.equal(
+    fixturePermissions.approvalDeciderSetting,
+    claudePermissions.approvalDeciderSetting,
+  );
+});
+
+test("fixture instances do not share mutable capabilities", () => {
+  const first = new FixtureProvider();
+  const second = new FixtureProvider();
+
+  first.capabilities.cost_budget = false;
+  assert.equal(second.capabilities.cost_budget, true);
 });
