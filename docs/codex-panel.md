@@ -119,7 +119,9 @@ paused queue. When a budget is exhausted, Chat shows the relevant cost and
 runtime controls together in the warning notice. **Apply** saves a higher limit
 without sending a message; limits can only increase.
 The composer can be hidden while retaining its draft; Stop remains available.
-Questions collapse it automatically for the current request.
+Every pending question or permission request collapses it automatically,
+including requests opened through **Review request**. It can be reopened to
+queue a message without changing its ordinary visibility preference.
 
 Questions appear as inline cards, with single/multiple choices, custom answers,
 skips and **Respond**. Several questions form a navigable stack. Switching tasks

@@ -6,7 +6,6 @@ import {
   useController,
   useSnapshot,
 } from "../../../../app/state/controller-context";
-import { pendingQuestions } from "../../../../app/state/selectors";
 import { useSessionState } from "../../../../app/state/session/use-session-state";
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
@@ -56,12 +55,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
       pendingInputKind(task.pending_input) === "permission"
         ? "Enter to queue"
         : HINTS.input,
-    questionRequest =
-      task.pending_input &&
-      pendingInputKind(task.pending_input) === "question" &&
-      pendingQuestions(task).length > 0
-        ? task.pending_input.id
-        : undefined,
+    inputRequest = task.pending_input?.id,
     [expandedRequest, setExpandedRequest] = useState<string>(),
     [manuallyCollapsed, updateComposerSession] = useSessionState(
       "task",
@@ -69,8 +63,8 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
       (state) => state.composerCollapsed,
     ),
     spent = spentBudget(task),
-    collapsed = questionRequest
-      ? expandedRequest !== questionRequest
+    collapsed = inputRequest
+      ? expandedRequest !== inputRequest
       : manuallyCollapsed,
     container = useRef<HTMLDivElement>(null),
     input = useRef<HTMLTextAreaElement>(null),
@@ -104,7 +98,8 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
 
   const toggle = (hide: boolean) => {
     focusAfterToggle.current = hide ? "toggle" : "input";
-    if (questionRequest) setExpandedRequest(hide ? undefined : questionRequest);
+    // Reopening applies only to this request, preserving the ordinary preference.
+    if (inputRequest) setExpandedRequest(hide ? undefined : inputRequest);
     else updateComposerSession({ composerCollapsed: hide });
   };
 
@@ -122,7 +117,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
 
     if (collapsed) {
       focusAfterToggle.current = "input";
-      if (questionRequest) setExpandedRequest(questionRequest);
+      if (inputRequest) setExpandedRequest(inputRequest);
       else updateComposerSession({ composerCollapsed: false });
     } else input.current?.focus({ preventScroll: true });
   }, [
@@ -130,7 +125,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
     canContinue,
     collapsed,
     message,
-    questionRequest,
+    inputRequest,
     updateComposerSession,
     updateSession,
   ]);

@@ -98,12 +98,22 @@ function setup(
   const updateTask = (patch: Partial<Task>) =>
     view.rerender(panel({ ...task, ...patch }));
 
-  const composer = view.getByRole("textbox", { name: "Message" });
+  const getComposer = () => view.getByRole("textbox", { name: "Message" });
 
   const type = (text: string) =>
-    fireEvent.change(composer, { target: { value: text } });
+    fireEvent.change(getComposer(), { target: { value: text } });
 
-  return { controller, task, tool, view, composer, type, updateTask };
+  return {
+    controller,
+    task,
+    tool,
+    view,
+    get composer() {
+      return getComposer();
+    },
+    type,
+    updateTask,
+  };
 }
 
 const sent = (tool: ReturnType<typeof setup>["tool"]) =>
@@ -346,10 +356,13 @@ test("while a turn runs, Cmd/Ctrl+Enter steers, Enter queues, and an empty compo
 });
 
 test("while the worker waits for input, Enter and Ctrl+Enter only queue", async () => {
-  const { tool, composer, type, view } = setup({
+  const { tool, type, view } = setup({
     status: "waiting",
     pending_input: { id: "r", tool: "Bash", kind: "permission", input: {} },
   });
+
+  fireEvent.click(view.getByRole("button", { name: "Show composer" }));
+  const composer = view.getByRole("textbox", { name: "Message" });
 
   type("Later");
   expect(view.queryByRole("button", { name: "Steer" })).toBeNull();
@@ -611,7 +624,9 @@ for (const pending_input of [
       pending_input,
     });
 
-    fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+    if (!pending_input) {
+      fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+    }
 
     expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
     assert.ok(view.getByRole("button", { name: "Show composer" }));
@@ -647,18 +662,86 @@ test("composer visibility is remembered separately for each task", () => {
   );
 });
 
-test("question toggles preserve the ordinary composer's hidden preference", () => {
-  const { view, updateTask } = setup({ status: "running" });
-  fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+for (const pending of [
+  { id: "permission", tool: "Bash", kind: "permission" as const, input: {} },
+  {
+    id: "empty-question",
+    tool: "AskUserQuestion",
+    kind: "question" as const,
+    input: { questions: [] },
+  },
+]) {
+  test(`${pending.kind} requests start with the composer collapsed`, () => {
+    const { view, tool } = setup({ status: "waiting", pending_input: pending });
 
-  updateTask({ status: "waiting", pending_input: questionInput("request") });
-  fireEvent.click(view.getByRole("button", { name: "Show composer" }));
-  assert.ok(view.getByRole("textbox", { name: "Message" }));
+    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+    expect(view.getByRole("button", { name: "Show composer" })).toBeTruthy();
+    expect(view.getByRole("button", { name: "Stop the turn" })).toBeTruthy();
+    expect(tool).not.toHaveBeenCalled();
 
-  updateTask({ status: "running", pending_input: undefined });
-  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
-  assert.ok(view.getByRole("button", { name: "Show composer" }));
-});
+    if (pending.kind === "question") {
+      expect(view.getByRole("button", { name: "Review request" })).toBeTruthy();
+    }
+  });
+}
+
+for (const pending of [
+  { id: "permission", tool: "Bash", kind: "permission" as const, input: {} },
+  {
+    id: "question",
+    tool: "AskUserQuestion",
+    kind: "question" as const,
+    input: {},
+  },
+]) {
+  test(`${pending.kind} requests auto-hide the composer, including fallback reviews`, () => {
+    const { view, type, updateTask } = setup({ status: "running" });
+    type("Saved draft");
+    updateTask({ status: "waiting", pending_input: pending });
+    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+    assert.ok(view.getByRole("button", { name: "Stop the turn" }));
+
+    fireEvent.click(
+      view.getByRole("button", { name: "Show composer (draft)" }),
+    );
+
+    expect(
+      (view.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement)
+        .value,
+    ).toBe("Saved draft");
+
+    updateTask({
+      status: "waiting",
+      pending_input: { ...pending, id: "next-request" },
+    });
+
+    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+    updateTask({ status: "running", pending_input: undefined });
+
+    expect(
+      (view.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement)
+        .value,
+    ).toBe("Saved draft");
+  });
+}
+
+for (const pending of [
+  questionInput("request")!,
+  { id: "permission", tool: "Bash", kind: "permission" as const, input: {} },
+]) {
+  test(`${pending.kind} toggles preserve the ordinary composer's hidden preference`, () => {
+    const { view, updateTask } = setup({ status: "running" });
+    fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+
+    updateTask({ status: "waiting", pending_input: pending });
+    fireEvent.click(view.getByRole("button", { name: "Show composer" }));
+    assert.ok(view.getByRole("textbox", { name: "Message" }));
+
+    updateTask({ status: "running", pending_input: undefined });
+    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+    assert.ok(view.getByRole("button", { name: "Show composer" }));
+  });
+}
 
 test("questions collapse the composer while preserving its draft and Stop action", async () => {
   const focus = vi.spyOn(HTMLElement.prototype, "focus");
