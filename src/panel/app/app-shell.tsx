@@ -1,18 +1,12 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect } from "react";
 
 import { LoginForm } from "../features/auth/login-form";
-import { ProjectsPage } from "../features/projects/projects-page";
-import { WorkerReadinessNotice } from "../features/providers/worker-readiness-notice";
-import { TaskInspector } from "../features/tasks/inspector/task-inspector";
 import { InlinePreview } from "../features/tasks/list/inline-preview";
-import { TaskFilters } from "../features/tasks/list/task-filters";
-import { TaskList } from "../features/tasks/list/task-list";
 import { Presence } from "../shared/components/motion/motion";
 import { DialogHost } from "../shared/dialogs/dialog-host";
 import { trackIdleScrollbars } from "../shared/utils/idle-scrollbars";
-import { Header } from "./header";
+import { PageOutlet } from "./navigation/page-outlet";
 import { useController, useSnapshot } from "./state/controller-context";
-import { TaskLayout } from "./task-layout";
 
 export function AppShell() {
   const controller = useController(),
@@ -22,21 +16,6 @@ export function AppShell() {
     controller.transport.embedded && state.host.displayMode === "inline";
 
   const expandedPanel = !compact;
-  const previousPage = useRef(state.page);
-  const workspace = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (previousPage.current === "projects" && state.page === "tasks") {
-      // Animate the preserved workspace as one page, including its header.
-      if (workspace.current) workspace.current.dataset.returning = "true";
-      document.getElementById("manage-projects")?.focus();
-    } else if (workspace.current) {
-      delete workspace.current.dataset.returning;
-    }
-
-    previousPage.current = state.page;
-  }, [state.page, state.selected]);
-
   useEffect(() => trackIdleScrollbars(document), []);
 
   useEffect(() => {
@@ -58,24 +37,7 @@ export function AppShell() {
               </div>
             )}
           </Presence>
-          <div
-            ref={workspace}
-            className="task-workspace"
-            hidden={state.page !== "tasks"}
-          >
-            <Header />
-            <WorkerReadinessNotice />
-            <TaskLayout
-              list={
-                <>
-                  <TaskFilters />
-                  <TaskList />
-                </>
-              }
-              inspector={<TaskInspector />}
-            />
-          </div>
-          {state.page === "projects" && <ProjectsPage />}
+          <PageOutlet />
           <LoginForm />
         </>
       )}

@@ -1,0 +1,24 @@
+/* Retained pages preserve reading positions while another page is active. */
+.app-page-slot {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.app-page-slot[hidden] {
+  display: none;
+}
+.app-page-slot[data-returning] {
+  animation: motion-slide-start var(--motion-base) var(--ease-out);
+}
+/* The page supplies the return direction; nested mobile views must not slide forward. */
+.app-page-slot[data-returning] :is(#detail, #task-rail) {
+  animation: none;
+}
+
+.page-outlet {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}

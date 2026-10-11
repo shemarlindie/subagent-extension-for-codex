@@ -1,0 +1,39 @@
+/** Page identity, availability and lifetime belong to the application. */
+export const PAGES = {
+  tasks: {
+    label: "Tasks",
+    globalOnly: false,
+    keepMounted: true,
+    entryFocusId: "manage-projects",
+  },
+  projects: {
+    label: "Projects",
+    globalOnly: true,
+    keepMounted: false,
+    entryFocusId: "projects-heading",
+  },
+} as const;
+
+export type PageId = keyof typeof PAGES;
+export const DEFAULT_PAGE: PageId = "tasks";
+
+export function parsePage(value: string | null): PageId | undefined {
+  return value && Object.hasOwn(PAGES, value) ? (value as PageId) : undefined;
+}
+
+type NavigationState = {
+  conversation?: string;
+  connected: boolean;
+  scopeKnown: boolean;
+  busy: boolean;
+  dialog?: unknown;
+};
+
+export function canNavigate(state: NavigationState, page: PageId): boolean {
+  if (state.busy || state.dialog) return false;
+
+  return (
+    !PAGES[page].globalOnly ||
+    (!state.conversation && state.connected && state.scopeKnown)
+  );
+}

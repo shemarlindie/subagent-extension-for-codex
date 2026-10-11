@@ -1,8 +1,9 @@
+import { DEFAULT_PAGE } from "../navigation/pages";
 import type { Snapshot } from "./types";
 
 export function initialState(): Snapshot {
   return {
-    page: "tasks",
+    page: DEFAULT_PAGE,
     tasks: [],
     workers: [],
     projects: [],

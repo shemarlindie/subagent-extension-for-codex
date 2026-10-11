@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE, parsePage } from "./navigation/pages";
 import {
   parsePersistedDialogs,
   type PersistedDialogId,
@@ -38,7 +39,8 @@ function read(url: URL): PersistedViewState {
   const state: PersistedViewState = {};
   const params = url.searchParams;
 
-  if (params.get(keys.page) === "projects") state.page = "projects";
+  const page = parsePage(params.get(keys.page));
+  if (page && page !== DEFAULT_PAGE) state.page = page;
 
   if (params.has(keys.project)) {
     const repository = params.get(keys.project);
@@ -73,7 +75,8 @@ function write(
   Object.values(keys).forEach((key) => params.delete(key));
   persistedDialogIds.forEach((id) => params.delete(dialogKey(id)));
 
-  if (state.page === "projects") params.set(keys.page, "projects");
+  if (state.page && state.page !== DEFAULT_PAGE)
+    params.set(keys.page, state.page);
   if (state.repository) params.set(keys.project, state.repository);
   if (state.selected) params.set(keys.task, state.selected);
   else if (state.browsing) params.set(keys.browsing, "1");

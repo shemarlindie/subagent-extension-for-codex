@@ -1,3 +1,4 @@
+import { canNavigate } from "../../app/navigation/pages";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { projectChoices } from "../../app/state/selectors";
 import { Button } from "../../shared/components/button/button";
@@ -33,7 +34,7 @@ export function ProjectScope() {
 
       <Button
         id="manage-projects"
-        disabled={disabled}
+        disabled={!canNavigate(state, "projects")}
         onClick={() => controller.manageProjects()}
       >
         Manage

@@ -29,6 +29,7 @@ import {
   handoffMessage,
   type HandoffTarget,
 } from "../../features/tasks/controls/handoff-message";
+import { canNavigate, DEFAULT_PAGE, type PageId } from "../navigation/pages";
 import { initialState } from "./initial-state";
 import {
   persistDialog,
@@ -156,9 +157,7 @@ export class Controller {
   private saveViewState() {
     this.viewState?.save({
       view: {
-        ...(this.state.page === "projects"
-          ? { page: "projects" as const }
-          : {}),
+        ...(this.state.page !== DEFAULT_PAGE ? { page: this.state.page } : {}),
         ...(this.state.repository ? { repository: this.state.repository } : {}),
         ...(this.state.selected ? { selected: this.state.selected } : {}),
         ...(this.state.filter ? { filter: this.state.filter } : {}),
@@ -1008,7 +1007,7 @@ export class Controller {
     )
       this.invalidateScope({
         conversation,
-        ...(conversation ? { page: "tasks" } : {}),
+        ...(conversation ? { page: DEFAULT_PAGE } : {}),
         repository,
         revision,
         scopeKnown: true,
@@ -1098,25 +1097,17 @@ export class Controller {
     });
   }
 
-  manageProjects() {
-    if (
-      this.state.conversation ||
-      !this.state.scopeKnown ||
-      this.state.dialog ||
-      this.state.busy ||
-      !this.state.connected
-    )
-      return;
+  navigate(page: PageId) {
+    if (!canNavigate(this.state, page)) return;
+    this.patch({ page, formError: "" });
+  }
 
-    this.patch({
-      page: "projects",
-      formError: "",
-    });
+  manageProjects() {
+    this.navigate("projects");
   }
 
   backToTasks() {
-    if (this.state.busy || this.state.dialog) return;
-    this.patch({ page: "tasks", formError: "" });
+    this.navigate(DEFAULT_PAGE);
   }
 
   removeProject(project: Project) {

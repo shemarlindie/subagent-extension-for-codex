@@ -39,7 +39,7 @@
   body[data-selected="false"] #task-rail {
     animation: motion-slide-start var(--motion-base) var(--ease-out);
   }
-  .back {
+  .task-inspector-back {
     display: inline-block;
   }
   /* Tabs run edge to edge, scrolling past the content margin and resting inside it. */

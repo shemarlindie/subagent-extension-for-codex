@@ -20,6 +20,7 @@ import type { DraftState } from "../../features/tasks/chat/drafts/draft-state.js
 import type { HandoffTarget } from "../../features/tasks/controls/handoff-message.js";
 import type { Filter, Tab, Task } from "../../features/tasks/types.js";
 import type { HostState } from "../../transports/types.js";
+import type { PageId } from "../navigation/pages";
 
 export type PanelData = {
   panel_scope?: {
@@ -106,7 +107,7 @@ export type PersistedDialog =
     };
 
 export type Snapshot = {
-  page: "tasks" | "projects";
+  page: PageId;
   tasks: Task[];
   workers: Worker[];
   projects: Project[];

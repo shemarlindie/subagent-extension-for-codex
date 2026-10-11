@@ -1,0 +1,33 @@
+.back {
+  padding: 2px;
+}
+
+.page-frame {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px;
+  animation: motion-slide-end var(--motion-base) var(--ease-out);
+}
+.page-frame-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  max-width: 880px;
+  margin-inline: auto;
+}
+.page-frame-heading h1 {
+  flex: 1;
+  margin: 0;
+  font-size: 20px;
+}
+.page-frame-heading h1:focus {
+  outline: none;
+}
+.page-frame-content {
+  max-width: 880px;
+  margin-inline: auto;
+}

@@ -5,9 +5,9 @@ import {
   useSnapshot,
 } from "../../../app/state/controller-context";
 import { profileLabel, selectedTask } from "../../../app/state/selectors";
-import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { MotionContent } from "../../../shared/components/motion/motion";
+import { BackButton } from "../../../shared/components/navigation/back-button";
 import { Notice } from "../../../shared/components/notice/notice";
 import { projectApproved } from "../../projects/selectors";
 import { currentActivityStatus } from "../activity/activity-timeline";
@@ -48,14 +48,12 @@ export function TaskInspector() {
         <div key={task.id} className="task-view">
           <div ref={headerRef} className="task-header">
             <div className="task-topline">
-              <Button
+              <BackButton
                 id="back"
-                variant="ghost"
-                className="back"
+                className="task-inspector-back"
+                label="Tasks"
                 onClick={() => controller.back()}
-              >
-                ← Tasks
-              </Button>
+              />
               <div className="task-meta">
                 <div
                   className="eyebrow"

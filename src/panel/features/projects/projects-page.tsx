@@ -1,20 +1,15 @@
-import { useLayoutEffect, useRef } from "react";
-
+import { PAGES } from "../../app/navigation/pages";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { EditableText } from "../../shared/components/editable-text/editable-text";
 import { Icon } from "../../shared/components/icons/icons";
+import { BackButton } from "../../shared/components/navigation/back-button";
+import { PageFrame } from "../../shared/components/navigation/page-frame";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 
 export function ProjectsPage() {
   const controller = useController(),
     state = useSnapshot();
-
-  const heading = useRef<HTMLHeadingElement>(null);
-
-  useLayoutEffect(() => {
-    heading.current?.focus();
-  }, []);
 
   const disabled =
     state.busy ||
@@ -23,19 +18,17 @@ export function ProjectsPage() {
     Boolean(state.dialog);
 
   return (
-    <section className="projects-page" aria-labelledby="projects-heading">
-      <div className="projects-page-heading">
-        <Button
-          variant="ghost"
-          className="back"
+    <PageFrame
+      title={PAGES.projects.label}
+      headingId="projects-heading"
+      back={
+        <BackButton
+          label={PAGES.tasks.label}
           disabled={state.busy || Boolean(state.dialog)}
           onClick={() => controller.backToTasks()}
-        >
-          ← Tasks
-        </Button>
-        <h1 id="projects-heading" ref={heading} tabIndex={-1}>
-          Projects
-        </h1>
+        />
+      }
+      actions={
         <Button
           id="project-add"
           variant="primary"
@@ -44,7 +37,8 @@ export function ProjectsPage() {
         >
           Add project
         </Button>
-      </div>
+      }
+    >
       <div className="project-manager">
         <p className="form-note">
           Manage saved projects on the service host. Names help you identify
@@ -118,6 +112,6 @@ export function ProjectsPage() {
           })}
         </ul>
       </div>
-    </section>
+    </PageFrame>
   );
 }

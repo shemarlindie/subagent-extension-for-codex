@@ -2,6 +2,7 @@
 @import "./theme.css";
 @import "./base.css";
 @import "../app/styles/panel.css";
+@import "../app/styles/navigation.css";
 @import "../app/styles/panel-expanded.css";
 @import "../app/styles/panel-narrow.css";
 @import "./primitives.css";
@@ -13,6 +14,7 @@
 @import "../features/tasks/controls/questions.css";
 @import "../features/settings/settings.css";
 @import "../features/projects/projects.css";
+@import "../shared/components/navigation/navigation.css";
 @import "../shared/components/motion/motion.css";
 @import "../features/tasks/list/search.css";
 @import "../shared/components/button/button.css";

@@ -37,10 +37,7 @@ Application state groups dialog descriptors and restoration in
 `app/state/persistence/`, and in-memory session state and hooks in
 `app/state/session/`. Transport size tracing stays with `transports/`.
 
-The controller owns UI state and async coordination. Global project management
-uses a full-width Projects page with the same back-navigation pattern as narrow
-task details. The task workspace stays mounted but hidden to preserve its reading
-position; Add project uses a focused dialog, rename stays inline, and removal uses a separate confirmation modal. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.
+The controller owns UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.
 
 Components read session memory with `useSessionState(scope, id, select?)` and
 partial updates. Select a stable field/reference to avoid unrelated rerenders.
@@ -75,6 +72,31 @@ Buttons use `<Button>` from `src/panel/shared/components/button/button.tsx`, wit
 - `text`: muted text with no box, for low-emphasis inline actions. Only this variant takes `underline`.
 
 `type` defaults to `"button"`, so pass `type="submit"` for a form's submit button. Base UI parts that render their own button, such as `Dialog.Close` and `Menu.Trigger`, take `className={buttonClass("ghost")}`. Both themes style the variant classes (`primary`, `ghost`, `text-button`). Components with their own look, such as task rows and filter pills, keep a native `<button>` with their own class.
+
+## Page navigation
+
+Application page identity, availability and retention live in
+`src/panel/app/navigation/pages.ts`. The controller applies its navigation guard
+to user-requested page changes. Tasks are available in both chat and global scope;
+Projects requires a connected, resolved global scope. Busy work and open
+dialogs block user navigation. A host scope change into a chat still returns
+to Tasks and invalidates stale dialogs.
+
+`PageOutlet` composes the registered page components. Tasks stays mounted while
+inactive to preserve drafts and reading positions; its container is hidden and
+inert. Projects unmounts on departure. The outlet remembers focused controls in
+retained pages and restores them on return. `PageFrame` provides a labeled
+full-width section, arrival heading focus, back control and actions;
+`BackButton` supplies the shared back-control presentation. Task detail selection
+and inspector tabs remain owned by the Tasks page rather than becoming separate
+application pages. Add project and removal confirmation remain dialogs.
+
+To add a page, declare its identity, label, scope requirement, retention policy and fallback focus target
+in `pages.ts`, then add its component to the outlet's typed component map. Keep
+feature content with its owning feature and use `PageFrame` for pages with a
+heading and toolbar. Route navigation through the controller so scope, busy and
+dialog guards apply consistently. Add focused coverage for its availability,
+URL restoration, lifetime and focus behavior.
 
 ## Extending the UI
 
