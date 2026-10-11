@@ -809,7 +809,7 @@ test("Manage opens a page and Back restores task selection, filters and focus", 
     ),
   );
 
-  await user.click(screen.getByRole("button", { name: "← Tasks" }));
+  await user.click(screen.getByRole("button", { name: "Tasks" }));
   expect(controller.getSnapshot().selected).toBe(selected);
   expect(controller.getSnapshot().search).toBe(search);
 

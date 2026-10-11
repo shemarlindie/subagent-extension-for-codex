@@ -511,7 +511,7 @@ test("refresh preserves the inspector and its scroll, while Back stays on the ta
   expect(screen.getByRole("region", { name: "Task inspector" })).toBe(detail);
   expect(detail.querySelector(".task-header")).toBe(header);
   assert.equal(detail.scrollTop, 160);
-  await user.click(screen.getByRole("button", { name: "← Tasks" }));
+  await user.click(screen.getByRole("button", { name: "Tasks" }));
   await act(() => controller.refresh());
   assert.equal(controller.getSnapshot().selected, undefined);
   assertAbsent(detail.querySelector(".task-header"));
@@ -524,7 +524,7 @@ test("narrow scoped panel Back keeps the task list visible across refresh", asyn
   });
 
   assert.equal(document.body.dataset.selected, "true");
-  await user.click(screen.getByRole("button", { name: "← Tasks" }));
+  await user.click(screen.getByRole("button", { name: "Tasks" }));
   assert.equal(document.body.dataset.selected, "false");
   await act(() => controller.refresh());
   assert.equal(document.body.dataset.selected, "false");
