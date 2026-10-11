@@ -6,6 +6,9 @@ header {
   padding: 8px 15px;
   border-bottom: 1px solid var(--line);
 }
+header[data-mode="global"] {
+  padding-left: 8px;
+}
 header[data-mode="thread"],
 header[data-mode="thread"] .toolbar {
   align-items: center;
