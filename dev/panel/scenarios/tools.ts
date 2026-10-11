@@ -103,7 +103,7 @@ const inScope = (
   (typeof scope.repository !== "string" ||
     task.repository === scope.repository);
 
-const previewClaudeDetails = { supported_versions: "2.1.285–2.1.295" };
+const previewClaudeDetails = { supported_versions: "2.1.285+" };
 
 const previewClaudeReady = {
   ready: true,
@@ -118,7 +118,7 @@ const previewClaudeReady = {
 const previewClaudeUnavailable = {
   ready: false,
   message:
-    "Claude Code 2.1.200 at /opt/homebrew/Caskroom/claude-code/2.1.200/claude is older than the supported 2.1.285–2.1.295. Update it with brew upgrade --cask claude-code (Homebrew installs don't update themselves), or set CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH to a supported copy.",
+    "Claude Code 2.1.200 at /opt/homebrew/Caskroom/claude-code/2.1.200/claude is older than the supported 2.1.285+. Update it with brew upgrade --cask claude-code (Homebrew installs don't update themselves), or set CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH to a supported copy.",
   details: {
     executable: "/opt/homebrew/Caskroom/claude-code/2.1.200/claude",
     version: "2.1.200",

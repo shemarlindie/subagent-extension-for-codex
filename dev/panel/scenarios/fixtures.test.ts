@@ -598,7 +598,7 @@ test("the Claude unavailable option reports the worker not ready and skips its m
   assert.equal(unavailable.models, undefined);
 
   // The fixtures repeat the supported range, which must follow the service's.
-  const range = `${claudeCliSupport.minimum}–${claudeCliSupport.maximum}`;
+  const range = `${claudeCliSupport.minimum}+`;
 
   for (const worker of [ready, unavailable])
     assert.equal(worker.readiness.details.supported_versions, range);

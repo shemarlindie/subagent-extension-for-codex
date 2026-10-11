@@ -372,7 +372,7 @@ files and lines.
 extracts it outside the checkout and runs the projects CLI, the stdio proxy
 with launcher auto-start, the panel, the packaged `.env` and a service restart
 against the extracted copy. It also checks that the archive holds no native
-binaries, drives Claude readiness with fake CLIs (supported, too old, too new,
+binaries, drives Claude readiness with fake CLIs (at or above the minimum, too old,
 a broken override and none on `PATH`) and, when the host has a supported CLI,
 runs model discovery through it.
 
@@ -439,9 +439,10 @@ clients through `Last-Event-ID`).
 ### Qualifying Claude Code versions
 
 `claudeCliSupport` in `src/service/features/providers/claude/configuration/executable.ts` holds the
-supported range beside the Agent SDK version it was qualified with. A test fails
-when the installed SDK no longer matches that version, so an SDK update
-re-qualifies the range. Qualify a version before adding it:
+minimum version beside the Agent SDK version it was qualified with. Newer
+CLI releases are accepted without an upper bound. A test fails when the installed
+SDK no longer matches that version, so an SDK update requires compatibility
+checks. Run these checks when updating the SDK or changing the minimum:
 
 1. Run `npm test`. Recorded fixtures cover the SDK message mapping, and the
    packed-artifact suite runs model discovery through the host's CLI.
@@ -451,9 +452,9 @@ re-qualifies the range. Qualify a version before adding it:
    (project settings, hooks, skills and MCP servers).
 3. In a live task from the panel, steer, interrupt and answer a question.
 
-Keep the range covering the SDK's paired version (`claudeCodeVersion` in its
-`package.json`) and the current stable and latest releases
-(`npm view @anthropic-ai/claude-code dist-tags`).
+Keep the minimum at or below the SDK's paired version (`claudeCodeVersion` in its
+`package.json`). Check the current stable and latest releases
+(`npm view @anthropic-ai/claude-code dist-tags`) when qualifying compatibility.
 
 ## Live Claude checks
 

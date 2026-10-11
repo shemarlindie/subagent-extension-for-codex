@@ -406,7 +406,9 @@ describe("packed artifact", () => {
 
         await retarget(newer);
         worker = await claudeWorker(client);
-        assert.match(worker.readiness.message!, /9\.0\.0 .* newer than/);
+        assert.equal(worker.readiness.ready, true);
+        assert.equal(worker.readiness.details.version, "9.0.0");
+        assert.equal(worker.readiness.details.supported_versions, "2.1.285+");
 
         // A configured path that stops resolving is an error, not a PATH fallback.
         await unlink(link);

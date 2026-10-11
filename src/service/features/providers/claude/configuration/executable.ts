@@ -4,21 +4,19 @@ import { access, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, win32 } from "node:path";
 
 /**
- * Claude Code releases qualified against the bundled Agent SDK: its paired
- * CLI version and the stable and latest channels when it was qualified.
- * Widen the range only after the protocol checks pass for a new version, and
- * re-qualify it whenever the SDK version changes.
+ * Minimum Claude Code release qualified against the bundled Agent SDK.
+ * Newer releases are accepted without an upper bound; re-qualify compatibility
+ * whenever the SDK version changes.
  */
 export const claudeCliSupport = {
   sdk: "0.3.293",
   minimum: "2.1.285",
-  maximum: "2.1.295",
 } as const;
 
 /** Names an explicit Claude Code executable, which replaces the PATH lookup. */
 export const claudePathVariable = "CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH";
 
-const supportedRange = `${claudeCliSupport.minimum}–${claudeCliSupport.maximum}`;
+const supportedRange = `${claudeCliSupport.minimum}+`;
 const setupDocs = "https://code.claude.com/docs/en/setup";
 /** How long a validated executable is trusted before `--version` runs again. */
 const FRESH_MS = 5 * 60 * 1000;
@@ -28,12 +26,7 @@ const VERSION_TIMEOUT_MS = 10_000;
 const VERSION_OUTPUT_BYTES = 4096;
 
 export type ClaudeCliProblem =
-  | "missing"
-  | "invalid_override"
-  | "unlaunchable"
-  | "unrecognized"
-  | "too_old"
-  | "too_new";
+  "missing" | "invalid_override" | "unlaunchable" | "unrecognized" | "too_old";
 
 export type ClaudeCliStatus =
   | { ready: true; path: string; version: string; supported: string }
@@ -253,13 +246,6 @@ export async function validateClaudeCli(
     return failure(
       "too_old",
       `Claude Code ${version} at ${path} is older than the supported ${supportedRange}. Update it with ${updateStep(path)}, or set ${claudePathVariable} to a supported copy.`,
-      { path, version },
-    );
-
-  if (compareVersions(version, claudeCliSupport.maximum) > 0)
-    return failure(
-      "too_new",
-      `Claude Code ${version} at ${path} is newer than the supported ${supportedRange}, which this extension hasn't been qualified with. Install the stable channel (npm's @anthropic-ai/claude-code@stable or the Homebrew claude-code cask), update the extension, or set ${claudePathVariable} to a supported copy.`,
       { path, version },
     );
 

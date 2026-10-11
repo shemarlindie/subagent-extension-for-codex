@@ -167,7 +167,7 @@ test("version output is parsed strictly", () => {
   assert.equal(compareVersions("2.1.9", "2.1.9"), 0);
 });
 
-test("validation accepts the range boundaries and rejects versions outside it", async () => {
+test("validation accepts the minimum and newer releases but rejects older versions", async () => {
   const check = async (version: string) =>
     validateClaudeCli(
       await fakeClaude(
@@ -176,7 +176,12 @@ test("validation accepts the range boundaries and rejects versions outside it", 
       ),
     );
 
-  for (const version of [claudeCliSupport.minimum, claudeCliSupport.maximum]) {
+  for (const version of [
+    claudeCliSupport.minimum,
+    "2.1.296",
+    "2.2.0",
+    "3.0.0",
+  ]) {
     const status = await check(version);
     assert.equal(status.ready, true, version);
     assert.equal(status.version, version);
@@ -186,10 +191,6 @@ test("validation accepts the range boundaries and rejects versions outside it", 
   assert.equal(old.ready, false);
   assert.equal(!old.ready && old.problem, "too_old");
   assert.match(!old.ready ? old.message : "", /claude update/);
-
-  const newer = await check("2.2.0");
-  assert.equal(!newer.ready && newer.problem, "too_new");
-  assert.match(!newer.ready ? newer.message : "", /stable/);
 });
 
 test("an outdated Homebrew install is told to upgrade the cask", async () => {
@@ -320,12 +321,12 @@ test("an unsupported CLI reports its path, version and the supported range", asy
       message: undefined,
       path,
       version: "2.0.0",
-      supported: `${claudeCliSupport.minimum}–${claudeCliSupport.maximum}`,
+      supported: `${claudeCliSupport.minimum}+`,
     },
   );
 });
 
-test("the supported range was qualified against the bundled SDK and includes its paired CLI", () => {
+test("the minimum was qualified against the bundled SDK and accepts its paired CLI", () => {
   const require = createRequire(import.meta.url);
 
   // The SDK's exports hide its manifest, which sits beside the entry point.
@@ -342,11 +343,10 @@ test("the supported range was qualified against the bundled SDK and includes its
   assert.equal(
     sdk.version,
     claudeCliSupport.sdk,
-    "The SDK changed; re-qualify the supported Claude Code range",
+    "The SDK changed; re-qualify Claude Code compatibility",
   );
 
   assert.ok(
-    compareVersions(sdk.claudeCodeVersion, claudeCliSupport.minimum) >= 0 &&
-      compareVersions(sdk.claudeCodeVersion, claudeCliSupport.maximum) <= 0,
+    compareVersions(sdk.claudeCodeVersion, claudeCliSupport.minimum) >= 0,
   );
 });
