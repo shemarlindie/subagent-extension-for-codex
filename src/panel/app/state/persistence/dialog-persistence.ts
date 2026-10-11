@@ -6,6 +6,7 @@ import type {
 } from "../types";
 
 export const persistedDialogIds = [
+  "remove-project",
   "project",
   "settings",
   "delegate",
@@ -44,6 +45,8 @@ function draftOf(
 /** Store only stable dialog identity and user-entered draft, never server data. */
 export function persistDialog(dialog: DialogState): PersistedDialog {
   switch (dialog.kind) {
+    case "remove-project":
+      return { kind: dialog.kind, repository: dialog.project.repository };
     case "project":
       return { kind: dialog.kind, repository: dialog.repository };
     case "settings":
@@ -90,6 +93,10 @@ export function parsePersistedDialog(
   const draft = draftOf(value);
 
   switch (value.kind) {
+    case "remove-project":
+      if (!isString(value.repository) || !value.repository) return;
+
+      return { kind: value.kind, repository: value.repository };
     case "project":
       return {
         kind: value.kind,

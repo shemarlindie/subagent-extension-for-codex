@@ -8,6 +8,8 @@ import { profileLabel, selectedTask } from "../../../app/state/selectors";
 import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { MotionContent } from "../../../shared/components/motion/motion";
+import { Notice } from "../../../shared/components/notice/notice";
+import { projectApproved } from "../../projects/selectors";
 import { currentActivityStatus } from "../activity/activity-timeline";
 import { EvidenceTabs } from "../evidence/evidence-tabs";
 import { TaskStatus } from "../shared/status";
@@ -81,6 +83,12 @@ export function TaskInspector() {
               <TaskMenu task={task} />
             </div>
             <TaskTitle task={task} />
+            {!projectApproved(state.projects, task.repository) && (
+              <Notice>
+                This repository is no longer approved. Add it again before
+                starting another turn. Saved task history remains available.
+              </Notice>
+            )}
           </div>
           <EvidenceTabs task={task} />
         </div>

@@ -12,7 +12,7 @@ npm run build
 npm start
 ```
 
-Open `http://127.0.0.1:4317`. Sign in with the token in `~/.local/share/codex-subagent-extension/admin-token` (or your configured data directory), then use **Add project** to approve a Git repository root with at least one commit. Treat the token as a credential; do not paste it into chats or commit it.
+Open `http://127.0.0.1:4317`. Sign in with the token in `~/.local/share/codex-subagent-extension/admin-token` (or your configured data directory), then use **Manage → Add project** to approve a Git repository root with at least one commit. Treat the token as a credential; do not paste it into chats or commit it.
 
 Claude uses the host's Claude Code credentials and user, project and local settings, including instructions, skills, hooks and MCP servers. This extension does not manage provider credentials. See [configuration and permissions](docs/configuration.md) before changing execution authority or session restrictions.
 

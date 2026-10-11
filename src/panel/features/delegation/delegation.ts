@@ -5,6 +5,7 @@ import type {
   Project,
   Snapshot,
 } from "../../app/state/types";
+import { projectApproved } from "../projects/selectors";
 
 /** Registered projects plus the chat's project when starting a task may add it. */
 export function taskProjects(state: Snapshot, projects = state.projects) {
@@ -39,16 +40,30 @@ export function delegationDialog(
     );
   const task = explicitSelection ? selectedTask(state) : undefined;
 
+  const taskRepository =
+    task && projectApproved(projects, task.repository)
+      ? task.repository
+      : undefined;
+
+  const scopedRepository =
+    state.repository && projectApproved(projects, state.repository)
+      ? state.repository
+      : undefined;
+
   return {
     kind: "delegate",
     defaults,
     preferredWorker,
     scope: state.scopeVersion,
     repository:
-      state.repository ??
-      task?.repository ??
+      scopedRepository ??
+      taskRepository ??
       choices.find((project) => project.pending)?.repository ??
       (choices.length === 1 ? choices[0].repository : undefined),
-    revision: state.repository ? state.revision : (task?.revision ?? "HEAD"),
+    revision: scopedRepository
+      ? state.revision
+      : taskRepository
+        ? (task?.revision ?? "HEAD")
+        : "HEAD",
   };
 }

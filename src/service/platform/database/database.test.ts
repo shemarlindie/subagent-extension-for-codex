@@ -210,3 +210,62 @@ test("a failed Drizzle query throws SQLite's error, without the query's values",
       !error.message.includes("secret-timestamp"),
   );
 });
+
+test("project names upgrade preserves saved approvals and existing task data", (t) => {
+  const dir = scratch(t);
+  const path = join(dir, "console.sqlite");
+  const older = join(dir, "older-migrations");
+  mkdirSync(older);
+
+  const initial = readdirSync(migrationsFolder)
+    .filter((name) => /^\d{14}_/.test(name))
+    .sort()[0];
+
+  cpSync(join(migrationsFolder, initial), join(older, initial), {
+    recursive: true,
+  });
+
+  const before = openDatabase(path, older);
+
+  before.client
+    .prepare("INSERT INTO project_roots(path, kind) VALUES(?,?)")
+    .run("/repo", "repository");
+
+  before.client
+    .prepare("INSERT INTO tasks VALUES(?,?,?)")
+    .run("kept", "alice", "{}");
+
+  before.close();
+  const upgraded = openDatabase(path);
+
+  t.onTestFinished(() => {
+    if (upgraded.client.isOpen) upgraded.close();
+  });
+
+  assert.deepEqual(
+    {
+      ...upgraded.client
+        .prepare("SELECT path,kind,name FROM project_roots")
+        .get(),
+    },
+    { path: "/repo", kind: "repository", name: null },
+  );
+
+  assert.equal(
+    upgraded.client.prepare("SELECT COUNT(*) AS n FROM tasks").get()?.n,
+    1,
+  );
+
+  upgraded.client
+    .prepare("UPDATE project_roots SET name=? WHERE path=?")
+    .run("Saved name", "/repo");
+
+  upgraded.close();
+  const reopened = openDatabase(path);
+  t.onTestFinished(() => reopened.close());
+
+  assert.equal(
+    reopened.client.prepare("SELECT name FROM project_roots").get()?.name,
+    "Saved name",
+  );
+});

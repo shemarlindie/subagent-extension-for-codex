@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { LoginForm } from "../features/auth/login-form";
+import { ProjectsPage } from "../features/projects/projects-page";
 import { WorkerReadinessNotice } from "../features/providers/worker-readiness-notice";
 import { TaskInspector } from "../features/tasks/inspector/task-inspector";
 import { InlinePreview } from "../features/tasks/list/inline-preview";
@@ -21,6 +22,20 @@ export function AppShell() {
     controller.transport.embedded && state.host.displayMode === "inline";
 
   const expandedPanel = !compact;
+  const previousPage = useRef(state.page);
+  const workspace = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (previousPage.current === "projects" && state.page === "tasks") {
+      // Animate the preserved workspace as one page, including its header.
+      if (workspace.current) workspace.current.dataset.returning = "true";
+      document.getElementById("manage-projects")?.focus();
+    } else if (workspace.current) {
+      delete workspace.current.dataset.returning;
+    }
+
+    previousPage.current = state.page;
+  }, [state.page, state.selected]);
 
   useEffect(() => trackIdleScrollbars(document), []);
 
@@ -36,7 +51,6 @@ export function AppShell() {
         <InlinePreview />
       ) : (
         <>
-          <Header />
           <Presence show={Boolean(state.error)}>
             {state.error && (
               <div id="error" className="context-error" role="alert">
@@ -44,16 +58,24 @@ export function AppShell() {
               </div>
             )}
           </Presence>
-          <WorkerReadinessNotice />
-          <TaskLayout
-            list={
-              <>
-                <TaskFilters />
-                <TaskList />
-              </>
-            }
-            inspector={<TaskInspector />}
-          />
+          <div
+            ref={workspace}
+            className="task-workspace"
+            hidden={state.page !== "tasks"}
+          >
+            <Header />
+            <WorkerReadinessNotice />
+            <TaskLayout
+              list={
+                <>
+                  <TaskFilters />
+                  <TaskList />
+                </>
+              }
+              inspector={<TaskInspector />}
+            />
+          </div>
+          {state.page === "projects" && <ProjectsPage />}
           <LoginForm />
         </>
       )}

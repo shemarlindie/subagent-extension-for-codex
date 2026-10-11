@@ -2,6 +2,7 @@ import type { Snapshot } from "./types";
 
 export function initialState(): Snapshot {
   return {
+    page: "tasks",
     tasks: [],
     workers: [],
     projects: [],

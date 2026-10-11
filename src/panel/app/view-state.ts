@@ -13,6 +13,7 @@ import type {
 } from "./state/types";
 
 const keys = {
+  page: "dw_page",
   project: "dw_project",
   task: "dw_task",
   browsing: "dw_browse",
@@ -36,6 +37,8 @@ type DevHostWindow = Window & {
 function read(url: URL): PersistedViewState {
   const state: PersistedViewState = {};
   const params = url.searchParams;
+
+  if (params.get(keys.page) === "projects") state.page = "projects";
 
   if (params.has(keys.project)) {
     const repository = params.get(keys.project);
@@ -70,6 +73,7 @@ function write(
   Object.values(keys).forEach((key) => params.delete(key));
   persistedDialogIds.forEach((id) => params.delete(dialogKey(id)));
 
+  if (state.page === "projects") params.set(keys.page, "projects");
   if (state.repository) params.set(keys.project, state.repository);
   if (state.selected) params.set(keys.task, state.selected);
   else if (state.browsing) params.set(keys.browsing, "1");

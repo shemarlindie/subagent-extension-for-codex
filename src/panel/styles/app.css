@@ -12,6 +12,7 @@
 @import "../features/tasks/controls/permission-request.css";
 @import "../features/tasks/controls/questions.css";
 @import "../features/settings/settings.css";
+@import "../features/projects/projects.css";
 @import "../shared/components/motion/motion.css";
 @import "../features/tasks/list/search.css";
 @import "../shared/components/button/button.css";

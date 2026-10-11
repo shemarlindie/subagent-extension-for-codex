@@ -32,11 +32,11 @@ export function ProjectScope() {
       />
 
       <Button
-        id="add-project"
-        disabled={!state.connected || state.busy}
-        onClick={() => controller.run(() => controller.browseAndAddProject())}
+        id="manage-projects"
+        disabled={disabled}
+        onClick={() => controller.manageProjects()}
       >
-        Browse
+        Manage
       </Button>
     </div>
   );

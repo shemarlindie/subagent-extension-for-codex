@@ -17,6 +17,7 @@ import type {
   WorktreeRemoval,
 } from "../../features/changes/types";
 import { delegationDialog } from "../../features/delegation/delegation";
+import { projectApproved } from "../../features/projects/selectors";
 import {
   activityCursor,
   mergeActivity,
@@ -87,6 +88,8 @@ export class Controller {
   private refreshing = false;
   private rerun = false;
   private generation = 0;
+  private projectGeneration = 0;
+  private reconcileShare = false;
   private browsing = false;
   private explicitSelection = false;
   private restoredView?: PersistedViewState;
@@ -110,6 +113,7 @@ export class Controller {
     // Seed URL-backed controls before the first render, then validate task data on load.
     this.state = {
       ...initial,
+      page: this.restoredView.page ?? initial.page,
       filter: this.restoredView.filter ?? initial.filter,
       search: this.restoredView.search ?? initial.search,
       tab: this.restoredView.tab ?? initial.tab,
@@ -152,6 +156,9 @@ export class Controller {
   private saveViewState() {
     this.viewState?.save({
       view: {
+        ...(this.state.page === "projects"
+          ? { page: "projects" as const }
+          : {}),
         ...(this.state.repository ? { repository: this.state.repository } : {}),
         ...(this.state.selected ? { selected: this.state.selected } : {}),
         ...(this.state.filter ? { filter: this.state.filter } : {}),
@@ -296,11 +303,11 @@ export class Controller {
       await this.refresh();
       if (this.disposed) return;
       this.transport.watch();
-      if (this.transport.embedded) this.schedule();
+      this.schedule();
     } catch (error) {
       if (!this.state.connected) {
         this.patch({ connection: "Connection failed" });
-      } else if (this.transport.embedded) {
+      } else {
         // Keep the panel polling when its first host read fails transiently.
         this.schedule();
       }
@@ -309,6 +316,7 @@ export class Controller {
     }
   }
 
+  // Registry changes and idle task deletions do not always produce stream events.
   private schedule() {
     clearTimeout(this.timer);
     if (this.disposed) return;
@@ -376,9 +384,86 @@ export class Controller {
         version = this.state.scopeVersion;
       }
 
+      const projectGeneration = this.projectGeneration;
       const projects = await this.tool<Project[]>("list_agent_projects");
       if (this.disposed || version !== this.state.scopeVersion) return;
+
+      if (projectGeneration !== this.projectGeneration) {
+        this.rerun = true;
+
+        return;
+      }
+
+      const removedProjects = this.state.projects.filter(
+        (old) =>
+          !projects.some((project) => project.repository === old.repository),
+      );
+
       this.patch({ projects });
+
+      // Other panels or the CLI can revoke the selected registration too.
+      if (
+        !this.state.conversation &&
+        this.state.repository &&
+        removedProjects.some(
+          (project) => project.repository === this.state.repository,
+        )
+      ) {
+        this.restoredView = undefined;
+        this.invalidateScope({ repository: undefined, revision: "HEAD" });
+        version = this.state.scopeVersion;
+        this.reconcileShare = true;
+      }
+
+      const removal = this.state.dialog;
+
+      if (
+        removal?.kind === "remove-project" &&
+        removal.scope === version &&
+        !projects.some(
+          (project) => project.repository === removal.project.repository,
+        )
+      ) {
+        this.invalidateScope({});
+        version = this.state.scopeVersion;
+        this.reconcileShare = true;
+      }
+
+      const delegation = this.state.dialog;
+      const draftRepository = this.getDialogDraft("delegate")?.repository;
+
+      const delegationRepository =
+        typeof draftRepository === "string"
+          ? draftRepository
+          : delegation?.kind === "delegate"
+            ? delegation.repository
+            : undefined;
+
+      if (
+        delegation?.kind === "delegate" &&
+        delegation.scope === version &&
+        delegationRepository &&
+        projectApproved(removedProjects, delegationRepository) &&
+        !projectApproved(projects, delegationRepository)
+      ) {
+        this.invalidateScope({});
+        version = this.state.scopeVersion;
+        this.reconcileShare = true;
+      }
+
+      if (this.state.conversation && removedProjects.length) {
+        const context = await this.tool<PanelData>("get_agent_panel_context", {
+          conversation_id: this.state.conversation,
+        });
+
+        if (this.disposed || version !== this.state.scopeVersion) return;
+
+        this.patch({
+          projectCandidate: context.panel_project_candidate?.repository,
+          projectCandidateAuto:
+            context.panel_project_candidate?.auto_register === true,
+        });
+      }
 
       const preferredRepository = this.restoredView?.repository;
 
@@ -420,16 +505,38 @@ export class Controller {
 
       if (this.disposed || version !== this.state.scopeVersion) return;
 
+      if (projectGeneration !== this.projectGeneration) {
+        this.rerun = true;
+
+        return;
+      }
+
       const tasks = next.filter(
         (task) =>
           (!conversation || task.conversation_id === conversation) &&
           (!repository || task.repository === repository),
       );
 
+      const taskDialog = this.state.dialog;
+
+      // A busy dialog survives invalidation; only invalidate its original scope.
+      if (
+        taskDialog &&
+        taskDialog.scope === version &&
+        "task" in taskDialog &&
+        !tasks.some((task) => task.id === taskDialog.task.id)
+      ) {
+        this.invalidateScope({});
+        this.reconcileShare = true;
+
+        return;
+      }
+
       let selected = this.state.selected;
 
       if (selected && !tasks.some((task) => task.id === selected)) {
         selected = undefined;
+        this.reconcileShare = true;
         this.explicitSelection = false;
         this.generation++;
 
@@ -492,6 +599,12 @@ export class Controller {
         search,
         tab,
       });
+
+      // Share after fallback selection so the host sees the same task as the panel.
+      if (this.reconcileShare) {
+        await this.share();
+        this.reconcileShare = false;
+      }
 
       await this.restorePersistedDialog(tasks, version);
       if (this.disposed || version !== this.state.scopeVersion) return;
@@ -895,6 +1008,7 @@ export class Controller {
     )
       this.invalidateScope({
         conversation,
+        ...(conversation ? { page: "tasks" } : {}),
         repository,
         revision,
         scopeKnown: true,
@@ -984,48 +1098,154 @@ export class Controller {
     });
   }
 
+  manageProjects() {
+    if (
+      this.state.conversation ||
+      !this.state.scopeKnown ||
+      this.state.dialog ||
+      this.state.busy ||
+      !this.state.connected
+    )
+      return;
+
+    this.patch({
+      page: "projects",
+      formError: "",
+    });
+  }
+
+  backToTasks() {
+    if (this.state.busy || this.state.dialog) return;
+    this.patch({ page: "tasks", formError: "" });
+  }
+
+  removeProject(project: Project) {
+    if (
+      this.state.page !== "projects" ||
+      this.state.conversation ||
+      this.state.busy ||
+      this.state.dialog ||
+      !this.state.connected
+    )
+      return;
+
+    this.patch({
+      dialog: {
+        kind: "remove-project",
+        project,
+        scope: this.state.scopeVersion,
+      },
+      formError: "",
+    });
+  }
+
+  clearProjectError() {
+    if (this.state.page === "projects" && !this.state.busy)
+      this.patch({ formError: "" });
+  }
+
+  async manageProject(
+    repository: string,
+    name?: string,
+    deleteTasks = false,
+  ): Promise<boolean> {
+    const scope = this.state.scopeVersion;
+    const dialog = this.state.dialog;
+
+    const removalDialog =
+      dialog?.kind === "remove-project" &&
+      name === undefined &&
+      dialog.project.repository === repository &&
+      dialog.scope === scope;
+
+    if (
+      this.state.page !== "projects" ||
+      (dialog && !removalDialog) ||
+      this.state.conversation ||
+      this.state.busy ||
+      this.disposed
+    )
+      return false;
+
+    const active = () =>
+      !this.disposed &&
+      this.state.page === "projects" &&
+      scope === this.state.scopeVersion &&
+      this.state.dialog === dialog;
+
+    ++this.projectGeneration;
+    this.patch({ busy: true, formError: "" });
+    let succeeded = false;
+
+    try {
+      const result = await this.tool<{ name?: string }>(
+        name === undefined
+          ? "remove_user_agent_project"
+          : "rename_user_agent_project",
+        {
+          repository,
+          ...(name === undefined ? { delete_tasks: deleteTasks } : { name }),
+        },
+      );
+
+      ++this.projectGeneration;
+      if (!active()) return false;
+
+      this.patch({
+        projects:
+          name === undefined
+            ? this.state.projects.filter(
+                (project) => project.repository !== repository,
+              )
+            : this.state.projects.map((project) =>
+                project.repository === repository
+                  ? { ...project, name: result.name ?? name.trim() }
+                  : project,
+              ),
+      });
+
+      succeeded = true;
+      if (removalDialog) this.closeDialog();
+
+      if (
+        name === undefined &&
+        (this.state.repository === repository ||
+          (deleteTasks && selectedTask(this.state)?.repository === repository))
+      ) {
+        this.restoredView = undefined;
+        this.patch({ busy: false });
+        this.invalidateScope({ repository: undefined, revision: "HEAD" });
+        this.reconcileShare = true;
+      }
+    } catch (error) {
+      if (active())
+        this.patch({
+          formError: error instanceof Error ? error.message : String(error),
+        });
+    } finally {
+      ++this.projectGeneration;
+
+      if (!this.disposed) {
+        this.patch({ busy: false });
+
+        if (scope !== this.state.scopeVersion) {
+          if (dialog && this.state.dialog === dialog) this.closeDialog();
+          this.run(() => this.refresh());
+        }
+      }
+    }
+
+    // Never retry a mutation. Polling reconciles other panels after a successful write.
+    // Cleanup can fail after deleting some tasks; always reconcile that outcome too.
+    await this.refresh().catch(this.report);
+
+    return succeeded;
+  }
+
   async browseProject() {
     return this.tool<{ repository: string | null }>(
       "browse_user_agent_project",
     );
-  }
-
-  /** Pick a folder and register it without the project dialog, then scope to it. */
-  async browseAndAddProject() {
-    if (this.state.dialog || this.state.busy || !this.state.connected) return;
-    const scope = this.state.scopeVersion;
-    this.patch({ busy: true, error: "" });
-
-    try {
-      const picked = await this.browseProject();
-      if (
-        !picked.repository ||
-        this.disposed ||
-        scope !== this.state.scopeVersion
-      )
-        return;
-
-      const registered = await this.tool<{ repository: string }>(
-        "register_user_agent_project",
-        { repository: picked.repository },
-      );
-
-      const projects = await this.tool<Project[]>("list_agent_projects");
-      if (this.disposed || scope !== this.state.scopeVersion) return;
-
-      this.patch({
-        projects,
-        projectCandidate: undefined,
-        projectCandidateAuto: false,
-        busy: false,
-      });
-
-      await this.changeProject(registered.repository);
-    } finally {
-      // A scope change already reset busy; clearing it again would stomp the new scope's work.
-      if (!this.disposed && scope === this.state.scopeVersion)
-        this.patch({ busy: false });
-    }
   }
 
   async browseTaskProject(): Promise<string | undefined> {
@@ -1113,7 +1333,8 @@ export class Controller {
       !this.state.dialog
     ) {
       this.patch({ projectCandidate: undefined, projectCandidateAuto: false });
-      await this.changeProject(registered.repository);
+      if (this.state.page === "tasks")
+        await this.changeProject(registered.repository);
     }
   }
 

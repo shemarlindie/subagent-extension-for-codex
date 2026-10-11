@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
@@ -17,14 +17,22 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
     state = useSnapshot();
 
   const [repository, setRepository] = usePersistedDialogField(
-    "project",
+    dialog.kind,
     "repository",
-    dialog.repository ?? "",
+    ("repository" in dialog ? dialog.repository : undefined) ?? "",
   );
 
   const [browsing, setBrowsing] = useState(false);
   const [error, setError] = useState("");
   const request = useRef(0);
+
+  // Back can unmount Add while its native picker is still open.
+  useEffect(
+    () => () => {
+      ++request.current;
+    },
+    [],
+  );
 
   const active = () =>
     controller.getSnapshot().dialog === dialog &&
@@ -40,10 +48,10 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
       if (generation === request.current && active() && result.repository)
         setRepository(result.repository);
     } catch (error) {
-      if (active())
+      if (generation === request.current && active())
         setError(error instanceof Error ? error.message : String(error));
     } finally {
-      if (active()) setBrowsing(false);
+      if (generation === request.current && active()) setBrowsing(false);
     }
   }
 
@@ -91,5 +99,7 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
 
 export const projectDialog = defineDialog<"project">({
   title: () => "Add project",
+  initialFocus: (popup) =>
+    popup?.querySelector<HTMLInputElement>("#project-repository") ?? null,
   render: (dialog) => <ProjectForm dialog={dialog} />,
 });

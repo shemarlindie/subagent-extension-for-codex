@@ -51,12 +51,12 @@ function setup(overrides: Partial<Snapshot> = {}) {
   return { view, user: userEvent.setup(), addProject, delegate, settings };
 }
 
-test("global header offers project scope and Browse without the thread title", () => {
+test("global header offers project scope and Manage without the thread title", () => {
   const { view } = setup();
 
   assert.equal(view.getByRole("status").textContent, "Connected");
   assert.ok(view.getByRole("combobox", { name: "Project scope" }));
-  assert.ok(view.getByRole("button", { name: "Browse" }));
+  assert.ok(view.getByRole("button", { name: "Manage" }));
   expect(view.queryByText("Delegated Work")).toBeNull();
 });
 
@@ -66,7 +66,7 @@ test("thread header shows settings and omits other global controls", async () =>
   assert.ok(view.getByText("Delegated Work"));
   assert.equal(view.getByText("My project").tagName, "STRONG");
   expect(view.queryByRole("combobox", { name: "Project scope" })).toBeNull();
-  expect(view.queryByRole("button", { name: "Browse" })).toBeNull();
+  expect(view.queryByRole("button", { name: "Manage" })).toBeNull();
   const settingsButton = view.getByRole("button", { name: "Settings" });
   expect(view.queryByRole("button", { name: "New Task" })).toBeNull();
 

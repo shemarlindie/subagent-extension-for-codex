@@ -291,3 +291,17 @@ test("an embedded dev panel shares its host's URL and local dialog storage", () 
   assert.equal(embedded.initial.dialogs?.[0]?.kind, "project");
   assert.equal(embeddedDevHostUiState(host.win), undefined);
 });
+
+test("Projects page survives reload alongside the task view and Back clears its URL choice", () => {
+  const browser = page(
+    "https://example.test/panel?dw_page=projects&dw_task=one&dw_search=Review",
+  );
+
+  const state = browserUiState(browser.win);
+  assert.equal(state.initial.view.page, "projects");
+  assert.equal(state.initial.view.selected, "one");
+  state.save({ view: { page: "tasks", selected: "one", search: "Review" } });
+  state.flush?.();
+  assert.equal(new URL(browser.href).searchParams.get("dw_page"), null);
+  assert.equal(new URL(browser.href).searchParams.get("dw_task"), "one");
+});

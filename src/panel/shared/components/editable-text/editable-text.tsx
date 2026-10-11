@@ -11,6 +11,7 @@ export type EditableTextProps = {
   value: string;
   label: string;
   maxLength?: number;
+  disabled?: boolean;
   onSave: (value: string) => Promise<void>;
 };
 
@@ -25,6 +26,7 @@ export function EditableText({
   value,
   label,
   maxLength,
+  disabled = false,
   onSave,
 }: EditableTextProps) {
   const errorId = useId();
@@ -109,7 +111,7 @@ export function EditableText({
   const save = useCallback(
     async (focus = true) => {
       const text = draft.trim();
-      if (saving.current || !text) return;
+      if (disabled || saving.current || !text) return;
       if (text === value) return finish(focus);
       saving.current = true;
       setBusy(true);
@@ -127,7 +129,7 @@ export function EditableText({
         setBusy(false);
       }
     },
-    [draft, value, onSave, finish],
+    [draft, value, onSave, finish, disabled],
   );
 
   useEffect(() => {
@@ -154,7 +156,7 @@ export function EditableText({
     style: layout.multiline ? { height: layout.height } : undefined,
     maxLength,
     required: true,
-    disabled: busy,
+    disabled: busy || disabled,
     ref: focusControl,
     onChange: (event: React.ChangeEvent<TextControl>) => {
       selection.current = {
@@ -212,6 +214,7 @@ export function EditableText({
           ref={trigger}
           type="button"
           className="editable-text-trigger"
+          disabled={disabled}
           title={value}
           aria-label={`Edit ${label.toLowerCase()}: ${value}`}
           onClick={() => {

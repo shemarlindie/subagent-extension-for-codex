@@ -31,8 +31,10 @@ import {
   fixtureCall,
   fixtureLaunchArgs,
   fixtureServiceCall,
+  hasProjectEdits,
   normalizeCwd,
   parseStyles,
+  removeFixtureProject,
   type Settings,
   settingsFrom,
   type Thread,
@@ -74,6 +76,8 @@ const defaults: Settings = {
   claudeUnavailable: false,
   successfulBudgetUpdates: false,
   addedProjects: [],
+  removedProjects: [],
+  projectNames: {},
   styles: "",
 };
 
@@ -125,6 +129,12 @@ export function Host() {
   const [liveThreads, setLiveThreads] = useState<Thread[]>([]);
   // Read by the running session's tool calls, which a registration must not relaunch.
   const added = useRef(settings.addedProjects);
+
+  const projectEdits = useRef({
+    removed: settings.removedProjects ?? [],
+    names: settings.projectNames ?? {},
+  });
+
   const frame = useRef<HTMLIFrameElement>(null);
 
   const update = (patch: Partial<Settings>) =>
@@ -133,7 +143,8 @@ export function Host() {
   // Clearing projects changes what the panel was launched with, so relaunch.
   const resetProjects = () => {
     added.current = [];
-    update({ addedProjects: [] });
+    projectEdits.current = { removed: [], names: {} };
+    update({ addedProjects: [], removedProjects: [], projectNames: {} });
     setSession((n) => n + 1);
   };
 
@@ -308,6 +319,8 @@ export function Host() {
                 claudeUnavailable: current.claudeUnavailable,
                 successfulBudgetUpdates: current.successfulBudgetUpdates,
                 addedProjects: added.current,
+                removedProjects: projectEdits.current.removed,
+                projectNames: projectEdits.current.names,
               });
 
       // Fixture registrations persist until Reset, like the service's registry.
@@ -320,10 +333,45 @@ export function Host() {
           result.structuredContent as { result: { repository: string } }
         ).result;
 
+        projectEdits.current.removed = projectEdits.current.removed.filter(
+          (path) => path !== repository,
+        );
+
+        update({ removedProjects: projectEdits.current.removed });
+
         if (!added.current.includes(repository)) {
           added.current = [...added.current, repository];
           update({ addedProjects: added.current });
         }
+      }
+
+      if (
+        source === "fixtures" &&
+        !result.isError &&
+        (name === "rename_user_agent_project" ||
+          name === "remove_user_agent_project")
+      ) {
+        const changed = (
+          result.structuredContent as {
+            result: { repository: string; name?: string };
+          }
+        ).result;
+
+        if (name === "rename_user_agent_project")
+          projectEdits.current.names = {
+            ...projectEdits.current.names,
+            [changed.repository]: changed.name!,
+          };
+        else
+          projectEdits.current = removeFixtureProject(
+            projectEdits.current,
+            changed.repository,
+          );
+
+        update({
+          removedProjects: projectEdits.current.removed,
+          projectNames: projectEdits.current.names,
+        });
       }
 
       record(result.isError ? "tool error" : "tool", {
@@ -715,7 +763,7 @@ export function Host() {
                 )}
                 <button
                   type="button"
-                  disabled={!settings.addedProjects.length}
+                  disabled={!hasProjectEdits(settings)}
                   onClick={resetProjects}
                 >
                   Reset projects

@@ -67,6 +67,7 @@ export class Control {
   /** The panel's activity pages, with each task's tally of older events. */
   activity: ActivityPages;
   projects?: Projects;
+  private removingProjects = new Set<string>();
   constructor(
     public store: Store,
     public workspaces: Workspaces,
@@ -224,6 +225,8 @@ export class Control {
         );
 
     // Repository resolution can yield while a dependency is being deleted.
+    if (this.removingProjects.has(repository))
+      throw new Error("Project task data is being deleted");
     for (const id of req.depends_on) this.mutableTask(owner, id);
 
     const t: Task = {
@@ -806,6 +809,97 @@ export class Control {
 
     this.deleting.add(id);
 
+    return this.deleteResources(owner, id, deleteAgentTask);
+  }
+
+  /** Holds the whole batch against scheduling and new dependencies before cleanup yields. */
+  async removeProject(owner: string, repository: string, deleteTasks = false) {
+    if (!this.projects)
+      throw new Error("Project management is unavailable in this service.");
+    if (this.removingProjects.has(repository))
+      throw new Error("Project task data is being removed");
+    if (!deleteTasks) return this.projects.remove(repository);
+
+    const tasks = this.store
+      .all()
+      .filter((task) => task.repository === repository);
+
+    if (tasks.some((task) => task.owner !== owner))
+      throw new Error(
+        "This project has task data owned by another user. Remove those tasks first.",
+      );
+    const ids = new Set(tasks.map((task) => task.id));
+
+    const dependent = this.store
+      .all()
+      .find(
+        (task) =>
+          !ids.has(task.id) && task.depends_on.some((id) => ids.has(id)),
+      );
+
+    if (dependent)
+      throw new Error(
+        `Task ${dependent.id} in another project depends on this project. Remove it first, or keep task data.`,
+      );
+    if (tasks.some((task) => this.deleting.has(task.id)))
+      throw new Error(
+        "A project task is already being removed. Wait and retry.",
+      );
+    // Delete dependents first so cleanup never leaves them without prerequisites.
+    const ordered: Task[] = [];
+    const remaining = [...tasks];
+
+    while (remaining.length) {
+      const index = remaining.findIndex(
+        (task) =>
+          !remaining.some((other) => other.depends_on.includes(task.id)),
+      );
+
+      if (index < 0)
+        throw new Error(
+          "Project tasks have circular dependencies. Keep task data and resolve them first.",
+        );
+      ordered.push(...remaining.splice(index, 1));
+    }
+
+    this.removingProjects.add(repository);
+    for (const id of ids) this.deleting.add(id);
+
+    try {
+      // Keep the whole batch locked until every turn has finished stopping.
+      const stopped = await Promise.allSettled(
+        tasks.map((task) => {
+          const active = this.active.get(task.id);
+
+          return active
+            ? this.interruptActive(owner, task.id, active)
+            : Promise.resolve();
+        }),
+      );
+
+      const failure = stopped.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
+
+      for (const task of ordered)
+        await this.deleteResources(owner, task.id, false);
+
+      return this.projects.remove(repository);
+    } catch (error) {
+      throw new Error(
+        `Project removal stopped; its approval is retained. Some extension task data may already be removed. ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
+    } finally {
+      this.removingProjects.delete(repository);
+      for (const id of ids) this.deleting.delete(id);
+    }
+  }
+
+  private async deleteResources(
+    owner: string,
+    id: string,
+    deleteAgentTask: boolean,
+  ) {
     try {
       const a = this.active.get(id);
       if (a) await this.interruptActive(owner, id, a);

@@ -33,6 +33,7 @@ export type PanelData = {
 };
 
 export type DialogState =
+  | { kind: "remove-project"; project: Project; scope: number }
   | { kind: "project"; repository?: string; scope: number }
   | { kind: "settings"; settings: SettingsDocument; scope: number }
   | {
@@ -63,6 +64,7 @@ export type PersistedDialogDraft = Record<string, unknown>;
 
 /** Local dialog descriptors; server-owned task and settings data is reloaded. */
 export type PersistedDialog =
+  | { kind: "remove-project"; repository: string; draft?: PersistedDialogDraft }
   | {
       kind: "project";
       repository?: string;
@@ -104,6 +106,7 @@ export type PersistedDialog =
     };
 
 export type Snapshot = {
+  page: "tasks" | "projects";
   tasks: Task[];
   workers: Worker[];
   projects: Project[];
@@ -144,7 +147,10 @@ export type Snapshot = {
 
 /** Shareable view choices restored from the browser URL. */
 export type PersistedViewState = Partial<
-  Pick<Snapshot, "repository" | "selected" | "filter" | "search" | "tab">
+  Pick<
+    Snapshot,
+    "repository" | "selected" | "filter" | "search" | "tab" | "page"
+  >
 > & {
   /** The user explicitly returned to the task list instead of selecting a task. */
   browsing?: boolean;

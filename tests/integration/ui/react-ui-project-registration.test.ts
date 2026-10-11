@@ -165,12 +165,16 @@ test("browsing a folder fills the project draft without granting access", async 
   );
 });
 
-test("the panel's Browse button picks a folder and adds it without the project dialog", async (t) => {
+test("Manage adds a project through the folder picker", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     configureProjectRegistration(transport, { picked: "/repo/picked" }),
   );
 
-  await user.click(screen.getByRole("button", { name: "Browse" }));
+  await user.click(screen.getByRole("button", { name: "Manage" }));
+  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Browse…" }));
+
+  await user.click(screen.getByRole("button", { name: "Add project" }));
 
   await waitFor(() =>
     assert.deepEqual(
@@ -182,6 +186,7 @@ test("the panel's Browse button picks a folder and adds it without the project d
   );
 
   assertAbsent(screen.queryByRole("dialog"));
+  expect(screen.getByRole("heading", { name: "Projects" })).toBeTruthy();
 });
 
 test("cancelling the panel's folder picker adds nothing", async (t) => {
@@ -189,7 +194,9 @@ test("cancelling the panel's folder picker adds nothing", async (t) => {
     configureProjectRegistration(transport),
   );
 
-  await user.click(screen.getByRole("button", { name: "Browse" }));
+  await user.click(screen.getByRole("button", { name: "Manage" }));
+  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Browse…" }));
 
   await waitFor(() =>
     assert.ok(
@@ -204,7 +211,7 @@ test("cancelling the panel's folder picker adds nothing", async (t) => {
     0,
   );
 
-  assertAbsent(screen.queryByRole("dialog"));
+  expect(screen.getByRole("dialog")).toBeTruthy();
 });
 
 test("cancelling the native picker preserves the manual project path", async (t) => {
@@ -620,5 +627,252 @@ test("pending task project browsing disables Start and ignores selection after s
   assert.equal(
     transport.calls.filter((call) => call.name === "start_agent_task").length,
     0,
+  );
+});
+
+test("Manage renames projects, preserves failed drafts, and confirms task-data removal", async (t) => {
+  const { controller, transport, user } = await setup(t);
+  const original = transport.tool.bind(transport);
+  let failRename = true;
+
+  transport.tool = async <T>(
+    name: string,
+    args: Record<string, unknown> = {},
+  ): Promise<T> => {
+    if (name === "rename_user_agent_project") {
+      transport.calls.push({ name, args });
+      if (failRename) throw new Error("Rename failed");
+
+      transport.projects = transport.projects.map((project) => ({
+        ...project,
+        name: String(args.name).trim(),
+      }));
+
+      return { name: String(args.name).trim() } as T;
+    }
+
+    if (name === "remove_user_agent_project") {
+      transport.calls.push({ name, args });
+      transport.projects = [];
+      transport.tasks = [];
+
+      return { repository: args.repository } as T;
+    }
+
+    return original<T>(name, args);
+  };
+
+  await user.click(screen.getByRole("button", { name: "Manage" }));
+
+  await user.click(
+    screen.getByRole("button", { name: "Edit project name: a" }),
+  );
+
+  const input = screen.getByRole("textbox", { name: "Project name" });
+  await user.clear(input);
+  await user.type(input, "New name");
+  await act(() => controller.refresh());
+  expect((input as HTMLInputElement).value).toBe("New name");
+  await user.keyboard("{Enter}");
+  await screen.findByRole("alert");
+  expect((input as HTMLInputElement).value).toBe("New name");
+  failRename = false;
+  await user.keyboard("{Enter}");
+  await screen.findByRole("button", { name: "Remove New name" });
+  await user.click(screen.getByRole("button", { name: "Remove New name" }));
+
+  expect(
+    screen
+      .getByRole("switch", { name: "Also remove extension task data" })
+      .getAttribute("aria-checked"),
+  ).toBe("false");
+
+  expect(
+    transport.calls.filter((call) => call.name === "remove_user_agent_project"),
+  ).toHaveLength(0);
+
+  await user.click(
+    screen.getByRole("switch", { name: "Also remove extension task data" }),
+  );
+
+  await user.click(
+    screen.getByRole("button", { name: "Remove project and task data" }),
+  );
+
+  await waitFor(() =>
+    expect(controller.getSnapshot().projects).toHaveLength(0),
+  );
+
+  expect(
+    transport.calls.find((call) => call.name === "remove_user_agent_project")
+      ?.args,
+  ).toEqual({ repository: "/repo/a", delete_tasks: true });
+});
+
+test("Manage cancels edit errors and restores focus when returning from Add", async (t) => {
+  const { transport, user } = await setup(t);
+  const original = transport.tool.bind(transport);
+
+  transport.tool = async <T>(
+    name: string,
+    args: Record<string, unknown> = {},
+  ): Promise<T> => {
+    if (name === "rename_user_agent_project") throw new Error("Rename failed");
+
+    return original<T>(name, args);
+  };
+
+  await user.click(screen.getByRole("button", { name: "Manage" }));
+
+  await user.click(
+    screen.getByRole("button", { name: "Edit project name: a" }),
+  );
+
+  await user.type(
+    screen.getByRole("textbox", { name: "Project name" }),
+    " changed",
+  );
+
+  await user.keyboard("{Enter}");
+  await screen.findByRole("alert");
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "Remove a" }));
+  expect(screen.queryByRole("alert")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  await user.click(screen.getByRole("button", { name: "Add project" }));
+
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "Repository path" }),
+    ),
+  );
+
+  await user.click(screen.getByRole("button", { name: "Close" }));
+
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Add project" }),
+    ),
+  );
+});
+
+test("a picker finishing after leaving Add cannot replace a new draft", async (t) => {
+  const { transport, user } = await setup(t);
+  let resolve!: (value: { repository: string }) => void;
+
+  const picked = new Promise<{ repository: string }>((done) => {
+    resolve = done;
+  });
+
+  const original = transport.tool.bind(transport);
+
+  transport.tool = async <T>(
+    name: string,
+    args: Record<string, unknown> = {},
+  ): Promise<T> =>
+    name === "browse_user_agent_project"
+      ? ((await picked) as T)
+      : original<T>(name, args);
+
+  await user.click(screen.getByRole("button", { name: "Manage" }));
+  await user.click(screen.getByRole("button", { name: "Add project" }));
+  await user.click(screen.getByRole("button", { name: "Browse…" }));
+  await user.click(screen.getByRole("button", { name: "Close" }));
+  await user.click(screen.getByRole("button", { name: "Add project" }));
+  const input = screen.getByRole("textbox", { name: "Repository path" });
+  await user.type(input, "/new-draft");
+
+  await act(async () => {
+    resolve({ repository: "/late-picker" });
+    await picked;
+  });
+
+  expect((input as HTMLInputElement).value).toBe("/new-draft");
+});
+
+test("Manage opens a page and Back restores task selection, filters and focus", async (t) => {
+  const { controller, user } = await setup(t);
+  const selected = controller.getSnapshot().selected;
+  await act(() => controller.setSearch("Review"));
+  const search = controller.getSnapshot().search;
+  await user.click(screen.getByRole("button", { name: "Manage" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.queryByRole("region", { name: "Task inspector" })).toBeNull();
+
+  expect(
+    screen.queryByRole("separator", { name: "Resize task list" }),
+  ).toBeNull();
+
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("heading", { name: "Projects" }),
+    ),
+  );
+
+  await user.click(screen.getByRole("button", { name: "← Tasks" }));
+  expect(controller.getSnapshot().selected).toBe(selected);
+  expect(controller.getSnapshot().search).toBe(search);
+
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Manage" }),
+  );
+});
+
+test("removal uses a focused modal, explains folder retention, and resets the optional choice", async (t) => {
+  const { user } = await setup(t);
+  await user.click(screen.getByRole("button", { name: "Manage" }));
+  await user.click(screen.getByRole("button", { name: "Remove a" }));
+  const modal = screen.getByRole("dialog", { name: "Remove project?" });
+
+  expect(modal.textContent).toContain(
+    "Your repository folder and files stay on disk.",
+  );
+
+  expect(modal.textContent?.toLowerCase()).not.toContain("delete");
+  expect(modal.textContent).not.toContain("through an approved parent folder");
+
+  await user.click(
+    within(modal).getByRole("switch", {
+      name: "Also remove extension task data",
+    }),
+  );
+
+  await user.click(within(modal).getByRole("button", { name: "Cancel" }));
+
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Remove a" }),
+    ),
+  );
+
+  await user.click(screen.getByRole("button", { name: "Remove a" }));
+
+  expect(
+    screen
+      .getByRole("switch", { name: "Also remove extension task data" })
+      .getAttribute("aria-checked"),
+  ).toBe("false");
+});
+
+test("removal explains remaining parent registration only when it covers the project", async (t) => {
+  const { user } = await setup(t, (transport) => {
+    transport.projects.push(
+      { repository: "/repo", kind: "parent", name: "Repositories" },
+      { repository: "/repo-other", kind: "parent", name: "Other" },
+    );
+  });
+
+  await user.click(screen.getByRole("button", { name: "Manage" }));
+  await user.click(screen.getByRole("button", { name: "Remove a" }));
+
+  expect(screen.getByRole("dialog").textContent).toContain(
+    "This project may still be registered through an approved parent folder.",
+  );
+
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  await user.click(screen.getByRole("button", { name: "Remove Repositories" }));
+
+  expect(screen.getByRole("dialog").textContent).not.toContain(
+    "through an approved parent folder",
   );
 });

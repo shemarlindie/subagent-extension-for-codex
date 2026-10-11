@@ -32,7 +32,7 @@ Do not paste the token into a chat or commit it. Authenticated raw service clien
 
 ## Repository access
 
-Targets must be canonical Git repository roots with at least one commit. A model-supplied path never grants access. Approve individual roots through **Add project**, accepted `request_agent_project` confirmation, or the local CLI:
+Targets must be canonical Git repository roots with at least one commit. A model-supplied path never grants access. Approve individual roots through global **Manage → Add project**, accepted `request_agent_project` confirmation, or the local CLI:
 
 ```sh
 node dist/projects-cli.js register /absolute/path/to/repository
@@ -45,7 +45,7 @@ To authorize repositories throughout a directory explicitly:
 node dist/projects-cli.js approve-parent /absolute/path/to/projects
 ```
 
-Parent approval permits validated descendant roots; register individual children to include them in project selectors. Registering a root alone does not approve independent nested repositories. Canonical path and symlink containment checks apply. Registration persists in SQLite and refreshes without a restart.
+Parent approval permits validated descendant roots; register individual children to include them in project selectors. Registering a root alone does not approve independent nested repositories. Canonical path and symlink containment checks apply. Registration persists in SQLite and refreshes without a restart. Use global **Manage** to rename or remove saved approvals; see [Manage projects](codex-panel.md#manage-projects) for task-data deletion and remaining grants.
 
 **Automatically add chat projects** (`auto_register_chat_project`, default `true`) is a user-only setting. It registers an unapproved chat Git root only when a task starts for that root, using original host sandbox metadata. Explicit task paths and `host_directory` hints do not grant access. Project listing, context discovery and opening panels remain read-only. Disabling the setting preserves existing grants. Host metadata delivery still needs registered-host verification; see [host capabilities](host-capabilities.md).
 

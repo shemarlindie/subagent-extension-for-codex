@@ -83,7 +83,11 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
                   ? trigger.current
                   : (definition?.restoreFocus?.() ??
                     document.getElementById("delegate"))
-                : document.getElementById("delegate")
+                : document.getElementById(
+                    controller.getSnapshot().page === "projects"
+                      ? "project-add"
+                      : "delegate",
+                  )
           }
         >
           <div className="dialog-heading">

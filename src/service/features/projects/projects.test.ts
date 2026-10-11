@@ -11,10 +11,12 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { callTool, isUserTool } from "../../platform/server/tools.js";
+import { executionTaskPolicy } from "../providers/task-policy.js";
+import { PendingInput } from "../tasks/input/pending-input.js";
 import { Control } from "../tasks/runtime/control.js";
 import { Store } from "../tasks/storage/store.js";
 import { git } from "../workspaces/git.js";
@@ -43,6 +45,178 @@ async function fixture(t: import("vitest").TestContext) {
 
   return { dir, db, store, workspaces, projects, repo };
 }
+
+async function removalFixture(t: import("vitest").TestContext) {
+  const f = await fixture(t);
+  const repository = await f.repo("repo");
+  await f.projects.register(repository);
+  const provider = new FixtureProvider();
+
+  const control = new Control(
+    f.store,
+    f.workspaces,
+    new Map([[provider.id, provider]]),
+    repository,
+  );
+
+  control.projects = f.projects;
+  control.stopped = true;
+  t.onTestFinished(() => control.close());
+
+  const task = (
+    depends_on: string[] = [],
+    root = repository,
+    owner = "owner",
+  ) =>
+    control.start(owner, {
+      provider: provider.id,
+      description: "Preserved task data",
+      repository: root,
+      depends_on,
+    });
+
+  return { ...f, control, repository, task };
+}
+
+test("removing project task data deletes dependency leaves before their prerequisites", async (t) => {
+  const f = await removalFixture(t);
+  const prerequisite = await f.task();
+  const dependent = await f.task([prerequisite.id]);
+  const leaf = await f.task([dependent.id]);
+  const discarded: string[] = [];
+
+  vi.spyOn(f.workspaces, "discard").mockImplementation(async (task) => {
+    assert.equal(f.store.get(task.id, "owner").id, task.id);
+    discarded.push(task.id);
+  });
+
+  await callTool(
+    f.control,
+    "owner",
+    "remove_user_agent_project",
+    { repository: f.repository, delete_tasks: true },
+    "user",
+  );
+
+  assert.deepEqual(discarded, [leaf.id, dependent.id, prerequisite.id]);
+  assert.deepEqual(f.store.all(), []);
+  assert.deepEqual(f.projects.list(), []);
+  assert.throws(() => f.store.events(leaf.id, "owner"), /Task not found/);
+});
+
+test("an outside-project dependent blocks project task removal before changing data", async (t) => {
+  const f = await removalFixture(t);
+  const outside = await f.repo("outside");
+  await f.projects.register(outside);
+  const prerequisite = await f.task();
+  const dependent = await f.task([prerequisite.id], outside);
+  const before = f.store.all();
+  const discard = vi.spyOn(f.workspaces, "discard");
+
+  await assert.rejects(
+    f.control.removeProject("owner", f.repository, true),
+    new RegExp(`${dependent.id}.*another project.*depends`),
+  );
+
+  assert.equal(discard.mock.calls.length, 0);
+  assert.deepEqual(f.store.all(), before);
+  assert.equal(await f.projects.resolve(f.repository), f.repository);
+});
+
+test("failed project cleanup keeps approval and remaining tasks and reports partial deletion", async (t) => {
+  const f = await removalFixture(t);
+  const prerequisite = await f.task();
+  const dependent = await f.task([prerequisite.id]);
+
+  vi.spyOn(f.workspaces, "discard").mockImplementation(async (task) => {
+    if (task.id === prerequisite.id) throw new Error("Worktree cleanup failed");
+  });
+
+  await assert.rejects(
+    f.control.removeProject("owner", f.repository, true),
+    /approval is retained.*Some extension task data may already be removed.*Worktree cleanup failed/,
+  );
+
+  assert.throws(() => f.store.get(dependent.id, "owner"), /not found/i);
+  assert.equal(f.store.get(prerequisite.id, "owner").id, prerequisite.id);
+  assert.equal(await f.projects.resolve(f.repository), f.repository);
+  f.control.rename("owner", prerequisite.id, "Retry cleanup");
+  vi.mocked(f.workspaces.discard).mockResolvedValue(undefined);
+  await f.control.removeProject("owner", f.repository, true);
+  assert.deepEqual(f.store.all(), []);
+  assert.deepEqual(f.projects.list(), []);
+});
+
+test("project removal locks new tasks, dependencies, and every batch member during cleanup", async (t) => {
+  const f = await removalFixture(t);
+  const outside = await f.repo("outside");
+  await f.projects.register(outside);
+  const prerequisite = await f.task();
+  const dependent = await f.task([prerequisite.id]);
+  let release!: () => void;
+  let entered!: () => void;
+
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+
+  vi.spyOn(f.workspaces, "discard")
+    .mockImplementationOnce(async () => {
+      entered();
+      await gate;
+    })
+    .mockResolvedValue(undefined);
+
+  const removal = f.control.removeProject("owner", f.repository, true);
+  await started;
+
+  try {
+    await assert.rejects(f.task(), /being (?:removed|deleted)/);
+
+    await assert.rejects(
+      f.task([prerequisite.id], outside),
+      /being (?:removed|deleted)/,
+    );
+
+    for (const task of [prerequisite, dependent]) {
+      assert.throws(
+        () => f.control.rename("owner", task.id, "Changed"),
+        /being (?:removed|deleted)/,
+      );
+
+      await assert.rejects(
+        f.control.send("owner", task.id, "Continue", "user"),
+        /being (?:removed|deleted)/,
+      );
+
+      await assert.rejects(
+        f.control.delete("owner", task.id),
+        /being (?:removed|deleted)/,
+      );
+    }
+
+    await assert.rejects(
+      f.control.removeProject("owner", f.repository),
+      /being (?:removed|deleted)/,
+    );
+
+    assert.equal(f.store.all().length, 2);
+  } finally {
+    release();
+    await removal;
+  }
+
+  assert.deepEqual(f.store.all(), []);
+
+  assert.deepEqual(
+    f.projects.list().map((project) => project.repository),
+    [outside],
+  );
+});
 
 test("project registration requires user authority and grants live persistent access only after submission", async (t) => {
   const f = await fixture(t);
@@ -194,6 +368,192 @@ test("registered repository aliases are canonicalized before persistence", async
   await f.projects.register(repository);
   assert.equal(f.projects.list().length, 1);
   assert.equal(f.projects.list()[0].repository, repository);
+});
+
+test("project names are trimmed, persisted, and retained by repeated registration", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("repo");
+  await f.projects.register(repository);
+  await f.projects.rename(repository, "  My project  ");
+  await f.projects.register(repository);
+  assert.equal(f.projects.list()[0].name, "My project");
+  const reopened = new Store(f.db);
+
+  try {
+    const registry = new Projects(
+      reopened.database,
+      new Workspaces(join(f.dir, "reopened-worktrees"), []),
+    );
+
+    assert.equal(registry.list()[0].name, "My project");
+    await registry.rename(repository, "x".repeat(200));
+    assert.equal(f.projects.list()[0].name, "x".repeat(200));
+  } finally {
+    reopened.close();
+  }
+});
+
+test("project rename rejects invalid names and unregistered roots without changing approval", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("repo");
+  const missing = await f.repo("missing");
+  await f.projects.register(repository);
+
+  for (const name of ["", " \n\t ", "x".repeat(201)]) {
+    await assert.rejects(async () => f.projects.rename(repository, name));
+  }
+
+  await assert.rejects(async () => f.projects.rename(missing, "Missing"));
+  assert.equal(f.projects.list()[0].name, "repo");
+  assert.equal(await f.projects.resolve(repository), repository);
+  assert.equal(f.projects.list().length, 1);
+});
+
+test("project rename and removal tools require user authority", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("repo");
+  await f.projects.register(repository);
+  const control = new Control(f.store, f.workspaces, new Map(), f.dir);
+  control.projects = f.projects;
+
+  for (const tool of [
+    "rename_user_agent_project",
+    "remove_user_agent_project",
+  ]) {
+    assert.equal(isUserTool(tool), true);
+
+    await assert.rejects(
+      callTool(control, "owner", tool, { repository, name: "Renamed" }),
+      /user interface/i,
+    );
+  }
+
+  await callTool(
+    control,
+    "owner",
+    "rename_user_agent_project",
+    { repository, name: "  Renamed  " },
+    "user",
+  );
+
+  assert.equal(f.projects.list()[0].name, "Renamed");
+
+  await callTool(
+    control,
+    "owner",
+    "remove_user_agent_project",
+    { repository },
+    "user",
+  );
+
+  assert.deepEqual(f.projects.list(), []);
+  await assert.rejects(f.projects.resolve(repository), /outside allowed roots/);
+});
+
+test("project removal is idempotent even after its directory disappears", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("gone/repo");
+  const retained = await f.repo("retained");
+  await f.projects.register(repository);
+  await f.projects.register(retained);
+  await rm(join(f.dir, "gone"), { recursive: true });
+  await writeFile(join(f.dir, "gone"), "no longer a directory");
+  await f.projects.remove(repository);
+  await f.projects.remove(repository);
+
+  assert.deepEqual(
+    f.projects.list().map((project) => project.repository),
+    [retained],
+  );
+
+  assert.equal(await f.projects.resolve(retained), retained);
+  assert.deepEqual(f.workspaces.allowedRoots, [retained]);
+});
+
+test("removing a listed child preserves its explicit parent grant", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("parent/repo");
+  const parent = join(f.dir, "parent");
+  await f.projects.register(parent, "parent");
+  await f.projects.register(repository);
+  await f.projects.remove(repository);
+
+  assert.deepEqual(f.projects.list(), [
+    { repository: parent, name: "parent", kind: "parent" },
+  ]);
+
+  assert.equal(await f.projects.resolve(repository), repository);
+});
+
+test("removing approval preserves task history and files but blocks new tasks and continuation", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("repo");
+
+  execFileSync("git", [
+    "-C",
+    repository,
+    "-c",
+    "user.name=Test",
+    "-c",
+    "user.email=test@example.invalid",
+    "commit",
+    "--allow-empty",
+    "-qm",
+    "initial",
+  ]);
+
+  const file = join(repository, "keep.txt");
+  await writeFile(file, "User file");
+  await f.projects.register(repository);
+  const provider = new FixtureProvider();
+
+  const control = new Control(
+    f.store,
+    f.workspaces,
+    new Map([[provider.id, provider]]),
+    repository,
+  );
+
+  control.projects = f.projects;
+
+  try {
+    const task = await control.start("owner", {
+      provider: "fixture",
+      description: "Review [input]",
+      repository,
+    });
+
+    for (let i = 0; i < 300; i++) {
+      if (f.store.get(task.id, "owner").status === "waiting") break;
+      await new Promise((done) => setTimeout(done, 10));
+    }
+
+    assert.equal(f.store.get(task.id, "owner").status, "waiting");
+    await control.interrupt("owner", task.id);
+    const before = f.store.get(task.id, "owner");
+    await f.projects.remove(repository);
+    assert.deepEqual(f.store.get(task.id, "owner"), before);
+    assert.equal(await realpath(file), file);
+
+    await assert.rejects(
+      control.start("owner", {
+        provider: "fixture",
+        description: "Another task",
+        repository,
+      }),
+      /outside allowed roots/,
+    );
+
+    await assert.rejects(
+      control.send("owner", task.id, "Continue", "user"),
+      /outside allowed roots/,
+    );
+
+    assert.equal(f.store.all().length, 1);
+    assert.deepEqual(f.store.get(task.id, "owner"), before);
+  } finally {
+    await control.close();
+  }
 });
 
 for (const missing of ["deleted", "parent replaced with file"] as const) {
@@ -362,4 +722,94 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
   } finally {
     await control.close();
   }
+});
+
+test("project task-data removal stops active input waits and preserves checkout files", async (t) => {
+  const f = await removalFixture(t);
+
+  execFileSync("git", [
+    "-C",
+    f.repository,
+    "-c",
+    "user.name=Test",
+    "-c",
+    "user.email=test@example.invalid",
+    "commit",
+    "--allow-empty",
+    "-qm",
+    "initial",
+  ]);
+
+  const file = join(f.repository, "keep.txt");
+  await writeFile(file, "User file");
+  f.control.stopped = false;
+
+  const task = await f.control.start("owner", {
+    provider: "fixture",
+    repository: f.repository,
+    description: "Review [input]",
+  });
+
+  for (let i = 0; i < 300; i++) {
+    if (f.store.get(task.id, "owner").status === "waiting") break;
+    await new Promise((done) => setTimeout(done, 10));
+  }
+
+  assert.equal(f.store.get(task.id, "owner").status, "waiting");
+  await f.control.removeProject("owner", f.repository, true);
+  assert.equal(f.control.active.has(task.id), false);
+  assert.deepEqual(f.store.all(), []);
+  assert.deepEqual(f.projects.list(), []);
+  assert.equal(await realpath(file), file);
+});
+
+test("project removal retains mutation locks until every interrupted turn settles", async (t) => {
+  const f = await removalFixture(t);
+  const first = await f.task();
+  const second = await f.task();
+  let release!: () => void;
+  let fail!: (error: Error) => void;
+
+  const done = [
+    new Promise<void>((_, reject) => {
+      fail = reject;
+    }),
+    new Promise<void>((resolve) => {
+      release = resolve;
+    }),
+  ];
+
+  for (const [index, task] of [first, second].entries()) {
+    const abort = new AbortController();
+
+    f.control.active.set(task.id, {
+      task,
+      abort,
+      done: done[index],
+      input: new PendingInput(
+        task,
+        f.store,
+        executionTaskPolicy,
+        abort.signal,
+        async () => {},
+      ),
+    });
+  }
+
+  const removal = f.control.removeProject("owner", f.repository, true);
+  const rejected = assert.rejects(removal, /Stop failed/);
+  fail(new Error("Stop failed"));
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+
+  assert.throws(
+    () => f.control.rename("owner", second.id, "Changed"),
+    /being (?:removed|deleted)/,
+  );
+
+  release();
+  await rejected;
+  f.control.active.clear();
+  f.control.rename("owner", second.id, "Retry allowed");
+  assert.equal(f.projects.list().length, 1);
+  assert.equal(f.store.all().length, 2);
 });

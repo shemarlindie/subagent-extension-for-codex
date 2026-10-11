@@ -19,8 +19,8 @@ change the conversation.
   in the header. **Add chat project** is the first header action when
   registration is needed.
 - **Global launch:** shows all conversations and offers the project selector,
-  **All chats** and **Browse** to register a repository. The project selector and
-  **Browse** sit directly below the connection status within the header.
+  **All chats** and **Manage** to add, rename or remove saved projects. The project selector and
+  **Manage** sit directly below the connection status within the header.
 - An explicit owned task supplies its own scope. Conflicting explicit task,
   conversation, repository or revision arguments are rejected.
 - Context resolution prefers explicit arguments, then validated optional Codex
@@ -44,6 +44,40 @@ Inline mode shows a compact scope/count/status summary. **Open panel** requests
 fullscreen only when the host advertises it; Collapse preserves selection and
 form drafts. A standalone console always shows the full layout. The host owns
 placement and available display modes; see [Host capabilities](host-capabilities.md).
+
+### Manage projects
+
+**Manage** is available only in global mode. It opens a full-width Projects page
+with **← Tasks** to return to the previous task view. The page lists saved names and
+repository paths, including parent approvals. **Add project** opens a focused
+dialog for entering a path or using the service host's folder picker.
+Click a project name to edit it inline, like a task title. Enter or clicking
+outside saves; Escape cancels. The remove icon on the right opens confirmation
+in a focused modal. The repository folder and its files remain on disk.
+Renaming changes the display name only;
+names may repeat because paths identify projects.
+
+Removal asks for confirmation. By default it removes the saved registration while
+preserving files, task history and worktrees. Running turns may finish; later
+turns require approval. Parent grants still apply, and automatic chat registration
+can add the repository again when a task starts from its chat. Parent approvals
+configured in `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` return on service restart;
+remove them from that configuration to keep them removed.
+
+**Also remove extension task data**, off by default, stops and removes that repository's
+tasks across all chats, matching its exact saved repository path. Removing a
+parent approval does not remove descendant repositories' tasks. Removal includes
+conversations, activity, requests, webhook
+deliveries and task worktrees/branches with uncommitted changes. Checkout files
+and provider sessions remain. Tasks in other projects that depend on these tasks
+block removal before cleanup starts. Internal dependents are removed first.
+If cleanup fails, the approval and remaining tasks stay available for retry;
+the error warns that earlier task removals cannot be undone.
+
+Removing the selected project returns to **All projects** and clears stale task
+selection and dialogs while keeping the Projects page open. Other panels reconcile registry changes on their next
+refresh. Rename drafts survive refresh and failed saves; destructive choices
+are not restored after reload.
 
 ## Panel behavior
 
@@ -288,6 +322,7 @@ the tool accepts up to 25), with at least 100 ms between reads. They pause when
 hidden or no longer viewing running Chat. Changes use explicit refreshes rather
 than polling; diff pages are limited to 1,000,000 characters.
 
-The standalone console uses authenticated HTTP and SSE. See
+The standalone console uses authenticated HTTP and SSE, with the same five-second
+refresh fallback to reconcile project changes and deletions from other panels. See
 [Host capabilities](host-capabilities.md) for embedded network restrictions,
 and [Local development](development.md#what-reloads-when) for activation/reloads.

@@ -373,6 +373,34 @@ export function definitions(
       schema: z.strictObject({}),
       run: () => browseProject(),
     }),
+    rename_user_agent_project: tool({
+      description:
+        "User interface only: rename a registered project without changing its repository or tasks.",
+      schema: z.strictObject({
+        repository: z.string().min(1).max(4096),
+        name: z.string().trim().min(1).max(200),
+      }),
+      run: (a) => {
+        if (!c.projects)
+          throw new Error("Project management is unavailable in this service.");
+
+        return c.projects.rename(a.repository, a.name);
+      },
+    }),
+    remove_user_agent_project: tool({
+      description:
+        "User interface only: remove a saved project approval. Optionally stop and delete this user's project tasks, history and task worktrees/branches; checkout files and provider sessions stay intact. External dependent tasks block deletion.",
+      schema: z.strictObject({
+        repository: z.string().min(1).max(4096),
+        delete_tasks: z.boolean().default(false),
+      }),
+      run: (a) => {
+        if (!c.projects)
+          throw new Error("Project management is unavailable in this service.");
+
+        return c.removeProject(owner, a.repository, a.delete_tasks);
+      },
+    }),
     start_user_agent_task: tool({
       ...tools.start_agent_task,
       description:
@@ -593,6 +621,8 @@ export function definitions(
 export const isUserTool = (name: string) =>
   [
     "register_user_agent_project",
+    "rename_user_agent_project",
+    "remove_user_agent_project",
     "browse_user_agent_project",
     "start_user_agent_task",
     "submit_user_agent_input",

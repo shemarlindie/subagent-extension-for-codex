@@ -3,6 +3,7 @@ import { changedFileDialog } from "../../features/changes/changed-file-preview";
 import { worktreeDialog } from "../../features/changes/worktree-form";
 import { delegateDialog } from "../../features/delegation/delegate-form";
 import { projectDialog } from "../../features/projects/project-form";
+import { removeProjectDialog } from "../../features/projects/remove-project-form";
 import { settingsDialog } from "../../features/settings/settings-form";
 import { deleteTaskDialog } from "../../features/tasks/controls/delete-task-form";
 import { handoffDialog } from "../../features/tasks/controls/handoff-form";
@@ -11,6 +12,7 @@ import type { DialogDefinition, DialogKind } from "./dialog-definition";
 
 // A new dialog variant fails to compile until it is registered here.
 const registry: { [K in DialogKind]: DialogDefinition<K> } = {
+  "remove-project": removeProjectDialog,
   project: projectDialog,
   settings: settingsDialog,
   delegate: delegateDialog,

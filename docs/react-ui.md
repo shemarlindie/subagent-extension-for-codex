@@ -9,7 +9,7 @@ Delegated Work is the only UI. It runs embedded in a host and in a regular brows
 | `src/panel/app/`                                                    | Entrypoints, environment selection, page shell, and HTML template.                                                                                                            |
 | `src/panel/features/tasks/`                                         | Task list, inspector, Chat, activity, evidence, and task-control subfeatures.                                                                                                 |
 | `src/panel/features/file-preview/`                                  | File previews: format detection and the code, Markdown, table, diff and image viewers, used by the Changes tab; Chat and Activity share the Markdown view.                    |
-| `src/panel/features/projects/`, `delegation/`, `settings/`, `auth/` | Project registration and scope, task delegation, settings, and login.                                                                                                         |
+| `src/panel/features/projects/`, `delegation/`, `settings/`, `auth/` | Project management, registration and scope, task delegation, settings, and login.                                                                                             |
 | `src/panel/app/state/`                                              | Application controller coordination, persisted UI state, composed snapshots, selector exports, and React context. Feature-owned types and selectors stay with their features. |
 | `src/panel/shared/components/`, `dialogs/`, `forms/`, `utils/`      | Reusable UI primitives and cross-feature helpers, including persisted dialog-form state.                                                                                      |
 | `src/panel/transports/`                                             | Console HTTP/SSE and MCP host bridge transports and their contracts.                                                                                                          |
@@ -37,7 +37,10 @@ Application state groups dialog descriptors and restoration in
 `app/state/persistence/`, and in-memory session state and hooks in
 `app/state/session/`. Transport size tracing stays with `transports/`.
 
-The controller owns UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.
+The controller owns UI state and async coordination. Global project management
+uses a full-width Projects page with the same back-navigation pattern as narrow
+task details. The task workspace stays mounted but hidden to preserve its reading
+position; Add project uses a focused dialog, rename stays inline, and removal uses a separate confirmation modal. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.
 
 Components read session memory with `useSessionState(scope, id, select?)` and
 partial updates. Select a stable field/reference to avoid unrelated rerenders.

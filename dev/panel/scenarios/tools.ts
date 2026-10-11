@@ -135,18 +135,30 @@ export type PreviewOptions = {
   successfulBudgetUpdates?: boolean;
   /** Repositories registered during the preview; the dev host keeps them. */
   addedProjects?: string[];
+  removedProjects?: string[];
+  projectNames?: Record<string, string>;
 };
 
-const projectsWith = ({ addedProjects = [] }: PreviewOptions) => [
-  ...previewProjects,
-  ...addedProjects
-    .filter((path) => !previewProjects.some((p) => p.repository === path))
-    .map((repository) => ({
-      repository,
-      name: repository.split("/").at(-1) ?? repository,
-      kind: "repository",
-    })),
-];
+const projectsWith = ({
+  addedProjects = [],
+  removedProjects = [],
+  projectNames = {},
+}: PreviewOptions) =>
+  [
+    ...previewProjects,
+    ...addedProjects
+      .filter((path) => !previewProjects.some((p) => p.repository === path))
+      .map((repository) => ({
+        repository,
+        name: repository.split("/").at(-1) ?? repository,
+        kind: "repository",
+      })),
+  ]
+    .filter((project) => !removedProjects.includes(project.repository))
+    .map((project) => ({
+      ...project,
+      name: projectNames[project.repository] ?? project.name,
+    }));
 
 /**
  * Mirrors ProjectRegistry.register without touching the disk: an absolute
@@ -356,6 +368,29 @@ export function previewTool(
 
   if (name === "register_user_agent_project")
     return registerProject(args.repository, options);
+
+  if (name === "rename_user_agent_project") {
+    if (
+      !projectsWith(options).some(
+        (project) => project.repository === args.repository,
+      )
+    )
+      throw new Error("Project is no longer registered");
+    const name = typeof args.name === "string" ? args.name.trim() : "";
+    if (!name || name.length > 200)
+      throw new Error("Project name must contain 1 to 200 characters");
+
+    return { repository: args.repository, name };
+  }
+
+  if (name === "remove_user_agent_project") {
+    if (args.delete_tasks)
+      throw new Error(
+        "Task data deletion requires a service; fixture tasks are preserved.",
+      );
+
+    return { repository: args.repository };
+  }
 
   if (PREVIEW_QUEUE_TOOLS.includes(name))
     return previewQueueTool(

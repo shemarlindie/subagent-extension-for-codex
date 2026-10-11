@@ -52,3 +52,12 @@ Callbacks require public HTTPS on port 443. The service verifies a signed single
 Successful delivery is recorded idempotently. Transient failures retry with exponential backoff, up to eight attempts. Redirects and permanent client errors are not retried; HTTP `410` disables a subscription. Signing-key rotation permits both signatures for five minutes. Grants expire after one day by default, with requested lifetimes capped at seven days; an omitted expiry still gets a finite grant.
 
 Local protocol tests verify subscription and delivery behavior. Registered-host event delivery still needs a reachable authenticated endpoint and live verification. This does not make the loopback service ready for public hosting; see [implementation status](implementation-status.md).
+
+## Project management in the panel
+
+`rename_user_agent_project` accepts `repository` and a trimmed `name` of 1–200
+characters. `remove_user_agent_project` accepts `repository` and optional
+`delete_tasks` (default `false`). Both require user-interface authority and use
+the saved canonical path as identity, so a directory that no longer exists can
+still be renamed or removed. The global **Projects** page owns these actions;
+see [Manage projects](codex-panel.md#manage-projects) for removal behavior.

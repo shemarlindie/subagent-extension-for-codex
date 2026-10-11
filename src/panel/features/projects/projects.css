@@ -1,0 +1,88 @@
+.project-manager {
+  display: grid;
+  gap: 12px;
+}
+.project-manager > .form-note {
+  margin: 0;
+}
+.managed-projects {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.managed-project {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.managed-project-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.managed-project-path {
+  display: block;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.managed-project-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.managed-project-info {
+  flex: 1;
+  min-width: 0;
+}
+.managed-project-title {
+  flex: 1;
+  min-width: 0;
+  line-height: 24px;
+}
+.managed-project-remove {
+  color: var(--muted);
+}
+.managed-project-remove:hover {
+  color: var(--color-text-danger);
+}
+
+.remove-project-form #submit {
+  color: var(--color-text-danger);
+  border-color: var(--color-border-danger);
+  background: var(--color-background-danger);
+}
+
+.projects-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px;
+  animation: motion-slide-end var(--motion-base) var(--ease-out);
+}
+.projects-page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  max-width: 880px;
+  margin-inline: auto;
+}
+.projects-page-heading h1 {
+  flex: 1;
+  margin: 0;
+  font-size: 20px;
+}
+.projects-page-heading h1:focus {
+  outline: none;
+}
+.projects-page .back {
+  display: inline-block;
+}
+.projects-page > .project-manager {
+  max-width: 880px;
+  margin-inline: auto;
+}

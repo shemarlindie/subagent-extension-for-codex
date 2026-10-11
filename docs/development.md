@@ -43,7 +43,7 @@ Remove the setting after testing; the sample does not prove a Claude provider
 is available.
 
 Projects need no startup registration. A chat's project is added when a task
-starts from that chat, and **Add project** or `npm run projects` covers the
+starts from that chat, and **Manage → Add project** or `npm run projects` covers the
 rest (see [Multiple projects](configuration.md#repository-access)).
 
 ## Generated validation schemas

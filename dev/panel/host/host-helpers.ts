@@ -25,8 +25,33 @@ export type Settings = {
   successfulBudgetUpdates: boolean;
   /** Projects registered in fixtures mode, kept until Reset. */
   addedProjects: string[];
+  removedProjects?: string[];
+  projectNames?: Record<string, string>;
   styles: string;
 };
+
+export function hasProjectEdits(
+  settings: Pick<
+    Settings,
+    "addedProjects" | "removedProjects" | "projectNames"
+  >,
+) {
+  return Boolean(
+    settings.addedProjects.length ||
+    settings.removedProjects?.length ||
+    Object.keys(settings.projectNames ?? {}).length,
+  );
+}
+
+export function removeFixtureProject(
+  edits: { removed: string[]; names: Record<string, string> },
+  repository: string,
+) {
+  const names = { ...edits.names };
+  delete names[repository];
+
+  return { removed: [...new Set([...edits.removed, repository])], names };
+}
 
 /** Codex sends cwd as a file URI, so convert typed paths before storing them. */
 export function normalizeCwd(value: string) {

@@ -31,6 +31,18 @@ export function restoreDialog(
   let dialog: DialogState | undefined;
 
   switch (saved.kind) {
+    case "remove-project": {
+      const state = context.snapshot();
+
+      const project = state.projects.find(
+        (item) => item.repository === saved.repository,
+      );
+
+      if (state.conversation || state.page !== "projects" || !project) return;
+
+      return { kind: saved.kind, project, scope };
+    }
+
     case "project":
       dialog = {
         kind: "project",
