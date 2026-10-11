@@ -103,12 +103,26 @@ body[data-expanded-panel="true"]
 }
 .chat-message > .chat-outcome {
   align-self: stretch;
+  margin-block-start: 4px;
 }
 .chat-outcome-line {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--chat-outcome-line-item-gap);
+  justify-content: space-between;
+  gap: 8px 24px;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+@media (hover: hover) {
+  /* Reserve the row's space so revealing actions does not move the conversation. */
+  .chat-message > .chat-outcome > .chat-outcome-line {
+    opacity: 0;
+    transition-delay: 1s;
+  }
+  .chat-message:is(:hover, :focus-within) > .chat-outcome > .chat-outcome-line {
+    opacity: 1;
+    transition-delay: 0s;
+  }
 }
 .chat-outcome-details {
   display: flex;
@@ -137,9 +151,16 @@ body[data-expanded-panel="true"]
 .chat-outcome[data-outcome="failed"] .chat-outcome-note {
   color: var(--danger);
 }
+.chat-outcome-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--chat-outcome-line-item-gap);
+}
+.chat-outcome-actions .chat-handoff {
+  margin-block-start: 0;
+}
 .chat-outcome-activity {
   flex: none;
-  margin-left: auto;
   font-size: 11px;
 }
 .chat-outcome-error {

@@ -281,7 +281,7 @@ test("completed chat turns show a quiet summary with a completion time on hover"
 
   const row = document.querySelector(".chat-outcome")!;
   const label = row.querySelector(".chat-outcome-label")!;
-  const duration = row.querySelector("time")!;
+  const duration = row.querySelector(".chat-outcome-duration")!;
   const turn = row.querySelector<HTMLElement>(".chat-outcome-timestamp")!;
 
   assert.equal(label.tagName, "SPAN");
@@ -292,16 +292,12 @@ test("completed chat turns show a quiet summary with a completion time on hover"
   );
 
   assert.equal(duration.textContent, "1m 35s");
-  assert.equal(duration.getAttribute("datetime"), timestamp);
 
-  assert.equal(await hoverTooltip(user, duration), "Responded after 1m 35s");
+  assert.equal(await hoverTooltip(user, duration), "Turn took 1m 35s");
 
-  assert.equal(
-    await hoverTooltip(user, turn),
-    "Responded on Oct 8, 2026, 11:30:00 AM",
-  );
+  assert.equal(await hoverTooltip(user, turn), "Oct 8, 2026, 11:30:00 AM");
 
-  expect(row.querySelector(".chat-outcome-line")?.lastElementChild).toBe(
+  expect(row.querySelector(".chat-outcome-actions")?.firstElementChild).toBe(
     within(row as HTMLElement).getByRole("button", { name: "View activity" }),
   );
 
@@ -319,14 +315,11 @@ test("completed chat turns show a quiet summary with a completion time on hover"
     }),
   );
 
-  assert.equal(
-    await hoverTooltip(user, turn),
-    "Responded on Oct 8, 2026, 2:30:00 PM",
-  );
+  assert.equal(await hoverTooltip(user, turn), "Oct 8, 2026, 2:30:00 PM");
 
   assert.equal(label.textContent, "Oct 8, 2:30 PM");
 
-  assert.equal(await hoverTooltip(user, duration), "Responded after 1m 35s");
+  assert.equal(await hoverTooltip(user, duration), "Turn took 1m 35s");
 
   await user.click(screen.getByRole("button", { name: "View activity" }));
   assert.equal(controller.getSnapshot().tab, "activity");
@@ -441,18 +434,19 @@ for (const outcome of ["failed", "interrupted"] as const)
       "Oct 8, 11:30 AM",
     );
 
-    assert.equal(row.querySelector("time")?.textContent, "1m 35s");
-
-    const label = outcome === "failed" ? "Failed" : "Interrupted";
+    assert.equal(
+      row.querySelector(".chat-outcome-duration")?.textContent,
+      "1m 35s",
+    );
 
     assert.equal(
-      await hoverTooltip(user, row.querySelector("time")!),
-      `${label} after 1m 35s`,
+      await hoverTooltip(user, row.querySelector(".chat-outcome-duration")!),
+      "Turn took 1m 35s",
     );
 
     assert.equal(
       await hoverTooltip(user, row.querySelector(".chat-outcome-timestamp")!),
-      `${label} on Oct 8, 2026, 11:30:00 AM`,
+      "Oct 8, 2026, 11:30:00 AM",
     );
 
     assert.equal(row.querySelector(".chat-outcome-error")?.textContent, error);

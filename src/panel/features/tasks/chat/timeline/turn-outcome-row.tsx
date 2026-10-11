@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 
 import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
 import {
@@ -13,7 +13,11 @@ import { formatDuration } from "../../list/duration";
 import { formatCost } from "../chat-model";
 import { formatOutcomeTimestamp } from "./outcome-timestamp";
 
-type TurnOutcomeRowProps = { outcome: TurnOutcome; response?: string };
+type TurnOutcomeRowProps = {
+  outcome: TurnOutcome;
+  response?: string;
+  action?: ReactNode;
+};
 
 const OUTCOME_LABELS: Record<TurnOutcome["outcome"], string> = {
   completed: "Responded",
@@ -22,7 +26,11 @@ const OUTCOME_LABELS: Record<TurnOutcome["outcome"], string> = {
 };
 
 /** Where a turn ended: its outcome, how long it ran and what it cost. */
-export function TurnOutcomeRow({ outcome, response }: TurnOutcomeRowProps) {
+export function TurnOutcomeRow({
+  outcome,
+  response,
+  action,
+}: TurnOutcomeRowProps) {
   const controller = useController(),
     { host } = useSnapshot();
 
@@ -34,11 +42,11 @@ export function TurnOutcomeRow({ outcome, response }: TurnOutcomeRowProps) {
   const turnTimestamp = formatOutcomeTimestamp(outcome.timestamp, host);
   const outcomeLabel = OUTCOME_LABELS[outcome.outcome];
 
-  const turnDurationTitle = `${outcomeLabel} after ${turnDuration}`;
+  const turnDurationTitle = `Turn took ${turnDuration}`;
 
-  const turnTimestampTitle =
-    `${outcomeLabel} on ` +
-    formatUserDateTime(outcome.timestamp, host, { timeZoneName: undefined });
+  const turnTimestampTitle = formatUserDateTime(outcome.timestamp, host, {
+    timeZoneName: undefined,
+  });
 
   return (
     <div
@@ -70,8 +78,24 @@ export function TurnOutcomeRow({ outcome, response }: TurnOutcomeRowProps) {
                 </span>
               </>
             )}
+            <TooltipWrapper label={turnTimestampTitle}>
+              <span
+                className="chat-outcome-timestamp chat-outcome-label"
+                aria-label={turnTimestampTitle}
+              >
+                {turnTimestamp}
+              </span>
+            </TooltipWrapper>
+          </span>
+          <span className="chat-outcome-detail">
+            <span aria-hidden="true">·</span>
             <TooltipWrapper label={turnDurationTitle}>
-              <time dateTime={outcome.timestamp}>{turnDuration}</time>
+              <span
+                className="chat-outcome-duration"
+                aria-label={turnDurationTitle}
+              >
+                {turnDuration}
+              </span>
             </TooltipWrapper>
           </span>
           {typeof outcome.cost_usd === "number" && (
@@ -87,23 +111,20 @@ export function TurnOutcomeRow({ outcome, response }: TurnOutcomeRowProps) {
               </TooltipWrapper>
             </span>
           )}
-          <TooltipWrapper label={turnTimestampTitle}>
-            <span className="chat-outcome-detail chat-outcome-timestamp">
-              <span aria-hidden="true">·</span>
-              <span className="chat-outcome-label">{turnTimestamp}</span>
-            </span>
-          </TooltipWrapper>
         </div>
-        <Button
-          variant="text"
-          underline
-          className="chat-outcome-activity"
-          onClick={() =>
-            controller.run(() => controller.viewTurnActivity(outcome.turn))
-          }
-        >
-          View activity
-        </Button>
+        <div className="chat-outcome-actions">
+          {action}
+          <Button
+            variant="text"
+            underline
+            className="chat-outcome-activity"
+            onClick={() =>
+              controller.run(() => controller.viewTurnActivity(outcome.turn))
+            }
+          >
+            View activity
+          </Button>
+        </div>
       </div>
       {outcome.error && <p className="chat-outcome-error">{outcome.error}</p>}
     </div>

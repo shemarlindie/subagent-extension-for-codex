@@ -26,6 +26,11 @@ export function ChatMessageView({
   streaming,
   outcome,
 }: ChatMessageViewProps) {
+  const askButton =
+    task && message.kind === "reply" && !streaming ? (
+      <AskReplyButton task={task} message={message} inline={Boolean(outcome)} />
+    ) : undefined;
+
   return (
     <article
       className="chat-message"
@@ -58,10 +63,15 @@ export function ChatMessageView({
           <MarkdownView content={message.text} />
         </div>
       )}
-      {task && message.kind === "reply" && !streaming && (
-        <AskReplyButton task={task} message={message} />
+      {outcome ? (
+        <TurnOutcomeRow
+          outcome={outcome}
+          response={message.text}
+          action={askButton}
+        />
+      ) : (
+        askButton
       )}
-      {outcome && <TurnOutcomeRow outcome={outcome} response={message.text} />}
     </article>
   );
 }

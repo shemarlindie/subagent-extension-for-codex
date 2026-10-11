@@ -89,14 +89,18 @@ It shows requests, follow-ups, worker messages, replies and turn outcomes.
 Worker and parent-agent text renders as Markdown, following the
 [Markdown rules](../src/panel/features/file-preview/README.md#markdown); what the
 user typed shows as typed. A reply that repeats the last message replaces it. An outcome stays with the preceding worker response when both belong to the
-same turn. Outcome rows show duration, cost and the timestamp on the left, with
-**Copy response** before the duration when a response is available and
-**View activity** on the right, moving below the details when space is tight.
+same turn. Outcome rows show the timestamp, duration and cost on the left, with
+**Copy response** before the timestamp when a response is available and
+**Ask Codex about this reply** in thread mode followed by **View activity**
+on the right, separated by a middot. These actions move below the details and
+align left when space is tight. On devices with hover, the row fades in when
+the message is hovered or contains keyboard focus. It waits one second after
+hover and focus leave before fading out; touch devices keep it visible. The
+row keeps its space while hidden, and reduced motion disables the fade.
 The timestamp omits seconds and the timezone. Responses from earlier days
 include the date, with the year shown only when it differs from the current year.
 Hover over the timestamp for the full date and time, including year and seconds,
-without a timezone label. The duration tooltip identifies whether the turn was
-**Responded**, **Failed** or **Interrupted** after that time.
+without a timezone label. The duration tooltip says **Turn took** followed by the elapsed time.
 Failures retain their error. Notes mark compaction, new sessions and recreated worktrees.
 Draft text streams with a caret and is replaced by its stored message.
 
