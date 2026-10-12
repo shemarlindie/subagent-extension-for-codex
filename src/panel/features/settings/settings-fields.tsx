@@ -200,7 +200,7 @@ export function SettingRowView({
                 [describedBy, error && errorId].filter(Boolean).join(" ") ||
                 undefined
               }
-              // Checked by the form, like budgets: closed sections are hidden.
+              // Checked by the form, like budgets: inactive panels are hidden.
               {...register(row.key, {
                 validate: (value) =>
                   new RegExp(`^(?:${row.pattern})$`).test(value) ||
@@ -247,7 +247,7 @@ export function SettingRowView({
                   [describedBy, error && errorId].filter(Boolean).join(" ") ||
                   undefined
                 }
-                // The form checks this itself: closed sections are hidden,
+                // The form checks this itself: inactive panels are hidden,
                 // where the browser cannot point to the field. A limit that is
                 // off may be blank, but an amount it would restore must fit.
                 {...register(row.key, {

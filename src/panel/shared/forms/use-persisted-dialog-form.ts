@@ -98,7 +98,7 @@ export function usePersistedDialogForm<T extends FieldValues>(
   return form;
 }
 
-/** Persists small component-owned fields such as a path or open section list. */
+/** Persists small component-owned fields such as paths or selected sections. */
 export function usePersistedDialogField<T>(
   kind: PersistedDialog["kind"],
   name: string,

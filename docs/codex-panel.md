@@ -122,11 +122,13 @@ budgets, and asks before discarding unsaved edits. **Save** sits in the page
 header, keeps the page open, and sends only changed fields through the app-only
 `update_user_agent_settings`. Permission and approval defaults are described in
 [Configuration](configuration.md).
-The form and accordion appear before the settings read finishes, and the last
-open section is restored. Pending fields remain in place with a spinner; a
+The form and section tabs appear before the settings read finishes, and the
+last selected section is restored. Wide pages use a vertical section rail;
+narrow pages use a horizontally scrolling tab strip that reaches the page edges
+and brings the selected section into view. Tab panels stay mounted so drafts
+survive section changes. Pending fields remain in place with a spinner; a
 dropdown whose selected value is unresolved also shows **Loading…** while
-disabled. Multiple sections can remain expanded while the read is pending.
-Opening a section scrolls it into view on the Settings page.
+disabled.
 
 Per-task tabs, composer drafts/visibility, question answers, Chat/Activity
 reading positions and the Changes position, opened files and viewed files last

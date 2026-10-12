@@ -36,9 +36,6 @@
   display: flex;
   flex-direction: column;
 }
-.settings-groups {
-  flex: 1 0 auto;
-}
 .settings-form-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -63,10 +60,141 @@
 .settings-form-footer {
   padding-top: 12px;
 }
-.settings-sections-layer {
+.settings-section-tabs {
+  display: grid;
+  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+  min-width: 0;
+}
+.settings-section-tabs-list {
+  position: sticky;
+  top: 72px;
+  z-index: 0;
   display: flex;
-  flex: 1 0 auto;
   flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+}
+/* The shared tabs rule rounds only top corners; vertical items round all four. */
+.settings-section-tabs-list .settings-section-tab {
+  width: 100%;
+  min-width: 0;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 6px;
+  padding: 9px 10px;
+  text-align: start;
+  font-size: 12px;
+}
+.settings-section-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-section-tab[aria-selected="true"] {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.settings-section-tab-badge {
+  flex: none;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.2;
+}
+.settings-section-tabs .tab-indicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: auto;
+  left: auto;
+  width: 2px;
+  height: var(--active-tab-height);
+  background: var(--text);
+  transform: translateY(var(--active-tab-top));
+  transition:
+    transform 0.18s ease,
+    height 0.18s ease;
+}
+.settings-section-tab-panel {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  padding-top: 0;
+}
+.settings-section-tab-content {
+  min-width: 0;
+}
+.settings-section-tab-heading {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+.settings-section-tabs[data-orientation="horizontal"] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  --section-tab-edge-pad: 18px;
+}
+.settings-section-tabs[data-orientation="horizontal"]
+  .settings-section-tabs-list {
+  top: 56px;
+  background: var(--bg);
+  flex-direction: row;
+  gap: 4px;
+  width: calc(100% + var(--section-tab-edge-pad) + var(--section-tab-edge-pad));
+  margin-inline: calc(0px - var(--section-tab-edge-pad));
+  padding-inline: var(--section-tab-edge-pad);
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+.settings-section-tabs[data-orientation="horizontal"]
+  .settings-section-tabs-list::-webkit-scrollbar {
+  display: none;
+}
+.settings-section-tabs[data-orientation="horizontal"] .settings-section-tab {
+  width: auto;
+  flex: none;
+  border-radius: 6px 6px 0 0;
+  padding: 9px 12px;
+}
+.settings-section-tabs[data-orientation="horizontal"]
+  .settings-section-tab-label {
+  overflow: visible;
+}
+.settings-section-tabs[data-orientation="horizontal"]
+  .settings-section-tab-panel {
+  grid-column: 1;
+  grid-row: 2;
+}
+.settings-section-tabs[data-orientation="horizontal"] .tab-indicator {
+  top: auto;
+  right: auto;
+  bottom: 0;
+  left: 0;
+  width: var(--active-tab-width);
+  height: 2px;
+  transform: translateX(var(--active-tab-left));
+  transition:
+    transform 0.18s ease,
+    width 0.18s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-section-tabs .tab-indicator {
+    transition: none;
+  }
+}
+.settings-sections-layer {
+  min-width: 0;
 }
 .settings-loading-body {
   gap: 12px;
@@ -97,15 +225,6 @@
 .settings-loading-spinner {
   color: var(--accent);
 }
-.settings-loading-groups {
-  min-width: 0;
-}
-.settings-loading-summary {
-  flex: 1;
-  min-width: 20px;
-  max-width: 120px;
-  height: 7px;
-}
 .settings-loading-rows {
   min-width: 0;
 }
@@ -125,13 +244,6 @@
   color: var(--muted);
   opacity: 0.65;
   cursor: wait;
-}
-.settings-group-header {
-  margin: 0;
-  font: inherit;
-}
-.settings-group-content {
-  padding: 0 12px;
 }
 /* A section's intro text, hidden when the section has none. */
 .settings-section-intro {

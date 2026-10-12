@@ -1,5 +1,5 @@
 import { Tabs } from "@base-ui/react/tabs";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 
 import {
   useController,
@@ -8,7 +8,8 @@ import {
 import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { Tab, Task } from "../../../app/state/types";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
-import { scrollChildIntoView } from "../../../shared/utils/scroll-into-view";
+import { TabList } from "../../../shared/components/tabs/tab-list";
+import { useActiveTabInView } from "../../../shared/components/tabs/use-active-tab-in-view";
 import { ChangesPanel } from "../../changes/changes-panel";
 import { ActivitySkeleton } from "../activity/activity-skeleton";
 import { turnStart } from "../activity/event-history";
@@ -18,26 +19,7 @@ import { ChatPanel } from "../chat/chat-panel";
 import { TaskDetails } from "../inspector/task-details";
 import { TabLabel } from "./tab-label";
 
-const TAB_EDGE_GAP = 12;
-
 type EvidenceTabsProps = { task?: Task; taskId: string };
-
-// The tab list scrolls sideways on narrow panels, so the selected tab can sit off-screen
-// (selection can also come from outside, such as the host selecting a task).
-// Only the list scrolls, never the page, so the inspector doesn't jump.
-function useActiveTabInView(tab: Tab) {
-  const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const list = listRef.current,
-      // By id rather than aria-selected, which can still show the previous tab here.
-      active = list?.querySelector<HTMLElement>(`#tab-${tab}`);
-
-    if (list && active) scrollChildIntoView(list, active, TAB_EDGE_GAP);
-  }, [tab]);
-
-  return listRef;
-}
 
 /** Keeps one tab shell mounted while only its header or content changes with data. */
 export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
@@ -95,12 +77,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
       value={state.tab}
       onValueChange={(tab) => controller.setTab(tab as Tab)}
     >
-      <Tabs.List
-        ref={listRef}
-        activateOnFocus
-        className="tabs"
-        aria-label="Task evidence"
-      >
+      <TabList ref={listRef} label="Task evidence">
         <Tabs.Tab value="chat" id="tab-chat">
           Chat
         </Tabs.Tab>
@@ -113,8 +90,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         <Tabs.Tab value="details" id="tab-details">
           Details
         </Tabs.Tab>
-        <Tabs.Indicator className="tab-indicator" />
-      </Tabs.List>
+      </TabList>
       {/* Stays mounted so the reading position and draft survive tab switches. */}
       <Tabs.Panel
         value="chat"

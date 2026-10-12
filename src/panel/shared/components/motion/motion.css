@@ -141,28 +141,10 @@
     height var(--motion-base) var(--ease-out),
     opacity var(--motion-base) var(--ease-out);
 }
-/* Accordion panels report their height in their own variable. */
-.settings-group-panel {
-  height: var(--accordion-panel-height);
-}
 .collapse-panel[data-starting-style],
 .collapse-panel[data-ending-style] {
   height: 0;
   opacity: 0;
-}
-.settings-group-trigger svg {
-  transition: transform var(--motion-base) var(--ease-out);
-}
-.settings-group-summary {
-  transition:
-    opacity var(--motion-fast) ease,
-    visibility var(--motion-fast);
-}
-.settings-group-trigger[data-panel-open] .settings-group-summary {
-  opacity: 0;
-}
-.settings-group-badge {
-  animation: motion-pop var(--motion-base) var(--ease-out);
 }
 /*
  * Native disclosures (raw responses, thinking) where the browser can animate them.

@@ -7,8 +7,6 @@ import { settingsSections as buildSettingsSections } from "../../../shared/setti
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
-import { SkeletonShape } from "../../shared/components/loading-skeleton/loading-skeleton";
-import { LoadingSwap } from "../../shared/components/loading-skeleton/loading-swap";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
 import { Presence } from "../../shared/components/motion/motion";
 import { reducedMotion } from "../../shared/components/motion/motion-utils";
@@ -25,6 +23,7 @@ import {
   type SettingsControls,
 } from "./settings-fields";
 import {
+  activeSection,
   changes,
   differs,
   editCount,
@@ -32,15 +31,14 @@ import {
   sectionKeys,
   sectionsForm,
   type SettingSection,
-  summary,
   type Values,
 } from "./settings-layout";
 import { SettingsLoadingTaskDefaults } from "./settings-loading-task-defaults";
 import { ModelTable } from "./settings-model-table";
 import {
-  SettingsSectionAccordion,
+  SettingsSectionTabs,
   type SettingsSectionView,
-} from "./settings-section-accordion";
+} from "./settings-section-tabs";
 
 export type SettingsFormDialog =
   | Extract<DialogState, { kind: "settings" }>
@@ -115,7 +113,7 @@ const loadingSections = buildSettingsSections({
   remembered: { max_cost_usd: 5, max_runtime_minutes: 20 },
 });
 
-/** One settings form and accordion for both loading and loaded data. */
+/** One settings form and section tabs for both loading and loaded data. */
 export function SettingsForm({
   dialog,
   saveActionPlacement = "footer",
@@ -150,9 +148,11 @@ export function SettingsForm({
     ),
     total = edits.reduce((sum, count) => sum + count, 0);
 
-  const [open, setOpen] = usePersistedDialogField("settings", "openSections", [
-      controller.getLastSettingsSection(),
-    ]),
+  const [selection, setSelection] = usePersistedDialogField(
+      "settings",
+      "openSections",
+      [controller.getLastSettingsSection()],
+    ),
     [discarding, setDiscarding] = useState(false),
     element = useRef<HTMLFormElement>(null),
     discardPrompt = useRef<HTMLDivElement>(null);
@@ -249,12 +249,16 @@ export function SettingsForm({
   const sectionOf = (key: string) =>
     sections.find((section) => sectionKeys(section).includes(key));
 
-  // Opens the section holding a setting and focuses its field, which also
-  // scrolls it into view.
+  const selectSection = (section: string) => {
+    setSelection([section]);
+    controller.saveSettingsSection(section);
+  };
+
+  // Opens the section holding a setting and focuses its field.
   const reveal = (key: string) => {
     const section = sectionOf(key);
     if (!section) return;
-    flushSync(() => setOpen([section.id]));
+    flushSync(() => selectSection(section.id));
 
     const field = element.current?.querySelector<HTMLInputElement>(
       `#setting-${key}`,
@@ -271,7 +275,7 @@ export function SettingsForm({
     return field;
   };
 
-  // An invalid field may sit in a closed section: reveal it and show why.
+  // An invalid field may sit in an inactive tab: reveal it and show why.
   const showInvalid = (errors: FieldErrors<Values>) => {
     const key = sections.flatMap(sectionKeys).find((name) => name in errors);
 
@@ -294,19 +298,6 @@ export function SettingsForm({
         return {
           id: section.id,
           title: section.title,
-          summary: (
-            <LoadingSwap
-              as="span"
-              className="loading-swap-inline"
-              loading={false}
-              busy={false}
-              skeleton={
-                <SkeletonShape className="settings-group-summary settings-loading-summary" />
-              }
-            >
-              {section.rows.flatMap((row) => summary(row, form)).join(" · ")}
-            </LoadingSwap>
-          ),
           edits: edits[index],
           content: (
             <SettingsContext.Provider
@@ -357,19 +348,6 @@ export function SettingsForm({
     : loadingSections.map((section) => ({
         id: section.id,
         title: section.title,
-        summary: (
-          <LoadingSwap
-            as="span"
-            className="loading-swap-inline"
-            loading={loading}
-            busy={false}
-            skeleton={
-              <SkeletonShape className="settings-group-summary settings-loading-summary" />
-            }
-          >
-            {null}
-          </LoadingSwap>
-        ),
         content:
           section.id === "task" ? (
             <SettingsLoadingTaskDefaults />
@@ -381,6 +359,8 @@ export function SettingsForm({
             />
           ),
       }));
+
+  const sectionSelection = activeSection(selection, sectionViews);
 
   const submit = handleSubmit((submitted) => {
     if (!settings) return;
@@ -433,11 +413,8 @@ export function SettingsForm({
           </Notice>
         </Collapsible.Panel>
       </Collapsible.Root>
-      <p
-        className={`form-note form-note--first${isLoading ? " settings-loading-note" : ""}`}
-      >
-        <span>Defaults for new tasks.</span>
-        {isLoading && (
+      {isLoading && (
+        <p className="form-note form-note--first settings-loading-note">
           <span
             className="settings-loading-message"
             role="status"
@@ -446,8 +423,8 @@ export function SettingsForm({
             <LoadingSpinner className="settings-loading-spinner" />
             <span>Loading…</span>
           </span>
-        )}
-      </p>
+        </p>
+      )}
       <div
         className={`settings-form-body${loading ? " settings-loading-body" : ""}`}
       >
@@ -459,14 +436,11 @@ export function SettingsForm({
                 : "settings-sections-layer"
             }
           >
-            <SettingsSectionAccordion
+            <SettingsSectionTabs
               sections={sectionViews}
-              open={open}
+              value={sectionSelection ?? ""}
               loading={isLoading}
-              onOpenChange={(next) => {
-                setOpen(next);
-                controller.saveSettingsOpenSections(next);
-              }}
+              onValueChange={selectSection}
             />
           </div>
         </Presence>

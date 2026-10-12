@@ -84,20 +84,18 @@ test("settings page renders server sections and saves only changed fields", asyn
   assertAbsent(screen.queryByRole("dialog"));
   assert.ok(screen.getByText("Used when a task doesn't choose its own."));
 
-  // Collapsed sections summarize with the server's labels.
-  const models = screen.getByRole("button", { name: /^Models/ });
-  assert.equal(models.getAttribute("aria-expanded"), "false");
+  const task = screen.getByRole("tab", { name: "Task" }),
+    models = screen.getByRole("tab", { name: "Models" });
 
-  assert.equal(
-    models.querySelector(".settings-group-summary")?.textContent,
-    "All inherit",
-  );
+  assert.equal(task.getAttribute("aria-selected"), "true");
+  assert.equal(models.getAttribute("aria-selected"), "false");
 
   const save = screen.getByRole("button", { name: "Save" });
   assert.equal((save as HTMLButtonElement).disabled, true);
   await user.click(screen.getByRole("switch", { name: "Allow subagents" }));
   await user.click(screen.getByRole("switch", { name: "Cost limit" }));
   await user.click(models);
+  assert.equal(models.getAttribute("aria-selected"), "true");
 
   // Menu options show the server's description as secondary text.
   await user.click(screen.getByRole("combobox", { name: "Global model" }));
@@ -110,15 +108,10 @@ test("settings page renders server sections and saves only changed fields", asyn
 
   await user.click(option);
 
-  assert.equal(
-    models.querySelector(".settings-group-summary")?.textContent,
-    "Global: Model A",
-  );
-
-  // One badge per section with edits; the budget counts once.
+  // Each tab tracks edits in its own section; the budget counts once.
   assert.deepEqual(
     screen
-      .getAllByText(/changed$/, { selector: ".settings-group-badge" })
+      .getAllByText(/changed$/, { selector: ".settings-section-tab-badge" })
       .map((b) => b.textContent),
     ["2 changed", "1 changed"],
   );
@@ -269,14 +262,9 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
 
   await user.clear(amount);
 
-  await user.click(screen.getByRole("button", { name: /^Models/ }));
-
-  assert.equal(
-    screen
-      .getByRole("button", { name: /^Budgets/ })
-      .getAttribute("aria-expanded"),
-    "true",
-  );
+  const budgetsTab = screen.getByRole("tab", { name: /^Budgets/ });
+  await user.click(screen.getByRole("tab", { name: /^Models/ }));
+  assert.equal(budgetsTab.getAttribute("aria-selected"), "false");
 
   // The server flags an unsupported saved effort.
   assert.ok(
@@ -289,24 +277,9 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
     "custom-id",
   );
 
-  // Collapse Budgets to verify saving reopens it and focuses an invalid amount.
-  await user.click(screen.getByRole("button", { name: /^Budgets/ }));
-
-  assert.equal(
-    screen
-      .getByRole("button", { name: /^Budgets/ })
-      .getAttribute("aria-expanded"),
-    "false",
-  );
-
+  // An invalid field switches to its section and receives focus.
   await user.click(screen.getByRole("button", { name: "Save 2 changes" }));
-
-  assert.equal(
-    screen
-      .getByRole("button", { name: /^Budgets/ })
-      .getAttribute("aria-expanded"),
-    "true",
-  );
+  assert.equal(budgetsTab.getAttribute("aria-selected"), "true");
 
   await waitFor(() => expect(document.activeElement).toBe(amount));
 
@@ -405,18 +378,18 @@ test("settings help links show the setting they name, except within their own se
   await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings" });
 
-  const expanded = (name: RegExp) =>
-    screen.getByRole("button", { name }).getAttribute("aria-expanded");
+  const selected = (name: string) =>
+    screen.getByRole("tab", { name }).getAttribute("aria-selected");
 
-  // Links into the open section stay plain text.
+  // Links into the selected section stay plain text.
   assertAbsent(screen.queryByRole("button", { name: "defaults" }));
   const link = screen.getByRole("button", { name: "profiles" });
   assert.equal(link.getAttribute("title"), "Show in Profiles");
 
   // A link opens its setting's section and focuses that setting's field.
   await user.click(link);
-  assert.equal(expanded(/^Profiles/), "true");
-  assert.equal(expanded(/^Defaults/), "false");
+  assert.equal(selected("Profiles"), "true");
+  assert.equal(selected("Defaults"), "false");
 
   expect(document.activeElement).toBe(
     screen.getByRole("textbox", { name: "reviewer_default model" }),
@@ -424,7 +397,7 @@ test("settings help links show the setting they name, except within their own se
 
   assertAbsent(screen.queryByRole("button", { name: "profiles" }));
   await user.click(screen.getByRole("button", { name: "defaults" }));
-  assert.equal(expanded(/^Defaults/), "true");
+  assert.equal(selected("Defaults"), "true");
 
   expect(document.activeElement).toBe(
     screen.getByRole("textbox", { name: "default model" }),
@@ -473,16 +446,15 @@ test("settings resets restore defaults only per section", async (t) => {
   const subagents = screen.getByRole("switch", { name: "Allow subagents" });
 
   // Resetting Task must preserve another section's saved override and draft.
-  await user.click(screen.getByRole("button", { name: /^Models/ }));
+  await user.click(screen.getByRole("tab", { name: "Models" }));
   const model = screen.getByRole("textbox", { name: "Global model" });
   await user.clear(model);
   await user.type(model, "draft-model");
 
   assertAbsent(screen.queryByRole("button", { name: "Reset" }));
 
-  await user.click(
-    screen.getAllByRole("button", { name: "Reset to defaults" })[0],
-  );
+  await user.click(screen.getByRole("tab", { name: "Task" }));
+  await user.click(screen.getByRole("button", { name: "Reset to defaults" }));
 
   assert.equal(subagents.getAttribute("aria-checked"), "true");
 
@@ -493,9 +465,11 @@ test("settings resets restore defaults only per section", async (t) => {
     "true",
   );
 
-  assert.equal(screen.getAllByRole("button", { name: /^Reset/ }).length, 1);
+  assert.equal(screen.queryAllByRole("button", { name: /^Reset/ }).length, 0);
 
+  await user.click(screen.getByRole("tab", { name: /^Models/ }));
   assert.equal((model as HTMLInputElement).value, "draft-model");
+  assert.equal(screen.getAllByRole("button", { name: /^Reset/ }).length, 1);
 
   assert.equal(
     screen.getByRole("combobox", { name: "Global effort" }).textContent,

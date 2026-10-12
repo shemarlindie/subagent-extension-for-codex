@@ -286,10 +286,9 @@ test("settings opens before its read and keeps its draft across scope changes", 
   await controller.settings();
   assert.equal(controller.getSnapshot().dialog?.kind, "settings-loading");
 
-  controller.saveSettingsOpenSections(["task", "models"]);
+  controller.saveSettingsSection("models");
 
   assert.deepEqual(controller.getDialogDraft("settings")?.openSections, [
-    "task",
     "models",
   ]);
 
@@ -301,7 +300,6 @@ test("settings opens before its read and keeps its draft across scope changes", 
   assert.equal(controller.getSnapshot().dialog?.kind, "settings-loading");
 
   assert.deepEqual(controller.getDialogDraft("settings")?.openSections, [
-    "task",
     "models",
   ]);
 
@@ -312,7 +310,6 @@ test("settings opens before its read and keeps its draft across scope changes", 
   assert.equal(controller.getLastSettingsSection(), "models");
 
   assert.deepEqual(controller.getDialogDraft("settings")?.openSections, [
-    "task",
     "models",
   ]);
 });

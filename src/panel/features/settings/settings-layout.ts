@@ -114,56 +114,14 @@ export function editCount(
     .filter((keys) => keys.some((key) => form[key] !== initial[key])).length;
 }
 
-const labelOf = (options: SettingOption[] | undefined, value: string) =>
-  options?.find((option) => option.value === value)?.label ?? value;
-
-/** Short value labels for a collapsed section's one-line summary. */
-export function summary(row: SettingRow, form: Values): string[] {
-  switch (row.kind) {
-    case "models": {
-      const overrides = row.scopes.flatMap((scope) => {
-        const model = form[scope.model.key],
-          effort = form[scope.effort.key];
-
-        const parts = [
-          model && labelOf(scope.model.options, model),
-          effort !== "default" && `${effort} effort`,
-        ].filter(Boolean);
-
-        return parts.length ? [`${scope.label}: ${parts.join(", ")}`] : [];
-      });
-
-      return overrides.length ? overrides : ["All inherit"];
-    }
-
-    case "budget":
-      return [
-        form[onKey(row.key)] === "true"
-          ? `${form[row.key]} ${row.unit}`
-          : "No limit",
-      ];
-    case "switch":
-      return [form[row.key] === "true" ? "On" : "Off"];
-    case "text":
-      return [form[row.key] || "None"];
-    default:
-      return [labelOf(row.options, form[row.key])];
-  }
-}
-
-/**
- * The open sections, or the first section when none of them exists in the
- * current layout. Closing every section on purpose is kept.
- */
-export function openSections(
-  open: string[],
+/** The selected section, or the first section when the saved choice is stale. */
+export function activeSection(
+  selection: string[],
   sections: ReadonlyArray<Pick<SettingSection, "id">>,
-) {
-  const ids = sections.map((section) => section.id);
+): string | undefined {
+  const ids = new Set(sections.map((section) => section.id));
 
-  return !open.length || open.some((id) => ids.includes(id))
-    ? open
-    : ids.slice(0, 1);
+  return [...selection].reverse().find((id) => ids.has(id)) ?? sections[0]?.id;
 }
 
 export const helpId = (key: string) => `setting-${key}-help`;

@@ -233,11 +233,11 @@ export class Controller {
     return this.lastSettingsSection ?? "task";
   }
 
-  saveSettingsOpenSections(sections: string[]) {
-    const lastOpen = sections.at(-1);
-    if (lastOpen) this.lastSettingsSection = lastOpen;
+  saveSettingsSection(section: string) {
+    this.lastSettingsSection = section;
 
-    this.saveDialogField("settings", "openSections", sections);
+    // Keep the persisted array field compatible with drafts from the accordion UI.
+    this.saveDialogField("settings", "openSections", [section]);
   }
 
   saveDialogDraft(kind: PersistedDialog["kind"], draft: PersistedDialogDraft) {

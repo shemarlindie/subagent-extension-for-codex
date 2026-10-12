@@ -3,16 +3,15 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  activeSection,
   changes,
   editCount,
   onKey,
-  openSections,
   rowForm,
   sectionKeys,
   sectionsForm,
   type SettingRow,
   type SettingSection,
-  summary,
 } from "./settings-layout";
 
 const budget: SettingRow = {
@@ -153,32 +152,7 @@ test("edit counts treat a budget and a model scope as one row each", () => {
   assert.equal(editCount(sections[1], edited, initial), 1);
 });
 
-test("summaries use option labels, units, and only model overrides", () => {
-  const form = sectionsForm(sections, saved);
-
-  assert.deepEqual(
-    sections[0].rows.flatMap((row) => summary(row, form)),
-    ["Current repository", "On", "No limit"],
-  );
-
-  assert.deepEqual(
-    summary(budget, { ...form, [onKey("max_cost_usd")]: "true" }),
-    ["7 USD"],
-  );
-
-  assert.deepEqual(summary(models, form), ["All inherit"]);
-
-  assert.deepEqual(
-    summary(models, {
-      ...form,
-      default_model: "sonnet",
-      default_reasoning_effort: "high",
-    }),
-    ["Global: Sonnet, high effort"],
-  );
-});
-
-test("text rows send their string as typed and summarize a blank value", () => {
+test("text rows send their string as typed", () => {
   const prefix: SettingRow = {
     kind: "text",
     key: "worktree_branch_prefix",
@@ -197,13 +171,11 @@ test("text rows send their string as typed and summarize a blank value", () => {
   assert.deepEqual(changes(text, { worktree_branch_prefix: "" }, initial), {
     worktree_branch_prefix: "",
   });
-
-  assert.deepEqual(summary(prefix, initial), ["agent/"]);
-  assert.deepEqual(summary(prefix, { worktree_branch_prefix: "" }), ["None"]);
 });
 
-test("open sections fall back to the first when none exists, but may all be closed", () => {
-  assert.deepEqual(openSections(["models"], sections), ["models"]);
-  assert.deepEqual(openSections(["gone"], sections), ["task"]);
-  assert.deepEqual(openSections([], sections), []);
+test("saved section selection falls back to a valid section", () => {
+  assert.equal(activeSection(["models"], sections), "models");
+  assert.equal(activeSection(["gone", "task"], sections), "task");
+  assert.equal(activeSection(["gone"], sections), "task");
+  assert.equal(activeSection([], []), undefined);
 });

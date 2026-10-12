@@ -45,7 +45,14 @@ Scroll hooks mutate stable reading cells without notifying on every scroll;
 answered questions clear their entry. See [State and persistence](#state-and-persistence)
 for lifetime and storage boundaries.
 
-Use Base UI (`@base-ui/react`) primitives for dialogs, tabs (with an animated indicator), the task filter radio group, single and multiple selection, project suggestions, the settings accordion and its switches, including focus management and keyboard navigation. `SelectField` and `MultiSelectField` share dropdown structure and styling; `FormSelect` connects selection to React Hook Form. The project autocomplete accepts both registered projects and explicit absolute paths. Keep simple buttons, text inputs, and textareas as native controls. Base UI provides unstyled components; keep their styling in this project's stylesheets and application decisions in the controller/forms. React, React DOM, React Hook Form, and the official MCP Apps bridge supply existing infrastructure rather than custom equivalents.
+Use Base UI (`@base-ui/react`) primitives for dialogs, tabs (with an animated indicator), the task filter radio group, single and multiple selection, project suggestions, and settings switches, including focus management and keyboard navigation. `SelectField` and `MultiSelectField` share dropdown structure and styling; `FormSelect` connects selection to React Hook Form. The project autocomplete accepts both registered projects and explicit absolute paths. Keep simple buttons, text inputs, and textareas as native controls. Base UI provides unstyled components; keep their styling in this project's stylesheets and application decisions in the controller/forms. React, React DOM, React Hook Form, and the official MCP Apps bridge supply existing infrastructure rather than custom equivalents.
+
+Build tab strips with the shared `TabList` in
+`src/panel/shared/components/tabs/`; it provides the standard focus behavior and
+animated indicator. When a selection can change outside the tab list, use
+`useActiveTabInView` with stable tab IDs so only the strip scrolls to reveal the
+selected tab. Horizontal strips in narrow layouts can extend to the container
+edges while padding their labels back into alignment with the panel content.
 
 Motion is short and quiet. Its purpose is to show what changed and to ease layout shifts. In `src/panel/shared/components/motion/motion.css`, `--motion-fast`, `--motion-base`, `--motion-slow`, and `--motion-loading-crossfade` mirror the matching duration fields in `MOTION` from `src/panel/shared/components/motion/motion-utils.ts`; `--ease-out` mirrors its `easing` field. Keep these definitions in sync. Base UI dialogs, popups, and collapsible panels animate through their `data-starting-style` and `data-ending-style` attributes. A collapsible panel uses the `collapse-panel` class and puts its padding and border on an inner element, so the height animation stays smooth. For other content, use the primitives in `src/panel/shared/components/motion/motion.tsx` and the reduced-motion helpers in `src/panel/shared/components/motion/motion-utils.ts`:
 
@@ -205,7 +212,7 @@ The controller separates session memory from recoverable view state:
   can restore after reload; saving updates its baseline and leaves the page
   open. Server-owned data is reloaded; authentication tokens are never form
   drafts.
-- The last expanded Settings section is browser-local and can appear as soon
+- The last selected Settings section is browser-local and can appear as soon
   as the Settings page opens.
 
 Changing scope invalidates outstanding reads and closes stale dialogs. A
@@ -220,8 +227,8 @@ panel hides dialogs while preserving their drafts for expansion.
   controller handles queue/send/interrupt actions and inline failures.
 - **Settings:** `src/shared/settings/settings-document.ts` supplies typed
   sections and rows. `src/panel/features/settings/settings-layout.ts` owns form logic.
-  Save only changed fields; preserve disabled budget amounts. Closed sections
-  remain mounted for validation, and invalid fields open their section.
+  Save only changed fields; preserve disabled budget amounts. Inactive tab
+  panels remain mounted for validation, and invalid fields select their section.
 - **Activity:** grouping and presentation retain original events for debug
   inspection. `Timeline`, `TimelineItem` and `TimelineDot` use Base UI `useRender`
   and expose state attributes for styling. Expensive raw response rendering

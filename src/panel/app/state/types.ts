@@ -195,7 +195,7 @@ export type PersistedViewState = Partial<
 /** Browser-local UI state that should survive reloads but not appear in copied URLs. */
 export type PersistedUiState = {
   view: PersistedViewState;
-  /** The last expanded settings section, kept separately from unsaved drafts. */
+  /** The last selected settings section, kept separately from unsaved drafts. */
   lastSettingsSection?: string;
   /** Oldest to newest; the last dialog is the active one. */
   dialogs?: PersistedDialog[];
