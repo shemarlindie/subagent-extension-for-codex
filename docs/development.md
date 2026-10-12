@@ -529,6 +529,12 @@ Vitest has two projects. Unit tests time out after 15 seconds, and
 worktrees. Keep a unit test under the shorter limit, and move a suite that
 needs longer into `tests/integration`.
 
+Put setup shared by colocated tests in a `<module>-test-harness.ts` file beside
+the module. Lint, type checks and the panel build treat these files as test
+code. For example, tests that drive a real panel `Controller` use `setup()`,
+`FakeTransport` and the `task()` builder from
+`src/panel/app/state/controller-test-harness.ts`.
+
 Compare DOM nodes with Vitest's `expect`, not Node's `assert` equality methods.
 A failed Node assertion can format jsdom's document graph, including for
 identity and `null` checks, and block the worker until it is killed; a timeout

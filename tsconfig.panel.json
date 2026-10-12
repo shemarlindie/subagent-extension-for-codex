@@ -13,5 +13,5 @@
     "resolveJsonModule": true
   },
   "include": ["src/panel", "src/shared"],
-  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*-test-harness.ts"]
 }

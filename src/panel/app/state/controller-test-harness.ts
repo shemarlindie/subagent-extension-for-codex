@@ -1,0 +1,140 @@
+// Test-only Controller harness. The source-boundaries lint rule and the panel
+// build reject production imports of `*-test-harness` modules.
+import assert from "node:assert/strict";
+
+import { Controller } from "./controller";
+import type {
+  Defaults,
+  PanelData,
+  Task,
+  Transport,
+  TransportEvents,
+} from "./types";
+
+export function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+
+  return { promise, resolve, reject };
+}
+
+export const flush = async () => {
+  for (let i = 0; i < 30; i++) await Promise.resolve();
+};
+
+export const defaults: Defaults = {
+  default_provider: "claude",
+  default_worker_profile: "reviewer",
+  max_runtime_minutes: 0.5,
+  max_cost_usd: null,
+};
+
+export function task(
+  id: string,
+  repository = "/repo/a",
+  conversation_id?: string,
+): Task {
+  return {
+    id,
+    repository,
+    conversation_id,
+    revision: "HEAD",
+    provider: "claude",
+    worker_profile: "reviewer",
+    title: "Review",
+    description: "Review",
+    depends_on: [],
+    context: [],
+    workspace_strategy: "worktree",
+    budget: { max_runtime_minutes: 20, max_cost_usd: null },
+    owner: "owner",
+    status: "running",
+    created_at: "",
+    updated_at: "",
+    instructions: [],
+    created_by: "user",
+    instructions_sent: 0,
+    pending_steers: [],
+    queue: [],
+    turn: 1,
+    runtime_ms: 0,
+  };
+}
+
+export class FakeTransport implements Transport {
+  embedded = true;
+  send?: Transport["send"];
+  events!: TransportEvents;
+  calls: { name: string; args: Record<string, unknown> }[] = [];
+  watches = 0;
+  disposals = 0;
+  connectGate?: Promise<void>;
+  tasks: Task[] = [];
+  context: PanelData = { panel_scope: { conversation_id: null } };
+  projects = [{ repository: "/repo/a", kind: "repository" }];
+  handler?: (name: string, args: Record<string, unknown>) => unknown;
+  shared: Record<string, unknown>[] = [];
+  async connect(events: TransportEvents) {
+    this.events = events;
+    await this.connectGate;
+  }
+
+  async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+    this.calls.push({ name, args });
+    const answer = this.handler?.(name, args);
+    if (answer !== undefined) return (await answer) as T;
+
+    const values: Record<string, unknown> = {
+      get_agent_panel_context: this.context,
+      list_agent_projects: this.projects,
+      list_available_workers: [
+        { provider: "claude", profiles: ["reviewer"], capabilities: {} },
+      ],
+      list_agent_tasks: this.tasks,
+      get_user_agent_activity: { events: [] },
+      get_user_agent_change_counts: {
+        scope: "task",
+        files: 0,
+        additions: 0,
+        deletions: 0,
+      },
+      get_user_agent_chat: { items: [], next_cursor: 0 },
+      get_agent_message: { message: { id: "parent_1" } },
+      get_agent_settings: { values: defaults },
+    };
+
+    assert.ok(name in values, `Unexpected tool ${name}`);
+
+    return values[name] as T;
+  }
+
+  async share(data: Record<string, unknown>) {
+    this.shared.push(data);
+  }
+
+  watch() {
+    this.watches++;
+  }
+
+  dispose() {
+    this.disposals++;
+  }
+}
+
+export function setup(wide = false) {
+  const transport = new FakeTransport();
+
+  const environment = {
+    hidden: () => false,
+    wide: () => wide,
+  };
+
+  const controller = new Controller(transport, environment);
+
+  return { transport, controller, environment };
+}

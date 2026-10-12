@@ -5,6 +5,9 @@ const builtins = new Set(
   builtinModules.map((name) => name.replace(/^node:/, "")),
 );
 
+/** Colocated tests and the `*-test-harness` modules they share are test code; imports may omit the extension. */
+export const testModule = /(?:\.test|-test-harness)(?:\.[cm]?[jt]sx?)?$/;
+
 /** Resolve local dependencies before checking ownership; service/platform/panel is service code. */
 export const sourceBoundaries = {
   meta: {
@@ -21,7 +24,7 @@ export const sourceBoundaries = {
     const localFile = relative(root, filename).replaceAll("\\", "/");
     const owner = localFile.match(/^src\/(service|panel|shared)\//)?.[1];
 
-    if (!owner || /\.test\.[cm]?[jt]sx?$/.test(localFile)) return {};
+    if (!owner || testModule.test(localFile)) return {};
 
     function check(node, value) {
       if (typeof value !== "string") return;
@@ -33,9 +36,10 @@ export const sourceBoundaries = {
           resolve(filename, "..", value),
         ).replaceAll("\\", "/");
 
-        target =
-          dependency.match(/^src\/(service|panel|shared)\//)?.[1] ??
-          dependency.match(/^(dev|tests)\//)?.[1];
+        target = testModule.test(dependency)
+          ? "test code"
+          : (dependency.match(/^src\/(service|panel|shared)\//)?.[1] ??
+            dependency.match(/^(dev|tests)\//)?.[1]);
       } else if (value.startsWith("node:") || builtins.has(value)) {
         target = "Node built-ins";
       } else if (

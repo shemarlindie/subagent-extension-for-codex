@@ -67,9 +67,10 @@ Production source lives under `src/`, with separate runtime boundaries:
 
 ESLint enforces these production import boundaries against resolved source
 paths, including re-exports, dynamic imports and type imports. Neither runtime
-imports development or test code. Colocated tests can cross these boundaries
-for fixtures and verification. Production builds also reject dependencies from
-the opposing runtime, development tooling and tests. See
+imports development or test code. Colocated tests, and the `*-test-harness.ts`
+modules they share, can cross these boundaries for fixtures and verification.
+Production builds also reject dependencies from the opposing runtime,
+development tooling and tests. See
 [Checks](development.md#checks) for the validation commands.
 
 The service task feature groups scheduling and execution in `runtime/`,

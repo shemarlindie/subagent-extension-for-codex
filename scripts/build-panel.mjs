@@ -4,6 +4,8 @@ import { dirname, resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { build, parseAst } from "vite";
 
+import { testModule } from "./lint/source-boundaries.mjs";
+
 await mkdir("dist", { recursive: true });
 
 // The page embeds its CSS as text, so relative `@import "./x.css";` lines are expanded in place.
@@ -73,7 +75,7 @@ async function inlineImports(file) {
   const leaked = chunks[0].moduleIds.filter(
     (id) =>
       forbiddenRoots.some((root) => id.startsWith(`${root}/`)) ||
-      /\.test\.[cm]?[jt]sx?$/.test(id),
+      testModule.test(id),
   );
 
   if (leaked.length)

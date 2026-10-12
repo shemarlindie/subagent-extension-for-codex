@@ -4,6 +4,8 @@ import { join } from "node:path";
 
 import { build } from "esbuild";
 
+import { testModule } from "./lint/source-boundaries.mjs";
+
 const outdir = "dist";
 
 const result = await build({
@@ -36,9 +38,7 @@ const { inputs, outputs } = result.metafile;
 
 // Development, UI and test code must never reach the service bundle.
 const forbidden = Object.keys(inputs).filter(
-  (path) =>
-    /^(dev|tests|src\/panel)\//.test(path) ||
-    /\.test\.[cm]?[jt]sx?$/.test(path),
+  (path) => /^(dev|tests|src\/panel)\//.test(path) || testModule.test(path),
 );
 
 if (forbidden.length)

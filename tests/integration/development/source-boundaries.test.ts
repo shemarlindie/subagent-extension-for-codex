@@ -35,6 +35,7 @@ test("production boundaries reject cross-runtime and development imports in ever
         "../../../../panel/app/app.js",
         "../../../../../dev/service/fixture-provider.js",
         "../../../../../tests/support/helpers.js",
+        "./control.test.js",
       ],
     ],
     [
@@ -43,6 +44,7 @@ test("production boundaries reject cross-runtime and development imports in ever
         "../../../../service/platform/panel/panel.js",
         "../../../../../dev/panel/scenarios/fixtures.js",
         "../../../../../tests/support/helpers.js",
+        "../../../app/state/controller-test-harness",
         "node:fs",
         "fs/promises",
       ],
@@ -112,10 +114,11 @@ test("production boundaries allow imports within their runtime and shared featur
   }
 });
 
-test("colocated production tests may import fixtures and other runtimes", async () => {
+test("colocated production tests and test harnesses may import fixtures and other runtimes", async () => {
   for (const filePath of [
     "src/service/features/tasks/runtime/example.test.ts",
     "src/panel/features/tasks/chat/example.test.tsx",
+    "src/panel/app/state/example-test-harness.ts",
     "src/shared/tasks/example.test.ts",
   ]) {
     assert.deepEqual(
