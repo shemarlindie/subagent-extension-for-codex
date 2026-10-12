@@ -39,6 +39,10 @@ recorded fixtures through the provider.
   task form. **Send messages** and **Update context** vary host capabilities.
 - **Successful limit updates** enables the fixture's Apply, Continue-prefill
   and send-button tooltip flow without calling a service.
+- **Slow async reads** delays fixture content reads so
+  loading placeholders can be inspected across the panel, including the initial
+  task list. Enabling it relaunches the panel automatically; writes and live
+  mode are unaffected.
 - **Width** offers 360, 480, 760 and Fill. A short 360px frame can make the whole
   inspector scroll; use 480 or Fill to check the fixed-header layout.
 - **Bridge log** shows tools, message/context requests and display-mode changes,

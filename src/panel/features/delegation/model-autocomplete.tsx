@@ -18,12 +18,14 @@ interface ModelAutocompleteProps {
   models: ModelChoice[];
   placeholder: string;
   describedBy?: string;
+  disabled?: boolean;
 }
 
 export function ModelAutocomplete({
   models,
   placeholder,
   describedBy,
+  disabled = false,
 }: ModelAutocompleteProps) {
   const { control } = useFormContext<DelegateValues>();
   const { field } = useController({ control, name: "model" });
@@ -49,6 +51,7 @@ export function ModelAutocomplete({
         onBlur={field.onBlur}
         maxLength={200}
         placeholder={placeholder}
+        disabled={disabled}
         aria-describedby={describedBy}
       />
       {models.length > 0 && (

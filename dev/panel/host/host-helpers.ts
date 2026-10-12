@@ -23,6 +23,8 @@ export type Settings = {
   claudeUnavailable: boolean;
   /** Fixtures only; lets the preview simulate successful budget updates. */
   successfulBudgetUpdates: boolean;
+  /** Fixtures only; delays content reads so loading placeholders can be inspected. */
+  slowAsyncReads: boolean;
   /** Projects registered in fixtures mode, kept until Reset. */
   addedProjects: string[];
   removedProjects?: string[];

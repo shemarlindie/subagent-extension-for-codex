@@ -384,10 +384,18 @@ function mockPanelGeometry() {
 export async function selectOption(
   user: ReturnType<typeof userEvent.setup>,
   label: string,
-  option: string,
+  option: string | RegExp,
   multiple = false,
 ) {
   const trigger = screen.getByRole("combobox", { name: label });
+
+  await waitFor(() =>
+    assert.equal(
+      (trigger as HTMLButtonElement | HTMLInputElement).disabled,
+      false,
+    ),
+  );
+
   await user.click(trigger);
   await user.click(await screen.findByRole("option", { name: option }));
   if (multiple) await user.keyboard("{Escape}");
@@ -395,6 +403,14 @@ export async function selectOption(
   await waitFor(() =>
     assert.equal(trigger.getAttribute("aria-expanded"), "false"),
   );
+}
+
+export function selectedProjectPath() {
+  const project = screen.getByRole("combobox", { name: "Project" });
+
+  return project instanceof HTMLInputElement
+    ? project.value
+    : (project.querySelector(".select-value-description")?.textContent ?? "");
 }
 
 export async function enterTask(user: any, description: string) {

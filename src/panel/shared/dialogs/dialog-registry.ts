@@ -1,10 +1,16 @@
 import type { DialogState } from "../../app/state/types";
 import { changedFileDialog } from "../../features/changes/changed-file-preview";
 import { worktreeDialog } from "../../features/changes/worktree-form";
-import { delegateDialog } from "../../features/delegation/delegate-form";
+import {
+  delegateDialog,
+  delegateLoadingDialog,
+} from "../../features/delegation/delegate-form";
 import { projectDialog } from "../../features/projects/project-form";
 import { removeProjectDialog } from "../../features/projects/remove-project-form";
-import { settingsDialog } from "../../features/settings/settings-form";
+import {
+  settingsDialog,
+  settingsLoadingDialog,
+} from "../../features/settings/settings-form";
 import { deleteTaskDialog } from "../../features/tasks/controls/delete-task-form";
 import { handoffDialog } from "../../features/tasks/controls/handoff-form";
 import { permissionDialog } from "../../features/tasks/controls/permission-form";
@@ -15,7 +21,9 @@ const registry: { [K in DialogKind]: DialogDefinition<K> } = {
   "remove-project": removeProjectDialog,
   project: projectDialog,
   settings: settingsDialog,
+  "settings-loading": settingsLoadingDialog,
   delegate: delegateDialog,
+  "delegate-loading": delegateLoadingDialog,
   respond: permissionDialog,
   handoff: handoffDialog,
   delete: deleteTaskDialog,

@@ -1,12 +1,18 @@
-import { useFormContext, useWatch } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../shared/providers/metadata";
 import { reasoningLevels } from "../../../shared/tasks/reasoning";
 import { profileLabel } from "../../app/state/selectors";
 import type { Defaults, Project, Task, Worker } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
+import { Presence } from "../../shared/components/motion/motion";
+import { AsyncControl } from "../../shared/forms/async-control";
 import { Field } from "../../shared/forms/fields";
+import { FormFieldError } from "../../shared/forms/form-field-error";
+import { FormFieldHint } from "../../shared/forms/form-field-hint";
 import { FormSelect } from "../../shared/forms/form-select";
+import { FormSwitch } from "../../shared/forms/form-switch";
+import { projectDisplayName } from "../projects/selectors";
 import { ModelAutocomplete } from "./model-autocomplete";
 import { ProjectAutocomplete } from "./project-autocomplete";
 
@@ -19,26 +25,36 @@ export type DelegateValues = {
   model: string;
   reasoning_effort: string;
   revision: string;
-  workspace_strategy: "worktree" | "current_repo";
+  workspace_strategy: "" | "worktree" | "current_repo";
   context: string;
   runtimeMode: string;
-  runtime: number;
+  runtime: number | "";
   costMode: string;
-  cost: number;
+  cost: number | "";
   deps: string[];
 };
 
 interface ProjectFieldProps {
   projects: Project[];
   allowParent: boolean;
+  loading?: boolean;
+  contextLoading?: boolean;
+  error?: string;
+  contextError?: string;
   disabled?: boolean;
+  browseDisabled?: boolean;
   onBrowse?: () => void;
 }
 
 export function ProjectField({
   projects,
   allowParent,
+  loading = false,
+  contextLoading = false,
+  error,
+  contextError,
   disabled = false,
+  browseDisabled = disabled,
   onBrowse,
 }: ProjectFieldProps) {
   const { control } = useFormContext<DelegateValues>(),
@@ -49,10 +65,19 @@ export function ProjectField({
       <div className="project-selection">
         <div className="project-selection-control">
           {allowParent ? (
-            <ProjectAutocomplete
-              disabled={disabled}
-              repositories={options.map((project) => project.repository)}
-            />
+            <AsyncControl
+              loading={loading || contextLoading}
+              label={
+                loading
+                  ? "Loading approved projects"
+                  : "Resolving project context"
+              }
+            >
+              <ProjectAutocomplete
+                disabled={disabled || loading || contextLoading}
+                projects={options}
+              />
+            </AsyncControl>
           ) : (
             <FormSelect
               control={control}
@@ -60,21 +85,31 @@ export function ProjectField({
               id="repository"
               label="Project"
               required
-              disabled={disabled}
+              disabled={disabled || loading || contextLoading}
+              loading={loading || contextLoading}
+              loadingLabel={
+                loading
+                  ? "Loading approved projects"
+                  : "Resolving project context"
+              }
               placeholder="Choose a project"
-              rules={{ required: "Choose a project before starting a task." }}
+              rules={{
+                required: "Choose a project before starting a task.",
+              }}
               options={options.map((project) => ({
                 value: project.repository,
-                label: project.pending
-                  ? `${project.repository} (chat project, added when the task starts)`
+                label: projectDisplayName(project),
+                description: project.pending
+                  ? `${project.repository} · Chat project, added when the task starts`
                   : project.repository,
+                showDescriptionInValue: true,
               }))}
             />
           )}
         </div>
         {onBrowse && (
           <Button
-            disabled={disabled}
+            disabled={browseDisabled}
             onClick={onBrowse}
             title="Choose and add a repository on the service host"
           >
@@ -82,6 +117,25 @@ export function ProjectField({
           </Button>
         )}
       </div>
+      <FormFieldError message={error} />
+      <FormFieldError
+        message={
+          contextError
+            ? `Project context could not be resolved: ${contextError}`
+            : undefined
+        }
+      />
+      <FormFieldHint
+        message={
+          !loading &&
+          !contextLoading &&
+          !error &&
+          !options.length &&
+          !allowParent
+            ? "Add a project before starting a task."
+            : undefined
+        }
+      />
       {allowParent && (
         <p className="help">
           Use a registered Git root or a Git repository inside an approved
@@ -92,8 +146,16 @@ export function ProjectField({
   );
 }
 
-export function WorkspaceField() {
+export function WorkspaceField({
+  settingsReady = true,
+  settingsLoading = false,
+}: {
+  settingsReady?: boolean;
+  settingsLoading?: boolean;
+}) {
   const { control } = useFormContext<DelegateValues>();
+  const value = useWatch({ control, name: "workspace_strategy" });
+  const unresolved = !settingsReady && !value;
 
   return (
     <Field id="workspace-strategy" label="Workspace">
@@ -102,6 +164,16 @@ export function WorkspaceField() {
         name="workspace_strategy"
         id="workspace-strategy"
         label="Workspace"
+        disabled={!settingsReady}
+        loading={settingsLoading && unresolved}
+        loadingLabel="Loading workspace default"
+        placeholder={
+          unresolved
+            ? settingsLoading
+              ? "Loading…"
+              : "Unavailable"
+            : undefined
+        }
         options={[
           { value: "worktree", label: "Isolated worktree" },
           {
@@ -114,10 +186,25 @@ export function WorkspaceField() {
   );
 }
 
-export function WorkerFields({ workers }: { workers: Worker[] }) {
+export function WorkerFields({
+  workers,
+  loading = false,
+  error,
+  disabled = false,
+  revisionDisabled = false,
+  revisionLoading = false,
+}: {
+  workers: Worker[];
+  loading?: boolean;
+  error?: string;
+  disabled?: boolean;
+  revisionDisabled?: boolean;
+  revisionLoading?: boolean;
+}) {
   const { register, control } = useFormContext<DelegateValues>();
   const strategy = useWatch({ control, name: "workspace_strategy" });
   const selected = useWatch({ control, name: "worker" });
+  const revision = useWatch({ control, name: "revision" });
 
   const readiness = workers.find(
     (worker) => worker.provider === selected?.split(":")[0],
@@ -132,6 +219,16 @@ export function WorkerFields({ workers }: { workers: Worker[] }) {
             name="worker"
             id="worker"
             label="Worker"
+            disabled={
+              disabled ||
+              loading ||
+              !workers.some((worker) => worker.profiles.length)
+            }
+            loading={loading}
+            loadingLabel="Loading available workers"
+            placeholder={
+              !selected ? (loading ? "Loading…" : "Unavailable") : undefined
+            }
             options={workers.flatMap((worker) =>
               worker.profiles.map((profile) => ({
                 value: `${worker.provider}:${profile}`,
@@ -139,135 +236,229 @@ export function WorkerFields({ workers }: { workers: Worker[] }) {
               })),
             )}
           />
-          {readiness?.ready === false && (
-            <p id="worker-error" className="form-error" role="alert">
-              {readiness.message}
-            </p>
-          )}
+          <FormFieldError message={error} />
+          <FormFieldError
+            message={
+              !loading &&
+              !error &&
+              !workers.some((worker) => worker.profiles.length)
+                ? "No workers are available. Check service configuration in Codex."
+                : undefined
+            }
+          />
+          <FormFieldError
+            id="worker-error"
+            message={readiness?.ready === false ? readiness.message : undefined}
+          />
         </Field>
       </div>
       <div>
         <Field id="revision" label="Revision">
-          <input
-            id="revision"
-            readOnly={strategy === "current_repo"}
-            required
-            {...register("revision", { required: true })}
-          />
+          <AsyncControl
+            loading={revisionLoading && !revision}
+            label="Resolving repository revision"
+          >
+            <input
+              id="revision"
+              disabled={revisionDisabled}
+              placeholder={
+                revisionLoading && !revision ? "Loading…" : undefined
+              }
+              readOnly={strategy === "current_repo"}
+              required
+              {...register("revision", { required: true })}
+            />
+          </AsyncControl>
         </Field>
       </div>
     </div>
   );
 }
 
-export function BudgetFields({ workers }: { workers: Worker[] }) {
+export function BudgetFields({
+  workers,
+  settingsReady = true,
+  workersReady = true,
+  settingsLoading = false,
+}: {
+  workers: Worker[];
+  settingsReady?: boolean;
+  workersReady?: boolean;
+  settingsLoading?: boolean;
+}) {
   const {
       register,
       control,
       formState: { errors },
     } = useFormContext<DelegateValues>(),
-    [worker, mode, runtimeMode] = useWatch({
+    [worker, mode, runtimeMode, cost, runtime] = useWatch({
       control,
-      name: ["worker", "costMode", "runtimeMode"],
+      name: ["worker", "costMode", "runtimeMode", "cost", "runtime"],
     });
 
   const provider = workers.find(
     (item) => item.provider === worker.split(":")[0],
   );
 
+  const workerResolved = Boolean(worker && provider);
+
   return (
     <>
-      <div className="two">
-        <Field id="cost-mode" label="Cost limit">
-          <FormSelect
+      <div className="setting-row setting-row-inline">
+        <span id="cost-mode-label" className="setting-label">
+          Cost limit
+        </span>
+        <div className="setting-control">
+          <span
+            className="setting-amount"
+            data-off={mode !== "limited" || undefined}
+          >
+            <AsyncControl
+              loading={settingsLoading && cost === "" && mode !== "none"}
+              label="Loading cost budget defaults"
+            >
+              <input
+                id="cost"
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="any"
+                disabled={mode !== "limited" || !settingsReady || !workersReady}
+                required={mode === "limited"}
+                aria-label="Cost limit (USD)"
+                aria-describedby="cost-note budget-error"
+                {...register("cost", {
+                  valueAsNumber: true,
+                  validate: (value) =>
+                    mode === "none" ||
+                    (typeof value === "number" &&
+                      Number.isFinite(value) &&
+                      value > 0) ||
+                    "Cost budget must be greater than zero.",
+                })}
+              />
+            </AsyncControl>
+            <span className="setting-unit">USD</span>
+          </span>
+          <Controller
             control={control}
             name="costMode"
-            id="cost-mode"
-            label="Cost limit"
-            options={[
-              { value: "limited", label: "Apply cost budget" },
-              { value: "none", label: "No cost limit" },
-            ]}
             rules={{
               validate: (value) =>
                 value === "none" ||
                 Boolean(provider?.capabilities.cost_budget) ||
                 "This worker cannot enforce a cost budget. Choose No cost limit.",
             }}
+            render={({ field }) => (
+              <FormSwitch
+                checked={field.value === "limited"}
+                onCheckedChange={(checked) =>
+                  field.onChange(checked ? "limited" : "none")
+                }
+                onBlur={field.onBlur}
+                id="cost-mode"
+                labelId="cost-mode-label"
+                describedBy="cost-note budget-error"
+                disabled={!settingsReady || !workersReady}
+                loading={settingsLoading && !field.value}
+              />
+            )}
           />
-        </Field>
-        <Field id="cost" label="Cost budget · USD">
-          <input
-            id="cost"
-            type="number"
-            min="0.01"
-            step="0.01"
-            disabled={mode === "none"}
-            required={mode !== "none"}
-            aria-describedby="cost-note budget-error"
-            {...register("cost", {
-              valueAsNumber: true,
-              validate: (value) =>
-                mode === "none" ||
-                (Number.isFinite(value) && value > 0) ||
-                "Cost budget must be greater than zero.",
-            })}
-          />
-        </Field>
+        </div>
       </div>
       <p id="cost-note" className="help">
-        {mode === "none"
-          ? runtimeMode === "none"
-            ? "No cost or runtime limit applies."
-            : "Only the runtime limit applies."
-          : providerMetadata(provider?.provider ?? "", provider?.metadata)
-                ?.costBudgetHelp
-            ? providerMetadata(provider?.provider ?? "", provider?.metadata)!
-                .costBudgetHelp
-            : provider?.capabilities.cost_budget
-              ? "Provider cost budget applies."
-              : "This provider requires No cost limit."}
+        {!workerResolved
+          ? workersReady
+            ? "Choose a worker to see budget support."
+            : "Loading budget options."
+          : mode === "none"
+            ? undefined
+            : providerMetadata(provider?.provider ?? "", provider?.metadata)
+                  ?.costBudgetHelp
+              ? providerMetadata(provider?.provider ?? "", provider?.metadata)!
+                  .costBudgetHelp
+              : provider?.capabilities.cost_budget
+                ? undefined
+                : "This provider requires No cost limit."}
       </p>
-      <div className="two">
-        <Field id="runtime-mode" label="Runtime limit">
-          <FormSelect
+      <div className="setting-row setting-row-inline">
+        <span id="runtime-mode-label" className="setting-label">
+          Runtime limit
+        </span>
+        <div className="setting-control">
+          <span
+            className="setting-amount"
+            data-off={runtimeMode !== "limited" || undefined}
+          >
+            <AsyncControl
+              loading={
+                settingsLoading && runtime === "" && runtimeMode !== "none"
+              }
+              label="Loading runtime limit defaults"
+            >
+              <input
+                id="runtime"
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="any"
+                disabled={runtimeMode !== "limited" || !settingsReady}
+                required={runtimeMode === "limited"}
+                aria-label="Runtime limit (mins)"
+                aria-describedby="budget-error"
+                {...register("runtime", {
+                  valueAsNumber: true,
+                  validate: (value) =>
+                    runtimeMode === "none" ||
+                    (typeof value === "number" &&
+                      Number.isFinite(value) &&
+                      value > 0) ||
+                    "Runtime limit must be greater than zero.",
+                })}
+              />
+            </AsyncControl>
+            <span className="setting-unit">mins</span>
+          </span>
+          <Controller
             control={control}
             name="runtimeMode"
-            id="runtime-mode"
-            label="Runtime limit"
-            options={[
-              { value: "limited", label: "Apply runtime budget" },
-              { value: "none", label: "No runtime limit" },
-            ]}
+            render={({ field }) => (
+              <FormSwitch
+                checked={field.value === "limited"}
+                onCheckedChange={(checked) =>
+                  field.onChange(checked ? "limited" : "none")
+                }
+                onBlur={field.onBlur}
+                id="runtime-mode"
+                labelId="runtime-mode-label"
+                describedBy="budget-error"
+                disabled={!settingsReady}
+                loading={settingsLoading && !field.value}
+              />
+            )}
           />
-        </Field>
-        <Field id="runtime" label="Runtime limit · minutes">
-          <input
-            id="runtime"
-            type="number"
-            min="0"
-            step="any"
-            disabled={runtimeMode === "none"}
-            required={runtimeMode !== "none"}
-            aria-describedby="budget-error"
-            {...register("runtime", {
-              valueAsNumber: true,
-              validate: (value) =>
-                runtimeMode === "none" ||
-                (Number.isFinite(value) && value > 0) ||
-                "Runtime limit must be greater than zero.",
-            })}
-          />
-        </Field>
+        </div>
       </div>
       <div id="budget-error" className="form-error" role="alert">
-        {errors.runtime?.message ?? errors.cost?.message}
+        {errors.costMode?.message ??
+          errors.runtime?.message ??
+          errors.cost?.message}
       </div>
     </>
   );
 }
 
-export function DependencyField({ tasks }: { tasks: Task[] }) {
+export function DependencyField({
+  tasks,
+  loading = false,
+  projectsLoading = false,
+  disabled = false,
+}: {
+  tasks: Task[];
+  loading?: boolean;
+  projectsLoading?: boolean;
+  disabled?: boolean;
+}) {
   const { control } = useFormContext<DelegateValues>(),
     repository = useWatch({ control, name: "repository" });
 
@@ -279,6 +470,13 @@ export function DependencyField({ tasks }: { tasks: Task[] }) {
         name="deps"
         id="deps"
         label="Wait for tasks (optional)"
+        disabled={loading || projectsLoading || disabled}
+        loading={loading || projectsLoading}
+        loadingLabel={
+          projectsLoading
+            ? "Loading project options for dependencies"
+            : "Loading tasks for dependency options"
+        }
         placeholder="No dependencies"
         options={tasks
           .filter((task) => task.repository === repository)
@@ -291,14 +489,25 @@ export function DependencyField({ tasks }: { tasks: Task[] }) {
 interface ModelFieldsProps {
   defaults: Defaults;
   workers: Worker[];
+  settingsReady?: boolean;
+  workersReady?: boolean;
+  settingsLoading?: boolean;
+  workersLoading?: boolean;
 }
 
-export function ModelFields({ defaults, workers }: ModelFieldsProps) {
+export function ModelFields({
+  defaults,
+  workers,
+  settingsReady = true,
+  workersReady = true,
+  settingsLoading = false,
+  workersLoading = false,
+}: ModelFieldsProps) {
   const { control } = useFormContext<DelegateValues>();
 
-  const [worker, selectedModel] = useWatch({
+  const [worker, selectedModel, selectedEffort] = useWatch({
     control,
-    name: ["worker", "model"],
+    name: ["worker", "model", "reasoning_effort"],
   });
 
   const [provider, role] = worker.split(":");
@@ -330,11 +539,23 @@ export function ModelFields({ defaults, workers }: ModelFieldsProps) {
   return (
     <>
       <Field id="model" label="Model">
-        <ModelAutocomplete
-          models={workerInfo?.models ?? []}
-          placeholder={model || "Provider runtime default"}
-          describedBy="model-help"
-        />
+        <AsyncControl
+          loading={workersLoading || (settingsLoading && !selectedModel)}
+          label="Loading model defaults and available models"
+        >
+          <ModelAutocomplete
+            models={workerInfo?.models ?? []}
+            placeholder={
+              !settingsReady
+                ? settingsLoading
+                  ? "Loading…"
+                  : "Unavailable"
+                : model || "Provider runtime default"
+            }
+            describedBy="model-help"
+            disabled={!settingsReady || !workersReady}
+          />
+        </AsyncControl>
         <p id="model-help" className="help">
           Leave blank to inherit {model || "the provider runtime default"}.
           Choose a discovered model or enter a model ID or provider alias.
@@ -352,6 +573,20 @@ export function ModelFields({ defaults, workers }: ModelFieldsProps) {
           name="reasoning_effort"
           id="reasoning-effort"
           label="Reasoning effort"
+          disabled={!settingsReady || !workersReady}
+          loading={
+            workersLoading ||
+            (settingsLoading &&
+              (!selectedEffort || selectedEffort === "default"))
+          }
+          loadingLabel="Loading reasoning options"
+          placeholder={
+            !settingsReady && !selectedEffort
+              ? settingsLoading
+                ? "Loading…"
+                : "Unavailable"
+              : undefined
+          }
           rules={{
             validate: (value) => {
               const resolved = value === "default" ? reasoning : value;
@@ -382,7 +617,15 @@ export function ModelFields({ defaults, workers }: ModelFieldsProps) {
   );
 }
 
-export function ApprovalField({ workers }: { workers: Worker[] }) {
+export function ApprovalField({
+  workers,
+  disabled = false,
+  loading = false,
+}: {
+  workers: Worker[];
+  disabled?: boolean;
+  loading?: boolean;
+}) {
   const { control } = useFormContext<DelegateValues>();
   const worker = useWatch({ control, name: "worker" });
   const provider = worker?.split(":")[0];
@@ -393,6 +636,11 @@ export function ApprovalField({ workers }: { workers: Worker[] }) {
     info?.metadata,
   )?.nativePermissions;
 
+  const unresolved = loading && !info,
+    permissionOptions =
+      permissions?.options ??
+      (unresolved ? [] : [{ value: "inherit", label: "Inherit" }]);
+
   return (
     <>
       <Field id="permission-mode" label="Permission mode">
@@ -401,31 +649,46 @@ export function ApprovalField({ workers }: { workers: Worker[] }) {
           name="permission_mode"
           id="permission-mode"
           label="Permission mode"
-          disabled={!permissions}
-          options={
-            permissions?.options ?? [{ value: "inherit", label: "Inherit" }]
-          }
+          disabled={disabled || !permissions}
+          loading={loading}
+          loadingLabel="Loading permission options"
+          placeholder={unresolved ? "Loading…" : undefined}
+          options={permissionOptions}
         />
         <p className="help">
-          {permissions?.help ??
-            "Native permission mode selection is available for providers that declare it."}
+          {unresolved
+            ? "Loading permission options."
+            : (permissions?.help ??
+              "Native permission mode selection is available for providers that declare it.")}
         </p>
       </Field>
-      {permissions?.approvalDecider && (
+      <Presence show={Boolean(permissions?.approvalDecider) || unresolved}>
         <Field id="approval-decider" label="Approval decision maker">
           <FormSelect
             control={control}
             name="approval_decider"
             id="approval-decider"
             label="Approval decision maker"
-            options={[
-              { value: "user", label: "User" },
-              { value: "parent_agent", label: "Parent agent" },
-            ]}
+            disabled={disabled}
+            loading={loading}
+            loadingLabel="Loading approval options"
+            placeholder={unresolved ? "Loading…" : undefined}
+            options={
+              unresolved
+                ? []
+                : [
+                    { value: "user", label: "User" },
+                    { value: "parent_agent", label: "Parent agent" },
+                  ]
+            }
           />
-          <p className="help">{permissions.approvalDeciderHelp}</p>
+          <p className="help">
+            {unresolved
+              ? "Loading approval options."
+              : permissions?.approvalDeciderHelp}
+          </p>
         </Field>
-      )}
+      </Presence>
     </>
   );
 }

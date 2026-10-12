@@ -33,10 +33,22 @@ export type PanelData = {
   tasks?: Task[];
 };
 
+export type DialogReadStatus = "loading" | "ready" | "error";
+
+export type DelegateDialogRead =
+  "context" | "settings" | "projects" | "workers";
+
 export type DialogState =
   | { kind: "remove-project"; project: Project; scope: number }
   | { kind: "project"; repository?: string; scope: number }
   | { kind: "settings"; settings: SettingsDocument; scope: number }
+  | {
+      kind: "settings-loading";
+      scope: number;
+      request: number;
+      status: DialogReadStatus;
+      error?: string;
+    }
   | {
       kind: "delegate";
       defaults: Defaults;
@@ -44,6 +56,18 @@ export type DialogState =
       repository?: string;
       revision: string;
       scope: number;
+    }
+  | {
+      kind: "delegate-loading";
+      scope: number;
+      request: number;
+      preferredWorker?: string;
+      repository?: string;
+      revision?: string;
+      defaults?: Defaults;
+      statuses: Record<DelegateDialogRead, DialogReadStatus>;
+      errors?: Partial<Record<DelegateDialogRead, string>>;
+      message?: string;
     }
   | { kind: "respond"; task: Task; scope: number }
   | { kind: "handoff"; task: Task; target?: HandoffTarget; scope: number }
@@ -111,6 +135,10 @@ export type Snapshot = {
   tasks: Task[];
   workers: Worker[];
   projects: Project[];
+  /** True once the project registry has been read successfully. */
+  projectsLoaded: boolean;
+  /** True once available worker profiles have been read successfully. */
+  workersLoaded: boolean;
   events: Event[];
   /** Tally of the selected task's events that fell off the front of `events`. */
   droppedEvents?: DroppedSummary;
@@ -118,6 +146,12 @@ export type Snapshot = {
   activityFocus?: ActivityFocus;
   /** The selected task's Chat, read alongside its events. */
   chat?: ChatState;
+  /** The selected task's initial Chat history read is pending. */
+  chatHistoryLoading?: string;
+  /** The selected task's initial Activity history read is pending. */
+  activityHistoryLoading?: string;
+  /** The current scope's first task-list read is still pending. */
+  taskListLoading: boolean;
   /** The selected task's message being written, streamed or read. */
   draft?: DraftState;
   selected?: string;
@@ -160,6 +194,8 @@ export type PersistedViewState = Partial<
 /** Browser-local UI state that should survive reloads but not appear in copied URLs. */
 export type PersistedUiState = {
   view: PersistedViewState;
+  /** The last expanded settings section, kept separately from unsaved drafts. */
+  lastSettingsSection?: string;
   /** Oldest to newest; the last dialog is the active one. */
   dialogs?: PersistedDialog[];
 };

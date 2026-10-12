@@ -8,6 +8,7 @@ import {
   enterTask,
   executionPresentation,
   screen,
+  selectedProjectPath,
   selectOption,
   setup,
   task,
@@ -106,14 +107,17 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
 
-  assert.equal(
-    screen.getByRole("combobox", { name: "Project" }).textContent,
-    "/repo/a",
+  await waitFor(() =>
+    assert.equal(
+      (screen.getByLabelText("Runtime limit (mins)") as HTMLInputElement).value,
+      "0.5",
+    ),
   );
 
+  assert.equal(selectedProjectPath(), "/repo/a");
+
   assert.equal(
-    (screen.getByLabelText("Runtime limit · minutes") as HTMLInputElement)
-      .value,
+    (screen.getByLabelText("Runtime limit (mins)") as HTMLInputElement).value,
     "0.5",
   );
 
@@ -121,7 +125,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   await selectOption(user, "Worker", "fixture · reviewer");
   await user.type(screen.getByLabelText("Model"), "selected-model");
   await selectOption(user, "Reasoning effort", "high");
-  await selectOption(user, "Cost limit", "Apply cost budget");
+  await user.click(screen.getByRole("switch", { name: "Cost limit" }));
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
   await screen.findByText(
@@ -133,7 +137,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
     0,
   );
 
-  await selectOption(user, "Cost limit", "No cost limit");
+  await user.click(screen.getByRole("switch", { name: "Cost limit" }));
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
   await waitFor(() =>
@@ -166,7 +170,7 @@ test("changing projects clears revision and dependencies while retaining the tas
 
   await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
-  await selectOption(user, "Project", "/repo/a");
+  await selectOption(user, "Project", /repo\/a$/);
   await enterTask(user, "Persistent task");
   await selectOption(user, "Workspace", "Isolated worktree");
   await user.clear(screen.getByLabelText("Revision"));
@@ -179,7 +183,7 @@ test("changing projects clears revision and dependencies while retaining the tas
     true,
   );
 
-  await selectOption(user, "Project", "/repo/b");
+  await selectOption(user, "Project", /repo\/b$/);
 
   assert.equal(
     (screen.getByLabelText("Revision") as HTMLInputElement).value,
@@ -197,7 +201,7 @@ test("changing projects clears revision and dependencies while retaining the tas
     /No dependencies/,
   );
 
-  await selectOption(user, "Project", "/repo/a");
+  await selectOption(user, "Project", /repo\/a$/);
 
   assert.match(
     screen.getByRole("combobox", { name: "Wait for tasks (optional)" })
@@ -341,7 +345,20 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Budget validation");
-  const runtime = screen.getByLabelText("Runtime limit · minutes");
+  const runtime = screen.getByLabelText("Runtime limit (mins)");
+
+  await waitFor(() =>
+    assert.equal((runtime as HTMLInputElement).disabled, false),
+  );
+
+  await waitFor(() =>
+    assert.equal(
+      (screen.getByRole("button", { name: "Start task" }) as HTMLButtonElement)
+        .disabled,
+      false,
+    ),
+  );
+
   await user.clear(runtime);
   await user.type(runtime, "0");
   await user.click(screen.getByRole("button", { name: "Start task" }));
@@ -355,8 +372,8 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
 
   await user.clear(runtime);
   await user.type(runtime, "1");
-  await selectOption(user, "Cost limit", "Apply cost budget");
-  const cost = screen.getByLabelText("Cost budget · USD");
+  await user.click(screen.getByRole("switch", { name: "Cost limit" }));
+  const cost = screen.getByLabelText("Cost limit (USD)");
   await user.clear(cost);
   await user.type(cost, "0");
   await user.click(screen.getByRole("button", { name: "Start task" }));

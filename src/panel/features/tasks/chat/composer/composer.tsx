@@ -37,8 +37,10 @@ const HINTS = {
 };
 
 type ComposerProps = {
-  task: Task;
+  task?: Task;
+  taskId?: string;
   budgetApplyVersion: number;
+  disabled?: boolean;
 };
 
 /**
@@ -46,23 +48,29 @@ type ComposerProps = {
  * Cmd/Ctrl+Enter steers a running turn after its next tool call. While the
  * worker waits for input, messages can only be queued. Apply a spent budget increase before sending the next message.
  */
-export function Composer({ task, budgetApplyVersion }: ComposerProps) {
+export function Composer({
+  task,
+  taskId,
+  budgetApplyVersion,
+  disabled = false,
+}: ComposerProps) {
   const controller = useController(),
     busy = useSnapshot().busy,
-    mode = composerMode(task),
+    sessionTaskId = task?.id ?? taskId ?? "loading",
+    mode = task ? composerMode(task) : "idle",
     inputHint =
-      task.pending_input &&
+      task?.pending_input &&
       pendingInputKind(task.pending_input) === "permission"
         ? "Enter to queue"
         : HINTS.input,
-    inputRequest = task.pending_input?.id,
+    inputRequest = task?.pending_input?.id,
     [expandedRequest, setExpandedRequest] = useState<string>(),
     [manuallyCollapsed, updateComposerSession] = useSessionState(
       "task",
-      task.id,
+      sessionTaskId,
       (state) => state.composerCollapsed,
     ),
-    spent = spentBudget(task),
+    spent = task ? spentBudget(task) : undefined,
     collapsed = inputRequest
       ? expandedRequest !== inputRequest
       : manuallyCollapsed,
@@ -72,7 +80,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
     focusAfterToggle = useRef<"input" | "toggle" | undefined>(undefined),
     [text, updateSession] = useSessionState(
       "task",
-      task.id,
+      sessionTaskId,
       (state) => state.composerDraft,
     ),
     canContinue = !spent,
@@ -97,6 +105,8 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
   }, [collapsed]);
 
   const toggle = (hide: boolean) => {
+    if (disabled) return;
+
     focusAfterToggle.current = hide ? "toggle" : "input";
     // Reopening applies only to this request, preserving the ordinary preference.
     if (inputRequest) setExpandedRequest(hide ? undefined : inputRequest);
@@ -108,6 +118,12 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
   };
 
   useEffect(() => {
+    if (disabled) {
+      previousBudgetApply.current = budgetApplyVersion;
+
+      return;
+    }
+
     if (previousBudgetApply.current === budgetApplyVersion || !canContinue)
       return;
 
@@ -124,6 +140,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
     budgetApplyVersion,
     canContinue,
     collapsed,
+    disabled,
     message,
     inputRequest,
     updateComposerSession,
@@ -131,7 +148,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
   ]);
 
   const send = async (delivery: Delivery) => {
-    if (!message || busy || !canContinue) return;
+    if (disabled || !task || !message || busy || !canContinue) return;
 
     setShowContinuePrompt(false);
     const failure = await controller.sendMessage(task, message, delivery);
@@ -141,10 +158,13 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
   };
 
   // Stopping with steers pending sends them at once as the next turn.
-  const stop = async () =>
+  const stop = async () => {
+    if (disabled || !task) return;
+
     setError(
       await controller.interruptTask(task, task.pending_steers.length > 0),
     );
+  };
 
   const keys = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.nativeEvent.isComposing) return;
@@ -167,7 +187,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
         className="chat-icon-button"
         data-action="stop"
         aria-label="Stop the turn"
-        disabled={busy}
+        disabled={disabled || busy}
         onClick={stop}
       >
         <Icon name="stop-solid" size={9} />
@@ -181,6 +201,8 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
       id="chat-composer-body"
       className="chat-composer"
       data-mode={mode}
+      data-loading={disabled || undefined}
+      aria-busy={disabled || undefined}
     >
       {collapsed ? (
         <div className="chat-composer-toggle-row motion-swap">
@@ -190,6 +212,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
             className="chat-composer-expand"
             aria-expanded={false}
             aria-controls="chat-composer-body"
+            disabled={disabled}
             onClick={() => toggle(false)}
           >
             <Icon name="chevron-down" size={12} />
@@ -213,6 +236,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
                 aria-label="Hide composer"
                 aria-expanded={true}
                 aria-controls="chat-composer-body"
+                disabled={disabled}
                 onClick={() => toggle(true)}
               >
                 <Icon name="chevron-down" size={12} />
@@ -223,6 +247,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
                 ref={input}
                 id="chat-composer"
                 aria-label="Message"
+                disabled={disabled}
                 aria-describedby={
                   [
                     spent ? undefined : "chat-composer-hint",
@@ -271,7 +296,7 @@ export function Composer({ task, budgetApplyVersion }: ComposerProps) {
                       className="chat-icon-button"
                       data-action="send"
                       aria-label={mode === "busy" ? "Steer" : "Send"}
-                      disabled={busy || !message || !canContinue}
+                      disabled={disabled || busy || !message || !canContinue}
                       onClick={() => send("steer")}
                     >
                       <Icon name="enter" size={12} />

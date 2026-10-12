@@ -14,7 +14,11 @@ const TOP_SLACK_PX = 48;
  * Returns the reader to their place in a task's changes when the tab shows
  * again, and keeps that place current while they scroll.
  */
-export function useChangesScroll(reading: ChangesReading, ready: boolean) {
+export function useChangesScroll(
+  reading: ChangesReading,
+  ready: boolean,
+  hasFiles = true,
+) {
   const viewportRef = useRef<HTMLDivElement>(null),
     // The reader scrolled since the tab showed, so their place is current.
     scrolled = useRef(false);
@@ -25,6 +29,17 @@ export function useChangesScroll(reading: ChangesReading, ready: boolean) {
     const viewport = viewportRef.current;
     // Wait for the files: restoring against the loading note would lose the place.
     if (!viewport || !ready) return;
+
+    if (!hasFiles) {
+      // An old file offset can be clamped when the tall loading view disappears.
+      // Empty results have no file position to restore, so keep the message at top.
+      reading.position = undefined;
+      scrolled.current = false;
+      scrollContainer(viewport).scrollTop = 0;
+      setAtTop(true);
+
+      return;
+    }
 
     // The scroll a restore causes, so it isn't mistaken for the reader's.
     let corrected: { container: HTMLElement; top: number } | undefined;
@@ -85,7 +100,7 @@ export function useChangesScroll(reading: ChangesReading, ready: boolean) {
       observer?.disconnect();
       ownerDocument.removeEventListener("scroll", onScroll, { capture: true });
     };
-  }, [reading, ready]);
+  }, [hasFiles, reading, ready]);
 
   const scrollToTop = useCallback(() => {
     const viewport = viewportRef.current;

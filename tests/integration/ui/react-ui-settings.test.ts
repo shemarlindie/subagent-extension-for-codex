@@ -202,7 +202,7 @@ test("settings dialog validates hidden budgets, types uncatalogued models, and f
     screen
       .getByRole("button", { name: /^Budgets/ })
       .getAttribute("aria-expanded"),
-    "false",
+    "true",
   );
 
   // The server flags an unsupported saved effort.
@@ -216,8 +216,16 @@ test("settings dialog validates hidden budgets, types uncatalogued models, and f
     "custom-id",
   );
 
-  // The cleared amount is in the closed Budgets section: saving reopens it
-  // and focuses the amount instead of sending an invalid value.
+  // Collapse Budgets to verify saving reopens it and focuses an invalid amount.
+  await user.click(screen.getByRole("button", { name: /^Budgets/ }));
+
+  assert.equal(
+    screen
+      .getByRole("button", { name: /^Budgets/ })
+      .getAttribute("aria-expanded"),
+    "false",
+  );
+
   await user.click(screen.getByRole("button", { name: "Save 2 changes" }));
 
   assert.equal(
@@ -396,11 +404,13 @@ test("settings resets restore defaults only per section", async (t) => {
   const model = screen.getByRole("textbox", { name: "Global model" });
   await user.clear(model);
   await user.type(model, "draft-model");
-  await user.click(screen.getByRole("button", { name: /^Task/ }));
 
   assertAbsent(screen.queryByRole("button", { name: "Reset" }));
 
-  await user.click(screen.getByRole("button", { name: "Reset to defaults" }));
+  await user.click(
+    screen.getAllByRole("button", { name: "Reset to defaults" })[0],
+  );
+
   assert.equal(subagents.getAttribute("aria-checked"), "true");
 
   assert.equal(
@@ -410,8 +420,8 @@ test("settings resets restore defaults only per section", async (t) => {
     "true",
   );
 
-  assertAbsent(screen.queryByRole("button", { name: /^Reset/ }));
-  await user.click(screen.getByRole("button", { name: /^Models/ }));
+  assert.equal(screen.getAllByRole("button", { name: /^Reset/ }).length, 1);
+
   assert.equal((model as HTMLInputElement).value, "draft-model");
 
   assert.equal(

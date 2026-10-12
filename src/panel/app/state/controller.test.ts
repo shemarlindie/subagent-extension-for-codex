@@ -191,6 +191,130 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
   }
 });
 
+test("selected activity loading clears independently from chat history", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+
+  const selected = task("task-1", "/repo/a", "thread-one");
+
+  transport.context = {
+    panel_scope: { conversation_id: "thread-one" },
+  };
+
+  const tasksRead = deferred<unknown>();
+  const activityRead = deferred<unknown>();
+  const chatRead = deferred<unknown>();
+
+  transport.handler = (name) =>
+    name === "list_agent_tasks"
+      ? tasksRead.promise
+      : name === "get_user_agent_activity"
+        ? activityRead.promise
+        : name === "get_user_agent_chat"
+          ? chatRead.promise
+          : undefined;
+
+  assert.equal(controller.getSnapshot().taskListLoading, true);
+  const starting = controller.start();
+  await flush();
+  assert.equal(controller.getSnapshot().taskListLoading, true);
+
+  tasksRead.resolve([selected]);
+  await flush();
+  assert.equal(controller.getSnapshot().taskListLoading, false);
+  assert.equal(controller.getSnapshot().selected, selected.id);
+  assert.equal(controller.getSnapshot().chatHistoryLoading, selected.id);
+  assert.equal(controller.getSnapshot().activityHistoryLoading, selected.id);
+
+  activityRead.resolve({ events: [] });
+  await flush();
+  assert.equal(controller.getSnapshot().activityHistoryLoading, undefined);
+  assert.equal(controller.getSnapshot().chatHistoryLoading, selected.id);
+
+  chatRead.resolve({ items: [], next_cursor: 0 });
+  await starting;
+  assert.equal(controller.getSnapshot().chatHistoryLoading, undefined);
+});
+
+test("selected chat history becomes available while activity is still loading", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+
+  const selected = task("task-1", "/repo/a", "thread-one");
+  transport.tasks = [selected];
+
+  transport.context = {
+    panel_scope: { conversation_id: "thread-one" },
+  };
+
+  const activityRead = deferred<unknown>();
+  const chatRead = deferred<unknown>();
+
+  transport.handler = (name) =>
+    name === "get_user_agent_activity"
+      ? activityRead.promise
+      : name === "get_user_agent_chat"
+        ? chatRead.promise
+        : undefined;
+
+  const starting = controller.start();
+  await flush();
+
+  chatRead.resolve({ items: [], next_cursor: 0 });
+  await flush();
+  assert.equal(controller.getSnapshot().chat?.task, selected.id);
+  assert.equal(controller.getSnapshot().chatHistoryLoading, undefined);
+  assert.equal(controller.getSnapshot().activityHistoryLoading, selected.id);
+
+  activityRead.resolve({ events: [] });
+  await starting;
+  assert.equal(controller.getSnapshot().activityHistoryLoading, undefined);
+});
+
+test("settings opens before its read and keeps its draft across scope changes", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  await controller.start();
+
+  const settingsRead = deferred<{ sections: never[]; values: Defaults }>();
+
+  transport.handler = (name) =>
+    name === "get_agent_settings" ? settingsRead.promise : undefined;
+
+  await controller.settings();
+  assert.equal(controller.getSnapshot().dialog?.kind, "settings-loading");
+
+  controller.saveSettingsOpenSections(["task", "models"]);
+
+  assert.deepEqual(controller.getDialogDraft("settings")?.openSections, [
+    "task",
+    "models",
+  ]);
+
+  controller.applyScope(
+    { panel_scope: { conversation_id: "another-chat" } },
+    false,
+  );
+
+  assert.equal(controller.getSnapshot().dialog?.kind, "settings-loading");
+
+  assert.deepEqual(controller.getDialogDraft("settings")?.openSections, [
+    "task",
+    "models",
+  ]);
+
+  settingsRead.resolve({ sections: [], values: defaults });
+  await flush();
+
+  assert.equal(controller.getSnapshot().dialog?.kind, "settings");
+  assert.equal(controller.getLastSettingsSection(), "models");
+
+  assert.deepEqual(controller.getDialogDraft("settings")?.openSections, [
+    "task",
+    "models",
+  ]);
+});
+
 test("browser view state seeds the first render, restores a task, and persists list navigation", async (t) => {
   const transport = new FakeTransport();
 
@@ -723,6 +847,7 @@ test("refresh preserves dialog identity and reviewed defaults while discovering 
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   await controller.delegate();
+  await flush();
   const dialog = controller.getSnapshot().dialog;
   assert.equal(dialog?.kind, "delegate");
   if (dialog?.kind !== "delegate") throw new Error("Expected delegate dialog");
@@ -743,21 +868,38 @@ test("delegation project lookup discarded when conversation changes", async (t) 
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   await controller.start();
-  const gate = deferred<typeof transport.projects>();
+  const gate = deferred<{ values: Defaults }>();
 
   transport.handler = (name) =>
-    name === "list_agent_projects" ? gate.promise : undefined;
+    name === "get_agent_settings" ? gate.promise : undefined;
 
   const opening = controller.delegate();
   await flush();
+  assert.equal(controller.getSnapshot().dialog?.kind, "delegate-loading");
+  controller.saveDialogField("delegate", "description", "Keep this draft");
+
+  assert.equal(
+    controller.getDialogDraft("delegate")?.description,
+    "Keep this draft",
+  );
+
+  let submitted = false;
+
+  await controller.submit(async () => {
+    submitted = true;
+  });
+
+  assert.equal(submitted, false);
+  assert.equal(controller.getSnapshot().busy, false);
 
   controller.applyScope(
     { panel_scope: { conversation_id: "another-chat" } },
     false,
   );
 
-  gate.resolve(transport.projects);
+  gate.resolve({ values: defaults });
   await opening;
+  await flush();
   assert.equal(controller.getSnapshot().dialog, undefined);
 });
 
@@ -766,6 +908,7 @@ test("in-flight mutation never selects its returned task after the host changes 
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   await controller.delegate();
+  await flush();
   const original = controller.getSnapshot().dialog;
   const gate = deferred<Task>();
   let navigated = false;
@@ -819,6 +962,7 @@ test("approved parent roots allow delegation in a scoped subrepository", async (
 
   await controller.start();
   await controller.delegate();
+  await flush();
   assert.equal(controller.getSnapshot().dialog?.kind, "delegate");
   const dialog = controller.getSnapshot().dialog;
 
@@ -841,6 +985,7 @@ test("automatic global history does not prefill delegation, while an intentional
 
   await controller.start();
   await controller.delegate();
+  await flush();
   let dialog = controller.getSnapshot().dialog;
 
   assert.equal(
@@ -851,6 +996,7 @@ test("automatic global history does not prefill delegation, while an intentional
   controller.dismiss();
   await controller.select("history");
   await controller.delegate();
+  await flush();
   dialog = controller.getSnapshot().dialog;
 
   assert.equal(
@@ -1279,6 +1425,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
 
     await controller.start();
     await controller.delegate();
+    await flush();
     const dialog = controller.getSnapshot().dialog;
     assert.equal(dialog?.kind, "delegate");
     if (dialog?.kind === "delegate")
@@ -1845,6 +1992,7 @@ test("revoking the edited delegation repository rejects selection of an in-fligh
   transport.projects.push({ repository: "/repo/b", kind: "repository" });
   await controller.start();
   await controller.delegate();
+  await flush();
   controller.saveDialogField("delegate", "repository", "/repo/b");
   const gate = deferred<Task>();
   const submitting = controller.submit(() => gate.promise, true);

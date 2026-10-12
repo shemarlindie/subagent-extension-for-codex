@@ -89,6 +89,7 @@
   position: relative;
 }
 .activity-viewport {
+  min-height: 190px;
   max-height: min(65dvh, 640px);
   overflow-y: auto;
   overflow-anchor: none;
@@ -99,6 +100,86 @@
 .activity-viewport:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 0;
+}
+.activity-skeleton-viewport {
+  /* The first status row adds 7px above its heading. */
+  padding-top: 6px;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+.activity-skeleton-viewport::-webkit-scrollbar {
+  display: none;
+}
+.activity-skeleton-dot {
+  --dot-color: var(--line);
+}
+.activity-skeleton-title-line {
+  display: inline-block;
+  height: 9px;
+  vertical-align: middle;
+}
+.activity-skeleton-title-wide {
+  width: 112px;
+}
+.activity-skeleton-title-medium {
+  width: 86px;
+}
+.activity-skeleton-title-short {
+  width: 58px;
+}
+.activity-skeleton-badge {
+  display: inline-block;
+  width: 32px;
+  height: 7px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.activity-skeleton-time {
+  flex: none;
+  width: 42px;
+  height: 9px;
+  margin-left: auto;
+}
+.activity-skeleton-debug-toggle {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  opacity: 0.5;
+}
+.activity-skeleton-debug-icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.activity-skeleton-summary-wide {
+  width: min(78%, 360px);
+  height: 8px;
+}
+.activity-skeleton-summary-short {
+  width: min(56%, 250px);
+  height: 8px;
+}
+.activity-skeleton-body {
+  display: grid;
+  gap: 8px;
+  padding-block: 10px;
+}
+.activity-skeleton .activity-message > .activity-skeleton-body {
+  padding-block: 10px;
+}
+.activity-skeleton-body-line {
+  width: 90%;
+  height: 8px;
+}
+.activity-skeleton-body-line-medium {
+  width: 76%;
+}
+.activity-skeleton-body-line-short {
+  width: 64%;
+}
+.activity-empty {
+  margin: 0;
+  padding: 12px 2px;
 }
 .activity-scroll-latest {
   position: absolute;

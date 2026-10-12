@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { expect } from "vitest";
 
+import { LOADING_SKELETON_CONFIG } from "../../../src/panel/shared/components/loading-skeleton/loading-skeleton-config";
+import { MOTION } from "../../../src/panel/shared/components/motion/motion-utils";
 import type { Event } from "../../../src/shared/events/types.js";
 import { windowActivity } from "../../../src/shared/tasks/activity/activity-tail.js";
 import {
@@ -51,7 +53,7 @@ test("the inspector omits task descriptions across refresh and task selection", 
 
   assert.ok(!header().textContent?.includes("Second instructions"));
   await user.click(screen.getByRole("tab", { name: "Details" }));
-  assert.equal(screen.getByText("Second instructions").tagName, "DD");
+  assert.ok(screen.getByText("Second instructions").closest("dd"));
   await act(() => controller.select("one"));
   await user.click(screen.getByRole("tab", { name: "Details" }));
 
@@ -59,7 +61,7 @@ test("the inspector omits task descriptions across refresh and task selection", 
     normalizer: (text) => text,
   });
 
-  assert.equal(description.tagName, "DD");
+  assert.ok(description.closest("dd"));
   assertAbsent(description.querySelector("img"));
 });
 
@@ -350,11 +352,34 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
   });
 
   test("connecting", async (t) => {
-    await setup(t, undefined, { start: false });
-    assert.ok(screen.getByRole("region", { name: "Delegated Work preview" }));
-    assert.equal(screen.getByRole("status").textContent, "Connecting…");
-    assertAbsent(screen.queryByText("No delegated tasks yet."));
-    assertAbsent(screen.queryByRole("button", { name: "New Task" }));
+    vi.useFakeTimers();
+
+    try {
+      const { controller } = await setup(t, undefined, { start: false });
+
+      assert.ok(screen.getByRole("region", { name: "Delegated Work preview" }));
+
+      await act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay));
+
+      assert.ok(
+        screen.getByRole("status", { name: "Loading delegated tasks" }),
+      );
+
+      assertAbsent(screen.queryByText("No delegated tasks yet."));
+      assertAbsent(screen.queryByRole("button", { name: "New Task" }));
+
+      await act(() => controller.showHostRequired());
+
+      await act(() =>
+        vi.advanceTimersByTime(
+          LOADING_SKELETON_CONFIG.minimumVisible + MOTION.loadingCrossfade,
+        ),
+      );
+
+      assert.equal(screen.getByRole("status").textContent, "Open through MCP");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

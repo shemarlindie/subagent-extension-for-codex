@@ -3,7 +3,21 @@ import { expect, test } from "vitest";
 import { Controller } from "../../app/state/controller";
 import type { Transport } from "../../app/state/types";
 import { delegationDialog } from "../delegation/delegation";
-import { projectApproved } from "./selectors";
+import { projectApproved, projectDisplayName } from "./selectors";
+
+test("project names fall back to path basenames across path styles", () => {
+  expect(projectDisplayName({ repository: "/workspaces/example/" })).toBe(
+    "example",
+  );
+
+  expect(projectDisplayName({ repository: "C:\\workspaces\\example\\" })).toBe(
+    "example",
+  );
+
+  expect(
+    projectDisplayName({ name: "Example project", repository: "/repo" }),
+  ).toBe("Example project");
+});
 
 test("remaining parent grants cover children but never siblings", () => {
   const projects = [{ repository: "/repos", kind: "parent" }];

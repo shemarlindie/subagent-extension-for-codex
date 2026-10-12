@@ -133,6 +133,8 @@ export type PreviewOptions = {
   claudeUnavailable?: boolean;
   /** Applies budget changes to fixture tasks instead of rejecting the action. */
   successfulBudgetUpdates?: boolean;
+  /** Leaves launch task data to the delayed list read when inspecting loading. */
+  deferTaskList?: boolean;
   /** Repositories registered during the preview; the dev host keeps them. */
   addedProjects?: string[];
   removedProjects?: string[];
@@ -286,7 +288,13 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
   return {
     conversation_id: context.panel_scope.conversation_id,
     ...context,
-    tasks: newestFirst.filter((task) => inScope(task, context.panel_scope)),
+    ...(!options.deferTaskList
+      ? {
+          tasks: newestFirst.filter((task) =>
+            inScope(task, context.panel_scope),
+          ),
+        }
+      : {}),
   };
 }
 

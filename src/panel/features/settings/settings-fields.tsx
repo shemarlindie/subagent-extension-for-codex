@@ -1,4 +1,3 @@
-import { Switch } from "@base-ui/react/switch";
 import { createContext, useContext } from "react";
 import {
   type Control,
@@ -8,8 +7,10 @@ import {
 } from "react-hook-form";
 
 import { Button } from "../../shared/components/button/button";
+import { AsyncControl } from "../../shared/forms/async-control";
 import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormSelect } from "../../shared/forms/form-select";
+import { FormSwitch } from "../../shared/forms/form-switch";
 import { workerProfileIconName } from "../tasks/list/worker-profile-icon";
 import {
   helpId,
@@ -84,27 +85,27 @@ function SettingSwitch({
   labelId,
   describedBy,
   control,
+  loading,
 }: {
   name: string;
   labelId: string;
   describedBy?: string;
   control: Control<Values>;
+  loading: boolean;
 }) {
   return (
     <Controller
       control={control}
       name={name}
       render={({ field }) => (
-        <Switch.Root
-          className="switch"
+        <FormSwitch
           checked={field.value === "true"}
           onCheckedChange={(checked) => field.onChange(String(checked))}
           onBlur={field.onBlur}
-          aria-labelledby={labelId}
-          aria-describedby={describedBy}
-        >
-          <Switch.Thumb className="switch-thumb" />
-        </Switch.Root>
+          loading={loading}
+          labelId={labelId}
+          describedBy={describedBy}
+        />
       )}
     />
   );
@@ -112,10 +113,16 @@ function SettingSwitch({
 
 interface SettingRowProps extends SettingsControls {
   row: Exclude<SettingRow, { kind: "models" }>;
+  loading?: boolean;
 }
 
 /** One setting: label and help beside a select, switch, or budget. */
-export function SettingRowView({ row, control, register }: SettingRowProps) {
+export function SettingRowView({
+  row,
+  control,
+  register,
+  loading = false,
+}: SettingRowProps) {
   const { form } = useContext(SettingsContext),
     id = `setting-${row.key}`,
     describedBy = row.help?.length ? helpId(row.key) : undefined;
@@ -130,6 +137,15 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
       <Help id={helpId(row.key)} parts={row.help} />
     </div>
   );
+
+  const withLoading = (child: React.ReactNode, label: string) =>
+    loading ? (
+      <AsyncControl loading label={label}>
+        {child}
+      </AsyncControl>
+    ) : (
+      child
+    );
 
   if (row.kind === "select")
     return (
@@ -153,6 +169,10 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
                   : undefined,
             }))}
             describedBy={describedBy}
+            disabled={loading}
+            loading={loading}
+            loadingLabel={`Loading ${row.label.toLowerCase()}`}
+            placeholder={loading ? "Loading…" : undefined}
           />
         </div>
       </div>
@@ -167,24 +187,28 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
           </label>,
         )}
         <div className="setting-control">
-          <input
-            id={id}
-            type="text"
-            spellCheck={false}
-            autoComplete="off"
-            maxLength={row.maxLength}
-            aria-invalid={Boolean(error)}
-            aria-describedby={
-              [describedBy, error && errorId].filter(Boolean).join(" ") ||
-              undefined
-            }
-            // Checked by the form, like budgets: closed sections are hidden.
-            {...register(row.key, {
-              validate: (value) =>
-                new RegExp(`^(?:${row.pattern})$`).test(value) ||
-                `${row.label} has characters a branch name can't use.`,
-            })}
-          />
+          {withLoading(
+            <input
+              id={id}
+              type="text"
+              spellCheck={false}
+              autoComplete="off"
+              maxLength={row.maxLength}
+              disabled={loading}
+              aria-invalid={Boolean(error)}
+              aria-describedby={
+                [describedBy, error && errorId].filter(Boolean).join(" ") ||
+                undefined
+              }
+              // Checked by the form, like budgets: closed sections are hidden.
+              {...register(row.key, {
+                validate: (value) =>
+                  new RegExp(`^(?:${row.pattern})$`).test(value) ||
+                  `${row.label} has characters a branch name can't use.`,
+              })}
+            />,
+            `Loading ${row.label.toLowerCase()}`,
+          )}
         </div>
         <FormFieldError
           id={errorId}
@@ -207,36 +231,39 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
         {/* Turning the limit back on restores its remembered amount. */}
         {row.kind === "budget" && (
           <span className="setting-amount" data-off={!on || undefined}>
-            <input
-              id={id}
-              type="number"
-              inputMode="decimal"
-              min={row.min}
-              max={row.max}
-              step="any"
-              required={on}
-              disabled={!on}
-              aria-label={`${row.label} (${row.unit})`}
-              aria-invalid={Boolean(error)}
-              aria-describedby={
-                [describedBy, error && errorId].filter(Boolean).join(" ") ||
-                undefined
-              }
-              // The form checks this itself: closed sections are hidden,
-              // where the browser cannot point to the field. A limit that is
-              // off may be blank, but an amount it would restore must fit.
-              {...register(row.key, {
-                validate: (value, all) =>
-                  (value === ""
-                    ? all[onKey(row.key)] !== "true"
-                    : Number.isFinite(Number(value)) &&
-                      Number(value) >= row.min &&
-                      (row.max === undefined || Number(value) <= row.max)) ||
-                  (row.max === undefined
-                    ? `Enter an amount of at least ${row.min} ${row.unit}.`
-                    : `Enter an amount from ${row.min} to ${row.max} ${row.unit}.`),
-              })}
-            />
+            {withLoading(
+              <input
+                id={id}
+                type="number"
+                inputMode="decimal"
+                min={row.min}
+                max={row.max}
+                step="any"
+                required={on}
+                disabled={!on || loading}
+                aria-label={`${row.label} (${row.unit})`}
+                aria-invalid={Boolean(error)}
+                aria-describedby={
+                  [describedBy, error && errorId].filter(Boolean).join(" ") ||
+                  undefined
+                }
+                // The form checks this itself: closed sections are hidden,
+                // where the browser cannot point to the field. A limit that is
+                // off may be blank, but an amount it would restore must fit.
+                {...register(row.key, {
+                  validate: (value, all) =>
+                    (value === ""
+                      ? all[onKey(row.key)] !== "true"
+                      : Number.isFinite(Number(value)) &&
+                        Number(value) >= row.min &&
+                        (row.max === undefined || Number(value) <= row.max)) ||
+                    (row.max === undefined
+                      ? `Enter an amount of at least ${row.min} ${row.unit}.`
+                      : `Enter an amount from ${row.min} to ${row.max} ${row.unit}.`),
+                })}
+              />,
+              `Loading ${row.label.toLowerCase()}`,
+            )}
             <span className="setting-unit">{row.unit}</span>
           </span>
         )}
@@ -248,6 +275,7 @@ export function SettingRowView({ row, control, register }: SettingRowProps) {
             undefined
           }
           control={control}
+          loading={loading}
         />
       </div>
       <FormFieldError

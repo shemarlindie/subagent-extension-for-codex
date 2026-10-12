@@ -103,20 +103,24 @@ export const EventList = memo(function EventList({
             )}
           </p>
         )}
-        <Timeline trimmed={trimmed}>
-          {groups.map((group, index) => (
-            <ActivityGroupCard
-              key={group.id}
-              group={group}
-              first={index === 0}
-              last={index === groups.length - 1}
-              span={thinkingSpan(group, events)}
-              running={running}
-              runtimeMs={runtimeMs}
-              preferences={preferences}
-            />
-          ))}
-        </Timeline>
+        {groups.length ? (
+          <Timeline trimmed={trimmed}>
+            {groups.map((group, index) => (
+              <ActivityGroupCard
+                key={group.id}
+                group={group}
+                first={index === 0}
+                last={index === groups.length - 1}
+                span={thinkingSpan(group, events)}
+                running={running}
+                runtimeMs={runtimeMs}
+                preferences={preferences}
+              />
+            ))}
+          </Timeline>
+        ) : (
+          <p className="help activity-empty">No activity recorded yet.</p>
+        )}
       </div>
       <ScrollLatestButton
         show={ready && !pinned}

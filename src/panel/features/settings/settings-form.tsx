@@ -1,13 +1,15 @@
-import { Accordion } from "@base-ui/react/accordion";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { type FieldErrors, useWatch } from "react-hook-form";
 
+import { settingsSections as buildSettingsSections } from "../../../shared/settings/settings-document";
 import { useController } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
-import { Chevron } from "../../shared/components/chevron";
+import { SkeletonShape } from "../../shared/components/loading-skeleton/loading-skeleton";
+import { LoadingSwap } from "../../shared/components/loading-skeleton/loading-swap";
+import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
 import { Presence } from "../../shared/components/motion/motion";
 import { reducedMotion } from "../../shared/components/motion/motion-utils";
 import { Notice } from "../../shared/components/notice/notice";
@@ -17,47 +19,123 @@ import {
   usePersistedDialogField,
   usePersistedDialogForm,
 } from "../../shared/forms/use-persisted-dialog-form";
-import { Help, SettingRowView, SettingsContext } from "./settings-fields";
+import {
+  Help,
+  SettingRowView,
+  SettingsContext,
+  type SettingsControls,
+} from "./settings-fields";
 import {
   changes,
   differs,
   editCount,
-  openSections,
   rowForm,
   sectionKeys,
   sectionsForm,
+  type SettingSection,
   summary,
   type Values,
 } from "./settings-layout";
+import { SettingsLoadingTaskDefaults } from "./settings-loading-task-defaults";
 import { ModelTable } from "./settings-model-table";
+import {
+  SettingsSectionAccordion,
+  type SettingsSectionView,
+} from "./settings-section-accordion";
 
-/** The settings editor: one accordion section per server-described section. */
+type SettingsFormDialog =
+  | Extract<DialogState, { kind: "settings" }>
+  | Extract<DialogState, { kind: "settings-loading" }>;
+
 interface SettingsFormProps {
-  dialog: Extract<DialogState, { kind: "settings" }>;
+  dialog: SettingsFormDialog;
 }
 
+interface LoadingSettingsSectionProps extends SettingsControls {
+  section: SettingSection;
+}
+
+function LoadingSettingsSection({
+  section,
+  control,
+  register,
+}: LoadingSettingsSectionProps) {
+  const keys = sectionKeys(section);
+
+  return (
+    <SettingsContext.Provider
+      value={{
+        show: () => {},
+        sectionOf: () => undefined,
+        current: keys,
+        form: {},
+      }}
+    >
+      <div className="settings-section-intro">
+        <Help id={`settings-${section.id}-help`} parts={section.help} />
+      </div>
+      {section.rows.map((row) =>
+        row.kind === "models" ? (
+          <ModelTable
+            key="models"
+            scopes={row.scopes}
+            control={control}
+            register={register}
+            loading
+            reserveProviderScope={section.id === "models"}
+          />
+        ) : (
+          <SettingRowView
+            key={row.key}
+            row={row}
+            control={control}
+            register={register}
+            loading
+          />
+        ),
+      )}
+    </SettingsContext.Provider>
+  );
+}
+
+// Use the shared settings definitions for all structure that is known before
+// the settings read. Dynamic provider scopes are added after the read returns.
+const loadingSections = buildSettingsSections({
+  values: {},
+  providers: [],
+  catalogs: [],
+  modelProviders: [],
+  shown: {},
+  remembered: { max_cost_usd: 5, max_runtime_minutes: 20 },
+});
+
+/** One settings form and accordion for both loading and loaded data. */
 export function SettingsForm({ dialog }: SettingsFormProps) {
   const controller = useController(),
-    { sections, values: saved, defaults } = dialog.settings,
-    initial = sectionsForm(sections, saved);
+    loading = dialog.kind === "settings-loading",
+    settings = loading ? undefined : dialog.settings,
+    status = loading ? dialog.status : "ready",
+    loadError = loading ? dialog.error : undefined,
+    sections = settings?.sections ?? [],
+    initial = sectionsForm(sections, settings?.values ?? {});
 
   const { control, register, handleSubmit, setValue } =
-    usePersistedDialogForm<Values>("settings", initial);
+    usePersistedDialogForm<Values>("settings", initial, { ready: !loading });
 
   const form = { ...initial, ...useWatch({ control }) } as Values,
     edits = sections.map((section) => editCount(section, form, initial)),
     total = edits.reduce((sum, count) => sum + count, 0);
 
-  const [open, setOpen] = usePersistedDialogField(
-      "settings",
-      "openSections",
-      sections.slice(0, 1).map((s) => s.id),
-    ),
+  const [open, setOpen] = usePersistedDialogField("settings", "openSections", [
+      controller.getLastSettingsSection(),
+    ]),
     [discarding, setDiscarding] = useState(false),
     element = useRef<HTMLFormElement>(null),
     discardPrompt = useRef<HTMLDivElement>(null);
 
-  const showDiscard = discarding && total > 0;
+  const isLoading = status === "loading",
+    isError = status === "error",
+    showDiscard = !loading && discarding && total > 0;
 
   useEffect(() => {
     if (!showDiscard) return;
@@ -167,112 +245,175 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
       setValue(key, value, { shouldDirty: true });
   };
 
+  const sectionViews: SettingsSectionView[] = settings
+    ? sections.map((section, index) => {
+        const keys = sectionKeys(section),
+          resets = Object.assign(
+            {},
+            ...section.rows.map((row) => rowForm(row, settings.defaults)),
+          ) as Values;
+
+        return {
+          id: section.id,
+          title: section.title,
+          summary: (
+            <LoadingSwap
+              as="span"
+              className="loading-swap-inline"
+              loading={false}
+              busy={false}
+              skeleton={
+                <SkeletonShape className="settings-group-summary settings-loading-summary" />
+              }
+            >
+              {section.rows.flatMap((row) => summary(row, form)).join(" · ")}
+            </LoadingSwap>
+          ),
+          edits: edits[index],
+          content: (
+            <SettingsContext.Provider
+              value={{
+                show: reveal,
+                sectionOf: (key) => sectionOf(key)?.title,
+                current: keys,
+                form,
+              }}
+            >
+              <div className="settings-section-intro">
+                <Help id={`settings-${section.id}-help`} parts={section.help} />
+              </div>
+              {section.rows.map((row) =>
+                row.kind === "models" ? (
+                  <ModelTable
+                    key="models"
+                    scopes={row.scopes}
+                    control={control}
+                    register={register}
+                  />
+                ) : (
+                  <SettingRowView
+                    key={row.key}
+                    row={row}
+                    control={control}
+                    register={register}
+                  />
+                ),
+              )}
+              {/* Shown only while something here differs from its default. */}
+              <Presence show={differs(resets, form)}>
+                <div className="settings-section-footer">
+                  <Button
+                    variant="text"
+                    underline
+                    className="setting-reset"
+                    onClick={() => apply(resets)}
+                  >
+                    Reset to defaults
+                  </Button>
+                </div>
+              </Presence>
+            </SettingsContext.Provider>
+          ),
+        };
+      })
+    : loadingSections.map((section) => ({
+        id: section.id,
+        title: section.title,
+        summary: (
+          <LoadingSwap
+            as="span"
+            className="loading-swap-inline"
+            loading={loading}
+            busy={false}
+            skeleton={
+              <SkeletonShape className="settings-group-summary settings-loading-summary" />
+            }
+          >
+            {null}
+          </LoadingSwap>
+        ),
+        content:
+          section.id === "task" ? (
+            <SettingsLoadingTaskDefaults />
+          ) : (
+            <LoadingSettingsSection
+              section={section}
+              control={control}
+              register={register}
+            />
+          ),
+      }));
+
+  const submit = handleSubmit((submitted) => {
+    if (!settings) return;
+    const set = changes(sections, submitted, initial);
+
+    return controller.submit(async () => {
+      if (Object.keys(set).length)
+        await controller.tool("update_agent_settings", { set });
+    });
+  }, showInvalid);
+
   return (
     <form
       ref={element}
       className="settings-form"
       noValidate
-      onSubmit={handleSubmit((submitted) => {
-        const set = changes(sections, submitted, initial);
-
-        return controller.submit(async () => {
-          if (Object.keys(set).length)
-            await controller.tool("update_agent_settings", { set });
-        });
-      }, showInvalid)}
+      aria-busy={isLoading || undefined}
+      onSubmit={loading ? (event) => event.preventDefault() : submit}
     >
-      <p className="form-note">Defaults for new tasks.</p>
-      {/* One section opens at a time; the first starts open. Closed sections
-          stay mounted so their fields are still validated. */}
-      <Accordion.Root
-        className="settings-groups"
-        keepMounted
-        value={openSections(open, sections)}
-        onValueChange={(value) => setOpen(value as string[])}
+      <p
+        className={`form-note form-note--first${isLoading ? " settings-loading-note" : ""}`}
       >
-        {sections.map((section, index) => {
-          const keys = sectionKeys(section),
-            resets = Object.assign(
-              {},
-              ...section.rows.map((row) => rowForm(row, defaults)),
-            ) as Values;
-
-          return (
-            <Accordion.Item
-              key={section.id}
-              value={section.id}
-              className="settings-group"
+        <span>Defaults for new tasks.</span>
+        {isLoading && (
+          <span
+            className="settings-loading-message"
+            role="status"
+            aria-label="Loading settings"
+          >
+            <LoadingSpinner className="settings-loading-spinner" />
+            <span>Loading…</span>
+          </span>
+        )}
+      </p>
+      <div
+        className={`settings-form-body${loading ? " settings-loading-body" : ""}`}
+      >
+        <Presence show={!isError}>
+          <div
+            className={
+              isLoading
+                ? "loading-skeleton settings-loading-skeleton"
+                : "settings-sections-layer"
+            }
+          >
+            <SettingsSectionAccordion
+              sections={sectionViews}
+              open={open}
+              loading={isLoading}
+              onOpenChange={(next) => {
+                setOpen(next);
+                controller.saveSettingsOpenSections(next);
+              }}
+            />
+          </div>
+        </Presence>
+        <Presence show={isError}>
+          <div className="settings-loading-error">
+            <p className="form-error form-field-error" role="alert">
+              {loadError}
+              {loading && !loadError ? "Settings could not be loaded." : null}
+            </p>
+            <Button
+              variant="primary"
+              onClick={() => controller.retryDialogLoad()}
             >
-              <Accordion.Header className="settings-group-header">
-                <Accordion.Trigger className="settings-group-trigger">
-                  <Chevron />
-                  <span className="settings-group-title">{section.title}</span>
-                  <span className="settings-group-summary">
-                    {section.rows
-                      .flatMap((row) => summary(row, form))
-                      .join(" · ")}
-                  </span>
-                  {edits[index] > 0 && (
-                    <span className="settings-group-badge">
-                      {edits[index]} changed
-                    </span>
-                  )}
-                </Accordion.Trigger>
-              </Accordion.Header>
-              <Accordion.Panel className="collapse-panel settings-group-panel">
-                {/* Links in a section's help point only to other sections. */}
-                <SettingsContext.Provider
-                  value={{
-                    show: reveal,
-                    sectionOf: (key) => sectionOf(key)?.title,
-                    current: keys,
-                    form,
-                  }}
-                >
-                  <div className="settings-group-content">
-                    <div className="settings-section-intro">
-                      <Help
-                        id={`settings-${section.id}-help`}
-                        parts={section.help}
-                      />
-                    </div>
-                    {section.rows.map((row) =>
-                      row.kind === "models" ? (
-                        <ModelTable
-                          key="models"
-                          scopes={row.scopes}
-                          control={control}
-                          register={register}
-                        />
-                      ) : (
-                        <SettingRowView
-                          key={row.key}
-                          row={row}
-                          control={control}
-                          register={register}
-                        />
-                      ),
-                    )}
-                    {/* Shown only while something here differs from its default. */}
-                    <Presence show={differs(resets, form)}>
-                      <div className="settings-section-footer">
-                        <Button
-                          variant="text"
-                          underline
-                          className="setting-reset"
-                          onClick={() => apply(resets)}
-                        >
-                          Reset to defaults
-                        </Button>
-                      </div>
-                    </Presence>
-                  </div>
-                </SettingsContext.Provider>
-              </Accordion.Panel>
-            </Accordion.Item>
-          );
-        })}
-      </Accordion.Root>
+              Retry
+            </Button>
+          </div>
+        </Presence>
+      </div>
       <Collapsible.Root open={showDiscard}>
         <Collapsible.Panel
           ref={discardPrompt}
@@ -302,13 +443,23 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
             ? `Save ${total} ${total === 1 ? "change" : "changes"}`
             : "Save settings"
         }
-        disabled={!total}
+        disabled={!settings || !total}
       />
     </form>
   );
 }
 
+const settingsTitle = () => "Plugin settings",
+  renderSettingsDialog = (dialog: SettingsFormDialog) => (
+    <SettingsForm dialog={dialog} />
+  );
+
 export const settingsDialog = defineDialog<"settings">({
-  title: () => "Plugin settings",
-  render: (dialog) => <SettingsForm dialog={dialog} />,
+  title: settingsTitle,
+  render: renderSettingsDialog,
+});
+
+export const settingsLoadingDialog = defineDialog<"settings-loading">({
+  title: settingsTitle,
+  render: renderSettingsDialog,
 });

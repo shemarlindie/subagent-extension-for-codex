@@ -1,8 +1,9 @@
 # Delegated Work panel
 
 The embedded panel and standalone console share one frontend. This guide owns
-user-visible behavior; [React UI architecture](react-ui.md) covers implementation,
-[Local development](development.md) covers setup, and
+user-visible behavior; [React UI architecture](react-ui.md), including its
+[loading and pending UI approach](react-ui.md#loading-and-pending-ui), covers
+implementation. [Local development](development.md) covers setup, and
 [UI verification](ui-verification.md) covers browser checks.
 
 ## Project and chat integration
@@ -44,6 +45,8 @@ Inline mode shows a compact scope/count/status summary. **Open panel** requests
 fullscreen only when the host advertises it; Collapse preserves selection and
 form drafts. A standalone console always shows the full layout. The host owns
 placement and available display modes; see [Host capabilities](host-capabilities.md).
+While the first task read is pending, the compact preview uses a short
+count-and-task skeleton in place of its summary.
 
 ### Manage projects
 
@@ -51,6 +54,8 @@ placement and available display modes; see [Host capabilities](host-capabilities
 with **← Tasks** to return to the previous task view. The page lists saved names and
 repository paths, including parent approvals. **Add project** opens a focused
 dialog for entering a path or using the service host's folder picker.
+The saved-project list shows name, path and action placeholders while its first
+read is pending.
 Click a project name to edit it inline, like a task title. Enter or clicking
 outside saves; Escape cancels. The remove icon on the right opens confirmation
 in a focused modal. The repository folder and its files remain on disk.
@@ -86,7 +91,9 @@ The task rail searches and filters by **Needs input**, **Failed**, **Active**,
 permissions count as Needs input; failures, interruptions and compaction
 failures as Failed; other unfinished tasks as Active. Queued follow-up turns
 keep a task active between runs. Counts respect project and search filters.
-Press `/` for search and Escape to clear it.
+The first task read shows card-like rows with placeholders for titles, worker
+profiles, runtime and status until the list arrives. Press `/` for search and
+Escape to clear it.
 
 Wide panels show rail and inspector together; narrow ones switch between them
 with a back action. Drag the divider to resize the task rail; its width is saved
@@ -102,6 +109,8 @@ the rail and Details accumulates across turns and includes the active run.
 It collects the request, explicit context, workspace/revision, dependencies and
 budgets. Conversation text is not attached automatically. Unsupported numeric
 cost budgets block submission; Claude's response-boundary limit is disclosed.
+The dialog opens with its form structure while defaults and choices load; only
+controls and actions that depend on pending data are disabled.
 The service derives a title from the request. Click the inspector title to edit:
 Enter or an outside click saves, Escape cancels, and blank/failed saves stay open.
 `rename_user_agent_task` accepts a trimmed title of 1–200 characters.
@@ -110,6 +119,12 @@ Enter or an outside click saves, Escape cancels, and blank/failed saves stay ope
 validates budgets, and asks before discarding unsaved edits. Saving sends only
 changed fields through the app-only `update_user_agent_settings`. Permission and
 approval defaults are described in [Configuration](configuration.md).
+The form and accordion appear before the settings read finishes, and the last
+open section is restored. Pending fields remain in place with a spinner; a
+dropdown whose selected value is unresolved also shows **Loading…** while
+disabled. Multiple sections can remain expanded while the read is pending.
+Opening a section scrolls it into view between the dialog heading and footer as
+space allows.
 
 Per-task tabs, composer drafts/visibility, question answers, Chat/Activity
 reading positions and the Changes position, opened files and viewed files last
@@ -174,6 +189,11 @@ Chat reads cursor-paged `get_user_agent_chat`; sending, queue editing and draft
 reads use app-only tools. Stop uses `interrupt_agent_task`. See the
 [MCP reference](mcp-reference.md) for tool contracts.
 
+While task content loads, the known tab labels and selected tab stay visible.
+Chat's first read shows alternating user bubbles and worker response lines,
+including one restrained Markdown-like reply, until the conversation arrives.
+An empty conversation says **No messages yet.**
+
 ## Activity timeline
 
 The timeline lists activity oldest first, like Chat. It groups tools, hooks,
@@ -219,6 +239,9 @@ refreshes while their row remains in the most recent 200 events. The service
 (`get_user_agent_activity`) gives the trimmed-tail note as a tally of the events
 before that window. The Activity tab shows no count.
 The panel reads only new events on each refresh. `get_agent_events` exposes full stored history.
+Initial reads and separately requested turn activity show a timeline-shaped
+skeleton with row summaries, timestamps and trailing debug affordances. An empty
+feed says **No activity recorded yet.**
 
 ## Changes tab
 
@@ -230,6 +253,11 @@ The tab count and Details read only the totals (`get_user_agent_change_counts`),
 without the file list or diff, so the full change read happens when Changes opens.
 Committed work stays in Git history. **Whole task** is the default; **This turn**
 appears after multiple turns.
+First reads show file-card skeletons with headers, stats, actions and
+line-numbered diff rows, and Details shimmers its change summary until the totals
+arrive. Opening a changed file shows a format-shaped preview skeleton until its
+first read finishes. When moving between files, the current preview stays visible
+with loading progress until the next file replaces it.
 
 The panel and agent APIs answer different questions:
 
@@ -255,6 +283,8 @@ the top while it scrolls. Binary files show size; images can preview, deleted
 files show Deleted and their removed lines. A file the diff has no part for
 still gets a section, marked Diff unavailable. The tab shows the changed-file count as a
 circular superscript badge beside its label, and only when at least one file changed.
+In long lists, only the first file opens by default; files the reader has opened
+or closed keep that choice.
 The badge pops in when a count first appears.
 Counts above 999 abbreviate, such as 1.1K or 2K. The badge sits outside the tab's layout,
 so the count never changes the tab's width. A reload keeps the count already shown.

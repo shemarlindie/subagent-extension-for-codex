@@ -1,19 +1,27 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useController, useFormContext } from "react-hook-form";
 
+import { projectDisplayName } from "../projects/selectors";
+import type { Project } from "../projects/types";
 import type { DelegateValues } from "./delegate-fields";
 
 /** Suggestions never restrict a path inside an approved parent; the service validates it. */
 interface ProjectAutocompleteProps {
-  repositories: string[];
+  projects: Project[];
   disabled?: boolean;
 }
 
 export function ProjectAutocomplete({
-  repositories,
+  projects,
   disabled = false,
 }: ProjectAutocompleteProps) {
   const { control } = useFormContext<DelegateValues>();
+
+  const projectByRepository = new Map(
+    projects.map((project) => [project.repository, project]),
+  );
+
+  const repositories = projects.map((project) => project.repository);
 
   const { field, fieldState } = useController({
     control,
@@ -58,7 +66,16 @@ export function ProjectAutocomplete({
                   value={repository}
                   className="autocomplete-item"
                 >
-                  {repository}
+                  <span className="select-item-text">
+                    <span>
+                      {projectDisplayName(
+                        projectByRepository.get(repository) ?? { repository },
+                      )}
+                    </span>
+                    <span className="select-item-description">
+                      {repository}
+                    </span>
+                  </span>
                 </Autocomplete.Item>
               )}
             </Autocomplete.List>

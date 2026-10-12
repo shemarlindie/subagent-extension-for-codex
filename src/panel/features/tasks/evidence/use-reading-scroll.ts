@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
+import { blockUserScroll } from "../../../shared/utils/block-user-scroll";
 import { scrollContainer } from "../../../shared/utils/scroll-container";
 import type { ReadingState } from "./reading-state";
 import { animateRows, measureRows, type RowPosition } from "./row-motion";
@@ -31,6 +32,10 @@ export type ReadingScrollOptions = {
   active: boolean;
   /** Content has loaded, so a saved position can be restored against it. */
   ready: boolean;
+  /** Prevent user scrolling while this view shows its loading placeholder. */
+  blockScrollWhileLoading?: boolean;
+  /** Report when the active content's saved position has been restored. */
+  reportPositionRestored?: boolean;
   /** The data attribute that identifies each row, such as `data-chat-item`. */
   itemAttribute: string;
   /** Slide moved rows to their new place and fade new rows in. */
@@ -52,6 +57,8 @@ export function useReadingScroll({
   reading: owned,
   active,
   ready,
+  blockScrollWhileLoading = false,
+  reportPositionRestored = false,
   itemAttribute,
   animateRows: animate = false,
   focus,
@@ -61,6 +68,7 @@ export function useReadingScroll({
   const viewportRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef(reading.position?.pinned ?? true);
   const [pinned, setPinned] = useState(pinnedRef.current);
+  const [positionRestored, setPositionRestored] = useState(false);
   const restored = useRef(false);
   const activeRef = useRef(active);
   const wasActive = useRef(false);
@@ -147,12 +155,39 @@ export function useReadingScroll({
     [reading, itemAttribute],
   );
 
+  const reconcileAfterContentChange = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || !activeRef.current || !restored.current) return;
+
+    const container = scrollContainer(viewport);
+    restore(viewport, container, true);
+    remember(viewport, container);
+  }, [remember, restore]);
+
   useLayoutEffect(() => {
     activeRef.current = active;
     const revealed = active && !wasActive.current;
     wasActive.current = active;
     const viewport = viewportRef.current;
-    if (!viewport || !active || !ready) return;
+
+    if (!ready) {
+      // A resize while loading must not restore the previous task's position
+      // over the placeholder or the position captured for the next reveal.
+      restored.current = false;
+      if (!viewport || !active) return;
+
+      // Task details can add pending input after the placeholder first renders.
+      // Keep a pinned chat at its latest edge as that loading layout changes.
+      if (blockScrollWhileLoading && pinnedRef.current) {
+        const container = scrollContainer(viewport);
+        container.scrollTop = end(container);
+      }
+
+      return;
+    }
+
+    if (!viewport || !active) return;
+
     const container = scrollContainer(viewport);
     // Measure without an in-flight transform.
     stopAnimations();
@@ -190,6 +225,21 @@ export function useReadingScroll({
         container.clientHeight,
       );
   });
+
+  // Runs after the restore above. The chat swap uses this to wait until its
+  // saved position is in place before starting the cross-fade.
+  useLayoutEffect(() => {
+    if (!reportPositionRestored) return;
+    if (!ready) setPositionRestored(false);
+    else if (active && viewportRef.current) setPositionRestored(true);
+  }, [active, ready, reportPositionRestored]);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || !active || ready || !blockScrollWhileLoading) return;
+
+    return blockUserScroll(viewport);
+  }, [active, blockScrollWhileLoading, ready]);
 
   const focused = useRef<number | undefined>(undefined),
     focusId = focus?.id,
@@ -240,8 +290,19 @@ export function useReadingScroll({
     if (!viewport || typeof ResizeObserver === "undefined") return;
 
     const observer = new ResizeObserver(() => {
-      if (!activeRef.current || !restored.current) return;
+      if (!activeRef.current) return;
       const container = scrollContainer(viewport);
+
+      // While Chat is loading, task-specific controls can still arrive and
+      // resize the viewport. Re-anchor the placeholder without restoring an
+      // old task's reading position over it.
+      if (!restored.current) {
+        if (blockScrollWhileLoading && pinnedRef.current)
+          container.scrollTop = end(container);
+
+        return;
+      }
+
       restore(viewport, container, true);
       remember(viewport, container);
     });
@@ -249,7 +310,7 @@ export function useReadingScroll({
     observer.observe(viewport);
 
     return () => observer.disconnect();
-  }, [reading, restore, remember]);
+  }, [reading, restore, remember, blockScrollWhileLoading]);
 
   const judge = useCallback(
     (viewport: HTMLElement, container: HTMLElement) => {
@@ -379,5 +440,11 @@ export function useReadingScroll({
     [stopAnimations],
   );
 
-  return { viewportRef, pinned, scrollToLatest };
+  return {
+    viewportRef,
+    pinned,
+    positionRestored: !reportPositionRestored || positionRestored,
+    reconcileAfterContentChange,
+    scrollToLatest,
+  };
 }

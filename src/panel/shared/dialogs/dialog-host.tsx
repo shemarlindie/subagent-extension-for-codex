@@ -27,10 +27,16 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
     const activeDialog = state.dialog;
     const previous = previousKind.current;
     previousKind.current = activeDialog?.kind;
+
+    const continuingAsyncForm =
+      (previous === "delegate-loading" && activeDialog?.kind === "delegate") ||
+      (previous === "settings-loading" && activeDialog?.kind === "settings");
+
     if (
       !activeDialog ||
       !previous ||
       activeDialog.kind === previous ||
+      continuingAsyncForm ||
       suspended
     )
       return;

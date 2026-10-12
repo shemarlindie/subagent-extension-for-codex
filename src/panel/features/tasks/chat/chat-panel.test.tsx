@@ -47,7 +47,7 @@ const base: Task = {
 function setup(
   patch: Partial<Task> = {},
   events: Event[] = [],
-  chatItems?: ChatItem[],
+  chatItems: ChatItem[] | null = [],
 ) {
   onTestFinished(cleanup);
   const task = { ...base, ...patch };
@@ -65,9 +65,10 @@ function setup(
     ...controller.getSnapshot(),
     events,
     chat:
-      chatItems === undefined
+      chatItems === null
         ? undefined
         : { task: task.id, items: chatItems, cursor: chatItems.length },
+    chatHistoryLoading: chatItems === null ? task.id : undefined,
   };
 
   const getSnapshot = controller.getSnapshot.bind(controller);
@@ -88,7 +89,7 @@ function setup(
   const panel = (current: Task) => (
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
-        <ChatPanel task={current} />
+        <ChatPanel task={current} taskId={current.id} />
       </Tooltip.Provider>
     </ControllerContext.Provider>
   );
@@ -118,6 +119,12 @@ function setup(
 
 const sent = (tool: ReturnType<typeof setup>["tool"]) =>
   tool.mock.calls.map(([name, args]) => [name, args]);
+
+test("keeps the real composer disabled while the initial chat read is pending", () => {
+  const { composer } = setup({}, [], null);
+
+  assert.equal((composer as HTMLTextAreaElement).disabled, true);
+});
 
 test.each([
   { from: "worker" as const, turn: 1, grouped: true, note: false },
@@ -253,8 +260,9 @@ test("dependency waiting shows a paused status instead of the running indicator"
     waiting_reason: "waiting_for_dependency",
   });
 
-  const status = view.getByRole("status");
+  const status = view.container.querySelector<HTMLElement>(".chat-working");
 
+  assert.ok(status);
   assert.equal(status.textContent, "Waiting on dependency");
   assert.ok(status.querySelector(".row-status-icon.waiting"));
   expect(status.querySelector(".running")).toBeNull();
@@ -282,8 +290,9 @@ for (const source of ["live activity", "events"] as const) {
         : [],
     );
 
-    const status = view.getByRole("status");
+    const status = view.container.querySelector<HTMLElement>(".chat-working");
 
+    assert.ok(status);
     assert.equal(status.textContent, "Waiting for rate limit reset");
     assert.ok(status.querySelector(".row-status-icon.paused"));
     expect(status.querySelector(".running")).toBeNull();

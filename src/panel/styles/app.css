@@ -7,8 +7,13 @@
 @import "../app/styles/panel-narrow.css";
 @import "./primitives.css";
 @import "../shared/components/select/select-field.css";
+@import "../shared/components/loading-spinner/loading-spinner.css";
 @import "../features/tasks/activity/activity.css";
+@import "../features/tasks/inspector/task-details.css";
+@import "../features/tasks/inspector/task-inspector.css";
 @import "../shared/dialogs/dialogs.css";
+@import "../shared/forms/async-control.css";
+@import "../shared/forms/form-switch.css";
 @import "../shared/components/notice/notice.css";
 @import "../features/tasks/controls/permission-request.css";
 @import "../features/tasks/controls/questions.css";
@@ -16,6 +21,8 @@
 @import "../features/projects/projects.css";
 @import "../shared/components/navigation/navigation.css";
 @import "../shared/components/motion/motion.css";
+@import "../shared/components/loading-skeleton/loading-skeleton.css";
+@import "../features/tasks/list/task-list.css";
 @import "../features/tasks/list/search.css";
 @import "../shared/components/button/button.css";
 @import "../shared/components/scroll-latest-button/scroll-latest-button.css";

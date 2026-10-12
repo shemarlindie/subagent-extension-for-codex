@@ -47,7 +47,7 @@ for lifetime and storage boundaries.
 
 Use Base UI (`@base-ui/react`) primitives for dialogs, tabs (with an animated indicator), the task filter radio group, single and multiple selection, project suggestions, the settings accordion and its switches, including focus management and keyboard navigation. `SelectField` and `MultiSelectField` share dropdown structure and styling; `FormSelect` connects selection to React Hook Form. The project autocomplete accepts both registered projects and explicit absolute paths. Keep simple buttons, text inputs, and textareas as native controls. Base UI provides unstyled components; keep their styling in this project's stylesheets and application decisions in the controller/forms. React, React DOM, React Hook Form, and the official MCP Apps bridge supply existing infrastructure rather than custom equivalents.
 
-Motion is short and quiet. Its purpose is to show what changed and to ease layout shifts. Timing tokens (`--motion-fast`, `--motion-base`, `--motion-slow`, `--ease-out`) live in `src/panel/shared/components/motion/motion.css` and match `MOTION` in `src/panel/shared/components/motion/motion-utils.ts`. Base UI dialogs, popups, and collapsible panels animate through their `data-starting-style` and `data-ending-style` attributes. A collapsible panel uses the `collapse-panel` class and puts its padding and border on an inner element, so the height animation stays smooth. For other content, use the primitives in `src/panel/shared/components/motion/motion.tsx` and the reduced-motion helpers in `src/panel/shared/components/motion/motion-utils.ts`:
+Motion is short and quiet. Its purpose is to show what changed and to ease layout shifts. In `src/panel/shared/components/motion/motion.css`, `--motion-fast`, `--motion-base`, `--motion-slow`, and `--motion-loading-crossfade` mirror the matching duration fields in `MOTION` from `src/panel/shared/components/motion/motion-utils.ts`; `--ease-out` mirrors its `easing` field. Keep these definitions in sync. Base UI dialogs, popups, and collapsible panels animate through their `data-starting-style` and `data-ending-style` attributes. A collapsible panel uses the `collapse-panel` class and puts its padding and border on an inner element, so the height animation stays smooth. For other content, use the primitives in `src/panel/shared/components/motion/motion.tsx` and the reduced-motion helpers in `src/panel/shared/components/motion/motion-utils.ts`:
 
 - `Presence` folds content in or out, or pops it, and keeps the last content mounted while it leaves. Content present on its first render appears in place unless you pass `appear`.
 - `useListPresence` pairs a keyed list with `Presence` (use `as="li"` inside lists): removed items stay in place while they exit, and items added after the first render are marked to appear.
@@ -57,6 +57,85 @@ Motion is short and quiet. Its purpose is to show what changed and to ease layou
 - `MotionContent` keys changing text or counts and applies a fade or rise without moving surrounding content.
 
 Animations that run while the activity timeline measures positions change only opacity, so they never disturb its reading position. Reduced-motion preferences turn every animation off. The Web Animations helpers also skip animation where the API is missing, as in jsdom tests.
+
+## Loading and pending UI
+
+Show feedback in the first render that knows a read is pending. Keep stable
+shells and known navigation visible, including tab labels and selection. Keep
+labels and values that do not depend on the pending read; use a feature-shaped
+skeleton for a data-dependent view when its record is not available yet. Keep
+still-valid content visible and show progress beside it. Skeleton layouts
+belong to their feature: match the expected content's structure and size, and
+compose shared `SkeletonShape` blocks instead of sharing one layout across
+unrelated views.
+
+Use the text-height helpers by default for placeholders that stand in for text.
+`measureText` is the shorthand for one placeholder; it wraps the shape in a
+`SkeletonTextFrame`. Use `SkeletonTextFrame` directly when several compact
+shapes stand in for a text block:
+
+```tsx
+<SkeletonShape className="line" measureText={description} />
+
+<SkeletonTextFrame text={description}>
+  <div className="description-lines">
+    <SkeletonShape className="line-wide" />
+    <SkeletonShape className="line-short" />
+  </div>
+</SkeletonTextFrame>
+```
+
+The hidden measurement inherits typography and available width from its parent,
+so place it under the same text styles as the loaded content. Pass the loaded
+text when available; while it is unknown, use representative text with the
+expected line count. This reserves the text's line height and wrapping without
+making the shimmer as tall as the text. Use plain shapes for icons, controls,
+badges and other elements whose size comes from fixed structure rather than
+text.
+`LOADING_SKELETON_CONFIG` in `loading-skeleton-config.ts` controls skeleton
+behavior independently of CSS motion durations. Its `delay` is the threshold
+before a skeleton appears; reads that finish before it elapses skip the
+skeleton, while control-level spinners stay immediate. Configure `delay` for
+immediate display when skeletons should appear as soon as loading starts.
+`minimumVisible` is how long a skeleton in `LoadingSwap` stays fully visible
+before its handoff begins.
+
+Use `LoadingSwap` when a placeholder will be replaced by loaded content. It
+layers both in the same grid area, marks the region busy by default, and delays
+the handoff until the minimum visible time has elapsed. It then keeps the
+skeleton mounted through the shared `MOTION.loadingCrossfade` fade, mirrored by
+the `--motion-loading-crossfade` CSS token. Keep the same `LoadingSwap` mounted
+in both the loading and ready renders so its minimum time and fade can finish.
+Keep the task inspector and tab list mounted while a selected task is fetched;
+swap the header and active tab content in place. Let each tab's loading swap
+span both the task lookup and its own read so the same placeholder stays in the
+same slot until real content is ready.
+For inline values such as counts, use `as="span"` with `loading-swap-inline`.
+Task Details uses the same metadata and facts grid for its full skeleton while
+the task record is unavailable; once the task arrives, separately pending
+values such as the Changes count use an inline swap. The inactive layer is
+hidden and inert.
+`LoadingSkeleton` provides the accessible status; use `announce={false}` when a
+parent already announces the same pending read. Match the skeleton's height and
+scrollbar space to the real view, and restore saved reading position before the
+handoff when the view owns one. Use `blockScroll` for tall skeletons whose
+viewport should not scroll, without shortening them. Reduced-motion preferences
+make shimmer and the fade effectively instant; the minimum visible time remains
+in effect.
+
+For forms and dialogs, render the known structure immediately and finish async
+reads in place. Keep labels, help text, and control geometry stable. Use
+`AsyncControl` to overlay a spinner on a pending input or textarea,
+`FormSwitch` for a pending toggle, and `SelectField` with `loading` while its
+selected value or options are unresolved; the select replaces its caret with a
+spinner and announces the read. If a value is already known but another pending
+dependency blocks editing, keep the value visible and disable the control
+without a spinner. Disable actions that depend on pending data, leave unrelated
+controls responsive, and replace failed reads with local error and retry UI.
+
+See [Slow async reads](ui-verification.md#scope-and-host-controls) to inspect
+pending states in the fixture UI; [the panel guide](codex-panel.md) describes
+their user-visible behavior.
 
 Banner messages use `Notice`, `CollapsibleNotice` and `NoticeText` from `src/panel/shared/components/notice/notice.tsx`. Pass `tone` (`warning`, the default, `error`, `info` or the accent-free `plain`) rather than adding a new banner class; the tone only changes the accent color in `.notice[data-tone]`. `NoticeText` clamps long text behind **Show more**. `ExpandableNotice` shows text as one clamped line that grows in place when toggled; text that already fits on one line has no toggle.
 
@@ -123,6 +202,8 @@ The controller separates session memory from recoverable view state:
   compatible form drafts live in local storage. The newest dialog restores
   first. Closing or successful submission removes its descriptor and draft.
   Server-owned data is reloaded; authentication tokens are never form drafts.
+- The last expanded Settings section is a separate browser-local preference, so
+  its matching loading section can appear as soon as the dialog opens.
 
 Changing scope invalidates outstanding reads and closes stale dialogs. A
 submitted mutation is never repeated automatically. Collapsing the embedded

@@ -32,12 +32,6 @@ export function delegationDialog(
 ): Extract<DialogState, { kind: "delegate" }> {
   projects = taskProjects(state, projects);
   const choices = projects.filter((project) => project.kind === "repository");
-  if (!choices.length && !projects.some((project) => project.kind === "parent"))
-    throw new Error("Add a project before delegating.");
-  if (!state.workers.some((worker) => worker.profiles.length))
-    throw new Error(
-      "No workers are available. Check service configuration in Codex.",
-    );
   const task = explicitSelection ? selectedTask(state) : undefined;
 
   const taskRepository =

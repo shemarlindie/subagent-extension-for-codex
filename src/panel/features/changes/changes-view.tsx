@@ -10,7 +10,7 @@ import {
   useViewedFiles,
 } from "./use-viewed-files";
 
-/** Files start collapsed past this many, so a long list stays scannable. */
+/** Long lists stay scannable by opening only their first file by default. */
 const OPEN_FILES = 8;
 
 type ChangesViewProps = {
@@ -28,7 +28,7 @@ export function ChangesView({ task, changes, reading }: ChangesViewProps) {
 
   return (
     <div className="diff-view">
-      {entries.map((entry) => {
+      {entries.map((entry, index) => {
         const { path } = entry.file;
 
         return (
@@ -36,7 +36,7 @@ export function ChangesView({ task, changes, reading }: ChangesViewProps) {
             key={path}
             entry={entry}
             remembered={reading.open.get(path)}
-            openByDefault={entries.length <= OPEN_FILES}
+            openByDefault={entries.length <= OPEN_FILES || index === 0}
             viewed={isViewed(viewed, entry)}
             changedSinceViewed={changedSinceViewed(viewed, entry)}
             onOpenChange={(open) => reading.open.set(path, open)}

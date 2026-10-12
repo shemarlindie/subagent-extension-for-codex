@@ -155,7 +155,10 @@ export function summary(row: SettingRow, form: Values): string[] {
  * The open sections, or the first section when none of them exists in the
  * current layout. Closing every section on purpose is kept.
  */
-export function openSections(open: string[], sections: SettingSection[]) {
+export function openSections(
+  open: string[],
+  sections: ReadonlyArray<Pick<SettingSection, "id">>,
+) {
   const ids = sections.map((section) => section.id);
 
   return !open.length || open.some((id) => ids.includes(id))

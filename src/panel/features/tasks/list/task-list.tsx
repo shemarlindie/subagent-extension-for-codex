@@ -15,11 +15,15 @@ import {
 } from "../../../app/state/selectors";
 import type { Filter, Task } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
+import { SkeletonShape } from "../../../shared/components/loading-skeleton/loading-skeleton";
+import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
 import { useListMotion } from "../../../shared/components/motion/motion";
 import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
 import { useNow } from "../../../shared/utils/use-now";
+import { projectDisplayName } from "../../projects/selectors";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
 import { TaskListScrollbar } from "./task-list-scrollbar";
+import { TaskListSkeleton } from "./task-list-skeleton";
 import { rowStatus } from "./task-status";
 import { TaskStatusIcon } from "./task-status-icon";
 import { WorkerProfileIcon } from "./worker-profile-icon";
@@ -127,9 +131,7 @@ export function TaskList() {
     projectNames = new Map(
       projectChoices(state).map((project) => [
         project.repository,
-        (project.name ||
-          project.repository.split(/[\\/]/).filter(Boolean).at(-1)) ??
-          project.repository,
+        projectDisplayName(project),
       ]),
     ),
     listRef = useRef<HTMLDivElement>(null),
@@ -179,48 +181,66 @@ export function TaskList() {
             </Button>
           )}
           <span id="count">
-            {narrowed ? `${tasks.length} of ${total}` : tasks.length}
+            <LoadingSwap
+              as="span"
+              className="loading-swap-inline"
+              loading={state.taskListLoading}
+              busy={false}
+              skeleton={
+                <SkeletonShape
+                  className={`task-list-count-skeleton${narrowed ? " task-list-count-skeleton-filtered" : ""}`}
+                />
+              }
+            >
+              {narrowed ? `${tasks.length} of ${total}` : tasks.length}
+            </LoadingSwap>
           </span>
         </span>
       </div>
       <div className="task-list-scroll-area">
         <div id="task-list" ref={listRef}>
-          {!state.connected ? (
-            <p className="help">
-              {state.connection === "Open through MCP"
-                ? "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui."
-                : "Waiting for the host connection."}
-            </p>
-          ) : tasks.length ? (
-            tasks.map((task) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                projectName={
-                  state.repository
-                    ? undefined
-                    : ((projectNames.get(task.repository) ||
-                        task.repository
-                          .split(/[\\/]/)
-                          .filter(Boolean)
-                          .at(-1)) ??
-                      task.repository)
-                }
-                selected={task.id === state.selected}
-                onSelect={() =>
-                  controller.run(() => controller.select(task.id))
-                }
-              />
-            ))
-          ) : (
-            <p className="help empty-state">
-              {state.search
-                ? `No tasks match “${state.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
-                : EMPTY_FILTER[filter]}
-            </p>
-          )}
+          <LoadingSwap
+            className="task-list-loading-swap"
+            loading={state.taskListLoading}
+            skeleton={<TaskListSkeleton showProject={!state.repository} />}
+          >
+            {state.taskListLoading ? null : !state.connected ? (
+              <p className="help">
+                {state.connection === "Open through MCP"
+                  ? "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui."
+                  : "Waiting for the host connection."}
+              </p>
+            ) : tasks.length ? (
+              tasks.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  projectName={
+                    state.repository
+                      ? undefined
+                      : ((projectNames.get(task.repository) ||
+                          task.repository
+                            .split(/[\\/]/)
+                            .filter(Boolean)
+                            .at(-1)) ??
+                        task.repository)
+                  }
+                  selected={task.id === state.selected}
+                  onSelect={() =>
+                    controller.run(() => controller.select(task.id))
+                  }
+                />
+              ))
+            ) : (
+              <p className="help empty-state">
+                {state.search
+                  ? `No tasks match “${state.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
+                  : EMPTY_FILTER[filter]}
+              </p>
+            )}
+          </LoadingSwap>
         </div>
-        <TaskListScrollbar scrollerRef={listRef} />
+        {!state.taskListLoading && <TaskListScrollbar scrollerRef={listRef} />}
       </div>
     </>
   );

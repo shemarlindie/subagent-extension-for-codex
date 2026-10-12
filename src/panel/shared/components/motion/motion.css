@@ -1,11 +1,12 @@
 /*
  * Motion: short, quiet transitions that show what changed and ease layout shifts.
- * Durations match MOTION in src/panel/shared/components/motion/motion.tsx. Reduced motion turns them off below.
+ * Durations match MOTION in src/panel/shared/components/motion/motion-utils.ts. Reduced motion turns them off below.
  */
 :root {
   --motion-fast: 120ms;
   --motion-base: 180ms;
   --motion-slow: 240ms;
+  --motion-loading-crossfade: 300ms;
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
 }
 @keyframes motion-fade {

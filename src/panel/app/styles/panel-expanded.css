@@ -113,6 +113,33 @@ body[data-expanded-panel="true"] .activity-panel .activity-timeline {
   display: flex;
   flex-direction: column;
 }
+body[data-expanded-panel="true"] .activity-panel .activity-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+body[data-expanded-panel="true"]
+  .activity-panel
+  .activity-content
+  > .loading-swap {
+  flex: 1;
+  min-height: 0;
+}
+body[data-expanded-panel="true"]
+  .activity-panel
+  .activity-content
+  > .loading-swap
+  > .loading-swap-skeleton,
+body[data-expanded-panel="true"]
+  .activity-panel
+  .activity-content
+  > .loading-swap
+  > .loading-swap-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 body[data-expanded-panel="true"] .activity-panel .activity-viewport {
   flex: 1;
   max-height: none;

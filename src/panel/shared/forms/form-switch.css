@@ -1,0 +1,43 @@
+.switch {
+  flex: none;
+  display: inline-flex;
+  width: 30px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease;
+}
+.switch[data-checked] {
+  background: var(--accent);
+}
+.switch:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.switch-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+.switch-thumb[data-checked] {
+  transform: translateX(12px);
+}
+.form-switch-loading {
+  position: relative;
+  cursor: wait;
+}
+.form-switch-loading .switch-thumb {
+  opacity: 0;
+}
+.form-switch-spinner {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}

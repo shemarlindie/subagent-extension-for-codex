@@ -59,6 +59,23 @@ const inspectorTabs: { id: InspectorTab; label: string }[] = [
 const iconNames = Object.keys(ICONS) as IconName[];
 
 const storageKey = "panel-dev-host";
+const fixtureReadDelayMs = 1200;
+
+// Keep mutations out of this list so the inspection toggle never delays writes.
+const fixtureReadTools = new Set([
+  "get_agent_panel_context",
+  "get_agent_settings",
+  "get_user_agent_activity",
+  "get_user_agent_change_counts",
+  "get_user_agent_changed_file",
+  "get_user_agent_changes",
+  "get_user_agent_chat",
+  "get_user_agent_draft",
+  "get_user_agent_turn_activity",
+  "list_agent_projects",
+  "list_agent_tasks",
+  "list_available_workers",
+]);
 
 const defaults: Settings = {
   source: "fixtures",
@@ -75,6 +92,7 @@ const defaults: Settings = {
   autoRegister: true,
   claudeUnavailable: false,
   successfulBudgetUpdates: false,
+  slowAsyncReads: false,
   addedProjects: [],
   removedProjects: [],
   projectNames: {},
@@ -222,6 +240,7 @@ export function Host() {
     autoRegister,
     claudeUnavailable,
     successfulBudgetUpdates,
+    slowAsyncReads,
   } = settings;
 
   const sessionKey = JSON.stringify([
@@ -235,6 +254,7 @@ export function Host() {
     autoRegister,
     claudeUnavailable,
     successfulBudgetUpdates,
+    slowAsyncReads,
   ]);
 
   useEffect(() => {
@@ -318,10 +338,18 @@ export function Host() {
                 autoRegisterChatProject: current.autoRegister,
                 claudeUnavailable: current.claudeUnavailable,
                 successfulBudgetUpdates: current.successfulBudgetUpdates,
+                deferTaskList: current.slowAsyncReads,
                 addedProjects: added.current,
                 removedProjects: projectEdits.current.removed,
                 projectNames: projectEdits.current.names,
               });
+
+      if (
+        source === "fixtures" &&
+        current.slowAsyncReads &&
+        fixtureReadTools.has(name)
+      )
+        await new Promise((resolve) => setTimeout(resolve, fixtureReadDelayMs));
 
       // Fixture registrations persist until Reset, like the service's registry.
       if (
@@ -591,6 +619,19 @@ export function Host() {
               }
             />
             Successful limit updates
+          </label>
+        )}
+        {source === "fixtures" && (
+          <label
+            className="check"
+            title="Delays fixture content reads by 1.2 seconds so loading placeholders can be inspected."
+          >
+            <input
+              type="checkbox"
+              checked={settings.slowAsyncReads}
+              onChange={(e) => update({ slowAsyncReads: e.target.checked })}
+            />
+            Slow async reads
           </label>
         )}
         <button type="button" onClick={() => setSession((n) => n + 1)}>

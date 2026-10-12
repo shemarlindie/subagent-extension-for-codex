@@ -1,0 +1,53 @@
+.task-inspector-skeleton-header {
+  min-width: 0;
+}
+.task-inspector-skeleton-back {
+  display: none;
+}
+.task-inspector-skeleton-status-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.task-inspector-skeleton-status,
+.task-inspector-skeleton-worker {
+  flex: none;
+  height: 8px;
+  border-radius: 999px;
+}
+.task-inspector-skeleton-header .eyebrow-worker {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+.task-inspector-skeleton-status {
+  width: 55px;
+}
+.task-inspector-skeleton-worker {
+  width: 100px;
+}
+.task-inspector-skeleton-menu {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+.task-inspector-skeleton-title {
+  display: block;
+}
+.task-inspector-skeleton-title > .skeleton-text-frame {
+  width: 100%;
+  padding-bottom: 4px;
+}
+.task-inspector-skeleton-title-shape {
+  width: min(62%, 360px);
+  height: 1lh;
+}
+@media (max-width: 640px) {
+  .task-inspector-skeleton-back {
+    display: block;
+    width: 42px;
+    height: 19px;
+  }
+}

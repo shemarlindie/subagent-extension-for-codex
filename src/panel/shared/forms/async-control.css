@@ -1,0 +1,20 @@
+.async-control {
+  position: relative;
+  min-width: 0;
+}
+.async-control-spinner {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: 8px;
+  display: grid;
+  width: 12px;
+  height: 12px;
+  place-items: center;
+  color: var(--accent);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.async-control[data-loading] :is(input, textarea) {
+  padding-right: 28px;
+}

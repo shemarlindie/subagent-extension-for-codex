@@ -62,7 +62,12 @@ test("task filters show counts and an empty state with a way out", async (t) => 
 
   assert.ok(screen.getByRole("radio", { name: "All, 0" }));
   assert.ok(screen.getByText("No tasks match “zzz”."));
-  assert.equal(screen.getByText("0 of 1").id, "count");
+
+  assert.equal(
+    screen.getByText("0 of 1").closest("#count")?.textContent,
+    "0 of 1",
+  );
+
   await user.click(screen.getByRole("button", { name: "Clear search" }));
   assert.equal((search as HTMLInputElement).value, "");
   await user.type(search, "a");

@@ -1,0 +1,122 @@
+.task-details-loading-swap,
+.task-details-value-swap {
+  min-width: 0;
+}
+.task-details-value-swap {
+  max-width: 100%;
+  vertical-align: baseline;
+}
+.task-details .task-details-value-swap > .loading-swap-skeleton,
+.task-details .task-details-value-swap > .loading-swap-content {
+  align-items: baseline;
+}
+.task-details .facts {
+  grid-template-columns: minmax(128px, max-content) minmax(0, 1fr);
+}
+.task-details .meta {
+  gap: 8px;
+}
+.task-details-skeleton .meta > span {
+  display: flex;
+  align-items: center;
+  min-height: 1lh;
+}
+.task-details-skeleton .facts dt,
+.task-details-skeleton .facts dd {
+  display: flex;
+  align-items: center;
+  min-height: 1lh;
+}
+.task-details-skeleton .facts dd.task-full-description {
+  min-height: 2lh;
+}
+.task-details-skeleton .facts .skeleton-text-frame {
+  width: 100%;
+}
+.task-details-skeleton-description-frame .skeleton-text-frame-content,
+.task-details-skeleton .facts .skeleton-text-frame-content {
+  width: 100%;
+}
+.task-details-skeleton-value,
+.task-details-skeleton-label {
+  height: 6px;
+  border-radius: 999px;
+}
+.task-details-skeleton-value-short {
+  width: 54px;
+}
+.task-details-skeleton-value-medium {
+  width: 104px;
+}
+.task-details-skeleton-value-long {
+  width: min(100%, 280px);
+}
+.task-details-skeleton-label-small {
+  width: 38px;
+}
+.task-details-skeleton-label-short {
+  width: 54px;
+}
+.task-details-skeleton-label-medium {
+  width: 82px;
+}
+.task-details-skeleton-label-long {
+  width: 128px;
+}
+.task-details-skeleton-description {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  gap: 5px;
+  width: 100%;
+  max-width: 480px;
+}
+.task-details-skeleton-description .task-details-skeleton-value {
+  max-width: 100%;
+}
+.task-details-skeleton-description .task-details-skeleton-value-long {
+  width: 100%;
+}
+.task-details-skeleton-description .task-details-skeleton-value-medium {
+  width: 84%;
+}
+.task-details-skeleton-description .task-details-skeleton-value-short {
+  width: 62%;
+}
+.task-details-skeleton-meta-project {
+  width: min(100%, 220px);
+}
+.task-details-skeleton-meta-limit {
+  width: 88px;
+}
+.task-details-meta-cost .task-details-skeleton-meta-limit {
+  width: 72px;
+}
+.task-details-skeleton-meta-project,
+.task-details-skeleton-meta-limit {
+  height: 6px;
+  border-radius: 999px;
+}
+.task-details-changes-skeleton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 1lh;
+}
+.task-details-changes-value-swap {
+  min-width: 172px;
+  min-height: 1lh;
+}
+.task-details-changes-skeleton .skeleton-shape {
+  height: 6px;
+  border-radius: 999px;
+}
+.task-details-changes-count {
+  width: 46px;
+}
+.task-details-changes-files {
+  width: 38px;
+}
+.task-details-changes-state {
+  width: 72px;
+}

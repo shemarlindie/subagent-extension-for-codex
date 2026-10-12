@@ -3,12 +3,15 @@ import type { Ref } from "react";
 
 import { Chevron } from "../chevron";
 import { Icon, type IconName } from "../icons/icons";
+import { LoadingSpinner } from "../loading-spinner/loading-spinner";
 
 export type SelectOption = {
   value: string;
   label: string;
-  /** Secondary text shown under the label in the menu only. */
+  /** Secondary text shown under the label in the menu. */
   description?: string;
+  /** Also show the secondary text under the label after selection. */
+  showDescriptionInValue?: boolean;
   /** Optional leading icon for the menu option and selected value. */
   icon?: IconName;
 };
@@ -18,6 +21,8 @@ export type SelectFieldProps = {
   label: string;
   options: SelectOption[];
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   name?: string;
   placeholder?: string;
   required?: boolean;
@@ -31,6 +36,8 @@ function SelectTrigger({
   id,
   label,
   options,
+  loading = false,
+  loadingLabel,
   placeholder,
   required,
   invalid,
@@ -39,40 +46,66 @@ function SelectTrigger({
   onBlur,
 }: SelectFieldProps) {
   return (
-    <Select.Trigger
-      id={id}
-      ref={triggerRef}
-      className="select-trigger"
-      aria-label={label}
-      aria-required={required || undefined}
-      aria-invalid={invalid || undefined}
-      aria-describedby={describedBy}
-      onBlur={onBlur}
-    >
-      <Select.Value className="select-value" placeholder={placeholder}>
-        {(value) => {
-          const option = options.find((item) => item.value === value);
+    <>
+      <Select.Trigger
+        id={id}
+        ref={triggerRef}
+        className="select-trigger"
+        aria-label={label}
+        aria-required={required || undefined}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
+        aria-busy={loading || undefined}
+        onBlur={onBlur}
+      >
+        <Select.Value className="select-value" placeholder={placeholder}>
+          {(value) => {
+            const option = options.find((item) => item.value === value);
 
-          return option ? (
-            <span className="select-value-content">
-              {option.icon && (
-                <Icon
-                  name={option.icon}
-                  size={10}
-                  className="select-worker-icon"
-                />
-              )}
-              <span className="select-value-label">{option.label}</span>
-            </span>
+            return option ? (
+              <span className="select-value-content">
+                {option.icon && (
+                  <Icon
+                    name={option.icon}
+                    size={10}
+                    className="select-worker-icon"
+                  />
+                )}
+                <span
+                  className="select-value-text"
+                  data-has-description={
+                    option.showDescriptionInValue && option.description
+                      ? "true"
+                      : undefined
+                  }
+                >
+                  <span className="select-value-label">{option.label}</span>
+                  {option.showDescriptionInValue && option.description && (
+                    <span className="select-value-description">
+                      {option.description}
+                    </span>
+                  )}
+                </span>
+              </span>
+            ) : (
+              placeholder
+            );
+          }}
+        </Select.Value>
+        <Select.Icon className="select-icon">
+          {loading ? (
+            <LoadingSpinner className="select-loading-spinner" />
           ) : (
-            placeholder
-          );
-        }}
-      </Select.Value>
-      <Select.Icon className="select-icon">
-        <Chevron />
-      </Select.Icon>
-    </Select.Trigger>
+            <Chevron />
+          )}
+        </Select.Icon>
+      </Select.Trigger>
+      {loading && (
+        <span className="select-loading-status" role="status">
+          {loadingLabel ?? `Loading ${label.toLowerCase()}`}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -146,7 +179,7 @@ export function SelectField(
       items={props.options}
       value={value}
       name={props.name}
-      disabled={props.disabled}
+      disabled={props.disabled || props.loading}
       onValueChange={(next) => props.onValueChange(next ?? "")}
     >
       <SelectTrigger {...props} />
@@ -167,7 +200,7 @@ export function MultiSelectField(
       items={props.options}
       value={props.value}
       name={props.name}
-      disabled={props.disabled}
+      disabled={props.disabled || props.loading}
       onValueChange={props.onValueChange}
     >
       <SelectTrigger {...props} />

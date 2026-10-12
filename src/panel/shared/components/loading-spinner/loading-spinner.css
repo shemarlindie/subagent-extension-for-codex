@@ -1,0 +1,15 @@
+.loading-spinner {
+  display: block;
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: loading-spinner-spin 700ms linear infinite;
+}
+@keyframes loading-spinner-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}

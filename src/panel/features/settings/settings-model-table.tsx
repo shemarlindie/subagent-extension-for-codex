@@ -1,4 +1,5 @@
 import { unsupportedEffortWarning } from "../../../shared/settings/settings-document";
+import { SkeletonShape } from "../../shared/components/loading-skeleton/loading-skeleton";
 import { FormSelect } from "../../shared/forms/form-select";
 import {
   WorkerProfileIcon,
@@ -9,10 +10,18 @@ import type { ModelScope } from "./settings-layout";
 
 interface ModelTableProps extends SettingsControls {
   scopes: ModelScope[];
+  loading?: boolean;
+  reserveProviderScope?: boolean;
 }
 
 /** Model and reasoning-effort defaults, one row per scope. */
-export function ModelTable({ scopes, control, register }: ModelTableProps) {
+export function ModelTable({
+  scopes,
+  control,
+  register,
+  loading = false,
+  reserveProviderScope = false,
+}: ModelTableProps) {
   return (
     <div className="model-table">
       <div className="model-table-head" aria-hidden="true">
@@ -40,7 +49,18 @@ export function ModelTable({ scopes, control, register }: ModelTableProps) {
               {scope.label}
             </span>
             {/* Without a discovered catalog the model ID is typed instead. */}
-            {scope.model.options ? (
+            {loading ? (
+              <FormSelect
+                control={control}
+                name={scope.model.key}
+                id={`setting-${scope.model.key}`}
+                label={scope.model.label}
+                options={scope.model.options ?? []}
+                loading
+                loadingLabel={`Loading ${scope.model.label.toLowerCase()}`}
+                placeholder="Loading…"
+              />
+            ) : scope.model.options ? (
               <FormSelect
                 control={control}
                 name={scope.model.key}
@@ -65,6 +85,10 @@ export function ModelTable({ scopes, control, register }: ModelTableProps) {
               label={scope.effort.label}
               options={scope.effort.options}
               describedBy={scope.effort.unsupported ? warningId : undefined}
+              disabled={loading}
+              loading={loading}
+              loadingLabel={`Loading ${scope.effort.label.toLowerCase()}`}
+              placeholder={loading ? "Loading…" : undefined}
             />
             {scope.effort.unsupported && (
               <p id={warningId} className="help warn">
@@ -74,6 +98,13 @@ export function ModelTable({ scopes, control, register }: ModelTableProps) {
           </div>
         );
       })}
+      {loading && reserveProviderScope && (
+        <div className="model-table-row" aria-hidden="true">
+          <SkeletonShape className="settings-model-loading-label" />
+          <SkeletonShape className="settings-model-loading-control" />
+          <SkeletonShape className="settings-model-loading-control" />
+        </div>
+      )}
     </div>
   );
 }

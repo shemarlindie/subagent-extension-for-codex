@@ -1,6 +1,14 @@
 import type { Snapshot } from "../../app/state/types.js";
 import type { Project } from "./types.js";
 
+export function projectDisplayName(
+  project: Pick<Project, "name" | "repository">,
+) {
+  const pathName = project.repository.split(/[\\/]/).filter(Boolean).at(-1);
+
+  return project.name || pathName || project.repository;
+}
+
 /** Presentation of canonical registry paths; the service still validates access. */
 export function projectApproved(projects: Project[], repository: string) {
   return projects.some(

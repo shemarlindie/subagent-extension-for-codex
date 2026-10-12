@@ -14,6 +14,8 @@ import {
 import type { Filter } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
+import { SkeletonShape } from "../../../shared/components/loading-skeleton/loading-skeleton";
+import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
 import { Presence } from "../../../shared/components/motion/motion";
 import { scrollChildIntoView } from "../../../shared/utils/scroll-into-view";
 
@@ -29,6 +31,7 @@ const typing = (target: EventTarget | null) =>
 export function TaskFilters() {
   const controller = useController(),
     state = useSnapshot(),
+    loading = state.taskListLoading,
     counts = filterCounts(state),
     current = effectiveFilter(state),
     searchRef = useRef<HTMLInputElement>(null),
@@ -119,6 +122,7 @@ export function TaskFilters() {
         ref={groupRef}
         className="filters"
         aria-label="Filter tasks"
+        aria-busy={loading || undefined}
         value={current}
         onValueChange={(value) => controller.setFilter(value as Filter)}
       >
@@ -132,7 +136,9 @@ export function TaskFilters() {
             <Radio.Root
               value={filter}
               data-filter={filter}
-              aria-label={`${label}, ${counts[filter]}`}
+              aria-label={
+                loading ? `${label}, loading` : `${label}, ${counts[filter]}`
+              }
               nativeButton
               render={<button type="button" />}
               // Choosing the pill that auto-select already marked fires no change, so pin it here.
@@ -142,13 +148,22 @@ export function TaskFilters() {
               <span
                 className="filter-count"
                 data-alert={
+                  !loading &&
                   (filter === "attention" || filter === "failed") &&
                   counts[filter] > 0
                     ? ""
                     : undefined
                 }
               >
-                {counts[filter]}
+                <LoadingSwap
+                  as="span"
+                  className="loading-swap-inline"
+                  loading={loading}
+                  busy={false}
+                  skeleton={<SkeletonShape className="filter-count-skeleton" />}
+                >
+                  {counts[filter]}
+                </LoadingSwap>
               </span>
             </Radio.Root>
           </Presence>

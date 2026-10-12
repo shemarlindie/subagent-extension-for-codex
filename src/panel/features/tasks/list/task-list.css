@@ -1,0 +1,164 @@
+.inline-preview {
+  padding: 12px 16px;
+}
+.preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.inline-preview p {
+  margin: 6px 0;
+}
+.preview-scope {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.preview-task {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 4px;
+}
+.preview-task-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.preview-task small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.inline-preview .error {
+  overflow-wrap: anywhere;
+}
+.inline-preview .worker-readiness .notice {
+  margin: 8px 0;
+}
+.inline-preview-loading-swap {
+  align-content: start;
+}
+.preview-counts-skeleton {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-height: 13px;
+  margin: 6px 0;
+}
+.preview-title-skeleton {
+  width: 88%;
+  height: 13px;
+  margin: 6px 0;
+}
+.preview-title-skeleton-short {
+  width: 54%;
+}
+.preview-status-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 3px;
+}
+.preview-status-dot-skeleton {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.preview-status-label-skeleton {
+  width: 62px;
+  height: 8px;
+}
+.preview-counts-skeleton .skeleton-shape {
+  height: 8px;
+}
+.preview-counts-number {
+  width: 14px;
+}
+.preview-counts-task {
+  width: 30px;
+}
+.preview-counts-active {
+  width: 33px;
+}
+.preview-counts-attention {
+  width: 90px;
+}
+.preview-counts-separator {
+  flex: none;
+  width: 3px;
+  height: 3px;
+  margin-inline: 2px;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: 0.6;
+}
+
+.task-list-count-skeleton {
+  display: inline-block;
+  width: 18px;
+  height: 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.task-list-count-skeleton-filtered {
+  width: 42px;
+}
+.task-list-loading-swap {
+  align-content: start;
+}
+.task-list-skeleton {
+  display: grid;
+  align-content: start;
+}
+.task-list-skeleton-row {
+  min-width: 0;
+  margin: 2px 0;
+  padding: 10px;
+  border-radius: 6px;
+}
+.task-list-skeleton-project {
+  width: 76px;
+  height: 7px;
+}
+.task-list-skeleton-title {
+  height: 10px;
+}
+.task-list-skeleton-title-wide {
+  width: 82%;
+}
+.task-list-skeleton-title-medium {
+  width: 68%;
+}
+.task-list-skeleton-title-short {
+  width: 54%;
+}
+.task-list-skeleton-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 5px;
+}
+.task-list-skeleton-worker,
+.task-list-skeleton-trailing {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.task-list-skeleton-profile,
+.task-list-skeleton-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.task-list-skeleton-worker-label {
+  width: 52px;
+  height: 7px;
+}
+.task-list-skeleton-runtime {
+  width: 54px;
+  height: 7px;
+}

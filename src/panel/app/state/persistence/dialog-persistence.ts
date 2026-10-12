@@ -50,13 +50,21 @@ export function persistDialog(dialog: DialogState): PersistedDialog {
     case "project":
       return { kind: dialog.kind, repository: dialog.repository };
     case "settings":
-      return { kind: dialog.kind };
+    case "settings-loading":
+      return { kind: "settings" };
     case "delegate":
       return {
         kind: dialog.kind,
         preferredWorker: dialog.preferredWorker,
         repository: dialog.repository,
         revision: dialog.revision,
+      };
+    case "delegate-loading":
+      return {
+        kind: "delegate",
+        preferredWorker: dialog.preferredWorker,
+        ...(dialog.repository ? { repository: dialog.repository } : {}),
+        ...(dialog.revision ? { revision: dialog.revision } : {}),
       };
     case "respond":
       return {

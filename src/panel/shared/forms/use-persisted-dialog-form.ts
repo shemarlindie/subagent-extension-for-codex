@@ -1,4 +1,11 @@
-import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   type DefaultValues,
   type FieldValues,
@@ -47,19 +54,38 @@ function restoredValues<T extends FieldValues>(
 export function usePersistedDialogForm<T extends FieldValues>(
   kind: PersistedDialog["kind"],
   defaultValues: DefaultValues<T>,
-  options?: Omit<UseFormProps<T>, "defaultValues">,
+  options?: Omit<UseFormProps<T>, "defaultValues"> & { ready?: boolean },
 ): UseFormReturn<T> {
-  const controller = useController(),
+  const { ready = true, ...formOptions } = options ?? {},
+    controller = useController(),
     form = useForm<T>({
-      ...options,
+      ...formOptions,
       defaultValues: restoredValues(
         defaultValues,
         controller.getDialogDraft(kind),
       ),
     }),
-    { getValues, watch } = form;
+    { getValues, reset, watch } = form,
+    initialized = useRef(ready);
+
+  // Async forms can render their shell before their defaults arrive. Restore
+  // the saved draft only after the data-dependent field set is known.
+  useLayoutEffect(() => {
+    if (!ready) {
+      initialized.current = false;
+
+      return;
+    }
+
+    if (!initialized.current) {
+      initialized.current = true;
+      reset(restoredValues(defaultValues, controller.getDialogDraft(kind)));
+    }
+  }, [controller, defaultValues, kind, ready, reset]);
 
   useEffect(() => {
+    if (!ready) return;
+
     controller.saveDialogDraft(kind, getValues() as PersistedDialogDraft);
 
     const subscription = watch((values) => {
@@ -67,7 +93,7 @@ export function usePersistedDialogForm<T extends FieldValues>(
     });
 
     return () => subscription.unsubscribe();
-  }, [controller, getValues, kind, watch]);
+  }, [controller, getValues, kind, ready, watch]);
 
   return form;
 }

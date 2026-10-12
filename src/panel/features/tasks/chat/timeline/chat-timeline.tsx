@@ -6,6 +6,7 @@ import type { BudgetRaise } from "../../../../../shared/tasks/model";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import { statusLabel } from "../../../../app/state/selectors";
 import type { Task } from "../../../../app/state/types";
+import { LoadingSwap } from "../../../../shared/components/loading-skeleton/loading-swap";
 import { currentActivityStatus } from "../../activity/activity-timeline";
 import { rowStatus } from "../../list/task-status";
 import { TaskStatusIcon } from "../../list/task-status-icon";
@@ -14,11 +15,14 @@ import { PendingInput } from "../composer/pending-input";
 import { BudgetLimitNotice } from "./budget-limit-notice";
 import { ChatMessageView } from "./chat-message-view";
 import { ChatNoteRow } from "./chat-note-row";
+import { ChatSkeleton } from "./chat-skeleton";
 import { TurnOutcomeRow } from "./turn-outcome-row";
 
 type ChatTimelineProps = {
-  task: Task;
+  task?: Task;
   viewportRef: RefObject<HTMLDivElement | null>;
+  positionRestored: boolean;
+  onLoadingSettled: () => void;
   budgetRaise: BudgetRaise;
   onBudgetRaiseChange: (value: BudgetRaise) => void;
   onBudgetApply: (value: BudgetRaise) => Promise<string | undefined>;
@@ -32,21 +36,24 @@ type ChatTimelineProps = {
 export function ChatTimeline({
   task,
   viewportRef,
+  positionRestored,
+  onLoadingSettled,
   budgetRaise,
   onBudgetRaiseChange,
   onBudgetApply,
 }: ChatTimelineProps) {
   const state = useSnapshot(),
-    chat = state.chat?.task === task.id ? state.chat : undefined,
-    worker =
-      providerMetadata(
-        task.provider,
-        state.workers.find((w) => w.provider === task.provider)?.metadata,
-      )?.displayName ?? task.provider;
+    chat = task && state.chat?.task === task.id ? state.chat : undefined,
+    worker = task
+      ? (providerMetadata(
+          task.provider,
+          state.workers.find((w) => w.provider === task.provider)?.metadata,
+        )?.displayName ?? task.provider)
+      : "";
 
   // Pending steers and queued messages show above the composer until sent.
   const waiting = new Set(
-    [...task.pending_steers, ...task.queue].map((m) => m.id),
+    task ? [...task.pending_steers, ...task.queue].map((m) => m.id) : [],
   );
 
   const items = chat?.items.filter(
@@ -54,10 +61,11 @@ export function ChatTimeline({
   );
 
   // The message being written, until the stored one with its id arrives.
-  const draft =
-    state.draft?.task === task.id
+  const draft = task
+    ? state.draft?.task === task.id
       ? state.draft
-      : task.draft && { task: task.id, ...task.draft };
+      : task.draft && { task: task.id, ...task.draft }
+    : undefined;
 
   const streaming =
     draft && !chat?.items.some((item) => item.id === draft.message_id)
@@ -65,14 +73,16 @@ export function ChatTimeline({
       : undefined;
 
   const activity =
-    task.status === "running" && state.events.length
+    task?.status === "running" && state.events.length
       ? currentActivityStatus(state.events, task)
-      : task.live_activity;
+      : task?.live_activity;
 
-  const presentation = rowStatus({ ...task, live_activity: activity });
+  const presentation = task
+    ? rowStatus({ ...task, live_activity: activity })
+    : undefined;
 
   const working =
-    composerMode(task) === "busy" && !streaming
+    task && composerMode(task) === "busy" && !streaming
       ? task.status === "running" && activity
         ? activity.text
         : statusLabel(task)
@@ -80,7 +90,12 @@ export function ChatTimeline({
 
   const latest = items?.at(-1);
   const workingShownInNote = latest?.kind === "note" && latest.text === working;
-  const spent = spentBudget(task);
+  const spent = task ? spentBudget(task) : undefined;
+  const loading = !task || !items || !positionRestored;
+
+  const loadingSwapClass = items?.length
+    ? "chat-loading-swap chat-loading-swap-has-history"
+    : "chat-loading-swap";
 
   return (
     <div
@@ -89,29 +104,42 @@ export function ChatTimeline({
       tabIndex={0}
       role="region"
       aria-label="Chat history"
+      aria-busy={loading || undefined}
     >
-      {!items ? (
-        <p className="help">Loading the conversation…</p>
-      ) : (
-        items.map((item, index) =>
-          item.kind === "message" ? (
-            <ChatMessageView
-              key={item.id}
-              task={task}
-              message={item.message}
-              worker={worker}
-              outcome={responseOutcome(item, items[index + 1])}
-            />
-          ) : item.kind === "outcome" ? (
-            responseOutcome(items[index - 1], item) ? null : (
-              <TurnOutcomeRow key={item.id} outcome={item} />
-            )
-          ) : (
-            <ChatNoteRow key={item.id} note={item} />
-          ),
-        )
-      )}
-      {streaming && (
+      <LoadingSwap
+        className={loadingSwapClass}
+        loading={loading}
+        busy={false}
+        skeleton={<ChatSkeleton />}
+        onSettled={onLoadingSettled}
+      >
+        {task && (
+          <div className="chat-history">
+            {items?.length ? (
+              items.map((item, index) =>
+                item.kind === "message" ? (
+                  <ChatMessageView
+                    key={item.id}
+                    task={task}
+                    message={item.message}
+                    worker={worker}
+                    outcome={responseOutcome(item, items[index + 1])}
+                  />
+                ) : item.kind === "outcome" ? (
+                  responseOutcome(items[index - 1], item) ? null : (
+                    <TurnOutcomeRow key={item.id} outcome={item} />
+                  )
+                ) : (
+                  <ChatNoteRow key={item.id} note={item} />
+                ),
+              )
+            ) : items && !streaming ? (
+              <p className="help chat-empty">No messages yet.</p>
+            ) : null}
+          </div>
+        )}
+      </LoadingSwap>
+      {task && streaming && (
         <ChatMessageView
           message={{
             id: streaming.message_id,
@@ -126,13 +154,13 @@ export function ChatTimeline({
           streaming
         />
       )}
-      {working && !workingShownInNote && (
+      {task && working && !workingShownInNote && presentation && (
         <div className="chat-working" role="status">
           <TaskStatusIcon kind={presentation.kind} label={working} decorative />
           <span>{working}</span>
         </div>
       )}
-      {spent && (
+      {task && spent && (
         <BudgetLimitNotice
           taskId={task.id}
           spent={spent}
@@ -141,7 +169,7 @@ export function ChatTimeline({
           onApply={onBudgetApply}
         />
       )}
-      <PendingInput task={task} />
+      {task && <PendingInput task={task} />}
     </div>
   );
 }

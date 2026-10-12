@@ -24,6 +24,10 @@ const keys = {
 } as const;
 
 const DIALOG_STORAGE_KEY = "codex-subagent-extension.dialog.v1";
+
+const SETTINGS_SECTION_STORAGE_KEY =
+  "codex-subagent-extension.settings-section.v1";
+
 const INPUT_PERSISTENCE_DEBOUNCE_MS = 250;
 
 const filters: Filter[] = ["all", "active", "attention", "completed", "failed"];
@@ -135,6 +139,31 @@ function writeDialogs(
   }
 }
 
+function readLastSettingsSection(storage?: Storage) {
+  if (!storage) return undefined;
+
+  try {
+    const section = storage.getItem(SETTINGS_SECTION_STORAGE_KEY);
+
+    return section && section.length <= 100 ? section : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeLastSettingsSection(
+  storage: Storage | undefined,
+  section: string,
+) {
+  if (!storage) return;
+
+  try {
+    storage.setItem(SETTINGS_SECTION_STORAGE_KEY, section);
+  } catch {
+    // Storage can be disabled or full; persistence must not break the UI.
+  }
+}
+
 function dialogStackIdentity(dialogs: PersistedDialog[]) {
   return JSON.stringify(dialogs.map(({ draft: _draft, ...dialog }) => dialog));
 }
@@ -143,6 +172,7 @@ function dialogStackIdentity(dialogs: PersistedDialog[]) {
 export function browserUiState(win: Window = window): UiStatePersistence {
   const storage = dialogStorage(win);
   let persistedDialogs = readDialogs(storage),
+    persistedSettingsSection = readLastSettingsSection(storage),
     pendingDialogs: PersistedDialog[] | undefined,
     pendingSearch: string | undefined,
     dialogTimer: ReturnType<typeof setTimeout> | undefined,
@@ -194,12 +224,23 @@ export function browserUiState(win: Window = window): UiStatePersistence {
 
       return {
         view: read(url),
+        ...(persistedSettingsSection
+          ? { lastSettingsSection: persistedSettingsSection }
+          : {}),
         ...(dialogs.length ? { dialogs } : {}),
       };
     },
     save: (state) => {
       const dialogs = state.dialogs ?? [],
         search = state.view.search ?? "";
+
+      if (
+        state.lastSettingsSection &&
+        state.lastSettingsSection !== persistedSettingsSection
+      ) {
+        persistedSettingsSection = state.lastSettingsSection;
+        writeLastSettingsSection(storage, persistedSettingsSection);
+      }
 
       // Filtering stays live; only the URL write waits for typing to pause.
       if (search !== persistedSearch) {

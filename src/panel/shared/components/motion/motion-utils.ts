@@ -1,8 +1,12 @@
-/** Matches the CSS motion tokens in src/panel/shared/components/motion/motion.css. */
+/** Shared panel motion values, mirrored by the CSS tokens in motion.css. */
 export const MOTION = {
   fast: 120,
   base: 180,
   slow: 240,
+  /**
+   * LoadingSwap's skeleton-to-content cross-fade, mirrored by CSS.
+   */
+  loadingCrossfade: 300,
   easing: "cubic-bezier(0.2, 0, 0, 1)",
 } as const;
 

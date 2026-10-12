@@ -52,42 +52,6 @@ header .brand {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.inline-preview {
-  padding: 12px 16px;
-}
-.preview-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.inline-preview p {
-  margin: 6px 0;
-}
-.preview-scope {
-  font-size: 11px;
-  overflow-wrap: anywhere;
-}
-.preview-task {
-  border-top: 1px solid var(--line);
-  margin-top: 10px;
-  padding-top: 4px;
-}
-.preview-task-title {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-}
-.preview-task small {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.inline-preview .error {
-  overflow-wrap: anywhere;
-}
 .project-scope {
   display: flex;
   align-items: center;
@@ -96,9 +60,6 @@ header .brand {
 }
 .worker-readiness .notice {
   margin: 8px;
-}
-.inline-preview .worker-readiness .notice {
-  margin: 8px 0;
 }
 .worker-readiness .notice p {
   margin-bottom: 0;
@@ -663,6 +624,9 @@ footer {
 .form-note {
   font-size: 12px;
   color: var(--muted);
+}
+.form-note--first {
+  margin-top: 0;
 }
 .task-inspector-back {
   display: none;

@@ -8,6 +8,8 @@ import { expect, onTestFinished, test, vi } from "vitest";
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
 import type { Task, Transport } from "../../app/state/types";
+import { LOADING_SKELETON_CONFIG } from "../../shared/components/loading-skeleton/loading-skeleton-config";
+import { MOTION } from "../../shared/components/motion/motion-utils";
 import { ChangesPanel } from "./changes-panel";
 import type { Changes, ChangesState } from "./types";
 
@@ -96,13 +98,20 @@ function setup(initial?: ChangesState) {
 }
 
 test.each([undefined, { ...loaded, data: undefined, loading: true }])(
-  "initial reading shows one header progressbar and announces the operation once",
-  (changes) => {
+  "initial reading keeps the header placeholder through the data read",
+  async (changes) => {
     const { view } = setup(changes);
-    const progress = view.getByRole("progressbar");
 
-    assert.ok(progress.closest(".changes-header"));
-    assert.equal(view.getByRole("status").textContent, "Reading changes…");
+    expect(view.queryByRole("progressbar")).toBeNull();
+
+    expect(
+      view.container.querySelector(".changes-header-skeleton"),
+    ).not.toBeNull();
+
+    assert.equal(
+      (await view.findByRole("status")).getAttribute("aria-label"),
+      "Loading changes",
+    );
 
     assert.equal(
       view.container
@@ -114,6 +123,62 @@ test.each([undefined, { ...loaded, data: undefined, loading: true }])(
     expect(view.queryByRole("alert")).toBeNull();
   },
 );
+
+test("keeps the Changes header and content placeholders together through the first-read cross-fade", () => {
+  vi.useFakeTimers();
+
+  try {
+    const { view, update } = setup();
+
+    act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay));
+    expect(view.container.querySelector(".changes-skeleton")).not.toBeNull();
+
+    expect(
+      view.container.querySelector(".changes-header-skeleton"),
+    ).not.toBeNull();
+
+    update(loaded);
+
+    act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible));
+
+    expect(view.container.querySelector(".changes-skeleton")).not.toBeNull();
+
+    expect(
+      view.container.querySelector(".changes-header-skeleton"),
+    ).not.toBeNull();
+
+    expect(view.container.querySelector(".diff-file")).not.toBeNull();
+
+    act(() => vi.advanceTimersByTime(MOTION.loadingCrossfade - 1));
+
+    expect(view.container.querySelector(".changes-skeleton")).not.toBeNull();
+
+    act(() => vi.advanceTimersByTime(1));
+
+    expect(view.container.querySelector(".changes-skeleton")).toBeNull();
+    expect(view.container.querySelector(".changes-header-skeleton")).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("holds the first-read height for empty results but releases it for file results", () => {
+  const { view, update } = setup();
+  const content = () => view.container.querySelector(".changes-content");
+
+  expect(content()?.getAttribute("data-preserve-empty-height")).toBe("true");
+
+  update({
+    ...loaded,
+    data: { ...data, files: [] },
+  });
+
+  expect(content()?.getAttribute("data-preserve-empty-height")).toBe("true");
+
+  update(loaded);
+
+  expect(content()?.hasAttribute("data-preserve-empty-height")).toBe(false);
+});
 
 test("scrolling changes shows a control that returns to the top", () => {
   const { view } = setup(loaded);
@@ -210,14 +275,22 @@ test("refresh keeps the mounted file and its collapsed state through loading, fa
   );
 });
 
-test("switching scopes hides old results and a failed initial read stops loading", () => {
+test("switching scopes hides old results and a failed initial read stops loading", async () => {
   const { view, update } = setup(loaded);
 
   update({ ...loaded, scope: "turn", loading: true, data: undefined });
 
   expect(view.container.querySelector(".diff-file")).toBeNull();
-  assert.equal(view.getAllByRole("progressbar").length, 1);
-  assert.equal(view.getByRole("status").textContent, "Reading changes…");
+  expect(view.queryByRole("progressbar")).toBeNull();
+
+  expect(
+    view.container.querySelector(".changes-header-skeleton"),
+  ).not.toBeNull();
+
+  assert.equal(
+    (await view.findByRole("status")).getAttribute("aria-label"),
+    "Loading changes",
+  );
 
   update({ ...loaded, scope: "turn", data: undefined, error: "Read failed" });
 
@@ -375,8 +448,8 @@ test("in a long list, a file changed since viewed stays open after a remount", a
       '[data-changed-file="src/0.ts"]',
     )!;
 
-  // Past eight files, files start collapsed.
-  assert.equal(first().open, false);
+  // Past eight files, only the first file starts open.
+  assert.equal(first().open, true);
 
   first().scrollIntoView = vi.fn();
 

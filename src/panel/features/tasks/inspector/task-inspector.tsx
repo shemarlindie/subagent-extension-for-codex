@@ -6,6 +6,7 @@ import {
 } from "../../../app/state/controller-context";
 import { profileLabel, selectedTask } from "../../../app/state/selectors";
 import { Icon } from "../../../shared/components/icons/icons";
+import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
 import { MotionContent } from "../../../shared/components/motion/motion";
 import { BackButton } from "../../../shared/components/navigation/back-button";
 import { Notice } from "../../../shared/components/notice/notice";
@@ -13,6 +14,7 @@ import { projectApproved } from "../../projects/selectors";
 import { currentActivityStatus } from "../activity/activity-timeline";
 import { EvidenceTabs } from "../evidence/evidence-tabs";
 import { TaskStatus } from "../shared/status";
+import { TaskHeaderSkeleton } from "./task-inspector-skeleton";
 import { TaskMenu } from "./task-menu";
 import { TaskTitle } from "./task-title";
 
@@ -35,60 +37,81 @@ export function TaskInspector() {
       ? { ...task, status: "failed" as const }
       : task;
 
+  const loading = !task && Boolean(state.selected) && state.taskListLoading;
+
   return (
     <section
       ref={detailRef}
       id="detail"
-      className={`detail${task ? " has-task" : ""}`}
+      className={`detail${task || loading ? " has-task" : ""}`}
       aria-label="Task inspector"
       data-task={task?.id}
       data-stacked={stacked || undefined}
+      aria-busy={loading || undefined}
     >
-      {task ? (
-        <div key={task.id} className="task-view">
+      {task || loading ? (
+        <div key={state.selected} className="task-view">
           <div ref={headerRef} className="task-header">
-            <div className="task-topline">
-              <BackButton
-                id="back"
-                className="task-inspector-back"
-                label="Tasks"
-                onClick={() => controller.back()}
-              />
-              <div className="task-meta">
-                <div
-                  className="eyebrow"
-                  data-live={live && live.state !== "failed" ? "" : undefined}
-                >
-                  <span className="eyebrow-status">
-                    <TaskStatus task={displayTask ?? task} activity={live} />
-                  </span>
-                  <span className="eyebrow-worker">
-                    / {task.provider} · {profileLabel(task.worker_profile)}
-                  </span>
-                  {/* Trails the line so changing detail never shifts the labels before it. */}
-                  <span className="eyebrow-live" role="status">
-                    {live && (
-                      <>
-                        <span aria-hidden="true">· </span>
-                        <MotionContent changeKey={live.text}>
-                          {live.text}
-                        </MotionContent>
-                      </>
+            <LoadingSwap
+              className="task-header-loading-swap"
+              loading={loading}
+              busy={false}
+              skeleton={<TaskHeaderSkeleton title={task?.title} />}
+            >
+              {task ? (
+                <>
+                  <div className="task-topline">
+                    <BackButton
+                      id="back"
+                      className="task-inspector-back"
+                      label="Tasks"
+                      onClick={() => controller.back()}
+                    />
+                    <div className="task-meta">
+                      <div
+                        className="eyebrow"
+                        data-live={
+                          live && live.state !== "failed" ? "" : undefined
+                        }
+                      >
+                        <span className="eyebrow-status">
+                          <TaskStatus
+                            task={displayTask ?? task}
+                            activity={live}
+                          />
+                        </span>
+                        <span className="eyebrow-worker">
+                          {task.provider} · {profileLabel(task.worker_profile)}
+                        </span>
+                        {/* Trails the line so changing detail never shifts the labels before it. */}
+                        <span className="eyebrow-live" role="status">
+                          {live && (
+                            <>
+                              <span aria-hidden="true">· </span>
+                              <MotionContent changeKey={live.text}>
+                                {live.text}
+                              </MotionContent>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <TaskMenu task={task} />
+                  </div>
+                  <TaskTitle task={task} />
+                  {state.projectsLoaded &&
+                    !projectApproved(state.projects, task.repository) && (
+                      <Notice>
+                        This repository is no longer approved. Add it again
+                        before starting another turn. Saved task history remains
+                        available.
+                      </Notice>
                     )}
-                  </span>
-                </div>
-              </div>
-              <TaskMenu task={task} />
-            </div>
-            <TaskTitle task={task} />
-            {!projectApproved(state.projects, task.repository) && (
-              <Notice>
-                This repository is no longer approved. Add it again before
-                starting another turn. Saved task history remains available.
-              </Notice>
-            )}
+                </>
+              ) : null}
+            </LoadingSwap>
           </div>
-          <EvidenceTabs task={task} />
+          <EvidenceTabs task={task} taskId={state.selected ?? ""} />
         </div>
       ) : (
         <div className="empty">

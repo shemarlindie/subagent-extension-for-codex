@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
+import { LoadingSwap } from "../../shared/components/loading-skeleton/loading-swap";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { formatBytes } from "../../shared/utils/format";
 import { scrollContainer } from "../../shared/utils/scroll-container";
@@ -10,8 +11,13 @@ import {
   fileFormat,
   fileName,
   type FileView,
+  fileViews,
 } from "../file-preview/file-format";
 import { FilePreview } from "../file-preview/file-preview";
+import {
+  FilePreviewSkeleton,
+  type FilePreviewSkeletonKind,
+} from "../file-preview/file-preview-skeleton";
 import { Progress } from "../file-preview/progress";
 import type { Task } from "../tasks/types";
 import { AskFileButton } from "./ask-file-button";
@@ -27,7 +33,7 @@ type Settled =
   | { status: "error"; message: string };
 
 /** The last file read, which stays until the next one is ready. */
-type Read = Settled & { path: string };
+type Read = Settled & { taskId: string; path: string };
 
 /** Reads the file, every part, when the preview opens or moves to it. */
 function useChangedFile(task: Task, path: string) {
@@ -40,10 +46,12 @@ function useChangedFile(task: Task, path: string) {
     readChangedFile(task.id, path, (args) =>
       controller.tool<ChangedFileContent>("get_user_agent_changed_file", args),
     ).then(
-      (file) => current && setRead({ path, status: "ready", file }),
+      (file) =>
+        current && setRead({ taskId: task.id, path, status: "ready", file }),
       (error: unknown) =>
         current &&
         setRead({
+          taskId: task.id,
           path,
           status: "error",
           message: error instanceof Error ? error.message : String(error),
@@ -55,7 +63,7 @@ function useChangedFile(task: Task, path: string) {
     };
   }, [controller, task.id, path]);
 
-  return read;
+  return read?.taskId === task.id ? read : undefined;
 }
 
 /** The task's changes, as the Changes tab last read them. */
@@ -105,14 +113,24 @@ type ChangedFilePreviewProps = {
  */
 export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
   const controller = useController(),
+    state = useSnapshot(),
     read = useChangedFile(task, path),
     // The file showing: the one asked for once read, until then the last one.
     shown = read?.path ?? path,
     loading = read?.path !== path,
     data = useChanges(task),
+    entry = data
+      ? changedFileEntries(data).find((item) => item.file.path === path)
+      : undefined,
+    skeletonKind: FilePreviewSkeletonKind =
+      entry?.file.status === "deleted"
+        ? "deleted"
+        : entry?.file.binary
+          ? "binary"
+          : "file",
     diff = useMemo(() => data && changedFileDiff(data, shown), [data, shown]),
     file = read?.status === "ready" ? read.file : undefined,
-    progress = loading && <Progress label={`Loading ${path}`} />,
+    progress = loading && read ? <Progress label={`Loading ${path}`} /> : null,
     // Kept across files, so stepping through them stays in, say, Diff.
     [view, setView] = useState<FileView>(),
     [viewSwitcherTarget, setViewSwitcherTarget] = useState<HTMLElement | null>(
@@ -148,6 +166,26 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
         }
       />
     );
+
+  const firstRead = loading && !read,
+    skeletonFile = { path, content: "" },
+    skeletonFormat = fileFormat(skeletonFile),
+    skeletonViewCount =
+      skeletonKind === "file"
+        ? fileViews(skeletonFile).length + (diff ? 1 : 0)
+        : 0,
+    skeletonActions = {
+      ask: Boolean(state.conversation),
+      copy:
+        skeletonKind === "file" &&
+        !controller.transport.embedded &&
+        skeletonFormat !== "image" &&
+        typeof navigator.clipboard?.writeText === "function",
+      viewed: Boolean(
+        data &&
+        changedFileEntries(data).some((entry) => entry.file.path === shown),
+      ),
+    };
 
   // Each file starts at its top.
   useLayoutEffect(() => {
@@ -185,66 +223,83 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
       aria-busy={loading}
       data-stale={loading && Boolean(read)}
     >
-      {file?.state === "present" ? (
-        <FilePreview
-          file={{
-            path: shown,
-            content: file.content ?? "",
-            mime_type: file.mime_type,
-          }}
-          viewSwitcherTarget={viewSwitcherTarget}
-          beforeActions={askButton}
-          actions={viewedToggle}
-          diff={diff}
-          view={view}
-          onViewChange={setView}
-          progress={progress}
-          alwaysShowViews
-        />
-      ) : (
-        <div className="file-preview">
-          <div className="file-preview-toolbar">
-            {/* A loaded file's shape, so the toolbar holds its height. */}
-            <FileBadge
-              path={shown}
-              format={fileFormat({
-                path: shown,
-                content: "",
-                mime_type: file?.mime_type,
-              })}
-            />
-            <span className="file-meta">
-              <span className="file-name">{fileName(shown)}</span>
-            </span>
-            <span className="toolbar-actions">
-              {askButton}
-              {viewedToggle}
-            </span>
-            {progress}
+      <LoadingSwap
+        className="changed-file-loading-swap"
+        loading={firstRead}
+        busy={false}
+        skeleton={
+          <FilePreviewSkeleton
+            format={skeletonFormat}
+            kind={skeletonKind}
+            hasDiff={Boolean(diff)}
+            viewCount={skeletonViewCount}
+            viewSwitcherTarget={viewSwitcherTarget}
+            loading={firstRead}
+            actions={skeletonActions}
+          />
+        }
+      >
+        {file?.state === "present" ? (
+          <FilePreview
+            file={{
+              path: shown,
+              content: file.content ?? "",
+              mime_type: file.mime_type,
+            }}
+            viewSwitcherTarget={viewSwitcherTarget}
+            beforeActions={askButton}
+            actions={viewedToggle}
+            diff={diff}
+            view={view}
+            onViewChange={setView}
+            progress={progress}
+            alwaysShowViews
+          />
+        ) : (
+          <div className="file-preview">
+            <div className="file-preview-toolbar">
+              {/* A loaded file's shape, so the toolbar holds its height. */}
+              <FileBadge
+                path={shown}
+                format={fileFormat({
+                  path: shown,
+                  content: "",
+                  mime_type: file?.mime_type,
+                })}
+              />
+              <span className="file-meta">
+                <span className="file-name">{fileName(shown)}</span>
+              </span>
+              <span className="toolbar-actions">
+                {askButton}
+                {viewedToggle}
+              </span>
+              {progress}
+            </div>
+            <div className="file-preview-body">
+              {read?.status === "error" ? (
+                <p className="form-error" role="alert">
+                  {read.message}
+                </p>
+              ) : file?.state === "deleted" ? (
+                <>
+                  <p className="help file-preview-note">Deleted</p>
+                  {/* What it held, so reviewing every file misses nothing. */}
+                  {diff && (
+                    <div className="diff-view">
+                      <DiffFile file={diff} initiallyOpen />
+                    </div>
+                  )}
+                </>
+              ) : file?.state === "binary" ? (
+                <p className="help">
+                  Binary file changed · {formatBytes(file.size)}
+                </p>
+              ) : null}
+            </div>
           </div>
-          <div className="file-preview-body">
-            {read?.status === "error" ? (
-              <p className="form-error" role="alert">
-                {read.message}
-              </p>
-            ) : file?.state === "deleted" ? (
-              <>
-                <p className="help file-preview-note">Deleted</p>
-                {/* What it held, so reviewing every file misses nothing. */}
-                {diff && (
-                  <div className="diff-view">
-                    <DiffFile file={diff} initiallyOpen />
-                  </div>
-                )}
-              </>
-            ) : file?.state === "binary" ? (
-              <p className="help">
-                Binary file changed · {formatBytes(file.size)}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      )}
+        )}
+      </LoadingSwap>
     </div>
   );
 }

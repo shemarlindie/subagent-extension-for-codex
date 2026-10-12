@@ -13,16 +13,16 @@ import { Composer } from "./composer/composer";
 import { MessageQueue } from "./queue/message-queue";
 import { ChatTimeline } from "./timeline/chat-timeline";
 
-type ChatPanelProps = { task: Task };
+type ChatPanelProps = { task?: Task; taskId: string };
 
 type BudgetRaiseDraft = { taskId: string; value: BudgetRaise };
 
 /** The task as a conversation, with the composer always at the bottom. */
-export function ChatPanel({ task }: ChatPanelProps) {
+export function ChatPanel({ task, taskId }: ChatPanelProps) {
   const controller = useController();
 
   const [budgetDraft, setBudgetDraft] = useState<BudgetRaiseDraft>(() => ({
-    taskId: task.id,
+    taskId,
     value: {},
   }));
 
@@ -30,30 +30,40 @@ export function ChatPanel({ task }: ChatPanelProps) {
 
   const state = useSnapshot();
 
-  const budgetRaise = budgetDraft.taskId === task.id ? budgetDraft.value : {};
+  const budgetRaise = budgetDraft.taskId === taskId ? budgetDraft.value : {};
 
   const changeBudgetRaise = (value: BudgetRaise) =>
-    setBudgetDraft({ taskId: task.id, value });
+    setBudgetDraft({ taskId, value });
 
   const applyBudgetRaise = async (value: BudgetRaise) => {
+    if (!task) return;
+
     const error = await controller.applyBudget(task, value);
     if (!error) setBudgetApplyVersion((version) => version + 1);
 
     return error;
   };
 
-  const ready = state.chat?.task === task.id;
+  const ready = Boolean(task && state.chat?.task === task.id);
 
   const [reading] = useSessionState(
     "task",
-    task.id,
+    taskId,
     (state) => state.reading.chat,
   );
 
-  const { viewportRef, pinned, scrollToLatest } = useReadingScroll({
+  const {
+    viewportRef,
+    pinned,
+    positionRestored,
+    reconcileAfterContentChange,
+    scrollToLatest,
+  } = useReadingScroll({
     reading,
     active: state.tab === "chat",
     ready,
+    blockScrollWhileLoading: true,
+    reportPositionRestored: true,
     itemAttribute: "data-chat-item",
   });
 
@@ -62,6 +72,8 @@ export function ChatPanel({ task }: ChatPanelProps) {
       <ChatTimeline
         task={task}
         viewportRef={viewportRef}
+        positionRestored={positionRestored}
+        onLoadingSettled={reconcileAfterContentChange}
         budgetRaise={budgetRaise}
         onBudgetRaiseChange={changeBudgetRaise}
         onBudgetApply={applyBudgetRaise}
@@ -69,19 +81,21 @@ export function ChatPanel({ task }: ChatPanelProps) {
       <div className="chat-footer">
         {/* Never replace a saved reading position with the empty loading layout. */}
         <ScrollLatestButton
-          show={ready && !pinned}
+          show={ready && positionRestored && !pinned}
           direction="down"
           label="Scroll to latest message"
           className="chat-scroll-latest"
           onClick={scrollToLatest}
         />
         {/* Keyed so switching tasks swaps the queue instead of animating its rows. */}
-        <MessageQueue key={`queue:${task.id}`} task={task} />
+        {task && <MessageQueue key={`queue:${task.id}`} task={task} />}
         {/* Keyed so draft and errors stay with their task. */}
         <Composer
-          key={`composer:${task.id}`}
+          key={`composer:${taskId}`}
           task={task}
+          taskId={taskId}
           budgetApplyVersion={budgetApplyVersion}
+          disabled={!ready}
         />
       </div>
     </div>

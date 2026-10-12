@@ -40,6 +40,17 @@
   background: var(--warn);
   color: var(--bg);
 }
+.filter-count:has(.filter-count-skeleton) {
+  display: inline-grid;
+  place-items: center;
+  height: 15px;
+  padding: 0;
+}
+.filter-count-skeleton {
+  width: 8px;
+  height: 5px;
+  border-radius: 3px;
+}
 .list-count {
   display: inline-flex;
   flex: none;

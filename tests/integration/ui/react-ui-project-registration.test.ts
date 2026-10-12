@@ -8,6 +8,7 @@ import {
   configureProjectRegistration,
   enterTask,
   screen,
+  selectedProjectPath,
   selectOption,
   setup,
   test,
@@ -433,7 +434,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Review this new project with my draft intact");
   await selectOption(user, "Worker", "fixture · reviewer");
-  const runtime = screen.getByLabelText("Runtime limit · minutes");
+  const runtime = screen.getByLabelText("Runtime limit (mins)");
   await user.clear(runtime);
   await user.type(runtime, "12.5");
   const scope = controller.getSnapshot().repository;
@@ -515,10 +516,7 @@ test("task project registration failure preserves the selected project and draft
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   await within(dialog).findByText("Use repository root");
 
-  assert.equal(
-    within(dialog).getByRole("combobox", { name: "Project" }).textContent,
-    "/repo/a",
-  );
+  assert.equal(selectedProjectPath(), "/repo/a");
 
   assert.equal(
     (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
@@ -552,10 +550,7 @@ test("cancelling the task project picker preserves selection and task draft with
     ),
   );
 
-  assert.equal(
-    within(dialog).getByRole("combobox", { name: "Project" }).textContent,
-    "/repo/a",
-  );
+  assert.equal(selectedProjectPath(), "/repo/a");
 
   assert.equal(
     (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,

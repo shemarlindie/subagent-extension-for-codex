@@ -10,6 +10,39 @@
   padding: 0;
   margin: 0;
 }
+.managed-projects-loading-swap,
+.project-list-skeleton {
+  min-width: 0;
+}
+.project-list-skeleton .managed-projects {
+  width: 100%;
+}
+.project-skeleton-name {
+  height: 11px;
+}
+.project-skeleton-name-wide {
+  width: min(220px, 66%);
+}
+.project-skeleton-name-medium {
+  width: min(170px, 52%);
+}
+.project-skeleton-name-short {
+  width: min(120px, 38%);
+}
+.project-skeleton-approval {
+  width: 82px;
+  height: 9px;
+}
+.project-skeleton-path {
+  width: min(360px, 78%);
+  height: 9px;
+}
+.project-skeleton-remove {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
 .managed-project {
   padding: 18px 0;
   border-bottom: 1px solid var(--line);

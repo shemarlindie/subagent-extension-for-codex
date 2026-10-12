@@ -29,6 +29,7 @@ const defaults: Settings = {
   autoRegister: true,
   claudeUnavailable: false,
   successfulBudgetUpdates: false,
+  slowAsyncReads: false,
   addedProjects: [],
   styles: "",
 };
@@ -82,6 +83,19 @@ test("fixture results are shaped like the service's tool results", () => {
   const failed = fixtureCall("start_agent_task", {}, {});
   assert.equal(failed.isError, true);
   assert.match(String(failed.content[0]!.text), /Design preview only/);
+});
+
+test("slow fixture reads leave launch task rows to the delayed list read", () => {
+  const opened = fixtureCall(
+    "open_codex_subagent_extension",
+    { conversation_id: PREVIEW_THREAD },
+    { deferTaskList: true },
+  );
+
+  const data = opened.structuredContent!;
+
+  assert.ok("panel_scope" in data);
+  assert.equal("tasks" in data, false);
 });
 
 test("threads are grouped by conversation, newest first", () => {

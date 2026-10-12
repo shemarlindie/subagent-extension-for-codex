@@ -26,10 +26,38 @@
   display: grid;
   gap: 8px;
 }
+.changes-skeleton-toolbar-summary {
+  grid-area: summary;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 18px;
+}
+.changes-skeleton-summary-line {
+  width: min(34%, 150px);
+  height: 8px;
+}
+.changes-skeleton-summary-line-short {
+  width: 64px;
+}
+.changes-skeleton-preview-action {
+  grid-area: review;
+  justify-self: end;
+  width: 96px;
+  height: 26px;
+  border-radius: 6px;
+}
+.changes-skeleton-refresh-action {
+  grid-area: refresh;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
 .changes-toolbar {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) max-content auto;
   grid-template-areas: "summary review refresh";
   align-items: center;
   gap: 8px;
@@ -51,8 +79,11 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  justify-self: end;
+  min-width: 96px;
   padding: 4px 8px;
   font-size: 12px;
+  white-space: nowrap;
 }
 .changes-summary-row {
   grid-area: summary;
@@ -93,10 +124,88 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-/* Loading and empty states hold space instead of collapsing to a thin bar. */
 .changes-content {
-  min-height: 96px;
+  min-height: 210px;
   min-width: 0;
+}
+/* Keep the first-read viewport steady as file placeholders become empty copy. */
+.changes-content[data-preserve-empty-height="true"] {
+  min-height: 480px;
+}
+.changes-skeleton {
+  display: grid;
+  gap: 10px;
+}
+.changes-skeleton-file {
+  min-width: 0;
+  overflow: clip;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.changes-skeleton-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 7px 10px;
+  background: var(--surface);
+}
+.changes-skeleton-file-open .changes-skeleton-heading {
+  border-bottom: 1px solid var(--line);
+}
+.changes-skeleton-chevron {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+.changes-skeleton-path {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 10px;
+}
+.changes-skeleton-path-wide {
+  width: min(50%, 280px);
+}
+.changes-skeleton-path-medium {
+  width: min(38%, 220px);
+}
+.changes-skeleton-path-short {
+  width: min(30%, 170px);
+}
+.changes-skeleton-tag {
+  flex: none;
+  width: 34px;
+  height: 13px;
+  border-radius: 9px;
+}
+.changes-skeleton-stats,
+.changes-skeleton-actions {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+.changes-skeleton-stat {
+  width: 17px;
+  height: 8px;
+  border-radius: 2px;
+}
+.changes-skeleton-stat-add {
+  background-color: color-mix(in srgb, var(--success) 42%, var(--surface));
+}
+.changes-skeleton-stat-remove {
+  background-color: color-mix(in srgb, var(--danger) 42%, var(--surface));
+}
+.changes-skeleton-actions {
+  gap: 0;
+}
+.changes-skeleton-action {
+  width: 16px;
+  height: 16px;
+  margin: 4px;
+  border-radius: 4px;
 }
 /* Keep the diff's top edge steady when the first read enables worktree actions. */
 .changes-worktree-actions {
@@ -340,6 +449,9 @@ body[data-expanded-panel="true"]
   grid-area: actions;
   justify-self: end;
   align-items: center;
+}
+.changed-file-loading-swap {
+  min-width: 0;
 }
 @container (max-width: 640px) {
   .changed-file-preview .file-preview-toolbar {

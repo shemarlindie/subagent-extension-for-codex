@@ -3,9 +3,17 @@ import { FormProvider, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../shared/providers/metadata";
 import { useController, useSnapshot } from "../../app/state/controller-context";
-import type { DialogState, Task } from "../../app/state/types";
+import type {
+  Defaults,
+  DialogReadStatus,
+  DialogState,
+  Task,
+} from "../../app/state/types";
+import { Button } from "../../shared/components/button/button";
+import { Presence } from "../../shared/components/motion/motion";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { Field } from "../../shared/forms/fields";
+import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormFooter } from "../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
 import {
@@ -21,14 +29,48 @@ import {
 import { taskProjects } from "./delegation";
 import { providerOptionDefaults } from "./provider-defaults";
 
+type DelegateFormDialog =
+  | Extract<DialogState, { kind: "delegate" }>
+  | Extract<DialogState, { kind: "delegate-loading" }>;
+
 interface DelegateFormProps {
-  dialog: Extract<DialogState, { kind: "delegate" }>;
+  dialog: DelegateFormDialog;
 }
+
+const FALLBACK_DEFAULTS: Defaults = {
+  max_runtime_minutes: null,
+  max_cost_usd: null,
+};
+
+const READY = {
+  context: "ready",
+  settings: "ready",
+  projects: "ready",
+  workers: "ready",
+} satisfies Record<
+  "context" | "settings" | "projects" | "workers",
+  DialogReadStatus
+>;
 
 export function DelegateForm({ dialog }: DelegateFormProps) {
   const controller = useController(),
     state = useSnapshot(),
-    defaults = dialog.defaults;
+    loading = dialog.kind === "delegate-loading",
+    statuses = loading ? dialog.statuses : READY,
+    errors = loading ? dialog.errors : undefined,
+    defaults =
+      dialog.kind === "delegate"
+        ? dialog.defaults
+        : (dialog.defaults ?? FALLBACK_DEFAULTS);
+
+  const persistedDraft = useRef(controller.getDialogDraft("delegate") ?? {}),
+    settingsReady = statuses.settings === "ready",
+    contextReady = statuses.context === "ready",
+    pendingNumber = (key: "runtime" | "cost"): number | "" => {
+      const value = persistedDraft.current[key];
+
+      return typeof value === "number" && Number.isFinite(value) ? value : "";
+    };
 
   const choices = state.workers.flatMap((worker) =>
     worker.profiles.map((profile) => `${worker.provider}:${profile}`),
@@ -36,7 +78,7 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
 
   const preferred =
     dialog.preferredWorker ??
-    `${defaults.default_provider}:${defaults.default_worker_profile}`;
+    `${defaults.default_provider ?? ""}:${defaults.default_worker_profile ?? ""}`;
 
   const [preferredProvider] = preferred.split(":"),
     preferredWorker = state.workers.find(
@@ -48,47 +90,171 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
       defaults,
     );
 
-  const strategyDefault = defaults.default_workspace_strategy ?? "current_repo";
+  const strategyDefault = settingsReady
+      ? (defaults.default_workspace_strategy ?? "current_repo")
+      : "",
+    resolvedRepository =
+      dialog.kind === "delegate"
+        ? dialog.repository
+        : (dialog.repository ??
+          (state.scopeKnown ? state.repository : undefined)),
+    resolvedRevision =
+      dialog.kind === "delegate"
+        ? dialog.revision
+        : (dialog.revision ?? (state.scopeKnown ? state.revision : "HEAD")),
+    initialValues: DelegateValues = {
+      ...optionDefaults,
+      repository: resolvedRepository ?? "",
+      revision:
+        settingsReady && contextReady
+          ? strategyDefault === "current_repo"
+            ? "HEAD"
+            : resolvedRevision
+          : "",
+      workspace_strategy: strategyDefault,
+      description: "",
+      model: "",
+      worker:
+        dialog.preferredWorker && choices.includes(dialog.preferredWorker)
+          ? dialog.preferredWorker
+          : settingsReady
+            ? choices.includes(preferred)
+              ? preferred
+              : (choices[0] ?? "")
+            : "",
+      runtimeMode: !settingsReady
+        ? ""
+        : defaults.use_runtime_budget === false ||
+            defaults.max_runtime_minutes === null
+          ? "none"
+          : "limited",
+      runtime: settingsReady
+        ? (defaults.max_runtime_minutes ?? 20)
+        : pendingNumber("runtime"),
+      costMode: !settingsReady
+        ? ""
+        : defaults.use_cost_budget === false || defaults.max_cost_usd === null
+          ? "none"
+          : "limited",
+      cost: settingsReady
+        ? (defaults.max_cost_usd ?? 5)
+        : pendingNumber("cost"),
+      reasoning_effort: settingsReady ? "default" : "",
+      context: "",
+      deps: [],
+    };
 
-  const form = usePersistedDialogForm<DelegateValues>("delegate", {
-    ...optionDefaults,
-    repository: dialog.repository ?? "",
-    revision: strategyDefault === "current_repo" ? "HEAD" : dialog.revision,
-    workspace_strategy: strategyDefault,
-    description: "",
-    model: "",
-    reasoning_effort: "default",
-    worker: choices.includes(preferred) ? preferred : choices[0],
-    runtimeMode:
-      defaults.use_runtime_budget === false ||
-      defaults.max_runtime_minutes === null
-        ? "none"
-        : "limited",
-    runtime: defaults.max_runtime_minutes ?? 20,
-    costMode:
-      defaults.use_cost_budget === false || defaults.max_cost_usd === null
-        ? "none"
-        : "limited",
-    cost: defaults.max_cost_usd ?? 5,
-    context: "",
-    deps: [],
+  const previousInitialValues = useRef(initialValues),
+    form = usePersistedDialogForm<DelegateValues>("delegate", initialValues);
+
+  // Async defaults fill untouched fields while preserving saved and active edits.
+  useEffect(() => {
+    for (const key of Object.keys(initialValues) as (keyof DelegateValues)[]) {
+      if (Object.is(initialValues[key], previousInitialValues.current[key]))
+        continue;
+
+      const field = form.getFieldState(key);
+      if (key in persistedDraft.current || field.isDirty || field.isTouched)
+        continue;
+
+      form.setValue(key, initialValues[key] as never, { shouldDirty: false });
+    }
+
+    previousInitialValues.current = initialValues;
   });
 
-  const repository = useWatch({ control: form.control, name: "repository" }),
-    previous = useRef(repository);
+  const [repository, selectedWorker] = useWatch({
+    control: form.control,
+    name: ["repository", "worker"],
+  });
+
+  const previous = useRef(repository);
+
+  const requiredReadsReady =
+      statuses.context === "ready" &&
+      statuses.settings === "ready" &&
+      statuses.projects === "ready" &&
+      statuses.workers === "ready",
+    hasWorkers = choices.length > 0,
+    selectedWorkerReady =
+      state.workers.find(
+        (worker) => worker.provider === selectedWorker.split(":")[0],
+      )?.readiness?.ready !== false,
+    canSubmit =
+      requiredReadsReady &&
+      hasWorkers &&
+      choices.includes(selectedWorker) &&
+      Boolean(selectedWorker) &&
+      Boolean(repository.trim()) &&
+      selectedWorkerReady,
+    failedReads = (Object.keys(statuses) as (keyof typeof statuses)[]).filter(
+      (resource) => statuses[resource] === "error",
+    ),
+    submit = form.handleSubmit((values) =>
+      controller.submit(async () => {
+        const [provider, worker_profile] = values.worker.split(":");
+
+        const worker = state.workers.find((item) => item.provider === provider);
+
+        const permissions = providerMetadata(
+          provider,
+          worker?.metadata,
+        )?.nativePermissions;
+
+        const nativeOptions = permissions
+          ? {
+              [permissions.permissionOption]: values.permission_mode,
+              ...(permissions.approvalDeciderOption
+                ? {
+                    [permissions.approvalDeciderOption]:
+                      values.approval_decider,
+                  }
+                : {}),
+            }
+          : undefined;
+
+        await controller.addChatProjectForTask(values.repository);
+
+        return controller.tool<Task>("start_agent_task", {
+          ...(nativeOptions
+            ? { provider_options: { [provider]: nativeOptions } }
+            : {}),
+          repository: values.repository,
+          description: values.description,
+          provider,
+          worker_profile,
+          model: values.model,
+          reasoning_effort: values.reasoning_effort,
+          revision:
+            values.workspace_strategy === "current_repo"
+              ? "HEAD"
+              : values.revision,
+          workspace_strategy: values.workspace_strategy,
+          conversation_id: conversation ?? null,
+          context: values.context.trim() ? [values.context] : [],
+          depends_on: values.deps,
+          budget: {
+            max_runtime_minutes:
+              values.runtimeMode === "none" ? null : Number(values.runtime),
+            max_cost_usd:
+              values.costMode === "none" ? null : Number(values.cost),
+          },
+        });
+      }, true),
+    );
 
   // Project changes reset only project-bound defaults, preserving the task draft.
   useEffect(() => {
     if (repository !== previous.current) {
       form.setValue(
         "revision",
-        repository === dialog.repository ? dialog.revision : "HEAD",
+        repository === resolvedRepository ? resolvedRevision : "HEAD",
       );
 
       form.setValue("deps", []);
       previous.current = repository;
     }
-  }, [repository, form, dialog.repository, dialog.revision]);
+  }, [repository, form, resolvedRepository, resolvedRevision]);
 
   const strategy = useWatch({
     control: form.control,
@@ -104,70 +270,49 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
   return (
     <FormProvider {...form}>
       <form
-        onSubmit={form.handleSubmit((values) =>
-          controller.submit(async () => {
-            const [provider, worker_profile] = values.worker.split(":");
+        noValidate
+        onSubmit={(event) => {
+          if (!canSubmit) {
+            event.preventDefault();
 
-            const worker = state.workers.find(
-              (item) => item.provider === provider,
-            );
+            return;
+          }
 
-            const permissions = providerMetadata(
-              provider,
-              worker?.metadata,
-            )?.nativePermissions;
-
-            const nativeOptions = permissions
-              ? {
-                  [permissions.permissionOption]: values.permission_mode,
-                  ...(permissions.approvalDeciderOption
-                    ? {
-                        [permissions.approvalDeciderOption]:
-                          values.approval_decider,
-                      }
-                    : {}),
-                }
-              : undefined;
-
-            await controller.addChatProjectForTask(values.repository);
-
-            return controller.tool<Task>("start_agent_task", {
-              ...(nativeOptions
-                ? { provider_options: { [provider]: nativeOptions } }
-                : {}),
-              repository: values.repository,
-              description: values.description,
-              provider,
-              worker_profile,
-              model: values.model,
-              reasoning_effort: values.reasoning_effort,
-              revision:
-                values.workspace_strategy === "current_repo"
-                  ? "HEAD"
-                  : values.revision,
-              workspace_strategy: values.workspace_strategy,
-              conversation_id: conversation ?? null,
-              context: values.context.trim() ? [values.context] : [],
-              depends_on: values.deps,
-              budget: {
-                max_runtime_minutes:
-                  values.runtimeMode === "none" ? null : values.runtime,
-                max_cost_usd: values.costMode === "none" ? null : values.cost,
-              },
-            });
-          }, true),
-        )}
+          void submit(event);
+        }}
       >
-        <p className="form-note">
+        <p className="form-note form-note--first">
           Provide the full request, including the outcome and evidence you
           expect back. A task title is generated from the description.{" "}
           {strategy === "current_repo"
             ? "Current repository includes uncommitted changes. Write profiles edit this checkout directly."
             : "Work starts from a committed revision in a separate worktree."}
         </p>
+        <Presence show={failedReads.length > 0}>
+          <div className="form-error form-field-error" role="alert">
+            <span>
+              {errors?.settings
+                ? `Task defaults could not be loaded: ${errors.settings}`
+                : "Some task options could not be loaded. See the affected field."}
+            </span>
+            <Button variant="text" onClick={() => controller.retryDialogLoad()}>
+              Retry loading
+            </Button>
+          </div>
+        </Presence>
+        <FormFieldError message={loading ? dialog.message : undefined} />
         <ProjectField
           projects={taskProjects(state)}
-          disabled={state.busy}
+          loading={statuses.projects === "loading"}
+          contextLoading={statuses.context === "loading"}
+          error={errors?.projects}
+          contextError={errors?.context}
+          disabled={
+            state.busy ||
+            statuses.projects !== "ready" ||
+            statuses.context === "loading"
+          }
+          browseDisabled={state.busy || loading}
           onBrowse={() =>
             controller.run(async () => {
               const repository = await controller.browseTaskProject();
@@ -192,10 +337,44 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
             {...form.register("description", { required: true })}
           />
         </Field>
-        <WorkspaceField />
-        <ApprovalField workers={state.workers} />
-        <WorkerFields workers={state.workers} />
-        <ModelFields defaults={defaults} workers={state.workers} />
+        <WorkspaceField
+          settingsReady={statuses.settings === "ready"}
+          settingsLoading={statuses.settings === "loading"}
+        />
+        <ApprovalField
+          workers={state.workers}
+          disabled={
+            statuses.workers !== "ready" || statuses.settings !== "ready"
+          }
+          loading={
+            statuses.workers === "loading" || statuses.settings === "loading"
+          }
+        />
+        <WorkerFields
+          workers={state.workers}
+          loading={
+            statuses.workers === "loading" ||
+            (statuses.settings === "loading" && !selectedWorker)
+          }
+          error={errors?.workers}
+          disabled={
+            statuses.workers !== "ready" || statuses.settings !== "ready"
+          }
+          revisionDisabled={
+            statuses.context !== "ready" || statuses.settings !== "ready"
+          }
+          revisionLoading={
+            statuses.context === "loading" || statuses.settings === "loading"
+          }
+        />
+        <ModelFields
+          defaults={defaults}
+          workers={state.workers}
+          settingsReady={statuses.settings === "ready"}
+          workersReady={statuses.workers === "ready"}
+          settingsLoading={statuses.settings === "loading"}
+          workersLoading={statuses.workers === "loading"}
+        />
         <Field id="context" label="Context to include (optional)">
           <textarea
             id="context"
@@ -204,20 +383,41 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
             {...form.register("context")}
           />
         </Field>
-        <BudgetFields workers={state.workers} />
-        <DependencyField tasks={state.tasks} />
-        <FormFooter label="Start task" />
+        <BudgetFields
+          workers={state.workers}
+          settingsReady={statuses.settings === "ready"}
+          workersReady={statuses.workers === "ready"}
+          settingsLoading={statuses.settings === "loading"}
+        />
+        <DependencyField
+          tasks={state.tasks}
+          loading={state.taskListLoading}
+          projectsLoading={
+            statuses.projects === "loading" || statuses.context === "loading"
+          }
+          disabled={
+            statuses.projects !== "ready" || statuses.context === "loading"
+          }
+        />
+        <FormFooter label="Start task" disabled={!canSubmit} />
       </form>
     </FormProvider>
   );
 }
 
 export const delegateDialog = defineDialog<"delegate">({
-  title: () => "New delegated task",
+  title: () => "New Task",
   render: (dialog) => <DelegateForm dialog={dialog} />,
   // With a known repository the project is settled, so start on the description.
   initialFocus: (popup, { repository }) =>
     repository
       ? (popup?.querySelector<HTMLElement>("#description") ?? null)
       : null,
+});
+
+export const delegateLoadingDialog = defineDialog<"delegate-loading">({
+  title: () => "New Task",
+  render: (dialog) => <DelegateForm dialog={dialog} />,
+  initialFocus: (popup) =>
+    popup?.querySelector<HTMLElement>("#description") ?? null,
 });
