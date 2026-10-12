@@ -69,6 +69,24 @@ class FakeStream {
   }
 }
 
+test("console default fetch preserves the browser receiver", async () => {
+  const original = globalThis.fetch;
+
+  globalThis.fetch = function (this: unknown) {
+    assert.equal(this, globalThis);
+
+    return Promise.resolve(Response.json({ result: { ok: true } }));
+  };
+
+  try {
+    const transport = new ConsoleTransport("https://console.example");
+    assert.deepEqual(await transport.tool("list_agent_tasks"), { ok: true });
+    await transport.login("local-token");
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
 test("console requests use browser credentials and required headers for tools and login", async () => {
   const calls: { url: string; options: RequestInit }[] = [];
 

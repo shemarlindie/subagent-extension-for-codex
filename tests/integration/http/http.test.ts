@@ -349,7 +349,18 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     const standalone = await fetch(base + "/");
     assert.equal(standalone.status, 200);
 
-    assert.match(await standalone.text(), /<title>Delegated Work<\/title>/);
+    const standaloneHtml = await standalone.text();
+    assert.match(standaloneHtml, /<title>Delegated Work<\/title>/);
+
+    assert.ok(
+      standaloneHtml.includes(
+        'window.CODEX_SUBAGENT_EXTENSION_ORIGIN = "http://127.0.0.1:4317"',
+      ),
+    );
+
+    // Environment detection must retain its sentinel after the template is injected.
+    assert.equal(standaloneHtml.split("__API_ORIGIN__").length - 1, 1);
+    assert.equal(ui.contents[0].text.split("__API_ORIGIN__").length - 1, 2);
 
     assert.deepEqual((ui.contents[0] as any)._meta.ui.csp, {
       connectDomains: [],

@@ -10,7 +10,7 @@ export class ConsoleTransport implements Transport {
   private disposed = false;
   constructor(
     private origin: string,
-    private request: typeof fetch = fetch,
+    private request: typeof fetch = fetch.bind(globalThis),
     private createStream = (url: string) =>
       new EventSource(url, { withCredentials: true }),
   ) {}

@@ -105,14 +105,12 @@ export function application(
   );
 
   app.get("/", async (req, res) => {
-    res
-      .type("html")
-      .send(
-        (await readFile(htmlPath, "utf8")).replaceAll(
-          "__API_ORIGIN__",
-          consoleOrigin(req),
-        ),
-      );
+    res.type("html").send(
+      // Inject the template's origin once; preserve the bundled runtime sentinel.
+      (await readFile(htmlPath, "utf8")).replace("__API_ORIGIN__", () =>
+        consoleOrigin(req),
+      ),
+    );
   });
 
   app.post("/api/login", (req, res) => {
