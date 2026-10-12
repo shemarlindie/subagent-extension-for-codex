@@ -45,6 +45,7 @@ import {
 } from "../configuration/tool-policy.js";
 import { claudeActivityPresentation } from "../events/activity.js";
 import { Inbox } from "./inbox.js";
+import { PARENT_TOOL, parentEnvironment, parentServer } from "./parent-tool.js";
 
 /**
  * The installed SDK's Query declaration omits two controls supported by the
@@ -238,9 +239,10 @@ export class ClaudeAgentProvider implements Provider {
     const guarded = (tool: string) =>
       policy.path_guard && pathTools.includes(tool);
 
-    // The restricted set offers file, search, approval-routed and question tools only.
+    // Restricted workers retain parent reporting alongside permitted task tools.
     const restrictedDenial = (tool: string) =>
       !restricted ||
+      tool === PARENT_TOOL ||
       tool === "AskUserQuestion" ||
       tool === "Skill" ||
       readTools.includes(tool)
@@ -295,7 +297,8 @@ export class ClaudeAgentProvider implements Provider {
             "Skill",
           ]
         : { type: "preset", preset: "claude_code" },
-      allowedTools: [],
+      mcpServers: { codex_parent: parentServer(c) },
+      allowedTools: [PARENT_TOOL],
       disallowedTools: policy.subagents ? [] : ["Agent", "Task"],
       ...(c.task.budget.max_cost_usd === null
         ? {}
@@ -305,7 +308,7 @@ export class ClaudeAgentProvider implements Provider {
       systemPrompt: {
         type: "preset",
         preset: "claude_code",
-        append: `You are an independent ${c.task.worker_profile}. Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Follow the configured native permission mode for tool execution."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
+        append: `${parentEnvironment(c)}\n\nYou are an independent ${c.task.worker_profile}. Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Follow the configured native permission mode for tool execution."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
       },
       hooks: {
         PreToolUse: [
@@ -341,6 +344,9 @@ export class ClaudeAgentProvider implements Provider {
         ],
       },
       canUseTool: async (tool, input, { signal }) => {
+        if (tool === PARENT_TOOL)
+          return { behavior: "allow", updatedInput: input };
+
         if (tool === "AskUserQuestion") {
           const answer = await c.input(tool, input, signal);
 

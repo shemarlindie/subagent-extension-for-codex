@@ -82,6 +82,10 @@ function serviceSummary(e: Event) {
 
 /** Row titles for service events whose type doesn't read as one. */
 const eventTitles: Record<string, string> = {
+  "parent.message": "Message queued for Codex",
+  "parent.message_attempted": "Sending message to Codex",
+  "parent.message_acknowledged": "Worker report acknowledged by Codex",
+  "parent.message_delivery": "Codex message delivery result",
   "agent.completed": "Turn completed",
   "agent.reply": "Reply",
   "task.completed": "Task completed",

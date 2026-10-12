@@ -465,7 +465,12 @@ CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs sa
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs mcp
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs budget
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs parity
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs parent
 ```
+
+The `parent` scenario verifies the injected SDK tool queues a message with no
+permission prompt. It does not exercise the Codex host bridge; use an open
+thread panel for that check.
 
 Each uses a temporary Git fixture and a native cost limit of $0.25, or $0.50 for
 parity. The budget scenario sets $0.001 and expects budget failure. Claude checks

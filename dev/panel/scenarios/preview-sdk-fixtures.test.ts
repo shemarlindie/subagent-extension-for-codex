@@ -74,6 +74,10 @@ const providerTypes = new Set([
 // Events the service records itself (src/service/features/tasks/runtime/control.ts, src/service/features/tasks/storage/store.ts).
 // `agent.permission_decided` is only emitted for non-Claude providers.
 const serviceTypes = new Set([
+  "parent.message",
+  "parent.message_attempted",
+  "parent.message_delivery",
+  "parent.message_acknowledged",
   "task.queued",
   "task.started",
   "task.waiting",

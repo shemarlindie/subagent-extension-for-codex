@@ -517,6 +517,16 @@ export class Control {
             t.session_owner = this.ownerWorker;
             this.store.save(t);
           },
+          messageParent: (text) => {
+            if (!t.conversation_id)
+              throw new Error("Task has no parent conversation");
+            if (a.abort.signal.aborted) throw new Error("Task was interrupted");
+            const message = text.trim();
+            if (!message || message.length > 20000)
+              throw new Error("Invalid parent message");
+
+            return this.store.event(t, "parent.message", { text: message }).id;
+          },
           input: a.input.request,
         },
         prompt,

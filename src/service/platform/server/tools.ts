@@ -6,6 +6,14 @@ import {
 } from "../../../shared/tasks/conversation/chat.js";
 import { MAX_DRAFT_WAIT_MS } from "../../../shared/tasks/conversation/drafts.js";
 import {
+  conversation,
+  MESSAGE_EVENTS,
+} from "../../../shared/tasks/conversation/messages.js";
+import {
+  PARENT_DELEGATION_PROTOCOL,
+  PARENT_REPORT_PROTOCOL,
+} from "../../../shared/tasks/conversation/parent-protocol.js";
+import {
   budgetRaiseSchema,
   deliveries,
   type InputAuthority,
@@ -26,6 +34,11 @@ import {
   MAX_MESSAGE_WAIT_SECONDS,
   pollMessages,
 } from "../../features/tasks/conversation/message-poll.js";
+import {
+  acknowledgeParentMessage,
+  claimParentMessage,
+  recordParentDelivery,
+} from "../../features/tasks/conversation/parent-messages.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import {
   panelContextInput,
@@ -299,7 +312,7 @@ export function definitions(
         ),
     }),
     get_agent_messages: tool({
-      description: `Read a task's conversation after a cursor: its request, the messages you and the user sent, the worker's messages, and each successful turn's reply (kind reply, the text that ended the turn). Pass next_cursor back as after to read only what follows. With wait_seconds (at most ${MAX_MESSAGE_WAIT_SECONDS}), it waits until a message follows the cursor, the turn ends or input is needed. Only complete messages are returned; a read that waits out its time includes draft, the text of the message being written. Also returns the task's status, turn, whether a turn is still running, any pending_input and its number of queued messages. Read what a turn changed with get_agent_changes(scope: "turn").`,
+      description: `Read a task's conversation after a cursor: its request, the messages you and the user sent, the worker's messages, and each successful turn's reply (kind reply, the text that ended the turn). Pass next_cursor back as after to read only what follows. With wait_seconds (at most ${MAX_MESSAGE_WAIT_SECONDS}), it waits until a message follows the cursor, the turn ends or input is needed. Only complete messages are returned; a read that waits out its time includes draft, the text of the message being written. Also returns the task's status, turn, whether a turn is still running, any pending_input and its number of queued messages. Read what a turn changed with get_agent_changes(scope: "turn"). ${PARENT_DELEGATION_PROTOCOL}`,
       schema: taskId.extend({
         after: z.number().int().nonnegative().default(0),
         wait_seconds: z
@@ -317,6 +330,29 @@ export function definitions(
           a.after,
           a.wait_seconds,
         ),
+    }),
+    get_agent_message: tool({
+      description: `Retrieve one stored conversation message by task ID and stable message ID, independently of the polling cursor. ${PARENT_REPORT_PROTOCOL}`,
+      schema: taskId.extend({ message_id: z.string().min(1) }),
+      run: (a) => {
+        const task = c.store.get(a.task_id, owner);
+
+        const message = conversation(
+          task,
+          c.store.eventsOfTypes(task.id, MESSAGE_EVENTS),
+        ).find((m) => m.id === a.message_id);
+
+        if (!message) throw new Error("Message not found");
+
+        return { message };
+      },
+    }),
+    ack_agent_message: tool({
+      description:
+        "Durably acknowledge an immutable explicit worker report (parent_message: true) after you successfully process it. Reading alone is not acknowledgement. Pass the report's task ID and stable message ID; repeat calls are idempotent. Normal worker text and final replies cannot be acknowledged with this tool. Acknowledged reports stay retrievable, with acknowledged: true, and will not be newly claimed for host notification.",
+      schema: taskId.extend({ message_id: z.string().min(1) }),
+      run: (a) =>
+        acknowledgeParentMessage(c.store, owner, a.task_id, a.message_id),
     }),
     get_agent_changes: tool({
       description:
@@ -440,6 +476,37 @@ export function definitions(
         const task = c.applyBudget(owner, a.task_id, a.budget);
 
         return { budget: task.budget, status: task.status };
+      },
+    }),
+    claim_user_agent_parent_message: tool({
+      description:
+        "User interface only: claim one queued worker message for this parent conversation. Claims are not automatically retried.",
+      schema: z.object({ conversation_id: z.string().min(1) }),
+      run: (a) => claimParentMessage(c.store, owner, a.conversation_id),
+    }),
+    record_user_agent_parent_delivery: tool({
+      description:
+        "User interface only: record the host delivery result for a claimed worker message.",
+      schema: taskId.extend({
+        conversation_id: z.string().min(1),
+        attempt_id: z.number().int().positive(),
+        delivered: z.boolean(),
+        skipped: z.literal("acknowledged").optional(),
+        error: z.string().max(2000).optional(),
+      }),
+      run: (a) => {
+        recordParentDelivery(
+          c.store,
+          owner,
+          a.task_id,
+          a.attempt_id,
+          a.conversation_id,
+          a.delivered,
+          a.error,
+          a.skipped,
+        );
+
+        return { recorded: true };
       },
     }),
     get_user_agent_chat: tool({
@@ -628,6 +695,8 @@ export const isUserTool = (name: string) =>
     "submit_user_agent_input",
     "send_user_agent_message",
     "raise_user_agent_budget",
+    "claim_user_agent_parent_message",
+    "record_user_agent_parent_delivery",
     "get_user_agent_chat",
     "get_user_agent_draft",
     "edit_user_agent_queued_message",

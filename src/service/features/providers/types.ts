@@ -30,6 +30,8 @@ export interface RunContext {
    * is emitted. Deltas aren't stored.
    */
   delta(messageId: string, text: string): void;
+  /** Queue a worker message for the open parent panel; returns its durable event ID. */
+  messageParent?(text: string): number;
   emit: (type: string, data: Record<string, unknown>) => void;
   session: (id: string, stateRef: string) => void;
   input: (

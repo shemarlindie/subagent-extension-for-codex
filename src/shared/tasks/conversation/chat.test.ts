@@ -130,3 +130,38 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
     ],
   );
 });
+
+test("Chat orders explicit parent reports before the matching final reply's updated SDK message", () => {
+  const items = chatItems(task, [
+    event(1, "agent.message", {
+      role: "assistant",
+      text: "Done.",
+      raw_response: { message: { id: "sdk_final" } },
+    }),
+    event(2, "parent.message", { text: "Worker report" }),
+    event(3, "agent.reply", { text: "Done.", turn: 1 }),
+    event(4, "task.turn_ended", { turn: 1, outcome: "completed" }),
+  ]);
+
+  assert.deepEqual(
+    items.map((item) => [item.id, item.event_id, item.kind]),
+    [
+      ["request", 0, "message"],
+      ["parent_2", 2, "message"],
+      ["sdk_final", 3, "message"],
+      ["turn_1_4", 4, "outcome"],
+    ],
+  );
+
+  const report = items[1];
+
+  assert.equal(
+    report.kind === "message" && report.message.parent_message,
+    true,
+  );
+
+  assert.equal(
+    report.kind === "message" && report.message.text,
+    "Worker report",
+  );
+});

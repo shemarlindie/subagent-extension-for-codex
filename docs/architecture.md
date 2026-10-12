@@ -152,4 +152,9 @@ chat project. See [Host capabilities](host-capabilities.md#project-context-and-r
 Internal task events support activity and persistence. Console progress uses SSE;
 MCP callers retrieve task/message results, and event subscriptions deliver the
 supported completion, failure and input-required notifications through signed
-webhooks. These channels do not imply unsolicited messages to the parent chat.
+webhooks. Explicit provider parent messages use a separate durable queue. The mounted
+embedded thread panel claims them and forwards their task/message IDs through
+the host message bridge. The parent retrieves the stored reports by ID or
+through message polling; both paths share stable IDs for duplicate handling. See
+[Host capabilities](host-capabilities.md#worker-messages-to-the-parent-chat)
+for delivery and lifecycle limits.

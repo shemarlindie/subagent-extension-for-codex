@@ -26,6 +26,7 @@ import {
   claudeSandbox,
 } from "../configuration/execution-environment.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
+import { PARENT_TOOL } from "./parent-tool.js";
 import { ClaudeAgentProvider } from "./provider.js";
 
 const reply = "Reviewed: a.ts:1 is missing a check.";
@@ -366,6 +367,12 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
 
   assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
   assert.equal(options!.strictMcpConfig, undefined);
+  assert.equal(options!.mcpServers?.codex_parent.type, "sdk");
+
+  assert.ok(
+    options!.allowedTools?.includes("mcp__codex_parent__message_parent"),
+  );
+
   assert.ok(!options!.disallowedTools!.includes("Skill"));
   assert.equal(options!.permissionMode, "plan");
   assert.equal(options!.allowDangerouslySkipPermissions, undefined);
@@ -440,6 +447,28 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
   assert.equal(await check("Write", { file_path: "a.ts" }), "deny");
   assert.equal(await check("Agent", {}), "deny");
   assert.equal(await check("mcp__server__tool", {}), "deny");
+  assert.equal(await check(`${PARENT_TOOL}_other`, {}), "deny");
+  assert.equal(await check(PARENT_TOOL, { message: "Done" }), undefined);
+
+  c.input = async () => {
+    throw new Error("Parent reporting must not request approval");
+  };
+
+  const parentReport = await options!.canUseTool!(
+    PARENT_TOOL,
+    { message: "Done" },
+    {
+      signal: c.signal,
+      toolUseID: "parent-report",
+      requestId: "parent-report",
+    },
+  );
+
+  assert.deepEqual(parentReport, {
+    behavior: "allow",
+    updatedInput: { message: "Done" },
+  });
+
   assert.equal(await check("Skill", { skill: "review" }), undefined);
   assert.equal(await check("Read", { file_path: "a.ts" }), undefined);
 });

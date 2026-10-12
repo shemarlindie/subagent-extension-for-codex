@@ -29,6 +29,7 @@ import {
   handoffMessage,
   type HandoffTarget,
 } from "../../features/tasks/controls/handoff-message";
+import { ParentMessageRelay } from "../../features/tasks/controls/parent-message-relay";
 import { canNavigate, DEFAULT_PAGE, type PageId } from "../navigation/pages";
 import { initialState } from "./initial-state";
 import {
@@ -84,6 +85,8 @@ export class Controller {
     refresh: () => this.refresh(),
   });
 
+  private parentRelay: ParentMessageRelay;
+
   private listeners = new Set<() => void>();
   readonly session = new SessionStateStore();
   private disposed = false;
@@ -116,6 +119,12 @@ export class Controller {
     },
     private viewState?: UiStatePersistence,
   ) {
+    this.parentRelay = new ParentMessageRelay(transport, () =>
+      this.disposed || !this.state.host.canSendParent
+        ? undefined
+        : this.state.conversation,
+    );
+
     this.restoredView = viewState?.initial.view ?? {};
     this.persistedDialogs = viewState?.initial.dialogs ?? [];
 
@@ -419,6 +428,8 @@ export class Controller {
 
     this.timer = setTimeout(async () => {
       try {
+        // Parent reports should still attempt delivery while UI reads are paused.
+        this.forwardParentMessage();
         if (!this.environment.hidden() && !this.state.busy)
           await this.refresh();
       } catch (error) {
@@ -499,6 +510,18 @@ export class Controller {
     return request;
   }
 
+  private forwardParentMessage() {
+    if (
+      !this.disposed &&
+      this.state.connected &&
+      this.transport.embedded &&
+      this.state.scopeKnown &&
+      this.state.host.canSendParent &&
+      this.state.conversation
+    )
+      this.run(() => this.parentRelay.forward(this.state.conversation!));
+  }
+
   async refresh(): Promise<void> {
     if (this.disposed || !this.state.connected) return;
 
@@ -507,6 +530,8 @@ export class Controller {
 
       return;
     }
+
+    this.forwardParentMessage();
 
     this.refreshing = true;
     const tabIntentRevisionAtReadStart = this.tabIntentRevision;

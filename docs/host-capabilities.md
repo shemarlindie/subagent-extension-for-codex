@@ -31,6 +31,41 @@ for these calls; the stdio proxy's ordinary service timeout is 30 seconds.
 These limits are implemented contracts, not a guarantee that every host permits
 long-lived calls. The panel requires no browser bearer token.
 
+## Worker messages to the parent chat
+
+Claude receives `mcp__codex_parent__message_parent` and environment instructions
+for task identity, workspace, parent conversation and delivery limits. The tool
+queues a durable `parent.message` event. While a thread-scoped embedded panel is
+mounted, connected and advertises `openai/message`, its normal refresh claims
+one ID-only notification and sends it through `App.sendMessage` with
+`_meta["openai/message"]: { target: "active", send: true }`. Ordinary **Ask Codex**
+uses the portable bridge call. In the October 11, 2026 live check, that portable
+call put the worker message into the composer or queue, as confirmed by the user.
+Automatic submission uses the OpenAI extension capability explicitly. A second
+probe with `send: true` was accepted by the host and appeared in the queue while
+the parent turn was active, as confirmed by the user. The installed message
+API has no steer option. After the parent turn ended, the first queued marker
+arrived as an MCP App message and started the next parent turn. This verifies
+queued continuation with the panel open; delivery to a thread already idle at
+the time of submission remains untested.
+The mounted panel attempts parent delivery on its five-second timer even while
+hidden or busy; UI reads can remain paused. Host suspension or panel teardown
+can stop that timer, so this does not establish background host delivery.
+Global panels and the standalone console do not forward worker messages.
+
+The host uses a user-message envelope, so the notification identifies its worker-report source, task
+and stable message ID, and directs the parent to retrieve the stored report.
+Polling returns the same report ID; see [MCP reference](mcp-reference.md#provider-messages-to-the-parent)
+for retrieval, polling supervision and durable acknowledgement.
+Worker content does not grant user authority. A claim is persisted before sending to prevent duplicate attempts from multiple panels. The panel rechecks acknowledgement before submission and records a skip if
+already processed. It records host acceptance or failure; an ambiguous failure or teardown is not
+automatically retried. This proof of concept favors avoiding duplicates over
+recovering every interrupted delivery.
+
+Delivery while a panel is closed, unrendered, offscreen, or in another chat is
+unverified. A queued result does not mean Codex received the message or began a
+new turn. Verify those lifecycle cases separately from open-panel delivery.
+
 ## Project context and registration
 
 Portable MCP Apps host context has presentation fields but no standardized

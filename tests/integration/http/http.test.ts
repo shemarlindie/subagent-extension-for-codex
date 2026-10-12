@@ -17,6 +17,7 @@ import { Workspaces } from "../../../src/service/features/workspaces/workspace.j
 import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
 import type { ModelChoice } from "../../../src/shared/providers/types.js";
+import { PARENT_DELEGATION_PROTOCOL } from "../../../src/shared/tasks/conversation/parent-protocol.js";
 import { startSchema } from "../../../src/shared/tasks/model.js";
 import { now } from "../../../src/shared/time.js";
 import { waitForListening } from "../../support/helpers.js";
@@ -189,6 +190,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     );
 
     assert.equal(client.getServerVersion()?.name, "codex-subagent-extension");
+    assert.ok(client.getInstructions()?.includes(PARENT_DELEGATION_PROTOCOL));
 
     assert.deepEqual(
       client.getServerCapabilities()?.experimental?.[
@@ -205,6 +207,19 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
 
     const tools = await client.listTools();
     assert.ok(tools.tools.some((t) => t.name === "start_agent_task"));
+
+    const ackTool = tools.tools.find(
+      (tool) => tool.name === "ack_agent_message",
+    );
+
+    assert.ok(ackTool);
+    assert.deepEqual((ackTool._meta as any).ui.visibility, ["model", "app"]);
+
+    assert.ok(
+      tools.tools
+        .find((tool) => tool.name === "get_agent_messages")
+        ?.description?.includes(PARENT_DELEGATION_PROTOCOL),
+    );
 
     const mentionTool = tools.tools.find(
       (tool) => tool.name === "search_mentions",
@@ -642,6 +657,16 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         stdio.getServerCapabilities()?.experimental?.["openai/settings"],
         undefined,
       );
+
+      assert.ok(stdio.getInstructions()?.includes(PARENT_DELEGATION_PROTOCOL));
+      const stdioTools = await stdio.listTools();
+
+      const stdioAck = stdioTools.tools.find(
+        (tool) => tool.name === "ack_agent_message",
+      );
+
+      assert.ok(stdioAck);
+      assert.deepEqual((stdioAck._meta as any).ui.visibility, ["model", "app"]);
 
       const settingsRead = await stdio.callTool({
         name: "get_agent_settings",

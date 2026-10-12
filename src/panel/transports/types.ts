@@ -5,6 +5,8 @@ export type HostState = {
   locale?: string;
   timeZone?: string;
   canSend: boolean;
+  /** Host supports automatic submission through the OpenAI message extension. */
+  canSendParent?: boolean;
   canShare: boolean;
   canExpand: boolean;
   displayMode: "inline" | "fullscreen" | "pip";
@@ -29,7 +31,8 @@ export interface Transport {
   tool<T>(name: string, args?: Record<string, unknown>): Promise<T>;
   watch(): void;
   dispose(): void;
-  send?(message: string): Promise<void>;
+  /** `submit` requests host submission; the host may queue it during an active turn. */
+  send?(message: string, options?: { submit?: boolean }): Promise<void>;
   share?(data: Record<string, unknown>): Promise<void>;
   expand?(): Promise<void>;
   /** Opens an external link through the host, which may block new windows. */

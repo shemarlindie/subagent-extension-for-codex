@@ -4,9 +4,13 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
+import {
+  PARENT_DELEGATION_PROTOCOL,
+  PARENT_REPORT_PROTOCOL,
+} from "../../../shared/tasks/conversation/parent-protocol.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
@@ -77,6 +81,8 @@ test("the old one-shot tools are gone and the conversation tools replace them", 
   for (const name of [
     "send_agent_message",
     "get_agent_messages",
+    "get_agent_message",
+    "ack_agent_message",
     "remove_agent_queued_message",
     "send_user_agent_message",
     "raise_user_agent_budget",
@@ -387,4 +393,410 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
     finish();
     await c.close();
   }
+});
+
+test("parent message relay tools require app authority and preserve conversation scope", async () => {
+  const { c, store, parent, user, start } = await setup();
+
+  try {
+    const created = await start("Review");
+    const task = store.get(created.id, "alice");
+    task.conversation_id = "parent-chat";
+    store.save(task);
+    store.event(task, "parent.message", { text: "Worker update" });
+
+    await assert.rejects(
+      parent("claim_user_agent_parent_message", {
+        conversation_id: "parent-chat",
+      }),
+      /User tools require a user interface/,
+    );
+
+    assert.equal(
+      await user("claim_user_agent_parent_message", {
+        conversation_id: "other-chat",
+      }),
+      null,
+    );
+
+    const claimed = await user<{ task_id: string; attempt_id: number }>(
+      "claim_user_agent_parent_message",
+      { conversation_id: "parent-chat" },
+    );
+
+    assert.equal(claimed.task_id, task.id);
+
+    await assert.rejects(
+      parent("record_user_agent_parent_delivery", {
+        task_id: task.id,
+        attempt_id: claimed.attempt_id,
+        conversation_id: "parent-chat",
+        delivered: true,
+      }),
+      /User tools require a user interface/,
+    );
+
+    await user("record_user_agent_parent_delivery", {
+      task_id: task.id,
+      attempt_id: claimed.attempt_id,
+      conversation_id: "parent-chat",
+      delivered: true,
+    });
+
+    assert.equal(
+      await user("claim_user_agent_parent_message", {
+        conversation_id: "parent-chat",
+      }),
+      null,
+    );
+  } finally {
+    await c.close();
+  }
+});
+
+test("acknowledgement after claim records a skipped delivery through app tools", async () => {
+  const { c, store, parent, user, start } = await setup();
+
+  try {
+    const created = await start("Review");
+    await until(() => store.get(created.id, "alice").status === "completed");
+    const task = store.get(created.id, "alice");
+    task.conversation_id = "parent-chat";
+    store.save(task);
+    store.event(task, "parent.message", { text: "Worker update" });
+
+    const claimed = await user<{
+      task_id: string;
+      message_id: string;
+      attempt_id: number;
+    }>("claim_user_agent_parent_message", { conversation_id: "parent-chat" });
+
+    await parent("ack_agent_message", {
+      task_id: task.id,
+      message_id: claimed.message_id,
+    });
+
+    const report = await user<{ message: { acknowledged?: true } }>(
+      "get_agent_message",
+      { task_id: task.id, message_id: claimed.message_id },
+    );
+
+    expect(report.message.acknowledged).toBe(true);
+
+    const result = await user("record_user_agent_parent_delivery", {
+      task_id: task.id,
+      attempt_id: claimed.attempt_id,
+      conversation_id: "parent-chat",
+      delivered: false,
+      skipped: "acknowledged",
+    });
+
+    expect(result).toEqual({ recorded: true });
+
+    expect(
+      store.eventsOfTypes(task.id, ["parent.message_delivery"]),
+    ).toMatchObject([
+      {
+        data: {
+          attempt_id: claimed.attempt_id,
+          delivered: false,
+          skipped: "acknowledged",
+        },
+      },
+    ]);
+  } finally {
+    await c.close();
+  }
+});
+
+test.each(["poll-first", "notification-first"])(
+  "explicit reports share an ID across polling and notifications (%s)",
+  async (arrivalOrder) => {
+    const { c, store, parent, user, start } = await setup();
+
+    try {
+      const created = await start("Review");
+      await until(() => store.get(created.id, "alice").status === "completed");
+      const task = store.get(created.id, "alice");
+      task.conversation_id = "parent-chat";
+      store.save(task);
+      const before = store.lastEventId(task.id);
+
+      const report = store.event(task, "parent.message", {
+        text: "An explicit worker report.",
+      });
+
+      const id = `parent_${report.id}`;
+
+      const poll = () =>
+        parent<Messages & { messages: { parent_message?: true }[] }>(
+          "get_agent_messages",
+          { task_id: task.id, after: before },
+        );
+
+      const notify = () =>
+        user<{ task_id: string; message_id: string; text: string }>(
+          "claim_user_agent_parent_message",
+          { conversation_id: "parent-chat" },
+        );
+
+      const first =
+        arrivalOrder === "poll-first" ? await poll() : await notify();
+
+      const second =
+        arrivalOrder === "poll-first" ? await notify() : await poll();
+
+      const polled = (
+        arrivalOrder === "poll-first" ? first : second
+      ) as Awaited<ReturnType<typeof poll>>;
+
+      const notification = (
+        arrivalOrder === "poll-first" ? second : first
+      ) as Awaited<ReturnType<typeof notify>>;
+
+      expect(polled.messages).toEqual([
+        expect.objectContaining({
+          id,
+          text: "An explicit worker report.",
+          from: "worker",
+          parent_message: true,
+        }),
+      ]);
+
+      expect(notification).toMatchObject({ task_id: task.id, message_id: id });
+      expect(notification.text).toContain("already processed");
+      expect(notification.text).toContain("get_agent_message");
+      expect(notification.text).not.toContain("An explicit worker report.");
+
+      // Advancing the polling cursor does not remove the stored report's lookup route.
+      const quiet = await parent<Messages>("get_agent_messages", {
+        task_id: task.id,
+        after: polled.next_cursor,
+      });
+
+      expect(quiet.messages).toEqual([]);
+
+      const exact = await parent<{ message: unknown }>("get_agent_message", {
+        task_id: task.id,
+        message_id: id,
+      });
+
+      expect(exact.message).toEqual(polled.messages[0]);
+
+      expect(
+        store.eventsOfTypes(task.id, ["parent.message_acknowledged"]),
+      ).toEqual([]);
+
+      const acknowledged = await parent("ack_agent_message", {
+        task_id: task.id,
+        message_id: id,
+      });
+
+      expect(acknowledged).toEqual({
+        task_id: task.id,
+        message_id: id,
+        acknowledged: true,
+        already_acknowledged: false,
+      });
+
+      const afterAck = await parent<{ message: unknown }>("get_agent_message", {
+        task_id: task.id,
+        message_id: id,
+      });
+
+      expect(afterAck.message).toEqual({
+        ...polled.messages[0],
+        acknowledged: true,
+      });
+
+      const replay = await parent<Messages>("get_agent_messages", {
+        task_id: task.id,
+        after: 0,
+      });
+
+      expect(replay.messages.find((message) => message.id === id)).toEqual(
+        afterAck.message,
+      );
+
+      const afterCursor = await parent<Messages>("get_agent_messages", {
+        task_id: task.id,
+        after: polled.next_cursor,
+      });
+
+      expect(afterCursor.messages).toEqual([]);
+
+      expect(afterCursor.next_cursor).toBeGreaterThanOrEqual(
+        polled.next_cursor,
+      );
+
+      await expect(
+        parent("ack_agent_message", { task_id: task.id, message_id: id }),
+      ).resolves.toMatchObject({ already_acknowledged: true });
+
+      await expect(
+        callTool(
+          c,
+          "bob",
+          "ack_agent_message",
+          { task_id: task.id, message_id: id },
+          "parent",
+        ),
+      ).rejects.toThrow(/Task not found/);
+
+      await expect(
+        parent("get_agent_message", {
+          task_id: task.id,
+          message_id: "parent_missing",
+        }),
+      ).rejects.toThrow(/Message not found/);
+
+      await expect(
+        callTool(
+          c,
+          "bob",
+          "get_agent_message",
+          { task_id: task.id, message_id: id },
+          "parent",
+        ),
+      ).rejects.toThrow(/Task not found/);
+    } finally {
+      await c.close();
+    }
+  },
+);
+
+test("explicit parent reports wake an outstanding conversation long poll", async () => {
+  let ready!: (context: RunContext) => void;
+
+  const context = new Promise<RunContext>((resolve) => {
+    ready = resolve;
+  });
+
+  let finish!: () => void;
+
+  const finished = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+
+  class Reporting extends FixtureProvider {
+    async run(context: RunContext) {
+      ready(context);
+      await finished;
+
+      return { reply: "Done" };
+    }
+  }
+
+  const { c, store, parent, start } = await setup(new Reporting());
+
+  try {
+    const task = await start("Report progress");
+    const worker = await context;
+
+    const pending = parent<
+      Messages & { messages: { parent_message?: true }[] }
+    >("get_agent_messages", {
+      task_id: task.id,
+      after: store.lastEventId(task.id),
+      wait_seconds: 5,
+    });
+
+    // The tool installs its listener before reading, so a report can arrive immediately.
+    const report = store.event(worker.task, "parent.message", {
+      text: "Progress from the worker",
+    });
+
+    const result = await pending;
+    expect(result.running).toBe(true);
+
+    expect(result.messages).toEqual([
+      expect.objectContaining({
+        id: `parent_${report.id}`,
+        text: "Progress from the worker",
+        parent_message: true,
+      }),
+    ]);
+
+    expect(result.next_cursor).toBeGreaterThanOrEqual(report.id);
+  } finally {
+    finish();
+    await c.close();
+  }
+});
+
+test("reading reports leaves them available for host delivery, while model acknowledgment suppresses unclaimed reports", async () => {
+  const { c, store, parent, user, start } = await setup();
+
+  try {
+    const created = await start("Review");
+    await until(() => store.get(created.id, "alice").status === "completed");
+    const task = store.get(created.id, "alice");
+    task.conversation_id = "parent-chat";
+    store.save(task);
+    const first = store.event(task, "parent.message", { text: "Read alone" });
+
+    const second = store.event(task, "parent.message", {
+      text: "Processed and acknowledged",
+    });
+
+    await parent("get_agent_messages", { task_id: task.id });
+
+    await parent("get_agent_message", {
+      task_id: task.id,
+      message_id: `parent_${first.id}`,
+    });
+
+    expect(
+      store.eventsOfTypes(task.id, ["parent.message_acknowledged"]),
+    ).toEqual([]);
+
+    await parent("ack_agent_message", {
+      task_id: task.id,
+      message_id: `parent_${second.id}`,
+    });
+
+    const notification = await user<{ message_id: string }>(
+      "claim_user_agent_parent_message",
+      { conversation_id: "parent-chat" },
+    );
+
+    expect(notification.message_id).toBe(`parent_${first.id}`);
+
+    expect(
+      await user("claim_user_agent_parent_message", {
+        conversation_id: "parent-chat",
+      }),
+    ).toBeNull();
+
+    await expect(
+      parent("ack_agent_message", { task_id: task.id, message_id: "request" }),
+    ).rejects.toThrow();
+
+    await expect(
+      parent("ack_agent_message", {
+        task_id: task.id,
+        message_id: "parent_999999",
+      }),
+    ).rejects.toThrow();
+
+    expect(
+      store.eventsOfTypes(task.id, ["parent.message_acknowledged"]),
+    ).toHaveLength(1);
+  } finally {
+    await c.close();
+  }
+});
+
+test("parent message tools publish the canonical polling and processing protocol", () => {
+  const tools = definitions({} as Control, "alice");
+
+  expect(tools.get_agent_messages.description).toContain(
+    PARENT_DELEGATION_PROTOCOL,
+  );
+
+  expect(tools.get_agent_message.description).toContain(PARENT_REPORT_PROTOCOL);
+
+  expect(tools.ack_agent_message.description).toContain(
+    "after you successfully process",
+  );
 });

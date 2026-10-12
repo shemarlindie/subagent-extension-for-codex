@@ -424,6 +424,7 @@ export function previewTool(
       { conversation_id: null },
       options,
     ),
+    claim_user_agent_parent_message: null,
     get_agent_panel_context: panelContext(args, options),
     list_agent_projects: projectsWith(options),
     list_agent_tasks: newestFirst

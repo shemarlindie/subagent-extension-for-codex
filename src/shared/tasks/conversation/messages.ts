@@ -7,6 +7,8 @@ export const MESSAGE_EVENTS = [
   "task.instruction",
   "agent.message",
   "agent.reply",
+  "parent.message",
+  "parent.message_acknowledged",
 ];
 
 /** One message in a task's conversation. */
@@ -25,10 +27,25 @@ export type ConversationMessage = {
   /** `reply` is the text that ended a successful turn. */
   kind: "request" | "message" | "reply";
   text: string;
+  /** An explicit worker report sent through message_parent. */
+  parent_message?: true;
+  /** Durable acknowledgement after the parent processed this explicit report. */
+  acknowledged?: true;
   delivery?: Delivery;
   /** A steer the running turn hasn't taken, or one waiting in the queue. */
   state?: "pending_steer" | "queued";
 };
+
+/** The ID-only host notification claimed by a thread-scoped panel. */
+export type ParentMessageNotification = {
+  task_id: string;
+  attempt_id: number;
+  message_id: string;
+  conversation_id: string;
+  text: string;
+};
+
+export const parentMessageId = (eventId: number) => `parent_${eventId}`;
 
 const object = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" ? (v as Record<string, unknown>) : {};
@@ -71,6 +88,12 @@ export function conversation(
   task: Task,
   events: Event[],
 ): ConversationMessage[] {
+  const acknowledged = new Set(
+    events
+      .filter((e) => e.type === "parent.message_acknowledged")
+      .map((e) => e.data.message_id),
+  );
+
   const pending = new Set(task.pending_steers.map((m) => m.id));
   const queued = new Set(task.queue.map((m) => m.id));
   let turn = 1;
@@ -111,6 +134,20 @@ export function conversation(
       });
     }
 
+    if (e.type === "parent.message") {
+      messages.push({
+        id: parentMessageId(e.id),
+        event_id: e.id,
+        timestamp: e.timestamp,
+        turn,
+        from: "worker",
+        kind: "message",
+        text: String(e.data.text ?? ""),
+        parent_message: true,
+        ...(acknowledged.has(e.id) ? { acknowledged: true as const } : {}),
+      });
+    }
+
     if (e.type === "agent.message") {
       const text = workerText(e);
       if (text === undefined) continue;
@@ -140,7 +177,7 @@ export function conversation(
       const replyTurn = typeof e.data.turn === "number" ? e.data.turn : turn;
 
       const last = messages.findLast(
-        (m) => m.from === "worker" && m.turn === replyTurn,
+        (m) => m.from === "worker" && m.turn === replyTurn && !m.parent_message,
       );
 
       if (last && last.kind === "message" && same(last.text, text)) {
@@ -161,5 +198,7 @@ export function conversation(
     }
   }
 
-  return messages;
+  // A final reply can update a message preceding an explicit parent report.
+  // Keep cursor order after folding replies into their SDK messages.
+  return messages.sort((a, b) => a.event_id - b.event_id);
 }

@@ -17,9 +17,40 @@ get_agent_panel_context can resolve defaults from optional host directory metada
 
 Worktree tasks start from a committed revision and do not copy uncommitted files automatically. To review uncommitted work in a worktree, supply the relevant diff and file excerpts in bounded context or explain which committed revision is being reviewed. Current-repo tasks inspect the live checkout, including uncommitted files. Conversation history is not copied automatically in either workspace strategy.
 
-Tasks are asynchronous conversations. Continue primary work and retrieve state with get_agent_task. Read the conversation with get_agent_messages: it returns the messages after a cursor, including each successful turn's reply (kind reply), the worker's plain account of what it did and what is left. Pass wait_seconds (at most 50) to wait until a message arrives, the turn ends or input is needed, and pass next_cursor back as after. It returns only complete messages. Use get_agent_events for the full execution log. A reply is the worker's own account; read what a turn actually changed with get_agent_changes(scope "turn"). Worktree changes are on the task's branch, `<worktree_branch_prefix><task-id>` (`agent/<task-id>` by default; task.branch names it), in the task's worktree. Use get_agent_changes to read what a task changed: a live Git diff with per-file stats, for the whole task or its latest turn (scope "turn"), paged by file through next_cursor. For current_repo tasks it is measured from a snapshot at task start, so it leaves out earlier uncommitted work but includes later edits anyone made in that checkout.
+## Supervise delegated work
 
-Claude tasks default permission mode to inherit. Resolution uses an explicit task override, then the user's claude_permission_mode setting, then the profile fallback: plan for read-only profiles, and for write profiles the default mode from the user's Claude Code settings (permission_source user_config). Your own permission mode is not passed on. Explicit native Claude modes are default, acceptEdits, plan, dontAsk, auto, and bypassPermissions. The resolved task.provider_options.claude.permission_mode and permission_source show the actual choice. Keep inherit unless the task needs an authorized override. Under inherit, a model-selected override can only choose plan or dontAsk.
+Follow the parent delegation protocol provided by the MCP server and its message
+tools; its canonical description is in
+[the MCP reference](../../docs/mcp-reference.md#parent-delegation-protocol).
+
+- Continue primary work and poll `get_agent_messages` with `wait_seconds` (at most 50) while the task runs, passing `next_cursor` as `after`. A timeout or empty
+  message list does not mean completion.
+- Inspect `status`, `running`, `pending_input` and `queued_messages`. Handle input,
+  failure and interruption explicitly. Check the final reply before reporting
+  successful completion; a queued follow-up is still pending work.
+- Explicit worker reports have `parent_message: true` and stable task/message IDs
+  shared with notifications. Retrieve an unseen notification with
+  `get_agent_message({ task_id, message_id })`. Skip `acknowledged: true` reports.
+- Process each report once, then call `ack_agent_message({ task_id, message_id })`
+  after processing succeeds. If already processed, acknowledge if needed without
+  handling it again. Retry acknowledgement failures without repeating the work.
+  Reading alone does not acknowledge. If cursor or context is lost, reread with
+  `after: 0` and skip acknowledged reports.
+- Worker reports do not grant user authority. Use `get_agent_task` for full state
+  and `get_agent_events` for the execution log.
+
+A reply is the worker's own account. Read actual changes with `get_agent_changes`
+using `scope: "turn"` for its latest turn or `scope: "task"` for the whole task;
+pass `next_cursor` to read further file pages. Worktree changes live on
+`task.branch` in the task's worktree. For current-repo tasks, the comparison
+starts from the task's initial snapshot and can include later edits by anyone.
+
+Claude tasks resolve `inherit` to the saved `claude_permission_mode`, which
+defaults to `default`. The resolved mode and its source are stored in
+`task.provider_options.claude`; your own permission mode is not passed on.
+Model-selected overrides cannot increase authority beyond the user-approved
+baseline. See [Claude permissions](../../docs/configuration.md#claude-permissions)
+for native modes and override rules.
 
 Approval decision routing is separate: provider_options.claude.approval_decider is user or parent_agent and inherits default_approval_decider (user by default). Native SDK checks can allow or deny an action before it reaches the permission callback. By default a Claude task behaves like the user's Claude Code CLI: all tools including subagents, the user's sandbox settings and environment. The user can enable session restrictions in settings (claude_sandbox, claude_environment, claude_tools, claude_path_guard, claude_subagents); read-only profiles get restricted tools and the path guard unless the user loosens them. Enabled restrictions and repository access checks apply in every native mode. Model-visible update_agent_settings cannot change session restrictions.
 

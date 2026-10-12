@@ -194,7 +194,7 @@ test("console SSE coalesces activity refreshes and disposal cancels pending refr
   assert.equal(streams.length, 2);
 });
 
-function hostApp() {
+function hostApp(submit = false) {
   const calls: unknown[] = [];
   const toolOptions: unknown[] = [];
   let response: unknown = { structuredContent: { result: ["task"] } };
@@ -206,6 +206,7 @@ function hostApp() {
     connect: async () => {},
     getHostCapabilities: () => ({
       serverTools: {},
+      ...(submit ? { experimental: { "openai/message": {} } } : {}),
       message: { text: true },
       updateModelContext: { structuredContent: true },
     }),
@@ -298,6 +299,7 @@ test("host preserves structured settings envelopes and unwraps other tools", asy
       displayMode: "inline",
       canExpand: true,
       canSend: true,
+      canSendParent: false,
       canShare: true,
     },
   ]);
@@ -355,6 +357,7 @@ test("host forwards locale and time zone on connect and context changes", async 
       displayMode: "inline",
       canExpand: true,
       canSend: true,
+      canSendParent: false,
       canShare: true,
     },
   ]);
@@ -367,6 +370,7 @@ test("host forwards locale and time zone on connect and context changes", async 
     displayMode: "inline",
     canExpand: true,
     canSend: true,
+    canSendParent: false,
     canShare: true,
   });
 
@@ -550,4 +554,29 @@ test("console SSE delivers draft deltas as they arrive", async () => {
   streams[0].delta?.({ data: JSON.stringify(update) });
   assert.deepEqual(observed.drafts, [update]);
   transport.dispose();
+});
+
+test("worker messages use explicit submission metadata and require host support", async () => {
+  const supported = hostApp(true);
+  const transport = new HostTransport(supported.app as any);
+  await transport.send("Worker marker", { submit: true });
+
+  assert.deepEqual(supported.calls, [
+    {
+      role: "user",
+      content: [{ type: "text", text: "Worker marker" }],
+      _meta: { "openai/message": { target: "active", send: true } },
+    },
+  ]);
+
+  const unsupported = hostApp();
+
+  await assert.rejects(
+    new HostTransport(unsupported.app as any).send("Worker marker", {
+      submit: true,
+    }),
+    /does not support submitting/,
+  );
+
+  assert.deepEqual(unsupported.calls, []);
 });
