@@ -207,22 +207,9 @@
 .settings-loading-skeleton {
   display: block;
 }
-.settings-loading-note {
+.settings-title-status {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.settings-loading-message {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  gap: 6px;
-  white-space: nowrap;
-  color: var(--muted);
-  font-size: 11px;
-}
-.settings-loading-spinner {
   color: var(--accent);
 }
 .settings-loading-rows {

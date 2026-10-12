@@ -4,6 +4,7 @@ type PageFrameProps = {
   title: string;
   headingId: string;
   className?: string;
+  titleStatus?: ReactNode;
   back?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
@@ -14,6 +15,7 @@ export function PageFrame({
   title,
   headingId,
   className,
+  titleStatus,
   back,
   actions,
   children,
@@ -32,9 +34,12 @@ export function PageFrame({
       <div className="page-frame-inner">
         <div className="page-frame-heading">
           {back}
-          <h1 id={headingId} ref={heading} tabIndex={-1}>
-            {title}
-          </h1>
+          <div className="page-frame-title">
+            <h1 id={headingId} ref={heading} tabIndex={-1}>
+              {title}
+            </h1>
+            {titleStatus}
+          </div>
           {actions}
         </div>
         <div className="page-frame-content">{children}</div>

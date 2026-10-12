@@ -7,7 +7,6 @@ import { settingsSections as buildSettingsSections } from "../../../shared/setti
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
-import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
 import { Presence } from "../../shared/components/motion/motion";
 import { reducedMotion } from "../../shared/components/motion/motion-utils";
 import { Notice } from "../../shared/components/notice/notice";
@@ -413,18 +412,6 @@ export function SettingsForm({
           </Notice>
         </Collapsible.Panel>
       </Collapsible.Root>
-      {isLoading && (
-        <p className="form-note form-note--first settings-loading-note">
-          <span
-            className="settings-loading-message"
-            role="status"
-            aria-label="Loading settings"
-          >
-            <LoadingSpinner className="settings-loading-spinner" />
-            <span>Loading…</span>
-          </span>
-        </p>
-      )}
       <div
         className={`settings-form-body${loading ? " settings-loading-body" : ""}`}
       >

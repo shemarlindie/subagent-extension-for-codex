@@ -30,12 +30,19 @@
   max-width: 880px;
   margin-inline: auto;
 }
-.page-frame-heading h1 {
+.page-frame-title {
+  display: flex;
   flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.page-frame-title h1 {
+  flex: none;
   margin: 0;
   font-size: 20px;
 }
-.page-frame-heading h1:focus {
+.page-frame-title h1:focus {
   outline: none;
 }
 .page-frame-content {

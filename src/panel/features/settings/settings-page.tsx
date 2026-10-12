@@ -4,6 +4,7 @@ import { PAGES } from "../../app/navigation/pages";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
+import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
 import { BackButton } from "../../shared/components/navigation/back-button";
 import { PageFrame } from "../../shared/components/navigation/page-frame";
 import {
@@ -50,6 +51,17 @@ export function SettingsPage() {
       className="settings-page"
       title={PAGES.settings.label}
       headingId="settings-heading"
+      titleStatus={
+        dialog.kind === "settings-loading" && dialog.status === "loading" ? (
+          <span
+            className="settings-title-status"
+            role="status"
+            aria-label="Loading settings"
+          >
+            <LoadingSpinner />
+          </span>
+        ) : undefined
+      }
       back={
         <BackButton
           label={PAGES.tasks.label}
