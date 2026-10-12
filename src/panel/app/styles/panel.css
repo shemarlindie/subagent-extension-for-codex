@@ -233,7 +233,7 @@ header .toolbar {
 #task-list::-webkit-scrollbar {
   display: none;
 }
-#task-list > .empty-state {
+#task-list .empty-state {
   padding: 8px 10px;
   text-align: center;
 }
