@@ -811,13 +811,17 @@ export function Host() {
                 </button>
               </div>
               <label>
-                Host style variables (JSON)
+                Host style variable overrides (JSON)
                 <textarea
                   rows={6}
                   value={styles}
                   placeholder='{"--color-background-primary": "#fff"}'
                   onChange={(e) => update({ styles: e.target.value })}
                 />
+                <small>
+                  Leave blank to omit host style variables. Captured light and
+                  dark maps are available as development references.
+                </small>
               </label>
             </div>
           )}

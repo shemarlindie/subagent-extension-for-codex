@@ -9,10 +9,10 @@
 
   --color-background-primary: rgb(255, 255, 255);
   --color-background-secondary: rgba(255, 255, 255, 0.96);
-  --color-background-tertiary: rgb(246, 246, 246);
-  --color-background-inverse: rgb(26, 28, 31);
+  --color-background-tertiary: rgb(245, 245, 245);
+  --color-background-inverse: rgb(13, 13, 13);
   --color-background-ghost: transparent;
-  --color-background-info: rgb(232, 243, 254);
+  --color-background-info: rgb(222, 236, 248);
   --color-background-danger: rgb(255, 240, 240);
   --color-background-success: color-mix(
     in srgb,
@@ -24,31 +24,31 @@
     rgb(226, 85, 7) 12%,
     rgb(255, 255, 255)
   );
-  --color-background-disabled: rgba(26, 28, 31, 0.047);
-  --color-text-primary: rgb(26, 28, 31);
-  --color-text-secondary: rgba(26, 28, 31, 0.494);
-  --color-text-tertiary: rgba(26, 28, 31, 0.494);
+  --color-background-disabled: rgba(13, 13, 13, 0.047);
+  --color-text-primary: rgb(13, 13, 13);
+  --color-text-secondary: rgba(13, 13, 13, 0.494);
+  --color-text-tertiary: rgba(13, 13, 13, 0.494);
   --color-text-inverse: rgb(255, 255, 255);
-  --color-text-ghost: rgba(26, 28, 31, 0.494);
-  --color-text-info: rgb(44, 103, 197);
+  --color-text-ghost: rgba(13, 13, 13, 0.494);
+  --color-text-info: rgb(1, 105, 204);
   --color-text-danger: rgb(224, 46, 42);
   --color-text-success: rgb(0, 162, 64);
   --color-text-warning: rgb(226, 85, 7);
-  --color-text-disabled: rgba(26, 28, 31, 0.494);
-  --color-border-primary: rgba(26, 28, 31, 0.118);
-  --color-border-secondary: rgba(26, 28, 31, 0.08);
-  --color-border-tertiary: rgba(26, 28, 31, 0.08);
-  --color-border-inverse: rgb(26, 28, 31);
+  --color-text-disabled: rgba(13, 13, 13, 0.494);
+  --color-border-primary: rgba(13, 13, 13, 0.118);
+  --color-border-secondary: rgba(13, 13, 13, 0.08);
+  --color-border-tertiary: rgba(13, 13, 13, 0.08);
+  --color-border-inverse: rgb(13, 13, 13);
   --color-border-ghost: transparent;
-  --color-border-info: rgb(58, 131, 247);
+  --color-border-info: rgb(1, 105, 204);
   --color-border-danger: rgb(224, 46, 42);
   --color-border-success: rgb(0, 162, 64);
   --color-border-warning: rgb(226, 85, 7);
-  --color-border-disabled: rgba(26, 28, 31, 0.118);
-  --color-ring-primary: rgb(58, 131, 247);
-  --color-ring-secondary: rgb(58, 131, 247);
-  --color-ring-inverse: rgb(58, 131, 247);
-  --color-ring-info: rgb(58, 131, 247);
+  --color-border-disabled: rgba(13, 13, 13, 0.118);
+  --color-ring-primary: rgb(1, 105, 204);
+  --color-ring-secondary: rgb(1, 105, 204);
+  --color-ring-inverse: rgb(1, 105, 204);
+  --color-ring-info: rgb(1, 105, 204);
   --color-ring-danger: rgb(224, 46, 42);
   --color-ring-success: rgb(0, 162, 64);
   --color-ring-warning: rgb(226, 85, 7);
@@ -119,42 +119,48 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-background-primary: rgb(24, 24, 24);
-  --color-background-secondary: rgba(54, 54, 54, 0.96);
-  --color-background-tertiary: rgb(20, 20, 20);
-  --color-background-inverse: rgb(255, 255, 255);
-  --color-background-info: rgb(19, 52, 99);
+  --color-background-primary: rgb(17, 17, 17);
+  --color-background-secondary: rgba(47, 47, 47, 0.96);
+  --color-background-tertiary: rgb(14, 14, 14);
+  --color-background-inverse: rgb(252, 252, 252);
+  --color-background-info: rgb(0, 26, 51);
   --color-background-danger: rgb(40, 11, 10);
   --color-background-success: color-mix(
     in srgb,
-    rgb(64, 201, 119) 12%,
-    rgb(40, 40, 40)
+    rgb(0, 162, 64) 12%,
+    rgb(33, 33, 33)
   );
   --color-background-warning: color-mix(
     in srgb,
     rgb(255, 133, 73) 12%,
-    rgb(40, 40, 40)
+    rgb(33, 33, 33)
   );
-  --color-background-disabled: rgba(255, 255, 255, 0.05);
-  --color-text-primary: rgb(255, 255, 255);
-  --color-text-secondary: rgba(255, 255, 255, 0.498);
-  --color-text-tertiary: rgba(255, 255, 255, 0.498);
-  --color-text-inverse: rgb(13, 13, 13);
-  --color-text-ghost: rgba(255, 255, 255, 0.498);
+  --color-background-disabled: rgba(252, 252, 252, 0.05);
+  --color-text-primary: rgb(252, 252, 252);
+  --color-text-secondary: rgba(252, 252, 252, 0.498);
+  --color-text-tertiary: rgba(252, 252, 252, 0.498);
+  --color-text-inverse: rgb(9, 9, 9);
+  --color-text-ghost: rgba(252, 252, 252, 0.498);
+  --color-text-info: rgb(100, 164, 224);
   --color-text-danger: rgb(255, 103, 100);
-  --color-text-success: rgb(64, 201, 119);
+  --color-text-success: rgb(0, 162, 64);
   --color-text-warning: rgb(255, 133, 73);
-  --color-text-disabled: rgba(255, 255, 255, 0.498);
-  --color-border-primary: rgba(255, 255, 255, 0.157);
-  --color-border-secondary: rgba(255, 255, 255, 0.082);
-  --color-border-tertiary: rgba(255, 255, 255, 0.082);
-  --color-border-inverse: rgb(255, 255, 255);
+  --color-text-disabled: rgba(252, 252, 252, 0.498);
+  --color-border-primary: rgba(252, 252, 252, 0.157);
+  --color-border-secondary: rgba(252, 252, 252, 0.082);
+  --color-border-tertiary: rgba(252, 252, 252, 0.082);
+  --color-border-inverse: rgb(252, 252, 252);
+  --color-border-info: rgba(100, 164, 224, 0.76);
   --color-border-danger: rgb(255, 103, 100);
-  --color-border-success: rgb(64, 201, 119);
+  --color-border-success: rgb(0, 162, 64);
   --color-border-warning: rgb(255, 133, 73);
-  --color-border-disabled: rgba(255, 255, 255, 0.157);
+  --color-border-disabled: rgba(252, 252, 252, 0.157);
+  --color-ring-primary: rgba(100, 164, 224, 0.76);
+  --color-ring-secondary: rgba(100, 164, 224, 0.76);
+  --color-ring-inverse: rgba(100, 164, 224, 0.76);
+  --color-ring-info: rgba(100, 164, 224, 0.76);
   --color-ring-danger: rgb(255, 103, 100);
-  --color-ring-success: rgb(64, 201, 119);
+  --color-ring-success: rgb(0, 162, 64);
   --color-ring-warning: rgb(255, 133, 73);
 
   --sidebar-bg: color-mix(in srgb, var(--color-text-primary) 4%, var(--bg));

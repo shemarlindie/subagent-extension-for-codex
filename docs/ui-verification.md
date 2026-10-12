@@ -89,8 +89,12 @@ supports DOM inspection. Host selects require setting `.value` and dispatching
 feeds. Hidden panes throttle frames: sample animations by pausing
 `element.getAnimations()` and setting `currentTime`, instead of timing them.
 
-The dev host does not reproduce Codex's sandbox, CSP, native placement or all
-host style variables. For changes affecting those boundaries, build and open
-an approved repository in Codex, check scope and New task prefills without
-submitting, and reopen an existing task. Automated transport/DOM tests and
-fixture screenshots cannot establish native host delivery or placement.
+The dev host omits style variables by default; enter JSON in the inspector to
+test them. Light and dark captures from Codex desktop's MCP App context on
+2026-10-12 are kept as development references. The panel filters style keys the
+installed SDK does not recognize, so later host additions do not fail app
+initialization. The dev host does not reproduce Codex's sandbox, CSP or native
+placement. For changes affecting those boundaries, build and open an approved
+repository in Codex, check scope and New task prefills without submitting, and
+reopen an existing task. Automated transport/DOM tests and fixture screenshots
+cannot establish native host delivery or placement.

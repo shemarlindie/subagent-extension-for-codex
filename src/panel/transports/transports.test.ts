@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 
+import { McpUiHostStylesSchema } from "@modelcontextprotocol/ext-apps";
+import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 import { test, vi } from "vitest";
 
 import type { TransportEvents } from "../app/state/types";
 import { ConsoleTransport } from "./console";
 import { HostTransport } from "./host";
+import { filterUnsupportedHostStyleVariables } from "./host-context-compat";
 
 function callbacks() {
   const statuses: string[] = [];
@@ -247,6 +250,54 @@ function hostApp(submit = false) {
     },
   };
 }
+
+test("host style filtering ignores new keys in initialization and context updates", () => {
+  const initialize = filterUnsupportedHostStyleVariables({
+    jsonrpc: "2.0",
+    id: 1,
+    result: {
+      hostContext: {
+        styles: {
+          variables: {
+            "--color-text-primary": "rgb(26, 28, 31)",
+            "--safe-area-inset-top": "0px",
+            "--future-host-token": "future value",
+          },
+        },
+      },
+    },
+  } as JSONRPCMessage) as unknown as {
+    result: { hostContext: { styles: { variables: Record<string, string> } } };
+  };
+
+  assert.deepEqual(initialize.result.hostContext.styles.variables, {
+    "--color-text-primary": "rgb(26, 28, 31)",
+  });
+
+  assert.equal(
+    McpUiHostStylesSchema.safeParse({
+      variables: initialize.result.hostContext.styles.variables,
+    }).success,
+    true,
+  );
+
+  const update = filterUnsupportedHostStyleVariables({
+    jsonrpc: "2.0",
+    method: "ui/notifications/host-context-changed",
+    params: {
+      styles: {
+        variables: {
+          "--safe-area-inset-bottom": "0px",
+          "--future-host-token": "future value",
+        },
+      },
+    },
+  } as JSONRPCMessage) as unknown as {
+    params: { styles: { variables: Record<string, string> } };
+  };
+
+  assert.deepEqual(update.params.styles.variables, {});
+});
 
 test("host folder browsing allows native interaction time while ordinary tools use default timeout", async () => {
   const fake = hostApp();

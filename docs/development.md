@@ -182,7 +182,12 @@ The page embeds the real panel in an iframe through the official `AppBridge`.
 Use **Data: fixtures** for UI checks without a service; prepared fixtures cannot
 create tasks or send Chat messages. **Launch** chooses thread or global
 scope; theme, display mode, width and host capabilities can be varied. The
-**Inspector** exposes the bridge log, host settings and icon catalog.
+**Inspector** exposes the bridge log, host settings and icon catalog. The dev
+host does not send style variables by default. Leave **Host style variable
+overrides** empty to omit them, or enter JSON to test specific values. The light
+and dark JSON captures from Codex desktop's MCP App host context (2026-10-12)
+are development references; the app filters unsupported style keys before SDK
+initialization so newer host variables do not break older SDK versions.
 
 [UI verification](ui-verification.md) documents the browser workflow, fixture
 catalogue and host controls. Fixtures in `dev/panel/scenarios/` are excluded from the
@@ -209,8 +214,9 @@ CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev PORT=4399 npm run dev
 CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev npm run dev:ui
 ```
 
-Codex's iframe sandbox, CSP, real host styles, and native placement are not
-reproduced, so confirm layout-sensitive changes in Codex before release.
+The dev host does not reproduce Codex's iframe sandbox, CSP or native placement.
+Confirm layout-sensitive changes in Codex before release; the captured style
+maps are development references, not values the dev host sends by default.
 
 ### Access from your local network
 

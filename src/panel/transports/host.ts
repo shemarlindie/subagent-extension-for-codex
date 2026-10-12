@@ -9,6 +9,7 @@ import {
 } from "@openai/mcp-extensions/app";
 
 import type { PanelData, Transport, TransportEvents } from "../app/state/types";
+import { HostContextCompatibilityTransport } from "./host-context-compat";
 import { traceSize } from "./size-trace";
 
 // DEBUG: Trace the SDK's outgoing sizes without replacing its resize observer.
@@ -56,7 +57,12 @@ export class HostTransport implements Transport {
       return {};
     };
 
-    await this.app.connect();
+    await this.app.connect(
+      typeof window === "undefined"
+        ? undefined
+        : new HostContextCompatibilityTransport(),
+    );
+
     // DEBUG: Automatic resize reporting starts after this handshake completes.
     traceSize("bridge-connected");
     if (this.disposed) return;
