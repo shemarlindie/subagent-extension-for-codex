@@ -14,6 +14,7 @@ import { projectApproved } from "../../projects/selectors";
 import { currentActivityStatus } from "../activity/activity-timeline";
 import { EvidenceTabs } from "../evidence/evidence-tabs";
 import { TaskStatus } from "../shared/status";
+import { TaskInspectorLoading } from "./task-inspector-loading";
 import { TaskHeaderSkeleton } from "./task-inspector-skeleton";
 import { TaskMenu } from "./task-menu";
 import { TaskTitle } from "./task-title";
@@ -38,6 +39,8 @@ export function TaskInspector() {
       : task;
 
   const loading = !task && Boolean(state.selected) && state.taskListLoading;
+  // Hosts without a restored selection pick a task once the list loads.
+  const awaitingSelection = !task && !loading && state.taskListLoading;
 
   return (
     <section
@@ -114,11 +117,14 @@ export function TaskInspector() {
           <EvidenceTabs task={task} taskId={state.selected ?? ""} />
         </div>
       ) : (
-        <div className="empty">
-          <Icon name="task-card" size={33} className="empty-icon" />
-          <p>Task details will show here.</p>
-        </div>
+        !awaitingSelection && (
+          <div className="empty">
+            <Icon name="task-card" size={33} className="empty-icon" />
+            <p>Task details will show here.</p>
+          </div>
+        )
       )}
+      <TaskInspectorLoading loading={awaitingSelection} />
     </section>
   );
 }

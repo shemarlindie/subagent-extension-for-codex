@@ -51,3 +51,25 @@
     height: 19px;
   }
 }
+.detail {
+  position: relative;
+}
+/* Overlays the arriving content so the two cross-fade without shifting layout. */
+.task-inspector-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  pointer-events: none;
+  animation: motion-fade var(--motion-loading-crossfade) var(--ease-out);
+  transition: opacity var(--motion-loading-crossfade) var(--ease-out);
+}
+.task-inspector-loading[data-leaving] {
+  opacity: 0;
+}
+.task-inspector-loading .loading-spinner {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}

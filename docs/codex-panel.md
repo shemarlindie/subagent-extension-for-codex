@@ -97,7 +97,9 @@ profiles, runtime and status until the list arrives. Press `/` for search and
 Escape to clear it.
 
 Wide panels show rail and inspector together; narrow ones switch between them
-with a back action. Drag the divider to resize the task rail; its width is saved
+with a back action. Until the first task read selects a task, the inspector
+shows a spinner; its empty message appears only after loading when no task is
+selected. Drag the divider to resize the task rail; its width is saved
 in this browser. Focus the divider and use Left/Right arrows to resize, Home/End
 for the minimum/maximum width, or double-click to restore the default width.
 Custom scrollbars appear during scrolling or pointer interaction and disappear

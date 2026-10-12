@@ -117,6 +117,11 @@ Keep the task inspector and tab list mounted while a selected task is fetched;
 swap the header and active tab content in place. Let each tab's loading swap
 span both the task lookup and its own read so the same placeholder stays in the
 same slot until real content is ready.
+Without a restored selection, the inspector cannot know which layout follows
+the first task-list read, so it shows a centered spinner instead of its empty
+state. `TaskInspectorLoading` overlays the inspector rather than using
+`LoadingSwap`, because the task view and the empty state are separate layouts;
+it stays mounted through the same crossfade while the arriving content fades in.
 For inline values such as counts, use `as="span"` with `loading-swap-inline`.
 Task Details uses the same metadata and facts grid for its full skeleton while
 the task record is unavailable; once the task arrives, separately pending
