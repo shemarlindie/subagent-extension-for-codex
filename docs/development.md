@@ -18,19 +18,21 @@ search log. Service connection settings come from its MCP environment.
 The example keeps data in `.codex-subagent-extension/live`. See the
 [configuration table](configuration.md#environment-variables) for every variable.
 
-**One data directory.** The service, the panel dev host, and Codex must all use
-the same `CODEX_SUBAGENT_EXTENSION_DATA`; it holds the database and the admin
-token they authenticate with. The Codex-launched stdio proxy does not read
-`.env`, so set the same path, made absolute, in Codex's MCP environment:
+**One data directory.** The service and panel dev host must use the same
+`CODEX_SUBAGENT_EXTENSION_DATA`; it holds the database and admin token. Choose
+[stdio or HTTP in the connection guide](../README.md#connect-codex). For stdio,
+the Codex-launched proxy also needs that data directory and does not read `.env`,
+so add the same path, made absolute, to its MCP environment:
 
 ```toml
-[mcp_servers.codex_subagent_extension]
-command = "node"
-args = ["<checkout-root>/dist/stdio.js"]
-
 [mcp_servers.codex_subagent_extension.env]
 CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension/live"
 ```
+
+For HTTP, configure the connection guide's URL and Authorization header using the
+token from `<checkout-root>/.codex-subagent-extension/live/admin-token`, or the
+service's token override. Codex does not need a data-directory environment setting
+for HTTP.
 
 For composer mention diagnostics, add
 `CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE=1` to the project `.env`, then
@@ -127,13 +129,20 @@ change database migrations.
 
 ## Run the service
 
-```sh
-npm run build && npm start
-```
+Build before starting either service mode, including when testing in Codex over
+HTTP or stdio:
 
-`npm start` runs the built `dist/main.js`; `npm run dev` runs
-`src/service/main.ts` through `tsx` and Node's watch mode, restarting it when an
-imported source file changes. A restart interrupts active tasks; send a follow-up
+| Use           | Command                        | Backend behavior                                                                                                       |
+| ------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Development   | `npm run build && npm run dev` | Runs `src/service/main.ts` through `tsx` and Node's watch mode; restarts when an imported backend source file changes. |
+| Built service | `npm run build && npm start`   | Runs `dist/main.js`; applying backend changes requires rebuilding and restarting.                                      |
+
+Both modes serve the embedded Codex panel and standalone console from
+`dist/app.html`. `npm run dev` does not rebuild the panel after UI edits;
+follow [What reloads when](#what-reloads-when) to apply subsequent changes.
+For browser UI development with Fast Refresh, use the [panel dev host](#panel-dev-host).
+
+A restart interrupts active tasks; send a follow-up
 after the service returns to continue them. Either way the service runs in the
 foreground at `http://127.0.0.1:4317`; stop it with Ctrl-C. If Codex is open with
 the plugin enabled, its stdio proxy may already have started one; a second service
@@ -153,6 +162,9 @@ npm run projects -- list
 The standalone console is at `http://127.0.0.1:4317`. Sign in with the contents
 of `<data-directory>/admin-token`, for example
 `pbcopy < .codex-subagent-extension/live/admin-token` on macOS.
+Use the configured console origin: `localhost` and `127.0.0.1` are different
+browser origins, and substituting `localhost` for the default address can fail
+the service's origin checks.
 
 ## Choosing a development tool
 
@@ -295,7 +307,9 @@ ordinary text keeps the replacement as written.
 
 ## Codex
 
-With the MCP configuration above, reload the MCP connection in Codex and open
+After [building and starting the service](#run-the-service), follow the
+[stdio or HTTP connection guide](../README.md#connect-codex), reload the MCP
+connection in Codex and open
 **Delegated Work** from a chat. It should show the same tasks as the dev host in
 live mode.
 
