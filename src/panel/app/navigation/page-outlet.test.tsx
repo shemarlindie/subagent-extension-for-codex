@@ -32,6 +32,14 @@ vi.mock("../../features/projects/projects-page", () => ({
   ),
 }));
 
+vi.mock("../../features/settings/settings-page", () => ({
+  SettingsPage: () => (
+    <PageFrame title="Settings" headingId="settings-heading">
+      <input aria-label="Settings draft" defaultValue="" />
+    </PageFrame>
+  ),
+}));
+
 afterEach(() => {
   cleanup();
   state.page = "tasks";
@@ -121,6 +129,32 @@ test("returning from an initial Projects URL focuses the task navigation entry",
   expect(document.activeElement).toBe(
     screen.getByRole("button", { name: "Manage projects" }),
   );
+});
+
+test("unmounts Settings on departure and focuses the task navigation entry", () => {
+  state.page = "settings";
+  const view = render(<PageOutlet />);
+  const draft = screen.getByRole("textbox", { name: "Settings draft" });
+
+  expect(document.activeElement).toBe(
+    screen.getByRole("heading", { name: "Settings" }),
+  );
+
+  state.page = "tasks";
+  view.rerender(<PageOutlet />);
+
+  expect(draft.isConnected).toBe(false);
+
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Manage projects" }),
+  );
+
+  state.page = "settings";
+  view.rerender(<PageOutlet />);
+
+  const nextDraft = screen.getByRole("textbox", { name: "Settings draft" });
+  expect(nextDraft).not.toBe(draft);
+  expect((nextDraft as HTMLInputElement).value).toBe("");
 });
 
 test("preserves return state through polling until the selected task changes", () => {

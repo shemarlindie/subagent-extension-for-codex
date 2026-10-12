@@ -41,6 +41,7 @@ export type DelegateDialogRead =
 export type DialogState =
   | { kind: "remove-project"; project: Project; scope: number }
   | { kind: "project"; repository?: string; scope: number }
+  // Settings use dialog persistence for their page form, not DialogHost.
   | { kind: "settings"; settings: SettingsDocument; scope: number }
   | {
       kind: "settings-loading";

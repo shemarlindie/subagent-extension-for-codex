@@ -1,6 +1,6 @@
 /*
- * Settings and handoff dialogs keep the maximum height; their forms fill it
- * and keep the footer at the bottom.
+ * Settings pages and handoff dialogs keep the maximum height; their forms fill
+ * it and keep the footer at the bottom.
  */
 #dialog.dialog:has(.settings-form),
 #dialog.dialog:has(.handoff-form) {
@@ -10,6 +10,24 @@
 }
 #dialog.dialog:has(.settings-form) {
   overflow: clip;
+}
+.page-frame.settings-page {
+  display: flex;
+  flex-direction: column;
+}
+.settings-page .page-frame-inner {
+  display: flex;
+  flex-direction: column;
+}
+.settings-page .page-frame-content {
+  display: flex;
+  flex: none;
+  width: 100%;
+}
+.settings-page .settings-form {
+  flex: none;
+  min-height: auto;
+  width: 100%;
 }
 .settings-form {
   container-type: inline-size;
@@ -34,6 +52,16 @@
   position: static;
   flex: none;
   margin-top: 0;
+}
+.settings-page .settings-form-body {
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+  margin-inline-end: 0;
+  padding-inline-end: 0;
+}
+.settings-form-footer {
+  padding-top: 12px;
 }
 .settings-sections-layer {
   display: flex;
@@ -137,14 +165,14 @@
 /* Asks before closing with unsaved edits. */
 .settings-discard-anchor {
   display: flow-root;
-  scroll-margin-bottom: 80px;
+  scroll-margin-block-start: 12px;
 }
 .settings-discard {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  margin: 0 0 16px;
   font-size: 12px;
 }
 .settings-discard strong {

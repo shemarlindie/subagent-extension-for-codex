@@ -1,6 +1,7 @@
 import { type ComponentType, useLayoutEffect, useRef } from "react";
 
 import { ProjectsPage } from "../../features/projects/projects-page";
+import { SettingsPage } from "../../features/settings/settings-page";
 import { useSnapshot } from "../state/controller-context";
 import { TasksPage } from "../tasks-page";
 import { type PageId, PAGES } from "./pages";
@@ -8,6 +9,7 @@ import { type PageId, PAGES } from "./pages";
 const CONTENT: Record<PageId, ComponentType> = {
   tasks: TasksPage,
   projects: ProjectsPage,
+  settings: SettingsPage,
 };
 
 /** Retained pages preserve forms and reading positions while inactive. */
@@ -53,11 +55,21 @@ export function PageOutlet() {
     if (slot && PAGES[page].keepMounted) slot.dataset.returning = "true";
 
     const opener = openers.current.get(page);
+
     if (opener?.isConnected) opener.focus();
-    else
-      root.current
-        ?.querySelector<HTMLElement>(`#${PAGES[page].entryFocusId}`)
-        ?.focus();
+    else {
+      const fallback = root.current?.querySelector<HTMLElement>(
+        `#${PAGES[page].entryFocusId}`,
+      );
+
+      (
+        fallback ??
+        (page === "tasks"
+          ? root.current?.querySelector<HTMLElement>("#settings")
+          : undefined)
+      )?.focus();
+    }
+
     previous.current = page;
   }, [page, selected]);
 

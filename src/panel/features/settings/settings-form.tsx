@@ -1,10 +1,10 @@
 import { Collapsible } from "@base-ui/react/collapsible";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { type FieldErrors, useWatch } from "react-hook-form";
 
 import { settingsSections as buildSettingsSections } from "../../../shared/settings/settings-document";
-import { useController } from "../../app/state/controller-context";
+import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
 import { SkeletonShape } from "../../shared/components/loading-skeleton/loading-skeleton";
@@ -14,7 +14,6 @@ import { Presence } from "../../shared/components/motion/motion";
 import { reducedMotion } from "../../shared/components/motion/motion-utils";
 import { Notice } from "../../shared/components/notice/notice";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
-import { FormFooter } from "../../shared/forms/form-footer";
 import {
   usePersistedDialogField,
   usePersistedDialogForm,
@@ -43,12 +42,19 @@ import {
   type SettingsSectionView,
 } from "./settings-section-accordion";
 
-type SettingsFormDialog =
+export type SettingsFormDialog =
   | Extract<DialogState, { kind: "settings" }>
   | Extract<DialogState, { kind: "settings-loading" }>;
 
+export interface SettingsSaveActionState {
+  disabled: boolean;
+  label: string;
+}
+
 interface SettingsFormProps {
   dialog: SettingsFormDialog;
+  saveActionPlacement?: "header" | "footer";
+  onSaveActionChange?: (state: SettingsSaveActionState) => void;
 }
 
 interface LoadingSettingsSectionProps extends SettingsControls {
@@ -110,20 +116,38 @@ const loadingSections = buildSettingsSections({
 });
 
 /** One settings form and accordion for both loading and loaded data. */
-export function SettingsForm({ dialog }: SettingsFormProps) {
+export function SettingsForm({
+  dialog,
+  saveActionPlacement = "footer",
+  onSaveActionChange,
+}: SettingsFormProps) {
   const controller = useController(),
+    state = useSnapshot(),
     loading = dialog.kind === "settings-loading",
     settings = loading ? undefined : dialog.settings,
     status = loading ? dialog.status : "ready",
     loadError = loading ? dialog.error : undefined,
-    sections = settings?.sections ?? [],
-    initial = sectionsForm(sections, settings?.values ?? {});
+    sections = useMemo(() => settings?.sections ?? [], [settings?.sections]),
+    initial = useMemo(
+      () => sectionsForm(sections, settings?.values ?? {}),
+      [sections, settings?.values],
+    );
 
-  const { control, register, handleSubmit, setValue } =
+  const { control, register, handleSubmit, setValue, reset } =
     usePersistedDialogForm<Values>("settings", initial, { ready: !loading });
 
+  const baseline = useRef(initial),
+    previousSettings = useRef(settings);
+
+  if (settings && previousSettings.current !== settings) {
+    baseline.current = initial;
+    previousSettings.current = settings;
+  }
+
   const form = { ...initial, ...useWatch({ control }) } as Values,
-    edits = sections.map((section) => editCount(section, form, initial)),
+    edits = sections.map((section) =>
+      editCount(section, form, baseline.current),
+    ),
     total = edits.reduce((sum, count) => sum + count, 0);
 
   const [open, setOpen] = usePersistedDialogField("settings", "openSections", [
@@ -136,6 +160,20 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
   const isLoading = status === "loading",
     isError = status === "error",
     showDiscard = !loading && discarding && total > 0;
+
+  const saveButtonDisabled = state.busy || !settings || !total,
+    saveButtonLabel = state.busy
+      ? "Working…"
+      : total
+        ? `Save ${total} ${total === 1 ? "change" : "changes"}`
+        : "Save";
+
+  useEffect(() => {
+    onSaveActionChange?.({
+      disabled: saveButtonDisabled,
+      label: saveButtonLabel,
+    });
+  }, [onSaveActionChange, saveButtonDisabled, saveButtonLabel]);
 
   useEffect(() => {
     if (!showDiscard) return;
@@ -151,7 +189,7 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
         ?.focus({ preventScroll: true });
 
       prompt.scrollIntoView({
-        block: "end",
+        block: "start",
         behavior: reducedMotion(prompt) ? "instant" : "smooth",
       });
     };
@@ -193,7 +231,7 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
     };
   }, [showDiscard]);
 
-  // Closing with unsaved edits asks first; saving closes without asking.
+  // Leaving with unsaved edits asks first; saving keeps the page open.
   const dirty = useRef(false);
   dirty.current = total > 0;
 
@@ -346,22 +384,55 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
 
   const submit = handleSubmit((submitted) => {
     if (!settings) return;
-    const set = changes(sections, submitted, initial);
+    const set = changes(sections, submitted, baseline.current);
 
-    return controller.submit(async () => {
-      if (Object.keys(set).length)
-        await controller.tool("update_agent_settings", { set });
-    });
+    return controller.submit(
+      async () => {
+        if (Object.keys(set).length)
+          await controller.tool("update_agent_settings", { set });
+      },
+      false,
+      () => {
+        baseline.current = { ...submitted };
+        reset(submitted, { keepValues: true });
+        setDiscarding(false);
+      },
+      false,
+    );
   }, showInvalid);
 
   return (
     <form
       ref={element}
+      id="settings-form"
       className="settings-form"
       noValidate
       aria-busy={isLoading || undefined}
       onSubmit={loading ? (event) => event.preventDefault() : submit}
     >
+      <Collapsible.Root open={showDiscard}>
+        <Collapsible.Panel
+          ref={discardPrompt}
+          className="settings-discard-anchor collapse-panel"
+          keepMounted
+          role={showDiscard ? "alert" : undefined}
+        >
+          <Notice className="settings-discard">
+            <strong>Discard unsaved changes?</strong>
+            <Button variant="primary" onClick={() => setDiscarding(false)}>
+              Keep editing
+            </Button>
+            <Button
+              onClick={() => {
+                controller.guardDismiss(undefined);
+                controller.backFromSettings();
+              }}
+            >
+              Discard
+            </Button>
+          </Notice>
+        </Collapsible.Panel>
+      </Collapsible.Root>
       <p
         className={`form-note form-note--first${isLoading ? " settings-loading-note" : ""}`}
       >
@@ -414,42 +485,28 @@ export function SettingsForm({ dialog }: SettingsFormProps) {
           </div>
         </Presence>
       </div>
-      <Collapsible.Root open={showDiscard}>
-        <Collapsible.Panel
-          ref={discardPrompt}
-          className="settings-discard-anchor collapse-panel"
-          keepMounted
-          role={showDiscard ? "alert" : undefined}
-        >
-          <Notice className="settings-discard">
-            <strong>Discard unsaved changes?</strong>
-            <Button variant="primary" onClick={() => setDiscarding(false)}>
-              Keep editing
-            </Button>
-            <Button
-              onClick={() => {
-                controller.guardDismiss(undefined);
-                controller.dismiss();
-              }}
-            >
-              Discard
-            </Button>
-          </Notice>
-        </Collapsible.Panel>
-      </Collapsible.Root>
-      <FormFooter
-        label={
-          total
-            ? `Save ${total} ${total === 1 ? "change" : "changes"}`
-            : "Save settings"
-        }
-        disabled={!settings || !total}
-      />
+      <Presence show={Boolean(state.formError)}>
+        <div id="form-error" className="form-error error" role="alert">
+          {state.formError}
+        </div>
+      </Presence>
+      {saveActionPlacement === "footer" && (
+        <footer className="settings-form-footer">
+          <Button
+            id="submit"
+            type="submit"
+            variant="primary"
+            disabled={saveButtonDisabled}
+          >
+            {saveButtonLabel}
+          </Button>
+        </footer>
+      )}
     </form>
   );
 }
 
-const settingsTitle = () => "Plugin settings",
+const settingsTitle = () => "Settings",
   renderSettingsDialog = (dialog: SettingsFormDialog) => (
     <SettingsForm dialog={dialog} />
   );

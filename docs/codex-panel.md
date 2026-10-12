@@ -17,7 +17,8 @@ change the conversation.
 - **Thread launch:** scopes tasks to the conversation, with a read-only project
   name/path beside **Delegated Work** in the header. The project name is bold,
   separated from the extension name by a pipe. **Settings** remains available
-  in the header. **Add chat project** is the first header action when
+  in the header and opens a full-width page with **← Tasks** to return.
+  **Add chat project** is the first header action when
   registration is needed.
 - **Global launch:** shows all conversations and offers the project selector,
   **All chats** and **Manage** to add, rename or remove saved projects. The project selector and
@@ -115,16 +116,17 @@ The service derives a title from the request. Click the inspector title to edit:
 Enter or an outside click saves, Escape cancels, and blank/failed saves stay open.
 `rename_user_agent_task` accepts a trimmed title of 1–200 characters.
 
-**Settings** uses server-defined sections and rows, supports per-section resets,
-validates budgets, and asks before discarding unsaved edits. Saving sends only
-changed fields through the app-only `update_user_agent_settings`. Permission and
-approval defaults are described in [Configuration](configuration.md).
+**Settings** opens a full-width page with **← Tasks** to return. It uses
+server-defined sections and rows, supports per-section resets, validates
+budgets, and asks before discarding unsaved edits. **Save** sits in the page
+header, keeps the page open, and sends only changed fields through the app-only
+`update_user_agent_settings`. Permission and approval defaults are described in
+[Configuration](configuration.md).
 The form and accordion appear before the settings read finishes, and the last
 open section is restored. Pending fields remain in place with a spinner; a
 dropdown whose selected value is unresolved also shows **Loading…** while
 disabled. Multiple sections can remain expanded while the read is pending.
-Opening a section scrolls it into view between the dialog heading and footer as
-space allows.
+Opening a section scrolls it into view on the Settings page.
 
 Per-task tabs, composer drafts/visibility, question answers, Chat/Activity
 reading positions and the Changes position, opened files and viewed files last

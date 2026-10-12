@@ -7,21 +7,20 @@ describe("page identity", () => {
     expect(DEFAULT_PAGE).toBe("tasks");
     expect(parsePage("tasks")).toBe("tasks");
     expect(parsePage("projects")).toBe("projects");
+    expect(parsePage("settings")).toBe("settings");
 
-    for (const value of [
-      null,
-      "",
-      "settings",
-      "Projects",
-      "constructor",
-      "__proto__",
-    ])
+    for (const value of [null, "", "Projects", "constructor", "__proto__"])
       expect(parsePage(value)).toBeUndefined();
   });
 });
 
 describe("page availability", () => {
-  const global = { connected: true, scopeKnown: true, busy: false };
+  const global = {
+    page: "tasks" as const,
+    connected: true,
+    scopeKnown: true,
+    busy: false,
+  };
 
   test("projects requires a connected, resolved global scope", () => {
     expect(canNavigate(global, "projects")).toBe(true);
@@ -37,13 +36,27 @@ describe("page availability", () => {
     }
   });
 
-  test("pending mutations and dialogs block navigation in both directions", () => {
-    for (const page of ["tasks", "projects"] as const) {
+  test("pending mutations and modal dialogs block navigation", () => {
+    for (const page of ["tasks", "projects", "settings"] as const) {
       expect(canNavigate({ ...global, busy: true }, page)).toBe(false);
 
       expect(
-        canNavigate({ ...global, dialog: { type: "settings" } }, page),
+        canNavigate({ ...global, dialog: { kind: "project" } }, page),
       ).toBe(false);
     }
+  });
+
+  test("settings page data does not block returning to tasks", () => {
+    const settings = {
+      ...global,
+      page: "settings" as const,
+      dialog: { kind: "settings" },
+    };
+
+    expect(canNavigate(settings, "tasks")).toBe(true);
+
+    expect(
+      canNavigate({ ...global, dialog: { kind: "settings" } }, "tasks"),
+    ).toBe(false);
   });
 });

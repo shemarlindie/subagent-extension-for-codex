@@ -156,16 +156,16 @@ Buttons use `<Button>` from `src/panel/shared/components/button/button.tsx`, wit
 
 Application page identity, availability and retention live in
 `src/panel/app/navigation/pages.ts`. The controller applies its navigation guard
-to user-requested page changes. Tasks are available in both chat and global scope;
-Projects requires a connected, resolved global scope. Busy work and open
-dialogs block user navigation. A host scope change into a chat still returns
-to Tasks and invalidates stale dialogs.
+to user-requested page changes. Tasks and Settings are available in chat and
+global scope; Projects requires a connected, resolved global scope. Busy work
+and open modal dialogs block user navigation. A host scope change into a chat
+returns from a global-only page to Tasks and invalidates stale dialogs.
 
 `PageOutlet` composes the registered page components. Tasks stays mounted while
 inactive to preserve drafts and reading positions; its container is hidden and
-inert. Projects unmounts on departure. The outlet remembers focused controls in
-retained pages and restores them on return. `PageFrame` provides a labeled
-full-width section, arrival heading focus, back control and actions;
+inert. Projects and Settings unmount on departure. The outlet remembers focused
+controls in retained pages and restores them on return. `PageFrame` provides a
+labeled full-width section, arrival heading focus, back control and actions;
 `BackButton` supplies the shared back-control presentation. Task detail selection
 and inspector tabs remain owned by the Tasks page rather than becoming separate
 application pages. Add project and removal confirmation remain dialogs.
@@ -200,10 +200,13 @@ The controller separates session memory from recoverable view state:
   page exit.
 - Boolean `dw_dlg_<name>=1` flags record open dialogs. Ordered descriptors and
   compatible form drafts live in local storage. The newest dialog restores
-  first. Closing or successful submission removes its descriptor and draft.
-  Server-owned data is reloaded; authentication tokens are never form drafts.
-- The last expanded Settings section is a separate browser-local preference, so
-  its matching loading section can appear as soon as the dialog opens.
+  first. Closing removes a descriptor, and successful dialog submissions do
+  the same. Settings keeps its descriptor while the page is open so its draft
+  can restore after reload; saving updates its baseline and leaves the page
+  open. Server-owned data is reloaded; authentication tokens are never form
+  drafts.
+- The last expanded Settings section is browser-local and can appear as soon
+  as the Settings page opens.
 
 Changing scope invalidates outstanding reads and closes stale dialogs. A
 submitted mutation is never repeated automatically. Collapsing the embedded

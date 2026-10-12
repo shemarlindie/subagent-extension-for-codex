@@ -7,15 +7,26 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 18px;
+  scroll-padding-block-start: 54px;
   animation: motion-slide-end var(--motion-base) var(--ease-out);
 }
+.page-frame-inner {
+  min-height: 100%;
+  padding: 0 18px 18px;
+}
 .page-frame-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   margin-bottom: 18px;
+  padding-block: 9px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  width: 100%;
   max-width: 880px;
   margin-inline: auto;
 }

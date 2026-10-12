@@ -30,7 +30,12 @@ import {
   type HandoffTarget,
 } from "../../features/tasks/controls/handoff-message";
 import { ParentMessageRelay } from "../../features/tasks/controls/parent-message-relay";
-import { canNavigate, DEFAULT_PAGE, type PageId } from "../navigation/pages";
+import {
+  canNavigate,
+  DEFAULT_PAGE,
+  type PageId,
+  PAGES,
+} from "../navigation/pages";
 import { initialState } from "./initial-state";
 import {
   persistDialog,
@@ -151,7 +156,10 @@ export class Controller {
     // Seed URL-backed controls before the first render, then validate task data on load.
     this.state = {
       ...initial,
-      page: this.restoredView.page ?? initial.page,
+      page:
+        this.persistedDialogs.at(-1)?.kind === "settings"
+          ? "settings"
+          : (this.restoredView.page ?? initial.page),
       filter: this.restoredView.filter ?? initial.filter,
       search: this.restoredView.search ?? initial.search,
       tab: this.restoredView.tab ?? initial.tab,
@@ -1247,7 +1255,9 @@ export class Controller {
     )
       this.invalidateScope({
         conversation,
-        ...(conversation ? { page: DEFAULT_PAGE } : {}),
+        ...(conversation && PAGES[this.state.page].globalOnly
+          ? { page: DEFAULT_PAGE }
+          : {}),
         repository,
         revision,
         scopeKnown: true,
@@ -1361,6 +1371,16 @@ export class Controller {
 
   navigate(page: PageId) {
     if (!canNavigate(this.state, page)) return;
+
+    if (this.state.page === "settings" && page !== "settings") {
+      if (this.dismissGuard?.() === false) return;
+      if (
+        this.state.dialog?.kind === "settings" ||
+        this.state.dialog?.kind === "settings-loading"
+      )
+        this.closeDialog();
+    }
+
     this.patch({ page, formError: "" });
   }
 
@@ -1595,7 +1615,27 @@ export class Controller {
   async settings() {
     if (this.state.dialog || this.state.busy) return;
 
+    this.navigate("settings");
+    if (this.state.page !== "settings") return;
+
     this.openSettingsLoading();
+  }
+
+  ensureSettingsLoaded() {
+    if (
+      this.state.page !== "settings" ||
+      !this.state.connected ||
+      this.state.dialog ||
+      this.state.busy
+    )
+      return;
+
+    this.openSettingsLoading();
+  }
+
+  backFromSettings() {
+    if (this.state.busy || this.state.page !== "settings") return;
+    this.navigate(DEFAULT_PAGE);
   }
 
   private openSettingsLoading() {
@@ -2079,9 +2119,10 @@ export class Controller {
     operation: () => Promise<Task | void>,
     selectReturned = false,
     afterSuccess?: () => void,
-  ) {
+    closeOnSuccess = true,
+  ): Promise<boolean> {
     const dialog = this.state.dialog;
-    if (!dialog || this.state.busy || this.disposed) return;
+    if (!dialog || this.state.busy || this.disposed) return false;
 
     // Loading forms may render before their dependencies, but cannot submit
     // until those reads have produced the values the request depends on.
@@ -2089,7 +2130,7 @@ export class Controller {
       dialog.kind === "settings-loading" ||
       dialog.kind === "delegate-loading"
     )
-      return;
+      return false;
 
     if (dialog.scope !== this.state.scopeVersion) {
       this.patch({
@@ -2097,7 +2138,7 @@ export class Controller {
           "The project or conversation changed. Close this form and reopen it in the current scope.",
       });
 
-      return;
+      return false;
     }
 
     this.patch({ busy: true, formError: "" });
@@ -2105,7 +2146,7 @@ export class Controller {
 
     try {
       const task = await operation();
-      if (this.disposed) return;
+      if (this.disposed) return false;
       if (dialog.scope !== this.state.scopeVersion)
         throw new Error(
           "The project or conversation changed while this request was in progress. Inspect its outcome in the original scope before retrying.",
@@ -2138,7 +2179,7 @@ export class Controller {
       }
 
       afterSuccess?.();
-      this.closeDialog();
+      if (closeOnSuccess) this.closeDialog();
       succeeded = true;
     } catch (error) {
       this.patch({
@@ -2152,5 +2193,7 @@ export class Controller {
       await this.refresh().catch(this.report);
       if (selectReturned) await this.share().catch(this.report);
     }
+
+    return succeeded;
   }
 }

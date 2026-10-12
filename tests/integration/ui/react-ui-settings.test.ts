@@ -13,7 +13,17 @@ import {
   waitFor,
 } from "./react-ui-test-support";
 
-test("settings dialog renders server sections and saves only changed fields", async (t) => {
+async function waitForSettingsSaved() {
+  await waitFor(() =>
+    assert.equal(
+      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
+        .disabled,
+      true,
+    ),
+  );
+}
+
+test("settings page renders server sections and saves only changed fields", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: {
@@ -70,7 +80,8 @@ test("settings dialog renders server sections and saves only changed fields", as
   );
 
   await user.click(screen.getByRole("button", { name: "Settings" }));
-  await screen.findByRole("dialog");
+  await screen.findByRole("heading", { name: "Settings" });
+  assertAbsent(screen.queryByRole("dialog"));
   assert.ok(screen.getByText("Used when a task doesn't choose its own."));
 
   // Collapsed sections summarize with the server's labels.
@@ -82,7 +93,7 @@ test("settings dialog renders server sections and saves only changed fields", as
     "All inherit",
   );
 
-  const save = screen.getByRole("button", { name: "Save settings" });
+  const save = screen.getByRole("button", { name: "Save" });
   assert.equal((save as HTMLButtonElement).disabled, true);
   await user.click(screen.getByRole("switch", { name: "Allow subagents" }));
   await user.click(screen.getByRole("switch", { name: "Cost limit" }));
@@ -113,7 +124,8 @@ test("settings dialog renders server sections and saves only changed fields", as
   );
 
   await user.click(screen.getByRole("button", { name: "Save 3 changes" }));
-  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  await waitForSettingsSaved();
+  assert.ok(screen.getByRole("heading", { name: "Settings" }));
 
   assert.deepEqual(
     transport.calls.find((call) => call.name === "update_agent_settings")!.args,
@@ -128,7 +140,68 @@ test("settings dialog renders server sections and saves only changed fields", as
   );
 });
 
-test("settings dialog validates hidden budgets, types uncatalogued models, and flags unsupported effort", async (t) => {
+test("settings edits made during a save remain as unsaved changes", async (t) => {
+  const { transport, user } = await setup(t, (transport) =>
+    serveSettings(transport, {
+      values: { claude_subagents: true, max_cost_usd: null },
+      sections: [
+        {
+          id: "task",
+          title: "Task",
+          rows: [
+            {
+              kind: "switch",
+              key: "claude_subagents",
+              label: "Allow subagents",
+            },
+            budgetRow,
+          ],
+        },
+      ],
+    }),
+  );
+
+  let releaseUpdate!: () => void;
+
+  const updateGate = new Promise<void>((resolve) => {
+    releaseUpdate = resolve;
+  });
+
+  t.onTestFinished(() => releaseUpdate());
+
+  const original = transport.tool.bind(transport);
+
+  transport.tool = async <T>(name: string, args = {}) => {
+    const result = await original<T>(name, args);
+    if (name === "update_agent_settings") await updateGate;
+
+    return result;
+  };
+
+  await user.click(screen.getByRole("button", { name: "Settings" }));
+  await screen.findByRole("heading", { name: "Settings" });
+  await user.click(screen.getByRole("switch", { name: "Allow subagents" }));
+  await user.click(screen.getByRole("button", { name: "Save 1 change" }));
+  await screen.findByRole("button", { name: "Working…" });
+
+  await user.click(screen.getByRole("switch", { name: "Cost limit" }));
+  releaseUpdate();
+
+  await screen.findByRole("button", { name: "Save 1 change" });
+
+  expect(
+    screen
+      .getByRole("switch", { name: "Cost limit" })
+      .getAttribute("aria-checked"),
+  ).toBe("true");
+
+  assert.deepEqual(
+    transport.calls.find((call) => call.name === "update_agent_settings")?.args,
+    { set: { claude_subagents: false } },
+  );
+});
+
+test("settings validates hidden budgets, types uncatalogued models, and flags unsupported effort", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: {
@@ -163,7 +236,7 @@ test("settings dialog validates hidden budgets, types uncatalogued models, and f
   );
 
   await user.click(screen.getByRole("button", { name: "Settings" }));
-  await screen.findByRole("dialog");
+  await screen.findByRole("heading", { name: "Settings" });
 
   // An off limit keeps its amount visible but prevents edits.
   const amount = screen.getByRole("spinbutton", { name: "Cost limit (USD)" });
@@ -175,7 +248,7 @@ test("settings dialog validates hidden budgets, types uncatalogued models, and f
   assert.equal((amount as HTMLInputElement).value, savedAmount);
 
   assert.equal(
-    (screen.getByRole("button", { name: "Save settings" }) as HTMLButtonElement)
+    (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
       .disabled,
     true,
   );
@@ -244,7 +317,7 @@ test("settings dialog validates hidden budgets, types uncatalogued models, and f
 
   await user.type(amount, "8");
   await user.click(screen.getByRole("button", { name: "Save 2 changes" }));
-  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  await waitForSettingsSaved();
 
   assert.deepEqual(
     transport.calls.find((call) => call.name === "update_agent_settings")!.args,
@@ -258,7 +331,7 @@ test("settings dialog validates hidden budgets, types uncatalogued models, and f
   );
 });
 
-test("settings explain invalid disabled budgets and let the user restore editing", async (t) => {
+test("settings explains invalid disabled budgets and lets the user restore editing", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: { max_cost_usd: 5 },
@@ -267,7 +340,7 @@ test("settings explain invalid disabled budgets and let the user restore editing
   );
 
   await user.click(screen.getByRole("button", { name: "Settings" }));
-  await screen.findByRole("dialog");
+  await screen.findByRole("heading", { name: "Settings" });
 
   const amount = screen.getByRole("spinbutton", { name: "Cost limit (USD)" }),
     toggle = screen.getByRole("switch", { name: "Cost limit" });
@@ -290,7 +363,7 @@ test("settings explain invalid disabled budgets and let the user restore editing
   await user.type(amount, "8");
   await user.click(toggle);
   await user.click(screen.getByRole("button", { name: "Save 1 change" }));
-  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  await waitForSettingsSaved();
 
   assert.deepEqual(
     transport.calls.find((call) => call.name === "update_agent_settings")!.args,
@@ -330,7 +403,7 @@ test("settings help links show the setting they name, except within their own se
   );
 
   await user.click(screen.getByRole("button", { name: "Settings" }));
-  await screen.findByRole("dialog");
+  await screen.findByRole("heading", { name: "Settings" });
 
   const expanded = (name: RegExp) =>
     screen.getByRole("button", { name }).getAttribute("aria-expanded");
@@ -396,7 +469,7 @@ test("settings resets restore defaults only per section", async (t) => {
   );
 
   await user.click(screen.getByRole("button", { name: "Settings" }));
-  await screen.findByRole("dialog");
+  await screen.findByRole("heading", { name: "Settings" });
   const subagents = screen.getByRole("switch", { name: "Allow subagents" });
 
   // Resetting Task must preserve another section's saved override and draft.
@@ -430,7 +503,7 @@ test("settings resets restore defaults only per section", async (t) => {
   );
 
   await user.click(screen.getByRole("button", { name: "Save 3 changes" }));
-  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  await waitForSettingsSaved();
 
   assert.deepEqual(
     transport.calls.find((call) => call.name === "update_agent_settings")!.args,
@@ -445,7 +518,7 @@ test("settings resets restore defaults only per section", async (t) => {
   );
 });
 
-test("closing settings with unsaved edits asks before discarding them", async (t) => {
+test("leaving settings with unsaved edits asks before discarding them", async (t) => {
   const originalMatchMedia = Object.getOwnPropertyDescriptor(
     window,
     "matchMedia",
@@ -520,18 +593,19 @@ test("closing settings with unsaved edits asks before discarding them", async (t
   );
 
   await user.click(screen.getByRole("button", { name: "Settings" }));
-  await screen.findByRole("dialog");
+  await screen.findByRole("heading", { name: "Settings" });
+  assertAbsent(screen.queryByRole("dialog"));
 
-  // Without edits, Cancel closes at once.
-  await user.click(screen.getByRole("button", { name: "Cancel" }));
-  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  // Without edits, the back button returns to Tasks immediately.
+  await user.click(screen.getByRole("button", { name: "Tasks" }));
+  await screen.findByRole("button", { name: "Settings" });
 
   await user.click(screen.getByRole("button", { name: "Settings" }));
-  await screen.findByRole("dialog");
+  await screen.findByRole("heading", { name: "Settings" });
   await user.click(screen.getByRole("switch", { name: "Allow subagents" }));
 
-  // Cancel and Escape both ask first; keeping edits leaves them in place.
-  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  // Returning to Tasks asks first; keeping edits leaves them in place.
+  await user.click(screen.getByRole("button", { name: "Tasks" }));
 
   const assertPromptVisible = (behavior: ScrollBehavior = "smooth") => {
     const prompt = screen.getByText("Discard unsaved changes?"),
@@ -545,7 +619,7 @@ test("closing settings with unsaved edits asks before discarding them", async (t
     );
 
     expect(scrolls.at(-1)?.element).toBe(anchor);
-    assert.deepEqual(scrolls.at(-1)?.options, { block: "end", behavior });
+    assert.deepEqual(scrolls.at(-1)?.options, { block: "start", behavior });
   };
 
   assertPromptVisible();
@@ -561,25 +635,24 @@ test("closing settings with unsaved edits asks before discarding them", async (t
 
   assert.ok(screen.getByRole("button", { name: "Save 1 change" }));
 
-  await user.keyboard("{Escape}");
-  assert.ok(screen.getByRole("dialog"));
+  await user.click(screen.getByRole("button", { name: "Tasks" }));
   assertPromptVisible();
   assert.equal(scrolls.length, 2);
   await user.click(screen.getByRole("button", { name: "Keep editing" }));
   prefersReducedMotion = true;
-  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  await user.click(screen.getByRole("button", { name: "Tasks" }));
   assertPromptVisible("instant");
   assert.equal(scrolls.length, 3);
   await user.click(screen.getByRole("button", { name: "Keep editing" }));
   prefersReducedMotion = false;
-  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "Tasks" }));
   assertPromptVisible();
   assert.equal(scrolls.length, 4);
   await user.click(screen.getByRole("button", { name: "Discard" }));
-  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+  await screen.findByRole("button", { name: "Settings" });
 
   await user.click(screen.getByRole("button", { name: "Settings" }));
-  await screen.findByRole("dialog");
+  await screen.findByRole("heading", { name: "Settings" });
 
   assert.equal(
     screen
@@ -589,7 +662,7 @@ test("closing settings with unsaved edits asks before discarding them", async (t
   );
 
   assert.equal(
-    (screen.getByRole("button", { name: "Save settings" }) as HTMLButtonElement)
+    (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
       .disabled,
     true,
   );
