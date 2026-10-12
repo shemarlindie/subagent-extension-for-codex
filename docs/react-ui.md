@@ -62,12 +62,12 @@ Animations that run while the activity timeline measures positions change only o
 
 Show feedback in the first render that knows a read is pending. Keep stable
 shells and known navigation visible, including tab labels and selection. Keep
-labels and values that do not depend on the pending read; use a feature-shaped
-skeleton for a data-dependent view when its record is not available yet. Keep
-still-valid content visible and show progress beside it. Skeleton layouts
-belong to their feature: match the expected content's structure and size, and
-compose shared `SkeletonShape` blocks instead of sharing one layout across
-unrelated views.
+labels and values that do not depend on the pending read. Use a feature-shaped
+skeleton when the expected structure is known. For content with widely varying
+layouts, such as file previews, use a centered spinner. Keep still-valid content
+visible and show progress beside it. Skeleton layouts belong to their feature:
+match the expected content's structure and size, and compose shared
+`SkeletonShape` blocks instead of sharing one layout across unrelated views.
 
 Use the text-height helpers by default for placeholders that stand in for text.
 `measureText` is the shorthand for one placeholder; it wraps the shape in a

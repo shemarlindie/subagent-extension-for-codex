@@ -8,7 +8,6 @@ import { expect, onTestFinished, test, vi } from "vitest";
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
 import type { Task, Transport } from "../../app/state/types";
-import { LOADING_SKELETON_CONFIG } from "../../shared/components/loading-skeleton/loading-skeleton-config";
 import { changedFileDialog, ChangedFilePreview } from "./changed-file-preview";
 import type { ChangedFileContent, Changes } from "./types";
 
@@ -334,85 +333,76 @@ test("global mode omits the file handoff from the preview toolbar", async () => 
 });
 
 test("does not reuse another task's preview when the path matches", async () => {
-  vi.useFakeTimers();
+  let resolveFirst!: (file: ChangedFileContent) => void,
+    resolveSecond!: (file: ChangedFileContent) => void;
 
-  try {
-    let resolveFirst!: (file: ChangedFileContent) => void,
-      resolveSecond!: (file: ChangedFileContent) => void;
+  const reads = new Map([
+    [
+      "task-a",
+      new Promise<ChangedFileContent>((resolve) => (resolveFirst = resolve)),
+    ],
+    [
+      "task-b",
+      new Promise<ChangedFileContent>((resolve) => (resolveSecond = resolve)),
+    ],
+  ]);
 
-    const reads = new Map([
-      [
-        "task-a",
-        new Promise<ChangedFileContent>((resolve) => (resolveFirst = resolve)),
-      ],
-      [
-        "task-b",
-        new Promise<ChangedFileContent>((resolve) => (resolveSecond = resolve)),
-      ],
-    ]);
+  const controller = new Controller(
+    {
+      embedded: true,
+      async tool<T>(_name: string, args: Record<string, unknown>) {
+        return (await reads.get(String(args.task_id))) as T;
+      },
+      dispose() {},
+    } as unknown as Transport,
+    { hidden: () => false, wide: () => false },
+  );
 
-    const controller = new Controller(
-      {
-        embedded: true,
-        async tool<T>(_name: string, args: Record<string, unknown>) {
-          return (await reads.get(String(args.task_id))) as T;
-        },
-        dispose() {},
-      } as unknown as Transport,
-      { hidden: () => false, wide: () => false },
-    );
+  onTestFinished(cleanup);
+  onTestFinished(() => controller.dispose());
 
-    onTestFinished(cleanup);
-    onTestFinished(() => controller.dispose());
+  const panel = (id: string) => (
+    <ControllerContext.Provider value={controller}>
+      <ChangedFilePreview task={{ ...task, id }} path="src/shared.txt" />
+    </ControllerContext.Provider>
+  );
 
-    const panel = (id: string) => (
-      <ControllerContext.Provider value={controller}>
-        <ChangedFilePreview task={{ ...task, id }} path="src/shared.txt" />
-      </ControllerContext.Provider>
-    );
+  const view = render(panel("task-a"));
 
-    const view = render(panel("task-a"));
+  await act(async () =>
+    resolveFirst({
+      path: "src/shared.txt",
+      state: "present",
+      size: 15,
+      content: "Task A content",
+    }),
+  );
 
-    await act(async () =>
-      resolveFirst({
-        path: "src/shared.txt",
-        state: "present",
-        size: 15,
-        content: "Task A content",
-      }),
-    );
+  expect(view.container.textContent).toContain("Task A content");
 
-    expect(view.container.textContent).toContain("Task A content");
+  view.rerender(panel("task-b"));
 
-    view.rerender(panel("task-b"));
+  expect(
+    view.getByRole("status", { name: "Loading file preview" }),
+  ).toBeTruthy();
 
-    await act(async () =>
-      vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay),
-    );
+  expect(view.container.querySelector(".loading-spinner")).not.toBeNull();
+  expect(view.container.querySelector(".skeleton-shape")).toBeNull();
 
-    expect(
-      view.getByRole("status", { name: "Loading file preview" }),
-    ).toBeTruthy();
+  expect(view.container.textContent).not.toContain("Task A content");
 
-    expect(
-      view.container
-        .querySelector(".loading-swap-content")
-        ?.getAttribute("aria-hidden"),
-    ).toBe("true");
+  await act(async () =>
+    resolveSecond({
+      path: "src/shared.txt",
+      state: "present",
+      size: 15,
+      content: "Task B content",
+    }),
+  );
 
-    expect(view.container.textContent).not.toContain("Task A content");
+  expect(view.container.textContent).toContain("Task B content");
 
-    await act(async () =>
-      resolveSecond({
-        path: "src/shared.txt",
-        state: "present",
-        size: 15,
-        content: "Task B content",
-      }),
-    );
-
-    expect(view.container.textContent).toContain("Task B content");
-  } finally {
-    vi.useRealTimers();
-  }
+  expect(
+    view.queryByRole("status", { name: "Loading file preview" }),
+  ).toBeNull();
 });

@@ -255,7 +255,7 @@ Committed work stays in Git history. **Whole task** is the default; **This turn*
 appears after multiple turns.
 First reads show file-card skeletons with headers, stats, actions and
 line-numbered diff rows, and Details shimmers its change summary until the totals
-arrive. Opening a changed file shows a format-shaped preview skeleton until its
+arrive. Opening a changed file shows a centered loading spinner until its
 first read finishes. When moving between files, the current preview stays visible
 with loading progress until the next file replaces it.
 

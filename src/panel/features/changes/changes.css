@@ -425,6 +425,7 @@ body[data-expanded-panel="true"]
  */
 .changed-file-preview {
   container-type: inline-size;
+  flex: none;
 }
 .changed-file-preview .file-preview-toolbar {
   display: grid;
@@ -450,8 +451,9 @@ body[data-expanded-panel="true"]
   justify-self: end;
   align-items: center;
 }
-.changed-file-loading-swap {
-  min-width: 0;
+.changed-file-preview[data-initial-loading] {
+  display: grid;
+  flex: 1;
 }
 @container (max-width: 640px) {
   .changed-file-preview .file-preview-toolbar {
