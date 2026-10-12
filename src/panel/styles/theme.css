@@ -106,8 +106,8 @@
   --hover: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
   --danger: var(--color-text-danger);
   --success: var(--color-text-success);
-  /* Keep the extension accent aligned with Codex's primary ring color. */
-  --accent: var(--color-ring-primary);
+  /* Use Codex's opaque info color so the accent stays solid in dark mode. */
+  --accent: var(--color-text-info);
   --warn: #925e17;
   --status-paused: var(--warn);
   --radius: 8px;

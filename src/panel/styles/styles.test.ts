@@ -44,9 +44,9 @@ test("theme accent and success states follow their host color tokens", () => {
     "utf8",
   );
 
-  assert.match(theme, /--accent:\s*var\(--color-ring-primary\);/);
+  assert.match(theme, /--accent:\s*var\(--color-text-info\);/);
   assert.match(theme, /--success:\s*var\(--color-text-success\);/);
-  assert.match(base, /--focus-ring:[^;]*var\(--accent\)/s);
+  assert.match(base, /--focus-ring:[^;]*var\(--color-ring-primary\)/s);
 
   const assertRuleUsesSuccess = (
     styles: string,

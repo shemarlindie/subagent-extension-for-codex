@@ -44,6 +44,9 @@ textarea:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 0;
 }
+button.primary:focus-visible {
+  outline-offset: 2px;
+}
 [hidden] {
   display: none !important;
 }

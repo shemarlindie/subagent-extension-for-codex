@@ -192,6 +192,9 @@ body[data-expanded-panel="true"]
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.chat-message[data-from="user"] .chat-bubble {
+  background: color-mix(in oklab, var(--text) 5%, transparent);
+}
 .chat-message[data-from="parent"] .chat-bubble {
   border: 1px dashed var(--line);
   background: transparent;

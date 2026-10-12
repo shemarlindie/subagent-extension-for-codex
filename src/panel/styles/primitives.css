@@ -1,7 +1,7 @@
 /* Shared React/Base UI structure: toolbar, tooltips, dialogs and tab details. */
 :root {
-  /* A quiet ring: visible to keyboard users without shouting. */
-  --focus-ring: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  /* Use Codex's primary ring token for focus indicators. */
+  --focus-ring: 1px solid var(--color-ring-primary);
 }
 /* Custom thumbs disappear on idle without changing the scrollbar's width. */
 * {
