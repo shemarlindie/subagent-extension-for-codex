@@ -9,7 +9,7 @@ import { isAbsolute, join, win32 } from "node:path";
  * whenever the SDK version changes.
  */
 export const claudeCliSupport = {
-  sdk: "0.3.293",
+  sdk: "0.3.296",
   minimum: "2.1.285",
 } as const;
 

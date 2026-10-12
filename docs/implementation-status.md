@@ -18,7 +18,7 @@ Tests establish local behavior, not successful deployment in every host. Run the
 
 ## Recorded native execution
 
-[Live verification evidence](live-claude-verification.json) records authenticated runs from **October 7, 2026**, using Agent SDK **0.3.289**. The current checkout qualifies its installed CLI range against SDK **0.3.293**; the recording does not certify that later SDK version.
+[Live verification evidence](live-claude-verification.json) records authenticated runs from **October 7, 2026**, using Agent SDK **0.3.289**. The current checkout records SDK **0.3.296** as its CLI qualification baseline; the recording does not certify that later SDK version.
 
 The recording covers read-only execution, an opt-in Bash sandbox, resuming the same session after reopening the control plane, execution/reply retrieval through the stdio MCP proxy, cost-threshold failure, and CLI parity with a project skill, MCP server, subagent and hook. Credentials and account details were not recorded. Synthetic and recorded preview fixtures provide additional conversation coverage; they are not a new authenticated run.
 
