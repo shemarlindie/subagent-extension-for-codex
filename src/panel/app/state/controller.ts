@@ -355,6 +355,46 @@ export class Controller {
     void this.restorePersistedDialog(this.state.tasks, this.state.scopeVersion);
   }
 
+  /** The task a wide or scoped panel opens when nothing is chosen, unless the user is browsing. */
+  private defaultSelection(tasks: Task[]) {
+    const { conversation, repository } = this.state;
+
+    if (
+      this.browsing ||
+      !tasks.length ||
+      !(this.environment.wide() || conversation || repository)
+    )
+      return undefined;
+
+    return (
+      tasks.find((task) => task.pending_input)?.id ??
+      tasks.find((task) => !terminal(task))?.id ??
+      tasks[0].id
+    );
+  }
+
+  /** Keeps a selection the list still contains; otherwise falls back to the default task. */
+  private fallbackSelection(tasks: Task[]): Partial<Snapshot> {
+    const current = this.state.selected;
+    if (current && tasks.some((task) => task.id === current)) return {};
+
+    if (current) {
+      this.reconcileShare = true;
+      this.explicitSelection = false;
+      this.generation++;
+    }
+
+    const selected = this.defaultSelection(tasks);
+    if (!current && !selected) return {};
+
+    return {
+      selected,
+      ...(selected ? { tab: this.session.get("task", selected).tab } : {}),
+      chatHistoryLoading: selected,
+      activityHistoryLoading: selected,
+    };
+  }
+
   report = (error: unknown) => {
     if (!this.disposed)
       this.patch({
@@ -756,18 +796,11 @@ export class Controller {
         this.browsing = true;
       }
 
-      if (
-        !selected &&
-        !this.browsing &&
-        tasks.length &&
-        (this.environment.wide() || conversation || repository)
-      ) {
-        selected =
-          tasks.find((task) => task.pending_input)?.id ??
-          tasks.find((task) => !terminal(task))?.id ??
-          tasks[0].id;
+      if (!selected) {
+        selected = this.defaultSelection(tasks);
 
-        if (!preserveCurrentTab) tab = this.session.get("task", selected).tab;
+        if (selected && !preserveCurrentTab)
+          tab = this.session.get("task", selected).tab;
       }
 
       // Don't replace URL choices with defaults until their project and task resolve.
@@ -1272,6 +1305,14 @@ export class Controller {
         data?.panel_project_candidate?.auto_register === true,
     });
 
+    const restoredTaskView =
+      this.restoredView?.selected || this.restoredView?.browsing;
+
+    const hostTaskId =
+      typeof data?.panel_selection?.task_id === "string" && !restoredTaskView
+        ? data.panel_selection.task_id
+        : undefined;
+
     if (Array.isArray(data?.tasks)) {
       const tasks = data.tasks.filter(
         (task) =>
@@ -1279,17 +1320,18 @@ export class Controller {
           (!repository || task.repository === repository),
       );
 
-      this.patch({ tasks, taskListLoading: false });
+      // Opening data carries the full list, so select now as the refresh would
+      // rather than showing the empty inspector until that read returns.
+      this.patch({
+        tasks,
+        taskListLoading: false,
+        ...(hostTaskId ? {} : this.fallbackSelection(tasks)),
+      });
     }
 
-    const restoredTaskView =
-      this.restoredView?.selected || this.restoredView?.browsing;
-
-    if (
-      typeof data?.panel_selection?.task_id === "string" &&
-      !restoredTaskView
-    ) {
-      const taskId = data.panel_selection.task_id;
+    if (hostTaskId) {
+      const taskId = hostTaskId,
+        hostTab = data?.panel_selection?.tab as Tab;
 
       const preserveCurrentTab =
         taskId === this.state.selected &&
@@ -1298,9 +1340,9 @@ export class Controller {
       const tab = preserveCurrentTab
         ? this.state.tab
         : (["chat", "changes", "activity", "details"] as const).includes(
-              data.panel_selection.tab as Tab,
+              hostTab,
             )
-          ? (data.panel_selection.tab as Tab)
+          ? hostTab
           : this.session.get("task", taskId).tab;
 
       ++this.generation;

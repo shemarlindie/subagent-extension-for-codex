@@ -228,3 +228,66 @@ test("Failed filter shows failed, interrupted and live-failed tasks only", async
     ["failed", "interrupted", "live-failed"],
   );
 });
+
+test("opening data selects the default task before the task-list read returns", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+
+  const listRead = deferred<Task[]>();
+
+  transport.handler = (name) =>
+    name === "list_agent_tasks" ? listRead.promise : undefined;
+
+  const done: Task = {
+      ...task("done", "/repo/a", "chat"),
+      status: "completed",
+    },
+    waiting: Task = {
+      ...task("waiting", "/repo/a", "chat"),
+      pending_input: { id: "q", tool: "ask", kind: "question", input: {} },
+    };
+
+  transport.tasks = [done, waiting];
+  void controller.start();
+  await flush();
+
+  transport.events.scope({
+    panel_scope: { conversation_id: "chat" },
+    tasks: [done, waiting],
+  });
+
+  const snapshot = controller.getSnapshot();
+  assert.equal(snapshot.taskListLoading, false);
+  assert.equal(snapshot.selected, "waiting");
+  assert.equal(snapshot.chatHistoryLoading, "waiting");
+
+  listRead.resolve([done, waiting]);
+  await flush();
+  assert.equal(controller.getSnapshot().selected, "waiting");
+});
+
+test("opening data defers to the host selection and to narrow unscoped panels", (t) => {
+  const hosted = setup(true);
+  t.onTestFinished(() => hosted.controller.dispose());
+
+  hosted.controller.applyScope(
+    {
+      panel_scope: { conversation_id: "chat" },
+      tasks: [task("a", "/repo/a", "chat"), task("b", "/repo/a", "chat")],
+      panel_selection: { task_id: "b" },
+    },
+    false,
+  );
+
+  assert.equal(hosted.controller.getSnapshot().selected, "b");
+
+  const narrow = setup();
+  t.onTestFinished(() => narrow.controller.dispose());
+
+  narrow.controller.applyScope(
+    { panel_scope: { conversation_id: null }, tasks: [task("a")] },
+    false,
+  );
+
+  assert.equal(narrow.controller.getSnapshot().selected, undefined);
+});
