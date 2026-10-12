@@ -3,7 +3,7 @@
 ## Essential reading
 
 - Read the [README overview and task behavior](README.md) to understand the product.
-- Before implementation or design work, read [Architecture](docs/architecture.md) for ownership and system boundaries.
+- Before choosing an approach for design or any implementation work—including creating, extending, fixing and refactoring—inspect the relevant existing code and instructions, and read [Architecture](docs/architecture.md) and the matching guides below for ownership and system boundaries.
 - Before changing code, read the relevant [development workflow](docs/development.md#choosing-a-development-tool) and [checks](docs/development.md#checks). Read setup instructions only when running or configuring the project.
 
 ## Read when relevant
@@ -23,11 +23,12 @@ Read the matching guide's relevant sections before working in an area; unrelated
 
 ## Validation
 
-- Match checks to the change and prefer focused checks during iteration. You may skip or defer expensive checks when their runtime outweighs the confidence they add; report what was skipped and why.
+- Validate the resulting behavior and relevant architectural boundaries. Match checks to the change and prefer focused checks during iteration. You may skip or defer expensive checks when their runtime outweighs the confidence they add; report what was skipped and why.
 - Before committing, run the relevant formatting, lint, type, test, build and browser checks against the final changes being committed. Unrelated checks do not need to run.
 - Format changed files with `npx eslint --fix <files> && npx prettier --write <files>`. ESLint enforces blank-line layout.
 - Unit tests time out after 15 seconds, and only `tests/integration` gets longer. Compare DOM nodes with `expect`, never `assert.deepEqual`; see [Checks](docs/development.md#checks).
 - Before running HTTP integration suites, ensure the sandbox permits localhost TCP listeners (`127.0.0.1`); request escalation up front if needed. CI runners need the same access. Do not skip these tests because listener binding is denied.
+- Update affected documentation and report meaningful design decisions, intentional differences from established patterns, and remaining concerns in proportion to the change.
 
 ### Browser checks
 
@@ -47,9 +48,11 @@ Check in the browser when a change is large, when seeing it would help, or when 
 
 ## Component and change conventions
 
+- Keep responsibility boundaries clear, modules cohesive, state and lifecycle ownership appropriate, and dependency direction consistent. Follow established patterns when suitable. Address architectural weaknesses introduced or directly affected by the change; leave broader improvements as recommendations outside the task's scope.
 - Organize modules around feature ownership and reasons to change. Keep feature logic, types, UI and styles together; group subfolders by responsibility rather than file type. Put UI domain logic in `src/panel/features` and reusable generic helpers in `src/panel/shared/utils`. Keep browser-safe contracts and domain functions used by both runtimes in feature-scoped `src/shared` modules; these must not import service execution or panel rendering. Keep application composition and state in `src/panel/app/state`. Limit panel shared code to stable cross-feature concepts and platform integrations.
 - Keep focused tests beside their owning modules; reserve integration suites for behavior that crosses feature, process, host, or environment boundaries.
-- Keep components focused on rendering; extract reusable helpers into their owning modules. Split oversized files by responsibility and keep one React component per file unless splitting adds needless indirection. Use kebab-case component filenames.
+- Reuse existing components, logic, styles and infrastructure where responsibilities align; preserve distinct behavior and presentation where the domain requires them. Introduce abstractions when they simplify ownership and maintenance without excessive configuration or coupling.
+- Prefer the simplest code that achieves the required behavior; remove unnecessary duplication, obsolete code and needless indirection within the affected area. Keep components and utilities small and focused, with components responsible for rendering and reusable helpers in their owning modules. Split files by responsibility without needless fragmentation, normally keeping one React component per file. Use kebab-case component filenames.
 - Prefer named prop and state types over inline object types.
 - Name components for their actual scope. Use a generic name only when the component and its styling are genuinely reusable; use a domain-specific name when behavior or styling is domain-specific.
 - Keep large collapsed sections lightweight: unmount expensive child rows while closed, and show a loader when asynchronous or deferred rendering needs feedback.
