@@ -1,5 +1,5 @@
 import { Icon } from "../icons/icons";
-import { Presence } from "../motion/motion";
+import { Presence } from "../motion/presence";
 
 type ScrollLatestDirection = "up" | "down";
 

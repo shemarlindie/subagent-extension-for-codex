@@ -10,11 +10,9 @@ import { useSessionState } from "../../../../app/state/session/use-session-state
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
 import { Icon } from "../../../../shared/components/icons/icons";
-import {
-  useAnimatedHeight,
-  useListMotion,
-} from "../../../../shared/components/motion/motion";
 import { MOTION } from "../../../../shared/components/motion/motion-utils";
+import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
+import { useListMotion } from "../../../../shared/components/motion/use-list-motion";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { FormFieldError } from "../../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../../shared/forms/form-field-hint";

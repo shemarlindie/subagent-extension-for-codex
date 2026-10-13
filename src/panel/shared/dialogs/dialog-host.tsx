@@ -7,7 +7,7 @@ import { useLayoutEffect, useRef } from "react";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { buttonClass } from "../components/button/button";
-import { useAnimatedHeight } from "../components/motion/motion";
+import { useAnimatedHeight } from "../components/motion/use-animated-height";
 import { dialogDefinition } from "./dialog-registry";
 
 function isSettingsPageDialog(

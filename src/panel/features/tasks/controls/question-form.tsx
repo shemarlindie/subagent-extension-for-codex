@@ -27,7 +27,7 @@ import type {
 } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
-import { Presence } from "../../../shared/components/motion/motion";
+import { Presence } from "../../../shared/components/motion/presence";
 import { questionAnswers } from "./question-answers";
 
 // Cards further back than this stay hidden so the stack reads as a stack, not a pile.

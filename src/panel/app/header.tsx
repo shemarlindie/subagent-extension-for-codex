@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { ProjectScope } from "../features/projects/project-scope";
 import { Button, buttonClass } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
-import { MotionContent } from "../shared/components/motion/motion";
+import { MotionContent } from "../shared/components/motion/motion-content";
 import { canAnimate, MOTION } from "../shared/components/motion/motion-utils";
 import { TooltipWrapper } from "../shared/components/tooltip";
 import { useController, useSnapshot } from "./state/controller-context";

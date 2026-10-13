@@ -7,7 +7,7 @@ import {
 import { pendingQuestions } from "../../../../app/state/selectors";
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
-import { Presence } from "../../../../shared/components/motion/motion";
+import { Presence } from "../../../../shared/components/motion/presence";
 import {
   Notice,
   NoticeText,

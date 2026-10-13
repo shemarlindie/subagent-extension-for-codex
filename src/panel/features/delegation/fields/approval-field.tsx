@@ -2,7 +2,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../../shared/providers/metadata";
 import type { Worker } from "../../../app/state/types";
-import { Presence } from "../../../shared/components/motion/motion";
+import { Presence } from "../../../shared/components/motion/presence";
 import { Field } from "../../../shared/forms/fields";
 import { FormSelect } from "../../../shared/forms/form-select";
 import type { DelegateValues } from "../delegate-values";

@@ -8,10 +8,8 @@ import {
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
 import { Icon } from "../../../../shared/components/icons/icons";
-import {
-  Presence,
-  useAnimatedHeight,
-} from "../../../../shared/components/motion/motion";
+import { Presence } from "../../../../shared/components/motion/presence";
+import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 
 type QueuedMessageRowProps = {

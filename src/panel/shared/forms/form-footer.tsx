@@ -2,7 +2,7 @@ import { Dialog } from "@base-ui/react/dialog";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Button } from "../components/button/button";
-import { Presence } from "../components/motion/motion";
+import { Presence } from "../components/motion/presence";
 
 interface FormFooterProps {
   label: string;

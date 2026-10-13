@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { LoadingSpinner } from "../components/loading-spinner/loading-spinner";
-import { Presence } from "../components/motion/motion";
+import { Presence } from "../components/motion/presence";
 
 interface AsyncControlProps {
   loading: boolean;

@@ -7,8 +7,8 @@ import { settingsSections as buildSettingsSections } from "../../../shared/setti
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
-import { Presence } from "../../shared/components/motion/motion";
 import { reducedMotion } from "../../shared/components/motion/motion-utils";
+import { Presence } from "../../shared/components/motion/presence";
 import { Notice } from "../../shared/components/notice/notice";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import {

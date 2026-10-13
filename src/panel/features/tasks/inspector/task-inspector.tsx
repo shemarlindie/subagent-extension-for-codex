@@ -7,7 +7,7 @@ import {
 import { profileLabel, selectedTask } from "../../../app/state/selectors";
 import { Icon } from "../../../shared/components/icons/icons";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
-import { MotionContent } from "../../../shared/components/motion/motion";
+import { MotionContent } from "../../../shared/components/motion/motion-content";
 import { BackButton } from "../../../shared/components/navigation/back-button";
 import { Notice } from "../../../shared/components/notice/notice";
 import { projectApproved } from "../../projects/selectors";

@@ -7,7 +7,7 @@ import {
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
-import { Presence } from "../../../../shared/components/motion/motion";
+import { Presence } from "../../../../shared/components/motion/presence";
 import { QueuedMessageRow } from "./queued-message-row";
 
 type MessageQueueProps = { task: Task };

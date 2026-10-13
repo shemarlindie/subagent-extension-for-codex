@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 
-import {
-  MotionContent,
-  Presence,
-} from "../../../shared/components/motion/motion";
+import { MotionContent } from "../../../shared/components/motion/motion-content";
+import { Presence } from "../../../shared/components/motion/presence";
 import { formatCount } from "../../../shared/utils/format";
 
 interface TabLabelProps {

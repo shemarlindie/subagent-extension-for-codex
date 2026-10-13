@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 import { LoginForm } from "../features/auth/login-form";
 import { InlinePreview } from "../features/tasks/list/inline-preview";
-import { Presence } from "../shared/components/motion/motion";
+import { Presence } from "../shared/components/motion/presence";
 import { DialogHost } from "../shared/dialogs/dialog-host";
 import { trackIdleScrollbars } from "../shared/utils/idle-scrollbars";
 import { PageOutlet } from "./navigation/page-outlet";

@@ -1,7 +1,7 @@
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
 import { Button } from "../button/button";
-import { useAnimatedHeight } from "../motion/motion";
+import { useAnimatedHeight } from "../motion/use-animated-height";
 
 /** Colors the notice's left bar; `warning` is the default and `plain` has no accent. */
 type NoticeTone = "warning" | "error" | "info" | "plain";

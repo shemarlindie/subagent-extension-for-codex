@@ -9,7 +9,7 @@ import {
 
 import { eventPayload } from "../../../../shared/events/payload";
 import { Icon } from "../../../shared/components/icons/icons";
-import { MotionContent } from "../../../shared/components/motion/motion";
+import { MotionContent } from "../../../shared/components/motion/motion-content";
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";

@@ -1,4 +1,4 @@
-import { Presence } from "../components/motion/motion";
+import { Presence } from "../components/motion/presence";
 
 export interface FormFieldFeedbackProps {
   id?: string;

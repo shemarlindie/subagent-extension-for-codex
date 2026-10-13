@@ -20,7 +20,7 @@ import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { SkeletonShape } from "../../../shared/components/loading-skeleton/loading-skeleton";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
-import { Presence } from "../../../shared/components/motion/motion";
+import { Presence } from "../../../shared/components/motion/presence";
 import { scrollChildIntoView } from "../../../shared/utils/scroll-into-view";
 
 const FILTER_EDGE_GAP = 16;

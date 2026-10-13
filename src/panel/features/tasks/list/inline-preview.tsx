@@ -12,7 +12,7 @@ import {
   SkeletonShape,
 } from "../../../shared/components/loading-skeleton/loading-skeleton";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
-import { MotionContent } from "../../../shared/components/motion/motion";
+import { MotionContent } from "../../../shared/components/motion/motion-content";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { traceSize } from "../../../transports/size-trace";
 import { projectDisplayName } from "../../projects/selectors";

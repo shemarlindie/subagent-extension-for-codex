@@ -5,7 +5,7 @@ import { providerMetadata } from "../../../shared/providers/metadata";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { Task } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
-import { Presence } from "../../shared/components/motion/motion";
+import { Presence } from "../../shared/components/motion/presence";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { Field } from "../../shared/forms/fields";
 import { FormFieldError } from "../../shared/forms/form-field-error";

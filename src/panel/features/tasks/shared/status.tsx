@@ -1,6 +1,6 @@
 import { statusLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
-import { MotionContent } from "../../../shared/components/motion/motion";
+import { MotionContent } from "../../../shared/components/motion/motion-content";
 import type { ActivityState } from "../activity/activity-timeline";
 import { rowStatus } from "../list/task-status";
 import { TaskStatusIcon } from "../list/task-status-icon";

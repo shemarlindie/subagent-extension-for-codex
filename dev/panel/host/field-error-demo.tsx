@@ -12,11 +12,11 @@ import {
 } from "react";
 import { createRoot } from "react-dom/client";
 
-import { Presence } from "../../../src/panel/shared/components/motion/motion";
 import {
   MOTION,
   reducedMotion,
 } from "../../../src/panel/shared/components/motion/motion-utils";
+import { Presence } from "../../../src/panel/shared/components/motion/presence";
 
 const FIELD_ERROR = "Enter a limit higher than $5.00.";
 

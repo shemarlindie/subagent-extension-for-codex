@@ -17,7 +17,7 @@ import type { Filter, Task } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
 import { SkeletonShape } from "../../../shared/components/loading-skeleton/loading-skeleton";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
-import { useListMotion } from "../../../shared/components/motion/motion";
+import { useListMotion } from "../../../shared/components/motion/use-list-motion";
 import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
 import { useNow } from "../../../shared/utils/use-now";
 import { projectDisplayName } from "../../projects/selectors";

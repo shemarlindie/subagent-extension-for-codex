@@ -12,12 +12,10 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 import { act, cleanup, render } from "@testing-library/react";
 import { createElement, useRef } from "react";
 
-import {
-  MotionContent,
-  Presence,
-  useAnimatedHeight,
-  useListPresence,
-} from "./motion";
+import { MotionContent } from "./motion-content";
+import { Presence } from "./presence";
+import { useAnimatedHeight } from "./use-animated-height";
+import { useListPresence } from "./use-list-presence";
 
 type Call = {
   element: HTMLElement;

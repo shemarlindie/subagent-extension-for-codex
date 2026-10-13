@@ -4,7 +4,7 @@ import { END_UNRECORDED } from "../../../shared/workspaces/changes";
 import { useSnapshot } from "../../app/state/controller-context";
 import { useSessionState } from "../../app/state/session/use-session-state";
 import { LoadingSwap } from "../../shared/components/loading-skeleton/loading-swap";
-import { useAnimatedHeight } from "../../shared/components/motion/motion";
+import { useAnimatedHeight } from "../../shared/components/motion/use-animated-height";
 import { ScrollLatestButton } from "../../shared/components/scroll-latest-button/scroll-latest-button";
 import type { Task } from "../tasks/types";
 import { ChangesHeader } from "./changes-header";
