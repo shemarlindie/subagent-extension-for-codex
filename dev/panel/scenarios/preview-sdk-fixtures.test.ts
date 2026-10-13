@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { test } from "vitest";
 
-import { ClaudeAgentProvider } from "../../../src/service/features/providers/claude/runtime/provider.js";
+import { normalizeClaudeMessage } from "../../../src/service/features/providers/claude/events/normalize.js";
 import type { RunContext } from "../../../src/service/features/providers/types.js";
 import { decodeEventView } from "../../../src/shared/events/decode.js";
 import { eventPayloadMapSchema } from "../../../src/shared/events/event-contract.generated.js";
@@ -147,7 +147,7 @@ test("fixture events match what the provider derives from their SDK message", ()
     const sdkMessage = message as unknown as SDKMessage;
     const derived: { type: string; data: Record<string, unknown> }[] = [];
 
-    new ClaudeAgentProvider().normalize(
+    normalizeClaudeMessage(
       {
         emit: (type: string, data: Record<string, unknown>) =>
           derived.push({ type, data }),

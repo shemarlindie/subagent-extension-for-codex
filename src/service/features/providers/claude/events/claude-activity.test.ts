@@ -22,6 +22,7 @@ import {
   claudeActivityContent,
   claudeActivityPresentation,
 } from "./activity.js";
+import { normalizeClaudeMessage } from "./normalize.js";
 
 function recorder() {
   const events: { type: string; data: Record<string, unknown> }[] = [];
@@ -38,7 +39,7 @@ function recorder() {
   } as unknown as RunContext;
 
   const normalize = (message: SDKMessage) => {
-    new ClaudeAgentProvider().normalize(context, message);
+    normalizeClaudeMessage(context, message);
 
     return events;
   };
@@ -46,10 +47,7 @@ function recorder() {
   const normalizeUnrecognized = (message: Record<string, unknown>) => {
     // Deliberately malformed runtime fixture: exercise preservation of a value
     // that the installed SDK's static union cannot express.
-    new ClaudeAgentProvider().normalize(
-      context,
-      message as unknown as SDKMessage,
-    );
+    normalizeClaudeMessage(context, message as unknown as SDKMessage);
 
     return events;
   };

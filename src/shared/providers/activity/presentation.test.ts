@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { ClaudeAgentProvider } from "../../../service/features/providers/claude/runtime/provider.js";
+import { normalizeClaudeMessage } from "../../../service/features/providers/claude/events/normalize.js";
 import type { RunContext } from "../../../service/features/providers/types.js";
 import { decodedEvent } from "../../events/decode.js";
 import type { Event } from "../../events/types.js";
@@ -105,7 +105,7 @@ test("Claude emits provider-owned presentation alongside the original SDK respon
     session_id: "session",
   } as const;
 
-  new ClaudeAgentProvider().normalize(
+  normalizeClaudeMessage(
     {
       emit: () => {},
       emitOpaque: (_type: string, data: Record<string, unknown>) => {
