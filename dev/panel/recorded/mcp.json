@@ -170,9 +170,9 @@
           "kind": "status",
           "quiet": true,
           "failed": false,
-          "thinking": true,
+          "thinking": false,
           "liveStatus": true,
-          "statusTitle": "Thinking…",
+          "statusTitle": "Requesting",
           "title": "Claude status",
           "messageId": "85d71d1c-8b8f-4bec-9a45-95f92914e39f",
           "hasThinking": false
@@ -518,9 +518,9 @@
           "kind": "status",
           "quiet": true,
           "failed": false,
-          "thinking": true,
+          "thinking": false,
           "liveStatus": true,
-          "statusTitle": "Thinking…",
+          "statusTitle": "Requesting",
           "title": "Claude status",
           "messageId": "80467446-def6-4d92-bb7a-993596778600",
           "hasThinking": false

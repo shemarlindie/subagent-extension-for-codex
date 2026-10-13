@@ -11,6 +11,7 @@ export interface ActivityPresentation {
   failed?: boolean;
   messageId?: string;
   hasThinking?: boolean;
+  rateLimitWindows?: ActivityRateLimitWindow[];
   statusState?: "running" | "completed" | "failed" | "info";
   operation?: {
     id: string;
@@ -37,3 +38,13 @@ export interface ActivityPresentation {
   };
   body?: { content?: unknown; error?: unknown };
 }
+
+/** A provider's reported utilization window, independent of its SDK payload. */
+export type ActivityRateLimitWindow = {
+  id: string;
+  label: string;
+  /** Used fraction, where 1 means 100%. */
+  utilization: number;
+  /** Reset time in Unix seconds. */
+  resetsAt?: number;
+};

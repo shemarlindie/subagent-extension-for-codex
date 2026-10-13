@@ -1,5 +1,6 @@
 import type { Event } from "../../../../../shared/events/types.js";
 import type { ActivityPresentation } from "../../../../../shared/providers/activity/types.js";
+import { claudeRateLimitWindows } from "../../../../../shared/providers/claude/rate-limit-windows.js";
 
 const object = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" && !Array.isArray(v)
@@ -68,7 +69,7 @@ function statusTitle(e: Pick<Event, "type" | "data">) {
       : d.status === "compacting"
         ? "Compacting context"
         : d.status === "requesting"
-          ? "Thinking…"
+          ? "Requesting"
           : "Working";
   if (key === "api_retry")
     return `Retrying request${typeof d.attempt === "number" ? ` · attempt ${d.attempt}` : ""}`;
@@ -201,8 +202,7 @@ export function claudeActivityPresentation(
           d.result,
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined),
-    thinking:
-      thinking.has(key) || (key === "status" && d.status === "requesting"),
+    thinking: thinking.has(key),
     liveStatus:
       [
         "status",
@@ -228,6 +228,11 @@ export function claudeActivityPresentation(
   if (key === "session_state_changed") {
     if (d.state === "requires_action") presentation.statusState = "info";
     if (d.state === "idle") presentation.statusState = "completed";
+  }
+
+  if (key === "rate_limit_event") {
+    const windows = claudeRateLimitWindows(d.rate_limit_info);
+    if (windows.length) presentation.rateLimitWindows = windows;
   }
 
   if (

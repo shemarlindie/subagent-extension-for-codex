@@ -129,6 +129,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
               focus && range ? (
                 range === "loading" ? (
                   <EventList
+                    task={task}
                     reading={reading}
                     events={state.events}
                     runtimeMs={task.runtime_ms}
@@ -138,6 +139,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
                   />
                 ) : (
                   <EventList
+                    task={task}
                     key={focus.request}
                     turn={focus.turn}
                     events={range.events}
@@ -150,6 +152,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
                 )
               ) : activityLoading ? null : (
                 <EventList
+                  task={task}
                   reading={reading}
                   events={state.events}
                   runtimeMs={task.runtime_ms}

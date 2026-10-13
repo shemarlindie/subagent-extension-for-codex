@@ -34,6 +34,11 @@ While a turn runs, `RunContext` connects it to the conversation:
 
 Providers emit common activity events and normalized presentation details for shared rendering. Native event payloads remain available for inspection. Activity rendering reads explicit presentation metadata; Claude SDK decoding happens in the Claude provider.
 
+Rate-limit presentation exposes reported utilization windows through
+`rateLimitWindows`. Claude's browser-safe window decoder also supplies these
+fields when reading older stored events whose presentation lacks them; the
+compatibility reader leaves the stored event and raw response unchanged.
+
 ## Stored provider state
 
 New providers can validate and resolve their isolated `provider_options.<provider_id>` namespace without adding fields to the shared task schema. Native input descriptions and approval labels can be supplied through the optional presentation argument to `RunContext.input`.

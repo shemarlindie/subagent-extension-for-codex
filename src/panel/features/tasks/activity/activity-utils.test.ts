@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type { Event } from "../../../app/state/types";
-import { resultPreview, turnStats } from "./activity-utils";
+import { responsePreview, turnStats } from "./activity-utils";
 
 const completed = (data: Record<string, unknown>): Event => ({
   id: 1,
@@ -13,20 +13,20 @@ const completed = (data: Record<string, unknown>): Event => ({
   data,
 });
 
-test("a result of up to 100 characters stays whole", () => {
+test("a reply preview stays whole when it is 100 characters", () => {
   const text = "a".repeat(100);
 
-  assert.equal(resultPreview(text), text);
+  assert.equal(responsePreview(text), text);
 });
 
-test("a longer result keeps its first 100 characters without trailing space", () => {
-  assert.equal(resultPreview(`${"a".repeat(99)} b`), `${"a".repeat(99)}...`);
+test("a longer reply preview keeps its first 100 characters", () => {
+  assert.equal(responsePreview(`${"a".repeat(99)} b`), `${"a".repeat(99)}...`);
 });
 
-test("a result is cut by character, not UTF-16 unit", () => {
+test("a reply preview counts Unicode characters, not UTF-16 units", () => {
   const text = "😀".repeat(101);
 
-  assert.equal(resultPreview(text), `${"😀".repeat(100)}...`);
+  assert.equal(responsePreview(text), `${"😀".repeat(100)}...`);
 });
 
 test("turn stats omit numbers the result does not report", () => {

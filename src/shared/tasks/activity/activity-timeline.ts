@@ -108,6 +108,13 @@ const isQuiet = (e: Event) =>
   activityPresentation(e).quiet ?? quiet.has(activityKind(e));
 
 function statusTitle(e: Event) {
+  // Older persisted presentations classified requesting as thinking.
+  if (
+    activityKind(e) === "status" &&
+    e.data.status === "requesting" &&
+    !activityFailed(e)
+  )
+    return "Requesting";
   const presentation = activityPresentation(e);
   if (presentation.statusTitle) return presentation.statusTitle;
   if (thinkingSignal(e)) return "Thinking…";
@@ -122,6 +129,9 @@ function statusTitle(e: Event) {
 }
 
 function thinkingSignal(e: Event): boolean {
+  if (activityKind(e) === "status" && e.data.status === "requesting")
+    return false;
+
   return (
     !activityFailed(e) &&
     (activityPresentation(e).thinking ?? thinking.has(activityKind(e)))
@@ -372,7 +382,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         if (id) messages.set(id, group);
       }
 
-      // A requesting/thinking marker immediately before an assistant message is
+      // A thinking marker immediately before an assistant message is
       // redundant when that message already contains its own thinking disclosure.
       // Keep the marker in the message's debug events so it remains inspectable.
       if (
@@ -397,17 +407,29 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       const completed = completedTurns.get(e.task_id);
       completedTurns.delete(e.task_id);
 
-      // The reply repeats the result its turn completed with; only the reply shows it.
+      // Keep repeated result text on the reply row, not the completion row.
       if (completed && completed.summary === string(d.text))
         completed.summary = undefined;
     }
 
     if (isQuiet(e) && !activityFailed(e)) {
       const previous = adjacentStatus;
-      // Only adjacent housekeeping bursts combine; messages remain in sequence.
+      // Startup and ordinary Claude status changes retain their own rows;
+      // only thinking signals can become a Thought row.
       if (
         previous?.kind === "status" &&
         previous.events[0].task_id === e.task_id &&
+        key !== "agent.started" &&
+        !previous.events.some(
+          (event) => activityKind(event) === "agent.started",
+        ) &&
+        !(key === "status" && !thinkingSignal(e)) &&
+        !previous.events.some(
+          (event) => activityKind(event) === "status" && !thinkingSignal(event),
+        ) &&
+        thinkingSignal(e) === onlyThinkingSignals(previous) &&
+        (key === "rate_limit_event") ===
+          (activityKind(previous.events.at(-1)!) === "rate_limit_event") &&
         !boundaries.has(key) &&
         !previous.events.some((event) => boundaries.has(activityKind(event)))
       ) {
@@ -446,7 +468,8 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
-    if (thinkingSignal(e)) group.summary = undefined;
+    if (e.type === "agent.reply" || thinkingSignal(e))
+      group.summary = undefined;
 
     if (e.type === "agent.completed" && !activityFailed(e))
       completedTurns.set(e.task_id, group);

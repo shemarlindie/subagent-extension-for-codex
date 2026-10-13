@@ -143,9 +143,9 @@
           "kind": "status",
           "quiet": true,
           "failed": false,
-          "thinking": true,
+          "thinking": false,
           "liveStatus": true,
-          "statusTitle": "Thinking…",
+          "statusTitle": "Requesting",
           "title": "Claude status",
           "messageId": "fd7845ac-d554-4bc6-8938-48b4f376d924",
           "hasThinking": false

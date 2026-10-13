@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { expect, test, vi } from "vitest";
 
 import { claudeActivityPresentation } from "../../../../service/features/providers/claude/events/activity";
+import { task as buildTask } from "../../../app/state/controller-test-harness";
 import type { Event as ActivityEvent } from "../../../app/state/types";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -178,7 +179,7 @@ test("latest group is last and fresh progress moves an older tool to the end wit
   const groups = () =>
     Array.from(view.container.querySelectorAll(".activity-group"));
 
-  assert.match(groups()[1].textContent ?? "", /Newer message/);
+  assert.match(groups()[1].textContent ?? "", /Started a response\.\.\./);
   const tool = groups()[0];
   const debug = view.getByRole("button", { name: "Debug activity: Read" });
   fireEvent.click(debug);
@@ -205,7 +206,7 @@ test("latest group is last and fresh progress moves an older tool to the end wit
   );
 
   expect(groups()[1], "The updated group moves without remounting").toBe(tool);
-  assert.match(groups()[0].textContent ?? "", /Newer message/);
+  assert.match(groups()[0].textContent ?? "", /Started a response\.\.\./);
 
   expect(
     Array.from(tool.querySelectorAll("details.activity-raw")),
@@ -1519,7 +1520,7 @@ test("grouped streams accumulate readable blocks and preserve every frame for in
   );
 });
 
-test("final SDK message replaces provisional stream fragments in the main conversation", () => {
+test("a final SDK message replaces provisional stream text with a response marker", () => {
   const events = [
     event(
       "claude.activity",
@@ -1562,8 +1563,13 @@ test("final SDK message replaces provisional stream fragments in the main conver
   );
 
   assert.equal(doc.querySelectorAll(".activity-group").length, 1);
-  const content = doc.querySelector(".activity-message > .activity-body");
-  assert.equal(content?.textContent, "Final response");
+
+  assert.equal(
+    doc.querySelector(".activity-group-secondary")?.textContent,
+    "Started a response...",
+  );
+
+  assertAbsent(doc.querySelector(".activity-message > .activity-body"));
   assert.equal(doc.querySelectorAll("details.activity-raw").length, 0);
 });
 
@@ -2197,7 +2203,7 @@ test("thinking-only assistant messages are not styled as message cards", () => {
   cleanup();
 });
 
-test("message debug view shows only the raw response, not a second rendering", async () => {
+test("assistant message rows use a response marker and retain raw response JSON", async () => {
   const msg = event(
     "agent.message",
     {
@@ -2210,12 +2216,96 @@ test("message debug view shows only the raw response, not a second rendering", a
 
   const view = render(createElement(GroupedEventList, { events: [msg] }));
 
+  const group = view.container.querySelector(".activity-message")!;
+
+  assert.equal(
+    group.querySelector(".activity-group-secondary")?.textContent,
+    "Started a response...",
+  );
+
+  assertAbsent(group.querySelector(".activity-body"));
+
   await userEvent.click(
     view.getByRole("button", { name: "Debug activity: Assistant" }),
   );
 
-  assert.equal(view.getAllByText("Visible once").length, 1);
   assert.ok(view.getByText("Raw response", { selector: "summary" }));
+
+  expect(
+    view.container.querySelector(".activity-raw pre")?.textContent,
+  ).toContain("Visible once");
+
+  cleanup();
+});
+
+test("an assistant response bubble contains only its thinking note", () => {
+  const raw = {
+    type: "assistant",
+    message: {
+      id: "thinking-bubble",
+      content: [
+        { type: "text", text: "Response text" },
+        { type: "thinking", thinking: "Reasoning note" },
+        { type: "text", text: "More response text" },
+      ],
+    },
+  };
+
+  const events = [
+    event(
+      "agent.message",
+      {
+        role: "assistant",
+        text: "Response text",
+        content: { type: "text", text: "Response text" },
+        raw_response: raw,
+      },
+      "thinking-bubble-message",
+    ),
+    event(
+      "agent.content",
+      {
+        role: "assistant",
+        content: { type: "thinking", thinking: "Reasoning note" },
+        raw_response: raw,
+      },
+      "thinking-bubble-thinking",
+    ),
+    event(
+      "agent.content",
+      {
+        role: "assistant",
+        content: { type: "text", text: "More response text" },
+        raw_response: raw,
+      },
+      "thinking-bubble-extra-text",
+    ),
+  ];
+
+  const view = render(createElement(GroupedEventList, { events }));
+  const group = view.container.querySelector(".activity-message")!;
+  const bubble = group.querySelector(".activity-body")!;
+
+  assert.equal(
+    group.querySelector(".activity-group-secondary")?.textContent,
+    "Started a response...",
+  );
+
+  assert.equal(
+    bubble.querySelector("details.activity-thinking summary")?.textContent,
+    "Thinking",
+  );
+
+  assert.deepEqual(
+    [...bubble.querySelectorAll(".activity-text")].map(
+      (node) => node.textContent,
+    ),
+    ["Reasoning note"],
+  );
+
+  assert.ok(!bubble.textContent?.includes("Response text"));
+  assert.ok(!bubble.textContent?.includes("More response text"));
+
   cleanup();
 });
 
@@ -2613,8 +2703,9 @@ test("the worker's text renders as Markdown while tool output stays plain", () =
   expect(plain.querySelector("strong")).toBeNull();
 });
 
-test("a reply row and the result that repeats it render the response as Markdown", () => {
-  const text = "**Done.**\n\n- one";
+test("a reply shows its plain preview outside Debug with More and Less controls", (t) => {
+  t.onTestFinished(cleanup);
+  const text = `**Done.**\n\n- one\n\n${"More detail. ".repeat(12)}`;
 
   const doc = parseHtml(
     renderToStaticMarkup(
@@ -2643,11 +2734,203 @@ test("a reply row and the result that repeats it render the response as Markdown
     summary.querySelector("strong"),
   );
 
-  expect(rendered).toHaveLength(2);
+  expect(rendered).toHaveLength(1);
   expect(rendered.every((summary) => summary.querySelector("li"))).toBe(true);
 
   expect(summaries.some((s) => s.textContent === "**plain status**")).toBe(
     true,
+  );
+
+  const reply = render(
+    createElement(GroupedEventList, {
+      events: [event("agent.reply", { text, turn: 1 }, "reply-preview")],
+    }),
+  );
+
+  const group = reply.container.querySelector(".activity-group")!;
+
+  expect(group.querySelector(".activity-group-title")?.textContent).toBe(
+    "Reply",
+  );
+
+  expect(group.querySelector(".activity-group-secondary")).toBeNull();
+  expect(group.querySelector(".activity-debug-body")).toBeNull();
+
+  const responseBody = group.querySelector(".activity-body .activity-text")!;
+  expect(responseBody.textContent).toBe(`${text.slice(0, 100).trimEnd()}...`);
+
+  const more = group.querySelector<HTMLButtonElement>(
+    ".activity-reply-toggle",
+  )!;
+
+  expect(more.textContent).toBe("More");
+  fireEvent.click(more);
+  expect(responseBody.textContent).toBe(text);
+  expect(more.textContent).toBe("Less");
+  fireEvent.click(more);
+  expect(responseBody.textContent).toBe(`${text.slice(0, 100).trimEnd()}...`);
+  expect(more.textContent).toBe("More");
+
+  fireEvent.click(group.querySelector(".activity-debug-toggle")!);
+  const debug = group.querySelector(".activity-debug-body")!;
+  expect(debug.querySelector(".activity-reply-toggle")).toBeNull();
+  expect(debug.querySelector(".activity-text")).toBeNull();
+
+  expect(debug.querySelector(".activity-raw pre")?.textContent).toContain(
+    JSON.stringify(text),
+  );
+});
+
+test("Activity includes the task's initial request at the start, including before events exist", (t) => {
+  t.onTestFinished(cleanup);
+
+  const task = {
+    ...buildTask("task"),
+    id: "task",
+    description: "**First request**",
+    created_by: "user" as const,
+    created_at: "2026-10-02T12:00:00.000Z",
+  };
+
+  const view = render(createElement(GroupedEventList, { task, events: [] }));
+
+  expect(
+    view.container.querySelector(".activity-request .chat-bubble")?.textContent,
+  ).toBe(task.description);
+
+  expect(
+    view.container.querySelector(".activity-request .chat-bubble strong"),
+  ).toBeNull();
+
+  expect(
+    view.container.querySelector(".activity-request .activity-debug-toggle"),
+  ).toBeNull();
+
+  view.rerender(
+    createElement(GroupedEventList, {
+      task,
+      events: [event("task.started", { turn: 1 }, "initial-start")],
+    }),
+  );
+
+  expect(
+    view.container
+      .querySelector(".timeline")
+      ?.firstElementChild?.classList.contains("activity-request"),
+  ).toBe(true);
+
+  view.rerender(createElement(GroupedEventList, { task, events: [], turn: 2 }));
+  expect(view.container.querySelector(".activity-request")).toBeNull();
+  view.rerender(createElement(GroupedEventList, { task, events: [], turn: 1 }));
+
+  expect(
+    view.container.querySelector(".activity-request .chat-bubble")?.textContent,
+  ).toBe(task.description);
+
+  const events = Array.from({ length: EVENT_TAIL_SIZE }, (_, index) => ({
+    ...event("task.started", { turn: 1 }, `initial-capacity-${index}`),
+    id: index + 1,
+  }));
+
+  view.rerender(createElement(GroupedEventList, { task, events }));
+  expect(view.container.querySelector(".activity-request")).not.toBeNull();
+
+  view.rerender(
+    createElement(GroupedEventList, {
+      task,
+      events,
+      dropped: {
+        task_id: task.id,
+        count: 1,
+        from: task.created_at,
+        to: task.created_at,
+        tools: {},
+        toolCalls: 0,
+        messages: 0,
+        failures: 0,
+        retries: 0,
+      },
+    }),
+  );
+
+  expect(view.container.querySelector(".activity-request")).toBeNull();
+});
+
+test("assistant groups keep attachments visible while text stays in raw JSON", (t) => {
+  t.onTestFinished(cleanup);
+  const raw_response = { message: { id: "attachment-response" } };
+
+  const view = render(
+    createElement(GroupedEventList, {
+      events: [
+        event(
+          "agent.message",
+          { role: "assistant", text: "Hidden response text", raw_response },
+          "attachment-text",
+        ),
+        event(
+          "agent.content",
+          {
+            role: "assistant",
+            content: {
+              type: "document",
+              title: "Attached notes",
+              source: { type: "text", data: "Visible attachment" },
+            },
+            raw_response,
+          },
+          "attachment-document",
+        ),
+      ],
+    }),
+  );
+
+  expect(view.container.querySelectorAll(".activity-group")).toHaveLength(1);
+  expect(view.container.textContent).toContain("Attached notes");
+  expect(view.container.textContent).toContain("Visible attachment");
+  expect(view.container.textContent).not.toContain("Hidden response text");
+});
+
+test("Activity user messages use Chat bubbles with literal text outside Debug", (t) => {
+  t.onTestFinished(cleanup);
+  const text = "**Keep this literal**\n```text\nuser input\n```";
+
+  const view = render(
+    createElement(GroupedEventList, {
+      events: [
+        event("agent.content", { role: "user", text }, "bubble-sdk-user"),
+        event(
+          "task.instruction",
+          { from: "user", message: "Follow up" },
+          "bubble-instruction",
+        ),
+        event(
+          "task.instruction",
+          { from: "parent", message: "Parent brief" },
+          "bubble-parent",
+        ),
+      ],
+    }),
+  );
+
+  expect(
+    [
+      ...view.container.querySelectorAll(
+        '.chat-message[data-from="user"] .chat-bubble',
+      ),
+    ].map((bubble) => bubble.textContent),
+  ).toEqual([text, "Follow up"]);
+
+  expect(view.container.querySelector(".chat-bubble strong")).toBeNull();
+  expect(view.container.querySelector(".chat-bubble pre")).toBeNull();
+  expect(view.container.querySelector(".activity-debug-body")).toBeNull();
+  const first = view.container.querySelector(".activity-group")!;
+  expect(first.querySelector(":scope > .activity-body")).toBeNull();
+  fireEvent.click(first.querySelector(".activity-debug-toggle")!);
+  expect(first.querySelector(".activity-debug-body .chat-bubble")).toBeNull();
+
+  expect(first.querySelector(".activity-raw pre")?.textContent).toContain(
+    JSON.stringify(text),
   );
 });
 
@@ -2690,7 +2973,168 @@ test("an expanded row hides its heading time beside the debug caption's", (t) =>
   assert.equal(group.hasAttribute("data-debug-open"), true);
 });
 
-test("a turn completion shows its stats and a shortened result", (t) => {
+test("rate-limit details show the latest update without opening Debug", (t) => {
+  t.onTestFinished(cleanup);
+  const preferences = { locale: "en-US", timeZone: "America/Los_Angeles" };
+  const resetsAt = 1791030000;
+
+  const update = (status: string, utilization: number, id: string) =>
+    event(
+      "claude.activity",
+      {
+        type: "rate_limit_event",
+        rate_limit_info: {
+          status,
+          utilization,
+          rateLimitType: "five_hour",
+          resetsAt,
+          overageStatus: "rejected",
+          overageResetsAt: resetsAt,
+          overageDisabledReason: "out_of_credits",
+        },
+      },
+      id,
+    );
+
+  const view = render(
+    createElement(GroupedEventList, {
+      events: [
+        update("allowed", 0.12, "rate-allowed"),
+        update("rejected", 1, "rate-rejected"),
+      ],
+      preferences,
+    }),
+  );
+
+  const stats = view.container.querySelector(".activity-group-stats");
+
+  expect(stats?.textContent).toBe(
+    `5-hour window · 100% used · Resets ${formatUserDateTime(new Date(resetsAt * 1000).toISOString(), preferences, { timeZoneName: undefined, second: undefined })}`,
+  );
+
+  expect(stats?.textContent).not.toMatch(/PDT|PST|GMT|UTC/);
+
+  expect(view.container.querySelectorAll(".activity-group")).toHaveLength(1);
+  expect(view.container.querySelector(".activity-debug-body")).toBeNull();
+  fireEvent.click(view.container.querySelector(".activity-debug-toggle")!);
+
+  expect(
+    view.container.querySelector(".activity-debug-body")?.textContent,
+  ).toContain("StatusAllowed");
+
+  expect(
+    view.container.querySelector(".activity-debug-body")?.textContent,
+  ).toContain("rejected");
+});
+
+test("rate-limit rows show utilization and reset times from unifiedWindows outside Debug", (t) => {
+  t.onTestFinished(cleanup);
+  const preferences = { locale: "en-US", timeZone: "America/Los_Angeles" };
+  const fiveHourReset = 1791870000;
+  const sevenDayReset = 1791964800;
+
+  const view = render(
+    createElement(GroupedEventList, {
+      events: [
+        event(
+          "claude.activity",
+          {
+            type: "rate_limit_event",
+            rate_limit_info: {
+              status: "allowed",
+              rateLimitType: "five_hour",
+              resetsAt: fiveHourReset,
+              overageStatus: "rejected",
+              unifiedWindows: {
+                five_hour: { utilization: 0.87, resetsAt: fiveHourReset },
+                seven_day: { utilization: 0.65, resetsAt: sevenDayReset },
+              },
+            },
+          },
+          "unified-window-update",
+        ),
+      ],
+      preferences,
+    }),
+  );
+
+  const reset = (seconds: number) =>
+    formatUserDateTime(new Date(seconds * 1000).toISOString(), preferences, {
+      timeZoneName: undefined,
+      second: undefined,
+    });
+
+  expect(
+    [...view.container.querySelectorAll(".activity-group-stats")].map(
+      (row) => row.textContent,
+    ),
+  ).toEqual([
+    `5-hour window · 87% used · Resets ${reset(fiveHourReset)}`,
+    `7-day window · 65% used · Resets ${reset(sevenDayReset)}`,
+  ]);
+
+  expect(view.container.querySelector(".activity-debug-body")).toBeNull();
+});
+
+test("rate-limit rows retain each window when an overage update arrives", (t) => {
+  t.onTestFinished(cleanup);
+
+  const update = (rateLimitType: string, utilization: number, id: string) =>
+    event(
+      "claude.activity",
+      {
+        type: "rate_limit_event",
+        rate_limit_info: { status: "allowed", rateLimitType, utilization },
+      },
+      id,
+    );
+
+  const view = render(
+    createElement(GroupedEventList, {
+      events: [
+        update("five_hour", 0.1, "windows-five-old"),
+        update("seven_day", 0.4, "windows-week"),
+        update("five_hour", 0.2, "windows-five-new"),
+        update("overage", 0.9, "windows-overage"),
+      ],
+    }),
+  );
+
+  expect(
+    [...view.container.querySelectorAll(".activity-group-stats")].map(
+      (row) => row.textContent,
+    ),
+  ).toEqual(["5-hour window · 20% used", "7-day window · 40% used"]);
+
+  expect(view.container.querySelectorAll(".activity-group")).toHaveLength(1);
+});
+
+test("rate-limit rows omit windows without valid utilization", (t) => {
+  t.onTestFinished(cleanup);
+
+  const view = render(
+    createElement(GroupedEventList, {
+      events: [
+        event(
+          "claude.activity",
+          {
+            type: "rate_limit_event",
+            rate_limit_info: {
+              status: "allowed_warning",
+              utilization: NaN,
+              resetsAt: 1e100,
+            },
+          },
+          "rate-warning",
+        ),
+      ],
+    }),
+  );
+
+  expect(view.container.querySelector(".activity-group-stats")).toBeNull();
+});
+
+test("a turn completion shows stats and keeps its result in raw JSON", (t) => {
   t.onTestFinished(cleanup);
   const result = "Done. ".repeat(30);
 
@@ -2738,22 +3182,13 @@ test("a turn completion shows its stats and a shortened result", (t) => {
 
   fireEvent.click(completion.querySelector(".activity-debug-toggle")!);
 
-  // The raw response keeps the whole result; the readable body shortens it.
+  // The result remains available in JSON, not as a second readable response.
   const debug = completion.querySelector(".activity-debug-body")!;
+  const raw = debug.querySelector(".activity-raw pre")!;
+  assert.ok(raw.textContent?.includes(result));
   debug.querySelector(".activity-raw")?.remove();
-  const body = debug.textContent!;
-  assert.ok(body.includes(`${result.slice(0, 100).trimEnd()}...`));
-  assert.ok(!body.includes(result.trimEnd()));
-
-  const toggle = debug.querySelector<HTMLButtonElement>(
-    ".activity-result-toggle",
-  )!;
-
-  assert.equal(toggle.textContent, "More");
-  fireEvent.click(toggle);
-  assert.equal(toggle.getAttribute("aria-expanded"), "true");
-  assert.equal(toggle.textContent, "Less");
-  assert.ok(debug.textContent!.includes(result.trimEnd()));
+  assert.ok(!debug.textContent?.includes(result));
+  expect(debug.querySelector(".activity-reply-toggle")).toBeNull();
 });
 
 test("the debug panel's collapse button closes it and brings its row back", async (t) => {

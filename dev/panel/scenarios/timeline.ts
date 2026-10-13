@@ -462,16 +462,26 @@ export const begin = (t: Timeline, tools: string[]) =>
 export const rateLimit = (
   t: Timeline,
   status: "allowed" | "rejected" = "allowed",
-) =>
-  t.sdk({
-    type: "rate_limit_event",
-    rate_limit_info: {
-      status,
-      rateLimitType: "five_hour",
-      resetsAt: 1791030000,
-      utilization: status === "rejected" ? 1 : 0.12,
+) => {
+  // The CLI reports these windows even though the SDK type omits the field.
+  const info = {
+    status,
+    rateLimitType: "five_hour" as const,
+    resetsAt: 1791030000,
+    unifiedWindows: {
+      five_hour: {
+        utilization: status === "rejected" ? 1 : 0.12,
+        resetsAt: 1791030000,
+      },
+      seven_day: { utilization: 0.65, resetsAt: 1791462000 },
     },
+  };
+
+  return t.sdk({
+    type: "rate_limit_event",
+    rate_limit_info: info,
   });
+};
 
 export const lifecycle = (
   id: string,

@@ -95,10 +95,22 @@ for (const type of [
   }
 }
 
-test("requesting status uses the same Thinking… label", () => {
+test("requesting status has its own row and never a thinking span", () => {
   const events = [sdk(1, "status", { status: "requesting" })];
-  assert.equal(groupActivity(events)[0].title, "Thinking…");
-  assert.equal(currentActivityStatus(events).text, "Thinking…");
+  const group = groupActivity(events)[0];
+  assert.equal(group.title, "Requesting");
+  assert.equal(currentActivityStatus(events).text, "Requesting");
+  assert.equal(thinkingSpan(group, events), undefined);
+
+  // Previously saved events must render correctly without rewriting history.
+  events[0].data.activity = {
+    ...(events[0].data.activity as object),
+    thinking: true,
+    statusTitle: "Thinking…",
+  };
+
+  assert.equal(groupActivity(events)[0].title, "Requesting");
+  assert.equal(thinkingSpan(groupActivity(events)[0], events), undefined);
 });
 
 test("thinking updates preserve an input request while a tool is still running", () => {
@@ -270,10 +282,11 @@ for (const [type, title] of [["task.started", "Task started"]]) {
       })),
       [
         { kind: "status", title, events: [events[0]] },
+        { kind: "status", title: "Agent connected", events: [events[1]] },
         {
           kind: "status",
           title: "Claude connected",
-          events: events.slice(1),
+          events: [events[2]],
         },
       ],
     );
@@ -436,7 +449,7 @@ test("hooks and background SDK tasks correlate by their own IDs across interleav
   assert.equal(groups[1].state, "completed");
 });
 
-test("contiguous housekeeping combines while failures remain prominent", () => {
+test("thinking, retries and ordinary statuses keep separate rows while failures remain prominent", () => {
   const events = [
     sdk(1, "status", { status: "requesting" }),
     sdk(2, "api_retry", { attempt: 1, max_retries: 3, retry_delay_ms: 200 }),
@@ -448,8 +461,8 @@ test("contiguous housekeeping combines while failures remain prominent", () => {
   const groups = groupActivity(events);
 
   assert.deepEqual(
-    groups[0].events.map((e) => e.id),
-    [1, 2, 3],
+    groups.slice(0, 3).map((group) => group.events.map((e) => e.id)),
+    [[1], [2], [3]],
   );
 
   const failure = groups.find((g) => g.events.some((e) => e.id === 4));
@@ -833,6 +846,36 @@ test("SDK idle sessions report a finished turn or host finishing state", () => {
   assert.equal(finishing.state, "info");
 });
 
+test("rate-limit updates group together without startup or Claude status events", () => {
+  const events = [
+    event(1, "agent.started", {}),
+    sdk(2, "status", { status: null }),
+    event(3, "claude.activity", {
+      type: "rate_limit_event",
+      rate_limit_info: { status: "allowed" },
+    }),
+    event(4, "claude.activity", {
+      type: "rate_limit_event",
+      rate_limit_info: { status: "allowed" },
+    }),
+    sdk(5, "status", { status: null }),
+  ];
+
+  const groups = groupActivity(events);
+
+  assert.deepEqual(
+    groups.map((group) => group.events.map((event) => event.id)),
+    [[1], [2], [3, 4], [5]],
+  );
+
+  assert.equal(groups[2].title, "Rate limit updated");
+
+  assert.deepEqual(
+    groups.flatMap((group) => group.events),
+    events,
+  );
+});
+
 test("rejected SDK rate limits report waiting rather than running", () => {
   const current = currentActivityStatus([
     event(1, "claude.activity", {
@@ -1049,7 +1092,7 @@ test("a message that absorbed its thinking marker spans marker to message", () =
   const raw = { message: { id: "m1" } };
 
   const events = [
-    sdk(5, "status", { status: "requesting" }),
+    event(5, "thinking_tokens", { tokens: 10 }),
     event(9, "agent.message", { text: "Done", raw_response: raw }),
     event(5.5, "agent.message", {
       content: [{ type: "thinking", thinking: "hm" }],
@@ -1067,18 +1110,30 @@ test("rows that are not thinking have no span", () => {
   assert.equal(thinkingSpan(groupActivity(events)[0], events), undefined);
 });
 
-test("housekeeping before the first thinking signal does not count as thinking", () => {
+test("startup and ordinary statuses remain visible beside a thinking row", () => {
   const events = [
     event(10, "agent.started"),
-    sdk(12, "status", { status: "requesting" }),
+    sdk(11, "status", { status: null }),
+    event(12, "thinking_tokens", { tokens: 10 }),
     event(20, "tool.started", { id: "a", name: "Read" }),
   ];
 
   const group = groupActivity(events).find((g) => g.title === "Thinking…")!;
+  const groups = groupActivity(events);
+
+  assert.deepEqual(
+    groups.map((group) => group.events.map((event) => event.id)),
+    [[10], [11], [12], [20]],
+  );
+
+  assert.equal(groups[0].title, "Agent connected");
+  assert.equal(groups[1].title, "Working");
+  assert.equal(thinkingSpan(groups[0], events), undefined);
+  assert.equal(thinkingSpan(groups[1], events), undefined);
   assert.deepEqual(thinkingSpan(group, events), { start: 12000, end: 20000 });
 });
 
-test("a turn's reply gets its own row and its completion row omits the repeated text", () => {
+test("a turn's reply gets its own row without showing its text in the summary", () => {
   const groups = groupActivity([
     event(1, "agent.completed", { result: "Done." }),
     event(2, "agent.reply", { text: "Done.", turn: 1 }),
@@ -1089,10 +1144,12 @@ test("a turn's reply gets its own row and its completion row omits the repeated 
     groups.map((group) => [group.title, group.summary]),
     [
       ["Turn completed", undefined],
-      ["Reply", "Done."],
+      ["Reply", undefined],
       ["Task completed", undefined],
     ],
   );
+
+  assert.equal(groups[1].events[0].data.text, "Done.");
 });
 
 test("a turn completion keeps its result when no matching reply follows", () => {
@@ -1106,10 +1163,12 @@ test("a turn completion keeps its result when no matching reply follows", () => 
     groups.map((group) => [group.title, group.summary]),
     [
       ["Turn completed", "Done."],
-      ["Reply", "Something else."],
+      ["Reply", undefined],
       ["Turn completed", "Later."],
     ],
   );
+
+  assert.equal(groups[1].events[0].data.text, "Something else.");
 });
 
 test("turn ends and queue changes summarise their outcome and queue", () => {

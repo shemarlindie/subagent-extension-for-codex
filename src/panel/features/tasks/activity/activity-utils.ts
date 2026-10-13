@@ -1,6 +1,10 @@
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
+import type { ActivityRateLimitWindow } from "../../../../shared/providers/activity/types";
 import type { Event } from "../../../app/state/types";
-import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
+import {
+  formatUserDateTime,
+  type UserDateTimePreferences,
+} from "../../../shared/utils/user-date-time";
 import { formatDuration } from "../list/duration";
 
 // Keep prose blocks and structured metadata within the same nesting budget.
@@ -16,6 +20,50 @@ export const label = (key: string) => {
 
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
+
+/** User-authored text stays literal, like its Chat bubble. */
+export function userMessageText(event: Event): string | undefined {
+  if (event.type === "task.instruction")
+    return event.data.from === "user" && typeof event.data.message === "string"
+      ? event.data.message
+      : undefined;
+  if (
+    !["agent.message", "agent.content"].includes(event.type) ||
+    event.data.role !== "user"
+  )
+    return undefined;
+  if (typeof event.data.text === "string") return event.data.text;
+  if (typeof event.data.content === "string") return event.data.content;
+
+  const blocks = Array.isArray(event.data.content)
+    ? event.data.content
+    : [event.data.content];
+
+  if (!blocks.length || !blocks.every((block) => record(block).type === "text"))
+    return undefined;
+
+  return blocks.map((block) => String(record(block).text ?? "")).join("\n");
+}
+
+/** Message text is inspected in raw JSON; attachments and thinking stay visible. */
+export function visibleMessageContent(event: Event, hideResponseText: boolean) {
+  if (userMessageText(event) !== undefined) return [];
+  const content = event.data.content ?? event.data.text;
+  const blocks = Array.isArray(content) ? content : [content];
+  if (
+    event.data.role === "user" ||
+    (!hideResponseText && event.type !== "agent.message")
+  )
+    return blocks.filter((block) => block !== undefined);
+
+  return blocks.filter((block) => {
+    const type = record(block).type;
+
+    return (
+      typeof block !== "string" && type !== "text" && type !== "text_delta"
+    );
+  });
+}
 
 export function formatActivityTime(
   timestamp: string,
@@ -101,20 +149,18 @@ export function thinkingOnly(events: Event[]) {
  */
 export function summaryIsResponse(events: Event[], summary: string) {
   return events.some(
-    (event) =>
-      event.type === "agent.reply" ||
-      (event.data.type === "result" && event.data.result === summary),
+    (event) => event.data.type === "result" && event.data.result === summary,
   );
 }
 
-const RESULT_PREVIEW_LENGTH = 100;
+const RESPONSE_PREVIEW_LENGTH = 100;
 
-/** A turn result's opening characters; the reply row shows it in full. */
-export function resultPreview(text: string) {
+/** The opening characters of a reply; More expands the full text in its row. */
+export function responsePreview(text: string) {
   const chars = Array.from(text);
 
-  return chars.length > RESULT_PREVIEW_LENGTH
-    ? `${chars.slice(0, RESULT_PREVIEW_LENGTH).join("").trimEnd()}...`
+  return chars.length > RESPONSE_PREVIEW_LENGTH
+    ? `${chars.slice(0, RESPONSE_PREVIEW_LENGTH).join("").trimEnd()}...`
     : text;
 }
 
@@ -159,4 +205,30 @@ export function turnStats(event: Event) {
     );
 
   return stats;
+}
+
+/** Latest normalized utilization for each rate-limit window in a status group. */
+export function rateLimitStats(
+  events: Event[],
+  preferences?: UserDateTimePreferences,
+) {
+  const windows = new Map<string, ActivityRateLimitWindow>();
+
+  for (const event of events)
+    for (const window of activityPresentation(event).rateLimitWindows ?? [])
+      windows.set(window.id, window);
+
+  return [...windows.values()].map((window) => {
+    const stats = [
+      window.label,
+      `${(window.utilization * 100).toLocaleString()}% used`,
+    ];
+
+    if (window.resetsAt !== undefined)
+      stats.push(
+        `Resets ${formatUserDateTime(new Date(window.resetsAt * 1000).toISOString(), preferences, { timeZoneName: undefined, second: undefined })}`,
+      );
+
+    return stats.join(" · ");
+  });
 }

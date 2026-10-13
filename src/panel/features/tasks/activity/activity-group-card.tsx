@@ -14,10 +14,13 @@ import { ActivityContent } from "./activity-content";
 import { ActivityTime } from "./activity-time";
 import type { ActivityGroup } from "./activity-timeline";
 import {
+  rateLimitStats,
   streamContent,
   summaryIsResponse,
   thinkingOnly,
   turnStats,
+  userMessageText,
+  visibleMessageContent,
 } from "./activity-utils";
 import { EventBody, EventDetails } from "./event-details";
 import { TimelineDot, TimelineItem } from "./timeline";
@@ -84,10 +87,20 @@ export function ActivityGroupCard({
 
   useEffect(() => () => cancelReveal.current?.(), []);
 
-  // Messages, and event/status rows with a summary, already show their text above;
+  const reply = group.events.find((event) => event.type === "agent.reply");
+
+  const userMessages = group.events.flatMap((event) => {
+    const text = userMessageText(event);
+
+    return text === undefined ? [] : [{ id: event.id, text }];
+  });
+
+  // Messages, replies and event/status rows with a summary show their text above;
   // tools and operations keep the structured debug body for their input and output.
   const showsOwnText =
     conversational ||
+    userMessages.length > 0 ||
+    reply !== undefined ||
     ((group.kind === "event" || group.kind === "status") &&
       group.summary !== undefined);
 
@@ -98,6 +111,28 @@ export function ActivityGroupCard({
   const contentEvents = group.events.filter(
     (event) => event.type === "agent.message" || event.type === "agent.content",
   );
+
+  const hasResponseEvent = contentEvents.some(
+    (event) => event.type === "agent.message" && event.data.role !== "user",
+  );
+
+  const visibleContent = contentEvents.flatMap((event) => {
+    const content = visibleMessageContent(event, hasResponseEvent);
+
+    return content.length
+      ? [
+          {
+            id: event.id,
+            content,
+            markdown: !hasResponseEvent && event.data.role !== "user",
+          },
+        ]
+      : [];
+  });
+
+  const streamedContent = contentEvents.length
+    ? []
+    : streamContent(group.events);
 
   // Thinking-only messages read as a quiet "Thinking" row, not an assistant reply.
   // Their text is mostly empty, so it is only shown through the debug view.
@@ -127,7 +162,9 @@ export function ActivityGroupCard({
     (event) => event.type === "agent.completed",
   );
 
-  const stats = completion ? turnStats(completion) : [];
+  const stats = completion
+    ? [turnStats(completion).join(" · ")].filter(Boolean)
+    : rateLimitStats(group.events, preferences);
 
   const badge =
     group.state === "running"
@@ -191,9 +228,20 @@ export function ActivityGroupCard({
           </Collapsible.Trigger>
         </TooltipWrapper>
       </div>
+      {reply && (
+        <div className="activity-body">
+          <EventBody event={reply} />
+        </div>
+      )}
+      {userMessages.map((message) => (
+        <div key={message.id} className="chat-message" data-from="user">
+          <p className="chat-bubble">{message.text}</p>
+        </div>
+      ))}
       {group.summary &&
+        userMessages.length === 0 &&
         (markdownSummary ? (
-          // A reply's summary is the worker's whole response, written in Markdown.
+          // A provider result's summary is the worker's response, written in Markdown.
           <div className="activity-group-summary activity-markdown">
             <MarkdownView content={group.summary} />
           </div>
@@ -202,20 +250,31 @@ export function ActivityGroupCard({
             {group.summary}
           </p>
         ))}
-      {stats.length > 0 && (
-        <p className="activity-group-stats">{stats.join(" · ")}</p>
+      {stats.map((text, index) => (
+        <p key={index} className="activity-group-stats">
+          {text}
+        </p>
+      ))}
+      {hasResponseEvent && !quietThinking && (
+        <p className="activity-group-secondary">Started a response...</p>
       )}
-      {conversational && !quietThinking && (
-        <div className="activity-body">
-          {contentEvents.length ? (
-            contentEvents.map((event) => (
-              <EventBody key={event.id} event={event} />
-            ))
-          ) : (
-            <ActivityContent content={streamContent(group.events)} markdown />
-          )}
-        </div>
-      )}
+      {conversational &&
+        !quietThinking &&
+        (visibleContent.length > 0 || streamedContent.length > 0) && (
+          <div className="activity-body">
+            {visibleContent.length ? (
+              visibleContent.map((item) => (
+                <ActivityContent
+                  key={item.id}
+                  content={item.content}
+                  markdown={item.markdown}
+                />
+              ))
+            ) : (
+              <ActivityContent content={streamedContent} markdown />
+            )}
+          </div>
+        )}
       {/* Always mounted so the toggle's aria-controls resolves while closed. */}
       <Collapsible.Panel
         keepMounted

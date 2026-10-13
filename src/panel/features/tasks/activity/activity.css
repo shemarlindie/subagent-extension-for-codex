@@ -1,4 +1,9 @@
 /* Activity uses the same readable content and inspectors in both hosts. */
+.activity-timeline .chat-message:is([data-from="user"], [data-from="parent"]) {
+  align-items: flex-start;
+  margin-top: 8px;
+}
+
 .activity-body {
   min-width: 0;
 }
@@ -46,7 +51,7 @@
   flex-basis: 100%;
   padding-left: 12px;
 }
-.activity-result-toggle {
+.activity-reply-toggle {
   font-size: 12px;
 }
 .activity-values {
@@ -439,11 +444,15 @@
   opacity: 0;
   visibility: hidden;
 }
-.activity-group-stats {
+.activity-group-stats,
+.activity-group-secondary {
   margin: 5px 0 0;
   color: var(--muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+}
+.activity-body .activity-group-secondary {
+  margin: 5px 0 0;
 }
 .activity-group-title {
   min-width: 0;
@@ -488,6 +497,24 @@
   padding: 2px 14px;
   background: var(--surface);
   border-radius: 10px;
+}
+.activity-message > .activity-body:has(> .activity-thinking),
+.activity-stream > .activity-body:has(> .activity-thinking) {
+  padding-block: 10px;
+}
+.activity-message > .activity-body > .activity-thinking:first-child,
+.activity-stream > .activity-body > .activity-thinking:first-child {
+  margin-top: 0;
+}
+.activity-message
+  > .activity-body
+  > .activity-thinking:last-child
+  > :last-child,
+.activity-stream
+  > .activity-body
+  > .activity-thinking:last-child
+  > :last-child {
+  margin-bottom: 0;
 }
 .activity-message.activity-error > .activity-body,
 .activity-stream.activity-error > .activity-body {

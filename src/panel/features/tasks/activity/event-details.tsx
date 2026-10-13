@@ -5,7 +5,7 @@ import type { Event } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
 import { ActivityContent } from "./activity-content";
 import { activityFailed } from "./activity-timeline";
-import { eventTitle, label, resultPreview } from "./activity-utils";
+import { eventTitle, label, responsePreview } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
 import { EVENT_TAIL_SIZE } from "./event-history";
 
@@ -43,10 +43,9 @@ function RawResponse({ event, defaultOpen }: RawResponseProps) {
   );
 }
 
-/** A turn's result opens shortened; the reply row already shows it in full. */
-function TurnResult({ text }: { text: string }) {
+function ReplyResult({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
-  const preview = resultPreview(text);
+  const preview = responsePreview(text);
   const shortened = preview !== text;
 
   return (
@@ -56,7 +55,7 @@ function TurnResult({ text }: { text: string }) {
         <Button
           variant="text"
           underline
-          className="activity-result-toggle"
+          className="activity-reply-toggle"
           aria-expanded={expanded}
           onClick={() => setExpanded(!expanded)}
         >
@@ -71,6 +70,8 @@ export function EventBody({ event }: { event: Event }) {
   const data = event.data;
   if (event.type === "agent.message" || event.type === "agent.content")
     return <ActivityContent content={data.content ?? data.text} markdown />;
+  if (event.type === "agent.reply")
+    return <ReplyResult text={String(data.text ?? "")} />;
   if (event.type === "tool.started")
     return <ActivityValue value={data.input} />;
   if (event.type === "tool.completed")
@@ -116,23 +117,24 @@ export function EventBody({ event }: { event: Event }) {
     "content",
   ];
 
-  const prose = proseKeys.filter((key) => typeof data[key] === "string");
+  const prose = proseKeys.filter(
+    (key) =>
+      typeof data[key] === "string" &&
+      !(event.type === "agent.completed" && key === "result"),
+  );
 
   return (
     <>
-      {prose.map((key) =>
-        key === "result" && event.type === "agent.completed" ? (
-          <TurnResult key={key} text={String(data[key])} />
-        ) : (
-          <ActivityContent key={key} content={data[key]} />
-        ),
-      )}
+      {prose.map((key) => (
+        <ActivityContent key={key} content={data[key]} />
+      ))}
       <ActivityValue
         value={Object.fromEntries(
           Object.entries(data).filter(
             ([key]) =>
               !envelope.has(key) &&
               !prose.includes(key) &&
+              !(event.type === "agent.completed" && key === "result") &&
               !(key === "total_cost_usd" && data.cost_usd !== undefined),
           ),
         )}

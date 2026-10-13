@@ -219,15 +219,34 @@ The timeline lists activity oldest first, like Chat. It groups tools, hooks,
 background tasks, streamed responses and adjacent routine updates while keeping
 original SDK events for inspection. Progress moves an operation's row to the
 end. Messages, failures and lifecycle transitions remain distinct;
-stopped/cancelled operations are not shown as successful. Thinking shows a live clock, then its elapsed time.
-The worker's text, thinking and replies render as Markdown, as in Chat; tool
-input and output stay plain text, with fenced blocks shown as code.
+stopped/cancelled operations are not shown as successful. Agent connection and
+ordinary Claude status events keep their own timeline rows. **Requesting** is a
+status update, without a thinking clock or duration. Thinking rows contain
+only thinking signals and show a live clock, then their elapsed time.
+User messages use Chat's literal-text bubbles, aligned left in Activity. Parent
+messages and parent-authored initial requests also align left here.
+The initial request appears before the first event when the beginning of the
+history is visible, including turn 1. Later-turn views and trimmed history omit it.
+Assistant message rows say **Started a response...**; their SDK message text stays
+in the raw response JSON, while thinking notes and attachments remain visible.
+A **Reply** row shows a 100-character preview beneath
+its heading, with a **More**/**Less** control; the full event remains in Debug's
+raw JSON. Tool input and output stay plain text,
+with fenced blocks shown as code.
 
 A turn's **Turn completed** row shows its duration, input and output tokens
-(input includes cached tokens) and the session's cumulative cost. When the
-**Reply** row that follows repeats the turn's result, only the reply shows the
-text. The completed row's debug view shows the result's first 100 characters,
-with **More** to show the rest.
+(input includes cached tokens) and the session's cumulative cost. If a **Reply**
+row follows and repeats the turn's result, the response appears on the Reply row.
+The completed row's debug view keeps the result in raw response JSON,
+alongside the turn metadata.
+
+Rate-limit updates keep their own groups, separate from startup and Claude status
+events. Each group shows a separate line for each reported window,
+showing the window name, its latest utilization percentage and reset timestamp
+without seconds or a timezone label. Labels include
+**5-hour window** and **7-day Opus window**. Windows without reported utilization
+are omitted. Status, overage details and earlier reports remain
+in Debug.
 
 Times follow the host's locale and time zone. A group heading shows the clock,
 and its tooltip is the full date and time without a timezone label. An expanded

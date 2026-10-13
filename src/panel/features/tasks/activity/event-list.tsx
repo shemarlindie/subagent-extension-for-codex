@@ -1,6 +1,6 @@
 import { memo } from "react";
 
-import type { Event } from "../../../app/state/types";
+import type { Event, Task } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
 import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
 import type { ReadingState } from "../evidence/reading-state";
@@ -12,6 +12,7 @@ import {
   type DroppedSummary,
   EVENT_TAIL_SIZE,
 } from "./event-history";
+import { TaskRequestActivity } from "./task-request-activity";
 import { Timeline } from "./timeline";
 
 export { EventDetails } from "./event-details";
@@ -29,6 +30,7 @@ function DroppedNote({ summary }: { summary: DroppedSummary }) {
 }
 
 interface EventListProps {
+  task?: Task;
   events: Event[];
   reading?: ReadingState;
   active?: boolean;
@@ -49,6 +51,7 @@ export type ActivityRowFocus = { eventId: number; request: number };
 
 // Polls keep the same events array when nothing changed, so a hidden tab skips work.
 export const EventList = memo(function EventList({
+  task,
   events,
   reading,
   active = true,
@@ -64,8 +67,13 @@ export const EventList = memo(function EventList({
     (a, b) => a.events.at(-1)!.id - b.events.at(-1)!.id,
   );
 
-  const ready = events.length > 0;
   const trimmed = events.length === EVENT_TAIL_SIZE;
+
+  const showRequest = Boolean(
+    task && !dropped && (turn === undefined || turn === 1),
+  );
+
+  const ready = events.length > 0 || showRequest;
 
   // Progress moves an operation's row, so the first row ending at or after
   // the event is where that event's part of the timeline begins.
@@ -78,7 +86,13 @@ export const EventList = memo(function EventList({
     ready,
     itemAttribute: "data-activity-id",
     animateRows: true,
-    focus: focusGroup && { id: focusGroup.id, request: focus.request },
+    focus: focusGroup && {
+      id:
+        showRequest && task && focusGroup === groups[0]
+          ? `activity-${task.id}-request`
+          : focusGroup.id,
+      request: focus.request,
+    },
   });
 
   return (
@@ -103,13 +117,20 @@ export const EventList = memo(function EventList({
             )}
           </p>
         )}
-        {groups.length ? (
+        {groups.length || showRequest ? (
           <Timeline trimmed={trimmed}>
+            {showRequest && task && (
+              <TaskRequestActivity
+                task={task}
+                last={groups.length === 0}
+                preferences={preferences}
+              />
+            )}
             {groups.map((group, index) => (
               <ActivityGroupCard
                 key={group.id}
                 group={group}
-                first={index === 0}
+                first={index === 0 && !showRequest}
                 last={index === groups.length - 1}
                 span={thinkingSpan(group, events)}
                 running={running}
