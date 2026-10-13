@@ -3,12 +3,7 @@ import { FormProvider, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../shared/providers/metadata";
 import { useController, useSnapshot } from "../../app/state/controller-context";
-import type {
-  Defaults,
-  DialogReadStatus,
-  DialogState,
-  Task,
-} from "../../app/state/types";
+import type { Task } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
 import { Presence } from "../../shared/components/motion/motion";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
@@ -16,6 +11,13 @@ import { Field } from "../../shared/forms/fields";
 import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormFooter } from "../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
+import {
+  type DelegateFormDialog,
+  delegateInitialValues,
+  delegateReads,
+  delegateTarget,
+  workerChoices,
+} from "./delegate-initial-values";
 import type { DelegateValues } from "./delegate-values";
 import { taskProjects, workerChoice } from "./delegation";
 import { ApprovalField } from "./fields/approval-field";
@@ -25,147 +27,24 @@ import { ModelFields } from "./fields/model-fields";
 import { ProjectField } from "./fields/project-field";
 import { WorkerFields } from "./fields/worker-fields";
 import { WorkspaceField } from "./fields/workspace-field";
-import { providerOptionDefaults } from "./provider-defaults";
-
-type DelegateFormDialog =
-  | Extract<DialogState, { kind: "delegate" }>
-  | Extract<DialogState, { kind: "delegate-loading" }>;
 
 interface DelegateFormProps {
   dialog: DelegateFormDialog;
 }
 
-const FALLBACK_DEFAULTS: Defaults = {
-  max_runtime_minutes: null,
-  max_cost_usd: null,
-};
-
-const READY = {
-  context: "ready",
-  settings: "ready",
-  projects: "ready",
-  workers: "ready",
-} satisfies Record<
-  "context" | "settings" | "projects" | "workers",
-  DialogReadStatus
->;
-
-/** A new task's revision: blank until settings and context load, HEAD for the current repo. */
-function startingRevision(ready: boolean, strategy: string, revision: string) {
-  if (!ready) return "";
-
-  return strategy === "current_repo" ? "HEAD" : revision;
-}
-
-/** A new task's worker: the dialog's choice, then the default, then the first available. */
-function startingWorker(
-  choices: string[],
-  preferredWorker: string | undefined,
-  preferred: string,
-  settingsReady: boolean,
-) {
-  if (preferredWorker && choices.includes(preferredWorker)) {
-    return preferredWorker;
-  }
-
-  if (!settingsReady) return "";
-
-  return choices.includes(preferred) ? preferred : (choices[0] ?? "");
-}
-
-/** A budget's starting mode: blank until settings load, then limited unless turned off. */
-function startingBudgetMode(settingsReady: boolean, unlimited: boolean) {
-  if (!settingsReady) return "";
-
-  return unlimited ? "none" : "limited";
-}
-
 function DelegateForm({ dialog }: DelegateFormProps) {
   const controller = useController(),
     state = useSnapshot(),
-    loading = dialog.kind === "delegate-loading",
-    statuses = loading ? dialog.statuses : READY,
-    errors = loading ? dialog.errors : undefined,
-    defaults =
-      dialog.kind === "delegate"
-        ? dialog.defaults
-        : (dialog.defaults ?? FALLBACK_DEFAULTS);
-
-  const persistedDraft = useRef(controller.getDialogDraft("delegate") ?? {}),
-    settingsReady = statuses.settings === "ready",
-    contextReady = statuses.context === "ready",
-    pendingNumber = (key: "runtime" | "cost"): number | "" => {
-      const value = persistedDraft.current[key];
-
-      return typeof value === "number" && Number.isFinite(value) ? value : "";
-    };
-
-  const choices = state.workers.flatMap((worker) =>
-    worker.profiles.map((profile) => `${worker.provider}:${profile}`),
-  );
-
-  const preferred =
-    dialog.preferredWorker ??
-    `${defaults.default_provider ?? ""}:${defaults.default_worker_profile ?? ""}`;
-
-  const { provider: preferredProvider } = workerChoice(preferred),
-    preferredWorker = state.workers.find(
-      (worker) => worker.provider === preferredProvider,
-    ),
-    optionDefaults = providerOptionDefaults(
-      preferredProvider,
-      preferredWorker?.metadata,
-      defaults,
-    );
-
-  const strategyDefault = settingsReady
-      ? (defaults.default_workspace_strategy ?? "current_repo")
-      : "",
-    resolvedRepository =
-      dialog.kind === "delegate"
-        ? dialog.repository
-        : (dialog.repository ??
-          (state.scopeKnown ? state.repository : undefined)),
-    resolvedRevision =
-      dialog.kind === "delegate"
-        ? dialog.revision
-        : (dialog.revision ?? (state.scopeKnown ? state.revision : "HEAD")),
-    initialValues: DelegateValues = {
-      ...optionDefaults,
-      repository: resolvedRepository ?? "",
-      revision: startingRevision(
-        settingsReady && contextReady,
-        strategyDefault,
-        resolvedRevision,
-      ),
-      workspace_strategy: strategyDefault,
-      description: "",
-      model: "",
-      worker: startingWorker(
-        choices,
-        dialog.preferredWorker,
-        preferred,
-        settingsReady,
-      ),
-      runtimeMode: startingBudgetMode(
-        settingsReady,
-        defaults.use_runtime_budget === false ||
-          defaults.max_runtime_minutes === null,
-      ),
-      runtime: settingsReady
-        ? (defaults.max_runtime_minutes ?? 20)
-        : pendingNumber("runtime"),
-      costMode: startingBudgetMode(
-        settingsReady,
-        defaults.use_cost_budget === false || defaults.max_cost_usd === null,
-      ),
-      cost: settingsReady
-        ? (defaults.max_cost_usd ?? 5)
-        : pendingNumber("cost"),
-      reasoning_effort: settingsReady ? "default" : "",
-      context: "",
-      deps: [],
-    };
+    { loading, statuses, errors, message, defaults } = delegateReads(dialog),
+    persistedDraft = useRef(controller.getDialogDraft("delegate") ?? {}),
+    choices = workerChoices(state.workers),
+    { repository: resolvedRepository, revision: resolvedRevision } =
+      delegateTarget(dialog, state),
+    initialValues = delegateInitialValues({
+      dialog,
+      scope: state,
+      draft: persistedDraft.current,
+    });
 
   const previousInitialValues = useRef(initialValues),
     form = usePersistedDialogForm<DelegateValues>("delegate", initialValues);
@@ -323,7 +202,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
             </Button>
           </div>
         </Presence>
-        <FormFieldError message={loading ? dialog.message : undefined} />
+        <FormFieldError message={message} />
         <ProjectField
           projects={taskProjects(state)}
           loading={statuses.projects === "loading"}
