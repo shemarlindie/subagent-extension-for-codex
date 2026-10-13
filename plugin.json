@@ -8,11 +8,11 @@
       "interface": {
         "displayName": "Codex Subagent Extension",
         "shortDescription": "Delegate, inspect, and control Claude coding tasks.",
-        "brandColor": "#3a83f7",
-        "composerIcon": "./assets/product-glyph-black.svg",
-        "composerIconDark": "./assets/product-glyph-white.svg",
-        "logo": "./assets/product-glyph-black.svg",
-        "logoDark": "./assets/product-glyph-white.svg"
+        "brandColor": "#3a7ca5",
+        "composerIcon": "./assets/brand/brand-glyph-black.svg",
+        "composerIconDark": "./assets/brand/brand-glyph-white.svg",
+        "logo": "./assets/brand/brand-icon-color.svg",
+        "logoDark": "./assets/brand/brand-icon-color.svg"
       }
     }
   }

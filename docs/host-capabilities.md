@@ -18,6 +18,26 @@ task on Chat. Display-mode preferences are hints; the host owns physical placeme
 
 The extension does not advertise PiP or a native pinned-summary surface. Its compact inline summary is part of the widget; display-mode requests do not guarantee desktop pane geometry.
 
+### Sidebar icon
+
+The **Delegated Work** sidebar icon is set by the `icons` field on the
+`open_codex_subagent_extension_global` MCP tool in
+`src/service/platform/panel/panel.ts`. Its
+`_meta["openai/ui"].entrypoints: [{ type: "global" }]` registers the sidebar entry.
+
+The icon array, `productGlyphIcons`, comes from
+`src/service/platform/server/product-glyph.ts`. It encodes these SVG files as
+base64 data URIs with theme metadata:
+
+- Light theme: [`brand-glyph-black.svg`](../assets/brand/brand-glyph-black.svg).
+- Dark theme: [`brand-glyph-white.svg`](../assets/brand/brand-glyph-white.svg).
+
+Use pure black (`#000000`) and pure white (`#ffffff`) in these assets because
+Codex dims the displayed sidebar icon.
+
+To change the icon, update those assets, rebuild, restart the service and reload
+the MCP connection.
+
 ## Panel network access
 
 Observed in the target Codex desktop installation: the embedded panel uses a

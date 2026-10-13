@@ -26,7 +26,7 @@ export function WorkerProfileIcon({
 }) {
   return (
     <Icon
-      name={workerProfileIconName(profile) ?? "worker"}
+      name={workerProfileIconName(profile) ?? "quiet-constellation"}
       size={size}
       className={className}
     />

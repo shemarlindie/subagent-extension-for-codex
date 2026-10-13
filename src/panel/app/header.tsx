@@ -54,7 +54,9 @@ export function Header() {
   return (
     <header data-mode={threadMode ? "thread" : "global"}>
       <div className="brand">
-        {threadMode && <Icon name="worker" size={20} className="mark" />}
+        {threadMode && (
+          <Icon name="quiet-constellation" size={20} className="mark" />
+        )}
         <div className="brand-text">
           {threadMode && (
             <div className="brand-title">

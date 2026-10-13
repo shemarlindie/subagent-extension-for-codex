@@ -84,7 +84,10 @@ test("the installed root is this checkout regardless of working directory", asyn
 });
 
 test("a missing package file names the file and the installation", () => {
-  assert.match(readPackageFile("assets", "product-glyph-black.svg"), /<svg/);
+  assert.match(
+    readPackageFile("assets", "brand", "brand-glyph-dark.svg"),
+    /<svg/,
+  );
 
   assert.throws(() => readPackageFile("assets", "missing.svg"), {
     message: `Missing package file assets/missing.svg in ${installRoot}`,

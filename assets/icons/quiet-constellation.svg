@@ -1,0 +1,43 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  width="24"
+  height="24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2.086956522"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect
+    x="3.652173913"
+    y="8.47826087"
+    width="15.652173913"
+    height="14.086956522"
+    rx="4.695652174"
+  />
+  <path
+    d="M7.826086956 14.739130435H9.391304348M13.565217391 14.739130435H15.130434783M11.47826087 5.347826087V8.47826087"
+  />
+  <circle
+    cx="1.565217391"
+    cy="3.782608696"
+    r="1.565217391"
+    fill="currentColor"
+    stroke="none"
+  />
+  <circle
+    cx="17.739130435"
+    cy="1.695652174"
+    r="1.304347826"
+    fill="currentColor"
+    stroke="none"
+  />
+  <circle
+    cx="22.956521739"
+    cy="6.391304348"
+    r="1.043478261"
+    fill="currentColor"
+    stroke="none"
+  />
+</svg>

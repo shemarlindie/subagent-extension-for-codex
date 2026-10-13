@@ -295,7 +295,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       ["light", "dark"],
     );
 
-    for (const [index, color] of ["#202124", "#f5f5f5"].entries()) {
+    for (const [index, color] of ["#000000", "#ffffff"].entries()) {
       const icon: NonNullable<typeof opener.icons>[number] | undefined =
         opener.icons?.[index];
 

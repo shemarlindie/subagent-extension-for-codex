@@ -117,7 +117,7 @@ test("mention test mode always returns a sample and logs the query as JSONL", as
       ["light", "dark"],
     );
 
-    for (const [index, color] of ["#202124", "#f5f5f5"].entries()) {
+    for (const [index, color] of ["#000000", "#ffffff"].entries()) {
       const icon = result.items[0]?.icons?.[index];
 
       assert.ok(icon);
@@ -127,10 +127,12 @@ test("mention test mode always returns a sample and logs the query as JSONL", as
         "base64",
       ).toString("utf8");
 
-      assert.match(svg, /viewBox="0 0 24 24"/);
+      assert.match(svg, /viewBox="10 7.75 46 46"/);
       assert.match(svg, /fill="none"/);
       assert.match(svg, new RegExp(`stroke="${color}"`));
-      assert.doesNotMatch(svg, /<(?:rect|circle|ellipse)\b|transform=/i);
+      assert.match(svg, /<rect\b/);
+      assert.equal((svg.match(/<circle\b/g) ?? []).length, 3);
+      assert.doesNotMatch(svg, /transform=/i);
     }
 
     assert.match(

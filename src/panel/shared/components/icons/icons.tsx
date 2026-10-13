@@ -11,6 +11,7 @@ interface IconDefinition {
 const ICON_NAMES = [
   "plus",
   "worker",
+  "quiet-constellation",
   "eye",
   "code",
   "flask",

@@ -227,7 +227,7 @@ describe("packed artifact", () => {
       "dist/projects-cli.js",
       "dist/app.html",
       "dist/THIRD_PARTY_LICENSES.txt",
-      "assets/product-glyph-black.svg",
+      "assets/brand/brand-glyph-dark.svg",
       "mcp.json",
     ])
       await access(join(pkg, file));
