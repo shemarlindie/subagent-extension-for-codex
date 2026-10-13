@@ -10,3 +10,4 @@ dist/
 .ruff_cache/
 
 product-icon-candidates/
+release/

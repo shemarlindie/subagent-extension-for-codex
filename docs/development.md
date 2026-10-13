@@ -370,6 +370,18 @@ verifies startup, transports, CLI readiness and restart behavior from an
 extracted package outside the checkout. It fails if the top-level file list
 changes.
 
+`npm run release:assemble` (after a build) writes `release/`: the packed files,
+a manifest with no scripts or dependencies, and
+`.agents/plugins/marketplace.json` listing the plugin with source `./`, so the
+directory is both a Codex marketplace and the plugin. Install it locally with
+`codex plugin marketplace add ./release`, then
+`codex plugin add codex-subagent-extension@shemarlindie`. The marketplace name
+`shemarlindie` is part of the plugin ID and its `PLUGIN_DATA` path, so it must
+not change. `tests/integration/package/marketplace-install.test.ts` installs
+the assembled directory into a temporary `CODEX_HOME` and runs the MCP command
+Codex reports. It needs the Codex CLI (`CODEX_BIN` or `codex` on `PATH`) and is
+skipped without it.
+
 ## Storage and Claude verification
 
 - [Database and migrations](database.md) covers schema changes, transactions

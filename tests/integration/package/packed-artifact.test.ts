@@ -14,7 +14,6 @@ import {
   unlink,
   writeFile,
 } from "node:fs/promises";
-import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -31,7 +30,12 @@ import {
 } from "vitest";
 
 import type { ProviderReadiness } from "../../../src/shared/providers/types.js";
-import { waitForListening } from "../../support/helpers.js";
+import {
+  freePort,
+  type Service,
+  serviceEnv,
+  stopService,
+} from "../../support/service.js";
 
 const exec = promisify(execFile);
 
@@ -44,9 +48,6 @@ let serviceRepository: string;
 /** The paths npm packed, before the tests add their own files to the extracted package. */
 let packedFiles: string[];
 
-/** A packaged service's data directory and loopback port. */
-type Service = { data: string; port: number };
-
 /** The service most tests share; it runs whatever Claude Code the host has. */
 let main: Service;
 /** Every service a test started, so each one is stopped even when a test fails. */
@@ -58,28 +59,6 @@ async function extraService(name: string): Promise<Service> {
   services.push(service);
 
   return service;
-}
-
-/** The environment without this service's overrides, so tests never reach the user's live service. */
-function cleanEnv(service = main, overrides: Record<string, string> = {}) {
-  const env: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(process.env)) {
-    if (
-      value !== undefined &&
-      !key.startsWith("CODEX_SUBAGENT_EXTENSION_") &&
-      key !== "PORT"
-    ) {
-      env[key] = value;
-    }
-  }
-
-  return {
-    ...env,
-    CODEX_SUBAGENT_EXTENSION_DATA: service.data,
-    PORT: String(service.port),
-    ...overrides,
-  };
 }
 
 /** Whether a file starts like an ELF, Mach-O or Windows PE binary. */
@@ -116,15 +95,6 @@ async function claudeWorker(client: Client) {
   };
 }
 
-async function freePort() {
-  const reservation = createServer();
-  await waitForListening(reservation.listen(0, "127.0.0.1"));
-  const { port } = reservation.address() as import("node:net").AddressInfo;
-  await new Promise<void>((done) => reservation.close(() => done()));
-
-  return port;
-}
-
 /** Connects over the packaged stdio entry, which starts the packaged service when none is running. */
 async function connectStdio(
   service = main,
@@ -138,7 +108,7 @@ async function connectStdio(
       command: process.execPath,
       args: ["--enable-source-maps", join(installation, "dist/stdio.js")],
       cwd: root,
-      env: cleanEnv(service, overrides),
+      env: serviceEnv(service, overrides),
       stderr: "pipe",
     }),
   );
@@ -168,28 +138,6 @@ const health = () =>
   fetch(`http://127.0.0.1:${main.port}/health`).then((response) =>
     response.json(),
   );
-
-async function stopService(service = main) {
-  const pid = Number(await readFile(join(service.data, "service.pid"), "utf8"));
-
-  try {
-    process.kill(pid, "SIGTERM");
-  } catch {
-    return;
-  }
-
-  for (let i = 0; i < 250; i++) {
-    try {
-      process.kill(pid, 0);
-    } catch {
-      return;
-    }
-
-    await new Promise((done) => setTimeout(done, 20));
-  }
-
-  process.kill(pid, "SIGKILL");
-}
 
 beforeAll(async () => {
   root = await realpath(await mkdtemp(join(tmpdir(), "packed-artifact-")));
@@ -302,7 +250,7 @@ describe("packed artifact", () => {
       const failed = await exec(
         process.execPath,
         ["--import", oldNode, join(pkg, `dist/${entry}.js`)],
-        { cwd: root, env: cleanEnv() },
+        { cwd: root, env: serviceEnv(main) },
       ).then(
         () => assert.fail(`${entry} started on an unsupported Node`),
         (error: { code: number; stderr: string }) => error,
@@ -321,7 +269,7 @@ describe("packed artifact", () => {
     const run = (...args: string[]) =>
       exec(process.execPath, [join(pkg, "dist/projects-cli.js"), ...args], {
         cwd: root,
-        env: cleanEnv(),
+        env: serviceEnv(main),
       });
 
     await run("register", repository);
@@ -397,7 +345,7 @@ describe("packed artifact", () => {
   });
 
   test("the packaged service keeps the projects it registered across a restart", async () => {
-    await stopService();
+    await stopService(main);
     await assert.rejects(health());
 
     const client = await connectStdio();
@@ -419,7 +367,7 @@ describe("packed artifact", () => {
 
     try {
       await callJson(client, "list_agent_projects");
-      await stopService();
+      await stopService(main);
       await assert.rejects(health());
 
       const projects = JSON.stringify(
