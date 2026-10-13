@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { createServer, type RequestListener } from "node:http";
+import { createServer, type RequestListener, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -64,6 +64,191 @@ async function fake(t: import("vitest").TestContext, handler: RequestListener) {
   return `http://127.0.0.1:${(server.address() as import("node:net").AddressInfo).port}`;
 }
 
+/** Stops the service a test's launcher started in `dir`, even when the test fails. */
+function stopOnFinish(t: import("vitest").TestContext, dir: string) {
+  t.onTestFinished(async () => {
+    let pid: number;
+
+    try {
+      pid = Number(await readFile(join(dir, "service.pid"), "utf8"));
+    } catch {
+      return;
+    }
+
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch {}
+
+    for (let i = 0; i < 100; i++) {
+      try {
+        process.kill(pid, 0);
+      } catch {
+        return;
+      }
+
+      await new Promise((done) => setTimeout(done, 20));
+    }
+
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {}
+  });
+}
+
+/** A fake service with the given identity that records drain requests. */
+async function identified(
+  t: import("vitest").TestContext,
+  identity: Record<string, unknown>,
+  onDrain: (server: Server) => void = () => {},
+) {
+  const drains: string[] = [];
+
+  const server = createServer((req, res) => {
+    res.setHeader("Content-Type", "application/json");
+
+    if (req.url === "/health") {
+      res.end(
+        JSON.stringify({
+          service: "codex-subagent-extension",
+          status: "ok",
+          ...identity,
+        }),
+      );
+
+      return;
+    }
+
+    if (req.url === "/api/service/drain") {
+      drains.push(req.headers.authorization ?? "");
+      res.statusCode = 202;
+      res.end(JSON.stringify({ status: "draining", running: 0 }));
+      onDrain(server);
+
+      return;
+    }
+
+    res.end("{}");
+  });
+
+  await waitForListening(server.listen(0, "127.0.0.1"));
+
+  t.onTestFinished(
+    () =>
+      new Promise<void>((done) => {
+        server.closeAllConnections();
+        server.close(() => done());
+      }),
+  );
+
+  const origin = `http://127.0.0.1:${(server.address() as import("node:net").AddressInfo).port}`;
+
+  return { origin, drains };
+}
+
+/** A data directory whose service.json describes a service at `origin`. */
+async function serviceData(
+  t: import("vitest").TestContext,
+  origin: string,
+  installRoot: string,
+) {
+  const dir = await data(t);
+
+  await writeFile(
+    join(dir, "service.json"),
+    JSON.stringify({ origin, installRoot }),
+  );
+
+  await writeFile(join(dir, "admin-token"), "handoff-token");
+
+  return dir;
+}
+
+test("launcher uses a service it didn't start whatever its version, and never drains it", async (t) => {
+  const { origin, drains } = await identified(t, {
+    version: "0.0.1",
+    apiVersion: 1,
+    launcher: "foreground",
+  });
+
+  const dir = await serviceData(t, origin, "/removed/install");
+  const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
+
+  assert.deepEqual(JSON.parse(result.stdout), {
+    origin,
+    token: "handoff-token",
+  });
+
+  assert.deepEqual(drains, []);
+});
+
+test("launcher refuses an incompatible service it didn't start", async (t) => {
+  const { origin, drains } = await identified(t, {
+    version: "9.0.0",
+    apiVersion: 99,
+    launcher: "foreground",
+  });
+
+  const dir = await serviceData(t, origin, resolve("."));
+
+  await assert.rejects(
+    connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
+    /different extension service \(version 9\.0\.0, not started by the plugin\)/,
+  );
+
+  assert.deepEqual(drains, []);
+  await assert.rejects(access(join(dir, "service.log")));
+});
+
+test("launcher drains an older plugin service and keeps using it while it speaks the same API", async (t) => {
+  const { origin, drains } = await identified(t, {
+    version: "0.0.1",
+    apiVersion: 1,
+    launcher: "stdio",
+  });
+
+  const dir = await serviceData(t, origin, resolve("."));
+  const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
+
+  assert.deepEqual(JSON.parse(result.stdout), {
+    origin,
+    token: "handoff-token",
+  });
+
+  assert.deepEqual(drains, ["Bearer handoff-token"]);
+});
+
+test(
+  "launcher replaces an uninstalled plugin service with an incompatible API once it exits",
+  { timeout: 30000 },
+  async (t) => {
+    const { origin, drains } = await identified(
+      t,
+      { version: "0.0.1", apiVersion: 0, launcher: "stdio" },
+      // The old service exits once asked to drain.
+      (server) => {
+        server.close();
+        server.closeAllConnections();
+      },
+    );
+
+    const dir = await serviceData(t, origin, join(tmpdir(), "removed-install"));
+    stopOnFinish(t, dir);
+    const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
+    assert.equal(JSON.parse(result.stdout).origin, origin);
+    assert.deepEqual(drains, ["Bearer handoff-token"]);
+
+    const health = await (await fetch(`${origin}/health`)).json();
+    assert.equal(health.launcher, "stdio");
+    assert.equal(health.apiVersion, 1);
+
+    const metadata = JSON.parse(
+      await readFile(join(dir, "service.json"), "utf8"),
+    );
+
+    assert.equal(metadata.installRoot, resolve("."));
+  },
+);
+
 test("data directory override is independent of packaged installation directory", () => {
   assert.equal(
     dataDirectory({ CODEX_SUBAGENT_EXTENSION_DATA: "/tmp/custom-agent-data" }),
@@ -84,7 +269,9 @@ test("launcher discovers service metadata and token without starting another ser
     res.setHeader("Content-Type", "application/json");
 
     if (req.url === "/health") {
-      res.end(JSON.stringify({ service: "codex-subagent-extension" }));
+      res.end(
+        JSON.stringify({ service: "codex-subagent-extension", apiVersion: 1 }),
+      );
     } else {
       auth = req.headers.authorization ?? "";
       res.end("{}");
@@ -161,6 +348,7 @@ test("launcher waits for an existing service to finish recovery without spawning
         JSON.stringify({
           service: "codex-subagent-extension",
           status: probes < 3 ? "starting" : "ready",
+          apiVersion: 1,
         }),
       );
     } else {
@@ -213,33 +401,7 @@ test(
     await waitForListening(reservation.listen(0, "127.0.0.1"));
     const port = (reservation.address() as import("node:net").AddressInfo).port;
     await new Promise<void>((done) => reservation.close(() => done()));
-    let pid: number | undefined;
-
-    t.onTestFinished(async () => {
-      try {
-        pid ??= Number(await readFile(join(dir, "service.pid"), "utf8"));
-      } catch {}
-
-      if (!pid) return;
-
-      try {
-        process.kill(pid, "SIGTERM");
-      } catch {}
-
-      for (let i = 0; i < 100; i++) {
-        try {
-          process.kill(pid, 0);
-        } catch {
-          return;
-        }
-
-        await new Promise((done) => setTimeout(done, 20));
-      }
-
-      try {
-        process.kill(pid, "SIGKILL");
-      } catch {}
-    });
+    stopOnFinish(t, dir);
 
     const env = {
       CODEX_SUBAGENT_EXTENSION_DATA: dir,
@@ -260,7 +422,7 @@ test(
       await readFile(join(dir, "service.json"), "utf8"),
     );
 
-    pid = Number(await readFile(join(dir, "service.pid"), "utf8"));
+    const pid = Number(await readFile(join(dir, "service.pid"), "utf8"));
     assert.equal(metadata.pid, pid);
     assert.equal(metadata.origin, connections[0].origin);
     const repeated = JSON.parse((await connect(env)).stdout);

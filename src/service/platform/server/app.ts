@@ -7,7 +7,7 @@ import express from "express";
 import type { DraftUpdate } from "../../../shared/tasks/conversation/drafts.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
-import { packageVersion } from "../service/runtime.js";
+import { serviceIdentity } from "../service/identity.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
 import { callTool, isUserTool } from "./tools.js";
@@ -40,6 +40,8 @@ export function application(
   app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Cache-Control", "no-store");
+    // A draining service is about to exit, so clients shouldn't reuse its connections.
+    if (app.locals.draining) res.setHeader("Connection", "close");
     const requestOrigin = req.headers.origin;
 
     if (requestOrigin && !allowed.has(requestOrigin)) {
@@ -95,11 +97,21 @@ export function application(
       `ac_session=${key}; HttpOnly; Path=/; Max-Age=3600; SameSite=${sessionOrigin.startsWith("https:") ? "None; Secure" : "Strict"}`,
     );
 
+  // The install root stays in service.json: /health may be reachable from the network.
+  const { version, apiVersion, launcher } = serviceIdentity();
+
   app.get("/health", (_req, res) =>
     res.status(app.locals.ready === false ? 503 : 200).json({
       service: "codex-subagent-extension",
-      status: app.locals.ready === false ? "starting" : "ok",
-      version: packageVersion,
+      status:
+        app.locals.ready === false
+          ? "starting"
+          : app.locals.draining
+            ? "draining"
+            : "ok",
+      version,
+      apiVersion,
+      launcher,
       providers: c.workers().map((w) => w.provider),
     }),
   );
@@ -186,6 +198,23 @@ export function application(
     }
 
     next();
+  });
+
+  // Only an administrator token may hand the service over; console sessions can't.
+  app.post("/api/service/drain", (req, res) => {
+    if (!bearer(req)) {
+      res.status(403).json({ error: "Administrator token required" });
+
+      return;
+    }
+
+    if (!app.locals.drain) {
+      res.status(501).json({ error: "This service cannot drain" });
+
+      return;
+    }
+
+    res.status(202).json({ status: "draining", running: app.locals.drain() });
   });
 
   app.post(["/api/tools/:name", "/api/user-tools/:name"], async (req, res) => {

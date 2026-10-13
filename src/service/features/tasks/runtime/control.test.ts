@@ -3247,3 +3247,39 @@ test("accepted interrupt sends retain uncertain delivery if stopping fails", asy
     await c.close();
   }
 });
+
+test("drain finishes running turns and leaves queued tasks for the next service", async () => {
+  const { c, store, repo, db } = await setup(new FixtureProvider(), 1);
+  const running = await c.start("alice", input(repo, "[input]"));
+  await until(() => !!store.get(running.id, "alice").pending_input);
+  const queued = await c.start("alice", input(repo, "Queued work"));
+  const drained = c.drain(5000);
+
+  c.input(
+    "alice",
+    running.id,
+    store.get(running.id, "alice").pending_input!.id,
+    true,
+    { answer: "yes" },
+  );
+
+  await drained;
+  assert.equal(store.get(running.id, "alice").status, "completed");
+  assert.equal(store.get(queued.id, "alice").status, "queued");
+  await c.close();
+  const reopened = new Store(db);
+  assert.equal(reopened.get(queued.id, "alice").status, "queued");
+  reopened.close();
+});
+
+test("drain stops waiting at its limit, and close interrupts the turn left", async () => {
+  const { c, store, repo, db } = await setup();
+  const t = await c.start("alice", input(repo, "[input]"));
+  await until(() => !!store.get(t.id, "alice").pending_input);
+  await c.drain(20);
+  assert.ok(c.active.has(t.id));
+  await c.close();
+  const reopened = new Store(db);
+  assert.equal(reopened.get(t.id, "alice").status, "interrupted");
+  reopened.close();
+});

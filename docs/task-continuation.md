@@ -56,6 +56,29 @@ move to the front of its queue. A non-empty recovered queue is paused until you
 resume it or send another message. If a submission or shutdown outcome is
 uncertain, inspect Chat and Activity before sending it again.
 
+## Updates and service handoff
+
+A plugin update installs the new version while the previous version's service
+may still be running. The next stdio proxy to start compares itself with that
+service, using the `version`, `apiVersion` and `launcher` fields of `/health`
+and the `installRoot` in `service.json`:
+
+| Running service                                                | The proxy                                                                       |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Same version, installation present                             | Uses it.                                                                        |
+| Started by a stdio proxy, older or its installation removed    | Asks it to drain, then starts the new version once it exits.                    |
+| Started by a stdio proxy, newer                                | Uses it if `apiVersion` matches; otherwise asks you to update the plugin.       |
+| Started another way (`npm run dev`, `npm start`, a supervisor) | Uses it if `apiVersion` matches; otherwise refuses. It never stops the service. |
+
+A draining service starts no more turns and lets running turns finish for up
+to 10 minutes, then interrupts any left, as a restart does. Queued tasks stay
+queued, and the new service starts them. While a draining service still speaks
+the same API, proxies keep using it; when it exits, their next call starts the
+new version. Otherwise calls wait for the new service.
+
+Keep development services on their own `CODEX_SUBAGENT_EXTENSION_DATA` and
+`PORT`, so an installed plugin never finds them on its data directory.
+
 ## Raise a task budget
 
 Runtime and cost limits accumulate across turns. Use the budget controls in
@@ -96,12 +119,13 @@ git for-each-ref --format='%(refname)' refs/agent-tasks | xargs -n1 git update-r
 
 ## Troubleshooting
 
-| Symptom                       | Check                                                                                                                                                              |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Service port is in use        | Identify the service on that port and confirm its data directory before starting another service.                                                                  |
-| MCP proxy cannot authenticate | Use the same absolute data directory for the service and MCP client, or matching token and URL overrides.                                                          |
-| Claude tasks cannot start     | Read the worker's readiness message. [Claude Code CLI](claude-cli.md) explains executable selection and fixes.                                                     |
-| A turn starts a new session   | Confirm the original service host and Claude state are available. A fresh session carries the bounded conversation described above.                                |
-| Startup refuses the database  | See [Database](database.md#migration-application) for supported migration histories. If a database has a migration this build lacks, use a build that includes it. |
+| Symptom                                      | Check                                                                                                                                                              |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Service port is in use                       | Identify the service on that port and confirm its data directory before starting another service.                                                                  |
+| MCP proxy cannot authenticate                | Use the same absolute data directory for the service and MCP client, or matching token and URL overrides.                                                          |
+| Claude tasks cannot start                    | Read the worker's readiness message. [Claude Code CLI](claude-cli.md) explains executable selection and fixes.                                                     |
+| A turn starts a new session                  | Confirm the original service host and Claude state are available. A fresh session carries the bounded conversation described above.                                |
+| "A different extension service … is running" | Stop the named service, or give development its own `CODEX_SUBAGENT_EXTENSION_DATA` and `PORT`.                                                                    |
+| Startup refuses the database                 | See [Database](database.md#migration-application) for supported migration histories. If a database has a migration this build lacks, use a build that includes it. |
 
 [Host capabilities](host-capabilities.md) covers host integration limits.

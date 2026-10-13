@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import {
   access,
   chmod,
+  cp,
   mkdir,
   mkdtemp,
   readdir,
@@ -128,13 +129,14 @@ async function freePort() {
 async function connectStdio(
   service = main,
   overrides: Record<string, string> = {},
+  installation = pkg,
 ) {
   const client = new Client({ name: "packed-artifact-test", version: "1" });
 
   await client.connect(
     new StdioClientTransport({
       command: process.execPath,
-      args: ["--enable-source-maps", join(pkg, "dist/stdio.js")],
+      args: ["--enable-source-maps", join(installation, "dist/stdio.js")],
       cwd: root,
       env: cleanEnv(service, overrides),
       stderr: "pipe",
@@ -426,6 +428,55 @@ describe("packed artifact", () => {
 
       assert.ok(projects.includes(repository));
       assert.equal((await health()).status, "ok");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("a newer package hands over from the older package's service", async () => {
+    // A copy reporting an older version stands in for the previous release.
+    const older = join(root, "package-older");
+    await cp(pkg, older, { recursive: true });
+
+    const manifest = JSON.parse(
+      await readFile(join(older, "package.json"), "utf8"),
+    );
+
+    await writeFile(
+      join(older, "package.json"),
+      JSON.stringify({ ...manifest, version: "0.0.1" }),
+    );
+
+    const service = await extraService("data-handoff");
+
+    const status = () =>
+      fetch(`http://127.0.0.1:${service.port}/health`).then((response) =>
+        response.json(),
+      );
+
+    const previous = await connectStdio(service, {}, older);
+
+    try {
+      await callJson(previous, "list_agent_projects");
+      assert.equal((await status()).version, "0.0.1");
+    } finally {
+      await previous.close();
+    }
+
+    const oldPid = await readFile(join(service.data, "service.pid"), "utf8");
+    const client = await connectStdio(service);
+
+    try {
+      // The idle older service drains at once; the next call starts this version.
+      await callJson(client, "list_agent_projects");
+      const current = await status();
+      assert.equal(current.version, manifest.version);
+      assert.equal(current.launcher, "stdio");
+
+      assert.notEqual(
+        await readFile(join(service.data, "service.pid"), "utf8"),
+        oldPid,
+      );
     } finally {
       await client.close();
     }

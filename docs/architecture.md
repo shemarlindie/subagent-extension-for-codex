@@ -30,6 +30,8 @@ timeout. Tool calls wait up to 60 seconds for the connection. When a call finds
 the service gone, the proxy starts a new one and retries the call once.
 Multiple host connections use the same service. Closing a proxy leaves tasks running.
 The service lease prevents competing processes from owning the same data directory.
+After a plugin update, the proxy replaces an older service it started by
+asking it to drain; see [Updates and service handoff](task-continuation.md#updates-and-service-handoff).
 See [Task continuation](task-continuation.md) for startup and recovery.
 
 The service owns task scheduling, approval authority, dependencies, workspace

@@ -9,15 +9,11 @@ import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
 import { application } from "../server/app.js";
 import { Auth } from "../server/auth.js";
+import { serviceIdentity } from "./identity.js";
 import { lease } from "./lease.js";
 import { networkOrigins } from "./network.js";
 import { inspectProcessIdentity } from "./process-info.js";
-import {
-  dataDirectory,
-  defaultPort,
-  packagePath,
-  packageVersion,
-} from "./runtime.js";
+import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
 import { adminToken } from "./token.js";
 
 export type ServeOptions = {
@@ -29,6 +25,12 @@ export type ServeOptions = {
    */
   providers?: (store: Store, data: string) => Map<string, Provider>;
 };
+
+/** How long a draining service waits for running turns before interrupting them. */
+const drainLimit = 10 * 60 * 1000;
+
+/** How long a stopping service waits to answer calls it already received. */
+const callDrainLimit = 10000;
 
 /** Starts the HTTP service and runs it until SIGINT or SIGTERM. */
 export async function serve({
@@ -67,7 +69,7 @@ export async function serve({
     JSON.stringify({
       origin,
       pid: process.pid,
-      version: packageVersion,
+      ...serviceIdentity(),
       ...processIdentity,
     }),
     { mode: 0o600 },
@@ -154,18 +156,50 @@ export async function serve({
   }
 
   const prune = setInterval(() => auth.prune(), 60000);
+  // Calls are POSTs; GETs include event streams that never end on their own.
+  let calls = 0;
+
+  server.on("request", (req, res) => {
+    if (req.method === "GET") return;
+    calls++;
+    res.once("close", () => calls--);
+  });
+
   let closing: Promise<void> | undefined;
 
   function close() {
     return (closing ??= (async () => {
-      app.locals.ready = false;
       clearInterval(prune);
       server.close();
+      server.closeIdleConnections();
+      // Answer calls already received, so a proxy sees a reset only for
+      // calls the service never read.
+      const deadline = Date.now() + callDrainLimit;
+
+      while (calls && Date.now() < deadline)
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+      app.locals.ready = false;
       await app.locals.closeMcp();
       await c.close();
       process.exit(0);
     })());
   }
+
+  let draining: Promise<void> | undefined;
+
+  // A newer stdio launcher asks this service to hand over: finish running
+  // turns (for at most drainLimit), then exit so it can start its own.
+  app.locals.drain = () => {
+    draining ??= (async () => {
+      app.locals.draining = true;
+      console.error("Draining for a newer extension service");
+      await c.drain(drainLimit);
+      await close();
+    })();
+
+    return c.active.size;
+  };
 
   process.on("SIGINT", () => void close());
   process.on("SIGTERM", () => void close());

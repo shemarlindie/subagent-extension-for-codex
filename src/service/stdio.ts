@@ -96,23 +96,37 @@ function withinConnectTimeout(attempt: Promise<ServiceConnection>) {
   ]).finally(() => clearTimeout(timer));
 }
 
-function refused(error: unknown) {
+/** Read-only tools, which the proxy may safely send twice. */
+function readOnly(name: string) {
+  return isReadOnlyTool(name) || name === mentionSearchToolName;
+}
+
+/**
+ * Whether a failed call can be retried on a new connection. A refused
+ * connection never reached the service. A reset one may have, so only
+ * read-only calls retry it.
+ */
+function retryable(error: unknown, name: string) {
+  const code = (error as { cause?: { code?: string } }).cause?.code;
+
   return (
-    (error as { cause?: { code?: string } }).cause?.code === "ECONNREFUSED"
+    code === "ECONNREFUSED" ||
+    (readOnly(name) && (code === "ECONNRESET" || code === "UND_ERR_SOCKET"))
   );
 }
 
 /**
- * Posts a tool call to the service. A refused connection means the service
- * stopped, so the call reconnects, starting a new service, and retries once.
+ * Posts a tool call to the service. When the service has stopped, the call
+ * reconnects, starting a new service, and retries once.
  */
 async function postService(
-  path: string,
+  name: string,
   body: unknown,
   timeout: number,
   headers: Record<string, string> = {},
   retry = true,
 ): Promise<Response> {
+  const path = `${isUserTool(name) ? "user-tools" : "tools"}/${name}`;
   const attempt = connection();
   const { origin, token } = await withinConnectTimeout(attempt);
 
@@ -130,15 +144,11 @@ async function postService(
       redirect: "error",
     });
   } catch (error) {
-    if (!retry || !refused(error)) throw error;
+    if (!retry || !retryable(error, name)) throw error;
     if (service === attempt) service = undefined;
 
-    return postService(path, body, timeout, headers, false);
+    return postService(name, body, timeout, headers, false);
   }
-}
-
-function toolPath(name: string) {
-  return `${isUserTool(name) ? "user-tools" : "tools"}/${name}`;
 }
 
 // Start finding or launching the service now; calls wait for it.
@@ -179,7 +189,7 @@ function serviceTimeout(name: string, args: Record<string, unknown>) {
 }
 
 async function serviceTool(name: string, args: Record<string, unknown>) {
-  const response = await postService(toolPath(name), args, 30000);
+  const response = await postService(name, args, 30000);
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Service request failed");
 
@@ -250,7 +260,7 @@ for (const [name, d] of Object.entries(tools)) {
         const hostDirectory = hostDirectoryFromMeta(extra._meta);
 
         const response = await postService(
-          toolPath(name),
+          name,
           withConversation(name, args, extra._meta),
           serviceTimeout(name, args),
           hostDirectory
@@ -298,11 +308,7 @@ const panel = delegationPanel(
   packagePath("dist/app.html"),
   undefined,
   async (args) => {
-    const response = await postService(
-      "tools/get_agent_panel_context",
-      args,
-      30000,
-    );
+    const response = await postService("get_agent_panel_context", args, 30000);
 
     const body = await response.json();
 

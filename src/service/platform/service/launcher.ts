@@ -1,7 +1,19 @@
 import { spawn } from "node:child_process";
-import { closeSync, mkdirSync, openSync, readFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 
+import {
+  handoff,
+  launcherEnv,
+  type RunningService,
+  serviceIdentity,
+} from "./identity.js";
 import {
   dataDirectory,
   defaultPort,
@@ -10,6 +22,15 @@ import {
 } from "./runtime.js";
 
 class ServiceStartingError extends Error {}
+
+/** How long to wait for a replaced service that can't serve this launcher to exit. */
+const replacementTimeout = 11 * 60 * 1000;
+
+function refused(error: unknown) {
+  return (
+    (error as { cause?: { code?: string } }).cause?.code === "ECONNREFUSED"
+  );
+}
 
 export async function connectService() {
   const data = dataDirectory();
@@ -93,20 +114,89 @@ export async function connectService() {
       );
     }
 
-    return { origin, token: token() };
+    return { origin, token: token(), health };
+  };
+
+  /** The running service as its health and, when it describes this origin, service.json report it. */
+  const running = (health: RunningService): RunningService => {
+    let root: string | undefined;
+
+    try {
+      const metadata = JSON.parse(
+        readFileSync(join(data, "service.json"), "utf8"),
+      );
+
+      if (new URL(metadata.origin).origin === origin)
+        root = metadata.installRoot;
+    } catch {}
+
+    return {
+      version: health.version,
+      apiVersion: health.apiVersion,
+      // An explicit URL names a service to use, never one to replace.
+      launcher: explicit ? "foreground" : health.launcher,
+      installRoot: root,
+      installed: !root || existsSync(root),
+    };
+  };
+
+  const waitForExit = async () => {
+    const deadline = Date.now() + replacementTimeout;
+
+    while (Date.now() < deadline) {
+      try {
+        await fetch(`${origin}/health`, {
+          signal: AbortSignal.timeout(1000),
+          redirect: "error",
+        });
+      } catch (error) {
+        if (refused(error)) return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    throw new Error(
+      `The previous extension service at ${origin} did not exit after finishing its turns. Inspect ${join(data, "service.log")}.`,
+    );
   };
 
   let needsLaunch = false;
 
   try {
-    return await probe();
+    const found = await probe();
+    const decision = handoff(running(found.health), serviceIdentity(), origin);
+
+    if (decision.action === "refuse") throw new Error(decision.message);
+    if (decision.action === "use")
+      return { origin: found.origin, token: found.token };
+
+    // An older or uninstalled plugin service hands over once its turns end.
+    const drain = await fetch(`${origin}/api/service/drain`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${found.token}`,
+        "Content-Type": "application/json",
+        "X-Codex-Subagent-Extension": "1",
+      },
+      body: "{}",
+      signal: AbortSignal.timeout(5000),
+      redirect: "error",
+    });
+
+    if (!drain.ok)
+      throw new Error(
+        `The previous extension service at ${origin} refused to hand over (${drain.status}); stop it and try again.`,
+      );
+
+    // A compatible service keeps serving until it exits; the proxy then reconnects and starts this version.
+    if (decision.forward) return { origin: found.origin, token: found.token };
+    await waitForExit();
+    needsLaunch = true;
   } catch (error) {
     // Only a refused connection authorizes starting a process. Never replace a live service.
-    if (!(error instanceof ServiceStartingError)) {
-      if (
-        explicit ||
-        (error as { cause?: { code?: string } }).cause?.code !== "ECONNREFUSED"
-      ) {
+    if (!needsLaunch && !(error instanceof ServiceStartingError)) {
+      if (explicit || !refused(error)) {
         throw error;
       }
 
@@ -141,6 +231,7 @@ export async function connectService() {
             : {}),
           PORT: url.port || "80",
           CODEX_SUBAGENT_EXTENSION_ORIGIN: origin,
+          [launcherEnv]: "stdio",
         },
       },
     );
@@ -162,7 +253,9 @@ export async function connectService() {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     try {
-      return await probe();
+      const { health: _, ...connection } = await probe();
+
+      return connection;
     } catch (e) {
       last = e;
     }

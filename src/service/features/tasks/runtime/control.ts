@@ -1260,6 +1260,23 @@ export class Control {
     return this.store.get(id, owner);
   }
 
+  /**
+   * Prepares for a newer service to take over: starts no more turns, then
+   * waits up to `limit` ms for running ones to end. Queued tasks stay queued
+   * for the next service; close() interrupts any turn still running.
+   */
+  async drain(limit: number) {
+    this.stopped = true;
+    let timer: NodeJS.Timeout | undefined;
+
+    await Promise.race([
+      Promise.allSettled([...this.active.values()].map((a) => a.done)),
+      new Promise((resolve) => (timer = setTimeout(resolve, limit))),
+    ]);
+
+    clearTimeout(timer);
+  }
+
   async close() {
     this.stopped = true;
 
