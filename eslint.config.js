@@ -17,6 +17,27 @@ const CODE = ["**/*.{js,mjs,cjs,ts,mts,cts,tsx}"];
 
 const TESTS = ["tests/**/*.ts", "**/*.test.{ts,tsx}", "**/*-test-harness.ts"];
 
+// Lower or remove these when files are refactored; don't raise them without a
+// review rationale.
+const SOURCE_FILE_LINE_CEILINGS = [
+  ["src/panel/app/state/controller.ts", 2025],
+  ["src/panel/features/delegation/delegate-fields.tsx", 700],
+  ["src/panel/features/settings/settings-form.tsx", 450],
+  ["src/service/features/providers/claude/runtime/provider.ts", 550],
+  ["src/service/features/settings/settings.ts", 450],
+  ["src/service/features/tasks/runtime/control.ts", 1150],
+  ["src/service/features/workspaces/workspace.ts", 700],
+  ["src/service/platform/server/tools.ts", 750],
+  ["src/service/platform/service/startup.ts", 475],
+  ["src/shared/tasks/activity/activity-timeline.ts", 600],
+  ["dev/panel/host/host.tsx", 800],
+  ["dev/panel/scenarios/activity-scenarios.ts", 575],
+  ["dev/panel/scenarios/conversation-scenarios.ts", 450],
+  ["dev/panel/scenarios/lifecycle-scenarios.ts", 575],
+  ["dev/panel/scenarios/timeline.ts", 450],
+  ["dev/panel/scenarios/tools.ts", 475],
+];
+
 export default defineConfig(
   { ignores: ["dist/", ".codex-subagent-extension/", "node_modules/"] },
   {
@@ -63,6 +84,25 @@ export default defineConfig(
       "@typescript-eslint/switch-exhaustiveness-check": "error",
     },
   },
+  {
+    // These ceilings block growth without requiring immediate refactors.
+    files: ["src/**/*.{ts,tsx}", "dev/**/*.{ts,tsx}"],
+    ignores: [...TESTS, "**/*.generated.ts"],
+    rules: {
+      "max-lines": [
+        "error",
+        { max: 400, skipBlankLines: true, skipComments: true },
+      ],
+      // Existing over-budget functions are counted in eslint-suppressions.json.
+      complexity: ["error", 20],
+    },
+  },
+  ...SOURCE_FILE_LINE_CEILINGS.map(([file, max]) => ({
+    files: [file],
+    rules: {
+      "max-lines": ["error", { max, skipBlankLines: true, skipComments: true }],
+    },
+  })),
   {
     // Tests re-check values they built to fail with a clearer message, so
     // conditions are only checked in production and development code.

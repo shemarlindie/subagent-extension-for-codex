@@ -1,0 +1,172 @@
+{
+  "dev/panel/scenarios/tools.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "dev/service/fixture-scenarios.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/app/header.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/app/state/controller.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "src/panel/app/state/persistence/dialog-persistence.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/changes/changed-file-preview.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/changes/changes-header.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/changes/changes-panel.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/delegation/delegate-fields.tsx": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/panel/features/delegation/delegate-form.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/settings/settings-form.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/activity/activity-content.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/activity/activity-group-card.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/activity/event-list.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/chat/budget-raise-fields.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/chat/chat-model.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/chat/composer/composer.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/chat/drafts/draft-follower.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/chat/timeline/chat-timeline.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/evidence/evidence-tabs.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/inspector/task-details.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/tasks/inspector/task-inspector.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/shared/components/loading-skeleton/loading-swap.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/shared/components/select/lookup-field.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/transports/host.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/service/features/providers/claude/events/activity.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/service/features/providers/claude/runtime/provider.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/service/features/tasks/runtime/control.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/service/platform/panel/panel-context.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/service/platform/service/launcher.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/service/platform/service/serve.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/service/platform/service/startup.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/shared/settings/settings-document.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/shared/tasks/activity/activity-timeline.ts": {
+    "complexity": {
+      "count": 2
+    }
+  }
+}

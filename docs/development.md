@@ -441,6 +441,14 @@ resolves import targets before enforcing the runtime ownership described in
 under `src/service/platform/panel/` remains service code. Run `npm run lint`
 after moving modules to catch accidental imports across runtime boundaries.
 
+TypeScript under `src/` and `dev/` uses max-lines (400 nonblank, noncomment lines)
+and complexity (20) ceilings; tests and `*.generated.ts` files are exempt. These
+rules act as a ratchet. Existing complexity findings are counted in
+`eslint-suppressions.json`; normal lint rejects new findings. Lower or remove a
+per-file line ceiling when refactoring, and do not raise one to make a change pass
+without stating the review reason. Remove stale complexity exceptions with
+`npx eslint . --prune-suppressions`.
+
 `npm run knip` reports unused files, dependencies and exports. Its entry points
 in `knip.json` are the build entries, the panel dev host's HTML entries, the
 fixture service Vite loads by path, `scripts/` and schema-generation configs.
