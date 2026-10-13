@@ -20,7 +20,7 @@ try {
 
   if (command === "list") {
     console.log(JSON.stringify(projects.list(), null, 2));
-  } else if (["register", "approve-parent"].includes(command) && path) {
+  } else if ((command === "register" || command === "approve-parent") && path) {
     console.log(
       JSON.stringify(
         await projects.register(

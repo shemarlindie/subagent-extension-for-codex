@@ -13,7 +13,8 @@ export type ActivityGroup = {
   title: string;
   summary?: string;
   state: ActivityState;
-  events: Event[];
+  /** A group starts with its first event and only gains events. */
+  events: [Event, ...Event[]];
 };
 
 const words = (v: unknown) =>

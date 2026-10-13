@@ -55,7 +55,14 @@ export const claudeOverrideDefaults: ClaudeOverrides = {
   claude_subagents: true,
 };
 
-export const claudeOverrideLabels: Record<string, Record<string, string>> = {
+type ClaudeOverrideLabels = {
+  [K in Exclude<keyof ClaudeOverrides, "claude_subagents">]: Record<
+    ClaudeOverrides[K],
+    string
+  >;
+};
+
+export const claudeOverrideLabels: ClaudeOverrideLabels = {
   claude_sandbox: {
     user_config: "Your Claude Code settings",
     extension: "Extension sandbox",

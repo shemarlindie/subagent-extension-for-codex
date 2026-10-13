@@ -35,15 +35,16 @@ export function addDropped(
   previous: DroppedSummary | undefined,
   dropped: Event[],
 ): DroppedSummary | undefined {
-  if (!dropped.length) return previous;
+  const [first] = dropped;
+  if (!first) return previous;
 
   const summary: DroppedSummary = previous
     ? { ...previous, tools: { ...previous.tools } }
     : {
-        task_id: dropped[0].task_id,
+        task_id: first.task_id,
         count: 0,
-        from: dropped[0].timestamp,
-        to: dropped[0].timestamp,
+        from: first.timestamp,
+        to: first.timestamp,
         toolCalls: 0,
         tools: {},
         messages: 0,
@@ -121,9 +122,10 @@ export function turnCloseIndex(events: Event[], turn: number) {
   const ended = events.findIndex((event) => isTurnEnded(event, turn));
   if (ended === -1) return -1;
 
-  for (let i = ended + 1; i < events.length; i++) {
-    if (TURN_CLOSE_STOPS.includes(events[i].type)) break;
-    if (TURN_CLOSING_EVENTS.includes(events[i].type)) return i;
+  for (const [i, event] of events.entries()) {
+    if (i <= ended) continue;
+    if (TURN_CLOSE_STOPS.includes(event.type)) break;
+    if (TURN_CLOSING_EVENTS.includes(event.type)) return i;
   }
 
   return ended;

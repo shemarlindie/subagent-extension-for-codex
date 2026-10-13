@@ -5,9 +5,11 @@ import { test } from "vitest";
 import {
   changedFiles,
   decodeCursor,
+  decodeFileCursor,
   diffPage,
   diffParts,
   encodeCursor,
+  encodeFileCursor,
 } from "./changes.js";
 
 test("changed files join name-status and numstat, including renames and binaries", () => {
@@ -69,6 +71,26 @@ test("changed files join name-status and numstat, including renames and binaries
   assert.deepEqual(changedFiles("", ""), []);
 });
 
+test("changed files reject truncated Git output", () => {
+  // A rename missing its new path.
+  assert.throws(
+    () => changedFiles("R100\0old.ts\0", "1\t1\t\0old.ts\0"),
+    /Truncated Git diff output/,
+  );
+
+  // A file with no numstat record.
+  assert.throws(
+    () => changedFiles("M\0a.ts\0", ""),
+    /Truncated Git diff output/,
+  );
+
+  // A numstat record without counts.
+  assert.throws(
+    () => changedFiles("M\0a.ts\0", "a.ts\0"),
+    /Malformed Git numstat output/,
+  );
+});
+
 test("diffs split by file and page whole files, at least one per page", () => {
   const one = "diff --git a/a b/a\n+diff --git inside content\n",
     two = "diff --git a/b b/b\n-x\n",
@@ -94,4 +116,16 @@ test("cursors carry both trees and the next file", () => {
   });
 
   assert.throws(() => decodeCursor("HEAD:main:1"), /Invalid changes cursor/);
+});
+
+test("file cursors carry the tree and the next offset", () => {
+  const tree = "c".repeat(64);
+
+  assert.deepEqual(decodeFileCursor(encodeFileCursor(tree, 1_000)), {
+    tree,
+    offset: 1_000,
+  });
+
+  assert.throws(() => decodeFileCursor("HEAD:1"), /Invalid file cursor/);
+  assert.throws(() => decodeFileCursor(`${tree}:`), /Invalid file cursor/);
 });

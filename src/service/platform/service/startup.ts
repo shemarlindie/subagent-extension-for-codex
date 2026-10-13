@@ -423,7 +423,7 @@ function printOwner(
   error: ExistingServiceError,
   owner: ProcessInfo | undefined,
 ) {
-  const fields = [
+  const fields: [label: string, value: string][] = [
     ["PID", String(error.pid)],
     ["Process", owner?.name ?? "unavailable"],
     ["Executable", owner?.executablePath ?? "unavailable"],

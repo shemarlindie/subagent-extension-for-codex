@@ -20,11 +20,17 @@ export const migrationsFolder = packagePath("migrations");
  */
 for (const method of ["run", "all", "get", "values"] as const) {
   const prototype = SQLiteAsyncPreparedQuery.prototype as unknown as Record<
-    string,
-    (...args: unknown[]) => unknown
+    typeof method,
+    ((...args: unknown[]) => unknown) | undefined
   >;
 
   const execute = prototype[method];
+
+  if (!execute) {
+    throw new Error(
+      `Drizzle's prepared queries have no ${method} method to wrap; check the drizzle-orm upgrade.`,
+    );
+  }
 
   prototype[method] = function (this: unknown, ...args: unknown[]) {
     try {

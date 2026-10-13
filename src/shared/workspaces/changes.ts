@@ -100,16 +100,19 @@ export function encodeFileCursor(tree: string, offset: number) {
 }
 
 export function decodeFileCursor(cursor: string) {
-  const match = /^([0-9a-f]{40,64}):(\d+)$/.exec(cursor);
-  if (!match) throw new Error("Invalid file cursor");
+  const [, tree, offset] = /^([0-9a-f]{40,64}):(\d+)$/.exec(cursor) ?? [];
 
-  return { tree: match[1], offset: Number(match[2]) };
+  if (tree === undefined || offset === undefined) {
+    throw new Error("Invalid file cursor");
+  }
+
+  return { tree, offset: Number(offset) };
 }
 
 /** Diff text per page. A file larger than this is still sent whole. */
 export const CHANGES_PAGE_CHARS = 1_000_000;
 
-const statuses: Record<string, ChangeStatus> = {
+const statuses: Partial<Record<string, ChangeStatus>> = {
   A: "added",
   M: "modified",
   D: "deleted",
@@ -127,15 +130,32 @@ export function changedFiles(nameStatus: string, numstat: string) {
     stats = numstat.split("\0"),
     files: ChangedFile[] = [];
 
-  for (let n = 0, s = 0; n < names.length && names[n];) {
-    const code = names[n++],
-      status = statuses[code[0]] ?? "modified",
+  let n = 0,
+    s = 0;
+
+  const field = (fields: string[], index: number) => {
+    // Git never lists an empty path or record; -z output ends with a NUL.
+    const value = fields[index];
+    if (!value) throw new Error("Truncated Git diff output");
+
+    return value;
+  };
+
+  for (let code = names[n]; code; code = names[n]) {
+    n++;
+
+    const status = statuses[code.charAt(0)] ?? "modified",
       paired = status === "renamed" || status === "copied",
-      old_path = paired ? names[n++] : undefined,
-      path = names[n++];
+      old_path = paired ? field(names, n++) : undefined,
+      path = field(names, n++);
 
     // "added\tdeleted\tpath", or "added\tdeleted\t" then both paths.
-    const [additions, deletions] = stats[s++].split("\t");
+    const [additions, deletions] = field(stats, s++).split("\t");
+
+    if (deletions === undefined) {
+      throw new Error("Malformed Git numstat output");
+    }
+
     s += paired ? 2 : 0;
     const binary = additions === "-";
 
@@ -162,11 +182,10 @@ export function diffPage(parts: string[], start: number, pageChars: number) {
   let end = start,
     size = 0;
 
-  while (
-    end < parts.length &&
-    (end === start || size + parts[end].length <= pageChars)
-  ) {
-    size += parts[end++].length;
+  for (const part of parts.slice(start)) {
+    if (end > start && size + part.length > pageChars) break;
+    size += part.length;
+    end++;
   }
 
   return { diff: parts.slice(start, end).join(""), end };
@@ -178,8 +197,12 @@ export function encodeCursor(base: string, current: string, index: number) {
 }
 
 export function decodeCursor(cursor: string) {
-  const match = /^([0-9a-f]{40,64}):([0-9a-f]{40,64}):(\d+)$/.exec(cursor);
-  if (!match) throw new Error("Invalid changes cursor");
+  const [, base, current, index] =
+    /^([0-9a-f]{40,64}):([0-9a-f]{40,64}):(\d+)$/.exec(cursor) ?? [];
 
-  return { base: match[1], current: match[2], index: Number(match[3]) };
+  if (base === undefined || current === undefined || index === undefined) {
+    throw new Error("Invalid changes cursor");
+  }
+
+  return { base, current, index: Number(index) };
 }

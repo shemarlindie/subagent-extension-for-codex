@@ -8,6 +8,7 @@
     "strict": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": "src",

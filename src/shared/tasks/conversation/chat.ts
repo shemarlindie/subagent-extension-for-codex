@@ -127,9 +127,11 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
 
   // Messages are in event order, so they interleave with the rest by event id.
   const flush = (until: number) => {
-    while (next < messages.length && messages[next].event_id <= until) {
-      const message = messages[next++];
-
+    for (
+      let message = messages[next];
+      message && message.event_id <= until;
+      message = messages[++next]
+    ) {
       items.push({
         kind: "message",
         id: message.id,

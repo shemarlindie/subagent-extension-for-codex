@@ -105,7 +105,10 @@ export function mcp(
             ctx.mcpReq._meta,
           );
 
-          const result = await current[name].run(
+          const definition = current[name];
+          if (!definition) throw new Error(`Unknown tool: ${name}`);
+
+          const result = await definition.run(
             withConversation(name, args, ctx.mcpReq._meta),
           );
 

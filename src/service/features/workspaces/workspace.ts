@@ -634,8 +634,15 @@ export class Workspaces {
     const entries: string[] = [];
 
     for (let index = 0; index + 1 < raw.length; index += 2) {
-      const [, mode, , id] = raw[index].slice(1).split(" ");
-      entries.push(`${mode} ${id}\t${raw[index + 1]}`);
+      const record = raw[index],
+        path = raw[index + 1],
+        [, mode, , id] = record?.slice(1).split(" ") ?? [];
+
+      if (path === undefined || mode === undefined || id === undefined) {
+        throw new Error("Malformed Git raw diff output");
+      }
+
+      entries.push(`${mode} ${id}\t${path}`);
     }
 
     // In a temporary index, the start snapshot with the committed files laid

@@ -50,9 +50,14 @@ export async function readDiff(cwd: string, base: string, current: string) {
         .split("\0")
         .filter(Boolean)
         .map((entry) => {
-          const [meta, path] = entry.split("\t");
+          const [meta, path] = entry.split("\t"),
+            size = meta?.trim().split(/\s+/)[3];
 
-          return [path, Number(meta.trim().split(/\s+/)[3])] as const;
+          if (path === undefined || size === undefined) {
+            throw new Error("Malformed Git tree listing");
+          }
+
+          return [path, Number(size)] as const;
         }),
     );
 

@@ -166,6 +166,12 @@ test("version output is parsed strictly", () => {
 
   assert.ok(compareVersions("2.1.10", "2.1.9") > 0);
   assert.equal(compareVersions("2.1.9", "2.1.9"), 0);
+  assert.ok(compareVersions("2.0.99", "2.1.0") < 0);
+
+  assert.throws(
+    () => compareVersions("2.1", "2.1.0"),
+    /Invalid Claude Code version/,
+  );
 });
 
 test("validation accepts the minimum and newer releases but rejects older versions", async () => {

@@ -50,8 +50,9 @@ export const withHelp = (parts: HelpPart[], shown: Record<string, unknown>) =>
     typeof part === "string" || part.setting in shown ? part : part.text,
   );
 
-const titleCase = (value: string) =>
-  value[0].toUpperCase() + value.slice(1).replaceAll("_", " ");
+/** A setting key or scope as a label: `worker_profile` reads "Worker profile". */
+export const titleCase = (value: string) =>
+  value.charAt(0).toUpperCase() + value.slice(1).replaceAll("_", " ");
 
 const options = (labels: Record<string, string>): SettingOption[] =>
   Object.entries(labels).map(([value, label]) => ({ value, label }));

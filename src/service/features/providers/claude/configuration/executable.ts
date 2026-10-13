@@ -176,16 +176,24 @@ export function parseClaudeVersion(output: string) {
   return /^(\d+\.\d+\.\d+) \(Claude Code\)$/.exec(output.trim())?.[1];
 }
 
-/** Compares two X.Y.Z versions numerically. */
-export function compareVersions(a: string, b: string) {
-  const left = a.split(".").map(Number);
-  const right = b.split(".").map(Number);
+function versionParts(version: string) {
+  const [, major, minor, patch] = /^(\d+)\.(\d+)\.(\d+)$/.exec(version) ?? [];
 
-  for (let i = 0; i < 3; i++) {
-    if (left[i] !== right[i]) return left[i] - right[i];
+  if (major === undefined || minor === undefined || patch === undefined) {
+    throw new Error(`Invalid Claude Code version: ${version}`);
   }
 
-  return 0;
+  return [Number(major), Number(minor), Number(patch)] as const;
+}
+
+/** Compares two X.Y.Z versions numerically. */
+export function compareVersions(a: string, b: string) {
+  const [leftMajor, leftMinor, leftPatch] = versionParts(a),
+    [rightMajor, rightMinor, rightPatch] = versionParts(b);
+
+  return (
+    leftMajor - rightMajor || leftMinor - rightMinor || leftPatch - rightPatch
+  );
 }
 
 /** The update step for how this copy of Claude Code was installed. */

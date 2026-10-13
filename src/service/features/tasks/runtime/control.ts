@@ -504,9 +504,9 @@ export class Control {
             }
           },
           steerTaken: (id) => {
-            const index = t.pending_steers.findIndex((m) => m.id === id);
-            if (index < 0) return;
-            const [taken] = t.pending_steers.splice(index, 1);
+            const taken = t.pending_steers.find((m) => m.id === id);
+            if (!taken) return;
+            t.pending_steers.splice(t.pending_steers.indexOf(taken), 1);
             // The session has it now, like the turn's prompt.
             t.instructions.push(taken);
             t.instructions_sent = t.instructions.length;

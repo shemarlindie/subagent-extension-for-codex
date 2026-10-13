@@ -19,6 +19,7 @@ import {
   sectionSchema,
   settingHelp,
   settingsSections,
+  titleCase,
   unsupportedEffortWarning,
 } from "../../../shared/settings/settings-document.js";
 import {
@@ -36,9 +37,6 @@ import { userSettings } from "./schema.js";
 // Settings cover these providers only.
 const settingsProviders = providerModelSettingScopes;
 
-const scopeTitle = (scope: string) =>
-  scope[0].toUpperCase() + scope.slice(1).replaceAll("_", " ");
-
 const modelSettingsShape = {
   default_model: modelNameSchema.meta({
     title: "Default model",
@@ -51,13 +49,13 @@ const modelSettingsShape = {
       [
         `${scope}_default_model`,
         modelNameSchema.meta({
-          title: `${scopeTitle(scope)} model`,
+          title: `${titleCase(scope)} model`,
         }),
       ],
       [
         `${scope}_default_reasoning_effort`,
         reasoningSchema.meta({
-          title: `${scopeTitle(scope)} reasoning effort`,
+          title: `${titleCase(scope)} reasoning effort`,
         }),
       ],
     ]),

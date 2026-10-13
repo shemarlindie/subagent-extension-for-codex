@@ -89,7 +89,7 @@ function queueState(
 export function conversation(
   task: Task,
   events: Event[],
-): ConversationMessage[] {
+): [ConversationMessage, ...ConversationMessage[]] {
   const acknowledged = new Set(
     events.flatMap((e) => {
       const data = eventPayload(e, "parent.message_acknowledged");
@@ -102,7 +102,8 @@ export function conversation(
   const queued = new Set(task.queue.map((m) => m.id));
   let turn = 1;
 
-  const messages: ConversationMessage[] = [
+  // The task's request always opens its conversation.
+  const messages: [ConversationMessage, ...ConversationMessage[]] = [
     {
       id: "request",
       event_id: 0,
