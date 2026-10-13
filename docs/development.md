@@ -354,10 +354,14 @@ so the extracted package runs without a separate `node_modules` directory. It sh
 Launches use the installed [Claude Code CLI](claude-cli.md). Source maps omit
 embedded sources and map stack traces to the original files.
 
-`npm run package:plugin` builds and packs the plugin. The archive includes
-migrations, assets, skills and documentation, but no service or panel source.
-`tests/integration/package/packed-artifact.test.ts` verifies startup, transports,
-CLI readiness and restart behavior from an extracted package outside the checkout.
+`npm run package:plugin` builds and packs the plugin. The package holds only
+what the installed plugin runs or shows: `dist/`, `migrations/`, `assets/`,
+`skills/`, `plugin.json`, `mcp.json`, the README and `LICENSE`. Guides under
+`docs/` are read on GitHub, so the README's relative links to them don't resolve
+inside an extracted package. `tests/integration/package/packed-artifact.test.ts`
+verifies startup, transports, CLI readiness and restart behavior from an
+extracted package outside the checkout. It fails if the top-level file list
+changes.
 
 ## Storage and Claude verification
 

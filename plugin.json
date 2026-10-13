@@ -3,6 +3,13 @@
   "name": "codex-subagent-extension",
   "version": "0.1.0",
   "description": "Delegate coding tasks to Claude, inspect progress, and collect results.",
+  "author": {
+    "name": "Shemar Lindie",
+    "url": "https://github.com/shemarlindie"
+  },
+  "homepage": "https://github.com/shemarlindie/codex-subagent-extension#readme",
+  "repository": "https://github.com/shemarlindie/codex-subagent-extension",
+  "license": "MIT",
   "extensions": {
     "com.openai": {
       "interface": {

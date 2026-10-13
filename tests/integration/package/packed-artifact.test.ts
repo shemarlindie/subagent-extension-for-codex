@@ -20,7 +20,14 @@ import { promisify } from "node:util";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { afterAll, beforeAll, describe, test, type TestContext } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  test,
+  type TestContext,
+} from "vitest";
 
 import type { ProviderReadiness } from "../../../src/shared/providers/types.js";
 import { waitForListening } from "../../support/helpers.js";
@@ -33,6 +40,8 @@ let root: string;
 let pkg: string;
 let repository: string;
 let serviceRepository: string;
+/** The paths npm packed, before the tests add their own files to the extracted package. */
+let packedFiles: string[];
 
 /** A packaged service's data directory and loopback port. */
 type Service = { data: string; port: number };
@@ -195,7 +204,8 @@ beforeAll(async () => {
     { maxBuffer: 64 * 1024 * 1024 },
   );
 
-  const [{ filename }] = JSON.parse(stdout);
+  const [{ filename, files }] = JSON.parse(stdout);
+  packedFiles = files.map((file: { path: string }) => file.path);
   await exec("tar", ["-xzf", join(root, filename), "-C", root]);
   pkg = join(root, "package");
 
@@ -220,6 +230,24 @@ afterAll(async () => {
 });
 
 describe("packed artifact", () => {
+  test("packs only the runtime files, the README and the license", () => {
+    const top = [...new Set(packedFiles.map((path) => path.split("/")[0]))];
+
+    expect(top.sort()).toEqual(
+      [
+        "LICENSE",
+        "README.md",
+        "assets",
+        "dist",
+        "mcp.json",
+        "migrations",
+        "package.json",
+        "plugin.json",
+        "skills",
+      ].sort(),
+    );
+  });
+
   test("contains the bundled entries and no node_modules or native executables", async () => {
     const top = await readdir(pkg);
 

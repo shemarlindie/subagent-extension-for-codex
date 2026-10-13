@@ -4,6 +4,16 @@
   "private": true,
   "type": "module",
   "description": "Claude delegation for Codex",
+  "license": "MIT",
+  "author": "Shemar Lindie",
+  "homepage": "https://github.com/shemarlindie/codex-subagent-extension#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shemarlindie/codex-subagent-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shemarlindie/codex-subagent-extension/issues"
+  },
   "engines": {
     "node": ">=24"
   },
@@ -90,9 +100,7 @@
     "assets",
     "skills",
     "README.md",
-    "AGENTS.md",
-    "docs",
-    "src/panel/features/file-preview/README.md"
+    "LICENSE"
   ],
   "allowScripts": {
     "esbuild@0.28.2": true,
