@@ -25,7 +25,6 @@ const SOURCE_FILE_LINE_CEILINGS = [
   ["src/service/features/providers/claude/runtime/provider.ts", 550],
   ["src/service/features/settings/settings.ts", 450],
   ["src/service/features/tasks/runtime/control.ts", 1000],
-  ["src/service/platform/server/tools.ts", 750],
   ["src/shared/tasks/activity/activity-timeline.ts", 600],
   ["dev/panel/host/host.tsx", 800],
   ["dev/panel/scenarios/activity-scenarios.ts", 575],

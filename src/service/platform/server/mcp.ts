@@ -18,12 +18,8 @@ import {
   searchAgentMentions,
 } from "./mentions.js";
 import { productGlyphIcons } from "./product-glyph.js";
-import {
-  type AnyTool,
-  definitions,
-  isUserTool,
-  withConversation,
-} from "./tools.js";
+import { definitions, isUserTool, withConversation } from "./tools.js";
+import type { AnyTool } from "./tools/definition.js";
 
 export function mcp(
   c: Control,

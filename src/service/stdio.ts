@@ -25,11 +25,11 @@ import {
 } from "./platform/server/mentions.js";
 import { productGlyphIcons } from "./platform/server/product-glyph.js";
 import {
-  type AnyTool,
   definitions,
   isUserTool,
   withConversation,
 } from "./platform/server/tools.js";
+import type { AnyTool } from "./platform/server/tools/definition.js";
 import { connectService } from "./platform/service/launcher.js";
 import { installRoot, packagePath } from "./platform/service/runtime.js";
 

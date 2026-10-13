@@ -16,7 +16,7 @@ import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
-import { callTool, definitions } from "./tools.js";
+import { callTool, definitions, isUserTool } from "./tools.js";
 
 async function until(fn: () => boolean) {
   for (let i = 0; i < 300; i++) {
@@ -73,6 +73,14 @@ type Messages = {
   pending_input: unknown;
   queued_messages: number;
 };
+
+test("exactly the tools named for the user are refused to other callers", () => {
+  const names = Object.keys(definitions({} as Control, "alice"));
+
+  for (const name of names) {
+    assert.equal(isUserTool(name), name.includes("_user_"), name);
+  }
+});
 
 test("the old one-shot tools are gone and the conversation tools replace them", () => {
   const names = Object.keys(definitions({} as Control, "alice"));
