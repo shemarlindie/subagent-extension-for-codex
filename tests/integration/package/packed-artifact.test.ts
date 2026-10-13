@@ -412,6 +412,25 @@ describe("packed artifact", () => {
     }
   });
 
+  test("a connected proxy starts a new service when its service stops", async () => {
+    const client = await connectStdio();
+
+    try {
+      await callJson(client, "list_agent_projects");
+      await stopService();
+      await assert.rejects(health());
+
+      const projects = JSON.stringify(
+        await callJson(client, "list_agent_projects"),
+      );
+
+      assert.ok(projects.includes(repository));
+      assert.equal((await health()).status, "ok");
+    } finally {
+      await client.close();
+    }
+  });
+
   test("the packaged service runs the host's Claude Code for model discovery", async (context: TestContext) => {
     const client = await connectStdio();
 

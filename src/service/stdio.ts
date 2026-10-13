@@ -55,7 +55,94 @@ try {
   }
 }
 
-const { token, origin } = await connectService();
+type ServiceConnection = Awaited<ReturnType<typeof connectService>>;
+
+/** How long a call waits for the service to be found or started. */
+const connectTimeout = 60000;
+
+let service: Promise<ServiceConnection> | undefined;
+
+/**
+ * The service connection, started in the background so the MCP handshake
+ * never waits for a cold service start. A failed attempt is forgotten, so
+ * the next call tries again.
+ */
+function connection() {
+  const attempt = (service ??= connectService());
+
+  attempt.catch(() => {
+    if (service === attempt) service = undefined;
+  });
+
+  return attempt;
+}
+
+function withinConnectTimeout(attempt: Promise<ServiceConnection>) {
+  let timer: NodeJS.Timeout | undefined;
+
+  return Promise.race([
+    attempt,
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () =>
+          reject(
+            new Error(
+              `The extension service did not start within ${connectTimeout / 1000} s`,
+            ),
+          ),
+        connectTimeout,
+      );
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+function refused(error: unknown) {
+  return (
+    (error as { cause?: { code?: string } }).cause?.code === "ECONNREFUSED"
+  );
+}
+
+/**
+ * Posts a tool call to the service. A refused connection means the service
+ * stopped, so the call reconnects, starting a new service, and retries once.
+ */
+async function postService(
+  path: string,
+  body: unknown,
+  timeout: number,
+  headers: Record<string, string> = {},
+  retry = true,
+): Promise<Response> {
+  const attempt = connection();
+  const { origin, token } = await withinConnectTimeout(attempt);
+
+  try {
+    return await fetch(`${origin}/api/${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "X-Codex-Subagent-Extension": "1",
+        ...headers,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeout),
+      redirect: "error",
+    });
+  } catch (error) {
+    if (!retry || !refused(error)) throw error;
+    if (service === attempt) service = undefined;
+
+    return postService(path, body, timeout, headers, false);
+  }
+}
+
+function toolPath(name: string) {
+  return `${isUserTool(name) ? "user-tools" : "tools"}/${name}`;
+}
+
+// Start finding or launching the service now; calls wait for it.
+connection().catch(() => {});
 
 const server = new McpServer(
   {
@@ -92,21 +179,7 @@ function serviceTimeout(name: string, args: Record<string, unknown>) {
 }
 
 async function serviceTool(name: string, args: Record<string, unknown>) {
-  const response = await fetch(
-    `${origin}/api/${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "X-Codex-Subagent-Extension": "1",
-      },
-      body: JSON.stringify(args),
-      signal: AbortSignal.timeout(30000),
-      redirect: "error",
-    },
-  );
-
+  const response = await postService(toolPath(name), args, 30000);
   const body = await response.json();
   if (!response.ok) throw new Error(body.error ?? "Service request failed");
 
@@ -174,26 +247,15 @@ for (const [name, d] of Object.entries(tools)) {
       extra: { _meta?: Record<string, unknown> },
     ): Promise<CallToolResult> => {
       try {
-        const response = await fetch(
-          `${origin}/api/${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-              "X-Codex-Subagent-Extension": "1",
-              ...(hostDirectoryFromMeta(extra._meta)
-                ? {
-                    "X-Codex-Host-Directory": encodeURIComponent(
-                      hostDirectoryFromMeta(extra._meta)!,
-                    ),
-                  }
-                : {}),
-            },
-            body: JSON.stringify(withConversation(name, args, extra._meta)),
-            signal: AbortSignal.timeout(serviceTimeout(name, args)),
-            redirect: "error",
-          },
+        const hostDirectory = hostDirectoryFromMeta(extra._meta);
+
+        const response = await postService(
+          toolPath(name),
+          withConversation(name, args, extra._meta),
+          serviceTimeout(name, args),
+          hostDirectory
+            ? { "X-Codex-Host-Directory": encodeURIComponent(hostDirectory) }
+            : {},
         );
 
         const body = await response.json();
@@ -236,19 +298,10 @@ const panel = delegationPanel(
   packagePath("dist/app.html"),
   undefined,
   async (args) => {
-    const response = await fetch(
-      `${origin}/api/tools/get_agent_panel_context`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          "X-Codex-Subagent-Extension": "1",
-        },
-        body: JSON.stringify(args),
-        signal: AbortSignal.timeout(30000),
-        redirect: "error",
-      },
+    const response = await postService(
+      "tools/get_agent_panel_context",
+      args,
+      30000,
     );
 
     const body = await response.json();

@@ -23,8 +23,12 @@ stdio proxy ----------------------> shared loopback service
                                  local Claude Code CLI
 ```
 
-The packaged stdio entrypoint connects to or launches the shared service. Multiple
-host connections use the same service. Closing a proxy leaves tasks running.
+The packaged stdio entrypoint connects to or launches the shared service. It
+answers the MCP handshake from its own tool definitions and connects in the
+background, so a cold service start can't exceed the host's MCP startup
+timeout. Tool calls wait up to 60 seconds for the connection. When a call finds
+the service gone, the proxy starts a new one and retries the call once.
+Multiple host connections use the same service. Closing a proxy leaves tasks running.
 The service lease prevents competing processes from owning the same data directory.
 See [Task continuation](task-continuation.md) for startup and recovery.
 
