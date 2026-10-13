@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { scalarText } from "../../../../shared/text";
 import { label, MAX_ACTIVITY_DEPTH, record } from "./activity-utils";
 import { NestedContentOmitted } from "./nested-content-omitted";
 
@@ -107,7 +108,7 @@ export function ActivityValue({
   if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;
 
   if (typeof value !== "object") {
-    return <span className="activity-text">{String(value)}</span>;
+    return <span className="activity-text">{scalarText(value)}</span>;
   }
 
   if (depth > MAX_ACTIVITY_DEPTH) return <NestedContentOmitted />;

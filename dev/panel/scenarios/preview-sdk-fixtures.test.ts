@@ -101,7 +101,9 @@ const serviceTypes = new Set([
 ]);
 
 const kindOf = (message: Record<string, unknown>) =>
-  message.type === "system" ? `system:${message.subtype}` : message.type;
+  message.type === "system"
+    ? `system:${String(message.subtype)}`
+    : String(message.type);
 
 const raw = (event: { data: Record<string, unknown> }) =>
   event.data.raw_response as Record<string, unknown> | undefined;

@@ -221,7 +221,7 @@ describe("packed artifact", () => {
 
     assert.ok(
       !top.includes("node_modules"),
-      `unexpected node_modules in ${top}`,
+      `unexpected node_modules in ${top.join(", ")}`,
     );
 
     for (const file of [

@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 
+import { scalarText } from "../../../../shared/text";
 import { highlightLines } from "../highlight";
 
 type MarkdownCodeProps = ComponentProps<"code"> & { node?: unknown };
@@ -27,7 +28,7 @@ export function MarkdownCode({
       className={`hljs ${className}`}
       dangerouslySetInnerHTML={{
         __html: highlightLines(
-          String(children).replace(/\n$/, ""),
+          scalarText(children).replace(/\n$/, ""),
           language.toLowerCase(),
         ).join("\n"),
       }}

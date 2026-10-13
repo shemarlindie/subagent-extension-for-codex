@@ -1,4 +1,5 @@
 import { pendingInputKind } from "../../../../../shared/tasks/model.js";
+import { scalarText } from "../../../../../shared/text.js";
 import {
   useController,
   useSnapshot,
@@ -48,7 +49,7 @@ export function PendingInput({ task }: PendingInputProps) {
           {/* A question without a questions list falls back to the generic review. */}
           <strong>{isQuestion ? "Input needed" : "Permission needed"}</strong>
           <NoticeText>
-            {String(pending?.input.description ?? pending?.tool ?? "")}
+            {scalarText(pending?.input.description, pending?.tool)}
           </NoticeText>
           <Button
             id="respond"

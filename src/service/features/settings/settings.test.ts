@@ -179,7 +179,9 @@ test("settings sections have unique IDs and cover every shown value once", async
       assert.equal(
         (result.schema.properties![row.key] as { description?: string })
           .description,
-        row.help.join(""),
+        row.help
+          .map((part) => (typeof part === "string" ? part : part.text))
+          .join(""),
         row.key,
       );
     }

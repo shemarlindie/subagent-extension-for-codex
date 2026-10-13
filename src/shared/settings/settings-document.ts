@@ -6,6 +6,7 @@ import {
 import { type ModelChoice } from "../providers/types.js";
 import { roles } from "../tasks/model.js";
 import { reasoningLevels } from "../tasks/reasoning.js";
+import { scalarText } from "../text.js";
 import { settingSectionSchema } from "./document-contract.generated.js";
 import type {
   HelpPart,
@@ -84,17 +85,16 @@ export function modelScope(
     .filter((catalog) => !providerScope || catalog.provider === scope)
     .flatMap((catalog) => catalog.models ?? []);
 
-  const saved = String(values[modelKey] ?? ""),
-    savedEffort = String(values[effortKey] ?? "default");
+  const saved = scalarText(values[modelKey]),
+    savedEffort = scalarText(values[effortKey], "default");
 
-  const effectiveModel = String(
+  const effectiveModel =
     saved ||
-      (scope !== "global" && !providerScope
-        ? values[`${provider}_default_model`]
-        : "") ||
-      (scope !== "global" ? values.default_model : "") ||
-      "default",
-  );
+    (scope !== "global" && !providerScope
+      ? scalarText(values[`${provider}_default_model`])
+      : "") ||
+    (scope !== "global" ? scalarText(values.default_model) : "") ||
+    "default";
 
   const metadata = catalogs
     .find((catalog) => catalog.provider === provider)
@@ -185,8 +185,8 @@ export function settingsSections(input: SectionInput): SettingSection[] {
   // Each model section explains inheritance from its own rows' side and links
   // to the other section's exact setting; the defaults stand in for "the
   // task's" profile and provider.
-  const profileModel = `${values.default_worker_profile}_default_model`,
-    providerModel = `${values.default_provider}_default_model`;
+  const profileModel = `${scalarText(values.default_worker_profile)}_default_model`,
+    providerModel = `${scalarText(values.default_provider)}_default_model`;
 
   const defaultsHelp = withHelp(
     [

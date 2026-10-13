@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
+import { scalarText } from "../../../../shared/text";
 import type { Event } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
 import { ActivityContent } from "./activity-content";
@@ -74,7 +75,7 @@ export function EventBody({ event }: { event: Event }) {
   }
 
   if (event.type === "agent.reply") {
-    return <ReplyResult text={String(data.text ?? "")} />;
+    return <ReplyResult text={scalarText(data.text)} />;
   }
 
   if (event.type === "tool.started") {
@@ -111,7 +112,7 @@ export function EventBody({ event }: { event: Event }) {
           markdown={data.type === "assistant"}
         />
         {presentation.body.error != null && (
-          <p className="error">{String(presentation.body.error)}</p>
+          <p className="error">{scalarText(presentation.body.error)}</p>
         )}
       </>
     );
@@ -189,7 +190,7 @@ export function EventDetails({
   const toolNames = new Map(
     events
       .filter((event) => event.type === "tool.started")
-      .map((event) => [event.data.id, String(event.data.name ?? "Tool")]),
+      .map((event) => [event.data.id, scalarText(event.data.name, "Tool")]),
   );
 
   return (

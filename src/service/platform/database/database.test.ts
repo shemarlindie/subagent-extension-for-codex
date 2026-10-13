@@ -161,7 +161,7 @@ test("processes opening a new database together migrate it once", async (t) => {
         process.execPath,
         ["--import", "tsx", "--input-type=module", "--eval", script],
         (error, _stdout, stderr) =>
-          error ? reject(new Error(stderr || String(error))) : resolve(),
+          error ? reject(new Error(stderr || error.message)) : resolve(),
       );
     });
 

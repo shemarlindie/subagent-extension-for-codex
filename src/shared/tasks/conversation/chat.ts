@@ -1,4 +1,5 @@
 import type { Event } from "../../events/types.js";
+import { scalarText } from "../../text.js";
 import type { Task } from "../model.js";
 import { conversation, type ConversationMessage } from "./messages.js";
 
@@ -88,7 +89,7 @@ function note(e: Event): ChatNote | undefined {
     return {
       ...base,
       note: "failure",
-      text: `Task failed: ${String(e.data.error ?? "Unknown error")}`,
+      text: `Task failed: ${scalarText(e.data.error, "Unknown error")}`,
     };
   }
 
@@ -155,7 +156,7 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
       failedOutcome = outcome.outcome === "failed" ? outcome : undefined;
     } else if (e.type === "task.failed") {
       if (failedOutcome) {
-        failedOutcome.error = String(e.data.error ?? "");
+        failedOutcome.error = scalarText(e.data.error);
         // A read after the outcome row gets it again, with its error.
         failedOutcome.event_id = e.id;
       } else {

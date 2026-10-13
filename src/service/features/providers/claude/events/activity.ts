@@ -2,6 +2,7 @@ import type { Event } from "../../../../../shared/events/types.js";
 import { contentText } from "../../../../../shared/providers/activity/content-text.js";
 import type { ActivityPresentation } from "../../../../../shared/providers/activity/types.js";
 import { claudeRateLimitWindows } from "../../../../../shared/providers/claude/rate-limit-windows.js";
+import { scalarText } from "../../../../../shared/text.js";
 
 const object = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" && !Array.isArray(v)
@@ -201,8 +202,14 @@ function operationIdFor(
   toolId: string | undefined,
 ) {
   if (toolId) return `tool:${toolId}`;
-  if (key.startsWith("hook_") && d.hook_id) return `hook:${d.hook_id}`;
-  if (key.startsWith("task_") && d.task_id) return `background:${d.task_id}`;
+
+  if (key.startsWith("hook_") && d.hook_id) {
+    return `hook:${scalarText(d.hook_id)}`;
+  }
+
+  if (key.startsWith("task_") && d.task_id) {
+    return `background:${scalarText(d.task_id)}`;
+  }
 
   return undefined;
 }
@@ -214,7 +221,10 @@ function operationTitle(
   toolId: string | undefined,
 ) {
   if (toolId) return "Tool";
-  if (key.startsWith("hook_")) return `Hook · ${d.hook_name ?? "Hook"}`;
+
+  if (key.startsWith("hook_")) {
+    return `Hook · ${scalarText(d.hook_name, "Hook")}`;
+  }
 
   return "Background task";
 }
@@ -307,11 +317,11 @@ export function claudeActivityPresentation(
     const frame = object(d.event);
 
     presentation.stream = {
-      id: String(d.parent_tool_use_id ?? "root"),
+      id: scalarText(d.parent_tool_use_id, "root"),
       messageId: string(object(frame.message).id),
       started: frame.type === "message_start",
       completed: frame.type === "message_stop",
-      title: String(frame.type ?? "Streaming").replace(/[_.]/g, " "),
+      title: scalarText(frame.type, "Streaming").replace(/[_.]/g, " "),
       content: frame.delta ?? frame.content_block,
       details: Object.fromEntries(
         Object.entries(frame).filter(([key]) => key !== "type"),
@@ -348,7 +358,7 @@ export function claudeActivityPresentation(
 
           presentation.stream.update = {
             index,
-            append: { field, type, text: String(delta[field] ?? "") },
+            append: { field, type, text: scalarText(delta[field]) },
           };
         }
       }

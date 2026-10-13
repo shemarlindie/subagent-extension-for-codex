@@ -1,6 +1,7 @@
 import type { Event } from "../../events/types.js";
 import { contentText } from "../../providers/activity/content-text.js";
 import { activityPresentation } from "../../providers/activity/presentation.js";
+import { scalarText } from "../../text.js";
 import type { Task } from "../model.js";
 
 export type ActivityState = "running" | "completed" | "failed" | "info";
@@ -20,7 +21,7 @@ const object = (v: unknown): Record<string, unknown> =>
     : {};
 
 const words = (v: unknown) =>
-  String(v ?? "")
+  scalarText(v)
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/[_.]/g, " ");
 
@@ -619,7 +620,7 @@ export function currentActivityStatus(
 
     if (kind === "agent.input_required") {
       return {
-        text: `Needs input${latest.data.tool ? ` · ${latest.data.tool}` : ""}`,
+        text: `Needs input${latest.data.tool ? ` · ${scalarText(latest.data.tool)}` : ""}`,
         state: "info",
       };
     }

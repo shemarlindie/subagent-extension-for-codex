@@ -1,5 +1,6 @@
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
 import type { ActivityRateLimitWindow } from "../../../../shared/providers/activity/types";
+import { scalarText } from "../../../../shared/text";
 import type { Event } from "../../../app/state/types";
 import {
   formatUserDateTime,
@@ -50,7 +51,7 @@ export function userMessageText(event: Event): string | undefined {
     return undefined;
   }
 
-  return blocks.map((block) => String(record(block).text ?? "")).join("\n");
+  return blocks.map((block) => scalarText(record(block).text)).join("\n");
 }
 
 /** Message text is inspected in raw JSON; attachments and thinking stay visible. */
@@ -104,7 +105,9 @@ export function eventTitle(event: Event, failed: boolean, toolName?: string) {
     return data.role === "user" ? "User content" : "Agent content";
   }
 
-  if (event.type === "tool.started") return `${data.name ?? "Tool"} started`;
+  if (event.type === "tool.started") {
+    return `${scalarText(data.name, "Tool")} started`;
+  }
 
   if (event.type === "tool.completed") {
     return `${toolName ?? "Tool"} ${failed ? "failed" : "completed"}`;
@@ -133,7 +136,7 @@ export function streamContent(events: Event[]) {
     if (append) {
       const block = blocks.get(index) ?? {};
       block.type = append.type;
-      block[append.field] = String(block[append.field] ?? "") + append.text;
+      block[append.field] = scalarText(block[append.field]) + append.text;
       blocks.set(index, block);
     }
   }

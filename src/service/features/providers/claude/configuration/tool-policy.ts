@@ -8,13 +8,15 @@ import {
   resolve,
 } from "node:path";
 
+import { scalarText } from "../../../../../shared/text.js";
+
 export const readTools = ["Read", "Glob", "Grep"];
 export const writeTools = ["Edit", "Write"];
 /** File tools whose target the path guard checks. */
 export const pathTools = [...readTools, ...writeTools, "NotebookEdit"];
 
 export const toolPath = (input: Record<string, unknown>, workspace: string) =>
-  String(input.file_path ?? input.notebook_path ?? input.path ?? workspace);
+  scalarText(input.file_path ?? input.notebook_path ?? input.path, workspace);
 
 /** Whether a path stays inside the workspace and out of Git metadata, following symlinks. */
 export async function inWorkspace(workspace: string, path: string) {

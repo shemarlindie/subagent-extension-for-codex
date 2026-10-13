@@ -94,7 +94,10 @@ test("console requests use browser credentials and required headers for tools an
     url: string | URL | Request,
     options: RequestInit,
   ) => {
-    calls.push({ url: String(url), options });
+    const href =
+      typeof url === "string" || url instanceof URL ? String(url) : url.url;
+
+    calls.push({ url: href, options });
 
     return Response.json({ result: { ok: true } });
   }) as typeof fetch;

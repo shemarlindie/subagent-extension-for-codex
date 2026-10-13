@@ -1,4 +1,5 @@
 import type { Event } from "../../events/types.js";
+import { scalarText } from "../../text.js";
 import type { Delivery, Sender, Task } from "../model.js";
 
 /** Events a conversation is derived from, besides the task's own request. */
@@ -130,7 +131,7 @@ export function conversation(
     }
 
     if (e.type === "task.instruction") {
-      const id = String(e.data.message_id ?? `evt_${e.id}`);
+      const id = scalarText(e.data.message_id, `evt_${e.id}`);
 
       messages.push({
         id,
@@ -139,7 +140,7 @@ export function conversation(
         turn,
         from: e.data.from === "parent" ? "parent" : "user",
         kind: "message",
-        text: String(e.data.message ?? ""),
+        text: scalarText(e.data.message),
         delivery: e.data.delivery as Delivery | undefined,
         ...queueState(id, pending, queued),
       });
@@ -153,7 +154,7 @@ export function conversation(
         turn,
         from: "worker",
         kind: "message",
-        text: String(e.data.text ?? ""),
+        text: scalarText(e.data.text),
         parent_message: true,
         ...(acknowledged.has(e.id) ? { acknowledged: true as const } : {}),
       });
@@ -184,7 +185,7 @@ export function conversation(
     }
 
     if (e.type === "agent.reply") {
-      const text = String(e.data.text ?? "");
+      const text = scalarText(e.data.text);
       const replyTurn = typeof e.data.turn === "number" ? e.data.turn : turn;
 
       const last = messages.findLast(

@@ -1,5 +1,6 @@
 import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
 import { providerMetadata } from "../../../shared/providers/metadata.js";
+import { scalarText } from "../../../shared/text.js";
 
 export function providerOptionDefaults(
   provider: string,
@@ -10,10 +11,10 @@ export function providerOptionDefaults(
 
   return {
     permission_mode: permissions
-      ? String(settings[permissions.permissionSetting] ?? "inherit")
+      ? scalarText(settings[permissions.permissionSetting], "inherit")
       : "inherit",
     approval_decider: permissions?.approvalDeciderSetting
-      ? String(settings[permissions.approvalDeciderSetting] ?? "user")
+      ? scalarText(settings[permissions.approvalDeciderSetting], "user")
       : "user",
   };
 }

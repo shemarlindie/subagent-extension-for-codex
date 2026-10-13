@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { scalarText } from "../../../../shared/text";
 import { MarkdownView } from "../../file-preview/markdown/markdown-view";
 import { label, MAX_ACTIVITY_DEPTH, record } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
@@ -106,7 +107,7 @@ export function ActivityContent({
   if (type === "text" || type === "text_delta") {
     return (
       <>
-        <Text text={String(block.text ?? "")} markdown={markdown} />
+        <Text text={scalarText(block.text)} markdown={markdown} />
         {block.citations != null && (
           <details>
             <summary>Citations</summary>
@@ -121,7 +122,7 @@ export function ActivityContent({
     return (
       <details className="activity-thinking">
         <summary>Thinking</summary>
-        <Text text={String(block.thinking ?? "")} markdown={markdown} />
+        <Text text={scalarText(block.thinking)} markdown={markdown} />
       </details>
     );
   }
@@ -138,7 +139,7 @@ export function ActivityContent({
     return (
       <>
         <span className="muted">Tool input fragment</span>
-        <pre>{String(block.partial_json ?? "")}</pre>
+        <pre>{scalarText(block.partial_json)}</pre>
       </>
     );
   }
@@ -150,7 +151,7 @@ export function ActivityContent({
   ) {
     return (
       <section>
-        <p>{String(block.name ?? "Tool call")}</p>
+        <p>{scalarText(block.name, "Tool call")}</p>
         <ActivityValue value={block.input} depth={depth + 1} />
       </section>
     );
@@ -166,14 +167,16 @@ export function ActivityContent({
   }
 
   if (type === "image" || type === "document") {
-    const source = record(block.source);
+    const source = record(block.source),
+      mediaType = scalarText(source.media_type),
+      data = typeof source.data === "string" ? source.data : undefined;
 
     const inlineImage =
       type === "image" &&
       source.type === "base64" &&
-      typeof source.data === "string" &&
+      data !== undefined &&
       ["image/png", "image/jpeg", "image/gif", "image/webp"].includes(
-        String(source.media_type),
+        mediaType,
       );
 
     let body: ReactNode;
@@ -183,7 +186,7 @@ export function ActivityContent({
         <img
           className="activity-image"
           alt="Claude activity attachment"
-          src={`data:${source.media_type};base64,${source.data}`}
+          src={`data:${mediaType};base64,${data}`}
         />
       );
     } else if (source.type === "text") {
@@ -202,7 +205,7 @@ export function ActivityContent({
     return (
       <section>
         <p>
-          {String(block.title ?? (type === "image" ? "Image" : "Document"))}
+          {scalarText(block.title, type === "image" ? "Image" : "Document")}
         </p>
         {body}
       </section>

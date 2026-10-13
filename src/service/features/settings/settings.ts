@@ -28,6 +28,7 @@ import {
   reasoningSchema,
   roles,
 } from "../../../shared/tasks/model.js";
+import { scalarText } from "../../../shared/text.js";
 import { type Database } from "../../platform/database/database.js";
 import { checkStored, decodeStored } from "../../platform/database/decode.js";
 import { userSettings } from "./schema.js";
@@ -474,8 +475,12 @@ export class Settings {
     }
 
     const defaults = this.values(owner);
-    const provider = args.provider ?? defaults.default_provider;
-    const role = args.worker_profile ?? defaults.default_worker_profile;
+    const provider = scalarText(args.provider ?? defaults.default_provider);
+
+    const role = scalarText(
+      args.worker_profile ?? defaults.default_worker_profile,
+    );
+
     const fields = defaults as Record<string, unknown>;
 
     // Resolve each choice independently; inheritance sentinels leave the next scope in control.

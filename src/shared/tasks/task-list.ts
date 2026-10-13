@@ -1,4 +1,5 @@
 import type { Event } from "../events/types.js";
+import { scalarText } from "../text.js";
 import { currentActivityStatus } from "./activity/activity-timeline.js";
 import type { Draft } from "./conversation/drafts.js";
 import { replyExcerpt } from "./conversation/reply.js";
@@ -20,7 +21,7 @@ export function replyFrom(event?: Event): ReplyExcerpt | undefined {
   return event
     ? {
         turn: Number(event.data.turn),
-        text: replyExcerpt(String(event.data.text ?? "")),
+        text: replyExcerpt(scalarText(event.data.text)),
       }
     : undefined;
 }
