@@ -11,7 +11,11 @@ test("app.css imports every stylesheet partial exactly once", () => {
     ...readFileSync(stylesheet, "utf8").matchAll(
       /^@import "(\.{1,2}\/[^"]+)";$/gm,
     ),
-  ].map((match) => resolve("src/panel/styles", match[1]));
+  ].map(([, path]) => {
+    assert.ok(path);
+
+    return resolve("src/panel/styles", path);
+  });
 
   const partials = readdirSync("src/panel", {
     recursive: true,
@@ -60,7 +64,13 @@ test("theme accent and success states follow their host color tokens", () => {
     );
 
     assert.ok(rule, `Missing CSS rule for ${selector}`);
-    assert.match(rule[1], new RegExp(`${property}:\\s*var\\(--success\\);`));
+    const [, declarations] = rule;
+    assert.ok(declarations !== undefined);
+
+    assert.match(
+      declarations,
+      new RegExp(`${property}:\\s*var\\(--success\\);`),
+    );
   };
 
   for (const [styles, selector, property] of [

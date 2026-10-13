@@ -77,7 +77,11 @@ test("Ask Codex about an older reply prepares that reply and sends only the edit
       transport.host.canSend = true;
       transport.host.canShare = false;
 
-      transport.tasks[0].reply = {
+      const [current] = transport.tasks;
+
+      assert.ok(current);
+
+      current.reply = {
         text: "Latest reply is unrelated to the selected reply.",
       } as (typeof transport.tasks)[0]["reply"];
 
@@ -188,7 +192,10 @@ test("closing a reply handoff sends nothing and hosts without message support ca
     }).value,
   ).toContain("A reply to ask about.");
 
-  await user.click(within(dialog).getAllByRole("button", { name: "Close" })[0]);
+  const [close] = within(dialog).getAllByRole("button", { name: "Close" });
+
+  assert.ok(close);
+  await user.click(close);
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(transport.messages).toEqual([]);
   expect(transport.shared).toEqual(sharedBeforeClick);
@@ -260,7 +267,10 @@ test("completed chat turns show a quiet summary with a completion time on hover"
   const timestamp = "2026-10-08T18:30:00.000Z";
 
   const { user, controller, transport } = await setup(t, (transport) => {
-    transport.tasks[0].status = "completed";
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+    current.status = "completed";
     transport.host.locale = "en-US";
     transport.host.timeZone = "America/Los_Angeles";
 
@@ -340,10 +350,12 @@ test("View activity scrolls to a recent turn and reads an older one on its own",
       );
 
     // Turn 1 is longer than the window, so only turn 2 is in the latest view.
-    for (const [turn, count] of [
+    const turns: [turn: number, count: number][] = [
       [1, 250],
       [2, 5],
-    ]) {
+    ];
+
+    for (const [turn, count] of turns) {
       add("task.started", { turn });
 
       for (let i = 0; i < count; i++) {
@@ -378,6 +390,7 @@ test("View activity scrolls to a recent turn and reads an older one on its own",
     name: "View activity",
   });
 
+  assert.ok(first && second);
   await user.click(second);
   assert.equal(controller.getSnapshot().tab, "activity");
   assertAbsent(screen.queryByText(/Showing activity for/));
@@ -413,7 +426,10 @@ for (const outcome of ["failed", "interrupted"] as const) {
     const error = outcome === "failed" ? "Worker failed <script>" : undefined;
 
     const { user } = await setup(t, (transport) => {
-      transport.tasks[0].status = outcome;
+      const [current] = transport.tasks;
+
+      assert.ok(current);
+      current.status = outcome;
       transport.host.locale = "en-US";
       transport.host.timeZone = "America/Los_Angeles";
 
@@ -470,7 +486,10 @@ test("task and reply text render literally without HTML interpretation", async (
   const injection = '<img src=x onerror="window.injected=true">';
 
   const { user } = await setup(t, (transport) => {
-    transport.tasks[0].title = injection;
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+    current.title = injection;
 
     transport.chat = [
       {

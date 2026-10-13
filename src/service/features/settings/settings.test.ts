@@ -28,6 +28,14 @@ function budget(result: ReturnType<Settings["read"]>, key: string) {
   return [value !== null, value ?? (row?.kind === "budget" && row.amount)];
 }
 
+// A schema property the test expects the settings document to expose.
+function schemaField(result: ReturnType<Settings["read"]>, key: string) {
+  const field = result.schema.properties?.[key];
+  assert.ok(field, `${key} is in the settings schema`);
+
+  return field;
+}
+
 async function fixture(t: TestContext) {
   const dir = await mkdtemp(join(tmpdir(), "settings-test-"));
   const path = join(dir, "settings.sqlite");
@@ -66,7 +74,7 @@ test("settings expose only enabled providers, nullable budgets, and a default pe
   assert.deepEqual(settingsReadOutputSchema.parse(result), result);
   assert.equal(result.schema.type, "object");
   const properties = result.schema.properties!;
-  assert.deepEqual(properties.default_provider.enum, ["fixture"]);
+  assert.deepEqual(schemaField(result, "default_provider").enum, ["fixture"]);
 
   for (const [name, field] of Object.entries(properties)) {
     assert.equal("default" in field, false, `${name} has no schema default`);
@@ -84,7 +92,10 @@ test("settings expose only enabled providers, nullable budgets, and a default pe
     Object.keys(result.values).sort(),
   );
 
-  const select = result.sections[0].rows.find(
+  const [firstSection] = result.sections;
+  assert.ok(firstSection);
+
+  const select = firstSection.rows.find(
     (row) => row.kind === "select" && row.key === "default_provider",
   );
 
@@ -97,7 +108,7 @@ test("settings expose only enabled providers, nullable budgets, and a default pe
 test("automatic chat project registration is an on-by-default, persistent user setting", async (t) => {
   const f = await fixture(t);
   const result = f.settings.read("alice");
-  const field = result.schema.properties!.auto_register_chat_project;
+  const field = schemaField(result, "auto_register_chat_project");
   assert.equal(field.type, "boolean");
   assert.equal(field.title, "Automatically add chat projects");
   assert.match(String(field.description), /host directory metadata/);
@@ -159,7 +170,10 @@ test("settings sections have unique IDs and cover every shown value once", async
   assert.deepEqual([...listed].sort(), Object.keys(result.values).sort());
 
   // Budget rows carry their input minimum and the amount to show when off.
-  const budget = result.sections[0].rows.find(
+  const [firstSection] = result.sections;
+  assert.ok(firstSection);
+
+  const budget = firstSection.rows.find(
     (row) => row.kind === "budget" && row.key === "max_cost_usd",
   );
 
@@ -235,7 +249,7 @@ test("each model section's intro links only to the other section's exact setting
 
   // Agents get the whole chain in the schema.
   assert.match(
-    String(result.schema.properties!.default_model.description),
+    String(schemaField(result, "default_model").description),
     /worker profile, then its provider, then the global default/,
   );
 });
@@ -263,11 +277,11 @@ test("disabled providers' model defaults are hidden but kept, and listed models 
   }
 
   const models = listed(hidden).filter((key) => key.endsWith("_model"));
-  assert.ok(hidden.schema.properties!.default_model.description);
+  assert.ok(schemaField(hidden, "default_model").description);
 
   assert.deepEqual(
-    new Set(models.map((key) => hidden.schema.properties![key].description)),
-    new Set([hidden.schema.properties!.default_model.description]),
+    new Set(models.map((key) => schemaField(hidden, key).description)),
+    new Set([schemaField(hidden, "default_model").description]),
   );
 
   // Enabling the provider again shows the saved value.
@@ -315,15 +329,19 @@ test("native model controls scope discovered models and derive reasoning choices
   const result = f.settings.read("alice", catalogs);
   const fields = result.schema.properties!;
 
-  assert.deepEqual(fields.claude_default_model.enum, [
+  assert.deepEqual(schemaField(result, "claude_default_model").enum, [
     "",
     "claude-model",
     "default",
   ]);
 
-  assert.deepEqual(fields.default_model.enum, ["", "claude-model", "default"]);
+  assert.deepEqual(schemaField(result, "default_model").enum, [
+    "",
+    "claude-model",
+    "default",
+  ]);
 
-  assert.deepEqual(fields.reviewer_default_model.enum, [
+  assert.deepEqual(schemaField(result, "reviewer_default_model").enum, [
     "",
     "claude-model",
     "default",
@@ -331,33 +349,37 @@ test("native model controls scope discovered models and derive reasoning choices
   ]);
 
   assert.ok(
-    (fields.default_reasoning_effort.enum as unknown[]).includes("none"),
+    (
+      schemaField(result, "default_reasoning_effort").enum as unknown[]
+    ).includes("none"),
   );
 
   assert.ok(
-    (fields.default_reasoning_effort.enum as unknown[]).includes("max"),
+    (
+      schemaField(result, "default_reasoning_effort").enum as unknown[]
+    ).includes("max"),
   );
 
   assert.ok(
-    (fields.reviewer_default_reasoning_effort.enum as unknown[]).includes(
-      "none",
-    ),
+    (
+      schemaField(result, "reviewer_default_reasoning_effort").enum as unknown[]
+    ).includes("none"),
   );
 
-  assert.deepEqual(fields.claude_default_reasoning_effort.enum, [
-    "default",
-    "low",
-    "high",
-    "max",
-  ]);
+  assert.deepEqual(
+    schemaField(result, "claude_default_reasoning_effort").enum,
+    ["default", "low", "high", "max"],
+  );
 
   assert.match(
-    String(fields.claude_default_reasoning_effort.description),
+    String(schemaField(result, "claude_default_reasoning_effort").description),
     /Supported efforts for claude model claude-model/,
   );
 
   assert.match(
-    String(fields.reviewer_default_reasoning_effort.description),
+    String(
+      schemaField(result, "reviewer_default_reasoning_effort").description,
+    ),
     /support is unknown/,
   );
 
@@ -383,6 +405,7 @@ test("native model controls scope discovered models and derive reasoning choices
     row.kind === "models" ? row.scopes : [],
   )[1];
 
+  assert.ok(reviewer);
   assert.equal(reviewer.label, "Reviewer");
 
   assert.deepEqual(
@@ -413,22 +436,21 @@ test("settings preserve custom models and unknown metadata while disabling effor
   ]);
 
   assert.ok(
-    (unknown.schema.properties!.default_model.enum as unknown[]).includes(
+    (schemaField(unknown, "default_model").enum as unknown[]).includes(
       "custom-model",
     ),
   );
 
   assert.match(
     String(
-      unknown.schema.properties!.fixture_default_reasoning_effort.description,
+      schemaField(unknown, "fixture_default_reasoning_effort").description,
     ),
     /support is unknown/,
   );
 
   assert.ok(
     (
-      unknown.schema.properties!.fixture_default_reasoning_effort
-        .enum as unknown[]
+      schemaField(unknown, "fixture_default_reasoning_effort").enum as unknown[]
     ).includes("none"),
   );
 
@@ -454,18 +476,18 @@ test("settings preserve custom models and unknown metadata while disabling effor
 
   assert.ok(
     (
-      disabled.schema.properties!.default_reasoning_effort.enum as unknown[]
+      schemaField(disabled, "default_reasoning_effort").enum as unknown[]
     ).includes("high"),
   );
 
   assert.deepEqual(
-    disabled.schema.properties!.fixture_default_reasoning_effort.enum,
+    schemaField(disabled, "fixture_default_reasoning_effort").enum,
     ["default", "high"],
   );
 
   assert.match(
     String(
-      disabled.schema.properties!.fixture_default_reasoning_effort.description,
+      schemaField(disabled, "fixture_default_reasoning_effort").description,
     ),
     /provider runtime default only/,
   );
@@ -474,7 +496,7 @@ test("settings preserve custom models and unknown metadata while disabling effor
   // description, and the panel gets a flag.
   assert.match(
     String(
-      disabled.schema.properties!.fixture_default_reasoning_effort.description,
+      schemaField(disabled, "fixture_default_reasoning_effort").description,
     ),
     /saved effort is not supported/,
   );
@@ -488,14 +510,11 @@ test("settings preserve custom models and unknown metadata while disabling effor
 
   const missing = f.settings.read("alice", [{ provider: "fixture" }]);
 
-  assert.equal(
-    missing.schema.properties!.fixture_default_model.enum,
-    undefined,
-  );
+  assert.equal(schemaField(missing, "fixture_default_model").enum, undefined);
 
   assert.match(
     String(
-      missing.schema.properties!.fixture_default_reasoning_effort.description,
+      schemaField(missing, "fixture_default_reasoning_effort").description,
     ),
     /support is unknown/,
   );
@@ -757,7 +776,7 @@ test("removed providers fall back on effective reads without rewriting saved def
   );
 
   assert.deepEqual(
-    f.settings.read("alice").schema.properties!.default_provider.enum,
+    schemaField(f.settings.read("alice"), "default_provider").enum,
     ["fixture"],
   );
 
@@ -830,7 +849,7 @@ test("Claude session restrictions are scalar user-only settings with stored defa
   const read = f.settings.read("alice");
 
   for (const key of keys) {
-    const field = read.schema.properties![key];
+    const field = schemaField(read, key);
     assert.ok(["string", "boolean"].includes(String(field.type)), key);
     assert.equal(Object.hasOwn(field, "default"), false, key);
   }
@@ -897,7 +916,7 @@ test("settings accept a new built-in's metadata without provider-ID handling", a
   const result = settings.read("alice");
   assert.equal(result.values.default_provider, "new-built-in");
 
-  assert.deepEqual(result.schema.properties!.default_provider.enum, [
+  assert.deepEqual(schemaField(result, "default_provider").enum, [
     "new-built-in",
   ]);
 

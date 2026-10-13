@@ -106,7 +106,10 @@ test("a file the diff leaves out gets a stand-in without shifting the rest", () 
     { path: "b.ts", lines: 1, missing: false },
   ]);
 
-  const b = changedFileEntries({ ...partial, diff: "" })[2];
+  const entries = changedFileEntries({ ...partial, diff: "" });
+  const b = entries[2];
+  assert.equal(entries.length, 3);
+  assert.ok(b);
 
   // A stand-in keeps the file's status, and offers no Diff view.
   assert.equal(b.diff.new, true);
@@ -115,6 +118,9 @@ test("a file the diff leaves out gets a stand-in without shifting the rest", () 
 });
 
 test("a path Git quoted in the diff matches its file by path, not place", () => {
+  const [aFile] = changes.files;
+  assert.ok(aFile);
+
   // As Git writes it: the tab as the two characters \t.
   const quoted = String.raw`diff --git "a/tab\tname.ts" "b/tab\tname.ts"
 --- "a/tab\tname.ts"
@@ -125,20 +131,23 @@ test("a path Git quoted in the diff matches its file by path, not place", () => 
 `,
     [tabbed, a] = changedFileEntries({
       ...changes,
-      files: [{ ...changes.files[0], path: "tab\tname.ts" }, changes.files[0]],
+      files: [{ ...aFile, path: "tab\tname.ts" }, aFile],
       // Out of order, so only the path can pair them.
       diff: aDiff + quoted,
     });
 
+  assert.ok(tabbed && a);
   assert.equal(tabbed.diff.to, "tab\tname.ts");
   assert.equal(tabbed.missing, undefined);
   assert.equal(a.diff.to, "a.ts");
 });
 
 test("the next unread file follows the current one, wrapping to the start", () => {
-  const [a, logo, b] = changedFileEntries(changes),
-    viewed = (...entries: (typeof a)[]) =>
-      new Map(entries.map((entry) => [entry.file.path, entry.signature]));
+  const [a, logo, b] = changedFileEntries(changes);
+  assert.ok(a && logo && b);
+
+  const viewed = (...entries: (typeof a)[]) =>
+    new Map(entries.map((entry) => [entry.file.path, entry.signature]));
 
   assert.equal(nextUnviewed(viewed(), [a, logo, b], a), logo);
   assert.equal(nextUnviewed(viewed(logo), [a, logo, b], a), b);

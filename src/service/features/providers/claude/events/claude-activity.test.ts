@@ -359,12 +359,13 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
   normalize(assistant);
   normalize(user);
 
-  const toolUse = assistant.message.content[1];
-  assert.ok(toolUse.type === "tool_use");
+  const [textBlock, toolUse] = assistant.message.content;
+  assert.ok(textBlock);
+  assert.ok(toolUse?.type === "tool_use");
   const userContent = user.message.content;
   assert.ok(Array.isArray(userContent));
-  const toolResult = userContent[0];
-  assert.ok(toolResult.type === "tool_result");
+  const [toolResult] = userContent;
+  assert.ok(toolResult?.type === "tool_result");
   assert.ok(Array.isArray(toolResult.content));
 
   assert.deepEqual(events, [
@@ -379,7 +380,7 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
         message_id: assistant.message.id,
         parent_tool_use_id: assistant.parent_tool_use_id,
         text: "Checking",
-        content: claudeActivityContent(assistant.message.content[0]),
+        content: claudeActivityContent(textBlock),
         raw_response: assistant,
       },
     },
@@ -412,19 +413,21 @@ test("assistant thinking blocks retain their typed content and source message", 
   ]);
 
   const events = recorder().normalize(message);
+  const [first, ...blocks] = events;
   assert.equal(events.length, 3);
-  assert.equal(events[0].data.text, "Visible text");
+  assert.ok(first);
+  assert.equal(first.data.text, "Visible text");
 
-  for (let i = 1; i < message.message.content.length; i++) {
-    assert.equal(events[i].type, "agent.content");
-
-    assert.deepEqual(
-      events[i].data.content,
-      claudeActivityContent(message.message.content[i]),
-    );
-
-    assert.equal(events[i].data.role, "assistant");
-  }
+  assert.deepEqual(
+    blocks.map((event) => [event.type, event.data.content, event.data.role]),
+    message.message.content
+      .slice(1)
+      .map((block) => [
+        "agent.content",
+        claudeActivityContent(block),
+        "assistant",
+      ]),
+  );
 
   for (const event of events) {
     assert.deepEqual(event.data.raw_response, message);
@@ -463,14 +466,18 @@ test("user image, document and tool-result blocks stay inspectable in order", ()
   const message = userMessage(content);
   const events = recorder().normalize(message);
 
+  const [first] = events;
   assert.equal(events.length, content.length);
-  assert.equal(events[0].type, "agent.content");
-  assert.equal(events[0].data.text, "Visible text");
+  assert.ok(first);
+  assert.equal(first.type, "agent.content");
+  assert.equal(first.data.text, "Visible text");
 
-  for (let i = 1; i < content.length - 1; i++) {
-    assert.equal(events[i].type, "agent.content");
-    assert.deepEqual(events[i].data.content, claudeActivityContent(content[i]));
-  }
+  assert.deepEqual(
+    events.slice(1, -1).map((event) => [event.type, event.data.content]),
+    content
+      .slice(1, -1)
+      .map((block) => ["agent.content", claudeActivityContent(block)]),
+  );
 
   assert.equal(events.at(-1)?.type, "tool.completed");
 
@@ -490,9 +497,10 @@ test("unrecognized content remains opaque through the runtime fallback", () => {
     parent_tool_use_id: null,
   };
 
-  const events = recorder().normalizeUnrecognized(message);
+  const [event] = recorder().normalizeUnrecognized(message);
+  assert.ok(event);
 
-  assert.deepEqual(events[0].data.content, {
+  assert.deepEqual(event.data.content, {
     type: "opaque",
     data: content,
   });
@@ -508,14 +516,15 @@ test("empty or error assistant messages and user string messages remain inspecta
 
   for (const { message, text } of cases) {
     const events = recorder().normalize(message);
-    assert.ok(events.length > 0, JSON.stringify(message));
+    const [first] = events;
+    assert.ok(first, JSON.stringify(message));
 
     for (const event of events) {
       assert.deepEqual(event.data.raw_response, message);
     }
 
     if (text !== undefined) {
-      assert.equal(events[0].data.text, text);
+      assert.equal(first.data.text, text);
     }
   }
 });
@@ -666,8 +675,10 @@ test("run emits result accounting exactly once for success and failure", async (
       (event) => event.type === "agent.completed",
     );
 
+    const [done] = completed;
     assert.equal(completed.length, 1);
-    assert.equal(completed[0].data.cost_usd, 0.25);
-    assert.deepEqual(completed[0].data.raw_response, message);
+    assert.ok(done);
+    assert.equal(done.data.cost_usd, 0.25);
+    assert.deepEqual(done.data.raw_response, message);
   }
 });

@@ -55,9 +55,10 @@ test("fenced code highlights languages named with symbols or aliases", () => {
     <MarkdownView content={"```c++\nint x;\n```\n\n```console\n$ ls\n```"} />,
   );
 
-  const blocks = container.querySelectorAll("pre code");
-  expect(blocks[0].querySelector(".hljs-type")).not.toBeNull();
-  expect(blocks[1].querySelector(".hljs-meta")).not.toBeNull();
+  const [cpp, shell] = container.querySelectorAll("pre code");
+  assert.ok(cpp && shell);
+  expect(cpp.querySelector(".hljs-type")).not.toBeNull();
+  expect(shell.querySelector(".hljs-meta")).not.toBeNull();
 });
 
 test("footnotes stay unique across views and jump within their own", () => {
@@ -79,7 +80,8 @@ test("footnotes stay unique across views and jump within their own", () => {
   const ids = [...container.querySelectorAll("li[id]")].map((li) => li.id);
   expect(new Set(ids).size).toBe(2);
 
-  const reference = container.querySelectorAll("sup a")[1];
+  const [, reference] = container.querySelectorAll("sup a");
+  assert.ok(reference);
   expect(reference.hasAttribute("target")).toBe(false);
   fireEvent.click(reference);
   expect(scrolled).toEqual([ids[1]]);
@@ -107,6 +109,7 @@ test("heading links jump to their heading in the same view", () => {
   headings.forEach((heading) => expect(heading.id).toMatch(/next-steps$/));
 
   const [, , second, secondCaps] = screen.getAllByRole("link");
+  assert.ok(second && secondCaps);
   fireEvent.click(second);
   fireEvent.click(secondCaps);
 

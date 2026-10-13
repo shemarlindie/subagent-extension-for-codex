@@ -100,7 +100,10 @@ test("the Changes tab offers This turn after a second turn and explains empty st
     return tool<T>(name, args);
   };
 
-  transport.tasks = [{ ...transport.tasks[0], status: "completed" }];
+  const [current] = transport.tasks;
+
+  assert.ok(current);
+  transport.tasks = [{ ...current, status: "completed" }];
   await act(() => controller.refresh());
   const alert = await screen.findByRole("alert");
 
@@ -146,18 +149,22 @@ test("Preview opens a changed file", async (t) => {
 
 test("previews say when a file was deleted, is binary, or can't be read", async (t) => {
   const { controller, transport } = await setup(t);
-  const task = controller.getSnapshot().tasks[0];
+  const [task] = controller.getSnapshot().tasks;
+
+  assert.ok(task);
 
   transport.changedFiles = {
     "gone.ts": { path: "gone.ts", state: "deleted", size: 0 },
     "data.bin": { path: "data.bin", state: "binary", size: 2048 },
   };
 
-  for (const [path, text] of [
+  const previews: [path: string, text: string][] = [
     ["gone.ts", "Deleted"],
     ["data.bin", "Binary file changed · 2.0 KB"],
     ["missing.ts", "The service returned no file."],
-  ]) {
+  ];
+
+  for (const [path, text] of previews) {
     if (path === "missing.ts") {
       const tool = transport.tool.bind(transport);
 
@@ -235,7 +242,10 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
   assert.equal((remove as HTMLButtonElement).disabled, true);
   assert.ok(screen.getByText("Available once the task stops."));
 
-  transport.tasks = [{ ...transport.tasks[0], status: "interrupted" }];
+  const [running] = transport.tasks;
+
+  assert.ok(running);
+  transport.tasks = [{ ...running, status: "interrupted" }];
   await act(() => controller.refresh());
 
   await waitFor(() =>
@@ -392,9 +402,12 @@ test("Ask Codex about a previewed file prepares its context and restores the pre
     name: "Ask Codex about this file",
   });
 
-  await user.click(
-    within(reopenedHandoff).getAllByRole("button", { name: "Close" })[0],
-  );
+  const [closeHandoff] = within(reopenedHandoff).getAllByRole("button", {
+    name: "Close",
+  });
+
+  assert(closeHandoff);
+  await user.click(closeHandoff);
 
   const closedHandoffPreview = await screen.findByRole("dialog", {
     name: "src/a.ts",
@@ -420,13 +433,10 @@ test("global mode hides Ask Codex about a previewed file even when the host can 
     };
   });
 
-  act(() =>
-    controller.open({
-      kind: "file",
-      task: controller.getSnapshot().tasks[0],
-      path: "src/a.ts",
-    }),
-  );
+  const [task] = controller.getSnapshot().tasks;
+
+  assert.ok(task);
+  act(() => controller.open({ kind: "file", task, path: "src/a.ts" }));
 
   const preview = await screen.findByRole("dialog", { name: "src/a.ts" });
 

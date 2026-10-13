@@ -78,18 +78,21 @@ test("a provider can present thinking, operations and session status without SDK
     }),
   ];
 
-  const groups = groupActivity(events);
-  assert.equal(groups[0].title, "Thinking…");
-  assert.equal(groups[1].title, "Indexing");
-  assert.equal(groups[1].state, "completed");
-  assert.deepEqual(groups[1].events, events.slice(1, 3));
+  const [thinking, indexing] = groupActivity(events);
+  assert.ok(thinking && indexing);
+  assert.equal(thinking.title, "Thinking…");
+  assert.equal(indexing.title, "Indexing");
+  assert.equal(indexing.state, "completed");
+  assert.deepEqual(indexing.events, events.slice(1, 3));
 
   assert.deepEqual(currentActivityStatus(events), {
     text: "Needs input",
     state: "info",
   });
 
-  assert.equal(groups[1].events[0].data.native_detail, "retained");
+  const [indexed] = indexing.events;
+  assert.ok(indexed);
+  assert.equal(indexed.data.native_detail, "retained");
 });
 
 test("Claude emits provider-owned presentation alongside the original SDK response", () => {
@@ -136,10 +139,12 @@ test("a provider can associate streams and messages using normalized identities"
 
   message.data.text = "Reply";
   const groups = groupActivity([stream, completed, message]);
+  const [group] = groups;
   assert.equal(groups.length, 1);
-  assert.equal(groups[0].kind, "message");
-  assert.equal(groups[0].state, "completed");
-  assert.deepEqual(groups[0].events, [stream, completed, message]);
+  assert.ok(group);
+  assert.equal(group.kind, "message");
+  assert.equal(group.state, "completed");
+  assert.deepEqual(group.events, [stream, completed, message]);
 });
 
 test("invalid normalized presentation is not exposed to activity consumers", () => {
@@ -185,10 +190,14 @@ test("normalized tool and event labels appear in timeline groups", () => {
   const otherNote = event(4, { title: "Cache refreshed", summary: "Ready" });
   const groups = groupActivity([tool, complete, note, otherNote]);
 
-  assert.equal(groups.length, 3);
-  assert.equal(groups[0].title, "Search index");
-  assert.equal(groups[0].summary, "Found three routes");
-  assert.equal(groups[0].state, "completed");
-  assert.equal(groups[1].title, "Index refreshed");
-  assert.equal(groups[2].title, "Cache refreshed");
+  const [search] = groups;
+  assert.ok(search);
+
+  assert.deepEqual(
+    groups.map((group) => group.title),
+    ["Search index", "Index refreshed", "Cache refreshed"],
+  );
+
+  assert.equal(search.summary, "Found three routes");
+  assert.equal(search.state, "completed");
 });

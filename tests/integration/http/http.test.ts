@@ -159,7 +159,9 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     );
 
     const login = await post("/api/login", { token: "private-token" });
-    const cookie = login.headers.get("set-cookie")!.split(";")[0];
+    const [cookie] = login.headers.get("set-cookie")!.split(";");
+
+    assert.ok(cookie);
     assert.match(login.headers.get("set-cookie")!, /HttpOnly/);
 
     assert.equal(
@@ -320,11 +322,15 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       uri: (opener._meta as any).ui.resourceUri,
     });
 
-    assert.equal(ui.contents[0].uri, "ui://codex-subagent-extension/app-v6");
-    assert.equal(ui.contents[0].mimeType, "text/html;profile=mcp-app");
-    assert.ok("text" in ui.contents[0]);
+    const [uiContent] = ui.contents;
 
-    assert.deepEqual((ui.contents[0] as any)._meta["openai/ui"], {
+    assert.ok(uiContent);
+
+    assert.equal(uiContent.uri, "ui://codex-subagent-extension/app-v6");
+    assert.equal(uiContent.mimeType, "text/html;profile=mcp-app");
+    assert.ok("text" in uiContent);
+
+    assert.deepEqual((uiContent as any)._meta["openai/ui"], {
       availableDisplayModes: ["inline", "fullscreen"],
       preferredDisplayMode: "inline",
     });
@@ -343,7 +349,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       "inline",
     );
 
-    assert.match(ui.contents[0].text, /<title>Delegated Work<\/title>/);
+    assert.match(uiContent.text, /<title>Delegated Work<\/title>/);
     const standalone = await fetch(base + "/");
     assert.equal(standalone.status, 200);
 
@@ -358,14 +364,14 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
 
     // Environment detection must retain its sentinel after the template is injected.
     assert.equal(standaloneHtml.split("__API_ORIGIN__").length - 1, 1);
-    assert.equal(ui.contents[0].text.split("__API_ORIGIN__").length - 1, 2);
+    assert.equal(uiContent.text.split("__API_ORIGIN__").length - 1, 2);
 
-    assert.deepEqual((ui.contents[0] as any)._meta.ui.csp, {
+    assert.deepEqual((uiContent as any)._meta.ui.csp, {
       connectDomains: [],
       resourceDomains: [],
     });
 
-    assert.deepEqual((ui.contents[0] as any)._meta["openai/widgetCSP"], {
+    assert.deepEqual((uiContent as any)._meta["openai/widgetCSP"], {
       connect_domains: [],
       resource_domains: [],
     });
@@ -873,21 +879,22 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         uri: (proxyOpener._meta as any).ui.resourceUri,
       });
 
-      assert.equal(
-        proxyUi.contents[0].uri,
-        "ui://codex-subagent-extension/app-v6",
-      );
+      const [proxyUiContent] = proxyUi.contents;
 
-      assert.equal(proxyUi.contents[0].mimeType, "text/html;profile=mcp-app");
-      assert.ok("text" in proxyUi.contents[0]);
-      assert.match(proxyUi.contents[0].text, /<title>Delegated Work<\/title>/);
+      assert.ok(proxyUiContent);
 
-      assert.deepEqual((proxyUi.contents[0] as any)._meta.ui.csp, {
+      assert.equal(proxyUiContent.uri, "ui://codex-subagent-extension/app-v6");
+
+      assert.equal(proxyUiContent.mimeType, "text/html;profile=mcp-app");
+      assert.ok("text" in proxyUiContent);
+      assert.match(proxyUiContent.text, /<title>Delegated Work<\/title>/);
+
+      assert.deepEqual((proxyUiContent as any)._meta.ui.csp, {
         connectDomains: [],
         resourceDomains: [],
       });
 
-      assert.deepEqual((proxyUi.contents[0] as any)._meta["openai/widgetCSP"], {
+      assert.deepEqual((proxyUiContent as any)._meta["openai/widgetCSP"], {
         connect_domains: [],
         resource_domains: [],
       });

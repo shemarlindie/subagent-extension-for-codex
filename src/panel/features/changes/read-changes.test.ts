@@ -32,7 +32,10 @@ test("pages are read in order and merged into one diff", async () => {
     async (args) => {
       cursors.push(args.cursor);
 
-      return pages[Number(args.cursor ?? 0)];
+      const next = pages[Number(args.cursor ?? 0)];
+      assert.ok(next, `no page for cursor ${String(args.cursor)}`);
+
+      return next;
     },
     () => true,
   );
@@ -127,11 +130,12 @@ test("a changed file's parts are joined; a deleted file has no content", async (
   ];
 
   assert.deepEqual(
-    await readChangedFile(
-      "task",
-      "a",
-      async (args) => parts[Number(args.cursor ?? 0)],
-    ),
+    await readChangedFile("task", "a", async (args) => {
+      const part = parts[Number(args.cursor ?? 0)];
+      assert.ok(part, `no part for cursor ${String(args.cursor)}`);
+
+      return part;
+    }),
     { path: "a", state: "present", size: 6, content: "abcdef" },
   );
 

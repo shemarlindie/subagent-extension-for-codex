@@ -355,6 +355,8 @@ test("marking a file viewed collapses it until its changes change", async () => 
   const [file] =
     view.container.querySelectorAll<HTMLDetailsElement>(".diff-file");
 
+  assert.ok(file);
+
   const toggle = view.getByRole("checkbox", { name: "Viewed src/a.ts" });
 
   // jsdom has no scrolling.
@@ -421,6 +423,8 @@ test("Preview all resumes at the first file not yet viewed", async () => {
   const [file] =
     view.container.querySelectorAll<HTMLDetailsElement>(".diff-file");
 
+  assert.ok(file);
+
   file.scrollIntoView = vi.fn();
 
   await act(async () =>
@@ -437,11 +441,14 @@ test("Preview all resumes at the first file not yet viewed", async () => {
 });
 
 test("in a long list, a file changed since viewed stays open after a remount", async () => {
+  const [firstFile] = data.files;
+  assert.ok(firstFile);
+
   const paths = Array.from({ length: 9 }, (_, index) => `src/${index}.ts`);
 
   const long = (line: string): Changes => ({
     ...data,
-    files: paths.map((path) => ({ ...data.files[0], path })),
+    files: paths.map((path) => ({ ...firstFile, path })),
     diff: paths
       .map(
         (path) =>

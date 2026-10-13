@@ -11,12 +11,14 @@ import {
   type SelectFieldProps,
 } from "./select-field";
 
+const alpha = {
+  value: "/repos/alpha",
+  label: "Alpha project",
+  description: "Frontend repository",
+};
+
 const options = [
-  {
-    value: "/repos/alpha",
-    label: "Alpha project",
-    description: "Frontend repository",
-  },
+  alpha,
   {
     value: "/repos/beta-service",
     label: "Beta project",
@@ -226,7 +228,7 @@ test("lookup renders the selected option icon and each option icon", async () =>
       id="project"
       label="Project"
       searchable
-      options={[{ ...options[0], icon: "bug" }]}
+      options={[{ ...alpha, icon: "bug" }]}
       value="/repos/alpha"
       onValueChange={vi.fn()}
     />,

@@ -457,21 +457,26 @@ const manyTurnRequest = (turn: number) =>
     ? "Try the sessions client again; the test server is back up."
     : `Now move the ${manyTurnModules[turn - 1]} client onto the retry wrapper.`;
 
-const manyTurnFollowUps = Array.from({ length: 14 }, (_, i) => ({
-  id: `msg_preview_many_turns_${i + 2}`,
-  message: manyTurnRequest(i + 2),
+/** The follow-up that starts `turn`, from turn 2 on. */
+const manyTurnFollowUp = (turn: number) => ({
+  id: `msg_preview_many_turns_${turn}`,
+  message: manyTurnRequest(turn),
   from: "user" as const,
-}));
+});
+
+const manyTurnFollowUps = Array.from({ length: 14 }, (_, i) =>
+  manyTurnFollowUp(i + 2),
+);
 
 const manyTurns = new Timeline("preview-many-turns", at(112), 4000);
 begin(manyTurns, ["Read", "Edit", "Bash"]);
 
-for (let turn = 1; turn <= 15; turn++) {
-  const module = manyTurnModules[turn - 1],
+for (const [index, module] of manyTurnModules.entries()) {
+  const turn = index + 1,
     file = `src/api/${module}-client.ts`;
 
   if (turn > 1) {
-    const followUp = manyTurnFollowUps[turn - 2];
+    const followUp = manyTurnFollowUp(turn);
 
     manyTurns
       .add(

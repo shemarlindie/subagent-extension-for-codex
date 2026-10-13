@@ -202,9 +202,11 @@ test("project names upgrade preserves saved approvals and existing task data", (
   const older = join(dir, "older-migrations");
   mkdirSync(older);
 
-  const initial = readdirSync(migrationsFolder)
+  const [initial] = readdirSync(migrationsFolder)
     .filter((name) => /^\d{14}_/.test(name))
-    .sort()[0];
+    .sort();
+
+  assert.ok(initial, "expected at least one migration");
 
   cpSync(join(migrationsFolder, initial), join(older, initial), {
     recursive: true,

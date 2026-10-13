@@ -130,11 +130,14 @@ test("console requests use browser credentials and required headers for tools an
     });
   }
 
-  assert.deepEqual(JSON.parse(calls[0].options.body as string), {
+  const [toolCall, loginCall] = calls;
+  assert.ok(toolCall && loginCall);
+
+  assert.deepEqual(JSON.parse(toolCall.options.body as string), {
     conversation_id: null,
   });
 
-  assert.deepEqual(JSON.parse(calls[1].options.body as string), {
+  assert.deepEqual(JSON.parse(loginCall.options.body as string), {
     token: "local-token",
   });
 
@@ -193,22 +196,26 @@ test("console SSE coalesces activity refreshes and disposal cancels pending refr
   await transport.connect(observed.events);
   transport.watch();
   assert.deepEqual(urls, ["https://console.example/api/events"]);
-  streams[0].onopen?.();
-  streams[0].onerror?.();
+  const [first] = streams;
+  assert.ok(first);
+  first.onopen?.();
+  first.onerror?.();
   assert.deepEqual(observed.statuses, ["● Live", "Reconnecting…"]);
-  streams[0].activity?.();
+  first.activity?.();
   vi.advanceTimersByTime(50);
-  streams[0].activity?.();
+  first.activity?.();
   vi.advanceTimersByTime(99);
   assert.equal(observed.counts().refreshes, 0);
   vi.advanceTimersByTime(1);
   assert.equal(observed.counts().refreshes, 1);
   transport.watch();
-  assert.equal(streams[0].closes, 1);
-  streams[1].activity?.();
+  assert.equal(first.closes, 1);
+  const [, second] = streams;
+  assert.ok(second);
+  second.activity?.();
   transport.dispose();
   vi.advanceTimersByTime(1000);
-  assert.equal(streams[1].closes, 1);
+  assert.equal(second.closes, 1);
   assert.equal(observed.counts().refreshes, 1);
   transport.watch();
   assert.equal(streams.length, 2);
@@ -626,7 +633,9 @@ test("console SSE delivers draft deltas as they arrive", async () => {
   assert.equal(transport.streamsDrafts, true);
 
   const update = { task_id: "t", message_id: "m", offset: 0, text: "Hi" };
-  streams[0].delta?.({ data: JSON.stringify(update) });
+  const [stream] = streams;
+  assert.ok(stream);
+  stream.delta?.({ data: JSON.stringify(update) });
   assert.deepEqual(observed.drafts, [update]);
   transport.dispose();
 });

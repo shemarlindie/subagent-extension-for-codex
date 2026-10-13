@@ -60,7 +60,9 @@ test("task deletion removes events and preserves other tasks, including matching
   const after = snapshot();
 
   for (const table of ["tasks", "events"]) {
-    assert.equal(after[table].length, 2, table);
+    const rows = after[table];
+    assert.ok(rows, table);
+    assert.equal(rows.length, 2, table);
   }
 
   assert.equal(store.get(`${task.id}_1`, task.owner).id, `${task.id}_1`);

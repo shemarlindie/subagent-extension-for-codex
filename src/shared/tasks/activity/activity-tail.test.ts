@@ -56,8 +56,10 @@ test("a window keeps the newest events and tallies the rest", () => {
 
   const page = windowActivity(log);
 
+  const [oldest] = page.events;
   assert.equal(page.events.length, EVENT_TAIL_SIZE);
-  assert.equal(page.events[0].id, 4);
+  assert.ok(oldest);
+  assert.equal(oldest.id, 4);
   assert.equal(page.dropped?.count, 3);
 });
 

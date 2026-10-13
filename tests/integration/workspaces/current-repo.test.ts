@@ -466,7 +466,11 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
       assert.ok(!options!.tools.includes(tool));
     }
 
-    const hook = options!.hooks!.PreToolUse![0].hooks[0];
+    const [matcher] = options!.hooks!.PreToolUse!;
+
+    assert.ok(matcher);
+    const [hook] = matcher.hooks;
+    assert.ok(hook);
     const signal = new AbortController().signal;
 
     for (const tool of ["Edit", "Write", "Bash"]) {

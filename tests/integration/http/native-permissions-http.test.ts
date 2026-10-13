@@ -182,7 +182,9 @@ test("cookie-authenticated user tasks use the extension permission setting acros
   const { c, post, request } = await setup(t);
   c.settings.update("local", { set: { claude_permission_mode: "auto" } });
   const login = await post("/api/login", { token: "test-token" });
-  const cookie = login.headers.get("set-cookie")!.split(";")[0];
+  const [cookie] = login.headers.get("set-cookie")!.split(";");
+
+  assert.ok(cookie);
 
   for (const worker_profile of ["reviewer", "implementer"]) {
     const res = await post(

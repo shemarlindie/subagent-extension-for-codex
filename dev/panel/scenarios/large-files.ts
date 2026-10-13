@@ -36,6 +36,15 @@ const MODULES = [
   "router",
 ];
 
+/** The module at `index`, cycling through MODULES. */
+function moduleAt(index: number) {
+  const name = MODULES.at(index % MODULES.length);
+
+  if (!name) throw new Error("MODULES must not be empty");
+
+  return name;
+}
+
 /** 60 files with ~7,000 changed lines: renames, deletions and new files included. */
 const buildDiff = lazy(() => {
   const next = random(1),
@@ -72,7 +81,7 @@ const buildDiff = lazy(() => {
 
     for (let line = 0; line < 118; line++) {
       const roll = added ? 0 : next();
-      const code = `  const value${line} = compute(${line}, "${MODULES[line % MODULES.length]}");`;
+      const code = `  const value${line} = compute(${line}, "${moduleAt(line)}");`;
 
       if (added || roll < 0.35) {
         lines.push(`+${code.replace("compute", "computeCached")}`);
@@ -121,7 +130,7 @@ const moduleSizes = lazy(() => {
     const raw = Math.round(next() * 200000);
 
     rows.push(
-      `node_modules/${MODULES[index % MODULES.length]}/file-${index}.js,chunk-${(index % 1800).toString(36)},${raw},${Math.round(raw * 0.31)},${index % 997 === 0 ? '"duplicated, see\nchunk report"' : ""}`,
+      `node_modules/${moduleAt(index)}/file-${index}.js,chunk-${(index % 1800).toString(36)},${raw},${Math.round(raw * 0.31)},${index % 997 === 0 ? '"duplicated, see\nchunk report"' : ""}`,
     );
   }
 
@@ -137,7 +146,7 @@ const buildLog = lazy(() => {
     const level = next() < 0.04 ? "WARN" : "INFO";
 
     lines.push(
-      `2026-10-02T09:${String(Math.floor(index / 600) % 60).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}Z ${level} [${MODULES[index % MODULES.length]}] transformed file-${index}.js in ${Math.round(next() * 40)}ms`,
+      `2026-10-02T09:${String(Math.floor(index / 600) % 60).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}Z ${level} [${moduleAt(index)}] transformed file-${index}.js in ${Math.round(next() * 40)}ms`,
     );
   }
 
@@ -145,11 +154,9 @@ const buildLog = lazy(() => {
 });
 
 /** A section's heading text; its GitHub-style slug is `<number>-<module>`. */
-const perfSection = (index: number) =>
-  `${index + 1}. ${MODULES[index % MODULES.length]}`;
+const perfSection = (index: number) => `${index + 1}. ${moduleAt(index)}`;
 
-const perfSlug = (index: number) =>
-  `${index + 1}-${MODULES[index % MODULES.length]}`;
+const perfSlug = (index: number) => `${index + 1}-${moduleAt(index)}`;
 
 /**
  * Over 100 KB of Markdown: many sections, tables and code blocks. Contents
@@ -170,7 +177,7 @@ const perfNotes = lazy(() => {
   ];
 
   for (let index = 0; index < 360; index++) {
-    const name = MODULES[index % MODULES.length];
+    const name = moduleAt(index);
 
     sections.push(
       `## ${perfSection(index)}`,

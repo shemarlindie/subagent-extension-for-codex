@@ -137,11 +137,10 @@ test("settings default to Default, expose only SDK permission modes, persist ove
   const settings = c.settings;
   assert.equal(settings.values("alice").claude_permission_mode, "default");
   const properties = settings.read("alice").schema.properties!;
+  const permissionMode = properties.claude_permission_mode;
+  assert.ok(permissionMode);
 
-  assert.deepEqual(
-    properties.claude_permission_mode.enum,
-    claudePermissionModes,
-  );
+  assert.deepEqual(permissionMode.enum, claudePermissionModes);
 
   assert.equal(Object.hasOwn(properties, "default_approval_mode"), false);
 

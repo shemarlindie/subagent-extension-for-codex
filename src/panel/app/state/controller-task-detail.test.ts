@@ -194,9 +194,9 @@ test("View activity scrolls to a turn in the window and reads one outside it", a
       }),
     );
 
-  for (const [turn, count] of [
-    [1, 300],
-    [2, 10],
+  for (const { turn, count } of [
+    { turn: 1, count: 300 },
+    { turn: 2, count: 10 },
   ]) {
     add("task.started", { turn });
     for (let i = 0; i < count; i++) add("log");

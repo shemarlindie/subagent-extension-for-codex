@@ -95,7 +95,7 @@ const text = await format(JSON.stringify(fixture), {
 const left = leftovers(text, [
   homedir(),
   hostname(),
-  hostname().split(".")[0],
+  hostname().replace(/\..*$/s, ""),
   userInfo().username,
   temp,
   tmpdir(),

@@ -25,7 +25,10 @@ test("the inspector omits task descriptions across refresh and task selection", 
     '<img src=x onerror="window.injected=true">\nFull worker instructions.';
 
   const { controller, transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].description = literal;
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+    current.description = literal;
 
     transport.tasks.push({
       ...task("two"),
@@ -39,10 +42,10 @@ test("the inspector omits task descriptions across refresh and task selection", 
   assert.ok(!header().textContent?.includes(literal));
   assertAbsent(header().querySelector(".notice, img"));
 
-  transport.tasks[0] = {
-    ...transport.tasks[0],
-    description: literal + " Updated.",
-  };
+  const [listed] = transport.tasks;
+
+  assert.ok(listed);
+  transport.tasks[0] = { ...listed, description: literal + " Updated." };
 
   await act(() => controller.refresh());
   assert.ok(!header().textContent?.includes("Full worker instructions"));
@@ -252,7 +255,10 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   assert.equal(controller.getSnapshot().dialog, undefined);
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   assertAbsent(screen.queryByRole("dialog"));
-  await user.click(screen.getAllByRole("button", { name: "New Task" })[0]);
+  const [newTask] = screen.getAllByRole("button", { name: "New Task" });
+
+  assert.ok(newTask);
+  await user.click(newTask);
   await screen.findByRole("dialog");
 
   assert.equal(
@@ -471,9 +477,12 @@ test("long notices clamp behind Show more and expand on demand", async (t) => {
   );
 
   const { user } = await setup(t, (transport) => {
-    transport.tasks[0].status = "waiting";
+    const [current] = transport.tasks;
 
-    transport.tasks[0].pending_input = {
+    assert.ok(current);
+    current.status = "waiting";
+
+    current.pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",

@@ -353,6 +353,11 @@ test("settings help links show the setting they name, except within their own se
     ". Not profiles.",
   ];
 
+  const sections: [id: string, title: string, key: string][] = [
+    ["defaults", "Defaults", "default"],
+    ["profiles", "Profiles", "reviewer_default"],
+  ];
+
   const { user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: {
@@ -361,10 +366,7 @@ test("settings help links show the setting they name, except within their own se
         reviewer_default_model: "",
         reviewer_default_reasoning_effort: "default",
       },
-      sections: [
-        ["defaults", "Defaults", "default"],
-        ["profiles", "Profiles", "reviewer_default"],
-      ].map(([id, title, key]) => ({
+      sections: sections.map(([id, title, key]) => ({
         id,
         title,
         help,

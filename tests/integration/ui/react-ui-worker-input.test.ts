@@ -14,7 +14,11 @@ import {
 
 test("worker question accepts a custom answer with no preset selection", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",
@@ -94,7 +98,11 @@ test("worker question accepts a custom answer with no preset selection", async (
 
 test("permission requests can be denied inline", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "permission",
       tool: "Execution",
       kind: "permission",
@@ -129,7 +137,11 @@ test("permission requests can be denied inline", async (t) => {
 
 test("worker questions submit preset multiple answers and a custom override together", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",
@@ -189,7 +201,11 @@ test("worker questions submit preset multiple answers and a custom override toge
 
 test("a single worker question can be skipped and the skip undone", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",
@@ -228,7 +244,11 @@ test("a single worker question can be skipped and the skip undone", async (t) =>
 
 test("a skipped stacked question sends an explicit skipped answer", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",
@@ -285,7 +305,11 @@ test("a skipped stacked question sends an explicit skipped answer", async (t) =>
 
 test("a question without options answers in a text box and shows send failures inline", async (t) => {
   const { transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",
@@ -338,7 +362,11 @@ test("a question without options answers in a text box and shows send failures i
 
 test("unsent question answers survive switching tasks and clear once sent", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",
@@ -372,10 +400,10 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
       args: Record<string, unknown> = {},
     ): Promise<T> => {
       if (name === "submit_agent_input") {
-        transport.tasks[0] = {
-          ...transport.tasks[0],
-          pending_input: undefined,
-        };
+        const [answered] = transport.tasks;
+
+        assert.ok(answered);
+        transport.tasks[0] = { ...answered, pending_input: undefined };
       }
 
       return original<T>(name, args);
@@ -450,7 +478,11 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
 
 test("keyboard focus follows the stacked question cards", async (t) => {
   const { user } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",
@@ -490,7 +522,11 @@ test("keyboard focus follows the stacked question cards", async (t) => {
 
 test("stacked worker questions return to the first unanswered card before sending", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "request",
       tool: "AskUserQuestion",
       kind: "question",
@@ -572,7 +608,11 @@ test("stacked worker questions return to the first unanswered card before sendin
 
 test("permission approval includes the optional message after an explicit decision", async (t) => {
   const { user, transport } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "message-request",
       kind: "permission",
       tool: "Bash",
@@ -587,7 +627,10 @@ test("permission approval includes the optional message after an explicit decisi
     0,
   );
 
-  assert.equal(transport.tasks[0].pending_input?.id, "message-request");
+  const [listed] = transport.tasks;
+
+  assert.ok(listed);
+  assert.equal(listed.pending_input?.id, "message-request");
   await user.click(screen.getByRole("button", { name: "Add a message" }));
 
   await user.type(

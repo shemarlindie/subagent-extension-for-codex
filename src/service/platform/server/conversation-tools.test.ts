@@ -184,6 +184,7 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
       (Task & { reply: unknown; queued_messages: number })[]
     >("list_agent_tasks", {});
 
+    assert.ok(listed);
     assert.deepEqual(listed.reply, task.reply);
     assert.equal(listed.queued_messages, 0);
   } finally {

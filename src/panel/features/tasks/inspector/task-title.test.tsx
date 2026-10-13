@@ -76,9 +76,10 @@ test("inline title saves trimmed text through the rename tool before refreshing"
 
   assert.equal(refresh.mock.calls.length, 1);
 
-  assert.ok(
-    tool.mock.invocationCallOrder[0] < refresh.mock.invocationCallOrder[0],
-  );
+  const [renameOrder] = tool.mock.invocationCallOrder;
+  const [refreshOrder] = refresh.mock.invocationCallOrder;
+  assert.ok(renameOrder !== undefined && refreshOrder !== undefined);
+  assert.ok(renameOrder < refreshOrder);
 
   assert.equal(back.mock.calls.length, 0);
   assert.equal(task.description, "Review the full authentication workflow.");

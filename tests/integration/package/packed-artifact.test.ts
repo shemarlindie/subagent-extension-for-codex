@@ -138,15 +138,19 @@ async function connectStdio(
 async function callJson(client: Client, name: string, args = {}) {
   const result = await client.callTool({ name, arguments: args });
   assert.ok(!result.isError, JSON.stringify(result.content));
+  const [content] = result.content as { text: string }[];
+  assert.ok(content, `${name} returned no content`);
 
-  return JSON.parse((result.content as { text: string }[])[0].text);
+  return JSON.parse(content.text);
 }
 
 async function callError(client: Client, name: string, args = {}) {
   const result = await client.callTool({ name, arguments: args });
   assert.ok(result.isError, JSON.stringify(result.content));
+  const [content] = result.content as { text: string }[];
+  assert.ok(content, `${name} returned no content`);
 
-  return (result.content as { text: string }[])[0].text;
+  return content.text;
 }
 
 const health = () =>

@@ -114,7 +114,9 @@ test("a blocked embedded clipboard keeps the copy action available and reports m
 
   fireEvent.click(view.getByRole("button", { name: "Copy branch" }));
   await waitFor(() => assert.equal(report.mock.calls.length, 1));
-  assert.match(String(report.mock.calls[0][0]), /select.*copy|copy.*manually/i);
+  const [call] = report.mock.calls;
+  assert.ok(call);
+  assert.match(String(call[0]), /select.*copy|copy.*manually/i);
   assert.ok(view.getByRole("button", { name: "Copy branch" }));
 
   expect(

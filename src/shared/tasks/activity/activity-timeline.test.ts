@@ -26,8 +26,10 @@ for (const type of [
 
     const groups = groupActivity(events);
     assert.equal(groups.length, 1);
-    assert.equal(groups[0].title, "Thinking…");
-    assert.deepEqual(groups[0].events, events);
+    const [group] = groups;
+    assert.ok(group);
+    assert.equal(group.title, "Thinking…");
+    assert.deepEqual(group.events, events);
     assert.equal(currentActivityStatus(events).text, "Thinking…");
   });
 }
@@ -40,8 +42,10 @@ test("SDK thinking updates use Thinking… and keep their original payloads", ()
 
   const groups = groupActivity(events);
   assert.equal(groups.length, 1);
-  assert.equal(groups[0].title, "Thinking…");
-  assert.deepEqual(groups[0].events, events);
+  const [group] = groups;
+  assert.ok(group);
+  assert.equal(group.title, "Thinking…");
+  assert.deepEqual(group.events, events);
   assert.equal(currentActivityStatus(events).text, "Thinking…");
 });
 
@@ -89,16 +93,19 @@ for (const type of [
       });
 
       const groups = groupActivity(events);
-      assert.equal(groups[0].state, "running");
-      assert.equal(groups[1].title, "Thinking…");
-      assert.deepEqual(groups[1].events, updates);
+      const [activeGroup, thinking] = groups;
+      assert.ok(activeGroup && thinking);
+      assert.equal(activeGroup.state, "running");
+      assert.equal(thinking.title, "Thinking…");
+      assert.deepEqual(thinking.events, updates);
     });
   }
 }
 
 test("requesting status has its own row and never a thinking span", () => {
   const events = [sdk(1, "status", { status: "requesting" })];
-  const group = groupActivity(events)[0];
+  const [group] = groupActivity(events);
+  assert.ok(group);
   assert.equal(group.title, "Requesting");
   assert.equal(currentActivityStatus(events).text, "Requesting");
   assert.equal(thinkingSpan(group, events), undefined);
@@ -138,8 +145,10 @@ test("correlated tool progress interrupts adjacent event consolidation", () => {
     [[1, 3], [2], [4]],
   );
 
-  assert.equal(groups[1].title, "Workspace indexed");
-  assert.equal(groups[2].title, "Workspace indexed");
+  assert.deepEqual(
+    groups.slice(1).map((group) => group.title),
+    ["Workspace indexed", "Workspace indexed"],
+  );
 });
 
 test("an intervening event keeps repeated thinking updates separate", () => {
@@ -182,11 +191,13 @@ test("repeated notifications consolidate only when their summaries match", () =>
 
   const groups = groupActivity(events);
   assert.equal(groups.length, 2);
-  assert.equal(groups[0].title, "Notification · 2 events");
-  assert.equal(groups[0].summary, "Ready");
-  assert.deepEqual(groups[0].events, events.slice(0, 2));
-  assert.equal(groups[1].summary, "Finished");
-  assert.deepEqual(groups[1].events, events.slice(2));
+  const [repeated, finished] = groups;
+  assert.ok(repeated && finished);
+  assert.equal(repeated.title, "Notification · 2 events");
+  assert.equal(repeated.summary, "Ready");
+  assert.deepEqual(repeated.events, events.slice(0, 2));
+  assert.equal(finished.summary, "Finished");
+  assert.deepEqual(finished.events, events.slice(2));
 });
 
 for (const role of ["assistant", "user"]) {
@@ -262,7 +273,9 @@ for (const type of [
   });
 }
 
-for (const [type, title] of [["task.started", "Task started"]]) {
+for (const { type, title } of [
+  { type: "task.started", title: "Task started" },
+]) {
   test(`${type} has a lifecycle title and stays separate from connection events`, () => {
     const events = [event(1, type), event(2, "agent.started"), sdk(3, "init")];
     const groups = groupActivity(events);
@@ -381,23 +394,25 @@ test("tool lifecycles correlate interleaved starts, progress and results without
 
   const groups = groupActivity(events);
   assert.equal(groups.length, 2);
-  assert.equal(groups[0].kind, "tool");
-  assert.equal(groups[0].state, "completed");
+  const [read, bash] = groups;
+  assert.ok(read && bash);
+  assert.equal(read.kind, "tool");
+  assert.equal(read.state, "completed");
 
   assert.deepEqual(
-    groups[0].events.map((e) => e.id),
+    read.events.map((e) => e.id),
     [1, 3, 5],
   );
 
-  assert.match(groups[0].title, /Read/);
-  assert.equal(groups[1].state, "failed");
+  assert.match(read.title, /Read/);
+  assert.equal(bash.state, "failed");
 
   assert.deepEqual(
-    groups[1].events.map((e) => e.id),
+    bash.events.map((e) => e.id),
     [2, 4],
   );
 
-  assert.match(groups[1].title, /Bash/);
+  assert.match(bash.title, /Bash/);
 });
 
 test("hooks and background SDK tasks correlate by their own IDs across interleaving", () => {
@@ -426,20 +441,22 @@ test("hooks and background SDK tasks correlate by their own IDs across interleav
 
   const groups = groupActivity(events);
   assert.equal(groups.length, 2);
+  const [hook, backgroundTask] = groups;
+  assert.ok(hook && backgroundTask);
 
   assert.deepEqual(
-    groups[0].events.map((e) => e.id),
+    hook.events.map((e) => e.id),
     [1, 3, 5],
   );
 
-  assert.equal(groups[0].state, "failed");
+  assert.equal(hook.state, "failed");
 
   assert.deepEqual(
-    groups[1].events.map((e) => e.id),
+    backgroundTask.events.map((e) => e.id),
     [2, 4, 6],
   );
 
-  assert.equal(groups[1].state, "completed");
+  assert.equal(backgroundTask.state, "completed");
 });
 
 test("thinking, retries and ordinary statuses keep separate rows while failures remain prominent", () => {
@@ -482,16 +499,13 @@ for (const boundary of [
     assert.equal(tools.length, 2);
 
     assert.deepEqual(
-      tools[0].events.map((e) => e.id),
-      [1],
+      tools.map((tool) => tool.events.map((e) => e.id)),
+      [[1], [3, 4]],
     );
 
-    assert.deepEqual(
-      tools[1].events.map((e) => e.id),
-      [3, 4],
-    );
-
-    assert.notEqual(tools[0].id, tools[1].id);
+    const [earlier, later] = tools;
+    assert.ok(earlier && later);
+    assert.notEqual(earlier.id, later.id);
   });
 }
 
@@ -564,9 +578,11 @@ test("stream blocks accumulate text, thinking and tool input while preserving ev
 
   const groups = groupActivity(events);
   assert.equal(groups.length, 1);
-  assert.equal(groups[0].kind, "stream");
-  assert.equal(groups[0].state, "completed");
-  assert.deepEqual(groups[0].events, events);
+  const [group] = groups;
+  assert.ok(group);
+  assert.equal(group.kind, "stream");
+  assert.equal(group.state, "completed");
+  assert.deepEqual(group.events, events);
 });
 
 test("different parent streams do not merge and current status follows the latest live tool", () => {
@@ -593,16 +609,12 @@ test("different parent streams do not merge and current status follows the lates
     ),
   ]);
 
-  assert.equal(groups.length, 2);
-
   assert.deepEqual(
-    groups[0].events.map((e) => e.id),
-    [1, 3],
-  );
-
-  assert.deepEqual(
-    groups[1].events.map((e) => e.id),
-    [2, 4],
+    groups.map((group) => group.events.map((e) => e.id)),
+    [
+      [1, 3],
+      [2, 4],
+    ],
   );
 
   const status = currentActivityStatus([
@@ -662,9 +674,11 @@ test("streamed response and normalized final message share their SDK message ide
 
   const groups = groupActivity([first, delta, final, thinking]);
   assert.equal(groups.length, 1);
-  assert.equal(groups[0].kind, "message");
-  assert.equal(groups[0].state, "completed");
-  assert.deepEqual(groups[0].events, [first, delta, final, thinking]);
+  const [group] = groups;
+  assert.ok(group);
+  assert.equal(group.kind, "message");
+  assert.equal(group.state, "completed");
+  assert.deepEqual(group.events, [first, delta, final, thinking]);
 });
 
 test("grouping orders retained events chronologically and accounts for each event exactly once", () => {
@@ -709,16 +723,10 @@ test("identical SDK tool IDs in separate host tasks cannot correlate", () => {
   });
 
   const groups = groupActivity([first, second, result]);
-  assert.equal(groups.length, 2);
 
   assert.deepEqual(
-    groups[0].events.map((e) => e.id),
-    [1, 3],
-  );
-
-  assert.deepEqual(
-    groups[1].events.map((e) => e.id),
-    [2],
+    groups.map((group) => group.events.map((e) => e.id)),
+    [[1, 3], [2]],
   );
 });
 
@@ -820,11 +828,14 @@ test("notifications and failures present useful prose in their group summaries",
     }),
   ]);
 
-  assert.equal(groups[0].summary, "Build artifacts are ready");
-  assert.match(groups[1].summary ?? "", /Shell execution blocked/);
-  assert.match(groups[2].summary ?? "", /Turn limit reached/);
-  assert.equal(groups[1].state, "failed");
-  assert.equal(groups[2].state, "failed");
+  const [notification, denied, completed] = groups;
+  assert.ok(notification && denied && completed);
+
+  assert.equal(notification.summary, "Build artifacts are ready");
+  assert.match(denied.summary ?? "", /Shell execution blocked/);
+  assert.match(completed.summary ?? "", /Turn limit reached/);
+  assert.equal(denied.state, "failed");
+  assert.equal(completed.state, "failed");
 });
 
 test("SDK action-required sessions report input state instead of running", () => {
@@ -868,7 +879,10 @@ test("rate-limit updates group together without startup or Claude status events"
     [[1], [2], [3, 4], [5]],
   );
 
-  assert.equal(groups[2].title, "Rate limit updated");
+  const [, , rateLimit] = groups;
+  assert.ok(rateLimit);
+
+  assert.equal(rateLimit.title, "Rate limit updated");
 
   assert.deepEqual(
     groups.flatMap((group) => group.events),
@@ -899,9 +913,11 @@ test("failed context compaction exposes its exact error and failed current state
 
   const groups = groupActivity(events);
   assert.equal(groups.length, 1);
-  assert.equal(groups[0].state, "failed");
-  assert.equal(groups[0].title, "Context compaction failed");
-  assert.equal(groups[0].summary, "Context could not be compacted");
+  const [group] = groups;
+  assert.ok(group);
+  assert.equal(group.state, "failed");
+  assert.equal(group.title, "Context compaction failed");
+  assert.equal(group.summary, "Context could not be compacted");
   const current = currentActivityStatus(events, task("running"));
   assert.equal(current.state, "failed");
 });
@@ -932,8 +948,11 @@ test("failed hooks expose stderr or fallback output in the group summary", () =>
       sdk(2, "hook_response", { hook_id: "hook", outcome: "error", ...fields }),
     ]);
 
-    assert.equal(groups[0].state, "failed");
-    assert.equal(groups[0].summary, fields.stderr ?? fields.output);
+    const [group] = groups;
+    assert.ok(group);
+
+    assert.equal(group.state, "failed");
+    assert.equal(group.summary, fields.stderr ?? fields.output);
   }
 });
 
@@ -955,12 +974,18 @@ test("failed tools expose string or mixed text-block results in their summary", 
       event(2, "tool.completed", { id: "read", error: true, content }),
     ]);
 
-    assert.equal(groups[0].state, "failed");
-    assert.match(groups[0].summary ?? "", /Read failed:/);
-    assert.match(groups[0].summary ?? "", /access denied/);
+    const [group] = groups;
+    assert.ok(group);
+
+    assert.equal(group.state, "failed");
+    assert.match(group.summary ?? "", /Read failed:/);
+    assert.match(group.summary ?? "", /access denied/);
+
+    const [started] = group.events;
+    assert.ok(started);
 
     assert.deepEqual(
-      groups[0].events[0].data.input,
+      started.data.input,
       { file_path: "src/a.ts" },
       "Original tool input remains inspectable",
     );
@@ -990,8 +1015,10 @@ test("cancelled hooks and stopped or killed background tasks remain neutral term
   ] as const) {
     const groups = groupActivity([start, finish]);
     assert.equal(groups.length, 1);
-    assert.equal(groups[0].state, "info");
-    assert.ok(groups[0].summary?.startsWith(prefix), groups[0].summary);
+    const [group] = groups;
+    assert.ok(group);
+    assert.equal(group.state, "info");
+    assert.ok(group.summary?.startsWith(prefix), group.summary);
   }
 });
 
@@ -1016,8 +1043,10 @@ test("late tool progress preserves a failed result summary and state", () => {
   ]);
 
   assert.equal(groups.length, 1);
-  assert.equal(groups[0].state, "failed");
-  assert.equal(groups[0].summary, "Access denied");
+  const [group] = groups;
+  assert.ok(group);
+  assert.equal(group.state, "failed");
+  assert.equal(group.summary, "Access denied");
 });
 
 test("merged tool progress separates housekeeping bursts in input event order", () => {
@@ -1074,6 +1103,7 @@ test("merged normalized message content separates housekeeping bursts in input e
 test("a thinking row lasts until the next event, or is open-ended when none follows", () => {
   const thinking = [event(10, "thinking_tokens"), event(14, "thinking_tokens")];
   const [group] = groupActivity(thinking);
+  assert.ok(group);
 
   assert.deepEqual(thinkingSpan(group, thinking), {
     start: 10000,
@@ -1107,7 +1137,9 @@ test("a message that absorbed its thinking marker spans marker to message", () =
 
 test("rows that are not thinking have no span", () => {
   const events = [event(1, "tool.started", { id: "a", name: "Read" })];
-  assert.equal(thinkingSpan(groupActivity(events)[0], events), undefined);
+  const [group] = groupActivity(events);
+  assert.ok(group);
+  assert.equal(thinkingSpan(group, events), undefined);
 });
 
 test("startup and ordinary statuses remain visible beside a thinking row", () => {
@@ -1126,10 +1158,13 @@ test("startup and ordinary statuses remain visible beside a thinking row", () =>
     [[10], [11], [12], [20]],
   );
 
-  assert.equal(groups[0].title, "Agent connected");
-  assert.equal(groups[1].title, "Working");
-  assert.equal(thinkingSpan(groups[0], events), undefined);
-  assert.equal(thinkingSpan(groups[1], events), undefined);
+  const [connected, working] = groups;
+  assert.ok(connected && working);
+
+  assert.equal(connected.title, "Agent connected");
+  assert.equal(working.title, "Working");
+  assert.equal(thinkingSpan(connected, events), undefined);
+  assert.equal(thinkingSpan(working, events), undefined);
   assert.deepEqual(thinkingSpan(group, events), { start: 12000, end: 20000 });
 });
 
@@ -1149,7 +1184,11 @@ test("a turn's reply gets its own row without showing its text in the summary", 
     ],
   );
 
-  assert.equal(groups[1].events[0].data.text, "Done.");
+  const [, reply] = groups;
+  assert.ok(reply);
+  const [replyEvent] = reply.events;
+  assert.ok(replyEvent);
+  assert.equal(replyEvent.data.text, "Done.");
 });
 
 test("a turn completion keeps its result when no matching reply follows", () => {
@@ -1168,7 +1207,11 @@ test("a turn completion keeps its result when no matching reply follows", () => 
     ],
   );
 
-  assert.equal(groups[1].events[0].data.text, "Something else.");
+  const [, reply] = groups;
+  assert.ok(reply);
+  const [replyEvent] = reply.events;
+  assert.ok(replyEvent);
+  assert.equal(replyEvent.data.text, "Something else.");
 });
 
 test("turn ends and queue changes summarise their outcome and queue", () => {

@@ -50,26 +50,31 @@ const models: SettingRow = {
   ],
 };
 
-const sections: SettingSection[] = [
-  {
-    id: "task",
-    title: "Task",
-    rows: [
-      {
-        kind: "select",
-        key: "default_workspace_strategy",
-        label: "Workspace",
-        options: [
-          { value: "current_repo", label: "Current repository" },
-          { value: "worktree", label: "Isolated worktree" },
-        ],
-      },
-      { kind: "switch", key: "claude_subagents", label: "Allow subagents" },
-      budget,
-    ],
-  },
-  { id: "models", title: "Models", rows: [models] },
-];
+const taskSection: SettingSection = {
+  id: "task",
+  title: "Task",
+  rows: [
+    {
+      kind: "select",
+      key: "default_workspace_strategy",
+      label: "Workspace",
+      options: [
+        { value: "current_repo", label: "Current repository" },
+        { value: "worktree", label: "Isolated worktree" },
+      ],
+    },
+    { kind: "switch", key: "claude_subagents", label: "Allow subagents" },
+    budget,
+  ],
+};
+
+const modelsSection: SettingSection = {
+  id: "models",
+  title: "Models",
+  rows: [models],
+};
+
+const sections = [taskSection, modelsSection];
 
 const saved = {
   default_workspace_strategy: "current_repo",
@@ -94,7 +99,7 @@ test("form state holds strings, and a limit that is off keeps its amount", () =>
     [onKey("max_cost_usd")]: "true",
   });
 
-  assert.deepEqual(sectionKeys(sections[1]), [
+  assert.deepEqual(sectionKeys(modelsSection), [
     "default_model",
     "default_reasoning_effort",
   ]);
@@ -148,8 +153,8 @@ test("edit counts treat a budget and a model scope as one row each", () => {
     default_reasoning_effort: "high",
   };
 
-  assert.equal(editCount(sections[0], edited, initial), 1);
-  assert.equal(editCount(sections[1], edited, initial), 1);
+  assert.equal(editCount(taskSection, edited, initial), 1);
+  assert.equal(editCount(modelsSection, edited, initial), 1);
 });
 
 test("text rows send their string as typed", () => {

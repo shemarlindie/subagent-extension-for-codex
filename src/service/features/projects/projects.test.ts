@@ -360,8 +360,11 @@ test("registered repository aliases are canonicalized before persistence", async
   await symlink(repository, alias, "dir");
   await f.projects.register(alias);
   await f.projects.register(repository);
-  assert.equal(f.projects.list().length, 1);
-  assert.equal(f.projects.list()[0].repository, repository);
+
+  assert.deepEqual(
+    f.projects.list().map((project) => project.repository),
+    [repository],
+  );
 });
 
 test("project names are trimmed, persisted, and retained by repeated registration", async (t) => {
@@ -370,7 +373,12 @@ test("project names are trimmed, persisted, and retained by repeated registratio
   await f.projects.register(repository);
   f.projects.rename(repository, "  My project  ");
   await f.projects.register(repository);
-  assert.equal(f.projects.list()[0].name, "My project");
+
+  assert.deepEqual(
+    f.projects.list().map((project) => project.name),
+    ["My project"],
+  );
+
   const reopened = new Store(f.db);
 
   try {
@@ -379,9 +387,17 @@ test("project names are trimmed, persisted, and retained by repeated registratio
       new Workspaces(join(f.dir, "reopened-worktrees"), []),
     );
 
-    assert.equal(registry.list()[0].name, "My project");
+    assert.deepEqual(
+      registry.list().map((project) => project.name),
+      ["My project"],
+    );
+
     registry.rename(repository, "x".repeat(200));
-    assert.equal(f.projects.list()[0].name, "x".repeat(200));
+
+    assert.deepEqual(
+      f.projects.list().map((project) => project.name),
+      ["x".repeat(200)],
+    );
   } finally {
     reopened.close();
   }
@@ -398,9 +414,13 @@ test("project rename rejects invalid names and unregistered roots without changi
   }
 
   await assert.rejects(async () => f.projects.rename(missing, "Missing"));
-  assert.equal(f.projects.list()[0].name, "repo");
+
+  assert.deepEqual(
+    f.projects.list().map((project) => project.name),
+    ["repo"],
+  );
+
   assert.equal(await f.projects.resolve(repository), repository);
-  assert.equal(f.projects.list().length, 1);
 });
 
 test("project rename and removal tools require user authority", async (t) => {
@@ -430,7 +450,10 @@ test("project rename and removal tools require user authority", async (t) => {
     "user",
   );
 
-  assert.equal(f.projects.list()[0].name, "Renamed");
+  assert.deepEqual(
+    f.projects.list().map((project) => project.name),
+    ["Renamed"],
+  );
 
   await callTool(
     control,
@@ -776,11 +799,13 @@ test("project removal retains mutation locks until every interrupted turn settle
 
   for (const [index, task] of [first, second].entries()) {
     const abort = new AbortController();
+    const taskDone = done[index];
+    assert.ok(taskDone);
 
     f.control.active.set(task.id, {
       task,
       abort,
-      done: done[index],
+      done: taskDone,
       input: new PendingInput(
         task,
         f.store,

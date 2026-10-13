@@ -187,6 +187,8 @@ test("diff markers between lines are notes, and CRLF endings are dropped", () =>
     "diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n\\ No newline at end of file\n+b\n",
   );
 
+  assert.ok(noNewline);
+
   assert.deepEqual(diffRows(noNewline), [
     { kind: "hunk", content: "@@ -1 +1 @@" },
     { kind: "line", type: "del", oldLine: 1, newLine: undefined, text: "a" },
@@ -197,6 +199,8 @@ test("diff markers between lines are notes, and CRLF endings are dropped", () =>
   const [crlf] = parseDiffFiles(
     "diff --git a/y b/y\r\n--- a/y\r\n+++ b/y\r\n@@ -1 +1 @@\r\n-a\r\n+b\r\n",
   );
+
+  assert.ok(crlf);
 
   assert.deepEqual(
     diffRows(crlf).map((row) => ("text" in row ? row.text : row.content)),

@@ -50,6 +50,18 @@ test("activity tool pages validate typed views and retain opaque unknown data", 
   const [valid, invalid, future, assistant, incomplete, user, userWithoutId] =
     page.events;
 
+  assert.equal(page.events.length, 7);
+
+  assert.ok(
+    valid &&
+      invalid &&
+      future &&
+      assistant &&
+      incomplete &&
+      user &&
+      userWithoutId,
+  );
+
   assert.equal(eventPayload(valid, "agent.reply")?.text, "Done");
   assert.equal(invalid.view?.kind, "opaque");
   assert.equal(invalid.data.extension, "retained");

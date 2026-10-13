@@ -106,11 +106,16 @@ test("fixture provider instances keep metadata and permission options isolated",
   const first = new FixtureProvider();
   const second = new FixtureProvider();
 
-  const originalClaudeLabel =
-    second.metadata.nativePermissions!.options[0].label;
+  const firstPermissions = first.metadata.nativePermissions;
+  const secondPermissions = second.metadata.nativePermissions;
+  assert.ok(firstPermissions && secondPermissions);
+  const [firstOption] = firstPermissions.options;
+  const [secondOption] = secondPermissions.options;
+  assert.ok(firstOption && secondOption);
+  const originalClaudeLabel = secondOption.label;
 
-  first.metadata.nativePermissions!.formTitle = "Changed fixture title";
-  first.metadata.nativePermissions!.options[0].label = "Changed fixture label";
+  firstPermissions.formTitle = "Changed fixture title";
+  firstOption.label = "Changed fixture label";
 
   assert.equal(
     second.metadata.nativePermissions?.formTitle,
@@ -136,9 +141,12 @@ test("fixture model catalogs copy caller data and returned effort levels", async
 
   const provider = new FixtureProvider({ modelChoices: [...modelChoices] });
 
-  modelChoices[0].supportedEffortLevels = ["max"];
-  const first = await provider.models();
-  first[0].supportedEffortLevels!.push("high");
+  const [choice] = modelChoices;
+  assert.ok(choice);
+  choice.supportedEffortLevels = ["max"];
+  const [first] = await provider.models();
+  assert.ok(first?.supportedEffortLevels);
+  first.supportedEffortLevels.push("high");
 
   assert.deepEqual((await provider.models())[0]?.supportedEffortLevels, [
     "low",

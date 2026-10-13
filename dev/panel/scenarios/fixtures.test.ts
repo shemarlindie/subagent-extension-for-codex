@@ -366,8 +366,9 @@ test("an explicit revision scopes the panel to that revision", () => {
 });
 
 test("fixture task renaming updates listed titles and validates input", () => {
-  const task = previewTasks[0],
-    originalTitle = task.title;
+  const [task] = previewTasks;
+  assert.ok(task);
+  const originalTitle = task.title;
 
   try {
     previewTool("rename_user_agent_task", {
@@ -429,7 +430,9 @@ test("fixture queues reorder, edit and remove in memory behind a left-over steer
       message: "Edited",
     });
 
-    assert.equal(task.queue[1].message, "Edited");
+    const [, edited] = task.queue;
+    assert.ok(edited);
+    assert.equal(edited.message, "Edited");
     call("remove_user_agent_queued_message", { message_id: later });
     assert.deepEqual(order(), [steer, queued]);
     call("clear_user_agent_queue", {});
@@ -591,6 +594,7 @@ test("the Claude unavailable option reports the worker not ready and skips its m
   };
 
   const [ready] = previewTool("list_available_workers", {}) as Worker[];
+  assert.ok(ready);
   assert.equal(ready.readiness.ready, true);
   assert.ok(ready.models?.length);
 
@@ -600,6 +604,7 @@ test("the Claude unavailable option reports the worker not ready and skips its m
     { claudeUnavailable: true },
   ) as Worker[];
 
+  assert.ok(unavailable);
   assert.equal(unavailable.readiness.ready, false);
   assert.match(unavailable.readiness.message!, /older than the supported/);
   assert.equal(unavailable.models, undefined);

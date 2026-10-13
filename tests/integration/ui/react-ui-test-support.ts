@@ -152,8 +152,11 @@ export class FakeTransport implements Transport {
   chat: Record<string, unknown>[] = [];
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
-  /** get_user_agent_changes pages; a cursor is the next page's index. */
-  changes: Changes[] = [
+  /**
+   * get_user_agent_changes pages; a cursor is the next page's index. The
+   * first page also answers get_user_agent_change_counts, so one is required.
+   */
+  changes: [Changes, ...Changes[]] = [
     { scope: "task", files: [], additions: 0, deletions: 0, diff: "" },
   ];
 
@@ -539,7 +542,7 @@ export {
 
 // Two pages of one file each, as the service pages a large diff. The second
 // file is binary.
-const changePages = (binary = "logo.png"): Changes[] => {
+const changePages = (binary = "logo.png"): [Changes, ...Changes[]] => {
   const files: Changes["files"] = [
     {
       path: "src/a.ts",

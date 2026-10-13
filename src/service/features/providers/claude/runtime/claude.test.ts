@@ -40,6 +40,14 @@ const setClaudeOptions = (task: Task, patch: Record<string, unknown>) => {
 
 const claudeOptions = (task: Task) => task.provider_options?.claude ?? {};
 
+// The first PreToolUse hook callback the provider registered.
+function preToolUseHook(options: Options | undefined) {
+  const hook = options?.hooks?.PreToolUse?.[0]?.hooks[0];
+  assert.ok(hook, "PreToolUse hook is registered");
+
+  return hook;
+}
+
 test("Claude session deletion skips absent ids and forwards existing sessions", async () => {
   const task: Task = {
     ...startSchema.parse({ repository: "/repo", description: "Delete" }),
@@ -257,8 +265,10 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   assert.deepEqual(await first, models);
   assert.deepEqual(await next, { done: true, value: undefined });
   assert.equal(closes, 1);
-  assert.equal((await provider.models())[0].supportsEffort, undefined);
-  assert.equal((await provider.models())[0].supportedEffortLevels, undefined);
+  const [cached] = await provider.models();
+  assert.ok(cached);
+  assert.equal(cached.supportsEffort, undefined);
+  assert.equal(cached.supportedEffortLevels, undefined);
   time += 5 * 60 * 1000 - 1;
   await provider.models();
   assert.equal(launches, 1);
@@ -301,7 +311,9 @@ test("failed Claude model discovery closes the query and retries after a short c
   assert.equal(attempts, 1);
   assert.equal(closes, 1);
   time += 30000;
-  assert.equal((await provider.models())[0].value, "retried-model");
+  const [retried] = await provider.models();
+  assert.ok(retried);
+  assert.equal(retried.value, "retried-model");
   assert.equal(attempts, 2);
   assert.equal(closes, 2);
 });
@@ -370,7 +382,9 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
 
   assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
   assert.equal(options!.strictMcpConfig, undefined);
-  assert.equal(options!.mcpServers?.codex_parent.type, "sdk");
+  const parentServer = options!.mcpServers?.codex_parent;
+  assert.ok(parentServer);
+  assert.equal(parentServer.type, "sdk");
 
   assert.ok(
     options!.allowedTools?.includes("mcp__codex_parent__message_parent"),
@@ -411,7 +425,7 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
   );
 
   await provider.run(c, "Review");
-  const hook = options!.hooks!.PreToolUse![0].hooks[0];
+  const hook = preToolUseHook(options);
 
   const check = async (tool: string, input: object) => {
     const r = await hook(
@@ -645,7 +659,7 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
       mode === "bypassPermissions" ? true : undefined,
     );
 
-    const hook = options!.hooks!.PreToolUse![0].hooks[0];
+    const hook = preToolUseHook(options);
 
     const decision = await hook(
       {
@@ -996,7 +1010,9 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
   }, /Sandbox serialization probe only/);
 
   assert.ok(args);
-  const settings = JSON.parse(args[args.indexOf("--settings") + 1]);
+  const settingsArg = args[args.indexOf("--settings") + 1];
+  assert.ok(settingsArg);
+  const settings = JSON.parse(settingsArg);
   assert.equal(settings.sandbox.enabled, true);
   assert.equal(settings.sandbox.failIfUnavailable, true);
   assert.equal(settings.sandbox.autoAllowBashIfSandboxed, false);
@@ -1111,7 +1127,7 @@ async function runWithPolicy(
   );
 
   await provider.run(ctx.c, "Work");
-  const hook = options!.hooks!.PreToolUse![0].hooks[0];
+  const hook = preToolUseHook(options);
 
   const check = async (tool: string, input: object) =>
     (

@@ -358,7 +358,9 @@ test("uncommitted changes keep the task's files that differ from HEAD, and drop 
     await edit(10, "edited again");
     assert.deepEqual(await paths(), ["file-0.txt", "task.txt"]);
 
-    const again = (await uncommitted()).files[0];
+    const [again] = (await uncommitted()).files;
+
+    assert.ok(again);
     assert.deepEqual([again.additions, again.deletions], [1, 1]);
     assert.doesNotMatch((await uncommitted()).diff, /task's edit/);
 

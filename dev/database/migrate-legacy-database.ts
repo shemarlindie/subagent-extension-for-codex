@@ -43,7 +43,7 @@ export type MigrationReport = {
   dropped: Record<string, number>;
 };
 
-type Row = Record<string, string | number | null>;
+type Value = string | number | null;
 
 /** Removes a database file with its WAL and shared-memory files. */
 function removeDatabase(path: string) {
@@ -149,8 +149,16 @@ function copy(
       .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?")
       .get(table);
 
-  const rows = (table: string) =>
-    has(table) ? (legacy.prepare(`SELECT * FROM ${table}`).all() as Row[]) : [];
+  // Naming the columns makes SQLite reject a table that lacks one.
+  const rows = <Column extends string>(
+    table: string,
+    columns: readonly Column[],
+  ) =>
+    has(table)
+      ? (legacy
+          .prepare(`SELECT ${columns.join(",")} FROM ${table}`)
+          .all() as Record<Column, Value>[])
+      : [];
 
   const report: MigrationReport = { copied: {}, dropped: {} };
 
@@ -159,7 +167,7 @@ function copy(
 
   const tasks = new Set<string>();
 
-  for (const row of rows("tasks")) {
+  for (const row of rows("tasks", ["id", "owner", "body"])) {
     decodeTask(String(row.id), String(row.body));
 
     client
@@ -175,7 +183,13 @@ function copy(
     "INSERT INTO events(id,task_id,type,timestamp,data) VALUES(?,?,?,?,?)",
   );
 
-  for (const row of rows("events")) {
+  for (const row of rows("events", [
+    "id",
+    "task_id",
+    "type",
+    "timestamp",
+    "data",
+  ])) {
     if (!tasks.has(String(row.task_id))) {
       count("dropped", "events");
       continue;
@@ -209,7 +223,7 @@ function copy(
     )
     .run(sequence);
 
-  for (const row of rows("project_roots")) {
+  for (const row of rows("project_roots", ["path", "kind"])) {
     client
       .prepare("INSERT INTO project_roots(path,kind) VALUES(?,?)")
       .run(row.path, row.kind);
@@ -217,7 +231,7 @@ function copy(
     count("copied", "project_roots");
   }
 
-  for (const row of rows("user_settings")) {
+  for (const row of rows("user_settings", ["owner", "body"])) {
     client
       .prepare("INSERT INTO user_settings(owner,body) VALUES(?,?)")
       .run(row.owner, row.body);
@@ -228,7 +242,9 @@ function copy(
   // Settings check themselves when read; any provider name passes here.
   const settings = new Settings(database, () => ["claude"]);
 
-  for (const row of rows("user_settings")) settings.values(String(row.owner));
+  for (const row of rows("user_settings", ["owner"])) {
+    settings.values(String(row.owner));
+  }
 
   for (const table of [
     "form_requests",
@@ -238,7 +254,11 @@ function copy(
     "artifacts",
     "codex_executors",
   ]) {
-    if (has(table)) report.dropped[table] = rows(table).length;
+    if (has(table)) {
+      report.dropped[table] = legacy
+        .prepare(`SELECT 1 FROM ${table}`)
+        .all().length;
+    }
   }
 
   const violations = client.prepare("PRAGMA foreign_key_check").all();

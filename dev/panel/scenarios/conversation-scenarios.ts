@@ -3,6 +3,13 @@ import { at, taskBase, timestamps, WEBSITE } from "./scenario-context";
 import { begin, resultUsage, SESSION, Timeline } from "./timeline";
 
 // --- Steering a running turn: one steer taken, one pending, two queued -------
+const firstQueued = {
+  id: "msg_preview_steering_queued_1",
+  message: "Then shorten the empty-state text.",
+  from: "user" as const,
+  delivery: "queue" as const,
+};
+
 const steeringMessages = {
   taken: {
     id: "msg_preview_steering_taken",
@@ -15,12 +22,7 @@ const steeringMessages = {
     from: "user" as const,
   },
   queued: [
-    {
-      id: "msg_preview_steering_queued_1",
-      message: "Then shorten the empty-state text.",
-      from: "user" as const,
-      delivery: "queue" as const,
-    },
+    firstQueued,
     {
       id: "msg_preview_steering_queued_2",
       message: "Afterwards, list any strings you couldn't change.",
@@ -65,7 +67,7 @@ steering.add(
   "task.queue_changed",
   {
     queue: [
-      queueEntry(steeringMessages.queued[0]),
+      queueEntry(firstQueued),
       {
         message_id: steeringMessages.removed,
         message: "Check the dark theme too.",
@@ -85,7 +87,7 @@ steering.add(
 
 steering.add(
   "task.queue_changed",
-  { queue: [queueEntry(steeringMessages.queued[0])], paused: false },
+  { queue: [queueEntry(firstQueued)], paused: false },
   0,
 );
 
@@ -196,38 +198,40 @@ const followUp = (
     .add("task.started", { turn }, 300);
 
 // A multi-turn conversation: the parent starts it, the user and the parent follow up.
-const conversationMessages = [
-  {
-    id: "msg_preview_conversation_1",
-    message: "Also reject files whose extension doesn't match their type.",
-    from: "user" as const,
-  },
-  {
-    id: "msg_preview_conversation_2",
-    message:
-      "Thanks. Before I review: does anything else call `saveUpload` directly?",
-    from: "parent" as const,
-  },
-];
+const fileTypeRequest = {
+  id: "msg_preview_conversation_1",
+  message: "Also reject files whose extension doesn't match their type.",
+  from: "user" as const,
+};
 
-const conversationReplies = [
-  `Added a size limit to the upload endpoint: requests over **10 MB** now get \`413 Payload Too Large\` before the body is read.
+const callersQuestion = {
+  id: "msg_preview_conversation_2",
+  message:
+    "Thanks. Before I review: does anything else call `saveUpload` directly?",
+  from: "parent" as const,
+};
+
+const conversationMessages = [fileTypeRequest, callersQuestion];
+
+const sizeLimitReply = `Added a size limit to the upload endpoint: requests over **10 MB** now get \`413 Payload Too Large\` before the body is read.
 
 - \`server/upload.ts\`: checks \`content-length\` first, then counts bytes as they stream.
 - \`server/upload.test.ts\`: covers both paths.
 
-\`npm test -- upload\` passes. Left to do: the limit is a constant; it could come from settings.`,
-  `Uploads are now checked against their type, too: a file whose extension doesn't match its detected type is rejected with \`415\`.
+\`npm test -- upload\` passes. Left to do: the limit is a constant; it could come from settings.`;
+
+const fileTypeReply = `Uploads are now checked against their type, too: a file whose extension doesn't match its detected type is rejected with \`415\`.
 
 | Extension | Detected | Result |
 | --- | --- | --- |
 | \`.png\` | PNG | accepted |
 | \`.png\` | PDF | rejected |
 
-The tests cover both cases.`,
-  // Exercises response formats that need care: a footnote, a relative file
-  // link, prose that looks like HTML, a relative image and a console session.
-  `Only the endpoint calls \`saveUpload\`[^1]; the import job uses its own writer in [import/writer.ts](server/import/writer.ts:12), so it isn't affected. It returns a Promise<UploadResult> either way.
+The tests cover both cases.`;
+
+// Exercises response formats that need care: a footnote, a relative file
+// link, prose that looks like HTML, a relative image and a console session.
+const callersReply = `Only the endpoint calls \`saveUpload\`[^1]; the import job uses its own writer in [import/writer.ts](server/import/writer.ts:12), so it isn't affected. It returns a Promise<UploadResult> either way.
 
 ![Call graph](docs/call-graph.png)
 
@@ -236,8 +240,7 @@ $ grep -rn saveUpload server
 server/upload.ts:14:  await saveUpload(file)
 \`\`\`
 
-[^1]: Searched with [ripgrep](https://github.com/BurntSushi/ripgrep), including tests.`,
-];
+[^1]: Searched with [ripgrep](https://github.com/BurntSushi/ripgrep), including tests.`;
 
 const conversationTask = new Timeline("preview-conversation", at(120), 1900);
 begin(conversationTask, ["Read", "Edit", "Bash"]);
@@ -249,14 +252,14 @@ conversationTask.tool(
   "1\texport async function upload(req) {",
 );
 
-conversationTask.say(conversationReplies[0]);
+conversationTask.say(sizeLimitReply);
 
-conversationTask.finish(conversationReplies[0], 1, {
+conversationTask.finish(sizeLimitReply, 1, {
   duration_ms: 142000,
   total_cost_usd: 0.61,
 });
 
-followUp(conversationTask, 2, conversationMessages[0]);
+followUp(conversationTask, 2, fileTypeRequest);
 
 conversationTask.tool(
   "Edit",
@@ -268,14 +271,14 @@ conversationTask.tool(
   "The file server/upload.ts has been updated.",
 );
 
-conversationTask.say(conversationReplies[1]);
+conversationTask.say(fileTypeReply);
 
-conversationTask.finish(conversationReplies[1], 2, {
+conversationTask.finish(fileTypeReply, 2, {
   duration_ms: 98000,
   total_cost_usd: 0.38,
 });
 
-followUp(conversationTask, 3, conversationMessages[1]);
+followUp(conversationTask, 3, callersQuestion);
 
 conversationTask.tool(
   "Grep",
@@ -283,9 +286,9 @@ conversationTask.tool(
   "server/upload.ts:14:  await saveUpload(file)",
 );
 
-conversationTask.say(conversationReplies[2]);
+conversationTask.say(callersReply);
 
-conversationTask.finish(conversationReplies[2], 3, {
+conversationTask.finish(callersReply, 3, {
   duration_ms: 31000,
   total_cost_usd: 0.09,
 });
@@ -350,24 +353,22 @@ const longChat = new Timeline("preview-long-chat", at(130), 2100);
 begin(longChat, ["Read", "Edit"]);
 const longChatTurns = 14;
 
-const longChatMessages = Array.from(
-  { length: longChatTurns - 1 },
-  (_, index) => {
-    const turn = index + 2;
+/** The follow-up that starts `turn`, from turn 2 on. */
+const longChatMessage = (turn: number) => ({
+  id: `msg_preview_long_chat_${turn}`,
+  message:
+    turn % 3 === 0
+      ? `Now the ${turn}th screen, please, and keep the spacing tokens.`
+      : `Next: screen ${turn}. Same approach as before.`,
+  from: turn % 4 === 0 ? ("parent" as const) : ("user" as const),
+});
 
-    return {
-      id: `msg_preview_long_chat_${turn}`,
-      message:
-        turn % 3 === 0
-          ? `Now the ${turn}th screen, please, and keep the spacing tokens.`
-          : `Next: screen ${turn}. Same approach as before.`,
-      from: turn % 4 === 0 ? ("parent" as const) : ("user" as const),
-    };
-  },
+const longChatMessages = Array.from({ length: longChatTurns - 1 }, (_, index) =>
+  longChatMessage(index + 2),
 );
 
 for (let turn = 1; turn <= longChatTurns; turn++) {
-  if (turn > 1) followUp(longChat, turn, longChatMessages[turn - 2]);
+  if (turn > 1) followUp(longChat, turn, longChatMessage(turn));
 
   const reply = `Updated screen ${turn} to the new layout.\n\n- Replaced the fixed widths with the grid.\n- Kept the spacing tokens.${turn === longChatTurns ? "\n\nThat's every screen." : ""}`;
 

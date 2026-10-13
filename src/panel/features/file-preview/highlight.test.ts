@@ -6,8 +6,10 @@ import { highlightLines } from "./highlight";
 
 test("highlighted lines reopen spans that cross line breaks and escape HTML", () => {
   const lines = highlightLines("/* one\ntwo */ const a = '<b>';", "javascript");
+  const [, second] = lines;
 
   assert.equal(lines.length, 2);
+  assert.ok(second);
 
   for (const line of lines) {
     assert.equal(
@@ -17,8 +19,8 @@ test("highlighted lines reopen spans that cross line breaks and escape HTML", ()
     );
   }
 
-  assert.match(lines[1], /^<span class="hljs-comment">two \*\/<\/span>/);
-  assert.match(lines[1], /&lt;b&gt;/);
+  assert.match(second, /^<span class="hljs-comment">two \*\/<\/span>/);
+  assert.match(second, /&lt;b&gt;/);
   assert.deepEqual(highlightLines("<i>\nx", "unknown"), ["&lt;i&gt;", "x"]);
 });
 

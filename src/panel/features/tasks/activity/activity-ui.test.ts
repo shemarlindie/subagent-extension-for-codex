@@ -225,8 +225,9 @@ test("latest group is last and fresh progress moves an older tool to the end wit
   const groups = () =>
     Array.from(view.container.querySelectorAll(".activity-group"));
 
-  assert.match(groups()[1].textContent ?? "", /Started a response\.\.\./);
-  const tool = groups()[0];
+  const [tool, starting] = groups();
+  assert.ok(tool && starting);
+  assert.match(starting.textContent ?? "", /Started a response\.\.\./);
   const debug = view.getByRole("button", { name: "Debug activity: Read" });
   fireEvent.click(debug);
   const raw = tool.querySelector("details.activity-raw") as HTMLDetailsElement;
@@ -251,8 +252,10 @@ test("latest group is last and fresh progress moves an older tool to the end wit
     createElement(GroupedEventList, { events: [started, newer, progress] }),
   );
 
-  expect(groups()[1], "The updated group moves without remounting").toBe(tool);
-  assert.match(groups()[0].textContent ?? "", /Started a response\.\.\./);
+  const [prepended, moved] = groups();
+  expect(moved, "The updated group moves without remounting").toBe(tool);
+  assert.ok(prepended);
+  assert.match(prepended.textContent ?? "", /Started a response\.\.\./);
 
   expect(
     Array.from(tool.querySelectorAll("details.activity-raw")),
@@ -287,20 +290,23 @@ test("tool debug opens only the newest raw response and preserves a manual colla
     view.container.querySelectorAll<HTMLDetailsElement>("details.activity-raw"),
   );
 
+  const [newest, older] = inspectors;
+  const [, completed] = events;
   assert.equal(inspectors.length, 2);
-  assert.equal(inspectors[0].open, true);
+  assert.ok(newest && older && completed);
+  assert.equal(newest.open, true);
 
   assert.equal(
-    inspectors[0].querySelector("pre")?.textContent,
-    JSON.stringify(events[1].data, null, 2),
+    newest.querySelector("pre")?.textContent,
+    JSON.stringify(completed.data, null, 2),
   );
 
-  assert.equal(inspectors[1].open, false);
-  assertAbsent(inspectors[1].querySelector("pre"));
+  assert.equal(older.open, false);
+  assertAbsent(older.querySelector("pre"));
 
   await act(async () => {
-    inspectors[0].open = false;
-    inspectors[0].dispatchEvent(new Event("toggle"));
+    newest.open = false;
+    newest.dispatchEvent(new Event("toggle"));
   });
 
   view.rerender(
@@ -309,12 +315,10 @@ test("tool debug opens only the newest raw response and preserves a manual colla
     }),
   );
 
-  expect(view.container.querySelector("details.activity-raw")).toBe(
-    inspectors[0],
-  );
+  expect(view.container.querySelector("details.activity-raw")).toBe(newest);
 
-  assert.equal(inspectors[0].open, false);
-  assertAbsent(inspectors[0].querySelector("pre"));
+  assert.equal(newest.open, false);
+  assertAbsent(newest.querySelector("pre"));
 });
 
 test("grouped event counts update without closing debug or remounting raw inspectors", async (t) => {
@@ -327,6 +331,9 @@ test("grouped event counts update without closing debug or remounting raw inspec
       `count-indexed-${index}`,
     ),
   );
+
+  const [first] = events;
+  assert.ok(first);
 
   const view = render(
     createElement(GroupedEventList, { events: events.slice(0, 1) }),
@@ -344,7 +351,7 @@ test("grouped event counts update without closing debug or remounting raw inspec
   await waitFor(() =>
     assert.equal(
       raw.querySelector("pre")?.textContent,
-      JSON.stringify(events[0].data, null, 2),
+      JSON.stringify(first.data, null, 2),
     ),
   );
 
@@ -373,7 +380,7 @@ test("grouped event counts update without closing debug or remounting raw inspec
 
     assert.equal(
       raw.querySelector("pre")?.textContent,
-      JSON.stringify(events[0].data, null, 2),
+      JSON.stringify(first.data, null, 2),
     );
 
     assert.equal(view.container.querySelectorAll(".activity-group").length, 1);
@@ -533,9 +540,10 @@ test("new activity preserves the visible reader anchor while unpinned", (t) => {
   viewport.scrollTop = 175;
   fireEvent.scroll(viewport);
 
-  const anchor =
-    view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
+  const [, anchor] =
+    view.container.querySelectorAll<HTMLElement>(".activity-group");
 
+  assert.ok(anchor);
   const before = anchor.getBoundingClientRect().top;
 
   view.rerender(
@@ -567,9 +575,10 @@ test("new activity preserves a reader scroll before its scroll event fires", (t)
   assert.equal(viewport.scrollTop, 240);
   viewport.scrollTop = 175;
 
-  const anchor =
-    view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
+  const [, anchor] =
+    view.container.querySelectorAll<HTMLElement>(".activity-group");
 
+  assert.ok(anchor);
   const before = anchor.getBoundingClientRect().top;
 
   view.rerender(
@@ -595,9 +604,10 @@ test("a hidden activity tab keeps its reading anchor through new activity", (t) 
   viewport.scrollTop = 175;
   fireEvent.scroll(viewport);
 
-  const anchor =
-    view.container.querySelectorAll<HTMLElement>(".activity-group")[1];
+  const [, anchor] =
+    view.container.querySelectorAll<HTMLElement>(".activity-group");
 
+  assert.ok(anchor);
   const before = anchor.getBoundingClientRect().top;
 
   const next = [...initial.slice(1), ...activityMessages("hidden-tab-next", 1)];
@@ -688,7 +698,8 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
   inspector.scrollTop = 350;
   fireEvent.scroll(inspector);
   assert.ok(fab(), "Scrolling into history unpins");
-  const anchor = inspector.querySelectorAll<HTMLElement>(".activity-group")[1];
+  const [, anchor] = inspector.querySelectorAll<HTMLElement>(".activity-group");
+  assert.ok(anchor);
   const before = anchor.getBoundingClientRect().top;
 
   view.rerender(
@@ -765,8 +776,11 @@ test("timeline items mark their rail ends, status and trimmed history as data at
     ...trimmed.querySelectorAll<HTMLElement>(".timeline-item"),
   ];
 
+  const [oldestRemaining] = trimmedItems;
+  assert.ok(oldestRemaining);
+
   assert.equal(
-    trimmedItems[0].hasAttribute("data-first"),
+    oldestRemaining.hasAttribute("data-first"),
     true,
     "The rail fades in above the oldest remaining item",
   );
@@ -865,10 +879,12 @@ test("new groups animate in and movement animations respect reduced motion", (t)
     "A newly appended visible group receives an entrance animation",
   );
 
-  assert.equal(entrance.frames[0].opacity, 0);
-  assert.equal(entrance.frames[0].transform, "translateY(12px)");
-  assert.equal(entrance.frames[1].opacity, 1);
-  assert.equal(entrance.frames[1].transform, "translateY(0)");
+  const [entranceFrom, entranceTo] = entrance.frames;
+  assert.ok(entranceFrom && entranceTo);
+  assert.equal(entranceFrom.opacity, 0);
+  assert.equal(entranceFrom.transform, "translateY(12px)");
+  assert.equal(entranceTo.opacity, 1);
+  assert.equal(entranceTo.transform, "translateY(0)");
   assert.ok(Number(entrance.options.duration) > 0);
   const retainedMovement = calls.find((call) => call.element !== newest);
 
@@ -877,8 +893,10 @@ test("new groups animate in and movement animations respect reduced motion", (t)
     "Existing visible groups animate to their new positions",
   );
 
-  assert.equal(retainedMovement.frames[0].transform, "translateY(130px)");
-  assert.equal(retainedMovement.frames[0].opacity, 1);
+  const [movementFrom] = retainedMovement.frames;
+  assert.ok(movementFrom);
+  assert.equal(movementFrom.transform, "translateY(130px)");
+  assert.equal(movementFrom.opacity, 1);
   const cancelledBeforeScroll = cancellations;
   fireEvent.scroll(viewport);
 
@@ -2256,11 +2274,13 @@ test("thinking-only assistant messages are not styled as message cards", () => {
     g.classList.contains("activity-thinking-only"),
   );
 
+  const [thinkingGroup] = quiet;
   assert.equal(quiet.length, 1);
+  assert.ok(thinkingGroup);
   // A thinking-only message must not be titled as an assistant reply.
-  assert.equal(quiet[0].querySelector("strong")?.textContent, "Thinking");
+  assert.equal(thinkingGroup.querySelector("strong")?.textContent, "Thinking");
   // The thinking text is only available through the debug view.
-  assertAbsent(quiet[0].querySelector("details"));
+  assertAbsent(thinkingGroup.querySelector("details"));
   assert.equal(view.getAllByText("Assistant").length, 1);
   // The debug toggle names the row the way its heading does.
   assert.ok(view.getByRole("button", { name: "Debug activity: Thinking" }));

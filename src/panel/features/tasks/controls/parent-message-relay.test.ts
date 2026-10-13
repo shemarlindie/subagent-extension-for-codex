@@ -1,4 +1,4 @@
-import { expect, test, vi } from "vitest";
+import { assert, expect, test, vi } from "vitest";
 
 import type { ParentMessageNotification } from "../../../../shared/tasks/conversation/messages";
 import type { Transport } from "../../../transports/types";
@@ -49,9 +49,11 @@ test("relay forwards a claimed worker message and records host delivery", async 
     submit: true,
   });
 
-  expect(send.mock.invocationCallOrder[0]).toBeLessThan(
-    tool.mock.invocationCallOrder[2],
-  );
+  const [sendOrder] = send.mock.invocationCallOrder;
+  const [, , thirdToolOrder] = tool.mock.invocationCallOrder;
+  assert.isDefined(sendOrder);
+  assert.isDefined(thirdToolOrder);
+  expect(sendOrder).toBeLessThan(thirdToolOrder);
 });
 
 test("an unavailable host or empty claim does not send or log delivery", async () => {

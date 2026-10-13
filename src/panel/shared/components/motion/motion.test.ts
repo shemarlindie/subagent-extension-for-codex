@@ -129,7 +129,9 @@ test("Presence folds content out, keeping the last content until it finishes", (
 
   const exit = motion.calls.at(-1)!;
   expect(exit.element).toBe(element);
-  assert.equal(exit.frames[0].opacity, 1);
+  const [exitFrom] = exit.frames;
+  assert.ok(exitFrom);
+  assert.equal(exitFrom.opacity, 1);
   assert.equal(exit.frames.at(-1)!.height, "0px");
   assert.equal(exit.frames.at(-1)!.marginTop, "0px");
   assert.equal(exit.options.fill, "forwards");
@@ -139,7 +141,9 @@ test("Presence folds content out, keeping the last content until it finishes", (
   view.rerender(notice(true, "Claude has a question"));
   const entrance = motion.calls.at(-1)!;
   assert.equal(entrance.element.textContent, "Claude has a question");
-  assert.equal(entrance.frames[0].height, "0px");
+  const [entranceFrom] = entrance.frames;
+  assert.ok(entranceFrom);
+  assert.equal(entranceFrom.height, "0px");
   assert.equal(entrance.frames.at(-1)!.opacity, 1);
 });
 
@@ -156,7 +160,9 @@ test("Presence pop variant scales and respects reduced motion", (t) => {
 
   const view = render(button(false));
   view.rerender(button(true));
-  assert.equal(motion.calls.at(-1)!.frames[0].transform, "scale(0.85)");
+  const [popFrom] = motion.calls.at(-1)!.frames;
+  assert.ok(popFrom);
+  assert.equal(popFrom.transform, "scale(0.85)");
   motion.reduce();
   const count = motion.calls.length;
   view.rerender(button(false));
@@ -190,13 +196,17 @@ test("useAnimatedHeight eases between the old and new height", (t) => {
   assert.equal(motion.calls.length, 0, "Mounting does not animate");
   view.rerender(createElement(Grow, { open: true }));
   const grow = motion.calls.at(-1)!;
-  assert.equal(grow.frames[0].height, "40px");
-  assert.equal(grow.frames[1].height, "120px");
+  const [growFrom, growTo] = grow.frames;
+  assert.ok(growFrom && growTo);
+  assert.equal(growFrom.height, "40px");
+  assert.equal(growTo.height, "120px");
   act(() => grow.animation.onfinish!());
   view.rerender(createElement(Grow, { open: false }));
   const shrink = motion.calls.at(-1)!;
-  assert.equal(shrink.frames[0].height, "120px");
-  assert.equal(shrink.frames[1].height, "40px");
+  const [shrinkFrom, shrinkTo] = shrink.frames;
+  assert.ok(shrinkFrom && shrinkTo);
+  assert.equal(shrinkFrom.height, "120px");
+  assert.equal(shrinkTo.height, "40px");
 });
 
 test("useListPresence keeps removed items in place and folds new ones in", (t) => {
@@ -232,10 +242,13 @@ test("useListPresence keeps removed items in place and folds new ones in", (t) =
   assert.deepEqual(order(), ["a", "b", "c", "d"], "b exits where it was");
 
   const [exit, entrance] = motion.calls;
+  assert.ok(exit && entrance);
   assert.equal(exit.element.dataset.row, "b");
   assert.equal(exit.frames.at(-1)!.height, "0px");
   assert.equal(entrance.element.dataset.row, "d");
-  assert.equal(entrance.frames[0].height, "0px");
+  const [entranceFrom] = entrance.frames;
+  assert.ok(entranceFrom);
+  assert.equal(entranceFrom.height, "0px");
 
   act(() => exit.animation.onfinish!());
   assert.deepEqual(order(), ["a", "c", "d"]);

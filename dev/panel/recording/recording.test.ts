@@ -59,14 +59,16 @@ const rateLimit = {
   session_id: "real-session",
 };
 
+const startedEvent: EventEnvelope = {
+  id: 41,
+  task_id: "task_123",
+  type: "agent.started",
+  timestamp: "2026-10-07T17:00:00.000Z",
+  data: { model: init.model, tools: init.tools, raw_response: init },
+};
+
 const events: EventEnvelope[] = [
-  {
-    id: 41,
-    task_id: "task_123",
-    type: "agent.started",
-    timestamp: "2026-10-07T17:00:00.000Z",
-    data: { model: init.model, tools: init.tools, raw_response: init },
-  },
+  startedEvent,
   {
     id: 42,
     task_id: "task_123",
@@ -118,15 +120,15 @@ test("a recording keeps nothing from the machine or account it ran on", () => {
     assert.ok(!text.includes(secret), secret);
   }
 
-  const started = recorded.events[0].data.raw_response as Record<
-    string,
-    unknown
-  >;
+  const [first, , instruction] = recorded.events;
+  assert.ok(first);
+  assert.ok(instruction);
+  const started = first.data.raw_response as Record<string, unknown>;
 
   assert.equal(started.cwd, "/demo/data/worktrees/preview-recorded-test");
   assert.equal(started.session_id, "preview-session");
   assert.equal(started.memory_paths, undefined);
-  assert.equal(recorded.events[2].data.request, "req_preview_0001");
+  assert.equal(instruction.data.request, "req_preview_0001");
 });
 
 test("a recording is renumbered, moved to its start and owned by the preview", () => {
@@ -167,6 +169,7 @@ test("a recording is renumbered, moved to its start and owned by the preview", (
 
 test("provider events get their presentation again", () => {
   const [started] = recorded.events;
+  assert.ok(started);
   const { activity, ...data } = started.data;
 
   assert.deepEqual(
@@ -180,7 +183,7 @@ test("a current_repo recording maps its workspace to the fixture repository, and
     { ...task, repository: "/scratch/repo", workspace: "/scratch/repo" },
     [
       {
-        ...events[0],
+        ...startedEvent,
         data: {
           raw_response: { cwd: "/scratch/repo/x", note: "/scratch/other" },
         },
@@ -197,7 +200,10 @@ test("a current_repo recording maps its workspace to the fixture repository, and
 
   assert.equal(recordedTask.repository, "/demo/project");
 
-  assert.deepEqual(recordedEvents[0].data.raw_response, {
+  const [recordedEvent] = recordedEvents;
+  assert.ok(recordedEvent);
+
+  assert.deepEqual(recordedEvent.data.raw_response, {
     cwd: "/demo/project/x",
     note: "/scratch/other",
   });
@@ -221,7 +227,7 @@ test("replacements redact decoded strings and preserve literal replacement value
 
   const result = recordFixture(
     { ...task, description: secret },
-    [{ ...events[0], data: { [secret]: [secret, "marker", "x"] } }],
+    [{ ...startedEvent, data: { [secret]: [secret, "marker", "x"] } }],
     {
       id: "preview-recorded-escaped",
       start: "2026-10-02T11:00:00.000Z",
@@ -238,10 +244,13 @@ test("replacements redact decoded strings and preserve literal replacement value
 
   assert.equal(result.task.description, replacement);
 
-  assert.deepEqual(result.events[0].data, {
+  const [resultEvent] = result.events;
+  assert.ok(resultEvent);
+
+  assert.deepEqual(resultEvent.data, {
     [replacement]: [replacement, "/demo/label", "removed"],
   });
 
   assert.equal(task.description, "Review");
-  assert.deepEqual(events[0].data.raw_response, init);
+  assert.deepEqual(startedEvent.data.raw_response, init);
 });

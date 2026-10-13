@@ -3,7 +3,7 @@ import { get } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { expect, test } from "vitest";
+import { assert, expect, test } from "vitest";
 
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
@@ -121,7 +121,9 @@ test.each([
 
         expect(unauthenticated.status).toBe(401);
 
-        const session = login.headers.get("set-cookie")!.split(";")[0];
+        const [session] = login.headers.get("set-cookie")!.split(";");
+
+        assert(session);
 
         const csrf = await fetch(`${base}/api/tools/list_agent_tasks`, {
           method: "POST",

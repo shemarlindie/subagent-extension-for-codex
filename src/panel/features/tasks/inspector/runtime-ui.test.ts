@@ -245,7 +245,11 @@ test("task list shows stopped state labels regardless of recorded runtime", (t) 
   ] as const) {
     for (const runtime_ms of [0, 95_000]) {
       view.rerender(row(task({ status, runtime_ms })));
-      assert.equal(rowRuntime(view), status[0].toUpperCase() + status.slice(1));
+
+      assert.equal(
+        rowRuntime(view),
+        status.charAt(0).toUpperCase() + status.slice(1),
+      );
     }
   }
 });
@@ -346,7 +350,7 @@ test("terminal states and input requests take precedence over stale activity", (
     view.rerender(row(task({ status, live_activity })));
 
     view.getByRole("img", {
-      name: status[0].toUpperCase() + status.slice(1),
+      name: status.charAt(0).toUpperCase() + status.slice(1),
     });
 
     expect(view.queryByRole("img", { name: live_activity.text })).toBeNull();

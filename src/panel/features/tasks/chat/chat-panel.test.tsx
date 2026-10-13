@@ -466,6 +466,7 @@ test("composer expansion and collapse animate directly between their heights wit
   const [expansion] = composerAnimations();
 
   assert.equal(composerAnimations().length, 1);
+  assert.ok(expansion);
   expect(expansion.element).toBe(composer);
 
   assert.deepEqual(
@@ -484,6 +485,7 @@ test("composer expansion and collapse animate directly between their heights wit
   const [collapse] = composerAnimations();
 
   assert.equal(composerAnimations().length, 1);
+  assert.ok(collapse);
   expect(collapse.element).toBe(composer);
 
   assert.deepEqual(
@@ -573,10 +575,12 @@ test("Stop moves continuously between expanded and collapsed composer layouts an
   animations.length = 0;
   fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
   assertSingleStop();
+  const [hideStop] = stopAnimations();
   assert.equal(stopAnimations().length, 1);
-  assert.equal(stopAnimations()[0].timing.duration, 180);
+  assert.ok(hideStop);
+  assert.equal(hideStop.timing.duration, 180);
 
-  assert.deepEqual(stopAnimations()[0].frames, [
+  assert.deepEqual(hideStop.frames, [
     { transform: "translateY(7px)" },
     { transform: "none" },
   ]);
@@ -588,10 +592,12 @@ test("Stop moves continuously between expanded and collapsed composer layouts an
   animations.length = 0;
   fireEvent.click(view.getByRole("button", { name: "Show composer" }));
   assertSingleStop();
+  const [showStop] = stopAnimations();
   assert.equal(stopAnimations().length, 1);
-  assert.equal(stopAnimations()[0].timing.duration, 180);
+  assert.ok(showStop);
+  assert.equal(showStop.timing.duration, 180);
 
-  assert.deepEqual(stopAnimations()[0].frames, [
+  assert.deepEqual(showStop.frames, [
     { transform: "translateY(-7px)" },
     { transform: "none" },
   ]);
@@ -884,7 +890,9 @@ test("pending steers can be sent now, and a paused queue resumed, cleared, edite
 
   const click = async (name: string, index = 0) => {
     const count = tool.mock.calls.length;
-    fireEvent.click(view.getAllByRole("button", { name })[index]);
+    const button = view.getAllByRole("button", { name })[index];
+    assert.ok(button, `No ${name} button at index ${index}`);
+    fireEvent.click(button);
     await waitFor(() => assert.equal(tool.mock.calls.length, count + 1));
   };
 

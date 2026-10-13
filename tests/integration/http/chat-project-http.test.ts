@@ -70,10 +70,11 @@ async function fixture(t: TestContext) {
 
   const login = await post("/api/login", { token: "project-test-token" });
 
-  const cookie = {
-    Cookie: login.headers.get("set-cookie")!.split(";")[0],
-    "X-Codex-Subagent-Extension": "1",
-  };
+  const [session] = login.headers.get("set-cookie")!.split(";");
+
+  assert.ok(session);
+
+  const cookie = { Cookie: session, "X-Codex-Subagent-Extension": "1" };
 
   async function repo(name: string) {
     const repository = join(dir, name);

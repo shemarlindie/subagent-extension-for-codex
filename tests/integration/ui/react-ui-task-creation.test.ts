@@ -18,7 +18,10 @@ import {
 
 test("delegation submits the full request without a title and search matches description", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
-    transport.tasks[0].description = "Inspect the unique zebra boundary.";
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+    current.description = "Inspect the unique zebra boundary.";
 
     transport.tasks.push({
       ...task("two"),
@@ -447,7 +450,11 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
 
 test("permission buttons allow explicit inline approval without a dropdown", async (t) => {
   const { user, transport } = await setup(t, (transport) => {
-    transport.tasks[0].pending_input = {
+    const [current] = transport.tasks;
+
+    assert.ok(current);
+
+    current.pending_input = {
       id: "permission",
       tool: "Execution",
       kind: "permission",

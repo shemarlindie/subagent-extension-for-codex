@@ -196,7 +196,9 @@ test("workers are read again each refresh while one can't start tasks, and other
   ready = true;
   await controller.refresh();
   assert.equal(workerReads(), 3);
-  assert.equal(controller.getSnapshot().workers[0].readiness?.ready, true);
+  const [readyWorker] = controller.getSnapshot().workers;
+  assert.ok(readyWorker);
+  assert.equal(readyWorker.readiness?.ready, true);
 
   await controller.refresh();
   assert.equal(workerReads(), 3);
@@ -214,5 +216,7 @@ test("workers are read again each refresh while one can't start tasks, and other
   ready = false;
   await controller.refresh();
   assert.equal(workerReads(), 4);
-  assert.equal(controller.getSnapshot().workers[0].readiness?.ready, false);
+  const [brokenWorker] = controller.getSnapshot().workers;
+  assert.ok(brokenWorker);
+  assert.equal(brokenWorker.readiness?.ready, false);
 });

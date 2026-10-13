@@ -58,7 +58,9 @@ test("other-panel removal clears selected project while renaming preserves scope
 
   await controller.manageProject("/repo/a", "Renamed");
   assert.equal(controller.getSnapshot().scopeVersion, version);
-  assert.equal(controller.getSnapshot().projects[0].name, "Renamed");
+  const [renamed] = controller.getSnapshot().projects;
+  assert.ok(renamed);
+  assert.equal(renamed.name, "Renamed");
 
   transport.handler = (name) =>
     name === "list_agent_projects" ? [] : undefined;
@@ -123,7 +125,9 @@ test("another panel removing a project closes its confirmation and retains the P
   t.onTestFinished(() => controller.dispose());
   await controller.start();
   controller.manageProjects();
-  controller.removeProject(controller.getSnapshot().projects[0]);
+  const [project] = controller.getSnapshot().projects;
+  assert.ok(project);
+  controller.removeProject(project);
   assert.equal(controller.getSnapshot().dialog?.kind, "remove-project");
   transport.projects = [];
   await controller.refresh();

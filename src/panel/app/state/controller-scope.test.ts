@@ -39,7 +39,9 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
     assert.equal(bootstrap.length, explicit ? 0 : 1);
 
     if (!explicit) {
-      assert.deepEqual(bootstrap[0].args, { conversation_id: null });
+      const [call] = bootstrap;
+      assert.ok(call);
+      assert.deepEqual(call.args, { conversation_id: null });
     }
 
     assert.deepEqual(

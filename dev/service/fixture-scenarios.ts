@@ -113,7 +113,11 @@ function parseFields(value: string) {
   const fields: Record<string, unknown> = {};
   const expression = /(?:^|\s)([A-Za-z][A-Za-z0-9_.-]*)=([^\s]+)/g;
 
-  for (const [, key, raw] of value.matchAll(expression)) {
+  for (const match of value.matchAll(expression)) {
+    // Neither group is optional, so every match has both.
+    const key = match[1]!,
+      raw = match[2]!;
+
     if (["__proto__", "prototype", "constructor"].includes(key)) continue;
     fields[key] = parseValue(raw);
   }
@@ -153,9 +157,12 @@ export function readScenarios(prompt: string): FixtureScenarios {
   const scenarios = defaultScenarios();
   const markers = prompt.matchAll(/\[fixture:([^\]]+)\]/gi);
 
-  for (const [, raw] of markers) {
-    const marker = raw.trim();
-    const [head, ...rest] = marker.split(/\s+/);
+  for (const match of markers) {
+    // The group isn't optional, so every marker has it.
+    const [head, ...rest] = match[1]!.trim().split(/\s+/);
+
+    // A blank marker names no scenario.
+    if (!head) continue;
     let kind = head;
     const args = parseFields(rest.join(" "));
 

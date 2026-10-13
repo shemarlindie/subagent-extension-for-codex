@@ -94,10 +94,11 @@ async function setup() {
 
   const login = await post("/api/login", { token: "test-token" });
 
-  const cookie = {
-    Cookie: login.headers.get("set-cookie")!.split(";")[0],
-    "X-Codex-Subagent-Extension": "1",
-  };
+  const [session] = login.headers.get("set-cookie")!.split(";");
+
+  assert.ok(session);
+
+  const cookie = { Cookie: session, "X-Codex-Subagent-Extension": "1" };
 
   const start = {
     provider: "fixture",

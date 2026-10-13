@@ -411,6 +411,24 @@ builds. Fix formatting with `npm run format`. The TypeScript configs enable
 `override` and functions that return a value on some paths return explicitly
 on all of them.
 
+They also enable `noUncheckedIndexedAccess`, so an array element or open-record
+value read by index may be `undefined`. Handle that from the data's contract
+rather than silencing it:
+
+- Traverse arrays with `for…of` or `entries()`, or destructure and check the
+  element once; a length check doesn't narrow `items[i]`.
+- Type a fixed key set as an exhaustive `Record<Key, Value>`, and a lookup whose
+  key may be absent as `Partial<Record<…>>` with a meaningful fallback.
+- Give a collection that is never empty a tuple type such as
+  `[Event, ...Event[]]`.
+- Make parsers of Git or other external output throw on truncated or malformed
+  input instead of producing empty paths or `NaN`.
+- In tests, destructure and assert presence with `assert.ok(value)` or Vitest's
+  `assert(value)`, which narrow the type; `expect(value).toBeDefined()` doesn't.
+
+Use a non-null assertion only for a local invariant the compiler can't see, with
+a comment when it isn't obvious.
+
 ESLint (`eslint.config.js`) checks TypeScript
 code quality and React hook rules; explicit `any` is allowed only in tests.
 Type-aware rules read the three tsconfigs and catch unhandled or misused

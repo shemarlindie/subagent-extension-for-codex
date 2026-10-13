@@ -91,9 +91,10 @@ test("worker discovery exposes SDK metadata and falls back when discovery fails"
   const { c } = await setup(provider);
 
   try {
-    const workers = await c.availableWorkers();
-    assert.deepEqual((workers[0] as any).models, models);
-    assert.equal(workers[0].provider, "fixture");
+    const [worker] = await c.availableWorkers();
+    assert.ok(worker);
+    assert.deepEqual((worker as any).models, models);
+    assert.equal(worker.provider, "fixture");
 
     provider.models = async () => {
       throw new Error("unavailable");
@@ -102,8 +103,8 @@ test("worker discovery exposes SDK metadata and falls back when discovery fails"
     const fallback = (await c.availableWorkers())[0] as any;
     assert.equal(fallback.models, undefined);
     assert.match(fallback.model_discovery_error, /Model discovery unavailable/);
-    assert.deepEqual(fallback.profiles, workers[0].profiles);
-    assert.deepEqual(fallback.capabilities, workers[0].capabilities);
+    assert.deepEqual(fallback.profiles, worker.profiles);
+    assert.deepEqual(fallback.capabilities, worker.capabilities);
   } finally {
     await c.close();
   }
@@ -662,6 +663,7 @@ test("current_repo dependents see only the dependency's own changes", async () =
     .get(second.id)!
     .split(`Dependency ${first.id} changes`);
 
+  assert.ok(dependency);
   assert.match(dependency, /\+worker/);
   assert.doesNotMatch(dependency, /\+user/);
   await c.close();
@@ -782,6 +784,7 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   );
 
   const prompt = prompts[2];
+  assert.ok(prompt);
   // The first turn's prompt, then the earlier conversation, then the message.
   assert.ok(prompt.startsWith("Review the parser"));
   assert.match(prompt, /continues in a new session/);
@@ -1310,7 +1313,8 @@ test("queued messages can be reordered behind the steers the worker already has"
     ["Pending", "C", "B", "A"],
   );
 
-  const pending = store.get(t.id, "alice").queue[0];
+  const [pending] = store.get(t.id, "alice").queue;
+  assert.ok(pending);
 
   assert.throws(
     () => c.moveQueued("alice", t.id, pending.id, 2),

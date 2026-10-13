@@ -186,6 +186,7 @@ test("Chat orders explicit parent reports before the matching final reply's upda
   );
 
   const report = items[1];
+  assert.ok(report);
 
   assert.equal(
     report.kind === "message" && report.message.parent_message,

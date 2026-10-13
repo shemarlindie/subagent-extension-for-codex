@@ -71,11 +71,13 @@ test("a block mounts its rows in view and keeps its measured height out of view"
   );
 
   const block = view.container.firstChild!.firstChild as HTMLElement;
+  const [observer] = observers;
+  assert.ok(observer);
   assert.equal(block.textContent, "");
   assert.equal(block.style.height, "40px");
 
   act(() =>
-    observers[0].callback([
+    observer.callback([
       { isIntersecting: true, boundingClientRect: { height: 40 } },
     ]),
   );
@@ -84,13 +86,39 @@ test("a block mounts its rows in view and keeps its measured height out of view"
   assert.equal(block.style.height, "");
 
   act(() =>
-    observers[0].callback([
+    observer.callback([
       { isIntersecting: false, boundingClientRect: { height: 75 } },
     ]),
   );
 
   assert.equal(block.textContent, "");
   assert.equal(block.style.height, "75px");
+});
+
+test("a batch of observer entries leaves a block in its latest state", (t) => {
+  const observers = mockObserver(t);
+
+  const view = render(
+    createElement(
+      "div",
+      { style: { overflowY: "auto" } },
+      createElement(LazyBlock, { estimate: 40, children: "rows" }),
+    ),
+  );
+
+  const block = view.container.firstChild!.firstChild as HTMLElement;
+  const [observer] = observers;
+  assert.ok(observer);
+
+  // Scrolled out and back before the observer reported: the block stays shown.
+  act(() =>
+    observer.callback([
+      { isIntersecting: false, boundingClientRect: { height: 60 } },
+      { isIntersecting: true, boundingClientRect: { height: 60 } },
+    ]),
+  );
+
+  assert.equal(block.textContent, "rows");
 });
 
 test("without IntersectionObserver, blocks always render", (t) => {
@@ -181,9 +209,11 @@ test("after a resize changes which box scrolls, blocks watch the new one", (t) =
   inner.overflow(false);
   outer.overflow(true);
   window.dispatchEvent(new Event("resize"));
+  const [first, second] = observers;
   assert.equal(observers.length, 2);
-  assert.equal(observers[0].disconnected, true);
-  expect(observers[1].root).toBe(outer.element);
+  assert.ok(first && second);
+  assert.equal(first.disconnected, true);
+  expect(second.root).toBe(outer.element);
 });
 
 test("a scroll area changing size, without a window resize, also re-finds it", (t) => {

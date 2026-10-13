@@ -24,13 +24,16 @@ test("native folder picker uses a fixed script and preserves folder-name spaces"
   });
 
   assert.deepEqual(result, { repository: "/repo/ project with spaces /" });
+  const [call] = calls;
   assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], "/usr/bin/osascript");
-  const args = calls[0][1] as string[];
-  assert.equal(args[0], "-e");
-  assert.match(args[1], /choose folder/);
-  assert.match(args[1], /on error number -128/);
-  assert.deepEqual(calls[0][2], { timeout: 120000, maxBuffer: 16384 });
+  assert.ok(call);
+  assert.equal(call[0], "/usr/bin/osascript");
+  const [flag, script] = call[1] as string[];
+  assert.equal(flag, "-e");
+  assert.ok(script);
+  assert.match(script, /choose folder/);
+  assert.match(script, /on error number -128/);
+  assert.deepEqual(call[2], { timeout: 120000, maxBuffer: 16384 });
 });
 
 test("native folder cancellation returns no repository", async () => {

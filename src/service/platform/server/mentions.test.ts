@@ -109,16 +109,20 @@ test("mention test mode always returns a sample and logs the query as JSONL", as
 
   try {
     const result = await searchAgentMentions("unmatched query", [], env);
-    assert.equal(result.items[0]?.name, "Claude");
-    assert.match(result.items[0]?.title ?? "", /sample/i);
+    const [item] = result.items;
+    assert.ok(item);
+    assert.equal(item.name, "Claude");
+    assert.match(item.title ?? "", /sample/i);
+    const { icons } = item;
+    assert.ok(icons);
 
     assert.deepEqual(
-      result.items[0]?.icons?.map((icon) => icon.theme),
+      icons.map((icon) => icon.theme),
       ["light", "dark"],
     );
 
     for (const [index, color] of ["#000000", "#ffffff"].entries()) {
-      const icon = result.items[0]?.icons?.[index];
+      const icon = icons[index];
 
       assert.ok(icon);
 

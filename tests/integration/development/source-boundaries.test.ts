@@ -15,6 +15,7 @@ async function boundaryMessages(filePath: string, source: string) {
     filePath: resolve(filePath),
   });
 
+  assert.ok(result, "ESLint must return a result for the fixture");
   assert.equal(result.fatalErrorCount, 0, "Fixture must parse as TypeScript");
 
   return result.messages.filter(
