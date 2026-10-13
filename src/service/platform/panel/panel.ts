@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 import type {
   OpenAIUiResourceMetadata,
@@ -11,6 +9,7 @@ import { panelOutputSchema } from "../../../shared/panel/panel-contract.generate
 import type { Task } from "../../../shared/tasks/model.js";
 import { productGlyphIcons } from "../server/product-glyph.js";
 import { type PanelContextInput, panelContextInput } from "./panel-context.js";
+import { preloadPanelHtml, readPanelHtml } from "./panel-html.js";
 
 // Bump the URI when resource metadata changes to invalidate host caches.
 export const panelUri = "ui://codex-subagent-extension/app-v6";
@@ -43,6 +42,8 @@ export function delegationPanel(
   initialTasks?: (conversationId?: string) => Task[],
   context?: (args: PanelContextInput) => Promise<PanelContext>,
 ) {
+  preloadPanelHtml(htmlPath);
+
   const panel = {
     name: "open_codex_subagent_extension",
     uri: panelUri,
@@ -102,7 +103,7 @@ export function delegationPanel(
         {
           uri: panelUri,
           mimeType: RESOURCE_MIME_TYPE,
-          text: await readFile(htmlPath, "utf8"),
+          text: await readPanelHtml(htmlPath),
           _meta: resourceMeta,
         },
       ],

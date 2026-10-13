@@ -482,6 +482,34 @@ describe("packed artifact", () => {
     }
   });
 
+  test("the panel keeps working after an update removes the running installation", async () => {
+    const removed = join(root, "package-removed");
+    await cp(pkg, removed, { recursive: true });
+    const service = await extraService("data-removed");
+    const client = await connectStdio(service, {}, removed);
+
+    try {
+      await callJson(client, "list_agent_projects");
+      await rm(removed, { recursive: true, force: true });
+
+      const page = await fetch(`http://127.0.0.1:${service.port}/`);
+      assert.equal(page.status, 200);
+      assert.match(await page.text(), /<html/i);
+
+      const { resources } = await client.listResources();
+
+      const panel = resources.find((resource) =>
+        resource.uri.startsWith("ui://"),
+      );
+
+      const html = (await client.readResource({ uri: panel!.uri })).contents[0];
+
+      assert.match(String((html as { text?: string }).text), /<html/i);
+    } finally {
+      await client.close();
+    }
+  });
+
   test("the packaged service runs the host's Claude Code for model discovery", async (context: TestContext) => {
     const client = await connectStdio();
 

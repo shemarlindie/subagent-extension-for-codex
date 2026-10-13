@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import express from "express";
@@ -7,6 +5,7 @@ import express from "express";
 import type { DraftUpdate } from "../../../shared/tasks/conversation/drafts.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
+import { preloadPanelHtml, readPanelHtml } from "../panel/panel-html.js";
 import { serviceIdentity } from "../service/identity.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
@@ -33,6 +32,8 @@ export function application(
   nativeHtmlPath = htmlPath,
   additionalOrigins: string[] = [],
 ) {
+  preloadPanelHtml(htmlPath);
+  preloadPanelHtml(nativeHtmlPath);
   const app = express();
   const allowed = new Set([origin, ...additionalOrigins]);
   app.disable("x-powered-by");
@@ -119,7 +120,7 @@ export function application(
   app.get("/", async (req, res) => {
     res.type("html").send(
       // Inject the template's origin once; preserve the bundled runtime sentinel.
-      (await readFile(htmlPath, "utf8")).replace("__API_ORIGIN__", () =>
+      (await readPanelHtml(htmlPath)).replace("__API_ORIGIN__", () =>
         consoleOrigin(req),
       ),
     );

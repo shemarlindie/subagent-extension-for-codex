@@ -341,7 +341,9 @@ failure cases, see [Fixture scenarios](fixture-scenarios.md).
 | `.env` or `vite.config.ts`           | Restart the affected processes                                          |
 
 The service reads panel HTML from `dist/` on each resource request, so rebuilt
-UI needs no service restart.
+UI needs no service restart. It keeps the last copy it read, and serves that
+copy if the file disappears, as when a plugin update removes the running
+installation before the service hands over.
 
 ## Build
 
