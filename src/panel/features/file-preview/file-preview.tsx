@@ -1,10 +1,18 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { type ReactNode, useDeferredValue, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 
 import { useController } from "../../app/state/controller-context";
 import { formatBytes } from "../../shared/utils/format";
+import { scrollChildIntoView } from "../../shared/utils/scroll-into-view";
 import { CopyButton } from "./copy-button";
 import { FileBadge } from "./file-badge";
 import {
@@ -40,6 +48,8 @@ type FilePreviewProps = {
   progress?: ReactNode;
   /** Shows the switcher with a single view too, so files share one layout. */
   alwaysShowViews?: boolean;
+  /** Wrap source and diff lines; otherwise their viewers scroll horizontally. */
+  wrapLines?: boolean;
 };
 
 /** A file with a switcher between the views its format offers. */
@@ -53,6 +63,7 @@ export function FilePreview({
   onViewChange,
   progress,
   alwaysShowViews = false,
+  wrapLines = false,
 }: FilePreviewProps) {
   const controller = useController(),
     canCopy =
@@ -76,9 +87,11 @@ export function FilePreview({
     // background, keeping the previous view until the new one is ready.
     shown = useDeferredValue(view),
     rendering = shown !== view,
+    switcherRef = useRef<HTMLDivElement>(null),
     switcher =
       views.length > 1 || alwaysShowViews ? (
         <ToggleGroup
+          ref={switcherRef}
           className="view-switch"
           aria-label="View"
           value={[view]}
@@ -95,9 +108,17 @@ export function FilePreview({
       ? switcher && createPortal(switcher, viewSwitcherTarget)
       : switcher;
 
+  // Narrow headings scroll the view choices; file changes can move the selection.
+  useEffect(() => {
+    const list = switcherRef.current,
+      selected = list?.querySelector<HTMLElement>("[data-pressed]");
+
+    if (list && selected) scrollChildIntoView(list, selected, 2);
+  }, [view, views, viewSwitcherTarget]);
+
   return (
     // Read-only, so there is no footer: the close button and Escape dismiss it.
-    <div className="file-preview">
+    <div className="file-preview" data-wrap-lines={wrapLines}>
       <div className="file-preview-toolbar">
         <FileBadge path={file.path} format={format} />
         <span className="file-meta">

@@ -363,6 +363,10 @@ body[data-expanded-panel="true"]
 .changed-file-nav {
   margin-left: auto;
 }
+.changed-file-options-target {
+  display: flex;
+  flex: none;
+}
 @media (max-width: 640px) {
   .dialog[data-kind="file"] .dialog-heading {
     flex-wrap: nowrap;
@@ -377,9 +381,11 @@ body[data-expanded-panel="true"]
   }
   .changed-file-view-switcher-target > .view-switch {
     flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
   .changed-file-view-switcher-target .view-option {
-    min-width: 0;
+    flex: none;
     padding-right: 6px;
     padding-left: 6px;
     white-space: nowrap;

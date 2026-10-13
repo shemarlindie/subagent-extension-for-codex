@@ -21,6 +21,7 @@ const ICON_NAMES = [
   "expand",
   "collapse",
   "more-horizontal",
+  "more-vertical",
   "more-circle",
   "refresh",
   "play",

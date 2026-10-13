@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { Tooltip } from "@base-ui/react/tooltip";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
 import { Controller } from "../../app/state/controller";
@@ -291,7 +292,13 @@ test("view tabs replace the title while Ask Codex and Viewed stay in the toolbar
     heading?.querySelector(".changed-file-view-switcher-target .view-switch"),
   );
 
-  assert.ok(heading?.lastElementChild?.classList.contains("changed-file-nav"));
+  assert.ok(heading?.querySelector(".changed-file-nav"));
+
+  expect(
+    heading?.lastElementChild?.querySelector(
+      '[aria-label="File preview options"]',
+    ),
+  ).not.toBeNull();
 
   assert.deepEqual(toolbarActions(), [
     "Ask Codex about this file",
@@ -323,6 +330,62 @@ test("a lone changed file shows its position without step buttons", async () => 
 
   // Counted, not compared: a failing compare of elements exhausts memory.
   assert.equal(view.container.querySelectorAll(".changed-file-step").length, 0);
+
+  expect(
+    view.getByRole("button", { name: "File preview options" }),
+  ).toBeTruthy();
+});
+
+test("the options menu toggles wrapping and keeps the choice across views and files", async () => {
+  const { view, moveTo } = setup("a.ts"),
+    user = userEvent.setup();
+
+  await act(async () => {});
+
+  const options = view.getByRole("button", { name: "File preview options" }),
+    next = view.getByRole("button", { name: "Next file" }),
+    wrapping = () =>
+      view.container
+        .querySelector(".file-preview")
+        ?.getAttribute("data-wrap-lines");
+
+  expect(
+    next.compareDocumentPosition(options) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+
+  expect(wrapping()).toBe("true");
+
+  await user.click(options);
+
+  const toggle = await view.findByRole("menuitemcheckbox", {
+    name: "Wrap lines",
+  });
+
+  expect(toggle.getAttribute("aria-checked")).toBe("true");
+  const indicator = toggle.querySelector(".file-preview-option-check");
+
+  await user.click(toggle);
+  expect(wrapping()).toBe("false");
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
+  expect(toggle.querySelector(".file-preview-option-check")).toBe(indicator);
+  expect(indicator?.hasAttribute("data-unchecked")).toBe(true);
+  await user.keyboard("{Escape}");
+  expect(document.activeElement).toBe(options);
+
+  await user.click(view.getByRole("button", { name: "Diff" }));
+  expect(wrapping()).toBe("false");
+  await moveTo("b.ts");
+  expect(wrapping()).toBe("false");
+  await moveTo("c.ts");
+  expect(wrapping()).toBe("false");
+  await moveTo("gone.ts");
+  expect(wrapping()).toBe("false");
+
+  options.focus();
+  await user.keyboard("{ArrowDown}");
+  await view.findByRole("menuitemcheckbox", { name: "Wrap lines" });
+  await user.keyboard("{Enter}");
+  expect(wrapping()).toBe("true");
 });
 
 test("global mode omits the file handoff from the preview toolbar", async () => {

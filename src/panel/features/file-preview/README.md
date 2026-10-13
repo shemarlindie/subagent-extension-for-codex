@@ -29,6 +29,12 @@ Tables keep every cell of a row wider than the header and drop a leading byte
 order mark. Diffs show Git's `\ No newline at end of file` as a note between
 lines and ignore CRLF line endings.
 
+Source and diff lines scroll horizontally by default. `FilePreview` accepts
+`wrapLines={true}` to wrap those viewers instead. The Changes preview owns this
+choice across files and renders `FilePreviewOptions` in the dialog heading
+after navigation; deleted-file diffs use the same wrapping styles. Markdown,
+table and image previews retain their format-specific layout.
+
 ## Markdown
 
 `MarkdownView` renders GitHub-flavored Markdown with `react-markdown` and

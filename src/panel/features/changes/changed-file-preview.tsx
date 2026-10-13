@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
@@ -13,6 +14,7 @@ import {
   type FileView,
 } from "../file-preview/file-format";
 import { FilePreview } from "../file-preview/file-preview";
+import { FilePreviewOptions } from "../file-preview/file-preview-options";
 import { Progress } from "../file-preview/progress";
 import type { Task } from "../tasks/types";
 import { AskFileButton } from "./ask-file-button";
@@ -118,6 +120,8 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
     progress = loading && read ? <Progress label={`Loading ${path}`} /> : null,
     // Kept across files, so stepping through them stays in, say, Diff.
     [view, setView] = useState<FileView>(),
+    [wrapLines, setWrapLines] = useState(false),
+    [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null),
     [viewSwitcherTarget, setViewSwitcherTarget] = useState<HTMLElement | null>(
       null,
     ),
@@ -166,6 +170,11 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           "[data-file-preview-view-switcher]",
         ) ?? null,
       );
+
+      setOptionsTarget(
+        dialog?.querySelector<HTMLElement>("[data-file-preview-options]") ??
+          null,
+      );
     }
 
     // A file of another kind remounts the toolbar, which drops focus. Only
@@ -191,6 +200,14 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
       data-stale={loading && Boolean(read)}
       data-initial-loading={firstRead || undefined}
     >
+      {optionsTarget &&
+        createPortal(
+          <FilePreviewOptions
+            wrapLines={wrapLines}
+            onWrapLinesChange={setWrapLines}
+          />,
+          optionsTarget,
+        )}
       {firstRead ? (
         <div
           className="file-preview-loading"
@@ -214,9 +231,10 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           onViewChange={setView}
           progress={progress}
           alwaysShowViews
+          wrapLines={wrapLines}
         />
       ) : (
-        <div className="file-preview">
+        <div className="file-preview" data-wrap-lines={wrapLines}>
           <div className="file-preview-toolbar">
             {/* A loaded file's shape, so the toolbar holds its height. */}
             <FileBadge
@@ -274,6 +292,7 @@ export const changedFileDialog = defineDialog<"file">({
         data-file-preview-view-switcher
       />
       <ChangedFileNav task={task} path={path} />
+      <span className="changed-file-options-target" data-file-preview-options />
     </div>
   ),
 });

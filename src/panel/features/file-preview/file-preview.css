@@ -110,7 +110,7 @@
   --badge: #d4537e;
 }
 
-/* Code with a line-number gutter. Lines wrap so narrow panels do not scroll sideways. */
+/* Code with a line-number gutter; wrapping is controlled by the preview. */
 .code-view {
   margin: 0;
   padding: 8px 0;
@@ -137,6 +137,37 @@
   user-select: none;
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
+}
+.file-preview-options {
+  width: 28px;
+  height: 28px;
+}
+.file-preview-option-check {
+  display: flex;
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.file-preview-option-check[data-unchecked] {
+  visibility: hidden;
+}
+.file-preview[data-wrap-lines="false"] :is(.code-view, .diff-table) {
+  overflow-x: auto;
+}
+.file-preview[data-wrap-lines="false"] :is(.code-view, .diff-table) > div {
+  width: max-content;
+  min-width: 100%;
+}
+.file-preview[data-wrap-lines="false"]
+  :is(.code-line code, .diff-row code, .diff-hunk, .diff-note) {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.file-preview[data-wrap-lines="false"] .code-line {
+  grid-template-columns: 4ch minmax(max-content, 1fr);
+}
+.file-preview[data-wrap-lines="false"] .diff-row {
+  grid-template-columns: 4ch 4ch 1.5ch minmax(max-content, 1fr);
 }
 .file-preview-note {
   margin: 0 0 8px;
@@ -488,6 +519,7 @@
   padding: 3px;
 }
 .view-switch {
+  position: relative;
   display: inline-flex;
   padding: 2px;
   border-radius: 7px;

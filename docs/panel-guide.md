@@ -353,6 +353,10 @@ start. The heading shows the position, such as `3 / 12`, before previous
 and next buttons that step through the files in list order, wrapping at either
 end; a lone file shows only its position. The chosen view carries over, and the
 last file stays visible until the next one is read.
+On narrow panels, scroll the view choices horizontally when they do not fit.
+The **File preview options** menu after Next includes **Wrap lines**, disabled
+by default. Turn it on to wrap source and diff lines. The choice lasts while the
+preview is open, including when switching views or files.
 
 ### Worktree actions
 
