@@ -7,7 +7,7 @@ Chat and Activity also render messages with its [Markdown view](#markdown).
 ## Ownership
 
 The feature root owns format detection, viewer selection and shared controls.
-`code/`, `markdown/`, `diff/` and `table/` own their respective viewers and
+`code/`, `markdown/`, `diff/` and `table/` own their respective viewers, parsers and
 format-specific rendering. Keep viewer helpers and focused tests with their
 owning format; keep feature styling in `file-preview.css`.
 

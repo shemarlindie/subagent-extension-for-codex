@@ -15,6 +15,7 @@ import { formatBytes } from "../../shared/utils/format";
 import { scrollChildIntoView } from "../../shared/utils/scroll-into-view";
 import { hasClipboardApi } from "../../shared/utils/write-clipboard";
 import { CopyButton } from "./copy-button";
+import { type ParsedDiffFile } from "./diff/diff-format";
 import { FileBadge } from "./file-badge";
 import {
   fileBytes,
@@ -26,7 +27,6 @@ import {
   formatName,
   isLargeSvg,
   MAX_SVG_IMAGE_BYTES,
-  type ParsedDiffFile,
   type PreviewFile,
   viewLabel,
 } from "./file-format";

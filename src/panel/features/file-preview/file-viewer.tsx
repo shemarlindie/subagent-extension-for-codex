@@ -2,17 +2,17 @@ import { memo, useMemo } from "react";
 
 import { CodeView } from "./code/code-view";
 import { DiffFile } from "./diff/diff-file";
+import { type ParsedDiffFile } from "./diff/diff-format";
 import { DiffView } from "./diff/diff-view";
 import {
   delimiterOf,
   fileSource,
   type FileView,
   imageSource,
-  type ParsedDiffFile,
-  parseDelimited,
   type PreviewFile,
 } from "./file-format";
 import { MarkdownView } from "./markdown/markdown-view";
+import { parseDelimited } from "./table/delimited-format";
 import { TableView } from "./table/table-view";
 
 type FileViewerProps = {

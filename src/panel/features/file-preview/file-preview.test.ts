@@ -15,11 +15,8 @@ import { createElement } from "react";
 
 import type { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
-import {
-  type ParsedDiffFile,
-  parseDiffFiles,
-  type PreviewFile,
-} from "./file-format";
+import { type ParsedDiffFile, parseDiffFiles } from "./diff/diff-format";
+import { type PreviewFile } from "./file-format";
 import { FilePreview } from "./file-preview";
 
 const controller = {

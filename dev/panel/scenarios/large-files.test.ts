@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { parseDiffFiles } from "../../../src/panel/features/file-preview/diff/diff-format";
 import {
   fileBytes,
   fileFormat,
   fileViews,
-  parseDelimited,
-  parseDiffFiles,
 } from "../../../src/panel/features/file-preview/file-format";
 import { highlightLines } from "../../../src/panel/features/file-preview/highlight";
+import { parseDelimited } from "../../../src/panel/features/file-preview/table/delimited-format";
 import { largeFiles } from "./large-files";
 
 const fileAt = (path: string) => {

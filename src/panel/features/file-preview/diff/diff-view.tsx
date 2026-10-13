@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
-import { parseDiffFiles } from "../file-format";
 import { DiffFile } from "./diff-file";
+import { parseDiffFiles } from "./diff-format";
 
 type DiffViewProps = {
   content: string;

@@ -8,15 +8,15 @@ import {
 
 import { LazyBlock } from "../../../shared/components/lazy-block/lazy-block";
 import { chunks } from "../../../shared/utils/chunks";
+import { pathLanguage } from "../file-format";
+import { highlightLine } from "../highlight";
+import { Progress } from "../progress";
 import {
   diffPath,
   type DiffRow,
   diffRows,
   type ParsedDiffFile,
-  pathLanguage,
-} from "../file-format";
-import { highlightLine } from "../highlight";
-import { Progress } from "../progress";
+} from "./diff-format";
 import { DiffStat } from "./diff-stat";
 
 /** Rows per lazily mounted block. */

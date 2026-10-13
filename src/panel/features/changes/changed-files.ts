@@ -2,7 +2,7 @@ import {
   diffPath,
   type ParsedDiffFile,
   parseDiffFiles,
-} from "../file-preview/file-format";
+} from "../file-preview/diff/diff-format";
 import type { ChangedFile, Changes } from "./types";
 
 /** A changed file with its part of the task's diff. */
