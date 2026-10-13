@@ -354,6 +354,11 @@ so the extracted package runs without a separate `node_modules` directory. It sh
 Launches use the installed [Claude Code CLI](claude-cli.md). Source maps omit
 embedded sources and map stack traces to the original files.
 
+The bundles live in `dist/bundle/`. The public entries `dist/main.js`,
+`dist/stdio.js` and `dist/projects-cli.js` are small ES2017 guards. Each checks
+Node against `engines.node` and prints what to install instead of failing on
+syntax an old runtime can't parse, then imports its bundle.
+
 `npm run package:plugin` builds and packs the plugin. The package holds only
 what the installed plugin runs or shows: `dist/`, `migrations/`, `assets/`,
 `skills/`, `plugin.json`, `mcp.json`, the README and `LICENSE`. Guides under

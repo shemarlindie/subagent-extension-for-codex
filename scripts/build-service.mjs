@@ -17,13 +17,16 @@ if (plugin.version !== version)
     `plugin.json version ${plugin.version} differs from package.json version ${version}`,
   );
 
+const entries = {
+  main: "src/service/main.ts",
+  stdio: "src/service/stdio.ts",
+  "projects-cli": "src/service/projects-cli.ts",
+};
+
 const result = await build({
-  entryPoints: {
-    main: "src/service/main.ts",
-    stdio: "src/service/stdio.ts",
-    "projects-cli": "src/service/projects-cli.ts",
-  },
-  outdir,
+  entryPoints: entries,
+  // Public entries in dist/ are version guards that load these bundles.
+  outdir: join(outdir, "bundle"),
   entryNames: "[name]",
   chunkNames: "chunks/[name]-[hash]",
   bundle: true,
@@ -112,6 +115,42 @@ writeFileSync(
     )
     .join("\n")}`,
 );
+
+// An old Node fails to parse or link the bundle before any check in it runs, so
+// each public entry checks the version first, in syntax old runtimes accept.
+const minimumNode = Number(
+  JSON.parse(readFileSync("package.json", "utf8")).engines.node.match(
+    /^>=(\d+)$/,
+  )?.[1],
+);
+
+if (!minimumNode)
+  throw new Error('package.json engines.node must have the form ">=<major>"');
+
+for (const name of Object.keys(entries))
+  await build({
+    stdin: {
+      contents: `import { nodeVersionError } from "./src/service/platform/service/node-version.ts";
+const error = nodeVersionError(process.versions.node, process.execPath, ${minimumNode});
+if (error) {
+  console.error(error);
+  process.exitCode = 1;
+} else {
+  import("./bundle/${name}.js");
+}
+`,
+      resolveDir: ".",
+      loader: "ts",
+      sourcefile: `${name}-entry.ts`,
+    },
+    outfile: join(outdir, `${name}.js`),
+    bundle: true,
+    external: ["./bundle/*"],
+    platform: "node",
+    target: "es2017",
+    format: "esm",
+    logLevel: "warning",
+  });
 
 const javascript = Object.entries(outputs)
   .filter(([path]) => path.endsWith(".js"))

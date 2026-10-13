@@ -291,6 +291,30 @@ describe("packed artifact", () => {
     assert.deepEqual(native, []);
   });
 
+  test("each public entry refuses an unsupported Node with a clear message", async () => {
+    // Stubbing the reported version stands in for an old runtime, whose parser would reject the bundle.
+    const oldNode =
+      'data:text/javascript,Object.defineProperty(process.versions,"node",{value:"22.11.0"})';
+
+    for (const entry of ["main", "stdio", "projects-cli"]) {
+      const failed = await exec(
+        process.execPath,
+        ["--import", oldNode, join(pkg, `dist/${entry}.js`)],
+        { cwd: root, env: cleanEnv() },
+      ).then(
+        () => assert.fail(`${entry} started on an unsupported Node`),
+        (error: { code: number; stderr: string }) => error,
+      );
+
+      assert.equal(failed.code, 1);
+
+      assert.match(
+        failed.stderr,
+        /needs Node\.js 24 or later, but .* is Node\.js 22\.11\.0/,
+      );
+    }
+  });
+
   test("the projects CLI registers and lists a repository from an unrelated directory", async () => {
     const run = (...args: string[]) =>
       exec(process.execPath, [join(pkg, "dist/projects-cli.js"), ...args], {
