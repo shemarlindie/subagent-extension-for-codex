@@ -1,3 +1,4 @@
+import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import { contentText } from "../../providers/activity/content-text.js";
 import { activityPresentation } from "../../providers/activity/presentation.js";
@@ -14,11 +15,6 @@ export type ActivityGroup = {
   state: ActivityState;
   events: Event[];
 };
-
-const object = (v: unknown): Record<string, unknown> =>
-  v && typeof v === "object" && !Array.isArray(v)
-    ? (v as Record<string, unknown>)
-    : {};
 
 const words = (v: unknown) =>
   scalarText(v)
@@ -39,6 +35,20 @@ export const activityKind = (e: Event) =>
 export function activityFailed(e: Event) {
   const failed = activityPresentation(e).failed;
   if (failed !== undefined) return failed;
+
+  if (
+    eventPayload(e, "task.failed") ||
+    eventPayload(e, "tool.completed")?.error === true ||
+    eventPayload(e, "agent.completed")?.is_error === true ||
+    Boolean(eventPayload(e, "task.interrupted")?.error) ||
+    Boolean(eventPayload(e, "task.completed")?.error) ||
+    Boolean(eventPayload(e, "parent.message_delivery")?.error)
+  ) {
+    return true;
+  }
+
+  if (e.view.kind === "known") return false;
+
   const d = e.data;
 
   return (
@@ -68,16 +78,18 @@ const boundaries = new Set([
 
 /** Summaries for service events whose fields don't read as one. */
 function serviceSummary(e: Event) {
-  const d = e.data;
+  const turnEnded = eventPayload(e, "task.turn_ended");
 
-  if (e.type === "task.turn_ended") {
-    return `Turn ${String(d.turn)} ${String(d.outcome)}`;
+  if (turnEnded) {
+    return `Turn ${turnEnded.turn} ${turnEnded.outcome}`;
   }
 
-  if (e.type === "task.queue_changed") {
-    const count = Array.isArray(d.queue) ? d.queue.length : 0;
+  const queueChanged = eventPayload(e, "task.queue_changed");
 
-    return `${count} queued${d.paused ? " · paused" : ""}`;
+  if (queueChanged) {
+    const count = queueChanged.queue.length;
+
+    return `${count} queued${queueChanged.paused ? " · paused" : ""}`;
   }
 
   return undefined;
@@ -117,15 +129,6 @@ const isQuiet = (e: Event) =>
   activityPresentation(e).quiet ?? quiet.has(activityKind(e));
 
 function statusTitle(e: Event) {
-  // Older persisted presentations classified requesting as thinking.
-  if (
-    activityKind(e) === "status" &&
-    e.data.status === "requesting" &&
-    !activityFailed(e)
-  ) {
-    return "Requesting";
-  }
-
   const presentation = activityPresentation(e);
   if (presentation.statusTitle) return presentation.statusTitle;
   if (thinkingSignal(e)) return "Thinking…";
@@ -140,10 +143,6 @@ function statusTitle(e: Event) {
 }
 
 function thinkingSignal(e: Event): boolean {
-  if (activityKind(e) === "status" && e.data.status === "requesting") {
-    return false;
-  }
-
   return (
     !activityFailed(e) &&
     (activityPresentation(e).thinking ?? thinking.has(activityKind(e)))
@@ -196,17 +195,21 @@ export function thinkingSpan(
 }
 
 function toolTitle(events: Event[]) {
-  const start = events.find((e) => e.type === "tool.started");
+  const start = events.find((e) => eventPayload(e, "tool.started"));
+  const started = start ? eventPayload(start, "tool.started") : undefined;
   const last = events.at(-1)!;
   const operation = activityPresentation(last).operation;
 
+  const opaqueData = last.view.kind === "known" ? {} : last.view.data;
+
   const name =
-    string(start?.data.name) ??
-    string(last.data.tool_name) ??
+    started?.name ??
+    eventPayload(last, "tool.completed")?.name ??
+    string(opaqueData.tool_name) ??
     operation?.title ??
     "Tool";
 
-  const input = object(start?.data.input);
+  const input = started?.input ?? {};
 
   const target =
     typeof input.pattern === "string"
@@ -221,17 +224,32 @@ function toolTitle(events: Event[]) {
 
 // Prefer actionable error prose over tool paths and routine operation descriptions.
 function failureSummary(event: Event) {
-  const d = event.data;
+  const opaqueData = event.view.kind === "known" ? {} : event.view.data;
 
-  const textOutput = contentText(d.content);
+  const tool = eventPayload(event, "tool.completed");
+  const taskFailure = eventPayload(event, "task.failed");
+  const interrupted = eventPayload(event, "task.interrupted");
+  const taskCompleted = eventPayload(event, "task.completed");
+  const delivery = eventPayload(event, "parent.message_delivery");
+  const agent = eventPayload(event, "agent.completed");
+
+  const textOutput = contentText(tool?.content ?? opaqueData.content);
 
   return [
-    d.error,
-    d.message,
-    d.stderr,
-    d.output,
+    taskFailure?.error,
+    interrupted?.error,
+    taskCompleted?.error,
+    delivery?.error,
+    agent?.result,
+    opaqueData.error,
+    opaqueData.message,
+    opaqueData.stderr,
+    opaqueData.output,
     textOutput,
-    Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined,
+    agent?.errors?.join("; "),
+    Array.isArray(opaqueData.errors)
+      ? opaqueData.errors.map(String).join("; ")
+      : undefined,
   ].find(
     (value): value is string =>
       typeof value === "string" && value.trim().length > 0,
@@ -296,8 +314,15 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     adjacentEvent = undefined;
     adjacentThinking = undefined;
 
-    const d = e.data,
-      key = activityKind(e);
+    const key = activityKind(e);
+    const d = e.view.kind === "known" ? {} : e.view.data;
+    const toolStarted = eventPayload(e, "tool.started");
+    const toolCompleted = eventPayload(e, "tool.completed");
+
+    const message =
+      eventPayload(e, "agent.message") ?? eventPayload(e, "agent.content");
+
+    const reply = eventPayload(e, "agent.reply");
 
     if (!isQuiet(e) || activityFailed(e)) adjacentStatus = undefined;
 
@@ -317,7 +342,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     let toolId: string | undefined;
 
     if (e.type.startsWith("tool.")) {
-      toolId = string(d.id);
+      toolId = toolStarted?.id ?? toolCompleted?.id ?? string(d.id);
     } else if (operation?.kind === "tool") {
       toolId = operation.id.replace(/^tool:/, "");
     }
@@ -406,12 +431,12 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         existing.events.push(e);
         existing.kind = "message";
         existing.state = "completed";
-        existing.title = d.role === "user" ? "You" : "Assistant";
+        existing.title = message?.role === "user" ? "You" : "Assistant";
       } else {
         group = add(
           e,
           "message",
-          d.role === "user" ? "You" : "Assistant",
+          message?.role === "user" ? "You" : "Assistant",
           "completed",
         );
 
@@ -422,7 +447,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       // redundant when that message already contains its own thinking disclosure.
       // Keep the marker in the message's debug events so it remains inspectable.
       if (
-        d.role !== "user" &&
+        message?.role !== "user" &&
         presentation.hasThinking &&
         previousThinking?.events[0].task_id === e.task_id &&
         onlyThinkingSignals(previousThinking)
@@ -439,12 +464,12 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       continue;
     }
 
-    if (e.type === "agent.reply") {
+    if (reply) {
       const completed = completedTurns.get(e.task_id);
       completedTurns.delete(e.task_id);
 
       // Keep repeated result text on the reply row, not the completion row.
-      if (completed && completed.summary === string(d.text)) {
+      if (completed && completed.summary === reply.text) {
         completed.summary = undefined;
       }
     }
@@ -495,6 +520,13 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       presentation.summary ??
       (activityFailed(e) ? failureSummary(e) : undefined) ??
       serviceSummary(e) ??
+      eventPayload(e, "agent.completed")?.result ??
+      reply?.text ??
+      eventPayload(e, "parent.message")?.text ??
+      eventPayload(e, "task.instruction")?.message ??
+      eventPayload(e, "task.waiting")?.reason ??
+      eventPayload(e, "parent.message_delivery")?.error ??
+      (toolCompleted ? contentText(toolCompleted.content) : undefined) ??
       string(
         d.text ??
           d.summary ??
@@ -505,7 +537,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
-    if (e.type === "agent.reply" || thinkingSignal(e)) {
+    if (reply || thinkingSignal(e)) {
       group.summary = undefined;
     }
 
@@ -619,8 +651,10 @@ export function currentActivityStatus(
     const kind = activityKind(latest);
 
     if (kind === "agent.input_required") {
+      const request = eventPayload(latest, "agent.input_required")?.request;
+
       return {
-        text: `Needs input${latest.data.tool ? ` · ${scalarText(latest.data.tool)}` : ""}`,
+        text: `Needs input${request?.tool ? ` · ${request.tool}` : ""}`,
         state: "info",
       };
     }

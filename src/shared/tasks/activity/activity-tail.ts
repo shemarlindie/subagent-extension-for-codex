@@ -1,3 +1,4 @@
+import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import { activityFailed, activityKind } from "./activity-timeline.js";
 
@@ -54,18 +55,19 @@ export function addDropped(
     summary.count++;
     summary.to = event.timestamp;
 
-    if (event.type === "tool.started") {
+    const started = eventPayload(event, "tool.started");
+
+    if (started) {
       summary.toolCalls++;
 
-      const name =
-        typeof event.data.name === "string" ? event.data.name : "Tool";
+      const name = started.name ?? "Tool";
 
       summary.tools[name] = (summary.tools[name] ?? 0) + 1;
     }
 
-    if (event.type === "agent.message" && event.data.role !== "user") {
-      summary.messages++;
-    }
+    const message = eventPayload(event, "agent.message");
+
+    if (message) summary.messages++;
 
     if (activityFailed(event)) summary.failures++;
     if (activityKind(event) === "api_retry") summary.retries++;
@@ -109,7 +111,7 @@ export const TURN_CLOSING_EVENTS = [
 export const TURN_CLOSE_STOPS = ["task.started", "task.turn_ended"];
 
 const isTurnEnded = (event: Event, turn: number) =>
-  event.type === "task.turn_ended" && Number(event.data.turn) === turn;
+  eventPayload(event, "task.turn_ended")?.turn === turn;
 
 /**
  * The index of the event that closes a turn: its closing status event, or

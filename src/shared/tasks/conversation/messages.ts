@@ -1,5 +1,5 @@
+import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
-import { scalarText } from "../../text.js";
 import type { Delivery, Sender, Task } from "../model.js";
 
 /** Events a conversation is derived from, besides the task's own request. */
@@ -48,30 +48,17 @@ export type ParentMessageNotification = {
 
 export const parentMessageId = (eventId: number) => `parent_${eventId}`;
 
-const object = (v: unknown): Record<string, unknown> =>
-  v && typeof v === "object" ? (v as Record<string, unknown>) : {};
-
 /** A worker message's SDK id, so its text blocks and draft share it. */
 function workerMessageId(e: Event) {
-  const raw = object(e.data.raw_response);
-
-  return typeof object(raw.message).id === "string"
-    ? String(object(raw.message).id)
-    : `evt_${e.id}`;
+  return eventPayload(e, "agent.message")?.message_id ?? `evt_${e.id}`;
 }
 
 /** Text the main worker wrote, leaving out subagents' messages. */
 function workerText(e: Event) {
-  const raw = object(e.data.raw_response);
-  if (raw.parent_tool_use_id) return undefined;
+  const message = eventPayload(e, "agent.message");
+  if (!message || message.parent_tool_use_id) return undefined;
 
-  if (e.data.role !== undefined && e.data.role !== "assistant") {
-    return undefined;
-  }
-
-  return typeof e.data.text === "string" && e.data.text.trim()
-    ? e.data.text
-    : undefined;
+  return message.text.trim() ? message.text : undefined;
 }
 
 const same = (message: string, reply: string) => {
@@ -104,9 +91,11 @@ export function conversation(
   events: Event[],
 ): ConversationMessage[] {
   const acknowledged = new Set(
-    events
-      .filter((e) => e.type === "parent.message_acknowledged")
-      .map((e) => e.data.message_id),
+    events.flatMap((e) => {
+      const data = eventPayload(e, "parent.message_acknowledged");
+
+      return data ? [data.message_id] : [];
+    }),
   );
 
   const pending = new Set(task.pending_steers.map((m) => m.id));
@@ -126,27 +115,30 @@ export function conversation(
   ];
 
   for (const e of [...events].sort((a, b) => a.id - b.id)) {
-    if (e.type === "task.started" && typeof e.data.turn === "number") {
-      turn = e.data.turn;
-    }
+    const started = eventPayload(e, "task.started");
+    if (started?.turn !== undefined) turn = started.turn;
 
-    if (e.type === "task.instruction") {
-      const id = scalarText(e.data.message_id, `evt_${e.id}`);
+    const instruction = eventPayload(e, "task.instruction");
+
+    if (instruction) {
+      const id = instruction.message_id;
 
       messages.push({
         id,
         event_id: e.id,
         timestamp: e.timestamp,
         turn,
-        from: e.data.from === "parent" ? "parent" : "user",
+        from: instruction.from,
         kind: "message",
-        text: scalarText(e.data.message),
-        delivery: e.data.delivery as Delivery | undefined,
+        text: instruction.message,
+        delivery: instruction.delivery,
         ...queueState(id, pending, queued),
       });
     }
 
-    if (e.type === "parent.message") {
+    const parentMessage = eventPayload(e, "parent.message");
+
+    if (parentMessage) {
       messages.push({
         id: parentMessageId(e.id),
         event_id: e.id,
@@ -154,13 +146,13 @@ export function conversation(
         turn,
         from: "worker",
         kind: "message",
-        text: scalarText(e.data.text),
+        text: parentMessage.text,
         parent_message: true,
         ...(acknowledged.has(e.id) ? { acknowledged: true as const } : {}),
       });
     }
 
-    if (e.type === "agent.message") {
+    if (eventPayload(e, "agent.message")) {
       const text = workerText(e);
       if (text === undefined) continue;
       const id = workerMessageId(e);
@@ -184,9 +176,11 @@ export function conversation(
       });
     }
 
-    if (e.type === "agent.reply") {
-      const text = scalarText(e.data.text);
-      const replyTurn = typeof e.data.turn === "number" ? e.data.turn : turn;
+    const reply = eventPayload(e, "agent.reply");
+
+    if (reply) {
+      const text = reply.text;
+      const replyTurn = reply.turn ?? turn;
 
       const last = messages.findLast(
         (m) => m.from === "worker" && m.turn === replyTurn && !m.parent_message,

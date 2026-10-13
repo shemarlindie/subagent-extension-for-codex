@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { decodedEvent } from "../../../../shared/events/decode";
 import type { Event } from "../../../app/state/types";
 import {
   activityCursor,
@@ -11,13 +12,14 @@ import {
   turnStart,
 } from "./event-history";
 
-const event = (id: number, task_id = "task"): Event => ({
-  id,
-  task_id,
-  timestamp: "2026-10-03T12:00:00.000Z",
-  type: "status",
-  data: {},
-});
+const event = (id: number, task_id = "task"): Event =>
+  decodedEvent({
+    id,
+    task_id,
+    timestamp: "2026-10-03T12:00:00.000Z",
+    type: "status",
+    data: {},
+  });
 
 const dropped = {
   task_id: "task",
@@ -117,22 +119,33 @@ test("the dropped note names the span, tools and trouble", () => {
 });
 
 test("a turn starts after the event that closed the previous turn", () => {
-  const typed = (id: number, type: string, data = {}): Event => ({
-    ...event(id),
-    type,
-    data,
-  });
+  const typed = (id: number, type: string, data = {}): Event =>
+    decodedEvent({
+      ...event(id),
+      type,
+      data,
+    });
 
   const events = [
     typed(1, "task.started", { turn: 1 }),
-    typed(2, "task.turn_ended", { turn: 1 }),
+    typed(2, "task.turn_ended", {
+      turn: 1,
+      outcome: "completed",
+      runtime_ms: 0,
+      cost_usd: 0,
+    }),
     // A queued message delivered as turn 1 ends, before the status that closes it.
     typed(3, "task.instruction"),
     typed(4, "task.completed"),
     typed(5, "task.instruction"),
     typed(6, "task.queued"),
     typed(7, "task.started", { turn: 2 }),
-    typed(8, "task.turn_ended", { turn: 2 }),
+    typed(8, "task.turn_ended", {
+      turn: 2,
+      outcome: "completed",
+      runtime_ms: 0,
+      cost_usd: 0,
+    }),
     typed(9, "task.started", { turn: 3 }),
   ];
 

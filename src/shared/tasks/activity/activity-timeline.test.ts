@@ -8,6 +8,7 @@ import {
   thinkingSpan,
 } from "../../../panel/features/tasks/activity/activity-timeline";
 import { claudeActivityPresentation } from "../../../service/features/providers/claude/events/activity.js";
+import { decodedEvent } from "../../events/decode.js";
 import { type Event } from "../../events/types.js";
 import { startSchema, type Task } from "../model.js";
 
@@ -101,22 +102,14 @@ test("requesting status has its own row and never a thinking span", () => {
   assert.equal(group.title, "Requesting");
   assert.equal(currentActivityStatus(events).text, "Requesting");
   assert.equal(thinkingSpan(group, events), undefined);
-
-  // Previously saved events must render correctly without rewriting history.
-  events[0].data.activity = {
-    ...(events[0].data.activity as object),
-    thinking: true,
-    statusTitle: "Thinking…",
-  };
-
-  assert.equal(groupActivity(events)[0].title, "Requesting");
-  assert.equal(thinkingSpan(groupActivity(events)[0], events), undefined);
 });
 
 test("thinking updates preserve an input request while a tool is still running", () => {
   const events = [
     event(1, "tool.started", { id: "read", name: "Read" }),
-    event(2, "agent.input_required", { tool: "Read" }),
+    event(2, "agent.input_required", {
+      request: { id: "request", tool: "Read", kind: "permission", input: {} },
+    }),
     event(3, "agent.thinking_tokens", { tokens: 10 }),
   ];
 
@@ -316,7 +309,7 @@ function event(
   type: string,
   data: Record<string, unknown> = {},
 ): Event {
-  return {
+  return decodedEvent({
     id,
     type,
     data:
@@ -325,7 +318,7 @@ function event(
         : data,
     task_id: "host-task",
     timestamp: new Date(id * 1000).toISOString(),
-  };
+  });
 }
 
 function sdk(id: number, subtype: string, data: Record<string, unknown> = {}) {
@@ -760,7 +753,14 @@ for (const terminal of ["agent.completed", "task.interrupted"]) {
 
 test("submitted input clears a stale current input request", () => {
   const current = currentActivityStatus([
-    event(1, "agent.input_required", { tool: "AskUserQuestion" }),
+    event(1, "agent.input_required", {
+      request: {
+        id: "request",
+        tool: "AskUserQuestion",
+        kind: "question",
+        input: {},
+      },
+    }),
     event(2, "agent.input_submitted"),
   ]);
 

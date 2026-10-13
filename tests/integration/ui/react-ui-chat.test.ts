@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { expect } from "vitest";
 
+import { decodedEvent } from "../../../src/shared/events/decode.js";
 import {
   act,
   assert,
@@ -325,16 +326,18 @@ test("completed chat turns show a quiet summary with a completion time on hover"
 
 test("View activity scrolls to a recent turn and reads an older one on its own", async (t) => {
   const { controller, user } = await setup(t, (transport) => {
-    const events: Record<string, unknown>[] = [];
+    const events: ReturnType<typeof decodedEvent>[] = [];
 
     const add = (type: string, data: Record<string, unknown> = {}) =>
-      events.push({
-        id: events.length + 1,
-        task_id: "one",
-        timestamp: "2026-10-08T18:30:00.000Z",
-        type,
-        data,
-      });
+      events.push(
+        decodedEvent({
+          id: events.length + 1,
+          task_id: "one",
+          timestamp: "2026-10-08T18:30:00.000Z",
+          type,
+          data,
+        }),
+      );
 
     // Turn 1 is longer than the window, so only turn 2 is in the latest view.
     for (const [turn, count] of [
@@ -347,11 +350,17 @@ test("View activity scrolls to a recent turn and reads an older one on its own",
         add("agent.message", { role: "assistant", text: `turn ${turn}` });
       }
 
-      add("task.turn_ended", { turn, outcome: "completed" });
+      add("task.turn_ended", {
+        turn,
+        outcome: "completed",
+        runtime_ms: 1000,
+        cost_usd: 0,
+      });
+
       add("task.completed");
     }
 
-    transport.taskEvents = events;
+    transport.taskEvents = events as unknown as Record<string, unknown>[];
 
     transport.chat = [1, 2].map((turn) => ({
       kind: "outcome",

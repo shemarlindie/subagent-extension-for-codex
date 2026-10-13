@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { decodedEvent } from "../../events/decode.js";
 import { startSchema, type Task } from "../model.js";
 import { conversation } from "./messages.js";
 
@@ -25,13 +26,14 @@ const task: Task = {
   runtime_ms: 0,
 };
 
-const event = (id: number, type: string, data: Record<string, unknown>) => ({
-  id,
-  task_id: "task",
-  type,
-  timestamp: `2026-10-07T10:00:${String(id).padStart(2, "0")}Z`,
-  data,
-});
+const event = (id: number, type: string, data: Record<string, unknown>) =>
+  decodedEvent({
+    id,
+    task_id: "task",
+    type,
+    timestamp: `2026-10-07T10:00:${String(id).padStart(2, "0")}Z`,
+    data,
+  });
 
 const said = (
   id: number,
@@ -41,8 +43,9 @@ const said = (
 ) =>
   event(id, "agent.message", {
     role: "assistant",
+    message_id: messageId,
+    parent_tool_use_id: parent,
     text,
-    raw_response: { message: { id: messageId }, parent_tool_use_id: parent },
   });
 
 test("a conversation has the request, messages, worker messages and replies in order", () => {

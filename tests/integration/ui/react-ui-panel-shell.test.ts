@@ -3,6 +3,7 @@ import { expect } from "vitest";
 
 import { LOADING_SKELETON_CONFIG } from "../../../src/panel/shared/components/loading-skeleton/loading-skeleton-config";
 import { MOTION } from "../../../src/panel/shared/components/motion/motion-utils";
+import { decodePanelToolResult } from "../../../src/panel/transports/event-decoding.js";
 import type { Event } from "../../../src/shared/events/types.js";
 import { windowActivity } from "../../../src/shared/tasks/activity/activity-tail.js";
 import {
@@ -416,7 +417,10 @@ test("the header trails a running task's live activity and drops it once settled
       args: Record<string, unknown> = {},
     ) =>
       (name === "get_user_agent_activity"
-        ? windowActivity(events as Event[], Number(args.after ?? 0))
+        ? windowActivity(
+            decodePanelToolResult<{ events: Event[] }>(name, { events }).events,
+            Number(args.after ?? 0),
+          )
         : original(name, args)) as T;
   });
 

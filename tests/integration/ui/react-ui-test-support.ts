@@ -15,6 +15,7 @@ import type {
   ChangedFileContent,
   Changes,
 } from "../../../src/panel/features/changes/types";
+import { decodePanelToolResult } from "../../../src/panel/transports/event-decoding.js";
 import type { Event } from "../../../src/shared/events/types.js";
 import {
   windowActivity,
@@ -191,6 +192,11 @@ export class FakeTransport implements Transport {
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     this.calls.push({ name, args });
 
+    const activityEvents = decodePanelToolResult<{ events: Event[] }>(
+      "get_user_agent_activity",
+      { events: this.taskEvents },
+    ).events;
+
     const values: Record<string, unknown> = {
       get_agent_panel_context: { panel_scope: { conversation_id: null } },
       list_agent_projects: this.projects,
@@ -208,11 +214,11 @@ export class FakeTransport implements Transport {
       ],
       list_agent_tasks: this.tasks,
       get_user_agent_activity: windowActivity(
-        this.taskEvents as unknown as Event[],
+        activityEvents,
         Number(args.after ?? 0),
       ),
       get_user_agent_turn_activity: windowTurnActivity(
-        this.taskEvents as unknown as Event[],
+        activityEvents,
         Number(args.turn),
       ),
       get_user_agent_chat: { items: this.chat, next_cursor: 0 },
@@ -233,7 +239,7 @@ export class FakeTransport implements Transport {
 
     assert.ok(name in values, `Unexpected tool ${name}`);
 
-    return values[name] as T;
+    return decodePanelToolResult<T>(name, values[name]);
   }
 
   async send(message: string) {

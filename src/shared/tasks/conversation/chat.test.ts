@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { Store } from "../../../service/features/tasks/storage/store.js";
+import { decodedEvent } from "../../events/decode.js";
 import { startSchema, type Task } from "../model.js";
 import { CHAT_EVENTS, chatItems } from "./chat.js";
 
@@ -26,11 +27,8 @@ const task: Task = {
   runtime_ms: 0,
 };
 
-const event = (
-  id: number,
-  type: string,
-  data: Record<string, unknown> = {},
-) => ({ id, task_id: "task", type, timestamp: "", data });
+const event = (id: number, type: string, data: Record<string, unknown> = {}) =>
+  decodedEvent({ id, task_id: "task", type, timestamp: "", data });
 
 test("stored Chat events include compaction failures and exclude ordinary statuses", (t) => {
   const store = new Store(":memory:");
@@ -38,15 +36,26 @@ test("stored Chat events include compaction failures and exclude ordinary status
   t.onTestFinished(() => store.close());
   store.save(task);
 
-  store.event(task, "claude.activity", {
+  store.eventOpaque(task, "claude.activity", {
+    type: "system",
+    subtype: "status",
+    status: "compacting",
+    activity: { kind: "status", statusTitle: "Compacting context" },
     raw_response: { type: "system", subtype: "status", status: "compacting" },
   });
 
-  const failure = store.event(task, "claude.activity", {
+  const failure = store.eventOpaque(task, "claude.activity", {
+    type: "system",
+    subtype: "status",
     raw_response: {
       type: "system",
       subtype: "status",
       compact_result: "failed",
+    },
+    activity: {
+      kind: "status",
+      statusTitle: "Context compaction failed",
+      failed: true,
     },
   });
 
@@ -57,6 +66,13 @@ test("Chat shows a compaction failure between replies without ending the turn", 
   const items = chatItems(task, [
     event(1, "agent.reply", { text: "Before compaction", turn: 1 }),
     event(2, "claude.activity", {
+      type: "system",
+      subtype: "status",
+      activity: {
+        kind: "status",
+        statusTitle: "Context compaction failed",
+        failed: true,
+      },
       raw_response: {
         type: "system",
         subtype: "status",
@@ -103,6 +119,9 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
     event(6, "task.session_started", { reason: "session_unavailable" }),
     event(7, "task.started", { turn: 2 }),
     event(8, "claude.activity", {
+      type: "system",
+      subtype: "compact_boundary",
+      activity: { kind: "compact_boundary" },
       raw_response: { type: "system", subtype: "compact_boundary" },
     }),
     event(9, "task.turn_ended", {
@@ -142,12 +161,18 @@ test("Chat orders explicit parent reports before the matching final reply's upda
   const items = chatItems(task, [
     event(1, "agent.message", {
       role: "assistant",
+      message_id: "sdk_final",
       text: "Done.",
       raw_response: { message: { id: "sdk_final" } },
     }),
     event(2, "parent.message", { text: "Worker report" }),
     event(3, "agent.reply", { text: "Done.", turn: 1 }),
-    event(4, "task.turn_ended", { turn: 1, outcome: "completed" }),
+    event(4, "task.turn_ended", {
+      turn: 1,
+      outcome: "completed",
+      runtime_ms: 0,
+      cost_usd: 0,
+    }),
   ]);
 
   assert.deepEqual(

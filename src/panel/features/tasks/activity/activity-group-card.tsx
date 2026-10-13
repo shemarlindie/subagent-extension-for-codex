@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 
+import { eventPayload } from "../../../../shared/events/payload";
 import { Icon } from "../../../shared/components/icons/icons";
 import { MotionContent } from "../../../shared/components/motion/motion";
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
@@ -139,11 +140,17 @@ export function ActivityGroupCard({
     (event) => event.type === "agent.message" || event.type === "agent.content",
   );
 
-  const hasResponseEvent = contentEvents.some(
-    (event) => event.type === "agent.message" && event.data.role !== "user",
-  );
+  const hasResponseEvent = contentEvents.some((event) => {
+    const message = eventPayload(event, "agent.message");
+
+    return message !== undefined;
+  });
 
   const visibleContent = contentEvents.flatMap((event) => {
+    const message =
+      eventPayload(event, "agent.message") ??
+      eventPayload(event, "agent.content");
+
     const content = visibleMessageContent(event, hasResponseEvent);
 
     return content.length
@@ -151,7 +158,7 @@ export function ActivityGroupCard({
           {
             id: event.id,
             content,
-            markdown: !hasResponseEvent && event.data.role !== "user",
+            markdown: !hasResponseEvent && message?.role !== "user",
           },
         ]
       : [];

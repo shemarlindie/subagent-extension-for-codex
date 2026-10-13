@@ -2,16 +2,18 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { decodedEvent } from "../../../../shared/events/decode";
 import type { Event } from "../../../app/state/types";
-import { responsePreview, turnStats } from "./activity-utils";
+import { responsePreview, thinkingOnly, turnStats } from "./activity-utils";
 
-const completed = (data: Record<string, unknown>): Event => ({
-  id: 1,
-  task_id: "task",
-  type: "agent.completed",
-  timestamp: "2026-01-01T00:00:00.000Z",
-  data,
-});
+const completed = (data: Record<string, unknown>): Event =>
+  decodedEvent({
+    id: 1,
+    task_id: "task",
+    type: "agent.completed",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    data,
+  });
 
 test("a reply preview stays whole when it is 100 characters", () => {
   const text = "a".repeat(100);
@@ -34,7 +36,7 @@ test("turn stats omit numbers the result does not report", () => {
   assert.deepEqual(turnStats(completed({ duration_ms: 4000 })), ["4s"]);
 });
 
-test("turn stats count cached input and leave non-numbers out", () => {
+test("turn stats count cached input from the validated payload", () => {
   const compact = (value: number) =>
     new Intl.NumberFormat(undefined, {
       notation: "compact",
@@ -44,16 +46,32 @@ test("turn stats count cached input and leave non-numbers out", () => {
   assert.deepEqual(
     turnStats(
       completed({
-        duration_ms: "soon",
-        cost_usd: null,
         usage: {
           input_tokens: 10,
           cache_creation_input_tokens: 1000,
           cache_read_input_tokens: 2000,
-          output_tokens: "many",
+          output_tokens: 0,
         },
       }),
     ),
     [`${compact(3010)} in · ${compact(0)} out tokens`],
   );
+});
+
+test("thinking-only groups accept an array of thinking blocks", () => {
+  const event = decodedEvent({
+    id: 2,
+    task_id: "task",
+    type: "agent.content",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    data: {
+      role: "assistant",
+      content: [
+        { type: "thinking", thinking: "First thought" },
+        { type: "thinking", thinking: "Second thought" },
+      ],
+    },
+  });
+
+  assert.equal(thinkingOnly([event]), true);
 });

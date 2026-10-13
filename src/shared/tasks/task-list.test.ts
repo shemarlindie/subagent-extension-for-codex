@@ -7,6 +7,7 @@ import {
   previewTasks,
 } from "../../../dev/panel/scenarios/fixtures";
 import { previewTool } from "../../../dev/panel/scenarios/tools";
+import { decodedEvent } from "../events/decode.js";
 import type { Event } from "../events/types.js";
 import { type ListedTask, listedTask } from "./task-list.js";
 
@@ -50,13 +51,13 @@ test("list summaries recover after subsequent work and disappear when the task s
     assert.ok(before.live_activity);
     assert.notEqual(before.live_activity.state, "running");
 
-    const continued: Event = {
+    const continued: Event = decodedEvent({
       id: Math.max(...events.map((event) => event.id)) + 1,
       task_id: task.id,
       timestamp: task.updated_at,
       type: "task.started",
       data: { turn: 2 },
-    };
+    });
 
     assert.deepEqual(listedTask(task, [...events, continued]).live_activity, {
       text: "Working",

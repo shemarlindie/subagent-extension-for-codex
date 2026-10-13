@@ -104,6 +104,16 @@ export function ActivityContent({
   const block = record(content);
   const type = block.type;
 
+  if (type === "opaque") {
+    return (
+      <ActivityContent
+        content={block.data}
+        depth={depth + 1}
+        markdown={markdown}
+      />
+    );
+  }
+
   if (type === "text" || type === "text_delta") {
     return (
       <>

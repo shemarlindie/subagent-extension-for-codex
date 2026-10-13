@@ -1,6 +1,10 @@
+import { eventPayload } from "../../../../shared/events/payload";
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
+import type {
+  ActivityContent,
+  ActivityContentBlock,
+} from "../../../../shared/providers/activity/types";
 import type { ActivityRateLimitWindow } from "../../../../shared/providers/activity/types";
-import { scalarText } from "../../../../shared/text";
 import type { Event } from "../../../app/state/types";
 import {
   formatUserDateTime,
@@ -22,49 +26,67 @@ export const label = (key: string) => {
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
-/** User-authored text stays literal, like its Chat bubble. */
-export function userMessageText(event: Event): string | undefined {
-  if (event.type === "task.instruction") {
-    return event.data.from === "user" && typeof event.data.message === "string"
-      ? event.data.message
-      : undefined;
-  }
-
-  if (
-    !["agent.message", "agent.content"].includes(event.type) ||
-    event.data.role !== "user"
-  ) {
-    return undefined;
-  }
-
-  if (typeof event.data.text === "string") return event.data.text;
-  if (typeof event.data.content === "string") return event.data.content;
-
-  const blocks = Array.isArray(event.data.content)
-    ? event.data.content
-    : [event.data.content];
-
-  if (
-    !blocks.length ||
-    !blocks.every((block) => record(block).type === "text")
-  ) {
-    return undefined;
-  }
-
-  return blocks.map((block) => scalarText(record(block).text)).join("\n");
+function isTextContent(
+  block: ActivityContent,
+): block is Extract<ActivityContentBlock, { type: "text" }> {
+  return typeof block !== "string" && block.type === "text";
 }
 
-/** Message text is inspected in raw JSON; attachments and thinking stay visible. */
-export function visibleMessageContent(event: Event, hideResponseText: boolean) {
-  if (userMessageText(event) !== undefined) return [];
-  const content = event.data.content ?? event.data.text;
-  const blocks = Array.isArray(content) ? content : [content];
+/** User-authored text stays literal, like its Chat bubble. */
+export function userMessageText(event: Event): string | undefined {
+  const instruction = eventPayload(event, "task.instruction");
+
+  if (instruction) {
+    return instruction.from === "user" ? instruction.message : undefined;
+  }
+
+  const message =
+    eventPayload(event, "agent.message") ??
+    eventPayload(event, "agent.content");
+
+  if (!message || message.role !== "user") return undefined;
+
+  if (message.text !== undefined) return message.text;
+  const content = message.content;
+  if (typeof content === "string") return content;
+
+  if (!Array.isArray(content) && isTextContent(content)) {
+    return content.text;
+  }
 
   if (
-    event.data.role === "user" ||
+    Array.isArray(content) &&
+    content.every((block) => typeof block === "string" || isTextContent(block))
+  ) {
+    return content
+      .map((block) => (typeof block === "string" ? block : block.text))
+      .join("\n");
+  }
+
+  return undefined;
+}
+
+/** Message text is inspected from typed content; attachments and thinking stay visible. */
+export function visibleMessageContent(event: Event, hideResponseText: boolean) {
+  if (userMessageText(event) !== undefined) return [];
+
+  const message =
+    eventPayload(event, "agent.message") ??
+    eventPayload(event, "agent.content");
+
+  const content: ActivityContent | ActivityContent[] | undefined =
+    message?.content ?? message?.text;
+
+  let blocks: ActivityContent[];
+  if (content === undefined) blocks = [];
+  else if (Array.isArray(content)) blocks = content;
+  else blocks = [content];
+
+  if (
+    message?.role === "user" ||
     (!hideResponseText && event.type !== "agent.message")
   ) {
-    return blocks.filter((block) => block !== undefined);
+    return blocks;
   }
 
   return blocks.filter((block) => {
@@ -96,26 +118,29 @@ export function formatActivityTime(
 }
 
 export function eventTitle(event: Event, failed: boolean, toolName?: string) {
-  const { data } = event;
   const presentation = activityPresentation(event);
   if (presentation.title) return presentation.title;
-  if (event.type === "agent.message") return "Worker message";
+  if (eventPayload(event, "agent.message")) return "Worker message";
 
-  if (event.type === "agent.content") {
-    return data.role === "user" ? "User content" : "Agent content";
+  const content = eventPayload(event, "agent.content");
+
+  if (content) {
+    return content.role === "user" ? "User content" : "Agent content";
   }
 
-  if (event.type === "tool.started") {
-    return `${scalarText(data.name, "Tool")} started`;
+  const started = eventPayload(event, "tool.started");
+
+  if (started) {
+    return `${started.name ?? "Tool"} started`;
   }
 
-  if (event.type === "tool.completed") {
+  if (eventPayload(event, "tool.completed")) {
     return `${toolName ?? "Tool"} ${failed ? "failed" : "completed"}`;
   }
 
-  if (event.type === "agent.started") return "Agent started";
+  if (eventPayload(event, "agent.started")) return "Agent started";
 
-  if (event.type === "agent.completed") {
+  if (eventPayload(event, "agent.completed")) {
     return `Agent ${failed ? "failed" : "finished"}`;
   }
 
@@ -124,7 +149,7 @@ export function eventTitle(event: Event, failed: boolean, toolName?: string) {
 
 /** Rebuilds visible content blocks from provider-normalized stream updates. */
 export function streamContent(events: Event[]) {
-  const blocks = new Map<number, Record<string, unknown>>();
+  const blocks = new Map<number, ActivityContentBlock>();
 
   for (const event of events) {
     const update = activityPresentation(event).stream?.update;
@@ -134,10 +159,42 @@ export function streamContent(events: Event[]) {
     if (initial) blocks.set(index, { ...initial });
 
     if (append) {
-      const block = blocks.get(index) ?? {};
-      block.type = append.type;
-      block[append.field] = scalarText(block[append.field]) + append.text;
-      blocks.set(index, block);
+      switch (append.field) {
+        case "text": {
+          const previous = blocks.get(index);
+          const text = previous?.type === "text" ? previous.text : "";
+          blocks.set(index, { type: "text", text: text + append.text });
+          break;
+        }
+
+        case "thinking": {
+          const previous = blocks.get(index);
+
+          const thinking =
+            previous?.type === "thinking" ? previous.thinking : "";
+
+          blocks.set(index, {
+            type: "thinking",
+            thinking: thinking + append.text,
+          });
+
+          break;
+        }
+
+        case "partial_json": {
+          const previous = blocks.get(index);
+
+          const partialJson =
+            previous?.type === "input_json_delta" ? previous.partial_json : "";
+
+          blocks.set(index, {
+            type: "input_json_delta",
+            partial_json: partialJson + append.text,
+          });
+
+          break;
+        }
+      }
     }
   }
 
@@ -156,8 +213,17 @@ export function thinkingOnly(events: Event[]) {
     events.length > 0 &&
     events.every((event) => {
       // The provider emits one content block per event; accept arrays too.
-      const content = event.data.content ?? event.data.text;
-      const blocks = Array.isArray(content) ? content : [content];
+      const message =
+        eventPayload(event, "agent.message") ??
+        eventPayload(event, "agent.content");
+
+      const content = message?.content ?? message?.text;
+
+      let blocks: unknown[];
+
+      if (content === undefined) blocks = [];
+      else if (Array.isArray(content)) blocks = content;
+      else blocks = [content];
 
       return blocks.length > 0 && blocks.every(isThinkingBlock);
     })
@@ -170,7 +236,10 @@ export function thinkingOnly(events: Event[]) {
  */
 export function summaryIsResponse(events: Event[], summary: string) {
   return events.some(
-    (event) => event.data.type === "result" && event.data.result === summary,
+    (event) =>
+      eventPayload(event, "agent.completed")?.result === summary ||
+      (event.presentation?.summaryIsResponse === true &&
+        event.presentation.summary === summary),
   );
 }
 
@@ -196,23 +265,23 @@ const compactNumber = (value: number) =>
 
 /** Headline numbers of a completed turn, readable without opening its debug view. */
 export function turnStats(event: Event) {
-  const data = event.data;
-  const usage = record(data.usage);
+  const data = eventPayload(event, "agent.completed");
+  const usage = data?.usage;
   const stats: string[] = [];
 
   if (
-    typeof data.duration_ms === "number" &&
+    typeof data?.duration_ms === "number" &&
     Number.isFinite(data.duration_ms)
   ) {
     stats.push(formatDuration(data.duration_ms));
   }
 
   const input =
-    tokenCount(usage.input_tokens) +
-    tokenCount(usage.cache_creation_input_tokens) +
-    tokenCount(usage.cache_read_input_tokens);
+    tokenCount(usage?.input_tokens) +
+    tokenCount(usage?.cache_creation_input_tokens) +
+    tokenCount(usage?.cache_read_input_tokens);
 
-  const output = tokenCount(usage.output_tokens);
+  const output = tokenCount(usage?.output_tokens);
 
   if (input || output) {
     stats.push(
@@ -221,7 +290,7 @@ export function turnStats(event: Event) {
   }
 
   // Providers report the session's cumulative cost, not this turn's.
-  if (typeof data.cost_usd === "number" && Number.isFinite(data.cost_usd)) {
+  if (typeof data?.cost_usd === "number" && Number.isFinite(data.cost_usd)) {
     stats.push(
       `${new Intl.NumberFormat(undefined, {
         style: "currency",

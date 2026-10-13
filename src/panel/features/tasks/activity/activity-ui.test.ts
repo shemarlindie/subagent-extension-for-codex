@@ -3,7 +3,11 @@ import assert from "node:assert/strict";
 
 import { expect, test, vi } from "vitest";
 
-import { claudeActivityPresentation } from "../../../../service/features/providers/claude/events/activity";
+import {
+  claudeActivityPresentation,
+  decodeClaudeActivityContent,
+} from "../../../../service/features/providers/claude/events/activity";
+import { decodedEvent } from "../../../../shared/events/decode";
 import { task as buildTask } from "../../../app/state/controller-test-harness";
 import type { Event as ActivityEvent } from "../../../app/state/types";
 
@@ -52,6 +56,20 @@ async function tooltipText(trigger: Element) {
 const eventIds = new Map<string, number>();
 import userEvent from "@testing-library/user-event";
 
+function normalizeContent(content: unknown) {
+  if (content === undefined || typeof content === "string") return content;
+
+  if (Array.isArray(content)) {
+    return content.flatMap((value) => {
+      const decoded = decodeClaudeActivityContent(value);
+
+      return decoded === undefined ? [] : [decoded];
+    });
+  }
+
+  return decodeClaudeActivityContent(content);
+}
+
 function event(
   type: string,
   data: Record<string, unknown>,
@@ -59,16 +77,44 @@ function event(
 ): ActivityEvent {
   if (!eventIds.has(id)) eventIds.set(id, eventIds.size + 1);
 
-  return {
+  const messageData =
+    type === "agent.message" || type === "agent.content"
+      ? {
+          role: "assistant",
+          ...data,
+          ...(type === "agent.content" &&
+          data.content === undefined &&
+          typeof data.text === "string"
+            ? { content: data.text }
+            : {}),
+        }
+      : data;
+
+  const content = messageData.content;
+
+  const normalizedContent = normalizeContent(content);
+
+  const normalizedData =
+    content === undefined
+      ? messageData
+      : { ...messageData, content: normalizedContent };
+
+  return decodedEvent({
     id: eventIds.get(id)!,
     task_id: "task",
     timestamp: "2026-10-02T12:00:00.000Z",
     type,
     data:
       type === "claude.activity" || data.raw_response
-        ? { ...data, activity: claudeActivityPresentation({ type, data }) }
-        : data,
-  };
+        ? {
+            ...normalizedData,
+            activity: claudeActivityPresentation({
+              type,
+              data: normalizedData,
+            }),
+          }
+        : normalizedData,
+  });
 }
 
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
@@ -1146,18 +1192,18 @@ test("opening raw response shows the original full JSON and preserves disclosure
   await waitFor(() => assertAbsent(details.querySelector("pre")));
 });
 
-test("non-SDK events expose their entire data when no original SDK response exists", async (t) => {
+test("unknown events expose their entire data when no raw response exists", async (t) => {
   t.onTestFinished(cleanup);
 
   const data = {
-    text: "Legacy event",
+    text: "Opaque event",
     enabled: false,
     count: 0,
     nested: [null],
   };
 
   const view = render(
-    createElement(EventList, { events: [event("agent.message", data)] }),
+    createElement(EventList, { events: [event("vendor.future_event", data)] }),
   );
 
   const details = view.container.querySelector(
@@ -2916,12 +2962,22 @@ test("Activity user messages use Chat bubbles with literal text outside Debug", 
         event("agent.content", { role: "user", text }, "bubble-sdk-user"),
         event(
           "task.instruction",
-          { from: "user", message: "Follow up" },
+          {
+            message_id: "follow-up",
+            from: "user",
+            message: "Follow up",
+            delivery: "queue",
+          },
           "bubble-instruction",
         ),
         event(
           "task.instruction",
-          { from: "parent", message: "Parent brief" },
+          {
+            message_id: "parent-brief",
+            from: "parent",
+            message: "Parent brief",
+            delivery: "queue",
+          },
           "bubble-parent",
         ),
       ],
@@ -3042,11 +3098,10 @@ test("rate-limit details show the latest update without opening Debug", (t) => {
   ).toContain("rejected");
 });
 
-test("rate-limit rows show utilization and reset times from unifiedWindows outside Debug", (t) => {
+test("rate-limit rows show the reported utilization and reset time outside Debug", (t) => {
   t.onTestFinished(cleanup);
   const preferences = { locale: "en-US", timeZone: "America/Los_Angeles" };
   const fiveHourReset = 1791870000;
-  const sevenDayReset = 1791964800;
 
   const view = render(
     createElement(GroupedEventList, {
@@ -3058,12 +3113,9 @@ test("rate-limit rows show utilization and reset times from unifiedWindows outsi
             rate_limit_info: {
               status: "allowed",
               rateLimitType: "five_hour",
+              utilization: 0.87,
               resetsAt: fiveHourReset,
               overageStatus: "rejected",
-              unifiedWindows: {
-                five_hour: { utilization: 0.87, resetsAt: fiveHourReset },
-                seven_day: { utilization: 0.65, resetsAt: sevenDayReset },
-              },
             },
           },
           "unified-window-update",
@@ -3083,10 +3135,7 @@ test("rate-limit rows show utilization and reset times from unifiedWindows outsi
     [...view.container.querySelectorAll(".activity-group-stats")].map(
       (row) => row.textContent,
     ),
-  ).toEqual([
-    `5-hour window · 87% used · Resets ${reset(fiveHourReset)}`,
-    `7-day window · 65% used · Resets ${reset(sevenDayReset)}`,
-  ]);
+  ).toEqual([`5-hour window · 87% used · Resets ${reset(fiveHourReset)}`]);
 
   expect(view.container.querySelector(".activity-debug-body")).toBeNull();
 });

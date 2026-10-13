@@ -1,5 +1,5 @@
+import { eventPayload } from "../events/payload.js";
 import type { Event } from "../events/types.js";
-import { scalarText } from "../text.js";
 import { currentActivityStatus } from "./activity/activity-timeline.js";
 import type { Draft } from "./conversation/drafts.js";
 import { replyExcerpt } from "./conversation/reply.js";
@@ -18,12 +18,14 @@ export type ListedTask = Task & {
 
 /** A latest `agent.reply` event as a listed task's excerpt. */
 export function replyFrom(event?: Event): ReplyExcerpt | undefined {
-  return event
-    ? {
-        turn: Number(event.data.turn),
-        text: replyExcerpt(scalarText(event.data.text)),
-      }
-    : undefined;
+  if (!event) return undefined;
+  const reply = eventPayload(event, "agent.reply");
+  if (!reply) return undefined;
+
+  return {
+    turn: reply.turn ?? 0,
+    text: replyExcerpt(reply.text),
+  };
 }
 
 /** Activity summaries are derived for the list, never persisted as task state. */

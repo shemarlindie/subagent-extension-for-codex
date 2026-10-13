@@ -2,6 +2,7 @@
 // build reject production imports of `*-test-harness` modules.
 import assert from "node:assert/strict";
 
+import { decodePanelToolResult } from "../../transports/event-decoding";
 import { Controller } from "./controller";
 import type {
   Defaults,
@@ -87,7 +88,10 @@ export class FakeTransport implements Transport {
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     this.calls.push({ name, args });
     const answer = this.handler?.(name, args);
-    if (answer !== undefined) return (await Promise.resolve(answer)) as T;
+
+    if (answer !== undefined) {
+      return decodePanelToolResult<T>(name, await Promise.resolve(answer));
+    }
 
     const values: Record<string, unknown> = {
       get_agent_panel_context: this.context,
@@ -110,7 +114,7 @@ export class FakeTransport implements Transport {
 
     assert.ok(name in values, `Unexpected tool ${name}`);
 
-    return values[name] as T;
+    return decodePanelToolResult<T>(name, values[name]);
   }
 
   async share(data: Record<string, unknown>) {

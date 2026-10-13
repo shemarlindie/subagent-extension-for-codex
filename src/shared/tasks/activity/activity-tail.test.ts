@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { decodedEvent } from "../../events/decode.js";
 import type { Event } from "../../events/types.js";
 import {
   addDropped,
@@ -13,20 +14,24 @@ const event = (
   id: number,
   type = "status",
   data: Record<string, unknown> = {},
-): Event => ({
-  id,
-  task_id: "task",
-  timestamp: `2026-10-03T12:00:0${id % 10}.000Z`,
-  type,
-  data,
-});
+): Event =>
+  decodedEvent({
+    id,
+    task_id: "task",
+    timestamp: `2026-10-03T12:00:0${id % 10}.000Z`,
+    type,
+    data,
+  });
 
 test("dropped events are tallied by kind and carried forward without mutation", () => {
   const first = addDropped(undefined, [
     event(1, "tool.started", { name: "Bash" }),
     event(2, "tool.started", { name: "Bash" }),
     event(3, "tool.started", { name: "Edit" }),
-    event(4, "agent.message", { role: "assistant" }),
+    event(4, "agent.message", {
+      role: "assistant",
+      text: "Activity page message",
+    }),
   ]);
 
   assert.equal(first?.count, 4);

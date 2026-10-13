@@ -1,3 +1,4 @@
+import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import { scalarText } from "../../text.js";
 import type { Task } from "../model.js";
@@ -50,9 +51,7 @@ export type ChatItem = ChatMessage | TurnOutcome | ChatNote;
 
 /** A context compaction, which Claude reports as a system message. */
 const isCompaction = (e: Event) => {
-  const raw = e.data.raw_response as Record<string, unknown> | undefined;
-
-  return raw?.type === "system" && raw.subtype === "compact_boundary";
+  return e.presentation?.kind === "compact_boundary";
 };
 
 function note(e: Event): ChatNote | undefined {
@@ -63,33 +62,39 @@ function note(e: Event): ChatNote | undefined {
     timestamp: e.timestamp,
   };
 
-  if (e.type === "task.session_started") {
+  const session = eventPayload(e, "task.session_started");
+
+  if (session) {
     return {
       ...base,
       note: "session",
       text:
-        e.data.reason === "no_session"
+        session.reason === "no_session"
           ? "New session: the task had none to continue"
           : "New session: the earlier one couldn't continue",
     };
   }
 
-  if (e.type === "task.worktree_recreated") {
+  const worktree = eventPayload(e, "task.worktree_recreated");
+
+  if (worktree) {
     return {
       ...base,
       note: "worktree",
       text:
-        e.data.from === "base"
+        worktree.from === "base"
           ? "Worktree recreated from the base commit, since its branch was deleted"
           : "Worktree recreated from its branch",
     };
   }
 
-  if (e.type === "task.failed") {
+  const failed = eventPayload(e, "task.failed");
+
+  if (failed) {
     return {
       ...base,
       note: "failure",
-      text: `Task failed: ${scalarText(e.data.error, "Unknown error")}`,
+      text: `Task failed: ${scalarText(failed.error, "Unknown error")}`,
     };
   }
 
@@ -97,12 +102,9 @@ function note(e: Event): ChatNote | undefined {
     return { ...base, note: "compaction", text: "Context compacted" };
   }
 
-  const raw = e.data.raw_response as Record<string, unknown> | undefined;
-
   if (
     e.type === "claude.activity" &&
-    raw?.type === "system" &&
-    raw.compact_result === "failed"
+    e.presentation?.statusTitle === "Context compaction failed"
   ) {
     return { ...base, note: "failure", text: "Context compaction failed" };
   }
@@ -138,25 +140,28 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
   };
 
   for (const e of sorted) {
-    if (e.type === "task.turn_ended") {
+    const turnEnded = eventPayload(e, "task.turn_ended");
+
+    if (turnEnded) {
       flush(e.id);
 
       const outcome: TurnOutcome = {
         kind: "outcome",
-        id: `turn_${String(e.data.turn)}_${e.id}`,
+        id: `turn_${turnEnded.turn}_${e.id}`,
         event_id: e.id,
         timestamp: e.timestamp,
-        turn: Number(e.data.turn),
-        outcome: e.data.outcome as TurnOutcome["outcome"],
-        runtime_ms: Number(e.data.runtime_ms ?? 0),
-        cost_usd: Number(e.data.cost_usd ?? 0),
+        turn: turnEnded.turn,
+        outcome: turnEnded.outcome,
+        runtime_ms: turnEnded.runtime_ms,
+        cost_usd: turnEnded.cost_usd,
       };
 
       items.push(outcome);
       failedOutcome = outcome.outcome === "failed" ? outcome : undefined;
-    } else if (e.type === "task.failed") {
+    } else if (eventPayload(e, "task.failed")) {
       if (failedOutcome) {
-        failedOutcome.error = scalarText(e.data.error);
+        failedOutcome.error = scalarText(eventPayload(e, "task.failed")?.error);
+
         // A read after the outcome row gets it again, with its error.
         failedOutcome.event_id = e.id;
       } else {
@@ -167,7 +172,9 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
       failedOutcome = undefined;
     } else {
       if (
-        ["task.instruction", "task.queued", "task.started"].includes(e.type)
+        eventPayload(e, "task.instruction") !== undefined ||
+        eventPayload(e, "task.queued") !== undefined ||
+        eventPayload(e, "task.started") !== undefined
       ) {
         failedOutcome = undefined;
       }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { test, vi } from "vitest";
 
+import { decodedEvent } from "../../../shared/events/decode";
 import {
   windowActivity,
   windowTurnActivity,
@@ -131,13 +132,15 @@ test("the activity view shows the service's window and its tally, and polls for 
   transport.tasks = [task("a")];
   await controller.start();
 
-  const events = Array.from({ length: 1005 }, (_, i) => ({
-    id: i + 1,
-    task_id: "a",
-    type: "log",
-    timestamp: "",
-    data: {},
-  }));
+  const events = Array.from({ length: 1005 }, (_, i) =>
+    decodedEvent({
+      id: i + 1,
+      task_id: "a",
+      type: "log",
+      timestamp: "",
+      data: {},
+    }),
+  );
 
   transport.handler = (name, args) =>
     name === "get_user_agent_activity"
@@ -181,13 +184,15 @@ test("View activity scrolls to a turn in the window and reads one outside it", a
   const events: Event[] = [];
 
   const add = (type: string, data: Record<string, unknown> = {}) =>
-    events.push({
-      id: events.length + 1,
-      task_id: "a",
-      type,
-      timestamp: "",
-      data,
-    });
+    events.push(
+      decodedEvent({
+        id: events.length + 1,
+        task_id: "a",
+        type,
+        timestamp: "",
+        data,
+      }),
+    );
 
   for (const [turn, count] of [
     [1, 300],
@@ -195,7 +200,14 @@ test("View activity scrolls to a turn in the window and reads one outside it", a
   ]) {
     add("task.started", { turn });
     for (let i = 0; i < count; i++) add("log");
-    add("task.turn_ended", { turn, outcome: "completed" });
+
+    add("task.turn_ended", {
+      turn,
+      outcome: "completed",
+      runtime_ms: 0,
+      cost_usd: 0,
+    });
+
     add("task.completed");
   }
 

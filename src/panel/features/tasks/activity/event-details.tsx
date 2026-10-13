@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { eventPayload } from "../../../../shared/events/payload";
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
 import { scalarText } from "../../../../shared/text";
 import type { Event } from "../../../app/state/types";
@@ -70,20 +71,35 @@ function ReplyResult({ text }: { text: string }) {
 export function EventBody({ event }: { event: Event }) {
   const data = event.data;
 
-  if (event.type === "agent.message" || event.type === "agent.content") {
-    return <ActivityContent content={data.content ?? data.text} markdown />;
+  const message =
+    eventPayload(event, "agent.message") ??
+    eventPayload(event, "agent.content");
+
+  if (message) {
+    return (
+      <ActivityContent
+        content={message.content ?? message.text}
+        markdown={message.role !== "user"}
+      />
+    );
   }
 
-  if (event.type === "agent.reply") {
-    return <ReplyResult text={scalarText(data.text)} />;
+  const reply = eventPayload(event, "agent.reply");
+
+  if (reply) {
+    return <ReplyResult text={reply.text} />;
   }
 
-  if (event.type === "tool.started") {
-    return <ActivityValue value={data.input} />;
+  const toolStarted = eventPayload(event, "tool.started");
+
+  if (toolStarted) {
+    return <ActivityValue value={toolStarted.input} />;
   }
 
-  if (event.type === "tool.completed") {
-    return <ActivityContent content={data.content ?? data.text} />;
+  const toolCompleted = eventPayload(event, "tool.completed");
+
+  if (toolCompleted) {
+    return <ActivityContent content={toolCompleted.content} />;
   }
 
   const presentation = activityPresentation(event);
@@ -109,7 +125,7 @@ export function EventBody({ event }: { event: Event }) {
         {/* The worker's messages are Markdown; user messages carry tool results. */}
         <ActivityContent
           content={presentation.body.content}
-          markdown={data.type === "assistant"}
+          markdown={presentation.body.role !== "user"}
         />
         {presentation.body.error != null && (
           <p className="error">{scalarText(presentation.body.error)}</p>
@@ -188,9 +204,11 @@ export function EventDetails({
   expandNewestRaw = rawOnly,
 }: EventDetailsProps) {
   const toolNames = new Map(
-    events
-      .filter((event) => event.type === "tool.started")
-      .map((event) => [event.data.id, scalarText(event.data.name, "Tool")]),
+    events.flatMap((event) => {
+      const tool = eventPayload(event, "tool.started");
+
+      return tool?.id ? [[tool.id, tool.name ?? "Tool"]] : [];
+    }),
   );
 
   return (
@@ -201,17 +219,21 @@ export function EventDetails({
         </p>
       )}
       {events.length ? (
-        [...events]
-          .reverse()
-          .map((event, index) => (
+        [...events].reverse().map((event, index) => {
+          const id =
+            eventPayload(event, "tool.started")?.id ??
+            eventPayload(event, "tool.completed")?.id;
+
+          return (
             <EventCard
               key={event.id}
               event={event}
-              toolName={toolNames.get(event.data.id)}
+              toolName={id ? toolNames.get(id) : undefined}
               rawOnly={rawOnly}
               expandRaw={expandNewestRaw && index === 0}
             />
-          ))
+          );
+        })
       ) : (
         <p className="muted">Waiting for worker activity.</p>
       )}
