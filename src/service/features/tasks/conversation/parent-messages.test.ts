@@ -20,6 +20,7 @@ function fixture(t: { onTestFinished(fn: () => void): void }) {
   function task(id: string, owner = "alice", conversation = "parent") {
     const task: Task = {
       ...startSchema.parse({
+        repository: "/repo",
         description: "Review",
         worker_profile: "reviewer",
       }),

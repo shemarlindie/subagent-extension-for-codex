@@ -84,9 +84,8 @@ export const startSchema = z.object({
   repository: z
     .string()
     .min(1)
-    .default("current")
     .describe(
-      "Explicit absolute Git repository root approved by list_agent_projects. current is rejected by the packaged service because it does not identify the chat project.",
+      "Explicit absolute Git repository root approved by list_agent_projects.",
     ),
   revision: z.string().default("HEAD"),
   conversation_id: z.string().optional(),

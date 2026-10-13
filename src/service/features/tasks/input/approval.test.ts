@@ -14,7 +14,7 @@ import { Workspaces } from "../../workspaces/workspace.js";
 import { Control } from "../runtime/control.js";
 import { Store } from "../storage/store.js";
 
-const request = {
+const baseRequest = {
   provider: "fixture",
   description: "Check approval",
   workspace_strategy: "current_repo",
@@ -73,13 +73,13 @@ async function setup(provider = new PermissionProvider()) {
     store,
     new Workspaces(join(dir, "worktrees"), [repo]),
     new Map([[provider.id, provider]]),
-    repo,
     2,
   );
 
   return {
     c,
     store,
+    request: { ...baseRequest, repository: repo },
     cleanup: async () => {
       await c.close();
       await rm(dir, { recursive: true, force: true });
@@ -88,7 +88,7 @@ async function setup(provider = new PermissionProvider()) {
 }
 
 test("ask_user blocks parent approval and accepts an owner user decision", async () => {
-  const { c, store, cleanup } = await setup();
+  const { c, store, request, cleanup } = await setup();
 
   try {
     const task = (await callTool(
@@ -136,7 +136,7 @@ test("ask_user blocks parent approval and accepts an owner user decision", async
 });
 
 test("parent_agent permits parent decisions only after user configuration", async () => {
-  const { c, store, cleanup } = await setup();
+  const { c, store, request, cleanup } = await setup();
 
   try {
     c.settings.update(
@@ -174,7 +174,7 @@ test("parent_agent permits parent decisions only after user configuration", asyn
 });
 
 test("parent cannot raise approval authority or mutate approval settings", async () => {
-  const { c, store, cleanup } = await setup();
+  const { c, store, request, cleanup } = await setup();
 
   try {
     for (const mode of ["parent_agent", "auto_approve"]) {
@@ -246,7 +246,7 @@ test("model calls cannot use any user-only approval tool", async () => {
 
 for (const mode of approvalModes) {
   test(`parent tasks inherit the user's ${mode} default`, async () => {
-    const { c, store, cleanup } = await setup();
+    const { c, store, request, cleanup } = await setup();
 
     try {
       c.settings.update(
@@ -302,7 +302,7 @@ for (const mode of approvalModes) {
 
 for (const mode of ["auto_approve", "deny"] as const) {
   test(`${mode} still waits for question input and permits parent answers`, async () => {
-    const { c, store, cleanup } = await setup(
+    const { c, store, request, cleanup } = await setup(
       new PermissionProvider("AskUserQuestion"),
     );
 
@@ -336,7 +336,7 @@ for (const mode of ["auto_approve", "deny"] as const) {
 }
 
 test("interruption invalidates pending permission IDs across continuation", async () => {
-  const { c, store, cleanup } = await setup();
+  const { c, store, request, cleanup } = await setup();
 
   try {
     const task = await c.start("alice", request);
@@ -363,7 +363,7 @@ test("interruption invalidates pending permission IDs across continuation", asyn
 });
 
 test("parents can restrict approval authority but cannot escalate any saved mode", async () => {
-  const { c, store, cleanup } = await setup();
+  const { c, store, request, cleanup } = await setup();
 
   try {
     const ordered = [

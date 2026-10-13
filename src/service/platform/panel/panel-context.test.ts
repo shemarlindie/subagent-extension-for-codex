@@ -20,7 +20,7 @@ async function fixture(t: TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "panel-context-")));
   const store = new Store(join(dir, "test.sqlite"));
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
-  const c = new Control(store, workspaces, new Map(), dir);
+  const c = new Control(store, workspaces, new Map());
   c.projects = new Projects(store.database, workspaces);
 
   t.onTestFinished(async () => {

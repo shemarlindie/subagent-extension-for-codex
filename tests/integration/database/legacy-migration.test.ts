@@ -29,7 +29,7 @@ const LEGACY_SCHEMA = `
 `;
 
 const task = (id: string): Task => ({
-  ...startSchema.parse({ description: "Migrate" }),
+  ...startSchema.parse({ repository: "/repo", description: "Migrate" }),
   title: "Migrate",
   id,
   owner: "alice",

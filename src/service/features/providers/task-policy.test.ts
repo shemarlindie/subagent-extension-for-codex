@@ -53,6 +53,7 @@ test("execution policy prevents parent escalation but lets users choose approval
     defaults.default_approval_mode = "ask_user";
 
     const input = startSchema.parse({
+      repository: "/repo",
       description: "Check",
       approval_mode: "auto_approve",
     });
@@ -98,6 +99,7 @@ test("execution policy prevents parent escalation but lets users choose approval
 
 test("task options are isolated to the selected provider namespace", () => {
   const input = {
+    repository: "/repo",
     description: "Check",
     provider: "new-built-in",
     provider_options: {

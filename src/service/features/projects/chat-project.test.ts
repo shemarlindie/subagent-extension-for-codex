@@ -17,7 +17,7 @@ async function fixture(t: TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "chat-project-")));
   const store = new Store(join(dir, "db.sqlite"));
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
-  const control = new Control(store, workspaces, new Map(), dir);
+  const control = new Control(store, workspaces, new Map());
   control.projects = new Projects(store.database, workspaces);
 
   t.onTestFinished(async () => {
@@ -83,7 +83,7 @@ test("task-start registration requires the task to target the thread root", asyn
     other = await f.repo("other");
 
   await mkdir(join(repository, "src"));
-  for (const target of [other, "current", "relative/project"])
+  for (const target of [other, "relative/project"])
     assert.equal(
       await autoRegisterChatProject(
         f.control,

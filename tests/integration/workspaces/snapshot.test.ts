@@ -140,7 +140,6 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
     new Store(join(s.dir, "tasks.sqlite")),
     s.workspaces,
     new Map([[provider.id, provider]]),
-    s.repo,
   );
 
   const until = async (done: () => boolean) => {
@@ -153,6 +152,7 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
     await writeFile(join(s.repo, "user.txt"), "user\n");
 
     const t = await c.start("alice", {
+      repository: s.repo,
       provider: "fixture",
       description: "Write files",
       workspace_strategy: "current_repo",

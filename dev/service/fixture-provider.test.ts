@@ -206,6 +206,7 @@ test("fixture permission modes simulate allow, deny, ask, and approval authority
       approvalMode?: "ask_user" | "parent_agent",
     ) => {
       const input = startSchema.parse({
+        repository: "/repo",
         provider: "fixture",
         description: "Permission policy fixture",
         ...(approvalMode ? { approval_mode: approvalMode } : {}),

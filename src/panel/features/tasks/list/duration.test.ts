@@ -14,6 +14,7 @@ test("durations read compactly at each scale", () => {
 
 const task = (patch: Partial<Task>): Task => ({
   ...startSchema.parse({
+    repository: "/repo",
     title: "t",
     description: "t",
     worker_profile: "reviewer",

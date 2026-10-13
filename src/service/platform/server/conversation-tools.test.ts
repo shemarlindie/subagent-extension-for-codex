@@ -44,7 +44,6 @@ async function setup(provider: Provider = new FixtureProvider()) {
     store,
     new Workspaces(join(dir, "worktrees"), [repo]),
     new Map([["fixture", provider]]),
-    repo,
   );
 
   const parent = <T>(name: string, args: Record<string, unknown>) =>

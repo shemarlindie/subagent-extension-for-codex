@@ -60,15 +60,15 @@ async function setup(
     store,
     new Workspaces(join(dir, "worktrees"), [repo]),
     new Map([[provider.id, provider]]),
-    repo,
     concurrency,
   );
 
   return { dir, repo, db, store, c };
 }
 
-const input = (description = "Investigate") => ({
+const input = (repository: string, description = "Investigate") => ({
   provider: "fixture",
+  repository,
   title: "Investigate task",
   description,
   workspace_strategy: "worktree",
@@ -125,7 +125,7 @@ test("an unready provider blocks task starts and model discovery but stays liste
     details: { supported_versions: "2.1.285+" },
   });
 
-  const { c, store } = await setup(provider);
+  const { c, store, repo } = await setup(provider);
 
   try {
     const [worker] = (await c.availableWorkers()) as any[];
@@ -134,7 +134,11 @@ test("an unready provider blocks task starts and model discovery but stays liste
     assert.equal(worker.model_discovery_error, undefined);
     assert.equal(discoveries, 0);
 
-    await assert.rejects(c.start("alice", input()), /not found on the service/);
+    await assert.rejects(
+      c.start("alice", input(repo)),
+      /not found on the service/,
+    );
+
     assert.deepEqual(store.all("alice"), []);
 
     provider.readiness = async () => ({ ready: true, details: {} });
@@ -175,11 +179,11 @@ test("known model effort metadata rejects invalid work before queueing while unk
     { value: "unknown-effort", displayName: "Unknown effort", description: "" },
   ];
 
-  const { c, store } = await setup(provider);
+  const { c, store, repo } = await setup(provider);
 
   try {
     await assert.rejects(
-      c.start("alice", { ...input(), reasoning_effort: "high" }),
+      c.start("alice", { ...input(repo), reasoning_effort: "high" }),
       /does not support reasoning effort high/,
     );
 
@@ -187,7 +191,7 @@ test("known model effort metadata rejects invalid work before queueing while unk
 
     for (const model of ["no-effort", "limited-effort"]) {
       await assert.rejects(
-        c.start("alice", { ...input(), model, reasoning_effort: "high" }),
+        c.start("alice", { ...input(repo), model, reasoning_effort: "high" }),
         /does not support reasoning effort high/,
       );
 
@@ -196,7 +200,7 @@ test("known model effort metadata rejects invalid work before queueing while unk
 
     for (const model of ["unknown-effort", "custom-model"]) {
       const task = await c.start("alice", {
-        ...input(),
+        ...input(repo),
         model,
         reasoning_effort: "high",
       });
@@ -206,7 +210,7 @@ test("known model effort metadata rejects invalid work before queueing while unk
     }
 
     const supported = await c.start("alice", {
-      ...input(),
+      ...input(repo),
       model: "limited-effort",
       reasoning_effort: "low",
     });
@@ -218,7 +222,7 @@ test("known model effort metadata rejects invalid work before queueing while unk
     };
 
     const unavailable = await c.start("alice", {
-      ...input(),
+      ...input(repo),
       model: "custom-model",
       reasoning_effort: "high",
     });
@@ -245,12 +249,16 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
     return run(...args);
   };
 
-  const { c, store } = await setup(provider);
+  const { c, store, repo } = await setup(provider);
 
   try {
     for (const reasoning_effort of ["none", "minimal"]) {
       await assert.rejects(
-        c.start("alice", { ...input(), provider: "claude", reasoning_effort }),
+        c.start("alice", {
+          ...input(repo),
+          provider: "claude",
+          reasoning_effort,
+        }),
         /Claude reasoning effort/,
       );
 
@@ -259,7 +267,7 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
       });
 
       await assert.rejects(
-        c.start("alice", { ...input(), provider: "claude" }),
+        c.start("alice", { ...input(repo), provider: "claude" }),
         /Claude reasoning effort/,
       );
 
@@ -268,7 +276,7 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
     }
 
     const task = await c.start("alice", {
-      ...input(),
+      ...input(repo),
       provider: "claude",
       reasoning_effort: "high",
     });
@@ -292,11 +300,11 @@ test("task titles come from trimmed descriptions while workers receive full inst
     return original(ctx, prompt);
   };
 
-  const { c, store } = await setup(provider);
+  const { c, store, repo } = await setup(provider);
 
   try {
     const task = await c.start("alice", {
-      ...input(),
+      ...input(repo),
       description: "  Full instructions\nwith detailed evidence.  ",
     });
 
@@ -325,7 +333,7 @@ test("invalid descriptions cannot persist or execute a task", async () => {
     throw new Error("Unexpected execution");
   };
 
-  const { c, store } = await setup(provider);
+  const { c, store, repo } = await setup(provider);
 
   try {
     const cases = [
@@ -336,7 +344,7 @@ test("invalid descriptions cannot persist or execute a task", async () => {
     ];
 
     for (const invalid of cases) {
-      await assert.rejects(c.start("alice", { ...input(), ...invalid }));
+      await assert.rejects(c.start("alice", { ...input(repo), ...invalid }));
       assert.equal(store.all().length, 0);
     }
 
@@ -380,7 +388,7 @@ test("user defaults persist across restart, preserve omitted fields and remain o
 });
 
 test("task tools honor defaults and explicit overrides without changing existing tasks", async () => {
-  const { c } = await setup();
+  const { c, repo } = await setup();
   const { callTool } = await import("../../../platform/server/tools.js");
 
   c.settings.update("alice", {
@@ -394,6 +402,7 @@ test("task tools honor defaults and explicit overrides without changing existing
   });
 
   const task: any = await callTool(c, "alice", "start_agent_task", {
+    repository: repo,
     description: "Test default merge",
     budget: { max_cost_usd: 1 },
   });
@@ -406,6 +415,7 @@ test("task tools honor defaults and explicit overrides without changing existing
   assert.equal(c.store.get(task.id, "alice").budget.max_runtime_minutes, 9);
 
   const other: any = await callTool(c, "bob", "start_agent_task", {
+    repository: repo,
     title: "Other owner defaults",
     description: "Other owner defaults",
   });
@@ -436,7 +446,7 @@ test("settings reject unsupported providers, invalid budgets, unknown fields and
 
 test("durable task completes in isolated worktree and records its reply", async () => {
   const { c, store, repo, db } = await setup();
-  const t = await c.start("alice", input());
+  const t = await c.start("alice", input(repo));
   await until(() => store.get(t.id, "alice").status === "completed");
   const done = store.get(t.id, "alice");
   assert.notEqual(done.workspace, repo);
@@ -474,9 +484,12 @@ test("durable task completes in isolated worktree and records its reply", async 
 });
 
 test("fixture invalid-session marker triggers the normal continuation recovery path", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
 
-  const t = await c.start("alice", input("[fixture:session state=invalid]"));
+  const t = await c.start(
+    "alice",
+    input(repo, "[fixture:session state=invalid]"),
+  );
 
   await until(() => store.get(t.id, "alice").status === "completed");
   assert.match(store.get(t.id, "alice").session_state_ref!, /:invalid$/);
@@ -497,24 +510,24 @@ test("fixture invalid-session marker triggers the normal continuation recovery p
 });
 
 test("ownership enforced across dependencies, state, events and controls", async () => {
-  const { c, store } = await setup();
-  const t = await c.start("alice", input("[input]"));
+  const { c, store, repo } = await setup();
+  const t = await c.start("alice", input(repo, "[input]"));
   await until(() => store.get(t.id, "alice").status === "waiting");
   assert.throws(() => store.get(t.id, "bob"));
   assert.throws(() => store.events(t.id, "bob"));
   await assert.rejects(c.interrupt("bob", t.id));
   await assert.rejects(c.send("bob", t.id, "Hi", "user"));
   await assert.rejects(c.delete("bob", t.id));
-  await assert.rejects(c.start("bob", { ...input(), depends_on: [t.id] }));
+  await assert.rejects(c.start("bob", { ...input(repo), depends_on: [t.id] }));
   await c.close();
 });
 
 test("dependents wait on an interrupted dependency and fail with a failed one, and a follow-up resumes them", async () => {
-  const { c, store } = await setup();
-  const first = await c.start("alice", input("[input]"));
+  const { c, store, repo } = await setup();
+  const first = await c.start("alice", input(repo, "[input]"));
 
   const second = await c.start("alice", {
-    ...input("Review result"),
+    ...input(repo, "Review result"),
     depends_on: [first.id],
   });
 
@@ -572,11 +585,11 @@ test("dependent prompts include each dependency's reply and workspace diff", asy
     }
   }
 
-  const { c, store } = await setup(new Writer());
-  const first = await c.start("alice", input("Write"));
+  const { c, store, repo } = await setup(new Writer());
+  const first = await c.start("alice", input(repo, "Write"));
 
   const second = await c.start("alice", {
-    ...input("Review"),
+    ...input(repo, "Review"),
     depends_on: [first.id],
   });
 
@@ -598,7 +611,7 @@ test("dependent prompts include each dependency's reply and workspace diff", asy
   execFileSync("git", ["-C", workspace!, "worktree", "remove", "--force", "."]);
 
   const third = await c.start("alice", {
-    ...input("Review again"),
+    ...input(repo, "Review again"),
     depends_on: [first.id],
   });
 
@@ -632,10 +645,10 @@ test("current_repo dependents see only the dependency's own changes", async () =
   const { c, store, repo } = await setup(new Writer());
   await writeFile(join(repo, "user.ts"), "user\n");
   const current = { workspace_strategy: "current_repo" };
-  const first = await c.start("alice", { ...input("Write"), ...current });
+  const first = await c.start("alice", { ...input(repo, "Write"), ...current });
 
   const second = await c.start("alice", {
-    ...input("Review"),
+    ...input(repo, "Review"),
     ...current,
     depends_on: [first.id],
   });
@@ -652,11 +665,11 @@ test("current_repo dependents see only the dependency's own changes", async () =
 });
 
 test("successful dependencies release and task hierarchy stays separate", async () => {
-  const { c, store } = await setup();
-  const a = await c.start("alice", input());
+  const { c, store, repo } = await setup();
+  const a = await c.start("alice", input(repo));
 
   const b = await c.start("alice", {
-    ...input(),
+    ...input(repo),
     depends_on: [a.id],
     parent_task_id: a.id,
   });
@@ -676,8 +689,8 @@ test("successful dependencies release and task hierarchy stays separate", async 
 });
 
 test("human input is durable and stale input IDs are rejected", async () => {
-  const { c, store } = await setup();
-  const t = await c.start("alice", input("[input]"));
+  const { c, store, repo } = await setup();
+  const t = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
   const request = store.get(t.id, "alice").pending_input!;
   assert.throws(() => c.input("alice", t.id, "stale", true));
@@ -703,8 +716,8 @@ test("interrupt preserves the session, and a follow-up resumes it with only the 
     }
   }
 
-  const { c, store } = await setup(new Recorder());
-  const t = await c.start("alice", input("[input]"));
+  const { c, store, repo } = await setup(new Recorder());
+  const t = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
   await c.interrupt("alice", t.id);
   const previous = store.get(t.id, "alice").session_id;
@@ -742,8 +755,8 @@ test("a follow-up without a resumable session starts a new one carrying the conv
     }
   }
 
-  const { c, store } = await setup(new Recorder());
-  const t = await c.start("alice", input("Review the parser"));
+  const { c, store, repo } = await setup(new Recorder());
+  const t = await c.start("alice", input(repo, "Review the parser"));
   await until(() => store.get(t.id, "alice").status === "completed");
   await c.send("alice", t.id, "Check the lexer too", "parent");
   await until(() => store.get(t.id, "alice").turn === 2);
@@ -780,7 +793,7 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   assert.equal(store.get(t.id, "alice").session_owner, c.ownerWorker);
 
   // A task that failed before its session existed starts one, too.
-  const early = await c.start("alice", input("Early"));
+  const early = await c.start("alice", input(repo, "Early"));
   await until(() => store.get(early.id, "alice").status === "completed");
   const failed = store.get(early.id, "alice");
   failed.status = "failed";
@@ -812,8 +825,8 @@ test("a completed task takes a follow-up as its next turn, with its own turn sco
     }
   }
 
-  const { c, store } = await setup(new Writer());
-  const t = await c.start("alice", input("Write"));
+  const { c, store, repo } = await setup(new Writer());
+  const t = await c.start("alice", input(repo, "Write"));
   await until(() => store.get(t.id, "alice").status === "completed");
   const first = store.get(t.id, "alice");
   assert.ok(first.completed_at);
@@ -848,7 +861,7 @@ test("a completed task takes a follow-up as its next turn, with its own turn sco
   );
 
   // A busy task takes no follow-up yet.
-  const busy = await c.start("alice", input("[input]"));
+  const busy = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(busy.id, "alice").pending_input);
 
   await assert.rejects(
@@ -860,10 +873,10 @@ test("a completed task takes a follow-up as its next turn, with its own turn sco
 });
 
 test("a turn stopped by its budget resumes after a follow-up raises it", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
 
   const t = await c.start("alice", {
-    ...input(),
+    ...input(repo),
     budget: { max_runtime_minutes: 20, max_cost_usd: 1 },
   });
 
@@ -915,10 +928,10 @@ test("a turn stopped by its budget resumes after a follow-up raises it", async (
 });
 
 test("applying an increased limit persists without starting a turn", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
 
   const task = await c.start("alice", {
-    ...input(),
+    ...input(repo),
     budget: { max_runtime_minutes: 20, max_cost_usd: 1 },
   });
 
@@ -959,10 +972,10 @@ test("applying an increased limit persists without starting a turn", async () =>
 });
 
 test("a mixed budget update only marks limits that increased", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
 
   const task = await c.start("alice", {
-    ...input(),
+    ...input(repo),
     budget: { max_runtime_minutes: 20, max_cost_usd: 1 },
   });
 
@@ -1004,8 +1017,8 @@ test("cost counts each turn once, though a resumed session reports its running t
     }
   }
 
-  const { c, store } = await setup(new Costly());
-  const t = await c.start("alice", input());
+  const { c, store, repo } = await setup(new Costly());
+  const t = await c.start("alice", input(repo));
   await until(() => store.get(t.id, "alice").status === "completed");
   await c.send("alice", t.id, "Again", "user");
   await until(() => store.get(t.id, "alice").turn === 2);
@@ -1040,8 +1053,8 @@ class PromptRecorder extends FixtureProvider {
 }
 
 test("a steer reaches the running turn at its next step without interrupting it", async () => {
-  const { c, store } = await setup();
-  const t = await c.start("alice", input("[slow]"));
+  const { c, store, repo } = await setup();
+  const t = await c.start("alice", input(repo, "[slow]"));
   await until(() => store.get(t.id, "alice").status === "running");
   const sent = await c.send("alice", t.id, "Mind the edge cases", "user");
   assert.equal(sent.state, "pending_steer");
@@ -1078,8 +1091,8 @@ test("a steer reaches the running turn at its next step without interrupting it"
 
 test("a queued message waits for its own turn, which follows at once", async () => {
   const recorder = new PromptRecorder();
-  const { c, store } = await setup(recorder);
-  const t = await c.start("alice", input("[slow]"));
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[slow]"));
   await until(() => store.get(t.id, "alice").status === "running");
 
   const sent = await c.send("alice", t.id, "Then write the docs", "parent", {
@@ -1152,8 +1165,8 @@ test("a queued message waits for its own turn, which follows at once", async () 
 
 test("a steer the turn ends without taking starts the next turn from the front of the queue", async () => {
   const recorder = new PromptRecorder();
-  const { c, store } = await setup(recorder);
-  const t = await c.start("alice", input("[late]"));
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[late]"));
   await until(() => store.get(t.id, "alice").status === "running");
   const steer = await c.send("alice", t.id, "Late thought", "user");
   assert.equal(steer.state, "pending_steer");
@@ -1184,8 +1197,8 @@ test("a steer the turn ends without taking starts the next turn from the front o
 
 test("an interrupt with pending steers sends them at once as one new turn", async () => {
   const recorder = new PromptRecorder();
-  const { c, store } = await setup(recorder);
-  const t = await c.start("alice", input("[late]"));
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[late]"));
   await until(() => store.get(t.id, "alice").status === "running");
   await c.send("alice", t.id, "First thought", "user");
   await c.send("alice", t.id, "Later", "user", { delivery: "queue" });
@@ -1214,8 +1227,8 @@ test("an interrupt with pending steers sends them at once as one new turn", asyn
 
 test("a plain interrupt pauses the queue, keeping pending steers at its front, until resumed or a message is sent", async () => {
   const recorder = new PromptRecorder();
-  const { c, store } = await setup(recorder);
-  const t = await c.start("alice", input("[late]"));
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[late]"));
   await until(() => store.get(t.id, "alice").status === "running");
   await c.send("alice", t.id, "Pending", "user");
   await c.send("alice", t.id, "Queued", "user", { delivery: "queue" });
@@ -1264,8 +1277,8 @@ test("a plain interrupt pauses the queue, keeping pending steers at its front, u
 
 test("queued messages can be reordered behind the steers the worker already has", async () => {
   const recorder = new PromptRecorder();
-  const { c, store } = await setup(recorder);
-  const t = await c.start("alice", input("[late]"));
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[late]"));
   await until(() => store.get(t.id, "alice").status === "running");
   await c.send("alice", t.id, "Pending", "user");
 
@@ -1315,8 +1328,8 @@ test("queued messages can be reordered behind the steers the worker already has"
 
 test("queued messages can be edited and removed until sent; the parent removes only its own", async () => {
   const recorder = new PromptRecorder();
-  const { c, store } = await setup(recorder);
-  const t = await c.start("alice", input("[input]"));
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
 
   const mine = await c.send("alice", t.id, "Draft", "user", {
@@ -1357,7 +1370,7 @@ test("queued messages can be edited and removed until sent; the parent removes o
   );
 
   // Clear removes them all.
-  const busy = await c.start("alice", input("[input]"));
+  const busy = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(busy.id, "alice").pending_input);
   await c.send("alice", busy.id, "One", "user", { delivery: "queue" });
   await c.send("alice", busy.id, "Two", "parent", { delivery: "queue" });
@@ -1368,8 +1381,8 @@ test("queued messages can be edited and removed until sent; the parent removes o
 });
 
 test("a worker waiting for input takes queued messages but no steers", async () => {
-  const { c, store } = await setup();
-  const t = await c.start("alice", input("[input]"));
+  const { c, store, repo } = await setup();
+  const t = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
 
   await assert.rejects(
@@ -1387,11 +1400,11 @@ test("a worker waiting for input takes queued messages but no steers", async () 
 });
 
 test("a restart mid-turn moves pending steers to the front of a paused queue", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
   c.stopped = true;
 
   try {
-    const t = await c.start("alice", input());
+    const t = await c.start("alice", input(repo));
     t.status = "running";
     t.turn = 1;
 
@@ -1436,10 +1449,10 @@ test("a restart mid-turn moves pending steers to the front of a paused queue", a
 });
 
 test("runtime budget stops a worker waiting for input", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
 
   const t = await c.start("alice", {
-    ...input("[input]"),
+    ...input(repo, "[input]"),
     budget: { max_runtime_minutes: 0.002, max_cost_usd: 1 },
   });
 
@@ -1449,10 +1462,10 @@ test("runtime budget stops a worker waiting for input", async () => {
 });
 
 test("unsupported budgets and providers fail before starting work", async () => {
-  const { c } = await setup();
+  const { c, repo } = await setup();
 
   await assert.rejects(
-    c.start("alice", { ...input(), budget: { max_tokens: 100 } }),
+    c.start("alice", { ...input(repo), budget: { max_tokens: 100 } }),
     /token budgets/,
   );
 
@@ -1460,6 +1473,7 @@ test("unsupported budgets and providers fail before starting work", async () => 
     c.start("alice", {
       provider: "claude",
       title: "test",
+      repository: repo,
       description: "test",
     }),
     /not enabled/,
@@ -1469,8 +1483,8 @@ test("unsupported budgets and providers fail before starting work", async () => 
 });
 
 test("restart recovery marks live task interrupted and clears stale permissions", async () => {
-  const { c, store } = await setup();
-  const t = await c.start("alice", input("[input]"));
+  const { c, store, repo } = await setup();
+  const t = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
   await c.interrupt("alice", t.id);
   const old = store.get(t.id, "alice");
@@ -1492,10 +1506,10 @@ test("restart recovery marks live task interrupted and clears stale permissions"
 });
 
 test("workspace root allowlist rejects external repositories", async () => {
-  const { c, dir } = await setup();
+  const { c, dir, repo } = await setup();
 
   await assert.rejects(
-    c.start("alice", { ...input(), repository: dir }),
+    c.start("alice", { ...input(repo), repository: dir }),
     /outside allowed roots/,
   );
 
@@ -1527,7 +1541,7 @@ test("worktree diff includes edits, untracked files and committed changes withou
   }
 
   const { c, store, repo } = await setup(new Writer());
-  const t = await c.start("alice", input());
+  const t = await c.start("alice", input(repo));
 
   await until(
     () =>
@@ -1579,7 +1593,7 @@ test("worktree branches use the owner's prefix, and Git rejects invalid names", 
     );
 
     c.settings.update("alice", { set: { worktree_branch_prefix: "work/" } });
-    const t = await c.start("alice", input());
+    const t = await c.start("alice", input(repo));
     await until(() => store.get(t.id, "alice").status === "completed");
     assert.equal(store.get(t.id, "alice").branch, `work/${t.id}`);
 
@@ -1593,7 +1607,7 @@ test("worktree branches use the owner's prefix, and Git rejects invalid names", 
 
     // Allowed characters can still form an invalid ref.
     c.settings.update("alice", { set: { worktree_branch_prefix: "a..b/" } });
-    const bad = await c.start("alice", input());
+    const bad = await c.start("alice", input(repo));
     await until(() => store.get(bad.id, "alice").status === "failed");
     assert.match(store.get(bad.id, "alice").error!, /Invalid worktree branch/);
     assert.equal(store.get(bad.id, "alice").workspace, undefined);
@@ -1616,7 +1630,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
       .trim();
 
   try {
-    const running = await c.start("alice", input("[input]"));
+    const running = await c.start("alice", input(repo, "[input]"));
     await until(() => !!store.get(running.id, "alice").pending_input);
 
     await assert.rejects(
@@ -1683,7 +1697,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
 
     // The next message recreates the worktree: from its branch, or from the
     // base commit once the branch is gone too.
-    const paused = await c.start("alice", input("[input]"));
+    const paused = await c.start("alice", input(repo, "[input]"));
     await until(() => !!store.get(paused.id, "alice").pending_input);
     await c.interrupt("alice", paused.id);
     await c.removeWorktree("alice", paused.id);
@@ -1732,7 +1746,7 @@ test("a task is deleted in any state with everything related to it", async () =>
   };
 
   try {
-    const t = await c.start("alice", input("[input]"));
+    const t = await c.start("alice", input(repo, "[input]"));
     await until(() => !!store.get(t.id, "alice").pending_input);
     const stopped = store.get(t.id, "alice");
     assert.ok(stopped.workspace && existsSync(stopped.workspace));
@@ -1742,7 +1756,7 @@ test("a task is deleted in any state with everything related to it", async () =>
     // A task that depends on this one keeps it, whatever its state, since a
     // follow-up could still resume it.
     const dependent = await c.start("alice", {
-      ...input("[input]"),
+      ...input(repo, "[input]"),
       depends_on: [t.id],
     });
 
@@ -1778,7 +1792,7 @@ test("a task is deleted in any state with everything related to it", async () =>
     assert.equal(git("for-each-ref", "refs/agent-tasks").includes(t.id), false);
 
     // Without the option, the provider's session is left alone.
-    const kept = await c.start("alice", input("[input]"));
+    const kept = await c.start("alice", input(repo, "[input]"));
     await until(() => !!store.get(kept.id, "alice").pending_input);
     await c.interrupt("alice", kept.id);
     await c.delete("alice", kept.id);
@@ -1789,12 +1803,12 @@ test("a task is deleted in any state with everything related to it", async () =>
 });
 
 test("scheduler enforces concurrency and independent branches run together", async () => {
-  const { c, store } = await setup(undefined, 2);
+  const { c, store, repo } = await setup(undefined, 2);
 
   const tasks = await Promise.all([
-    c.start("alice", input("[input]")),
-    c.start("alice", input("[input]")),
-    c.start("alice", input("[input]")),
+    c.start("alice", input(repo, "[input]")),
+    c.start("alice", input(repo, "[input]")),
+    c.start("alice", input(repo, "[input]")),
   ]);
 
   await until(
@@ -1828,8 +1842,8 @@ test("parallel permission requests are serialized without losing the first respo
     }
   }
 
-  const { c, store } = await setup(new Parallel());
-  const t = await c.start("alice", input());
+  const { c, store, repo } = await setup(new Parallel());
+  const t = await c.start("alice", input(repo));
   await until(() => !!store.get(t.id, "alice").pending_input);
   let request = store.get(t.id, "alice").pending_input!;
   assert.equal(request.input.command, "first");
@@ -1854,12 +1868,12 @@ test("parallel permission requests are serialized without losing the first respo
 test("unsupported cost limits fail before task persistence and explicit null allows execution", async () => {
   const provider = new FixtureProvider();
   provider.capabilities.cost_budget = false;
-  const { c } = await setup(provider);
+  const { c, repo } = await setup(provider);
 
   try {
     await assert.rejects(
       c.start("alice", {
-        ...input(),
+        ...input(repo),
         budget: { max_runtime_minutes: null, max_cost_usd: 1 },
       }),
       /does not support cost budgets/,
@@ -1868,7 +1882,7 @@ test("unsupported cost limits fail before task persistence and explicit null all
     assert.equal(c.store.all().length, 0);
 
     const task = await c.start("alice", {
-      ...input(),
+      ...input(repo),
       budget: { max_cost_usd: null },
     });
 
@@ -1881,13 +1895,13 @@ test("unsupported cost limits fail before task persistence and explicit null all
 });
 
 test("no cost limit persists in settings and explicit task limits override it", async () => {
-  const { c, db } = await setup();
+  const { c, db, repo } = await setup();
   c.settings.update("alice", { set: { max_cost_usd: null } });
-  const task = await c.start("alice", input());
+  const task = await c.start("alice", input(repo));
   assert.equal(task.budget.max_cost_usd, null);
 
   const limited = await c.start("alice", {
-    ...input(),
+    ...input(repo),
     budget: { max_cost_usd: 2 },
   });
 
@@ -1908,12 +1922,12 @@ test("no cost limit persists in settings and explicit task limits override it", 
 
 test("a follow-up revalidates provider budget support before changing an interrupted task", async () => {
   const provider = new FixtureProvider();
-  const { c } = await setup(provider);
+  const { c, repo } = await setup(provider);
   c.stopped = true;
 
   try {
     const task = await c.start("alice", {
-      ...input(),
+      ...input(repo),
       budget: { max_runtime_minutes: null, max_cost_usd: 1 },
     });
 
@@ -1965,10 +1979,10 @@ test("cancelled queued input rejects promptly without bypassing the active permi
     };
   };
 
-  const { c, store } = await setup(provider);
+  const { c, store, repo } = await setup(provider);
 
   try {
-    const task = await c.start("alice", input());
+    const task = await c.start("alice", input(repo));
 
     await until(
       () => queuedRejected && !!store.get(task.id, "alice").pending_input,
@@ -2010,7 +2024,7 @@ test("cancelled queued input rejects promptly without bypassing the active permi
 });
 
 test("deletion locks execution, dependencies and duplicate cleanup until it finishes", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
   let release!: () => void;
 
   const pending = new Promise<void>((resolve) => {
@@ -2025,7 +2039,7 @@ test("deletion locks execution, dependencies and duplicate cleanup until it fini
   };
 
   try {
-    const task = await c.start("alice", input("[input]"));
+    const task = await c.start("alice", input(repo, "[input]"));
     await until(() => !!store.get(task.id, "alice").pending_input);
     await c.interrupt("alice", task.id);
     const deletion = c.delete("alice", task.id, true);
@@ -2046,7 +2060,7 @@ test("deletion locks execution, dependencies and duplicate cleanup until it fini
     await assert.rejects(c.delete("alice", task.id), /being deleted/);
 
     await assert.rejects(
-      c.start("alice", { ...input(), depends_on: [task.id] }),
+      c.start("alice", { ...input(repo), depends_on: [task.id] }),
       /being deleted/,
     );
 
@@ -2060,14 +2074,14 @@ test("deletion locks execution, dependencies and duplicate cleanup until it fini
 });
 
 test("provider deletion failures preserve local task resources and release the lock", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
 
   c.providers.get("fixture")!.deleteSession = async () => {
     throw new Error("cleanup failed");
   };
 
   try {
-    const task = await c.start("alice", input("[input]"));
+    const task = await c.start("alice", input(repo, "[input]"));
     await until(() => !!store.get(task.id, "alice").pending_input);
     await c.interrupt("alice", task.id);
     await assert.rejects(c.delete("alice", task.id, true), /cleanup failed/);
@@ -2082,7 +2096,7 @@ test("provider deletion failures preserve local task resources and release the l
 });
 
 test("a follow-up already awaiting project validation cannot resurrect a deleted task", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
   let release!: () => void;
 
   const pending = new Promise<void>((resolve) => {
@@ -2092,7 +2106,7 @@ test("a follow-up already awaiting project validation cannot resurrect a deleted
   let validating = false;
 
   try {
-    const task = await c.start("alice", input("[input]"));
+    const task = await c.start("alice", input(repo, "[input]"));
     await until(() => !!store.get(task.id, "alice").pending_input);
     await c.interrupt("alice", task.id);
 
@@ -2165,12 +2179,12 @@ test("a new provider controls preparation and input policy without built-in iden
     };
   };
 
-  const { c, store } = await setup(provider);
+  const { c, store, repo } = await setup(provider);
 
   try {
     await assert.rejects(
       c.start("alice", {
-        ...input(),
+        ...input(repo),
         provider: provider.id,
         model: "forbidden",
       }),
@@ -2179,7 +2193,7 @@ test("a new provider controls preparation and input policy without built-in iden
 
     await assert.rejects(
       c.start("alice", {
-        ...input(),
+        ...input(repo),
         provider: provider.id,
         provider_options: {
           [provider.id]: { execution_pool: "shared" },
@@ -2190,7 +2204,7 @@ test("a new provider controls preparation and input policy without built-in iden
 
     await assert.rejects(
       c.start("alice", {
-        ...input(),
+        ...input(repo),
         provider: provider.id,
         provider_options: { claude: { permission_mode: "plan" } },
       }),
@@ -2201,7 +2215,7 @@ test("a new provider controls preparation and input policy without built-in iden
 
     const task = await c.start(
       "alice",
-      { ...input(), provider: provider.id },
+      { ...input(repo), provider: provider.id },
       "parent",
     );
 
@@ -2296,11 +2310,15 @@ test("a new provider owns native session continuation after a restart", async ()
   };
 
   provider.taskPolicy = policy;
-  const { c, store } = await setup(provider);
+  const { c, store, repo } = await setup(provider);
   c.stopped = true;
 
   try {
-    const task = await c.start("alice", { ...input(), provider: provider.id });
+    const task = await c.start("alice", {
+      ...input(repo),
+      provider: provider.id,
+    });
+
     task.status = "running";
     task.turn = 1;
 
@@ -2354,9 +2372,9 @@ test("a new provider owns native session continuation after a restart", async ()
 });
 
 test("user task renaming checks ownership and persists across active turn updates", async () => {
-  const { c, store } = await setup();
+  const { c, store, repo } = await setup();
   const { callTool } = await import("../../../platform/server/tools.js");
-  const task = await c.start("alice", input("[input]"));
+  const task = await c.start("alice", input(repo, "[input]"));
 
   try {
     await until(() => store.get(task.id, "alice").status === "waiting");
@@ -2419,7 +2437,7 @@ test("user task renaming checks ownership and persists across active turn update
 });
 
 test("a task whose first event can't be written is never created", async () => {
-  const { store, c } = await setup();
+  const { store, c, repo } = await setup();
 
   try {
     const heard: string[] = [];
@@ -2429,7 +2447,7 @@ test("a task whose first event can't be written is never created", async () => {
       "CREATE TRIGGER reject_queued BEFORE INSERT ON events WHEN NEW.type='task.queued' BEGIN SELECT RAISE(ABORT, 'event write failed'); END",
     );
 
-    await assert.rejects(c.start("local", input()), /event write failed/);
+    await assert.rejects(c.start("local", input(repo)), /event write failed/);
     assert.deepEqual(store.all(), []);
     assert.deepEqual(heard, []);
   } finally {

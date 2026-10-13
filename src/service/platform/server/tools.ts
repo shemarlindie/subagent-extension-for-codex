@@ -149,10 +149,7 @@ export function definitions(
       description:
         "List persistently approved project roots. Never registers. Pass an explicit absolute repository to start_agent_task. If the chat's project is missing, ask the user to use Add project in the panel. Task arguments never grant access.",
       schema: z.strictObject({}),
-      run: () =>
-        c.projects?.list() ?? [
-          { repository: c.repository, name: c.repository, kind: "repository" },
-        ],
+      run: () => c.projects?.list() ?? [],
     }),
     get_current_agent_project: tool({
       description:

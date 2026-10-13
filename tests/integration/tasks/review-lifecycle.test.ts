@@ -52,7 +52,6 @@ test(
       store,
       new Workspaces(join(data, "worktrees"), []),
       new Map([["fixture", new FixtureProvider()]]),
-      repository,
     );
 
     const projects = new Projects(

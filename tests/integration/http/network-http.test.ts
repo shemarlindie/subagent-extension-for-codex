@@ -45,7 +45,6 @@ test.each([
       new Store(join(dir, "test.sqlite")),
       new Workspaces(join(dir, "worktrees"), []),
       new Map(),
-      dir,
     );
 
     const app = application(

@@ -27,7 +27,6 @@ async function fixture(t: TestContext) {
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), []),
     new Map(),
-    dir,
   );
 
   c.projects = new Projects(c.store.database, c.workspaces);

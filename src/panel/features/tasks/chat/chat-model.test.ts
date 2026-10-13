@@ -8,6 +8,7 @@ import { composerMode, spentBudget } from "./chat-model";
 function failedBudgetTask(patch: Partial<Task> = {}): Task {
   return {
     ...startSchema.parse({
+      repository: "/repo",
       description: "Continue the task",
       budget: { max_cost_usd: 2, max_runtime_minutes: 20 },
     }),

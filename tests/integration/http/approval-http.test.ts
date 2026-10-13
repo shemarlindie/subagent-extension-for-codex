@@ -63,7 +63,6 @@ async function setup() {
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
     new Map([["fixture", new PermissionProvider()]]),
-    dir,
   );
 
   const app = application(

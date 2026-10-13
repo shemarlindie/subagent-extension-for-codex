@@ -4,6 +4,7 @@ import { startSchema, type Task } from "../../src/shared/tasks/model.js";
 export function task(id = "task_fixture"): Task {
   return {
     ...startSchema.parse({
+      repository: "/repo",
       provider: "fixture",
       description: "Exercise the fixture provider",
     }),

@@ -98,7 +98,6 @@ async function setup(t: TestContext, provider = new FixtureProvider()) {
     store,
     new Workspaces(join(dir, "worktrees"), [repo]),
     new Map([["claude", provider]]),
-    repo,
     1,
   );
 
@@ -107,10 +106,10 @@ async function setup(t: TestContext, provider = new FixtureProvider()) {
     await rm(dir, { recursive: true, force: true });
   });
 
-  return { c, store };
+  return { c, store, request: { ...baseRequest, repository: repo } };
 }
 
-const request = {
+const baseRequest = {
   provider: "claude",
   description: "Implement a change",
   worker_profile: "implementer",
@@ -178,7 +177,7 @@ test("settings default to Default, expose only SDK permission modes, persist ove
 });
 
 test("task arguments cannot spoof parent permissions and resolved source is stored", async (t) => {
-  const { c, store } = await setup(t);
+  const { c, store, request } = await setup(t);
 
   const task = await c.start(
     "alice",
@@ -212,7 +211,7 @@ test("task arguments cannot spoof parent permissions and resolved source is stor
 });
 
 test("task-level inherit uses the extension's configured Auto mode", async (t) => {
-  const { c } = await setup(t);
+  const { c, request } = await setup(t);
   c.settings.update("alice", { set: { claude_permission_mode: "auto" } });
 
   const task = await c.start(
@@ -226,7 +225,7 @@ test("task-level inherit uses the extension's configured Auto mode", async (t) =
 });
 
 test("parent cannot increase native permissions or grant itself decision authority", async (t) => {
-  const { c } = await setup(t);
+  const { c, request } = await setup(t);
 
   await assert.rejects(
     c.start(
@@ -330,7 +329,7 @@ async function until(predicate: () => boolean) {
 }
 
 test("new Claude tasks require native permission and decision fields", async (t) => {
-  const { c } = await setup(t);
+  const { c, request } = await setup(t);
   for (const approval_mode of [
     "ask_user",
     "parent_agent",
@@ -355,7 +354,7 @@ test("new Claude tasks require native permission and decision fields", async (t)
 });
 
 test("persisted Claude tasks retain native approval routing", async (t) => {
-  const { c, store } = await setup(t, new PromptProvider());
+  const { c, store, request } = await setup(t, new PromptProvider());
 
   for (const [nativeDecider, parentAllowed] of [
     ["parent_agent", true],
@@ -413,7 +412,7 @@ test("persisted Claude tasks retain native approval routing", async (t) => {
 });
 
 test("native unresolved approvals honor their decision setting independently of execution defaults", async (t) => {
-  const { c, store } = await setup(t, new PromptProvider());
+  const { c, store, request } = await setup(t, new PromptProvider());
 
   c.settings.update("alice", {
     set: {
@@ -474,7 +473,7 @@ test("native unresolved approvals honor their decision setting independently of 
 });
 
 test("Claude tasks snapshot session restrictions from settings and ignore task arguments", async (t) => {
-  const { c, store } = await setup(t);
+  const { c, store, request } = await setup(t);
 
   c.settings.update("alice", {
     set: {

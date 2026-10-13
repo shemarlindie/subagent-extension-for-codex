@@ -83,7 +83,6 @@ export async function serve({
     store,
     new Workspaces(join(data, "worktrees"), []),
     providers,
-    process.cwd(),
     concurrency,
   );
 

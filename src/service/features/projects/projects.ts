@@ -93,10 +93,6 @@ export class Projects {
 
   async resolve(path: string) {
     this.refresh();
-    if (path === "current")
-      throw new Error(
-        "Host project context is unavailable. Call list_agent_projects and pass an explicit repository path; add missing projects through the user interface or local projects CLI.",
-      );
     if (!isAbsolute(path)) throw new Error("Use an absolute repository path");
     const actual = await realpath(path);
 

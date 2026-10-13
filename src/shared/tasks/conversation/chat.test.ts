@@ -8,7 +8,10 @@ import { startSchema, type Task } from "../model.js";
 import { CHAT_EVENTS, chatItems } from "./chat.js";
 
 const task: Task = {
-  ...startSchema.parse({ description: "Move the helpers" }),
+  ...startSchema.parse({
+    repository: "/repo",
+    description: "Move the helpers",
+  }),
   id: "task",
   title: "Move the helpers",
   owner: "alice",

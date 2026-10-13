@@ -70,7 +70,6 @@ export class Control {
     public store: Store,
     public workspaces: Workspaces,
     public providers: Map<string, Provider>,
-    public repository: string,
     public concurrency = 3,
   ) {
     this.settings = new Settings(
@@ -215,9 +214,7 @@ export class Control {
 
     const repository = this.projects
       ? await this.projects.resolve(req.repository)
-      : await this.workspaces.repository(
-          req.repository === "current" ? this.repository : req.repository,
-        );
+      : await this.workspaces.repository(req.repository);
 
     // Repository resolution can yield while a dependency is being deleted.
     if (this.removingProjects.has(repository))

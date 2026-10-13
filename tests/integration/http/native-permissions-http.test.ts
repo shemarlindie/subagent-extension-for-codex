@@ -54,7 +54,6 @@ async function setup(t: TestContext) {
     new Store(join(dir, "tasks.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
     new Map([["claude", provider]]),
-    dir,
   );
 
   const app = application(

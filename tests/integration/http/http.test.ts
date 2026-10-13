@@ -74,7 +74,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     new Store(join(dir, "test.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
     new Map([["fixture", new FixtureProvider()]]),
-    dir,
   );
 
   const seedTask = (
@@ -1040,7 +1039,6 @@ test("SSE requires authentication, replays owned events in global cursor order a
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
     new Map(),
-    dir,
   );
 
   const auth = new Auth("token");
@@ -1056,7 +1054,7 @@ test("SSE requires authentication, replays owned events in global cursor order a
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 
   const make = (id: string, owner: string) => ({
-    ...startSchema.parse({ description: "test" }),
+    ...startSchema.parse({ repository: "/repo", description: "test" }),
     id,
     title: "test",
     owner,
@@ -1152,7 +1150,6 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
     new Map([["fixture", provider]]),
-    dir,
   );
 
   const app = application(

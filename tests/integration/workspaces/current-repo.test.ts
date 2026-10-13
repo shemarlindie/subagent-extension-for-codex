@@ -59,7 +59,6 @@ async function setup() {
     new Store(join(dir, "tasks.sqlite")),
     workspaces,
     new Map([[provider.id, provider]]),
-    repo,
   );
 
   return {
@@ -195,6 +194,7 @@ test("current repository review receives the working tree diff in its provider p
     const before = s.git("status", "--porcelain");
 
     const started = await s.c.start("alice", {
+      repository: s.repo,
       title: "Review my uncommitted edits",
       description: "Review my uncommitted edits",
       provider: "fixture",
@@ -242,13 +242,15 @@ test("current repository settings persist, are owner-scoped, and allow task over
     );
 
     assert.equal(
-      startSchema.parse({ description: "Review" }).workspace_strategy,
+      startSchema.parse({ repository: "/repo", description: "Review" })
+        .workspace_strategy,
       "current_repo",
     );
 
     assert.equal(
       (
         await s.c.start("alice", {
+          repository: s.repo,
           title: "Review defaults",
           description: "Review defaults",
         })
@@ -271,11 +273,13 @@ test("current repository settings persist, are owner-scoped, and allow task over
     );
 
     const inherited = await s.c.start("alice", {
+      repository: s.repo,
       title: "Review",
       description: "Review",
     });
 
     const overridden = await s.c.start("alice", {
+      repository: s.repo,
       title: "Implement",
       description: "Implement",
       workspace_strategy: "current_repo",
@@ -343,6 +347,7 @@ test("current repository write profiles edit the checkout while preserving unrel
     };
 
     const started = await s.c.start("alice", {
+      repository: s.repo,
       title: "Update implementation.ts",
       description: "Update implementation.ts",
       provider: "fixture",
@@ -432,6 +437,7 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
     s.c.providers.set("claude", provider);
 
     const started = await s.c.start("alice", {
+      repository: s.repo,
       title: "Review uncommitted changes",
       description: "Review uncommitted changes",
       provider: "claude",

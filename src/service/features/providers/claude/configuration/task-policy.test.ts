@@ -23,6 +23,7 @@ test("Claude preparation preserves native modes and restrictions independently o
     );
 
     const input = startSchema.parse({
+      repository: "/repo",
       description: "Review",
     });
 
@@ -71,6 +72,7 @@ test("Claude task-level inherit resolves to the configured extension Auto mode",
     settings.update("alice", { set: { claude_permission_mode: "auto" } });
 
     const input = startSchema.parse({
+      repository: "/repo",
       description: "Implement",
       worker_profile: "reviewer",
       provider_options: { claude: { permission_mode: "inherit" } },
@@ -100,7 +102,10 @@ test("Claude preparation checks native permission, approval decider, and effort 
       "alice",
     );
 
-    const input = startSchema.parse({ description: "Review" });
+    const input = startSchema.parse({
+      repository: "/repo",
+      description: "Review",
+    });
 
     const prepare = (overrides: Partial<typeof input>) =>
       claudeTaskPolicy.prepareStart({

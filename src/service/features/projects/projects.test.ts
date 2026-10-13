@@ -56,7 +56,6 @@ async function removalFixture(t: import("vitest").TestContext) {
     f.store,
     f.workspaces,
     new Map([[provider.id, provider]]),
-    repository,
   );
 
   control.projects = f.projects;
@@ -221,7 +220,7 @@ test("project removal locks new tasks, dependencies, and every batch member duri
 test("project registration requires user authority and grants live persistent access only after submission", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("new-project");
-  const control = new Control(f.store, f.workspaces, new Map(), f.dir);
+  const control = new Control(f.store, f.workspaces, new Map());
   control.projects = f.projects;
   const tool = "register_user_agent_project";
   assert.equal(isUserTool(tool), true);
@@ -320,11 +319,6 @@ test("explicit paths cannot grant access, and current never falls back to anothe
 
   await f.projects.register(a);
 
-  await assert.rejects(
-    f.projects.resolve("current"),
-    /explicit repository path/,
-  );
-
   await assert.rejects(f.projects.resolve("a"), /absolute/);
   await assert.rejects(f.projects.resolve(b), /outside allowed roots/);
 
@@ -413,7 +407,7 @@ test("project rename and removal tools require user authority", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("repo");
   await f.projects.register(repository);
-  const control = new Control(f.store, f.workspaces, new Map(), f.dir);
+  const control = new Control(f.store, f.workspaces, new Map());
   control.projects = f.projects;
 
   for (const tool of [
@@ -511,7 +505,6 @@ test("removing approval preserves task history and files but blocks new tasks an
     f.store,
     f.workspaces,
     new Map([[provider.id, provider]]),
-    repository,
   );
 
   control.projects = f.projects;
@@ -655,7 +648,6 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
     f.store,
     f.workspaces,
     new Map([[provider.id, provider]]),
-    a,
   );
 
   control.projects = f.projects;
@@ -673,11 +665,11 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
     await assert.rejects(
       control.start("owner", {
         provider: "fixture",
-        title: "ambiguous",
-        description: "ambiguous",
-        repository: "current",
+        title: "relative",
+        description: "relative",
+        repository: "relative/project",
       }),
-      /explicit repository path/,
+      /absolute repository path/,
     );
 
     assert.equal(f.store.all().length, 0);
@@ -706,7 +698,6 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
     );
 
     await control.interrupt("owner", task.id);
-    control.repository = a;
 
     const { task: resumed } = await control.send(
       "owner",

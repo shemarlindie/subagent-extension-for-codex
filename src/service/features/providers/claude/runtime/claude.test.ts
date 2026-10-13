@@ -42,7 +42,7 @@ const claudeOptions = (task: Task) => task.provider_options?.claude ?? {};
 
 test("Claude session deletion skips absent ids and forwards existing sessions", async () => {
   const task: Task = {
-    ...startSchema.parse({ description: "Delete" }),
+    ...startSchema.parse({ repository: "/repo", description: "Delete" }),
     title: "Delete",
     id: "delete-task",
     owner: "alice",
@@ -76,7 +76,7 @@ test("Claude session deletion skips absent ids and forwards existing sessions", 
 
 test("Claude session deletion only tolerates the SDK's missing-session error", async () => {
   const task: Task = {
-    ...startSchema.parse({ description: "Delete" }),
+    ...startSchema.parse({ repository: "/repo", description: "Delete" }),
     title: "Delete",
     id: "delete-task",
     owner: "alice",
@@ -135,6 +135,7 @@ async function context() {
 
   const task: Task = {
     ...startSchema.parse({
+      repository: "/repo",
       description: "Review",
       worker_profile: "reviewer",
       provider_options: {
@@ -712,6 +713,7 @@ test("extension Auto setting reaches a task and the SDK launch", async () => {
     settings.update("alice", { set: { claude_permission_mode: "auto" } });
 
     const input = startSchema.parse({
+      repository: "/repo",
       description: "Implement",
       worker_profile: "implementer",
       provider_options: { claude: { permission_mode: "inherit" } },

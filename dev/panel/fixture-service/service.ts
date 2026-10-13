@@ -125,7 +125,7 @@ function fixtureStore() {
     const workspaces = new Workspaces(join(directory, "snapshots"), []);
     // No providers: served tools read changes and manage worktrees, and
     // never run a task.
-    const control = new Control(store, workspaces, new Map(), directory);
+    const control = new Control(store, workspaces, new Map());
     const fixture = { store, control, directory };
     (globalThis as { __fixtureStore?: FixtureStore }).__fixtureStore = fixture;
 

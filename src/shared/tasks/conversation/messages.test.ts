@@ -7,7 +7,10 @@ import { startSchema, type Task } from "../model.js";
 import { conversation } from "./messages.js";
 
 const task: Task = {
-  ...startSchema.parse({ description: "Review the parser" }),
+  ...startSchema.parse({
+    repository: "/repo",
+    description: "Review the parser",
+  }),
   id: "task",
   title: "Review the parser",
   owner: "alice",

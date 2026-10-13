@@ -19,6 +19,7 @@ import { TaskDetails } from "./task-details";
 
 const task = (patch: Partial<Task>): Task => ({
   ...startSchema.parse({
+    repository: "/repo",
     title: "t",
     description: "t",
     worker_profile: "reviewer",

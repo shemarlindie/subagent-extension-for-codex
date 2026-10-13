@@ -16,7 +16,7 @@ function fixture() {
   const store = new Store(":memory:");
 
   const task: Task = {
-    ...startSchema.parse({ description: "Activity" }),
+    ...startSchema.parse({ repository: "/repo", description: "Activity" }),
     title: "Activity",
     id: "activity",
     owner: "alice",
