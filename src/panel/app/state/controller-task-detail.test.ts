@@ -23,14 +23,13 @@ test("selected activity loading clears independently from chat history", async (
   const activityRead = deferred<unknown>();
   const chatRead = deferred<unknown>();
 
-  transport.handler = (name) =>
-    name === "list_agent_tasks"
-      ? tasksRead.promise
-      : name === "get_user_agent_activity"
-        ? activityRead.promise
-        : name === "get_user_agent_chat"
-          ? chatRead.promise
-          : undefined;
+  transport.handler = (name) => {
+    if (name === "list_agent_tasks") return tasksRead.promise;
+    if (name === "get_user_agent_activity") return activityRead.promise;
+    if (name === "get_user_agent_chat") return chatRead.promise;
+
+    return undefined;
+  };
 
   assert.equal(controller.getSnapshot().taskListLoading, true);
   const starting = controller.start();
@@ -68,12 +67,12 @@ test("selected chat history becomes available while activity is still loading", 
   const activityRead = deferred<unknown>();
   const chatRead = deferred<unknown>();
 
-  transport.handler = (name) =>
-    name === "get_user_agent_activity"
-      ? activityRead.promise
-      : name === "get_user_agent_chat"
-        ? chatRead.promise
-        : undefined;
+  transport.handler = (name) => {
+    if (name === "get_user_agent_activity") return activityRead.promise;
+    if (name === "get_user_agent_chat") return chatRead.promise;
+
+    return undefined;
+  };
 
   const starting = controller.start();
   await flush();
@@ -96,16 +95,16 @@ test("delayed detail from a previous selection cannot replace current events", a
   await controller.start();
   const gate = deferred<unknown>();
 
-  transport.handler = (name, args) =>
-    name === "get_user_agent_activity"
-      ? args.task_id === "a"
-        ? gate.promise
-        : {
-            events: [
-              { id: 2, task_id: "b", type: "log", timestamp: "", data: {} },
-            ],
-          }
-      : undefined;
+  transport.handler = (name, args) => {
+    if (name === "get_user_agent_activity" && args.task_id === "a")
+      return gate.promise;
+    if (name === "get_user_agent_activity")
+      return {
+        events: [{ id: 2, task_id: "b", type: "log", timestamp: "", data: {} }],
+      };
+
+    return undefined;
+  };
 
   const first = controller.select("a");
   await controller.select("b");
@@ -197,12 +196,14 @@ test("View activity scrolls to a turn in the window and reads one outside it", a
     add("task.completed");
   }
 
-  transport.handler = (name, args) =>
-    name === "get_user_agent_activity"
-      ? windowActivity(events, Number(args.after))
-      : name === "get_user_agent_turn_activity"
-        ? windowTurnActivity(events, Number(args.turn))
-        : undefined;
+  transport.handler = (name, args) => {
+    if (name === "get_user_agent_activity")
+      return windowActivity(events, Number(args.after));
+    if (name === "get_user_agent_turn_activity")
+      return windowTurnActivity(events, Number(args.turn));
+
+    return undefined;
+  };
 
   await controller.select("a");
   await controller.viewTurnActivity(2);

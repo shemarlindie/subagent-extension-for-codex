@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type DragEvent, useState } from "react";
 
 import {
   useController,
@@ -14,6 +14,18 @@ type MessageQueueProps = { task: Task };
 
 /** The queued message being dragged and the insertion point it's over. */
 type QueueDrag = { id: string; over?: number };
+
+/** Where a dragged message would land relative to the row at `index`. */
+function dropEdge(
+  over: number | undefined,
+  index: number,
+  count: number,
+): "before" | "after" | undefined {
+  if (over === index) return "before";
+  if (over === index + 1 && index === count - 1) return "after";
+
+  return undefined;
+}
 
 /**
  * Messages not sent yet, above the composer: steers the running turn takes
@@ -51,6 +63,29 @@ export function MessageQueue({ task }: MessageQueueProps) {
 
     setDrag(undefined);
     if (from >= 0 && to !== from) void move(drag.id, to);
+  };
+
+  const moveRow = (messageId: string, index: number, offset: number) => {
+    const to = index + offset;
+
+    return to >= first && to < queue.length
+      ? move(messageId, to)
+      : Promise.resolve(false);
+  };
+
+  const dragOverRow = (index: number, after: boolean) => {
+    const over = Math.max(index + (after ? 1 : 0), first);
+
+    if (drag && drag.over !== over) setDrag({ ...drag, over });
+  };
+
+  const dragOverQueue = (event: DragEvent<HTMLUListElement>) => {
+    if (drag) event.preventDefault();
+  };
+
+  const dropOnQueue = (event: DragEvent<HTMLUListElement>) => {
+    event.preventDefault();
+    drop();
   };
 
   return (
@@ -117,16 +152,7 @@ export function MessageQueue({ task }: MessageQueueProps) {
                 </span>
               )}
             </div>
-            <ul
-              ref={queueList}
-              onDragOver={(event) => {
-                if (drag) event.preventDefault();
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                drop();
-              }}
-            >
+            <ul ref={queueList} onDragOver={dragOverQueue} onDrop={dropOnQueue}>
               {queue.map((message) => {
                 const key = message.id,
                   index = positions.get(key) ?? -1;
@@ -140,28 +166,10 @@ export function MessageQueue({ task }: MessageQueueProps) {
                       reorderable={reorderable}
                       movable={reorderable && !message.recorded}
                       dragging={drag?.id === key}
-                      dropAt={
-                        drag?.over === index
-                          ? "before"
-                          : drag?.over === index + 1 &&
-                              index === queue.length - 1
-                            ? "after"
-                            : undefined
-                      }
-                      onMove={(offset) => {
-                        const to = index + offset;
-
-                        return to >= first && to < queue.length
-                          ? move(key, to)
-                          : Promise.resolve(false);
-                      }}
+                      dropAt={dropEdge(drag?.over, index, queue.length)}
+                      onMove={(offset) => moveRow(key, index, offset)}
                       onDragStart={() => setDrag({ id: key })}
-                      onDragOver={(after) => {
-                        const over = Math.max(index + (after ? 1 : 0), first);
-
-                        if (drag && drag.over !== over)
-                          setDrag({ ...drag, over });
-                      }}
+                      onDragOver={(after) => dragOverRow(index, after)}
                       onDragEnd={() => setDrag(undefined)}
                     />
                   </li>

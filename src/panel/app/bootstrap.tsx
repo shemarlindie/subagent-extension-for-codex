@@ -5,10 +5,17 @@ import { ConsoleTransport } from "../transports/console";
 import { HostTransport } from "../transports/host";
 import { traceSize } from "../transports/size-trace";
 import { AppShell } from "./app-shell";
-import { detectEnvironment } from "./environment";
+import { detectEnvironment, type Environment } from "./environment";
 import { Controller } from "./state/controller";
 import { ControllerContext } from "./state/controller-context";
 import { browserUiState, embeddedDevHostUiState } from "./view-state";
+
+function viewStateFor(environment: Environment) {
+  if (environment.kind === "http") return browserUiState();
+  if (environment.kind === "host") return embeddedDevHostUiState();
+
+  return undefined;
+}
 
 export function mount() {
   const environment = detectEnvironment();
@@ -29,12 +36,7 @@ export function mount() {
       ? new ConsoleTransport(environment.origin)
       : new HostTransport();
 
-  const viewState =
-    environment.kind === "http"
-      ? browserUiState()
-      : environment.kind === "host"
-        ? embeddedDevHostUiState()
-        : undefined;
+  const viewState = viewStateFor(environment);
 
   const controller = new Controller(transport, undefined, viewState);
 

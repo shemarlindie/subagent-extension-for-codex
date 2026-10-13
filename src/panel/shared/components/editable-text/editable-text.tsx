@@ -168,27 +168,36 @@ export function EditableText({
     },
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLSpanElement>) => {
+    // Enter and Escape belong to the IME until composition finishes.
+    if (event.nativeEvent.isComposing) return;
+
+    if (editing && event.key === "Escape" && !saving.current) {
+      event.preventDefault();
+      control.current?.blur();
+      finish(false);
+    }
+
+    if (event.key === "Enter" && event.target === control.current) {
+      event.preventDefault();
+      void save();
+    }
+  };
+
+  const startEditing = () => {
+    selection.current = undefined;
+    setDraft(value);
+    setError("");
+    setEditing(true);
+  };
+
   return (
     <span
       ref={root}
       className="editable-text"
       data-editing={editing || undefined}
       data-multiline={layout.multiline || undefined}
-      onKeyDown={(event) => {
-        // Enter and Escape belong to the IME until composition finishes.
-        if (event.nativeEvent.isComposing) return;
-
-        if (editing && event.key === "Escape" && !saving.current) {
-          event.preventDefault();
-          control.current?.blur();
-          finish(false);
-        }
-
-        if (event.key === "Enter" && event.target === control.current) {
-          event.preventDefault();
-          void save();
-        }
-      }}
+      onKeyDown={handleKeyDown}
     >
       <span
         ref={measure}
@@ -217,12 +226,7 @@ export function EditableText({
           disabled={disabled}
           title={value}
           aria-label={`Edit ${label.toLowerCase()}: ${value}`}
-          onClick={() => {
-            selection.current = undefined;
-            setDraft(value);
-            setError("");
-            setEditing(true);
-          }}
+          onClick={startEditing}
         >
           <span className="editable-text-label">{value}</span>
         </button>

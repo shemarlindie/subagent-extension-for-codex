@@ -69,6 +69,13 @@ type CommandLifecycle = {
 /** How long an interrupt may take before the process is stopped instead. */
 const INTERRUPT_GRACE_MS = 10_000;
 
+/** The reason shown when a permission prompt is denied without a message. */
+function defaultDenialMessage(tool: string) {
+  if (tool === "Bash") return "Command denied";
+
+  return writeTools.includes(tool) ? "Edit denied" : "Tool call denied";
+}
+
 export class ClaudeAgentProvider implements Provider {
   id = "claude";
   taskPolicy = claudeTaskPolicy;
@@ -238,18 +245,21 @@ export class ClaudeAgentProvider implements Provider {
       policy.path_guard && pathTools.includes(tool);
 
     // Restricted workers retain parent reporting alongside permitted task tools.
-    const restrictedDenial = (tool: string) =>
-      !restricted ||
-      tool === PARENT_TOOL ||
-      tool === "AskUserQuestion" ||
-      tool === "Skill" ||
-      readTools.includes(tool)
+    const restrictedDenial = (tool: string) => {
+      if (
+        !restricted ||
+        tool === PARENT_TOOL ||
+        tool === "AskUserQuestion" ||
+        tool === "Skill" ||
+        readTools.includes(tool)
+      )
+        return undefined;
+      if (readOnly) return "Read-only worker profile";
+
+      return approvalTool(tool) || writeTools.includes(tool)
         ? undefined
-        : readOnly
-          ? "Read-only worker profile"
-          : approvalTool(tool) || writeTools.includes(tool)
-            ? undefined
-            : "Tool not permitted";
+        : "Tool not permitted";
+    };
 
     const sandbox =
       policy.sandbox === "user_config"
@@ -371,13 +381,7 @@ export class ClaudeAgentProvider implements Provider {
           ? { behavior: "allow", updatedInput: input }
           : {
               behavior: "deny",
-              message:
-                answer.message ??
-                (tool === "Bash"
-                  ? "Command denied"
-                  : writeTools.includes(tool)
-                    ? "Edit denied"
-                    : "Tool call denied"),
+              message: answer.message ?? defaultDenialMessage(tool),
             };
       },
     };

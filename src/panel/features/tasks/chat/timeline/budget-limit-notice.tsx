@@ -23,12 +23,8 @@ export function BudgetLimitNotice({
   if (spent.cost) fields.push("cost");
   if (spent.runtime) fields.push("runtime");
 
-  const title =
-    spent.cost && spent.runtime
-      ? "Budget limits reached"
-      : spent.cost
-        ? "Cost limit reached"
-        : "Runtime limit reached";
+  const title = limitTitle(spent);
+  const detail = limitDetail(spent);
 
   return (
     <Notice tone="warning" className="chat-budget-notice">
@@ -56,15 +52,7 @@ export function BudgetLimitNotice({
             </span>
           )}
         </div>
-        <div className="chat-budget-notice-detail">
-          {spent.cost && spent.runtime
-            ? "Apply higher cost and runtime limits to continue."
-            : spent.cost
-              ? "Apply a higher cost limit to continue."
-              : spent.runtime
-                ? "Apply a higher runtime limit to continue."
-                : null}
-        </div>
+        <div className="chat-budget-notice-detail">{detail}</div>
         {fields.length > 0 && (
           <BudgetRaiseFields
             key={taskId}
@@ -78,4 +66,20 @@ export function BudgetLimitNotice({
       </div>
     </Notice>
   );
+}
+
+function limitTitle(spent: SpentBudget) {
+  if (spent.cost && spent.runtime) return "Budget limits reached";
+  if (spent.cost) return "Cost limit reached";
+
+  return "Runtime limit reached";
+}
+
+function limitDetail(spent: SpentBudget) {
+  if (spent.cost && spent.runtime)
+    return "Apply higher cost and runtime limits to continue.";
+  if (spent.cost) return "Apply a higher cost limit to continue.";
+  if (spent.runtime) return "Apply a higher runtime limit to continue.";
+
+  return null;
 }

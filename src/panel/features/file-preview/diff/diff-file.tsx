@@ -1,9 +1,16 @@
-import { type ReactNode, useDeferredValue, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  type SyntheticEvent,
+  useDeferredValue,
+  useMemo,
+  useState,
+} from "react";
 
 import { LazyBlock } from "../../../shared/components/lazy-block/lazy-block";
 import { chunks } from "../../../shared/utils/chunks";
 import {
   diffPath,
+  type DiffRow,
   diffRows,
   type ParsedDiffFile,
   pathLanguage,
@@ -16,6 +23,13 @@ import { DiffStat } from "./diff-stat";
 const BLOCK_ROWS = 200;
 /** A diff row's height before it is measured: 11px text at 1.6 line height. */
 const ROW_HEIGHT = 17.6;
+
+/** The sign shown before each line of a diff. */
+const DIFF_SIGNS: Record<"add" | "del" | "normal", string> = {
+  add: "+",
+  del: "−",
+  normal: " ",
+};
 
 type DiffFileProps = {
   file: ParsedDiffFile;
@@ -53,24 +67,26 @@ export function DiffFile({
       !file.new &&
       !file.deleted;
 
+  function handleToggle(event: SyntheticEvent<HTMLDetailsElement>) {
+    const details = event.currentTarget;
+
+    // A file that renders open also fires toggle; only report a change.
+    if (details.open !== open) {
+      setOpen(details.open);
+      onOpenChange?.(details.open);
+    }
+
+    // Collapsing from a header stuck at the top would leave the file above
+    // the view; bring it back.
+    if (!details.open) details.scrollIntoView({ block: "nearest" });
+  }
+
   return (
     <details
       {...data}
       className="diff-file"
       open={open}
-      onToggle={(event) => {
-        const details = event.currentTarget;
-
-        // A file that renders open also fires toggle; only report a change.
-        if (details.open !== open) {
-          setOpen(details.open);
-          onOpenChange?.(details.open);
-        }
-
-        // Collapsing from a header stuck at the top would leave the file above
-        // the view; bring it back.
-        if (!details.open) details.scrollIntoView({ block: "nearest" });
-      }}
+      onToggle={handleToggle}
     >
       <summary>
         <span className="diff-path">
@@ -122,36 +138,45 @@ function DiffRows({ file, language, emptyNote }: DiffRowsProps) {
           eager={blockIndex === 0}
           estimate={rows.length * ROW_HEIGHT}
         >
-          {rows.map((row, index) =>
-            row.kind === "hunk" ? (
-              <div className="diff-hunk" key={index}>
-                {row.content}
-              </div>
-            ) : row.kind === "note" ? (
-              <div className="diff-note" key={index}>
-                {row.content}
-              </div>
-            ) : (
-              <div className={`diff-row ${row.type}`} key={index}>
-                <span className="line-number" aria-hidden>
-                  {row.oldLine ?? ""}
-                </span>
-                <span className="line-number" aria-hidden>
-                  {row.newLine ?? ""}
-                </span>
-                <span className="diff-sign" aria-hidden>
-                  {row.type === "add" ? "+" : row.type === "del" ? "−" : " "}
-                </span>
-                <code
-                  dangerouslySetInnerHTML={{
-                    __html: highlightLine(row.text, language) || " ",
-                  }}
-                />
-              </div>
-            ),
-          )}
+          {rows.map((row, index) => renderDiffRow(row, index, language))}
         </LazyBlock>
       ))}
+    </div>
+  );
+}
+
+/** A hunk header, a note, or a line of code, keyed by its position in the file. */
+function renderDiffRow(row: DiffRow, index: number, language?: string) {
+  if (row.kind === "hunk")
+    return (
+      <div className="diff-hunk" key={index}>
+        {row.content}
+      </div>
+    );
+
+  if (row.kind === "note")
+    return (
+      <div className="diff-note" key={index}>
+        {row.content}
+      </div>
+    );
+
+  return (
+    <div className={`diff-row ${row.type}`} key={index}>
+      <span className="line-number" aria-hidden>
+        {row.oldLine ?? ""}
+      </span>
+      <span className="line-number" aria-hidden>
+        {row.newLine ?? ""}
+      </span>
+      <span className="diff-sign" aria-hidden>
+        {DIFF_SIGNS[row.type]}
+      </span>
+      <code
+        dangerouslySetInnerHTML={{
+          __html: highlightLine(row.text, language) || " ",
+        }}
+      />
     </div>
   );
 }

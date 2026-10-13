@@ -195,6 +195,26 @@ export const settingsUpdateSchema = z.strictObject({
 
 export type SettingsValues = z.infer<typeof valuesSchema>;
 
+/**
+ * Resolves a budget limit. An explicit toggle turns it on at the amount or
+ * off. Without a toggle, a sent field replaces the saved value, and null on
+ * either side turns the limit off.
+ */
+function budgetLimit(
+  enabled: boolean | undefined,
+  amount: number,
+  field: number | null | undefined,
+  saved: number | null | undefined,
+) {
+  if (enabled === undefined) {
+    if (field === undefined) return saved;
+
+    return field === null || saved === null ? null : field;
+  }
+
+  return enabled ? amount : null;
+}
+
 export class Settings {
   private providers: () => string[];
   constructor(
@@ -388,16 +408,12 @@ export class Settings {
       previous.cost_budget_amount ??
       5;
 
-    const max_cost_usd =
-      use_cost_budget === undefined
-        ? fields.max_cost_usd === undefined
-          ? previous.max_cost_usd
-          : fields.max_cost_usd === null || previous.max_cost_usd === null
-            ? null
-            : fields.max_cost_usd
-        : use_cost_budget
-          ? amount
-          : null;
+    const max_cost_usd = budgetLimit(
+      use_cost_budget,
+      amount,
+      fields.max_cost_usd,
+      previous.max_cost_usd,
+    );
 
     const runtimeAmountValue =
       fields.max_runtime_minutes ??
@@ -405,17 +421,12 @@ export class Settings {
       previous.runtime_budget_amount ??
       20;
 
-    const max_runtime_minutes =
-      use_runtime_budget === undefined
-        ? fields.max_runtime_minutes === undefined
-          ? previous.max_runtime_minutes
-          : fields.max_runtime_minutes === null ||
-              previous.max_runtime_minutes === null
-            ? null
-            : fields.max_runtime_minutes
-        : use_runtime_budget
-          ? runtimeAmountValue
-          : null;
+    const max_runtime_minutes = budgetLimit(
+      use_runtime_budget,
+      runtimeAmountValue,
+      fields.max_runtime_minutes,
+      previous.max_runtime_minutes,
+    );
 
     const values = persistedValuesSchema.parse({
       ...previous,

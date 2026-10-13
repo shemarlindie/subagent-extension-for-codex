@@ -19,6 +19,13 @@ type HandoffFormProps = {
   target?: HandoffTarget;
 };
 
+function footerLabel(canSend: boolean, canCopy: boolean) {
+  if (canSend) return "Send to conversation";
+  if (canCopy) return "Copy message";
+
+  return "Done";
+}
+
 export function HandoffForm({ task, target }: HandoffFormProps) {
   const controller = useController(),
     state = useSnapshot(),
@@ -53,12 +60,7 @@ export function HandoffForm({ task, target }: HandoffFormProps) {
           {...register("message", { required: true })}
         />
       </Field>
-      <FormFooter
-        dismissLabel="Close"
-        label={
-          canSend ? "Send to conversation" : canCopy ? "Copy message" : "Done"
-        }
-      />
+      <FormFooter dismissLabel="Close" label={footerLabel(canSend, canCopy)} />
     </form>
   );
 }

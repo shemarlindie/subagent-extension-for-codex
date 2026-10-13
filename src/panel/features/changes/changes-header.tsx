@@ -46,6 +46,7 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
     [viewed] = useViewedFiles(task.id),
     entries = data && !data.state ? changedFileEntries(data) : [],
     viewedCount = entries.filter((entry) => isViewed(viewed, entry)).length,
+    loadingNote = data ? "Refreshing changes…" : "Reading changes…",
     // Preview all picks up where the reader left off.
     resumeAt = firstUnviewed(viewed, entries);
 
@@ -83,7 +84,7 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
             </span>
           )}
           <span className="changes-status" role="status" data-initial={!data}>
-            {loading ? (data ? "Refreshing changes…" : "Reading changes…") : ""}
+            {loading ? loadingNote : ""}
           </span>
         </div>
         {resumeAt && (

@@ -32,6 +32,7 @@ export default defineConfig(
       ],
       // Best-effort cleanup and probing deliberately ignore failures.
       "no-empty": ["error", { allowEmptyCatch: true }],
+      "no-nested-ternary": "error",
     },
   },
   {
@@ -102,6 +103,26 @@ export default defineConfig(
     rules: {
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "error",
+    },
+  },
+  {
+    // One-expression handlers read as part of the markup; anything longer is
+    // logic that belongs in a named function. Empty no-ops and one-expression
+    // blocks, such as a ref callback's assignment, stay inline.
+    files: ["src/panel/**/*.tsx", "dev/panel/**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...[
+          "JSXAttribute > JSXExpressionContainer > :function",
+          // Also when chosen by a condition, as in `cond ? () => { … } : undefined`.
+          "JSXAttribute > JSXExpressionContainer > :matches(ConditionalExpression, LogicalExpression) > :function",
+        ].map((handler) => ({
+          selector: `${handler} > BlockStatement:not([body.length=0]):not([body.length=1][body.0.type="ExpressionStatement"])`,
+          message:
+            "Move multi-statement handlers out of JSX into a named function.",
+        })),
+      ],
     },
   },
   {

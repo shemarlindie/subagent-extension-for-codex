@@ -37,18 +37,20 @@ const exists = (path: string) =>
     () => false,
   );
 
+/** A worktree task's base commit, or a current_repo task's start snapshot. */
+function taskBase(t: Task) {
+  if (t.workspace_strategy === "worktree") return t.branch && t.base_commit;
+
+  return t.start_tree;
+}
+
 /**
  * What a scope's changes are measured from: a worktree's base commit or a
  * current_repo task's start snapshot for the whole task, the turn snapshot
  * for the latest turn.
  */
 function changesBase(t: Task, scope: ChangeScope) {
-  const base =
-    scope === "turn"
-      ? t.turn_start_tree
-      : t.workspace_strategy === "worktree"
-        ? t.branch && t.base_commit
-        : t.start_tree;
+  const base = scope === "turn" ? t.turn_start_tree : taskBase(t);
 
   // Without its starting snapshot, there is nothing to compare against.
   if (!base)

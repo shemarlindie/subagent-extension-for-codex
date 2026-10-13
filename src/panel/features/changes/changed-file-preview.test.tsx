@@ -66,21 +66,22 @@ function setup(
   vi.spyOn(controller, "tool").mockImplementation((async (
     _name: string,
     args: { path: string },
-  ) =>
-    args.path === "b.ts"
-      ? new Promise(() => {})
-      : args.path === "gone.ts"
-        ? ({
-            path: args.path,
-            state: "deleted",
-            size: 0,
-          } satisfies ChangedFileContent)
-        : ({
-            path: args.path,
-            state: "present",
-            size: 0,
-            content: `${args.path} content`,
-          } satisfies ChangedFileContent)) as typeof controller.tool);
+  ) => {
+    if (args.path === "b.ts") return new Promise(() => {});
+    if (args.path === "gone.ts")
+      return {
+        path: args.path,
+        state: "deleted",
+        size: 0,
+      } satisfies ChangedFileContent;
+
+    return {
+      path: args.path,
+      state: "present",
+      size: 0,
+      content: `${args.path} content`,
+    } satisfies ChangedFileContent;
+  }) as typeof controller.tool);
 
   const show = vi
     .spyOn(controller, "showChangedFile")

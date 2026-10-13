@@ -109,6 +109,13 @@ const FORMAT_NAMES: Record<FileFormat, string> = {
   text: "Text",
 };
 
+/** The highlight.js language for formats that have a fixed one, rather than the path's. */
+const FORMAT_LANGUAGES: Partial<Record<FileFormat, string>> = {
+  json: "json",
+  diff: "diff",
+  markdown: "markdown",
+};
+
 const VIEW_LABELS: Record<FileView, string> = {
   preview: "Preview",
   diff: "Changes",
@@ -191,13 +198,21 @@ export function imageSource(file: PreviewFile) {
     : `data:${mime};charset=utf-8,${encodeURIComponent(file.content)}`;
 }
 
+/** The number of `=` characters that pad base64 text. */
+function base64Padding(text: string) {
+  if (text.endsWith("==")) return 2;
+  if (text.endsWith("=")) return 1;
+
+  return 0;
+}
+
 /** The file's size in bytes: decoded for base64 images, UTF-8 otherwise. */
 export function fileBytes(file: PreviewFile) {
   const content = file.content;
 
   if (isBase64Image(file)) {
     const trimmed = content.trim();
-    const padding = trimmed.endsWith("==") ? 2 : trimmed.endsWith("=") ? 1 : 0;
+    const padding = base64Padding(trimmed);
 
     return Math.floor((trimmed.length * 3) / 4) - padding;
   }
@@ -357,6 +372,22 @@ function withoutCr(text: string) {
   return text.endsWith("\r") ? text.slice(0, -1) : text;
 }
 
+type DiffChange = ParsedDiffFile["chunks"][number]["changes"][number];
+
+/** The line number on the old side of a change; only unchanged and removed lines have one. */
+function oldLineOf(change: DiffChange) {
+  if (change.type === "normal") return change.ln1;
+
+  return change.type === "del" ? change.ln : undefined;
+}
+
+/** The line number on the new side of a change; only unchanged and added lines have one. */
+function newLineOf(change: DiffChange) {
+  if (change.type === "normal") return change.ln2;
+
+  return change.type === "add" ? change.ln : undefined;
+}
+
 /** A diff file's hunk headers and lines, in order, with line numbers. */
 export function diffRows(file: ParsedDiffFile): DiffRow[] {
   return file.chunks.flatMap((chunk): DiffRow[] => [
@@ -372,18 +403,8 @@ export function diffRows(file: ParsedDiffFile): DiffRow[] {
       return {
         kind: "line",
         type: change.type,
-        oldLine:
-          change.type === "normal"
-            ? change.ln1
-            : change.type === "del"
-              ? change.ln
-              : undefined,
-        newLine:
-          change.type === "normal"
-            ? change.ln2
-            : change.type === "add"
-              ? change.ln
-              : undefined,
+        oldLine: oldLineOf(change),
+        newLine: newLineOf(change),
         text: withoutCr(change.content.slice(1)),
       };
     }),
@@ -427,13 +448,6 @@ export function fileSource(file: PreviewFile) {
       format === "json" && !file.content.slice(0, 2000).includes("\n")
         ? prettyJson(file.content)
         : file.content,
-    language:
-      format === "json"
-        ? "json"
-        : format === "diff"
-          ? "diff"
-          : format === "markdown"
-            ? "markdown"
-            : pathLanguage(file.path),
+    language: FORMAT_LANGUAGES[format] ?? pathLanguage(file.path),
   };
 }

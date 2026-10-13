@@ -152,6 +152,10 @@ function FieldErrorCard({
   pending: boolean;
   onPreview: () => void;
 }) {
+  let previewLabel = "Preview";
+  if (pending) previewLabel = "Switching…";
+  else if (invalid) previewLabel = "Hide preview";
+
   return (
     <section className="demo-card" aria-labelledby={`${mode.id}-title`}>
       <div className="demo-card-heading">
@@ -169,7 +173,7 @@ function FieldErrorCard({
           disabled={pending}
           onClick={onPreview}
         >
-          {pending ? "Switching…" : invalid ? "Hide preview" : "Preview"}
+          {previewLabel}
         </button>
       </div>
       <p className="demo-description">{mode.description}</p>

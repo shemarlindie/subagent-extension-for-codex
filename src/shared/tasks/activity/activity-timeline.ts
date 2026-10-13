@@ -98,6 +98,12 @@ const eventTitles: Record<string, string> = {
   "task.message_removed": "Queued message removed",
 };
 
+/** States of task outcome events; other task events are informational. */
+const taskEventStates: Record<string, ActivityState> = {
+  "task.failed": "failed",
+  "task.completed": "completed",
+};
+
 const thinking = new Set([
   "thinking_tokens",
   "thinking.tokens",
@@ -203,20 +209,23 @@ function toolTitle(events: Event[]) {
   };
 }
 
+/** A tool result's text: its string content, or the text blocks of its content array. */
+function resultText(content: unknown) {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return undefined;
+
+  return content
+    .filter((block) => object(block).type === "text")
+    .map((block) => string(object(block).text))
+    .filter(Boolean)
+    .join("\n");
+}
+
 // Prefer actionable error prose over tool paths and routine operation descriptions.
 function failureSummary(event: Event) {
   const d = event.data;
 
-  const textOutput =
-    typeof d.content === "string"
-      ? d.content
-      : Array.isArray(d.content)
-        ? d.content
-            .filter((block) => object(block).type === "text")
-            .map((block) => string(object(block).text))
-            .filter(Boolean)
-            .join("\n")
-        : undefined;
+  const textOutput = resultText(d.content);
 
   return [
     d.error,
@@ -229,6 +238,23 @@ function failureSummary(event: Event) {
     (value): value is string =>
       typeof value === "string" && value.trim().length > 0,
   );
+}
+
+/** Title of a service event row: a failure's title, else its presentation's, else its name. */
+function eventRowTitle(
+  e: Event,
+  key: string,
+  presentationTitle: string | undefined,
+) {
+  if (!activityFailed(e))
+    return (
+      presentationTitle ??
+      eventTitles[key] ??
+      (thinkingSignal(e) ? "Thinking…" : sentence(key))
+    );
+  if (key === "status") return statusTitle(e);
+
+  return sentence(key === "agent.completed" ? "Agent failed" : key);
 }
 
 /** Presentation only: every event remains in exactly one inspectable group. */
@@ -288,17 +314,14 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     const presentation = activityPresentation(e);
     const operation = presentation.operation;
 
-    const toolId = e.type.startsWith("tool.")
-      ? string(d.id)
-      : operation?.kind === "tool"
-        ? operation.id.replace(/^tool:/, "")
-        : undefined;
+    let toolId: string | undefined;
+    if (e.type.startsWith("tool.")) toolId = string(d.id);
+    else if (operation?.kind === "tool")
+      toolId = operation.id.replace(/^tool:/, "");
 
-    const operationId = toolId
-      ? `tool:${e.task_id}:${toolId}`
-      : operation
-        ? `${e.task_id}:${operation.id}`
-        : undefined;
+    let operationId: string | undefined;
+    if (toolId) operationId = `tool:${e.task_id}:${toolId}`;
+    else if (operation) operationId = `${e.task_id}:${operation.id}`;
 
     if (operationId) {
       let group = operations.get(operationId);
@@ -444,13 +467,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     const group = add(
       e,
       "event",
-      activityFailed(e)
-        ? key === "status"
-          ? statusTitle(e)
-          : sentence(key === "agent.completed" ? "Agent failed" : key)
-        : (presentation.title ??
-            eventTitles[key] ??
-            (thinkingSignal(e) ? "Thinking…" : sentence(key))),
+      eventRowTitle(e, key, presentation.title),
       activityFailed(e) ? "failed" : "info",
     );
 
@@ -591,12 +608,7 @@ export function currentActivityStatus(
     if (kind.startsWith("task."))
       return {
         text: sentence(kind.slice(5)),
-        state:
-          kind === "task.failed"
-            ? "failed"
-            : kind === "task.completed"
-              ? "completed"
-              : "info",
+        state: taskEventStates[kind] ?? "info",
       };
 
     const presentation = activityPresentation(latest);

@@ -279,6 +279,22 @@ export function fixtureActivityPayload(
   return presentFixtureActivity({ ...data, raw_response: rawResponse });
 }
 
+function fixtureContentDelta(
+  deltaType: string,
+  text: string,
+  fields: Record<string, unknown>,
+) {
+  if (deltaType === "thinking")
+    return { type: "thinking_delta", thinking: text };
+  if (deltaType === "input_json")
+    return {
+      type: "input_json_delta",
+      partial_json: field(fields, "partial_json") ?? '{"path":"fixture"}',
+    };
+
+  return { type: "text_delta", text };
+}
+
 export function fixtureStreamPayload(
   frame: FixtureStreamFrame,
   fields: Record<string, unknown>,
@@ -316,16 +332,7 @@ export function fixtureStreamPayload(
         : {}),
     };
   if (frame === "content_block_delta")
-    event.delta =
-      deltaType === "thinking"
-        ? { type: "thinking_delta", thinking: text }
-        : deltaType === "input_json"
-          ? {
-              type: "input_json_delta",
-              partial_json:
-                field(fields, "partial_json") ?? '{"path":"fixture"}',
-            }
-          : { type: "text_delta", text };
+    event.delta = fixtureContentDelta(deltaType, text, fields);
   if (frame === "message_delta")
     event.delta = {
       stop_reason: field(fields, "stop_reason") ?? "end_turn",

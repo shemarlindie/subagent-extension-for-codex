@@ -65,12 +65,10 @@ function BudgetRaiseField({
     ? value.max_cost_usd !== null
     : value.max_runtime_minutes !== null;
 
+  const currentLimitText = current === undefined ? "" : String(current);
+
   const limitTextFallback =
-    typeof candidate === "number"
-      ? String(candidate)
-      : current === undefined
-        ? ""
-        : String(current);
+    typeof candidate === "number" ? String(candidate) : currentLimitText;
 
   const [costLimit, setCostLimit] = useState(limitTextFallback);
   const [runtimeLimit, setRuntimeLimit] = useState(limitTextFallback);
@@ -112,12 +110,12 @@ function BudgetRaiseField({
     setApplyError(undefined);
     const parsedAmount = Number(limitText);
 
+    const fallbackAmount = checked ? current : null;
+
     const nextAmount =
       checked && Number.isFinite(parsedAmount) && parsedAmount > 0
         ? parsedAmount
-        : checked
-          ? current
-          : null;
+        : fallbackAmount;
 
     if (isCost) onChange({ ...value, max_cost_usd: nextAmount });
     else onChange({ ...value, max_runtime_minutes: nextAmount });

@@ -1,5 +1,12 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
+import {
+  Group,
+  type Layout,
+  type LayoutChangedMeta,
+  Panel,
+  Separator,
+  usePanelRef,
+} from "react-resizable-panels";
 
 const DEFAULT_WIDTH = 245;
 const MIN_RAIL_WIDTH = 220;
@@ -52,6 +59,26 @@ export function TaskLayout({ list, inspector }: TaskLayoutProps) {
     return () => media.removeEventListener("change", update);
   }, []);
 
+  function handleLayoutChanged(
+    layout: Layout,
+    { isUserInteraction }: LayoutChangedMeta,
+  ) {
+    const group = groupElementRef.current;
+    const separator = separatorElementRef.current;
+
+    if (!isUserInteraction || narrow || !group || !separator) return;
+
+    // The callback runs before panel styles commit; use the new layout.
+    const availableWidth = group.clientWidth - separator.offsetWidth;
+
+    saveWidth((availableWidth * layout["task-rail-panel"]) / 100);
+  }
+
+  function resetWidth() {
+    railRef.current?.resize(DEFAULT_WIDTH);
+    saveWidth(DEFAULT_WIDTH);
+  }
+
   return (
     <Group
       className="shell"
@@ -59,17 +86,7 @@ export function TaskLayout({ list, inspector }: TaskLayoutProps) {
       disabled={narrow}
       disableCursor
       resizeTargetMinimumSize={{ fine: 8, coarse: 24 }}
-      onLayoutChanged={(layout, { isUserInteraction }) => {
-        const group = groupElementRef.current;
-        const separator = separatorElementRef.current;
-
-        if (!isUserInteraction || narrow || !group || !separator) return;
-
-        // The callback runs before panel styles commit; use the new layout.
-        const availableWidth = group.clientWidth - separator.offsetWidth;
-
-        saveWidth((availableWidth * layout["task-rail-panel"]) / 100);
-      }}
+      onLayoutChanged={handleLayoutChanged}
     >
       <Panel
         id="task-rail-panel"
@@ -91,10 +108,7 @@ export function TaskLayout({ list, inspector }: TaskLayoutProps) {
         aria-label="Resize task list"
         title="Drag to resize task list; use arrow keys when focused"
         disableDoubleClick
-        onDoubleClick={() => {
-          railRef.current?.resize(DEFAULT_WIDTH);
-          saveWidth(DEFAULT_WIDTH);
-        }}
+        onDoubleClick={resetWidth}
       >
         <svg
           className="task-list-resizer-grip"

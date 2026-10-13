@@ -408,6 +408,10 @@ panel, shared modules, development tooling, tests, and Vite configs. `npm test` 
 `pretest` checks schema freshness, formatting, and linting, then builds. Fix
 formatting with `npm run format`. ESLint (`eslint.config.js`) checks TypeScript
 code quality and React hook rules; explicit `any` is allowed only in tests.
+It rejects nested ternaries, and in panel JSX it rejects inline handlers whose
+`{ … }` body holds more than one expression, or any other statement such as
+`if`; move those into a named function. Empty no-ops and one-expression bodies,
+such as `(element) => { ref.current = element; }`, stay inline.
 It also checks Markdown with `@eslint/markdown`'s recommended rules, such as
 invalid same-file heading fragments, code fences without a language and malformed
 tables. It does not check that links to other files exist or that their heading

@@ -1,6 +1,10 @@
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
-import { useEffect, useRef } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useRef,
+} from "react";
 
 import {
   useController,
@@ -52,6 +56,17 @@ export function TaskFilters() {
   const shown = (filter: Filter) =>
     filter === "all" || counts[filter] > 0 || filter === current;
 
+  const onSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Escape") return;
+    if (state.search) controller.setSearch("");
+    else event.currentTarget.blur();
+  };
+
+  const clearSearch = () => {
+    controller.setSearch("");
+    searchRef.current?.focus();
+  };
+
   // "/" jumps to search from anywhere outside a text field or dialog.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -97,11 +112,7 @@ export function TaskFilters() {
           aria-keyshortcuts="/"
           value={state.search}
           onChange={(event) => controller.setSearch(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== "Escape") return;
-            if (state.search) controller.setSearch("");
-            else event.currentTarget.blur();
-          }}
+          onKeyDown={onSearchKeyDown}
         />
         {/* The native clear button is hidden; this one also restores focus to the input. */}
         {state.search && (
@@ -109,10 +120,7 @@ export function TaskFilters() {
             variant="text"
             className="search-clear"
             aria-label="Clear search"
-            onClick={() => {
-              controller.setSearch("");
-              searchRef.current?.focus();
-            }}
+            onClick={clearSearch}
           >
             <Icon name="close" size={8} />
           </Button>

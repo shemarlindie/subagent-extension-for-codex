@@ -112,6 +112,13 @@ const loadingSections = buildSettingsSections({
   remembered: { max_cost_usd: 5, max_runtime_minutes: 20 },
 });
 
+function saveButtonText(busy: boolean, total: number) {
+  if (busy) return "Working…";
+  if (!total) return "Save";
+
+  return `Save ${total} ${total === 1 ? "change" : "changes"}`;
+}
+
 /** One settings form and section tabs for both loading and loaded data. */
 export function SettingsForm({
   dialog,
@@ -161,11 +168,7 @@ export function SettingsForm({
     showDiscard = !loading && discarding && total > 0;
 
   const saveButtonDisabled = state.busy || !settings || !total,
-    saveButtonLabel = state.busy
-      ? "Working…"
-      : total
-        ? `Save ${total} ${total === 1 ? "change" : "changes"}`
-        : "Save";
+    saveButtonLabel = saveButtonText(state.busy, total);
 
   useEffect(() => {
     onSaveActionChange?.({
@@ -380,6 +383,11 @@ export function SettingsForm({
     );
   }, showInvalid);
 
+  const discard = () => {
+    controller.guardDismiss(undefined);
+    controller.backFromSettings();
+  };
+
   return (
     <form
       ref={element}
@@ -401,14 +409,7 @@ export function SettingsForm({
             <Button variant="primary" onClick={() => setDiscarding(false)}>
               Keep editing
             </Button>
-            <Button
-              onClick={() => {
-                controller.guardDismiss(undefined);
-                controller.backFromSettings();
-              }}
-            >
-              Discard
-            </Button>
+            <Button onClick={discard}>Discard</Button>
           </Notice>
         </Collapsible.Panel>
       </Collapsible.Root>

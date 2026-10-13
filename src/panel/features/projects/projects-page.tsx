@@ -61,6 +61,21 @@ export function ProjectsPage() {
             {state.projects.map((project) => {
               const name = projectDisplayName(project);
 
+              const saveName = async (value: string) => {
+                controller.clearProjectError();
+
+                const saved = await controller.manageProject(
+                  project.repository,
+                  value,
+                );
+
+                if (!saved)
+                  throw new Error(
+                    controller.getSnapshot().formError ||
+                      "The project changed. Reopen its name to retry.",
+                  );
+              };
+
               return (
                 <li key={project.repository} className="managed-project">
                   <div className="managed-project-summary">
@@ -72,20 +87,7 @@ export function ProjectsPage() {
                             label="Project name"
                             maxLength={200}
                             disabled={disabled}
-                            onSave={async (value) => {
-                              controller.clearProjectError();
-
-                              const saved = await controller.manageProject(
-                                project.repository,
-                                value,
-                              );
-
-                              if (!saved)
-                                throw new Error(
-                                  controller.getSnapshot().formError ||
-                                    "The project changed. Reopen its name to retry.",
-                                );
-                            }}
+                            onSave={saveName}
                           />
                         </strong>
                         {project.kind === "parent" && (

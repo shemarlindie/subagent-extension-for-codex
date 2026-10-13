@@ -1,5 +1,11 @@
 import { Collapsible } from "@base-ui/react/collapsible";
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  type TransitionEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 
 import { Icon } from "../../../shared/components/icons/icons";
 import { MotionContent } from "../../../shared/components/motion/motion";
@@ -80,6 +86,22 @@ export function ActivityGroupCard({
       cancelReveal.current = animateScrollIntoView(headingRef.current);
   };
 
+  const handleDebugOpenChange = (open: boolean) => {
+    if (!open) cancelReveal.current?.();
+    setDebugOpen(open);
+  };
+
+  // Child transitions bubble here; only the panel's own height settling
+  // means it has finished opening.
+  const handlePanelTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
+    if (
+      debugOpen &&
+      event.target === event.currentTarget &&
+      event.propertyName === "height"
+    )
+      revealPanel();
+  };
+
   // Reduced motion skips the height transition, so the panel is full height at once.
   useEffect(() => {
     if (debugOpen && reducedMotion(panelRef.current)) revealPanel();
@@ -145,17 +167,18 @@ export function ActivityGroupCard({
       ? span.end - span.start
       : undefined;
 
-  const title =
+  let title = group.title;
+  if (
     group.events.some((event) => event.type === "task.completed") &&
     runtimeMs !== undefined
-      ? `Task completed after ${formatDuration(runtimeMs)}`
-      : thoughtMs !== undefined
-        ? thoughtMs >= 1000
-          ? `Thought for ${formatDuration(thoughtMs)}`
-          : "Thought"
-        : quietThinking
-          ? "Thinking"
-          : group.title;
+  )
+    title = `Task completed after ${formatDuration(runtimeMs)}`;
+  else if (thoughtMs !== undefined)
+    title =
+      thoughtMs >= 1000
+        ? `Thought for ${formatDuration(thoughtMs)}`
+        : "Thought";
+  else if (quietThinking) title = "Thinking";
 
   // A completed turn states its duration, tokens and cost without opening debug.
   const completion = group.events.find(
@@ -166,14 +189,10 @@ export function ActivityGroupCard({
     ? [turnStats(completion).join(" · ")].filter(Boolean)
     : rateLimitStats(group.events, preferences);
 
-  const badge =
-    group.state === "running"
-      ? "Running"
-      : group.state === "failed"
-        ? "Failed"
-        : group.state === "completed" && !conversational
-          ? "Done"
-          : undefined;
+  let badge: string | undefined;
+  if (group.state === "running") badge = "Running";
+  else if (group.state === "failed") badge = "Failed";
+  else if (group.state === "completed" && !conversational) badge = "Done";
 
   return (
     <Collapsible.Root
@@ -186,10 +205,7 @@ export function ActivityGroupCard({
         />
       }
       open={debugOpen}
-      onOpenChange={(open) => {
-        if (!open) cancelReveal.current?.();
-        setDebugOpen(open);
-      }}
+      onOpenChange={handleDebugOpenChange}
       data-activity-id={group.id}
       data-debug-open={debugOpen || undefined}
       className={`activity-group activity-${group.kind}${quietThinking ? " activity-thinking-only" : ""}${group.state === "failed" ? " activity-error" : ""}`}
@@ -281,16 +297,7 @@ export function ActivityGroupCard({
         ref={panelRef}
         id={debugId}
         className="activity-debug-panel collapse-panel"
-        onTransitionEnd={(event) => {
-          // Child transitions bubble here; only the panel's own height settling
-          // means it has finished opening.
-          if (
-            debugOpen &&
-            event.target === event.currentTarget &&
-            event.propertyName === "height"
-          )
-            revealPanel();
-        }}
+        onTransitionEnd={handlePanelTransitionEnd}
       >
         {debugMounted && (
           <div className="activity-debug-body">

@@ -210,6 +210,14 @@ function versionOutput(path: string, timeout: number) {
   });
 }
 
+/** Explains why `--version` could not run: a timeout, or the error it raised. */
+function unlaunchableReason(error: unknown, timeout: number) {
+  if ((error as { killed?: boolean }).killed)
+    return `\`--version\` did not finish within ${timeout / 1000} seconds`;
+
+  return error instanceof Error ? error.message : String(error);
+}
+
 /** Runs `--version` and checks the release against the supported range. */
 export async function validateClaudeCli(
   path: string,
@@ -220,11 +228,7 @@ export async function validateClaudeCli(
   try {
     output = await versionOutput(path, timeout);
   } catch (error) {
-    const reason = (error as { killed?: boolean }).killed
-      ? `\`--version\` did not finish within ${timeout / 1000} seconds`
-      : error instanceof Error
-        ? error.message
-        : String(error);
+    const reason = unlaunchableReason(error, timeout);
 
     return failure(
       "unlaunchable",

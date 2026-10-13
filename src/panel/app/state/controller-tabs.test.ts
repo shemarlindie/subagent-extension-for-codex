@@ -68,23 +68,25 @@ for (const tab of ["changes", "details"] as const)
     t.onTestFinished(() => controller.dispose());
     transport.tasks = [task("a"), task("b")];
 
-    transport.handler = (name, args) =>
-      name === "get_user_agent_changes"
-        ? {
-            scope: "task",
-            files: [],
-            additions: args.task_id === "a" ? 1 : 2,
-            deletions: 0,
-            diff: "",
-          }
-        : name === "get_user_agent_change_counts"
-          ? {
-              scope: "task",
-              files: 0,
-              additions: args.task_id === "a" ? 1 : 2,
-              deletions: 0,
-            }
-          : undefined;
+    transport.handler = (name, args) => {
+      if (name === "get_user_agent_changes")
+        return {
+          scope: "task",
+          files: [],
+          additions: args.task_id === "a" ? 1 : 2,
+          deletions: 0,
+          diff: "",
+        };
+      if (name === "get_user_agent_change_counts")
+        return {
+          scope: "task",
+          files: 0,
+          additions: args.task_id === "a" ? 1 : 2,
+          deletions: 0,
+        };
+
+      return undefined;
+    };
 
     await controller.start();
     await controller.select("a");
@@ -134,12 +136,13 @@ test("a host link opens the Changes tab, and a read for a replaced task is dropp
     diff: "",
   });
 
-  transport.handler = (name, args) =>
-    name === "get_user_agent_changes"
-      ? args.task_id === "a"
-        ? gate.promise
-        : changes("b")
-      : undefined;
+  transport.handler = (name, args) => {
+    if (name === "get_user_agent_changes" && args.task_id === "a")
+      return gate.promise;
+    if (name === "get_user_agent_changes") return changes("b");
+
+    return undefined;
+  };
 
   await controller.start();
 
@@ -232,12 +235,13 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
     diff: "",
   };
 
-  transport.handler = (name, args) =>
-    name === "get_user_agent_changes"
-      ? args.scope === "task"
-        ? gate.promise
-        : turn
-      : undefined;
+  transport.handler = (name, args) => {
+    if (name === "get_user_agent_changes" && args.scope === "task")
+      return gate.promise;
+    if (name === "get_user_agent_changes") return turn;
+
+    return undefined;
+  };
 
   const oldRead = controller.loadChanges("task");
   await controller.loadChanges("turn");

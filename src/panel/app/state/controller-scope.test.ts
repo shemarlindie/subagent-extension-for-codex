@@ -58,12 +58,13 @@ test("a project switch rejects an old list response and refreshes the current sc
   await controller.start();
   const gate = deferred<Task[]>();
 
-  transport.handler = (name, args) =>
-    name === "list_agent_tasks"
-      ? args.repository === "/repo/b"
-        ? [task("new", "/repo/b")]
-        : gate.promise
-      : undefined;
+  transport.handler = (name, args) => {
+    if (name === "list_agent_tasks" && args.repository === "/repo/b")
+      return [task("new", "/repo/b")];
+    if (name === "list_agent_tasks") return gate.promise;
+
+    return undefined;
+  };
 
   const oldRefresh = controller.refresh();
   await flush();
@@ -154,12 +155,14 @@ test("All chats preserves repository and discards a delayed conversation respons
   controller.setSearch("old search");
   const gate = deferred<Task[]>();
 
-  transport.handler = (name, args) =>
-    name === "list_agent_tasks"
-      ? args.conversation_id === "chat-a"
-        ? gate.promise
-        : [task("a", "/repo/a", "chat-a"), task("b", "/repo/a", "chat-b")]
-      : undefined;
+  transport.handler = (name, args) => {
+    if (name === "list_agent_tasks" && args.conversation_id === "chat-a")
+      return gate.promise;
+    if (name === "list_agent_tasks")
+      return [task("a", "/repo/a", "chat-a"), task("b", "/repo/a", "chat-b")];
+
+    return undefined;
+  };
 
   const oldRefresh = controller.refresh();
   await flush();

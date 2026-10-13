@@ -227,11 +227,10 @@ async function waitAndTakeSteers(
 ) {
   const duration = requestedWaitMs ?? (slow ? 480 : 80);
 
-  const steps = slow
-    ? 8
-    : requestedWaitMs !== undefined
-      ? Math.max(1, Math.min(80, Math.ceil(duration / 250)))
-      : 1;
+  let steps = 1;
+  if (slow) steps = 8;
+  else if (requestedWaitMs !== undefined)
+    steps = Math.max(1, Math.min(80, Math.ceil(duration / 250)));
 
   for (let step = 0; step < steps; step++) {
     await setTimeout(duration / steps, undefined, { signal: c.signal });

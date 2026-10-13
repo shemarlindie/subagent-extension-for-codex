@@ -40,29 +40,12 @@ export function ChatMessageView({
       data-chat-item={message.id}
       data-streaming={streaming || undefined}
       aria-busy={streaming || undefined}
-      aria-label={
-        message.from === "worker"
-          ? worker
-          : message.from === "parent"
-            ? "Parent agent"
-            : "You"
-      }
+      aria-label={messageLabel(message, worker)}
     >
       {message.from === "parent" && (
         <div className="chat-sender">Parent agent</div>
       )}
-      {message.from === "user" ? (
-        <p className="chat-bubble">{message.text}</p>
-      ) : message.from === "parent" ? (
-        // The parent agent writes Markdown briefs; what the user typed stays literal.
-        <div className="chat-bubble">
-          <MarkdownView content={message.text} />
-        </div>
-      ) : (
-        <div className="chat-worker-text">
-          <MarkdownView content={message.text} />
-        </div>
-      )}
+      {messageBody(message)}
       {outcome ? (
         <TurnOutcomeRow
           outcome={outcome}
@@ -73,5 +56,33 @@ export function ChatMessageView({
         askButton
       )}
     </article>
+  );
+}
+
+function messageLabel(message: ConversationMessage, worker: string) {
+  if (message.from === "worker") return worker;
+  if (message.from === "parent") return "Parent agent";
+
+  return "You";
+}
+
+function messageBody(message: ConversationMessage) {
+  if (message.from === "user") {
+    return <p className="chat-bubble">{message.text}</p>;
+  }
+
+  if (message.from === "parent") {
+    // The parent agent writes Markdown briefs; what the user typed stays literal.
+    return (
+      <div className="chat-bubble">
+        <MarkdownView content={message.text} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="chat-worker-text">
+      <MarkdownView content={message.text} />
+    </div>
   );
 }

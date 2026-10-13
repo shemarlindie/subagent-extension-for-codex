@@ -150,6 +150,15 @@ export const claudePolicySchema = z.object({
 
 export type ClaudePolicy = z.infer<typeof claudePolicySchema>;
 
+function resolveTools(
+  setting: ClaudeOverrides["claude_tools"],
+  readOnly: boolean,
+): ClaudePolicy["tools"] {
+  if (setting !== "profile") return setting;
+
+  return readOnly ? "restricted" : "all";
+}
+
 /** Settings choose each restriction; "profile" restricts read-only profiles only. */
 export function resolveClaudePolicy(
   overrides: ClaudeOverrides,
@@ -160,12 +169,7 @@ export function resolveClaudePolicy(
   return {
     sandbox: overrides.claude_sandbox,
     environment: overrides.claude_environment,
-    tools:
-      overrides.claude_tools === "profile"
-        ? readOnly
-          ? "restricted"
-          : "all"
-        : overrides.claude_tools,
+    tools: resolveTools(overrides.claude_tools, readOnly),
     path_guard:
       overrides.claude_path_guard === "profile"
         ? readOnly

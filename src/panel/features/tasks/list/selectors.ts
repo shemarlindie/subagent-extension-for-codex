@@ -24,12 +24,13 @@ export const terminal = (task: Task) =>
 export const idle = (task: Task) =>
   ["completed", "failed", "interrupted"].includes(task.status);
 
-export const statusLabel = (task: Task) =>
-  task.pending_input
-    ? "Needs input"
-    : task.waiting_reason === "waiting_for_dependency"
-      ? "Waiting on dependency"
-      : task.status[0].toUpperCase() + task.status.slice(1);
+export const statusLabel = (task: Task) => {
+  if (task.pending_input) return "Needs input";
+  if (task.waiting_reason === "waiting_for_dependency")
+    return "Waiting on dependency";
+
+  return task.status[0].toUpperCase() + task.status.slice(1);
+};
 
 export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 

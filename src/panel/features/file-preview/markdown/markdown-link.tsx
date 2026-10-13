@@ -61,20 +61,19 @@ export function MarkdownLink({
 
   const openLink = controller?.transport.openLink?.bind(controller.transport);
 
+  // Embedded hosts sandbox the panel, so the host opens the link.
+  const openInHost = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    controller!.run(() => openLink!(href!));
+  };
+
   return (
     <a
       {...rest}
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={
-        openLink &&
-        ((event) => {
-          // Embedded hosts sandbox the panel, so the host opens the link.
-          event.preventDefault();
-          controller!.run(() => openLink(href!));
-        })
-      }
+      onClick={openLink && openInHost}
     >
       {children}
     </a>

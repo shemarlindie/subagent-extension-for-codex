@@ -25,11 +25,8 @@ export function CopyButton({
   // A changed value must not inherit the previous value's checkmark.
   const [copiedText, setCopiedText] = useState<string>(),
     copied = copiedText === text,
-    feedbackLabel = copied
-      ? iconOnly
-        ? `${label} — copied`
-        : "Copied"
-      : label,
+    copiedLabel = iconOnly ? `${label} — copied` : "Copied",
+    feedbackLabel = copied ? copiedLabel : label,
     resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined),
     currentWrite = useRef(0);
 

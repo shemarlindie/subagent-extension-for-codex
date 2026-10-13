@@ -34,6 +34,11 @@ export type DelegateValues = {
   deps: string[];
 };
 
+/** Placeholder for a select whose value is still waiting on settings or workers. */
+function pendingPlaceholder(loading: boolean) {
+  return loading ? "Loading…" : "Unavailable";
+}
+
 interface ProjectFieldProps {
   projects: Project[];
   allowParent: boolean;
@@ -169,11 +174,7 @@ export function WorkspaceField({
         loading={settingsLoading && unresolved}
         loadingLabel="Loading workspace default"
         placeholder={
-          unresolved
-            ? settingsLoading
-              ? "Loading…"
-              : "Unavailable"
-            : undefined
+          unresolved ? pendingPlaceholder(settingsLoading) : undefined
         }
         options={[
           { value: "worktree", label: "Isolated worktree" },
@@ -227,9 +228,7 @@ export function WorkerFields({
             }
             loading={loading}
             loadingLabel="Loading available workers"
-            placeholder={
-              !selected ? (loading ? "Loading…" : "Unavailable") : undefined
-            }
+            placeholder={!selected ? pendingPlaceholder(loading) : undefined}
             options={workers.flatMap((worker) =>
               worker.profiles.map((profile) => ({
                 value: `${worker.provider}:${profile}`,
@@ -274,6 +273,32 @@ export function WorkerFields({
       </div>
     </div>
   );
+}
+
+/** Explains the cost limit for the selected worker, when there is something to explain. */
+function costNote(
+  provider: Worker | undefined,
+  workerResolved: boolean,
+  workersReady: boolean,
+  mode: string,
+) {
+  if (!workerResolved)
+    return workersReady
+      ? "Choose a worker to see budget support."
+      : "Loading budget options.";
+
+  if (mode === "none") return undefined;
+
+  const costBudgetHelp = providerMetadata(
+    provider?.provider ?? "",
+    provider?.metadata,
+  )?.costBudgetHelp;
+
+  if (costBudgetHelp) return costBudgetHelp;
+
+  return provider?.capabilities.cost_budget
+    ? undefined
+    : "This provider requires No cost limit.";
 }
 
 export function BudgetFields({
@@ -368,19 +393,7 @@ export function BudgetFields({
         </div>
       </div>
       <p id="cost-note" className="help">
-        {!workerResolved
-          ? workersReady
-            ? "Choose a worker to see budget support."
-            : "Loading budget options."
-          : mode === "none"
-            ? undefined
-            : providerMetadata(provider?.provider ?? "", provider?.metadata)
-                  ?.costBudgetHelp
-              ? providerMetadata(provider?.provider ?? "", provider?.metadata)!
-                  .costBudgetHelp
-              : provider?.capabilities.cost_budget
-                ? undefined
-                : "This provider requires No cost limit."}
+        {costNote(provider, workerResolved, workersReady, mode)}
       </p>
       <div className="setting-row setting-row-inline">
         <span id="runtime-mode-label" className="setting-label">
@@ -548,11 +561,9 @@ export function ModelFields({
           <ModelAutocomplete
             models={workerInfo?.models ?? []}
             placeholder={
-              !settingsReady
-                ? settingsLoading
-                  ? "Loading…"
-                  : "Unavailable"
-                : model || "Provider runtime default"
+              settingsReady
+                ? model || "Provider runtime default"
+                : pendingPlaceholder(settingsLoading)
             }
             describedBy="model-help"
             disabled={!settingsReady || !workersReady}
@@ -584,9 +595,7 @@ export function ModelFields({
           loadingLabel="Loading reasoning options"
           placeholder={
             !settingsReady && !selectedEffort
-              ? settingsLoading
-                ? "Loading…"
-                : "Unavailable"
+              ? pendingPlaceholder(settingsLoading)
               : undefined
           }
           rules={{

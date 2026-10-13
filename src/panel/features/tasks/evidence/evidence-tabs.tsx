@@ -43,16 +43,16 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
 
   // A turn the latest activity holds scrolls into view there; a turn read on
   // its own opens at its first row. Stable objects keep the list memoized.
-  const focusEventId = !focus
-    ? undefined
-    : range
-      ? range === "loading"
-        ? undefined
-        : range.events[0]?.id
-      : turnStart(
-          { events: state.events, dropped: state.droppedEvents },
-          focus.turn,
-        );
+  let focusEventId: number | undefined;
+
+  if (focus && range) {
+    if (range !== "loading") focusEventId = range.events[0]?.id;
+  } else if (focus) {
+    focusEventId = turnStart(
+      { events: state.events, dropped: state.droppedEvents },
+      focus.turn,
+    );
+  }
 
   const request = focus?.request;
 
@@ -70,6 +70,57 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         : { eventId: focusEventId, request },
     [focusEventId, request],
   );
+
+  // The focused turn's events, or a loading placeholder for them; without focus, the whole activity log.
+  const renderActivityEvents = () => {
+    if (!task) return null;
+
+    if (!focus || !range) {
+      if (activityLoading) return null;
+
+      return (
+        <EventList
+          task={task}
+          reading={reading}
+          events={state.events}
+          runtimeMs={task.runtime_ms}
+          dropped={state.droppedEvents}
+          preferences={state.host}
+          active={state.tab === "activity"}
+          running={task.status === "running" && !task.pending_input}
+          focus={rowFocus}
+        />
+      );
+    }
+
+    if (range === "loading") {
+      return (
+        <EventList
+          task={task}
+          reading={reading}
+          events={state.events}
+          runtimeMs={task.runtime_ms}
+          dropped={state.droppedEvents}
+          preferences={state.host}
+          active={false}
+        />
+      );
+    }
+
+    return (
+      <EventList
+        task={task}
+        key={focus.request}
+        turn={focus.turn}
+        events={range.events}
+        dropped={range.dropped}
+        runtimeMs={task.runtime_ms}
+        preferences={state.host}
+        active={state.tab === "activity"}
+        focus={rowFocus}
+      />
+    );
+  };
 
   return (
     <Tabs.Root
@@ -125,45 +176,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
               <ActivitySkeleton announce={!(focus && range === "loading")} />
             }
           >
-            {task ? (
-              focus && range ? (
-                range === "loading" ? (
-                  <EventList
-                    task={task}
-                    reading={reading}
-                    events={state.events}
-                    runtimeMs={task.runtime_ms}
-                    dropped={state.droppedEvents}
-                    preferences={state.host}
-                    active={false}
-                  />
-                ) : (
-                  <EventList
-                    task={task}
-                    key={focus.request}
-                    turn={focus.turn}
-                    events={range.events}
-                    dropped={range.dropped}
-                    runtimeMs={task.runtime_ms}
-                    preferences={state.host}
-                    active={state.tab === "activity"}
-                    focus={rowFocus}
-                  />
-                )
-              ) : activityLoading ? null : (
-                <EventList
-                  task={task}
-                  reading={reading}
-                  events={state.events}
-                  runtimeMs={task.runtime_ms}
-                  dropped={state.droppedEvents}
-                  preferences={state.host}
-                  active={state.tab === "activity"}
-                  running={task.status === "running" && !task.pending_input}
-                  focus={rowFocus}
-                />
-              )
-            ) : null}
+            {renderActivityEvents()}
           </LoadingSwap>
         </div>
       </Tabs.Panel>

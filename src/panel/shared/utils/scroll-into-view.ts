@@ -10,12 +10,10 @@ export function scrollChildIntoView(
   const left = child.offsetLeft - gap,
     right = child.offsetLeft + child.offsetWidth + gap;
 
-  const target =
-    left < list.scrollLeft
-      ? left
-      : right > list.scrollLeft + list.clientWidth
-        ? right - list.clientWidth
-        : undefined;
+  let target: number | undefined;
+  if (left < list.scrollLeft) target = left;
+  else if (right > list.scrollLeft + list.clientWidth)
+    target = right - list.clientWidth;
 
   if (target !== undefined)
     list.scrollTo?.({

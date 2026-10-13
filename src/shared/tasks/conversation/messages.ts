@@ -78,6 +78,18 @@ const same = (message: string, reply: string) => {
   return a === b || a.endsWith(b);
 };
 
+/** Where a sent message waits, if the running turn hasn't taken it yet. */
+function queueState(
+  id: string,
+  pending: Set<string>,
+  queued: Set<string>,
+): Pick<ConversationMessage, "state"> {
+  if (pending.has(id)) return { state: "pending_steer" };
+  if (queued.has(id)) return { state: "queued" };
+
+  return {};
+}
+
 /**
  * A task's conversation from its events, in order: its request, the
  * messages the user and parent sent, the worker's messages and each
@@ -126,11 +138,7 @@ export function conversation(
         kind: "message",
         text: String(e.data.message ?? ""),
         delivery: e.data.delivery as Delivery | undefined,
-        ...(pending.has(id)
-          ? { state: "pending_steer" as const }
-          : queued.has(id)
-            ? { state: "queued" as const }
-            : {}),
+        ...queueState(id, pending, queued),
       });
     }
 

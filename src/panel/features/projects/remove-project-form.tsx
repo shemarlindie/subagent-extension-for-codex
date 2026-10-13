@@ -1,5 +1,5 @@
 import { Switch } from "@base-ui/react/switch";
-import { useLayoutEffect, useState } from "react";
+import { type FormEvent, useLayoutEffect, useState } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
@@ -29,21 +29,16 @@ export function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
 
   useLayoutEffect(() => setRemoveTasks(false), [dialog]);
 
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!state.busy && dialog.scope === state.scopeVersion)
+      controller.run(() =>
+        controller.manageProject(project.repository, undefined, removeTasks),
+      );
+  };
+
   return (
-    <form
-      className="remove-project-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!state.busy && dialog.scope === state.scopeVersion)
-          controller.run(() =>
-            controller.manageProject(
-              project.repository,
-              undefined,
-              removeTasks,
-            ),
-          );
-      }}
-    >
+    <form className="remove-project-form" onSubmit={submit}>
       <p>
         Remove <strong>{project.name ?? project.repository}</strong> from saved
         projects?

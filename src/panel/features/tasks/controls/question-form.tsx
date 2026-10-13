@@ -1,4 +1,11 @@
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type CSSProperties,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   useForm,
   type UseFormRegister,
@@ -55,6 +62,22 @@ interface QuestionCardProps {
   onUnskip: () => void;
 }
 
+function cardPosition(
+  index: number,
+  active: number,
+): QuestionCardProps["position"] {
+  if (index < active) return "behind";
+  if (index > active) return "ahead";
+
+  return "active";
+}
+
+function submitLabel(busy: boolean, sending: boolean) {
+  if (busy) return "Sending…";
+
+  return sending ? "Respond" : "Next";
+}
+
 function QuestionCard({
   question,
   index,
@@ -73,6 +96,37 @@ function QuestionCard({
     active = position === "active",
     presetField = register(`answers.${index}`),
     customField = register(`custom.${index}`);
+
+  // A single choice and a typed answer are alternatives.
+  const handlePresetChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (!multiple) setValue(`custom.${index}`, "");
+    onUnskip();
+
+    return presetField.onChange(event);
+  };
+
+  const handleOtherChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.value.trim()) {
+      if (!multiple) setValue(`answers.${index}`, "");
+      onUnskip();
+    }
+
+    return customField.onChange(event);
+  };
+
+  // Enter moves to the next card; on the last one it submits as usual.
+  const handleOtherKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" && onNext) {
+      event.preventDefault();
+      onNext();
+    }
+  };
+
+  const handleTextChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    if (event.target.value.trim()) onUnskip();
+
+    return customField.onChange(event);
+  };
 
   return (
     <div
@@ -108,13 +162,7 @@ function QuestionCard({
                 type={multiple ? "checkbox" : "radio"}
                 value={option.label}
                 {...presetField}
-                onChange={(event) => {
-                  // A single choice and a typed answer are alternatives.
-                  if (!multiple) setValue(`custom.${index}`, "");
-                  onUnskip();
-
-                  return presetField.onChange(event);
-                }}
+                onChange={handlePresetChange}
               />
               <span className="question-option-text">
                 <span className="question-option-label">{option.label}</span>
@@ -135,21 +183,8 @@ function QuestionCard({
               aria-label="Write your own answer"
               placeholder="Other — write your own answer"
               {...customField}
-              onChange={(event) => {
-                if (event.target.value.trim()) {
-                  if (!multiple) setValue(`answers.${index}`, "");
-                  onUnskip();
-                }
-
-                return customField.onChange(event);
-              }}
-              onKeyDown={(event) => {
-                // Enter moves to the next card; on the last one it submits as usual.
-                if (event.key === "Enter" && onNext) {
-                  event.preventDefault();
-                  onNext();
-                }
-              }}
+              onChange={handleOtherChange}
+              onKeyDown={handleOtherKeyDown}
             />
           </div>
         </div>
@@ -158,11 +193,7 @@ function QuestionCard({
           aria-labelledby={`${id}-text`}
           placeholder="Write your answer"
           {...customField}
-          onChange={(event) => {
-            if (event.target.value.trim()) onUnskip();
-
-            return customField.onChange(event);
-          }}
+          onChange={handleTextChange}
         />
       )}
     </div>
@@ -216,12 +247,10 @@ export function QuestionForm({ task }: { task: Task }) {
     unanswered = answers.findIndex((answer) => !answer),
     last = active === questions.length - 1,
     sending = last || unanswered < 0,
-    message =
-      incomplete && unanswered >= 0
-        ? stacked
-          ? "Answer each question before sending."
-          : "Answer the question before sending."
-        : error;
+    incompleteMessage = stacked
+      ? "Answer each question before sending."
+      : "Answer the question before sending.",
+    message = incomplete && unanswered >= 0 ? incompleteMessage : error;
 
   const show = (index: number) => {
     setIncomplete(false);
@@ -275,6 +304,18 @@ export function QuestionForm({ task }: { task: Task }) {
     const next = new Set(skipped);
     next.delete(index);
     setSkipped(next);
+  };
+
+  // Back disappears on the first card, so focus moves on to Next.
+  const goBack = () => {
+    if (active === 1) focusAfterMove.current = "submit";
+    show(active - 1);
+  };
+
+  const goNext = () => {
+    // Typing continues in the next card rather than the hidden one.
+    focusAfterMove.current = "card";
+    show(active + 1);
   };
 
   // Next moves one card on. Sending first returns to any unanswered card;
@@ -361,23 +402,13 @@ export function QuestionForm({ task }: { task: Task }) {
             key={index}
             question={question}
             index={index}
-            position={
-              index < active ? "behind" : index > active ? "ahead" : "active"
-            }
+            position={cardPosition(index, active)}
             depth={Math.abs(index - active)}
             register={register}
             setValue={setValue}
             custom={customs[index] ?? ""}
             skipped={skipped.has(index)}
-            onNext={
-              sending
-                ? undefined
-                : () => {
-                    // Typing continues in the next card rather than the hidden one.
-                    focusAfterMove.current = "card";
-                    show(active + 1);
-                  }
-            }
+            onNext={sending ? undefined : goNext}
             onUnskip={() => unskip(index)}
           />
         ))}
@@ -400,24 +431,14 @@ export function QuestionForm({ task }: { task: Task }) {
           {skipped.has(active) ? "Undo" : "Skip this question"}
         </Button>
         <div className="question-nav">
-          {active > 0 && (
-            <Button
-              onClick={() => {
-                // Back disappears on the first card, so focus moves on to Next.
-                if (active === 1) focusAfterMove.current = "submit";
-                show(active - 1);
-              }}
-            >
-              Back
-            </Button>
-          )}
+          {active > 0 && <Button onClick={goBack}>Back</Button>}
           <Button
             ref={submit}
             type="submit"
             variant="primary"
             disabled={state.busy}
           >
-            {state.busy ? "Sending…" : sending ? "Respond" : "Next"}
+            {submitLabel(state.busy, sending)}
           </Button>
         </div>
       </div>

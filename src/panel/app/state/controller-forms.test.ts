@@ -255,15 +255,17 @@ test("New task offers the chat project only when auto-add is on and adds it befo
     // A registered project never triggers registration.
     await controller.addChatProjectForTask("/repo/a");
 
-    transport.handler = (name) =>
-      name === "list_agent_projects"
-        ? [
-            ...transport.projects,
-            { repository: "/repo/chat", kind: "repository" },
-          ]
-        : name === "register_user_agent_project"
-          ? { repository: "/repo/chat", kind: "repository" }
-          : undefined;
+    transport.handler = (name) => {
+      if (name === "list_agent_projects")
+        return [
+          ...transport.projects,
+          { repository: "/repo/chat", kind: "repository" },
+        ];
+      if (name === "register_user_agent_project")
+        return { repository: "/repo/chat", kind: "repository" };
+
+      return undefined;
+    };
 
     await controller.addChatProjectForTask("/repo/chat");
 

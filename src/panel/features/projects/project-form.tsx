@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
@@ -55,14 +55,13 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
     }
   }
 
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!browsing) controller.run(() => controller.registerProject(repository));
+  };
+
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!browsing)
-          controller.run(() => controller.registerProject(repository));
-      }}
-    >
+    <form onSubmit={submit}>
       <p className="form-note">
         Choose a Git repository on the service host. Adding it allows delegated
         tasks to access this repository. Browse opens a folder dialog on that

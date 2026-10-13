@@ -102,14 +102,16 @@ function TaskRowRuntime({ task }: { task: Task }) {
       className="row-runtime"
       title={label ? status.label : "Total run time across turns"}
     >
-      {label ??
-        (task.status === "failed"
-          ? `Failed after ${duration}`
-          : live
-            ? duration
-            : `${terminal(task) ? "Ran for" : "Run time"} ${duration}`)}
+      {label ?? runtimeText(task, live, duration)}
     </span>
   );
+}
+
+function runtimeText(task: Task, live: boolean, duration: string) {
+  if (task.status === "failed") return `Failed after ${duration}`;
+  if (live) return duration;
+
+  return `${terminal(task) ? "Ran for" : "Run time"} ${duration}`;
 }
 
 const EMPTY_FILTER: Record<Filter, string> = {
@@ -163,6 +165,43 @@ export function TaskList() {
     [],
   );
 
+  // Rows, or the message that replaces them when offline or when nothing matches.
+  const renderRows = () => {
+    if (!state.connected)
+      return (
+        <p className="help">
+          {state.connection === "Open through MCP"
+            ? "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui."
+            : "Waiting for the host connection."}
+        </p>
+      );
+
+    if (tasks.length)
+      return tasks.map((task) => (
+        <TaskRow
+          key={task.id}
+          task={task}
+          projectName={
+            state.repository
+              ? undefined
+              : ((projectNames.get(task.repository) ||
+                  task.repository.split(/[\\/]/).filter(Boolean).at(-1)) ??
+                task.repository)
+          }
+          selected={task.id === state.selected}
+          onSelect={() => controller.run(() => controller.select(task.id))}
+        />
+      ));
+
+    return (
+      <p className="help empty-state">
+        {state.search
+          ? `No tasks match “${state.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
+          : EMPTY_FILTER[filter]}
+      </p>
+    );
+  };
+
   const resetFilters = () => {
     controller.setSearch("");
     controller.setFilter("all");
@@ -204,40 +243,7 @@ export function TaskList() {
             loading={state.taskListLoading}
             skeleton={<TaskListSkeleton showProject={!state.repository} />}
           >
-            {state.taskListLoading ? null : !state.connected ? (
-              <p className="help">
-                {state.connection === "Open through MCP"
-                  ? "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui."
-                  : "Waiting for the host connection."}
-              </p>
-            ) : tasks.length ? (
-              tasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  projectName={
-                    state.repository
-                      ? undefined
-                      : ((projectNames.get(task.repository) ||
-                          task.repository
-                            .split(/[\\/]/)
-                            .filter(Boolean)
-                            .at(-1)) ??
-                        task.repository)
-                  }
-                  selected={task.id === state.selected}
-                  onSelect={() =>
-                    controller.run(() => controller.select(task.id))
-                  }
-                />
-              ))
-            ) : (
-              <p className="help empty-state">
-                {state.search
-                  ? `No tasks match “${state.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
-                  : EMPTY_FILTER[filter]}
-              </p>
-            )}
+            {state.taskListLoading ? null : renderRows()}
           </LoadingSwap>
         </div>
         {!state.taskListLoading && <TaskListScrollbar scrollerRef={listRef} />}

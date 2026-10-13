@@ -69,12 +69,12 @@ test.each([
 
     environment.hidden = () => state.hidden;
 
-    transport.handler = (name) =>
-      name === "claim_user_agent_parent_message"
-        ? parentNotification
-        : name === "record_user_agent_parent_delivery"
-          ? {}
-          : undefined;
+    transport.handler = (name) => {
+      if (name === "claim_user_agent_parent_message") return parentNotification;
+      if (name === "record_user_agent_parent_delivery") return {};
+
+      return undefined;
+    };
 
     await controller.start();
 
@@ -146,12 +146,12 @@ test.each([
 
     const claim = deferred<typeof parentNotification>();
 
-    transport.handler = (name) =>
-      name === "claim_user_agent_parent_message"
-        ? claim.promise
-        : name === "record_user_agent_parent_delivery"
-          ? {}
-          : undefined;
+    transport.handler = (name) => {
+      if (name === "claim_user_agent_parent_message") return claim.promise;
+      if (name === "record_user_agent_parent_delivery") return {};
+
+      return undefined;
+    };
 
     await controller.refresh();
 
@@ -204,14 +204,13 @@ test("controller waits for known conversation scope before claiming parent notif
 
   const context = deferred<PanelData>();
 
-  transport.handler = (name) =>
-    name === "get_agent_panel_context"
-      ? context.promise
-      : name === "claim_user_agent_parent_message"
-        ? parentNotification
-        : name === "record_user_agent_parent_delivery"
-          ? {}
-          : undefined;
+  transport.handler = (name) => {
+    if (name === "get_agent_panel_context") return context.promise;
+    if (name === "claim_user_agent_parent_message") return parentNotification;
+    if (name === "record_user_agent_parent_delivery") return {};
+
+    return undefined;
+  };
 
   const starting = controller.start();
   await flush();
@@ -257,12 +256,12 @@ test("scheduled parent delivery continues while hidden UI polling is paused", as
     .fn<NonNullable<Transport["send"]>>()
     .mockResolvedValue(undefined);
 
-  transport.handler = (name) =>
-    name === "claim_user_agent_parent_message"
-      ? parentNotification
-      : name === "record_user_agent_parent_delivery"
-        ? {}
-        : undefined;
+  transport.handler = (name) => {
+    if (name === "claim_user_agent_parent_message") return parentNotification;
+    if (name === "record_user_agent_parent_delivery") return {};
+
+    return undefined;
+  };
 
   await controller.start();
 

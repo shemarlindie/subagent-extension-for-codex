@@ -50,57 +50,69 @@ export function ChatSkeleton({ announce = true }: { announce?: boolean } = {}) {
           data-side={message.side}
           key={`${message.side}-${index}`}
         >
-          {message.side === "user" ? (
-            <div className="chat-skeleton-bubble">
-              {message.lines.map((line, lineIndex) => (
-                <SkeletonShape
-                  className={`chat-skeleton-line chat-skeleton-line-${line}`}
-                  key={`${line}-${lineIndex}`}
-                />
-              ))}
-            </div>
-          ) : message.richMarkdown ? (
-            <div className="chat-skeleton-worker-text chat-skeleton-rich-response">
-              <div className="chat-skeleton-rich-heading-row">
-                <SkeletonShape className="chat-skeleton-line chat-skeleton-rich-heading" />
-              </div>
-              <div className="chat-skeleton-rich-paragraph">
-                {RICH_INTRO_LINES.map((line, lineIndex) => (
+          {skeletonMessageBody(message)}
+        </div>
+      ))}
+    </LoadingSkeleton>
+  );
+}
+
+function skeletonMessageBody(message: SkeletonMessage) {
+  if (message.side === "user") {
+    return (
+      <div className="chat-skeleton-bubble">
+        {message.lines.map((line, lineIndex) => (
+          <SkeletonShape
+            className={`chat-skeleton-line chat-skeleton-line-${line}`}
+            key={`${line}-${lineIndex}`}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (message.richMarkdown) {
+    return (
+      <div className="chat-skeleton-worker-text chat-skeleton-rich-response">
+        <div className="chat-skeleton-rich-heading-row">
+          <SkeletonShape className="chat-skeleton-line chat-skeleton-rich-heading" />
+        </div>
+        <div className="chat-skeleton-rich-paragraph">
+          {RICH_INTRO_LINES.map((line, lineIndex) => (
+            <SkeletonShape
+              className={`chat-skeleton-line chat-skeleton-rich-intro-${line}`}
+              key={`${line}-${lineIndex}`}
+            />
+          ))}
+        </div>
+        <SkeletonShape className="chat-skeleton-line chat-skeleton-rich-subheading" />
+        <div className="chat-skeleton-rich-list">
+          {RICH_LIST_ITEMS.map((lines, itemIndex) => (
+            <div className="chat-skeleton-rich-list-item" key={itemIndex}>
+              <SkeletonShape className="chat-skeleton-rich-bullet" />
+              <div className="chat-skeleton-rich-list-lines">
+                {lines.map((line, lineIndex) => (
                   <SkeletonShape
-                    className={`chat-skeleton-line chat-skeleton-rich-intro-${line}`}
+                    className={`chat-skeleton-line chat-skeleton-line-${line}`}
                     key={`${line}-${lineIndex}`}
                   />
                 ))}
               </div>
-              <SkeletonShape className="chat-skeleton-line chat-skeleton-rich-subheading" />
-              <div className="chat-skeleton-rich-list">
-                {RICH_LIST_ITEMS.map((lines, itemIndex) => (
-                  <div className="chat-skeleton-rich-list-item" key={itemIndex}>
-                    <SkeletonShape className="chat-skeleton-rich-bullet" />
-                    <div className="chat-skeleton-rich-list-lines">
-                      {lines.map((line, lineIndex) => (
-                        <SkeletonShape
-                          className={`chat-skeleton-line chat-skeleton-line-${line}`}
-                          key={`${line}-${lineIndex}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
-          ) : (
-            <div className="chat-skeleton-worker-text">
-              {message.lines.map((line, lineIndex) => (
-                <SkeletonShape
-                  className={`chat-skeleton-line chat-skeleton-line-${line}`}
-                  key={`${line}-${lineIndex}`}
-                />
-              ))}
-            </div>
-          )}
+          ))}
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chat-skeleton-worker-text">
+      {message.lines.map((line, lineIndex) => (
+        <SkeletonShape
+          className={`chat-skeleton-line chat-skeleton-line-${line}`}
+          key={`${line}-${lineIndex}`}
+        />
       ))}
-    </LoadingSkeleton>
+    </div>
   );
 }

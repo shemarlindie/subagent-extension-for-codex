@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { type FormEvent, useEffect, useRef } from "react";
 import { FormProvider, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../shared/providers/metadata";
@@ -51,6 +51,35 @@ const READY = {
   "context" | "settings" | "projects" | "workers",
   DialogReadStatus
 >;
+
+/** A new task's revision: blank until settings and context load, HEAD for the current repo. */
+function startingRevision(ready: boolean, strategy: string, revision: string) {
+  if (!ready) return "";
+
+  return strategy === "current_repo" ? "HEAD" : revision;
+}
+
+/** A new task's worker: the dialog's choice, then the default, then the first available. */
+function startingWorker(
+  choices: string[],
+  preferredWorker: string | undefined,
+  preferred: string,
+  settingsReady: boolean,
+) {
+  if (preferredWorker && choices.includes(preferredWorker))
+    return preferredWorker;
+
+  if (!settingsReady) return "";
+
+  return choices.includes(preferred) ? preferred : (choices[0] ?? "");
+}
+
+/** A budget's starting mode: blank until settings load, then limited unless turned off. */
+function startingBudgetMode(settingsReady: boolean, unlimited: boolean) {
+  if (!settingsReady) return "";
+
+  return unlimited ? "none" : "limited";
+}
 
 export function DelegateForm({ dialog }: DelegateFormProps) {
   const controller = useController(),
@@ -105,37 +134,32 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
     initialValues: DelegateValues = {
       ...optionDefaults,
       repository: resolvedRepository ?? "",
-      revision:
-        settingsReady && contextReady
-          ? strategyDefault === "current_repo"
-            ? "HEAD"
-            : resolvedRevision
-          : "",
+      revision: startingRevision(
+        settingsReady && contextReady,
+        strategyDefault,
+        resolvedRevision,
+      ),
       workspace_strategy: strategyDefault,
       description: "",
       model: "",
-      worker:
-        dialog.preferredWorker && choices.includes(dialog.preferredWorker)
-          ? dialog.preferredWorker
-          : settingsReady
-            ? choices.includes(preferred)
-              ? preferred
-              : (choices[0] ?? "")
-            : "",
-      runtimeMode: !settingsReady
-        ? ""
-        : defaults.use_runtime_budget === false ||
-            defaults.max_runtime_minutes === null
-          ? "none"
-          : "limited",
+      worker: startingWorker(
+        choices,
+        dialog.preferredWorker,
+        preferred,
+        settingsReady,
+      ),
+      runtimeMode: startingBudgetMode(
+        settingsReady,
+        defaults.use_runtime_budget === false ||
+          defaults.max_runtime_minutes === null,
+      ),
       runtime: settingsReady
         ? (defaults.max_runtime_minutes ?? 20)
         : pendingNumber("runtime"),
-      costMode: !settingsReady
-        ? ""
-        : defaults.use_cost_budget === false || defaults.max_cost_usd === null
-          ? "none"
-          : "limited",
+      costMode: startingBudgetMode(
+        settingsReady,
+        defaults.use_cost_budget === false || defaults.max_cost_usd === null,
+      ),
       cost: settingsReady
         ? (defaults.max_cost_usd ?? 5)
         : pendingNumber("cost"),
@@ -243,6 +267,16 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
       }, true),
     );
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (!canSubmit) {
+      event.preventDefault();
+
+      return;
+    }
+
+    void submit(event);
+  }
+
   // Project changes reset only project-bound defaults, preserving the task draft.
   useEffect(() => {
     if (repository !== previous.current) {
@@ -269,18 +303,7 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
 
   return (
     <FormProvider {...form}>
-      <form
-        noValidate
-        onSubmit={(event) => {
-          if (!canSubmit) {
-            event.preventDefault();
-
-            return;
-          }
-
-          void submit(event);
-        }}
-      >
+      <form noValidate onSubmit={handleSubmit}>
         <p className="form-note form-note--first">
           Describe what you want done and include any important details.
         </p>

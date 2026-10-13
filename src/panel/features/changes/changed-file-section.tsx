@@ -32,6 +32,13 @@ function binaryNote(file: ChangedFile) {
     : `Binary file changed · ${formatBytes(file.size)}`;
 }
 
+/** Why a file's diff has no lines to show. */
+function emptyDiffNote(file: ChangedFile, missing?: boolean) {
+  if (file.binary) return binaryNote(file);
+
+  return missing ? "Diff unavailable" : "No content changes";
+}
+
 const previewable = (file: ChangedFile) =>
   !file.binary || Boolean(imageMime(file.path));
 
@@ -57,6 +64,11 @@ export function ChangedFileSection({
     setOpen(!viewed);
   }
 
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    onOpenChange(next);
+  };
+
   return (
     <DiffFile
       // Names the file, so the tab can return to it.
@@ -65,17 +77,8 @@ export function ChangedFileSection({
       file={diff}
       initiallyOpen={open}
       open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        onOpenChange(next);
-      }}
-      emptyNote={
-        file.binary
-          ? binaryNote(file)
-          : missing
-            ? "Diff unavailable"
-            : "No content changes"
-      }
+      onOpenChange={handleOpenChange}
+      emptyNote={emptyDiffNote(file, missing)}
       actions={
         <>
           {previewable(file) && (

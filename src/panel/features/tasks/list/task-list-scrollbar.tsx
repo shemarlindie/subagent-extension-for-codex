@@ -120,6 +120,36 @@ export function TaskListScrollbar({ scrollerRef }: TaskListScrollbarProps) {
       ((event.clientY - currentDrag.startY) / trackRange) * scrollRange;
   };
 
+  const startThumbDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+
+    const scroller = scrollerRef.current;
+
+    if (!scroller) return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    drag.current = {
+      pointerId: event.pointerId,
+      startScrollTop: scroller.scrollTop,
+      startY: event.clientY,
+    };
+  };
+
+  const endThumbDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.pointerId !== event.pointerId) return;
+
+    drag.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const cancelThumbDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.pointerId !== event.pointerId) return;
+
+    drag.current = null;
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const scroller = scrollerRef.current;
 
@@ -169,34 +199,10 @@ export function TaskListScrollbar({ scrollerRef }: TaskListScrollbarProps) {
         aria-valuenow={metrics.value}
         className="task-list-scrollbar-thumb"
         onKeyDown={onKeyDown}
-        onPointerDown={(event) => {
-          if (event.button !== 0) return;
-
-          const scroller = scrollerRef.current;
-
-          if (!scroller) return;
-
-          event.preventDefault();
-          event.currentTarget.setPointerCapture(event.pointerId);
-
-          drag.current = {
-            pointerId: event.pointerId,
-            startScrollTop: scroller.scrollTop,
-            startY: event.clientY,
-          };
-        }}
+        onPointerDown={startThumbDrag}
         onPointerMove={moveThumb}
-        onPointerUp={(event) => {
-          if (drag.current?.pointerId !== event.pointerId) return;
-
-          drag.current = null;
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }}
-        onPointerCancel={(event) => {
-          if (drag.current?.pointerId !== event.pointerId) return;
-
-          drag.current = null;
-        }}
+        onPointerUp={endThumbDrag}
+        onPointerCancel={cancelThumbDrag}
         role="scrollbar"
         style={{
           height: metrics.height,

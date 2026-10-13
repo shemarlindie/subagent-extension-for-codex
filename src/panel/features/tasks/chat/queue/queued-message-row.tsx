@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { type DragEvent, type KeyboardEvent, useRef, useState } from "react";
 
 import type { QueuedMessage } from "../../../../../shared/tasks/model";
 import {
@@ -75,6 +75,46 @@ export function QueuedMessageRow({
     if (!error) toggleEditing();
   };
 
+  const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
+    if (!canMove || busy) return;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", message.message);
+    onDragStart();
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    onDragOver(event.clientY > box.top + box.height / 2);
+  };
+
+  const handleRowKeyDown = async (event: KeyboardEvent<HTMLDivElement>) => {
+    if (
+      !canMove ||
+      event.target !== event.currentTarget ||
+      !event.altKey ||
+      (event.key !== "ArrowUp" && event.key !== "ArrowDown")
+    )
+      return;
+    event.preventDefault();
+    if (busy) return;
+    // Reordering can move the focused row out of the DOM and back.
+    if (await onMove(event.key === "ArrowUp" ? -1 : 1)) row.current?.focus();
+  };
+
+  const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      toggleEditing();
+    } else if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      void save();
+    }
+  };
+
   return (
     <div
       ref={row}
@@ -86,31 +126,10 @@ export function QueuedMessageRow({
       // Stays focusable while busy, so a move in flight keeps focus.
       tabIndex={canMove ? 0 : undefined}
       aria-keyshortcuts={canMove ? "Alt+ArrowUp Alt+ArrowDown" : undefined}
-      onDragStart={(event) => {
-        if (!canMove || busy) return;
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", message.message);
-        onDragStart();
-      }}
-      onDragOver={(event) => {
-        const box = event.currentTarget.getBoundingClientRect();
-        onDragOver(event.clientY > box.top + box.height / 2);
-      }}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={onDragEnd}
-      onKeyDown={async (event) => {
-        if (
-          !canMove ||
-          event.target !== event.currentTarget ||
-          !event.altKey ||
-          (event.key !== "ArrowUp" && event.key !== "ArrowDown")
-        )
-          return;
-        event.preventDefault();
-        if (busy) return;
-        // Reordering can move the focused row out of the DOM and back.
-        if (await onMove(event.key === "ArrowUp" ? -1 : 1))
-          row.current?.focus();
-      }}
+      onKeyDown={handleRowKeyDown}
     >
       {/* The slot folds with reordering, and the handle pops with movability. */}
       <Presence show={reorderable} as="span" variant="fold">
@@ -135,19 +154,7 @@ export function QueuedMessageRow({
           maxLength={20000}
           autoFocus
           onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              toggleEditing();
-            } else if (
-              event.key === "Enter" &&
-              !event.shiftKey &&
-              !event.nativeEvent.isComposing
-            ) {
-              event.preventDefault();
-              void save();
-            }
-          }}
+          onKeyDown={handleEditKeyDown}
         />
       )}
       {/* Keyed so the other action set fades in after a switch. */}

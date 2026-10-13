@@ -86,14 +86,16 @@ function ChangedFileViewed({ task, path, onViewed }: ChangedFileViewedProps) {
 
   if (!entry) return null;
 
+  const handleChange = (value: boolean) => {
+    setViewed(entry, value);
+    if (value) onViewed(nextUnviewed(viewed, entries, entry)?.file.path);
+  };
+
   return (
     <ViewedToggle
       path={path}
       viewed={isViewed(viewed, entry)}
-      onChange={(value) => {
-        setViewed(entry, value);
-        if (value) onViewed(nextUnviewed(viewed, entries, entry)?.file.path);
-      }}
+      onChange={handleChange}
     />
   );
 }
@@ -128,16 +130,13 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
     root = useRef<HTMLDivElement>(null),
     // Viewed was used to move on, so the next file's Viewed takes focus.
     refocusViewed = useRef(false),
+    handleViewed = (next?: string) => {
+      if (!next) return;
+      refocusViewed.current = true;
+      controller.showChangedFile(next);
+    },
     viewedToggle = (
-      <ChangedFileViewed
-        task={task}
-        path={shown}
-        onViewed={(next) => {
-          if (!next) return;
-          refocusViewed.current = true;
-          controller.showChangedFile(next);
-        }}
-      />
+      <ChangedFileViewed task={task} path={shown} onViewed={handleViewed} />
     ),
     askButton = (
       <AskFileButton
@@ -208,7 +207,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           />,
           optionsTarget,
         )}
-      {firstRead ? (
+      {firstRead && (
         <div
           className="file-preview-loading"
           role="status"
@@ -216,7 +215,8 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
         >
           <LoadingSpinner />
         </div>
-      ) : file?.state === "present" ? (
+      )}
+      {!firstRead && file?.state === "present" && (
         <FilePreview
           file={{
             path: shown,
@@ -233,7 +233,8 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           alwaysShowViews
           wrapLines={wrapLines}
         />
-      ) : (
+      )}
+      {!firstRead && file?.state !== "present" && (
         <div className="file-preview" data-wrap-lines={wrapLines}>
           <div className="file-preview-toolbar">
             {/* A loaded file's shape, so the toolbar holds its height. */}
@@ -255,11 +256,12 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             {progress}
           </div>
           <div className="file-preview-body">
-            {read?.status === "error" ? (
+            {read?.status === "error" && (
               <p className="form-error" role="alert">
                 {read.message}
               </p>
-            ) : file?.state === "deleted" ? (
+            )}
+            {file?.state === "deleted" && (
               <>
                 <p className="help file-preview-note">Deleted</p>
                 {/* What it held, so reviewing every file misses nothing. */}
@@ -269,11 +271,12 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
                   </div>
                 )}
               </>
-            ) : file?.state === "binary" ? (
+            )}
+            {file?.state === "binary" && (
               <p className="help">
                 Binary file changed · {formatBytes(file.size)}
               </p>
-            ) : null}
+            )}
           </div>
         </div>
       )}

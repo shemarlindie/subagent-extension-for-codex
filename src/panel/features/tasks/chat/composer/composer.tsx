@@ -18,7 +18,7 @@ import { MOTION } from "../../../../shared/components/motion/motion-utils";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { FormFieldError } from "../../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
-import { composerMode, spentBudget } from "../chat-model";
+import { composerMode, type SpentBudget, spentBudget } from "../chat-model";
 
 const PLACEHOLDERS = {
   idle: "What's next?",
@@ -35,6 +35,13 @@ const HINTS = {
   busy: `Enter to queue · ${STEER_KEY} to steer`,
   input: "Answer the question above, or Enter to queue",
 };
+
+/** The label on the button that reopens a collapsed composer. */
+function expandLabel(spent: SpentBudget | undefined, draft: string) {
+  if (spent) return "Show composer (limit reached)";
+
+  return draft ? "Show composer (draft)" : "Show composer";
+}
 
 type ComposerProps = {
   task?: Task;
@@ -63,6 +70,12 @@ export function Composer({
       pendingInputKind(task.pending_input) === "permission"
         ? "Enter to queue"
         : HINTS.input,
+    hint = mode === "input" ? inputHint : HINTS[mode],
+    sendTooltip =
+      mode === "busy"
+        ? `Send into the running turn (${STEER_KEY})`
+        : "Send (Enter)",
+    continueLabel = mode === "busy" ? "Steer" : "Send",
     inputRequest = task?.pending_input?.id,
     [expandedRequest, setExpandedRequest] = useState<string>(),
     [manuallyCollapsed, updateComposerSession] = useSessionState(
@@ -216,13 +229,7 @@ export function Composer({
             onClick={() => toggle(false)}
           >
             <Icon name="chevron-down" size={12} />
-            <span>
-              {spent
-                ? "Show composer (limit reached)"
-                : message
-                  ? "Show composer (draft)"
-                  : "Show composer"}
-            </span>
+            <span>{expandLabel(spent, message)}</span>
           </Button>
           {mode !== "idle" && stopButton}
         </div>
@@ -270,16 +277,10 @@ export function Composer({
                     label={
                       showContinuePrompt
                         ? "Press ENTER to continue"
-                        : mode === "busy"
-                          ? `Send into the running turn (${STEER_KEY})`
-                          : "Send (Enter)"
+                        : sendTooltip
                     }
                     triggerLabel={
-                      showContinuePrompt
-                        ? mode === "busy"
-                          ? "Steer"
-                          : "Send"
-                        : undefined
+                      showContinuePrompt ? continueLabel : undefined
                     }
                     open={showContinuePrompt ? true : undefined}
                     onOpenChange={
@@ -311,9 +312,7 @@ export function Composer({
           <FormFieldHint
             id="chat-composer-hint"
             className="chat-composer-field-feedback"
-            message={
-              spent ? undefined : mode === "input" ? inputHint : HINTS[mode]
-            }
+            message={spent ? undefined : hint}
           />
         </div>
       )}

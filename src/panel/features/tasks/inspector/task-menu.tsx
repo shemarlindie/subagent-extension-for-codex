@@ -11,15 +11,20 @@ import { TooltipWrapper } from "../../../shared/components/tooltip";
 
 type TaskMenuProps = { task: Task };
 
+function handoffMenuLabel(canSend: boolean, canCopy: boolean) {
+  if (canSend) return "Bring to Codex";
+
+  return canCopy ? "Copy for Codex" : "Prepare handoff";
+}
+
 /** Task actions beside the open task's title and status. */
 export function TaskMenu({ task }: TaskMenuProps) {
   const controller = useController(),
     state = useSnapshot(),
-    handoffLabel = state.host.canSend
-      ? "Bring to Codex"
-      : !controller.transport.embedded
-        ? "Copy for Codex"
-        : "Prepare handoff";
+    handoffLabel = handoffMenuLabel(
+      state.host.canSend,
+      !controller.transport.embedded,
+    );
 
   return (
     <Menu.Root>

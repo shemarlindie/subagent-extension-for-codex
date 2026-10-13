@@ -1,4 +1,7 @@
-import { Dialog } from "@base-ui/react/dialog";
+import {
+  Dialog,
+  type DialogRootChangeEventDetails,
+} from "@base-ui/react/dialog";
 import { useLayoutEffect, useRef } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
@@ -74,15 +77,44 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   // Switching forms or showing an error eases the height instead of snapping it.
   useAnimatedHeight(popup, `${dialog?.kind}:${state.formError ?? ""}`);
 
+  const handleOpenChange = (
+    open: boolean,
+    details: DialogRootChangeEventDetails,
+  ) => {
+    if (state.busy) details.cancel();
+    else if (!open) controller.dismiss();
+  };
+
+  const handleInitialFocus = () => {
+    trigger.current = document.activeElement as HTMLElement | null;
+    openedScope.current = dialog?.scope ?? 0;
+
+    return (
+      (dialog && definition?.initialFocus?.(popup.current, dialog)) || true
+    );
+  };
+
+  const handleFinalFocus = () => {
+    if (suspended) return document.getElementById("open-panel");
+
+    if (openedScope.current !== controller.getSnapshot().scopeVersion)
+      return document.getElementById(
+        controller.getSnapshot().page === "projects"
+          ? "project-add"
+          : "delegate",
+      );
+
+    if (trigger.current?.isConnected) return trigger.current;
+
+    return definition?.restoreFocus?.() ?? document.getElementById("delegate");
+  };
+
   return (
     // Host collapse hides the modal; keeping its contents mounted retains drafts.
     <Dialog.Root
       open={Boolean(activeDialog) && !suspended}
       disablePointerDismissal
-      onOpenChange={(open, details) => {
-        if (state.busy) details.cancel();
-        else if (!open) controller.dismiss();
-      }}
+      onOpenChange={handleOpenChange}
     >
       <Dialog.Portal keepMounted={Boolean(activeDialog)}>
         <Dialog.Backdrop className="dialog-overlay" />
@@ -92,29 +124,8 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
           className="dialog"
           data-kind={dialog?.kind}
           aria-describedby={undefined}
-          initialFocus={() => {
-            trigger.current = document.activeElement as HTMLElement | null;
-            openedScope.current = dialog?.scope ?? 0;
-
-            return (
-              (dialog && definition?.initialFocus?.(popup.current, dialog)) ||
-              true
-            );
-          }}
-          finalFocus={() =>
-            suspended
-              ? document.getElementById("open-panel")
-              : openedScope.current === controller.getSnapshot().scopeVersion
-                ? trigger.current?.isConnected
-                  ? trigger.current
-                  : (definition?.restoreFocus?.() ??
-                    document.getElementById("delegate"))
-                : document.getElementById(
-                    controller.getSnapshot().page === "projects"
-                      ? "project-add"
-                      : "delegate",
-                  )
-          }
+          initialFocus={handleInitialFocus}
+          finalFocus={handleFinalFocus}
         >
           <div className="dialog-heading">
             <Dialog.Title id="dialog-title">

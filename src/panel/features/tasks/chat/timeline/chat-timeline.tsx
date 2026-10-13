@@ -61,11 +61,11 @@ export function ChatTimeline({
   );
 
   // The message being written, until the stored one with its id arrives.
-  const draft = task
-    ? state.draft?.task === task.id
+  const draft =
+    task &&
+    (state.draft?.task === task.id
       ? state.draft
-      : task.draft && { task: task.id, ...task.draft }
-    : undefined;
+      : task.draft && { task: task.id, ...task.draft });
 
   const streaming =
     draft && !chat?.items.some((item) => item.id === draft.message_id)
@@ -81,12 +81,12 @@ export function ChatTimeline({
     ? rowStatus({ ...task, live_activity: activity })
     : undefined;
 
-  const working =
-    task && composerMode(task) === "busy" && !streaming
-      ? task.status === "running" && activity
-        ? activity.text
-        : statusLabel(task)
-      : undefined;
+  let working: string | undefined;
+
+  if (task && composerMode(task) === "busy" && !streaming) {
+    working =
+      task.status === "running" && activity ? activity.text : statusLabel(task);
+  }
 
   const latest = items?.at(-1);
   const workingShownInNote = latest?.kind === "note" && latest.text === working;
@@ -115,27 +115,32 @@ export function ChatTimeline({
       >
         {task && (
           <div className="chat-history">
-            {items?.length ? (
-              items.map((item, index) =>
-                item.kind === "message" ? (
-                  <ChatMessageView
-                    key={item.id}
-                    task={task}
-                    message={item.message}
-                    worker={worker}
-                    outcome={responseOutcome(item, items[index + 1])}
-                  />
-                ) : item.kind === "outcome" ? (
-                  responseOutcome(items[index - 1], item) ? null : (
-                    <TurnOutcomeRow key={item.id} outcome={item} />
-                  )
-                ) : (
-                  <ChatNoteRow key={item.id} note={item} />
-                ),
-              )
-            ) : items && !streaming ? (
-              <p className="help chat-empty">No messages yet.</p>
-            ) : null}
+            {items?.length
+              ? items.map((item, index) => {
+                  if (item.kind === "message") {
+                    return (
+                      <ChatMessageView
+                        key={item.id}
+                        task={task}
+                        message={item.message}
+                        worker={worker}
+                        outcome={responseOutcome(item, items[index + 1])}
+                      />
+                    );
+                  }
+
+                  if (item.kind === "outcome") {
+                    return responseOutcome(items[index - 1], item) ? null : (
+                      <TurnOutcomeRow key={item.id} outcome={item} />
+                    );
+                  }
+
+                  return <ChatNoteRow key={item.id} note={item} />;
+                })
+              : items &&
+                !streaming && (
+                  <p className="help chat-empty">No messages yet.</p>
+                )}
           </div>
         )}
       </LoadingSwap>

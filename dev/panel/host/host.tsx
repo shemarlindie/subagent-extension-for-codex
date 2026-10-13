@@ -179,15 +179,11 @@ export function Host() {
 
     event.preventDefault();
 
-    const nextIndex =
-      event.key === "Home"
-        ? 0
-        : event.key === "End"
-          ? tabs.length - 1
-          : (currentIndex +
-              (event.key === "ArrowRight" ? 1 : -1) +
-              tabs.length) %
-            tabs.length;
+    let nextIndex =
+      (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) %
+      tabs.length;
+    if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = tabs.length - 1;
 
     const nextTab = inspectorTabs[nextIndex];
 
@@ -195,6 +191,15 @@ export function Host() {
 
     setActiveInspectorTab(nextTab.id);
     tabs[nextIndex]?.focus();
+  };
+
+  // Clears the inspector and returns focus to the toggle that opened it.
+  const closeInspector = () => {
+    update({ showInspector: false });
+
+    requestAnimationFrame(() =>
+      document.getElementById("inspector-toggle")?.focus(),
+    );
   };
 
   // Keep recording while closed so Bridge log can show the session history later.
@@ -316,33 +321,31 @@ export function Host() {
 
     const call = async (name: string, args: Record<string, unknown> = {}) => {
       // Fixture service tools run the real service code on the Vite server.
-      const served =
-        source === "live"
-          ? "service"
-          : FIXTURE_SERVICE_TOOLS.includes(name)
-            ? "fixture service"
-            : "browser fixtures";
+      let served = "browser fixtures";
+      if (source === "live") served = "service";
+      else if (FIXTURE_SERVICE_TOOLS.includes(name)) served = "fixture service";
 
-      const result =
-        served === "service"
-          ? ((await (
-              await service()
-            ).callTool({
-              name,
-              arguments: args,
-              _meta: codexMeta(current),
-            })) as CallToolResult)
-          : served === "fixture service"
-            ? await fixtureServiceCall(name, args)
-            : fixtureCall(name, args, {
-                autoRegisterChatProject: current.autoRegister,
-                claudeUnavailable: current.claudeUnavailable,
-                successfulBudgetUpdates: current.successfulBudgetUpdates,
-                deferTaskList: current.slowAsyncReads,
-                addedProjects: added.current,
-                removedProjects: projectEdits.current.removed,
-                projectNames: projectEdits.current.names,
-              });
+      let result;
+      if (served === "service")
+        result = (await (
+          await service()
+        ).callTool({
+          name,
+          arguments: args,
+          _meta: codexMeta(current),
+        })) as CallToolResult;
+      else if (served === "fixture service")
+        result = await fixtureServiceCall(name, args);
+      else
+        result = fixtureCall(name, args, {
+          autoRegisterChatProject: current.autoRegister,
+          claudeUnavailable: current.claudeUnavailable,
+          successfulBudgetUpdates: current.successfulBudgetUpdates,
+          deferTaskList: current.slowAsyncReads,
+          addedProjects: added.current,
+          removedProjects: projectEdits.current.removed,
+          projectNames: projectEdits.current.names,
+        });
 
       if (
         source === "fixtures" &&
@@ -693,13 +696,7 @@ export function Host() {
             type="button"
             aria-label="Close inspector"
             title="Close inspector"
-            onClick={() => {
-              update({ showInspector: false });
-
-              requestAnimationFrame(() =>
-                document.getElementById("inspector-toggle")?.focus(),
-              );
-            }}
+            onClick={closeInspector}
           >
             <Icon name="close" size={14} />
           </button>

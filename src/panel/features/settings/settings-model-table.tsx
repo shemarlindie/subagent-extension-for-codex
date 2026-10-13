@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { unsupportedEffortWarning } from "../../../shared/settings/settings-document";
 import { SkeletonShape } from "../../shared/components/loading-skeleton/loading-skeleton";
 import { FormSelect } from "../../shared/forms/form-select";
@@ -34,6 +36,44 @@ export function ModelTable({
           profile = scope.model.key.replace(/_default_model$/, ""),
           hasProfileIcon = Boolean(workerProfileIconName(profile));
 
+        // Without a discovered catalog the model ID is typed instead.
+        let modelControl: ReactNode;
+
+        if (loading)
+          modelControl = (
+            <FormSelect
+              control={control}
+              name={scope.model.key}
+              id={`setting-${scope.model.key}`}
+              label={scope.model.label}
+              options={scope.model.options ?? []}
+              loading
+              loadingLabel={`Loading ${scope.model.label.toLowerCase()}`}
+              placeholder="Loading…"
+            />
+          );
+        else if (scope.model.options)
+          modelControl = (
+            <FormSelect
+              control={control}
+              name={scope.model.key}
+              id={`setting-${scope.model.key}`}
+              label={scope.model.label}
+              options={scope.model.options}
+            />
+          );
+        else
+          modelControl = (
+            <input
+              id={`setting-${scope.model.key}`}
+              type="text"
+              placeholder="Inherit"
+              maxLength={200}
+              aria-label={scope.model.label}
+              {...register(scope.model.key)}
+            />
+          );
+
         return (
           <div key={scope.model.key} className="model-table-row">
             <span
@@ -48,36 +88,7 @@ export function ModelTable({
               )}
               {scope.label}
             </span>
-            {/* Without a discovered catalog the model ID is typed instead. */}
-            {loading ? (
-              <FormSelect
-                control={control}
-                name={scope.model.key}
-                id={`setting-${scope.model.key}`}
-                label={scope.model.label}
-                options={scope.model.options ?? []}
-                loading
-                loadingLabel={`Loading ${scope.model.label.toLowerCase()}`}
-                placeholder="Loading…"
-              />
-            ) : scope.model.options ? (
-              <FormSelect
-                control={control}
-                name={scope.model.key}
-                id={`setting-${scope.model.key}`}
-                label={scope.model.label}
-                options={scope.model.options}
-              />
-            ) : (
-              <input
-                id={`setting-${scope.model.key}`}
-                type="text"
-                placeholder="Inherit"
-                maxLength={200}
-                aria-label={scope.model.label}
-                {...register(scope.model.key)}
-              />
-            )}
+            {modelControl}
             <FormSelect
               control={control}
               name={scope.effort.key}

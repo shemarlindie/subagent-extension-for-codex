@@ -646,12 +646,11 @@ export class Controller {
       const delegation = this.state.dialog;
       const draftRepository = this.getDialogDraft("delegate")?.repository;
 
-      const delegationRepository =
-        typeof draftRepository === "string"
-          ? draftRepository
-          : delegation?.kind === "delegate"
-            ? delegation.repository
-            : undefined;
+      let delegationRepository: string | undefined;
+      if (typeof draftRepository === "string")
+        delegationRepository = draftRepository;
+      else if (delegation?.kind === "delegate")
+        delegationRepository = delegation.repository;
 
       if (
         delegation?.kind === "delegate" &&
@@ -1337,13 +1336,13 @@ export class Controller {
         taskId === this.state.selected &&
         this.tabIntentRevision !== this.tabIntentRevisionAtSelection;
 
-      const tab = preserveCurrentTab
-        ? this.state.tab
-        : (["chat", "changes", "activity", "details"] as const).includes(
-              hostTab,
-            )
-          ? hostTab
-          : this.session.get("task", taskId).tab;
+      let tab: Tab;
+      if (preserveCurrentTab) tab = this.state.tab;
+      else if (
+        (["chat", "changes", "activity", "details"] as const).includes(hostTab)
+      )
+        tab = hostTab;
+      else tab = this.session.get("task", taskId).tab;
 
       ++this.generation;
       this.explicitSelection = true;

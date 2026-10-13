@@ -32,6 +32,15 @@ import { generateTaskTitle } from "./task-title.js";
 /** Statuses in which a task has a turn running, starting or about to. */
 const BUSY = ["queued", "starting", "running", "waiting"];
 
+/** The payload of a task's status event once its turn has ended. */
+function taskStatusData(t: Task, reply: string | undefined) {
+  if (t.status === "queued") return {};
+  if (t.status === "completed" && reply !== undefined)
+    return { reply: replyExcerpt(reply) };
+
+  return { error: t.error };
+}
+
 /** The SDK message id a stored worker message carries, which its draft shares. */
 function storedMessageId(data: Record<string, unknown>) {
   const raw = data.raw_response as { message?: { id?: unknown } } | undefined;
@@ -575,15 +584,7 @@ export class Control {
           this.endTurn(t, outcome, a.sendPending);
           this.store.save(t);
 
-          this.store.event(
-            t,
-            `task.${t.status}`,
-            t.status === "queued"
-              ? {}
-              : t.status === "completed" && reply !== undefined
-                ? { reply: replyExcerpt(reply) }
-                : { error: t.error },
-          );
+          this.store.event(t, `task.${t.status}`, taskStatusData(t, reply));
         });
       } finally {
         // A failed write must not leave the task held as running.

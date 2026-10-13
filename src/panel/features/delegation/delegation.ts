@@ -44,6 +44,8 @@ export function delegationDialog(
       ? state.repository
       : undefined;
 
+  const taskRevision = taskRepository ? (task?.revision ?? "HEAD") : "HEAD";
+
   return {
     kind: "delegate",
     defaults,
@@ -54,10 +56,6 @@ export function delegationDialog(
       taskRepository ??
       choices.find((project) => project.pending)?.repository ??
       (choices.length === 1 ? choices[0].repository : undefined),
-    revision: scopedRepository
-      ? state.revision
-      : taskRepository
-        ? (task?.revision ?? "HEAD")
-        : "HEAD",
+    revision: scopedRepository ? state.revision : taskRevision,
   };
 }

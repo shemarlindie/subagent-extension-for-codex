@@ -63,14 +63,15 @@ function statusTitle(e: Pick<Event, "type" | "data">) {
     d = e.data;
 
   if (thinking.has(key)) return "Thinking…";
-  if (key === "status")
-    return d.compact_result === "failed"
-      ? "Context compaction failed"
-      : d.status === "compacting"
-        ? "Compacting context"
-        : d.status === "requesting"
-          ? "Requesting"
-          : "Working";
+
+  if (key === "status") {
+    if (d.compact_result === "failed") return "Context compaction failed";
+    if (d.status === "compacting") return "Compacting context";
+    if (d.status === "requesting") return "Requesting";
+
+    return "Working";
+  }
+
   if (key === "api_retry")
     return `Retrying request${typeof d.attempt === "number" ? ` · attempt ${d.attempt}` : ""}`;
   if (key === "compact_boundary") return "Context compacted";
@@ -78,12 +79,14 @@ function statusTitle(e: Pick<Event, "type" | "data">) {
     return d.isAuthenticating
       ? "Connecting to Claude"
       : "Authentication updated";
-  if (key === "session_state_changed")
-    return d.state === "requires_action"
-      ? "Needs input"
-      : d.state === "idle"
-        ? "Turn finished"
-        : "Working";
+
+  if (key === "session_state_changed") {
+    if (d.state === "requires_action") return "Needs input";
+    if (d.state === "idle") return "Turn finished";
+
+    return "Working";
+  }
+
   if (key === "rate_limit_event")
     return object(d.rate_limit_info).status === "rejected"
       ? "Waiting for rate limit reset"
@@ -152,15 +155,7 @@ function failureSummary(event: Pick<Event, "type" | "data">) {
   const d = event.data;
 
   const textOutput =
-    typeof d.content === "string"
-      ? d.content
-      : Array.isArray(d.content)
-        ? d.content
-            .filter((block) => object(block).type === "text")
-            .map((block) => string(object(block).text))
-            .filter(Boolean)
-            .join("\n")
-        : undefined;
+    typeof d.content === "string" ? d.content : textBlocks(d.content);
 
   return [
     d.compact_error,
@@ -175,6 +170,55 @@ function failureSummary(event: Pick<Event, "type" | "data">) {
     (value): value is string =>
       typeof value === "string" && value.trim().length > 0,
   );
+}
+
+/** Joins the text blocks of an SDK message's content array. */
+function textBlocks(content: unknown) {
+  if (!Array.isArray(content)) return undefined;
+
+  return content
+    .filter((block) => object(block).type === "text")
+    .map((block) => string(object(block).text))
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** Labels an SDK activity event, or a transcript content row. */
+function activityTitle(e: Pick<Event, "type" | "data">, key: string) {
+  if (e.type === "claude.activity")
+    return (
+      sdkTitles[key] ??
+      key.charAt(0).toUpperCase() + key.slice(1).replace(/[_.]/g, " ")
+    );
+  if (e.type === "agent.content")
+    return e.data.role === "user" ? "User content" : "Claude content";
+
+  return undefined;
+}
+
+/** Groups tool, hook and background task progress under one operation. */
+function operationIdFor(
+  key: string,
+  d: Event["data"],
+  toolId: string | undefined,
+) {
+  if (toolId) return `tool:${toolId}`;
+  if (key.startsWith("hook_") && d.hook_id) return `hook:${d.hook_id}`;
+  if (key.startsWith("task_") && d.task_id) return `background:${d.task_id}`;
+
+  return undefined;
+}
+
+/** Names the operation that a tool, hook or background task event belongs to. */
+function operationTitle(
+  key: string,
+  d: Event["data"],
+  toolId: string | undefined,
+) {
+  if (toolId) return "Tool";
+  if (key.startsWith("hook_")) return `Hook · ${d.hook_name ?? "Hook"}`;
+
+  return "Background task";
 }
 
 /** Claude SDK details are translated at the provider boundary. */
@@ -212,15 +256,7 @@ export function claudeActivityPresentation(
       ].includes(key) || thinking.has(key),
     statusTitle:
       quiet.has(key) || thinking.has(key) ? statusTitle(e) : undefined,
-    title:
-      e.type === "claude.activity"
-        ? (sdkTitles[key] ??
-          key.charAt(0).toUpperCase() + key.slice(1).replace(/[_.]/g, " "))
-        : e.type === "agent.content"
-          ? d.role === "user"
-            ? "User content"
-            : "Claude content"
-          : undefined,
+    title: activityTitle(e, key),
     messageId: string(object(raw.message).id ?? raw.uuid),
     hasThinking: hasThinkingContent(e),
   };
@@ -242,23 +278,13 @@ export function claudeActivityPresentation(
     presentation.statusState = "info";
   const toolId = key === "tool_progress" ? string(d.tool_use_id) : undefined;
 
-  const operationId = toolId
-    ? `tool:${toolId}`
-    : key.startsWith("hook_") && d.hook_id
-      ? `hook:${d.hook_id}`
-      : key.startsWith("task_") && d.task_id
-        ? `background:${d.task_id}`
-        : undefined;
+  const operationId = operationIdFor(key, d, toolId);
 
   if (operationId)
     presentation.operation = {
       id: operationId,
       kind: toolId ? "tool" : "operation",
-      title: toolId
-        ? "Tool"
-        : key.startsWith("hook_")
-          ? `Hook · ${d.hook_name ?? "Hook"}`
-          : "Background task",
+      title: operationTitle(key, d, toolId),
       summary: string(
         d.description ?? d.summary ?? object(d.patch).description,
       ),

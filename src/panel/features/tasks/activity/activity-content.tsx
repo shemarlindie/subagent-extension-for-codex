@@ -152,27 +152,33 @@ export function ActivityContent({
         String(source.media_type),
       );
 
+    let body: ReactNode;
+    if (inlineImage)
+      body = (
+        <img
+          className="activity-image"
+          alt="Claude activity attachment"
+          src={`data:${source.media_type};base64,${source.data}`}
+        />
+      );
+    else if (source.type === "text")
+      body = <ActivityContent content={source.data} depth={depth + 1} />;
+    else if (source.type === "content")
+      body = <ActivityContent content={source.content} depth={depth + 1} />;
+    else
+      body = (
+        <ActivityValue
+          value={{ source: { ...source, data: undefined } }}
+          depth={depth + 1}
+        />
+      );
+
     return (
       <section>
         <p>
           {String(block.title ?? (type === "image" ? "Image" : "Document"))}
         </p>
-        {inlineImage ? (
-          <img
-            className="activity-image"
-            alt="Claude activity attachment"
-            src={`data:${source.media_type};base64,${source.data}`}
-          />
-        ) : source.type === "text" ? (
-          <ActivityContent content={source.data} depth={depth + 1} />
-        ) : source.type === "content" ? (
-          <ActivityContent content={source.content} depth={depth + 1} />
-        ) : (
-          <ActivityValue
-            value={{ source: { ...source, data: undefined } }}
-            depth={depth + 1}
-          />
-        )}
+        {body}
       </section>
     );
   }
