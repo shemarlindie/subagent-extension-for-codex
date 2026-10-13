@@ -382,6 +382,41 @@ the assembled directory into a temporary `CODEX_HOME` and runs the MCP command
 Codex reports. It needs the Codex CLI (`CODEX_BIN` or `codex` on `PATH`) and is
 skipped without it.
 
+## Releasing
+
+Users install from the `release` branch, which holds only assembled releases;
+each release commit is tagged `v<version>`. Codex refreshes Git marketplaces on
+startup and reinstalls the plugin when the branch moves, so every push to
+`release` reaches users.
+
+1. Bump `version` in `package.json` and `plugin.json`. The build fails when they
+   differ, and Codex keys installed versions by it, so every release needs a
+   new one.
+2. Add a `## <version>` section to `CHANGELOG.md` for users: what changed, and
+   anything to do by hand. Its text becomes the GitHub release notes.
+3. Merge to `main`, then run the **Release** workflow from `main` in GitHub
+   Actions.
+
+The workflow (`.github/workflows/release.yml`) runs the CI checks, assembles
+and installs the release with Codex, commits it to `release` with the source
+commit in the message, tags it, attaches an attested zip to a GitHub release,
+and then installs `<owner>/<repo>@v<version>` from GitHub with Codex on Linux,
+macOS and Windows. The source commit on `main` isn't tagged, because user-facing
+tags name release commits.
+
+Repository settings the workflow relies on, set by hand:
+
+- A ruleset on `release` that allows only GitHub Actions to push and blocks
+  force pushes and deletion.
+- A ruleset on `v*` tags that allows only GitHub Actions to create them and
+  blocks updates and deletion.
+- A public repository, since `codex plugin marketplace add owner/repo` fetches
+  without credentials.
+
+`.github/workflows/ci.yml` runs the checks on Linux and macOS for pushes to
+`main` and pull requests. Windows runs only the build and packaging tests,
+because parts of the suite use POSIX shell fakes.
+
 ## Storage and Claude verification
 
 - [Database and migrations](database.md) covers schema changes, transactions

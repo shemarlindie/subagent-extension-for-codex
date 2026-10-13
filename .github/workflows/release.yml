@@ -1,0 +1,134 @@
+name: Release
+
+# Run by hand from main after bumping the version in package.json and
+# plugin.json and adding its CHANGELOG.md section. User-facing v* tags point at
+# release-branch commits, so the source commit isn't tagged.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Releases are made from main, not ${GITHUB_REF}" >&2
+          exit 1
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Read the version
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null; then
+            echo "v${version} already exists; bump the version first" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          awk -v heading="## ${VERSION}" '
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
+            echo "CHANGELOG.md has no notes under '## ${VERSION}'" >&2
+            exit 1
+          fi
+
+      - run: npm run build
+      - run: npm run release:assemble
+      - run: npm install --global @openai/codex
+      - name: Install the assembled marketplace with Codex
+        run: npx vitest run tests/integration/package/marketplace-install.test.ts
+
+      - name: Commit to the release branch and tag it
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="$RUNNER_TEMP/release-branch"
+          if git ls-remote --exit-code --heads origin release >/dev/null; then
+            git fetch origin release
+            git worktree add -B release "$branch" origin/release
+          else
+            # The first release starts an orphan branch holding only releases.
+            git worktree add --detach "$branch"
+            git -C "$branch" checkout --orphan release
+            git -C "$branch" rm -rfq .
+          fi
+          find "$branch" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R release/. "$branch/"
+          git -C "$branch" add -A
+          git -C "$branch" commit -qm "Release v${VERSION}" -m "Source: ${GITHUB_SHA}"
+          git -C "$branch" tag -a "v${VERSION}" -m "v${VERSION}"
+          git -C "$branch" push origin release "v${VERSION}"
+
+      - name: Zip the release
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: cd release && zip -qr "../codex-subagent-extension-${VERSION}.zip" .
+
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: codex-subagent-extension-${{ steps.version.outputs.version }}.zip
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v${VERSION}" "codex-subagent-extension-${VERSION}.zip" \
+            --title "v${VERSION}" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
+
+  # Installs what users get: the published tag, fetched by Codex from GitHub.
+  install:
+    needs: publish
+    name: Install v${{ needs.publish.outputs.version }} (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm install --global @openai/codex
+      - name: Install from GitHub with Codex
+        env:
+          MARKETPLACE_SOURCE: ${{ github.repository }}@v${{ needs.publish.outputs.version }}
+        run: npx vitest run tests/integration/package/marketplace-install.test.ts

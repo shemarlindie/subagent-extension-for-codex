@@ -43,6 +43,12 @@ function findCodex() {
 
 const codex = findCodex();
 
+/**
+ * A published marketplace to install from instead of the assembled build,
+ * such as owner/repo@v1.2.3; the release workflow sets it after publishing.
+ */
+const published = process.env.MARKETPLACE_SOURCE;
+
 type McpServer = {
   name: string;
   transport: {
@@ -71,6 +77,8 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     await mkdir(codexHome);
     service = { data: join(root, "data"), port: await freePort() };
 
+    if (published) return;
+
     // Assemble from the existing build (pretest builds it).
     await access(resolve("dist/stdio.js"));
 
@@ -86,8 +94,14 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     await rm(root, { recursive: true, force: true });
   });
 
-  test("installs from the assembled marketplace and serves over Codex's MCP command", async () => {
-    await runCodex("plugin", "marketplace", "add", join(root, "release"));
+  test("installs from the marketplace and serves over Codex's MCP command", async () => {
+    await runCodex(
+      "plugin",
+      "marketplace",
+      "add",
+      published ?? join(root, "release"),
+    );
+
     await runCodex("plugin", "add", "codex-subagent-extension@shemarlindie");
 
     const { version } = JSON.parse(await readFile("package.json", "utf8"));
