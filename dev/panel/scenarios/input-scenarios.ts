@@ -138,7 +138,7 @@ export const inputTasks: Task[] = [
     provider_options: {
       claude: {
         permission_mode: "default",
-        permission_source: "user_config",
+        permission_source: "setting",
         approval_decider: "user",
       },
     },
@@ -183,7 +183,7 @@ export const inputTasks: Task[] = [
     provider_options: {
       claude: {
         permission_mode: "default",
-        permission_source: "user_config",
+        permission_source: "setting",
         approval_decider: "user",
       },
     },
