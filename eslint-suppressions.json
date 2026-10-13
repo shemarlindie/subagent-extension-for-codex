@@ -141,7 +141,7 @@
   },
   "src/service/features/tasks/runtime/control.ts": {
     "complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "src/service/platform/panel/panel-context.ts": {

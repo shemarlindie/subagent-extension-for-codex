@@ -24,7 +24,7 @@ const SOURCE_FILE_LINE_CEILINGS = [
   ["src/panel/features/settings/settings-form.tsx", 450],
   ["src/service/features/providers/claude/runtime/provider.ts", 550],
   ["src/service/features/settings/settings.ts", 450],
-  ["src/service/features/tasks/runtime/control.ts", 1150],
+  ["src/service/features/tasks/runtime/control.ts", 1000],
   ["src/service/features/workspaces/workspace.ts", 700],
   ["src/service/platform/server/tools.ts", 750],
   ["src/shared/tasks/activity/activity-timeline.ts", 600],
