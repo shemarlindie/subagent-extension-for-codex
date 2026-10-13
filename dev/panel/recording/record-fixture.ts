@@ -17,7 +17,7 @@ import { parseArgs } from "node:util";
 
 import { format, resolveConfig } from "prettier";
 
-import type { Event } from "../../../src/shared/events/types";
+import type { EventEnvelope } from "../../../src/shared/events/event-contract";
 import type { Task } from "../../../src/shared/tasks/model";
 import { leftovers, recordFixture } from "./recording";
 
@@ -64,7 +64,10 @@ const task = JSON.parse(String(row.body)) as Task;
 const events = db
   .prepare("SELECT * FROM events WHERE task_id=? ORDER BY id")
   .all(values.task)
-  .map((r) => ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as Event);
+  .map(
+    (r) =>
+      ({ ...r, data: JSON.parse(String(r.data)) }) as unknown as EventEnvelope,
+  );
 
 const temp = realpathSync(tmpdir());
 

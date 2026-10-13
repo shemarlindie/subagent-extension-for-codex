@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
-import { type Event } from "../../../src/shared/events/types";
+import type { EventEnvelope } from "../../../src/shared/events/event-contract";
 import { startSchema, type Task } from "../../../src/shared/tasks/model";
 import { leftovers, recordFixture } from "./recording";
 
@@ -53,13 +53,13 @@ const rateLimit = {
   rate_limit_info: {
     status: "allowed",
     rateLimitType: "five_hour",
+    utilization: 0.75,
     overageDisabledReason: "org_level_disabled",
-    unifiedWindows: { five_hour: { utilization: 0.75 } },
   },
   session_id: "real-session",
 };
 
-const events: Event[] = [
+const events: EventEnvelope[] = [
   {
     id: 41,
     task_id: "task_123",

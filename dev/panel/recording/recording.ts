@@ -3,11 +3,11 @@
 // ran on replaced, so the file can be committed. See
 // docs/development.md#recorded-fixtures.
 import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
-import type { Event } from "../../../src/shared/events/types";
+import type { EventEnvelope } from "../../../src/shared/events/event-contract";
 import type { Task } from "../../../src/shared/tasks/model";
 
 /** A recorded run, as `dev/panel/recorded/*.json` stores it. */
-export type RecordedFixture = { task: Task; events: Event[] };
+export type RecordedFixture = { task: Task; events: EventEnvelope[] };
 
 export type RecordingOptions = {
   /** The fixture task's id; `preview-recorded-<name>` by convention. */
@@ -77,15 +77,14 @@ const PROVIDER_EVENTS = new Set([
  *   status and window, without the account's usage or overage policy;
  * - events are renumbered from `firstId` and moved to `start`;
  * - the task belongs to the preview owner, has no workspace (its Changes tab
- *   is empty), and is renamed when `title` is given; a record from before
- *   the current task shape gets its missing fields.
+ *   is empty), and is renamed when `title` is given.
  *
  * Provider events get their `activity` presentation again from the
  * sanitized SDK message, so they still match what the provider derives.
  */
 export function recordFixture(
   task: Task,
-  events: Event[],
+  events: EventEnvelope[],
   options: RecordingOptions & { home: string; host: string },
 ): RecordedFixture {
   const replacements: [string, string][] = [

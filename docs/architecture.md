@@ -72,6 +72,17 @@ Production builds also reject dependencies from the opposing runtime,
 development tooling and tests. See
 [Checks](development.md#checks) for the validation commands.
 
+Event payload contracts and normalized activity content live in browser-safe
+shared features. Storage and live event creation attach a validated typed view
+beside the original JSON payload; panel activity pages validate that view again
+at the transport boundary. Unknown event names and known names with incomplete
+or invalid payloads stay opaque, and the original payload remains available for
+inspection. Claude normalizes assistant and user identity fields into the
+project event payload; the complete SDK response remains intact for debug
+inspection. The Claude-owned
+`src/shared/providers/claude/events.ts` contract may import SDK declarations as
+types. Runtime SDK imports remain forbidden in shared code.
+
 The service task feature groups scheduling and execution in `runtime/`,
 questions and permissions in `input/`, durable records in `storage/`,
 and draft delivery and message polling in `conversation/`. Input can be answered

@@ -372,7 +372,9 @@
           "title": "User content",
           "messageId": "021cbc20-81a0-472c-ad68-ff01bee79e13",
           "hasThinking": false
-        }
+        },
+        "message_id": "021cbc20-81a0-472c-ad68-ff01bee79e13",
+        "parent_tool_use_id": null
       }
     },
     {
@@ -913,8 +915,7 @@
         "role": "assistant",
         "content": {
           "type": "thinking",
-          "thinking": "",
-          "signature": "CAQSkAUKEAgSGAI4AUIIdGhpbmtpbmcSDE3FiokeyiBs+ksCXhoMgvPrI5uXMNBjArcDIjDc6G2wgauV0NHRDsUUVCx9tvLWuve9TDwiYggOvfP6OU2D9jQCT1XNRwFL6q86WPEqrQT4K4uf8K33Y8uHDexBrz3OkaHXVLqTtq9VgsVjBJBxbIytiffQqyzEn/vQdCu/Ar0fjWGTiMUzbJgyRpz6X30YPTMb+8V/y6l176TCoEWLechn3tD9lw5RfM9G2TIdKA/1lsYQbd4cgErt7F/FOPGmckecaZ9aANNl+JaxH7WA9H9M01j4boNIASw8l7OZIAVC+zMt1tnLN04uRoaBPpY07p9rKx9Ns1JLDdUv7N1TcygI0hWBhfp3rRr/cbKdWR8InuBpA2dhGwLcSLfOBJiM3E0DTgsJtZOXJF0FEsLCyVz6L19MyZqmpbuuQjoNNOifdb71ysws/t2KtZgIR/huPsXZXcwnpNF+Siwzhx79+2+CSYeTlgEmUPq+qizbT+CYDcFq1uCKPA8NPWIvfF/TCUlyeshd5ePiNPTh0Padbym02O9R+DqHTP3nQmPUunCU8HVuCQ/hKxKpBtbpI6XtkJpntQpzioGZpVEV3qCwQHTf7kGvmr3knjiNZa/JffztC4ThcaFsBAdi/ast+JKYp9bCsUjIdpT7wb0Wyg/rQEiwYgXbjfga7ZkQMiPb3mnGxal2Rgy2us2mQ5623sLIG/fGl0tySXBZKLiOCbPDPfc0vqFAmVBrOjorWAz8GfvNSIGuLKsWCg3TAqvu1Xn/0uqwI057LCxUNbCD1dX1xvLavj6f794adjflxf/mfo3wMem+nW40Ul3l9Bp0qmkjk1IBRqijFnb+IzF/0hgB"
+          "thinking": ""
         },
         "raw_response": {
           "type": "assistant",
@@ -966,7 +967,9 @@
           "title": "Claude content",
           "messageId": "msg_011CfoGy5kc2GDUdfHvjGdGV",
           "hasThinking": true
-        }
+        },
+        "message_id": "msg_011CfoGy5kc2GDUdfHvjGdGV",
+        "parent_tool_use_id": null
       }
     },
     {
@@ -1029,7 +1032,9 @@
           "liveStatus": false,
           "messageId": "msg_011CfoGy5kc2GDUdfHvjGdGV",
           "hasThinking": false
-        }
+        },
+        "message_id": "msg_011CfoGy5kc2GDUdfHvjGdGV",
+        "parent_tool_use_id": null
       }
     },
     {

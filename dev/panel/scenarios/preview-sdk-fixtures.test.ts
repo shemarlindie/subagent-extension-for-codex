@@ -9,6 +9,8 @@ import { test } from "vitest";
 
 import { ClaudeAgentProvider } from "../../../src/service/features/providers/claude/runtime/provider.js";
 import type { RunContext } from "../../../src/service/features/providers/types.js";
+import { decodeEventView } from "../../../src/shared/events/decode.js";
+import { eventPayloadMapSchema } from "../../../src/shared/events/event-contract.generated.js";
 import { previewEvents } from "./fixtures";
 
 type Kind<T> = T extends { type: "system"; subtype: infer S extends string }
@@ -108,6 +110,20 @@ const kindOf = (message: Record<string, unknown>) =>
 const raw = (event: { data: Record<string, unknown> }) =>
   event.data.raw_response as Record<string, unknown> | undefined;
 
+test("preview project events match the current payload contracts", () => {
+  const knownTypes = new Set(Object.keys(eventPayloadMapSchema.shape));
+
+  for (const event of previewEvents) {
+    if (!knownTypes.has(event.type)) continue;
+
+    assert.equal(
+      decodeEventView(event.type, event.data).kind,
+      "known",
+      `${event.task_id}#${event.id} has an incomplete ${event.type} payload`,
+    );
+  }
+});
+
 test("fixture SDK messages cover every kind the SDK defines", () => {
   const seen = new Set(
     previewEvents.flatMap((event) => {
@@ -128,33 +144,38 @@ test("fixture events match what the provider derives from their SDK message", ()
   for (const event of previewEvents.filter((e) => providerTypes.has(e.type))) {
     const message = raw(event);
     assert.ok(message, `${event.task_id}#${event.id} has no raw_response`);
+    const sdkMessage = message as unknown as SDKMessage;
     const derived: { type: string; data: Record<string, unknown> }[] = [];
 
     new ClaudeAgentProvider().normalize(
       {
         emit: (type: string, data: Record<string, unknown>) =>
           derived.push({ type, data }),
+        emitOpaque: (type: string, data: Record<string, unknown>) =>
+          derived.push({ type, data }),
       } as unknown as RunContext,
-      message as unknown as SDKMessage,
+      sdkMessage,
     );
 
-    assert.ok(
-      derived.some((candidate) => {
-        try {
-          // As the service stores it: JSON drops undefined fields, which
-          // recorded fixtures (dev/panel/scenarios/recorded) don't have.
-          assert.deepEqual(
-            JSON.parse(
-              JSON.stringify({ type: candidate.type, data: candidate.data }),
-            ),
-            JSON.parse(JSON.stringify({ type: event.type, data: event.data })),
-          );
+    const matched = derived.some((candidate) => {
+      try {
+        // As the service stores it: JSON drops undefined fields, which
+        // recorded fixtures (dev/panel/scenarios/recorded) don't have.
+        assert.deepEqual(
+          JSON.parse(
+            JSON.stringify({ type: candidate.type, data: candidate.data }),
+          ),
+          JSON.parse(JSON.stringify({ type: event.type, data: event.data })),
+        );
 
-          return true;
-        } catch {
-          return false;
-        }
-      }),
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    assert.ok(
+      matched,
       `${event.task_id}#${event.id} (${event.type}) differs from the provider's output`,
     );
 

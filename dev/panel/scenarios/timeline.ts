@@ -7,7 +7,11 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
-import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
+import {
+  claudeActivityContent,
+  claudeActivityPresentation,
+} from "../../../src/service/features/providers/claude/events/activity";
+import { decodedEvent } from "../../../src/shared/events/decode";
 import type { Event } from "../../../src/shared/events/types";
 import { at, FAKE_TREE } from "./scenario-context";
 
@@ -105,15 +109,23 @@ export class Timeline {
   add(type: string, data: Data = {}, gapMs = 1500) {
     this.clock += gapMs;
 
-    this.events.push({
-      id: this.firstId + this.count++,
-      task_id: this.taskId,
-      type,
-      timestamp: new Date(this.clock).toISOString(),
-      data: data.raw_response
-        ? { ...data, activity: claudeActivityPresentation({ type, data }) }
-        : data,
-    });
+    this.events.push(
+      decodedEvent({
+        id: this.firstId + this.count++,
+        task_id: this.taskId,
+        type,
+        timestamp: new Date(this.clock).toISOString(),
+        data: data.raw_response
+          ? {
+              ...data,
+              activity: claudeActivityPresentation({
+                type,
+                data,
+              }),
+            }
+          : data,
+      }),
+    );
 
     return this;
   }
@@ -189,8 +201,10 @@ export class Timeline {
       if (block.type === "text") {
         this.add("agent.message", {
           role: "assistant",
+          message_id: message.message.id,
+          parent_tool_use_id: message.parent_tool_use_id,
           text: block.text,
-          content: block,
+          content: claudeActivityContent(block),
           raw_response: message,
         });
       } else if (block.type === "tool_use") {
@@ -203,7 +217,9 @@ export class Timeline {
       } else {
         this.add("agent.content", {
           role: "assistant",
-          content: block,
+          message_id: message.message.id,
+          parent_tool_use_id: message.parent_tool_use_id,
+          content: claudeActivityContent(block),
           raw_response: message,
         });
       }
@@ -226,21 +242,27 @@ export class Timeline {
       if (block.type === "text") {
         this.add("agent.content", {
           role: "user",
+          message_id: message.uuid,
+          parent_tool_use_id: message.parent_tool_use_id,
           text: block.text,
-          content: block,
+          content: claudeActivityContent(block),
           raw_response: message,
         });
       } else if (block.type === "tool_result") {
         this.add("tool.completed", {
           id: block.tool_use_id,
           error: block.is_error,
-          content: block.content,
+          content: Array.isArray(block.content)
+            ? block.content.map(claudeActivityContent)
+            : block.content,
           raw_response: message,
         });
       } else {
         this.add("agent.content", {
           role: "user",
-          content: block,
+          message_id: message.uuid,
+          parent_tool_use_id: message.parent_tool_use_id,
+          content: claudeActivityContent(block),
           raw_response: message,
         });
       }
@@ -468,18 +490,11 @@ export const rateLimit = (
   t: Timeline,
   status: "allowed" | "rejected" = "allowed",
 ) => {
-  // The CLI reports these windows even though the SDK type omits the field.
   const info = {
     status,
     rateLimitType: "five_hour" as const,
+    utilization: status === "rejected" ? 1 : 0.12,
     resetsAt: 1791030000,
-    unifiedWindows: {
-      five_hour: {
-        utilization: status === "rejected" ? 1 : 0.12,
-        resetsAt: 1791030000,
-      },
-      seven_day: { utilization: 0.65, resetsAt: 1791462000 },
-    },
   };
 
   return t.sdk({

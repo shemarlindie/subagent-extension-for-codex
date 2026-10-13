@@ -1,5 +1,10 @@
-import { claudeActivityPresentation } from "../../src/service/features/providers/claude/events/activity.js";
+import {
+  claudeActivityPresentation,
+  decodeClaudeActivityContent,
+} from "../../src/service/features/providers/claude/events/activity.js";
 import type { RunContext } from "../../src/service/features/providers/types.js";
+import type { EventPayloadMap } from "../../src/shared/events/event-contract.js";
+import type { ActivityContent } from "../../src/shared/providers/activity/types.js";
 import {
   applyFixtureFieldOverrides,
   fixtureActivityPayload,
@@ -22,8 +27,33 @@ export interface FixtureRunEvents {
   ): void;
   emitActivity(type: string, fields: Record<string, unknown>): void;
   emitStream(frame: FixtureStreamFrame, fields: Record<string, unknown>): void;
-  emitPresented(type: string, data: Record<string, unknown>): void;
+  emitPresented(
+    type: "agent.content" | "tool.completed",
+    data: Record<string, unknown>,
+  ): void;
   emitContent(scenario: FixtureContentScenario): void;
+}
+
+function activityContent(value: unknown): ActivityContent {
+  return (
+    decodeClaudeActivityContent(value) ?? {
+      type: "opaque",
+      data: { value },
+    }
+  );
+}
+
+function presentedContent(value: unknown, arrayRequired: boolean) {
+  if (typeof value === "string") return value;
+
+  const wasArray = Array.isArray(value);
+  const content = wasArray ? value : [value];
+  const normalized = content.map(activityContent);
+
+  if (arrayRequired || wasArray) return normalized;
+  if (normalized.length === 1) return normalized[0];
+
+  return normalized;
 }
 
 /** Keep every synthetic event for a single turn on the same task and turn ids. */
@@ -79,7 +109,7 @@ export function createFixtureRunEvents(
     });
 
   const emitActivity = (type: string, fields: Record<string, unknown>) =>
-    c.emit(
+    c.emitOpaque(
       "claude.activity",
       fixtureActivityPayload(type, fields, taskId, turn),
     );
@@ -88,22 +118,36 @@ export function createFixtureRunEvents(
     frame: FixtureStreamFrame,
     fields: Record<string, unknown>,
   ) =>
-    c.emit(
+    c.emitOpaque(
       "claude.activity",
       fixtureStreamPayload(frame, fields, taskId, turn),
     );
 
-  const emitPresented = (type: string, data: Record<string, unknown>) => {
+  const emitPresented = (
+    type: "agent.content" | "tool.completed",
+    data: Record<string, unknown>,
+  ) => {
+    const normalized = {
+      ...data,
+      content: presentedContent(data.content, type === "tool.completed"),
+    };
+
     const provided = data.activity;
 
     const activity = {
-      ...claudeActivityPresentation({ type, data }),
+      ...claudeActivityPresentation({ type, data: normalized }),
       ...(provided && typeof provided === "object" && !Array.isArray(provided)
         ? provided
         : {}),
     };
 
-    c.emit(type, { ...data, activity });
+    const payload = { ...normalized, activity };
+
+    if (type === "agent.content") {
+      c.emit(type, payload as unknown as EventPayloadMap["agent.content"]);
+    } else {
+      c.emit(type, payload as unknown as EventPayloadMap["tool.completed"]);
+    }
   };
 
   const emitContent = (scenario: FixtureContentScenario) => {

@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { test } from "vitest";
 
+import { decodeEventView } from "../../src/shared/events/decode.js";
 import { FixtureProvider } from "./fixture-provider.js";
 import { context, task } from "./fixture-provider-test-helpers.js";
 
@@ -32,6 +33,20 @@ test("fixture tool and content scenarios produce representative synthetic events
   ].join(" ");
 
   await provider.run(f.runContext, prompt);
+
+  const presentedEvents = f.events.filter(
+    (event) =>
+      (event.type === "agent.content" || event.type === "tool.completed") &&
+      event.data.activity !== undefined,
+  );
+
+  assert.ok(presentedEvents.length > 0);
+
+  assert.ok(
+    presentedEvents.every(
+      (event) => decodeEventView(event.type, event.data).kind === "known",
+    ),
+  );
 
   const completedToolIds = new Set(
     f.events
@@ -83,7 +98,11 @@ test("fixture tool and content scenarios produce representative synthetic events
         !!content && typeof content === "object" && !Array.isArray(content),
     );
 
-  const image = contentBlocks.find((content) => content.type === "image");
+  const opaqueBlocks = contentBlocks
+    .filter((content) => content.type === "opaque")
+    .map((content) => content.data as Record<string, unknown>);
+
+  const image = opaqueBlocks.find((content) => content.type === "image");
 
   assert.deepEqual(image?.source, {
     type: "base64",
@@ -91,13 +110,13 @@ test("fixture tool and content scenarios produce representative synthetic events
     data: "ZmFrZQ==",
   });
 
-  assert.ok(contentBlocks.some((content) => content.type === "document"));
+  assert.ok(opaqueBlocks.some((content) => content.type === "document"));
 
   assert.ok(
-    contentBlocks.some((content) => content.type === "redacted_thinking"),
+    opaqueBlocks.some((content) => content.type === "redacted_thinking"),
   );
 
-  assert.ok(contentBlocks.some((content) => content.type === "custom_block"));
+  assert.ok(opaqueBlocks.some((content) => content.type === "custom_block"));
 });
 
 test("fixture restrictions and child workers follow configured policy", async () => {

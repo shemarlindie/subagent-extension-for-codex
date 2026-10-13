@@ -1,4 +1,5 @@
 // Public registry for synthetic and recorded panel preview scenarios.
+import { decodedEvent } from "../../../src/shared/events/decode";
 import type { Event } from "../../../src/shared/events/types";
 import type { Task } from "../../../src/shared/tasks/model";
 import recordedMcp from "../recorded/mcp.json";
@@ -84,34 +85,33 @@ const timelinesById = new Map(
 );
 
 export const previewEvents: Event[] = [
-  "preview-audit",
-  "preview-failed",
-  "preview-question",
-  "preview-stacked-questions",
-  "preview-refactor",
-  "preview-release",
-  "preview-blocks",
-  "preview-signals",
-  "preview-long",
-  "preview-many-turns",
-  "preview-interrupted",
-  "preview-input",
-  "preview-dependent",
-  "preview-build",
-  "preview-profile",
-  "preview-resumed",
-  "preview-steering",
-  "preview-paused",
-  "preview-conversation",
-  "preview-budget",
-  "preview-runtime-budget",
-  "preview-long-chat",
-  "preview-live-streaming",
-]
-  .flatMap((id) => timelinesById.get(id)!.events)
-  .concat(
-    liveTimelines
-      .filter((timeline) => timeline.taskId !== "preview-live-streaming")
-      .flatMap((timeline) => timeline.events),
-    recordedFixtures.flatMap((recorded) => recorded.events),
-  );
+  ...[
+    "preview-audit",
+    "preview-failed",
+    "preview-question",
+    "preview-stacked-questions",
+    "preview-refactor",
+    "preview-release",
+    "preview-blocks",
+    "preview-signals",
+    "preview-long",
+    "preview-many-turns",
+    "preview-interrupted",
+    "preview-input",
+    "preview-dependent",
+    "preview-build",
+    "preview-profile",
+    "preview-resumed",
+    "preview-steering",
+    "preview-paused",
+    "preview-conversation",
+    "preview-budget",
+    "preview-runtime-budget",
+    "preview-long-chat",
+    "preview-live-streaming",
+  ].flatMap((id) => timelinesById.get(id)!.events),
+  ...liveTimelines
+    .filter((timeline) => timeline.taskId !== "preview-live-streaming")
+    .flatMap((timeline) => timeline.events),
+  ...recordedFixtures.flatMap((recorded) => recorded.events),
+].map(decodedEvent);

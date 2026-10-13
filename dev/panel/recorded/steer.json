@@ -23,7 +23,10 @@
     "depends_on": [],
     "context": [],
     "workspace_strategy": "worktree",
-    "budget": { "max_runtime_minutes": 3, "max_cost_usd": 0.5 },
+    "budget": {
+      "max_runtime_minutes": 3,
+      "max_cost_usd": 0.5
+    },
     "title": "Recorded: a steer, then interrupt and send now",
     "id": "preview-recorded-steer",
     "owner": "preview",
@@ -74,7 +77,9 @@
       "task_id": "preview-recorded-steer",
       "type": "task.started",
       "timestamp": "2026-10-02T11:00:00.074Z",
-      "data": { "turn": 1 }
+      "data": {
+        "turn": 1
+      }
     },
     {
       "id": 3002,
@@ -253,7 +258,9 @@
                   "command": "sleep 5; echo one",
                   "description": "Sleep then echo one"
                 },
-                "caller": { "type": "direct" }
+                "caller": {
+                  "type": "direct"
+                }
               }
             ],
             "container": null,
@@ -524,7 +531,9 @@
       "task_id": "preview-recorded-steer",
       "type": "task.steer_taken",
       "timestamp": "2026-10-02T11:00:08.371Z",
-      "data": { "message_id": "msg_66e92a4d-2d91-46dd-b5b3-682e2a326392" }
+      "data": {
+        "message_id": "msg_66e92a4d-2d91-46dd-b5b3-682e2a326392"
+      }
     },
     {
       "id": 3012,
@@ -585,7 +594,9 @@
                   "command": "sleep 5; echo two",
                   "description": "Sleep then echo two"
                 },
-                "caller": { "type": "direct" }
+                "caller": {
+                  "type": "direct"
+                }
               }
             ],
             "container": null,
@@ -902,7 +913,9 @@
           "liveStatus": false,
           "messageId": "msg_011CfoHwtARm95CPM56TXQ6m",
           "hasThinking": false
-        }
+        },
+        "message_id": "msg_011CfoHwtARm95CPM56TXQ6m",
+        "parent_tool_use_id": null
       }
     },
     {
@@ -956,7 +969,9 @@
           "cache_creation_input_tokens": 33947,
           "cache_read_input_tokens": 65588,
           "output_tokens": 197,
-          "output_tokens_details": { "thinking_tokens": 0 },
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
@@ -1005,14 +1020,26 @@
         "fast_mode_disabled_reason": "sdk_opt_in_required",
         "subagent_stats": {
           "spawned": 0,
-          "requested": { "background": 0, "foreground": 0, "unset": 0 },
+          "requested": {
+            "background": 0,
+            "foreground": 0,
+            "unset": 0
+          },
           "started_in_background": 0,
           "max_depth": 0,
           "spawned_by_subagents": 0,
           "completed": 0,
           "failed": 0,
-          "killed": { "parent": 0, "user": 0, "system": 0 },
-          "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+          "killed": {
+            "parent": 0,
+            "user": 0,
+            "system": 0
+          },
+          "refused": {
+            "depth_limit": 0,
+            "concurrency_limit": 0,
+            "budget": 0
+          },
           "by_type": {}
         },
         "is_error": false,
@@ -1042,7 +1069,9 @@
             "cache_creation_input_tokens": 33947,
             "cache_read_input_tokens": 65588,
             "output_tokens": 197,
-            "output_tokens_details": { "thinking_tokens": 0 },
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
             "server_tool_use": {
               "web_search_requests": 0,
               "web_fetch_requests": 0
@@ -1091,13 +1120,21 @@
           "fast_mode_disabled_reason": "sdk_opt_in_required",
           "subagent_stats": {
             "spawned": 0,
-            "requested": { "background": 0, "foreground": 0, "unset": 0 },
+            "requested": {
+              "background": 0,
+              "foreground": 0,
+              "unset": 0
+            },
             "started_in_background": 0,
             "max_depth": 0,
             "spawned_by_subagents": 0,
             "completed": 0,
             "failed": 0,
-            "killed": { "parent": 0, "user": 0, "system": 0 },
+            "killed": {
+              "parent": 0,
+              "user": 0,
+              "system": 0
+            },
             "refused": {
               "depth_limit": 0,
               "concurrency_limit": 0,
@@ -1191,7 +1228,9 @@
       "task_id": "preview-recorded-steer",
       "type": "task.started",
       "timestamp": "2026-10-02T11:00:18.063Z",
-      "data": { "turn": 2 }
+      "data": {
+        "turn": 2
+      }
     },
     {
       "id": 3028,
@@ -1370,7 +1409,9 @@
                   "command": "sleep 30; echo slow",
                   "description": "Sleep 30s then echo slow"
                 },
-                "caller": { "type": "direct" }
+                "caller": {
+                  "type": "direct"
+                }
               }
             ],
             "container": null,
@@ -1571,7 +1612,9 @@
       "task_id": "preview-recorded-steer",
       "type": "task.control_requested",
       "timestamp": "2026-10-02T11:00:20.247Z",
-      "data": { "status": "interrupted" }
+      "data": {
+        "status": "interrupted"
+      }
     },
     {
       "id": 3037,
@@ -1581,13 +1624,19 @@
       "data": {
         "role": "user",
         "text": "[Request interrupted by user]",
-        "content": { "type": "text", "text": "[Request interrupted by user]" },
+        "content": {
+          "type": "text",
+          "text": "[Request interrupted by user]"
+        },
         "raw_response": {
           "type": "user",
           "message": {
             "role": "user",
             "content": [
-              { "type": "text", "text": "[Request interrupted by user]" }
+              {
+                "type": "text",
+                "text": "[Request interrupted by user]"
+              }
             ]
           },
           "parent_tool_use_id": null,
@@ -1605,7 +1654,9 @@
           "title": "User content",
           "messageId": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
           "hasThinking": false
-        }
+        },
+        "message_id": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
+        "parent_tool_use_id": null
       }
     },
     {
@@ -1623,7 +1674,9 @@
           "cache_creation_input_tokens": 768,
           "cache_read_input_tokens": 33947,
           "output_tokens": 88,
-          "output_tokens_details": { "thinking_tokens": 0 },
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
@@ -1672,14 +1725,26 @@
         "fast_mode_disabled_reason": "sdk_opt_in_required",
         "subagent_stats": {
           "spawned": 0,
-          "requested": { "background": 0, "foreground": 0, "unset": 0 },
+          "requested": {
+            "background": 0,
+            "foreground": 0,
+            "unset": 0
+          },
           "started_in_background": 0,
           "max_depth": 0,
           "spawned_by_subagents": 0,
           "completed": 0,
           "failed": 0,
-          "killed": { "parent": 0, "user": 0, "system": 0 },
-          "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+          "killed": {
+            "parent": 0,
+            "user": 0,
+            "system": 0
+          },
+          "refused": {
+            "depth_limit": 0,
+            "concurrency_limit": 0,
+            "budget": 0
+          },
           "by_type": {}
         },
         "is_error": true,
@@ -1704,7 +1769,9 @@
             "cache_creation_input_tokens": 768,
             "cache_read_input_tokens": 33947,
             "output_tokens": 88,
-            "output_tokens_details": { "thinking_tokens": 0 },
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
             "server_tool_use": {
               "web_search_requests": 0,
               "web_fetch_requests": 0
@@ -1753,13 +1820,21 @@
           "fast_mode_disabled_reason": "sdk_opt_in_required",
           "subagent_stats": {
             "spawned": 0,
-            "requested": { "background": 0, "foreground": 0, "unset": 0 },
+            "requested": {
+              "background": 0,
+              "foreground": 0,
+              "unset": 0
+            },
             "started_in_background": 0,
             "max_depth": 0,
             "spawned_by_subagents": 0,
             "completed": 0,
             "failed": 0,
-            "killed": { "parent": 0, "user": 0, "system": 0 },
+            "killed": {
+              "parent": 0,
+              "user": 0,
+              "system": 0
+            },
             "refused": {
               "depth_limit": 0,
               "concurrency_limit": 0,
@@ -1815,7 +1890,9 @@
       "task_id": "preview-recorded-steer",
       "type": "task.started",
       "timestamp": "2026-10-02T11:00:21.037Z",
-      "data": { "turn": 3 }
+      "data": {
+        "turn": 3
+      }
     },
     {
       "id": 3042,
@@ -1974,7 +2051,10 @@
       "data": {
         "role": "assistant",
         "text": "PEAR",
-        "content": { "type": "text", "text": "PEAR" },
+        "content": {
+          "type": "text",
+          "text": "PEAR"
+        },
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -1982,7 +2062,12 @@
             "id": "msg_011CfoHxQnvW62fTe8TqF1P4",
             "type": "message",
             "role": "assistant",
-            "content": [{ "type": "text", "text": "PEAR" }],
+            "content": [
+              {
+                "type": "text",
+                "text": "PEAR"
+              }
+            ],
             "container": null,
             "stop_reason": null,
             "stop_sequence": null,
@@ -2018,7 +2103,9 @@
           "liveStatus": false,
           "messageId": "msg_011CfoHxQnvW62fTe8TqF1P4",
           "hasThinking": false
-        }
+        },
+        "message_id": "msg_011CfoHxQnvW62fTe8TqF1P4",
+        "parent_tool_use_id": null
       }
     },
     {
@@ -2109,7 +2196,9 @@
           "cache_creation_input_tokens": 2570,
           "cache_read_input_tokens": 34715,
           "output_tokens": 6,
-          "output_tokens_details": { "thinking_tokens": 0 },
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
           "server_tool_use": {
             "web_search_requests": 0,
             "web_fetch_requests": 0
@@ -2158,14 +2247,26 @@
         "fast_mode_disabled_reason": "sdk_opt_in_required",
         "subagent_stats": {
           "spawned": 0,
-          "requested": { "background": 0, "foreground": 0, "unset": 0 },
+          "requested": {
+            "background": 0,
+            "foreground": 0,
+            "unset": 0
+          },
           "started_in_background": 0,
           "max_depth": 0,
           "spawned_by_subagents": 0,
           "completed": 0,
           "failed": 0,
-          "killed": { "parent": 0, "user": 0, "system": 0 },
-          "refused": { "depth_limit": 0, "concurrency_limit": 0, "budget": 0 },
+          "killed": {
+            "parent": 0,
+            "user": 0,
+            "system": 0
+          },
+          "refused": {
+            "depth_limit": 0,
+            "concurrency_limit": 0,
+            "budget": 0
+          },
           "by_type": {}
         },
         "is_error": false,
@@ -2193,7 +2294,9 @@
             "cache_creation_input_tokens": 2570,
             "cache_read_input_tokens": 34715,
             "output_tokens": 6,
-            "output_tokens_details": { "thinking_tokens": 0 },
+            "output_tokens_details": {
+              "thinking_tokens": 0
+            },
             "server_tool_use": {
               "web_search_requests": 0,
               "web_fetch_requests": 0
@@ -2242,13 +2345,21 @@
           "fast_mode_disabled_reason": "sdk_opt_in_required",
           "subagent_stats": {
             "spawned": 0,
-            "requested": { "background": 0, "foreground": 0, "unset": 0 },
+            "requested": {
+              "background": 0,
+              "foreground": 0,
+              "unset": 0
+            },
             "started_in_background": 0,
             "max_depth": 0,
             "spawned_by_subagents": 0,
             "completed": 0,
             "failed": 0,
-            "killed": { "parent": 0, "user": 0, "system": 0 },
+            "killed": {
+              "parent": 0,
+              "user": 0,
+              "system": 0
+            },
             "refused": {
               "depth_limit": 0,
               "concurrency_limit": 0,
@@ -2312,7 +2423,9 @@
       "task_id": "preview-recorded-steer",
       "type": "task.completed",
       "timestamp": "2026-10-02T11:00:24.371Z",
-      "data": { "reply": "PEAR" }
+      "data": {
+        "reply": "PEAR"
+      }
     }
   ]
 }

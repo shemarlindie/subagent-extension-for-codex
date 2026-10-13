@@ -34,10 +34,21 @@ While a turn runs, `RunContext` connects it to the conversation:
 
 Providers emit common activity events and normalized presentation details for shared rendering. Native event payloads remain available for inspection. Activity rendering reads explicit presentation metadata; Claude SDK decoding happens in the Claude provider.
 
+`RunContext.emit` correlates known project event names with their payloads.
+Use `emitOpaque` only for provider-owned or future event names that have no
+project contract. The service validates known payload fields when it creates
+the durable event and preserves the complete original JSON alongside the typed
+view. Stored reads and panel activity transports validate their own incoming
+data, keeping incomplete payloads and unfamiliar event names available through
+the opaque view. Claude's native SDK declarations are reused through a
+type-only import in its owning shared provider contract; that exception does
+not bring SDK execution code into common or browser code. The panel validates
+the normalized event envelope and keeps the full raw response available for
+inspection.
+
 Rate-limit presentation exposes reported utilization windows through
-`rateLimitWindows`. Claude's browser-safe window decoder also supplies these
-fields when reading older stored events whose presentation lacks them; the
-compatibility reader leaves the stored event and raw response unchanged.
+`rateLimitWindows`. Claude translates its SDK rate-limit fields at the provider
+boundary; consumers read the normalized windows from the presentation.
 
 ## Stored provider state
 

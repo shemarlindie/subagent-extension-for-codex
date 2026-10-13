@@ -39,6 +39,8 @@ export function context(currentTask = task()) {
     delta: () => {},
     emit: (type: string, data: Record<string, unknown>) =>
       events.push({ type, data }),
+    emitOpaque: (type: string, data: Record<string, unknown>) =>
+      events.push({ type, data }),
     session: (id: string, stateRef: string) => sessions.push({ id, stateRef }),
     input: async (tool: string) => {
       inputs.push(tool);
