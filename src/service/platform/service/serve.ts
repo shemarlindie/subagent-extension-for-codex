@@ -179,7 +179,7 @@ export async function serve({
       while (calls && Date.now() < deadline)
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-      app.locals.ready = false;
+      app.locals.stopping = true;
       await app.locals.closeMcp();
       await c.close();
       process.exit(0);

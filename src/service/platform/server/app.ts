@@ -76,6 +76,12 @@ export function application(
   app.use(express.json({ limit: "256kb" }));
 
   app.use((req, res, next) => {
+    if (app.locals.stopping && req.path !== "/health") {
+      res.status(503).json({ error: "The service is stopping" });
+
+      return;
+    }
+
     if (app.locals.ready === false && req.path !== "/health") {
       res.status(503).json({ error: "Service recovery is still in progress" });
 
@@ -102,19 +108,22 @@ export function application(
   const { version, apiVersion, launcher } = serviceIdentity();
 
   app.get("/health", (_req, res) =>
-    res.status(app.locals.ready === false ? 503 : 200).json({
-      service: "codex-subagent-extension",
-      status:
-        app.locals.ready === false
-          ? "starting"
-          : app.locals.draining
-            ? "draining"
-            : "ok",
-      version,
-      apiVersion,
-      launcher,
-      providers: c.workers().map((w) => w.provider),
-    }),
+    res
+      .status(app.locals.ready === false || app.locals.stopping ? 503 : 200)
+      .json({
+        service: "codex-subagent-extension",
+        status: app.locals.stopping
+          ? "stopping"
+          : app.locals.ready === false
+            ? "starting"
+            : app.locals.draining
+              ? "draining"
+              : "ok",
+        version,
+        apiVersion,
+        launcher,
+        providers: c.workers().map((w) => w.provider),
+      }),
   );
 
   app.get("/", async (req, res) => {

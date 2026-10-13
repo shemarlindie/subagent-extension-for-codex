@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer, type RequestListener, type Server } from "node:http";
 import { tmpdir } from "node:os";
@@ -10,6 +10,7 @@ import { test } from "vitest";
 
 import { dataDirectory } from "../../../src/service/platform/service/runtime.js";
 import { waitForListening } from "../../support/helpers.js";
+import { freePort, stopService } from "../../support/service.js";
 
 const exec = promisify(execFile);
 
@@ -66,33 +67,7 @@ async function fake(t: import("vitest").TestContext, handler: RequestListener) {
 
 /** Stops the service a test's launcher started in `dir`, even when the test fails. */
 function stopOnFinish(t: import("vitest").TestContext, dir: string) {
-  t.onTestFinished(async () => {
-    let pid: number;
-
-    try {
-      pid = Number(await readFile(join(dir, "service.pid"), "utf8"));
-    } catch {
-      return;
-    }
-
-    try {
-      process.kill(pid, "SIGTERM");
-    } catch {}
-
-    for (let i = 0; i < 100; i++) {
-      try {
-        process.kill(pid, 0);
-      } catch {
-        return;
-      }
-
-      await new Promise((done) => setTimeout(done, 20));
-    }
-
-    try {
-      process.kill(pid, "SIGKILL");
-    } catch {}
-  });
+  t.onTestFinished(() => stopService({ data: dir }).catch(() => {}));
 }
 
 /** A fake service with the given identity that records drain requests. */
@@ -246,6 +221,40 @@ test(
     );
 
     assert.equal(metadata.installRoot, resolve("."));
+  },
+);
+
+test(
+  "launcher starts the service again once a stopping service releases the lease",
+  { timeout: 30000 },
+  async (t) => {
+    const dir = await data(t);
+    stopOnFinish(t, dir);
+    const port = await freePort();
+
+    // A stopping service: it still holds the lease but no longer listens.
+    const stopping = spawn(process.execPath, [
+      "-e",
+      "setTimeout(() => {}, 60000)",
+    ]);
+
+    t.onTestFinished(() => void stopping.kill());
+    await writeFile(join(dir, "service.pid"), String(stopping.pid));
+
+    const connecting = connect({
+      CODEX_SUBAGENT_EXTENSION_DATA: dir,
+      PORT: String(port),
+    });
+
+    // The first launch loses the lease and exits; then the old service exits.
+    await new Promise((done) => setTimeout(done, 1500));
+    stopping.kill();
+    const result = JSON.parse((await connecting).stdout);
+    assert.equal(result.origin, `http://127.0.0.1:${port}`);
+
+    const health = await (await fetch(`${result.origin}/health`)).json();
+    assert.equal(health.status, "ok");
+    assert.equal(health.launcher, "stdio");
   },
 );
 

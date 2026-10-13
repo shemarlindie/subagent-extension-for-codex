@@ -14,6 +14,7 @@ import {
   type RunningService,
   serviceIdentity,
 } from "./identity.js";
+import { isProcessRunning } from "./process-info.js";
 import {
   dataDirectory,
   defaultPort,
@@ -21,10 +22,14 @@ import {
   packagePath,
 } from "./runtime.js";
 
-class ServiceStartingError extends Error {}
+/** A service that is starting or stopping: wait instead of launching or failing. */
+class ServiceTransitionError extends Error {}
 
 /** How long to wait for a replaced service that can't serve this launcher to exit. */
 const replacementTimeout = 11 * 60 * 1000;
+
+/** How many services one connection attempt may start, when earlier ones exit. */
+const maxLaunches = 3;
 
 function refused(error: unknown) {
   return (
@@ -84,10 +89,10 @@ export async function connectService() {
 
     if (
       health.service === "codex-subagent-extension" &&
-      health.status === "starting" &&
+      ["starting", "stopping"].includes(health.status) &&
       response.status === 503
     ) {
-      throw new ServiceStartingError("Service recovery is still in progress");
+      throw new ServiceTransitionError(`The service is ${health.status}`);
     }
 
     if (!response.ok || health.service !== "codex-subagent-extension") {
@@ -194,8 +199,9 @@ export async function connectService() {
     await waitForExit();
     needsLaunch = true;
   } catch (error) {
-    // Only a refused connection authorizes starting a process. Never replace a live service.
-    if (!needsLaunch && !(error instanceof ServiceStartingError)) {
+    // Only a refused connection authorizes starting a process. Never replace
+    // a live service; one starting or stopping is waited for below.
+    if (!(error instanceof ServiceTransitionError)) {
       if (explicit || !refused(error)) {
         throw error;
       }
@@ -204,9 +210,25 @@ export async function connectService() {
     }
   }
 
-  let spawnError: Error | undefined;
+  /** Whether no live process holds the service lease on the data directory. */
+  const leaseReleased = () => {
+    try {
+      return !isProcessRunning(
+        Number(readFileSync(join(data, "service.pid"), "utf8")),
+      );
+    } catch {
+      return true;
+    }
+  };
 
-  if (needsLaunch) {
+  let spawnError: Error | undefined;
+  let launches = 0;
+  /** Whether the last service this launcher started has exited. */
+  let exited = false;
+
+  const launch = () => {
+    launches++;
+    exited = false;
     mkdirSync(data, { recursive: true, mode: 0o700 });
     const log = openSync(join(data, "service.log"), "a", 0o600);
 
@@ -240,9 +262,15 @@ export async function connectService() {
       spawnError = e;
     });
 
+    child.on("exit", () => {
+      exited = true;
+    });
+
     child.unref();
     closeSync(log);
-  }
+  };
+
+  if (needsLaunch) launch();
 
   // Concurrent launchers may spawn losers: the service lease alone owns recovery and workers.
   const deadline = Date.now() + 15000;
@@ -258,6 +286,18 @@ export async function connectService() {
       return connection;
     } catch (e) {
       last = e;
+
+      // Nothing listens and no service this launcher started is coming up:
+      // a stopping service held the lease (a handover or shutdown), so the
+      // last launch exited. Start again once that service has let go.
+      if (
+        !explicit &&
+        refused(e) &&
+        (launches === 0 || exited) &&
+        launches < maxLaunches &&
+        leaseReleased()
+      )
+        launch();
     }
   }
 

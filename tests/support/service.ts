@@ -42,9 +42,9 @@ export function serviceEnv(
   };
 }
 
-/** Stops the service that owns `service.data`, if one is running. */
-export async function stopService(service: Service) {
-  const pid = Number(await readFile(`${service.data}/service.pid`, "utf8"));
+/** Stops the service that owns the data directory, if one is running. */
+export async function stopService({ data }: Pick<Service, "data">) {
+  const pid = Number(await readFile(`${data}/service.pid`, "utf8"));
 
   try {
     process.kill(pid, "SIGTERM");
