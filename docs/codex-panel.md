@@ -73,8 +73,7 @@ remove them from that configuration to keep them removed.
 **Also remove extension task data**, off by default, stops and removes that repository's
 tasks across all chats, matching its exact saved repository path. Removing a
 parent approval does not remove descendant repositories' tasks. Removal includes
-conversations, activity, requests, webhook
-deliveries and task worktrees/branches with uncommitted changes. Checkout files
+conversations, activity, requests and task worktrees/branches with uncommitted changes. Checkout files
 and provider sessions remain. Tasks in other projects that depend on these tasks
 block removal before cleanup starts. Internal dependents are removed first.
 If cleanup fails, the approval and remaining tasks stay available for retry;
@@ -341,7 +340,7 @@ blocks inspection or triggers an automatic follow-up.
 
 The circled ellipsis beside the task status opens **Task actions**, including handoff
 and deletion. **Delete task** stops running/queued/waiting work, then
-removes task history, requests, webhook deliveries and its worktree/branch/refs.
+removes task history, requests and its worktree/branch/refs.
 Current-repo files stay intact. **Also delete the agent task**, off by default,
 also removes the provider session. Provider cleanup failure retains the local
 task for retry; later cleanup failure can leave earlier resources removed.

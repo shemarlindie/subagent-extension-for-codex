@@ -16,7 +16,7 @@ Read the matching guide's relevant sections before working in an area; unrelated
 | Provider execution, permissions or session policy          | [Provider contract](docs/provider-contract.md) and relevant [Configuration](docs/configuration.md) sections.                       |
 | Claude executable selection, readiness or SDK/CLI upgrades | [Claude Code CLI](docs/claude-cli.md) and [version qualification](docs/development.md#qualifying-claude-code-versions).            |
 | Settings, budgets or repository access                     | Relevant [Configuration](docs/configuration.md) sections.                                                                          |
-| MCP tools, user authority, forms or webhook events         | [MCP reference](docs/mcp-reference.md).                                                                                            |
+| MCP tools, user authority or forms                         | [MCP reference](docs/mcp-reference.md).                                                                                            |
 | Host context, project/chat scope, entrypoints or mentions  | [Host capabilities](docs/host-capabilities.md).                                                                                    |
 | Startup, continuation, recovery or storage                 | [Setup and task continuation](docs/setup-and-resume.md); [Database](docs/development.md#database) for schema changes or migration. |
 | Capability claims or verification gaps                     | [Implementation status](docs/implementation-status.md); inspect dated evidence only for the claim being assessed.                  |

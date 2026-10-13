@@ -5,7 +5,7 @@
 //   npm run db:migrate-legacy -- [--dry-run] [<data directory>]
 //
 // The old database is kept beside the new one as console.sqlite.pre-migration.
-// Worktrees, events-key and admin-token are left as they are.
+// Worktrees and admin-token are left as they are.
 
 import { existsSync, renameSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -13,7 +13,6 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
-import { decodeSubscription } from "../../src/service/features/events/service.js";
 import { Settings } from "../../src/service/features/settings/settings.js";
 import { decodeRequest } from "../../src/service/features/tasks/input/forms.js";
 import {
@@ -133,19 +132,6 @@ function checkLegacy(legacy: DatabaseSync) {
     throw new Error("No tasks table; this is not a service database");
 }
 
-/** The task an outbox delivery's envelope names, if any. */
-function outboxTaskId(row: Row) {
-  try {
-    return (JSON.parse(String(row.body)) as { data?: { task_id?: unknown } })
-      .data?.task_id;
-  } catch (error) {
-    throw new Error(
-      `Stored webhook delivery ${row.subscription_id}/${row.event_id} is malformed`,
-      { cause: error },
-    );
-  }
-}
-
 function copy(
   legacy: DatabaseSync,
   database: ReturnType<typeof openDatabase>,
@@ -178,7 +164,7 @@ function copy(
     count("copied", "tasks");
   }
 
-  // Ids are kept, so event cursors held by clients and the webhook checkpoint stay valid.
+  // Ids are kept, so event cursors held by clients stay valid.
   const event = client.prepare(
     "INSERT INTO events(id,task_id,type,timestamp,data) VALUES(?,?,?,?,?)",
   );
@@ -202,8 +188,8 @@ function copy(
   }
 
   // Carry the id sequence over, not just the kept ids: events deleted with
-  // their tasks may have used higher ids that a client or the webhook
-  // checkpoint has already passed, and reusing them would skip new events.
+  // their tasks may have used higher ids that a client has already passed,
+  // and reusing them would skip new events.
   const sequence = Number(
     legacy.prepare("SELECT seq FROM sqlite_sequence WHERE name='events'").get()
       ?.seq ?? 0,
@@ -256,51 +242,13 @@ function copy(
 
   for (const row of rows("user_settings")) settings.values(String(row.owner));
 
-  for (const row of rows("event_subscriptions")) {
-    decodeSubscription(String(row.id), String(row.body));
-
-    client
-      .prepare("INSERT INTO event_subscriptions(id,owner,body) VALUES(?,?,?)")
-      .run(row.id, row.owner, row.body);
-
-    count("copied", "event_subscriptions");
-  }
-
-  for (const row of rows("event_outbox")) {
-    // The envelope names its task; its event id can't be split reliably,
-    // since task ids may contain underscores.
-    const taskId = outboxTaskId(row);
-
-    if (typeof taskId !== "string" || !tasks.has(taskId)) {
-      count("dropped", "event_outbox");
-      continue;
-    }
-
-    client
-      .prepare(
-        "INSERT INTO event_outbox(subscription_id,event_id,task_id,body,status,attempts,next_at) VALUES(?,?,?,?,?,?,?)",
-      )
-      .run(
-        row.subscription_id,
-        row.event_id,
-        taskId,
-        row.body,
-        row.status,
-        row.attempts,
-        row.next_at,
-      );
-
-    count("copied", "event_outbox");
-  }
-
-  const [checkpoint] = rows("event_checkpoint");
-
-  if (checkpoint)
-    client
-      .prepare("UPDATE event_checkpoint SET cursor=? WHERE id=1")
-      .run(checkpoint.cursor);
-
-  for (const table of ["artifacts", "codex_executors"])
+  for (const table of [
+    "event_subscriptions",
+    "event_outbox",
+    "event_checkpoint",
+    "artifacts",
+    "codex_executors",
+  ])
     if (has(table)) report.dropped[table] = rows(table).length;
 
   const violations = client.prepare("PRAGMA foreign_key_check").all();

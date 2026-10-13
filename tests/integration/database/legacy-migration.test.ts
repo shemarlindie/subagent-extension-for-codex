@@ -91,7 +91,7 @@ function legacyDataDirectory(t: TestContext) {
   const run = (sql: string, ...values: (string | number)[]) =>
     db.prepare(sql).run(...values);
 
-  // A task id that prefixes another's, as the old outbox ids made ambiguous.
+  // Retain both tasks and their independent event histories.
   for (const id of ["task_a", "task_a_1"])
     run(
       "INSERT INTO tasks VALUES(?,?,?)",
@@ -178,10 +178,14 @@ test("an old database migrates with its records, task references and event ids",
       form_requests: 2,
       project_roots: 1,
       user_settings: 1,
-      event_subscriptions: 1,
-      event_outbox: 2,
     },
-    dropped: { form_requests: 1, event_outbox: 1, artifacts: 1 },
+    dropped: {
+      form_requests: 1,
+      event_subscriptions: 1,
+      event_outbox: 3,
+      event_checkpoint: 1,
+      artifacts: 1,
+    },
   });
 
   assert.ok(existsSync(join(data, "console.sqlite.pre-migration")));
@@ -221,27 +225,21 @@ test("an old database migrates with its records, task references and event ids",
   assert.deepEqual(
     client
       .prepare(
-        "SELECT event_id, task_id, attempts FROM event_outbox ORDER BY event_id",
+        "SELECT name FROM sqlite_master WHERE name IN ('event_subscriptions','event_outbox','event_checkpoint')",
       )
-      .all()
-      .map((row) => ({ ...row })),
-    [
-      { event_id: "evt_task_a_1_9", task_id: "task_a_1", attempts: 2 },
-      { event_id: "evt_task_a_5", task_id: "task_a", attempts: 2 },
-    ],
+      .all(),
+    [],
   );
 
-  assert.equal(
-    client.prepare("SELECT cursor FROM event_checkpoint").get()?.cursor,
-    9,
-  );
-
-  // Deleting a task now cascades to its forms and deliveries.
+  // Forms still cascade when their task is deleted.
   store.delete("task_a_1", "alice");
 
-  assert.equal(
-    client.prepare("SELECT COUNT(*) AS n FROM event_outbox").get()?.n,
-    1,
+  assert.deepEqual(
+    client
+      .prepare("SELECT id FROM form_requests ORDER BY id")
+      .all()
+      .map((row) => String(row.id)),
+    ["start"],
   );
 
   assert.throws(() => migrateLegacyDatabase(data), /already exists/);
@@ -292,4 +290,16 @@ test("a running service or an already versioned database is refused", (t) => {
   t.onTestFinished(() => rmSync(current, { recursive: true, force: true }));
   openDatabase(join(current, "console.sqlite")).close();
   assert.throws(() => migrateLegacyDatabase(current), /already versioned/);
+});
+
+test("retired webhook records are discarded without decoding their contents", (t) => {
+  const { data, legacy } = legacyDataDirectory(t);
+  legacy.prepare("UPDATE event_subscriptions SET body='malformed'").run();
+  legacy.prepare("UPDATE event_outbox SET body='malformed'").run();
+  legacy.close();
+
+  const report = migrateLegacyDatabase(data);
+  assert.equal(report.copied.tasks, 2);
+  assert.equal(report.dropped.event_subscriptions, 1);
+  assert.equal(report.dropped.event_outbox, 3);
 });

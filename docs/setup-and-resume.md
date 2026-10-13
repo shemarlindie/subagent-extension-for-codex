@@ -13,7 +13,7 @@ Use the [README](../README.md) for installation and Codex MCP setup, and [Config
 
 A task stays open after a turn: a message in Chat, or `send_agent_message` from the parent agent, starts its next turn. The next turn resumes the worker's session on the machine that owns it. When it can't (the task failed before its session existed, the session is on another machine, or its saved state is unavailable), the turn starts a new session in the same task, whose prompt carries the request and the earlier conversation, newest kept; Chat marks it "New session". A worktree removed with **Remove worktree** comes back from the task's branch, or from its base commit if the branch was deleted too. A completed or interrupted task can receive another message; delete it when its conversation and resources are no longer needed.
 
-The service stores its database, task worktrees, admin token and event signing key in its data directory. To reconnect, start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value and use the task list to inspect existing work. A restart leaves a turn that was running interrupted. Steers it hadn't taken wait at the front of its queue, which is paused until the next message. If a submission or shutdown outcome is uncertain, inspect the task's Chat and Activity before sending again. The service does not merge worktree changes.
+The service stores its database, task worktrees and admin token in its data directory. To reconnect, start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value and use the task list to inspect existing work. A restart leaves a turn that was running interrupted. Steers it hadn't taken wait at the front of its queue, which is paused until the next message. If a submission or shutdown outcome is uncertain, inspect the task's Chat and Activity before sending again. The service does not merge worktree changes.
 
 ## Raise a task budget
 
@@ -21,7 +21,7 @@ Runtime and cost limits accumulate across turns. When a task stops at a limit, u
 
 ## Preserve service state
 
-Stop the service gracefully before backing up its data. Preserve the full data directory, including SQLite files, worktrees, and `events-key`; copying only a live SQLite database can omit its write-ahead log. Keep the Claude runtime state alongside the machine that owns the worktrees. Moving this state to another machine does not ensure native session continuation.
+Stop the service gracefully before backing up its data. Preserve the full data directory, including SQLite files and worktrees; copying only a live SQLite database can omit its write-ahead log. Keep the Claude runtime state alongside the machine that owns the worktrees. Moving this state to another machine does not ensure native session continuation.
 
 ## Troubleshooting
 

@@ -798,7 +798,7 @@ export class Control {
 
   /**
    * Deletes a task and everything related to it: its events, stored requests
-   * and webhook deliveries, and a worktree task's worktree and branch,
+   * and a worktree task's worktree and branch,
    * uncommitted changes included. A running, queued or waiting task is
    * interrupted first, since deleting is the only way to end a task for good.
    * `deleteAgentTask` also deletes the provider's session, which the task

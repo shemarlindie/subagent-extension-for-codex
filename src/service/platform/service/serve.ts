@@ -1,14 +1,6 @@
-import { randomBytes } from "node:crypto";
-import {
-  chmodSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { Events } from "../../features/events/service.js";
 import { Projects } from "../../features/projects/projects.js";
 import { configuredProviders } from "../../features/providers/config.js";
 import type { Provider } from "../../features/providers/types.js";
@@ -102,24 +94,12 @@ export async function serve({
     await c.projects.register(resolve(root), "parent");
 
   const auth = new Auth(token);
-  const keyPath = join(data, "events-key");
-  let eventKey: Buffer;
-
-  try {
-    eventKey = readFileSync(keyPath);
-  } catch {
-    eventKey = randomBytes(32);
-    writeFileSync(keyPath, eventKey, { mode: 0o600, flag: "wx" });
-  }
-
-  const events = new Events(c.store, eventKey);
 
   const app = application(
     c,
     auth,
     origin,
     packagePath("dist/app.html"),
-    events,
     packagePath("dist/app.html"),
     lanOrigins,
   );
@@ -140,11 +120,9 @@ export async function serve({
 
   try {
     await c.recover();
-    events.start();
     app.locals.ready = true;
   } catch (error) {
     server.close();
-    await events.close();
     await c.close();
     throw error;
   }
@@ -172,7 +150,6 @@ export async function serve({
       clearInterval(prune);
       server.close();
       await app.locals.closeMcp();
-      await events.close();
       await c.close();
       process.exit(0);
     })());

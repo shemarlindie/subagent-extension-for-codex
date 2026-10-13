@@ -20,7 +20,6 @@ import { test, type TestContext } from "vitest";
 const repository = fileURLToPath(new URL("../../../", import.meta.url));
 
 const contracts = [
-  "src/service/features/events/subscription-contract",
   "src/shared/settings/document-contract",
   "src/shared/panel/panel-contract",
   "src/shared/providers/claude/task-options-contract",
@@ -92,7 +91,7 @@ test("generates validators and checks fresh or stale outputs without rewriting f
   assert.equal(checked.status, 0, checked.stderr);
   assert.deepEqual(snapshot(directory), before);
 
-  const staleFile = join(directory, `${contracts[1]}.generated.ts`);
+  const staleFile = join(directory, `${contracts[0]}.generated.ts`);
 
   writeFileSync(staleFile, `${readFileSync(staleFile, "utf8")}\n// stale\n`);
 
@@ -132,7 +131,7 @@ test("rejects an unmapped imported type before writing a permissive validator", 
   );
 
   const before = readFileSync(
-    join(directory, `${contracts[2]}.generated.ts`),
+    join(directory, `${contracts[1]}.generated.ts`),
     "utf8",
   );
 
@@ -142,7 +141,7 @@ test("rejects an unmapped imported type before writing a permissive validator", 
   assert.match(result.stderr, /Permissive validator.*panel-contract.ts/);
 
   const after = readFileSync(
-    join(directory, `${contracts[2]}.generated.ts`),
+    join(directory, `${contracts[1]}.generated.ts`),
     "utf8",
   );
 
@@ -168,7 +167,7 @@ test("maps cross-folder contract imports to generated validators using module se
   assert.equal(result.status, 0, result.stderr);
 
   const output = readFileSync(
-    join(directory, `${contracts[2]}.generated.ts`),
+    join(directory, `${contracts[1]}.generated.ts`),
     "utf8",
   );
 
@@ -335,7 +334,7 @@ test("resolves feature-owned handwritten validator mappings without overwriting 
   assert.equal(readFileSync(permissions, "utf8"), before);
 
   const output = readFileSync(
-    join(directory, `${contracts[3]}.generated.ts`),
+    join(directory, `${contracts[2]}.generated.ts`),
     "utf8",
   );
 

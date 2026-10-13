@@ -53,7 +53,6 @@ test.each([
       new Auth("test-token"),
       origin,
       htmlPath,
-      undefined,
       htmlPath,
       network ? [lanOrigin] : [],
     );

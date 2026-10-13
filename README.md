@@ -92,8 +92,8 @@ you to keep the service running; Codex does not start it through this transport.
 After saving the configuration, reload the MCP connection in Codex and open
 **Delegated Work** from a chat. Use `codex mcp list` to check the configured server;
 opening the panel verifies the connection. Changed tool metadata also requires
-MCP reconnection. Task/input host forms and webhook events are HTTP-only. Host
-placement, metadata, mention handoff and registered-host delivery still need live
+MCP reconnection. Task/input host forms are HTTP-only. Host
+placement, metadata and mention handoff still need live
 verification; see [host capabilities](docs/host-capabilities.md).
 
 `npm run package:plugin` builds an npm tarball containing the service, proxy, panel and delegation skill. Extract its `package/` directory as the local plugin root. Installation alone does not start the service; the host starts the stdio launcher. [Build details](docs/development.md#build) cover packaging and checks.
@@ -123,7 +123,7 @@ Use [the panel guide](docs/codex-panel.md) for delegation, Chat, Changes and pro
 | Working on React components and state                       | [React UI architecture](docs/react-ui.md)               |
 | Working on system boundaries                                | [Architecture](docs/architecture.md)                    |
 | Implementing a provider or task execution                   | [Provider contract](docs/provider-contract.md)          |
-| Changing MCP tools, forms or events                         | [MCP reference](docs/mcp-reference.md)                  |
+| Changing MCP tools or forms                                 | [MCP reference](docs/mcp-reference.md)                  |
 | Integrating with Codex or other MCP hosts                   | [Host capabilities](docs/host-capabilities.md)          |
 | Diagnosing Claude executable readiness                      | [Claude Code CLI](docs/claude-cli.md)                   |
 | Assessing verified behavior and remaining gaps              | [Implementation status](docs/implementation-status.md)  |

@@ -1,16 +1,8 @@
-import {
-  McpServer,
-  ProtocolError,
-  type ServerContext,
-} from "@modelcontextprotocol/server";
+import { McpServer, type ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { PARENT_DELEGATION_PROTOCOL } from "../../../shared/tasks/conversation/parent-protocol.js";
 import type { Task } from "../../../shared/tasks/model.js";
-import {
-  EventProtocolError,
-  type Events,
-} from "../../features/events/service.js";
 import { autoRegisterChatProject } from "../../features/projects/chat-project.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { codexContextCapability } from "../panel/host-context.js";
@@ -40,7 +32,6 @@ export function mcp(
   owner: string,
   origin: string,
   htmlPath: string,
-  events?: Events,
   nativeHtmlPath = htmlPath,
 ) {
   const server = new McpServer(
@@ -53,7 +44,6 @@ export function mcp(
       capabilities: {
         ...codexContextCapability,
         tools: {},
-        ...(events ? { events: {} } : {}),
       },
       requestState: { verify: (state) => c.forms.verify(owner, state) },
       instructions:
@@ -216,40 +206,6 @@ export function mcp(
       },
     );
   }
-
-  if (events)
-    for (const method of [
-      "events/list",
-      "events/subscribe",
-      "events/unsubscribe",
-    ]) {
-      server.server.setRequestHandler(
-        method,
-        {
-          params: z
-            .object({ _meta: z.record(z.string(), z.unknown()).optional() })
-            .passthrough(),
-        },
-        async (params) => {
-          const { _meta, ...args } = params;
-
-          try {
-            return {
-              resultType: "complete" as const,
-              ...(await events.handle(owner, method, args)),
-            };
-          } catch (e) {
-            if (e instanceof EventProtocolError)
-              throw new ProtocolError(
-                e.code,
-                e.message,
-                e.reason ? { reason: e.reason } : undefined,
-              );
-            throw e;
-          }
-        },
-      );
-    }
 
   const panel = delegationPanel(
     nativeHtmlPath,

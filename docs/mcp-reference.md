@@ -1,6 +1,9 @@
 # MCP reference
 
-Both the stdio proxy and authenticated HTTP `/mcp` endpoint expose task tools and the Delegated Work MCP App. The HTTP endpoint additionally serves native task/input forms and webhook events. See [host capabilities](host-capabilities.md) for host context, entrypoints, mention integration and verification gaps; [configuration](configuration.md) owns settings and authority rules.
+Both the stdio proxy and authenticated HTTP `/mcp` endpoint expose task tools and the Delegated Work MCP App. The HTTP endpoint additionally serves native task/input forms. See [host capabilities](host-capabilities.md) for host context, entrypoints, mention integration and verification gaps; [configuration](configuration.md) owns settings and authority rules.
+
+The HTTP endpoint uses the MCP 2.0 server SDK for protocol revision `2026-07-28`,
+including `server/discover`, tools, resources and stateless connections.
 
 ## Task tools
 
@@ -93,24 +96,6 @@ HTTP forms use MCP `input_required` round trips. Hosts return opaque `requestSta
 Task and worker-input forms are HTTP-only. `request_agent_project` uses the durable HTTP flow or SDK form elicitation over stdio when supported. Otherwise use **Add project**, **Browse** or the local registration CLI; supplying a path cannot bypass confirmation. Without task/input form support, use `start_agent_task` and `submit_agent_input` for questions and parent-approved permissions, and panel buttons for user permissions.
 
 Local tests exercise actual protocol round trips with fixture workers. Native host rendering remains unverified.
-
-## Webhook events
-
-The HTTP endpoint uses the MCP 2.0 server SDK for protocol revision `2026-07-28`, including `server/discover`, tools, resources and stateless connections. It implements `events/list`, `events/subscribe` and `events/unsubscribe`.
-
-| Event                       | Trigger                                                                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `agent_task.completed`      | A successful turn ends with nothing queued; fires each time the task goes idle. Payload includes turn and a reply excerpt. |
-| `agent_task.failed`         | Task execution fails.                                                                                                      |
-| `agent_task.input_required` | A worker needs an answer or permission decision.                                                                           |
-
-Subscriptions filter by task, conversation or provider. Notifications are compact; fetch the full conversation with `get_agent_messages`. There is no event replay cursor or pre-subscription history delivery.
-
-Callbacks require public HTTPS on port 443. The service verifies a signed single-use challenge, rechecks DNS on each delivery, rejects non-public addresses, pins the validated address for TLS and does not follow redirects. Secrets are encrypted in SQLite using `<data-directory>/events-key`; preserve that file with database backups. Subscriptions and pending deliveries survive restarts.
-
-Successful delivery is recorded idempotently. Transient failures retry with exponential backoff, up to eight attempts. Redirects and permanent client errors are not retried; HTTP `410` disables a subscription. Signing-key rotation permits both signatures for five minutes. Grants expire after one day by default, with requested lifetimes capped at seven days; an omitted expiry still gets a finite grant.
-
-Local protocol tests verify subscription and delivery behavior. Registered-host event delivery still needs a reachable authenticated endpoint and live verification. This does not make the loopback service ready for public hosting; see [implementation status](implementation-status.md).
 
 ## Project management in the panel
 

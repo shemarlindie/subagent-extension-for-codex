@@ -39,13 +39,6 @@ function deletionFixture() {
         "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
       )
       .run(id, task.owner, 0, id, JSON.stringify({ task_id: id }));
-
-    for (const subscription of ["first", "second"])
-      store.database.client
-        .prepare(
-          "INSERT INTO event_outbox(subscription_id,event_id,task_id,body) VALUES(?,?,?,?)",
-        )
-        .run(subscription, `evt_${id}_42`, id, "{}");
   }
 
   // Forms that register a project or start a task belong to no task.
@@ -57,7 +50,7 @@ function deletionFixture() {
 
   const snapshot = () =>
     Object.fromEntries(
-      ["tasks", "events", "form_requests", "event_outbox"].map((table) => [
+      ["tasks", "events", "form_requests"].map((table) => [
         table,
         store.database.client
           .prepare(`SELECT * FROM ${table} ORDER BY rowid`)
@@ -84,11 +77,6 @@ test("task deletion removes auxiliary records and preserves other tasks, includi
   assert.deepEqual(
     after.form_requests.map((row) => row.id),
     [`${task.id}_1`, "unrelated", "taskless"],
-  );
-
-  assert.deepEqual(
-    after.event_outbox,
-    before.event_outbox.filter((row) => row.event_id !== `evt_${task.id}_42`),
   );
 
   assert.equal(store.get(`${task.id}_1`, task.owner).id, `${task.id}_1`);

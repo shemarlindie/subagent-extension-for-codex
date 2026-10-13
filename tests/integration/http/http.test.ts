@@ -126,7 +126,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     auth,
     "http://127.0.0.1:4317",
     resolve("dist/app.html"),
-    undefined,
     resolve("dist/app.html"),
   ).listen(0, "127.0.0.1");
 
@@ -1135,10 +1134,7 @@ test("SSE requires authentication, replays owned events in global cursor order a
   }
 });
 
-test("MCP 2.0 discovers events and serves tools/resources on the same authenticated endpoint", async () => {
-  const { Events } =
-    await import("../../../src/service/features/events/service.js");
-
+test("MCP 2.0 serves tools/resources without webhook capabilities on the authenticated endpoint", async () => {
   const dir = await mkdtemp(join(tmpdir(), "ac-modern-"));
 
   const provider = Object.assign(new FixtureProvider(), {
@@ -1159,21 +1155,11 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
     dir,
   );
 
-  const events = new Events(
-    c.store,
-    Buffer.alloc(32, 1),
-    async (_url, body) => ({
-      status: 200,
-      body: JSON.stringify({ challenge: JSON.parse(body).challenge }),
-    }),
-  );
-
   const app = application(
     c,
     new Auth("token"),
     "http://127.0.0.1:4317",
     resolve("dist/app.html"),
-    events,
   );
 
   const server = app.listen(0, "127.0.0.1");
@@ -1234,7 +1220,7 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
     const discovery = await rpc("server/discover");
     assert.equal(discovery.response.status, 200);
     assert.equal(discovery.json.result.resultType, "complete");
-    assert.ok(discovery.json.result.capabilities.events);
+    assert.equal(discovery.json.result.capabilities.events, undefined);
     assert.ok(discovery.json.result.capabilities.tools);
     assert.ok(discovery.json.result.capabilities.resources);
 
@@ -1244,9 +1230,16 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
     );
 
     assert.ok(discovery.json.result.supportedVersions.includes("2026-07-28"));
-    const catalog = await rpc("events/list");
-    assert.equal(catalog.json.result.events.length, 3);
-    assert.equal(catalog.json.result.resultType, "complete");
+
+    for (const method of [
+      "events/list",
+      "events/subscribe",
+      "events/unsubscribe",
+    ]) {
+      const rejected = await rpc(method);
+      assert.equal(rejected.json.error.code, -32601);
+    }
+
     const tools = await rpc("tools/list");
 
     const settings = await rpc("tools/call", {
@@ -1339,32 +1332,8 @@ test("MCP 2.0 discovers events and serves tools/resources on the same authentica
         resource_domains: [],
       },
     );
-
-    const delivery = {
-      mode: "webhook",
-      url: "https://receiver.example/callback",
-      secret: "whsec_" + Buffer.alloc(32, 7).toString("base64"),
-    };
-
-    const subscribed = await rpc("events/subscribe", {
-      name: "agent_task.completed",
-      arguments: {},
-      delivery,
-      cursor: null,
-    });
-
-    assert.ok(subscribed.json.result.id);
-
-    const removed = await rpc("events/unsubscribe", {
-      name: "agent_task.completed",
-      arguments: {},
-      delivery: { mode: delivery.mode, url: delivery.url },
-    });
-
-    assert.equal(removed.json.result.resultType, "complete");
   } finally {
     await app.locals.closeMcp();
-    await events.close();
     server.closeAllConnections();
     await new Promise<void>((r) => server.close(() => r()));
     await c.close();

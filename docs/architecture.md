@@ -42,7 +42,6 @@ provider; provider discovery reports actual enabled capabilities.
 | `src/service/features/providers`         | Provider contracts, settings, task policy and Claude integration             |
 | `src/service/features/projects`          | Approved roots, registration and host-project policy                         |
 | `src/service/features/workspaces`        | Git workspaces, snapshots and change inspection                              |
-| `src/service/features/events`            | Durable events, subscriptions and webhook delivery                           |
 | `src/service/features/settings`          | User defaults and settings document                                          |
 | `src/service/platform/server`            | HTTP/MCP authentication, transport and tool dispatch                         |
 | `src/service/platform/panel`             | Embedded resource, launch scope and optional host context                    |
@@ -100,8 +99,8 @@ control layer records delivery and preserves steers the provider did not take.
 Worker replies are plain text or Markdown; provider activity is a separate event
 stream. Draft deltas are transient, while completed messages and task events persist.
 
-SQLite stores tasks, events, settings, approved projects, subscriptions and form
-requests. WAL and synchronous transactions protect related durable writes;
+SQLite stores tasks, events, settings, approved projects and form requests.
+WAL and synchronous transactions protect related durable writes;
 notifications run after commit. On restart, in-flight work becomes interrupted
 and requires a follow-up, while queued tasks and dependency waits recover.
 The service does not claim to recover an executing process mid-turn.
@@ -151,10 +150,8 @@ separate user operation or the configured policy for a task started from its hos
 chat project. See [Host capabilities](host-capabilities.md#project-context-and-registration).
 
 Internal task events support activity and persistence. Console progress uses SSE;
-MCP callers retrieve task/message results, and event subscriptions deliver the
-supported completion, failure and input-required notifications through signed
-webhooks. Explicit provider parent messages use a separate durable queue. The mounted
-embedded thread panel claims them and forwards their task/message IDs through
+MCP callers retrieve task/message results. Explicit provider parent messages use
+a durable queue. The mounted embedded thread panel claims them and forwards their task/message IDs through
 the host message bridge. The parent retrieves the stored reports by ID or
 through message polling; both paths share stable IDs for duplicate handling. See
 [Host capabilities](host-capabilities.md#worker-messages-to-the-parent-chat)

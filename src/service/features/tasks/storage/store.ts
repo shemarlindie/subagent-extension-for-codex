@@ -85,7 +85,7 @@ export class Store {
   }
 
   /**
-   * Deletes a task. Its events, pending forms and queued webhook deliveries
+   * Deletes a task. Its events and pending forms
    * reference it and are deleted with it.
    */
   delete(id: string, owner: string) {
@@ -325,18 +325,6 @@ export class Store {
       .get();
 
     return row && decodeEvent(row);
-  }
-
-  /** Every task's events after a cursor, a page at a time, for webhook capture. */
-  eventsAfter(after: number): Event[] {
-    return this.orm
-      .select()
-      .from(events)
-      .where(gt(events.id, after))
-      .orderBy(events.id)
-      .limit(PAGE)
-      .all()
-      .map(decodeEvent);
   }
 
   /** The id of the latest event, or of a task's latest one; 0 before any. */

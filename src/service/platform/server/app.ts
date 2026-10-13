@@ -6,7 +6,6 @@ import express from "express";
 
 import { type Event } from "../../../shared/events/types.js";
 import type { DraftUpdate } from "../../../shared/tasks/conversation/drafts.js";
-import { type Events } from "../../features/events/service.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
@@ -30,7 +29,6 @@ export function application(
   auth: Auth,
   origin: string,
   htmlPath: string,
-  events?: Events,
   nativeHtmlPath = htmlPath,
   additionalOrigins: string[] = [],
 ) {
@@ -149,7 +147,7 @@ export function application(
       : undefined;
 
   const handler = createMcpHandler(() =>
-    mcp(c, auth.owner, origin, htmlPath, events, nativeHtmlPath),
+    mcp(c, auth.owner, origin, htmlPath, nativeHtmlPath),
   );
 
   const nodeHandler = toNodeHandler(handler);

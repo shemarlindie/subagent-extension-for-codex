@@ -53,7 +53,7 @@ rest (see [Multiple projects](configuration.md#repository-access)).
 Choose the source of validation according to what the contract owns:
 
 - Plain boundary data shapes use TypeScript contracts and generated Zod schemas.
-  This covers event subscription identity, settings documents, panel output,
+  This covers settings documents, panel output,
   and Claude start/task options. Edit the feature-owned source types rather
   than the generated validators.
 - Inputs with transformations, defaults, or substantial validation behavior use
@@ -64,9 +64,8 @@ Choose the source of validation according to what the contract owns:
   boundaries. Internal types that need no runtime validation remain plain
   TypeScript.
 
-JSDoc supplies rules that ordinary TypeScript types cannot express. For example,
-the subscription contract uses `@strict` to reject extra properties,
-`@format url` to validate URLs, and `@default {}` to fill in omitted filters.
+JSDoc supplies rules that ordinary TypeScript types cannot express. Contracts can use `@strict` to reject extra properties,
+`@format url` to validate URLs, and `@default {}` to fill in omitted fields.
 Contracts describe parsed output; defaults can make an input property optional
 even when it is required in that output.
 
@@ -119,12 +118,11 @@ outputs, and permissive `z.any()` fallbacks; see [Troubleshooting](#troubleshoot
 Do not feed Drizzle inferred types into this generator.
 
 For database rows, `createSelectSchema` from `drizzle-orm/zod` validates returned
-rows at deserialization boundaries, including task event and webhook outbox
-rows. Use `createInsertSchema` when insert validation is needed; it allows fields
+rows at deserialization boundaries, including task event rows. Use `createInsertSchema` when insert validation is needed; it allows fields
 with database defaults to be omitted. These use the same Zod 4 runtime as the
 generated protocol validators. JSON bodies are decoded and validated separately:
-an event subscription's `body` column stores serialized JSON, so its table schema
-validates the string, not the subscription inside it. Schema generation does not
+a task's `body` column stores serialized JSON, so its table schema validates
+the string, not the task inside it. Schema generation does not
 change database migrations.
 
 ## Run the service
@@ -402,7 +400,7 @@ before any feature reads it.
   `src/service/platform/database/schema.ts` collects them for drizzle-kit.
 - Each feature queries only its own tables, through the shared `Database`:
   tasks and events in `tasks/store.ts`, form requests in
-  `tasks/form-requests.ts`, webhooks in `events/storage.ts`, and settings and
+  `tasks/form-requests.ts`, and settings and
   project roots in their services. Other features read tasks and events
   through `Store`. Queries use Drizzle; raw SQL is kept where it is clearer,
   such as the JSON predicates in `Store.chatEvents`.
@@ -432,11 +430,14 @@ before any feature reads it.
   copies every record into a new database, keeping event ids and filling in
   the task references,
   checks each record as the service would, and keeps the old file as
-  `console.sqlite.pre-migration`. Forms and webhook deliveries whose task is
-  gone, and the retired `artifacts` and `codex_executors` tables, are dropped
-  and reported. Worktrees and keys are untouched.
+  `console.sqlite.pre-migration`. Forms whose task is gone and retired tables are dropped and reported.
+  Worktrees and other data-directory files are untouched.
 - `migrations/` ships in the package and is read with `packagePath`, so
   source checkouts and installed packages use the same folder.
+
+The webhook-removal migration drops obsolete subscriptions, deliveries and capture
+state while preserving task events and parent-message delivery records. Existing
+`events-key` files are no longer used and can be removed.
 
 Write a task change and the events that record it in one
 `store.transaction(() => …)`, so they commit together. Transactions are
@@ -448,8 +449,7 @@ Event listeners on `store.bus` hear an event only after its transaction
 commits, in order, and never one that rolled back. A notification is a hint
 that rows exist: a listener that throws is logged without affecting the
 commit or other listeners, and consumers recover what they miss from the
-database (webhook capture from its checkpoint, long polls by re-reading, SSE
-clients through `Last-Event-ID`).
+database (long polls by re-reading, SSE clients through `Last-Event-ID`).
 
 ### Qualifying Claude Code versions
 

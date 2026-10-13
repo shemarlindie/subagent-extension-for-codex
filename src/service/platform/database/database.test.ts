@@ -39,27 +39,19 @@ const ledger = (client: DatabaseSync) =>
     .all()
     .map((row) => String(row.name));
 
-test("a fresh database gets every table, the webhook checkpoint and the connection settings", (t) => {
+test("a fresh database gets every active table and the connection settings", (t) => {
   const path = join(scratch(t), "data", "console.sqlite");
   const db = openDatabase(path);
   t.onTestFinished(() => db.close());
 
   assert.deepEqual(tables(db.client), [
     "__drizzle_migrations",
-    "event_checkpoint",
-    "event_outbox",
-    "event_subscriptions",
     "events",
     "form_requests",
     "project_roots",
     "tasks",
     "user_settings",
   ]);
-
-  assert.deepEqual(
-    db.client.prepare("SELECT id, cursor FROM event_checkpoint").get()?.cursor,
-    0,
-  );
 
   assert.equal(
     db.client.prepare("PRAGMA journal_mode").get()?.journal_mode,
@@ -77,7 +69,6 @@ test("reopening applies nothing twice and keeps existing rows", (t) => {
     .prepare("INSERT INTO tasks VALUES(?,?,?)")
     .run("kept", "alice", "{}");
 
-  first.client.prepare("UPDATE event_checkpoint SET cursor=7").run();
   const applied = ledger(first.client);
   first.close();
 
@@ -88,11 +79,6 @@ test("reopening applies nothing twice and keeps existing rows", (t) => {
   assert.equal(
     second.client.prepare("SELECT COUNT(*) AS n FROM tasks").get()?.n,
     1,
-  );
-
-  assert.equal(
-    second.client.prepare("SELECT cursor FROM event_checkpoint").get()?.cursor,
-    7,
   );
 });
 
@@ -267,5 +253,94 @@ test("project names upgrade preserves saved approvals and existing task data", (
   assert.equal(
     reopened.client.prepare("SELECT name FROM project_roots").get()?.name,
     "Saved name",
+  );
+});
+
+test("removing webhooks preserves tasks and activity while dropping populated delivery tables", (t) => {
+  const dir = scratch(t);
+  const path = join(dir, "console.sqlite");
+  const older = join(dir, "older-migrations");
+  mkdirSync(older);
+
+  const migrationNames = readdirSync(migrationsFolder)
+    .filter((name) => /^\d{14}_/.test(name))
+    .sort();
+
+  const removal = migrationNames.findIndex((name) =>
+    name.endsWith("_remove-webhooks"),
+  );
+
+  assert.ok(removal > 0);
+
+  for (const name of migrationNames.slice(0, removal))
+    cpSync(join(migrationsFolder, name), join(older, name), {
+      recursive: true,
+    });
+
+  const before = openDatabase(path, older);
+
+  before.client
+    .prepare("INSERT INTO tasks VALUES(?,?,?)")
+    .run("kept", "alice", "{}");
+
+  before.client
+    .prepare(
+      "INSERT INTO events(id,task_id,type,timestamp,data) VALUES(?,?,?,?,?)",
+    )
+    .run(7, "kept", "task.completed", "now", "{}");
+
+  before.client
+    .prepare("INSERT INTO event_subscriptions VALUES(?,?,?)")
+    .run("sub", "alice", "{}");
+
+  before.client
+    .prepare(
+      "INSERT INTO event_outbox(subscription_id,event_id,task_id,body) VALUES(?,?,?,?)",
+    )
+    .run("sub", "evt_7", "kept", "{}");
+
+  before.client.prepare("UPDATE event_checkpoint SET cursor=7").run();
+  before.close();
+
+  const upgraded = openDatabase(path);
+  t.onTestFinished(() => upgraded.close());
+
+  assert.deepEqual(tables(upgraded.client), [
+    "__drizzle_migrations",
+    "events",
+    "form_requests",
+    "project_roots",
+    "tasks",
+    "user_settings",
+  ]);
+
+  assert.deepEqual(
+    { ...upgraded.client.prepare("SELECT * FROM tasks").get() },
+    { id: "kept", owner: "alice", body: "{}" },
+  );
+
+  assert.deepEqual(
+    { ...upgraded.client.prepare("SELECT * FROM events").get() },
+    {
+      id: 7,
+      task_id: "kept",
+      type: "task.completed",
+      timestamp: "now",
+      data: "{}",
+    },
+  );
+
+  assert.equal(
+    upgraded.client
+      .prepare(
+        "INSERT INTO events(task_id,type,timestamp,data) VALUES(?,?,?,?)",
+      )
+      .run("kept", "task.started", "later", "{}").lastInsertRowid,
+    8,
+  );
+
+  assert.deepEqual(
+    upgraded.client.prepare("PRAGMA foreign_key_check").all(),
+    [],
   );
 });
