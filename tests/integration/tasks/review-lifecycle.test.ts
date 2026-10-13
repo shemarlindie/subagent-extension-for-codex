@@ -111,8 +111,9 @@ test(
     const env = { ...process.env };
 
     for (const key of Object.keys(env)) {
-      if (key.startsWith("CODEX_SUBAGENT_EXTENSION_") || key === "PORT")
+      if (key.startsWith("CODEX_SUBAGENT_EXTENSION_") || key === "PORT") {
         delete env[key];
+      }
     }
 
     await assert.rejects(

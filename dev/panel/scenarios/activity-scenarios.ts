@@ -363,7 +363,8 @@ begin(long, ["Read", "Edit", "Bash"]);
 function convert(i: number) {
   const file = `tests/suite-${i}.test.ts`;
   if (i % 12 === 0) rateLimit(long);
-  if (i === 18)
+
+  if (i === 18) {
     long.sdk({
       type: "system",
       subtype: "compact_boundary",
@@ -373,6 +374,8 @@ function convert(i: number) {
         post_tokens: 9000,
       },
     });
+  }
+
   long.ticks(40 + i, 120 + i);
   long.think(`Next up: ${file}. Check the imports before converting.`);
   long.say(`Converting ${file} to the new runner.`);
@@ -384,7 +387,7 @@ function convert(i: number) {
     { progress: [1] },
   );
 
-  if (i % 3 === 0)
+  if (i % 3 === 0) {
     long.tool(
       "Edit",
       {
@@ -395,7 +398,9 @@ function convert(i: number) {
       `The file ${file} has been updated.`,
       { progress: [1] },
     );
-  if (i % 5 === 0 || i === 17)
+  }
+
+  if (i % 5 === 0 || i === 17) {
     long.tool(
       "Bash",
       { command: `npm test -- ${file}` },
@@ -404,6 +409,7 @@ function convert(i: number) {
         : `PASS ${file}`,
       { progress: [2, 4], error: i === 17 },
     );
+  }
 }
 
 for (let i = 0; i < 18; i++) convert(i);
@@ -520,7 +526,7 @@ for (let turn = 1; turn <= 15; turn++) {
     { progress: [2, 4], error: failed },
   );
 
-  if (failed)
+  if (failed) {
     manyTurns
       .turnEnded(turn, "failed", 52000, 0.09)
       .add(
@@ -528,12 +534,13 @@ for (let turn = 1; turn <= 15; turn++) {
         { error: "The test server refused connections." },
         200,
       );
-  else
+  } else {
     manyTurns.finish(
       `Moved the ${module} client onto the retry wrapper; its tests pass.`,
       turn,
       { duration_ms: 40000 + turn * 3000, total_cost_usd: 0.05 + turn * 0.01 },
     );
+  }
 }
 
 export const activityTasks: Task[] = [

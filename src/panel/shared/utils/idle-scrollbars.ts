@@ -50,8 +50,9 @@ export function trackIdleScrollbars(doc: Document) {
       if (
         (vertical && /auto|scroll/.test(style.overflowY)) ||
         (horizontal && /auto|scroll/.test(style.overflowX))
-      )
+      ) {
         return element;
+      }
     }
 
     return undefined;

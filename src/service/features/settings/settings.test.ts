@@ -68,8 +68,9 @@ test("settings expose only enabled providers, nullable budgets, and a default pe
   const properties = result.schema.properties!;
   assert.deepEqual(properties.default_provider.enum, ["fixture"]);
 
-  for (const [name, field] of Object.entries(properties))
+  for (const [name, field] of Object.entries(properties)) {
     assert.equal("default" in field, false, `${name} has no schema default`);
+  }
 
   // Budgets read as a number or null; the on/off switches are update-only.
   assert.equal("use_cost_budget" in result.values, false);
@@ -173,14 +174,16 @@ test("settings sections have unique IDs and cover every shown value once", async
   );
 
   // Agents read the same help in each field's schema description.
-  for (const row of result.sections.flatMap((section) => section.rows))
-    if (row.kind !== "models" && row.help)
+  for (const row of result.sections.flatMap((section) => section.rows)) {
+    if (row.kind !== "models" && row.help) {
       assert.equal(
         (result.schema.properties![row.key] as { description?: string })
           .description,
         row.help.join(""),
         row.key,
       );
+    }
+  }
 });
 
 test("help links to settings the panel doesn't show become plain text", () => {
@@ -357,11 +360,13 @@ test("native model controls scope discovered models and derive reasoning choices
   );
 
   for (const [key, field] of Object.entries(fields)) {
-    if (Array.isArray(field.enum))
+    if (Array.isArray(field.enum)) {
       assert.ok(
         field.enum.includes((result.values as Record<string, unknown>)[key]),
         `${key} must accept its saved value`,
       );
+    }
+
     assert.equal("default" in field, false);
   }
 
@@ -841,11 +846,13 @@ test("Claude session restrictions are scalar user-only settings with stored defa
     { claude_tools: "all" },
     { claude_path_guard: "off" },
     { claude_subagents: true },
-  ])
+  ]) {
     assert.throws(
       () => f.settings.update("alice", { set }, "parent"),
       /user decision/,
     );
+  }
+
   assert.deepEqual(f.settings.values("alice"), before);
 
   f.settings.update("alice", {

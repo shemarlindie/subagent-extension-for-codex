@@ -11,11 +11,13 @@ const MARGIN = "1200px 0px";
 export function scrollParent(element: HTMLElement) {
   for (let node = element.parentElement; node; node = node.parentElement) {
     const { overflowY } = getComputedStyle(node);
+
     if (
       (overflowY === "auto" || overflowY === "scroll") &&
       node.scrollHeight > node.clientHeight
-    )
+    ) {
       return node;
+    }
   }
 
   return null;
@@ -32,8 +34,10 @@ const resizeListeners = new Set<() => void>();
 let resizeFrame = 0;
 
 function onLayoutChange(listener: () => void) {
-  if (!resizeListeners.size)
+  if (!resizeListeners.size) {
     window.addEventListener("resize", notifyResize, { passive: true });
+  }
+
   resizeListeners.add(listener);
 
   return () => {
@@ -128,8 +132,10 @@ export function LazyBlock({
       observer = new IntersectionObserver(
         ([entry]) => {
           // Keep the rendered height for the empty box that replaces it.
-          if (!entry.isIntersecting)
+          if (!entry.isIntersecting) {
             height.current = entry.boundingClientRect.height || height.current;
+          }
+
           setVisible(entry.isIntersecting);
         },
         { root, rootMargin: MARGIN },

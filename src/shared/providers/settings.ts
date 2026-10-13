@@ -26,13 +26,19 @@ export function validateProviderSettingsUpdate(
   authority: InputAuthority,
 ) {
   if (authority === "user") return;
+
   if (
     set.claude_permission_mode !== undefined ||
     set.default_approval_decider !== undefined
-  )
+  ) {
     throw new Error("Approval settings require a user decision in settings");
-  if (Object.keys(claudeOverrideDefaults).some((key) => set[key] !== undefined))
+  }
+
+  if (
+    Object.keys(claudeOverrideDefaults).some((key) => set[key] !== undefined)
+  ) {
     throw new Error(
       "Claude session restrictions require a user decision in settings",
     );
+  }
 }

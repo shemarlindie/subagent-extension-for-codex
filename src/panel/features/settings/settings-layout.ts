@@ -81,20 +81,26 @@ export function changes(
   const set: Record<string, unknown> = {};
   const edited = (key: string) => form[key] !== initial[key];
 
-  for (const row of sections.flatMap((section) => section.rows))
+  for (const row of sections.flatMap((section) => section.rows)) {
     if (row.kind === "budget") {
       const on = onKey(row.key);
       if (edited(on)) set[row.toggle] = form[on] === "true";
+
       // A blank amount while off keeps the saved one.
       if (
         form[row.key] !== "" &&
         (edited(row.key) || (edited(on) && form[on] === "true"))
-      )
+      ) {
         set[row.key] = Number(form[row.key]);
-    } else
-      for (const key of rowKeys(row))
-        if (edited(key))
+      }
+    } else {
+      for (const key of rowKeys(row)) {
+        if (edited(key)) {
           set[key] = row.kind === "switch" ? form[key] === "true" : form[key];
+        }
+      }
+    }
+  }
 
   return set;
 }

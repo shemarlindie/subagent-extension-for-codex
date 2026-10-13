@@ -44,8 +44,9 @@ try {
     installRoot,
   );
 } catch (error) {
-  if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
+  if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
     throw error;
+  }
 }
 
 const { token, origin } = await connectService();
@@ -73,11 +74,13 @@ const server = new McpServer(
 function serviceTimeout(name: string, args: Record<string, unknown>) {
   if (name === "browse_user_agent_project") return 150000;
 
-  if (name === "get_agent_messages")
+  if (name === "get_agent_messages") {
     return Math.min(Number(args.wait_seconds) || 0, 50) * 1000 + 10000;
+  }
 
-  if (name === "get_user_agent_draft")
+  if (name === "get_user_agent_draft") {
     return Math.min(Number(args.wait_ms) || 0, 25000) + 10000;
+  }
 
   return 30000;
 }
@@ -240,8 +243,10 @@ const panel = delegationPanel(
     );
 
     const body = await response.json();
-    if (!response.ok)
+
+    if (!response.ok) {
       throw new Error(body.error ?? "Panel context unavailable");
+    }
 
     return body.result;
   },

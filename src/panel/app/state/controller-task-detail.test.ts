@@ -96,12 +96,15 @@ test("delayed detail from a previous selection cannot replace current events", a
   const gate = deferred<unknown>();
 
   transport.handler = (name, args) => {
-    if (name === "get_user_agent_activity" && args.task_id === "a")
+    if (name === "get_user_agent_activity" && args.task_id === "a") {
       return gate.promise;
-    if (name === "get_user_agent_activity")
+    }
+
+    if (name === "get_user_agent_activity") {
       return {
         events: [{ id: 2, task_id: "b", type: "log", timestamp: "", data: {} }],
       };
+    }
 
     return undefined;
   };
@@ -197,10 +200,13 @@ test("View activity scrolls to a turn in the window and reads one outside it", a
   }
 
   transport.handler = (name, args) => {
-    if (name === "get_user_agent_activity")
+    if (name === "get_user_agent_activity") {
       return windowActivity(events, Number(args.after));
-    if (name === "get_user_agent_turn_activity")
+    }
+
+    if (name === "get_user_agent_turn_activity") {
       return windowTurnActivity(events, Number(args.turn));
+    }
 
     return undefined;
   };

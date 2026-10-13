@@ -130,17 +130,23 @@ export class ClaudeAgentProvider implements Provider {
         !(error instanceof Error) ||
         error.message !==
           `Session ${task.session_id} not found in any project directory`
-      )
+      ) {
         throw error;
+      }
     }
   }
 
   models(): Promise<ModelChoice[]> {
-    if (this.catalog && this.catalog.expires > Date.now())
+    if (this.catalog && this.catalog.expires > Date.now()) {
       return Promise.resolve(this.catalog.models);
+    }
+
     if (this.catalogRequest) return this.catalogRequest;
-    if (this.catalogFailure && this.catalogFailure.expires > Date.now())
+
+    if (this.catalogFailure && this.catalogFailure.expires > Date.now()) {
       return Promise.reject(this.catalogFailure.error);
+    }
+
     const request = this.discoverModels();
     this.catalogRequest = request;
 
@@ -221,14 +227,17 @@ export class ClaudeAgentProvider implements Provider {
 
   async run(c: RunContext, prompt: string): Promise<TurnOutput> {
     const taskOptions = readClaudeTaskOptions(c.task);
+
     if (
       !taskOptions.claude_policy ||
       !taskOptions.permission_mode ||
       !taskOptions.approval_decider
-    )
+    ) {
       throw new Error(
         "Claude task is missing resolved native permission state",
       );
+    }
+
     const policy = taskOptions.claude_policy;
     const nativeMode = taskOptions.permission_mode;
 
@@ -252,8 +261,10 @@ export class ClaudeAgentProvider implements Provider {
         tool === "AskUserQuestion" ||
         tool === "Skill" ||
         readTools.includes(tool)
-      )
+      ) {
         return undefined;
+      }
+
       if (readOnly) return "Read-only worker profile";
 
       return approvalTool(tool) || writeTools.includes(tool)
@@ -339,11 +350,13 @@ export class ClaudeAgentProvider implements Provider {
                 // Skills stay available; the tools they call are checked individually.
                 const denial = restrictedDenial(tool);
                 if (denial) return deny(denial);
+
                 if (
                   guarded(tool) &&
                   !(await inWorkspace(workspace, toolPath(params, workspace)))
-                )
+                ) {
                   return deny("Path outside task workspace or Git metadata");
+                }
 
                 return {};
               },
@@ -352,8 +365,9 @@ export class ClaudeAgentProvider implements Provider {
         ],
       },
       canUseTool: async (tool, input, { signal }) => {
-        if (tool === PARENT_TOOL)
+        if (tool === PARENT_TOOL) {
           return { behavior: "allow", updatedInput: input };
+        }
 
         if (tool === "AskUserQuestion") {
           const answer = await c.input(tool, input, signal);
@@ -367,11 +381,14 @@ export class ClaudeAgentProvider implements Provider {
         if (denial) return { behavior: "deny", message: denial };
 
         if (guarded(tool)) {
-          if (!(await inWorkspace(workspace, toolPath(input, workspace))))
+          if (!(await inWorkspace(workspace, toolPath(input, workspace)))) {
             return { behavior: "deny", message: "Path outside task workspace" };
+          }
+
           // Guarded reads stay inside the workspace, so they need no prompt.
-          if (readTools.includes(tool))
+          if (readTools.includes(tool)) {
             return { behavior: "allow", updatedInput: input };
+          }
         }
 
         // Calls not already approved by settings or the permission mode ask the task's approver.
@@ -484,14 +501,15 @@ export class ClaudeAgentProvider implements Provider {
           // The main worker's text streams as deltas; other frames are
           // left out, and the finished message follows.
           if (m.parent_tool_use_id === null) {
-            if (m.event.type === "message_start")
+            if (m.event.type === "message_start") {
               streaming = m.event.message.id;
-            else if (
+            } else if (
               m.event.type === "content_block_delta" &&
               m.event.delta.type === "text_delta" &&
               streaming
-            )
+            ) {
               c.delta(streaming, m.event.delta.text);
+            }
           }
 
           const stop =
@@ -499,18 +517,21 @@ export class ClaudeAgentProvider implements Provider {
             m.event.type === "message_delta" &&
             m.event.delta.stop_reason;
 
-          if (stop && stop !== "tool_use" && stop !== "pause_turn")
+          if (stop && stop !== "tool_use" && stop !== "pause_turn") {
             await withdraw();
+          }
+
           continue;
         }
 
         this.normalize(c, m);
         if (m.type !== "result") continue;
 
-        if (m.subtype !== "success" || m.is_error)
+        if (m.subtype !== "success" || m.is_error) {
           throw new Error(
             `Claude result: ${m.subtype}${"errors" in m ? ": " + m.errors.join("; ") : ""}`,
           );
+        }
 
         reply = m.result;
 
@@ -574,34 +595,39 @@ export class ClaudeAgentProvider implements Provider {
         });
       } else {
         for (const b of content) {
-          if (b.type === "text")
+          if (b.type === "text") {
             emit(m.type === "assistant" ? "agent.message" : "agent.content", {
               role: m.type,
               text: b.text,
               content: b,
             });
-          else if (b.type === "tool_use")
+          } else if (b.type === "tool_use") {
             emit("tool.started", { id: b.id, name: b.name, input: b.input });
-          else if (b.type === "tool_result")
+          } else if (b.type === "tool_result") {
             emit("tool.completed", {
               id: b.tool_use_id,
               error: b.is_error,
               content: b.content,
             });
-          else emit("agent.content", { role: m.type, content: b });
+          } else {
+            emit("agent.content", { role: m.type, content: b });
+          }
         }
 
-        if (!content.length || ("error" in m && m.error))
+        if (!content.length || ("error" in m && m.error)) {
           emit("claude.activity", { ...m });
+        }
       }
-    } else if (m.type === "system" && m.subtype === "init")
+    } else if (m.type === "system" && m.subtype === "init") {
       emit("agent.started", { model: m.model, tools: m.tools });
-    else if (m.type === "result")
+    } else if (m.type === "result") {
       emit("agent.completed", {
         ...m,
         cost_usd: m.total_cost_usd,
         usage: m.usage,
       });
-    else emit("claude.activity", { ...m });
+    } else {
+      emit("claude.activity", { ...m });
+    }
   }
 }

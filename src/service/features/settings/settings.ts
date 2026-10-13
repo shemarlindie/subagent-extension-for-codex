@@ -257,8 +257,9 @@ export class Settings {
     const record = `settings for ${owner}`;
     const body = decodeStored(z.looseObject({}), row.body, record);
 
-    if (!this.providers().includes(body.default_provider as string))
+    if (!this.providers().includes(body.default_provider as string)) {
       body.default_provider = this.providers()[0];
+    }
 
     return checkStored(persistedValuesSchema, body, record);
   }
@@ -268,11 +269,13 @@ export class Settings {
       this.saved(owner);
 
     const available = this.providers();
+
     // A saved provider can disappear when the service configuration changes.
-    if (!available.includes(values.default_provider))
+    if (!available.includes(values.default_provider)) {
       values.default_provider = valuesSchema.shape.default_provider.parse(
         available[0],
       );
+    }
 
     return values;
   }
@@ -359,8 +362,11 @@ export class Settings {
         effortField = properties[info.effortKey] as Record<string, unknown>;
 
       modelField.description = modelNote;
-      if (info.modelChoices)
+
+      if (info.modelChoices) {
         modelField.enum = info.modelChoices.map((option) => option.value);
+      }
+
       effortField.enum = info.effortChoices.map((option) => option.value);
 
       effortField.description = [
@@ -386,18 +392,26 @@ export class Settings {
 
   update(owner: string, input: unknown, authority: InputAuthority = "user") {
     const { set } = settingsUpdateSchema.parse(input);
-    if (authority !== "user" && set.auto_register_chat_project !== undefined)
+
+    if (authority !== "user" && set.auto_register_chat_project !== undefined) {
       throw new Error(
         "Automatic project registration requires a user decision in settings",
       );
-    if (authority !== "user" && set.default_approval_mode !== undefined)
+    }
+
+    if (authority !== "user" && set.default_approval_mode !== undefined) {
       throw new Error("Approval settings require a user decision in settings");
+    }
+
     validateProviderSettingsUpdate(set, authority);
+
     if (
       set.default_provider &&
       !this.providers().includes(set.default_provider)
-    )
+    ) {
       throw new Error("Provider is not enabled");
+    }
+
     // Synchronous read/merge/write preserves omitted fields across concurrent requests.
     const previous = this.saved(owner);
     const { use_cost_budget, use_runtime_budget, ...fields } = set;
@@ -450,10 +464,15 @@ export class Settings {
 
   taskInput(owner: string, input: unknown) {
     const args = z.record(z.string(), z.unknown()).parse(input);
-    if (args.model !== undefined)
+
+    if (args.model !== undefined) {
       args.model = modelNameSchema.parse(args.model);
-    if (args.reasoning_effort !== undefined)
+    }
+
+    if (args.reasoning_effort !== undefined) {
       args.reasoning_effort = reasoningSchema.parse(args.reasoning_effort);
+    }
+
     const defaults = this.values(owner);
     const provider = args.provider ?? defaults.default_provider;
     const role = args.worker_profile ?? defaults.default_worker_profile;

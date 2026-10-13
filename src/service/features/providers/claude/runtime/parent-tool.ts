@@ -16,7 +16,7 @@ export function parentServer(context: RunContext) {
         "Queue a concise progress update, important finding, blocker, or completion message to your parent Codex chat. Delivery requires the extension panel to be open. A queued result does not confirm host delivery.",
         { message: z.string().trim().min(1).max(20000) },
         async ({ message }) => {
-          if (!context.messageParent || !context.task.conversation_id)
+          if (!context.messageParent || !context.task.conversation_id) {
             return {
               isError: true,
               content: [
@@ -26,6 +26,8 @@ export function parentServer(context: RunContext) {
                 },
               ],
             };
+          }
+
           const id = context.messageParent(message);
 
           return {

@@ -36,12 +36,16 @@ export function previewQueueTool(
   if (!message) throw new Error("That message is no longer queued.");
 
   if (name === "edit_user_agent_queued_message") {
-    if (message.recorded)
+    if (message.recorded) {
       throw new Error("A steer the worker already has can't be edited.");
+    }
+
     message.message = String(args.message);
   } else if (name === "move_user_agent_queued_message") {
-    if (message.recorded)
+    if (message.recorded) {
       throw new Error("A steer the worker already has stays at the front.");
+    }
+
     const rest = task.queue.filter((m) => m !== message);
     const first = rest.filter((m) => m.recorded).length;
 
@@ -66,15 +70,17 @@ function previewSend(task: Task, args: Record<string, unknown>) {
   const delivery = (args.delivery ?? "steer") as Delivery,
     mode = composerMode(task);
 
-  if (mode === "idle" || delivery === "interrupt")
+  if (mode === "idle" || delivery === "interrupt") {
     throw new Error(
       "Design preview only. No worker or service action was executed.",
     );
+  }
 
-  if (mode === "input" && delivery === "steer")
+  if (mode === "input" && delivery === "steer") {
     throw new Error(
       "The worker is waiting for input, so it can't be steered. Answer its request, or queue the message.",
     );
+  }
 
   const message = {
     id: `msg_preview_sent_${++sent}`,

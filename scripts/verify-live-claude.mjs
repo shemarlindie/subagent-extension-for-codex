@@ -649,8 +649,9 @@ if (scenario === "parent") {
       JSON.stringify({ phase: "observed", ...observed, approvals, started }),
     );
 
-    for (const [check, passed] of Object.entries(observed))
+    for (const [check, passed] of Object.entries(observed)) {
       assert.ok(passed, check);
+    }
 
     assert.equal(
       execFileSync("git", ["-C", repo, "status", "--porcelain"], {

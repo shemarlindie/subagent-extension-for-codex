@@ -63,8 +63,10 @@ export function addDropped(
       summary.tools[name] = (summary.tools[name] ?? 0) + 1;
     }
 
-    if (event.type === "agent.message" && event.data.role !== "user")
+    if (event.type === "agent.message" && event.data.role !== "user") {
       summary.messages++;
+    }
+
     if (activityFailed(event)) summary.failures++;
     if (activityKind(event) === "api_retry") summary.retries++;
   }

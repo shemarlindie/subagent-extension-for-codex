@@ -267,12 +267,14 @@ export function SettingsForm({
     );
 
     // Disabled amounts cannot take focus; their switch restores editing.
-    if (field?.disabled)
+    if (field?.disabled) {
       field
         .closest(".setting-row")
         ?.querySelector<HTMLElement>('[role="switch"]')
         ?.focus();
-    else field?.focus();
+    } else {
+      field?.focus();
+    }
 
     return field;
   };
@@ -285,8 +287,9 @@ export function SettingsForm({
   };
 
   const apply = (entries: Values) => {
-    for (const [key, value] of Object.entries(entries))
+    for (const [key, value] of Object.entries(entries)) {
       setValue(key, value, { shouldDirty: true });
+    }
   };
 
   const sectionViews: SettingsSectionView[] = settings
@@ -370,8 +373,9 @@ export function SettingsForm({
 
     return controller.submit(
       async () => {
-        if (Object.keys(set).length)
+        if (Object.keys(set).length) {
           await controller.tool("update_agent_settings", { set });
+        }
       },
       false,
       () => {

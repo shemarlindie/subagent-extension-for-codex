@@ -65,8 +65,9 @@ export function isProcessRunning(pid: number) {
 
       return state !== "Z" && state !== "X";
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT")
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return permissionDenied;
+      }
     }
   }
 
@@ -104,11 +105,13 @@ export function isExtensionService(owner: ProcessInfo, lockFile: string) {
   }
 
   if (metadata.pid !== owner.pid) return false;
+
   if (
     typeof metadata.startedAt !== "string" ||
     metadata.startedAt !== owner.startedAt
-  )
+  ) {
     return false;
+  }
 
   return (
     typeof metadata.commandLine === "string" &&
@@ -189,8 +192,10 @@ function inspectDarwinProcess(pid: number): ProcessInfo | undefined {
     for (const line of files.split(/\r?\n/)) {
       if (line.startsWith("f")) descriptor = line.slice(1);
       if (!line.startsWith("n/")) continue;
-      if (descriptor === "txt" && !executablePath)
+
+      if (descriptor === "txt" && !executablePath) {
         executablePath = line.slice(1);
+      }
     }
   } catch {
     // lsof may be unavailable or restricted; ps still provides useful details.

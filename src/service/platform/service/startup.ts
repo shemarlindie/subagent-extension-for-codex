@@ -429,8 +429,9 @@ function printOwner(
     ["Lock file", error.lockFile],
   ];
 
-  if (owner?.commandLine && stdin.isTTY && stdout.isTTY)
+  if (owner?.commandLine && stdin.isTTY && stdout.isTTY) {
     fields.push(["Command", owner.commandLine]);
+  }
 
   writeStartupOutput([
     { type: "message", text: `${error.message}.` },

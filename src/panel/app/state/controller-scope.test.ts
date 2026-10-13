@@ -17,7 +17,7 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
       task("c", "/repo/b", "chat-a"),
     ];
 
-    if (explicit)
+    if (explicit) {
       controller.applyScope(
         {
           panel_scope: {
@@ -28,6 +28,8 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
         },
         false,
       );
+    }
+
     await controller.start();
 
     const bootstrap = transport.calls.filter(
@@ -35,8 +37,10 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
     );
 
     assert.equal(bootstrap.length, explicit ? 0 : 1);
-    if (!explicit)
+
+    if (!explicit) {
       assert.deepEqual(bootstrap[0].args, { conversation_id: null });
+    }
 
     assert.deepEqual(
       transport.calls.find((call) => call.name === "list_agent_tasks")?.args,
@@ -59,8 +63,10 @@ test("a project switch rejects an old list response and refreshes the current sc
   const gate = deferred<Task[]>();
 
   transport.handler = (name, args) => {
-    if (name === "list_agent_tasks" && args.repository === "/repo/b")
+    if (name === "list_agent_tasks" && args.repository === "/repo/b") {
       return [task("new", "/repo/b")];
+    }
+
     if (name === "list_agent_tasks") return gate.promise;
 
     return undefined;
@@ -156,10 +162,13 @@ test("All chats preserves repository and discards a delayed conversation respons
   const gate = deferred<Task[]>();
 
   transport.handler = (name, args) => {
-    if (name === "list_agent_tasks" && args.conversation_id === "chat-a")
+    if (name === "list_agent_tasks" && args.conversation_id === "chat-a") {
       return gate.promise;
-    if (name === "list_agent_tasks")
+    }
+
+    if (name === "list_agent_tasks") {
       return [task("a", "/repo/a", "chat-a"), task("b", "/repo/a", "chat-b")];
+    }
 
     return undefined;
   };

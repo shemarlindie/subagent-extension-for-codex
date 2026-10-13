@@ -137,8 +137,9 @@ export function Composer({
       return;
     }
 
-    if (previousBudgetApply.current === budgetApplyVersion || !canContinue)
+    if (previousBudgetApply.current === budgetApplyVersion || !canContinue) {
       return;
+    }
 
     previousBudgetApply.current = budgetApplyVersion;
     if (!message) updateSession({ composerDraft: "Continue" });
@@ -148,7 +149,9 @@ export function Composer({
       focusAfterToggle.current = "input";
       if (inputRequest) setExpandedRequest(inputRequest);
       else updateComposerSession({ composerCollapsed: false });
-    } else input.current?.focus({ preventScroll: true });
+    } else {
+      input.current?.focus({ preventScroll: true });
+    }
   }, [
     budgetApplyVersion,
     canContinue,

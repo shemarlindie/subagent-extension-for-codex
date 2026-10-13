@@ -62,7 +62,7 @@ function note(e: Event): ChatNote | undefined {
     timestamp: e.timestamp,
   };
 
-  if (e.type === "task.session_started")
+  if (e.type === "task.session_started") {
     return {
       ...base,
       note: "session",
@@ -71,8 +71,9 @@ function note(e: Event): ChatNote | undefined {
           ? "New session: the task had none to continue"
           : "New session: the earlier one couldn't continue",
     };
+  }
 
-  if (e.type === "task.worktree_recreated")
+  if (e.type === "task.worktree_recreated") {
     return {
       ...base,
       note: "worktree",
@@ -81,16 +82,19 @@ function note(e: Event): ChatNote | undefined {
           ? "Worktree recreated from the base commit, since its branch was deleted"
           : "Worktree recreated from its branch",
     };
+  }
 
-  if (e.type === "task.failed")
+  if (e.type === "task.failed") {
     return {
       ...base,
       note: "failure",
       text: `Task failed: ${String(e.data.error ?? "Unknown error")}`,
     };
+  }
 
-  if (isCompaction(e))
+  if (isCompaction(e)) {
     return { ...base, note: "compaction", text: "Context compacted" };
+  }
 
   const raw = e.data.raw_response as Record<string, unknown> | undefined;
 
@@ -98,8 +102,9 @@ function note(e: Event): ChatNote | undefined {
     e.type === "claude.activity" &&
     raw?.type === "system" &&
     raw.compact_result === "failed"
-  )
+  ) {
     return { ...base, note: "failure", text: "Context compaction failed" };
+  }
 
   return undefined;
 }
@@ -160,8 +165,11 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
 
       failedOutcome = undefined;
     } else {
-      if (["task.instruction", "task.queued", "task.started"].includes(e.type))
+      if (
+        ["task.instruction", "task.queued", "task.started"].includes(e.type)
+      ) {
         failedOutcome = undefined;
+      }
 
       const marker = note(e);
 

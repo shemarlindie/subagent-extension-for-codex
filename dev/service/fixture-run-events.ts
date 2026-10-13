@@ -122,7 +122,7 @@ export function createFixtureRunEvents(
 
       const toolId = startTool(name, input);
 
-      if (scenario.outcome !== "running")
+      if (scenario.outcome !== "running") {
         finishTool(
           toolId,
           name,
@@ -132,6 +132,7 @@ export function createFixtureRunEvents(
             ? "Fixture content tool failed."
             : "Fixture content tool result.",
         );
+      }
 
       return;
     }
@@ -159,23 +160,25 @@ export function createFixtureRunEvents(
         content: [],
       });
 
-      if (scenario.kind === "error")
+      if (scenario.kind === "error") {
         emitActivity(scenario.role, {
           error: true,
           message:
             scenario.fields?.message ?? "Fixture empty-content error event.",
         });
+      }
 
       return;
     }
 
     const content = createFixtureContentBlock(scenario);
 
-    if (content && typeof content === "object" && !Array.isArray(content))
+    if (content && typeof content === "object" && !Array.isArray(content)) {
       applyFixtureFieldOverrides(
         content as Record<string, unknown>,
         scenario.fields ?? {},
       );
+    }
 
     emitPresented("agent.content", { role: scenario.role, content });
   };

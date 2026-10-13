@@ -138,8 +138,9 @@ export async function runFixtureTurn(
   const events = createFixtureRunEvents(c, turn);
 
   const failAt = (stage: string) => {
-    if (scenarios.fail && scenarios.failStage === stage)
+    if (scenarios.fail && scenarios.failStage === stage) {
       throw new Error(`Fixture failure at ${stage}.`);
+    }
   };
 
   try {
@@ -204,14 +205,15 @@ export async function runFixtureTurn(
 
     return { reply };
   } catch (error) {
-    if (c.signal.aborted)
+    if (c.signal.aborted) {
       completeTurn("interrupted", { subtype: "interrupted", is_error: false });
-    else
+    } else {
       completeTurn("failed", {
         subtype: "error_during_execution",
         is_error: true,
         errors: [error instanceof Error ? error.message : String(error)],
       });
+    }
 
     throw error;
   }
@@ -228,9 +230,12 @@ async function waitAndTakeSteers(
   const duration = requestedWaitMs ?? (slow ? 480 : 80);
 
   let steps = 1;
-  if (slow) steps = 8;
-  else if (requestedWaitMs !== undefined)
+
+  if (slow) {
+    steps = 8;
+  } else if (requestedWaitMs !== undefined) {
     steps = Math.max(1, Math.min(80, Math.ceil(duration / 250)));
+  }
 
   for (let step = 0; step < steps; step++) {
     await setTimeout(duration / steps, undefined, { signal: c.signal });

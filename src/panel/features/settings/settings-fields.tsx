@@ -147,7 +147,7 @@ export function SettingRowView({
       child
     );
 
-  if (row.kind === "select")
+  if (row.kind === "select") {
     return (
       <div className="setting-row">
         {text(
@@ -177,8 +177,9 @@ export function SettingRowView({
         </div>
       </div>
     );
+  }
 
-  if (row.kind === "text")
+  if (row.kind === "text") {
     return (
       <div className="setting-row">
         {text(
@@ -217,6 +218,7 @@ export function SettingRowView({
         />
       </div>
     );
+  }
 
   const on = row.kind === "budget" && form[onKey(row.key)] === "true";
 

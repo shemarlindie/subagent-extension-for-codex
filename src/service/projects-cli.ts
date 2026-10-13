@@ -17,8 +17,10 @@ try {
   );
 
   const [command, path] = process.argv.slice(2);
-  if (command === "list") console.log(JSON.stringify(projects.list(), null, 2));
-  else if (["register", "approve-parent"].includes(command) && path)
+
+  if (command === "list") {
+    console.log(JSON.stringify(projects.list(), null, 2));
+  } else if (["register", "approve-parent"].includes(command) && path) {
     console.log(
       JSON.stringify(
         await projects.register(
@@ -27,10 +29,11 @@ try {
         ),
       ),
     );
-  else
+  } else {
     throw new Error(
       "Usage: projects-cli.js list | register <repository> | approve-parent <directory>",
     );
+  }
 } finally {
   store.close();
 }

@@ -61,8 +61,11 @@ test.each([
     try {
       await waitForListening(server);
       const address = server.address();
-      if (!address || typeof address === "string")
+
+      if (!address || typeof address === "string") {
         throw new Error("Missing listener");
+      }
+
       const base = `http://127.0.0.1:${address.port}`;
 
       expect(await pageAt(base, "192.168.1.20:4317")).toBe(

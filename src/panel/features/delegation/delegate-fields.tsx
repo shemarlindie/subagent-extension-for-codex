@@ -282,10 +282,11 @@ function costNote(
   workersReady: boolean,
   mode: string,
 ) {
-  if (!workerResolved)
+  if (!workerResolved) {
     return workersReady
       ? "Choose a worker to see budget support."
       : "Loading budget options.";
+  }
 
   if (mode === "none") return undefined;
 

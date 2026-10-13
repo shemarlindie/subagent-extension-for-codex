@@ -19,20 +19,24 @@ export function claudeRateLimitWindows(
 ): ActivityRateLimitWindow[] {
   const info = record(value);
   const windows = new Map(Object.entries(record(info.unifiedWindows)));
+
   if (
     typeof info.rateLimitType === "string" &&
     !windows.has(info.rateLimitType)
-  )
+  ) {
     windows.set(info.rateLimitType, info);
+  }
 
   return [...windows.entries()].flatMap(([id, value]) => {
     const window = record(value);
+
     if (
       id === "overage" ||
       typeof window.utilization !== "number" ||
       !Number.isFinite(window.utilization)
-    )
+    ) {
       return [];
+    }
 
     const resetsAt =
       typeof window.resetsAt === "number" &&

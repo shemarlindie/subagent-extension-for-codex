@@ -26,8 +26,10 @@ async function setup() {
 
   git(repo, "init", "-q");
 
-  for (let i = 0; i < 3; i++)
+  for (let i = 0; i < 3; i++) {
     await writeFile(join(repo, `file-${i}.txt`), `line ${i}\n`.repeat(20));
+  }
+
   git(repo, "add", ".");
 
   git(
@@ -161,8 +163,10 @@ test("pages hold whole files, list every file, and keep reading the same state",
 
   try {
     const t = await s.task("current_repo");
-    for (let i = 0; i < 3; i++)
+
+    for (let i = 0; i < 3; i++) {
       await writeFile(join(s.repo, `file-${i}.txt`), `edited ${i}\n`);
+    }
 
     const first = await s.workspaces.changes(t, "task", undefined, 10);
     assert.equal(first.files.length, 3);
@@ -577,11 +581,12 @@ test("changed files are read whole or in parts, with images as base64 and other 
     });
 
     // Unchanged files, and paths outside the repository, are refused.
-    for (const path of ["file-2.txt", "../repo/file-2.txt", ".git/config"])
+    for (const path of ["file-2.txt", "../repo/file-2.txt", ".git/config"]) {
       await assert.rejects(
         s.workspaces.changedFile(t, path),
         /not among this task's changes/,
       );
+    }
 
     // A later part's cursor can't reach an unchanged file either.
     await assert.rejects(
@@ -611,8 +616,11 @@ test("later pages reuse the diff of the first, until it expires", async () => {
 
   try {
     const t = await s.task("current_repo");
-    for (let i = 0; i < 3; i++)
+
+    for (let i = 0; i < 3; i++) {
       await writeFile(join(s.repo, `file-${i}.txt`), `edited ${i}\n`);
+    }
+
     const first = await s.workspaces.changes(t, "task", undefined, 10);
 
     // Moving the checkout away makes every Git call fail, so a page that
@@ -638,8 +646,10 @@ test("only the two most recent diffs are kept", async () => {
 
   try {
     const t = await s.task("current_repo");
-    for (let i = 0; i < 3; i++)
+
+    for (let i = 0; i < 3; i++) {
       await writeFile(join(s.repo, `file-${i}.txt`), `edited ${i}\n`);
+    }
 
     // Three tree pairs: the task's (from HEAD's tree), then the turn's from
     // two other bases, the empty tree and a later snapshot.
@@ -650,11 +660,17 @@ test("only the two most recent diffs are kept", async () => {
       .trim();
 
     await s.workspaces.changes(t, "turn", undefined, 10);
-    for (const i of [0, 1])
+
+    for (const i of [0, 1]) {
       await writeFile(join(s.repo, `file-${i}.txt`), "turn base\n");
+    }
+
     t.turn_start_tree = await s.workspaces.snapshot(s.repo);
-    for (const i of [0, 1])
+
+    for (const i of [0, 1]) {
       await writeFile(join(s.repo, `file-${i}.txt`), "edited again\n");
+    }
+
     const newest = await s.workspaces.changes(t, "turn", undefined, 10);
     assert.ok(newest.next_cursor);
 

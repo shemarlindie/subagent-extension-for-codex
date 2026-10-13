@@ -13,12 +13,13 @@ export function MarkdownCode({
   // Info strings can hold symbols, as in c++ or objective-c.
   const language = /(?:^|\s)language-(\S+)/.exec(className ?? "")?.[1];
 
-  if (!language)
+  if (!language) {
     return (
       <code className={className} {...rest}>
         {children}
       </code>
     );
+  }
 
   return (
     <code

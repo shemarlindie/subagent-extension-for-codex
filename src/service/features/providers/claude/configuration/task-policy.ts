@@ -19,10 +19,11 @@ import type { ProviderTaskPolicy } from "../../task-policy.js";
 export const claudeTaskPolicy: ProviderTaskPolicy = {
   inputKind: (tool) => (tool === "AskUserQuestion" ? "question" : "permission"),
   prepareStart({ input, defaults, authority }) {
-    if (input.approval_mode !== undefined)
+    if (input.approval_mode !== undefined) {
       throw new Error(
         "Claude uses permission_mode and approval_decider; approval_mode is only supported by execution-approval providers",
       );
+    }
 
     const requested = claudeStartOptionsSchema.parse(
       optionsForProvider(input.provider_options, "claude"),
@@ -38,25 +39,33 @@ export const claudeTaskPolicy: ProviderTaskPolicy = {
       defaults.claude_permission_mode,
     );
 
-    if (authority !== "user" && exceedsPermission(resolved.mode, baseline.mode))
+    if (
+      authority !== "user" &&
+      exceedsPermission(resolved.mode, baseline.mode)
+    ) {
       throw new Error(
         "Task permission mode exceeds the user-approved native mode",
       );
+    }
+
     if (
       authority !== "user" &&
       requested.approval_decider === "parent_agent" &&
       defaults.default_approval_decider !== "parent_agent"
-    )
+    ) {
       throw new Error(
         "Parent approval requires user authorization in settings",
       );
+    }
+
     if (
       input.reasoning_effort &&
       ["none", "minimal"].includes(input.reasoning_effort)
-    )
+    ) {
       throw new Error(
         "Claude reasoning effort must be low, medium, high, xhigh or max",
       );
+    }
 
     return {
       provider_options: withProviderOptions(input.provider_options, "claude", {

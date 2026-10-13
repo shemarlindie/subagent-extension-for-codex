@@ -53,10 +53,11 @@ if (
   Number.isNaN(Date.parse(values.start)) ||
   !Number.isInteger(firstId) ||
   replace.some(([from]) => !from)
-)
+) {
   throw new Error(
     "Usage: --db <tasks.sqlite> --task <task id> --name <lowercase-name> [--title <title>] [--start <ISO time>] [--first-id <n>] [--replace <from>=<to> ...]",
   );
+}
 
 const db = new DatabaseSync(values.db, { readOnly: true });
 const row = db.prepare("SELECT body FROM tasks WHERE id=?").get(values.task);
@@ -100,10 +101,11 @@ const left = leftovers(text, [
   tmpdir(),
 ]);
 
-if (left.length)
+if (left.length) {
   throw new Error(
     `Not written: it still contains ${left.join(", ")}. Replace them with --replace <from>=<to>.`,
   );
+}
 
 writeFileSync(path, text);
 

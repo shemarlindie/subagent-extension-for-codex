@@ -23,11 +23,13 @@ export function Header() {
   const glyph = useRef<HTMLSpanElement>(null);
 
   const refresh = () => {
-      if (canAnimate(glyph.current))
+      if (canAnimate(glyph.current)) {
         glyph.current!.animate(
           [{ transform: "rotate(0)" }, { transform: "rotate(360deg)" }],
           { duration: 500, easing: MOTION.easing },
         );
+      }
+
       controller.run(() => controller.refresh());
     },
     expand = () =>

@@ -54,13 +54,15 @@ async function extraService(name: string): Promise<Service> {
 function cleanEnv(service = main, overrides: Record<string, string> = {}) {
   const env: Record<string, string> = {};
 
-  for (const [key, value] of Object.entries(process.env))
+  for (const [key, value] of Object.entries(process.env)) {
     if (
       value !== undefined &&
       !key.startsWith("CODEX_SUBAGENT_EXTENSION_") &&
       key !== "PORT"
-    )
+    ) {
       env[key] = value;
+    }
+  }
 
   return {
     ...env,
@@ -206,8 +208,9 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
-  for (const service of [main, ...services])
+  for (const service of [main, ...services]) {
     await stopService(service).catch(() => {});
+  }
 
   await rm(root, { recursive: true, force: true });
 });
@@ -229,15 +232,17 @@ describe("packed artifact", () => {
       "dist/THIRD_PARTY_LICENSES.txt",
       "assets/brand/brand-glyph-dark.svg",
       "mcp.json",
-    ])
+    ]) {
       await access(join(pkg, file));
+    }
 
     // The service and projects CLI migrate the database from these at startup.
     const migrations = await readdir(join(process.cwd(), "migrations"));
     assert.ok(migrations.length);
 
-    for (const migration of migrations)
+    for (const migration of migrations) {
       await access(join(pkg, "migrations", migration, "migration.sql"));
+    }
 
     const files = (await readdir(pkg, { recursive: true, withFileTypes: true }))
       .filter((entry) => entry.isFile())
@@ -245,9 +250,11 @@ describe("packed artifact", () => {
 
     const native = [];
 
-    for (const file of files)
-      if (nativeExecutable(await readFile(file)))
+    for (const file of files) {
+      if (nativeExecutable(await readFile(file))) {
         native.push(relative(pkg, file));
+      }
+    }
 
     assert.deepEqual(native, []);
   });
@@ -342,10 +349,11 @@ describe("packed artifact", () => {
     try {
       const worker = await claudeWorker(client);
 
-      if (!worker.readiness.ready)
+      if (!worker.readiness.ready) {
         context.skip(
           `No supported Claude Code on this host: ${worker.readiness.message}`,
         );
+      }
 
       assert.equal(worker.model_discovery_error, undefined);
       assert.ok(worker.models?.some((model) => model.value === "default"));

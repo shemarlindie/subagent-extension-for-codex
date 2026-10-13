@@ -137,11 +137,13 @@ test("Claude preparation checks native permission, approval decider, and effort 
       /requires user authorization/,
     );
 
-    for (const reasoning_effort of ["none", "minimal"] as const)
+    for (const reasoning_effort of ["none", "minimal"] as const) {
       assert.throws(
         () => prepare({ reasoning_effort }),
         /Claude reasoning effort/,
       );
+    }
+
     defaults.default_approval_decider = "parent_agent";
 
     assert.doesNotThrow(() =>

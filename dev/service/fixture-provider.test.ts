@@ -172,8 +172,9 @@ test("fixture run keys emit every SDK activity and stream frame", async () => {
     .filter((event) => event.type === "claude.activity")
     .map((event) => event.data.type);
 
-  for (const type of activityTypes)
+  for (const type of activityTypes) {
     assert.ok(emittedActivityTypes.includes(type), type);
+  }
 
   const streamFrames = f.events
     .filter((event) => event.type === "claude.activity")
@@ -186,8 +187,9 @@ test("fixture run keys emit every SDK activity and stream frame", async () => {
         : [];
     });
 
-  for (const frame of fixtureStreamFrameTypes)
+  for (const frame of fixtureStreamFrameTypes) {
     assert.ok(streamFrames.includes(frame), frame);
+  }
 });
 
 test("fixture permission modes simulate allow, deny, ask, and approval authority", () => {
@@ -227,17 +229,19 @@ test("fixture permission modes simulate allow, deny, ask, and approval authority
       return { ...task(), ...prepared } as Task;
     };
 
-    for (const mode of ["plan", "dontAsk"])
+    for (const mode of ["plan", "dontAsk"]) {
       assert.equal(
         provider.taskPolicy.decideInput(prepare(mode), "Bash"),
         false,
       );
+    }
 
-    for (const mode of ["auto", "bypassPermissions"])
+    for (const mode of ["auto", "bypassPermissions"]) {
       assert.equal(
         provider.taskPolicy.decideInput(prepare(mode), "Bash"),
         true,
       );
+    }
 
     assert.equal(
       provider.taskPolicy.decideInput(prepare("acceptEdits"), "Edit"),

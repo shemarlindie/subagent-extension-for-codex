@@ -17,11 +17,14 @@ for (const phase of ["connect", "read", "poll"] as const) {
     t.onTestFinished(() => controller.dispose());
     const gate = deferred<void>();
     if (phase === "connect") transport.connectGate = gate.promise;
-    if (phase === "read")
+
+    if (phase === "read") {
       transport.handler = (name) =>
         name === "list_available_workers"
           ? gate.promise.then(() => [])
           : undefined;
+    }
+
     const starting = controller.start();
     await flush();
 

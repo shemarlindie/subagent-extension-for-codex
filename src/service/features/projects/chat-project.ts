@@ -53,15 +53,20 @@ export async function autoRegisterChatProject(
   repository?: string,
 ) {
   try {
-    if (!c.projects || !c.settings.values(owner).auto_register_chat_project)
+    if (!c.projects || !c.settings.values(owner).auto_register_chat_project) {
       return undefined;
+    }
+
     const root = await hostProjectCandidate(hostDirectoryFromMeta(meta));
     if (!root) return undefined;
+
     if (
       repository !== undefined &&
       (!isAbsolute(repository) || (await gitRoot(repository)) !== root)
-    )
+    ) {
       return undefined;
+    }
+
     // Keep existing grants as they are instead of adding a redundant narrower row.
     if (!(await isApproved(c, root))) await c.projects.register(root);
 
@@ -78,10 +83,13 @@ export async function currentChatProject(
   meta?: Record<string, unknown>,
 ) {
   const root = await hostProjectCandidate(hostDirectoryFromMeta(meta));
-  if (!root)
+
+  if (!root) {
     throw new Error(
       "The host supplied no usable local project directory. Use the actual absolute repository from the task context, and ask the user to use Add project in the panel if it is not registered.",
     );
+  }
+
   const registered = await isApproved(c, root);
 
   const auto =

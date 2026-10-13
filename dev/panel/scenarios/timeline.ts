@@ -186,26 +186,27 @@ export class Timeline {
     };
 
     for (const block of content) {
-      if (block.type === "text")
+      if (block.type === "text") {
         this.add("agent.message", {
           role: "assistant",
           text: block.text,
           content: block,
           raw_response: message,
         });
-      else if (block.type === "tool_use")
+      } else if (block.type === "tool_use") {
         this.add("tool.started", {
           id: block.id,
           name: block.name,
           input: block.input,
           raw_response: message,
         });
-      else
+      } else {
         this.add("agent.content", {
           role: "assistant",
           content: block,
           raw_response: message,
         });
+      }
     }
 
     return this;
@@ -222,26 +223,27 @@ export class Timeline {
     };
 
     for (const block of content) {
-      if (block.type === "text")
+      if (block.type === "text") {
         this.add("agent.content", {
           role: "user",
           text: block.text,
           content: block,
           raw_response: message,
         });
-      else if (block.type === "tool_result")
+      } else if (block.type === "tool_result") {
         this.add("tool.completed", {
           id: block.tool_use_id,
           error: block.is_error,
           content: block.content,
           raw_response: message,
         });
-      else
+      } else {
         this.add("agent.content", {
           role: "user",
           content: block,
           raw_response: message,
         });
+      }
     }
 
     return this;
@@ -321,8 +323,10 @@ export class Timeline {
     options: { error?: boolean; progress?: number[] } = {},
   ) {
     const id = this.toolStart(name, input);
-    for (const seconds of options.progress ?? [])
+
+    for (const seconds of options.progress ?? []) {
       this.toolProgress(id, name, seconds);
+    }
 
     return this.toolDone(id, content, options.error);
   }
@@ -361,12 +365,13 @@ export class Timeline {
       content_block: text(""),
     });
 
-    for (const chunk of chunks)
+    for (const chunk of chunks) {
       this.stream({
         type: "content_block_delta",
         index: 0,
         delta: { type: "text_delta", text: chunk },
       });
+    }
 
     if (finish) {
       this.stream({ type: "content_block_stop", index: 0 });

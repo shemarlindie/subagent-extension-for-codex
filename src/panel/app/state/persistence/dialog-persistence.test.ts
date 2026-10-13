@@ -70,7 +70,7 @@ test("dialog identity ignores draft edits but includes the dialog target", () =>
 for (const target of [
   { kind: "reply", id: "older-reply" },
   { kind: "file", path: "src/auth.ts" },
-] as const)
+] as const) {
   test(`targeted ${target.kind} handoffs round-trip their target and edited draft`, () => {
     const dialog = {
       kind: "handoff",
@@ -80,8 +80,11 @@ for (const target of [
     } as Extract<DialogState, { kind: "handoff" }>;
 
     const persisted = persistDialog(dialog);
-    if (persisted.kind !== "handoff")
+
+    if (persisted.kind !== "handoff") {
       throw new Error("Expected handoff descriptor");
+    }
+
     const draft = { message: "Edited question about the selected context." };
 
     assert.deepEqual(parsePersistedDialog({ ...persisted, draft }), {
@@ -112,6 +115,7 @@ for (const target of [
       false,
     );
   });
+}
 
 test("malformed handoff targets are rejected instead of becoming whole-task handoffs", () => {
   for (const target of [

@@ -13,7 +13,7 @@ export function applyDraftUpdate(
   current: DraftState | undefined,
   update: DraftUpdate,
 ): { draft: DraftState | undefined; stale?: boolean } {
-  if ("cleared" in update)
+  if ("cleared" in update) {
     return {
       draft:
         current?.task === update.task_id &&
@@ -21,15 +21,17 @@ export function applyDraftUpdate(
           ? undefined
           : current,
     };
+  }
 
   const same =
     current?.task === update.task_id &&
     current.message_id === update.message_id;
 
-  if (same && update.offset === current.text.length)
+  if (same && update.offset === current.text.length) {
     return { draft: { ...current, text: current.text + update.text } };
+  }
 
-  if (update.offset === 0)
+  if (update.offset === 0) {
     return {
       draft: {
         task: update.task_id,
@@ -37,6 +39,7 @@ export function applyDraftUpdate(
         text: update.text,
       },
     };
+  }
 
   return { draft: current, stale: true };
 }

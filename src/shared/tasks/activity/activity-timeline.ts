@@ -68,8 +68,9 @@ const boundaries = new Set([
 function serviceSummary(e: Event) {
   const d = e.data;
 
-  if (e.type === "task.turn_ended")
+  if (e.type === "task.turn_ended") {
     return `Turn ${String(d.turn)} ${String(d.outcome)}`;
+  }
 
   if (e.type === "task.queue_changed") {
     const count = Array.isArray(d.queue) ? d.queue.length : 0;
@@ -119,8 +120,10 @@ function statusTitle(e: Event) {
     activityKind(e) === "status" &&
     e.data.status === "requesting" &&
     !activityFailed(e)
-  )
+  ) {
     return "Requesting";
+  }
+
   const presentation = activityPresentation(e);
   if (presentation.statusTitle) return presentation.statusTitle;
   if (thinkingSignal(e)) return "Thinking…";
@@ -135,8 +138,9 @@ function statusTitle(e: Event) {
 }
 
 function thinkingSignal(e: Event): boolean {
-  if (activityKind(e) === "status" && e.data.status === "requesting")
+  if (activityKind(e) === "status" && e.data.status === "requesting") {
     return false;
+  }
 
   return (
     !activityFailed(e) &&
@@ -167,20 +171,24 @@ export function thinkingSpan(
 
   if (thinkingSignal(last) && group.kind !== "message") {
     let next: Event | undefined;
-    for (const e of events)
+
+    for (const e of events) {
       if (
         e.task_id === last.task_id &&
         e.id > last.id &&
         (!next || e.id < next.id)
-      )
+      ) {
         next = e;
+      }
+    }
 
     return { start, end: next ? Date.parse(next.timestamp) : null };
   }
 
   // A message that absorbed its thinking marker spans marker to message.
-  if (group.kind === "message")
+  if (group.kind === "message") {
     return { start, end: Date.parse(last.timestamp) };
+  }
 
   return undefined;
 }
@@ -246,12 +254,14 @@ function eventRowTitle(
   key: string,
   presentationTitle: string | undefined,
 ) {
-  if (!activityFailed(e))
+  if (!activityFailed(e)) {
     return (
       presentationTitle ??
       eventTitles[key] ??
       (thinkingSignal(e) ? "Thinking…" : sentence(key))
     );
+  }
+
   if (key === "status") return statusTitle(e);
 
   return sentence(key === "agent.completed" ? "Agent failed" : key);
@@ -315,9 +325,12 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     const operation = presentation.operation;
 
     let toolId: string | undefined;
-    if (e.type.startsWith("tool.")) toolId = string(d.id);
-    else if (operation?.kind === "tool")
+
+    if (e.type.startsWith("tool.")) {
+      toolId = string(d.id);
+    } else if (operation?.kind === "tool") {
       toolId = operation.id.replace(/^tool:/, "");
+    }
 
     let operationId: string | undefined;
     if (toolId) operationId = `tool:${e.task_id}:${toolId}`;
@@ -325,6 +338,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
 
     if (operationId) {
       let group = operations.get(operationId);
+
       if (!group || e.type === "tool.started" || operation?.started) {
         group = add(
           e,
@@ -334,7 +348,10 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         );
 
         operations.set(operationId, group);
-      } else group.events.push(e);
+      } else {
+        group.events.push(e);
+      }
+
       const previousSummary = group.summary;
       if (toolId) Object.assign(group, toolTitle(group.events));
       else group.summary = operation?.summary ?? group.summary;
@@ -354,7 +371,10 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         group.state = "info";
         const reason = operation?.summary;
         group.summary = `${d.outcome === "cancelled" ? "Cancelled" : "Stopped"}${reason ? ` · ${reason}` : ""}`;
-      } else if (complete) group.state = "completed";
+      } else if (complete) {
+        group.state = "completed";
+      }
+
       continue;
     }
 
@@ -363,12 +383,15 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         parent = `${e.task_id}:${stream.id}`;
 
       let group = streams.get(parent);
+
       if (!group || stream.started) {
         group = add(e, "stream", "Responding", "running");
         streams.set(parent, group);
         const id = stream.messageId;
         if (id) messages.set(`${e.task_id}:${id}`, group);
-      } else group.events.push(e);
+      } else {
+        group.events.push(e);
+      }
 
       if (stream.completed) {
         group.state = "completed";
@@ -431,12 +454,14 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       completedTurns.delete(e.task_id);
 
       // Keep repeated result text on the reply row, not the completion row.
-      if (completed && completed.summary === string(d.text))
+      if (completed && completed.summary === string(d.text)) {
         completed.summary = undefined;
+      }
     }
 
     if (isQuiet(e) && !activityFailed(e)) {
       const previous = adjacentStatus;
+
       // Startup and ordinary Claude status changes retain their own rows;
       // only thinking signals can become a Thought row.
       if (
@@ -458,9 +483,14 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       ) {
         previous.events.push(e);
         previous.title = statusTitle(e);
-      } else adjacentStatus = add(e, "status", statusTitle(e));
-      if (adjacentStatus && onlyThinkingSignals(adjacentStatus))
+      } else {
+        adjacentStatus = add(e, "status", statusTitle(e));
+      }
+
+      if (adjacentStatus && onlyThinkingSignals(adjacentStatus)) {
         adjacentThinking = adjacentStatus;
+      }
+
       continue;
     }
 
@@ -485,12 +515,15 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
-    if (e.type === "agent.reply" || thinkingSignal(e))
+    if (e.type === "agent.reply" || thinkingSignal(e)) {
       group.summary = undefined;
+    }
 
-    if (e.type === "agent.completed" && !activityFailed(e))
+    if (e.type === "agent.completed" && !activityFailed(e)) {
       completedTurns.set(e.task_id, group);
-    else if (boundaries.has(key)) completedTurns.delete(e.task_id);
+    } else if (boundaries.has(key)) {
+      completedTurns.delete(e.task_id);
+    }
 
     // Generic updates need matching readable summaries; SDK messages and actionable
     // transitions retain their own rows. Every raw event remains inspectable.
@@ -521,7 +554,10 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
           : `${presentation.title ?? sentence(key)} · ${count} events`;
 
         adjacentEvent = previousEvent;
-      } else adjacentEvent = group;
+      } else {
+        adjacentEvent = group;
+      }
+
       if (onlyThinkingSignals(adjacentEvent)) adjacentThinking = adjacentEvent;
     }
   }
@@ -536,19 +572,27 @@ export function currentActivityStatus(
 ): { text: string; state: ActivityState } {
   if (task) {
     if (task.status === "failed") return { text: "Failed", state: "failed" };
-    if (task.status === "completed")
+
+    if (task.status === "completed") {
       return { text: "Completed", state: "completed" };
-    if (task.status === "interrupted")
+    }
+
+    if (task.status === "interrupted") {
       return { text: sentence(task.status), state: "info" };
-    if (task.status === "waiting" || task.pending_input)
+    }
+
+    if (task.status === "waiting" || task.pending_input) {
       return {
         text: task.pending_input
           ? `Needs input · ${task.pending_input.tool}`
           : "Waiting",
         state: "info",
       };
-    if (task.status === "queued" || task.status === "starting")
+    }
+
+    if (task.status === "queued" || task.status === "starting") {
       return { text: sentence(task.status), state: "running" };
+    }
   }
 
   const sorted = [...events].sort((a, b) => a.id - b.id);
@@ -583,36 +627,47 @@ export function currentActivityStatus(
 
   if (latest && (!active || latest.id > active.events.at(-1)!.id)) {
     const kind = activityKind(latest);
-    if (kind === "agent.input_required")
+
+    if (kind === "agent.input_required") {
       return {
         text: `Needs input${latest.data.tool ? ` · ${latest.data.tool}` : ""}`,
         state: "info",
       };
+    }
+
     // A provider failure can arrive before the host persists its terminal task state.
-    if (activityFailed(latest))
+    if (activityFailed(latest)) {
       return {
         text: kind === "status" ? statusTitle(latest) : "Failed",
         state: "failed",
       };
-    if (kind === "agent.completed")
+    }
+
+    if (kind === "agent.completed") {
       return {
         text: task?.status === "running" ? "Finishing up" : "Turn completed",
         state: task?.status === "running" ? "running" : "completed",
       };
+    }
+
     if (
       ["task.started", "agent.turn_started", "agent.input_submitted"].includes(
         kind,
       )
-    )
+    ) {
       return { text: "Working", state: "running" };
-    if (kind.startsWith("task."))
+    }
+
+    if (kind.startsWith("task.")) {
       return {
         text: sentence(kind.slice(5)),
         state: taskEventStates[kind] ?? "info",
       };
+    }
 
     const presentation = activityPresentation(latest);
-    if (presentation.statusState === "completed")
+
+    if (presentation.statusState === "completed") {
       return {
         text:
           task?.status === "running"
@@ -620,13 +675,16 @@ export function currentActivityStatus(
             : (presentation.statusTitle ?? "Turn finished"),
         state: task ? "info" : "completed",
       };
-    if (presentation.statusState)
+    }
+
+    if (presentation.statusState) {
       return { text: statusTitle(latest), state: presentation.statusState };
+    }
 
     return { text: statusTitle(latest), state: "running" };
   }
 
-  if (active)
+  if (active) {
     return {
       text:
         active.kind === "tool"
@@ -634,6 +692,7 @@ export function currentActivityStatus(
           : active.title,
       state: "running",
     };
+  }
 
   return {
     text: events.length ? "Working" : "Waiting for worker activity",

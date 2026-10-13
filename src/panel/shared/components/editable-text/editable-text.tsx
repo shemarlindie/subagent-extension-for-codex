@@ -52,11 +52,13 @@ export function EditableText({
       control.current = element;
       if (!element || !editing) return;
       element.focus({ preventScroll: true });
-      if (selection.current)
+
+      if (selection.current) {
         element.setSelectionRange(
           selection.current.start,
           selection.current.end,
         );
+      }
     },
     [editing],
   );

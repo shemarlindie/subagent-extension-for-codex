@@ -39,7 +39,7 @@ export function ModelTable({
         // Without a discovered catalog the model ID is typed instead.
         let modelControl: ReactNode;
 
-        if (loading)
+        if (loading) {
           modelControl = (
             <FormSelect
               control={control}
@@ -52,7 +52,7 @@ export function ModelTable({
               placeholder="Loading…"
             />
           );
-        else if (scope.model.options)
+        } else if (scope.model.options) {
           modelControl = (
             <FormSelect
               control={control}
@@ -62,7 +62,7 @@ export function ModelTable({
               options={scope.model.options}
             />
           );
-        else
+        } else {
           modelControl = (
             <input
               id={`setting-${scope.model.key}`}
@@ -73,6 +73,7 @@ export function ModelTable({
               {...register(scope.model.key)}
             />
           );
+        }
 
         return (
           <div key={scope.model.key} className="model-table-row">

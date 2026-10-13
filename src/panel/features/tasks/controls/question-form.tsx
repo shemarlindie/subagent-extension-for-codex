@@ -43,8 +43,10 @@ function answerFor(
   custom: string | undefined,
 ) {
   const typed = custom?.trim() ?? "";
-  if (Array.isArray(preset))
+
+  if (Array.isArray(preset)) {
     return [...preset, ...(typed ? [typed] : [])].join(", ");
+  }
 
   return question.multiSelect ? typed : typed || (preset?.trim() ?? "");
 }
@@ -262,13 +264,16 @@ export function QuestionForm({ task }: { task: Task }) {
   useEffect(() => {
     const target = focusAfterMove.current;
     focusAfterMove.current = undefined;
-    if (target === "submit") submit.current?.focus();
-    else if (target === "card")
+
+    if (target === "submit") {
+      submit.current?.focus();
+    } else if (target === "card") {
       form.current
         ?.querySelector<HTMLElement>(
           ".question-card[data-position=active] :is(input, textarea)",
         )
         ?.focus();
+    }
   }, [active]);
 
   // Leaving the task unmounts the form; keep its unsent answers as a draft to restore.

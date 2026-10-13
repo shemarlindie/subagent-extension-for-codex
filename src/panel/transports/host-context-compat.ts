@@ -26,8 +26,11 @@ function filterHostContext(context: unknown) {
     ),
   );
 
-  if (Object.keys(supportedVariables).length === Object.keys(variables).length)
+  if (
+    Object.keys(supportedVariables).length === Object.keys(variables).length
+  ) {
     return context;
+  }
 
   return {
     ...context,

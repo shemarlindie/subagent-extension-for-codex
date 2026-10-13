@@ -76,8 +76,10 @@ function limitTitle(spent: SpentBudget) {
 }
 
 function limitDetail(spent: SpentBudget) {
-  if (spent.cost && spent.runtime)
+  if (spent.cost && spent.runtime) {
     return "Apply higher cost and runtime limits to continue.";
+  }
+
   if (spent.cost) return "Apply a higher cost limit to continue.";
   if (spent.runtime) return "Apply a higher runtime limit to continue.";
 

@@ -68,14 +68,22 @@ function ReplyResult({ text }: { text: string }) {
 
 export function EventBody({ event }: { event: Event }) {
   const data = event.data;
-  if (event.type === "agent.message" || event.type === "agent.content")
+
+  if (event.type === "agent.message" || event.type === "agent.content") {
     return <ActivityContent content={data.content ?? data.text} markdown />;
-  if (event.type === "agent.reply")
+  }
+
+  if (event.type === "agent.reply") {
     return <ReplyResult text={String(data.text ?? "")} />;
-  if (event.type === "tool.started")
+  }
+
+  if (event.type === "tool.started") {
     return <ActivityValue value={data.input} />;
-  if (event.type === "tool.completed")
+  }
+
+  if (event.type === "tool.completed") {
     return <ActivityContent content={data.content ?? data.text} />;
+  }
 
   const presentation = activityPresentation(event);
 
@@ -94,7 +102,7 @@ export function EventBody({ event }: { event: Event }) {
     );
   }
 
-  if (presentation.body)
+  if (presentation.body) {
     return (
       <>
         {/* The worker's messages are Markdown; user messages carry tool results. */}
@@ -107,6 +115,7 @@ export function EventBody({ event }: { event: Event }) {
         )}
       </>
     );
+  }
 
   const proseKeys = [
     "text",

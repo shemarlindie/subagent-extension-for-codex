@@ -193,13 +193,15 @@ test("cleanup clears markers and pending timers and removes interaction listener
   expectActive(scroller, false);
   expect(vi.getTimerCount()).toBe(0);
   scroller.dispatchEvent(new Event("scroll"));
+
   for (const eventType of [
     "pointermove",
     "pointerdown",
     "pointerup",
     "pointercancel",
-  ])
+  ]) {
     pointer(child, eventType);
+  }
 
   expectActive(scroller, false);
   expect(vi.getTimerCount()).toBe(0);

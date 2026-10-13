@@ -103,8 +103,9 @@ export function withConversation(
     if (
       typeof state?.sandboxCwd === "string" &&
       state.sandboxCwd.length <= 4096
-    )
+    ) {
       args = { ...args, host_directory: state.sandboxCwd };
+    }
   }
 
   // A selected task supplies its own scope; ambient chat hints cannot constrain it.
@@ -121,8 +122,10 @@ export function withConversation(
       name,
     ) &&
       args.task_id !== undefined)
-  )
+  ) {
     return args;
+  }
+
   // Codex core adds threadId; ChatGPT documents its anonymized session field.
   // Both are optional correlation hints, never filesystem/ownership authority.
   const session = meta?.["openai/session"] ?? meta?.threadId;
@@ -392,10 +395,11 @@ export function definitions(
         "User interface only: approve and persist a Git repository selected by the user. Does not approve its parent or nested repositories.",
       schema: z.strictObject({ repository: z.string().min(1).max(4096) }),
       run: async (a) => {
-        if (!c.projects)
+        if (!c.projects) {
           throw new Error(
             "Project registration is unavailable in this service.",
           );
+        }
 
         return c.projects.register(a.repository);
       },
@@ -414,8 +418,9 @@ export function definitions(
         name: z.string().trim().min(1).max(200),
       }),
       run: (a) => {
-        if (!c.projects)
+        if (!c.projects) {
           throw new Error("Project management is unavailable in this service.");
+        }
 
         return c.projects.rename(a.repository, a.name);
       },
@@ -428,8 +433,9 @@ export function definitions(
         delete_tasks: z.boolean().default(false),
       }),
       run: (a) => {
-        if (!c.projects)
+        if (!c.projects) {
           throw new Error("Project management is unavailable in this service.");
+        }
 
         return c.removeProject(owner, a.repository, a.delete_tasks);
       },
@@ -721,8 +727,10 @@ export async function callTool(
   authority: InputAuthority = "parent",
   hostMeta?: Record<string, unknown>,
 ) {
-  if (isUserTool(name) && authority !== "user")
+  if (isUserTool(name) && authority !== "user") {
     throw new Error("User tools require a user interface");
+  }
+
   const defs = definitions(c, owner, authority, hostMeta);
   if (!(name in defs)) throw new Error("Unknown tool");
   const d: AnyTool = defs[name as keyof typeof defs];

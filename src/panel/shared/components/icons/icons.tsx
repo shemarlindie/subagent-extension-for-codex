@@ -75,8 +75,9 @@ function parseIcon(source: string): IconDefinition {
     openingTagEnd < 0 ||
     closingTagStart <= openingTagEnd ||
     strokeWidth === undefined
-  )
+  ) {
     throw new Error("Invalid SVG icon asset");
+  }
 
   return {
     artwork: source.slice(openingTagEnd + 1, closingTagStart).trim(),
@@ -90,8 +91,9 @@ export const ICONS = Object.fromEntries(
   ICON_NAMES.map((name) => {
     const source = iconSources["../../../../../assets/icons/" + name + ".svg"];
 
-    if (source === undefined)
+    if (source === undefined) {
       throw new Error("Missing SVG icon asset: " + name);
+    }
 
     return [name, parseIcon(source)];
   }),

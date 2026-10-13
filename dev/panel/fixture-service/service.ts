@@ -59,8 +59,9 @@ function write(root: string, edits: Edits) {
   for (const [path, content] of Object.entries(edits)) {
     const file = join(root, path);
 
-    if (content === null) rmSync(file, { force: true });
-    else {
+    if (content === null) {
+      rmSync(file, { force: true });
+    } else {
       mkdirSync(dirname(file), { recursive: true });
       writeFileSync(file, content);
     }
@@ -68,9 +69,11 @@ function write(root: string, edits: Edits) {
 }
 
 function apply(root: string, turn: Turn) {
-  if ("patch" in turn && typeof turn.patch === "string")
+  if ("patch" in turn && typeof turn.patch === "string") {
     execFileSync("git", ["-C", root, "apply", "-"], { input: turn.patch });
-  else write(root, turn as Edits);
+  } else {
+    write(root, turn as Edits);
+  }
 }
 
 /**
@@ -103,8 +106,10 @@ async function seedChanges(task: Task, root: string, workspaces: Workspaces) {
   const workspace = task.workspace;
 
   for (const [index, turn] of fixture.turns.entries()) {
-    if (index === fixture.turns.length - 1)
+    if (index === fixture.turns.length - 1) {
       task.turn_start_tree = await workspaces.snapshot(workspace);
+    }
+
     apply(workspace, turn);
 
     if (fixture.commit) {
@@ -131,8 +136,11 @@ function fixtureStore() {
 
     for (const task of previewTasks) {
       const saved = structuredClone(task);
-      if (previewChanges[task.id])
+
+      if (previewChanges[task.id]) {
         await seedChanges(saved, directory, workspaces);
+      }
+
       store.save(saved);
     }
 
@@ -160,8 +168,9 @@ export async function fixtureServiceTool(
   name: string,
   args: Record<string, unknown>,
 ) {
-  if (!FIXTURE_SERVICE_TOOLS.includes(name))
+  if (!FIXTURE_SERVICE_TOOLS.includes(name)) {
     throw new Error(`The fixture service does not serve ${name}`);
+  }
 
   const { control } = await fixtureStore();
   const task = previewTasks.find((task) => task.id === args.task_id);

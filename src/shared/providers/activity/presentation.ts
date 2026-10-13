@@ -8,15 +8,17 @@ export function activityPresentation(event: Event): ActivityPresentation {
 
   if (activity && typeof activity === "object" && !Array.isArray(activity)) {
     const presentation = activity as ActivityPresentation;
+
     // Older saved Claude events have presentation metadata but no normalized windows.
     if (
       presentation.kind === "rate_limit_event" &&
       presentation.rateLimitWindows === undefined
-    )
+    ) {
       return {
         ...presentation,
         rateLimitWindows: claudeRateLimitWindows(event.data.rate_limit_info),
       };
+    }
 
     return presentation;
   }

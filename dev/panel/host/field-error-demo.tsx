@@ -82,8 +82,9 @@ function FieldErrorExample({
       event.target !== event.currentTarget ||
       event.propertyName !== "height" ||
       invalid
-    )
+    ) {
       return;
+    }
 
     setRetainedError(undefined);
   };
@@ -100,10 +101,11 @@ function FieldErrorExample({
 
   let errorContent;
 
-  if (mode === "plain") errorContent = invalid ? message : null;
-  else if (mode === "presence")
+  if (mode === "plain") {
+    errorContent = invalid ? message : null;
+  } else if (mode === "presence") {
     errorContent = <Presence show={invalid}>{message}</Presence>;
-  else
+  } else {
     errorContent = (
       <Collapsible.Root open={invalid}>
         <Collapsible.Panel
@@ -121,6 +123,7 @@ function FieldErrorExample({
         </Collapsible.Panel>
       </Collapsible.Root>
     );
+  }
 
   return (
     <div className="demo-field-example">

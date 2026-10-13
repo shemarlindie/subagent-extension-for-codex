@@ -92,13 +92,14 @@ function legacyDataDirectory(t: TestContext) {
     db.prepare(sql).run(...values);
 
   // Retain both tasks and their independent event histories.
-  for (const id of ["task_a", "task_a_1"])
+  for (const id of ["task_a", "task_a_1"]) {
     run(
       "INSERT INTO tasks VALUES(?,?,?)",
       id,
       "alice",
       JSON.stringify(task(id)),
     );
+  }
 
   run("INSERT INTO events VALUES(5,'task_a','task.completed','now','{}')");
 
@@ -153,13 +154,14 @@ function legacyDataDirectory(t: TestContext) {
     ["task_a", 5],
     ["task_a_1", 9],
     ["gone", 3],
-  ] as const)
+  ] as const) {
     run(
       "INSERT INTO event_outbox(subscription_id,event_id,body,attempts) VALUES(?,?,?,2)",
       "sub_1",
       `evt_${taskId}_${eventId}`,
       envelope(taskId, eventId),
     );
+  }
 
   // Left open, so the last writes may still be in the WAL.
   return { data, legacy: db };

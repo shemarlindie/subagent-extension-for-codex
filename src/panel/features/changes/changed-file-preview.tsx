@@ -182,12 +182,14 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
       const active = document.activeElement;
 
       refocusViewed.current = false;
+
       if (
         !active ||
         active === document.body ||
         active.getAttribute("role") === "dialog"
-      )
+      ) {
         root.current?.querySelector<HTMLElement>(".viewed-toggle")?.focus();
+      }
     }
   }, [shown]);
 

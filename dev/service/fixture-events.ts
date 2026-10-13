@@ -229,22 +229,27 @@ function setFieldPath(
     if (["__proto__", "prototype", "constructor"].includes(part)) return;
     const next = current[part];
 
-    if (!next || typeof next !== "object" || Array.isArray(next))
+    if (!next || typeof next !== "object" || Array.isArray(next)) {
       current[part] = {};
+    }
+
     current = current[part] as Record<string, unknown>;
   }
 
   const last = parts.at(-1)!;
-  if (!["__proto__", "prototype", "constructor"].includes(last))
+
+  if (!["__proto__", "prototype", "constructor"].includes(last)) {
     current[last] = value;
+  }
 }
 
 export function applyFixtureFieldOverrides(
   target: Record<string, unknown>,
   fields: Record<string, unknown>,
 ) {
-  for (const [key, value] of Object.entries(fields))
+  for (const [key, value] of Object.entries(fields)) {
     setFieldPath(target, key, value);
+  }
 }
 
 export function fixtureActivityPayload(
@@ -284,13 +289,16 @@ function fixtureContentDelta(
   text: string,
   fields: Record<string, unknown>,
 ) {
-  if (deltaType === "thinking")
+  if (deltaType === "thinking") {
     return { type: "thinking_delta", thinking: text };
-  if (deltaType === "input_json")
+  }
+
+  if (deltaType === "input_json") {
     return {
       type: "input_json_delta",
       partial_json: field(fields, "partial_json") ?? '{"path":"fixture"}',
     };
+  }
 
   return { type: "text_delta", text };
 }
@@ -311,14 +319,17 @@ export function fixtureStreamPayload(
   const text = field(fields, "text") ?? "Fixture stream delta.";
   const event: Record<string, unknown> = { type: frame };
 
-  if (frame === "message_start")
+  if (frame === "message_start") {
     event.message = {
       id: field(fields, "message_id") ?? messageId,
       role: "assistant",
       content: [],
     };
+  }
+
   if (frame.startsWith("content_block_")) event.index = index;
-  if (frame === "content_block_start")
+
+  if (frame === "content_block_start") {
     event.content_block = {
       type: blockType,
       ...(blockType === "text" ? { text: "" } : {}),
@@ -331,13 +342,18 @@ export function fixtureStreamPayload(
           }
         : {}),
     };
-  if (frame === "content_block_delta")
+  }
+
+  if (frame === "content_block_delta") {
     event.delta = fixtureContentDelta(deltaType, text, fields);
-  if (frame === "message_delta")
+  }
+
+  if (frame === "message_delta") {
     event.delta = {
       stop_reason: field(fields, "stop_reason") ?? "end_turn",
       stop_sequence: null,
     };
+  }
 
   for (const [key, value] of Object.entries(fields)) {
     if (
@@ -354,8 +370,10 @@ export function fixtureStreamPayload(
         "name",
         "parent_tool_use_id",
       ].includes(key)
-    )
+    ) {
       continue;
+    }
+
     setFieldPath(event, key, value);
   }
 

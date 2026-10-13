@@ -59,11 +59,13 @@ test("native permission resolution uses the task mode or the concrete extension 
 });
 
 test("model-selected modes cannot exceed the concrete extension setting", () => {
-  for (const mode of ["plan", "dontAsk", "default"] as const)
+  for (const mode of ["plan", "dontAsk", "default"] as const) {
     assert.equal(exceedsPermission(mode, "default"), false, mode);
+  }
 
-  for (const mode of ["acceptEdits", "auto", "bypassPermissions"] as const)
+  for (const mode of ["acceptEdits", "auto", "bypassPermissions"] as const) {
     assert.equal(exceedsPermission(mode, "default"), true, mode);
+  }
 
   assert.equal(exceedsPermission("default", "acceptEdits"), false);
   assert.equal(exceedsPermission("auto", "acceptEdits"), true);
@@ -142,11 +144,13 @@ test("settings default to Default, expose only SDK permission modes, persist ove
   );
 
   assert.equal(Object.hasOwn(properties, "default_approval_mode"), false);
-  for (const key of Object.keys(settings.read("alice").values))
+
+  for (const key of Object.keys(settings.read("alice").values)) {
     assert.ok(
       Object.hasOwn(properties, key),
       `${key} needs a host schema property`,
     );
+  }
 
   assert.throws(
     () =>
@@ -330,16 +334,18 @@ async function until(predicate: () => boolean) {
 
 test("new Claude tasks require native permission and decision fields", async (t) => {
   const { c, request } = await setup(t);
+
   for (const approval_mode of [
     "ask_user",
     "parent_agent",
     "auto_approve",
     "deny",
-  ])
+  ]) {
     await assert.rejects(
       c.start("alice", { ...request, approval_mode }),
       /Claude uses permission_mode and approval_decider/,
     );
+  }
 
   const task = await c.start(
     "alice",
@@ -374,7 +380,7 @@ test("persisted Claude tasks retain native approval routing", async (t) => {
     const pending = persisted.pending_input!;
 
     if (!parentAllowed) {
-      for (const approved of [true, false])
+      for (const approved of [true, false]) {
         assert.throws(
           () =>
             c.input(
@@ -388,6 +394,8 @@ test("persisted Claude tasks retain native approval routing", async (t) => {
             ),
           /requires user approval/,
         );
+      }
+
       assert.equal(store.get(task.id, "alice").pending_input?.id, pending.id);
     }
 
@@ -541,7 +549,7 @@ test("profile restriction values restrict read-only profiles and explicit values
     claude_path_guard: "profile",
   } as const;
 
-  for (const role of ["researcher", "reviewer", "security_reviewer"])
+  for (const role of ["researcher", "reviewer", "security_reviewer"]) {
     assert.deepEqual(
       [
         resolveClaudePolicy(profile, role).tools,
@@ -549,7 +557,14 @@ test("profile restriction values restrict read-only profiles and explicit values
       ],
       ["restricted", true],
     );
-  for (const role of ["implementer", "debugger", "test_engineer", "refactorer"])
+  }
+
+  for (const role of [
+    "implementer",
+    "debugger",
+    "test_engineer",
+    "refactorer",
+  ]) {
     assert.deepEqual(
       [
         resolveClaudePolicy(profile, role).tools,
@@ -557,6 +572,7 @@ test("profile restriction values restrict read-only profiles and explicit values
       ],
       ["all", false],
     );
+  }
 
   const loosened = resolveClaudePolicy(
     { ...profile, claude_tools: "all", claude_path_guard: "off" },

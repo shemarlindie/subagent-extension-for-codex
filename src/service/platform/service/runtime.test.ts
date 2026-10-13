@@ -40,8 +40,9 @@ test("package root resolves from source, built entries and bundle chunks", async
     ["src", "service", "platform", "service"],
     ["dist"],
     ["dist", "chunks"],
-  ])
+  ]) {
     assert.equal(findPackageRoot(moduleAt(root, ...location)), root);
+  }
 });
 
 test("package root skips other packages' manifests and malformed ones", async (t) => {

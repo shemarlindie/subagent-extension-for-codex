@@ -372,11 +372,12 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
       name: string,
       args: Record<string, unknown> = {},
     ): Promise<T> => {
-      if (name === "submit_agent_input")
+      if (name === "submit_agent_input") {
         transport.tasks[0] = {
           ...transport.tasks[0],
           pending_input: undefined,
         };
+      }
 
       return original<T>(name, args);
     };

@@ -9,12 +9,13 @@ test("highlighted lines reopen spans that cross line breaks and escape HTML", ()
 
   assert.equal(lines.length, 2);
 
-  for (const line of lines)
+  for (const line of lines) {
     assert.equal(
       line.match(/<span/g)?.length ?? 0,
       line.match(/<\/span>/g)?.length ?? 0,
       line,
     );
+  }
 
   assert.match(lines[1], /^<span class="hljs-comment">two \*\/<\/span>/);
   assert.match(lines[1], /&lt;b&gt;/);

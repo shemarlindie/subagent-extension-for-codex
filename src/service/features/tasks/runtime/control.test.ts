@@ -459,7 +459,7 @@ test("durable task completes in isolated worktree and records its reply", async 
   assert.match(String(reply.data.end_tree), /^[0-9a-f]{40}$/);
 
   // Each replied turn's snapshots are pinned under the turn.
-  for (const name of ["start", "end"])
+  for (const name of ["start", "end"]) {
     assert.equal(
       execFileSync("git", [
         "-C",
@@ -471,6 +471,7 @@ test("durable task completes in isolated worktree and records its reply", async 
         .trim(),
       reply.data[`${name}_tree`],
     );
+  }
 
   const completed = store
     .events(t.id, "alice")
@@ -575,11 +576,12 @@ test("dependent prompts include each dependency's reply and workspace diff", asy
     async run(c: RunContext, p: string) {
       prompts.set(c.task.id, p);
 
-      if (c.task.description === "Write")
+      if (c.task.description === "Write") {
         await writeFile(
           join(c.task.workspace!, "added.ts"),
           "export const added = 1;\n",
         );
+      }
 
       return super.run(c, p);
     }
@@ -635,8 +637,9 @@ test("current_repo dependents see only the dependency's own changes", async () =
     async run(c: RunContext, p: string) {
       prompts.set(c.task.id, p);
 
-      if (c.task.description === "Write")
+      if (c.task.description === "Write") {
         await writeFile(join(c.task.workspace!, "worker.ts"), "worker\n");
+      }
 
       return super.run(c, p);
     }
@@ -2141,14 +2144,20 @@ test("a new provider controls preparation and input policy without built-in iden
   provider.taskPolicy = {
     prepareStart({ input, authority }) {
       assert.equal(input.approval_mode, undefined);
-      if (input.model === "forbidden")
+
+      if (input.model === "forbidden") {
         throw new Error("Native model unavailable");
+      }
+
       const options = input.provider_options?.[input.provider];
+
       if (
         options?.execution_pool !== undefined &&
         options.execution_pool !== "isolated"
-      )
+      ) {
         throw new Error("Native execution pool must be isolated");
+      }
+
       prepared.push(authority);
 
       return {
@@ -2401,7 +2410,7 @@ test("user task renaming checks ownership and persists across active turn update
       /Task not found/,
     );
 
-    for (const title of ["   ", "x".repeat(201)])
+    for (const title of ["   ", "x".repeat(201)]) {
       await assert.rejects(
         callTool(
           c,
@@ -2414,6 +2423,7 @@ test("user task renaming checks ownership and persists across active turn update
           "user",
         ),
       );
+    }
 
     await callTool(
       c,

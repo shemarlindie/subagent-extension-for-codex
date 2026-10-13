@@ -167,7 +167,7 @@ export function TaskList() {
 
   // Rows, or the message that replaces them when offline or when nothing matches.
   const renderRows = () => {
-    if (!state.connected)
+    if (!state.connected) {
       return (
         <p className="help">
           {state.connection === "Open through MCP"
@@ -175,8 +175,9 @@ export function TaskList() {
             : "Waiting for the host connection."}
         </p>
       );
+    }
 
-    if (tasks.length)
+    if (tasks.length) {
       return tasks.map((task) => (
         <TaskRow
           key={task.id}
@@ -192,6 +193,7 @@ export function TaskList() {
           onSelect={() => controller.run(() => controller.select(task.id))}
         />
       ));
+    }
 
     return (
       <p className="help empty-state">

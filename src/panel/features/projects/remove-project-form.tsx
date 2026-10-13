@@ -31,10 +31,12 @@ export function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!state.busy && dialog.scope === state.scopeVersion)
+
+    if (!state.busy && dialog.scope === state.scopeVersion) {
       controller.run(() =>
         controller.manageProject(project.repository, undefined, removeTasks),
       );
+    }
   };
 
   return (

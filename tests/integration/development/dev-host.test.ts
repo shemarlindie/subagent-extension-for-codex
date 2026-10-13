@@ -40,8 +40,10 @@ test("a typed cwd becomes the file URI Codex sends", () => {
   const uri = normalizeCwd("/a b/#x?y");
   assert.equal(uri, "file:///a%20b/%23x%3Fy");
   assert.equal(decodeURIComponent(new URL(uri).pathname), "/a b/#x?y");
-  for (const kept of ["file:///repo", "", "relative/path"])
+
+  for (const kept of ["file:///repo", "", "relative/path"]) {
     assert.equal(normalizeCwd(kept), kept);
+  }
 });
 
 test("saved current settings override defaults", () => {

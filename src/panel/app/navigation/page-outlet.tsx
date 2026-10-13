@@ -56,8 +56,9 @@ export function PageOutlet() {
 
     const opener = openers.current.get(page);
 
-    if (opener?.isConnected) opener.focus();
-    else {
+    if (opener?.isConnected) {
+      opener.focus();
+    } else {
       const fallback = root.current?.querySelector<HTMLElement>(
         `#${PAGES[page].entryFocusId}`,
       );

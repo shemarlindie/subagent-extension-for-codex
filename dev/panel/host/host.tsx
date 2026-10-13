@@ -229,8 +229,9 @@ export function Host() {
     hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__ = viewState;
 
     return () => {
-      if (hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__ === viewState)
+      if (hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__ === viewState) {
         delete hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__;
+      }
     };
   }, [viewState]);
 
@@ -302,7 +303,7 @@ export function Host() {
 
     // Offer the service's threads in the Thread picker. Read-only, and not
     // part of the panel's traffic, so it stays out of the bridge log.
-    if (source === "live")
+    if (source === "live") {
       void service()
         .then((connection) =>
           connection.callTool({
@@ -318,6 +319,7 @@ export function Host() {
           ),
         )
         .catch(() => setLiveThreads([]));
+    }
 
     const call = async (name: string, args: Record<string, unknown> = {}) => {
       // Fixture service tools run the real service code on the Vite server.
@@ -326,7 +328,8 @@ export function Host() {
       else if (FIXTURE_SERVICE_TOOLS.includes(name)) served = "fixture service";
 
       let result;
-      if (served === "service")
+
+      if (served === "service") {
         result = (await (
           await service()
         ).callTool({
@@ -334,9 +337,9 @@ export function Host() {
           arguments: args,
           _meta: codexMeta(current),
         })) as CallToolResult;
-      else if (served === "fixture service")
+      } else if (served === "fixture service") {
         result = await fixtureServiceCall(name, args);
-      else
+      } else {
         result = fixtureCall(name, args, {
           autoRegisterChatProject: current.autoRegister,
           claudeUnavailable: current.claudeUnavailable,
@@ -346,13 +349,15 @@ export function Host() {
           removedProjects: projectEdits.current.removed,
           projectNames: projectEdits.current.names,
         });
+      }
 
       if (
         source === "fixtures" &&
         current.slowAsyncReads &&
         fixtureReadTools.has(name)
-      )
+      ) {
         await new Promise((resolve) => setTimeout(resolve, fixtureReadDelayMs));
+      }
 
       // Fixture registrations persist until Reset, like the service's registry.
       if (
@@ -388,16 +393,17 @@ export function Host() {
           }
         ).result;
 
-        if (name === "rename_user_agent_project")
+        if (name === "rename_user_agent_project") {
           projectEdits.current.names = {
             ...projectEdits.current.names,
             [changed.repository]: changed.name!,
           };
-        else
+        } else {
           projectEdits.current = removeFixtureProject(
             projectEdits.current,
             changed.repository,
           );
+        }
 
         update({
           removedProjects: projectEdits.current.removed,

@@ -105,8 +105,13 @@ export function TaskListScrollbar({ scrollerRef }: TaskListScrollbarProps) {
     const currentDrag = drag.current;
     const scroller = scrollerRef.current;
 
-    if (!currentDrag || currentDrag.pointerId !== event.pointerId || !scroller)
+    if (
+      !currentDrag ||
+      currentDrag.pointerId !== event.pointerId ||
+      !scroller
+    ) {
       return;
+    }
 
     const trackRange = Math.max(1, scroller.clientHeight - metrics.height);
 

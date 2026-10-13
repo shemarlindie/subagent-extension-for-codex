@@ -248,8 +248,11 @@ test("useListPresence keeps removed items in place and folds new ones in", (t) =
 
   // Items arriving in an empty list are left to whatever shows the list.
   view.rerender(createElement(List, { items: [] }));
-  for (const call of motion.calls.slice(count))
+
+  for (const call of motion.calls.slice(count)) {
     act(() => call.animation.onfinish!());
+  }
+
   // The next change drops the finished exits, leaving the list empty.
   view.rerender(createElement(List, { items: [] }));
   const emptied = motion.calls.length;

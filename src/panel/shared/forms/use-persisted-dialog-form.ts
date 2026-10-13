@@ -23,12 +23,17 @@ import type {
 function compatible(value: unknown, example: unknown): boolean {
   if (Array.isArray(example)) return Array.isArray(value);
   if (example === null) return value === null;
-  if (typeof example === "number")
+
+  if (typeof example === "number") {
     return typeof value === "number" && Number.isFinite(value);
+  }
+
   if (typeof example === "boolean") return typeof value === "boolean";
   if (typeof example === "string") return typeof value === "string";
-  if (example && typeof example === "object")
+
+  if (example && typeof example === "object") {
     return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
 
   return false;
 }

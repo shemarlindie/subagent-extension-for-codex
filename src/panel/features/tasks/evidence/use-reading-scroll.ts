@@ -119,8 +119,9 @@ export function useReadingScroll({
         setPinned(nextPinned);
       }
 
-      if (pinnedRef.current) container.scrollTop = end(container);
-      else if (saved) {
+      if (pinnedRef.current) {
+        container.scrollTop = end(container);
+      } else if (saved) {
         container.scrollTop = saved.top + scrolled;
 
         const element =
@@ -139,18 +140,20 @@ export function useReadingScroll({
               (position) => position.bottom > 0 && position.element.isConnected,
             );
 
-        if (anchor)
+        if (anchor) {
           container.scrollTop +=
             anchor.element.getBoundingClientRect().top -
             container.getBoundingClientRect().top -
             (anchor.top - scrolled);
+        }
       }
 
       // Ignore the scroll event this correction causes, so it cannot unpin
       // the reader or cancel row animations. A pending reader scroll still
       // needs its event judged.
-      if (!scrolled && Math.abs(container.scrollTop - before) >= 1)
+      if (!scrolled && Math.abs(container.scrollTop - before) >= 1) {
         correctedScrollTop.current = container.scrollTop;
+      }
     },
     [reading, itemAttribute],
   );
@@ -218,12 +221,13 @@ export function useReadingScroll({
     remember(viewport, container);
 
     // Rows that changed while hidden appear in place rather than replaying motion.
-    if (animate && settled && !revealed && !reducedMotion(viewport))
+    if (animate && settled && !revealed && !reducedMotion(viewport)) {
       animations.current = animateRows(
         previous,
         rows.current,
         container.clientHeight,
       );
+    }
   });
 
   // Runs after the restore above. The chat swap uses this to wait until its
@@ -267,8 +271,9 @@ export function useReadingScroll({
       element.getBoundingClientRect().top -
       container.getBoundingClientRect().top;
 
-    if (Math.abs(container.scrollTop - before) >= 1)
+    if (Math.abs(container.scrollTop - before) >= 1) {
       correctedScrollTop.current = container.scrollTop;
+    }
 
     // Reading from the row unpins, unless the row already sits at the end.
     const next = distanceFromEnd(container) <= END_SLACK_PX;
@@ -297,8 +302,9 @@ export function useReadingScroll({
       // resize the viewport. Re-anchor the placeholder without restoring an
       // old task's reading position over it.
       if (!restored.current) {
-        if (blockScrollWhileLoading && pinnedRef.current)
+        if (blockScrollWhileLoading && pinnedRef.current) {
           container.scrollTop = end(container);
+        }
 
         return;
       }
@@ -331,8 +337,10 @@ export function useReadingScroll({
       if (!started || glide.current !== started) return;
       glide.current = undefined;
       const viewport = viewportRef.current;
-      if (viewport && activeRef.current)
+
+      if (viewport && activeRef.current) {
         judge(viewport, scrollContainer(viewport));
+      }
     }, GLIDE_STALL_MS);
   }, [judge]);
 

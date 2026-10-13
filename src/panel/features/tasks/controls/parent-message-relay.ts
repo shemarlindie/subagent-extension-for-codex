@@ -32,10 +32,11 @@ export class ParentMessageRelay {
           if (
             this.currentConversation() !== conversation ||
             message.conversation_id !== conversation
-          )
+          ) {
             throw new Error(
               "Panel parent conversation changed before delivery",
             );
+          }
         };
 
         assertCurrent();

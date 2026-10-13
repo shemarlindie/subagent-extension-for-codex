@@ -49,8 +49,14 @@ export function useChangesScroll(
     const restore = () => {
       const container = scrollContainer(viewport);
       setAtTop(container.scrollTop <= TOP_SLACK_PX);
-      if (!reading.position || container.scrollHeight <= container.clientHeight)
+
+      if (
+        !reading.position ||
+        container.scrollHeight <= container.clientHeight
+      ) {
         return;
+      }
+
       restorePosition(viewport, container, reading.position);
       setAtTop(container.scrollTop <= TOP_SLACK_PX);
       corrected = { container, top: container.scrollTop };

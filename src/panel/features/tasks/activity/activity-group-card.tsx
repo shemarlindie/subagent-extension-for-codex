@@ -73,8 +73,10 @@ export function ActivityGroupCard({
 
   const revealPanel = () => {
     cancelReveal.current?.();
-    if (panelRef.current)
+
+    if (panelRef.current) {
       cancelReveal.current = animateScrollIntoView(panelRef.current);
+    }
   };
 
   // Closing from the panel's end brings its row back, with focus on the toggle that reopens it.
@@ -82,8 +84,10 @@ export function ActivityGroupCard({
     cancelReveal.current?.();
     setDebugOpen(false);
     toggleRef.current?.focus({ preventScroll: true });
-    if (headingRef.current)
+
+    if (headingRef.current) {
       cancelReveal.current = animateScrollIntoView(headingRef.current);
+    }
   };
 
   const handleDebugOpenChange = (open: boolean) => {
@@ -98,8 +102,9 @@ export function ActivityGroupCard({
       debugOpen &&
       event.target === event.currentTarget &&
       event.propertyName === "height"
-    )
+    ) {
       revealPanel();
+    }
   };
 
   // Reduced motion skips the height transition, so the panel is full height at once.
@@ -168,17 +173,20 @@ export function ActivityGroupCard({
       : undefined;
 
   let title = group.title;
+
   if (
     group.events.some((event) => event.type === "task.completed") &&
     runtimeMs !== undefined
-  )
+  ) {
     title = `Task completed after ${formatDuration(runtimeMs)}`;
-  else if (thoughtMs !== undefined)
+  } else if (thoughtMs !== undefined) {
     title =
       thoughtMs >= 1000
         ? `Thought for ${formatDuration(thoughtMs)}`
         : "Thought";
-  else if (quietThinking) title = "Thinking";
+  } else if (quietThinking) {
+    title = "Thinking";
+  }
 
   // A completed turn states its duration, tokens and cost without opening debug.
   const completion = group.events.find(

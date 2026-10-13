@@ -66,8 +66,9 @@ function startingWorker(
   preferred: string,
   settingsReady: boolean,
 ) {
-  if (preferredWorker && choices.includes(preferredWorker))
+  if (preferredWorker && choices.includes(preferredWorker)) {
     return preferredWorker;
+  }
 
   if (!settingsReady) return "";
 
@@ -174,12 +175,15 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
   // Async defaults fill untouched fields while preserving saved and active edits.
   useEffect(() => {
     for (const key of Object.keys(initialValues) as (keyof DelegateValues)[]) {
-      if (Object.is(initialValues[key], previousInitialValues.current[key]))
+      if (Object.is(initialValues[key], previousInitialValues.current[key])) {
         continue;
+      }
 
       const field = form.getFieldState(key);
-      if (key in persistedDraft.current || field.isDirty || field.isTouched)
+
+      if (key in persistedDraft.current || field.isDirty || field.isTouched) {
         continue;
+      }
 
       form.setValue(key, initialValues[key] as never, { shouldDirty: false });
     }
@@ -335,12 +339,14 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
           onBrowse={() =>
             controller.run(async () => {
               const repository = await controller.browseTaskProject();
+
               // Keep selection in this draft; changing panel scope would discard it.
-              if (repository)
+              if (repository) {
                 form.setValue("repository", repository, {
                   shouldDirty: true,
                   shouldValidate: true,
                 });
+              }
             })
           }
           allowParent={state.projects.some(

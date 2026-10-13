@@ -25,10 +25,11 @@ async function inlineImports(file) {
   const css = parts.join("");
 
   // An import in any other form would stay in the page and be ignored, silently dropping styles.
-  if (/@import\b/.test(css.replace(/\/\*[\s\S]*?\*\//g, "")))
+  if (/@import\b/.test(css.replace(/\/\*[\s\S]*?\*\//g, ""))) {
     throw new Error(
       `Unsupported @import in ${file}; use @import "./file.css";`,
     );
+  }
 
   return css;
 }
@@ -61,8 +62,9 @@ async function inlineImports(file) {
     .flatMap((bundle) => bundle.output)
     .filter((file) => file.type === "chunk");
 
-  if (chunks.length !== 1)
+  if (chunks.length !== 1) {
     throw new Error(`Expected one bundle chunk, got ${chunks.length}`);
+  }
 
   // Fixtures (with their multi-megabyte generators) and the dev host that
   // serves them belong to development only.
@@ -78,10 +80,11 @@ async function inlineImports(file) {
       testModule.test(id),
   );
 
-  if (leaked.length)
+  if (leaked.length) {
     throw new Error(
       `Service, development, or test modules reached ${output}:\n${leaked.join("\n")}`,
     );
+  }
 
   const css = await inlineImports(stylesheet);
 

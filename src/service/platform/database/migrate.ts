@@ -32,10 +32,11 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
         .all();
 
       // Databases from before versioned migrations are not upgraded.
-      if (tables.length)
+      if (tables.length) {
         throw new Error(
           `${path} was created by an unsupported earlier version. Delete its data directory to start over.`,
         );
+      }
 
       client.exec(
         `CREATE TABLE ${LEDGER}(id INTEGER PRIMARY KEY, hash TEXT NOT NULL, created_at NUMERIC, name TEXT, applied_at TEXT)`,
@@ -52,10 +53,11 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
     const known = new Set(migrations.map((m) => m.name));
     const unknown = [...applied].filter((name) => !known.has(name));
 
-    if (unknown.length)
+    if (unknown.length) {
       throw new Error(
         `${path} was migrated by a newer version (${unknown.join(", ")}). Update codex-subagent-extension.`,
       );
+    }
 
     const record = client.prepare(
       `INSERT INTO ${LEDGER}(hash, created_at, name, applied_at) VALUES(?,?,?,?)`,
@@ -64,8 +66,9 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
     for (const migration of migrations) {
       if (applied.has(migration.name)) continue;
 
-      for (const statement of migration.sql)
+      for (const statement of migration.sql) {
         if (statement.trim()) client.exec(statement);
+      }
 
       record.run(
         migration.hash,

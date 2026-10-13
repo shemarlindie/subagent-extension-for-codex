@@ -23,15 +23,19 @@ export const label = (key: string) => {
 
 /** User-authored text stays literal, like its Chat bubble. */
 export function userMessageText(event: Event): string | undefined {
-  if (event.type === "task.instruction")
+  if (event.type === "task.instruction") {
     return event.data.from === "user" && typeof event.data.message === "string"
       ? event.data.message
       : undefined;
+  }
+
   if (
     !["agent.message", "agent.content"].includes(event.type) ||
     event.data.role !== "user"
-  )
+  ) {
     return undefined;
+  }
+
   if (typeof event.data.text === "string") return event.data.text;
   if (typeof event.data.content === "string") return event.data.content;
 
@@ -39,8 +43,12 @@ export function userMessageText(event: Event): string | undefined {
     ? event.data.content
     : [event.data.content];
 
-  if (!blocks.length || !blocks.every((block) => record(block).type === "text"))
+  if (
+    !blocks.length ||
+    !blocks.every((block) => record(block).type === "text")
+  ) {
     return undefined;
+  }
 
   return blocks.map((block) => String(record(block).text ?? "")).join("\n");
 }
@@ -50,11 +58,13 @@ export function visibleMessageContent(event: Event, hideResponseText: boolean) {
   if (userMessageText(event) !== undefined) return [];
   const content = event.data.content ?? event.data.text;
   const blocks = Array.isArray(content) ? content : [content];
+
   if (
     event.data.role === "user" ||
     (!hideResponseText && event.type !== "agent.message")
-  )
+  ) {
     return blocks.filter((block) => block !== undefined);
+  }
 
   return blocks.filter((block) => {
     const type = record(block).type;
@@ -89,14 +99,22 @@ export function eventTitle(event: Event, failed: boolean, toolName?: string) {
   const presentation = activityPresentation(event);
   if (presentation.title) return presentation.title;
   if (event.type === "agent.message") return "Worker message";
-  if (event.type === "agent.content")
+
+  if (event.type === "agent.content") {
     return data.role === "user" ? "User content" : "Agent content";
+  }
+
   if (event.type === "tool.started") return `${data.name ?? "Tool"} started`;
-  if (event.type === "tool.completed")
+
+  if (event.type === "tool.completed") {
     return `${toolName ?? "Tool"} ${failed ? "failed" : "completed"}`;
+  }
+
   if (event.type === "agent.started") return "Agent started";
-  if (event.type === "agent.completed")
+
+  if (event.type === "agent.completed") {
     return `Agent ${failed ? "failed" : "finished"}`;
+  }
 
   return label(event.type);
 }
@@ -179,8 +197,12 @@ export function turnStats(event: Event) {
   const usage = record(data.usage);
   const stats: string[] = [];
 
-  if (typeof data.duration_ms === "number" && Number.isFinite(data.duration_ms))
+  if (
+    typeof data.duration_ms === "number" &&
+    Number.isFinite(data.duration_ms)
+  ) {
     stats.push(formatDuration(data.duration_ms));
+  }
 
   const input =
     tokenCount(usage.input_tokens) +
@@ -189,13 +211,14 @@ export function turnStats(event: Event) {
 
   const output = tokenCount(usage.output_tokens);
 
-  if (input || output)
+  if (input || output) {
     stats.push(
       `${compactNumber(input)} in · ${compactNumber(output)} out tokens`,
     );
+  }
 
   // Providers report the session's cumulative cost, not this turn's.
-  if (typeof data.cost_usd === "number" && Number.isFinite(data.cost_usd))
+  if (typeof data.cost_usd === "number" && Number.isFinite(data.cost_usd)) {
     stats.push(
       `${new Intl.NumberFormat(undefined, {
         style: "currency",
@@ -203,6 +226,7 @@ export function turnStats(event: Event) {
         maximumFractionDigits: 4,
       }).format(data.cost_usd)} session cost`,
     );
+  }
 
   return stats;
 }
@@ -214,9 +238,11 @@ export function rateLimitStats(
 ) {
   const windows = new Map<string, ActivityRateLimitWindow>();
 
-  for (const event of events)
-    for (const window of activityPresentation(event).rateLimitWindows ?? [])
+  for (const event of events) {
+    for (const window of activityPresentation(event).rateLimitWindows ?? []) {
       windows.set(window.id, window);
+    }
+  }
 
   return [...windows.values()].map((window) => {
     const stats = [
@@ -224,10 +250,11 @@ export function rateLimitStats(
       `${(window.utilization * 100).toLocaleString()}% used`,
     ];
 
-    if (window.resetsAt !== undefined)
+    if (window.resetsAt !== undefined) {
       stats.push(
         `Resets ${formatUserDateTime(new Date(window.resetsAt * 1000).toISOString(), preferences, { timeZoneName: undefined, second: undefined })}`,
       );
+    }
 
     return stats.join(" · ");
   });

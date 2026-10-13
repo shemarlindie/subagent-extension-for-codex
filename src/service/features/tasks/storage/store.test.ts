@@ -58,8 +58,10 @@ test("task deletion removes events and preserves other tasks, including matching
   store.delete(task.id, task.owner);
   assert.throws(() => store.get(task.id, task.owner), /Task not found/);
   const after = snapshot();
-  for (const table of ["tasks", "events"])
+
+  for (const table of ["tasks", "events"]) {
     assert.equal(after[table].length, 2, table);
+  }
 
   assert.equal(store.get(`${task.id}_1`, task.owner).id, `${task.id}_1`);
   assert.equal(store.events(`${task.id}_1`, task.owner).length, 1);

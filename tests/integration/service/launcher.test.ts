@@ -23,9 +23,12 @@ const tsx = import.meta.resolve("tsx");
 
 async function connect(env: NodeJS.ProcessEnv) {
   const clean = { ...process.env };
-  for (const key of Object.keys(clean))
-    if (key.startsWith("CODEX_SUBAGENT_EXTENSION_") || key === "PORT")
+
+  for (const key of Object.keys(clean)) {
+    if (key.startsWith("CODEX_SUBAGENT_EXTENSION_") || key === "PORT") {
       delete clean[key];
+    }
+  }
 
   return exec(
     process.execPath,
@@ -80,9 +83,9 @@ test("launcher discovers service metadata and token without starting another ser
   const origin = await fake(t, (req, res) => {
     res.setHeader("Content-Type", "application/json");
 
-    if (req.url === "/health")
+    if (req.url === "/health") {
       res.end(JSON.stringify({ service: "codex-subagent-extension" }));
-    else {
+    } else {
       auth = req.headers.authorization ?? "";
       res.end("{}");
     }
@@ -119,9 +122,9 @@ test("incompatible live service and authentication failure never authorize auto-
   );
 
   const denied = await fake(t, (req, res) => {
-    if (req.url === "/health")
+    if (req.url === "/health") {
       res.end(JSON.stringify({ service: "codex-subagent-extension" }));
-    else {
+    } else {
       res.statusCode = 401;
       res.end("{}");
     }

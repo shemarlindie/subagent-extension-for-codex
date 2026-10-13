@@ -117,8 +117,9 @@ export function resolveClaudePermission(
   input: { permission_mode?: PermissionMode },
   configured: ClaudePermissionMode,
 ) {
-  if (input.permission_mode && input.permission_mode !== "inherit")
+  if (input.permission_mode && input.permission_mode !== "inherit") {
     return { mode: input.permission_mode, source: "task" as const };
+  }
 
   return { mode: configured, source: "setting" as const };
 }

@@ -191,8 +191,9 @@ const perfNotes = lazy(() => {
       "",
     );
 
-    if ((index + 1) % 60 === 0)
+    if ((index + 1) % 60 === 0) {
       sections.push("[Back to contents](#contents)", "");
+    }
   }
 
   return sections.join("\n");
@@ -202,10 +203,11 @@ const perfNotes = lazy(() => {
 const vendorBundle = lazy(() => {
   const parts: string[] = ['"use strict";'];
 
-  for (let index = 0; parts.join("").length < 250_000; index++)
+  for (let index = 0; parts.join("").length < 250_000; index++) {
     parts.push(
       `var a${index}=function(e,t){return e+t*${index}};function b${index}(n){return a${index}(n,${index % 7})}`,
     );
+  }
 
   return parts.join("");
 });

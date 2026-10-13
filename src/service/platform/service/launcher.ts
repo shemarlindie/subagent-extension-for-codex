@@ -27,6 +27,7 @@ export async function connectService() {
   }
 
   const url = new URL(origin);
+
   if (
     url.protocol !== "http:" ||
     !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) ||
@@ -35,10 +36,12 @@ export async function connectService() {
     url.pathname !== "/" ||
     url.search ||
     url.hash
-  )
+  ) {
     throw new Error(
       "Local stdio proxy requires a plain loopback HTTP service origin",
     );
+  }
+
   origin = url.origin;
 
   const token = () =>
@@ -52,16 +55,20 @@ export async function connectService() {
     });
 
     const health = await response.json();
+
     if (
       health.service === "codex-subagent-extension" &&
       health.status === "starting" &&
       response.status === 503
-    )
+    ) {
       throw new ServiceStartingError("Service recovery is still in progress");
-    if (!response.ok || health.service !== "codex-subagent-extension")
+    }
+
+    if (!response.ok || health.service !== "codex-subagent-extension") {
       throw new Error(
         "Port is occupied by an incompatible service; stop or upgrade it explicitly",
       );
+    }
 
     const auth = await fetch(`${origin}/api/tools/list_agent_projects`, {
       method: "POST",
@@ -75,10 +82,11 @@ export async function connectService() {
       redirect: "error",
     });
 
-    if (!auth.ok)
+    if (!auth.ok) {
       throw new Error(
         "Service token or protocol mismatch; inspect data/URL overrides",
       );
+    }
 
     return { origin, token: token() };
   };
@@ -93,8 +101,10 @@ export async function connectService() {
       if (
         explicit ||
         (error as { cause?: { code?: string } }).cause?.code !== "ECONNREFUSED"
-      )
+      ) {
         throw error;
+      }
+
       needsLaunch = true;
     }
   }

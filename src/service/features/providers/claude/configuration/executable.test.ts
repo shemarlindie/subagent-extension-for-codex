@@ -160,8 +160,9 @@ test("version output is parsed strictly", () => {
     "v2.1.293 (Claude Code)",
     "Claude Code 2.1.293",
     "",
-  ])
+  ]) {
     assert.equal(parseClaudeVersion(output), undefined, output);
+  }
 
   assert.ok(compareVersions("2.1.10", "2.1.9") > 0);
   assert.equal(compareVersions("2.1.9", "2.1.9"), 0);

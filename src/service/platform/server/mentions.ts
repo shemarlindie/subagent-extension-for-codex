@@ -56,17 +56,19 @@ export function resolveMentionSearchEnv(
   if (
     result[mentionTestModeEnv] === undefined &&
     localEnvironment[mentionTestModeEnv] !== undefined
-  )
+  ) {
     result[mentionTestModeEnv] = localEnvironment[mentionTestModeEnv];
+  }
 
   if (
     result.CODEX_SUBAGENT_EXTENSION_DATA === undefined &&
     localEnvironment.CODEX_SUBAGENT_EXTENSION_DATA
-  )
+  ) {
     result.CODEX_SUBAGENT_EXTENSION_DATA = resolve(
       packageRoot,
       localEnvironment.CODEX_SUBAGENT_EXTENSION_DATA,
     );
+  }
 
   return result;
 }
@@ -129,13 +131,14 @@ export async function searchAgentMentions(
         : [],
   };
 
-  if (testMode)
+  if (testMode) {
     await logMentionSearch(
       query,
       workers,
       result.items.map((item) => item.name),
       env,
     );
+  }
 
   return result;
 }

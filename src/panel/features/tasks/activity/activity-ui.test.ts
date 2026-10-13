@@ -774,12 +774,17 @@ test("new groups animate in and movement animations respect reduced motion", (t)
   });
 
   t.onTestFinished(() => {
-    if (previousAnimate)
+    if (previousAnimate) {
       Object.defineProperty(HTMLElement.prototype, "animate", previousAnimate);
-    else delete (HTMLElement.prototype as any).animate;
-    if (previousMatchMedia)
+    } else {
+      delete (HTMLElement.prototype as any).animate;
+    }
+
+    if (previousMatchMedia) {
       Object.defineProperty(window, "matchMedia", previousMatchMedia);
-    else delete (window as any).matchMedia;
+    } else {
+      delete (window as any).matchMedia;
+    }
   });
 
   const initial = activityMessages("animation", 4);
@@ -982,6 +987,7 @@ test("mixed content, tool inputs and tool results are readable and HTML stays li
   ]);
 
   const text = doc.body.textContent ?? "";
+
   for (const snippet of [
     malicious,
     "Thinking",
@@ -995,8 +1001,10 @@ test("mixed content, tool inputs and tool results are readable and HTML stays li
     "Tool output",
     "Read started",
     "Read completed",
-  ])
+  ]) {
     assert.ok(text.includes(snippet), snippet);
+  }
+
   assert.ok(!text.includes("hidden-signature"));
   assertAbsent(doc.querySelector("script"));
   assert.equal(doc.querySelectorAll("details.activity-raw").length, 6);
@@ -1074,14 +1082,16 @@ test("failures are distinguished for results, tool errors and denied permissions
   ]);
 
   assert.equal(doc.querySelectorAll(".activity-error").length, 3);
+
   for (const snippet of [
     "Tool failed",
     "Agent failed",
     "Permission denied",
     "Turn limit",
     "Cost$0.00",
-  ])
+  ]) {
     assert.ok(doc.body.textContent?.includes(snippet), snippet);
+  }
 });
 
 test("opening raw response shows the original full JSON and preserves disclosure through refresh", async (t) => {
@@ -1311,6 +1321,7 @@ test("unsupported image sources present readable metadata without embedding unsa
 
   assert.equal(doc.querySelectorAll("img").length, 0);
   const text = doc.body.textContent ?? "";
+
   for (const snippet of [
     "Image",
     "Document",
@@ -1319,8 +1330,10 @@ test("unsupported image sources present readable metadata without embedding unsa
     "image/svg+xml",
     "application/pdf",
     "https://example.invalid/image.png",
-  ])
+  ]) {
     assert.ok(text.includes(snippet), snippet);
+  }
+
   assert.ok(!text.includes("private-encoded-svg"));
   assert.ok(!text.includes("private-encoded-pdf"));
   assert.equal(doc.querySelectorAll("details.activity-raw").length, 3);
@@ -1697,16 +1710,21 @@ test("opening debug scrolls its panel into view once the height transition settl
   });
 
   t.onTestFinished(() => {
-    if (previousScroll)
+    if (previousScroll) {
       Object.defineProperty(
         Element.prototype,
         "scrollIntoView",
         previousScroll,
       );
-    else delete (Element.prototype as any).scrollIntoView;
-    if (previousMatchMedia)
+    } else {
+      delete (Element.prototype as any).scrollIntoView;
+    }
+
+    if (previousMatchMedia) {
       Object.defineProperty(window, "matchMedia", previousMatchMedia);
-    else delete (window as any).matchMedia;
+    } else {
+      delete (window as any).matchMedia;
+    }
   });
 
   const read = event(
@@ -3208,13 +3226,15 @@ test("the debug panel's collapse button closes it and brings its row back", asyn
   });
 
   t.onTestFinished(() => {
-    if (previousScroll)
+    if (previousScroll) {
       Object.defineProperty(
         Element.prototype,
         "scrollIntoView",
         previousScroll,
       );
-    else delete (Element.prototype as any).scrollIntoView;
+    } else {
+      delete (Element.prototype as any).scrollIntoView;
+    }
   });
 
   const read = event(

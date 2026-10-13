@@ -33,16 +33,18 @@ export interface ProviderTaskPolicy {
 export const executionTaskPolicy: ProviderTaskPolicy = {
   inputKind: (tool) => (tool === "AskUserQuestion" ? "question" : "permission"),
   prepareStart({ input, defaults, authority }) {
-    if (Object.keys(input.provider_options?.[input.provider] ?? {}).length)
+    if (Object.keys(input.provider_options?.[input.provider] ?? {}).length) {
       throw new Error("Provider does not accept task options");
+    }
 
     const approval_mode = input.approval_mode ?? defaults.default_approval_mode;
 
     if (
       authority !== "user" &&
       approvalRank[approval_mode] > approvalRank[defaults.default_approval_mode]
-    )
+    ) {
       throw new Error("Task approval mode exceeds the user-approved default");
+    }
 
     return { approval_mode };
   },

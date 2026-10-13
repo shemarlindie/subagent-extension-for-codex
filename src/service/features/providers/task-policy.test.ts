@@ -20,16 +20,20 @@ test("execution policy separates automatic permission decisions from questions a
   );
 
   assert.equal(executionTaskPolicy.decideInput(task("deny"), "Bash"), false);
-  for (const mode of ["ask_user", "parent_agent"] as const)
+
+  for (const mode of ["ask_user", "parent_agent"] as const) {
     assert.equal(
       executionTaskPolicy.decideInput(task(mode), "Bash"),
       undefined,
     );
-  for (const mode of ["auto_approve", "deny", "parent_agent"] as const)
+  }
+
+  for (const mode of ["auto_approve", "deny", "parent_agent"] as const) {
     assert.equal(
       executionTaskPolicy.decideInput(task(mode), "AskUserQuestion"),
       undefined,
     );
+  }
 
   assert.equal(
     executionTaskPolicy.parentMayApprove(task("parent_agent")),

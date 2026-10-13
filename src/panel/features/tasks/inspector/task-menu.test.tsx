@@ -81,6 +81,7 @@ test.each([
   const enabled = status !== "busy";
   assert.equal(action.getAttribute("aria-disabled") === "true", !enabled);
   await user.click(action);
+
   if (enabled) {
     assert.equal(controller.getSnapshot().dialog?.kind, "delete");
     const dialog = controller.getSnapshot().dialog;
@@ -89,7 +90,9 @@ test.each([
       dialog && "task" in dialog ? dialog.task.id : undefined,
       task.id,
     );
-  } else assert.equal(controller.getSnapshot().dialog, undefined);
+  } else {
+    assert.equal(controller.getSnapshot().dialog, undefined);
+  }
 });
 
 test("task menu does not offer renaming", async () => {

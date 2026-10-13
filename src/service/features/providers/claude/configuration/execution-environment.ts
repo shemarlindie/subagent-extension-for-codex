@@ -20,12 +20,13 @@ export function claudeEnvironment(
   source: NodeJS.ProcessEnv,
   mode: ClaudePolicy["environment"],
 ): NodeJS.ProcessEnv {
-  if (mode === "inherit")
+  if (mode === "inherit") {
     return Object.fromEntries(
       Object.entries(source).filter(
         ([name, value]) => value !== undefined && !privateVariable(name),
       ),
     );
+  }
 
   const allowed = [
     "PATH",

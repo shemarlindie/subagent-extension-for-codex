@@ -234,8 +234,9 @@ test("mixed message blocks keep text, thinking, images, documents and future con
       assert.equal(events[i].data.role, role);
     }
 
-    for (const event of events)
+    for (const event of events) {
       assert.deepEqual(event.data.raw_response, message);
+    }
   }
 });
 
@@ -248,10 +249,14 @@ test("empty or error assistant messages and user string messages remain inspecta
   ]) {
     const events = recorder().normalize(message);
     assert.ok(events.length > 0, JSON.stringify(message));
-    for (const event of events)
+
+    for (const event of events) {
       assert.deepEqual(event.data.raw_response, message);
-    if (message.message.content === "User instruction")
+    }
+
+    if (message.message.content === "User instruction") {
       assert.equal(events[0].data.text, "User instruction");
+    }
   }
 });
 
@@ -394,10 +399,11 @@ test("run emits result accounting exactly once for success and failure", async (
       readyClaudeCli,
     );
 
-    if (failed)
+    if (failed) {
       await assert.rejects(provider.run(context, "Review"), /error_max_turns/);
-    else
+    } else {
       assert.equal((await provider.run(context, "Review")).reply, "Finished");
+    }
 
     const completed = events.filter(
       (event) => event.type === "agent.completed",

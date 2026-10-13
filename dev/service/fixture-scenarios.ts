@@ -161,29 +161,29 @@ export function readScenarios(prompt: string): FixtureScenarios {
       args.usd = parseValue(head.slice("cost=".length));
     }
 
-    if (kind === "question" || kind === "input")
+    if (kind === "question" || kind === "input") {
       scenarios.questionCount += scenarioCount(args);
-    else if (kind === "permission")
+    } else if (kind === "permission") {
       scenarios.permissionTools.push(
         ...Array.from({ length: scenarioCount(args) }, () =>
           safeToolName(field(args, "tool"), "Bash"),
         ),
       );
-    else if (kind === "assistant-error")
+    } else if (kind === "assistant-error") {
       scenarios.assistantErrors.push(field(args, "type") ?? "unknown");
-    else if (kind === "tool-error")
+    } else if (kind === "tool-error") {
       scenarios.toolErrorNames.push(
         ...Array.from({ length: scenarioCount(args) }, () =>
           safeToolName(field(args, "name"), "Read"),
         ),
       );
-    else if (kind === "tool")
+    } else if (kind === "tool") {
       scenarios.toolNames.push(
         ...Array.from({ length: scenarioCount(args) }, () =>
           safeToolName(field(args, "name"), "Read"),
         ),
       );
-    else if (kind === "subagent") {
+    } else if (kind === "subagent") {
       scenarios.subagent = true;
       scenarios.subagentCount = Math.min(scenarioCount(args), 4);
       scenarios.subagentOutcome = field(args, "outcome") ?? "success";
@@ -201,9 +201,11 @@ export function readScenarios(prompt: string): FixtureScenarios {
         name: field(args, "name"),
         ...(Object.keys(fields).length ? { fields } : {}),
       });
-    } else if (kind === "thinking") scenarios.thinking = true;
-    else if (kind === "change") scenarios.change = true;
-    else if (kind === "fail") {
+    } else if (kind === "thinking") {
+      scenarios.thinking = true;
+    } else if (kind === "change") {
+      scenarios.change = true;
+    } else if (kind === "fail") {
       scenarios.fail = true;
       scenarios.failStage = field(args, "stage") ?? "complete";
     } else if (kind === "completion") {
@@ -213,47 +215,64 @@ export function readScenarios(prompt: string): FixtureScenarios {
       scenarios.completionIsError =
         field(args, "is_error") === "true" ||
         field(args, "outcome") === "error";
-    } else if (kind === "slow") scenarios.slow = true;
-    else if (kind === "late") scenarios.late = true;
-    else if (kind === "session" && field(args, "state") === "invalid")
+    } else if (kind === "slow") {
+      scenarios.slow = true;
+    } else if (kind === "late") {
+      scenarios.late = true;
+    } else if (kind === "session" && field(args, "state") === "invalid") {
       scenarios.invalidateSession = true;
-    else if (kind === "restriction") {
+    } else if (kind === "restriction") {
       const name = field(args, "name");
-      if (name && /^[A-Za-z][A-Za-z0-9_-]{0,49}$/.test(name))
+
+      if (name && /^[A-Za-z][A-Za-z0-9_-]{0,49}$/.test(name)) {
         scenarios.restrictions.push(name);
+      }
     } else if (kind === "activity") {
       const type = field(args, "type");
-      if (type && /^[A-Za-z][A-Za-z0-9_.-]{0,99}$/.test(type))
+
+      if (type && /^[A-Za-z][A-Za-z0-9_.-]{0,99}$/.test(type)) {
         scenarios.activities.push({
           type,
           fields: Object.fromEntries(
             Object.entries(args).filter(([key]) => key !== "type"),
           ),
         });
+      }
     } else if (kind === "stream") {
       const frame = field(args, "frame") ?? "content_block_delta";
-      if (Object.keys(args).length === 0) scenarios.streamLifecycle = true;
-      else if (fixtureStreamFrameTypes.includes(frame as FixtureStreamFrame))
+
+      if (Object.keys(args).length === 0) {
+        scenarios.streamLifecycle = true;
+      } else if (
+        fixtureStreamFrameTypes.includes(frame as FixtureStreamFrame)
+      ) {
         scenarios.streams.push({
           frame: frame as FixtureStreamFrame,
           fields: Object.fromEntries(
             Object.entries(args).filter(([key]) => key !== "frame"),
           ),
         });
+      }
     } else if (kind === "wait") {
       const value = Number(field(args, "ms") ?? 0);
-      if (Number.isSafeInteger(value) && value >= 0)
+
+      if (Number.isSafeInteger(value) && value >= 0) {
         scenarios.waitMs = Math.min(value, 60_000);
+      }
     } else if (kind === "cost") {
       const value = Number(field(args, "usd") ?? 0);
-      if (Number.isFinite(value) && value >= 0)
+
+      if (Number.isFinite(value) && value >= 0) {
         scenarios.costUsd = Math.min(value, 1_000_000);
+      }
     }
   }
 
   // Existing tests and demo instructions can continue using these concise keys.
-  if (prompt.includes("[input]"))
+  if (prompt.includes("[input]")) {
     scenarios.questionCount = Math.max(scenarios.questionCount, 1);
+  }
+
   scenarios.fail ||= prompt.includes("[fail]");
   scenarios.slow ||= prompt.includes("[slow]");
   scenarios.late ||= prompt.includes("[late]");

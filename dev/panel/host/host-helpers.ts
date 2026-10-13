@@ -216,18 +216,20 @@ export function threadsOf(tasks: Task[]): Thread[] {
     if (!task.conversation_id) continue;
     const thread = threads.get(task.conversation_id);
 
-    if (!thread)
+    if (!thread) {
       threads.set(task.conversation_id, {
         id: task.conversation_id,
         latest: task.title,
         created: task.created_at,
         tasks: 1,
       });
-    else {
+    } else {
       thread.tasks++;
+
       // The label names the thread's most recent task.
-      if (task.created_at > thread.created)
+      if (task.created_at > thread.created) {
         Object.assign(thread, { latest: task.title, created: task.created_at });
+      }
     }
   }
 

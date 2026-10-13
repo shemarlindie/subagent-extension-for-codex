@@ -11,8 +11,9 @@ export function animateScrollIntoView(element: HTMLElement) {
       let parent = element.parentElement;
       parent;
       parent = parent.parentElement
-    )
+    ) {
       ancestors.push({ element: parent, start: parent.scrollTop, end: 0 });
+    }
 
     element.scrollIntoView({
       block: "nearest",
@@ -30,8 +31,9 @@ export function animateScrollIntoView(element: HTMLElement) {
 
     if (!scrolling.length) return;
 
-    for (const ancestor of scrolling)
+    for (const ancestor of scrolling) {
       ancestor.element.scrollTop = ancestor.start;
+    }
 
     const started = view.performance.now();
 
@@ -39,9 +41,10 @@ export function animateScrollIntoView(element: HTMLElement) {
       const progress = Math.min(1, (now - started) / MOTION.fast),
         eased = 1 - (1 - progress) ** 3;
 
-      for (const ancestor of scrolling)
+      for (const ancestor of scrolling) {
         ancestor.element.scrollTop =
           ancestor.start + (ancestor.end - ancestor.start) * eased;
+      }
 
       if (progress < 1) frame = view.requestAnimationFrame(tick);
     };

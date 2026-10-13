@@ -9,10 +9,11 @@ export function adminToken(data: string, env = process.env) {
   const override = env.CODEX_SUBAGENT_EXTENSION_TOKEN;
 
   if (override !== undefined) {
-    if (override.length < minimumTokenLength)
+    if (override.length < minimumTokenLength) {
       throw new Error(
         `CODEX_SUBAGENT_EXTENSION_TOKEN must be at least ${minimumTokenLength} characters`,
       );
+    }
 
     return override;
   }

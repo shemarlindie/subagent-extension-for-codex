@@ -32,7 +32,7 @@ export function measurePosition(
   for (const file of files(viewport)) {
     const rect = file.getBoundingClientRect();
 
-    if (rect.bottom > top)
+    if (rect.bottom > top) {
       return {
         top: container.scrollTop,
         anchor: {
@@ -40,6 +40,7 @@ export function measurePosition(
           top: rect.top - top,
         },
       };
+    }
   }
 
   return { top: container.scrollTop };
@@ -63,9 +64,10 @@ export function restorePosition(
         (file) => file.getAttribute(FILE_ATTRIBUTE) === anchor.path,
       );
 
-  if (anchor && file)
+  if (anchor && file) {
     container.scrollTop +=
       file.getBoundingClientRect().top -
       container.getBoundingClientRect().top -
       anchor.top;
+  }
 }

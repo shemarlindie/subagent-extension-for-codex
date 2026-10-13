@@ -558,8 +558,10 @@ for (const missing of ["deleted", "parent replaced with file"] as const) {
     await f.projects.register(unavailable);
     await f.projects.register(available);
     await rm(join(f.dir, "unavailable"), { recursive: true });
-    if (missing === "parent replaced with file")
+
+    if (missing === "parent replaced with file") {
       await writeFile(join(f.dir, "unavailable"), "no longer a directory");
+    }
 
     assert.equal(await f.projects.resolve(available), available);
 
@@ -575,8 +577,10 @@ for (const missing of ["deleted", "parent replaced with file"] as const) {
 
     await assert.rejects(f.projects.resolve(outside), /outside allowed roots/);
 
-    if (missing === "parent replaced with file")
+    if (missing === "parent replaced with file") {
       await rm(join(f.dir, "unavailable"));
+    }
+
     await f.repo("unavailable/repo");
     assert.equal(await f.projects.resolve(unavailable), unavailable);
   });

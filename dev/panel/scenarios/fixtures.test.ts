@@ -28,6 +28,7 @@ const eventsFor = (taskId: string): Event[] =>
 
 test("preview tasks cover every task status", () => {
   const statuses = new Set(previewTasks.map((task) => task.status));
+
   for (const status of [
     "queued",
     "starting",
@@ -36,8 +37,9 @@ test("preview tasks cover every task status", () => {
     "interrupted",
     "completed",
     "failed",
-  ])
+  ]) {
     assert.ok(statuses.has(status as never), `missing ${status} task`);
+  }
 });
 
 test("preview events cover the activity kinds the timeline renders", () => {
@@ -78,8 +80,10 @@ test("preview events cover the activity kinds the timeline renders", () => {
     "task.instruction",
     "prompt_suggestion",
     "tool_use_summary",
-  ])
+  ]) {
     assert.ok(kinds.has(kind), `no preview event of kind ${kind}`);
+  }
+
   for (const row of [
     "message",
     "tool",
@@ -87,8 +91,9 @@ test("preview events cover the activity kinds the timeline renders", () => {
     "status",
     "stream",
     "event",
-  ])
+  ]) {
     assert.ok(rows.has(row as never), `no preview ${row} row`);
+  }
 });
 
 test("a preview task has more events than the activity view keeps", () => {
@@ -304,10 +309,12 @@ test("fixture registration validates the root and the caller keeps it", () => {
     { repository: "/new/repo", kind: "repository" },
   );
 
-  for (const repository of ["relative/repo", "/demo/project/src", "/a b"])
+  for (const repository of ["relative/repo", "/demo/project/src", "/a b"]) {
     assert.throws(() =>
       previewTool("register_user_agent_project", { repository }),
     );
+  }
+
   // Nothing is remembered until the caller passes it back.
   const fixed = previewTool("list_agent_projects") as { repository: string }[];
   assert.ok(!fixed.some((project) => project.repository === "/new/repo"));
@@ -600,8 +607,9 @@ test("the Claude unavailable option reports the worker not ready and skips its m
   // The fixtures repeat the supported range, which must follow the service's.
   const range = `${claudeCliSupport.minimum}+`;
 
-  for (const worker of [ready, unavailable])
+  for (const worker of [ready, unavailable]) {
     assert.equal(worker.readiness.details.supported_versions, range);
+  }
 
   assert.ok(unavailable.readiness.message!.includes(range));
 });

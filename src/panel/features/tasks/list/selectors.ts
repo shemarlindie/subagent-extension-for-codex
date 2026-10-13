@@ -26,8 +26,10 @@ export const idle = (task: Task) =>
 
 export const statusLabel = (task: Task) => {
   if (task.pending_input) return "Needs input";
-  if (task.waiting_reason === "waiting_for_dependency")
+
+  if (task.waiting_reason === "waiting_for_dependency") {
     return "Waiting on dependency";
+  }
 
   return task.status[0].toUpperCase() + task.status.slice(1);
 };

@@ -15,7 +15,7 @@ function PermissionValue({
   value: unknown;
   command?: boolean;
 }) {
-  if (typeof value === "string")
+  if (typeof value === "string") {
     return command ? (
       <pre className="permission-command">
         <code>{value}</code>
@@ -23,11 +23,13 @@ function PermissionValue({
     ) : (
       <div className="permission-value-text">{value}</div>
     );
+  }
 
-  if (value === null || typeof value !== "object")
+  if (value === null || typeof value !== "object") {
     return <code className="permission-scalar">{String(value)}</code>;
+  }
 
-  if (Array.isArray(value))
+  if (Array.isArray(value)) {
     return value.length ? (
       <ul className="permission-value-list">
         {value.map((item, index) => (
@@ -39,6 +41,7 @@ function PermissionValue({
     ) : (
       <span className="permission-empty">Empty list</span>
     );
+  }
 
   const entries = Object.entries(value);
 
@@ -65,8 +68,9 @@ export function PermissionInputDetails({
 }) {
   const entries = Object.entries(input);
 
-  if (!entries.length)
+  if (!entries.length) {
     return <p className="permission-empty">No additional details provided.</p>;
+  }
 
   return (
     <dl className="permission-details" aria-label="Permission request details">

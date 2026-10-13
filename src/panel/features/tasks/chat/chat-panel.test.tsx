@@ -434,13 +434,15 @@ test("composer expansion and collapse animate directly between their heights wit
     height.mockRestore();
     vi.unstubAllGlobals();
 
-    if (animateDescriptor)
+    if (animateDescriptor) {
       Object.defineProperty(
         HTMLElement.prototype,
         "animate",
         animateDescriptor,
       );
-    else Reflect.deleteProperty(HTMLElement.prototype, "animate");
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, "animate");
+    }
   });
 
   const { view, updateTask } = setup({ status: "running" });
@@ -537,13 +539,15 @@ test("Stop moves continuously between expanded and collapsed composer layouts an
     bounds.mockRestore();
     vi.unstubAllGlobals();
 
-    if (animateDescriptor)
+    if (animateDescriptor) {
       Object.defineProperty(
         HTMLElement.prototype,
         "animate",
         animateDescriptor,
       );
-    else Reflect.deleteProperty(HTMLElement.prototype, "animate");
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, "animate");
+    }
   });
 
   const { view, tool } = setup({ status: "running" });

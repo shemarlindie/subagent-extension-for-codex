@@ -197,17 +197,19 @@ test("MCP get_current_agent_project reports the thread root without registering 
   );
 
   const tools = await client.listTools();
+
   for (const name of [
     "get_current_agent_project",
     "list_agent_projects",
     "get_agent_panel_context",
     "open_codex_subagent_extension",
-  ])
+  ]) {
     assert.equal(
       tools.tools.find((tool) => tool.name === name)?.annotations?.readOnlyHint,
       true,
       name,
     );
+  }
 
   const missing = await client.callTool({
     name: "get_current_agent_project",
@@ -246,7 +248,7 @@ test("MCP get_current_agent_project reports the thread root without registering 
   assert.deepEqual(registered(f), []);
 });
 
-for (const transport of ["HTTP", "stdio"] as const)
+for (const transport of ["HTTP", "stdio"] as const) {
   test(`${transport} exposes React project registration while retired host form tools are unavailable`, async (t) => {
     const f = await fixture(t);
     const repository = await f.repo("panel-project");
@@ -290,12 +292,12 @@ for (const transport of ["HTTP", "stdio"] as const)
         name,
       );
 
-      if (transport === "HTTP")
+      if (transport === "HTTP") {
         await assert.rejects(
           client.callTool({ name, arguments: {} }),
           /not found|unknown tool/i,
         );
-      else {
+      } else {
         const rejected = await client.callTool({ name, arguments: {} });
         assert.equal(rejected.isError, true);
 
@@ -310,11 +312,12 @@ for (const transport of ["HTTP", "stdio"] as const)
       "open_codex_subagent_extension",
       "open_codex_subagent_extension_global",
       "search_mentions",
-    ])
+    ]) {
       assert.ok(
         tools.some((tool) => tool.name === name),
         name,
       );
+    }
 
     const resources = await client.listResources();
 
@@ -366,3 +369,4 @@ for (const transport of ["HTTP", "stdio"] as const)
     assert.equal(await f.c.projects!.resolve(repository), repository);
     assert.equal(f.c.store.all().length, 0);
   });
+}

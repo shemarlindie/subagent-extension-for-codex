@@ -93,8 +93,10 @@ export function QueuedMessageRow({
       event.target !== event.currentTarget ||
       !event.altKey ||
       (event.key !== "ArrowUp" && event.key !== "ArrowDown")
-    )
+    ) {
       return;
+    }
+
     event.preventDefault();
     if (busy) return;
     // Reordering can move the focused row out of the DOM and back.

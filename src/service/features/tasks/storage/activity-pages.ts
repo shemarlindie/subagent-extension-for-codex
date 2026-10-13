@@ -103,8 +103,9 @@ export class ActivityPages {
     this.tallies.delete(taskId);
     this.tallies.set(taskId, { through, summary });
 
-    if (this.tallies.size > TALLY_CACHE_SIZE)
+    if (this.tallies.size > TALLY_CACHE_SIZE) {
       this.tallies.delete(this.tallies.keys().next().value!);
+    }
 
     return summary;
   }

@@ -167,18 +167,22 @@ const projectsWith = ({
  * repository root. The caller decides whether to remember it.
  */
 function registerProject(path: unknown, options: PreviewOptions) {
-  if (typeof path !== "string" || !path.startsWith("/"))
+  if (typeof path !== "string" || !path.startsWith("/")) {
     throw new Error("Registration requires an absolute path");
+  }
+
   const repository = path.replace(/\/+$/, "") || "/";
   // Stands in for a missing directory, as in directoryPath.
   if (/\s/.test(repository)) throw new Error("No Git repository at this path");
+
   // A folder inside a known repository is not its Git root.
   if (
     projectsWith(options).some(({ repository: root }) =>
       repository.startsWith(`${root}/`),
     )
-  )
+  ) {
     throw new Error("Use repository root");
+  }
 
   return { repository, kind: "repository" };
 }
@@ -302,8 +306,10 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
 function raisePreviewBudget(taskId: unknown, value: unknown) {
   const task = previewTasks.find((candidate) => candidate.id === taskId);
   if (!task) throw new Error("Task not found");
-  if (["queued", "starting", "running", "waiting"].includes(task.status))
+
+  if (["queued", "starting", "running", "waiting"].includes(task.status)) {
     throw new Error("A task's budget can only be changed while it is idle.");
+  }
 
   const raise = budgetRaiseSchema.parse(value);
   const originalBudget = task.budget;
@@ -314,18 +320,22 @@ function raisePreviewBudget(taskId: unknown, value: unknown) {
       current = task.budget[key];
 
     if (next === undefined) continue;
-    if (next !== null && (current === null || next < current))
+
+    if (next !== null && (current === null || next < current)) {
       throw new Error(
         `The budget can only be raised: ${key} is ${current ?? "unlimited"}`,
       );
+    }
+
     budget[key] = next;
   }
 
   if (
     budget.max_runtime_minutes === task.budget.max_runtime_minutes &&
     budget.max_cost_usd === task.budget.max_cost_usd
-  )
+  ) {
     throw new Error("Choose a changed budget limit to apply.");
+  }
 
   task.budget = budget;
 
@@ -366,53 +376,64 @@ export function previewTool(
   options: PreviewOptions = {},
 ): unknown {
   if (name === "raise_user_agent_budget") {
-    if (!options.successfulBudgetUpdates)
+    if (!options.successfulBudgetUpdates) {
       throw new Error(
         "Design preview only. No worker or service action was executed.",
       );
+    }
 
     return raisePreviewBudget(args.task_id, args.budget);
   }
 
-  if (name === "register_user_agent_project")
+  if (name === "register_user_agent_project") {
     return registerProject(args.repository, options);
+  }
 
   if (name === "rename_user_agent_project") {
     if (
       !projectsWith(options).some(
         (project) => project.repository === args.repository,
       )
-    )
+    ) {
       throw new Error("Project is no longer registered");
+    }
+
     const name = typeof args.name === "string" ? args.name.trim() : "";
-    if (!name || name.length > 200)
+
+    if (!name || name.length > 200) {
       throw new Error("Project name must contain 1 to 200 characters");
+    }
 
     return { repository: args.repository, name };
   }
 
   if (name === "remove_user_agent_project") {
-    if (args.delete_tasks)
+    if (args.delete_tasks) {
       throw new Error(
         "Task data deletion requires a service; fixture tasks are preserved.",
       );
+    }
 
     return { repository: args.repository };
   }
 
-  if (PREVIEW_QUEUE_TOOLS.includes(name))
+  if (PREVIEW_QUEUE_TOOLS.includes(name)) {
     return previewQueueTool(
       previewTasks.find((task) => task.id === args.task_id),
       name,
       args,
     );
+  }
 
   if (name === "rename_user_agent_task") {
     const task = previewTasks.find((task) => task.id === args.task_id);
     if (!task) throw new Error("Task not found");
     const title = typeof args.title === "string" ? args.title.trim() : "";
-    if (!title || title.length > 200)
+
+    if (!title || title.length > 200) {
       throw new Error("Task title must contain 1 to 200 characters");
+    }
+
     task.title = title;
 
     return task;
@@ -511,10 +532,11 @@ export function previewTool(
     })(),
   };
 
-  if (!(name in fixtures))
+  if (!(name in fixtures)) {
     throw new Error(
       "Design preview only. No worker or service action was executed.",
     );
+  }
 
   return fixtures[name];
 }

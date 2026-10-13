@@ -47,8 +47,9 @@ type Row = Record<string, string | number | null>;
 
 /** Removes a database file with its WAL and shared-memory files. */
 function removeDatabase(path: string) {
-  for (const file of [path, `${path}-wal`, `${path}-shm`])
+  for (const file of [path, `${path}-wal`, `${path}-shm`]) {
     rmSync(file, { force: true });
+  }
 }
 
 /**
@@ -64,8 +65,10 @@ export function migrateLegacyDatabase(
   const next = `${path}.migrating`;
 
   if (!existsSync(path)) throw new Error(`No database at ${path}`);
-  if (existsSync(kept))
+
+  if (existsSync(kept)) {
     throw new Error(`${kept} already exists; this directory was migrated`);
+  }
 
   const release = lease(data);
 
@@ -88,8 +91,9 @@ export function migrateLegacyDatabase(
       legacy.close();
     }
 
-    if (dryRun) removeDatabase(next);
-    else {
+    if (dryRun) {
+      removeDatabase(next);
+    } else {
       renameSync(path, kept);
 
       try {
@@ -119,16 +123,19 @@ function checkLegacy(legacy: DatabaseSync) {
     .all()
     .map((row) => String(row.name));
 
-  if (tables.includes("__drizzle_migrations"))
+  if (tables.includes("__drizzle_migrations")) {
     throw new Error("The database is already versioned; nothing to migrate");
+  }
 
   const unknown = tables.filter((name) => !LEGACY_TABLES.has(name));
 
-  if (unknown.length)
+  if (unknown.length) {
     throw new Error(`Unexpected tables: ${unknown.join(", ")}`);
+  }
 
-  if (!tables.includes("tasks"))
+  if (!tables.includes("tasks")) {
     throw new Error("No tasks table; this is not a service database");
+  }
 }
 
 function copy(
@@ -230,15 +237,17 @@ function copy(
     "event_checkpoint",
     "artifacts",
     "codex_executors",
-  ])
+  ]) {
     if (has(table)) report.dropped[table] = rows(table).length;
+  }
 
   const violations = client.prepare("PRAGMA foreign_key_check").all();
 
-  if (violations.length)
+  if (violations.length) {
     throw new Error(
       `Foreign key violations after copying: ${JSON.stringify(violations)}`,
     );
+  }
 
   return report;
 }

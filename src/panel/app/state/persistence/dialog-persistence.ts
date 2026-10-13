@@ -30,10 +30,14 @@ function isString(value: unknown): value is string {
 
 function handoffTargetOf(value: unknown): HandoffTarget | undefined {
   if (!isRecord(value)) return;
-  if (value.kind === "reply" && isString(value.id) && value.id)
+
+  if (value.kind === "reply" && isString(value.id) && value.id) {
     return { kind: "reply", id: value.id };
-  if (value.kind === "file" && isString(value.path) && value.path)
+  }
+
+  if (value.kind === "file" && isString(value.path) && value.path) {
     return { kind: "file", path: value.path };
+  }
 }
 
 function draftOf(
@@ -155,8 +159,9 @@ export function parsePersistedDialog(
         ...(draft ? { draft } : {}),
       };
     case "file":
-      if (!isString(value.taskId) || !value.taskId || !isString(value.path))
+      if (!isString(value.taskId) || !value.taskId || !isString(value.path)) {
         return;
+      }
 
       return {
         kind: value.kind,
@@ -171,8 +176,9 @@ export function parsePersistedDialog(
         (value.action !== "remove" && value.action !== "delete-branch") ||
         (value.files !== undefined &&
           (!Array.isArray(value.files) || !value.files.every(isString)))
-      )
+      ) {
         return;
+      }
 
       return {
         kind: value.kind,

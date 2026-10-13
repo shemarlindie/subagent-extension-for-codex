@@ -9,8 +9,9 @@ describe("page identity", () => {
     expect(parsePage("projects")).toBe("projects");
     expect(parsePage("settings")).toBe("settings");
 
-    for (const value of [null, "", "Projects", "constructor", "__proto__"])
+    for (const value of [null, "", "Projects", "constructor", "__proto__"]) {
       expect(parsePage(value)).toBeUndefined();
+    }
   });
 });
 

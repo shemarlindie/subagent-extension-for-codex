@@ -43,8 +43,9 @@ export function emitFixturePrelude(
     events.emitStream("message_stop", {});
     actions.push("Emitted a complete fixture stream lifecycle.");
   } else {
-    for (const stream of scenarios.streams)
+    for (const stream of scenarios.streams) {
       events.emitStream(stream.frame, stream.fields);
+    }
   }
 
   for (const restriction of scenarios.restrictions) {
@@ -157,10 +158,11 @@ export async function runFixtureActions(
   }
 
   if (scenarios.change) {
-    if (c.task.workspace_strategy !== "worktree")
+    if (c.task.workspace_strategy !== "worktree") {
       throw new Error(
         "Fixture change scenarios require an isolated worktree task.",
       );
+    }
 
     const safeTaskId = c.task.id.replace(/[^A-Za-z0-9_-]/g, "_");
     const relativePath = `fixture-scenario-${safeTaskId}-turn-${c.task.turn}.md`;

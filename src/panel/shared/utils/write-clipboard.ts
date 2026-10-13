@@ -1,6 +1,6 @@
 /** Writes from a user action, including hosts that restrict the Clipboard API. */
 export async function writeClipboardText(text: string): Promise<void> {
-  if (typeof navigator.clipboard?.writeText === "function")
+  if (typeof navigator.clipboard?.writeText === "function") {
     try {
       await navigator.clipboard.writeText(text);
 
@@ -8,6 +8,7 @@ export async function writeClipboardText(text: string): Promise<void> {
     } catch {
       // Embedded hosts can expose the API while denying clipboard-write.
     }
+  }
 
   const focused = document.activeElement,
     selection = document.getSelection(),
@@ -31,8 +32,9 @@ export async function writeClipboardText(text: string): Promise<void> {
     if (
       typeof document.execCommand === "function" &&
       document.execCommand("copy")
-    )
+    ) {
       return;
+    }
   } catch {
     // A host may block native copy too; offer manual selection below.
   } finally {

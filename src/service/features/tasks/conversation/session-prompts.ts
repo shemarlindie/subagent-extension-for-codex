@@ -28,8 +28,10 @@ export class SessionPrompts {
     ownerWorker: string,
   ): Promise<NewSessionReason | undefined> {
     if (!t.session_id) return "no_session";
-    if (t.session_owner !== ownerWorker || !t.session_state_ref)
+
+    if (t.session_owner !== ownerWorker || !t.session_state_ref) {
       return "session_unavailable";
+    }
 
     try {
       await provider.taskPolicy.validateSession?.(t);
@@ -116,8 +118,9 @@ export class SessionPrompts {
       if (
         e.type === "task.instruction" &&
         !received.has(String(e.data.message_id))
-      )
+      ) {
         continue;
+      }
 
       const entry =
         e.type === "agent.reply"
@@ -160,23 +163,27 @@ export class SessionPrompts {
       .changes(d, "task", undefined, MAX_DEPENDENCY_DIFF_CHARS)
       .catch(() => undefined);
 
-    if (changes?.state === "branch_deleted")
+    if (changes?.state === "branch_deleted") {
       return [
         `Dependency ${d.id}'s worktree and branch were deleted, so its changes are unavailable.`,
       ];
-    if (changes?.state === "end_unrecorded")
+    }
+
+    if (changes?.state === "end_unrecorded") {
       return [
         `Dependency ${d.id} ended before its end state was recorded, so its changes can't be told apart from later edits to its checkout.`,
       ];
+    }
 
     const removed = changes?.state === "workspace_missing";
 
-    if (!changes?.diff)
+    if (!changes?.diff) {
       return removed
         ? [
             `Dependency ${d.id}'s worktree was removed, and its branch ${changes.branch} has no committed changes.`,
           ]
         : [];
+    }
 
     const shown = changes.diff.slice(0, MAX_DEPENDENCY_DIFF_CHARS),
       count = changes.files.length,

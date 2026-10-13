@@ -222,13 +222,18 @@ export function fileBytes(file: PreviewFile) {
   for (let index = 0; index < content.length; index++) {
     const code = content.charCodeAt(index);
 
-    if (code < 0x80) bytes += 1;
-    else if (code < 0x800) bytes += 2;
+    if (code < 0x80) {
+      bytes += 1;
+    } else if (code < 0x800) {
+      bytes += 2;
+    }
     // A surrogate pair is one 4-byte code point.
     else if (code >= 0xd800 && code < 0xdc00) {
       bytes += 4;
       index++;
-    } else bytes += 3;
+    } else {
+      bytes += 3;
+    }
   }
 
   return bytes;
@@ -269,10 +274,14 @@ export function parseDelimited(content: string, separator = ","): string[][] {
       if (char === '"' && content[index + 1] === '"') {
         field += '"';
         index++;
-      } else if (char === '"') quoted = false;
-      else field += char;
-    } else if (char === '"' && field === "") quoted = true;
-    else if (char === separator) {
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        field += char;
+      }
+    } else if (char === '"' && field === "") {
+      quoted = true;
+    } else if (char === separator) {
       row.push(field);
       field = "";
     } else if (char === "\n" || char === "\r") {
@@ -281,7 +290,9 @@ export function parseDelimited(content: string, separator = ","): string[][] {
       rows.push(row);
       row = [];
       field = "";
-    } else field += char;
+    } else {
+      field += char;
+    }
   }
 
   if (field || row.length) {
@@ -394,11 +405,12 @@ export function diffRows(file: ParsedDiffFile): DiffRow[] {
     { kind: "hunk", content: withoutCr(chunk.content) },
     ...chunk.changes.map((change): DiffRow => {
       // The parser files a "\ No newline" marker as a change of the line before.
-      if (change.content.startsWith("\\"))
+      if (change.content.startsWith("\\")) {
         return {
           kind: "note",
           content: withoutCr(change.content.slice(1).trim()),
         };
+      }
 
       return {
         kind: "line",

@@ -187,18 +187,26 @@ export class Controller {
             this.state.dialog?.kind === "delegate-loading" &&
             patch.dialog.kind === "delegate";
 
-        if (sameDialogReference(previous, descriptor) || finishingDelegateLoad)
+        if (
+          sameDialogReference(previous, descriptor) ||
+          finishingDelegateLoad
+        ) {
           this.persistedDialogs[this.persistedDialogs.length - 1] = {
             ...descriptor,
             ...(previous?.draft ? { draft: previous.draft } : {}),
           } as PersistedDialog;
-        else this.persistedDialogs = [descriptor];
+        } else {
+          this.persistedDialogs = [descriptor];
+        }
       }
     }
 
     this.state = { ...this.state, ...patch };
-    if (this.state.selected)
+
+    if (this.state.selected) {
       this.session.update("task", this.state.selected, { tab: this.state.tab });
+    }
+
     this.listeners.forEach((listener) => listener());
     if (this.viewStateReady) this.saveViewState();
   }
@@ -285,12 +293,13 @@ export class Controller {
     }
 
     if (saved.kind === "delegate") {
-      if (this.canRestoreDialog(saved, scope))
+      if (this.canRestoreDialog(saved, scope)) {
         this.openDelegateLoading(
           saved.preferredWorker,
           saved.repository,
           saved.revision,
         );
+      }
 
       return;
     }
@@ -317,14 +326,16 @@ export class Controller {
       const dialog = restored instanceof Promise ? await restored : restored;
 
       if (!dialog) {
-        if (!this.state.dialog)
+        if (!this.state.dialog) {
           await this.discardPersistedDialog(saved, tasks, scope);
+        }
 
         return;
       }
 
-      if (dialog && this.canRestoreDialog(saved, scope) && !this.state.dialog)
+      if (dialog && this.canRestoreDialog(saved, scope) && !this.state.dialog) {
         this.patch({ dialog, formError: "" });
+      }
     } catch {
       // Keep the saved descriptor so a later refresh can retry transient reads.
     }
@@ -363,8 +374,9 @@ export class Controller {
       this.browsing ||
       !tasks.length ||
       !(this.environment.wide() || conversation || repository)
-    )
+    ) {
       return undefined;
+    }
 
     return (
       tasks.find((task) => task.pending_input)?.id ??
@@ -396,10 +408,11 @@ export class Controller {
   }
 
   report = (error: unknown) => {
-    if (!this.disposed)
+    if (!this.disposed) {
       this.patch({
         error: error instanceof Error ? error.message : String(error),
       });
+    }
   };
 
   run = (action: () => Promise<unknown>) => {
@@ -440,14 +453,17 @@ export class Controller {
 
       this.patch({ connected: true, loginRequired: false });
       const savedDialog = this.persistedDialogs.at(-1);
-      if (!this.state.dialog && savedDialog?.kind === "settings")
+
+      if (!this.state.dialog && savedDialog?.kind === "settings") {
         this.openSettingsLoading();
-      else if (!this.state.dialog && savedDialog?.kind === "delegate")
+      } else if (!this.state.dialog && savedDialog?.kind === "delegate") {
         this.openDelegateLoading(
           savedDialog.preferredWorker,
           savedDialog.repository,
           savedDialog.revision,
         );
+      }
+
       await this.refresh();
       if (this.disposed) return;
       this.transport.watch();
@@ -478,8 +494,10 @@ export class Controller {
       try {
         // Parent reports should still attempt delivery while UI reads are paused.
         this.forwardParentMessage();
-        if (!this.environment.hidden() && !this.state.busy)
+
+        if (!this.environment.hidden() && !this.state.busy) {
           await this.refresh();
+        }
       } catch (error) {
         this.report(error);
       } finally {
@@ -566,8 +584,9 @@ export class Controller {
       this.state.scopeKnown &&
       this.state.host.canSendParent &&
       this.state.conversation
-    )
+    ) {
       this.run(() => this.parentRelay.forward(this.state.conversation!));
+    }
   }
 
   async refresh(): Promise<void> {
@@ -593,8 +612,11 @@ export class Controller {
 
         if (this.disposed || version !== this.state.scopeVersion) return;
         this.applyScope(context, false);
-        if (!this.state.scopeKnown)
+
+        if (!this.state.scopeKnown) {
           throw new Error("The service returned no panel scope.");
+        }
+
         version = this.state.scopeVersion;
       }
 
@@ -647,10 +669,12 @@ export class Controller {
       const draftRepository = this.getDialogDraft("delegate")?.repository;
 
       let delegationRepository: string | undefined;
-      if (typeof draftRepository === "string")
+
+      if (typeof draftRepository === "string") {
         delegationRepository = draftRepository;
-      else if (delegation?.kind === "delegate")
+      } else if (delegation?.kind === "delegate") {
         delegationRepository = delegation.repository;
+      }
 
       if (
         delegation?.kind === "delegate" &&
@@ -787,8 +811,10 @@ export class Controller {
         selected = restoredTask.id;
         this.explicitSelection = true;
         this.browsing = false;
-        if (!preserveCurrentTab)
+
+        if (!preserveCurrentTab) {
           tab = restored?.tab ?? this.session.get("task", selected).tab;
+        }
       } else if (restored?.browsing) {
         selected = undefined;
         this.explicitSelection = false;
@@ -798,8 +824,9 @@ export class Controller {
       if (!selected) {
         selected = this.defaultSelection(tasks);
 
-        if (selected && !preserveCurrentTab)
+        if (selected && !preserveCurrentTab) {
           tab = this.session.get("task", selected).tab;
+        }
       }
 
       // Don't replace URL choices with defaults until their project and task resolve.
@@ -848,10 +875,11 @@ export class Controller {
     } catch (error) {
       if (this.disposed || version !== this.state.scopeVersion) return;
       const dialog = this.state.dialog;
+
       if (
         dialog?.kind === "delegate-loading" &&
         dialog.statuses.context === "loading"
-      )
+      ) {
         this.updateDelegateDialogRead(
           dialog.request,
           "context",
@@ -859,6 +887,8 @@ export class Controller {
           undefined,
           error,
         );
+      }
+
       this.patch({ connection: "Reconnecting…" });
       throw error;
     } finally {
@@ -1030,7 +1060,7 @@ export class Controller {
         { task_id: task, turn },
       );
 
-      if (current())
+      if (current()) {
         this.patch({
           activityFocus: {
             task,
@@ -1039,6 +1069,7 @@ export class Controller {
             range: { events: page.events, dropped: page.dropped },
           },
         });
+      }
     } catch (error) {
       if (current()) this.patch({ activityFocus: undefined });
       throw error;
@@ -1054,8 +1085,9 @@ export class Controller {
   private async loadCountsIfStale() {
     const task = selectedTask(this.state);
 
-    if (task && changesStale(this.state.changeCounts, task))
+    if (task && changesStale(this.state.changeCounts, task)) {
       await this.loadCounts();
+    }
   }
 
   /** Reads the selected task's full changes while the Changes tab is open. */
@@ -1066,8 +1098,9 @@ export class Controller {
       task &&
       this.state.tab === "changes" &&
       changesStale(this.state.changes, task)
-    )
+    ) {
       await this.loadChanges();
+    }
   }
 
   /**
@@ -1188,14 +1221,16 @@ export class Controller {
       this.patch({ busy: false });
     }
 
-    if (result.status === "uncommitted")
+    if (result.status === "uncommitted") {
       this.open({
         kind: "worktree",
         action: "remove",
         task,
         files: result.files,
       });
-    else await this.afterWorktreeChange();
+    } else {
+      await this.afterWorktreeChange();
+    }
   }
 
   /** The Changes tab and the tab count read the removed worktree or branch at once. */
@@ -1265,6 +1300,7 @@ export class Controller {
 
   applyScope(data?: PanelData, refresh = true) {
     const scope = data?.panel_scope;
+
     if (
       !scope ||
       !(
@@ -1272,8 +1308,9 @@ export class Controller {
         scope.conversation_id === null
       ) ||
       (scope.repository !== undefined && typeof scope.repository !== "string")
-    )
+    ) {
       return;
+    }
 
     const conversation = scope.conversation_id ?? undefined,
       repository = scope.repository,
@@ -1284,7 +1321,7 @@ export class Controller {
       conversation !== this.state.conversation ||
       repository !== this.state.repository ||
       revision !== this.state.revision
-    )
+    ) {
       this.invalidateScope({
         conversation,
         ...(conversation && PAGES[this.state.page].globalOnly
@@ -1294,6 +1331,7 @@ export class Controller {
         revision,
         scopeKnown: true,
       });
+    }
 
     this.patch({
       projectCandidate:
@@ -1337,19 +1375,25 @@ export class Controller {
         this.tabIntentRevision !== this.tabIntentRevisionAtSelection;
 
       let tab: Tab;
-      if (preserveCurrentTab) tab = this.state.tab;
-      else if (
+
+      if (preserveCurrentTab) {
+        tab = this.state.tab;
+      } else if (
         (["chat", "changes", "activity", "details"] as const).includes(hostTab)
-      )
+      ) {
         tab = hostTab;
-      else tab = this.session.get("task", taskId).tab;
+      } else {
+        tab = this.session.get("task", taskId).tab;
+      }
 
       ++this.generation;
       this.explicitSelection = true;
       this.browsing = false;
       this.tabIntentRevision++;
-      if (!preserveCurrentTab)
+
+      if (!preserveCurrentTab) {
         this.tabIntentRevisionAtSelection = this.tabIntentRevision;
+      }
 
       this.patch({
         selected: taskId,
@@ -1366,11 +1410,13 @@ export class Controller {
     }
 
     const dialog = this.state.dialog;
+
     if (
       dialog?.kind === "delegate-loading" &&
       dialog.statuses.context !== "ready"
-    )
+    ) {
       this.updateDelegateDialogRead(dialog.request, "context", "ready");
+    }
 
     if (refresh) this.run(() => this.refresh());
   }
@@ -1415,11 +1461,13 @@ export class Controller {
 
     if (this.state.page === "settings" && page !== "settings") {
       if (this.dismissGuard?.() === false) return;
+
       if (
         this.state.dialog?.kind === "settings" ||
         this.state.dialog?.kind === "settings-loading"
-      )
+      ) {
         this.closeDialog();
+      }
     }
 
     this.patch({ page, formError: "" });
@@ -1440,8 +1488,9 @@ export class Controller {
       this.state.busy ||
       this.state.dialog ||
       !this.state.connected
-    )
+    ) {
       return;
+    }
 
     this.patch({
       dialog: {
@@ -1454,8 +1503,9 @@ export class Controller {
   }
 
   clearProjectError() {
-    if (this.state.page === "projects" && !this.state.busy)
+    if (this.state.page === "projects" && !this.state.busy) {
       this.patch({ formError: "" });
+    }
   }
 
   async manageProject(
@@ -1478,8 +1528,9 @@ export class Controller {
       this.state.conversation ||
       this.state.busy ||
       this.disposed
-    )
+    ) {
       return false;
+    }
 
     const active = () =>
       !this.disposed &&
@@ -1532,10 +1583,11 @@ export class Controller {
         this.reconcileShare = true;
       }
     } catch (error) {
-      if (active())
+      if (active()) {
         this.patch({
           formError: error instanceof Error ? error.message : String(error),
         });
+      }
     } finally {
       ++this.projectGeneration;
 
@@ -1564,14 +1616,16 @@ export class Controller {
 
   async browseTaskProject(): Promise<string | undefined> {
     const dialog = this.state.dialog;
+
     if (
       !dialog ||
       dialog.kind !== "delegate" ||
       this.state.busy ||
       this.disposed ||
       dialog.scope !== this.state.scopeVersion
-    )
+    ) {
       return;
+    }
 
     const active = () =>
       !this.disposed &&
@@ -1597,10 +1651,11 @@ export class Controller {
 
       return registered.repository;
     } catch (error) {
-      if (active())
+      if (active()) {
         this.patch({
           formError: error instanceof Error ? error.message : String(error),
         });
+      }
     } finally {
       this.patch({ busy: false });
     }
@@ -1609,21 +1664,26 @@ export class Controller {
   /** Add the chat project the user chose in New task before its task starts. */
   async addChatProjectForTask(repository: string) {
     const state = this.state;
+
     if (
       !state.projectCandidateAuto ||
       repository !== state.projectCandidate ||
       state.projects.some((project) => project.repository === repository)
-    )
+    ) {
       return;
+    }
+
     await this.tool("register_user_agent_project", { repository });
     const projects = await this.tool<Project[]>("list_agent_projects");
-    if (!this.disposed)
+
+    if (!this.disposed) {
       this.patch({
         projects,
         projectsLoaded: true,
         projectCandidate: undefined,
         projectCandidateAuto: false,
       });
+    }
   }
 
   async registerProject(repository: string) {
@@ -1637,8 +1697,10 @@ export class Controller {
       );
 
       const projects = await this.tool<Project[]>("list_agent_projects");
-      if (!this.disposed && scope === this.state.scopeVersion)
+
+      if (!this.disposed && scope === this.state.scopeVersion) {
         this.patch({ projects, projectsLoaded: true });
+      }
     });
 
     if (
@@ -1648,8 +1710,10 @@ export class Controller {
       !this.state.dialog
     ) {
       this.patch({ projectCandidate: undefined, projectCandidateAuto: false });
-      if (this.state.page === "tasks")
+
+      if (this.state.page === "tasks") {
         await this.changeProject(registered.repository);
+      }
     }
   }
 
@@ -1668,8 +1732,9 @@ export class Controller {
       !this.state.connected ||
       this.state.dialog ||
       this.state.busy
-    )
+    ) {
       return;
+    }
 
     this.openSettingsLoading();
   }
@@ -1749,10 +1814,12 @@ export class Controller {
       const settings = await this.tool<SettingsDocument>("get_agent_settings");
 
       if (!this.isSettingsDialogRequest(dialog.request)) return;
-      if (!Array.isArray(settings.sections))
+
+      if (!Array.isArray(settings.sections)) {
         throw new Error(
           "Settings are unavailable in this preview or service version.",
         );
+      }
 
       this.patch({
         dialog: { kind: "settings", settings, scope: this.state.scopeVersion },
@@ -1784,7 +1851,7 @@ export class Controller {
   private loadDelegateDialog(
     dialog: Extract<DialogState, { kind: "delegate-loading" }>,
   ) {
-    if (dialog.statuses.settings === "loading")
+    if (dialog.statuses.settings === "loading") {
       void this.tool<{ values: Defaults }>("get_agent_settings").then(
         ({ values }) =>
           this.updateDelegateDialogRead(dialog.request, "settings", "ready", {
@@ -1799,8 +1866,9 @@ export class Controller {
             error,
           ),
       );
+    }
 
-    if (dialog.statuses.projects === "loading")
+    if (dialog.statuses.projects === "loading") {
       void this.readProjects().then(
         (projects) =>
           this.updateDelegateDialogRead(dialog.request, "projects", "ready", {
@@ -1815,8 +1883,9 @@ export class Controller {
             error,
           ),
       );
+    }
 
-    if (dialog.statuses.workers === "loading")
+    if (dialog.statuses.workers === "loading") {
       void this.readWorkers().then(
         (workers) => {
           this.workersReadAt = Date.now();
@@ -1834,6 +1903,7 @@ export class Controller {
             error,
           ),
       );
+    }
   }
 
   private updateDelegateDialogRead(
@@ -1847,17 +1917,22 @@ export class Controller {
     error?: unknown,
   ) {
     const current = this.state.dialog;
+
     if (
       this.disposed ||
       current?.kind !== "delegate-loading" ||
       current.request !== request
-    )
+    ) {
       return;
+    }
 
     const errors = { ...current.errors };
-    if (status === "error")
+
+    if (status === "error") {
       errors[resource] = error instanceof Error ? error.message : String(error);
-    else delete errors[resource];
+    } else {
+      delete errors[resource];
+    }
 
     const updated = {
       ...current,
@@ -1891,7 +1966,8 @@ export class Controller {
         });
       } catch (loadError) {
         const active = this.state.dialog;
-        if (active?.kind === "delegate-loading" && active.request === request)
+
+        if (active?.kind === "delegate-loading" && active.request === request) {
           this.patch({
             dialog: {
               ...active,
@@ -1901,6 +1977,7 @@ export class Controller {
                   : String(loadError),
             },
           });
+        }
       }
     }
   }
@@ -1958,13 +2035,16 @@ export class Controller {
   prepareHandoff(task: Task, target: HandoffTarget, contextText?: string) {
     const previous = this.state.dialog;
     if (this.disposed || this.state.busy || !this.state.conversation) return;
+
     if (
       previous &&
       (previous.kind !== "file" ||
         previous.task.id !== task.id ||
         previous.scope !== this.state.scopeVersion)
-    )
+    ) {
       return;
+    }
+
     if (!this.state.tasks.some((current) => current.id === task.id)) return;
 
     const dialog: DialogState = {
@@ -2011,8 +2091,10 @@ export class Controller {
       this.state.busy ||
       !this.state.dialog ||
       this.dismissGuard?.() === false
-    )
+    ) {
       return;
+    }
+
     this.closeDialog();
   }
 
@@ -2049,8 +2131,10 @@ export class Controller {
   /** Resolves a permission request directly from the task's Chat card. */
   decidePermission(task: Task, approved: boolean, message = "") {
     const request = task.pending_input;
-    if (!request || request.kind !== "permission")
+
+    if (!request || request.kind !== "permission") {
       return Promise.resolve("The permission request is no longer available.");
+    }
 
     return this.chatAction(() =>
       this.tool("submit_agent_input", {
@@ -2170,8 +2254,9 @@ export class Controller {
     if (
       dialog.kind === "settings-loading" ||
       dialog.kind === "delegate-loading"
-    )
+    ) {
       return false;
+    }
 
     if (dialog.scope !== this.state.scopeVersion) {
       this.patch({
@@ -2188,10 +2273,12 @@ export class Controller {
     try {
       const task = await operation();
       if (this.disposed) return false;
-      if (dialog.scope !== this.state.scopeVersion)
+
+      if (dialog.scope !== this.state.scopeVersion) {
         throw new Error(
           "The project or conversation changed while this request was in progress. Inspect its outcome in the original scope before retrying.",
         );
+      }
 
       if (task && selectReturned) {
         ++this.generation;

@@ -19,12 +19,14 @@ function Prose({ text }: { text: string }): ReactNode {
 
   for (const match of text.matchAll(FENCE)) {
     const before = text.slice(last, match.index).trim();
-    if (before)
+
+    if (before) {
       parts.push(
         <p key={last} className="activity-text">
           {before}
         </p>,
       );
+    }
 
     parts.push(
       <pre key={match.index} className="activity-code">
@@ -36,12 +38,14 @@ function Prose({ text }: { text: string }): ReactNode {
   }
 
   const rest = text.slice(last).trim();
-  if (rest)
+
+  if (rest) {
     parts.push(
       <p key={last} className="activity-text">
         {rest}
       </p>,
     );
+  }
 
   return <>{parts}</>;
 }
@@ -73,9 +77,11 @@ export function ActivityContent({
     content !== null &&
     typeof content === "object" &&
     depth > MAX_ACTIVITY_DEPTH
-  )
+  ) {
     return <NestedContentOmitted />;
-  if (Array.isArray(content))
+  }
+
+  if (Array.isArray(content)) {
     return (
       <>
         {content.map((block, i) => (
@@ -88,11 +94,16 @@ export function ActivityContent({
         ))}
       </>
     );
-  if (typeof content === "string")
+  }
+
+  if (typeof content === "string") {
     return <Text text={content} markdown={markdown} />;
+  }
+
   const block = record(content);
   const type = block.type;
-  if (type === "text" || type === "text_delta")
+
+  if (type === "text" || type === "text_delta") {
     return (
       <>
         <Text text={String(block.text ?? "")} markdown={markdown} />
@@ -104,42 +115,55 @@ export function ActivityContent({
         )}
       </>
     );
-  if (type === "thinking" || type === "thinking_delta")
+  }
+
+  if (type === "thinking" || type === "thinking_delta") {
     return (
       <details className="activity-thinking">
         <summary>Thinking</summary>
         <Text text={String(block.thinking ?? "")} markdown={markdown} />
       </details>
     );
-  if (type === "redacted_thinking")
+  }
+
+  if (type === "redacted_thinking") {
     return <p className="muted">Thinking is redacted.</p>;
-  if (type === "signature_delta")
+  }
+
+  if (type === "signature_delta") {
     return <p className="muted">Thinking signature received.</p>;
-  if (type === "input_json_delta")
+  }
+
+  if (type === "input_json_delta") {
     return (
       <>
         <span className="muted">Tool input fragment</span>
         <pre>{String(block.partial_json ?? "")}</pre>
       </>
     );
+  }
+
   if (
     type === "tool_use" ||
     type === "server_tool_use" ||
     type === "mcp_tool_use"
-  )
+  ) {
     return (
       <section>
         <p>{String(block.name ?? "Tool call")}</p>
         <ActivityValue value={block.input} depth={depth + 1} />
       </section>
     );
-  if (type === "tool_result" || type === "mcp_tool_result")
+  }
+
+  if (type === "tool_result" || type === "mcp_tool_result") {
     return (
       <section>
         {block.is_error === true && <p className="error">Tool failed</p>}
         <ActivityContent content={block.content} depth={depth + 1} />
       </section>
     );
+  }
 
   if (type === "image" || type === "document") {
     const source = record(block.source);
@@ -153,7 +177,8 @@ export function ActivityContent({
       );
 
     let body: ReactNode;
-    if (inlineImage)
+
+    if (inlineImage) {
       body = (
         <img
           className="activity-image"
@@ -161,17 +186,18 @@ export function ActivityContent({
           src={`data:${source.media_type};base64,${source.data}`}
         />
       );
-    else if (source.type === "text")
+    } else if (source.type === "text") {
       body = <ActivityContent content={source.data} depth={depth + 1} />;
-    else if (source.type === "content")
+    } else if (source.type === "content") {
       body = <ActivityContent content={source.content} depth={depth + 1} />;
-    else
+    } else {
       body = (
         <ActivityValue
           value={{ source: { ...source, data: undefined } }}
           depth={depth + 1}
         />
       );
+    }
 
     return (
       <section>
@@ -183,8 +209,10 @@ export function ActivityContent({
     );
   }
 
-  if (!Object.keys(block).length)
+  if (!Object.keys(block).length) {
     return <ActivityValue value={content} depth={depth} />;
+  }
+
   // Includes search/code results, citations, tool references and future blocks.
   const { type: _, ...fields } = block;
 

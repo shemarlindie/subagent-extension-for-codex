@@ -50,8 +50,11 @@ export class PendingInput {
 
   request: RunContext["input"] = async (tool, input, signal, presentation) => {
     const t = this.task;
-    if (this.abortSignal.aborted || signal?.aborted)
+
+    if (this.abortSignal.aborted || signal?.aborted) {
       throw new Error("Input interrupted");
+    }
+
     const policy = this.policy;
     const kind = policy.inputKind(tool);
 

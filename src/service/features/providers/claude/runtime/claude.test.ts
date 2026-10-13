@@ -120,11 +120,12 @@ test("Claude session deletion only tolerates the SDK's missing-session error", a
       readyClaudeCli,
     );
 
-    for (const session_state_ref of [undefined, "/missing/transcript.jsonl"])
+    for (const session_state_ref of [undefined, "/missing/transcript.jsonl"]) {
       await assert.rejects(
         failed.deleteSession({ ...task, session_state_ref }),
         (actual: unknown) => actual === error,
       );
+    }
   }
 });
 
@@ -947,6 +948,7 @@ test("filtered Claude environment excludes service and other-provider credential
   assert.equal(spawned.ANTHROPIC_API_KEY, "synthetic-claude-key");
   assert.equal(spawned.CLAUDE_CONFIG_DIR, "/synthetic/claude-state");
   assert.equal(spawned.PATH, process.env.PATH);
+
   for (const name of [
     "OPENAI_API_KEY",
     "OPENAI_EXECUTOR_API_KEY",
@@ -955,12 +957,13 @@ test("filtered Claude environment excludes service and other-provider credential
     "AWS_SECRET_ACCESS_KEY",
     "NODE_OPTIONS",
     "HTTPS_PROXY",
-  ])
+  ]) {
     assert.equal(
       spawned[name],
       undefined,
       `${name} must not reach the native harness`,
     );
+  }
 });
 
 test("Claude SDK serializes the extension Bash sandbox without enabling automatic or unsandboxed execution", async () => {
@@ -1059,11 +1062,12 @@ test("Claude asks for a plain reply, with no structured output tool", async () =
       requestId: "request",
     });
 
-  for (const tool of ["StructuredOutput", "mcp__unconfigured__report"])
+  for (const tool of ["StructuredOutput", "mcp__unconfigured__report"]) {
     assert.equal(
       (await permission(tool, { summary: "Report" }))!.behavior,
       "deny",
     );
+  }
 });
 
 async function runWithPolicy(
@@ -1154,12 +1158,14 @@ test("Claude parity policy leaves sandbox, tools and paths to the user's configu
   assert.deepEqual(options.tools, { type: "preset", preset: "claude_code" });
   assert.deepEqual(options.disallowedTools, []);
   assert.equal(options.env!.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
+
   for (const name of [
     "CODEX_SUBAGENT_EXTENSION_TOKEN",
     "OPENAI_API_KEY",
     "CLAUDE_CODE_OAUTH_TOKEN",
-  ])
+  ]) {
     assert.equal(options.env![name], undefined, name);
+  }
 
   for (const [tool, input] of [
     ["WebFetch", { url: "https://example.com" }],

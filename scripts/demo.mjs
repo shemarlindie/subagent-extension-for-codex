@@ -60,6 +60,8 @@ const child = spawn(
 
 console.error(`Demo login token: ${token} (fixture worker; no model calls)`);
 
-for (const signal of ["SIGINT", "SIGTERM"])
+for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => child.kill(signal));
+}
+
 child.on("exit", (code) => process.exit(code ?? 0));

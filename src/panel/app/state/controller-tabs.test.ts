@@ -62,14 +62,14 @@ test("host selections restore a task's remembered tab unless they explicitly req
 });
 
 // The Changes tab reads every change; Details reads only the totals.
-for (const tab of ["changes", "details"] as const)
+for (const tab of ["changes", "details"] as const) {
   test(`returning to a remembered ${tab} tab reads that task's changes`, async (t) => {
     const { controller, transport } = setup();
     t.onTestFinished(() => controller.dispose());
     transport.tasks = [task("a"), task("b")];
 
     transport.handler = (name, args) => {
-      if (name === "get_user_agent_changes")
+      if (name === "get_user_agent_changes") {
         return {
           scope: "task",
           files: [],
@@ -77,13 +77,16 @@ for (const tab of ["changes", "details"] as const)
           deletions: 0,
           diff: "",
         };
-      if (name === "get_user_agent_change_counts")
+      }
+
+      if (name === "get_user_agent_change_counts") {
         return {
           scope: "task",
           files: 0,
           additions: args.task_id === "a" ? 1 : 2,
           deletions: 0,
         };
+      }
 
       return undefined;
     };
@@ -121,6 +124,7 @@ for (const tab of ["changes", "details"] as const)
       tab === "changes" ? ["a"] : [],
     );
   });
+}
 
 test("a host link opens the Changes tab, and a read for a replaced task is dropped", async (t) => {
   const { controller, transport } = setup();
@@ -137,8 +141,10 @@ test("a host link opens the Changes tab, and a read for a replaced task is dropp
   });
 
   transport.handler = (name, args) => {
-    if (name === "get_user_agent_changes" && args.task_id === "a")
+    if (name === "get_user_agent_changes" && args.task_id === "a") {
       return gate.promise;
+    }
+
     if (name === "get_user_agent_changes") return changes("b");
 
     return undefined;
@@ -236,8 +242,10 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
   };
 
   transport.handler = (name, args) => {
-    if (name === "get_user_agent_changes" && args.scope === "task")
+    if (name === "get_user_agent_changes" && args.scope === "task") {
       return gate.promise;
+    }
+
     if (name === "get_user_agent_changes") return turn;
 
     return undefined;

@@ -45,11 +45,14 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
 
     try {
       const result = await controller.browseProject();
-      if (generation === request.current && active() && result.repository)
+
+      if (generation === request.current && active() && result.repository) {
         setRepository(result.repository);
+      }
     } catch (error) {
-      if (generation === request.current && active())
+      if (generation === request.current && active()) {
         setError(error instanceof Error ? error.message : String(error));
+      }
     } finally {
       if (generation === request.current && active()) setBrowsing(false);
     }

@@ -68,12 +68,14 @@ function setup(
     args: { path: string },
   ) => {
     if (args.path === "b.ts") return new Promise(() => {});
-    if (args.path === "gone.ts")
+
+    if (args.path === "gone.ts") {
       return {
         path: args.path,
         state: "deleted",
         size: 0,
       } satisfies ChangedFileContent;
+    }
 
     return {
       path: args.path,

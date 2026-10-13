@@ -61,8 +61,9 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
       currentDialog.kind === previous ||
       continuingAsyncForm ||
       suspended
-    )
+    ) {
       return;
+    }
 
     const focus =
       definition?.initialFocus?.(popup.current, currentDialog) ??
@@ -97,12 +98,13 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   const handleFinalFocus = () => {
     if (suspended) return document.getElementById("open-panel");
 
-    if (openedScope.current !== controller.getSnapshot().scopeVersion)
+    if (openedScope.current !== controller.getSnapshot().scopeVersion) {
       return document.getElementById(
         controller.getSnapshot().page === "projects"
           ? "project-add"
           : "delegate",
       );
+    }
 
     if (trigger.current?.isConnected) return trigger.current;
 

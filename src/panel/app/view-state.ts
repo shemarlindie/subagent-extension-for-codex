@@ -55,16 +55,19 @@ function read(url: URL): PersistedViewState {
   if (task) state.selected = task;
 
   const filter = params.get(keys.filter);
-  if (filter && filters.includes(filter as Filter))
+
+  if (filter && filters.includes(filter as Filter)) {
     state.filter = filter as Filter;
+  }
 
   if (params.has(keys.search)) state.search = params.get(keys.search) ?? "";
 
   const tab = params.get(keys.tab);
   if (tab && tabs.includes(tab as Tab)) state.tab = tab as Tab;
 
-  if (!state.selected && params.get(keys.browsing) === "1")
+  if (!state.selected && params.get(keys.browsing) === "1") {
     state.browsing = true;
+  }
 
   return state;
 }
@@ -79,8 +82,10 @@ function write(
   Object.values(keys).forEach((key) => params.delete(key));
   persistedDialogIds.forEach((id) => params.delete(dialogKey(id)));
 
-  if (state.page && state.page !== DEFAULT_PAGE)
+  if (state.page && state.page !== DEFAULT_PAGE) {
     params.set(keys.page, state.page);
+  }
+
   if (state.repository) params.set(keys.project, state.repository);
   if (state.selected) params.set(keys.task, state.selected);
   else if (state.browsing) params.set(keys.browsing, "1");
@@ -96,8 +101,9 @@ function write(
 }
 
 function replaceUrl(win: Window, url: URL) {
-  if (url.href !== win.location.href)
+  if (url.href !== win.location.href) {
     win.history.replaceState(win.history.state, "", url);
+  }
 }
 
 function dialogStorage(win: Window): Storage | undefined {
@@ -131,9 +137,11 @@ function writeDialogs(
   if (!storage) return;
 
   try {
-    if (dialogs.length)
+    if (dialogs.length) {
       storage.setItem(DIALOG_STORAGE_KEY, JSON.stringify(dialogs));
-    else storage.removeItem(DIALOG_STORAGE_KEY);
+    } else {
+      storage.removeItem(DIALOG_STORAGE_KEY);
+    }
   } catch {
     // Storage can be disabled or full; persistence must not break the UI.
   }

@@ -35,8 +35,10 @@ const BUSY = ["queued", "starting", "running", "waiting"];
 /** The payload of a task's status event once its turn has ended. */
 function taskStatusData(t: Task, reply: string | undefined) {
   if (t.status === "queued") return {};
-  if (t.status === "completed" && reply !== undefined)
+
+  if (t.status === "completed" && reply !== undefined) {
     return { reply: replyExcerpt(reply) };
+  }
 
   return { error: t.error };
 }
@@ -210,15 +212,19 @@ export class Control {
         (model.supportsEffort === false ||
           (model.supportedEffortLevels !== undefined &&
             !model.supportedEffortLevels.includes(req.reasoning_effort)))
-      )
+      ) {
         throw new Error(
           `Model ${model.value} does not support reasoning effort ${req.reasoning_effort}`,
         );
+      }
     }
 
     this.validateBudgets(req);
-    if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD")
+
+    if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD") {
       throw new Error("Current repository workspace requires revision HEAD");
+    }
+
     for (const id of req.depends_on) this.store.get(id, owner);
 
     const repository = this.projects
@@ -226,8 +232,10 @@ export class Control {
       : await this.workspaces.repository(req.repository);
 
     // Repository resolution can yield while a dependency is being deleted.
-    if (this.removingProjects.has(repository))
+    if (this.removingProjects.has(repository)) {
       throw new Error("Project task data is being deleted");
+    }
+
     for (const id of req.depends_on) this.mutableTask(owner, id);
 
     const t: Task = {
@@ -260,14 +268,20 @@ export class Control {
   private validateBudgets(req: Start) {
     const p = this.providers.get(req.provider);
     if (!p) throw new Error("Provider is not enabled");
-    if (req.budget.max_cost_usd !== null && !p.capabilities.cost_budget)
+
+    if (req.budget.max_cost_usd !== null && !p.capabilities.cost_budget) {
       throw new Error(
         "Provider does not support cost budgets; explicitly set max_cost_usd to null to run without a cost limit",
       );
-    if (req.budget.max_tokens && !p.capabilities.token_budget)
+    }
+
+    if (req.budget.max_tokens && !p.capabilities.token_budget) {
       throw new Error("Provider does not support token budgets");
-    if (!p.capabilities.runtime_budget)
+    }
+
+    if (!p.capabilities.runtime_budget) {
       throw new Error("Provider does not support runtime budgets");
+    }
   }
 
   async schedule() {
@@ -278,14 +292,17 @@ export class Control {
       for (const t of this.store.all().reverse()) {
         if (this.active.size >= this.concurrency) break;
         if (this.deleting.has(t.id)) continue;
+
         if (
           t.status !== "queued" &&
           !(
             t.status === "waiting" &&
             t.waiting_reason === "waiting_for_dependency"
           )
-        )
+        ) {
           continue;
+        }
+
         const deps = t.depends_on.map((id) => this.store.get(id, t.owner));
         const failed = deps.find((d) => d.status === "failed");
 
@@ -426,8 +443,9 @@ export class Control {
       t.session_owner = this.ownerWorker;
 
       this.store.transaction(() => {
-        if (newSession && t.turn > 1)
+        if (newSession && t.turn > 1) {
           this.store.event(t, "task.session_started", { reason: newSession });
+        }
 
         this.store.save(t);
         this.store.event(t, "task.started", { turn: t.turn });
@@ -439,17 +457,21 @@ export class Control {
           : t.budget.max_runtime_minutes * 60000 - t.runtime_ms;
 
       if (remaining <= 0) throw new Error("Runtime budget exhausted");
+
       if (
         t.budget.max_cost_usd !== null &&
         (t.cost_usd ?? 0) >= t.budget.max_cost_usd
-      )
+      ) {
         throw new Error("Cost budget exhausted");
-      if (remaining !== Infinity)
+      }
+
+      if (remaining !== Infinity) {
         timer = setTimeout(() => {
           t.status = "failed";
           t.error = "Runtime budget exhausted";
           a.abort.abort(new Error(t.error));
         }, remaining);
+      }
 
       const prompt = newSession
         ? await this.prompts.sessionPrompt(t)
@@ -465,9 +487,11 @@ export class Control {
           signal: a.abort.signal,
           acceptSteers: (sink) => {
             a.sink = sink;
+
             // Steers sent before the provider was ready go now.
-            for (const steer of [...t.pending_steers])
+            for (const steer of [...t.pending_steers]) {
               this.deliver(t, a, steer);
+            }
           },
           steerTaken: (id) => {
             const index = t.pending_steers.findIndex((m) => m.id === id);
@@ -509,8 +533,9 @@ export class Control {
             });
 
             // The stored message replaces its draft.
-            if (type === "agent.message")
+            if (type === "agent.message") {
               this.drafts.clear(t.id, storedMessageId(data));
+            }
           },
           session: (id, ref) => {
             t.session_id = id;
@@ -519,12 +544,16 @@ export class Control {
             this.store.save(t);
           },
           messageParent: (text) => {
-            if (!t.conversation_id)
+            if (!t.conversation_id) {
               throw new Error("Task has no parent conversation");
+            }
+
             if (a.abort.signal.aborted) throw new Error("Task was interrupted");
             const message = text.trim();
-            if (!message || message.length > 20000)
+
+            if (!message || message.length > 20000) {
               throw new Error("Invalid parent message");
+            }
 
             return this.store.event(t, "parent.message", { text: message }).id;
           },
@@ -680,8 +709,10 @@ export class Control {
   /** Records the queue when it differs from `before`. */
   private queueChanged(t: Task, before: ReturnType<Control["queueSnapshot"]>) {
     const after = this.queueSnapshot(t);
-    if (JSON.stringify(after) !== JSON.stringify(before))
+
+    if (JSON.stringify(after) !== JSON.stringify(before)) {
       this.store.event(t, "task.queue_changed", after);
+    }
   }
 
   /**
@@ -734,7 +765,9 @@ export class Control {
       if (t.workspace_strategy === "current_repo") {
         await this.recordEnd(t);
         end = t.end_tree;
-      } else end = await this.workspaces.snapshot(t.workspace!);
+      } else {
+        end = await this.workspaces.snapshot(t.workspace!);
+      }
 
       await this.workspaces.pin(t, `turns/${turn}/start`, t.turn_start_tree!);
       if (end) await this.workspaces.pin(t, `turns/${turn}/end`, end);
@@ -764,8 +797,11 @@ export class Control {
   rename(owner: string, id: string, title: string) {
     const current = this.mutableTask(owner, id);
     const normalized = title.trim();
-    if (!normalized || normalized.length > 200)
+
+    if (!normalized || normalized.length > 200) {
       throw new Error("Task title must contain 1 to 200 characters");
+    }
+
     const task = this.active.get(id)?.task ?? current;
     task.title = normalized;
     this.store.save(task);
@@ -780,11 +816,13 @@ export class Control {
     action = "changing its worktree",
   ) {
     const t = this.mutableTask(owner, id);
+
     if (
       this.active.has(id) ||
       ["queued", "starting", "running", "waiting"].includes(t.status)
-    )
+    ) {
       throw new Error(`Wait until the task stops before ${action}.`);
+    }
 
     return t;
   }
@@ -805,10 +843,11 @@ export class Control {
       .all(owner)
       .find((d) => d.depends_on.includes(id));
 
-    if (dependent)
+    if (dependent) {
       throw new Error(
         `Task ${dependent.id} depends on this task. Delete it first.`,
       );
+    }
 
     this.deleting.add(id);
 
@@ -817,20 +856,26 @@ export class Control {
 
   /** Holds the whole batch against scheduling and new dependencies before cleanup yields. */
   async removeProject(owner: string, repository: string, deleteTasks = false) {
-    if (!this.projects)
+    if (!this.projects) {
       throw new Error("Project management is unavailable in this service.");
-    if (this.removingProjects.has(repository))
+    }
+
+    if (this.removingProjects.has(repository)) {
       throw new Error("Project task data is being removed");
+    }
+
     if (!deleteTasks) return this.projects.remove(repository);
 
     const tasks = this.store
       .all()
       .filter((task) => task.repository === repository);
 
-    if (tasks.some((task) => task.owner !== owner))
+    if (tasks.some((task) => task.owner !== owner)) {
       throw new Error(
         "This project has task data owned by another user. Remove those tasks first.",
       );
+    }
+
     const ids = new Set(tasks.map((task) => task.id));
 
     const dependent = this.store
@@ -840,14 +885,18 @@ export class Control {
           !ids.has(task.id) && task.depends_on.some((id) => ids.has(id)),
       );
 
-    if (dependent)
+    if (dependent) {
       throw new Error(
         `Task ${dependent.id} in another project depends on this project. Remove it first, or keep task data.`,
       );
-    if (tasks.some((task) => this.deleting.has(task.id)))
+    }
+
+    if (tasks.some((task) => this.deleting.has(task.id))) {
       throw new Error(
         "A project task is already being removed. Wait and retry.",
       );
+    }
+
     // Delete dependents first so cleanup never leaves them without prerequisites.
     const ordered: Task[] = [];
     const remaining = [...tasks];
@@ -858,10 +907,12 @@ export class Control {
           !remaining.some((other) => other.depends_on.includes(task.id)),
       );
 
-      if (index < 0)
+      if (index < 0) {
         throw new Error(
           "Project tasks have circular dependencies. Keep task data and resolve them first.",
         );
+      }
+
       ordered.push(...remaining.splice(index, 1));
     }
 
@@ -883,8 +934,9 @@ export class Control {
       const failure = stopped.find((result) => result.status === "rejected");
       if (failure?.status === "rejected") throw failure.reason;
 
-      for (const task of ordered)
+      for (const task of ordered) {
         await this.deleteResources(owner, task.id, false);
+      }
 
       return this.projects.remove(repository);
     } catch (error) {
@@ -911,8 +963,11 @@ export class Control {
       // Keep the local task available to retry if provider cleanup fails.
       if (deleteAgentTask && t.session_id) {
         const provider = this.providers.get(t.provider);
-        if (!provider?.deleteSession)
+
+        if (!provider?.deleteSession) {
           throw new Error("Provider session deletion is unavailable");
+        }
+
         await provider.deleteSession(t);
       }
 
@@ -933,12 +988,13 @@ export class Control {
     const t = this.idleWorktreeTask(owner, id);
     const result = await this.workspaces.removeWorktree(t, force);
 
-    if (result.status === "removed")
+    if (result.status === "removed") {
       this.store.event(t, "task.worktree_removed", {
         path: t.workspace,
         branch: t.branch,
         forced: force,
       });
+    }
 
     return result;
   }
@@ -968,8 +1024,9 @@ export class Control {
       return this.interruptActive(owner, id, a);
     }
 
-    if (!BUSY.includes(t.status))
+    if (!BUSY.includes(t.status)) {
       throw new Error(`Cannot interrupt a ${t.status} task`);
+    }
 
     t.status = "interrupted";
     t.completed_at = now();
@@ -1008,8 +1065,10 @@ export class Control {
   /** Applies a budget increase to an idle task without starting a turn. */
   applyBudget(owner: string, id: string, raise: BudgetRaise) {
     const task = this.mutableTask(owner, id);
-    if (this.active.has(id) || BUSY.includes(task.status))
+
+    if (this.active.has(id) || BUSY.includes(task.status)) {
       throw new Error("A task's budget can only be changed while it is idle.");
+    }
 
     const originalBudget = task.budget;
     const budget = { ...originalBudget };
@@ -1019,8 +1078,9 @@ export class Control {
     if (
       budget.max_runtime_minutes === task.budget.max_runtime_minutes &&
       budget.max_cost_usd === task.budget.max_cost_usd
-    )
+    ) {
       throw new Error("Choose a changed budget limit to apply.");
+    }
 
     const costRaised =
       budget.max_cost_usd !== null &&
@@ -1081,10 +1141,11 @@ export class Control {
 
     const t = a?.task ?? stored;
 
-    if (t.pending_input && delivery === "steer")
+    if (t.pending_input && delivery === "steer") {
       throw new Error(
         "The worker is waiting for input, so it can't be steered. Answer its request, or queue the message.",
       );
+    }
 
     if (options.budget) this.raiseBudget(t, options.budget);
     const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
@@ -1144,8 +1205,11 @@ export class Control {
     options: { delivery?: Delivery; budget?: BudgetRaise } = {},
   ) {
     const t = this.mutableTask(owner, id);
-    if (this.active.has(id) || BUSY.includes(t.status))
+
+    if (this.active.has(id) || BUSY.includes(t.status)) {
       throw new Error("The task is busy; wait until its turn ends.");
+    }
+
     if (options.budget) this.raiseBudget(t, options.budget);
     this.validateBudgets(t);
     if (this.projects) await this.projects.resolve(t.repository);
@@ -1182,10 +1246,13 @@ export class Control {
         current = t.budget[key];
 
       if (next === undefined) continue;
-      if (next !== null && (current === null || next < current))
+
+      if (next !== null && (current === null || next < current)) {
         throw new Error(
           `The budget can only be raised: ${key} is ${current ?? "unlimited"}`,
         );
+      }
+
       t.budget[key] = next;
     }
   }
@@ -1202,8 +1269,11 @@ export class Control {
     const t = this.queueTask(owner, id);
     const m = t.queue.find((m) => m.id === messageId);
     if (!m) throw new Error("That message is no longer queued.");
-    if (m.recorded)
+
+    if (m.recorded) {
       throw new Error("A steer the worker already has can't be edited.");
+    }
+
     const before = this.queueSnapshot(t);
     m.message = message;
 
@@ -1223,8 +1293,11 @@ export class Control {
     const t = this.queueTask(owner, id);
     const m = t.queue.find((m) => m.id === messageId);
     if (!m) throw new Error("That message is no longer queued.");
-    if (m.recorded)
+
+    if (m.recorded) {
       throw new Error("A steer the worker already has stays at the front.");
+    }
+
     const before = this.queueSnapshot(t);
     const rest = t.queue.filter((q) => q !== m);
     const first = rest.filter((q) => q.recorded).length;
@@ -1247,8 +1320,11 @@ export class Control {
     const t = this.queueTask(owner, id);
     const m = t.queue.find((m) => m.id === messageId);
     if (!m) throw new Error("That message is no longer queued.");
-    if (by === "parent" && m.from !== "parent")
+
+    if (by === "parent" && m.from !== "parent") {
       throw new Error("The parent agent can remove only messages it queued.");
+    }
+
     const before = this.queueSnapshot(t);
     t.queue = t.queue.filter((q) => q !== m);
     if (!t.queue.length) delete t.queue_paused;
@@ -1272,8 +1348,11 @@ export class Control {
 
     this.store.transaction(() => {
       this.store.save(t);
-      for (const m of removed)
+
+      for (const m of removed) {
         this.store.event(t, "task.message_removed", { message_id: m.id });
+      }
+
       this.queueChanged(t, before);
     });
 
@@ -1320,16 +1399,21 @@ export class Control {
     authority: InputAuthority = "user",
   ) {
     const t = this.mutableTask(owner, id);
-    if (t.pending_input?.id !== requestId)
+
+    if (t.pending_input?.id !== requestId) {
       throw new Error("Input request is stale");
+    }
+
     if (
       pendingInputKind(t.pending_input) !== "question" &&
       authority !== "user" &&
       !this.providers.get(t.provider)?.taskPolicy.parentMayApprove(t)
-    )
+    ) {
       throw new Error(
         "This permission requires user approval; use the approval buttons in the panel",
       );
+    }
+
     const a = this.active.get(id);
     if (!a?.input.waiting) throw new Error("No active input request");
 
@@ -1367,7 +1451,8 @@ export class Control {
       result.status === "rejected" ? [result.reason] : [],
     );
 
-    if (errors.length)
+    if (errors.length) {
       throw new AggregateError(errors, "Worker shutdown incomplete");
+    }
   }
 }

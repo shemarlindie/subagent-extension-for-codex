@@ -53,10 +53,11 @@ export class DraftFollower {
       { task_id: id },
     );
 
-    if (this.context.snapshot().selected === id)
+    if (this.context.snapshot().selected === id) {
       this.context.patch({
         draft: read.draft ? { task: id, ...read.draft } : undefined,
       });
+    }
   }
 
   private followingDraft = false;
@@ -80,8 +81,9 @@ export class DraftFollower {
             composerMode(task) === "idle" ||
             this.context.snapshot().tab !== "chat" ||
             this.context.hidden()
-          )
+          ) {
             break;
+          }
 
           const known =
             this.context.snapshot().draft?.task === task.id
@@ -110,8 +112,9 @@ export class DraftFollower {
           if (
             this.context.closed() ||
             this.context.snapshot().selected !== task.id
-          )
+          ) {
             continue;
+          }
 
           const draft = read.draft
             ? { task: task.id, ...read.draft }
@@ -129,9 +132,12 @@ export class DraftFollower {
           // and reads stay at least DRAFT_READ_GAP_MS apart, so a fast stream
           // renders at most that often.
           const elapsed = Date.now() - started;
-          if (!changed && elapsed < 500) await sleep(1000);
-          else if (elapsed < DRAFT_READ_GAP_MS)
+
+          if (!changed && elapsed < 500) {
+            await sleep(1000);
+          } else if (elapsed < DRAFT_READ_GAP_MS) {
             await sleep(DRAFT_READ_GAP_MS - elapsed);
+          }
         }
       } finally {
         this.followingDraft = false;

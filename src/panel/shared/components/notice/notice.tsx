@@ -94,10 +94,12 @@ export function ExpandableNotice({
 
     const measure = () => {
       if (element.getAnimations?.().length) return;
+
       // On narrow panels the inspector is hidden until selection, so its initial
       // zero-sized measurement must wait for ResizeObserver to report its reveal.
-      if (element.clientHeight === 0 && element.getClientRects().length === 0)
+      if (element.clientHeight === 0 && element.getClientRects().length === 0) {
         return;
+      }
 
       // Compare the clamped height with the text's expanded height. scrollHeight
       // alone does not reveal content hidden by -webkit-line-clamp in Chromium.
@@ -141,7 +143,7 @@ export function ExpandableNotice({
     </span>
   );
 
-  if (overflowing === false && !open)
+  if (overflowing === false && !open) {
     return (
       <div className={noticeClass("notice-collapsible")} data-tone={tone}>
         <div className="notice-trigger notice-expandable notice-static">
@@ -149,6 +151,7 @@ export function ExpandableNotice({
         </div>
       </div>
     );
+  }
 
   return (
     <div className={noticeClass("notice-collapsible")} data-tone={tone}>

@@ -42,19 +42,22 @@ type Variant = "collapse" | "fold" | "pop";
 
 // Collapse folds every box edge so neighbours slide rather than jump.
 function frames(variant: Variant, element: HTMLElement): Keyframe[] {
-  if (variant === "pop")
+  if (variant === "pop") {
     return [
       { opacity: 0, transform: "scale(0.85)" },
       { opacity: 1, transform: "none" },
     ];
+  }
 
   // Fold shrinks an item in a flex row along its width; the negative margin cancels the row's gap.
   if (variant === "fold") {
     // The Presence wrapper has no box, so the row is the nearest ancestor that does.
     let row = element.parentElement;
 
-    while (row && getComputedStyle(row).display === "contents")
+    while (row && getComputedStyle(row).display === "contents") {
       row = row.parentElement;
+    }
+
     const gap = parseFloat(getComputedStyle(row ?? element).columnGap);
 
     return [
@@ -255,9 +258,11 @@ export function useListPresence<T>(
 
   // Walk the old order so each removed item keeps its place among the new ones.
   for (const entry of previous) {
-    if (!current.has(entry.key)) entries.push({ ...entry, present: false });
-    else
+    if (!current.has(entry.key)) {
+      entries.push({ ...entry, present: false });
+    } else {
       while (next < items.length) if (take(items[next++]) === entry.key) break;
+    }
   }
 
   while (next < items.length) take(items[next++]);
@@ -362,8 +367,11 @@ export function useAnimatedHeight(
       to = element.offsetHeight;
 
     height.current = to;
-    if (from === undefined || Math.abs(from - to) < 1 || !canAnimate(element))
+
+    if (from === undefined || Math.abs(from - to) < 1 || !canAnimate(element)) {
       return;
+    }
+
     animating.current = true;
 
     const animation = element.animate(

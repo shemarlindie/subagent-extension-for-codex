@@ -54,8 +54,10 @@ export const sourceBoundaries = {
         target === owner ||
         target === "shared" ||
         (owner === "service" && target === "Node built-ins")
-      )
+      ) {
         return;
+      }
+
       context.report({ node, messageId: "boundary", data: { owner, target } });
     }
 

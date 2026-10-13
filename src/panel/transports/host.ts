@@ -23,9 +23,11 @@ class SizeTracingApp extends App {
 
 function toolRequestOptions(name: string, args: Record<string, unknown>) {
   if (name === "browse_user_agent_project") return { timeout: 150000 };
+
   // A draft read waits as long as it was asked to, plus a margin.
-  if (name === "get_user_agent_draft")
+  if (name === "get_user_agent_draft") {
     return { timeout: Number(args.wait_ms ?? 0) + 10000 };
+  }
 
   return undefined;
 }
@@ -75,8 +77,11 @@ export class HostTransport implements Transport {
     // DEBUG: Automatic resize reporting starts after this handshake completes.
     traceSize("bridge-connected");
     if (this.disposed) return;
-    if (!this.app.getHostCapabilities()?.serverTools)
+
+    if (!this.app.getHostCapabilities()?.serverTools) {
       throw new Error("This host does not support the console’s MCP tools.");
+    }
+
     this.updateHost();
   }
 
@@ -84,8 +89,11 @@ export class HostTransport implements Transport {
     if (this.disposed) return;
     const context = this.app.getHostContext();
     if (context?.theme) applyDocumentTheme(context.theme);
-    if (context?.styles?.variables)
+
+    if (context?.styles?.variables) {
       applyHostStyleVariables(context.styles.variables);
+    }
+
     const displayMode = context?.displayMode ?? "inline";
     // DEBUG: Correlate host mode changes with viewport and card measurements.
     traceSize("host-context", { displayMode });
@@ -125,12 +133,13 @@ export class HostTransport implements Transport {
       toolRequestOptions(name, args),
     );
 
-    if (result.isError)
+    if (result.isError) {
       throw new Error(
         result.content
           ?.map((item) => (item.type === "text" ? item.text : ""))
           .join("\n") || "The tool failed.",
       );
+    }
 
     const body = result.structuredContent as
       Record<string, unknown> | undefined;
@@ -151,8 +160,9 @@ export class HostTransport implements Transport {
     if (
       options?.submit &&
       this.app.getHostCapabilities()?.experimental?.[OPENAI_MESSAGE_KEY] == null
-    )
+    ) {
       throw new Error("This host does not support submitting worker messages.");
+    }
 
     const params = OpenAIMessageParamsSchema.parse({
       role: "user",
@@ -164,10 +174,11 @@ export class HostTransport implements Transport {
 
     const result = await this.app.sendMessage(params);
 
-    if (result.isError)
+    if (result.isError) {
       throw new Error(
         "The host declined delivery. Select and copy the message into Codex instead.",
       );
+    }
   }
 
   async share(structuredContent: Record<string, unknown>) {
@@ -188,7 +199,8 @@ export class HostTransport implements Transport {
     const mode =
       context?.displayMode === "fullscreen" ? "inline" : "fullscreen";
 
-    if (context?.availableDisplayModes?.includes(mode))
+    if (context?.availableDisplayModes?.includes(mode)) {
       await this.app.requestDisplayMode({ mode });
+    }
   }
 }

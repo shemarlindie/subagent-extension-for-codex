@@ -79,25 +79,29 @@ export class FixtureProvider implements Provider {
           ? this.runState.sessions.get(task.session_id)
           : undefined;
 
-        if (!session || session.stateRef !== task.session_state_ref)
+        if (!session || session.stateRef !== task.session_state_ref) {
           throw new Error(
             "Fixture session is unavailable in this service process",
           );
+        }
       },
     };
   }
 
   async readiness(): Promise<ProviderReadiness> {
     if (this.readinessDelayMs) await setTimeout(this.readinessDelayMs);
-    if (this.readinessMode === "error")
-      throw new Error("Fixture readiness check failed.");
 
-    if (this.readinessMode === "unavailable")
+    if (this.readinessMode === "error") {
+      throw new Error("Fixture readiness check failed.");
+    }
+
+    if (this.readinessMode === "unavailable") {
       return {
         ready: false,
         message: "Fixture readiness was configured as unavailable.",
         details: { runtime: "fixture", configured: "unavailable" },
       };
+    }
 
     return {
       ready: true,
@@ -108,8 +112,9 @@ export class FixtureProvider implements Provider {
   async models() {
     if (this.modelsDelayMs) await setTimeout(this.modelsDelayMs);
 
-    if (this.modelsMode === "error")
+    if (this.modelsMode === "error") {
       throw new Error("Fixture model discovery failed.");
+    }
 
     if (this.modelsMode === "error-once" && this.modelFailurePending) {
       this.modelFailurePending = false;
@@ -122,8 +127,10 @@ export class FixtureProvider implements Provider {
   }
 
   async deleteSession(task: Task) {
-    if (this.deleteSessionError)
+    if (this.deleteSessionError) {
       throw new Error("Fixture session deletion failed.");
+    }
+
     if (task.session_id) this.runState.sessions.delete(task.session_id);
     this.runState.invalidatedTasks.delete(task.id);
   }

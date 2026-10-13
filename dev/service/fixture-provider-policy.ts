@@ -40,18 +40,24 @@ export const fixtureTaskPolicy: ProviderTaskPolicy = {
       defaults.claude_permission_mode,
     );
 
-    if (authority !== "user" && exceedsPermission(resolved.mode, baseline.mode))
+    if (
+      authority !== "user" &&
+      exceedsPermission(resolved.mode, baseline.mode)
+    ) {
       throw new Error(
         "Task permission mode exceeds the user-approved native mode",
       );
+    }
+
     if (
       authority !== "user" &&
       requested.approval_decider === "parent_agent" &&
       defaults.default_approval_decider !== "parent_agent"
-    )
+    ) {
       throw new Error(
         "Parent approval requires user authorization in settings",
       );
+    }
 
     const execution = executionTaskPolicy.prepareStart({
       ...context,
@@ -79,11 +85,13 @@ export const fixtureTaskPolicy: ProviderTaskPolicy = {
 
     if (mode === "plan" || mode === "dontAsk") return false;
     if (mode === "auto" || mode === "bypassPermissions") return true;
+
     if (
       mode === "acceptEdits" &&
       ["Edit", "Write", "NotebookEdit"].includes(tool)
-    )
+    ) {
       return true;
+    }
 
     return executionTaskPolicy.decideInput(task, tool);
   },

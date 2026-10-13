@@ -43,10 +43,14 @@ export function recordParentDelivery(
   skipped?: "acknowledged",
 ) {
   const task = store.get(taskId, owner);
-  if (skipped && (delivered || error))
+
+  if (skipped && (delivered || error)) {
     throw new Error("Skipped delivery cannot be accepted or failed");
-  if (task.conversation_id !== conversation)
+  }
+
+  if (task.conversation_id !== conversation) {
     throw new Error("Parent conversation mismatch");
+  }
 
   const events = store.eventsOfTypes(task.id, [
     "parent.message_attempted",
@@ -58,16 +62,19 @@ export function recordParentDelivery(
       (event) =>
         event.id === attemptId && event.type === "parent.message_attempted",
     )
-  )
+  ) {
     throw new Error("Parent message attempt not found");
+  }
+
   if (
     events.some(
       (event) =>
         event.type === "parent.message_delivery" &&
         event.data.attempt_id === attemptId,
     )
-  )
+  ) {
     return;
+  }
 
   store.event(task, "parent.message_delivery", {
     attempt_id: attemptId,
@@ -106,10 +113,11 @@ export function acknowledgeParentMessage(
         event.data.message_id === report.id,
     );
 
-    if (!alreadyAcknowledged)
+    if (!alreadyAcknowledged) {
       store.event(task, "parent.message_acknowledged", {
         message_id: report.id,
       });
+    }
 
     return {
       task_id: task.id,

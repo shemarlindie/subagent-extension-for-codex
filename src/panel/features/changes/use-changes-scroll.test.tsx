@@ -39,8 +39,9 @@ function layout(scrollHeight: number, clientHeight: number) {
   });
 
   onTestFinished(() => {
-    for (const [key, descriptor] of saved)
+    for (const [key, descriptor] of saved) {
       if (descriptor) Object.defineProperty(proto, key, descriptor);
+    }
   });
 }
 

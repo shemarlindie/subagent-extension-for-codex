@@ -37,8 +37,9 @@ export function lease(data: string) {
           if (
             existsSync(file) &&
             readFileSync(file, "utf8") === String(process.pid)
-          )
+          ) {
             unlinkSync(file);
+          }
         } finally {
           activeLeases.delete(file);
         }
@@ -46,14 +47,18 @@ export function lease(data: string) {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       const pid = Number(readFileSync(file, "utf8"));
-      if (!Number.isSafeInteger(pid) || pid <= 0)
+
+      if (!Number.isSafeInteger(pid) || pid <= 0) {
         throw new Error("Invalid service lock; inspect before removing", {
           cause: error,
         });
+      }
 
       const staleSelfPid = pid === process.pid && !activeLeases.has(file);
-      if (!staleSelfPid && isProcessRunning(pid))
+
+      if (!staleSelfPid && isProcessRunning(pid)) {
         throw new ExistingServiceError(pid, file, { cause: error });
+      }
 
       const reclaim = join(data, "service-reclaim.lock");
 

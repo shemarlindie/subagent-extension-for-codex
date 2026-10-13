@@ -48,8 +48,10 @@ test("other-panel removal clears selected project while renaming preserves scope
 
   transport.handler = (name) => {
     if (name === "rename_user_agent_project") return { name: "Renamed" };
-    if (name === "list_agent_projects")
+
+    if (name === "list_agent_projects") {
       return [{ repository: "/repo/a", name: "Renamed", kind: "repository" }];
+    }
 
     return undefined;
   };

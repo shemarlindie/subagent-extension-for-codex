@@ -161,18 +161,22 @@ test.each([
       ),
     ).toHaveLength(1);
 
-    if (change === "scope change")
+    if (change === "scope change") {
       controller.applyScope(
         { panel_scope: { conversation_id: "other-chat" } },
         false,
       );
-    else if (change === "disposal") controller.dispose();
-    else if (change === "hidden panel") environment.hidden = () => true;
-    else
+    } else if (change === "disposal") {
+      controller.dispose();
+    } else if (change === "hidden panel") {
+      environment.hidden = () => true;
+    } else {
       transport.events.host({
         ...controller.getSnapshot().host,
         canSendParent: false,
       });
+    }
+
     claim.resolve(parentNotification);
     await flush();
 

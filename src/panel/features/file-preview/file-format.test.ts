@@ -41,8 +41,9 @@ test("formats come from the MIME type, then the extension", () => {
     [file("README"), "text"],
   ];
 
-  for (const [input, format] of cases)
+  for (const [input, format] of cases) {
     assert.equal(fileFormat(input), format, input.path);
+  }
 
   assert.equal(baseMime(file("a.PNG")), "image/png");
   assert.equal(baseMime(file("a.txt")), "text/plain");

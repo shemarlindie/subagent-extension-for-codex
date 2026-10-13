@@ -57,8 +57,9 @@ for (const [name, language] of Object.entries({
   typescript,
   xml,
   yaml,
-}))
+})) {
   hljs.registerLanguage(name, language);
+}
 
 // Highlighting is synchronous; past this size the text renders plain so the panel stays responsive.
 const MAX_HIGHLIGHT_CHARS = 200_000;
@@ -86,9 +87,10 @@ export function highlightLines(code: string, language?: string): string[] {
   for (const line of html.split("\n")) {
     const prefix = open.join("");
 
-    for (const tag of line.matchAll(/<span[^>]*>|<\/span>/g))
+    for (const tag of line.matchAll(/<span[^>]*>|<\/span>/g)) {
       if (tag[0] === "</span>") open.pop();
       else open.push(tag[0]);
+    }
 
     lines.push(prefix + line + "</span>".repeat(open.length));
   }

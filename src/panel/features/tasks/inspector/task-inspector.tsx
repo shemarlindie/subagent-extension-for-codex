@@ -142,8 +142,9 @@ function useStackedLayout(taskId?: string) {
     const detail = detailRef.current,
       header = headerRef.current;
 
-    if (!detail || !header || typeof ResizeObserver === "undefined")
+    if (!detail || !header || typeof ResizeObserver === "undefined") {
       return setStacked(false);
+    }
 
     // Stacking leaves both heights unchanged, so this cannot oscillate.
     const measure = () =>

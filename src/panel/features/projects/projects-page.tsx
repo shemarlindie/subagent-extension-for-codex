@@ -69,11 +69,12 @@ export function ProjectsPage() {
                   value,
                 );
 
-                if (!saved)
+                if (!saved) {
                   throw new Error(
                     controller.getSnapshot().formError ||
                       "The project changed. Reopen its name to retry.",
                   );
+                }
               };
 
               return (

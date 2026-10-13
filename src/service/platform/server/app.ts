@@ -191,8 +191,10 @@ export function application(
       // The raw token is an administrator credential. MCP hosts must enforce
       // app-only tool visibility; console users authenticate with a session cookie.
       const userRoute = req.path.startsWith("/api/user-tools/");
-      if (userRoute && !isUserTool(String(req.params.name)))
+
+      if (userRoute && !isUserTool(String(req.params.name))) {
         throw new Error("Unknown user tool");
+      }
 
       const result = await callTool(
         c,
@@ -231,8 +233,9 @@ export function application(
 
     // Drafts stream as `delta` events without an id, so replay ignores them.
     const sendDraft = (update: DraftUpdate, updateOwner: string) => {
-      if (owner === updateOwner)
+      if (owner === updateOwner) {
         res.write(`event: delta\ndata: ${JSON.stringify(update)}\n\n`);
+      }
     };
 
     c.store.bus.on("event", send);
@@ -245,8 +248,9 @@ export function application(
     } while (replay.length === 1000);
 
     // A client that connects mid-message gets the draft so far.
-    for (const draft of c.drafts.forOwner(owner))
+    for (const draft of c.drafts.forOwner(owner)) {
       sendDraft({ ...draft, offset: 0 }, owner);
+    }
 
     const heartbeat = setInterval(() => {
       if (!bearer(req) && !auth.ownerFor(req.headers.cookie)) {

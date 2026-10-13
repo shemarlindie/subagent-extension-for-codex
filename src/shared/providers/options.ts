@@ -19,6 +19,7 @@ export function assertSelectedProviderOptions(
   provider: string,
   options: ProviderOptions | undefined,
 ) {
-  if (Object.keys(options ?? {}).some((id) => id !== provider))
+  if (Object.keys(options ?? {}).some((id) => id !== provider)) {
     throw new Error("Options must be namespaced under the selected provider");
+  }
 }

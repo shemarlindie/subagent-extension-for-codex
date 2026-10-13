@@ -56,8 +56,9 @@ function useWal(client: DatabaseSync) {
 
   for (;;) {
     try {
-      if (client.prepare("PRAGMA journal_mode").get()?.journal_mode === "wal")
+      if (client.prepare("PRAGMA journal_mode").get()?.journal_mode === "wal") {
         return;
+      }
 
       client.exec("PRAGMA journal_mode=WAL");
 
@@ -97,10 +98,11 @@ function transactions(client: DatabaseSync) {
 
   return {
     transaction<T>(fn: () => T): T {
-      if (queued)
+      if (queued) {
         throw new Error(
           "A transaction is already open; run this work inside it",
         );
+      }
 
       const notifications: (() => void)[] = [];
       queued = notifications;
@@ -111,8 +113,9 @@ function transactions(client: DatabaseSync) {
         result = fn();
 
         // Work after an await would run outside the transaction.
-        if (thenable(result))
+        if (thenable(result)) {
           throw new Error("Database transactions must be synchronous");
+        }
 
         client.exec("COMMIT");
       } catch (error) {

@@ -18,10 +18,11 @@ export function formatStartupOutput(
 
   const output = blocks
     .map((block) => {
-      if (block.type === "message")
+      if (block.type === "message") {
         return wrapText(block.text, width, "", "  ");
+      }
 
-      if (block.type === "fields")
+      if (block.type === "fields") {
         return block.fields
           .flatMap(({ label, value }) =>
             wrapText(
@@ -32,6 +33,7 @@ export function formatStartupOutput(
             ),
           )
           .join("\n");
+      }
 
       return wrapText(block.text, width, "  ", "  ");
     })

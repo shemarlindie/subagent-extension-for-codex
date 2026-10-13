@@ -26,8 +26,9 @@ test("git ignores input left unread by a command that exits at once", async () =
   process.on("uncaughtException", onUncaught);
 
   try {
-    for (let i = 0; i < 5; i++)
+    for (let i = 0; i < 5; i++) {
       assert.match(await git(dir, ["--version"], undefined, input), /^git /);
+    }
 
     // Let any stream error emitted after the exit surface.
     await new Promise((done) => setTimeout(done, 50));

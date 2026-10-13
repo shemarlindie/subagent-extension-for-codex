@@ -119,8 +119,9 @@ test("filter counts match each filter's list and follow search and scope", () =>
     failed: 1,
   });
 
-  for (const filter of Object.keys(counts) as Filter[])
+  for (const filter of Object.keys(counts) as Filter[]) {
     assert.equal(counts[filter], visibleTasks(state({ filter })).length);
+  }
 
   // Search narrows every count, but the selected filter does not.
   assert.deepEqual(filterCounts(state({ search: "alpha", filter: "failed" })), {

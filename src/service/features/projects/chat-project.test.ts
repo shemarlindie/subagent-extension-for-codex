@@ -83,7 +83,8 @@ test("task-start registration requires the task to target the thread root", asyn
     other = await f.repo("other");
 
   await mkdir(join(repository, "src"));
-  for (const target of [other, "relative/project"])
+
+  for (const target of [other, "relative/project"]) {
     assert.equal(
       await autoRegisterChatProject(
         f.control,
@@ -93,6 +94,8 @@ test("task-start registration requires the task to target the thread root", asyn
       ),
       undefined,
     );
+  }
+
   assert.deepEqual(f.control.projects!.list(), []);
 
   assert.equal(

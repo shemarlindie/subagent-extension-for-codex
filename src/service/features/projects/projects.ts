@@ -26,16 +26,22 @@ export class Projects {
   }
 
   async register(path: string, kind: "repository" | "parent" = "repository") {
-    if (!isAbsolute(path))
+    if (!isAbsolute(path)) {
       throw new Error("Registration requires an absolute path");
+    }
+
     const actual = await realpath(path);
-    if (!(await stat(actual)).isDirectory())
+
+    if (!(await stat(actual)).isDirectory()) {
       throw new Error("Project root must be a directory");
+    }
+
     if (
       kind === "repository" &&
       (await git(actual, ["rev-parse", "--show-toplevel"])).trim() !== actual
-    )
+    ) {
       throw new Error("Use repository root");
+    }
 
     this.database.orm
       .insert(projectRoots)
@@ -65,8 +71,10 @@ export class Projects {
 
   rename(repository: string, name: string) {
     const trimmed = name.trim();
-    if (!trimmed || trimmed.length > 200)
+
+    if (!trimmed || trimmed.length > 200) {
       throw new Error("Project name must contain 1 to 200 characters");
+    }
 
     const result = this.database.orm
       .update(projectRoots)
@@ -104,18 +112,21 @@ export class Projects {
         return child === "" || (!child.startsWith("..") && !isAbsolute(child));
       });
 
-    if (!approved())
+    if (!approved()) {
       throw new Error(
         "Repository outside allowed roots (register this repository or approve its parent)",
       );
+    }
 
     // Keep the existing canonical-path containment and Git-root validation too.
     const repository = await this.workspaces.repository(actual);
+
     // Revocation may happen while Git validation yields.
-    if (!approved())
+    if (!approved()) {
       throw new Error(
         "Repository outside allowed roots (register this repository or approve its parent)",
       );
+    }
 
     return repository;
   }

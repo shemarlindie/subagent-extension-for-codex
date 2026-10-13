@@ -27,8 +27,14 @@ export function WorktreeActions({ task, changes }: WorktreeActionsProps) {
     busy = useSnapshot().busy,
     state = changes?.data?.state;
 
-  if (task.workspace_strategy !== "worktree" || !task.branch || !changes?.data)
+  if (
+    task.workspace_strategy !== "worktree" ||
+    !task.branch ||
+    !changes?.data
+  ) {
     return null;
+  }
+
   if (state === "branch_deleted") return null;
 
   const running = ACTIVE.includes(task.status),

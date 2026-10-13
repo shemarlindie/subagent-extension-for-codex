@@ -287,8 +287,10 @@ test("task list status icons expose each task state to assistive technology", (t
     assert.equal(icon.querySelector("title")?.textContent, label);
     assert.equal(view.getAllByRole("img").length, 1);
     if (label === "Needs input") assert.ok(icon.classList.contains("input"));
-    if (label === "Interrupted")
+
+    if (label === "Interrupted") {
       assert.ok(icon.classList.contains("interrupted"));
+    }
   }
 });
 

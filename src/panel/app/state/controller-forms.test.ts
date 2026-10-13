@@ -250,19 +250,25 @@ test("New task offers the chat project only when auto-add is on and adds it befo
     await flush();
     const dialog = controller.getSnapshot().dialog;
     assert.equal(dialog?.kind, "delegate");
-    if (dialog?.kind === "delegate")
+
+    if (dialog?.kind === "delegate") {
       assert.equal(dialog.repository, auto ? "/repo/chat" : "/repo/a");
+    }
+
     // A registered project never triggers registration.
     await controller.addChatProjectForTask("/repo/a");
 
     transport.handler = (name) => {
-      if (name === "list_agent_projects")
+      if (name === "list_agent_projects") {
         return [
           ...transport.projects,
           { repository: "/repo/chat", kind: "repository" },
         ];
-      if (name === "register_user_agent_project")
+      }
+
+      if (name === "register_user_agent_project") {
         return { repository: "/repo/chat", kind: "repository" };
+      }
 
       return undefined;
     };

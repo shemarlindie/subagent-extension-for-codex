@@ -27,7 +27,7 @@ interface FieldValueProps {
 
 function FieldValue({ name, value, depth }: FieldValueProps): ReactNode {
   if (typeof value === "number" && Number.isFinite(value)) {
-    if (name.endsWith("_usd"))
+    if (name.endsWith("_usd")) {
       return (
         <span>
           {new Intl.NumberFormat(undefined, {
@@ -37,14 +37,24 @@ function FieldValue({ name, value, depth }: FieldValueProps): ReactNode {
           }).format(value)}
         </span>
       );
-    if (name.endsWith("_ms"))
+    }
+
+    if (name.endsWith("_ms")) {
       return <span>{(value / 1000).toLocaleString()} s</span>;
-    if (name === "elapsed_time_seconds")
+    }
+
+    if (name === "elapsed_time_seconds") {
       return <span>{value.toLocaleString()} s</span>;
-    if (name === "utilization")
+    }
+
+    if (name === "utilization") {
       return <span>{(value * 100).toLocaleString()}%</span>;
-    if (name === "resetsAt" || name === "overageResetsAt")
+    }
+
+    if (name === "resetsAt" || name === "overageResetsAt") {
       return <span>{new Date(value * 1000).toLocaleString()}</span>;
+    }
+
     if (name.includes("tokens")) return <span>{value.toLocaleString()}</span>;
   }
 
@@ -58,8 +68,10 @@ function FieldValue({ name, value, depth }: FieldValueProps): ReactNode {
       "stdout",
       "stderr",
     ].includes(name)
-  )
+  ) {
     return <pre>{value}</pre>;
+  }
+
   if (
     typeof value === "string" &&
     [
@@ -73,8 +85,9 @@ function FieldValue({ name, value, depth }: FieldValueProps): ReactNode {
       "overageDisabledReason",
       "stop_reason",
     ].includes(name)
-  )
+  ) {
     return <span>{label(value)}</span>;
+  }
 
   return <ActivityValue value={value} depth={depth} />;
 }
@@ -92,10 +105,14 @@ export function ActivityValue({
   if (value === undefined) return null;
   if (value === null) return <span className="muted">None</span>;
   if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;
-  if (typeof value !== "object")
+
+  if (typeof value !== "object") {
     return <span className="activity-text">{String(value)}</span>;
+  }
+
   if (depth > MAX_ACTIVITY_DEPTH) return <NestedContentOmitted />;
-  if (Array.isArray(value))
+
+  if (Array.isArray(value)) {
     return value.length ? (
       <ul className="activity-values">
         {value.map((item, index) => (
@@ -107,6 +124,8 @@ export function ActivityValue({
     ) : (
       <span className="muted">None</span>
     );
+  }
+
   const fields = Object.entries(value).filter(([, item]) => item !== undefined);
   if (!fields.length) return null;
 

@@ -528,23 +528,28 @@ test("leaving settings with unsaved edits asks before discarding them", async (t
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
     configurable: true,
     value(this: HTMLElement, options?: boolean | ScrollIntoViewOptions) {
-      if (!this.matches("[data-task]"))
+      if (!this.matches("[data-task]")) {
         scrolls.push({ element: this, options });
+      }
     },
   });
 
   t.onTestFinished(() => {
-    if (originalMatchMedia)
+    if (originalMatchMedia) {
       Object.defineProperty(window, "matchMedia", originalMatchMedia);
-    else delete (window as Partial<Window>).matchMedia;
+    } else {
+      delete (window as Partial<Window>).matchMedia;
+    }
 
-    if (originalScroll)
+    if (originalScroll) {
       Object.defineProperty(
         HTMLElement.prototype,
         "scrollIntoView",
         originalScroll,
       );
-    else delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+    } else {
+      delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+    }
   });
 
   const { transport, user } = await setup(t, (transport) =>

@@ -44,13 +44,15 @@ export async function serve({
   const release = lease(data);
   process.once("exit", release);
   const processIdentity = inspectProcessIdentity(process.pid);
+
   if (
     !processIdentity &&
     (process.platform === "linux" || process.platform === "darwin")
-  )
+  ) {
     console.error(
       "Could not record this service's process identity; a later launcher may require manual cleanup.",
     );
+  }
 
   const serviceFile = join(data, "service.json");
   const temporaryServiceFile = `${serviceFile}.${process.pid}.tmp`;
@@ -76,8 +78,9 @@ export async function serve({
     process.env.CODEX_SUBAGENT_EXTENSION_CONCURRENCY ?? 3,
   );
 
-  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 20)
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 20) {
     throw new Error("Concurrency must be between 1 and 20");
+  }
 
   const c = new Control(
     store,
@@ -87,10 +90,12 @@ export async function serve({
   );
 
   c.projects = new Projects(store.database, c.workspaces);
+
   for (const root of JSON.parse(
     process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS ?? "[]",
-  ))
+  )) {
     await c.projects.register(resolve(root), "parent");
+  }
 
   const auth = new Auth(token);
 
@@ -135,10 +140,11 @@ export async function serve({
     `Codex subagent extension service: ${origin}\nLogin token ${tokenSource}`,
   );
 
-  if (network)
+  if (network) {
     console.error(
       `Network listener: 0.0.0.0:${port}\n${lanOrigins.join("\n")}`,
     );
+  }
 
   const prune = setInterval(() => auth.prune(), 60000);
   let closing: Promise<void> | undefined;

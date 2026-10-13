@@ -15,7 +15,7 @@ export function MarkdownImage({
   const [failed, setFailed] = useState<string>();
   const source = typeof src === "string" ? src : undefined;
 
-  if (!loadableImage(source) || failed === source)
+  if (!loadableImage(source) || failed === source) {
     return (
       // A data URI is too long to be a useful tooltip.
       <span
@@ -25,6 +25,7 @@ export function MarkdownImage({
         {alt || "Image"}
       </span>
     );
+  }
 
   return (
     <img

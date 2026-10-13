@@ -133,11 +133,12 @@ export async function locateClaudeCli(
     environment.platform === "win32" ? win32.isAbsolute : isAbsolute;
 
   if (override) {
-    if (!absolute(override))
+    if (!absolute(override)) {
       return {
         problem: "invalid_override",
         message: `${claudePathVariable} must be an absolute path to the Claude Code executable; it is "${override}".`,
       };
+    }
 
     try {
       return { path: await realpath(override) };
@@ -178,18 +179,22 @@ export function compareVersions(a: string, b: string) {
   const left = a.split(".").map(Number);
   const right = b.split(".").map(Number);
 
-  for (let i = 0; i < 3; i++)
+  for (let i = 0; i < 3; i++) {
     if (left[i] !== right[i]) return left[i]! - right[i]!;
+  }
 
   return 0;
 }
 
 /** The update step for how this copy of Claude Code was installed. */
 function updateStep(path: string) {
-  if (/[\\/]Caskroom[\\/]/.test(path))
+  if (/[\\/]Caskroom[\\/]/.test(path)) {
     return "brew upgrade --cask claude-code (Homebrew installs don't update themselves)";
-  if (/[\\/]node_modules[\\/]/.test(path))
+  }
+
+  if (/[\\/]node_modules[\\/]/.test(path)) {
     return "npm install -g @anthropic-ai/claude-code@stable";
+  }
 
   return "claude update";
 }
@@ -212,8 +217,9 @@ function versionOutput(path: string, timeout: number) {
 
 /** Explains why `--version` could not run: a timeout, or the error it raised. */
 function unlaunchableReason(error: unknown, timeout: number) {
-  if ((error as { killed?: boolean }).killed)
+  if ((error as { killed?: boolean }).killed) {
     return `\`--version\` did not finish within ${timeout / 1000} seconds`;
+  }
 
   return error instanceof Error ? error.message : String(error);
 }
@@ -239,19 +245,21 @@ export async function validateClaudeCli(
 
   const version = parseClaudeVersion(output);
 
-  if (!version)
+  if (!version) {
     return failure(
       "unrecognized",
       `${path} --version printed "${output.trim().slice(0, 200)}", not a Claude Code release version. Install a supported release (${supportedRange}); prereleases aren't supported.`,
       { path },
     );
+  }
 
-  if (compareVersions(version, claudeCliSupport.minimum) < 0)
+  if (compareVersions(version, claudeCliSupport.minimum) < 0) {
     return failure(
       "too_old",
       `Claude Code ${version} at ${path} is older than the supported ${supportedRange}. Update it with ${updateStep(path)}, or set ${claudePathVariable} to a supported copy.`,
       { path, version },
     );
+  }
 
   return { ready: true, path, version, supported: supportedRange };
 }
@@ -295,8 +303,9 @@ export class ClaudeCli {
 
     const now = Date.now();
 
-    if (this.cache?.identity === identity && this.cache.expires > now)
+    if (this.cache?.identity === identity && this.cache.expires > now) {
       return this.cache.status;
+    }
 
     const status = this.validate(located.path);
     const entry = { identity, expires: now + FRESH_MS, status };

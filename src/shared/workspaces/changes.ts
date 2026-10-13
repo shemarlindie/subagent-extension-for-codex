@@ -165,8 +165,9 @@ export function diffPage(parts: string[], start: number, pageChars: number) {
   while (
     end < parts.length &&
     (end === start || size + parts[end].length <= pageChars)
-  )
+  ) {
     size += parts[end++].length;
+  }
 
   return { diff: parts.slice(start, end).join(""), end };
 }

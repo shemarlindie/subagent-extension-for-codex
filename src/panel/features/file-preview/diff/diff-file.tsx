@@ -147,19 +147,21 @@ function DiffRows({ file, language, emptyNote }: DiffRowsProps) {
 
 /** A hunk header, a note, or a line of code, keyed by its position in the file. */
 function renderDiffRow(row: DiffRow, index: number, language?: string) {
-  if (row.kind === "hunk")
+  if (row.kind === "hunk") {
     return (
       <div className="diff-hunk" key={index}>
         {row.content}
       </div>
     );
+  }
 
-  if (row.kind === "note")
+  if (row.kind === "note") {
     return (
       <div className="diff-note" key={index}>
         {row.content}
       </div>
     );
+  }
 
   return (
     <div className={`diff-row ${row.type}`} key={index}>

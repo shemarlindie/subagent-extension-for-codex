@@ -53,11 +53,12 @@ function setup(initialNarrow = false) {
   // jsdom does not perform flex layout; model 1000px of panel space plus an 8px separator.
   vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(
     function (this: HTMLElement) {
-      if (this.hasAttribute("data-panel"))
+      if (this.hasAttribute("data-panel")) {
         return (
           (Number(this.style.flexGrow) > 1 ? Number(this.style.flexGrow) : 50) *
           10
         );
+      }
 
       if (this.hasAttribute("data-group")) return 1008;
       if (this.hasAttribute("data-separator")) return 8;
@@ -77,11 +78,12 @@ function setup(initialNarrow = false) {
       if (
         this.id === "task-inspector-panel" ||
         this.hasAttribute("data-separator")
-      )
+      ) {
         return (
           ((this.parentElement?.querySelector("[data-panel]") as HTMLElement)
             ?.offsetWidth ?? 0) + (this.id === "task-inspector-panel" ? 8 : 0)
         );
+      }
 
       return 0;
     },

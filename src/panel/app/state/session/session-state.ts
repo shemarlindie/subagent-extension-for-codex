@@ -79,14 +79,16 @@ export class SessionStateStore {
     patch: Partial<SessionState<S>>,
   ) {
     const entry = this.entry(scope, id);
+
     if (
       Object.keys(patch).every((key) => {
         const field = key as keyof SessionState<S>;
 
         return Object.is(entry.value[field], patch[field]);
       })
-    )
+    ) {
       return;
+    }
 
     entry.value = { ...entry.value, ...patch };
     entry.listeners.forEach((listener) => listener());
@@ -111,6 +113,8 @@ export class SessionStateStore {
     if (entry.listeners.size) {
       entry.value = defaults[scope]() as SessionState<S>;
       entry.listeners.forEach((listener) => listener());
-    } else this.entries[scope].delete(id);
+    } else {
+      this.entries[scope].delete(id);
+    }
   }
 }

@@ -143,8 +143,10 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
   );
 
   const until = async (done: () => boolean) => {
-    for (let i = 0; i < 300 && !done(); i++)
+    for (let i = 0; i < 300 && !done(); i++) {
       await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
     assert.ok(done(), "Timed out");
   };
 

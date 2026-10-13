@@ -34,7 +34,8 @@ export class Auth {
   }
 
   prune() {
-    for (const [key, s] of this.sessions)
+    for (const [key, s] of this.sessions) {
       if (s.expires < Date.now()) this.sessions.delete(key);
+    }
   }
 }

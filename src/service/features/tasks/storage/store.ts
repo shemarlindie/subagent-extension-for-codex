@@ -44,8 +44,9 @@ export class Store {
    * rollback they hear nothing, and saved tasks get back their `updated_at`.
    */
   transaction<T>(fn: () => T): T {
-    if (this.saved)
+    if (this.saved) {
       throw new Error("A transaction is already open; run this work inside it");
+    }
 
     const saved: [Task, string][] = [];
     this.saved = saved;
@@ -141,12 +142,13 @@ export class Store {
    * still run; consumers catch up on what they missed from the database.
    */
   private notify(e: Event, owner: string) {
-    for (const listener of this.bus.listeners("event"))
+    for (const listener of this.bus.listeners("event")) {
       try {
         listener(e, owner);
       } catch (error) {
         console.error("Event listener failed", error);
       }
+    }
   }
 
   events(id: string, owner: string, after = 0): Event[] {

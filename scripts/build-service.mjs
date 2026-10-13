@@ -41,10 +41,11 @@ const forbidden = Object.keys(inputs).filter(
   (path) => /^(dev|tests|src\/panel)\//.test(path) || testModule.test(path),
 );
 
-if (forbidden.length)
+if (forbidden.length) {
   throw new Error(
     `Backend bundle includes non-production code:\n${forbidden.join("\n")}`,
   );
+}
 
 // Only Node built-ins stay external; supports-color is debug's optional probe, which falls back when it is missing.
 const builtins = new Set(builtinModules);
@@ -60,10 +61,11 @@ const externals = new Set(
 
 const unexpected = [...externals].filter((path) => !allowedExternal(path));
 
-if (unexpected.length)
+if (unexpected.length) {
   throw new Error(
     `Backend bundle leaves packages external:\n${unexpected.join("\n")}`,
   );
+}
 
 // Bundling drops the packages' own license files, so collect them into one notice.
 const packageDirectory = (path) =>

@@ -90,8 +90,9 @@ test("the old one-shot tools are gone and the conversation tools replace them", 
     "remove_user_agent_queued_message",
     "resume_user_agent_queue",
     "clear_user_agent_queue",
-  ])
+  ]) {
     assert.ok(names.includes(name), name);
+  }
 
   for (const name of [
     "continue_agent_task",
@@ -99,8 +100,9 @@ test("the old one-shot tools are gone and the conversation tools replace them", 
     "get_agent_result",
     "cancel_agent_task",
     "retry_agent_task",
-  ])
+  ]) {
     assert.ok(!names.includes(name), name);
+  }
 });
 
 test("a parent reads replies by long poll and sends follow-ups as messages", async () => {

@@ -115,8 +115,10 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
   assert.deepEqual(
     items.map((item) => {
       if (item.kind === "message") return [item.kind, item.id];
-      if (item.kind === "outcome")
+
+      if (item.kind === "outcome") {
         return [item.kind, item.turn, item.outcome, item.error, item.event_id];
+      }
 
       return [item.kind, item.note];
     }),

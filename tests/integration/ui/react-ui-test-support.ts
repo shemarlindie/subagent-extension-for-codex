@@ -299,18 +299,20 @@ export async function setup(
 
   if (options.displayMode) transport.host.displayMode = options.displayMode;
   configure?.(transport);
-  if (options.conversation)
+
+  if (options.conversation) {
     transport.tasks = transport.tasks.map((task) => ({
       ...task,
       conversation_id: options.conversation,
     }));
+  }
 
   const controller = new Controller(transport, {
     hidden: () => false,
     wide: () => options.wide ?? true,
   });
 
-  if (options.scoped || options.conversation)
+  if (options.scoped || options.conversation) {
     controller.applyScope(
       {
         panel_scope: {
@@ -320,6 +322,8 @@ export async function setup(
       },
       false,
     );
+  }
+
   if (options.start !== false) await controller.start();
 
   function Harness() {
@@ -366,10 +370,14 @@ function mockPanelGeometry() {
     .mockImplementation(function (this: HTMLElement) {
       if (this.hasAttribute("data-group")) return new DOMRect(0, 0, 1004, 600);
       if (this.id === "task-rail-panel") return new DOMRect(0, 0, 245, 600);
-      if (this.hasAttribute("data-separator"))
+
+      if (this.hasAttribute("data-separator")) {
         return new DOMRect(245, 0, 4, 600);
-      if (this.id === "task-inspector-panel")
+      }
+
+      if (this.id === "task-inspector-panel") {
         return new DOMRect(249, 0, 755, 600);
+      }
 
       return new DOMRect(0, 0, 0, 0);
     });
@@ -432,14 +440,18 @@ export function configureModelDefaults(
 
   transport.tool = async <T>(name: string, args = {}) => {
     const result = await original<any>(name, args);
-    if (name === "get_agent_settings")
+
+    if (name === "get_agent_settings") {
       return { ...result, values: { ...result.values, ...defaults } } as T;
-    if (name === "list_available_workers")
+    }
+
+    if (name === "list_available_workers") {
       return result.map((worker: any) => ({
         ...worker,
         profiles: ["reviewer", "researcher"],
         ...(models ? { models } : {}),
       })) as T;
+    }
 
     return result as T;
   };
@@ -460,13 +472,14 @@ export function serveSettings(
       return { values: {} } as T;
     }
 
-    if (name === "get_agent_settings")
+    if (name === "get_agent_settings") {
       return {
         schema: { type: "object", properties: {} },
         values: {},
         defaults: {},
         ...document,
       } as T;
+    }
 
     return original<T>(name, args);
   };

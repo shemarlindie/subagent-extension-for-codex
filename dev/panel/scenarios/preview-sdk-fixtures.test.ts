@@ -115,8 +115,9 @@ test("fixture SDK messages cover every kind the SDK defines", () => {
     }),
   );
 
-  for (const kind of Object.keys(sdkKinds))
+  for (const kind of Object.keys(sdkKinds)) {
     assert.ok(seen.has(kind), `no fixture for SDK message kind ${kind}`);
+  }
 });
 
 test("fixture events match what the provider derives from their SDK message", () => {
@@ -163,85 +164,124 @@ test("fixture events match what the provider derives from their SDK message", ()
 
 test("service events use known types and cover the service's lifecycle", () => {
   const seen = new Set(previewEvents.map((event) => event.type));
-  for (const event of previewEvents)
+
+  for (const event of previewEvents) {
     assert.ok(
       providerTypes.has(event.type) || serviceTypes.has(event.type),
       `${event.task_id}#${event.id} has unknown event type ${event.type}`,
     );
-  for (const type of serviceTypes)
+  }
+
+  for (const type of serviceTypes) {
     assert.ok(seen.has(type), `no fixture of service event ${type}`);
+  }
 });
 
 test("service event payloads match what the service emits", () => {
   const payload = (type: string) =>
     previewEvents.filter((event) => event.type === type).map((e) => e.data);
 
-  for (const data of payload("agent.input_required"))
+  for (const data of payload("agent.input_required")) {
     assert.deepEqual(Object.keys(data), ["request"]);
+  }
+
   for (const { request } of payload("agent.input_required") as {
     request: Record<string, unknown>;
-  }[])
+  }[]) {
     assert.deepEqual(Object.keys(request).sort(), [
       "id",
       "input",
       "kind",
       "tool",
     ]);
-  for (const data of payload("agent.input_submitted"))
+  }
+
+  for (const data of payload("agent.input_submitted")) {
     assert.deepEqual(Object.keys(data), ["approved"]);
-  for (const data of payload("agent.input_decision"))
+  }
+
+  for (const data of payload("agent.input_decision")) {
     assert.deepEqual(Object.keys(data).sort(), [
       "approved",
       "authority",
       "request_id",
     ]);
-  for (const data of payload("task.started"))
+  }
+
+  for (const data of payload("task.started")) {
     assert.deepEqual(Object.keys(data), ["turn"]);
-  for (const data of payload("agent.reply"))
+  }
+
+  for (const data of payload("agent.reply")) {
     assert.deepEqual(Object.keys(data), [
       "text",
       "turn",
       "start_tree",
       "end_tree",
     ]);
-  for (const data of payload("task.completed"))
+  }
+
+  for (const data of payload("task.completed")) {
     assert.deepEqual(Object.keys(data), ["reply"]);
-  for (const data of payload("task.failed"))
+  }
+
+  for (const data of payload("task.failed")) {
     assert.deepEqual(Object.keys(data), ["error"]);
-  for (const data of payload("task.waiting"))
+  }
+
+  for (const data of payload("task.waiting")) {
     assert.deepEqual(Object.keys(data), ["reason", "dependency_id"]);
-  for (const data of payload("task.instruction"))
+  }
+
+  for (const data of payload("task.instruction")) {
     assert.deepEqual(Object.keys(data), [
       "message_id",
       "message",
       "from",
       "delivery",
     ]);
-  for (const data of payload("task.turn_ended"))
+  }
+
+  for (const data of payload("task.turn_ended")) {
     assert.deepEqual(Object.keys(data), [
       "turn",
       "outcome",
       "runtime_ms",
       "cost_usd",
     ]);
+  }
 
   for (const data of payload("task.queue_changed")) {
     assert.deepEqual(Object.keys(data), ["queue", "paused"]);
-    for (const entry of data.queue as Record<string, unknown>[])
+
+    for (const entry of data.queue as Record<string, unknown>[]) {
       assert.deepEqual(Object.keys(entry), ["message_id", "message", "from"]);
+    }
   }
 
-  for (const type of ["task.steer_taken", "task.message_removed"])
-    for (const data of payload(type))
+  for (const type of ["task.steer_taken", "task.message_removed"]) {
+    for (const data of payload(type)) {
       assert.deepEqual(Object.keys(data), ["message_id"]);
-  for (const data of payload("task.session_started"))
+    }
+  }
+
+  for (const data of payload("task.session_started")) {
     assert.deepEqual(Object.keys(data), ["reason"]);
-  for (const data of payload("task.worktree_recreated"))
+  }
+
+  for (const data of payload("task.worktree_recreated")) {
     assert.deepEqual(Object.keys(data), ["from"]);
-  for (const data of payload("task.control_requested"))
+  }
+
+  for (const data of payload("task.control_requested")) {
     assert.deepEqual(Object.keys(data), ["status"]);
-  for (const data of payload("task.worktree_removed"))
+  }
+
+  for (const data of payload("task.worktree_removed")) {
     assert.deepEqual(Object.keys(data), ["path", "branch", "forced"]);
-  for (const data of payload("task.branch_deleted"))
+  }
+
+  for (const data of payload("task.branch_deleted")) {
     assert.deepEqual(Object.keys(data), ["branch"]);
+  }
 });

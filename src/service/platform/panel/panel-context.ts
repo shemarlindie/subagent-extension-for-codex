@@ -39,12 +39,14 @@ export async function resolvePanelContext(
 ) {
   args = (await withHostRepository(c, args)) as PanelContextInput;
   const target = args.task_id ? c.store.get(args.task_id, owner) : undefined;
+
   if (
     target &&
     args.conversation_id != null &&
     target.conversation_id !== args.conversation_id
-  )
+  ) {
     throw new Error("Task belongs to a different conversation");
+  }
 
   const conversationId =
     args.conversation_id === null
@@ -70,10 +72,13 @@ export async function resolvePanelContext(
     }
   }
 
-  if (target && repository !== target.repository)
+  if (target && repository !== target.repository) {
     throw new Error("Task belongs to a different repository");
-  if (target && args.revision && args.revision !== target.revision)
+  }
+
+  if (target && args.revision && args.revision !== target.revision) {
     throw new Error("Task uses a different revision");
+  }
 
   const candidate =
     !args.repository && !target && args.conversation_id !== null

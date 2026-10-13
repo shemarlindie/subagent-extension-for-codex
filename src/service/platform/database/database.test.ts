@@ -271,10 +271,11 @@ test("removing webhooks preserves tasks and activity while dropping populated de
 
   assert.ok(removal > 0);
 
-  for (const name of migrationNames.slice(0, removal))
+  for (const name of migrationNames.slice(0, removal)) {
     cpSync(join(migrationsFolder, name), join(older, name), {
       recursive: true,
     });
+  }
 
   const before = openDatabase(path, older);
 
@@ -359,10 +360,11 @@ test("removing native forms discards pending requests and preserves task activit
 
   assert.ok(removal > 0);
 
-  for (const name of names.slice(0, removal))
+  for (const name of names.slice(0, removal)) {
     cpSync(join(migrationsFolder, name), join(older, name), {
       recursive: true,
     });
+  }
 
   const before = openDatabase(path, older);
 

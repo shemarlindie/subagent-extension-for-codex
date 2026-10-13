@@ -142,13 +142,16 @@ test("current repository uses HEAD and includes staged, unstaged and untracked e
     assert.deepEqual(await readdir(s.workspaces.root), []);
     // The start snapshot holds the user's uncommitted work.
     const diff = await s.workspaces.diff(s.repo, t.base_commit!, t.start_tree!);
+
     for (const content of [
       "staged content",
       "unstaged content",
       "untracked content",
       "new file.txt",
-    ])
+    ]) {
       assert.ok(diff.includes(content), content);
+    }
+
     assert.equal(s.git("status", "--porcelain"), before);
   } finally {
     await s.close();
@@ -211,8 +214,9 @@ test("current repository review receives the working tree diff in its provider p
       "staged content",
       "unstaged content",
       "untracked content",
-    ])
+    ]) {
       assert.ok(receivedPrompt.includes(content), content);
+    }
 
     // The task's own changes leave out the user's earlier edits.
     const changes = await s.c.workspaces.changes(
@@ -457,8 +461,11 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
     assert.ok((receivedPrompt as string).includes("unstaged content"));
     assert.ok((receivedPrompt as string).includes("untracked content"));
     assert.ok(Array.isArray(options!.tools));
-    for (const tool of ["Edit", "Write", "Bash"])
+
+    for (const tool of ["Edit", "Write", "Bash"]) {
       assert.ok(!(options!.tools as string[]).includes(tool));
+    }
+
     const hook = options!.hooks!.PreToolUse![0].hooks[0];
     const signal = new AbortController().signal;
 

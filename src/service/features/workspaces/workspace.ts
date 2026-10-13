@@ -53,10 +53,11 @@ function changesBase(t: Task, scope: ChangeScope) {
   const base = scope === "turn" ? t.turn_start_tree : taskBase(t);
 
   // Without its starting snapshot, there is nothing to compare against.
-  if (!base)
+  if (!base) {
     throw new Error(
       "This task has no change snapshot, so its changes aren't available.",
     );
+  }
 
   return base;
 }
@@ -167,7 +168,7 @@ export class Workspaces {
       // the same as from HEAD, since `add -A` stages the working tree either
       // way (and in a sparse checkout leaves files outside the sparse set as
       // committed). The copy is never written back.
-      if (await this.copyIndex(cwd, index))
+      if (await this.copyIndex(cwd, index)) {
         try {
           // `add -A` skips files marked assume-unchanged, so the copy drops
           // the mark; `ls-files -v` tags them with a lowercase letter.
@@ -178,11 +179,13 @@ export class Workspaces {
             .map((entry) => entry.slice(2));
 
           // Paths go on standard input, so any number of them fits.
-          if (assumed.length)
+          if (assumed.length) {
             await run(
               ["update-index", "--no-assume-unchanged", "-z", "--stdin"],
               assumed.join("\0"),
             );
+          }
+
           await run(["add", "-A"]);
 
           return (await run(["write-tree"])).trim();
@@ -191,6 +194,7 @@ export class Workspaces {
           // merge conflict. A failure here still gets a snapshot, from HEAD.
           await rm(index, { force: true });
         }
+      }
 
       // Used when the checkout has no index file, or the copy failed above.
       // The tree is the same; starting from HEAD only costs a hash of every
@@ -231,13 +235,14 @@ export class Workspaces {
       .split("\n")
       .filter(Boolean);
 
-    if (refs.length)
+    if (refs.length) {
       await git(
         t.repository,
         ["update-ref", "--stdin"],
         undefined,
         refs.map((ref) => `delete ${ref}\n`).join(""),
       );
+    }
   }
 
   /**
@@ -289,18 +294,25 @@ export class Workspaces {
 
         return !p.startsWith("..") && !isAbsolute(p);
       })
-    )
+    ) {
       throw new Error("Repository outside allowed roots");
-    if ((await git(actual, ["rev-parse", "--show-toplevel"])).trim() !== actual)
+    }
+
+    if (
+      (await git(actual, ["rev-parse", "--show-toplevel"])).trim() !== actual
+    ) {
       throw new Error("Use repository root");
+    }
 
     return actual;
   }
 
   /** Creates the task's workspace; worktrees get branch `<prefix><task-id>`. */
   async create(t: Task, branchPrefix = "agent/") {
-    if (t.workspace_strategy === "current_repo" && t.revision !== "HEAD")
+    if (t.workspace_strategy === "current_repo" && t.revision !== "HEAD") {
       throw new Error("Current repository workspace requires revision HEAD");
+    }
+
     t.repository = await this.repository(t.repository);
 
     t.base_commit = (
@@ -380,8 +392,9 @@ export class Workspaces {
       t.workspace_strategy === "current_repo" &&
       !t.end_tree &&
       TURN_ENDED.includes(t.status)
-    )
+    ) {
       return { state: "end_unrecorded" };
+    }
 
     return {
       cwd: t.workspace!,
@@ -405,12 +418,13 @@ export class Workspaces {
     const base = changesBase(t, scope);
     const source = await this.changesSource(t);
 
-    if (!("cwd" in source))
+    if (!("cwd" in source)) {
       return {
         ...empty,
         state: source.state,
         ...(t.branch ? { branch: t.branch } : {}),
       };
+    }
 
     const page = cursor ? decodeCursor(cursor) : undefined;
     if (page && page.base !== base) throw new Error("Stale changes cursor");
@@ -451,12 +465,13 @@ export class Workspaces {
     if (!t.workspace) return empty;
     const source = await this.changesSource(t);
 
-    if (!("cwd" in source) || source.state)
+    if (!("cwd" in source) || source.state) {
       return {
         ...empty,
         state: source.state,
         ...(t.branch ? { branch: t.branch } : {}),
       };
+    }
 
     const page = cursor ? decodeCursor(cursor) : undefined,
       head = await headTree(source.cwd);
@@ -571,9 +586,11 @@ export class Workspaces {
     });
 
     // Maps keep insertion order, so the first entries are the oldest.
-    for (const entry of this.baselines.keys())
-      if (this.baselines.size > BASELINE_CACHE_SIZE)
+    for (const entry of this.baselines.keys()) {
+      if (this.baselines.size > BASELINE_CACHE_SIZE) {
         this.baselines.delete(entry);
+      }
+    }
 
     return base;
   }
@@ -663,8 +680,9 @@ export class Workspaces {
     const key = `${cwd}\0${base}\0${current}`,
       now = Date.now();
 
-    for (const [entry, { expires }] of this.diffs)
+    for (const [entry, { expires }] of this.diffs) {
       if (expires <= now) this.diffs.delete(entry);
+    }
 
     const cached = this.diffs.get(key);
     if (cached) return cached.diff;
@@ -679,8 +697,9 @@ export class Workspaces {
     });
 
     // Maps keep insertion order, so the first entries are the oldest.
-    for (const entry of this.diffs.keys())
+    for (const entry of this.diffs.keys()) {
       if (this.diffs.size > DIFF_CACHE_SIZE) this.diffs.delete(entry);
+    }
 
     return diff;
   }
@@ -702,16 +721,19 @@ export class Workspaces {
     if (!t.workspace) throw new Error("This task hasn't changed any files.");
     const source = await this.changesSource(t);
 
-    if (!("cwd" in source))
+    if (!("cwd" in source)) {
       throw new Error(
         source.state === "end_unrecorded"
           ? END_UNRECORDED
           : `The worktree and its branch ${t.branch} were deleted, so this file is unavailable.`,
       );
-    if (uncommitted && source.state)
+    }
+
+    if (uncommitted && source.state) {
       throw new Error(
         `The worktree was removed, so nothing is uncommitted; its commits are on branch ${t.branch}.`,
       );
+    }
 
     // Later parts read the tree the first part read.
     const { tree, offset } = cursor
@@ -750,10 +772,11 @@ export class Workspaces {
       ),
     );
 
-    if (!changed.flat().includes(path))
+    if (!changed.flat().includes(path)) {
       throw new Error(
         `${path} is not among this task's ${uncommitted ? "uncommitted " : ""}changes.`,
       );
+    }
 
     const object = `${tree}:${path}`;
 
@@ -762,14 +785,16 @@ export class Workspaces {
         () => true,
         () => false,
       ))
-    )
+    ) {
       return { path, state: "deleted", size: 0 };
+    }
 
     const bytes = await gitBytes(source.cwd, ["cat-file", "blob", object]),
       image = imageMime(path);
 
-    if (!image && isBinary(bytes))
+    if (!image && isBinary(bytes)) {
       return { path, state: "binary", size: bytes.length };
+    }
 
     const content = Buffer.from(bytes).toString(image ? "base64" : "utf8"),
       end = offset + pageChars;
@@ -792,10 +817,13 @@ export class Workspaces {
    * changes are listed instead of removed, unless `force` discards them.
    */
   async removeWorktree(t: Task, force = false) {
-    if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch)
+    if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch) {
       throw new Error("This task has no worktree to remove.");
-    if (!(await exists(t.workspace)))
+    }
+
+    if (!(await exists(t.workspace))) {
       throw new Error("The worktree was already removed.");
+    }
 
     if (!force) {
       // "XY path" entries; a rename or copy is followed by its old path.
@@ -830,10 +858,14 @@ export class Workspaces {
    * snapshot refs, since nothing reads its changes after that.
    */
   async deleteBranch(t: Task) {
-    if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch)
+    if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch) {
       throw new Error("This task has no branch to delete.");
-    if (await exists(t.workspace))
+    }
+
+    if (await exists(t.workspace)) {
       throw new Error("Remove the worktree before deleting its branch.");
+    }
+
     await git(t.repository, ["branch", "-D", "--end-of-options", t.branch]);
     await this.unpin(t);
   }
@@ -845,11 +877,13 @@ export class Workspaces {
    */
   async discard(t: Task) {
     if (t.workspace_strategy === "worktree" && t.workspace) {
-      if (await exists(t.workspace))
+      if (await exists(t.workspace)) {
         await git(t.repository, ["worktree", "remove", "--force", t.workspace]);
+      }
 
-      if (t.branch && (await this.branchExists(t)))
+      if (t.branch && (await this.branchExists(t))) {
         await git(t.repository, ["branch", "-D", "--end-of-options", t.branch]);
+      }
     }
 
     await this.unpin(t);
@@ -870,8 +904,10 @@ export class Workspaces {
    * base commit. Returns which it came from.
    */
   async recreateWorktree(t: Task): Promise<"branch" | "base"> {
-    if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch)
+    if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch) {
       throw new Error("This task has no worktree to recreate.");
+    }
+
     // Forget a worktree whose directory was deleted without Git.
     await git(t.repository, ["worktree", "prune"]);
     await mkdir(this.root, { recursive: true, mode: 0o700 });

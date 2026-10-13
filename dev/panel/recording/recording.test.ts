@@ -114,8 +114,9 @@ test("a recording keeps nothing from the machine or account it ran on", () => {
     "Private connector",
     "org_level_disabled",
     "utilization",
-  ])
+  ]) {
     assert.ok(!text.includes(secret), secret);
+  }
 
   const started = recorded.events[0].data.raw_response as Record<
     string,

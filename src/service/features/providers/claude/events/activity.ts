@@ -72,13 +72,17 @@ function statusTitle(e: Pick<Event, "type" | "data">) {
     return "Working";
   }
 
-  if (key === "api_retry")
+  if (key === "api_retry") {
     return `Retrying request${typeof d.attempt === "number" ? ` · attempt ${d.attempt}` : ""}`;
+  }
+
   if (key === "compact_boundary") return "Context compacted";
-  if (key === "auth_status")
+
+  if (key === "auth_status") {
     return d.isAuthenticating
       ? "Connecting to Claude"
       : "Authentication updated";
+  }
 
   if (key === "session_state_changed") {
     if (d.state === "requires_action") return "Needs input";
@@ -87,10 +91,12 @@ function statusTitle(e: Pick<Event, "type" | "data">) {
     return "Working";
   }
 
-  if (key === "rate_limit_event")
+  if (key === "rate_limit_event") {
     return object(d.rate_limit_info).status === "rejected"
       ? "Waiting for rate limit reset"
       : "Rate limit updated";
+  }
+
   if (key === "files_persisted") return "Files saved";
   if (key === "plugin_install") return "Updating plugins";
   if (key === "task.queued") return "Queued";
@@ -185,13 +191,16 @@ function textBlocks(content: unknown) {
 
 /** Labels an SDK activity event, or a transcript content row. */
 function activityTitle(e: Pick<Event, "type" | "data">, key: string) {
-  if (e.type === "claude.activity")
+  if (e.type === "claude.activity") {
     return (
       sdkTitles[key] ??
       key.charAt(0).toUpperCase() + key.slice(1).replace(/[_.]/g, " ")
     );
-  if (e.type === "agent.content")
+  }
+
+  if (e.type === "agent.content") {
     return e.data.role === "user" ? "User content" : "Claude content";
+  }
 
   return undefined;
 }
@@ -274,13 +283,15 @@ export function claudeActivityPresentation(
   if (
     key === "rate_limit_event" &&
     object(d.rate_limit_info).status === "rejected"
-  )
+  ) {
     presentation.statusState = "info";
+  }
+
   const toolId = key === "tool_progress" ? string(d.tool_use_id) : undefined;
 
   const operationId = operationIdFor(key, d, toolId);
 
-  if (operationId)
+  if (operationId) {
     presentation.operation = {
       id: operationId,
       kind: toolId ? "tool" : "operation",
@@ -301,6 +312,7 @@ export function claudeActivityPresentation(
           String(d.status ?? object(d.patch).status),
         ),
     };
+  }
 
   if (key === "stream_event") {
     const frame = object(d.event);
@@ -324,11 +336,12 @@ export function claudeActivityPresentation(
       Number.isSafeInteger(index) &&
       index >= 0
     ) {
-      if (frame.type === "content_block_start")
+      if (frame.type === "content_block_start") {
         presentation.stream.update = {
           index,
           block: object(frame.content_block),
         };
+      }
 
       if (frame.type === "content_block_delta") {
         const delta = object(frame.delta);
@@ -356,8 +369,9 @@ export function claudeActivityPresentation(
   if (
     e.type === "claude.activity" &&
     (d.type === "assistant" || d.type === "user")
-  )
+  ) {
     presentation.body = { content: object(d.message).content, error: d.error };
+  }
 
   return presentation;
 }

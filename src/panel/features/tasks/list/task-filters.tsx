@@ -76,8 +76,10 @@ export function TaskFilters() {
         event.ctrlKey ||
         event.altKey ||
         typing(event.target)
-      )
+      ) {
         return;
+      }
+
       event.preventDefault();
       searchRef.current?.focus();
     };
@@ -94,8 +96,9 @@ export function TaskFilters() {
         `[data-filter="${current}"]`,
       );
 
-    if (group && selected)
+    if (group && selected) {
       scrollChildIntoView(group, selected, FILTER_EDGE_GAP);
+    }
   }, [current]);
 
   return (

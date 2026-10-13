@@ -63,9 +63,12 @@ export function mergeActivity(
   const recent = previous.events.filter((event) => event.task_id === taskId);
 
   let events = recent;
-  if (page.events.length)
+
+  if (page.events.length) {
     events = [...recent, ...page.events].slice(-EVENT_TAIL_SIZE);
-  else if (recent.length === previous.events.length) events = previous.events;
+  } else if (recent.length === previous.events.length) {
+    events = previous.events;
+  }
 
   const dropped =
     page.dropped &&

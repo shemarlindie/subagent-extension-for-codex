@@ -74,8 +74,9 @@ function pointer(
     button: 0,
     clientY: 0,
     ...values,
-  }))
+  })) {
     Object.defineProperty(event, key, { value });
+  }
 
   target.dispatchEvent(event);
 }

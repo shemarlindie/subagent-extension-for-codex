@@ -134,11 +134,12 @@ export function recordFixture(
     for (const [from, to] of pairs) text = text.split(from).join(to);
 
     text = text.replace(/req_[A-Za-z0-9]{8,}/g, (id) => {
-      if (!requestIds.has(id))
+      if (!requestIds.has(id)) {
         requestIds.set(
           id,
           `req_preview_${String(++requests).padStart(4, "0")}`,
         );
+      }
 
       return requestIds.get(id)!;
     });
@@ -151,13 +152,15 @@ export function recordFixture(
   const sanitizeValue = (value: unknown): unknown => {
     if (typeof value === "string") return sanitizeText(value);
     if (Array.isArray(value)) return value.map(sanitizeValue);
-    if (value && typeof value === "object")
+
+    if (value && typeof value === "object") {
       return Object.fromEntries(
         Object.entries(value).map(([key, child]) => [
           sanitizeText(key),
           sanitizeValue(child),
         ]),
       );
+    }
 
     return value;
   };
@@ -253,6 +256,8 @@ function scrubRateLimits(value: unknown, start: string) {
         rateLimitType: info.rateLimitType,
         resetsAt: Math.floor(Date.parse(start) / 1000) + 5 * 3600,
       };
-    } else scrubRateLimits(child, start);
+    } else {
+      scrubRateLimits(child, start);
+    }
   }
 }

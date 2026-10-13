@@ -25,10 +25,11 @@ export function findPackageRoot(moduleUrl: string | URL) {
   for (let directory = start; ; directory = dirname(directory)) {
     if (isPackageManifest(join(directory, "package.json"))) return directory;
 
-    if (dirname(directory) === directory)
+    if (dirname(directory) === directory) {
       throw new Error(
         `No ${packageName} package.json found above ${start}; the installation is incomplete`,
       );
+    }
   }
 }
 
@@ -54,8 +55,9 @@ export function readPackageFile(...segments: string[]) {
 }
 
 export function dataDirectory(env = process.env) {
-  if (env.CODEX_SUBAGENT_EXTENSION_DATA)
+  if (env.CODEX_SUBAGENT_EXTENSION_DATA) {
     return resolve(env.CODEX_SUBAGENT_EXTENSION_DATA);
+  }
 
   return join(homedir(), ".local", "share", "codex-subagent-extension");
 }

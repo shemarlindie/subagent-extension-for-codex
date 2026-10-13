@@ -16,12 +16,16 @@ let pending = false;
 export async function browseProject(
   options = { platform: process.platform as string, execute },
 ) {
-  if (options.platform !== "darwin")
+  if (options.platform !== "darwin") {
     throw new Error(
       "Folder browsing is available on macOS. Enter an absolute repository path instead.",
     );
-  if (pending)
+  }
+
+  if (pending) {
     throw new Error("A folder picker is already open on the service host.");
+  }
+
   pending = true;
 
   try {

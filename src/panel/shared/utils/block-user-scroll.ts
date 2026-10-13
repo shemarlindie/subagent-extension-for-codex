@@ -19,8 +19,9 @@ export function blockUserScroll(element: HTMLElement) {
         "PageUp",
         " ",
       ].includes(event.key)
-    )
+    ) {
       event.preventDefault();
+    }
   };
 
   element.addEventListener("wheel", preventWheelScroll, { passive: false });

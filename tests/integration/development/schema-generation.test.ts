@@ -370,11 +370,12 @@ test("rejects duplicate mapping inputs through relative aliases before writing o
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Duplicate.*mapping.*permissions\.ts/i);
 
-  for (const contract of contracts)
+  for (const contract of contracts) {
     assert.equal(
       existsSync(join(directory, `${contract}.generated.ts`)),
       false,
     );
+  }
 });
 
 test("rejects handwritten mappings to generated outputs before writing outputs", (t) => {
@@ -408,9 +409,10 @@ test("rejects handwritten mappings to generated outputs before writing outputs",
     /conflicts with generated output.*panel-contract/i,
   );
 
-  for (const contract of contracts)
+  for (const contract of contracts) {
     assert.equal(
       existsSync(join(directory, `${contract}.generated.ts`)),
       false,
     );
+  }
 });

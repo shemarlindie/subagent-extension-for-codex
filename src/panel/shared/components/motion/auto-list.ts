@@ -23,19 +23,21 @@ export const autoListEffects: AutoAnimationPlugin = (
   // An empty effect finishes at once, so a removed row is cleaned up immediately.
   if (reducedMotion(el)) return new KeyframeEffect(el, [], { duration: 0 });
 
-  if (action === "add")
+  if (action === "add") {
     return new KeyframeEffect(
       el,
       [{ opacity: 0, transform: "translateY(4px)" }, { opacity: 1 }],
       timing,
     );
+  }
 
   // A removed row sits absolutely positioned over the gap while it fades.
-  if (action === "remove")
+  if (action === "remove") {
     return new KeyframeEffect(el, [{ opacity: 1 }, { opacity: 0 }], {
       ...timing,
       duration: MOTION.fast,
     });
+  }
 
   const from = previous!,
     to = next!,

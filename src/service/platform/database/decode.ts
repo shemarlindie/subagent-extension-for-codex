@@ -11,10 +11,11 @@ export function checkStored<T extends z.ZodType>(
 ): z.infer<T> {
   const result = schema.safeParse(value);
 
-  if (!result.success)
+  if (!result.success) {
     throw new Error(
       `Stored ${record} is malformed: ${z.prettifyError(result.error)}`,
     );
+  }
 
   return result.data;
 }

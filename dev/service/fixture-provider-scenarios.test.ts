@@ -120,7 +120,7 @@ test("fixture restrictions and child workers follow configured policy", async ()
     ].join(" "),
   );
 
-  for (const name of restrictions)
+  for (const name of restrictions) {
     assert.ok(
       f.events.some(
         (event) =>
@@ -130,6 +130,7 @@ test("fixture restrictions and child workers follow configured policy", async ()
       ),
       name,
     );
+  }
 
   assert.equal(
     f.events.filter(

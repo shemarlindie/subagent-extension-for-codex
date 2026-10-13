@@ -19,13 +19,14 @@ export function WorktreeForm({ dialog }: WorktreeFormProps) {
     event.preventDefault();
 
     void controller.submit(async () => {
-      if (remove)
+      if (remove) {
         await controller.tool("remove_user_agent_worktree", {
           task_id: task.id,
           force: true,
         });
-      else
+      } else {
         await controller.tool("delete_user_agent_branch", { task_id: task.id });
+      }
 
       await controller.loadChanges();
       await controller.loadCounts();

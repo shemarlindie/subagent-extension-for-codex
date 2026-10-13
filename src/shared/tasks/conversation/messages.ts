@@ -63,8 +63,10 @@ function workerMessageId(e: Event) {
 function workerText(e: Event) {
   const raw = object(e.data.raw_response);
   if (raw.parent_tool_use_id) return undefined;
-  if (e.data.role !== undefined && e.data.role !== "assistant")
+
+  if (e.data.role !== undefined && e.data.role !== "assistant") {
     return undefined;
+  }
 
   return typeof e.data.text === "string" && e.data.text.trim()
     ? e.data.text
@@ -123,8 +125,9 @@ export function conversation(
   ];
 
   for (const e of [...events].sort((a, b) => a.id - b.id)) {
-    if (e.type === "task.started" && typeof e.data.turn === "number")
+    if (e.type === "task.started" && typeof e.data.turn === "number") {
       turn = e.data.turn;
+    }
 
     if (e.type === "task.instruction") {
       const id = String(e.data.message_id ?? `evt_${e.id}`);

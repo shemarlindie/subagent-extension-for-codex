@@ -344,8 +344,11 @@ test("View activity scrolls to a recent turn and reads an older one on its own",
       [2, 5],
     ]) {
       add("task.started", { turn });
-      for (let i = 0; i < count; i++)
+
+      for (let i = 0; i < count; i++) {
         add("agent.message", { role: "assistant", text: `turn ${turn}` });
+      }
+
       add("task.turn_ended", { turn, outcome: "completed" });
       add("task.completed");
     }
@@ -391,7 +394,7 @@ test("View activity scrolls to a recent turn and reads an older one on its own",
   assert.ok(screen.getByText(/Showing the most recent 200 events\./));
 });
 
-for (const outcome of ["failed", "interrupted"] as const)
+for (const outcome of ["failed", "interrupted"] as const) {
   test(`${outcome} chat turns retain their status and error beside the compact summary`, async (t) => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-09T18:00:00Z"));
@@ -454,6 +457,7 @@ for (const outcome of ["failed", "interrupted"] as const)
     assertAbsent(row.querySelector('[aria-label^="Reported cost"]'));
     assert.ok(within(row).getByRole("button", { name: "View activity" }));
   });
+}
 
 test("task and reply text render literally without HTML interpretation", async (t) => {
   const injection = '<img src=x onerror="window.injected=true">';

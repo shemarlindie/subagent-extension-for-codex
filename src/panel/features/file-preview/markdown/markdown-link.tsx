@@ -45,19 +45,21 @@ export function MarkdownLink({
   const controller = useContext(ControllerContext),
     kind = linkKind(href);
 
-  if (kind === "text")
+  if (kind === "text") {
     return (
       <span className="markdown-link-text" title={href || undefined}>
         {children}
       </span>
     );
+  }
 
-  if (kind === "fragment")
+  if (kind === "fragment") {
     return (
       <a {...rest} href={href} onClick={(event) => jumpWithin(event, href!)}>
         {children}
       </a>
     );
+  }
 
   const openLink = controller?.transport.openLink?.bind(controller.transport);
 
