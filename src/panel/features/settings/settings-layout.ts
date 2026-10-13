@@ -1,7 +1,6 @@
 import type {
   HelpPart,
   ModelScope,
-  SettingOption,
   SettingRow,
   SettingSection,
 } from "../../../shared/settings/settings-document";
@@ -9,7 +8,7 @@ import type { SettingValue } from "../../app/state/types";
 
 /** Form logic for the settings dialog: values in and out, summaries, resets. */
 
-export type { HelpPart, ModelScope, SettingOption, SettingRow, SettingSection };
+export type { HelpPart, ModelScope, SettingRow, SettingSection };
 
 /** Form state keeps every value as a string. */
 export type Values = Record<string, string>;
@@ -20,7 +19,7 @@ type Settings = Record<string, SettingValue>;
 export const onKey = (key: string) => `${key}:on`;
 
 /** The setting keys a row edits. */
-export function rowKeys(row: SettingRow): string[] {
+function rowKeys(row: SettingRow): string[] {
   return row.kind === "models"
     ? row.scopes.flatMap((scope) => [scope.model.key, scope.effort.key])
     : [row.key];

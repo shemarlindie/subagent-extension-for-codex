@@ -43,9 +43,6 @@ body[data-expanded-panel="true"] .task-header h1:not(.task-title) {
   overflow: hidden;
   margin: 6px 0;
 }
-body[data-expanded-panel="true"] .notice-expand-text[data-open] {
-  max-height: min(280px, 25dvh);
-}
 body[data-expanded-panel="true"] .task-header .notice {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -53,17 +50,6 @@ body[data-expanded-panel="true"] .task-header .notice {
   align-items: center;
   margin: 12px 0;
   padding: 10px 12px;
-}
-body[data-expanded-panel="true"] .task-header .notice.notice-collapsible {
-  display: block;
-  margin: 0 0 12px;
-  padding: 0;
-}
-body[data-expanded-panel="true"] .notice-trigger {
-  padding: 10px 12px;
-}
-body[data-expanded-panel="true"] .notice-body {
-  padding: 0 12px 12px;
 }
 body[data-expanded-panel="true"] .task-header .notice > * {
   grid-column: 1;

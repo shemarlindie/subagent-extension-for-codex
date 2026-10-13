@@ -8,7 +8,6 @@ import type { Event } from "../../../app/state/types";
 import { formatDuration } from "../list/duration";
 
 export {
-  addDropped,
   type DroppedSummary,
   EVENT_TAIL_SIZE,
 } from "../../../../shared/tasks/activity/activity-tail";

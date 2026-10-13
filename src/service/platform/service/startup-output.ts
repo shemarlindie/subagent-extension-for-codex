@@ -1,4 +1,4 @@
-export type StartupOutputField = { label: string; value: string };
+type StartupOutputField = { label: string; value: string };
 
 export type StartupOutputBlock =
   | { type: "message"; text: string }

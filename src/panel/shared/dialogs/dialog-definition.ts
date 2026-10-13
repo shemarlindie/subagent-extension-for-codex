@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import type { DialogState } from "../../app/state/types";
 
 export type DialogKind = DialogState["kind"];
-export type DialogOf<K extends DialogKind> = Extract<DialogState, { kind: K }>;
+
+type DialogOf<K extends DialogKind> = Extract<DialogState, { kind: K }>;
 
 /** What a dialog variant contributes to the shared `DialogHost` shell. */
 export interface DialogDefinition<K extends DialogKind> {

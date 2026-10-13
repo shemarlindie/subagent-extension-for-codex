@@ -39,7 +39,7 @@ export type ChatNote = {
 };
 
 /** A message in Chat, with the id and event it keeps from the conversation. */
-export type ChatMessage = {
+type ChatMessage = {
   kind: "message";
   id: string;
   event_id: number;
@@ -49,7 +49,7 @@ export type ChatMessage = {
 export type ChatItem = ChatMessage | TurnOutcome | ChatNote;
 
 /** A context compaction, which Claude reports as a system message. */
-export const isCompaction = (e: Event) => {
+const isCompaction = (e: Event) => {
   const raw = e.data.raw_response as Record<string, unknown> | undefined;
 
   return raw?.type === "system" && raw.subtype === "compact_boundary";

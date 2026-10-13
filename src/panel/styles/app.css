@@ -14,7 +14,6 @@
 @import "../shared/dialogs/dialogs.css";
 @import "../shared/forms/async-control.css";
 @import "../shared/forms/form-switch.css";
-@import "../shared/components/notice/notice.css";
 @import "../features/tasks/controls/permission-request.css";
 @import "../features/tasks/controls/questions.css";
 @import "../features/settings/settings.css";

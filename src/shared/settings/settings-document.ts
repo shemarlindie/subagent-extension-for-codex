@@ -20,7 +20,6 @@ export const sectionSchema = settingSectionSchema;
 export type {
   HelpPart,
   ModelScope,
-  SettingOption,
   SettingRow,
   SettingSection,
 } from "./document-contract.js";

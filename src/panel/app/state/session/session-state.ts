@@ -16,7 +16,7 @@ export type TaskSessionState = {
   viewedChanges: ReadonlyMap<string, string>;
 };
 
-export type QuestionSessionState = {
+type QuestionSessionState = {
   draft?: QuestionDraft;
 };
 

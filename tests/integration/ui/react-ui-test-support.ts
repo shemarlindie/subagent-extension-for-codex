@@ -485,7 +485,7 @@ export function serveSettings(
   };
 }
 
-export const effortOptions = [
+const effortOptions = [
   { value: "default", label: "Inherit" },
   { value: "high", label: "high" },
 ];
@@ -520,14 +520,8 @@ export const budgetRow = {
 
 export {
   act,
-  AppShell,
   assert,
-  cleanup,
-  Controller,
-  ControllerContext,
-  createElement,
   describe,
-  render,
   screen,
   SKIPPED_ANSWER,
   test,

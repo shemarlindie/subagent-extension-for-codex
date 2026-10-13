@@ -31,7 +31,7 @@ export type ChangeFixture = {
  * The files a diff starts from, for diffs whose hunks each cover a whole
  * file, as the large fixture diff's do.
  */
-export function preimage(diff: string) {
+function preimage(diff: string) {
   const files: Record<string, string> = {};
 
   for (const file of parseDiff(diff)) {

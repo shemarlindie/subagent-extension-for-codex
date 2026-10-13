@@ -37,15 +37,13 @@ export const claudeEnvironmentSchema = z.enum(["inherit", "filtered"]);
 export const claudeToolsSchema = z.enum(["profile", "all", "restricted"]);
 export const claudePathGuardSchema = z.enum(["profile", "on", "off"]);
 
-export const claudeOverridesSchema = z.object({
-  claude_sandbox: claudeSandboxSchema,
-  claude_environment: claudeEnvironmentSchema,
-  claude_tools: claudeToolsSchema,
-  claude_path_guard: claudePathGuardSchema,
-  claude_subagents: z.boolean(),
-});
-
-export type ClaudeOverrides = z.infer<typeof claudeOverridesSchema>;
+export type ClaudeOverrides = {
+  claude_sandbox: z.infer<typeof claudeSandboxSchema>;
+  claude_environment: z.infer<typeof claudeEnvironmentSchema>;
+  claude_tools: z.infer<typeof claudeToolsSchema>;
+  claude_path_guard: z.infer<typeof claudePathGuardSchema>;
+  claude_subagents: boolean;
+};
 
 // Other Claude Code configuration loads by default; the extension owns the
 // session's native permission mode.
@@ -85,7 +83,7 @@ export function approvalDecider(options: {
   return options.approval_decider ?? "user";
 }
 
-export const permissionLabels: Partial<
+const permissionLabels: Partial<
   Record<ClaudePermissionMode | "inherit", string>
 > = {
   inherit: "Use extension setting",

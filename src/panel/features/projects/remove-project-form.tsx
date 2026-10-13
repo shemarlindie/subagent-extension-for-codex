@@ -11,7 +11,7 @@ type RemoveProjectFormProps = {
   dialog: Extract<DialogState, { kind: "remove-project" }>;
 };
 
-export function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
+function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
   const controller = useController();
   const state = useSnapshot();
   // A reopened confirmation always starts with task records retained.

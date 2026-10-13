@@ -108,7 +108,7 @@ export const TURN_CLOSING_EVENTS = [
 /** Events that begin something else, so a closing event can't follow them. */
 export const TURN_CLOSE_STOPS = ["task.started", "task.turn_ended"];
 
-export const isTurnEnded = (event: Event, turn: number) =>
+const isTurnEnded = (event: Event, turn: number) =>
   event.type === "task.turn_ended" && Number(event.data.turn) === turn;
 
 /**

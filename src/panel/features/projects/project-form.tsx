@@ -12,7 +12,7 @@ interface ProjectFormProps {
   dialog: Extract<DialogState, { kind: "project" }>;
 }
 
-export function ProjectForm({ dialog }: ProjectFormProps) {
+function ProjectForm({ dialog }: ProjectFormProps) {
   const controller = useController(),
     state = useSnapshot();
 

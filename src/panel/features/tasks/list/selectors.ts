@@ -20,10 +20,6 @@ const FILTERS = Object.keys(FILTER_LABELS) as Filter[];
 export const terminal = (task: Task) =>
   ["completed", "failed"].includes(task.status);
 
-/** No turn is running, starting or about to, so a message starts the next one. */
-export const idle = (task: Task) =>
-  ["completed", "failed", "interrupted"].includes(task.status);
-
 export const statusLabel = (task: Task) => {
   if (task.pending_input) return "Needs input";
 
@@ -41,7 +37,7 @@ export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 export const failedStatus = (task: Task) =>
   ["failed", "interrupted"].includes(rowStatus(task).kind);
 
-export const needsInput = (task: Task) => Boolean(task.pending_input);
+const needsInput = (task: Task) => Boolean(task.pending_input);
 
 // One AskUserQuestion call carries every stacked question in `questions`
 // (1-4 in the Claude SDK). A request without them has no questions to show.

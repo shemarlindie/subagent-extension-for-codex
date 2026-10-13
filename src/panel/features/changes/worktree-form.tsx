@@ -10,7 +10,7 @@ type WorktreeFormProps = {
 };
 
 /** Confirms removing a worktree with uncommitted changes, or deleting a branch. */
-export function WorktreeForm({ dialog }: WorktreeFormProps) {
+function WorktreeForm({ dialog }: WorktreeFormProps) {
   const controller = useController(),
     { action, task, files = [] } = dialog,
     remove = action === "remove";

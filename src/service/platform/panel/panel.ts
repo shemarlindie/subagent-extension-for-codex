@@ -14,7 +14,7 @@ import { type PanelContextInput, panelContextInput } from "./panel-context.js";
 
 // Bump the URI when resource metadata changes to invalidate host caches.
 export const panelUri = "ui://codex-subagent-extension/app-v6";
-export const globalPanelToolName = "open_codex_subagent_extension_global";
+const globalPanelToolName = "open_codex_subagent_extension_global";
 
 const entrypoints = {
   entrypoints: [{ type: "thread" }],

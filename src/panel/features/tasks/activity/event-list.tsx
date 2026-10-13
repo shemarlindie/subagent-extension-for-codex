@@ -47,7 +47,7 @@ interface EventListProps {
   focus?: ActivityRowFocus;
 }
 
-export type ActivityRowFocus = { eventId: number; request: number };
+type ActivityRowFocus = { eventId: number; request: number };
 
 // Polls keep the same events array when nothing changed, so a hidden tab skips work.
 export const EventList = memo(function EventList({

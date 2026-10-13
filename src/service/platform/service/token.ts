@@ -3,7 +3,7 @@ import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Generated tokens are 43 characters; overrides must be comparably unguessable.
-export const minimumTokenLength = 32;
+const minimumTokenLength = 32;
 
 export function adminToken(data: string, env = process.env) {
   const override = env.CODEX_SUBAGENT_EXTENSION_TOKEN;

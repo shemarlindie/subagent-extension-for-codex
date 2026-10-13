@@ -12,7 +12,6 @@ export const roles = [
   "security_reviewer",
 ] as const;
 
-export { reasoningLevels } from "./reasoning.js";
 export const modelNameSchema = z.string().trim().max(200);
 export const reasoningSchema = z.enum(["default", ...reasoningLevels]);
 
@@ -132,7 +131,7 @@ export const statuses = [
   "failed",
 ] as const;
 
-export type Status = (typeof statuses)[number];
+type Status = (typeof statuses)[number];
 
 /** Who sent a message: the user through the panel, or the parent agent. */
 export type Sender = InputAuthority;

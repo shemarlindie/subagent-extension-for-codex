@@ -15,7 +15,7 @@ import { Field } from "../../../shared/forms/fields";
 import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
 import { PermissionInputDetails } from "./permission-input-details";
 
-export function PermissionForm({ task }: { task: Task }) {
+function PermissionForm({ task }: { task: Task }) {
   const controller = useController(),
     state = useSnapshot(),
     request = task.pending_input!,

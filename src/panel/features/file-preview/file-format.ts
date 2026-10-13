@@ -184,7 +184,7 @@ export function fileBadge(path: string) {
 }
 
 /** Raster images are base64; SVG is markup. */
-export function isBase64Image(file: PreviewFile) {
+function isBase64Image(file: PreviewFile) {
   const mime = baseMime(file);
 
   return mime.startsWith("image/") && mime !== "image/svg+xml";
@@ -320,7 +320,7 @@ const ESCAPES: Record<string, string> = {
  * quotes but keeps C escapes; octal escapes are UTF-8 bytes. Git quotes every
  * path with a backslash, so a backslash always starts an escape.
  */
-export function unquoteDiffPath(path: string) {
+function unquoteDiffPath(path: string) {
   if (!path.includes("\\")) return path;
 
   const bytes: number[] = [],

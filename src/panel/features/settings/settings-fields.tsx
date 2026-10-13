@@ -44,7 +44,7 @@ export const SettingsContext = createContext<{
 });
 
 /** Help parts in order, with each explicit link to a setting as a button. */
-export function LinkedText({ parts }: { parts: HelpPart[] }) {
+function LinkedText({ parts }: { parts: HelpPart[] }) {
   const settings = useContext(SettingsContext);
 
   return parts.map((part, index) => {

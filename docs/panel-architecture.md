@@ -163,7 +163,7 @@ their user-visible behavior.
 
 ## Shared controls
 
-Banner messages use `Notice`, `CollapsibleNotice` and `NoticeText` from `src/panel/shared/components/notice/notice.tsx`. Pass `tone` (`warning`, the default, `error`, `info` or the accent-free `plain`) rather than adding a new banner class; the tone only changes the accent color in `.notice[data-tone]`. `NoticeText` clamps long text behind **Show more**. `ExpandableNotice` shows text as one clamped line that grows in place when toggled; text that already fits on one line has no toggle.
+Banner messages use `Notice` and `NoticeText` from `src/panel/shared/components/notice/notice.tsx`. Pass `tone` (`warning`, the default, `error`, `info` or the accent-free `plain`) rather than adding a new banner class; the tone only changes the accent color in `.notice[data-tone]`. `NoticeText` clamps long text behind **Show more**.
 
 Icons live in one catalog, `ICONS` in `src/panel/shared/components/icons/icons.tsx`. Render them with `<Icon name="bug" />` rather than inline `<svg>` markup. Every glyph uses the shared 24-unit viewBox and defaults to 16 px; pass `size` to override its rendered size. To add a glyph, include its tight geometry bounds, path data, optional shapes, and stroke width. Icons are decorative unless you pass `label`, and `className` and other SVG props pass through.
 

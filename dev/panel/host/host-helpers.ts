@@ -138,7 +138,7 @@ export const FIXTURE_SERVICE_TOOLS: string[] = [
   "delete_user_agent_branch",
 ];
 
-export const FIXTURE_SERVICE_PATH = "/fixture-service/tools/";
+const FIXTURE_SERVICE_PATH = "/fixture-service/tools/";
 
 /** Calls a fixture tool on the Vite dev server, shaped like fixtureCall's result. */
 export async function fixtureServiceCall(

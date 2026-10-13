@@ -1,7 +1,7 @@
 import { Icon } from "../icons/icons";
 import { Presence } from "../motion/motion";
 
-export type ScrollLatestDirection = "up" | "down";
+type ScrollLatestDirection = "up" | "down";
 
 export interface ScrollLatestButtonProps {
   show: boolean;

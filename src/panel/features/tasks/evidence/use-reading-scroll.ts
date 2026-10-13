@@ -47,7 +47,7 @@ export type ReadingScrollOptions = {
   focus?: ReadingFocus;
 };
 
-export type ReadingFocus = { id: string; request: number };
+type ReadingFocus = { id: string; request: number };
 
 /**
  * Keep an oldest-first timeline at its latest row while the reader is there,

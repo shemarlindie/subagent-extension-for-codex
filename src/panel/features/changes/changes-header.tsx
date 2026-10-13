@@ -25,10 +25,10 @@ const SCOPES: { value: ChangeScope; label: string }[] = [
   { value: "turn", label: "This turn" },
 ];
 
-export const CURRENT_REPO_CHANGES_NOTE =
+const CURRENT_REPO_CHANGES_NOTE =
   "Uncommitted changes to the files this task changed, including edits to them made outside the task. Committed changes are in the Git history.";
 
-export const WORKTREE_CHANGES_NOTE =
+const WORKTREE_CHANGES_NOTE =
   "Uncommitted changes in the worktree. Committed changes are on the branch: Compare shows them, and Push sends only them, so commit these first to include them.";
 
 /** Where the changes are, how to get at them, and which part is shown. */

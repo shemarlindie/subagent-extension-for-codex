@@ -27,7 +27,7 @@ const VERSION_TIMEOUT_MS = 10_000;
 const VERSION_OUTPUT_BYTES = 4096;
 const execFileAsync = promisify(execFile);
 
-export type ClaudeCliProblem =
+type ClaudeCliProblem =
   "missing" | "invalid_override" | "unlaunchable" | "unrecognized" | "too_old";
 
 export type ClaudeCliStatus =

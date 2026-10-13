@@ -405,8 +405,9 @@ npm test
 
 `npm run typecheck` runs the read-only `schemas:check` before checking the service,
 panel, shared modules, development tooling, tests, and Vite configs. `npm test` uses Vitest (`vitest.config.ts`); its
-`pretest` checks schema freshness, formatting, and linting, then builds. Fix
-formatting with `npm run format`. ESLint (`eslint.config.js`) checks TypeScript
+`pretest` checks schema freshness, formatting, linting and unused code, then
+builds. Fix formatting with `npm run format`. ESLint (`eslint.config.js`) checks
+TypeScript
 code quality and React hook rules; explicit `any` is allowed only in tests.
 Type-aware rules read the three tsconfigs and catch unhandled or misused
 promises, deprecated APIs, non-exhaustive `switch` statements over unions, and
@@ -430,6 +431,12 @@ resolves import targets before enforcing the runtime ownership described in
 [Architecture](architecture.md#code-ownership). Service-owned panel integration
 under `src/service/platform/panel/` remains service code. Run `npm run lint`
 after moving modules to catch accidental imports across runtime boundaries.
+
+`npm run knip` reports unused files, dependencies and exports. Its entry points
+in `knip.json` are the build entries, the panel dev host's HTML entries, the
+fixture service Vite loads by path, `scripts/` and schema-generation configs.
+Remove an export nothing imports, or drop `export` when only its own module uses
+it; add an entry when a file is loaded by path rather than imported.
 
 Vitest has two projects. Unit tests time out after 15 seconds, and
 `tests/integration` gets 60 seconds because those suites spawn processes and

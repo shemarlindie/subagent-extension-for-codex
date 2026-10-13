@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/service/stdio.ts",
+    "src/service/projects-cli.ts",
+    "src/panel/app/app.ts",
+    "src/**/schema-generation.mjs",
+    "dev/panel/host/panel.ts",
+    "dev/panel/host/field-error-demo.tsx",
+    "dev/panel/fixture-service/service.ts",
+    "dev/service/demo-service.ts",
+    "scripts/*.mjs"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx,mjs}",
+    "dev/**/*.{ts,tsx}",
+    "tests/**/*.ts",
+    "scripts/**/*.mjs"
+  ]
+}

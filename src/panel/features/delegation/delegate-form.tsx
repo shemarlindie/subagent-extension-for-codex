@@ -82,7 +82,7 @@ function startingBudgetMode(settingsReady: boolean, unlimited: boolean) {
   return unlimited ? "none" : "limited";
 }
 
-export function DelegateForm({ dialog }: DelegateFormProps) {
+function DelegateForm({ dialog }: DelegateFormProps) {
   const controller = useController(),
     state = useSnapshot(),
     loading = dialog.kind === "delegate-loading",

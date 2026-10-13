@@ -36,7 +36,7 @@ test("the inspector omits task descriptions across refresh and task selection", 
   const header = () => document.querySelector(".task-header")!;
 
   assert.ok(!header().textContent?.includes(literal));
-  assertAbsent(header().querySelector(".notice-collapsible, img"));
+  assertAbsent(header().querySelector(".notice, img"));
 
   transport.tasks[0] = {
     ...transport.tasks[0],
@@ -78,7 +78,7 @@ test("short task descriptions are omitted from the inspector header", async (t) 
     ),
   );
 
-  assertAbsent(header.querySelector(".notice-expand-text, .notice-trigger"));
+  assertAbsent(header.querySelector(".notice"));
 });
 
 test("inline preview expands and collapses while preserving the selected task", async (t) => {

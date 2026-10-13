@@ -193,7 +193,7 @@ export type PersistedViewState = Partial<
 };
 
 /** Browser-local UI state that should survive reloads but not appear in copied URLs. */
-export type PersistedUiState = {
+type PersistedUiState = {
   view: PersistedViewState;
   /** The last selected settings section, kept separately from unsaved drafts. */
   lastSettingsSection?: string;

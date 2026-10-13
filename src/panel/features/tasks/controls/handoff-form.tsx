@@ -12,8 +12,6 @@ import { FormFooter } from "../../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
 import { handoffMessage, type HandoffTarget } from "./handoff-message";
 
-export { handoffMessage } from "./handoff-message";
-
 type HandoffFormProps = {
   task: Task;
   target?: HandoffTarget;
@@ -26,7 +24,7 @@ function footerLabel(canSend: boolean, canCopy: boolean) {
   return "Done";
 }
 
-export function HandoffForm({ task, target }: HandoffFormProps) {
+function HandoffForm({ task, target }: HandoffFormProps) {
   const controller = useController(),
     state = useSnapshot(),
     canSend = state.host.canSend,

@@ -6,7 +6,7 @@ import { label, MAX_ACTIVITY_DEPTH, record } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
 import { NestedContentOmitted } from "./nested-content-omitted";
 
-export { ActivityValue, label, record };
+export { ActivityValue };
 
 // A closed ``` fence with an optional info string; group 1 is the code. Unclosed
 // fences (still streaming) do not match and stay plain text.

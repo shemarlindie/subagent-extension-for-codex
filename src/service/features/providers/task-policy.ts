@@ -6,7 +6,7 @@ import {
 } from "../../../shared/tasks/model.js";
 import type { Settings } from "../settings/settings.js";
 
-export interface TaskPreparation {
+interface TaskPreparation {
   input: Start;
   defaults: ReturnType<Settings["values"]>;
   authority: InputAuthority;

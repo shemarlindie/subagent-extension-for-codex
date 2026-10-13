@@ -5,7 +5,7 @@
 
 export type ChangeScope = "task" | "turn";
 
-export type ChangeStatus =
+type ChangeStatus =
   "added" | "modified" | "deleted" | "renamed" | "copied" | "type_changed";
 
 export interface ChangedFile {

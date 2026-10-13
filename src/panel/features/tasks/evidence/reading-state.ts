@@ -1,4 +1,4 @@
-export type ReadingPosition = {
+type ReadingPosition = {
   top: number;
   pinned: boolean;
   anchor?: { id: string; top: number };
