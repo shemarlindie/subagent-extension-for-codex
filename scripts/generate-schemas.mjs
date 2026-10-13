@@ -86,6 +86,82 @@ for (const file of await discover("src/**/schema-generation.mjs")) {
   }
 }
 
+// ts-to-zod exports schemas for every exported type, including helper types
+// used only inside another generated schema. Keep those helpers private unless
+// another module imports the schema directly.
+const publicSchemas = new Map(
+  [...outputs].map((output) => [output, new Set()]),
+);
+
+for (const file of await discover("src/**/*.{ts,tsx,js,mjs}")) {
+  const source = await readFile(file, "utf8");
+
+  const imports =
+    /(?:import|export)\s+(?:type\s+)?(?:\{([^}]+)\}|\*\s+as\s+[\w$]+)\s+from\s+["']([^"']+)["']/gs;
+
+  for (const match of source.matchAll(imports)) {
+    const [, namedImports, specifier] = match;
+
+    const importedPath = resolve(
+      dirname(file),
+      specifier.replace(/\.js$/, ".ts"),
+    );
+
+    const schemas = publicSchemas.get(importedPath);
+
+    if (!schemas) continue;
+
+    if (namedImports === undefined) {
+      schemas.add("*");
+      continue;
+    }
+
+    for (const name of namedImports.split(",")) {
+      const imported = name
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/)[0];
+
+      if (imported) schemas.add(imported);
+    }
+  }
+}
+
+const generatedOutputByInput = new Map(
+  contracts.map(({ input, output }) => [input, output]),
+);
+
+for (const { input } of contracts) {
+  const source = await readFile(input, "utf8");
+
+  const imports = /import\s+type\s*\{([^}]+)\}\s*from\s+["']([^"']+)["']/gs;
+
+  for (const match of source.matchAll(imports)) {
+    const [, names, specifier] = match;
+
+    const importedPath = resolve(
+      dirname(input),
+      specifier.replace(/\.js$/, ".ts"),
+    );
+
+    const importedOutput = generatedOutputByInput.get(importedPath);
+    const schemas = importedOutput && publicSchemas.get(importedOutput);
+
+    if (!schemas) continue;
+
+    for (const name of names.split(",")) {
+      const imported = name
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/)[0];
+
+      if (imported) {
+        schemas.add(imported[0].toLowerCase() + imported.slice(1) + "Schema");
+      }
+    }
+  }
+}
+
 function modulePath(from, to) {
   // Module imports need forward slashes even when filesystem paths use backslashes.
   const path = relative(dirname(from), to)
@@ -107,7 +183,43 @@ for (const { input, output } of contracts) {
 
   if (result.errors.length) throw new Error(result.errors.join("\n"));
 
-  const source = result.getZodSchemasFile(modulePath(output, input));
+  const publicNames = publicSchemas.get(output) ?? new Set();
+
+  const generated = result
+    .getZodSchemasFile(modulePath(output, input))
+    .replaceAll("z.ZodSchema<", "z.ZodType<");
+
+  const declarations = [...generated.matchAll(/^export const (\w+Schema)\b/gm)];
+
+  const internalSchemas = new Set();
+
+  for (const [index, declaration] of declarations.entries()) {
+    const next = declarations[index + 1];
+
+    const body = generated.slice(
+      declaration.index + declaration[0].length,
+      next?.index ?? generated.length,
+    );
+
+    for (const [, name] of declarations) {
+      if (
+        name !== declaration[1] &&
+        new RegExp("\\b" + name + "\\b").test(body)
+      ) {
+        internalSchemas.add(name);
+      }
+    }
+  }
+
+  const source = generated.replace(
+    /^export const (\w+Schema)\b/gm,
+    (declaration, name) =>
+      publicNames.has("*") ||
+      publicNames.has(name) ||
+      !internalSchemas.has(name)
+        ? declaration
+        : declaration.replace(/^export /, ""),
+  );
 
   // Unconfigured imported types fall back to any; never silently lose validation.
   if (/\bz\.any\(\)/.test(source)) {

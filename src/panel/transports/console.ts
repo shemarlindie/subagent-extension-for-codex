@@ -1,4 +1,5 @@
 import type { Transport, TransportEvents } from "../app/state/types";
+import { decodePanelToolResult } from "./event-decoding";
 
 export class ConsoleTransport implements Transport {
   readonly embedded = false;
@@ -44,7 +45,10 @@ export class ConsoleTransport implements Transport {
   }
 
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
-    return (await this.api("/api/tools/" + name, args)).result as T;
+    return decodePanelToolResult<T>(
+      name,
+      (await this.api("/api/tools/" + name, args)).result,
+    );
   }
 
   async login(token: string) {

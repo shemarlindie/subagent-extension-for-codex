@@ -26,7 +26,7 @@ export const sourceBoundaries = {
 
     if (!owner || testModule.test(localFile)) return {};
 
-    function check(node, value) {
+    function check(node, value, declaration = node) {
       if (typeof value !== "string") return;
       let target;
 
@@ -46,6 +46,24 @@ export const sourceBoundaries = {
         owner === "shared" &&
         /^(?:@anthropic-ai\/claude-agent-sdk|drizzle-orm)(?:\/|$)/.test(value)
       ) {
+        if (
+          value === "@anthropic-ai/claude-agent-sdk" &&
+          filename
+            .replaceAll("\\", "/")
+            .endsWith("/src/shared/providers/claude/events.ts") &&
+          (declaration.type === "TSImportType" ||
+            declaration.importKind === "type" ||
+            declaration.exportKind === "type" ||
+            (declaration.specifiers?.length > 0 &&
+              declaration.specifiers.every(
+                (specifier) =>
+                  specifier.type === "ImportSpecifier" &&
+                  specifier.importKind === "type",
+              )))
+        ) {
+          return;
+        }
+
         target = "runtime packages";
       }
 
@@ -62,12 +80,13 @@ export const sourceBoundaries = {
     }
 
     return {
-      ImportDeclaration: (node) => check(node.source, node.source.value),
+      ImportDeclaration: (node) => check(node.source, node.source.value, node),
       ExportNamedDeclaration: (node) =>
-        node.source && check(node.source, node.source.value),
-      ExportAllDeclaration: (node) => check(node.source, node.source.value),
-      ImportExpression: (node) => check(node.source, node.source.value),
-      TSImportType: (node) => check(node.source, node.source.value),
+        node.source && check(node.source, node.source.value, node),
+      ExportAllDeclaration: (node) =>
+        check(node.source, node.source.value, node),
+      ImportExpression: (node) => check(node.source, node.source.value, node),
+      TSImportType: (node) => check(node.source, node.source.value, node),
     };
   },
 };

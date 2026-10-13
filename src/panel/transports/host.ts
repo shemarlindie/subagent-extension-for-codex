@@ -9,6 +9,7 @@ import {
 } from "@openai/mcp-extensions/app";
 
 import type { PanelData, Transport, TransportEvents } from "../app/state/types";
+import { decodePanelToolResult } from "./event-decoding";
 import { HostContextCompatibilityTransport } from "./host-context-compat";
 import { traceSize } from "./size-trace";
 
@@ -145,7 +146,9 @@ export class HostTransport implements Transport {
 
     if (!body) throw new Error("The service returned no structured data.");
 
-    return (name.endsWith("_agent_settings") ? body : body.result) as T;
+    return name.endsWith("_agent_settings")
+      ? (body as T)
+      : decodePanelToolResult<T>(name, body.result);
   }
 
   watch() {}
