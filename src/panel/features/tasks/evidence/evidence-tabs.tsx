@@ -81,11 +81,11 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         <Tabs.Tab value="chat" id="tab-chat">
           Chat
         </Tabs.Tab>
-        <Tabs.Tab value="changes" id="tab-changes">
-          <TabLabel count={counts?.data?.files ?? 0}>Changes</TabLabel>
-        </Tabs.Tab>
         <Tabs.Tab value="activity" id="tab-activity">
           Activity
+        </Tabs.Tab>
+        <Tabs.Tab value="changes" id="tab-changes">
+          <TabLabel count={counts?.data?.files ?? 0}>Changes</TabLabel>
         </Tabs.Tab>
         <Tabs.Tab value="details" id="tab-details">
           Details

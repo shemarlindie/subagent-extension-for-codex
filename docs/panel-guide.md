@@ -147,7 +147,7 @@ only while mounted. For the storage boundaries, see [State and persistence](pane
 
 ## Chat tab
 
-Chat is the first inspector tab, followed by Changes, Activity and Details.
+The inspector tabs appear in this order: Chat, Activity, Changes and Details.
 It shows requests, follow-ups, worker messages, replies and turn outcomes.
 Worker and parent-agent text renders as Markdown, following the
 [Markdown rules](../src/panel/features/file-preview/README.md#markdown); what the
