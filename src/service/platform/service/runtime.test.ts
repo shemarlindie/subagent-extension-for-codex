@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -12,6 +19,7 @@ import {
   findPackageRoot,
   installRoot,
   packagePath,
+  packageVersion,
   readPackageFile,
 } from "./runtime.js";
 
@@ -93,4 +101,12 @@ test("a missing package file names the file and the installation", () => {
   assert.throws(() => readPackageFile("assets", "missing.svg"), {
     message: `Missing package file assets/missing.svg in ${installRoot}`,
   });
+});
+
+test("the package version comes from the installed package.json", async () => {
+  const manifest = JSON.parse(
+    await readFile(packagePath("package.json"), "utf8"),
+  );
+
+  assert.equal(packageVersion, manifest.version);
 });

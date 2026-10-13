@@ -33,7 +33,11 @@ import {
 } from "./platform/server/tools.js";
 import type { AnyTool } from "./platform/server/tools/definition.js";
 import { connectService } from "./platform/service/launcher.js";
-import { installRoot, packagePath } from "./platform/service/runtime.js";
+import {
+  installRoot,
+  packagePath,
+  packageVersion,
+} from "./platform/service/runtime.js";
 
 let mentionSearchEnv = resolveMentionSearchEnv(process.env, {}, installRoot);
 
@@ -56,7 +60,7 @@ const { token, origin } = await connectService();
 const server = new McpServer(
   {
     name: "codex-subagent-extension",
-    version: "0.1.0",
+    version: packageVersion,
     icons: productGlyphIcons,
   },
   {

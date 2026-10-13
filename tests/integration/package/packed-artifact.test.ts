@@ -278,9 +278,14 @@ describe("packed artifact", () => {
   test("stdio starts the packaged service and serves tools, icons, the panel and the packaged .env", async () => {
     const client = await connectStdio();
 
+    const { version } = JSON.parse(
+      await readFile(join(pkg, "package.json"), "utf8"),
+    );
+
     try {
       const server = client.getServerVersion();
       assert.equal(server?.name, "codex-subagent-extension");
+      assert.equal(server?.version, version);
       assert.equal(server?.icons?.length, 2);
 
       assert.ok(
@@ -316,7 +321,15 @@ describe("packed artifact", () => {
       await client.close();
     }
 
-    assert.equal((await health()).service, "codex-subagent-extension");
+    const status = await health();
+    assert.equal(status.service, "codex-subagent-extension");
+    assert.equal(status.version, version);
+
+    assert.equal(
+      JSON.parse(await readFile(join(main.data, "service.json"), "utf8"))
+        .version,
+      version,
+    );
 
     // The launcher started the extracted dist/main.js, not the checkout's.
     if (process.platform !== "win32") {

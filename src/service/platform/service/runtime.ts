@@ -57,6 +57,11 @@ export function readPackageFile(...segments: string[]) {
   }
 }
 
+/** The installed package's version; package.json is the only version source. */
+export const packageVersion: string = JSON.parse(
+  readPackageFile("package.json"),
+).version;
+
 export function dataDirectory(env = process.env) {
   if (env.CODEX_SUBAGENT_EXTENSION_DATA) {
     return resolve(env.CODEX_SUBAGENT_EXTENSION_DATA);

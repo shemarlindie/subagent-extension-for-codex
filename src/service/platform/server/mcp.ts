@@ -15,6 +15,7 @@ import {
   resolvePanelContext,
   taskPanelContext,
 } from "../panel/panel-context.js";
+import { packageVersion } from "../service/runtime.js";
 import {
   claudeMentionResource,
   claudeMentionUri,
@@ -42,7 +43,7 @@ export function mcp(
   const server = new McpServer(
     {
       name: "codex-subagent-extension",
-      version: "0.1.0",
+      version: packageVersion,
       icons: productGlyphIcons,
     },
     {

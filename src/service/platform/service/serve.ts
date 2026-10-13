@@ -12,7 +12,12 @@ import { Auth } from "../server/auth.js";
 import { lease } from "./lease.js";
 import { networkOrigins } from "./network.js";
 import { inspectProcessIdentity } from "./process-info.js";
-import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
+import {
+  dataDirectory,
+  defaultPort,
+  packagePath,
+  packageVersion,
+} from "./runtime.js";
 import { adminToken } from "./token.js";
 
 export type ServeOptions = {
@@ -62,7 +67,7 @@ export async function serve({
     JSON.stringify({
       origin,
       pid: process.pid,
-      version: "0.1.0",
+      version: packageVersion,
       ...processIdentity,
     }),
     { mode: 0o600 },

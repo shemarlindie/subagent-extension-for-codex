@@ -8,6 +8,15 @@ import { testModule } from "./lint/source-boundaries.mjs";
 
 const outdir = "dist";
 
+// package.json is the version source; plugin.json repeats it for Codex, so a mismatch fails the build.
+const { version } = JSON.parse(readFileSync("package.json", "utf8"));
+const plugin = JSON.parse(readFileSync("plugin.json", "utf8"));
+
+if (plugin.version !== version)
+  throw new Error(
+    `plugin.json version ${plugin.version} differs from package.json version ${version}`,
+  );
+
 const result = await build({
   entryPoints: {
     main: "src/service/main.ts",

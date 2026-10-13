@@ -8,6 +8,7 @@ import {
   OpenAIMessageParamsSchema,
 } from "@openai/mcp-extensions/app";
 
+import { version } from "../../../package.json";
 import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
 import type { PanelData, Transport, TransportEvents } from "../app/state/types";
 import { decodePanelToolResult } from "./event-decoding";
@@ -41,7 +42,7 @@ export class HostTransport implements Transport {
   constructor(
     // DEBUG: Use the tracing subclass until the panel sizing investigation is complete.
     private app: App = new SizeTracingApp(
-      { name: "Delegated Work", version: "0.1.0" },
+      { name: "Delegated Work", version },
       {},
       { autoResize: true },
     ),
