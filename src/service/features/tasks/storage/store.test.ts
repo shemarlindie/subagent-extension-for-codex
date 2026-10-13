@@ -116,8 +116,17 @@ test("recent events return only the task's latest 200 in chronological order aft
     const expected = [];
 
     for (let index = 0; index < 205; index++) {
-      expected.push(store.event(task, "agent.message", { index }));
-      store.event(other, "agent.message", { unrelated: index });
+      expected.push(
+        store.event(task, "agent.message", {
+          role: "assistant",
+          text: String(index),
+        }),
+      );
+
+      store.event(other, "agent.message", {
+        role: "assistant",
+        text: `unrelated ${index}`,
+      });
     }
 
     assert.deepEqual(
@@ -165,6 +174,22 @@ function transactionFixture(t: { onTestFinished(fn: () => void): void }) {
   return { store, task, heard };
 }
 
+test("opaque provider events persist and notify with their raw payload", (t) => {
+  const { store, task, heard } = transactionFixture(t);
+  const payload = { subtype: "future_activity", nested: { retained: true } };
+  let created: Event | undefined;
+
+  store.transaction(() => {
+    created = store.eventOpaque(task, "claude.activity", payload);
+    assert.deepEqual(heard, []);
+  });
+
+  assert.equal(created?.view.kind, "opaque");
+  assert.deepEqual(created?.data, payload);
+  assert.deepEqual(heard, ["claude.activity"]);
+  assert.deepEqual(store.events(task.id, task.owner), [created]);
+});
+
 test("a transaction commits task state with its events and notifies in order afterwards", (t) => {
   const { store, task, heard } = transactionFixture(t);
 
@@ -172,7 +197,7 @@ test("a transaction commits task state with its events and notifies in order aft
     task.status = "running";
     store.save(task);
     store.event(task, "task.started");
-    store.event(task, "task.queue_changed");
+    store.event(task, "task.queue_changed", { queue: [], paused: false });
     // Listeners hear nothing until the commit.
     assert.deepEqual(heard, []);
   });

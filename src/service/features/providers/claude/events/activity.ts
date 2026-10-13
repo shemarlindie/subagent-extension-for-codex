@@ -1,8 +1,20 @@
-import type { Event } from "../../../../../shared/events/types.js";
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+
 import { contentText } from "../../../../../shared/providers/activity/content-text.js";
-import type { ActivityPresentation } from "../../../../../shared/providers/activity/types.js";
+import type {
+  ActivityContent,
+  ActivityPresentation,
+} from "../../../../../shared/providers/activity/types.js";
+import { decodeClaudeRateLimitWindowInfo } from "../../../../../shared/providers/claude/events.js";
 import { claudeRateLimitWindows } from "../../../../../shared/providers/claude/rate-limit-windows.js";
 import { scalarText } from "../../../../../shared/text.js";
+import { decodeClaudeActivityContent } from "./content.js";
+import { claudeStreamPresentation } from "./stream-presentation.js";
+
+export {
+  claudeActivityContent,
+  decodeClaudeActivityContent,
+} from "./content.js";
 
 const object = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" && !Array.isArray(v)
@@ -11,11 +23,18 @@ const object = (v: unknown): Record<string, unknown> =>
 
 const string = (v: unknown) => (typeof v === "string" ? v : undefined);
 
-const activityKind = (e: Pick<Event, "type" | "data">) =>
-  e.type === "claude.activity" ? String(e.data.subtype ?? e.data.type) : e.type;
+type ActivityEvent = { type: string; data: object; rawResponse?: SDKMessage };
 
-function activityFailed(e: Pick<Event, "type" | "data">) {
-  const d = e.data;
+const activityKind = (e: ActivityEvent) => {
+  const data = object(e.data);
+
+  return e.type === "claude.activity"
+    ? String(data.subtype ?? data.type)
+    : e.type;
+};
+
+function activityFailed(e: ActivityEvent) {
+  const d = object(e.data);
 
   return (
     d.error === true ||
@@ -60,9 +79,9 @@ const thinking = new Set([
   "agent.thinking_tokens",
 ]);
 
-function statusTitle(e: Pick<Event, "type" | "data">) {
+function statusTitle(e: ActivityEvent) {
   const key = activityKind(e),
-    d = e.data;
+    d = object(e.data);
 
   if (thinking.has(key)) return "Thinking…";
 
@@ -94,7 +113,8 @@ function statusTitle(e: Pick<Event, "type" | "data">) {
   }
 
   if (key === "rate_limit_event") {
-    return object(d.rate_limit_info).status === "rejected"
+    return decodeClaudeRateLimitWindowInfo(d.rate_limit_info)?.status ===
+      "rejected"
       ? "Waiting for rate limit reset"
       : "Rate limit updated";
   }
@@ -109,7 +129,7 @@ function statusTitle(e: Pick<Event, "type" | "data">) {
   return "Working";
 }
 
-function hasThinkingContent(e: Pick<Event, "type" | "data">) {
+function hasThinkingContent(e: ActivityEvent) {
   const hasThinkingBlock = (value: unknown): boolean => {
     if (Array.isArray(value)) return value.some(hasThinkingBlock);
     const block = object(value);
@@ -121,10 +141,16 @@ function hasThinkingContent(e: Pick<Event, "type" | "data">) {
     );
   };
 
-  const rawMessage = object(object(e.data.raw_response).message);
+  const nativeMessage = object(e.rawResponse);
+  const storedMessage = object(object(e.data).raw_response);
+
+  const rawMessage = object(
+    nativeMessage.message ?? storedMessage.message ?? object(e.data).message,
+  );
 
   return (
-    hasThinkingBlock(e.data.content) || hasThinkingBlock(rawMessage.content)
+    hasThinkingBlock(object(e.data).content) ||
+    hasThinkingBlock(rawMessage.content)
   );
 }
 
@@ -159,8 +185,8 @@ const sdkTitles: Record<string, string> = {
   stream_event: "Response streaming",
 };
 
-function failureSummary(event: Pick<Event, "type" | "data">) {
-  const d = event.data;
+function failureSummary(event: ActivityEvent) {
+  const d = object(event.data);
 
   const textOutput = contentText(d.content);
 
@@ -179,8 +205,26 @@ function failureSummary(event: Pick<Event, "type" | "data">) {
   );
 }
 
+function activityBodyContent(value: unknown): ActivityContent[] | undefined {
+  if (typeof value === "string") return [value];
+
+  if (Array.isArray(value)) {
+    const blocks: ActivityContent[] = [];
+
+    for (const item of value) {
+      const block = decodeClaudeActivityContent(item);
+      if (block === undefined) return undefined;
+      blocks.push(block);
+    }
+
+    return blocks;
+  }
+
+  return undefined;
+}
+
 /** Labels an SDK activity event, or a transcript content row. */
-function activityTitle(e: Pick<Event, "type" | "data">, key: string) {
+function activityTitle(e: ActivityEvent, key: string) {
   if (e.type === "claude.activity") {
     return (
       sdkTitles[key] ??
@@ -189,7 +233,7 @@ function activityTitle(e: Pick<Event, "type" | "data">, key: string) {
   }
 
   if (e.type === "agent.content") {
-    return e.data.role === "user" ? "User content" : "Claude content";
+    return object(e.data).role === "user" ? "User content" : "Claude content";
   }
 
   return undefined;
@@ -198,7 +242,7 @@ function activityTitle(e: Pick<Event, "type" | "data">, key: string) {
 /** Groups tool, hook and background task progress under one operation. */
 function operationIdFor(
   key: string,
-  d: Event["data"],
+  d: Record<string, unknown>,
   toolId: string | undefined,
 ) {
   if (toolId) return `tool:${toolId}`;
@@ -217,7 +261,7 @@ function operationIdFor(
 /** Names the operation that a tool, hook or background task event belongs to. */
 function operationTitle(
   key: string,
-  d: Event["data"],
+  d: Record<string, unknown>,
   toolId: string | undefined,
 ) {
   if (toolId) return "Tool";
@@ -231,12 +275,15 @@ function operationTitle(
 
 /** Claude SDK details are translated at the provider boundary. */
 export function claudeActivityPresentation(
-  e: Pick<Event, "type" | "data">,
+  e: ActivityEvent,
 ): ActivityPresentation {
-  const d = e.data,
+  const d = object(e.data),
     key = activityKind(e);
 
-  const raw = object(d.raw_response);
+  const rateLimitInfo =
+    e.rawResponse?.type === "rate_limit_event"
+      ? e.rawResponse.rate_limit_info
+      : decodeClaudeRateLimitWindowInfo(d.rate_limit_info);
 
   const presentation: ActivityPresentation = {
     kind: key,
@@ -254,6 +301,9 @@ export function claudeActivityPresentation(
           d.result,
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined),
+    ...(e.type === "claude.activity" && d.type === "result"
+      ? { summaryIsResponse: true }
+      : {}),
     thinking: thinking.has(key),
     liveStatus:
       [
@@ -265,7 +315,13 @@ export function claudeActivityPresentation(
     statusTitle:
       quiet.has(key) || thinking.has(key) ? statusTitle(e) : undefined,
     title: activityTitle(e, key),
-    messageId: string(object(raw.message).id ?? raw.uuid),
+    messageId: string(
+      (e.rawResponse?.type === "assistant"
+        ? e.rawResponse.message.id
+        : undefined) ??
+        object(object(d.raw_response).message).id ??
+        object(d.raw_response).uuid,
+    ),
     hasThinking: hasThinkingContent(e),
   };
 
@@ -274,15 +330,12 @@ export function claudeActivityPresentation(
     if (d.state === "idle") presentation.statusState = "completed";
   }
 
-  if (key === "rate_limit_event") {
-    const windows = claudeRateLimitWindows(d.rate_limit_info);
+  if (key === "rate_limit_event" && rateLimitInfo) {
+    const windows = claudeRateLimitWindows(rateLimitInfo);
     if (windows.length) presentation.rateLimitWindows = windows;
   }
 
-  if (
-    key === "rate_limit_event" &&
-    object(d.rate_limit_info).status === "rejected"
-  ) {
+  if (key === "rate_limit_event" && rateLimitInfo?.status === "rejected") {
     presentation.statusState = "info";
   }
 
@@ -314,62 +367,42 @@ export function claudeActivityPresentation(
   }
 
   if (key === "stream_event") {
-    const frame = object(d.event);
-
-    presentation.stream = {
-      id: scalarText(d.parent_tool_use_id, "root"),
-      messageId: string(object(frame.message).id),
-      started: frame.type === "message_start",
-      completed: frame.type === "message_stop",
-      title: scalarText(frame.type, "Streaming").replace(/[_.]/g, " "),
-      content: frame.delta ?? frame.content_block,
-      details: Object.fromEntries(
-        Object.entries(frame).filter(([key]) => key !== "type"),
-      ),
-    };
-
-    const index = frame.index ?? 0;
-
-    if (
-      typeof index === "number" &&
-      Number.isSafeInteger(index) &&
-      index >= 0
-    ) {
-      if (frame.type === "content_block_start") {
-        presentation.stream.update = {
-          index,
-          block: object(frame.content_block),
-        };
-      }
-
-      if (frame.type === "content_block_delta") {
-        const delta = object(frame.delta);
-
-        const fields: Partial<Record<string, [string, string]>> = {
-          text_delta: ["text", "text"],
-          thinking_delta: ["thinking", "thinking"],
-          input_json_delta: ["partial_json", "input_json_delta"],
-        };
-
-        const fieldsForDelta = fields[String(delta.type)];
-
-        if (fieldsForDelta) {
-          const [field, type] = fieldsForDelta;
-
-          presentation.stream.update = {
-            index,
-            append: { field, type, text: scalarText(delta[field]) },
-          };
-        }
-      }
-    }
+    presentation.stream = claudeStreamPresentation(d, e.rawResponse);
   }
 
   if (
     e.type === "claude.activity" &&
     (d.type === "assistant" || d.type === "user")
   ) {
-    presentation.body = { content: object(d.message).content, error: d.error };
+    let role: "assistant" | "user" = d.type;
+    let contentValue: unknown;
+    const native = e.rawResponse;
+
+    if (native?.type === "assistant" || native?.type === "user") {
+      role = native.type;
+      contentValue = native.message.content;
+    } else {
+      const message = object(d.message);
+
+      if (message.role === "assistant" || message.role === "user") {
+        role = message.role;
+      }
+
+      contentValue = message.content ?? d.content;
+    }
+
+    const content = activityBodyContent(contentValue);
+
+    const error =
+      typeof d.error === "boolean" || typeof d.error === "string"
+        ? d.error
+        : undefined;
+
+    presentation.body = {
+      role,
+      ...(content ? { content } : {}),
+      ...(error !== undefined ? { error } : {}),
+    };
   }
 
   return presentation;

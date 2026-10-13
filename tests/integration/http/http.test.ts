@@ -1075,9 +1075,9 @@ test("SSE requires authentication, replays owned events in global cursor order a
 
   c.store.save(a);
   c.store.save(b);
-  const first = c.store.event(a, "test.first");
-  c.store.event(b, "test.secret");
-  const last = c.store.event(a, "test.last");
+  const first = c.store.eventOpaque(a, "test.first");
+  c.store.eventOpaque(b, "test.secret");
+  const last = c.store.eventOpaque(a, "test.last");
   // A client that connects mid-message gets the draft so far.
   c.drafts.append("local", "a", "msg_a", "Hel");
   c.drafts.append("other", "b", "msg_b", "secret draft");
@@ -1111,7 +1111,7 @@ test("SSE requires authentication, replays owned events in global cursor order a
 
     assert.ok(!data.includes("secret draft"));
     const pending = reader.read();
-    c.store.event(a, "test.live");
+    c.store.eventOpaque(a, "test.live");
     const live = new TextDecoder().decode((await pending).value);
     assert.ok(live.includes("test.live"));
     const delta = reader.read();

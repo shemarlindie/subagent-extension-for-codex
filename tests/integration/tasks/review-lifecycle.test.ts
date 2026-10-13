@@ -86,7 +86,7 @@ test(
       };
 
       store.save(task);
-      store.event(task, "task.created");
+      store.eventOpaque(task, "task.created");
     }
 
     const before = store.all();

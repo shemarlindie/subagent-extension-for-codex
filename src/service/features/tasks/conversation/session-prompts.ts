@@ -1,3 +1,4 @@
+import { eventPayload } from "../../../../shared/events/payload.js";
 import type { Task } from "../../../../shared/tasks/model.js";
 import type { Provider } from "../../providers/types.js";
 import type { Workspaces } from "../../workspaces/workspace.js";
@@ -115,17 +116,23 @@ export class SessionPrompts {
       .reverse();
 
     for (const e of events) {
-      if (
-        e.type === "task.instruction" &&
-        !received.has(String(e.data.message_id))
-      ) {
+      const instruction = eventPayload(e, "task.instruction");
+      const reply = eventPayload(e, "agent.reply");
+
+      if (instruction && !received.has(instruction.message_id)) {
         continue;
       }
 
-      const entry =
-        e.type === "agent.reply"
-          ? `Your reply:\n${String(e.data.text)}`
-          : `${e.data.from === "parent" ? "Parent agent" : "User"}:\n${String(e.data.message)}`;
+      let entry: string | undefined;
+
+      if (reply) {
+        entry = `Your reply:\n${reply.text}`;
+      } else if (instruction) {
+        const sender = instruction.from === "parent" ? "Parent agent" : "User";
+        entry = `${sender}:\n${instruction.message}`;
+      }
+
+      if (entry === undefined) continue;
 
       if (length + entry.length > MAX_TRANSCRIPT_CHARS) {
         entries.unshift("… (earlier conversation left out)");
@@ -148,9 +155,10 @@ export class SessionPrompts {
   /** A dependency's latest reply for a dependent's prompt. */
   private dependencyReply(d: Task) {
     const reply = this.store.latestEvent(d.id, "agent.reply");
+    const payload = reply ? eventPayload(reply, "agent.reply") : undefined;
 
-    return reply
-      ? `Dependency ${d.id} replied:\n${String(reply.data.text)}`
+    return payload
+      ? `Dependency ${d.id} replied:\n${payload.text}`
       : `Dependency ${d.id} finished without a reply.`;
   }
 

@@ -177,6 +177,7 @@ async function context() {
     task,
     signal: new AbortController().signal,
     emit: (type, data) => events.push({ type, data }),
+    emitOpaque: (type, data) => events.push({ type, data }),
     session: (id, ref) => sessions.push({ id, ref }),
     input: async () => ({ approved: false, message: "User declined" }),
     acceptSteers: () => {},

@@ -1,3 +1,4 @@
+import { eventPayload } from "../../../../shared/events/payload.js";
 import {
   parentMessageId,
   type ParentMessageNotification,
@@ -60,7 +61,8 @@ export function recordParentDelivery(
   if (
     !events.some(
       (event) =>
-        event.id === attemptId && event.type === "parent.message_attempted",
+        event.id === attemptId &&
+        eventPayload(event, "parent.message_attempted") !== undefined,
     )
   ) {
     throw new Error("Parent message attempt not found");
@@ -69,8 +71,8 @@ export function recordParentDelivery(
   if (
     events.some(
       (event) =>
-        event.type === "parent.message_delivery" &&
-        event.data.attempt_id === attemptId,
+        eventPayload(event, "parent.message_delivery")?.attempt_id ===
+        attemptId,
     )
   ) {
     return;
@@ -109,8 +111,8 @@ export function acknowledgeParentMessage(
 
     const alreadyAcknowledged = events.some(
       (event) =>
-        event.type === "parent.message_acknowledged" &&
-        event.data.message_id === report.id,
+        eventPayload(event, "parent.message_acknowledged")?.message_id ===
+        report.id,
     );
 
     if (!alreadyAcknowledged) {

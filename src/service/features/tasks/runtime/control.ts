@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 
+import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
+import type { EventType } from "../../../../shared/events/event-types.js";
+import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
 import { assertSelectedProviderOptions } from "../../../../shared/providers/options.js";
 import { replyExcerpt } from "../../../../shared/tasks/conversation/reply.js";
@@ -33,21 +36,28 @@ import { generateTaskTitle } from "./task-title.js";
 const BUSY = ["queued", "starting", "running", "waiting"];
 
 /** The payload of a task's status event once its turn has ended. */
-function taskStatusData(t: Task, reply: string | undefined) {
-  if (t.status === "queued") return {};
+function recordStatusEvent(store: Store, t: Task, reply: string | undefined) {
+  if (t.status === "queued") return store.event(t, "task.queued");
 
-  if (t.status === "completed" && reply !== undefined) {
-    return { reply: replyExcerpt(reply) };
+  if (t.status === "completed") {
+    return store.event(t, "task.completed", {
+      ...(reply !== undefined ? { reply: replyExcerpt(reply) } : {}),
+    });
   }
 
-  return { error: t.error };
-}
+  if (t.status === "failed") {
+    return store.event(t, "task.failed", {
+      ...(t.error ? { error: t.error } : {}),
+    });
+  }
 
-/** The SDK message id a stored worker message carries, which its draft shares. */
-function storedMessageId(data: Record<string, unknown>) {
-  const raw = data.raw_response as { message?: { id?: unknown } } | undefined;
+  if (t.status === "interrupted") {
+    return store.event(t, "task.interrupted", {
+      ...(t.error ? { error: t.error } : {}),
+    });
+  }
 
-  return typeof raw?.message?.id === "string" ? raw.message.id : undefined;
+  throw new Error(`Cannot record a turn outcome for task status ${t.status}`);
 }
 
 interface Active {
@@ -508,12 +518,20 @@ export class Control {
           },
           delta: (messageId, text) =>
             this.drafts.append(t.owner, t.id, messageId, text),
-          emit: (type, data) => {
-            this.store.transaction(() => {
-              if (
-                type === "agent.completed" &&
-                typeof data.cost_usd === "number"
-              ) {
+          emit: <K extends EventType, D extends EventPayloadMap[K]>(
+            type: K,
+            data: D,
+          ) => {
+            const event = this.store.transaction(() => {
+              const event = this.store.event(t, type, data);
+
+              const completed =
+                event.view.kind === "known" &&
+                event.view.type === "agent.completed"
+                  ? event.view.data
+                  : undefined;
+
+              if (typeof completed?.cost_usd === "number") {
                 // The provider reports the session's cumulative cost, which
                 // includes the turns a resumed session already ran. One lower
                 // than before started counting again.
@@ -521,21 +539,30 @@ export class Control {
 
                 t.cost_usd =
                   (t.cost_usd ?? 0) +
-                  (data.cost_usd >= before
-                    ? data.cost_usd - before
-                    : data.cost_usd);
+                  (completed.cost_usd >= before
+                    ? completed.cost_usd - before
+                    : completed.cost_usd);
 
-                t.session_cost_usd = data.cost_usd;
+                t.session_cost_usd = completed.cost_usd;
                 this.store.save(t);
               }
 
-              this.store.event(t, type, data);
+              return event;
             });
 
             // The stored message replaces its draft.
             if (type === "agent.message") {
-              this.drafts.clear(t.id, storedMessageId(data));
+              this.drafts.clear(
+                t.id,
+                eventPayload(event, "agent.message")?.message_id ??
+                  event.presentation?.messageId,
+              );
             }
+          },
+          emitOpaque: (type, data) => {
+            this.store.transaction(() => {
+              this.store.eventOpaque(t, type, data);
+            });
           },
           session: (id, ref) => {
             t.session_id = id;
@@ -613,7 +640,7 @@ export class Control {
           this.endTurn(t, outcome, a.sendPending);
           this.store.save(t);
 
-          this.store.event(t, `task.${t.status}`, taskStatusData(t, reply));
+          recordStatusEvent(this.store, t, reply);
         });
       } finally {
         // A failed write must not leave the task held as running.

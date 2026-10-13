@@ -81,6 +81,7 @@ async function context() {
     task,
     signal: abort.signal,
     emit: (type) => events.push({ type }),
+    emitOpaque: (type) => events.push({ type }),
     session: () => {},
     input: async () => ({ approved: false }),
     acceptSteers: (s) => (sink = s),

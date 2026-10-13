@@ -41,7 +41,52 @@ test("decodes migrated event rows without changing metadata or arbitrary JSON fi
   expect(decodeEvent(row)).toEqual({
     ...row,
     data: { future: { nested: [1, null] } },
+    view: { kind: "known", type: "task.started", data: {} },
   });
+});
+
+test("validated event views preserve complete raw payload data", (t) => {
+  const rawResponse = {
+    type: "assistant",
+    uuid: "sdk-message",
+    message: { id: "message-id", content: [{ type: "text", text: "Done" }] },
+  };
+
+  const row = storedEvent(
+    t,
+    JSON.stringify({
+      role: "assistant",
+      text: "Done",
+      raw_response: rawResponse,
+    }),
+  );
+
+  const decoded = decodeEvent({ ...row, type: "agent.message" });
+
+  expect(decoded.view).toEqual({
+    kind: "known",
+    type: "agent.message",
+    data: { role: "assistant", text: "Done" },
+  });
+
+  expect(decoded.data.raw_response).toEqual(rawResponse);
+});
+
+test("incomplete known payloads remain opaque without losing their fields", (t) => {
+  const row = storedEvent(
+    t,
+    JSON.stringify({ turn: "two", outcome: "completed" }),
+  );
+
+  const decoded = decodeEvent({ ...row, type: "task.turn_ended" });
+
+  expect(decoded.view).toEqual({
+    kind: "opaque",
+    type: "task.turn_ended",
+    data: { turn: "two", outcome: "completed" },
+  });
+
+  expect(decoded.data).toEqual({ turn: "two", outcome: "completed" });
 });
 
 test("names an event with corrupt row metadata before decoding its JSON", (t) => {

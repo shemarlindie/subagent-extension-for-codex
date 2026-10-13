@@ -4,21 +4,51 @@ import { test } from "vitest";
 
 import { ClaudeAgentProvider } from "../../../service/features/providers/claude/runtime/provider.js";
 import type { RunContext } from "../../../service/features/providers/types.js";
+import { decodedEvent } from "../../events/decode.js";
 import type { Event } from "../../events/types.js";
 import {
   currentActivityStatus,
   groupActivity,
 } from "../../tasks/activity/activity-timeline.js";
-import type { ActivityPresentation } from "./types.js";
+import { activityPresentation } from "./presentation.js";
+import type { ActivityPresentation, ActivityStreamAppend } from "./types.js";
+
+function streamAppendTypes() {
+  const valid: ActivityPresentation = {
+    stream: {
+      id: "stream",
+      update: {
+        index: 0,
+        append: {
+          field: "thinking",
+          type: "thinking",
+          text: "Checking",
+        },
+      },
+    },
+  };
+
+  // @ts-expect-error stream append fields must describe the same block
+  const invalid: ActivityStreamAppend = {
+    field: "text",
+    type: "thinking",
+    text: "Checking",
+  };
+
+  void valid;
+  void invalid;
+}
+
+void streamAppendTypes;
 
 function event(id: number, activity: ActivityPresentation): Event {
-  return {
+  return decodedEvent({
     id,
     task_id: "fake-task",
     timestamp: new Date(id * 1000).toISOString(),
     type: "fake.activity",
     data: { activity, native_detail: "retained" },
-  };
+  });
 }
 
 test("a provider can present thinking, operations and session status without SDK events", () => {
@@ -63,7 +93,8 @@ test("a provider can present thinking, operations and session status without SDK
 });
 
 test("Claude emits provider-owned presentation alongside the original SDK response", () => {
-  let emitted: Pick<Event, "type" | "data"> | undefined;
+  let rawResponse: unknown;
+  let emittedActivity: unknown;
 
   const message = {
     type: "system",
@@ -75,16 +106,17 @@ test("Claude emits provider-owned presentation alongside the original SDK respon
 
   new ClaudeAgentProvider().normalize(
     {
-      emit: (type, data) => {
-        emitted = { type, data };
+      emit: () => {},
+      emitOpaque: (_type: string, data: Record<string, unknown>) => {
+        rawResponse = data.raw_response;
+        emittedActivity = data.activity;
       },
-    } as RunContext,
+    } as unknown as RunContext,
     message,
   );
 
-  assert.ok(emitted);
-  assert.equal(emitted.data.raw_response, message);
-  const activity = emitted.data.activity as ActivityPresentation;
+  assert.equal(rawResponse, message);
+  const activity = emittedActivity as ActivityPresentation;
   // Requesting is a status update, not a thinking signal.
   assert.equal(activity.statusTitle, "Requesting");
   assert.equal(activity.thinking, false);
@@ -108,6 +140,24 @@ test("a provider can associate streams and messages using normalized identities"
   assert.equal(groups[0].kind, "message");
   assert.equal(groups[0].state, "completed");
   assert.deepEqual(groups[0].events, [stream, completed, message]);
+});
+
+test("invalid normalized presentation is not exposed to activity consumers", () => {
+  const invalid = decodedEvent({
+    id: 1,
+    task_id: "fake-task",
+    timestamp: "2026-10-13T00:00:00.000Z",
+    type: "fake.activity",
+    data: {
+      activity: {
+        kind: "stream",
+        stream: { id: "reply", content: { type: "text", text: 42 } },
+      },
+    },
+  });
+
+  assert.equal(invalid.presentation, undefined);
+  assert.deepEqual(activityPresentation(invalid), {});
 });
 
 test("normalized tool and event labels appear in timeline groups", () => {

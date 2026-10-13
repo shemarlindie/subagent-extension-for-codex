@@ -1,3 +1,7 @@
+import type {
+  EventEmitter,
+  OpaqueEventEmitter,
+} from "../../../shared/events/event-types.js";
 import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
 import type {
   Capabilities,
@@ -32,7 +36,10 @@ export interface RunContext {
   delta(messageId: string, text: string): void;
   /** Queue a worker message for the open parent panel; returns its durable event ID. */
   messageParent?(text: string): number;
-  emit: (type: string, data: Record<string, unknown>) => void;
+  /** Emits a known project event while retaining provider-specific typed fields. */
+  emit: EventEmitter;
+  /** Explicit escape path for provider-owned or future event names. */
+  emitOpaque: OpaqueEventEmitter;
   session: (id: string, stateRef: string) => void;
   input: (
     tool: string,

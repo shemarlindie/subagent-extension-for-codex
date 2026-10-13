@@ -1,56 +1,39 @@
 import type { ActivityRateLimitWindow } from "../activity/types.js";
+import type { ClaudeRateLimitWindowInfo } from "./events.js";
 
-const record = (value: unknown): Record<string, unknown> =>
-  value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-
-const labels: Record<string, string> = {
+const labels: Record<
+  NonNullable<ClaudeRateLimitWindowInfo["rateLimitType"]>,
+  string
+> = {
   five_hour: "5-hour window",
   seven_day: "7-day window",
   seven_day_opus: "7-day Opus window",
   seven_day_sonnet: "7-day Sonnet window",
   seven_day_overage_included: "7-day included-model window",
+  overage: "Overage",
 };
 
-/** Shared with the compatibility reader for events stored before normalization. */
+/** Converts Claude's rate-limit metadata into the provider-neutral window shape. */
 export function claudeRateLimitWindows(
-  value: unknown,
+  info: ClaudeRateLimitWindowInfo,
 ): ActivityRateLimitWindow[] {
-  const info = record(value);
-  const windows = new Map(Object.entries(record(info.unifiedWindows)));
+  const id = info.rateLimitType;
+  const { utilization, resetsAt: resetTime } = info;
 
   if (
-    typeof info.rateLimitType === "string" &&
-    !windows.has(info.rateLimitType)
+    id === undefined ||
+    id === "overage" ||
+    typeof utilization !== "number" ||
+    !Number.isFinite(utilization)
   ) {
-    windows.set(info.rateLimitType, info);
+    return [];
   }
 
-  return [...windows.entries()].flatMap(([id, value]) => {
-    const window = record(value);
+  const resetsAt =
+    typeof resetTime === "number" &&
+    Number.isFinite(new Date(resetTime * 1000).getTime())
+      ? resetTime
+      : undefined;
 
-    if (
-      id === "overage" ||
-      typeof window.utilization !== "number" ||
-      !Number.isFinite(window.utilization)
-    ) {
-      return [];
-    }
-
-    const resetsAt =
-      typeof window.resetsAt === "number" &&
-      Number.isFinite(new Date(window.resetsAt * 1000).getTime())
-        ? window.resetsAt
-        : undefined;
-
-    return [
-      {
-        id,
-        label: labels[id] ?? id.replaceAll("_", " "),
-        utilization: window.utilization,
-        resetsAt,
-      },
-    ];
-  });
+  return [{ id, label: labels[id], utilization, resetsAt }];
 }

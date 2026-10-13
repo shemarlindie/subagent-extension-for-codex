@@ -1,7 +1,8 @@
 import { createSelectSchema } from "drizzle-orm/zod";
 import { z } from "zod";
 
-import { type Event } from "../../../../shared/events/types.js";
+import { decodedEvent } from "../../../../shared/events/decode.js";
+import type { EventEnvelope } from "../../../../shared/events/event-contract.js";
 import {
   approvalModeSchema,
   deliveries,
@@ -86,16 +87,18 @@ export function decodeTask(id: string, body: string): Task {
   return decodeStored(storedTaskSchema, body, `task ${id}`);
 }
 
-/** A stored event row, whose data is any JSON object. */
+/** A stored event row with a validated view of the fields this build knows. */
 export function decodeEvent(row: typeof events.$inferSelect) {
   const stored = checkStored(eventRowSchema, row, `event ${row.id}`);
 
-  return {
+  const event = {
     ...stored,
     data: decodeStored(
       z.record(z.string(), z.unknown()),
       stored.data,
       `event ${stored.id}`,
     ),
-  } satisfies Event;
+  } satisfies EventEnvelope;
+
+  return decodedEvent(event);
 }

@@ -2,7 +2,13 @@ import { EventEmitter } from "node:events";
 
 import { and, desc, eq, gt, inArray, lt, lte, max, or, sql } from "drizzle-orm";
 
-import { type Event } from "../../../../shared/events/types.js";
+import { decodedEvent } from "../../../../shared/events/decode.js";
+import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
+import type {
+  EventType,
+  HasNoPayload,
+} from "../../../../shared/events/event-types.js";
+import type { Event } from "../../../../shared/events/types.js";
 import { type Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import {
@@ -121,7 +127,32 @@ export class Store {
     return toTask(row);
   }
 
-  event(t: Task, type: string, data: Record<string, unknown> = {}): Event {
+  event<K extends EventType, D extends EventPayloadMap[K] = EventPayloadMap[K]>(
+    t: Task,
+    type: K,
+    ...args: HasNoPayload<EventPayloadMap[K]> extends true
+      ? [data?: D]
+      : [data: D]
+  ): Event {
+    const data = (args[0] ?? {}) as Record<string, unknown>;
+
+    return this.writeEvent(t, type, data);
+  }
+
+  /** Records a provider-owned event through the explicit opaque extension path. */
+  eventOpaque(
+    t: Task,
+    type: string,
+    data: Record<string, unknown> = {},
+  ): Event {
+    return this.writeEvent(t, type, data);
+  }
+
+  private writeEvent(
+    t: Task,
+    type: string,
+    data: Record<string, unknown>,
+  ): Event {
     const timestamp = now();
 
     const { id } = this.orm
@@ -130,10 +161,10 @@ export class Store {
       .returning({ id: events.id })
       .get();
 
-    const e = { id, task_id: t.id, type, timestamp, data };
-    this.database.afterCommit(() => this.notify(e, t.owner));
+    const event = decodedEvent({ id, task_id: t.id, type, timestamp, data });
+    this.database.afterCommit(() => this.notify(event, t.owner));
 
-    return e;
+    return event;
   }
 
   /**

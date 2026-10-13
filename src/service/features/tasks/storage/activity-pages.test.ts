@@ -41,8 +41,14 @@ function fixture() {
     for (let i = 0; i < count; i++) {
       const n = written++;
 
-      if (n % 3 === 0) store.event(task, "tool.started", { name: "Bash" });
-      else store.event(task, "agent.message", { role: "assistant" });
+      if (n % 3 === 0) {
+        store.event(task, "tool.started", { name: "Bash" });
+      } else {
+        store.event(task, "agent.message", {
+          role: "assistant",
+          text: "Activity page message",
+        });
+      }
     }
   };
 
@@ -112,9 +118,15 @@ test("a turn reads from the previous turn's close through its own close", () => 
   const { store, task, write } = fixture();
 
   const end = (turn: number) => {
-    store.event(task, "task.turn_ended", { turn, outcome: "completed" });
+    store.event(task, "task.turn_ended", {
+      turn,
+      outcome: "completed",
+      runtime_ms: 1,
+      cost_usd: 0,
+    });
+
     // Queue changes can come between the end and the status that closes it.
-    store.event(task, "agent.message", { role: "user" });
+    store.event(task, "agent.content", { role: "user", content: [] });
     store.event(task, "task.completed", {});
   };
 

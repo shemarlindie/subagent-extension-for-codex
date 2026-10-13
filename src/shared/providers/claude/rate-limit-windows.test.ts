@@ -1,20 +1,51 @@
 import { expect, test } from "vitest";
 
+import { decodedEvent } from "../../events/decode.js";
 import type { Event } from "../../events/types.js";
 import { activityPresentation } from "../activity/presentation.js";
+import {
+  type ClaudeRateLimitInfo,
+  decodeClaudeRateLimitWindowInfo,
+} from "./events.js";
 import { claudeRateLimitWindows } from "./rate-limit-windows.js";
 
-test("unified windows take precedence over duplicate top-level window data", () => {
+const rateLimitInfo = (
+  fields: Partial<ClaudeRateLimitInfo> = {},
+): ClaudeRateLimitInfo => ({ status: "allowed", ...fields });
+
+test("serialized rate-limit metadata validates current SDK fields", () => {
   expect(
-    claudeRateLimitWindows({
-      rateLimitType: "five_hour",
-      utilization: 0.9,
-      resetsAt: 300,
-      unifiedWindows: {
-        five_hour: { utilization: 0.25, resetsAt: 100 },
-        seven_day: { utilization: 0.5, resetsAt: 200 },
-      },
+    decodeClaudeRateLimitWindowInfo({
+      status: "allowed_warning",
+      rateLimitType: "seven_day",
+      utilization: 0.75,
+      resetsAt: 100,
     }),
+  ).toEqual({
+    status: "allowed_warning",
+    rateLimitType: "seven_day",
+    utilization: 0.75,
+    resetsAt: 100,
+  });
+
+  expect(
+    decodeClaudeRateLimitWindowInfo({
+      status: "allowed",
+      rateLimitType: "future_window",
+      utilization: 0.75,
+    }),
+  ).toBeUndefined();
+});
+
+test("current SDK metadata maps its reported window", () => {
+  expect(
+    claudeRateLimitWindows(
+      rateLimitInfo({
+        rateLimitType: "five_hour",
+        utilization: 0.25,
+        resetsAt: 100,
+      }),
+    ),
   ).toEqual([
     {
       id: "five_hour",
@@ -22,70 +53,30 @@ test("unified windows take precedence over duplicate top-level window data", () 
       utilization: 0.25,
       resetsAt: 100,
     },
-    {
-      id: "seven_day",
-      label: "7-day window",
-      utilization: 0.5,
-      resetsAt: 200,
-    },
   ]);
 });
 
-test("legacy top-level data supplies a window absent from unified windows", () => {
-  expect(
-    claudeRateLimitWindows({
-      rateLimitType: "five_hour",
-      utilization: 0,
-      resetsAt: 100,
-    }),
-  ).toEqual([
-    {
-      id: "five_hour",
-      label: "5-hour window",
-      utilization: 0,
-      resetsAt: 100,
-    },
-  ]);
+test("missing windows and overage do not produce utilization windows", () => {
+  expect(claudeRateLimitWindows(rateLimitInfo())).toEqual([]);
 
   expect(
-    claudeRateLimitWindows({
-      rateLimitType: "five_hour",
-      utilization: 0.25,
-      unifiedWindows: { seven_day: { utilization: 0.5 } },
-    }).map((window) => window.id),
-  ).toEqual(["seven_day", "five_hour"]);
+    claudeRateLimitWindows(
+      rateLimitInfo({ rateLimitType: "overage", utilization: 0.5 }),
+    ),
+  ).toEqual([]);
 });
 
-test("missing or invalid utilization and overage entries are excluded", () => {
-  expect(
-    claudeRateLimitWindows({
-      unifiedWindows: {
-        five_hour: {},
-        seven_day: { utilization: "0.5" },
-        seven_day_opus: { utilization: Number.NaN },
-        seven_day_sonnet: { utilization: Number.POSITIVE_INFINITY },
-        overage: { utilization: 0.5 },
-        unknown: null,
-      },
-    }),
-  ).toEqual([]);
-
-  expect(
-    claudeRateLimitWindows({ rateLimitType: "overage", utilization: 0.5 }),
-  ).toEqual([]);
-
-  expect(claudeRateLimitWindows(null)).toEqual([]);
-});
-
-test.each([undefined, "100", Number.NaN, Number.POSITIVE_INFINITY, 1e20])(
+test.each([undefined, Number.NaN, Number.POSITIVE_INFINITY, 1e20])(
   "invalid reset time %s does not discard valid utilization",
   (resetsAt) => {
     expect(
-      claudeRateLimitWindows({
-        rateLimitType: "five_hour",
-        utilization: 0.4,
-        resetsAt,
-      }),
+      claudeRateLimitWindows(
+        rateLimitInfo({
+          rateLimitType: "five_hour",
+          utilization: 0.4,
+          resetsAt,
+        }),
+      ),
     ).toEqual([
       {
         id: "five_hour",
@@ -99,11 +90,13 @@ test.each([undefined, "100", Number.NaN, Number.POSITIVE_INFINITY, 1e20])(
 
 test("included-model windows keep a distinct label and epoch reset time", () => {
   expect(
-    claudeRateLimitWindows({
-      unifiedWindows: {
-        seven_day_overage_included: { utilization: 0.8, resetsAt: 0 },
-      },
-    }),
+    claudeRateLimitWindows(
+      rateLimitInfo({
+        rateLimitType: "seven_day_overage_included",
+        utilization: 0.8,
+        resetsAt: 0,
+      }),
+    ),
   ).toEqual([
     {
       id: "seven_day_overage_included",
@@ -114,17 +107,26 @@ test("included-model windows keep a distinct label and epoch reset time", () => 
   ]);
 });
 
-test("saved rate-limit metadata gains windows without replacing normalized presentation", () => {
-  const saved: Event = {
+test("normalized rate-limit presentation exposes its provider windows", () => {
+  const saved: Event = decodedEvent({
     id: 1,
     task_id: "task",
     timestamp: "2026-10-13T00:00:00.000Z",
     type: "agent.rate_limit_event",
     data: {
-      activity: { kind: "rate_limit_event", title: "Rate limit updated" },
-      rate_limit_info: { rateLimitType: "five_hour", utilization: 0.25 },
+      activity: {
+        kind: "rate_limit_event",
+        title: "Rate limit updated",
+        rateLimitWindows: [
+          {
+            id: "five_hour",
+            label: "5-hour window",
+            utilization: 0.25,
+          },
+        ],
+      },
     },
-  };
+  });
 
   const presentation = activityPresentation(saved);
 
@@ -136,25 +138,23 @@ test("saved rate-limit metadata gains windows without replacing normalized prese
         id: "five_hour",
         label: "5-hour window",
         utilization: 0.25,
-        resetsAt: undefined,
       },
     ],
   });
 
-  expect(saved.data.activity).toEqual({
-    kind: "rate_limit_event",
-    title: "Rate limit updated",
-  });
+  expect(saved.data.activity).toEqual(saved.presentation);
 
   const normalized = {
     ...presentation,
     rateLimitWindows: [],
   };
 
-  expect(
-    activityPresentation({
-      ...saved,
-      data: { ...saved.data, activity: normalized },
-    }),
-  ).toBe(normalized);
+  const normalizedEvent = decodedEvent({
+    ...saved,
+    data: { ...saved.data, activity: normalized },
+  });
+
+  expect(activityPresentation(normalizedEvent)).toBe(
+    normalizedEvent.presentation,
+  );
 });
