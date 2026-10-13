@@ -3,21 +3,11 @@ import type {
   TurnActivityPage,
 } from "../../../shared/tasks/activity/activity-tail";
 import type { BudgetRaise, Delivery } from "../../../shared/tasks/model";
-import {
-  changesKey,
-  changesStale,
-  readChanges,
-} from "../../features/changes/read-changes";
+import { ChangeLoader } from "../../features/changes/change-loader";
 import type {
-  ChangeCounts,
-  ChangeCountsState,
-  Changes,
   ChangeScope,
-  ChangesState,
   WorktreeRemoval,
 } from "../../features/changes/types";
-import { delegationDialog } from "../../features/delegation/delegation";
-import { projectApproved } from "../../features/projects/selectors";
 import {
   activityCursor,
   mergeActivity,
@@ -30,24 +20,21 @@ import {
   type HandoffTarget,
 } from "../../features/tasks/controls/handoff-message";
 import { ParentMessageRelay } from "../../features/tasks/controls/parent-message-relay";
+import { errorMessage } from "../../shared/utils/error-message";
 import {
   canNavigate,
   DEFAULT_PAGE,
   type PageId,
   PAGES,
 } from "../navigation/pages";
+import { DialogLoader } from "./dialog-loader";
 import { initialState } from "./initial-state";
-import {
-  persistDialog,
-  sameDialogReference,
-} from "./persistence/dialog-persistence";
-import { restoreDialog } from "./persistence/dialog-restoration";
-import { filterCounts, selectedTask, terminal } from "./selectors";
+import { PersistedDialogs } from "./persistence/persisted-dialogs";
+import { projectRemovalReset } from "./scope-reconciliation";
+import { defaultTask, selectionPatch } from "./selection";
+import { filterCounts, selectedTask } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
 import type {
-  Defaults,
-  DelegateDialogRead,
-  DialogReadStatus,
   DialogState,
   Filter,
   PanelData,
@@ -55,7 +42,6 @@ import type {
   PersistedDialogDraft,
   PersistedViewState,
   Project,
-  SettingsDocument,
   Snapshot,
   Tab,
   Task,
@@ -107,15 +93,37 @@ export class Controller {
   private browsing = false;
   private explicitSelection = false;
   private restoredView?: PersistedViewState;
-  private lastSettingsSection?: string;
-  private persistedDialogs: PersistedDialog[];
+  private dialogs: PersistedDialogs;
   private viewStateReady = false;
   private timer?: ReturnType<typeof setTimeout>;
   /** When workers were last read, so a CLI that breaks mid-session still shows. */
   private workersReadAt = 0;
   private projectsRead?: Promise<Project[]>;
   private workersRead?: Promise<Worker[]>;
-  private dialogReadRequest = 0;
+
+  private dialogLoader = new DialogLoader({
+    snapshot: () => this.state,
+    closed: () => this.disposed,
+    patch: (patch) => this.patch(patch),
+    tool: (name) => this.tool(name),
+    readProjects: () => this.readProjects(),
+    readWorkers: async () => {
+      const workers = await this.readWorkers();
+      this.workersReadAt = Date.now();
+
+      return workers;
+    },
+    explicitSelection: () => this.explicitSelection,
+    refresh: () => this.run(() => this.refresh()),
+  });
+
+  private changeLoader = new ChangeLoader({
+    snapshot: () => this.state,
+    closed: () => this.disposed,
+    patch: (patch) => this.patch(patch),
+    tool: (name, args) => this.tool(name, args),
+  });
+
   constructor(
     readonly transport: Transport,
     private environment = {
@@ -131,20 +139,23 @@ export class Controller {
     );
 
     this.restoredView = viewState?.initial.view ?? {};
-    this.persistedDialogs = viewState?.initial.dialogs ?? [];
 
-    const restoredOpenSections =
-      this.persistedDialogs.at(-1)?.kind === "settings"
-        ? this.persistedDialogs.at(-1)?.draft?.openSections
-        : undefined;
-
-    this.lastSettingsSection =
-      viewState?.initial.lastSettingsSection ??
-      (Array.isArray(restoredOpenSections)
-        ? [...restoredOpenSections]
-            .reverse()
-            .find((section): section is string => typeof section === "string")
-        : undefined);
+    this.dialogs = new PersistedDialogs(
+      {
+        snapshot: () => this.state,
+        closed: () => this.disposed,
+        changed: () => {
+          if (this.viewStateReady) this.saveViewState();
+        },
+        save: () => this.saveViewState(),
+        show: (dialog) => this.patch({ dialog, formError: "" }),
+        openSettings: () => this.dialogLoader.openSettings(),
+        openDelegate: (...args) => this.dialogLoader.openDelegate(...args),
+        explicitSelection: () => this.explicitSelection,
+        tool: (name) => this.tool(name),
+      },
+      viewState?.initial,
+    );
 
     const initial = initialState();
     this.browsing = this.restoredView.browsing === true;
@@ -157,7 +168,7 @@ export class Controller {
     this.state = {
       ...initial,
       page:
-        this.persistedDialogs.at(-1)?.kind === "settings"
+        this.dialogs.latest()?.kind === "settings"
           ? "settings"
           : (this.restoredView.page ?? initial.page),
       filter: this.restoredView.filter ?? initial.filter,
@@ -179,26 +190,8 @@ export class Controller {
   private patch(patch: Partial<Snapshot>) {
     if (this.disposed) return;
 
-    if ("dialog" in patch && patch.dialog !== this.state.dialog) {
-      if (patch.dialog) {
-        const descriptor = persistDialog(patch.dialog),
-          previous = this.persistedDialogs.at(-1),
-          finishingDelegateLoad =
-            this.state.dialog?.kind === "delegate-loading" &&
-            patch.dialog.kind === "delegate";
-
-        if (
-          sameDialogReference(previous, descriptor) ||
-          finishingDelegateLoad
-        ) {
-          this.persistedDialogs[this.persistedDialogs.length - 1] = {
-            ...descriptor,
-            ...(previous?.draft ? { draft: previous.draft } : {}),
-          };
-        } else {
-          this.persistedDialogs = [descriptor];
-        }
-      }
+    if (patch.dialog && patch.dialog !== this.state.dialog) {
+      this.dialogs.shown(this.state.dialog, patch.dialog);
     }
 
     this.state = { ...this.state, ...patch };
@@ -222,169 +215,48 @@ export class Controller {
         ...(this.state.selected ? { tab: this.state.tab } : {}),
         ...(this.browsing && !this.state.selected ? { browsing: true } : {}),
       },
-      ...(this.lastSettingsSection
-        ? { lastSettingsSection: this.lastSettingsSection }
-        : {}),
-      ...(this.persistedDialogs.length
-        ? { dialogs: [...this.persistedDialogs] }
-        : {}),
+      ...this.dialogs.saved(),
     });
   }
 
   getDialogDraft(kind: PersistedDialog["kind"]) {
-    const dialog = this.persistedDialogs.at(-1);
-
-    return dialog?.kind === kind ? dialog.draft : undefined;
+    return this.dialogs.draft(kind);
   }
 
   getLastSettingsSection() {
-    return this.lastSettingsSection ?? "task";
+    return this.dialogs.lastSettingsSection();
   }
 
   saveSettingsSection(section: string) {
-    this.lastSettingsSection = section;
-
-    // Keep the persisted array field compatible with drafts from the accordion UI.
-    this.saveDialogField("settings", "openSections", [section]);
+    this.dialogs.saveSettingsSection(section);
   }
 
   saveDialogDraft(kind: PersistedDialog["kind"], draft: PersistedDialogDraft) {
-    const activeDialog = this.state.dialog;
-    if (!activeDialog || this.disposed) return;
-
-    // Early form fields remain editable and persist while their reads resolve.
-    const matchesKind =
-      activeDialog.kind === kind ||
-      (kind === "settings" && activeDialog.kind === "settings-loading") ||
-      (kind === "delegate" && activeDialog.kind === "delegate-loading");
-
-    if (!matchesKind) return;
-
-    const descriptor =
-      this.persistedDialogs.at(-1) ?? persistDialog(activeDialog);
-
-    if (descriptor.kind !== kind) return;
-
-    if (!this.persistedDialogs.length) this.persistedDialogs.push(descriptor);
-
-    this.persistedDialogs[this.persistedDialogs.length - 1] = {
-      ...descriptor,
-      draft: { ...descriptor.draft, ...draft },
-    };
-
-    if (this.viewStateReady) this.saveViewState();
+    this.dialogs.saveDraft(kind, draft);
   }
 
   saveDialogField(kind: PersistedDialog["kind"], name: string, value: unknown) {
-    this.saveDialogDraft(kind, {
-      ...this.getDialogDraft(kind),
-      [name]: value,
-    });
-  }
-
-  private async restorePersistedDialog(tasks: Task[], scope: number) {
-    const saved = this.persistedDialogs.at(-1);
-    if (!saved || this.state.dialog) return;
-
-    if (saved.kind === "settings") {
-      if (this.canRestoreDialog(saved, scope)) this.openSettingsLoading();
-
-      return;
-    }
-
-    if (saved.kind === "delegate") {
-      if (this.canRestoreDialog(saved, scope)) {
-        this.openDelegateLoading(
-          saved.preferredWorker,
-          saved.repository,
-          saved.revision,
-        );
-      }
-
-      return;
-    }
-
-    const task =
-      "taskId" in saved
-        ? tasks.find((item) => item.id === saved.taskId)
-        : undefined;
-
-    if ("taskId" in saved && !task) {
-      await this.discardPersistedDialog(saved, tasks, scope);
-
-      return;
-    }
-
-    try {
-      const active = () =>
-        this.canRestoreDialog(saved, scope) && !this.hasDialog();
-
-      const restored = restoreDialog(saved, tasks, scope, {
-        snapshot: () => this.state,
-        active,
-        explicitSelection: this.explicitSelection,
-        tool: (name) => this.tool(name),
-      });
-
-      const dialog = restored instanceof Promise ? await restored : restored;
-
-      if (!dialog) {
-        if (!this.hasDialog()) {
-          await this.discardPersistedDialog(saved, tasks, scope);
-        }
-
-        return;
-      }
-
-      if (active()) this.patch({ dialog, formError: "" });
-    } catch {
-      // Keep the saved descriptor so a later refresh can retry transient reads.
-    }
-  }
-
-  private canRestoreDialog(saved: PersistedDialog, scope: number) {
-    return (
-      !this.disposed &&
-      scope === this.state.scopeVersion &&
-      sameDialogReference(this.persistedDialogs.at(-1), saved)
-    );
-  }
-
-  private async discardPersistedDialog(
-    saved: PersistedDialog,
-    tasks: Task[],
-    scope: number,
-  ) {
-    if (!this.canRestoreDialog(saved, scope)) return;
-    this.persistedDialogs.pop();
-    this.saveViewState();
-    await this.restorePersistedDialog(tasks, scope);
+    this.dialogs.saveField(kind, name, value);
   }
 
   private closeDialog() {
-    this.persistedDialogs.pop();
+    this.dialogs.pop();
     this.patch({ dialog: undefined, formError: "" });
-    void this.restorePersistedDialog(this.state.tasks, this.state.scopeVersion);
+    void this.dialogs.restore(this.state.tasks, this.state.scopeVersion);
   }
 
   /** The task a wide or scoped panel opens when nothing is chosen, unless the user is browsing. */
   private defaultSelection(tasks: Task[]) {
-    const { conversation, repository } = this.state,
-      [first] = tasks;
+    const { conversation, repository } = this.state;
 
     if (
       this.browsing ||
-      !first ||
       !(this.environment.wide() || conversation || repository)
     ) {
       return undefined;
     }
 
-    return (
-      tasks.find((task) => task.pending_input)?.id ??
-      tasks.find((task) => !terminal(task))?.id ??
-      first.id
-    );
+    return defaultTask(tasks)?.id;
   }
 
   /** Keeps a selection the list still contains; otherwise falls back to the default task. */
@@ -410,11 +282,7 @@ export class Controller {
   }
 
   report = (error: unknown) => {
-    if (!this.disposed) {
-      this.patch({
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    if (!this.disposed) this.patch({ error: errorMessage(error) });
   };
 
   run = (action: () => Promise<unknown>) => {
@@ -460,12 +328,12 @@ export class Controller {
       if (this.isDisposed()) return;
 
       this.patch({ connected: true, loginRequired: false });
-      const savedDialog = this.persistedDialogs.at(-1);
+      const savedDialog = this.dialogs.latest();
 
       if (!this.state.dialog && savedDialog?.kind === "settings") {
-        this.openSettingsLoading();
+        this.dialogLoader.openSettings();
       } else if (!this.state.dialog && savedDialog?.kind === "delegate") {
-        this.openDelegateLoading(
+        this.dialogLoader.openDelegate(
           savedDialog.preferredWorker,
           savedDialog.repository,
           savedDialog.revision,
@@ -662,53 +530,22 @@ export class Controller {
 
       this.patch({ projects, projectsLoaded: true });
 
-      // Other panels or the CLI can revoke the selected registration too.
-      if (
-        !this.state.conversation &&
-        this.state.repository &&
-        removedProjects.some(
-          (project) => project.repository === this.state.repository,
-        )
-      ) {
-        this.restoredView = undefined;
-        this.invalidateScope({ repository: undefined, revision: "HEAD" });
-        version = this.state.scopeVersion;
-        this.reconcileShare = true;
-      }
+      const reset = projectRemovalReset(
+        this.state,
+        projects,
+        removedProjects,
+        this.dialogs.draft("delegate")?.repository,
+      );
 
-      const removal = this.state.dialog;
+      if (reset) {
+        if (reset === "repository") this.restoredView = undefined;
 
-      if (
-        removal?.kind === "remove-project" &&
-        removal.scope === version &&
-        !projects.some(
-          (project) => project.repository === removal.project.repository,
-        )
-      ) {
-        this.invalidateScope({});
-        version = this.state.scopeVersion;
-        this.reconcileShare = true;
-      }
+        this.invalidateScope(
+          reset === "repository"
+            ? { repository: undefined, revision: "HEAD" }
+            : {},
+        );
 
-      const delegation = this.state.dialog;
-      const draftRepository = this.getDialogDraft("delegate")?.repository;
-
-      let delegationRepository: string | undefined;
-
-      if (typeof draftRepository === "string") {
-        delegationRepository = draftRepository;
-      } else if (delegation?.kind === "delegate") {
-        delegationRepository = delegation.repository;
-      }
-
-      if (
-        delegation?.kind === "delegate" &&
-        delegation.scope === version &&
-        delegationRepository &&
-        projectApproved(removedProjects, delegationRepository) &&
-        !projectApproved(projects, delegationRepository)
-      ) {
-        this.invalidateScope({});
         version = this.state.scopeVersion;
         this.reconcileShare = true;
       }
@@ -795,64 +632,11 @@ export class Controller {
       }
 
       const previousSelected = this.state.selected;
-      let selected = previousSelected;
 
-      // A late task-list result may supply a remembered/default tab. Keep the
-      // current tab when the user changed it since this selection or read began.
-      const preserveCurrentTab =
-        this.tabIntentRevision !== this.tabIntentRevisionAtSelection ||
-        this.tabIntentRevision !== tabIntentRevisionAtReadStart;
-
-      if (selected && !tasks.some((task) => task.id === selected)) {
-        selected = undefined;
-        this.reconcileShare = true;
-        this.explicitSelection = false;
-        this.generation++;
-
-        this.patch({
-          events: [],
-          activityFocus: undefined,
-          chat: undefined,
-          draft: undefined,
-        });
-      }
-
-      let tab = this.state.tab;
-      const restored = this.restoredView;
-      const search = restored?.search ?? this.state.search;
-
-      const filter = restored
-        ? availableFilter(
-            { ...this.state, tasks, search },
-            restored.filter ?? this.state.filter,
-          )
-        : this.state.filter;
-
-      const restoredTask = restored?.selected
-        ? tasks.find((task) => task.id === restored.selected)
-        : undefined;
-
-      if (restoredTask) {
-        selected = restoredTask.id;
-        this.explicitSelection = true;
-        this.browsing = false;
-
-        if (!preserveCurrentTab) {
-          tab = restored?.tab ?? this.session.get("task", selected).tab;
-        }
-      } else if (restored?.browsing) {
-        selected = undefined;
-        this.explicitSelection = false;
-        this.browsing = true;
-      }
-
-      if (!selected) {
-        selected = this.defaultSelection(tasks);
-
-        if (selected && !preserveCurrentTab) {
-          tab = this.session.get("task", selected).tab;
-        }
-      }
+      const { selected, tab, filter, search } = this.reconcileSelection(
+        tasks,
+        tabIntentRevisionAtReadStart,
+      );
 
       // Don't replace URL choices with defaults until their project and task resolve.
       this.restoredView = undefined;
@@ -882,7 +666,7 @@ export class Controller {
         this.reconcileShare = false;
       }
 
-      await this.restorePersistedDialog(tasks, version);
+      await this.dialogs.restore(tasks, version);
       if (this.stale(version)) return;
 
       await this.loadDetail();
@@ -905,7 +689,7 @@ export class Controller {
         dialog?.kind === "delegate-loading" &&
         dialog.statuses.context === "loading"
       ) {
-        this.updateDelegateDialogRead(
+        this.dialogLoader.updateDelegateRead(
           dialog.request,
           "context",
           "error",
@@ -927,6 +711,76 @@ export class Controller {
         this.run(() => this.refresh());
       }
     }
+  }
+
+  /**
+   * The selection, tab and list controls after a task-list read: a URL-restored
+   * task or browsing state first, then the current task while the list still
+   * has it, then the default task. A tab the user changed since this selection
+   * or read began is kept.
+   */
+  private reconcileSelection(
+    tasks: Task[],
+    tabIntentRevisionAtReadStart: number,
+  ) {
+    let selected = this.state.selected;
+
+    const preserveCurrentTab =
+      this.tabIntentRevision !== this.tabIntentRevisionAtSelection ||
+      this.tabIntentRevision !== tabIntentRevisionAtReadStart;
+
+    if (selected && !tasks.some((task) => task.id === selected)) {
+      selected = undefined;
+      this.reconcileShare = true;
+      this.explicitSelection = false;
+      this.generation++;
+
+      this.patch({
+        events: [],
+        activityFocus: undefined,
+        chat: undefined,
+        draft: undefined,
+      });
+    }
+
+    let tab = this.state.tab;
+    const restored = this.restoredView;
+    const search = restored?.search ?? this.state.search;
+
+    const filter = restored
+      ? availableFilter(
+          { ...this.state, tasks, search },
+          restored.filter ?? this.state.filter,
+        )
+      : this.state.filter;
+
+    const restoredTask = restored?.selected
+      ? tasks.find((task) => task.id === restored.selected)
+      : undefined;
+
+    if (restoredTask) {
+      selected = restoredTask.id;
+      this.explicitSelection = true;
+      this.browsing = false;
+
+      if (!preserveCurrentTab) {
+        tab = restored?.tab ?? this.session.get("task", selected).tab;
+      }
+    } else if (restored?.browsing) {
+      selected = undefined;
+      this.explicitSelection = false;
+      this.browsing = true;
+    }
+
+    if (!selected) {
+      selected = this.defaultSelection(tasks);
+
+      if (selected && !preserveCurrentTab) {
+        tab = this.session.get("task", selected).tab;
+      }
+    }
+
+    return { selected, tab, filter, search };
   }
 
   async loadDetail() {
@@ -985,22 +839,11 @@ export class Controller {
   }
 
   async select(id: string) {
-    this.explicitSelection = true;
-    this.browsing = false;
-    ++this.generation;
-    this.tabIntentRevision++;
-    this.tabIntentRevisionAtSelection = this.tabIntentRevision;
+    this.choose();
     this.restoredView = undefined;
 
     this.patch({
-      selected: id,
-      events: [],
-      droppedEvents: undefined,
-      activityFocus: undefined,
-      chat: undefined,
-      chatHistoryLoading: id,
-      activityHistoryLoading: id,
-      draft: undefined,
+      ...selectionPatch(id),
       tab: this.session.get("task", id).tab,
     });
 
@@ -1016,17 +859,7 @@ export class Controller {
     ++this.generation;
     this.tabIntentRevision++;
 
-    this.patch({
-      selected: undefined,
-      events: [],
-      droppedEvents: undefined,
-      activityFocus: undefined,
-      chat: undefined,
-      chatHistoryLoading: undefined,
-      activityHistoryLoading: undefined,
-      draft: undefined,
-    });
-
+    this.patch(selectionPatch(undefined));
     this.run(() => this.share());
   }
 
@@ -1036,6 +869,21 @@ export class Controller {
 
   setFilter(filter: Filter) {
     this.patch({ filter });
+  }
+
+  /**
+   * Records a task the user or host chose, so late task-list reads keep it.
+   * `newTabIntent` also starts tab tracking afresh for this selection.
+   */
+  private choose(newTabIntent = true) {
+    ++this.generation;
+    this.explicitSelection = true;
+    this.browsing = false;
+    this.tabIntentRevision++;
+
+    if (newTabIntent) {
+      this.tabIntentRevisionAtSelection = this.tabIntentRevision;
+    }
   }
 
   setTab(tab: Snapshot["tab"]) {
@@ -1106,127 +954,22 @@ export class Controller {
     this.patch({ activityFocus: undefined });
   }
 
-  /** Reads the selected task's change totals when its status or turn has moved on. */
   private async loadCountsIfStale() {
-    const task = selectedTask(this.state);
-
-    if (task && changesStale(this.state.changeCounts, task)) {
-      await this.loadCounts();
-    }
+    await this.changeLoader.loadCountsIfStale();
   }
 
-  /** Reads the selected task's full changes while the Changes tab is open. */
   private async loadChangesIfStale() {
-    const task = selectedTask(this.state);
-
-    if (
-      task &&
-      this.state.tab === "changes" &&
-      changesStale(this.state.changes, task)
-    ) {
-      await this.loadChanges();
-    }
+    await this.changeLoader.loadChangesIfStale();
   }
 
-  /**
-   * Reads the selected task's change totals for its tab count and Details: the
-   * counts alone, so the file list and diff stay on the service until Changes
-   * opens. A reload keeps the last totals during the read and after failure.
-   */
+  /** Reads the selected task's change totals, for its tab count and Details. */
   async loadCounts() {
-    const task = selectedTask(this.state);
-    if (!task || this.disposed) return;
-
-    const previous =
-      this.state.changeCounts?.task === task.id
-        ? this.state.changeCounts
-        : undefined;
-
-    const counts: ChangeCountsState = {
-      task: task.id,
-      key: changesKey(task),
-      loading: true,
-      data: previous?.data,
-    };
-
-    let current = counts;
-    this.patch({ changeCounts: counts });
-    // A newer read, or another task, replaces this one.
-    const live = () => !this.disposed && this.state.changeCounts === current;
-
-    try {
-      const data = await this.tool<ChangeCounts>(
-        "get_user_agent_change_counts",
-        { task_id: task.id },
-      );
-
-      if (live()) {
-        current = { ...counts, loading: false, data };
-        this.patch({ changeCounts: current });
-      }
-    } catch (error) {
-      if (!live()) return;
-
-      current = {
-        ...counts,
-        loading: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-
-      this.patch({ changeCounts: current });
-    }
+    await this.changeLoader.loadCounts();
   }
 
-  /**
-   * Reads the selected task's changes, every page, for `scope` (the current
-   * one by default). A same-scope reload keeps the last result during the
-   * read and after failure; changing scope clears it.
-   */
+  /** Reads the selected task's changes for `scope`, the current one by default. */
   async loadChanges(scope?: ChangeScope) {
-    const task = selectedTask(this.state);
-    if (!task || this.disposed) return;
-
-    const previous =
-      this.state.changes?.task === task.id ? this.state.changes : undefined;
-
-    const next = scope ?? previous?.scope ?? "task";
-
-    const changes: ChangesState = {
-      task: task.id,
-      scope: next,
-      key: changesKey(task),
-      loading: true,
-      data: previous?.scope === next ? previous.data : undefined,
-    };
-
-    let current = changes;
-    this.patch({ changes });
-    // A newer read, or another task, replaces this one.
-    const live = () => !this.disposed && this.state.changes === current;
-
-    try {
-      const data = await readChanges(
-        task.id,
-        changes.scope,
-        (args) => this.tool<Changes>("get_user_agent_changes", args),
-        live,
-      );
-
-      if (data && live()) {
-        current = { ...changes, loading: false, data };
-        this.patch({ changes: current });
-      }
-    } catch (error) {
-      if (!live()) return;
-
-      current = {
-        ...changes,
-        loading: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-
-      this.patch({ changes: current });
-    }
+    await this.changeLoader.loadChanges(scope);
   }
 
   /**
@@ -1296,7 +1039,7 @@ export class Controller {
         ? { ...currentDialog, scope: scopeVersion }
         : undefined;
 
-    if (!this.restoredView && !scopeSafeDialog) this.persistedDialogs = [];
+    if (!this.restoredView && !scopeSafeDialog) this.dialogs.clear();
 
     const restoredSelection = this.restoredView?.browsing
       ? undefined
@@ -1307,13 +1050,7 @@ export class Controller {
       scopeVersion,
       tasks: [],
       taskListLoading: true,
-      selected: restoredSelection,
-      events: [],
-      activityFocus: undefined,
-      chat: undefined,
-      chatHistoryLoading: restoredSelection,
-      activityHistoryLoading: restoredSelection,
-      draft: undefined,
+      ...selectionPatch(restoredSelection),
       ...(this.state.busy
         ? {
             formError:
@@ -1412,23 +1149,10 @@ export class Controller {
         tab = this.session.get("task", taskId).tab;
       }
 
-      ++this.generation;
-      this.explicitSelection = true;
-      this.browsing = false;
-      this.tabIntentRevision++;
-
-      if (!preserveCurrentTab) {
-        this.tabIntentRevisionAtSelection = this.tabIntentRevision;
-      }
+      this.choose(!preserveCurrentTab);
 
       this.patch({
-        selected: taskId,
-        events: [],
-        activityFocus: undefined,
-        chat: undefined,
-        chatHistoryLoading: taskId,
-        activityHistoryLoading: taskId,
-        draft: undefined,
+        ...selectionPatch(taskId),
         tab,
         filter: this.restoredView?.filter ?? null,
         search: this.restoredView?.search ?? "",
@@ -1441,7 +1165,7 @@ export class Controller {
       dialog?.kind === "delegate-loading" &&
       dialog.statuses.context !== "ready"
     ) {
-      this.updateDelegateDialogRead(dialog.request, "context", "ready");
+      this.dialogLoader.updateDelegateRead(dialog.request, "context", "ready");
     }
 
     if (refresh) this.run(() => this.refresh());
@@ -1613,7 +1337,7 @@ export class Controller {
     } catch (error) {
       if (active()) {
         this.patch({
-          formError: error instanceof Error ? error.message : String(error),
+          formError: errorMessage(error),
         });
       }
     } finally {
@@ -1681,7 +1405,7 @@ export class Controller {
     } catch (error) {
       if (active()) {
         this.patch({
-          formError: error instanceof Error ? error.message : String(error),
+          formError: errorMessage(error),
         });
       }
     } finally {
@@ -1752,8 +1476,7 @@ export class Controller {
 
     this.navigate("settings");
     if (this.state.page !== "settings") return;
-
-    this.openSettingsLoading();
+    this.dialogLoader.openSettings();
   }
 
   ensureSettingsLoaded() {
@@ -1766,7 +1489,7 @@ export class Controller {
       return;
     }
 
-    this.openSettingsLoading();
+    this.dialogLoader.openSettings();
   }
 
   backFromSettings() {
@@ -1774,274 +1497,15 @@ export class Controller {
     this.navigate(DEFAULT_PAGE);
   }
 
-  private openSettingsLoading() {
-    const dialog = {
-      kind: "settings-loading" as const,
-      scope: this.state.scopeVersion,
-      request: ++this.dialogReadRequest,
-      status: "loading" as const,
-    };
-
-    this.patch({ dialog, formError: "" });
-    void this.loadSettingsDialog(dialog);
-  }
-
   async delegate(preferredWorker?: string) {
     if (this.state.dialog || this.state.busy) return;
 
-    this.openDelegateLoading(preferredWorker);
+    this.dialogLoader.openDelegate(preferredWorker);
   }
 
-  private openDelegateLoading(
-    preferredWorker?: string,
-    repository?: string,
-    revision?: string,
-  ) {
-    const dialog = {
-      kind: "delegate-loading" as const,
-      scope: this.state.scopeVersion,
-      request: ++this.dialogReadRequest,
-      preferredWorker,
-      ...(repository ? { repository } : {}),
-      ...(revision ? { revision } : {}),
-      statuses: {
-        context: this.state.scopeKnown ? "ready" : "loading",
-        settings: "loading",
-        projects: this.state.projectsLoaded ? "ready" : "loading",
-        workers: this.state.workersLoaded ? "ready" : "loading",
-      } satisfies Record<DelegateDialogRead, DialogReadStatus>,
-    };
-
-    this.patch({ dialog, formError: "" });
-    void this.loadDelegateDialog(dialog);
-  }
-
+  /** Retries the open loading dialog's failed reads. */
   retryDialogLoad() {
-    const dialog = this.state.dialog;
-
-    if (dialog?.kind === "settings-loading" && dialog.status === "error") {
-      const retry = {
-        ...dialog,
-        scope: this.state.scopeVersion,
-        request: ++this.dialogReadRequest,
-        status: "loading" as const,
-        error: undefined,
-      };
-
-      this.patch({ dialog: retry });
-      void this.loadSettingsDialog(retry);
-
-      return;
-    }
-
-    if (dialog?.kind === "delegate-loading") this.retryDelegateDialog(dialog);
-  }
-
-  private async loadSettingsDialog(
-    dialog: Extract<DialogState, { kind: "settings-loading" }>,
-  ) {
-    try {
-      const settings = await this.tool<SettingsDocument>("get_agent_settings");
-
-      if (!this.isSettingsDialogRequest(dialog.request)) return;
-
-      if (!Array.isArray(settings.sections)) {
-        throw new Error(
-          "Settings are unavailable in this preview or service version.",
-        );
-      }
-
-      this.patch({
-        dialog: { kind: "settings", settings, scope: this.state.scopeVersion },
-        formError: "",
-      });
-    } catch (error) {
-      const current = this.state.dialog;
-      if (!this.isSettingsDialogRequest(dialog.request)) return;
-
-      this.patch({
-        dialog: {
-          ...(current as Extract<DialogState, { kind: "settings-loading" }>),
-          scope: this.state.scopeVersion,
-          status: "error",
-          error: error instanceof Error ? error.message : String(error),
-        },
-      });
-    }
-  }
-
-  private isSettingsDialogRequest(request: number) {
-    return (
-      !this.disposed &&
-      this.state.dialog?.kind === "settings-loading" &&
-      this.state.dialog.request === request
-    );
-  }
-
-  private loadDelegateDialog(
-    dialog: Extract<DialogState, { kind: "delegate-loading" }>,
-  ) {
-    if (dialog.statuses.settings === "loading") {
-      void this.tool<{ values: Defaults }>("get_agent_settings").then(
-        ({ values }) =>
-          this.updateDelegateDialogRead(dialog.request, "settings", "ready", {
-            defaults: values,
-          }),
-        (error: unknown) =>
-          this.updateDelegateDialogRead(
-            dialog.request,
-            "settings",
-            "error",
-            undefined,
-            error,
-          ),
-      );
-    }
-
-    if (dialog.statuses.projects === "loading") {
-      void this.readProjects().then(
-        (projects) =>
-          this.updateDelegateDialogRead(dialog.request, "projects", "ready", {
-            snapshot: { projects, projectsLoaded: true },
-          }),
-        (error: unknown) =>
-          this.updateDelegateDialogRead(
-            dialog.request,
-            "projects",
-            "error",
-            undefined,
-            error,
-          ),
-      );
-    }
-
-    if (dialog.statuses.workers === "loading") {
-      void this.readWorkers().then(
-        (workers) => {
-          this.workersReadAt = Date.now();
-
-          this.updateDelegateDialogRead(dialog.request, "workers", "ready", {
-            snapshot: { workers, workersLoaded: true },
-          });
-        },
-        (error: unknown) =>
-          this.updateDelegateDialogRead(
-            dialog.request,
-            "workers",
-            "error",
-            undefined,
-            error,
-          ),
-      );
-    }
-  }
-
-  private updateDelegateDialogRead(
-    request: number,
-    resource: DelegateDialogRead,
-    status: DialogReadStatus,
-    result?: {
-      defaults?: Defaults;
-      snapshot?: Partial<Snapshot>;
-    },
-    error?: unknown,
-  ) {
-    const current = this.state.dialog;
-
-    if (
-      this.disposed ||
-      current?.kind !== "delegate-loading" ||
-      current.request !== request
-    ) {
-      return;
-    }
-
-    const errors = { ...current.errors };
-
-    if (status === "error") {
-      errors[resource] = error instanceof Error ? error.message : String(error);
-    } else {
-      delete errors[resource];
-    }
-
-    const updated = {
-      ...current,
-      statuses: { ...current.statuses, [resource]: status },
-      errors,
-      ...(result && "defaults" in result ? { defaults: result.defaults } : {}),
-    };
-
-    this.patch({ ...result?.snapshot, dialog: updated });
-
-    if (
-      Object.values(updated.statuses).every((item) => item === "ready") &&
-      updated.defaults
-    ) {
-      try {
-        const resolved = delegationDialog(
-          this.state,
-          this.state.projects,
-          updated.defaults,
-          this.explicitSelection,
-          updated.preferredWorker,
-        );
-
-        this.patch({
-          dialog: {
-            ...resolved,
-            scope: updated.scope,
-            repository: updated.repository ?? resolved.repository,
-            revision: updated.revision ?? resolved.revision,
-          },
-        });
-      } catch (loadError) {
-        const active = this.state.dialog;
-
-        if (active?.kind === "delegate-loading" && active.request === request) {
-          this.patch({
-            dialog: {
-              ...active,
-              message:
-                loadError instanceof Error
-                  ? loadError.message
-                  : String(loadError),
-            },
-          });
-        }
-      }
-    }
-  }
-
-  private retryDelegateDialog(
-    dialog: Extract<DialogState, { kind: "delegate-loading" }>,
-  ) {
-    const request = ++this.dialogReadRequest;
-    const statuses = { ...dialog.statuses };
-    const errors = { ...dialog.errors };
-    const retryContext = statuses.context === "error";
-
-    for (const resource of [
-      "context",
-      "settings",
-      "projects",
-      "workers",
-    ] as const) {
-      if (statuses[resource] !== "error") continue;
-      statuses[resource] = "loading";
-      delete errors[resource];
-    }
-
-    const retry = {
-      ...dialog,
-      request,
-      statuses,
-      errors,
-      message: undefined,
-    };
-
-    this.patch({ dialog: retry });
-    this.loadDelegateDialog(retry);
-    if (retryContext) this.run(() => this.refresh());
+    this.dialogLoader.retry();
   }
 
   open(
@@ -2084,16 +1548,12 @@ export class Controller {
       scope: this.state.scopeVersion,
     };
 
-    const descriptor = persistDialog(dialog);
-
     // Seed the form before publishing it and keep its file preview underneath.
-    this.persistedDialogs = [
-      ...(previous ? this.persistedDialogs : []),
-      {
-        ...descriptor,
-        draft: { message: handoffMessage(task, target, contextText) },
-      },
-    ];
+    this.dialogs.seed(
+      dialog,
+      { message: handoffMessage(task, target, contextText) },
+      Boolean(previous),
+    );
 
     this.patch({ dialog, formError: "" });
   }
@@ -2148,7 +1608,7 @@ export class Controller {
         input: { ...request.input, answers },
       });
     } catch (error) {
-      return error instanceof Error ? error.message : String(error);
+      return errorMessage(error);
     } finally {
       this.patch({ busy: false });
     }
@@ -2191,7 +1651,7 @@ export class Controller {
     try {
       await operation();
     } catch (error) {
-      return error instanceof Error ? error.message : String(error);
+      return errorMessage(error);
     } finally {
       this.patch({ busy: false });
     }
@@ -2315,11 +1775,7 @@ export class Controller {
       }
 
       if (task && selectReturned) {
-        ++this.generation;
-        this.explicitSelection = true;
-        this.browsing = false;
-        this.tabIntentRevision++;
-        this.tabIntentRevisionAtSelection = this.tabIntentRevision;
+        this.choose();
         this.restoredView = undefined;
 
         this.patch({
@@ -2327,13 +1783,7 @@ export class Controller {
             task,
             ...this.state.tasks.filter((item) => item.id !== task.id),
           ],
-          selected: task.id,
-          events: [],
-          activityFocus: undefined,
-          chat: undefined,
-          chatHistoryLoading: task.id,
-          activityHistoryLoading: task.id,
-          draft: undefined,
+          ...selectionPatch(task.id),
           tab: this.session.get("task", task.id).tab,
           repository: task.repository,
           revision: task.revision,
@@ -2345,7 +1795,7 @@ export class Controller {
       succeeded = true;
     } catch (error) {
       this.patch({
-        formError: error instanceof Error ? error.message : String(error),
+        formError: errorMessage(error),
       });
     } finally {
       this.patch({ busy: false });

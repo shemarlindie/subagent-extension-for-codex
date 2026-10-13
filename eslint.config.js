@@ -20,7 +20,7 @@ const TESTS = ["tests/**/*.ts", "**/*.test.{ts,tsx}", "**/*-test-harness.ts"];
 // Lower or remove these when files are refactored; don't raise them without a
 // review rationale.
 const SOURCE_FILE_LINE_CEILINGS = [
-  ["src/panel/app/state/controller.ts", 2025],
+  ["src/panel/app/state/controller.ts", 1450],
   ["src/panel/features/settings/settings-form.tsx", 450],
   ["src/service/features/providers/claude/runtime/provider.ts", 550],
   ["src/service/features/settings/settings.ts", 450],

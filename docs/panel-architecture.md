@@ -41,9 +41,17 @@ helpers live in `shared/utils/`. Global tokens, resets and primitive styles
 remain in `styles/`; application layouts live in `app/styles/`. `app.css`
 imports all production CSS in cascade order.
 
-Application state groups dialog descriptors and restoration in
+Application state groups dialog descriptors, saved drafts and restoration in
 `app/state/persistence/`, and in-memory session state and hooks in
 `app/state/session/`. Transport size tracing stays with `transports/`.
+
+`Controller` is the one facade components call. It keeps scope versions,
+selection and refresh sequencing, and delegates self-contained work to
+collaborators that receive a small context of callbacks: `DialogLoader` opens
+the settings and New Task dialogs while their reads load,
+`PersistedDialogs` keeps the dialog stack a reload reopens, and the
+feature-owned `ChangeLoader` and `DraftFollower` read changes and drafts for the
+selected task.
 
 ## State ownership and component patterns
 
