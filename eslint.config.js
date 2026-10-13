@@ -143,6 +143,14 @@ export default defineConfig(
   },
   prettier,
   {
+    // One-line statements may omit braces; anything spanning lines needs them,
+    // and every branch of an if/else matches. Listed after the Prettier config,
+    // which turns curly off; when Prettier wraps a long one-liner, eslint --fix
+    // adds braces once and the result stays stable.
+    files: CODE,
+    rules: { curly: ["error", "multi-line", "consistent"] },
+  },
+  {
     // Docs: broken links and fragments, empty links, duplicate headings and
     // similar Markdown mistakes. GitHub-flavored for tables.
     files: ["**/*.md"],

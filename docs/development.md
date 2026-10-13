@@ -412,6 +412,9 @@ It rejects nested ternaries, and in panel JSX it rejects inline handlers whose
 `{ … }` body holds more than one expression, or any other statement such as
 `if`; move those into a named function. Empty no-ops and one-expression bodies,
 such as `(element) => { ref.current = element; }`, stay inline.
+Statements that fit on one line, such as `if (!task) return;`, may omit braces;
+a body on another line, or one spanning several lines, needs braces, and every
+branch of an `if`/`else` follows the same choice.
 It also checks Markdown with `@eslint/markdown`'s recommended rules, such as
 invalid same-file heading fragments, code fences without a language and malformed
 tables. It does not check that links to other files exist or that their heading
