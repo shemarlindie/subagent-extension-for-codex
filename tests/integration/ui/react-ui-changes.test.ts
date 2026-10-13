@@ -137,9 +137,7 @@ test("Preview opens a changed file", async (t) => {
 
   await waitFor(() =>
     assert.match(
-      dialog.querySelector(
-        ".changed-file-loading-swap .loading-swap-content .code-view",
-      )?.textContent ?? "",
+      dialog.querySelector(".code-view")?.textContent ?? "",
       /new line/,
     ),
   );
@@ -430,11 +428,9 @@ test("global mode hides Ask Codex about a previewed file even when the host can 
   const preview = await screen.findByRole("dialog", { name: "src/a.ts" });
 
   await waitFor(() =>
-    expect(
-      preview.querySelector(
-        ".changed-file-loading-swap .loading-swap-content .code-view",
-      )?.textContent,
-    ).toContain("new line"),
+    expect(preview.querySelector(".code-view")?.textContent).toContain(
+      "new line",
+    ),
   );
 
   expect(
