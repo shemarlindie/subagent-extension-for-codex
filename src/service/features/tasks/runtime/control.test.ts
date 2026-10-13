@@ -573,7 +573,7 @@ test("dependent prompts include each dependency's reply and workspace diff", asy
   const prompts = new Map<string, string>();
 
   class Writer extends FixtureProvider {
-    async run(c: RunContext, p: string) {
+    override async run(c: RunContext, p: string) {
       prompts.set(c.task.id, p);
 
       if (c.task.description === "Write") {
@@ -634,7 +634,7 @@ test("current_repo dependents see only the dependency's own changes", async () =
   const prompts = new Map<string, string>();
 
   class Writer extends FixtureProvider {
-    async run(c: RunContext, p: string) {
+    override async run(c: RunContext, p: string) {
       prompts.set(c.task.id, p);
 
       if (c.task.description === "Write") {
@@ -712,7 +712,7 @@ test("interrupt preserves the session, and a follow-up resumes it with only the 
   const prompts: string[] = [];
 
   class Recorder extends FixtureProvider {
-    async run(c: RunContext, p: string) {
+    override async run(c: RunContext, p: string) {
       prompts.push(p);
 
       return super.run(c, p);
@@ -751,7 +751,7 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   const prompts: string[] = [];
 
   class Recorder extends FixtureProvider {
-    async run(c: RunContext, p: string) {
+    override async run(c: RunContext, p: string) {
       prompts.push(p);
 
       return super.run(c, p);
@@ -818,7 +818,7 @@ test("a follow-up without a resumable session starts a new one carrying the conv
 
 test("a completed task takes a follow-up as its next turn, with its own turn scope", async () => {
   class Writer extends FixtureProvider {
-    async run(c: RunContext, p: string) {
+    override async run(c: RunContext, p: string) {
       await writeFile(
         join(c.task.workspace!, `turn-${c.task.turn}.txt`),
         `${c.task.turn}\n`,
@@ -1005,7 +1005,7 @@ test("a mixed budget update only marks limits that increased", async () => {
 test("cost counts each turn once, though a resumed session reports its running total", async () => {
   class Costly extends FixtureProvider {
     totals = [0.5, 0.8, 0.3];
-    async run(c: RunContext, p: string) {
+    override async run(c: RunContext, p: string) {
       c.emit("agent.completed", { cost_usd: this.totals.shift() });
 
       return super.run(
@@ -1048,7 +1048,7 @@ function eventData(store: Store, id: string, type: string) {
 /** The prompt each turn of a task started with. */
 class PromptRecorder extends FixtureProvider {
   prompts: string[] = [];
-  async run(c: RunContext, p: string) {
+  override async run(c: RunContext, p: string) {
     this.prompts.push(p);
 
     return super.run(c, p);
@@ -1521,7 +1521,7 @@ test("workspace root allowlist rejects external repositories", async () => {
 
 test("worktree diff includes edits, untracked files and committed changes without touching primary checkout", async () => {
   class Writer extends FixtureProvider {
-    async run(c: RunContext, p: string) {
+    override async run(c: RunContext, p: string) {
       await writeFile(join(c.task.workspace!, "README.md"), "changed\n");
 
       await writeFile(
@@ -1833,7 +1833,7 @@ test("scheduler enforces concurrency and independent branches run together", asy
 
 test("parallel permission requests are serialized without losing the first response", async () => {
   class Parallel extends FixtureProvider {
-    async run(c: RunContext, _prompt: string): Promise<TurnOutput> {
+    override async run(c: RunContext, _prompt: string): Promise<TurnOutput> {
       const [first, second] = await Promise.all([
         c.input("Bash", { command: "first" }, c.signal),
         c.input("Bash", { command: "second" }, c.signal),

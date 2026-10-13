@@ -122,7 +122,7 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
 
   // Each turn adds one file; the first turn waits for input so it can be continued.
   class Writer extends FixtureProvider {
-    async run(c: RunContext, p: string) {
+    override async run(c: RunContext, p: string) {
       turns.push(c.task.turn_start_tree!);
 
       await writeFile(

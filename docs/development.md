@@ -406,8 +406,12 @@ npm test
 `npm run typecheck` runs the read-only `schemas:check` before checking the service,
 panel, shared modules, development tooling, tests, and Vite configs. `npm test` uses Vitest (`vitest.config.ts`); its
 `pretest` checks schema freshness, formatting, linting and unused code, then
-builds. Fix formatting with `npm run format`. ESLint (`eslint.config.js`) checks
-TypeScript
+builds. Fix formatting with `npm run format`. The TypeScript configs enable
+`noImplicitOverride` and `noImplicitReturns`, so overriding members are marked
+`override` and functions that return a value on some paths return explicitly
+on all of them.
+
+ESLint (`eslint.config.js`) checks TypeScript
 code quality and React hook rules; explicit `any` is allowed only in tests.
 Type-aware rules read the three tsconfigs and catch unhandled or misused
 promises, deprecated APIs, non-exhaustive `switch` statements over unions, and

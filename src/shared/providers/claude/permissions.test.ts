@@ -310,7 +310,7 @@ test("parent cannot increase native permissions or grant itself decision authori
 });
 
 class PromptProvider extends FixtureProvider {
-  async run(ctx: RunContext): Promise<TurnOutput> {
+  override async run(ctx: RunContext): Promise<TurnOutput> {
     const answer = await ctx.input(
       "Write",
       { file_path: "README.md" },

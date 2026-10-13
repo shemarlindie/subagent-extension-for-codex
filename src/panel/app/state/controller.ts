@@ -1686,6 +1686,8 @@ export class Controller {
     } finally {
       this.patch({ busy: false });
     }
+
+    return undefined;
   }
 
   /** Add the chat project the user chose in New task before its task starts. */
@@ -2153,6 +2155,8 @@ export class Controller {
     // The request is answered, so nothing about it needs remembering.
     this.session.remove("question", request.id);
     await this.refresh().catch(this.report);
+
+    return undefined;
   }
 
   /** Resolves a permission request directly from the task's Chat card. */
@@ -2192,6 +2196,8 @@ export class Controller {
     }
 
     await this.refresh().catch(this.report);
+
+    return undefined;
   }
 
   /** Applies a new task budget without starting the next turn. */

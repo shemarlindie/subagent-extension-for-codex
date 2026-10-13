@@ -34,7 +34,7 @@ class PermissionProvider extends FixtureProvider {
     super();
   }
 
-  async run(ctx: RunContext): Promise<TurnOutput> {
+  override async run(ctx: RunContext): Promise<TurnOutput> {
     const response = await ctx.input(
       this.tool,
       { command: "pwd", question: "Which approach?" },

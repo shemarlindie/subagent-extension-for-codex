@@ -21,6 +21,8 @@ export function inspectProcess(pid: number): ProcessInfo | undefined {
   } catch {
     // Process inspection is best-effort; never prevent startup from reporting the lock.
   }
+
+  return undefined;
 }
 
 /** Captures only the identity fields needed by the service lock metadata. */
@@ -45,6 +47,8 @@ export function inspectProcessIdentity(
   } catch {
     // A missing process identity disables termination rather than guessing.
   }
+
+  return undefined;
 }
 
 export function isProcessRunning(pid: number) {
@@ -173,6 +177,8 @@ function linuxStartedAt(fields: string[]) {
   } catch {
     // Without a boot ID, tick counts can repeat after reboot and PID reuse.
   }
+
+  return undefined;
 }
 
 function inspectDarwinProcess(pid: number): ProcessInfo | undefined {

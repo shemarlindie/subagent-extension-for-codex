@@ -6,6 +6,8 @@
     "lib": ["ES2023", "DOM"],
     "types": ["node"],
     "strict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
     "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": "src",

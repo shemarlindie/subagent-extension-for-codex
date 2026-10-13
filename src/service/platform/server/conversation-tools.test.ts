@@ -324,7 +324,7 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
   const finished = new Promise<void>((resolve) => (finish = resolve));
 
   class Streaming extends FixtureProvider {
-    async run(c: RunContext) {
+    override async run(c: RunContext) {
       c.delta("msg_live", "Half ");
       await new Promise((r) => setTimeout(r, 20));
       c.delta("msg_live", "a reply");
@@ -680,7 +680,7 @@ test("explicit parent reports wake an outstanding conversation long poll", async
   });
 
   class Reporting extends FixtureProvider {
-    async run(context: RunContext) {
+    override async run(context: RunContext) {
       ready(context);
       await finished;
 

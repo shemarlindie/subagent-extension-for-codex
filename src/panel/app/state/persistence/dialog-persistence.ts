@@ -38,6 +38,8 @@ function handoffTargetOf(value: unknown): HandoffTarget | undefined {
   if (value.kind === "file" && isString(value.path) && value.path) {
     return { kind: "file", path: value.path };
   }
+
+  return undefined;
 }
 
 function draftOf(

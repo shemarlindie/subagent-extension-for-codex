@@ -517,6 +517,8 @@ function processIdentityOutcome(
 
     return false;
   }
+
+  return undefined;
 }
 
 function sendSignal(pid: number, signal: NodeJS.Signals) {

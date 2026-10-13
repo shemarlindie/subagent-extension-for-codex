@@ -21,7 +21,7 @@ import { Auth } from "../../../src/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
 
 class PermissionProvider extends FixtureProvider {
-  async run(ctx: RunContext): Promise<TurnOutput> {
+  override async run(ctx: RunContext): Promise<TurnOutput> {
     const answer = await ctx.input("Bash", { command: "pwd" }, ctx.signal);
 
     return {
