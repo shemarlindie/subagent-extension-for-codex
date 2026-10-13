@@ -5,7 +5,7 @@ import { installRoot, packageVersion } from "./runtime.js";
  * proxy of the previous version, so the launcher won't forward to a service
  * it can't talk to.
  */
-export const serviceApiVersion = 1;
+const serviceApiVersion = 1;
 
 /** Set by the stdio launcher on the services it starts. */
 export const launcherEnv = "CODEX_SUBAGENT_EXTENSION_LAUNCHER";
@@ -15,7 +15,7 @@ export const launcherEnv = "CODEX_SUBAGENT_EXTENSION_LAUNCHER";
  * update; a `foreground` service (npm run dev, npm start, a supervisor) is
  * never stopped by a launcher.
  */
-export type ServiceLauncher = "stdio" | "foreground";
+type ServiceLauncher = "stdio" | "foreground";
 
 export type ServiceIdentity = {
   version: string;
@@ -37,7 +37,7 @@ export function serviceIdentity(env = process.env): ServiceIdentity {
 export function compareVersions(a: string, b: string) {
   const parts = (version: string) =>
     version
-      .split("-")[0]
+      .replace(/-.*/, "")
       .split(".")
       .map((part) => Number(part) || 0);
 
@@ -79,28 +79,31 @@ export function handoff(
   const compatible = running.apiVersion === own.apiVersion;
   const described = `version ${running.version ?? "unknown"}`;
 
-  if (running.launcher !== "stdio")
+  if (running.launcher !== "stdio") {
     return compatible
       ? { action: "use" }
       : {
           action: "refuse",
           message: `A different extension service (${described}, not started by the plugin) is running at ${origin}. Stop it, or give development its own CODEX_SUBAGENT_EXTENSION_DATA and PORT.`,
         };
+  }
 
   const order = running.version
     ? compareVersions(running.version, own.version)
     : -1;
 
-  if (order > 0)
+  if (order > 0) {
     return compatible
       ? { action: "use" }
       : {
           action: "refuse",
           message: `A newer extension service (${described}) is running at ${origin}; update the plugin to ${running.version} or later.`,
         };
+  }
 
-  if (order < 0 || !running.installed)
+  if (order < 0 || !running.installed) {
     return { action: "replace", forward: compatible };
+  }
 
   return { action: "use" };
 }

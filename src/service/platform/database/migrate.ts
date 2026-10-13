@@ -27,8 +27,9 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
     before.length &&
     path !== ":memory:" &&
     migrations.some((m) => !before.includes(m.name))
-  )
+  ) {
     backUpDatabase(client, path, before.at(-1)!);
+  }
 
   client.exec("BEGIN IMMEDIATE");
 

@@ -26,9 +26,11 @@ const { values } = parseArgs({
 
 const out = resolve(values.out);
 
-for (const entry of ["dist/main.js", "dist/stdio.js", "dist/app.html"])
-  if (!existsSync(entry))
+for (const entry of ["dist/main.js", "dist/stdio.js", "dist/app.html"]) {
+  if (!existsSync(entry)) {
     throw new Error(`${entry} is missing; run npm run build first`);
+  }
+}
 
 // npm's file list, so the plugin and any npm package ship the same files.
 const [{ files }] = JSON.parse(

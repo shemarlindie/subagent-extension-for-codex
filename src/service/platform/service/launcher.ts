@@ -131,8 +131,9 @@ export async function connectService() {
         readFileSync(join(data, "service.json"), "utf8"),
       );
 
-      if (new URL(metadata.origin).origin === origin)
+      if (new URL(metadata.origin).origin === origin) {
         root = metadata.installRoot;
+      }
     } catch {}
 
     return {
@@ -173,8 +174,10 @@ export async function connectService() {
     const decision = handoff(running(found.health), serviceIdentity(), origin);
 
     if (decision.action === "refuse") throw new Error(decision.message);
-    if (decision.action === "use")
+
+    if (decision.action === "use") {
       return { origin: found.origin, token: found.token };
+    }
 
     // An older or uninstalled plugin service hands over once its turns end.
     const drain = await fetch(`${origin}/api/service/drain`, {
@@ -189,10 +192,11 @@ export async function connectService() {
       redirect: "error",
     });
 
-    if (!drain.ok)
+    if (!drain.ok) {
       throw new Error(
         `The previous extension service at ${origin} refused to hand over (${drain.status}); stop it and try again.`,
       );
+    }
 
     // A compatible service keeps serving until it exits; the proxy then reconnects and starts this version.
     if (decision.forward) return { origin: found.origin, token: found.token };
@@ -224,11 +228,11 @@ export async function connectService() {
   let spawnError: Error | undefined;
   let launches = 0;
   /** Whether the last service this launcher started has exited. */
-  let exited = false;
+  const lastLaunch = { exited: false };
 
   const launch = () => {
     launches++;
-    exited = false;
+    lastLaunch.exited = false;
     mkdirSync(data, { recursive: true, mode: 0o700 });
     const log = openSync(join(data, "service.log"), "a", 0o600);
 
@@ -263,7 +267,7 @@ export async function connectService() {
     });
 
     child.on("exit", () => {
-      exited = true;
+      lastLaunch.exited = true;
     });
 
     child.unref();
@@ -293,11 +297,12 @@ export async function connectService() {
       if (
         !explicit &&
         refused(e) &&
-        (launches === 0 || exited) &&
+        (launches === 0 || lastLaunch.exited) &&
         launches < maxLaunches &&
         leaseReleased()
-      )
+      ) {
         launch();
+      }
     }
   }
 

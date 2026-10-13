@@ -176,8 +176,9 @@ export async function serve({
       // calls the service never read.
       const deadline = Date.now() + callDrainLimit;
 
-      while (calls && Date.now() < deadline)
+      while (calls && Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, 50));
+      }
 
       app.locals.stopping = true;
       await app.locals.closeMcp();

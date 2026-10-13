@@ -107,24 +107,28 @@ export function application(
   // The install root stays in service.json: /health may be reachable from the network.
   const { version, apiVersion, launcher } = serviceIdentity();
 
-  app.get("/health", (_req, res) =>
+  app.get("/health", (_req, res) => {
+    let status = "ok";
+
+    if (app.locals.stopping) {
+      status = "stopping";
+    } else if (app.locals.ready === false) {
+      status = "starting";
+    } else if (app.locals.draining) {
+      status = "draining";
+    }
+
     res
       .status(app.locals.ready === false || app.locals.stopping ? 503 : 200)
       .json({
         service: "codex-subagent-extension",
-        status: app.locals.stopping
-          ? "stopping"
-          : app.locals.ready === false
-            ? "starting"
-            : app.locals.draining
-              ? "draining"
-              : "ok",
+        status,
         version,
         apiVersion,
         launcher,
         providers: c.workers().map((w) => w.provider),
-      }),
-  );
+      });
+  });
 
   app.get("/", async (req, res) => {
     res.type("html").send(

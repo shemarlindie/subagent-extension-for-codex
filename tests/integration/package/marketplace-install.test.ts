@@ -35,7 +35,7 @@ function findCodex() {
     ])
       .toString()
       .split(/\r?\n/)[0]
-      .trim();
+      ?.trim();
   } catch {
     return undefined;
   }

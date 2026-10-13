@@ -79,7 +79,7 @@ test("only the administrator token can drain the service, which then closes conn
     body: JSON.stringify({ token }),
   });
 
-  const cookie = login.headers.get("set-cookie")!.split(";")[0];
+  const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
 
   assert.equal(
     (await post("/api/service/drain", { Cookie: cookie })).status,

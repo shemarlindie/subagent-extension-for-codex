@@ -87,8 +87,9 @@ test("never replaces a service it didn't start", () => {
   for (const running of [
     service({ launcher: "foreground", version: "0.1.0" }),
     service({ launcher: "foreground", installed: false }),
-  ])
+  ]) {
     assert.deepEqual(handoff(running, own, origin), { action: "use" });
+  }
 
   // Services from before identities report no launcher or API version.
   for (const running of [

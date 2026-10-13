@@ -26,13 +26,15 @@ export function serviceEnv(
 ) {
   const env: Record<string, string> = {};
 
-  for (const [key, value] of Object.entries(process.env))
+  for (const [key, value] of Object.entries(process.env)) {
     if (
       value !== undefined &&
       !key.startsWith("CODEX_SUBAGENT_EXTENSION_") &&
       key !== "PORT"
-    )
+    ) {
       env[key] = value;
+    }
+  }
 
   return {
     ...env,

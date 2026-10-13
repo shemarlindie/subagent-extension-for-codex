@@ -48,7 +48,7 @@ function connections(...list: ServiceConnection[]) {
   let calls = 0;
 
   return {
-    connect: async () => list[Math.min(calls++, list.length - 1)],
+    connect: async () => list[Math.min(calls++, list.length - 1)]!,
     calls: () => calls,
   };
 }

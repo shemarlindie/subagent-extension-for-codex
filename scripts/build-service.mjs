@@ -12,10 +12,11 @@ const outdir = "dist";
 const packageManifest = JSON.parse(readFileSync("package.json", "utf8"));
 const plugin = JSON.parse(readFileSync("plugin.json", "utf8"));
 
-if (plugin.version !== packageManifest.version)
+if (plugin.version !== packageManifest.version) {
   throw new Error(
     `plugin.json version ${plugin.version} differs from package.json version ${packageManifest.version}`,
   );
+}
 
 const entries = {
   main: "src/service/main.ts",
@@ -122,10 +123,11 @@ const minimumNode = Number(
   packageManifest.engines.node.match(/^>=(\d+)$/)?.[1],
 );
 
-if (!minimumNode)
+if (!minimumNode) {
   throw new Error('package.json engines.node must have the form ">=<major>"');
+}
 
-for (const name of Object.keys(entries))
+for (const name of Object.keys(entries)) {
   await build({
     stdin: {
       contents: `import { nodeVersionError } from "./src/service/platform/service/node-version.ts";
@@ -149,6 +151,7 @@ if (error) {
     format: "esm",
     logLevel: "warning",
   });
+}
 
 const javascript = Object.entries(outputs)
   .filter(([path]) => path.endsWith(".js"))

@@ -210,6 +210,7 @@ test("pending migrations back up the database as it was first", (t) => {
 
   const [backup, ...rest] = backups();
   assert.deepEqual(rest, []);
+  assert.ok(backup);
   assert.match(backup, new RegExp(`^console-${previous.at(-1)}-.*\\.sqlite$`));
 
   const copy = new DatabaseSync(join(dir, "backups", backup));
