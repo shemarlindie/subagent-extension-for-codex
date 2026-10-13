@@ -9,12 +9,12 @@ import { testModule } from "./lint/source-boundaries.mjs";
 const outdir = "dist";
 
 // package.json is the version source; plugin.json repeats it for Codex, so a mismatch fails the build.
-const { version } = JSON.parse(readFileSync("package.json", "utf8"));
+const packageManifest = JSON.parse(readFileSync("package.json", "utf8"));
 const plugin = JSON.parse(readFileSync("plugin.json", "utf8"));
 
-if (plugin.version !== version)
+if (plugin.version !== packageManifest.version)
   throw new Error(
-    `plugin.json version ${plugin.version} differs from package.json version ${version}`,
+    `plugin.json version ${plugin.version} differs from package.json version ${packageManifest.version}`,
   );
 
 const entries = {
@@ -119,9 +119,7 @@ writeFileSync(
 // An old Node fails to parse or link the bundle before any check in it runs, so
 // each public entry checks the version first, in syntax old runtimes accept.
 const minimumNode = Number(
-  JSON.parse(readFileSync("package.json", "utf8")).engines.node.match(
-    /^>=(\d+)$/,
-  )?.[1],
+  packageManifest.engines.node.match(/^>=(\d+)$/)?.[1],
 );
 
 if (!minimumNode)
