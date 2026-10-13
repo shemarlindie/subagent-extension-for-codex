@@ -9,19 +9,11 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { test } from "vitest";
 
 import { waitForListening } from "../../support/helpers.js";
+import { serviceEnv } from "../../support/service.js";
 
-/** Runs the built proxy against `origin`, without the user's overrides. */
-async function proxy(t: import("vitest").TestContext, origin: string) {
+/** Runs the built proxy against a service on `port`, without the user's overrides. */
+async function proxy(t: import("vitest").TestContext, port: number) {
   const data = await mkdtemp(join(tmpdir(), "stdio-proxy-"));
-  const env: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(process.env))
-    if (
-      value !== undefined &&
-      !key.startsWith("CODEX_SUBAGENT_EXTENSION_") &&
-      key !== "PORT"
-    )
-      env[key] = value;
 
   const client = new Client({ name: "stdio-proxy-test", version: "1" });
 
@@ -34,12 +26,10 @@ async function proxy(t: import("vitest").TestContext, origin: string) {
     new StdioClientTransport({
       command: process.execPath,
       args: [resolve("dist/stdio.js")],
-      env: {
-        ...env,
-        CODEX_SUBAGENT_EXTENSION_DATA: data,
-        CODEX_SUBAGENT_EXTENSION_ORIGIN: origin,
-        CODEX_SUBAGENT_EXTENSION_TOKEN: "test-token",
-      },
+      env: serviceEnv(
+        { data, port },
+        { CODEX_SUBAGENT_EXTENSION_TOKEN: "test-token" },
+      ),
       stderr: "pipe",
     }),
   );
@@ -86,7 +76,7 @@ test("the proxy completes the MCP handshake while the service is still starting"
   const { port } = server.address() as import("node:net").AddressInfo;
 
   const started = Date.now();
-  const client = await proxy(t, `http://127.0.0.1:${port}`);
+  const client = await proxy(t, port);
   const { tools } = await client.listTools();
 
   assert.ok(tools.some((tool) => tool.name === "start_agent_task"));

@@ -38,6 +38,7 @@ import {
   packagePath,
   packageVersion,
 } from "./platform/service/runtime.js";
+import { serviceClient } from "./platform/service/service-client.js";
 
 let mentionSearchEnv = resolveMentionSearchEnv(process.env, {}, installRoot);
 
@@ -55,104 +56,29 @@ try {
   }
 }
 
-type ServiceConnection = Awaited<ReturnType<typeof connectService>>;
-
-/** How long a call waits for the service to be found or started. */
-const connectTimeout = 60000;
-
-let service: Promise<ServiceConnection> | undefined;
-
-/**
- * The service connection, started in the background so the MCP handshake
- * never waits for a cold service start. A failed attempt is forgotten, so
- * the next call tries again.
- */
-function connection() {
-  const attempt = (service ??= connectService());
-
-  attempt.catch(() => {
-    if (service === attempt) service = undefined;
-  });
-
-  return attempt;
-}
-
-function withinConnectTimeout(attempt: Promise<ServiceConnection>) {
-  let timer: NodeJS.Timeout | undefined;
-
-  return Promise.race([
-    attempt,
-    new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () =>
-          reject(
-            new Error(
-              `The extension service did not start within ${connectTimeout / 1000} s`,
-            ),
-          ),
-        connectTimeout,
-      );
-    }),
-  ]).finally(() => clearTimeout(timer));
-}
+const service = serviceClient(connectService);
 
 /** Read-only tools, which the proxy may safely send twice. */
 function readOnly(name: string) {
   return isReadOnlyTool(name) || name === mentionSearchToolName;
 }
 
-/**
- * Whether a failed call can be retried on a new connection. A refused
- * connection never reached the service. A reset one may have, so only
- * read-only calls retry it.
- */
-function retryable(error: unknown, name: string) {
-  const code = (error as { cause?: { code?: string } }).cause?.code;
-
-  return (
-    code === "ECONNREFUSED" ||
-    (readOnly(name) && (code === "ECONNRESET" || code === "UND_ERR_SOCKET"))
-  );
-}
-
-/**
- * Posts a tool call to the service. When the service has stopped, the call
- * reconnects, starting a new service, and retries once.
- */
-async function postService(
+/** Forwards a tool call to the service's tool API. */
+function postService(
   name: string,
   body: unknown,
   timeout: number,
   headers: Record<string, string> = {},
-  retry = true,
-): Promise<Response> {
-  const path = `${isUserTool(name) ? "user-tools" : "tools"}/${name}`;
-  const attempt = connection();
-  const { origin, token } = await withinConnectTimeout(attempt);
-
-  try {
-    return await fetch(`${origin}/api/${path}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "X-Codex-Subagent-Extension": "1",
-        ...headers,
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeout),
-      redirect: "error",
-    });
-  } catch (error) {
-    if (!retry || !retryable(error, name)) throw error;
-    if (service === attempt) service = undefined;
-
-    return postService(name, body, timeout, headers, false);
-  }
+) {
+  return service.post(
+    `${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
+    body,
+    { timeout, headers, readOnly: readOnly(name) },
+  );
 }
 
 // Start finding or launching the service now; calls wait for it.
-connection().catch(() => {});
+service.connect().catch(() => {});
 
 const server = new McpServer(
   {

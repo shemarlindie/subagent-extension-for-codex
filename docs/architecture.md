@@ -27,11 +27,15 @@ The packaged stdio entrypoint connects to or launches the shared service. It
 answers the MCP handshake from its own tool definitions and connects in the
 background, so a cold service start can't exceed the host's MCP startup
 timeout. Tool calls wait up to 60 seconds for the connection. When a call finds
-the service gone, the proxy starts a new one and retries the call once.
+the service gone, the proxy starts a new one and sends the call again if the
+service can't have received it, or if the call is read-only
+(`src/service/platform/service/service-client.ts`). A new service that loses
+the data-directory lease to one still stopping is started again once the lease
+is free.
 Multiple host connections use the same service. Closing a proxy leaves tasks running.
 The service lease prevents competing processes from owning the same data directory.
 After a plugin update, the proxy replaces an older service it started by
-asking it to drain; see [Updates and service handoff](task-continuation.md#updates-and-service-handoff).
+asking it to drain. See [Updates and service handoff](task-continuation.md#updates-and-service-handoff).
 See [Task continuation](task-continuation.md) for startup and recovery.
 
 The service owns task scheduling, approval authority, dependencies, workspace
