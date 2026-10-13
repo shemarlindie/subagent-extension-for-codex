@@ -28,28 +28,10 @@ import type {
 import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { Presence } from "../../../shared/components/motion/motion";
+import { questionAnswers } from "./question-answers";
 
 // Cards further back than this stay hidden so the stack reads as a stack, not a pile.
 const MAX_PEEK = 2;
-
-// The SDK has no per-question skip; an explicit answer tells Claude what happened.
-export const SKIPPED_ANSWER =
-  "(Skipped: the user has no preference; use your best judgment.)";
-
-// Presets come first; a typed answer replaces a single choice and joins a multiple one.
-function answerFor(
-  question: Question,
-  preset: string | string[] | undefined,
-  custom: string | undefined,
-) {
-  const typed = custom?.trim() ?? "";
-
-  if (Array.isArray(preset)) {
-    return [...preset, ...(typed ? [typed] : [])].join(", ");
-  }
-
-  return question.multiSelect ? typed : typed || (preset?.trim() ?? "");
-}
 
 interface QuestionCardProps {
   question: Question;
@@ -240,11 +222,11 @@ export function QuestionForm({ task }: { task: Task }) {
     focusAfterMove = useRef<"card" | "submit">(undefined),
     presets = useWatch({ control, name: "answers" }),
     customs = useWatch({ control, name: "custom" }),
-    answers = questions.map((question, index) =>
-      skipped.has(index)
-        ? SKIPPED_ANSWER
-        : answerFor(question, presets[index], customs[index]),
-    ),
+    answerEntries = questionAnswers(questions, skipped, {
+      answers: presets,
+      custom: customs,
+    }),
+    answers = answerEntries.map(([, answer]) => answer),
     unanswered = answers.findIndex((answer) => !answer),
     last = active === questions.length - 1,
     sending = last || unanswered < 0,
@@ -297,7 +279,7 @@ export function QuestionForm({ task }: { task: Task }) {
 
   // A skipped card drops its partial answer and moves on to the next card.
   const skipOne = (index: number) => {
-    setValue(`answers.${index}`, questions[index].multiSelect ? [] : "");
+    setValue(`answers.${index}`, questions[index]?.multiSelect ? [] : "");
     setValue(`custom.${index}`, "");
     setSkipped(new Set(skipped).add(index));
     if (index < questions.length - 1) show(index + 1);
@@ -346,9 +328,7 @@ export function QuestionForm({ task }: { task: Task }) {
 
     const failure = await controller.answer(
       task,
-      Object.fromEntries(
-        questions.map((question, index) => [question.question, answers[index]]),
-      ),
+      Object.fromEntries(answerEntries),
     );
 
     sent.current = !failure;

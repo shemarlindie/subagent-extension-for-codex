@@ -101,7 +101,7 @@ import { createElement } from "react";
 import { AppShell } from "../../../src/panel/app/app-shell";
 import { Controller } from "../../../src/panel/app/state/controller";
 import { ControllerContext } from "../../../src/panel/app/state/controller-context";
-import { SKIPPED_ANSWER } from "../../../src/panel/features/tasks/controls/question-form";
+import { SKIPPED_ANSWER } from "../../../src/panel/features/tasks/controls/question-answers";
 
 export const executionPresentation: InputPresentation = {
   description:

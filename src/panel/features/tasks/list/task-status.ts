@@ -1,8 +1,10 @@
 import { statusLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
 
+type RowKind = Task["status"] | "input" | "paused";
+
 // Live activity can mark a running task as failed, paused, or waiting for input.
-function rowKind(task: Task, activity: Task["live_activity"]) {
+function rowKind(task: Task, activity: Task["live_activity"]): RowKind {
   if (task.pending_input) return "input";
   if (activity?.state === "failed") return "failed";
   if (activity?.text.startsWith("Needs input")) return "input";
@@ -21,7 +23,7 @@ export function rowStatus(task: Task) {
         ? activity.text
         : statusLabel(task);
 
-  const shortLabels = {
+  const shortLabels: Record<RowKind, string> = {
     queued: "Queued",
     starting: "Starting",
     running: "Running",

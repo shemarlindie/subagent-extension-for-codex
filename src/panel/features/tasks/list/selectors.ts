@@ -27,7 +27,7 @@ export const statusLabel = (task: Task) => {
     return "Waiting on dependency";
   }
 
-  return task.status[0].toUpperCase() + task.status.slice(1);
+  return task.status.charAt(0).toUpperCase() + task.status.slice(1);
 };
 
 export const profileLabel = (profile: string) => profile.replaceAll("_", " ");

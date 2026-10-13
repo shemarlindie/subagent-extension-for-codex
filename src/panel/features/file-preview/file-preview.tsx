@@ -21,6 +21,7 @@ import {
   fileFormat,
   fileName,
   type FileView,
+  type FileViews,
   fileViews,
   formatName,
   isLargeSvg,
@@ -70,7 +71,7 @@ export function FilePreview({
     canCopy = !controller.transport.embedded && hasClipboardApi(),
     format = fileFormat(file),
     views = useMemo(
-      (): FileView[] =>
+      (): FileViews =>
         diff ? [...fileViews(file), "changes"] : fileViews(file),
       [file, diff],
     ),
@@ -94,7 +95,7 @@ export function FilePreview({
           className="view-switch"
           aria-label="View"
           value={[view]}
-          onValueChange={(value) => value[0] && setView(value[0])}
+          onValueChange={([next]) => next && setView(next)}
         >
           {views.map((option) => (
             <Toggle key={option} value={option} className="view-option">

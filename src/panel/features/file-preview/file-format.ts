@@ -135,7 +135,9 @@ export function fileName(path: string) {
 }
 
 export function baseMime(file: Pick<PreviewFile, "path" | "mime_type">) {
-  if (file.mime_type) return file.mime_type.split(";")[0].trim().toLowerCase();
+  if (file.mime_type) {
+    return file.mime_type.replace(/;.*$/s, "").trim().toLowerCase();
+  }
 
   return EXTENSION_MIMES[extensionOf(file.path) ?? ""] ?? "text/plain";
 }
@@ -304,7 +306,7 @@ export function parseDelimited(content: string, separator = ","): string[][] {
   return rows;
 }
 
-const ESCAPES: Record<string, string> = {
+const ESCAPES: Partial<Record<string, string>> = {
   a: "\x07",
   b: "\b",
   t: "\t",
@@ -328,13 +330,16 @@ function unquoteDiffPath(path: string) {
     encoder = new TextEncoder();
 
   for (let index = 0; index < path.length;) {
-    const octal = /^\\([0-3][0-7]{2})/.exec(path.slice(index, index + 4));
+    const [, octal] =
+        /^\\([0-3][0-7]{2})/.exec(path.slice(index, index + 4)) ?? [],
+      escaped =
+        path[index] === "\\" ? ESCAPES[path.charAt(index + 1)] : undefined;
 
-    if (octal) {
-      bytes.push(parseInt(octal[1], 8));
+    if (octal !== undefined) {
+      bytes.push(parseInt(octal, 8));
       index += 4;
-    } else if (path[index] === "\\" && path[index + 1] in ESCAPES) {
-      bytes.push(...encoder.encode(ESCAPES[path[index + 1]]));
+    } else if (escaped !== undefined) {
+      bytes.push(...encoder.encode(escaped));
       index += 2;
     } else {
       const char = String.fromCodePoint(path.codePointAt(index)!);
@@ -432,7 +437,10 @@ export function isLargeSvg(file: PreviewFile) {
 }
 
 /** The ways a file can be shown, best first. A single view hides the switcher. */
-export function fileViews(file: PreviewFile): FileView[] {
+/** A file's views, best first; every file has at least one. */
+export type FileViews = [FileView, ...FileView[]];
+
+export function fileViews(file: PreviewFile): FileViews {
   switch (fileFormat(file)) {
     case "markdown":
       return ["preview", "source"];

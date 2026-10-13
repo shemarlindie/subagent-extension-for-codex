@@ -1,4 +1,7 @@
-import { settingHelp } from "../../../shared/settings/settings-document";
+import {
+  settingHelp,
+  titleCase,
+} from "../../../shared/settings/settings-document";
 import { roles } from "../../../shared/tasks/model";
 import { SelectField } from "../../shared/components/select/select-field";
 import { AsyncControl } from "../../shared/forms/async-control";
@@ -12,10 +15,7 @@ export function SettingsLoadingTaskDefaults() {
     {
       label: "Worker profile",
       key: "worker-profile",
-      options: roles.map((value) => ({
-        value,
-        label: value[0].toUpperCase() + value.slice(1).replaceAll("_", " "),
-      })),
+      options: roles.map((value) => ({ value, label: titleCase(value) })),
     },
     {
       label: "Workspace",
@@ -85,10 +85,12 @@ export function SettingsLoadingTaskDefaults() {
             </AsyncControl>
           </div>
         </div>
-        {[
-          ["Cost limit", "USD"],
-          ["Runtime limit", "mins"],
-        ].map(([label, unit]) => (
+        {(
+          [
+            ["Cost limit", "USD"],
+            ["Runtime limit", "mins"],
+          ] as const
+        ).map(([label, unit]) => (
           <div className="setting-row setting-row-inline" key={label}>
             <span className="setting-label">{label}</span>
             <div className="setting-control">

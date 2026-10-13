@@ -22,6 +22,18 @@ export function taskProjects(state: Snapshot, projects = state.projects) {
     : projects;
 }
 
+/** A worker choice's `provider:profile` value; a bare provider has no profile. */
+export function workerChoice(value: string) {
+  const separator = value.indexOf(":");
+
+  return separator < 0
+    ? { provider: value }
+    : {
+        provider: value.slice(0, separator),
+        profile: value.slice(separator + 1),
+      };
+}
+
 /** Resolve defaults without treating an automatically highlighted task as project intent. */
 export function delegationDialog(
   state: Snapshot,
@@ -55,7 +67,7 @@ export function delegationDialog(
       scopedRepository ??
       taskRepository ??
       choices.find((project) => project.pending)?.repository ??
-      (choices.length === 1 ? choices[0].repository : undefined),
+      (choices.length === 1 ? choices[0]?.repository : undefined),
     revision: scopedRepository ? state.revision : taskRevision,
   };
 }

@@ -369,11 +369,12 @@ export class Controller {
 
   /** The task a wide or scoped panel opens when nothing is chosen, unless the user is browsing. */
   private defaultSelection(tasks: Task[]) {
-    const { conversation, repository } = this.state;
+    const { conversation, repository } = this.state,
+      [first] = tasks;
 
     if (
       this.browsing ||
-      !tasks.length ||
+      !first ||
       !(this.environment.wide() || conversation || repository)
     ) {
       return undefined;
@@ -382,7 +383,7 @@ export class Controller {
     return (
       tasks.find((task) => task.pending_input)?.id ??
       tasks.find((task) => !terminal(task))?.id ??
-      tasks[0].id
+      first.id
     );
   }
 

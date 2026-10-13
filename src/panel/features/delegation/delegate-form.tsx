@@ -26,7 +26,7 @@ import {
   WorkerFields,
   WorkspaceField,
 } from "./delegate-fields";
-import { taskProjects } from "./delegation";
+import { taskProjects, workerChoice } from "./delegation";
 import { providerOptionDefaults } from "./provider-defaults";
 
 type DelegateFormDialog =
@@ -110,7 +110,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
     dialog.preferredWorker ??
     `${defaults.default_provider ?? ""}:${defaults.default_worker_profile ?? ""}`;
 
-  const [preferredProvider] = preferred.split(":"),
+  const { provider: preferredProvider } = workerChoice(preferred),
     preferredWorker = state.workers.find(
       (worker) => worker.provider === preferredProvider,
     ),
@@ -206,7 +206,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
     hasWorkers = choices.length > 0,
     selectedWorkerReady =
       state.workers.find(
-        (worker) => worker.provider === selectedWorker.split(":")[0],
+        (worker) => worker.provider === workerChoice(selectedWorker).provider,
       )?.readiness?.ready !== false,
     canSubmit =
       requiredReadsReady &&
@@ -220,7 +220,9 @@ function DelegateForm({ dialog }: DelegateFormProps) {
     ),
     submit = form.handleSubmit((values) =>
       controller.submit(async () => {
-        const [provider, worker_profile] = values.worker.split(":");
+        const { provider, profile: worker_profile } = workerChoice(
+          values.worker,
+        );
 
         const worker = state.workers.find((item) => item.provider === provider);
 

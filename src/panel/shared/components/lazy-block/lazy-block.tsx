@@ -130,13 +130,17 @@ export function LazyBlock({
       unwatch = watchArea(root);
 
       observer = new IntersectionObserver(
-        ([entry]) => {
-          // Keep the rendered height for the empty box that replaces it.
-          if (!entry.isIntersecting) {
-            height.current = entry.boundingClientRect.height || height.current;
-          }
+        (entries) => {
+          // One element is observed; its last entry is its current state.
+          for (const entry of entries) {
+            // Keep the rendered height for the empty box that replaces it.
+            if (!entry.isIntersecting) {
+              height.current =
+                entry.boundingClientRect.height || height.current;
+            }
 
-          setVisible(entry.isIntersecting);
+            setVisible(entry.isIntersecting);
+          }
         },
         { root, rootMargin: MARGIN },
       );

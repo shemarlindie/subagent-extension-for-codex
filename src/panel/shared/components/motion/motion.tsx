@@ -241,7 +241,7 @@ export function useListPresence<T>(
     current = new Set(items.map(keyOf)),
     entries: ListPresenceEntry<T>[] = [];
 
-  let next = 0;
+  const pending = items.values();
 
   const take = (item: T) => {
     const key = keyOf(item);
@@ -261,11 +261,13 @@ export function useListPresence<T>(
     if (!current.has(entry.key)) {
       entries.push({ ...entry, present: false });
     } else {
-      while (next < items.length) if (take(items[next++]) === entry.key) break;
+      for (let step = pending.next(); !step.done; step = pending.next()) {
+        if (take(step.value) === entry.key) break;
+      }
     }
   }
 
-  while (next < items.length) take(items[next++]);
+  for (const item of pending) take(item);
   setState({ items, entries });
 
   return entries;

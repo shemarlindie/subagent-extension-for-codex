@@ -66,12 +66,22 @@ export function TaskLayout({ list, inspector }: TaskLayoutProps) {
     const group = groupElementRef.current;
     const separator = separatorElementRef.current;
 
-    if (!isUserInteraction || narrow || !group || !separator) return;
+    const railPercent = layout["task-rail-panel"];
+
+    if (
+      !isUserInteraction ||
+      narrow ||
+      !group ||
+      !separator ||
+      railPercent === undefined
+    ) {
+      return;
+    }
 
     // The callback runs before panel styles commit; use the new layout.
     const availableWidth = group.clientWidth - separator.offsetWidth;
 
-    saveWidth((availableWidth * layout["task-rail-panel"]) / 100);
+    saveWidth((availableWidth * railPercent) / 100);
   }
 
   function resetWidth() {

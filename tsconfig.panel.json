@@ -9,6 +9,7 @@
     "strict": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "noEmit": true,
     "esModuleInterop": true,

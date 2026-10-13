@@ -31,7 +31,8 @@ function Prose({ text }: { text: string }): ReactNode {
 
     parts.push(
       <pre key={match.index} className="activity-code">
-        {match[1].replace(/\n$/, "")}
+        {/* FENCE's one capture group is required, so every match has it. */}
+        {match[1]!.replace(/\n$/, "")}
       </pre>,
     );
 

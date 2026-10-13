@@ -112,7 +112,7 @@ export const EventList = memo(function EventList({
                 ? `Showing the most recent ${EVENT_TAIL_SIZE} events.`
                 : `Showing the last ${EVENT_TAIL_SIZE} events of turn ${turn}.`}
             </span>
-            {dropped && dropped.task_id === events[0].task_id && (
+            {dropped && dropped.task_id === events[0]?.task_id && (
               <DroppedNote summary={dropped} />
             )}
           </p>

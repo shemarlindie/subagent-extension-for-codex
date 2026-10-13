@@ -13,6 +13,7 @@ import { FormFieldHint } from "../../shared/forms/form-field-hint";
 import { FormSelect } from "../../shared/forms/form-select";
 import { FormSwitch } from "../../shared/forms/form-switch";
 import { projectDisplayName } from "../projects/selectors";
+import { workerChoice } from "./delegation";
 import { ModelAutocomplete } from "./model-autocomplete";
 import { ProjectAutocomplete } from "./project-autocomplete";
 
@@ -209,7 +210,7 @@ export function WorkerFields({
   const revision = useWatch({ control, name: "revision" });
 
   const readiness = workers.find(
-    (worker) => worker.provider === selected.split(":")[0],
+    (worker) => worker.provider === workerChoice(selected).provider,
   )?.readiness;
 
   return (
@@ -324,7 +325,7 @@ export function BudgetFields({
     });
 
   const provider = workers.find(
-    (item) => item.provider === worker.split(":")[0],
+    (item) => item.provider === workerChoice(worker).provider,
   );
 
   const workerResolved = Boolean(worker && provider);
@@ -526,7 +527,7 @@ export function ModelFields({
     name: ["worker", "model", "reasoning_effort"],
   });
 
-  const [provider, role] = worker.split(":");
+  const { provider, profile: role } = workerChoice(worker);
 
   const model =
     defaults[`${role}_default_model`] ||
@@ -640,7 +641,7 @@ export function ApprovalField({
 }) {
   const { control } = useFormContext<DelegateValues>();
   const worker = useWatch({ control, name: "worker" });
-  const provider = worker.split(":")[0];
+  const { provider } = workerChoice(worker);
   const info = workers.find((item) => item.provider === provider);
 
   const permissions = providerMetadata(

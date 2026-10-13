@@ -3,7 +3,9 @@
   "compilerOptions": {
     "lib": ["ES2024", "DOM"],
     // vite.config.ts imports its plugin with the extension Node's native loader needs.
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    // Temporary: tests and tooling migrate to noUncheckedIndexedAccess next.
+    "noUncheckedIndexedAccess": false
   },
   "exclude": [],
   "include": [

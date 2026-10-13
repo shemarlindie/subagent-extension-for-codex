@@ -22,12 +22,12 @@ export function ChangedFileNav({ task, path }: ChangedFileNavProps) {
     entries = data ? changedFileEntries(data) : [],
     index = entries.findIndex((entry) => entry.file.path === path);
 
-  // Opened from a reload before the changes were read, or the file is gone.
-  if (index < 0) return null;
-
   const count = entries.length,
     previous = entries[(index - 1 + count) % count],
     next = entries[(index + 1) % count];
+
+  // Opened from a reload before the changes were read, or the file is gone.
+  if (index < 0 || !previous || !next) return null;
 
   return (
     <nav className="changed-file-nav" aria-label="Changed files">
