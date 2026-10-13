@@ -16,6 +16,7 @@ import {
   test,
   vi,
   waitFor,
+  within,
 } from "./react-ui-test-support";
 
 test("the inspector omits task descriptions across refresh and task selection", async (t) => {
@@ -53,11 +54,13 @@ test("the inspector omits task descriptions across refresh and task selection", 
 
   assert.ok(!header().textContent?.includes("Second instructions"));
   await user.click(screen.getByRole("tab", { name: "Details" }));
-  assert.ok(screen.getByText("Second instructions").closest("dd"));
+  // Activity keeps its hidden panel mounted with the initial request, so scope to Details.
+  const details = () => within(screen.getByRole("tabpanel"));
+  assert.ok(details().getByText("Second instructions").closest("dd"));
   await act(() => controller.select("one"));
   await user.click(screen.getByRole("tab", { name: "Details" }));
 
-  const description = screen.getByText(literal + " Updated.", {
+  const description = details().getByText(literal + " Updated.", {
     normalizer: (text) => text,
   });
 

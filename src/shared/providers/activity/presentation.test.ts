@@ -84,7 +84,10 @@ test("Claude emits provider-owned presentation alongside the original SDK respon
 
   assert.ok(emitted);
   assert.equal(emitted.data.raw_response, message);
-  assert.equal((emitted.data.activity as ActivityPresentation).thinking, true);
+  const activity = emitted.data.activity as ActivityPresentation;
+  // Requesting is a status update, not a thinking signal.
+  assert.equal(activity.statusTitle, "Requesting");
+  assert.equal(activity.thinking, false);
 });
 
 test("a provider can associate streams and messages using normalized identities", () => {

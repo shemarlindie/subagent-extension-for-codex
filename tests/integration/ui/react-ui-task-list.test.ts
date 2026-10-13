@@ -227,11 +227,11 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
     screen
       .getAllByRole("tab")
       .map((tab) => tab.textContent?.replace(/\s*\d+$/, "").trim()),
-    ["Chat", "Changes", "Activity", "Details"],
+    ["Chat", "Activity", "Changes", "Details"],
   );
 
   await user.click(result);
-  await user.keyboard("{ArrowRight}{ArrowRight}");
+  await user.keyboard("{ArrowRight}");
 
   await waitFor(() =>
     assert.equal(
@@ -256,7 +256,7 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
     ),
   );
 
-  await user.keyboard("{ArrowRight}");
+  await user.keyboard("{ArrowRight}{ArrowRight}");
 
   await waitFor(() =>
     assert.equal(

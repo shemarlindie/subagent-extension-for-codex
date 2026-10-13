@@ -354,7 +354,8 @@ test("the options menu toggles wrapping and keeps the choice across views and fi
     next.compareDocumentPosition(options) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
 
-  expect(wrapping()).toBe("true");
+  // Wrapping is off by default.
+  expect(wrapping()).toBe("false");
 
   await user.click(options);
 
@@ -362,31 +363,32 @@ test("the options menu toggles wrapping and keeps the choice across views and fi
     name: "Wrap lines",
   });
 
-  expect(toggle.getAttribute("aria-checked")).toBe("true");
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
   const indicator = toggle.querySelector(".file-preview-option-check");
+  expect(indicator?.hasAttribute("data-unchecked")).toBe(true);
 
   await user.click(toggle);
-  expect(wrapping()).toBe("false");
-  expect(toggle.getAttribute("aria-checked")).toBe("false");
+  expect(wrapping()).toBe("true");
+  expect(toggle.getAttribute("aria-checked")).toBe("true");
   expect(toggle.querySelector(".file-preview-option-check")).toBe(indicator);
-  expect(indicator?.hasAttribute("data-unchecked")).toBe(true);
+  expect(indicator?.hasAttribute("data-unchecked")).toBe(false);
   await user.keyboard("{Escape}");
   expect(document.activeElement).toBe(options);
 
   await user.click(view.getByRole("button", { name: "Diff" }));
-  expect(wrapping()).toBe("false");
+  expect(wrapping()).toBe("true");
   await moveTo("b.ts");
-  expect(wrapping()).toBe("false");
+  expect(wrapping()).toBe("true");
   await moveTo("c.ts");
-  expect(wrapping()).toBe("false");
+  expect(wrapping()).toBe("true");
   await moveTo("gone.ts");
-  expect(wrapping()).toBe("false");
+  expect(wrapping()).toBe("true");
 
   options.focus();
   await user.keyboard("{ArrowDown}");
   await view.findByRole("menuitemcheckbox", { name: "Wrap lines" });
   await user.keyboard("{Enter}");
-  expect(wrapping()).toBe("true");
+  expect(wrapping()).toBe("false");
 });
 
 test("global mode omits the file handoff from the preview toolbar", async () => {
