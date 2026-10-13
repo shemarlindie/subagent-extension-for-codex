@@ -147,11 +147,11 @@ export class Controller {
         : undefined);
 
     const initial = initialState();
-    this.browsing = this.restoredView?.browsing === true;
+    this.browsing = this.restoredView.browsing === true;
 
     const restoredSelection = this.browsing
       ? undefined
-      : this.restoredView?.selected;
+      : this.restoredView.selected;
 
     // Seed URL-backed controls before the first render, then validate task data on load.
     this.state = {
@@ -194,7 +194,7 @@ export class Controller {
           this.persistedDialogs[this.persistedDialogs.length - 1] = {
             ...descriptor,
             ...(previous?.draft ? { draft: previous.draft } : {}),
-          } as PersistedDialog;
+          };
         } else {
           this.persistedDialogs = [descriptor];
         }
@@ -270,7 +270,7 @@ export class Controller {
     this.persistedDialogs[this.persistedDialogs.length - 1] = {
       ...descriptor,
       draft: { ...descriptor.draft, ...draft },
-    } as PersistedDialog;
+    };
 
     if (this.viewStateReady) this.saveViewState();
   }
@@ -316,9 +316,12 @@ export class Controller {
     }
 
     try {
+      const active = () =>
+        this.canRestoreDialog(saved, scope) && !this.hasDialog();
+
       const restored = restoreDialog(saved, tasks, scope, {
         snapshot: () => this.state,
-        active: () => this.canRestoreDialog(saved, scope) && !this.state.dialog,
+        active,
         explicitSelection: this.explicitSelection,
         tool: (name) => this.tool(name),
       });
@@ -326,16 +329,14 @@ export class Controller {
       const dialog = restored instanceof Promise ? await restored : restored;
 
       if (!dialog) {
-        if (!this.state.dialog) {
+        if (!this.hasDialog()) {
           await this.discardPersistedDialog(saved, tasks, scope);
         }
 
         return;
       }
 
-      if (dialog && this.canRestoreDialog(saved, scope) && !this.state.dialog) {
-        this.patch({ dialog, formError: "" });
-      }
+      if (active()) this.patch({ dialog, formError: "" });
     } catch {
       // Keep the saved descriptor so a later refresh can retry transient reads.
     }
@@ -455,7 +456,7 @@ export class Controller {
         draft: (update) => this.draftFollower.apply(update),
       });
 
-      if (this.disposed) return;
+      if (this.isDisposed()) return;
 
       this.patch({ connected: true, loginRequired: false });
       const savedDialog = this.persistedDialogs.at(-1);
@@ -471,7 +472,7 @@ export class Controller {
       }
 
       await this.refresh();
-      if (this.disposed) return;
+      if (this.isDisposed()) return;
       this.transport.watch();
       this.schedule();
     } catch (error) {
@@ -522,6 +523,21 @@ export class Controller {
     clearTimeout(this.timer);
     this.transport.dispose();
     this.listeners.clear();
+  }
+
+  // Calls rather than field reads: an await can dispose the controller or
+  // replace its state, but TypeScript keeps a field's narrowing across it.
+  private isDisposed() {
+    return this.disposed;
+  }
+
+  private hasDialog() {
+    return this.state.dialog !== undefined;
+  }
+
+  /** Whether disposal or a scope change made an in-flight read obsolete. */
+  private stale(version: number) {
+    return this.disposed || version !== this.state.scopeVersion;
   }
 
   async login(token: string) {
@@ -619,10 +635,9 @@ export class Controller {
           conversation_id: null,
         });
 
-        if (this.disposed || version !== this.state.scopeVersion) return;
-        this.applyScope(context, false);
+        if (this.stale(version)) return;
 
-        if (!this.state.scopeKnown) {
+        if (!this.applyScope(context, false)) {
           throw new Error("The service returned no panel scope.");
         }
 
@@ -631,7 +646,7 @@ export class Controller {
 
       const projectGeneration = this.projectGeneration;
       const projects = await this.readProjects();
-      if (this.disposed || version !== this.state.scopeVersion) return;
+      if (this.stale(version)) return;
 
       if (projectGeneration !== this.projectGeneration) {
         this.rerun = true;
@@ -702,7 +717,7 @@ export class Controller {
           conversation_id: this.state.conversation,
         });
 
-        if (this.disposed || version !== this.state.scopeVersion) return;
+        if (this.stale(version)) return;
 
         this.patch({
           projectCandidate: context.panel_project_candidate?.repository,
@@ -737,7 +752,7 @@ export class Controller {
         Date.now() - this.workersReadAt >= WORKERS_FRESH_MS
       ) {
         const workers = await this.readWorkers();
-        if (this.disposed || version !== this.state.scopeVersion) return;
+        if (this.stale(version)) return;
         this.workersReadAt = Date.now();
         this.patch({ workers, workersLoaded: true });
       }
@@ -749,7 +764,7 @@ export class Controller {
         ...(repository ? { repository } : {}),
       });
 
-      if (this.disposed || version !== this.state.scopeVersion) return;
+      if (this.stale(version)) return;
 
       if (projectGeneration !== this.projectGeneration) {
         this.rerun = true;
@@ -867,22 +882,22 @@ export class Controller {
       }
 
       await this.restorePersistedDialog(tasks, version);
-      if (this.disposed || version !== this.state.scopeVersion) return;
+      if (this.stale(version)) return;
 
       await this.loadDetail();
-      if (this.disposed || version !== this.state.scopeVersion) return;
+      if (this.stale(version)) return;
       // Prefetch the selected task's change totals for the tab count. Do not hold
       // up the task list while Git reads in the background.
       this.run(() => this.loadCountsIfStale());
       this.run(() => this.loadChangesIfStale());
-      if (this.disposed || version !== this.state.scopeVersion) return;
+      if (this.stale(version)) return;
 
       this.patch({
         connection: `Connected · refreshes every ${POLL_INTERVAL_MS / 1000}s`,
         error: "",
       });
     } catch (error) {
-      if (this.disposed || version !== this.state.scopeVersion) return;
+      if (this.stale(version)) return;
       const dialog = this.state.dialog;
 
       if (
@@ -904,7 +919,7 @@ export class Controller {
       this.refreshing = false;
 
       if (
-        !this.disposed &&
+        !this.isDisposed() &&
         (this.rerun || version !== this.state.scopeVersion)
       ) {
         this.rerun = false;
@@ -1307,6 +1322,7 @@ export class Controller {
     });
   }
 
+  /** Applies host or service scope data; returns false when it carries no valid scope. */
   applyScope(data?: PanelData, refresh = true) {
     const scope = data?.panel_scope;
 
@@ -1318,7 +1334,7 @@ export class Controller {
       ) ||
       (scope.repository !== undefined && typeof scope.repository !== "string")
     ) {
-      return;
+      return false;
     }
 
     const conversation = scope.conversation_id ?? undefined,
@@ -1344,22 +1360,22 @@ export class Controller {
 
     this.patch({
       projectCandidate:
-        typeof data?.panel_project_candidate?.repository === "string"
+        typeof data.panel_project_candidate?.repository === "string"
           ? data.panel_project_candidate.repository
           : undefined,
       projectCandidateAuto:
-        data?.panel_project_candidate?.auto_register === true,
+        data.panel_project_candidate?.auto_register === true,
     });
 
     const restoredTaskView =
       this.restoredView?.selected || this.restoredView?.browsing;
 
     const hostTaskId =
-      typeof data?.panel_selection?.task_id === "string" && !restoredTaskView
+      typeof data.panel_selection?.task_id === "string" && !restoredTaskView
         ? data.panel_selection.task_id
         : undefined;
 
-    if (Array.isArray(data?.tasks)) {
+    if (Array.isArray(data.tasks)) {
       const tasks = data.tasks.filter(
         (task) =>
           (!conversation || task.conversation_id === conversation) &&
@@ -1377,7 +1393,7 @@ export class Controller {
 
     if (hostTaskId) {
       const taskId = hostTaskId,
-        hostTab = data?.panel_selection?.tab as Tab;
+        hostTab = data.panel_selection?.tab as Tab;
 
       const preserveCurrentTab =
         taskId === this.state.selected &&
@@ -1428,6 +1444,8 @@ export class Controller {
     }
 
     if (refresh) this.run(() => this.refresh());
+
+    return true;
   }
 
   async changeProject(repository?: string) {
@@ -1600,7 +1618,7 @@ export class Controller {
     } finally {
       ++this.projectGeneration;
 
-      if (!this.disposed) {
+      if (!this.isDisposed()) {
         this.patch({ busy: false });
 
         if (scope !== this.state.scopeVersion) {
@@ -2035,7 +2053,7 @@ export class Controller {
     if (this.state.dialog || this.state.busy) return;
 
     this.patch({
-      dialog: { ...dialog, scope: this.state.scopeVersion } as DialogState,
+      dialog: { ...dialog, scope: this.state.scopeVersion },
       formError: "",
     });
   }
@@ -2281,7 +2299,7 @@ export class Controller {
 
     try {
       const task = await operation();
-      if (this.disposed) return false;
+      if (this.isDisposed()) return false;
 
       if (dialog.scope !== this.state.scopeVersion) {
         throw new Error(

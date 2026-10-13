@@ -12,7 +12,7 @@ import { Store } from "../../../tasks/storage/store.js";
 import { claudeTaskPolicy } from "./task-policy.js";
 
 const claudeOptions = (task: { provider_options?: Task["provider_options"] }) =>
-  readClaudeTaskOptions(task as Task);
+  readClaudeTaskOptions(task);
 
 test("Claude preparation preserves native modes and restrictions independently of execution approval", () => {
   const store = new Store(":memory:");

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 
 import { McpUiHostStylesSchema } from "@modelcontextprotocol/ext-apps";
-import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 import { test, vi } from "vitest";
 
 import type { TransportEvents } from "../app/state/types";
@@ -147,10 +146,7 @@ test("console requests use browser credentials and required headers for tools an
 test("console authentication failure requests login and server failures retain their message", async () => {
   let response = new Response(null, { status: 401 });
 
-  const transport = new ConsoleTransport(
-    "",
-    (async () => response) as typeof fetch,
-  );
+  const transport = new ConsoleTransport("", async () => response);
 
   const observed = callbacks();
   await transport.connect(observed.events);
@@ -294,7 +290,7 @@ test("host style filtering ignores new keys in initialization and context update
         },
       },
     },
-  } as JSONRPCMessage) as unknown as {
+  }) as unknown as {
     result: { hostContext: { styles: { variables: Record<string, string> } } };
   };
 
@@ -320,7 +316,7 @@ test("host style filtering ignores new keys in initialization and context update
         },
       },
     },
-  } as JSONRPCMessage) as unknown as {
+  }) as unknown as {
     params: { styles: { variables: Record<string, string> } };
   };
 

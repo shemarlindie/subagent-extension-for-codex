@@ -122,7 +122,7 @@ function BudgetRaiseField({
   };
 
   const apply = async () => {
-    if (!canApply || candidate === undefined) return;
+    if (!canApply) return;
 
     const raise: BudgetRaise = isCost
       ? { max_cost_usd: candidate }

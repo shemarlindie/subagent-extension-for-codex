@@ -31,7 +31,7 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
 
   await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
-  const model = screen.getByLabelText("Model") as HTMLInputElement;
+  const model = screen.getByLabelText<HTMLInputElement>("Model");
   assert.equal(model.placeholder, "limited-model");
   await user.click(model);
 
@@ -86,7 +86,7 @@ test("runtime default model metadata blocks unsupported effort and permits nativ
   await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
   await enterTask(user, "Check native default metadata");
-  assert.equal((screen.getByLabelText("Model") as HTMLInputElement).value, "");
+  assert.equal(screen.getByLabelText<HTMLInputElement>("Model").value, "");
   await selectOption(user, "Reasoning effort", "high (unsupported by claude)");
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
@@ -251,7 +251,7 @@ test("model selection updates role and provider defaults while preserving explic
 
   await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
-  const field = screen.getByLabelText("Model") as HTMLInputElement;
+  const field = screen.getByLabelText<HTMLInputElement>("Model");
   assert.equal(field.placeholder, "review-model");
 
   assert.match(

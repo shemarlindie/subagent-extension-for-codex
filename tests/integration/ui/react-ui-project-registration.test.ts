@@ -131,8 +131,7 @@ test("browsing a folder fills the project draft without granting access", async 
 
   await waitFor(() =>
     assert.equal(
-      (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
-        .value,
+      within(dialog).getByLabelText<HTMLInputElement>("Repository path").value,
       "/repo/picked",
     ),
   );
@@ -217,9 +216,8 @@ test("cancelling the native picker preserves the manual project path", async (t)
 
   const dialog = await screen.findByRole("dialog");
 
-  const path = within(dialog).getByLabelText(
-    "Repository path",
-  ) as HTMLInputElement;
+  const path =
+    within(dialog).getByLabelText<HTMLInputElement>("Repository path");
 
   await user.type(path, "/repo/manual-draft");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
@@ -265,8 +263,7 @@ test("project registration errors preserve the draft and do not change the selec
   await screen.findByText("Use repository root");
 
   assert.equal(
-    (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
-      .value,
+    within(dialog).getByLabelText<HTMLInputElement>("Repository path").value,
     "/repo/invalid/src",
   );
 
@@ -290,8 +287,7 @@ test("a chat project hint prefills registration without registering it automatic
   const dialog = await screen.findByRole("dialog");
 
   assert.equal(
-    (within(dialog).getByLabelText("Repository path") as HTMLInputElement)
-      .value,
+    within(dialog).getByLabelText<HTMLInputElement>("Repository path").value,
     "/repo/chat-project",
   );
 
@@ -391,9 +387,8 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
 
   const dialog = await screen.findByRole("dialog");
 
-  const path = within(dialog).getByLabelText(
-    "Repository path",
-  ) as HTMLInputElement;
+  const path =
+    within(dialog).getByLabelText<HTMLInputElement>("Repository path");
 
   await user.type(path, "/repo/new-draft");
 
@@ -440,7 +435,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
   assert.equal(controller.getSnapshot().repository, scope);
 
   assert.equal(
-    (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
+    within(dialog).getByLabelText<HTMLTextAreaElement>("Description").value,
     "Review this new project with my draft intact",
   );
 
@@ -508,7 +503,7 @@ test("task project registration failure preserves the selected project and draft
   assert.equal(selectedProjectPath(), "/repo/a");
 
   assert.equal(
-    (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
+    within(dialog).getByLabelText<HTMLTextAreaElement>("Description").value,
     "Keep this description after registration failure",
   );
 
@@ -530,11 +525,9 @@ test("cancelling the task project picker preserves selection and task draft with
 
   await waitFor(() =>
     assert.equal(
-      (
-        within(dialog).getByRole("button", {
-          name: "Browse…",
-        }) as HTMLButtonElement
-      ).disabled,
+      within(dialog).getByRole<HTMLButtonElement>("button", {
+        name: "Browse…",
+      }).disabled,
       false,
     ),
   );
@@ -542,7 +535,7 @@ test("cancelling the task project picker preserves selection and task draft with
   assert.equal(selectedProjectPath(), "/repo/a");
 
   assert.equal(
-    (within(dialog).getByLabelText("Description") as HTMLTextAreaElement).value,
+    within(dialog).getByLabelText<HTMLTextAreaElement>("Description").value,
     "Preserve task while browsing",
   );
 
@@ -586,9 +579,9 @@ test("pending task project browsing disables Start and ignores selection after s
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "A pending folder selection");
 
-  const start = within(dialog).getByRole("button", {
+  const start = within(dialog).getByRole<HTMLButtonElement>("button", {
     name: "Start task",
-  }) as HTMLButtonElement;
+  });
 
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   assert.equal(start.disabled, true);

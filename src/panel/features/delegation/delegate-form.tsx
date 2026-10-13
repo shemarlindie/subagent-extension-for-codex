@@ -185,7 +185,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
         continue;
       }
 
-      form.setValue(key, initialValues[key] as never, { shouldDirty: false });
+      form.setValue(key, initialValues[key], { shouldDirty: false });
     }
 
     previousInitialValues.current = initialValues;

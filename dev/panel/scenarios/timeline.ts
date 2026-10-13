@@ -124,7 +124,7 @@ export class Timeline {
       ...body,
       uuid: this.uuid(),
       session_id: SESSION,
-    } as Plain;
+    };
 
     return this.add(
       "claude.activity",

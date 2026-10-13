@@ -196,7 +196,7 @@ export class Control {
     if (!req.description) throw new Error("Task description is required");
 
     if (
-      provider?.models &&
+      provider.models &&
       req.reasoning_effort &&
       req.reasoning_effort !== "default"
     ) {
@@ -562,7 +562,7 @@ export class Control {
         prompt,
       );
 
-      if (a.abort.signal.aborted) throw a.abort.signal.reason;
+      a.abort.signal.throwIfAborted();
       reply = output.reply;
       await this.recordReply(t, reply);
       t.status = "completed";

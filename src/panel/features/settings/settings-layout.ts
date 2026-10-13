@@ -13,7 +13,7 @@ export type { HelpPart, ModelScope, SettingRow, SettingSection };
 /** Form state keeps every value as a string. */
 export type Values = Record<string, string>;
 
-type Settings = Record<string, SettingValue>;
+type Settings = Partial<Record<string, SettingValue>>;
 
 /** A budget row's on/off state lives beside its amount in the form. */
 export const onKey = (key: string) => `${key}:on`;

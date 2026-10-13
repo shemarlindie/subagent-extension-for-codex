@@ -33,12 +33,12 @@ test("shows a spinner until loading ends, then the empty message when nothing is
   expect(view.getByRole("status", { name: "Loading tasks" })).not.toBeNull();
   expect(view.queryByText("Task details will show here.")).toBeNull();
 
-  act(() =>
+  act(() => {
     controller.applyScope(
       { panel_scope: { conversation_id: "chat" }, tasks: [] },
       false,
-    ),
-  );
+    );
+  });
 
   expect(view.queryByRole("status", { name: "Loading tasks" })).toBeNull();
   expect(view.getByText("Task details will show here.")).not.toBeNull();
@@ -47,15 +47,15 @@ test("shows a spinner until loading ends, then the empty message when nothing is
 test("opens the default task from opening data without showing the empty message", () => {
   const { controller, view } = renderInspector();
 
-  act(() =>
+  act(() => {
     controller.applyScope(
       {
         panel_scope: { conversation_id: "chat" },
         tasks: [task("a", "/repo/a", "chat")],
       },
       false,
-    ),
-  );
+    );
+  });
 
   const inspector = view.getByRole("region", { name: "Task inspector" });
   expect(inspector.dataset.task).toBe("a");

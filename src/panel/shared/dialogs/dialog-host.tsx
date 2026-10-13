@@ -76,7 +76,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   }, [state.dialog, definition, suspended]);
 
   // Switching forms or showing an error eases the height instead of snapping it.
-  useAnimatedHeight(popup, `${dialog?.kind}:${state.formError ?? ""}`);
+  useAnimatedHeight(popup, `${dialog?.kind}:${state.formError}`);
 
   const handleOpenChange = (
     open: boolean,

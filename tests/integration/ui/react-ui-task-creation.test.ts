@@ -109,7 +109,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
 
   await waitFor(() =>
     assert.equal(
-      (screen.getByLabelText("Runtime limit (mins)") as HTMLInputElement).value,
+      screen.getByLabelText<HTMLInputElement>("Runtime limit (mins)").value,
       "0.5",
     ),
   );
@@ -117,7 +117,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   assert.equal(selectedProjectPath(), "/repo/a");
 
   assert.equal(
-    (screen.getByLabelText("Runtime limit (mins)") as HTMLInputElement).value,
+    screen.getByLabelText<HTMLInputElement>("Runtime limit (mins)").value,
     "0.5",
   );
 
@@ -196,12 +196,12 @@ test("changing projects clears revision and dependencies while retaining the tas
   await selectOption(user, "Project", /repo\/b$/);
 
   assert.equal(
-    (screen.getByLabelText("Revision") as HTMLInputElement).value,
+    screen.getByLabelText<HTMLInputElement>("Revision").value,
     "HEAD",
   );
 
   assert.equal(
-    (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
+    screen.getByLabelText<HTMLTextAreaElement>("Description").value,
     "Persistent task",
   );
 
@@ -266,7 +266,7 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
   expect(screen.getByRole("dialog")).toBe(dialog);
 
   assert.equal(
-    (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
+    screen.getByLabelText<HTMLTextAreaElement>("Description").value,
     "Keyboard worker selection",
   );
 
@@ -402,7 +402,7 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
 
   await waitFor(() =>
     assert.equal(
-      (screen.getByRole("button", { name: "Start task" }) as HTMLButtonElement)
+      screen.getByRole<HTMLButtonElement>("button", { name: "Start task" })
         .disabled,
       false,
     ),
@@ -475,7 +475,7 @@ test("current repository selection locks revision to HEAD and submits the checko
   const { transport, user } = await setup(t);
   await user.click(screen.getByRole("button", { name: "New Task" }));
   await screen.findByRole("dialog");
-  const revision = screen.getByLabelText("Revision") as HTMLInputElement;
+  const revision = screen.getByLabelText<HTMLInputElement>("Revision");
   assert.equal(revision.value, "HEAD");
   assert.equal(revision.readOnly, true);
 

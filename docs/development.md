@@ -411,7 +411,12 @@ TypeScript
 code quality and React hook rules; explicit `any` is allowed only in tests.
 Type-aware rules read the three tsconfigs and catch unhandled or misused
 promises, deprecated APIs, non-exhaustive `switch` statements over unions, and
-values that would stringify as `[object Object]`. Pass async event handlers
+values that would stringify as `[object Object]`. They also reject unnecessary
+type assertions and, outside tests, conditions the types say can't vary. When a
+check guards data the static type doesn't describe, such as host input, a
+missing record key or a browser API absent in jsdom, make the type say so
+(`Partial<Record>`, `.at()`, `unknown`) or test with `typeof` rather than
+disabling the rule. Pass async event handlers
 through `controller.run` or `controller.handle` so failures are reported, and
 narrow untyped event data with `scalarText` from `src/shared/text.ts`. A full
 `npm run lint` takes about 10 seconds.

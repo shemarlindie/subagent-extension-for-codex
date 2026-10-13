@@ -16,6 +16,7 @@ import { callTool } from "../../../src/service/platform/server/tools";
 import type { Task } from "../../../src/shared/tasks/model";
 import { FIXTURE_SERVICE_TOOLS } from "../host/host-helpers";
 import {
+  type ChangeFixture,
   type Edits,
   previewChanges,
   type Turn,
@@ -72,7 +73,7 @@ function apply(root: string, turn: Turn) {
   if ("patch" in turn && typeof turn.patch === "string") {
     execFileSync("git", ["-C", root, "apply", "-"], { input: turn.patch });
   } else {
-    write(root, turn as Edits);
+    write(root, turn);
   }
 }
 
@@ -81,8 +82,12 @@ function apply(root: string, turn: Turn) {
  * each turn. The task's workspace, branch and snapshots become real ones;
  * the turn snapshot is taken before the last turn.
  */
-async function seedChanges(task: Task, root: string, workspaces: Workspaces) {
-  const fixture = previewChanges[task.id]();
+async function seedChanges(
+  task: Task,
+  fixture: ChangeFixture,
+  root: string,
+  workspaces: Workspaces,
+) {
   const repo = join(root, "repos", task.id);
   mkdirSync(repo, { recursive: true });
   git(repo, "init", "-q");
@@ -137,8 +142,10 @@ function fixtureStore() {
     for (const task of previewTasks) {
       const saved = structuredClone(task);
 
-      if (previewChanges[task.id]) {
-        await seedChanges(saved, directory, workspaces);
+      const changes = previewChanges[task.id];
+
+      if (changes) {
+        await seedChanges(saved, changes(), directory, workspaces);
       }
 
       store.save(saved);

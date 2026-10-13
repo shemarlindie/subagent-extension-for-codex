@@ -24,7 +24,7 @@ export type ParsedDiffFile = ReturnType<typeof parseDiff>[number];
 /** SVGs larger than this show as source only, never rendered as an image. */
 export const MAX_SVG_IMAGE_BYTES = 64 * 1024;
 
-const MIME_FORMATS: Record<string, FileFormat> = {
+const MIME_FORMATS: Partial<Record<string, FileFormat>> = {
   "text/x-diff": "diff",
   "text/x-patch": "diff",
   "text/diff": "diff",
@@ -157,7 +157,8 @@ export function pathLanguage(path: string | undefined) {
 
 export function fileFormat(file: PreviewFile): FileFormat {
   const mime = baseMime(file);
-  if (MIME_FORMATS[mime]) return MIME_FORMATS[mime];
+  const known = MIME_FORMATS[mime];
+  if (known) return known;
   if (mime.startsWith("image/")) return "image";
   const extension = extensionOf(file.path);
 

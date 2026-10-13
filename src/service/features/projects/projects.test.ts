@@ -692,7 +692,7 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
 
     assert.equal(
       (
-        await git(started.workspace!, [
+        await git(started.workspace, [
           "rev-parse",
           "--path-format=absolute",
           "--git-common-dir",

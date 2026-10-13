@@ -15,7 +15,7 @@ export type Question = {
 /** Question form values, indexed by question position. */
 export type QuestionAnswers = {
   answers: Record<string, string | string[]>;
-  custom: Record<string, string>;
+  custom: Partial<Record<string, string>>;
 };
 
 /** Unsent answers to one question request, restored when its task is shown again. */

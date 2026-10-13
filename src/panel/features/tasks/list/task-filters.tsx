@@ -135,7 +135,7 @@ export function TaskFilters() {
         aria-label="Filter tasks"
         aria-busy={loading || undefined}
         value={current}
-        onValueChange={(value) => controller.setFilter(value as Filter)}
+        onValueChange={(value) => controller.setFilter(value)}
       >
         {filters.map(([filter, label]) => (
           <Presence

@@ -52,7 +52,7 @@ function restoredValues<T extends FieldValues>(
     ),
   );
 
-  return { ...defaults, ...accepted } as DefaultValues<T>;
+  return { ...defaults, ...accepted };
 }
 
 /** Creates an RHF form whose values are saved and restored with its dialog. */
@@ -91,10 +91,10 @@ export function usePersistedDialogForm<T extends FieldValues>(
   useEffect(() => {
     if (!ready) return;
 
-    controller.saveDialogDraft(kind, getValues() as PersistedDialogDraft);
+    controller.saveDialogDraft(kind, getValues());
 
     const subscription = watch((values) => {
-      controller.saveDialogDraft(kind, values as PersistedDialogDraft);
+      controller.saveDialogDraft(kind, values);
     });
 
     return () => subscription.unsubscribe();

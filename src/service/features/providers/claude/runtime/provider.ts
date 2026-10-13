@@ -427,7 +427,8 @@ export class ClaudeAgentProvider implements Provider {
     // The final message is ending, so the turn takes no more steers.
     let ending = false;
     // A steer couldn't be withdrawn, so the CLI runs it after this result.
-    let continuing = false;
+    // Widened because a callback sets it, which TypeScript can't see.
+    let continuing = false as boolean;
     let fallback: ReturnType<typeof setTimeout> | undefined;
 
     const interrupt = () => {

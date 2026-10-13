@@ -141,7 +141,7 @@ test("current repository uses HEAD and includes staged, unstaged and untracked e
     // The start snapshot's temporary index is gone; no worktree was made.
     assert.deepEqual(await readdir(s.workspaces.root), []);
     // The start snapshot holds the user's uncommitted work.
-    const diff = await s.workspaces.diff(s.repo, t.base_commit!, t.start_tree!);
+    const diff = await s.workspaces.diff(s.repo, t.base_commit, t.start_tree!);
 
     for (const content of [
       "staged content",
@@ -341,7 +341,7 @@ test("current repository write profiles edit the checkout while preserving unrel
       assert.equal(context.task.workspace, s.repo);
 
       await writeFile(
-        join(context.task.workspace!, "implementation.ts"),
+        join(context.task.workspace, "implementation.ts"),
         "export const value = 2;\n",
       );
 
@@ -463,7 +463,7 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
     assert.ok(Array.isArray(options!.tools));
 
     for (const tool of ["Edit", "Write", "Bash"]) {
-      assert.ok(!(options!.tools as string[]).includes(tool));
+      assert.ok(!options!.tools.includes(tool));
     }
 
     const hook = options!.hooks!.PreToolUse![0].hooks[0];

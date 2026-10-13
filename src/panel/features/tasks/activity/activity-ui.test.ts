@@ -2349,16 +2349,13 @@ test("the trimmed note summarizes dropped events only for the task being shown",
     ).container.querySelector(".activity-trimmed-note")!.textContent;
 
   assert.match(
-    note()!,
+    note(),
     /12 earlier events over 1m 30s not shown\. 5 tool calls \(Bash 3, Read 2\) · 4 messages · 1 failure\./,
   );
 
   cleanup();
 
-  assert.doesNotMatch(
-    note({ ...dropped, task_id: "other" })!,
-    /earlier events/,
-  );
+  assert.doesNotMatch(note({ ...dropped, task_id: "other" }), /earlier events/);
 });
 
 test("activity times use Chat's format and tooltip", (t) => {

@@ -125,7 +125,7 @@ test("keyboard controls scroll by a small step or page and clamp at both ends", 
 
 test("dragging maps pointer movement to scroll distance and stops on pointer up", async () => {
   const { scroller } = setup();
-  const thumb = (await screen.findByRole("scrollbar")) as HTMLElement;
+  const thumb = await screen.findByRole("scrollbar");
   const setCapture = vi.fn();
   const releaseCapture = vi.fn();
 

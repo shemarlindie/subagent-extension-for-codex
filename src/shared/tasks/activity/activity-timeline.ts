@@ -84,7 +84,7 @@ function serviceSummary(e: Event) {
 }
 
 /** Row titles for service events whose type doesn't read as one. */
-const eventTitles: Record<string, string> = {
+const eventTitles: Partial<Record<string, string>> = {
   "parent.message": "Message queued for Codex",
   "parent.message_attempted": "Sending message to Codex",
   "parent.message_acknowledged": "Worker report acknowledged by Codex",
@@ -359,7 +359,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         group.summary = previousSummary;
       } else if (stopped) {
         group.state = "info";
-        const reason = operation?.summary;
+        const reason = operation.summary;
         group.summary = `${d.outcome === "cancelled" ? "Cancelled" : "Stopped"}${reason ? ` · ${reason}` : ""}`;
       } else if (complete) {
         group.state = "completed";

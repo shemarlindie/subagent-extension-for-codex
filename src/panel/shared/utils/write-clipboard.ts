@@ -1,6 +1,11 @@
+/** Whether the Clipboard API exists; browsers omit it outside secure contexts. */
+export const hasClipboardApi = () =>
+  typeof (navigator.clipboard as Clipboard | undefined)?.writeText ===
+  "function";
+
 /** Writes from a user action, including hosts that restrict the Clipboard API. */
 export async function writeClipboardText(text: string): Promise<void> {
-  if (typeof navigator.clipboard?.writeText === "function") {
+  if (hasClipboardApi()) {
     try {
       await navigator.clipboard.writeText(text);
 

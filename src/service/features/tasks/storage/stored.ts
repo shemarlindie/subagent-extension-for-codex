@@ -83,7 +83,7 @@ const storedTaskSchema = z.looseObject({
 
 /** A stored task body, named by its row's id when malformed. */
 export function decodeTask(id: string, body: string): Task {
-  return decodeStored(storedTaskSchema, body, `task ${id}`) as Task;
+  return decodeStored(storedTaskSchema, body, `task ${id}`);
 }
 
 /** A stored event row, whose data is any JSON object. */

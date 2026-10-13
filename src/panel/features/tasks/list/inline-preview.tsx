@@ -41,9 +41,9 @@ export function InlinePreview() {
 
   const task =
     tasks.find((task) => task.id === state.selected) ??
-    attention[0] ??
-    active[0] ??
-    tasks[0];
+    attention.at(0) ??
+    active.at(0) ??
+    tasks.at(0);
 
   const project = state.projects.find(
     (project) => project.repository === state.repository,

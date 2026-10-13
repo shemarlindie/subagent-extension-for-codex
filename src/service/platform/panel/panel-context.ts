@@ -37,7 +37,7 @@ export async function resolvePanelContext(
   owner: string,
   args: PanelContextInput,
 ) {
-  args = (await withHostRepository(c, args)) as PanelContextInput;
+  args = await withHostRepository(c, args);
   const target = args.task_id ? c.store.get(args.task_id, owner) : undefined;
 
   if (

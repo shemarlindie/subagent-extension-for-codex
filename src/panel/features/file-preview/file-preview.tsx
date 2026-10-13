@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { useController } from "../../app/state/controller-context";
 import { formatBytes } from "../../shared/utils/format";
 import { scrollChildIntoView } from "../../shared/utils/scroll-into-view";
+import { hasClipboardApi } from "../../shared/utils/write-clipboard";
 import { CopyButton } from "./copy-button";
 import { FileBadge } from "./file-badge";
 import {
@@ -66,9 +67,7 @@ export function FilePreview({
   wrapLines = false,
 }: FilePreviewProps) {
   const controller = useController(),
-    canCopy =
-      !controller.transport.embedded &&
-      typeof navigator.clipboard?.writeText === "function",
+    canCopy = !controller.transport.embedded && hasClipboardApi(),
     format = fileFormat(file),
     views = useMemo(
       (): FileView[] =>

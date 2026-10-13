@@ -65,7 +65,7 @@ steering.add(
   "task.queue_changed",
   {
     queue: [
-      queueEntry(steeringMessages.queued[0]!),
+      queueEntry(steeringMessages.queued[0]),
       {
         message_id: steeringMessages.removed,
         message: "Check the dark theme too.",
@@ -85,7 +85,7 @@ steering.add(
 
 steering.add(
   "task.queue_changed",
-  { queue: [queueEntry(steeringMessages.queued[0]!)], paused: false },
+  { queue: [queueEntry(steeringMessages.queued[0])], paused: false },
   0,
 );
 
@@ -249,14 +249,14 @@ conversationTask.tool(
   "1\texport async function upload(req) {",
 );
 
-conversationTask.say(conversationReplies[0]!);
+conversationTask.say(conversationReplies[0]);
 
-conversationTask.finish(conversationReplies[0]!, 1, {
+conversationTask.finish(conversationReplies[0], 1, {
   duration_ms: 142000,
   total_cost_usd: 0.61,
 });
 
-followUp(conversationTask, 2, conversationMessages[0]!);
+followUp(conversationTask, 2, conversationMessages[0]);
 
 conversationTask.tool(
   "Edit",
@@ -268,14 +268,14 @@ conversationTask.tool(
   "The file server/upload.ts has been updated.",
 );
 
-conversationTask.say(conversationReplies[1]!);
+conversationTask.say(conversationReplies[1]);
 
-conversationTask.finish(conversationReplies[1]!, 2, {
+conversationTask.finish(conversationReplies[1], 2, {
   duration_ms: 98000,
   total_cost_usd: 0.38,
 });
 
-followUp(conversationTask, 3, conversationMessages[1]!);
+followUp(conversationTask, 3, conversationMessages[1]);
 
 conversationTask.tool(
   "Grep",
@@ -283,9 +283,9 @@ conversationTask.tool(
   "server/upload.ts:14:  await saveUpload(file)",
 );
 
-conversationTask.say(conversationReplies[2]!);
+conversationTask.say(conversationReplies[2]);
 
-conversationTask.finish(conversationReplies[2]!, 3, {
+conversationTask.finish(conversationReplies[2], 3, {
   duration_ms: 31000,
   total_cost_usd: 0.09,
 });
@@ -367,7 +367,7 @@ const longChatMessages = Array.from(
 );
 
 for (let turn = 1; turn <= longChatTurns; turn++) {
-  if (turn > 1) followUp(longChat, turn, longChatMessages[turn - 2]!);
+  if (turn > 1) followUp(longChat, turn, longChatMessages[turn - 2]);
 
   const reply = `Updated screen ${turn} to the new layout.\n\n- Replaced the fixed widths with the grid.\n- Kept the spacing tokens.${turn === longChatTurns ? "\n\nThat's every screen." : ""}`;
 

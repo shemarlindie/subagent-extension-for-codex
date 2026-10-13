@@ -18,12 +18,15 @@ export function scrollChildIntoView(
     target = right - list.clientWidth;
   }
 
-  if (target !== undefined) {
-    list.scrollTo?.({
+  // jsdom, which runs the panel tests, has neither scrollTo nor matchMedia.
+  if (target !== undefined && typeof list.scrollTo === "function") {
+    list.scrollTo({
       left: Math.max(0, target),
-      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
+      behavior:
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
     });
   }
 }

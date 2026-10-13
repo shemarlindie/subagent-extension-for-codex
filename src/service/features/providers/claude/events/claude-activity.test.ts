@@ -13,7 +13,7 @@ import type {
 import { test } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
-import { startSchema, type Task } from "../../../../../shared/tasks/model.js";
+import { startSchema } from "../../../../../shared/tasks/model.js";
 import { type RunContext } from "../../types.js";
 import { ClaudeAgentProvider } from "../runtime/provider.js";
 
@@ -368,7 +368,7 @@ test("run emits result accounting exactly once for success and failure", async (
         },
       },
       title: "Review",
-    } as Task;
+    };
 
     context.signal = new AbortController().signal;
     context.session = () => {};

@@ -185,7 +185,7 @@ export function Host() {
     if (event.key === "Home") nextIndex = 0;
     else if (event.key === "End") nextIndex = tabs.length - 1;
 
-    const nextTab = inspectorTabs[nextIndex];
+    const nextTab = inspectorTabs.at(nextIndex);
 
     if (!nextTab) return;
 
@@ -314,7 +314,8 @@ export function Host() {
         .then((result) =>
           setLiveThreads(
             threadsOf(
-              (result.structuredContent as { result?: Task[] })?.result ?? [],
+              (result.structuredContent as { result?: Task[] } | undefined)
+                ?.result ?? [],
             ),
           ),
         )

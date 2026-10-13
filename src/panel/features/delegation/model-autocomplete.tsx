@@ -9,7 +9,7 @@ function matches(model: ModelChoice, query: string) {
   const text = query.trim().toLowerCase();
 
   return [model.value, model.displayName, model.description].some((field) =>
-    field?.toLowerCase().includes(text),
+    field.toLowerCase().includes(text),
   );
 }
 

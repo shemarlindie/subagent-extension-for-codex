@@ -4,10 +4,9 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import { PageFrame } from "../../shared/components/navigation/page-frame";
 import { PageOutlet } from "./page-outlet";
-import type { PageId } from "./pages";
 
 const state = vi.hoisted(() => ({
-  page: "tasks" as PageId,
+  page: "tasks",
   selected: undefined as string | undefined,
 }));
 

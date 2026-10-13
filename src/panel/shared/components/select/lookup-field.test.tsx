@@ -120,9 +120,9 @@ test("lookup shows no matches and clears the query after dismissal", async () =>
 
   expect(
     (
-      (await screen.findByRole("combobox", {
+      await screen.findByRole<HTMLInputElement>("combobox", {
         name: "Search project",
-      })) as HTMLInputElement
+      })
     ).value,
   ).toBe("");
 

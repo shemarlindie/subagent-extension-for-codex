@@ -23,9 +23,10 @@ import type { HostState } from "../../transports/types.js";
 import type { PageId } from "../navigation/pages";
 
 export type PanelData = {
+  // Host data arrives unchecked; applyScope validates these before use.
   panel_scope?: {
-    conversation_id: string | null;
-    repository?: string;
+    conversation_id?: unknown;
+    repository?: unknown;
     revision?: string;
   };
   panel_project_candidate?: { repository: string; auto_register?: boolean };

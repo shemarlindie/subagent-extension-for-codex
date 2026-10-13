@@ -349,9 +349,9 @@ test("Ask Codex about a previewed file prepares its context and restores the pre
     name: "Ask Codex about this file",
   });
 
-  const field = within(dialog).getByRole("textbox", {
+  const field = within(dialog).getByRole<HTMLTextAreaElement>("textbox", {
     name: "Message",
-  }) as HTMLTextAreaElement;
+  });
 
   await waitFor(() => expect(document.activeElement).toBe(field));
   expect(field.value).toContain("src/a.ts");

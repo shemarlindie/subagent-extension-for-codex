@@ -121,7 +121,7 @@ test.each([
 
         expect(unauthenticated.status).toBe(401);
 
-        const session = login.headers.get("set-cookie")!.split(";")[0]!;
+        const session = login.headers.get("set-cookie")!.split(";")[0];
 
         const csrf = await fetch(`${base}/api/tools/list_agent_tasks`, {
           method: "POST",

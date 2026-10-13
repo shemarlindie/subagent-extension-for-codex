@@ -13,7 +13,11 @@ export const MOTION = {
 export function reducedMotion(element?: Element | null) {
   const view = element?.ownerDocument.defaultView ?? window;
 
-  return view.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  // jsdom, which runs the panel tests, has no matchMedia.
+  return (
+    typeof view.matchMedia === "function" &&
+    view.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 }
 
 // Without the Web Animations API (or with reduced motion), changes apply at once.

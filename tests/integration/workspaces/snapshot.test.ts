@@ -229,7 +229,7 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
 
     s.git("-c", "gc.pruneExpire=now", "gc", "-q");
 
-    assert.deepEqual(s.changed(done.start_tree!, done.end_tree!), [
+    assert.deepEqual(s.changed(done.start_tree, done.end_tree!), [
       "turn-1.txt",
       "turn-2.txt",
     ]);

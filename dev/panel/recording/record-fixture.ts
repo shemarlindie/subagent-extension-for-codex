@@ -35,14 +35,11 @@ const { values } = parseArgs({
 
 const firstId = Number(values["first-id"]);
 
-const replace = values.replace.map((pair) => {
+const replace = values.replace.map((pair): [string, string] => {
   const at = pair.indexOf("=");
 
   // Without "=", the empty `from` fails the check below.
-  return (at < 1 ? ["", ""] : [pair.slice(0, at), pair.slice(at + 1)]) as [
-    string,
-    string,
-  ];
+  return at < 1 ? ["", ""] : [pair.slice(0, at), pair.slice(at + 1)];
 });
 
 if (

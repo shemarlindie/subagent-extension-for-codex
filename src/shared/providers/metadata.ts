@@ -57,7 +57,9 @@ export const fixtureMetadata: ProviderMetadata = {
 };
 
 /** Built-in presentation registration, including stored tasks without a live worker. */
-export const builtinProviderMetadata: Record<string, ProviderMetadata> = {
+export const builtinProviderMetadata: Partial<
+  Record<string, ProviderMetadata>
+> = {
   claude: claudeMetadata,
   fixture: fixtureMetadata,
 };

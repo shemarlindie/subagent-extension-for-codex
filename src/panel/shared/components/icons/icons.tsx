@@ -59,11 +59,14 @@ const ICON_NAMES = [
 
 export type IconName = (typeof ICON_NAMES)[number];
 
-const iconSources = import.meta.glob("../../../../../assets/icons/*.svg", {
-  eager: true,
-  query: "?raw",
-  import: "default",
-}) as Record<string, string>;
+const iconSources: Partial<Record<string, string>> = import.meta.glob<string>(
+  "../../../../../assets/icons/*.svg",
+  {
+    eager: true,
+    query: "?raw",
+    import: "default",
+  },
+);
 
 // The wrapper owns sizing and theming; each file supplies artwork and its default stroke width.
 function parseIcon(source: string): IconDefinition {

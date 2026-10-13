@@ -62,7 +62,7 @@ test("worker question accepts a custom answer with no preset selection", async (
 
   // A typed answer replaces the single choice.
   assert.equal(
-    (screen.getByRole("radio", { name: "Preset" }) as HTMLInputElement).checked,
+    screen.getByRole<HTMLInputElement>("radio", { name: "Preset" }).checked,
     false,
   );
 
@@ -158,8 +158,7 @@ test("worker questions submit preset multiple answers and a custom override toge
 
   // Moving between cards keeps the answers already chosen.
   assert.equal(
-    (screen.getByRole("checkbox", { name: "Tests" }) as HTMLInputElement)
-      .checked,
+    screen.getByRole<HTMLInputElement>("checkbox", { name: "Tests" }).checked,
     true,
   );
 
@@ -262,7 +261,7 @@ test("a skipped stacked question sends an explicit skipped answer", async (t) =>
   await user.click(screen.getByRole("button", { name: "Format" }));
 
   assert.equal(
-    (screen.getByRole("radio", { name: "YAML" }) as HTMLInputElement).checked,
+    screen.getByRole<HTMLInputElement>("radio", { name: "YAML" }).checked,
     false,
   );
 
@@ -408,11 +407,9 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
   assert.ok(screen.getByText("Question 3 of 3"));
 
   assert.equal(
-    (
-      screen.getByRole("textbox", {
-        name: "Write your own answer",
-      }) as HTMLInputElement
-    ).value,
+    screen.getByRole<HTMLInputElement>("textbox", {
+      name: "Write your own answer",
+    }).value,
     "Platform team",
   );
 
@@ -423,8 +420,7 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
   await user.click(screen.getByRole("button", { name: "Checks" }));
 
   assert.equal(
-    (screen.getByRole("checkbox", { name: "Tests" }) as HTMLInputElement)
-      .checked,
+    screen.getByRole<HTMLInputElement>("checkbox", { name: "Tests" }).checked,
     true,
   );
 

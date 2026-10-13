@@ -1556,7 +1556,7 @@ test("worktree diff includes edits, untracked files and committed changes withou
   assert.equal(done.branch, `agent/${t.id}`);
 
   assert.equal(
-    execFileSync("git", ["-C", repo, "log", "-1", "--format=%s", done.branch!])
+    execFileSync("git", ["-C", repo, "log", "-1", "--format=%s", done.branch])
       .toString()
       .trim(),
     "worker edit",
@@ -1790,7 +1790,7 @@ test("a task is deleted in any state with everything related to it", async () =>
       [],
     );
 
-    assert.equal(existsSync(stopped.workspace!), false);
+    assert.equal(existsSync(stopped.workspace), false);
     assert.equal(git("branch", "--list", "agent/*").includes(t.id), false);
     assert.equal(git("for-each-ref", "refs/agent-tasks").includes(t.id), false);
 
@@ -2179,7 +2179,7 @@ test("a new provider controls preparation and input policy without built-in iden
     decisions.push(automatic.approved);
     await context.input("ChooseApproach", {}, context.signal);
     // Changing the provider's automatic policy affects its next request.
-    provider.taskPolicy!.decideInput = () => undefined;
+    provider.taskPolicy.decideInput = () => undefined;
     const manual = await context.input("NativeWrite", {}, context.signal);
     decisions.push(manual.approved);
 

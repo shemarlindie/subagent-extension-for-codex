@@ -108,7 +108,7 @@ const pixel = Buffer.from(
 );
 
 /** Change fixtures by preview task id. */
-export const previewChanges: Record<string, () => ChangeFixture> = {
+export const previewChanges: Partial<Record<string, () => ChangeFixture>> = {
   // A worktree task with two turns, committed on its branch.
   "preview-interrupted": (): ChangeFixture => ({
     base: {

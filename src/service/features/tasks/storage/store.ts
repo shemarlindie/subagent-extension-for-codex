@@ -128,7 +128,7 @@ export class Store {
       .insert(events)
       .values({ task_id: t.id, type, timestamp, data: JSON.stringify(data) })
       .returning({ id: events.id })
-      .get()!;
+      .get();
 
     const e = { id, task_id: t.id, type, timestamp, data };
     this.database.afterCommit(() => this.notify(e, t.owner));

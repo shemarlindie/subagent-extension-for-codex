@@ -84,7 +84,7 @@ test("fixture results are shaped like the service's tool results", () => {
   assert.ok(Array.isArray(listed.structuredContent!.result));
   const failed = fixtureCall("start_agent_task", {}, {});
   assert.equal(failed.isError, true);
-  assert.match(String(failed.content[0]!.text), /Design preview only/);
+  assert.match(String(failed.content[0].text), /Design preview only/);
 });
 
 test("slow fixture reads leave launch task rows to the delayed list read", () => {

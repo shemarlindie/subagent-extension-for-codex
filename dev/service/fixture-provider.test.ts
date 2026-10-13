@@ -5,7 +5,7 @@ import { test } from "vitest";
 import { Settings } from "../../src/service/features/settings/settings.js";
 import { Store } from "../../src/service/features/tasks/storage/store.js";
 import type { ModelChoice } from "../../src/shared/providers/types.js";
-import { startSchema, type Task } from "../../src/shared/tasks/model.js";
+import { startSchema } from "../../src/shared/tasks/model.js";
 import { fixtureSdkActivityTypes } from "./fixture-events.js";
 import { FixtureProvider } from "./fixture-provider.js";
 import { context, task } from "./fixture-provider-test-helpers.js";
@@ -107,10 +107,10 @@ test("fixture provider instances keep metadata and permission options isolated",
   const second = new FixtureProvider();
 
   const originalClaudeLabel =
-    second.metadata.nativePermissions!.options[0]!.label;
+    second.metadata.nativePermissions!.options[0].label;
 
   first.metadata.nativePermissions!.formTitle = "Changed fixture title";
-  first.metadata.nativePermissions!.options[0]!.label = "Changed fixture label";
+  first.metadata.nativePermissions!.options[0].label = "Changed fixture label";
 
   assert.equal(
     second.metadata.nativePermissions?.formTitle,
@@ -136,9 +136,9 @@ test("fixture model catalogs copy caller data and returned effort levels", async
 
   const provider = new FixtureProvider({ modelChoices: [...modelChoices] });
 
-  modelChoices[0]!.supportedEffortLevels = ["max"];
+  modelChoices[0].supportedEffortLevels = ["max"];
   const first = await provider.models();
-  first[0]!.supportedEffortLevels!.push("high");
+  first[0].supportedEffortLevels!.push("high");
 
   assert.deepEqual((await provider.models())[0]?.supportedEffortLevels, [
     "low",
@@ -226,7 +226,7 @@ test("fixture permission modes simulate allow, deny, ask, and approval authority
         authority: "user",
       });
 
-      return { ...task(), ...prepared } as Task;
+      return { ...task(), ...prepared };
     };
 
     for (const mode of ["plan", "dontAsk"]) {

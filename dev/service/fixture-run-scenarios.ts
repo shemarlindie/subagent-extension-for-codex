@@ -49,7 +49,8 @@ export function emitFixturePrelude(
   }
 
   for (const restriction of scenarios.restrictions) {
-    const configured = policy?.[restriction as keyof FixturePolicy];
+    const configured =
+      policy?.[restriction as keyof NonNullable<FixturePolicy>];
 
     events.emitActivity("permission_denied", {
       tool_name: restriction,

@@ -7,7 +7,7 @@ export const previewProjects = [
 /** The dev host's default Thread ID; most tasks belong to it. */
 export const PREVIEW_THREAD = "dev-thread";
 export const OTHER_THREAD = "other-thread";
-export const WEBSITE = previewProjects[1]!.repository;
+export const WEBSITE = previewProjects[1].repository;
 
 export const taskBase = {
   owner: "preview",
@@ -21,7 +21,7 @@ export const taskBase = {
     },
   },
   conversation_id: PREVIEW_THREAD,
-  repository: previewProjects[0]!.repository,
+  repository: previewProjects[0].repository,
   revision: "HEAD",
   depends_on: [],
   context: [],

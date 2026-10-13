@@ -2,7 +2,9 @@ import { approvalLabels, type Task } from "../tasks/model.js";
 import { claudeTaskFacts } from "./claude/presentation.js";
 
 /** Provider-owned presenters retain native session details without leaking SDK concepts into the inspector. */
-const presenters: Record<string, (task: Task) => Record<string, string>> = {
+const presenters: Partial<
+  Record<string, (task: Task) => Record<string, string>>
+> = {
   claude: claudeTaskFacts,
 };
 

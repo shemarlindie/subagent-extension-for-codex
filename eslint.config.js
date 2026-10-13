@@ -15,6 +15,8 @@ import { sourceBoundaries } from "./scripts/lint/source-boundaries.mjs";
 // Code rules expect a JavaScript syntax tree, so they stay off Markdown.
 const CODE = ["**/*.{js,mjs,cjs,ts,mts,cts,tsx}"];
 
+const TESTS = ["tests/**/*.ts", "**/*.test.{ts,tsx}", "**/*-test-harness.ts"];
+
 export default defineConfig(
   { ignores: ["dist/", ".codex-subagent-extension/", "node_modules/"] },
   {
@@ -55,10 +57,18 @@ export default defineConfig(
       "@typescript-eslint/no-deprecated": "error",
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/no-unnecessary-type-assertion": "error",
       "@typescript-eslint/prefer-promise-reject-errors": "error",
       "@typescript-eslint/restrict-template-expressions": "error",
       "@typescript-eslint/switch-exhaustiveness-check": "error",
     },
+  },
+  {
+    // Tests re-check values they built to fail with a clearer message, so
+    // conditions are only checked in production and development code.
+    files: ["**/*.{ts,mts,cts,tsx}"],
+    ignores: TESTS,
+    rules: { "@typescript-eslint/no-unnecessary-condition": "error" },
   },
   {
     // Blank-line layout is the one formatting concern Prettier leaves alone.
@@ -152,13 +162,7 @@ export default defineConfig(
   },
   {
     // Tests cast loosely typed protocol results and build partial fakes.
-    files: [
-      "tests/**/*.ts",
-      "src/**/*.test.ts",
-      "src/**/*.test.tsx",
-      "dev/**/*.test.ts",
-      "dev/**/*.test.tsx",
-    ],
+    files: TESTS,
     rules: { "@typescript-eslint/no-explicit-any": "off" },
   },
   {

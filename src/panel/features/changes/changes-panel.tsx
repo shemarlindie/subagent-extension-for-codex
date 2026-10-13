@@ -56,7 +56,7 @@ export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
             busy={false}
             skeleton={<ChangesHeaderSkeleton />}
           >
-            {!headerLoading && task ? (
+            {!headerLoading ? (
               <ChangesHeader task={task} changes={changes} />
             ) : null}
           </LoadingSwap>

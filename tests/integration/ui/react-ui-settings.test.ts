@@ -16,8 +16,7 @@ import {
 async function waitForSettingsSaved() {
   await waitFor(() =>
     assert.equal(
-      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
-        .disabled,
+      screen.getByRole<HTMLButtonElement>("button", { name: "Save" }).disabled,
       true,
     ),
   );
@@ -241,8 +240,7 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
   assert.equal((amount as HTMLInputElement).value, savedAmount);
 
   assert.equal(
-    (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
-      .disabled,
+    screen.getByRole<HTMLButtonElement>("button", { name: "Save" }).disabled,
     true,
   );
 
@@ -641,8 +639,7 @@ test("leaving settings with unsaved edits asks before discarding them", async (t
   );
 
   assert.equal(
-    (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
-      .disabled,
+    screen.getByRole<HTMLButtonElement>("button", { name: "Save" }).disabled,
     true,
   );
 

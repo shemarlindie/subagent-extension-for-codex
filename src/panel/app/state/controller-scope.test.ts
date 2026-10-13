@@ -4,7 +4,7 @@ import { test } from "vitest";
 
 import { deferred, flush, setup, task } from "./controller-test-harness";
 import { visibleTasks } from "./selectors";
-import type { PanelData, Task } from "./types";
+import type { Task } from "./types";
 
 test("panel bootstrap explicitly requests global scope; host scope skips bootstrap and filters results", async (t) => {
   for (const explicit of [false, true]) {
@@ -212,11 +212,44 @@ test("unrelated tool output leaves scope, selection and the open form intact", a
   await controller.start();
   await controller.delegate();
   const before = controller.getSnapshot();
-  controller.applyScope({} as PanelData, false);
+  controller.applyScope({}, false);
   const after = controller.getSnapshot();
   assert.equal(after.scopeVersion, before.scopeVersion);
   assert.equal(after.selected, before.selected);
   assert.equal(after.dialog, before.dialog);
+});
+
+test("malformed scope data is rejected and the task list waits for a valid scope", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+
+  assert.equal(
+    controller.applyScope({ panel_scope: { conversation_id: 42 } }, false),
+    false,
+  );
+
+  assert.equal(
+    controller.applyScope(
+      { panel_scope: { conversation_id: null, repository: 7 } },
+      false,
+    ),
+    false,
+  );
+
+  assert.equal(controller.getSnapshot().scopeKnown, false);
+
+  // The bootstrap read returns no usable scope, so the list is never read.
+  transport.context = { panel_scope: { conversation_id: 42 } };
+  await controller.start();
+  assert.equal(controller.getSnapshot().scopeKnown, false);
+  assert.ok(!transport.calls.some((call) => call.name === "list_agent_tasks"));
+
+  assert.equal(
+    controller.applyScope({ panel_scope: { conversation_id: "chat" } }, false),
+    true,
+  );
+
+  assert.equal(controller.getSnapshot().conversation, "chat");
 });
 
 test("Failed filter shows failed, interrupted and live-failed tasks only", async (t) => {

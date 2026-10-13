@@ -258,7 +258,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             {progress}
           </div>
           <div className="file-preview-body">
-            {read?.status === "error" && (
+            {read.status === "error" && (
               <p className="form-error" role="alert">
                 {read.message}
               </p>

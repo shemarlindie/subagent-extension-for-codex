@@ -255,7 +255,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   await screen.findByRole("dialog");
 
   assert.equal(
-    (screen.getByLabelText("Description") as HTMLTextAreaElement).value,
+    screen.getByLabelText<HTMLTextAreaElement>("Description").value,
     "",
   );
 

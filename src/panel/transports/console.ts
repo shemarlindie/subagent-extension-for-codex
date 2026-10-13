@@ -64,7 +64,7 @@ export class ConsoleTransport implements Transport {
     });
 
     this.stream.addEventListener("delta", (event) =>
-      this.events?.draft(JSON.parse((event as MessageEvent).data)),
+      this.events?.draft(JSON.parse(event.data)),
     );
   }
 

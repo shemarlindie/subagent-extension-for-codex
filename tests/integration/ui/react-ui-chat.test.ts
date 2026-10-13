@@ -108,9 +108,9 @@ test("Ask Codex about an older reply prepares that reply and sends only the edit
     name: "Ask Codex about this reply",
   });
 
-  const field = within(dialog).getByRole("textbox", {
+  const field = within(dialog).getByRole<HTMLTextAreaElement>("textbox", {
     name: "Message",
-  }) as HTMLTextAreaElement;
+  });
 
   expect(field.value).toContain("older-reply");
   expect(field.value).toContain("Earlier reply about the authentication bug.");
@@ -182,11 +182,9 @@ test("closing a reply handoff sends nothing and hosts without message support ca
   ).toBeNull();
 
   expect(
-    (
-      within(dialog).getByRole("textbox", {
-        name: "Message",
-      }) as HTMLTextAreaElement
-    ).value,
+    within(dialog).getByRole<HTMLTextAreaElement>("textbox", {
+      name: "Message",
+    }).value,
   ).toContain("A reply to ask about.");
 
   await user.click(within(dialog).getAllByRole("button", { name: "Close" })[0]);

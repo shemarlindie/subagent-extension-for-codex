@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { Store } from "../../../service/features/tasks/storage/store.js";
-import { type Event } from "../../events/types.js";
 import { startSchema, type Task } from "../model.js";
 import { CHAT_EVENTS, chatItems } from "./chat.js";
 
@@ -27,8 +26,11 @@ const task: Task = {
   runtime_ms: 0,
 };
 
-const event = (id: number, type: string, data: Record<string, unknown> = {}) =>
-  ({ id, task_id: "task", type, timestamp: "", data }) as Event;
+const event = (
+  id: number,
+  type: string,
+  data: Record<string, unknown> = {},
+) => ({ id, task_id: "task", type, timestamp: "", data });
 
 test("stored Chat events include compaction failures and exclude ordinary statuses", (t) => {
   const store = new Store(":memory:");

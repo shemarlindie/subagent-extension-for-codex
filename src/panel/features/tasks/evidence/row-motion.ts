@@ -40,8 +40,10 @@ export function animateRows(
     const delta = old ? old.top - position.top : 12;
     if (position.bottom < 0 || position.top > height) continue;
     if (old && Math.abs(delta) <= 1) continue;
+    // jsdom, which runs the panel tests, has no Web Animations.
+    if (typeof position.element.animate !== "function") continue;
 
-    const animation = position.element.animate?.(
+    const animation = position.element.animate(
       [
         { transform: `translateY(${delta}px)`, opacity: old ? 1 : 0 },
         { transform: "translateY(0)", opacity: 1 },
@@ -49,7 +51,7 @@ export function animateRows(
       { duration: MOTION.slow, easing: MOTION.easing },
     );
 
-    if (animation) animations.push(animation);
+    animations.push(animation);
   }
 
   return animations;

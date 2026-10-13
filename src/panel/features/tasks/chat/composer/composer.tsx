@@ -26,7 +26,7 @@ const PLACEHOLDERS = {
   input: "Queue",
 };
 
-const STEER_KEY = /Mac|iPhone|iPad/.test(globalThis.navigator?.userAgent ?? "")
+const STEER_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent)
   ? "⌘ + Enter"
   : "Ctrl + Enter";
 

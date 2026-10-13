@@ -136,13 +136,12 @@ export class HostTransport implements Transport {
     if (result.isError) {
       throw new Error(
         result.content
-          ?.map((item) => (item.type === "text" ? item.text : ""))
+          .map((item) => (item.type === "text" ? item.text : ""))
           .join("\n") || "The tool failed.",
       );
     }
 
-    const body = result.structuredContent as
-      Record<string, unknown> | undefined;
+    const body = result.structuredContent;
 
     if (!body) throw new Error("The service returned no structured data.");
 

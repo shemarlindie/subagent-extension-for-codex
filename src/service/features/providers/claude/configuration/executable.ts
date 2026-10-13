@@ -182,7 +182,7 @@ export function compareVersions(a: string, b: string) {
   const right = b.split(".").map(Number);
 
   for (let i = 0; i < 3; i++) {
-    if (left[i] !== right[i]) return left[i]! - right[i]!;
+    if (left[i] !== right[i]) return left[i] - right[i];
   }
 
   return 0;

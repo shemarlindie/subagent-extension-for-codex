@@ -209,7 +209,7 @@ export function WorkerFields({
   const revision = useWatch({ control, name: "revision" });
 
   const readiness = workers.find(
-    (worker) => worker.provider === selected?.split(":")[0],
+    (worker) => worker.provider === selected.split(":")[0],
   )?.readiness;
 
   return (
@@ -640,11 +640,11 @@ export function ApprovalField({
 }) {
   const { control } = useFormContext<DelegateValues>();
   const worker = useWatch({ control, name: "worker" });
-  const provider = worker?.split(":")[0];
+  const provider = worker.split(":")[0];
   const info = workers.find((item) => item.provider === provider);
 
   const permissions = providerMetadata(
-    provider ?? "",
+    provider,
     info?.metadata,
   )?.nativePermissions;
 

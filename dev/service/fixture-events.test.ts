@@ -18,7 +18,7 @@ test("fixture payloads cover every installed SDK message activity family", () =>
 
   for (const type of fixtureSdkActivityTypes) {
     const data = fixtureActivityPayload(type, {}, "task_fixture", 2);
-    const raw = data.raw_response as Record<string, unknown>;
+    const raw = data.raw_response;
 
     assert.equal(data.type, type);
     assert.equal(data.activity.kind, type);
@@ -47,10 +47,7 @@ test("fixture activity payloads keep nested overrides and unknown SDK events", (
   const unknown = fixtureActivityPayload("future_sdk_event", {}, "task", 1);
   assert.equal(unknown.activity.kind, "future_sdk_event");
 
-  assert.equal(
-    (unknown.raw_response as Record<string, unknown>).type,
-    "future_sdk_event",
-  );
+  assert.equal(unknown.raw_response.type, "future_sdk_event");
 });
 
 test("fixture assistant messages cover every installed SDK error code", () => {
@@ -71,7 +68,7 @@ test("fixture assistant messages cover every installed SDK error code", () => {
 test("fixture stream frames cover each Messages API streaming lifecycle event", () => {
   for (const frame of fixtureStreamFrameTypes) {
     const data = fixtureStreamPayload(frame, {}, "task_fixture", 3);
-    const raw = data.raw_response as Record<string, unknown>;
+    const raw = data.raw_response;
     const event = raw.event as Record<string, unknown>;
 
     assert.equal(event.type, frame);

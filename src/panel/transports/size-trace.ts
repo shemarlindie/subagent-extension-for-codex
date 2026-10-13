@@ -30,11 +30,11 @@ export function traceSize(
     elapsedMs: Math.round(now * 100) / 100,
     timestamp: new Date(performance.timeOrigin + now).toISOString(),
     viewport: { width: window.innerWidth, height: window.innerHeight },
-    bodyHeight: document.body?.getBoundingClientRect().height ?? 0,
+    bodyHeight: document.body.getBoundingClientRect().height,
     previewHeight:
       document.querySelector(".inline-preview")?.getBoundingClientRect()
         .height ?? null,
-    expanded: document.body?.dataset.expandedPanel,
+    expanded: document.body.dataset.expandedPanel,
     details,
   };
 

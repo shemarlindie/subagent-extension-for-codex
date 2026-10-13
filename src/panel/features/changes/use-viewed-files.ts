@@ -30,7 +30,7 @@ export function firstUnviewed(
   viewed: ReadonlyMap<string, string>,
   entries: ChangedFileEntry[],
 ) {
-  return entries.find((entry) => !isViewed(viewed, entry)) ?? entries[0];
+  return entries.find((entry) => !isViewed(viewed, entry)) ?? entries.at(0);
 }
 
 /**

@@ -77,7 +77,7 @@ if (typeof window.ResizeObserver !== "function") {
           devicePixelContentBoxSize: [size],
         } as ResizeObserverEntry;
 
-        this.callback([entry], this as unknown as ResizeObserver);
+        this.callback([entry], this);
       }
 
       unobserve(_target: Element) {}

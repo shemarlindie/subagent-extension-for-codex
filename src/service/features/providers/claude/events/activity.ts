@@ -345,7 +345,7 @@ export function claudeActivityPresentation(
       if (frame.type === "content_block_delta") {
         const delta = object(frame.delta);
 
-        const fields: Record<string, [string, string]> = {
+        const fields: Partial<Record<string, [string, string]>> = {
           text_delta: ["text", "text"],
           thinking_delta: ["thinking", "thinking"],
           input_json_delta: ["partial_json", "input_json_delta"],

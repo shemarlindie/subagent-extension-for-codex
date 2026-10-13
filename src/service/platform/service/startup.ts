@@ -149,7 +149,8 @@ async function handleExistingService(error: ExistingServiceError) {
 
     try {
       return await readline.question(
-        formatStartupPrompt(prompt, stdout.columns ?? 100),
+        // Only a terminal reports its width.
+        formatStartupPrompt(prompt, stdout.isTTY ? stdout.columns : 100),
         {
           signal: controller.signal,
         },
@@ -449,7 +450,7 @@ function writeStartupOutput(
   process.stderr.write(
     formatStartupOutput(blocks, {
       leadingBlank,
-      width: Math.max(40, process.stderr.columns ?? 100),
+      width: Math.max(40, process.stderr.isTTY ? process.stderr.columns : 100),
     }),
   );
 }
