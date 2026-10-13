@@ -23,7 +23,7 @@ The example keeps data in `.codex-subagent-extension/live`. See the
 
 **One data directory.** The service and panel dev host must use the same
 `CODEX_SUBAGENT_EXTENSION_DATA`, which holds the database and admin token. Choose
-[stdio or HTTP in the connection guide](../README.md#connect-codex). For stdio,
+[stdio or HTTP](#connect-codex-from-a-checkout). For stdio,
 the Codex-launched proxy needs that data directory in its MCP environment for
 service discovery. Add the same path, made absolute:
 
@@ -32,7 +32,13 @@ service discovery. Add the same path, made absolute:
 CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension/live"
 ```
 
-For HTTP, configure the connection guide's URL and Authorization header using the
+If the plugin is installed too, also give the checkout its own `PORT` (for
+example `17318`) in `.env` and the MCP environment. Otherwise the plugin's proxy
+finds the checkout's service on port 17317, and an update can
+[hand over](task-continuation.md#updates-and-service-handoff) a
+checkout service that a stdio proxy started.
+
+For HTTP, configure the [Streamable HTTP](#streamable-http) URL and Authorization header using the
 token from `<checkout-root>/.codex-subagent-extension/live/admin-token`, or the
 service's token override. Codex does not need a data-directory environment setting
 for HTTP.
@@ -286,13 +292,72 @@ check cannot establish that the whole recording is safe to share. Use repeatable
 values with spaces or shell characters, for example
 `--replace 'internal-name=/demo/name'`.
 
-## Codex
+## Connect Codex from a checkout
 
-After [building and starting the service](#run-the-service), follow the
-[stdio or HTTP connection guide](../README.md#connect-codex), reload the MCP
-connection in Codex and open
-**Delegated Work** from a chat. It should show the same tasks as the dev host in
-live mode.
+Installed users get the plugin from the marketplace ([README](../README.md#install)).
+To run a checkout instead, build it, choose one transport and add its example to
+`~/.codex/config.toml`. Remove the plugin first, or Codex runs both servers. Both expose
+the same task tools and MCP App. Replace the existing server entry when switching
+transports. Do not combine its stdio and HTTP settings. See the
+[Codex MCP configuration reference](https://learn.chatgpt.com/docs/extend/mcp#configure-with-configtoml)
+for supported options.
+
+### Stdio
+
+Run `npm run build`, then configure the built launcher using an absolute checkout
+path:
+
+```toml
+[mcp_servers.codex_subagent_extension]
+command = "node"
+args = ["<checkout-root>/dist/stdio.js"]
+```
+
+The launcher connects to the local service or starts it when needed. It reads the admin token itself. If you override `CODEX_SUBAGENT_EXTENSION_DATA`, give the service and MCP launcher the same absolute path through `[mcp_servers.codex_subagent_extension.env]`. See [task continuation](task-continuation.md) for recovery and state preservation, and [Configuration](configuration.md#admin-token) for token overrides.
+
+### Streamable HTTP
+
+Start the service before connecting Codex:
+
+```sh
+npm run build && npm start
+```
+
+For development, use `npm run build && npm run dev` instead. Both serve the built
+panel. Follow [What reloads when](#what-reloads-when) after edits.
+
+Configure the authenticated `/mcp` endpoint:
+
+```toml
+[mcp_servers.codex_subagent_extension]
+url = "http://127.0.0.1:17317/mcp"
+
+[mcp_servers.codex_subagent_extension.http_headers]
+Authorization = "Bearer <admin-token>"
+```
+
+Replace `<admin-token>` locally with the contents of
+`~/.local/share/codex-subagent-extension/admin-token`, or
+`<data-directory>/admin-token` if you changed the data directory. If the service
+uses `CODEX_SUBAGENT_EXTENSION_TOKEN`, use that override instead. On macOS, copy
+the default file's token without printing it:
+
+```sh
+pbcopy < ~/.local/share/codex-subagent-extension/admin-token
+```
+
+Keep the token and configuration private. Do not paste them into chats or commit
+them. Update the URL if you changed the service port. HTTP connections require
+you to keep the service running. Codex does not start it through this transport.
+
+### Verify either connection
+
+After saving the configuration, reload the MCP connection in Codex and open
+**Delegated Work** from a chat. Use `codex mcp list` to check the configured server.
+Opening the panel verifies the connection and shows the same tasks as the dev
+host in live mode. Changed tool metadata also requires
+MCP reconnection. To check UI changes in Codex, see
+[UI verification](ui-verification.md#measurement-and-checks-in-codex).
 
 ## Demo
 

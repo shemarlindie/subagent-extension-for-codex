@@ -2,98 +2,65 @@
 
 Delegate Claude coding tasks from Codex through a local MCP service. Claude runs through the Claude Agent SDK and Claude Code harness. One service owns scheduling, durable task state and Git worktrees. Disconnecting a client leaves tasks running.
 
-## Quick start
+## Install
 
-Requires Node.js 24+, Git and a [supported Claude Code CLI](docs/claude-cli.md) configured on the service host.
+You need:
 
-1. Install dependencies and build from the checkout root:
+- [Claude Code](https://code.claude.com/docs/en/setup) 2.1.285 or later, signed in: run `claude` once and complete sign-in. See [Claude Code CLI](docs/claude-cli.md) for how the extension finds it.
+- Node.js 24 or later as the `node` Codex finds on its `PATH`.
+- Git.
+- A Codex build with plugin marketplaces. The install is tested with Codex CLI 0.162.1.
 
-   ```sh
-   npm ci
-   npm run build
-   ```
+Add the marketplace, then install the plugin:
 
-2. [Connect Codex](#connect-codex) using stdio or Streamable HTTP. The stdio
-   launcher can start the service automatically. HTTP requires starting the
-   service yourself.
-3. Reload the MCP connection and open **Delegated Work** in Codex. Use
-   **Manage → Add project** to approve a Git repository root with at least one
-   commit.
+```sh
+codex plugin marketplace add shemarlindie/codex-subagent-extension@release
+codex plugin add codex-subagent-extension@shemarlindie
+```
 
-You can also manage projects in the standalone console at
-`http://127.0.0.1:17317` while the service is running. Sign in with the token in
-`~/.local/share/codex-subagent-extension/admin-token` (or your configured data
-directory). Treat the token as a credential. Do not paste it into chats or commit
-it.
+After the first command, the plugin also appears in the Codex desktop app's Plugins directory. Or ask Codex to do it: _"Install the Codex plugin codex-subagent-extension from the release branch of github.com/shemarlindie/codex-subagent-extension."_
+
+Then open **Delegated Work** from a Codex chat and use **Manage → Add project** to approve a Git repository root with at least one commit. The plugin starts its local service the first time Codex connects.
+
+You can also manage projects in the standalone console at `http://127.0.0.1:17317` while the service is running. Sign in with the token in `~/.local/share/codex-subagent-extension/admin-token`. Treat the token as a credential. Do not paste it into chats or commit it.
 
 Claude uses the host's Claude Code credentials and user, project and local settings, including instructions, skills, hooks and MCP servers. This extension does not manage provider credentials. See [configuration and permissions](docs/configuration.md) before changing execution authority or session restrictions.
 
-For UI previews and interactive testing without model calls, see [development tools](docs/development.md#choosing-a-development-tool).
+### Moving from a manual setup
 
-## Connect Codex
+If you connected a checkout by hand before, delete `[mcp_servers.codex_subagent_extension]` (and its `.env` or `http_headers` tables) from `~/.codex/config.toml`. Otherwise Codex runs both servers and lists every tool twice. Stop the old service if it's still running. The plugin won't stop a service it didn't start.
 
-Choose one transport and add its example to `~/.codex/config.toml`. Both expose
-the same task tools and MCP App. Replace the existing server entry when switching
-transports. Do not combine its stdio and HTTP settings. See the
-[Codex MCP configuration reference](https://learn.chatgpt.com/docs/extend/mcp#configure-with-configtoml)
-for supported options.
+## Update
 
-### Stdio
-
-Run `npm run build`, then configure the built launcher using an absolute checkout
-path:
-
-```toml
-[mcp_servers.codex_subagent_extension]
-command = "node"
-args = ["<checkout-root>/dist/stdio.js"]
-```
-
-The launcher connects to the local service or starts it when needed. It reads the admin token itself. If you override `CODEX_SUBAGENT_EXTENSION_DATA`, give the service and MCP launcher the same absolute path through `[mcp_servers.codex_subagent_extension.env]`. See [task continuation](docs/task-continuation.md) for recovery and state preservation, and [Configuration](docs/configuration.md#admin-token) for token overrides.
-
-### Streamable HTTP
-
-Start the service before connecting Codex:
+Codex checks the marketplace when it starts and installs new releases on its own. To check now:
 
 ```sh
-npm run build && npm start
+codex plugin marketplace upgrade shemarlindie
 ```
 
-For development, use `npm run build && npm run dev` instead. Both serve the built
-panel. Follow [the reload guide](docs/development.md#what-reloads-when) after edits.
+The new version takes over from the running service once its running turns finish. Queued tasks carry over. See [updates and service handoff](docs/task-continuation.md#updates-and-service-handoff). Startup backs up the database before applying migrations. [Database](docs/database.md#restore-a-backup) explains restoring one.
 
-Configure the authenticated `/mcp` endpoint:
+To stay on one version, add the marketplace at a release tag instead of the branch, for example `codex plugin marketplace add shemarlindie/codex-subagent-extension@v0.1.0`. Remove the marketplace first if it's already added.
 
-```toml
-[mcp_servers.codex_subagent_extension]
-url = "http://127.0.0.1:17317/mcp"
-
-[mcp_servers.codex_subagent_extension.http_headers]
-Authorization = "Bearer <admin-token>"
-```
-
-Replace `<admin-token>` locally with the contents of
-`~/.local/share/codex-subagent-extension/admin-token`, or
-`<data-directory>/admin-token` if you changed the data directory. If the service
-uses `CODEX_SUBAGENT_EXTENSION_TOKEN`, use that override instead. On macOS, copy
-the default file's token without printing it:
+## Uninstall
 
 ```sh
-pbcopy < ~/.local/share/codex-subagent-extension/admin-token
+codex plugin remove codex-subagent-extension@shemarlindie
+codex plugin marketplace remove shemarlindie
 ```
 
-Keep the token and configuration private. Do not paste them into chats or commit
-them. Update the URL if you changed the service port. HTTP connections require
-you to keep the service running. Codex does not start it through this transport.
+Removing the plugin leaves the service running until it stops. Stop it with `kill "$(cat ~/.local/share/codex-subagent-extension/service.pid)"`. Running turns are interrupted. Your tasks, settings and worktrees stay in `~/.local/share/codex-subagent-extension`. Delete that directory to remove them. Branches the tasks created stay in their repositories.
 
-### Verify either connection
+## Troubleshooting
 
-After saving the configuration, reload the MCP connection in Codex. Check the
-configured server with `codex mcp list`, then open **Delegated Work** from a chat
-to verify the connection. Reload the MCP connection whenever tool metadata changes. To check UI changes in Codex, see
-[UI verification](docs/ui-verification.md#measurement-and-checks-in-codex).
+| Symptom                                        | Fix                                                                                                                                      |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `needs Node.js 24 or later` in Codex's MCP log | Install Node.js 24+ and make it the first `node` on the `PATH` Codex starts with.                                                        |
+| Tools report the service is unavailable        | Read `~/.local/share/codex-subagent-extension/service.log`.                                                                              |
+| `A different extension service … is running`   | Another service owns the data directory or port, for example a development checkout. Stop it, or give development its own data and port. |
+| Claude tasks can't start                       | The panel shows a readiness message above the task list. [Claude Code CLI](docs/claude-cli.md) explains fixes.                           |
 
-`npm run package:plugin` builds an npm tarball containing the service, proxy, panel and delegation skill. Extract its `package/` directory as the local plugin root. Installation alone does not start the service. The host starts the stdio launcher. [Build details](docs/development.md#build) cover packaging and checks.
+For connecting a checkout over stdio or Streamable HTTP instead of installing the plugin, see [Connect Codex from a checkout](docs/development.md#connect-codex-from-a-checkout).
 
 ## Working with tasks
 
@@ -139,7 +106,7 @@ codebase, follow this suggested reading order:
 | ------------------------------------------------------------- | ------------------------------------------------------------ |
 | Follow contribution and documentation conventions             | [Agent instructions](AGENTS.md)                              |
 | Understand runtime ownership and system boundaries            | [Architecture](docs/architecture.md)                         |
-| Build, test, preview or package the extension                 | [Local development](docs/development.md)                     |
+| Build, test, connect, preview or release the extension        | [Local development](docs/development.md)                     |
 | Change React components, styling and client state             | [Panel architecture](docs/panel-architecture.md)             |
 | Check UI layouts and behavior in the browser                  | [UI verification](docs/ui-verification.md)                   |
 | Exercise fake-worker task behavior without model calls        | [Fixture scenarios](docs/fixture-scenarios.md)               |

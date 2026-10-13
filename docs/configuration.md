@@ -3,7 +3,7 @@
 Use this guide to configure service startup, repository access and delegated
 execution authority. Environment variables control startup and storage. Per-user settings control new tasks, and task arguments can override ordinary defaults. Permission increases require user authority.
 
-See [task continuation](task-continuation.md) for continuing tasks and preserving state, and the [README](../README.md#connect-codex) for client connection setup.
+See [task continuation](task-continuation.md) for continuing tasks and preserving state, and the [README](../README.md#install) for installation. [Local development](development.md#connect-codex-from-a-checkout) covers connecting a checkout.
 
 ## Environment variables
 
@@ -20,6 +20,11 @@ Checkout commands load an optional `.env`, and shell variables take precedence. 
 | `PORT`                                       | `17317`                                   | Service listener port (loopback by default).                                                                                                      |
 | `CODEX_SUBAGENT_EXTENSION_ORIGIN`            | `http://127.0.0.1:<PORT>`                 | Standalone origin and CORS allowlist.                                                                                                             |
 | `CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE` | Disabled                                  | `1` returns a sample Claude mention and logs searches to `<data-directory>/mention-search.jsonl` for local testing only.                          |
+
+The installed plugin keeps its data in the same default directory instead of
+the `PLUGIN_DATA` directory Codex gives plugins. Every way of running the
+service shares it, and Codex may delete `PLUGIN_DATA` when the plugin is
+uninstalled, which would take the task history and worktree records with it.
 
 See [local development](development.md) for `.env`, startup conflicts and packaging, and [Claude CLI readiness](claude-cli.md) for executable selection.
 
