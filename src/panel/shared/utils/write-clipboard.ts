@@ -29,12 +29,15 @@ export async function writeClipboardText(text: string): Promise<void> {
     field.select();
 
     // Native copy remains available in some hosts without clipboard-write.
+    // execCommand is deprecated but has no replacement for that case.
+    /* eslint-disable @typescript-eslint/no-deprecated */
     if (
       typeof document.execCommand === "function" &&
       document.execCommand("copy")
     ) {
       return;
     }
+    /* eslint-enable @typescript-eslint/no-deprecated */
   } catch {
     // A host may block native copy too; offer manual selection below.
   } finally {

@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type SubmitEvent, useEffect, useRef, useState } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
@@ -58,7 +58,7 @@ export function ProjectForm({ dialog }: ProjectFormProps) {
     }
   }
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!browsing) controller.run(() => controller.registerProject(repository));
   };

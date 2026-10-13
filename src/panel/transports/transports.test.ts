@@ -227,6 +227,13 @@ function hostApp(submit = false) {
     ontoolresult: undefined as any,
     onhostcontextchanged: undefined as any,
     onteardown: undefined as any,
+    // Tests dispatch each notification through its on* slot.
+    addEventListener: (
+      event: "toolresult" | "hostcontextchanged",
+      handler: any,
+    ) => {
+      app[`on${event}`] = handler;
+    },
     connect: async () => {},
     getHostCapabilities: () => ({
       serverTools: {},

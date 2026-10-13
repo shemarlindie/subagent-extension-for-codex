@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef } from "react";
+import { type SubmitEvent, useEffect, useRef } from "react";
 import { FormProvider, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../shared/providers/metadata";
@@ -271,7 +271,7 @@ export function DelegateForm({ dialog }: DelegateFormProps) {
       }, true),
     );
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     if (!canSubmit) {
       event.preventDefault();
 

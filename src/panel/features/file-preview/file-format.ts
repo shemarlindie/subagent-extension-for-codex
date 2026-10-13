@@ -445,7 +445,9 @@ export function fileViews(file: PreviewFile): FileView[] {
       if (baseMime(file) !== "image/svg+xml") return ["image"];
 
       return isLargeSvg(file) ? ["source"] : ["image", "source"];
-    default:
+    case "code":
+    case "json":
+    case "text":
       return ["source"];
   }
 }

@@ -50,16 +50,16 @@ export class HostTransport implements Transport {
     // DEBUG: Compare handshake timing with the first compact render and size notification.
     traceSize("bridge-connect-start");
 
-    this.app.ontoolresult = (result) => {
+    this.app.addEventListener("toolresult", (result) => {
       if (!this.disposed) {
         // DEBUG: Mark when task data arrives without recording its contents.
         traceSize("tool-result-received");
         const data = result.structuredContent as PanelData;
         events.scope(data);
       }
-    };
+    });
 
-    this.app.onhostcontextchanged = () => this.updateHost();
+    this.app.addEventListener("hostcontextchanged", () => this.updateHost());
 
     this.app.onteardown = async () => {
       this.dispose();

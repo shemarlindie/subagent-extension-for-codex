@@ -213,7 +213,12 @@ export function persistedDialogId(dialog: PersistedDialog): PersistedDialogId {
       return dialog.action === "remove"
         ? "worktree_remove"
         : "worktree_delete_branch";
-    default:
+    case "delegate":
+    case "file":
+    case "handoff":
+    case "project":
+    case "remove-project":
+    case "settings":
       return dialog.kind;
   }
 }

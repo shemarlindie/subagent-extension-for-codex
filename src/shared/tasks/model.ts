@@ -148,12 +148,12 @@ export type Delivery = (typeof deliveries)[number];
 export const budgetRaiseSchema = z
   .object({
     max_runtime_minutes: startSchema.shape.budget
-      .removeDefault()
-      .shape.max_runtime_minutes.removeDefault()
+      .unwrap()
+      .shape.max_runtime_minutes.unwrap()
       .optional(),
     max_cost_usd: startSchema.shape.budget
-      .removeDefault()
-      .shape.max_cost_usd.removeDefault()
+      .unwrap()
+      .shape.max_cost_usd.unwrap()
       .optional(),
   })
   .strict();

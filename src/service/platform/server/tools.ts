@@ -178,23 +178,21 @@ export function definitions(
         "Create durable asynchronous work from the full request in description; a concise title is generated automatically. Work starts in the current repository by default, including uncommitted changes, or in a committed-revision worktree when requested. Supply an explicit absolute repository from list_agent_projects; current does not identify the host chat project. Reopen existing work with open_codex_subagent_extension(task_id), never another start call.",
       schema: startSchema.extend({
         conversation_id: startSchema.shape.conversation_id.nullable(),
-        provider: startSchema.shape.provider.removeDefault().optional(),
-        worker_profile: startSchema.shape.worker_profile
-          .removeDefault()
-          .optional(),
+        provider: startSchema.shape.provider.unwrap().optional(),
+        worker_profile: startSchema.shape.worker_profile.unwrap().optional(),
         workspace_strategy: startSchema.shape.workspace_strategy
-          .removeDefault()
+          .unwrap()
           .optional(),
         budget: startSchema.shape.budget
-          .removeDefault()
+          .unwrap()
           .extend({
             max_runtime_minutes: startSchema.shape.budget
-              .removeDefault()
-              .shape.max_runtime_minutes.removeDefault()
+              .unwrap()
+              .shape.max_runtime_minutes.unwrap()
               .optional(),
             max_cost_usd: startSchema.shape.budget
-              .removeDefault()
-              .shape.max_cost_usd.removeDefault()
+              .unwrap()
+              .shape.max_cost_usd.unwrap()
               .optional(),
           })
           .optional(),

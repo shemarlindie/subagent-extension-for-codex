@@ -1,5 +1,5 @@
 import { Switch } from "@base-ui/react/switch";
-import { type FormEvent, useLayoutEffect, useState } from "react";
+import { type SubmitEvent, useLayoutEffect, useState } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
@@ -29,7 +29,7 @@ export function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
 
   useLayoutEffect(() => setRemoveTasks(false), [dialog]);
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!state.busy && dialog.scope === state.scopeVersion) {

@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import type { SubmitEvent } from "react";
 
 import { useController } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
@@ -15,7 +15,7 @@ export function WorktreeForm({ dialog }: WorktreeFormProps) {
     { action, task, files = [] } = dialog,
     remove = action === "remove";
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     void controller.submit(async () => {

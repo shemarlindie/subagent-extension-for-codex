@@ -430,10 +430,10 @@ export function Host() {
       }
     };
 
-    next.oninitialized = async () => {
+    // Codex renders the panel as the result of its launch tool.
+    const openPanel = async () => {
       record("initialized");
 
-      // Codex renders the panel as the result of its launch tool.
       const name =
         launch === "global"
           ? "open_codex_subagent_extension_global"
@@ -452,6 +452,9 @@ export function Host() {
       }
     };
 
+    // openPanel records its own failures.
+    next.addEventListener("initialized", () => void openPanel());
+
     next.onrequestdisplaymode = async ({ mode }) => {
       record("display mode", mode);
       update({ displayMode: mode });
@@ -459,9 +462,9 @@ export function Host() {
       return { mode };
     };
 
-    next.onsizechange = (size) => {
+    next.addEventListener("sizechange", (size) => {
       if (size.height) setHeight(size.height);
-    };
+    });
 
     next.onmessage = async (params) => {
       record("message", params);
@@ -482,7 +485,7 @@ export function Host() {
       return {};
     };
 
-    next.onloggingmessage = (params) => record("log", params);
+    next.addEventListener("loggingmessage", (params) => record("log", params));
 
     // Listen before the document loads: the panel sends initialize at startup.
     void next.connect(new PostMessageTransport(view, view)).then(() => {

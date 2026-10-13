@@ -52,7 +52,8 @@ export function rowForm(row: SettingRow, values: Settings): Values {
 
     case "switch":
       return { [row.key]: String(values[row.key] === true) };
-    default:
+    case "select":
+    case "text":
       return { [row.key]: String(values[row.key] ?? "") };
   }
 }
