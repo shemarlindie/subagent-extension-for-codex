@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 
 import { ESLint } from "eslint";
+import tseslint from "typescript-eslint";
 import { test } from "vitest";
 
-const eslint = new ESLint();
+// Fixture paths don't exist, so they can't join a tsconfig program.
+const eslint = new ESLint({
+  overrideConfig: tseslint.configs.disableTypeChecked,
+});
 
 async function boundaryMessages(filePath: string, source: string) {
   const [result] = await eslint.lintText(source, {

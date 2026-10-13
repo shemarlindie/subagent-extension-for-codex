@@ -408,6 +408,12 @@ panel, shared modules, development tooling, tests, and Vite configs. `npm test` 
 `pretest` checks schema freshness, formatting, and linting, then builds. Fix
 formatting with `npm run format`. ESLint (`eslint.config.js`) checks TypeScript
 code quality and React hook rules; explicit `any` is allowed only in tests.
+Type-aware rules read the three tsconfigs and catch unhandled or misused
+promises, deprecated APIs, non-exhaustive `switch` statements over unions, and
+values that would stringify as `[object Object]`. Pass async event handlers
+through `controller.run` or `controller.handle` so failures are reported, and
+narrow untyped event data with `scalarText` from `src/shared/text.ts`. A full
+`npm run lint` takes about 10 seconds.
 It rejects nested ternaries, and in panel JSX it rejects inline handlers whose
 `{ … }` body holds more than one expression, or any other statement such as
 `if`; move those into a named function. Empty no-ops and one-expression bodies,

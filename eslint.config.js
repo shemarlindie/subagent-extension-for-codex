@@ -36,6 +36,31 @@ export default defineConfig(
     },
   },
   {
+    // Type-aware rules. Each TypeScript file belongs to one of the three
+    // tsconfigs; projectService would only find tsconfig.json by name.
+    files: ["**/*.{ts,mts,cts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        project: [
+          "./tsconfig.json",
+          "./tsconfig.panel.json",
+          "./tsconfig.test.json",
+        ],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      "@typescript-eslint/await-thenable": "error",
+      "@typescript-eslint/no-base-to-string": "error",
+      "@typescript-eslint/no-deprecated": "error",
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/prefer-promise-reject-errors": "error",
+      "@typescript-eslint/restrict-template-expressions": "error",
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+    },
+  },
+  {
     // Blank-line layout is the one formatting concern Prettier leaves alone.
     files: CODE,
     plugins: {

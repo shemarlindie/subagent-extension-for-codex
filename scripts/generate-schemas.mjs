@@ -5,9 +5,16 @@ import { pathToFileURL } from "node:url";
 import { ESLint } from "eslint";
 import { format, resolveConfig } from "prettier";
 import { generate } from "ts-to-zod";
+import tseslint from "typescript-eslint";
 
 const check = process.argv.includes("--check");
-const eslint = new ESLint({ fix: true });
+
+// Generated output may not exist on disk yet, so it can't join a tsconfig
+// program; `npm run lint` applies the type-aware rules afterwards.
+const eslint = new ESLint({
+  fix: true,
+  overrideConfig: tseslint.configs.disableTypeChecked,
+});
 
 async function discover(pattern) {
   const paths = [];
