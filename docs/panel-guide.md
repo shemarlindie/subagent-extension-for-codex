@@ -106,9 +106,10 @@ in local storage when the browser or host permits it. Focus the divider and use 
 for the minimum/maximum width, or double-click to restore the default width.
 Custom scrollbars appear during scrolling or pointer interaction and disappear
 after one second of inactivity. They remain visible while dragging.
-Details includes description, worker, revision, turns,
-budgets, session, workspace/branch, changes, dependencies and usage. Runtime in
-the rail and Details accumulates across turns and includes the active run.
+Details includes task creation and latest activity dates, description, worker,
+revision, turns, budgets, session, workspace/branch, changes, dependencies and
+usage. Dates follow the host locale and time zone. Runtime in the rail and
+Details accumulates across turns and includes the active run.
 
 ### Create and rename tasks
 

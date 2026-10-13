@@ -86,11 +86,11 @@ test("shows a full Details-shaped skeleton until task data is available", () => 
     details.container.querySelectorAll(
       ".task-details-skeleton .facts dt .skeleton-shape",
     ),
-  ).toHaveLength(18);
+  ).toHaveLength(20);
 
   expect(
     details.container.querySelectorAll(
       ".task-details-skeleton .facts dd .skeleton-shape",
     ),
-  ).toHaveLength(21);
+  ).toHaveLength(23);
 });

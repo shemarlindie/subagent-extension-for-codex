@@ -6,6 +6,10 @@ import type { Task } from "../../../app/state/types";
 import { SkeletonShape } from "../../../shared/components/loading-skeleton/loading-skeleton";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
 import { useNow } from "../../../shared/utils/use-now";
+import {
+  formatUserDateTime,
+  type UserDateTimePreferences,
+} from "../../../shared/utils/user-date-time";
 import { changesSummary } from "../../changes/read-changes";
 import type { ChangeCountsState } from "../../changes/types";
 import { WorktreeActions } from "../../changes/worktree-actions";
@@ -16,6 +20,8 @@ type TaskDetailsProps = {
   task?: Task;
   /** The selected task's change totals, read live for the tab count and Details. */
   counts?: ChangeCountsState;
+  /** The host's locale and time zone, as used by Chat and Activity. */
+  preferences?: UserDateTimePreferences;
 };
 
 type DetailsValueProps = {
@@ -61,13 +67,33 @@ function changesFact(counts?: ChangeCountsState) {
   return `${changesSummary(counts.data)} uncommitted`;
 }
 
-export function TaskDetails({ task, counts }: TaskDetailsProps) {
+function taskDate(timestamp: string, preferences?: UserDateTimePreferences) {
+  if (!Number.isFinite(Date.parse(timestamp))) return "Unavailable";
+
+  return (
+    <time
+      dateTime={timestamp}
+      title={formatUserDateTime(timestamp, preferences, {
+        timeZoneName: undefined,
+      })}
+    >
+      {formatUserDateTime(timestamp, preferences, {
+        second: undefined,
+        timeZoneName: undefined,
+      })}
+    </time>
+  );
+}
+
+export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
   const now = useNow(Boolean(task && runtimeLive(task)));
   const changesPending = !counts?.data && !counts?.error;
 
   const facts: Record<string, ReactNode> | undefined = task
     ? {
         "Task ID": task.id,
+        Created: taskDate(task.created_at, preferences),
+        "Latest activity": taskDate(task.updated_at, preferences),
         Description: task.description,
         Worker: `${task.provider} · ${profileLabel(task.worker_profile)}`,
         ...providerTaskFacts(task),

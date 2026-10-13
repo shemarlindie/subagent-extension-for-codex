@@ -13,6 +13,10 @@
 .task-details .facts {
   grid-template-columns: minmax(128px, max-content) minmax(0, 1fr);
 }
+.task-details .facts time {
+  color: inherit;
+  font-size: inherit;
+}
 .task-details .meta {
   gap: 8px;
 }

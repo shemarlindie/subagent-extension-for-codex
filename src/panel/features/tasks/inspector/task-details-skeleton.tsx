@@ -9,6 +9,8 @@ import {
 
 const FACTS = [
   { label: "Task ID", labelSize: "small", valueKind: "short" },
+  { label: "Created", labelSize: "small", valueKind: "long" },
+  { label: "Latest activity", labelSize: "medium", valueKind: "long" },
   { label: "Description", labelSize: "short", valueKind: "description" },
   { label: "Worker", labelSize: "small", valueKind: "medium" },
   { label: "Permission mode", labelSize: "medium", valueKind: "medium" },

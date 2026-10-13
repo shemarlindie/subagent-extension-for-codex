@@ -175,7 +175,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
           undefined
         }
       >
-        <TaskDetails task={task} counts={counts} />
+        <TaskDetails task={task} counts={counts} preferences={state.host} />
       </Tabs.Panel>
     </Tabs.Root>
   );
