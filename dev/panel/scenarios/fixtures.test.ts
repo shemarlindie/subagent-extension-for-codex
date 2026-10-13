@@ -6,14 +6,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "vitest";
 
 import type { Event } from "../../../src/panel/app/state/types";
-import {
-  activityKind,
-  currentActivityStatus,
-  groupActivity,
-} from "../../../src/panel/features/tasks/activity/activity-timeline";
 import { EVENT_TAIL_SIZE } from "../../../src/panel/features/tasks/activity/event-history";
 import { EventList } from "../../../src/panel/features/tasks/activity/event-list";
 import { claudeCliSupport } from "../../../src/service/features/providers/claude/configuration/executable";
+import { activityKind } from "../../../src/shared/tasks/activity/activity-events";
+import { currentActivityStatus } from "../../../src/shared/tasks/activity/activity-status";
+import { groupActivity } from "../../../src/shared/tasks/activity/activity-timeline";
 import type { Task } from "../../../src/shared/tasks/model";
 import {
   PREVIEW_THREAD,

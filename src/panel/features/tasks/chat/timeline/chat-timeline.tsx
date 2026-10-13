@@ -1,13 +1,13 @@
 import type { RefObject } from "react";
 
 import { providerMetadata } from "../../../../../shared/providers/metadata.js";
+import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status";
 import type { ChatItem } from "../../../../../shared/tasks/conversation/chat.js";
 import type { BudgetRaise } from "../../../../../shared/tasks/model";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import { statusLabel } from "../../../../app/state/selectors";
 import type { Task } from "../../../../app/state/types";
 import { LoadingSwap } from "../../../../shared/components/loading-skeleton/loading-swap";
-import { currentActivityStatus } from "../../activity/activity-timeline";
 import { rowStatus } from "../../list/task-status";
 import { TaskStatusIcon } from "../../list/task-status-icon";
 import { composerMode, spentBudget } from "../chat-model";

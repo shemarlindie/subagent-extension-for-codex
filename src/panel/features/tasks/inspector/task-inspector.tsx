@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
+import { currentActivityStatus } from "../../../../shared/tasks/activity/activity-status";
 import {
   useController,
   useSnapshot,
@@ -11,7 +12,6 @@ import { MotionContent } from "../../../shared/components/motion/motion-content"
 import { BackButton } from "../../../shared/components/navigation/back-button";
 import { Notice } from "../../../shared/components/notice/notice";
 import { projectApproved } from "../../projects/selectors";
-import { currentActivityStatus } from "../activity/activity-timeline";
 import { EvidenceTabs } from "../evidence/evidence-tabs";
 import { TaskStatus } from "../shared/status";
 import { TaskInspectorLoading } from "./task-inspector-loading";

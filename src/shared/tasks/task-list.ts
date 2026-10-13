@@ -1,6 +1,6 @@
 import { eventPayload } from "../events/payload.js";
 import type { Event } from "../events/types.js";
-import { currentActivityStatus } from "./activity/activity-timeline.js";
+import { currentActivityStatus } from "./activity/activity-status.js";
 import type { Draft } from "./conversation/drafts.js";
 import { replyExcerpt } from "./conversation/reply.js";
 import type { Task } from "./model.js";

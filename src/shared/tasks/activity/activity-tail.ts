@@ -1,6 +1,6 @@
 import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
-import { activityFailed, activityKind } from "./activity-timeline.js";
+import { activityFailed, activityKind } from "./activity-events.js";
 
 /** How many of a task's newest events its activity shows; older ones are tallied. */
 export const EVENT_TAIL_SIZE = 200;

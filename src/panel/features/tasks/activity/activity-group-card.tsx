@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { eventPayload } from "../../../../shared/events/payload";
+import type { ActivityGroup } from "../../../../shared/tasks/activity/activity-events";
 import { Icon } from "../../../shared/components/icons/icons";
 import { MotionContent } from "../../../shared/components/motion/motion-content";
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
@@ -19,7 +20,6 @@ import { MarkdownView } from "../../file-preview/markdown/markdown-view";
 import { formatDuration } from "../list/duration";
 import { ActivityContent } from "./activity-content";
 import { ActivityTime } from "./activity-time";
-import type { ActivityGroup } from "./activity-timeline";
 import {
   rateLimitStats,
   streamContent,

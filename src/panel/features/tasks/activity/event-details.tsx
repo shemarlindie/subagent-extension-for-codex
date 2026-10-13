@@ -2,11 +2,11 @@ import { useState } from "react";
 
 import { eventPayload } from "../../../../shared/events/payload";
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
+import { activityFailed } from "../../../../shared/tasks/activity/activity-events";
 import { scalarText } from "../../../../shared/text";
 import type { Event } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
 import { ActivityContent } from "./activity-content";
-import { activityFailed } from "./activity-timeline";
 import { eventTitle, label, responsePreview } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
 import { EVENT_TAIL_SIZE } from "./event-history";

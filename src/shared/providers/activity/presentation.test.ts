@@ -6,10 +6,8 @@ import { ClaudeAgentProvider } from "../../../service/features/providers/claude/
 import type { RunContext } from "../../../service/features/providers/types.js";
 import { decodedEvent } from "../../events/decode.js";
 import type { Event } from "../../events/types.js";
-import {
-  currentActivityStatus,
-  groupActivity,
-} from "../../tasks/activity/activity-timeline.js";
+import { currentActivityStatus } from "../../tasks/activity/activity-status.js";
+import { groupActivity } from "../../tasks/activity/activity-timeline.js";
 import { activityPresentation } from "./presentation.js";
 import type { ActivityPresentation, ActivityStreamAppend } from "./types.js";
 

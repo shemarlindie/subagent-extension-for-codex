@@ -2,15 +2,12 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import {
-  currentActivityStatus,
-  groupActivity,
-  thinkingSpan,
-} from "../../../panel/features/tasks/activity/activity-timeline";
 import { claudeActivityPresentation } from "../../../service/features/providers/claude/events/activity.js";
 import { decodedEvent } from "../../events/decode.js";
 import { type Event } from "../../events/types.js";
 import { startSchema, type Task } from "../model.js";
+import { currentActivityStatus } from "./activity-status.js";
+import { groupActivity, thinkingSpan } from "./activity-timeline.js";
 
 for (const type of [
   "thinking_tokens",

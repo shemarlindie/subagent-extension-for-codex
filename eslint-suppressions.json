@@ -164,9 +164,14 @@
       "count": 1
     }
   },
+  "src/shared/tasks/activity/activity-status.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
   "src/shared/tasks/activity/activity-timeline.ts": {
     "complexity": {
-      "count": 2
+      "count": 1
     }
   }
 }

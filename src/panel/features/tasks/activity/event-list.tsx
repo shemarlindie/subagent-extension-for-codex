@@ -1,12 +1,15 @@
 import { memo } from "react";
 
+import {
+  groupActivity,
+  thinkingSpan,
+} from "../../../../shared/tasks/activity/activity-timeline";
 import type { Event, Task } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
 import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
 import type { ReadingState } from "../evidence/reading-state";
 import { useReadingScroll } from "../evidence/use-reading-scroll";
 import { ActivityGroupCard } from "./activity-group-card";
-import { groupActivity, thinkingSpan } from "./activity-timeline";
 import {
   describeDropped,
   type DroppedSummary,
