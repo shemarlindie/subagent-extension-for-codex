@@ -80,6 +80,7 @@ export function ProjectField({
             </AsyncControl>
           ) : (
             <FormSelect
+              searchable
               control={control}
               name="repository"
               id="repository"
@@ -465,6 +466,7 @@ export function DependencyField({
   return (
     <Field id="deps" label="Wait for tasks (optional)">
       <FormSelect
+        searchable
         multiple
         control={control}
         name="deps"

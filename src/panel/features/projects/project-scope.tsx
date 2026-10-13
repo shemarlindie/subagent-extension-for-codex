@@ -24,6 +24,7 @@ export function ProjectScope() {
   return (
     <div className="project-scope" aria-label="Project context">
       <SelectField
+        searchable
         id="project-scope"
         label="Project scope"
         value={value}
@@ -36,6 +37,7 @@ export function ProjectScope() {
           ...projectChoices(state).map((project) => ({
             value: project.repository,
             label: projectDisplayName(project),
+            description: project.repository,
           })),
         ]}
         onValueChange={(value) =>

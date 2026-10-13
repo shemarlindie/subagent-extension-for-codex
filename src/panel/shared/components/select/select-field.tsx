@@ -4,6 +4,7 @@ import type { Ref } from "react";
 import { Chevron } from "../chevron";
 import { Icon, type IconName } from "../icons/icons";
 import { LoadingSpinner } from "../loading-spinner/loading-spinner";
+import { LookupField } from "./lookup-field";
 
 export type SelectOption = {
   value: string;
@@ -20,6 +21,7 @@ export type SelectFieldProps = {
   id: string;
   label: string;
   options: SelectOption[];
+  searchable?: boolean;
   disabled?: boolean;
   loading?: boolean;
   loadingLabel?: string;
@@ -169,6 +171,8 @@ export function SelectField(
     onValueChange(value: string): void;
   },
 ) {
+  if (props.searchable) return <LookupField {...props} />;
+
   const value =
     props.value === "" && !props.options.some((option) => option.value === "")
       ? null
@@ -194,6 +198,8 @@ export function MultiSelectField(
     onValueChange(value: string[]): void;
   },
 ) {
+  if (props.searchable) return <LookupField {...props} multiple />;
+
   return (
     <Select.Root<string, true>
       multiple

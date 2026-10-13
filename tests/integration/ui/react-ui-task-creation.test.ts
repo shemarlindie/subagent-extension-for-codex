@@ -176,12 +176,22 @@ test("changing projects clears revision and dependencies while retaining the tas
   await user.clear(screen.getByLabelText("Revision"));
   await user.type(screen.getByLabelText("Revision"), "edited-branch");
 
-  await selectOption(
-    user,
-    "Wait for tasks (optional)",
-    "Review authentication",
-    true,
+  await user.click(
+    screen.getByRole("combobox", { name: "Wait for tasks (optional)" }),
   );
+
+  const dependencySearch = await screen.findByRole("combobox", {
+    name: "Search wait for tasks (optional)",
+  });
+
+  await user.type(dependencySearch, "AUTHENTICATION");
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+
+  await user.click(
+    screen.getByRole("option", { name: "Review authentication" }),
+  );
+
+  await user.keyboard("{Escape}");
 
   await selectOption(user, "Project", /repo\/b$/);
 
@@ -337,6 +347,45 @@ test("approved parent project suggestions allow an unlisted nested repository pa
         .repository,
       "/approved/new/nested-repo",
     ),
+  );
+});
+
+test("approved parent project suggestions find saved names and submit the selected repository path", async (t) => {
+  const { transport, user } = await setup(t, (transport) => {
+    transport.projects.push(
+      { repository: "/approved", kind: "parent" },
+      {
+        repository: "/approved/client",
+        kind: "repository",
+        name: "Client Portal",
+      },
+    );
+  });
+
+  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await screen.findByRole("dialog");
+
+  const project = screen.getByRole("combobox", { name: "Project" });
+
+  await user.clear(project);
+  await user.type(project, "CLIENT PORTAL");
+
+  const suggestion = await screen.findByRole("option", {
+    name: /Client Portal/,
+  });
+
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  expect(suggestion.textContent).toContain("/approved/client");
+  await user.click(suggestion);
+  expect((project as HTMLInputElement).value).toBe("/approved/client");
+  await enterTask(user, "Review the client portal");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+
+  await waitFor(() =>
+    expect(
+      transport.calls.find((call) => call.name === "start_agent_task")?.args
+        .repository,
+    ).toBe("/approved/client"),
   );
 });
 

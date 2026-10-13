@@ -9,6 +9,17 @@ export function projectDisplayName(
   return project.name || pathName || project.repository;
 }
 
+export function matchesProjectQuery(
+  project: Pick<Project, "name" | "repository">,
+  query: string,
+) {
+  const text = query.trim().toLowerCase();
+
+  return [project.repository, projectDisplayName(project)].some((part) =>
+    part.toLowerCase().includes(text),
+  );
+}
+
 /** Presentation of canonical registry paths; the service still validates access. */
 export function projectApproved(projects: Project[], repository: string) {
   return projects.some(

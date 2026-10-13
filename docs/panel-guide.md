@@ -38,6 +38,8 @@ change the conversation.
 On narrow panels, header actions move into **Panel actions**, including
 **Settings**, with **Add chat project** first when registration is needed.
 
+Project dropdowns include a search field that matches saved names and repository paths.
+
 Changing scope invalidates reads, clears old evidence and closes unsent forms.
 A mutation already submitted cannot be retracted or automatically retried; its
 late result never selects work into the new scope. Task creation validates
@@ -119,6 +121,10 @@ budgets. Conversation text is not attached automatically. Unsupported numeric
 cost budgets block submission; Claude's response-boundary limit is disclosed.
 The dialog opens with its form structure while defaults and choices load; only
 controls and actions that depend on pending data are disabled.
+Use **Wait for tasks** to search task titles or IDs in the selected project and
+select multiple dependencies. Searching preserves selections; reopening the
+dropdown clears the search.
+
 The service derives a title from the request. Click the inspector title to edit:
 Enter or an outside click saves, Escape cancels, and blank/failed saves stay open.
 `rename_user_agent_task` accepts a trimmed title of 1–200 characters.

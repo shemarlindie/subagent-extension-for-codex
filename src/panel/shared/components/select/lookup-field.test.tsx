@@ -1,0 +1,295 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { afterEach, expect, test, vi } from "vitest";
+
+import { ICONS } from "../icons/icons";
+import {
+  MultiSelectField,
+  SelectField,
+  type SelectFieldProps,
+} from "./select-field";
+
+const options = [
+  {
+    value: "/repos/alpha",
+    label: "Alpha project",
+    description: "Frontend repository",
+  },
+  {
+    value: "/repos/beta-service",
+    label: "Beta project",
+    description: "Backend repository",
+  },
+  {
+    value: "/repos/gamma",
+    label: "Gamma project",
+    description: "Documentation repository",
+  },
+];
+
+afterEach(cleanup);
+
+function SingleLookup() {
+  const [value, setValue] = useState("/repos/alpha");
+
+  return (
+    <SelectField
+      id="project"
+      label="Project"
+      searchable
+      options={options}
+      value={value}
+      onValueChange={setValue}
+    />
+  );
+}
+
+function MultipleLookup() {
+  const [value, setValue] = useState(["/repos/alpha"]);
+
+  return (
+    <>
+      <MultiSelectField
+        id="dependencies"
+        label="Dependencies"
+        searchable
+        options={options}
+        value={value}
+        onValueChange={setValue}
+      />
+      <output aria-label="Selected dependencies">{value.join(",")}</output>
+    </>
+  );
+}
+
+test("lookup finds labels, descriptions and values with trimmed case-insensitive queries", async () => {
+  const user = userEvent.setup();
+
+  render(<SingleLookup />);
+  await user.click(screen.getByRole("combobox", { name: "Project" }));
+
+  const search = await screen.findByRole("combobox", {
+    name: "Search project",
+  });
+
+  await user.type(search, "  BETA PROJECT  ");
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  expect(screen.getByRole("option").textContent).toContain("Beta project");
+
+  await user.clear(search);
+  await user.type(search, "documentation");
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  expect(screen.getByRole("option").textContent).toContain("Gamma project");
+
+  await user.clear(search);
+  await user.type(search, "beta-service");
+  await user.click(screen.getByRole("option"));
+
+  expect(
+    screen.getByRole("combobox", { name: "Project" }).textContent,
+  ).toContain("Beta project");
+
+  await waitFor(() => expect(screen.queryByRole("option")).toBeNull());
+});
+
+test("lookup shows no matches and clears the query after dismissal", async () => {
+  const user = userEvent.setup();
+
+  render(<SingleLookup />);
+  await user.click(screen.getByRole("combobox", { name: "Project" }));
+
+  await user.type(
+    await screen.findByRole("combobox", { name: "Search project" }),
+    "missing project",
+  );
+
+  expect(screen.queryByRole("option")).toBeNull();
+  expect(screen.getByText("No matching options")).toBeTruthy();
+
+  await user.keyboard("{Escape}");
+
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("combobox", { name: "Search project" }),
+    ).toBeNull(),
+  );
+
+  await user.click(screen.getByRole("combobox", { name: "Project" }));
+
+  expect(
+    (
+      (await screen.findByRole("combobox", {
+        name: "Search project",
+      })) as HTMLInputElement
+    ).value,
+  ).toBe("");
+
+  expect(screen.getAllByRole("option")).toHaveLength(3);
+});
+
+test("keyboard search selects an option and returns focus to the trigger", async () => {
+  const user = userEvent.setup();
+
+  render(<SingleLookup />);
+
+  const trigger = screen.getByRole("combobox", { name: "Project" });
+
+  trigger.focus();
+  await user.keyboard("{Enter}");
+
+  const search = await screen.findByRole("combobox", {
+    name: "Search project",
+  });
+
+  await waitFor(() => expect(document.activeElement).toBe(search));
+  await user.type(search, "Gamma");
+  await user.keyboard("{ArrowDown}{Enter}");
+  await waitFor(() => expect(screen.queryByRole("option")).toBeNull());
+  expect(trigger.textContent).toContain("Gamma project");
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+});
+
+test("multiple lookup preserves selected dependencies across searches and supports removal", async () => {
+  const user = userEvent.setup();
+
+  render(<MultipleLookup />);
+  await user.click(screen.getByRole("combobox", { name: "Dependencies" }));
+
+  const search = await screen.findByRole("combobox", {
+    name: "Search dependencies",
+  });
+
+  await user.type(search, "Beta");
+  await user.click(screen.getByRole("option"));
+
+  expect(screen.getByLabelText("Selected dependencies").textContent).toBe(
+    "/repos/alpha,/repos/beta-service",
+  );
+
+  await user.clear(search);
+  await user.type(search, "Gamma");
+  await user.click(screen.getByRole("option"));
+
+  expect(screen.getByLabelText("Selected dependencies").textContent).toBe(
+    "/repos/alpha,/repos/beta-service,/repos/gamma",
+  );
+
+  await user.clear(search);
+  await user.type(search, "Alpha");
+  expect(screen.getByRole("option").getAttribute("aria-selected")).toBe("true");
+  await user.click(screen.getByRole("option"));
+
+  expect(screen.getByLabelText("Selected dependencies").textContent).toBe(
+    "/repos/beta-service,/repos/gamma",
+  );
+});
+
+test.each(["disabled", "loading"] as const)(
+  "%s lookup cannot open or change its selected value",
+  async (state) => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    const props: Partial<SelectFieldProps> = { [state]: true };
+
+    render(
+      <SelectField
+        id="project"
+        label="Project"
+        searchable
+        options={options}
+        value="/repos/alpha"
+        onValueChange={onValueChange}
+        {...props}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Project" }));
+
+    expect(
+      screen.queryByRole("combobox", { name: "Search project" }),
+    ).toBeNull();
+
+    expect(onValueChange).not.toHaveBeenCalled();
+  },
+);
+
+test("lookup renders the selected option icon and each option icon", async () => {
+  const user = userEvent.setup();
+  const artwork = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+  artwork.innerHTML = ICONS.bug.artwork;
+
+  render(
+    <SelectField
+      id="project"
+      label="Project"
+      searchable
+      options={[{ ...options[0], icon: "bug" }]}
+      value="/repos/alpha"
+      onValueChange={vi.fn()}
+    />,
+  );
+
+  const trigger = screen.getByRole("combobox", { name: "Project" });
+  const selectedIcon = trigger.querySelector(".select-worker-icon");
+
+  expect(Array.from(selectedIcon?.children ?? [])).toEqual(
+    Array.from(artwork.children),
+  );
+
+  expect(selectedIcon?.getAttribute("aria-hidden")).toBe("true");
+  await user.click(trigger);
+
+  const option = await screen.findByRole("option");
+  const optionIcon = option.querySelector(".select-worker-icon");
+
+  expect(Array.from(optionIcon?.children ?? [])).toEqual(
+    Array.from(artwork.children),
+  );
+
+  expect(optionIcon?.getAttribute("aria-hidden")).toBe("true");
+});
+
+test("refreshing lookup options preserves the search and selected value", async () => {
+  const user = userEvent.setup();
+
+  const props = {
+    id: "project",
+    label: "Project",
+    searchable: true,
+    value: "/repos/alpha",
+    onValueChange: vi.fn(),
+  };
+
+  const view = render(<SelectField {...props} options={options} />);
+
+  await user.click(screen.getByRole("combobox", { name: "Project" }));
+
+  const search = await screen.findByRole("combobox", {
+    name: "Search project",
+  });
+
+  await user.type(search, "Beta");
+
+  view.rerender(
+    <SelectField
+      {...props}
+      options={[
+        ...options,
+        { value: "/repos/beta-extra", label: "Beta tools" },
+      ]}
+    />,
+  );
+
+  expect(screen.getByRole("combobox", { name: "Search project" })).toBe(search);
+  expect((search as HTMLInputElement).value).toBe("Beta");
+  expect(screen.getAllByRole("option")).toHaveLength(2);
+
+  expect(
+    screen.getByRole("combobox", { name: "Project" }).textContent,
+  ).toContain("Alpha project");
+
+  expect(props.onValueChange).not.toHaveBeenCalled();
+});

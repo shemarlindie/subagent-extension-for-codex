@@ -180,3 +180,18 @@ form .select-trigger {
   color: var(--warn);
   font-size: 12px;
 }
+
+.lookup-popup {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.lookup-search {
+  flex: none;
+  width: 100%;
+  margin-bottom: 4px;
+}
+.lookup-list {
+  overflow-y: auto;
+  min-height: 0;
+}

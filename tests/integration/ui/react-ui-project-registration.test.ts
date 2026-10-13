@@ -20,22 +20,16 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
   const { controller, user } = await setup(t);
   const picker = screen.getByRole("combobox", { name: "Project scope" });
   await user.click(picker);
-  const all = await screen.findByRole("option", { name: "All projects" });
 
-  await waitFor(() =>
-    expect(
-      document.activeElement,
-      "All projects should receive opening focus",
-    ).toBe(all),
-  );
+  const search = await screen.findByRole("combobox", {
+    name: "Search project scope",
+  });
 
-  await user.keyboard("{End}");
-
-  await waitFor(() =>
-    expect(document.activeElement, "Project option should receive focus").toBe(
-      screen.getByRole("option", { name: "a" }),
-    ),
-  );
+  await waitFor(() => expect(document.activeElement).toBe(search));
+  await user.type(search, "/REPO/A");
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  expect(screen.getByRole("option", { name: /^a/ })).toBeTruthy();
+  await user.keyboard("{ArrowDown}");
 
   await user.keyboard("{Enter}");
 
@@ -57,20 +51,15 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
 
   await user.click(picker);
 
-  await waitFor(() =>
-    expect(document.activeElement, "Project option should receive focus").toBe(
-      screen.getByRole("option", { name: "a" }),
-    ),
-  );
+  const reopenedSearch = await screen.findByRole("combobox", {
+    name: "Search project scope",
+  });
 
-  await user.keyboard("{Home}");
-
-  await waitFor(() =>
-    expect(
-      document.activeElement,
-      "All projects should receive Home focus",
-    ).toBe(screen.getByRole("option", { name: "All projects" })),
-  );
+  await waitFor(() => expect(document.activeElement).toBe(reopenedSearch));
+  expect((reopenedSearch as HTMLInputElement).value).toBe("");
+  await user.type(reopenedSearch, "All projects");
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  await user.keyboard("{ArrowDown}");
 
   await user.keyboard("{Enter}");
 

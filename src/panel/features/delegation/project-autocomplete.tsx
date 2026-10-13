@@ -1,7 +1,7 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useController, useFormContext } from "react-hook-form";
 
-import { projectDisplayName } from "../projects/selectors";
+import { matchesProjectQuery, projectDisplayName } from "../projects/selectors";
 import type { Project } from "../projects/types";
 import type { DelegateValues } from "./delegate-fields";
 
@@ -32,6 +32,12 @@ export function ProjectAutocomplete({
   return (
     <Autocomplete.Root
       items={repositories}
+      filter={(repository, query) =>
+        matchesProjectQuery(
+          projectByRepository.get(repository) ?? { repository },
+          query,
+        )
+      }
       value={field.value}
       onValueChange={field.onChange}
       openOnInputClick
