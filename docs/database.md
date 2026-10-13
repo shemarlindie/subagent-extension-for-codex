@@ -44,6 +44,21 @@ migrations before any feature reads it.
   build containing those migrations. Otherwise start with a fresh data directory.
 - `migrations/` ships in the package. Source checkouts and installed packages use
   the same migration files.
+- Before applying pending migrations to a database that already has some,
+  `src/service/platform/database/backup.ts` copies it with `VACUUM INTO` to
+  `<data>/backups/console-<last-applied-migration>-<timestamp>.sqlite` and keeps
+  the newest three. Plugin updates arrive automatically, so this is the way
+  back from a bad migration.
+
+## Restore a backup
+
+1. Stop the service.
+2. Move `console.sqlite` and its `-wal` and `-shm` files out of the data
+   directory.
+3. Copy the backup to `console.sqlite`.
+4. Run the version that matches the backup: a newer build migrates it again,
+   and an older build refuses a database that names migrations it lacks. To
+   pin a plugin version, reinstall it from that release's tag (`@vX.Y.Z`).
 
 ## Transactions and notifications
 

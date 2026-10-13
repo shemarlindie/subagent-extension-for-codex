@@ -161,6 +161,81 @@ test("a failing migration rolls back with its ledger entry, and applies once fix
   assert.equal(ledger(fixed.client).at(-1), "29990101000000_add_notes");
 });
 
+/** A database migrated from a copy of the package's migrations, which a test can extend. */
+function migratedCopy(t: { onTestFinished(fn: () => void): void }) {
+  const dir = scratch(t);
+  const path = join(dir, "console.sqlite");
+  const folder = join(dir, "migrations");
+  cpSync(migrationsFolder, folder, { recursive: true });
+  openDatabase(path, folder).close();
+
+  const addMigration = (name: string) => {
+    mkdirSync(join(folder, name));
+
+    writeFileSync(
+      join(folder, name, "migration.sql"),
+      `CREATE TABLE ${name.replace(/^\d+_/, "")}(id TEXT PRIMARY KEY);`,
+    );
+  };
+
+  const backups = () => {
+    try {
+      return readdirSync(join(dir, "backups")).sort();
+    } catch {
+      return [];
+    }
+  };
+
+  return { dir, path, folder, addMigration, backups };
+}
+
+test("no backup is made of a new database or when nothing is pending", (t) => {
+  const { path, folder, backups } = migratedCopy(t);
+  openDatabase(path, folder).close();
+  assert.deepEqual(backups(), []);
+});
+
+test("pending migrations back up the database as it was first", (t) => {
+  const { dir, path, folder, addMigration, backups } = migratedCopy(t);
+  const db = openDatabase(path, folder);
+  const previous = ledger(db.client);
+
+  db.client
+    .prepare("INSERT INTO tasks VALUES(?,?,?)")
+    .run("kept", "alice", "{}");
+
+  db.close();
+  addMigration("29990101000000_notes");
+  openDatabase(path, folder).close();
+
+  const [backup, ...rest] = backups();
+  assert.deepEqual(rest, []);
+  assert.match(backup, new RegExp(`^console-${previous.at(-1)}-.*\\.sqlite$`));
+
+  const copy = new DatabaseSync(join(dir, "backups", backup));
+  t.onTestFinished(() => copy.close());
+  assert.deepEqual(ledger(copy), previous);
+  assert.ok(!tables(copy).includes("notes"));
+  assert.equal(copy.prepare("SELECT id FROM tasks").get()?.id, "kept");
+});
+
+test("only the newest three backups are kept", (t) => {
+  const { path, folder, addMigration, backups } = migratedCopy(t);
+  const names = ["first", "second", "third", "fourth"];
+
+  for (const [index, name] of names.entries()) {
+    addMigration(`2999010100000${index}_${name}`);
+    openDatabase(path, folder).close();
+  }
+
+  // Each backup is named for the migration applied last before it, so the
+  // one taken before "first" is the oldest and is removed.
+  assert.deepEqual(
+    backups().map((file) => file.match(/_(first|second|third)-/)?.[1]),
+    ["first", "second", "third"],
+  );
+});
+
 test("processes opening a new database together migrate it once", async (t) => {
   const path = join(scratch(t), "console.sqlite");
   const module = pathToFileURL(join(import.meta.dirname, "database.ts")).href;

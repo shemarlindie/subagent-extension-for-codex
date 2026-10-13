@@ -2,6 +2,8 @@ import { type DatabaseSync } from "node:sqlite";
 
 import { readMigrationFiles } from "drizzle-orm/migrator";
 
+import { backUpDatabase } from "./backup.js";
+
 /** Drizzle's ledger table, so drizzle-kit and Drizzle's migrator read the same history. */
 const LEDGER = "__drizzle_migrations";
 
@@ -16,6 +18,17 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
   const migrations = readMigrationFiles({ migrationsFolder: folder });
 
   if (!migrations.length) throw new Error(`No migrations found in ${folder}`);
+
+  // VACUUM INTO can't run inside the migration transaction, so the backup
+  // reads the ledger first. Processes starting together may each back up.
+  const before = ledger(client);
+
+  if (
+    before.length &&
+    path !== ":memory:" &&
+    migrations.some((m) => !before.includes(m.name))
+  )
+    backUpDatabase(client, path, before.at(-1)!);
 
   client.exec("BEGIN IMMEDIATE");
 
@@ -43,12 +56,7 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
       );
     }
 
-    const applied = new Set(
-      client
-        .prepare(`SELECT name FROM ${LEDGER}`)
-        .all()
-        .map((row) => String(row.name)),
-    );
+    const applied = new Set(ledger(client));
 
     const known = new Set(migrations.map((m) => m.name));
     const unknown = [...applied].filter((name) => !known.has(name));
@@ -83,4 +91,18 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
     client.exec("ROLLBACK");
     throw error;
   }
+}
+
+/** Applied migration names, oldest first; none before the ledger exists. */
+function ledger(client: DatabaseSync) {
+  const exists = client
+    .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?")
+    .get(LEDGER);
+
+  if (!exists) return [];
+
+  return client
+    .prepare(`SELECT name FROM ${LEDGER} ORDER BY id`)
+    .all()
+    .map((row) => String(row.name));
 }
