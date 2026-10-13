@@ -18,7 +18,7 @@ import {
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
   settingsUpdateSchema,
-} from "../../../features/settings/settings.js";
+} from "../../../features/settings/settings-values.js";
 import {
   MAX_MESSAGE_WAIT_SECONDS,
   pollMessages,

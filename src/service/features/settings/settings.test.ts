@@ -10,11 +10,11 @@ import { claudeOverrideDefaults } from "../../../shared/providers/claude/permiss
 import type { ModelChoice } from "../../../shared/providers/types.js";
 import { withHelp } from "../../../shared/settings/settings-document.js";
 import { Store } from "../tasks/storage/store.js";
+import { Settings } from "./settings.js";
 import {
-  Settings,
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
-} from "./settings.js";
+} from "./settings-values.js";
 
 // A budget as the panel shows it: whether it applies, and its amount
 // (remembered while off).
