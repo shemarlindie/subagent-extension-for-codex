@@ -88,7 +88,9 @@
     "assets",
     "skills",
     "README.md",
-    "docs"
+    "AGENTS.md",
+    "docs",
+    "src/panel/features/file-preview/README.md"
   ],
   "allowScripts": {
     "esbuild@0.28.2": true,

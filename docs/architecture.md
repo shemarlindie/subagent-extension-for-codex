@@ -25,7 +25,7 @@ stdio proxy ----------------------> shared loopback service
 The packaged stdio entrypoint connects to or launches the shared service. Multiple
 host connections use the same service; closing a proxy leaves tasks running.
 The service lease prevents competing processes from owning the same data directory.
-See [Setup and resume](setup-and-resume.md) for operational configuration.
+See [Task continuation](task-continuation.md) for startup and recovery.
 
 The service owns task scheduling, approval authority, dependencies, workspace
 lifecycle, messages, durable state and result delivery. The Claude provider owns
@@ -53,7 +53,7 @@ provider; provider discovery reports actual enabled capabilities.
 Production source lives under `src/`, with separate runtime boundaries:
 
 - `src/service/` owns Node execution, persistence, Git operations and server
-  transports. Its entrypoints build the existing `dist/main.js`, `dist/stdio.js`
+  transports. Its entrypoints build `dist/main.js`, `dist/stdio.js`
   and `dist/projects-cli.js` outputs.
 - `src/panel/` owns the browser application. Application composition and state
   live in `app/`; domain presentation lives in `features/`; reusable panel
@@ -86,7 +86,7 @@ host controls, scenarios, recording, recorded data and the fixture service.
 legacy migration utility. Focused tests stay beside their owning modules;
 `tests/integration/` covers runtime and environment boundaries.
 
-See [React UI](react-ui.md) for panel architecture,
+See [Panel architecture](panel-architecture.md) for panel architecture,
 [Local development](development.md) for tooling and
 [Provider contract](provider-contract.md) for adapters.
 
@@ -99,8 +99,7 @@ control layer records delivery and preserves steers the provider did not take.
 Worker replies are plain text or Markdown; provider activity is a separate event
 stream. Draft deltas are transient, while completed messages and task events persist.
 
-SQLite stores tasks, events, settings, and approved projects.
-WAL and synchronous transactions protect related durable writes;
+SQLite stores tasks, events, settings and approved projects. WAL and synchronous transactions protect related durable writes;
 notifications run after commit. On restart, in-flight work becomes interrupted
 and requires a follow-up, while queued tasks and dependency waits recover.
 The service does not claim to recover an executing process mid-turn.
@@ -109,8 +108,9 @@ Session continuity requires the saved provider session ID, stable workspace,
 matching session owner and available local session state. An ID alone cannot
 move a resumable task to another machine. The provider receives explicit `cwd`
 and `resume`; it does not resume whichever conversation happened to run last.
-Removing a worktree retains the task branch for recreation; deleting the branch
-removes that recovery route. See [Setup and resume](setup-and-resume.md).
+Removing a worktree retains the task branch for recreation. If the branch is
+also deleted, recreation falls back to the base commit; changes held only by
+the deleted branch or discarded worktree do not return. See [Task continuation](task-continuation.md).
 
 ## Workspace and permission boundaries
 
@@ -151,7 +151,8 @@ chat project. See [Host capabilities](host-capabilities.md#project-context-and-r
 
 Internal task events support activity and persistence. Console progress uses SSE;
 MCP callers retrieve task/message results. Explicit provider parent messages use
-a durable queue. The mounted embedded thread panel claims them and forwards their task/message IDs through
+a durable queue. The mounted
+embedded thread panel claims them and forwards their task/message IDs through
 the host message bridge. The parent retrieves the stored reports by ID or
 through message polling; both paths share stable IDs for duplicate handling. See
 [Host capabilities](host-capabilities.md#worker-messages-to-the-parent-chat)

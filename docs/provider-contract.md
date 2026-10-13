@@ -1,12 +1,12 @@
 # Built-in provider contract
 
-Providers implement `Provider` in `src/service/features/providers/types.ts`. Registration is explicit in `src/service/features/providers/config.ts`; this is an internal contract, not a dynamic plugin API.
+Use this guide when implementing or changing provider execution. Providers implement `Provider` in `src/service/features/providers/types.ts`. Registration is explicit in `src/service/features/providers/config.ts`; this is an internal contract, not a dynamic plugin API.
 
 The shared control plane owns queues, dependencies, concurrency, workspace creation and snapshots, budget checks, task ownership, persistence, input serialization, and the conversation: messages, pending steers, the queue and drafts. Providers own model discovery, native execution, session creation/deletion, and native permissions.
 
 ## A turn
 
-A task is a conversation of turns, and `Provider.run(context, prompt)` runs one turn. The prompt is the whole first-turn prompt for a new session, or only the messages a resumed session hasn't received. A successful turn returns `{ reply }`, the plain text that ended it; the service records it as an `agent.reply` event. An interrupted or failed turn throws and records no reply.
+A task is a conversation of turns, and `Provider.run(context, prompt)` runs one turn. For a new session, the prompt contains the original request, workspace and dependency context, and any bounded earlier conversation. A resumed session receives unsent messages and, for a shared checkout, a reminder that its files may have changed. `SessionPrompts` in `src/service/features/tasks/conversation/session-prompts.ts` owns this assembly. A successful turn returns `{ reply }`, the plain text that ended it; the service records it as an `agent.reply` event. An interrupted or failed turn throws and records no reply.
 
 While a turn runs, `RunContext` connects it to the conversation:
 
@@ -24,13 +24,13 @@ While a turn runs, `RunContext` connects it to the conversation:
 - `decideInput` can approve or deny execution requests under provider policy. Returning `undefined` queues an interactive request. Questions always remain interactive.
 - `parentMayApprove` selects whether the parent can answer an unresolved permission request. Claude uses its independent approval decider; whole-execution providers use their execution approval policy.
 - `inputKind` classifies provider tool names as questions or permissions. The persisted kind lets forms and presentation use a common distinction.
-- Optional `validateSession` checks provider-owned session state before a later turn resumes it. A session it rejects, or one owned by another service worker, gives way to a new session in the same task, whose prompt carries the earlier conversation.
+- Optional `taskPolicy.validateSession` checks provider-owned session state before a later turn resumes it. A session it rejects, or one owned by another service worker, gives way to a new session in the same task, whose prompt carries the earlier conversation.
 
-`executionTaskPolicy` resolves whole-execution approval defaults from user settings and supplies the existing approval behavior. Native policies resolve their own defaults; presentation metadata does not select lifecycle policy. Claude supplies a native policy. A new built-in supplies its own policy without editing lifecycle branches in `Control`.
+`executionTaskPolicy` resolves whole-execution approval defaults from user settings and supplies whole-execution approval behavior. Native policies resolve their own defaults; presentation metadata does not select lifecycle policy. Claude supplies a native policy. A new built-in supplies its own policy without editing lifecycle branches in `Control`.
 
 ## Presentation and settings
 
-`Provider.metadata` is serializable metadata exposed by worker discovery. Delegation forms use it for native permission controls, effort choices, and budget help. Provider-owned settings definitions contribute schemas and sections while retaining existing persisted setting names. Providers whose settings are unsupported remain excluded from settings defaults.
+`Provider.metadata` is serializable metadata exposed by worker discovery. Delegation forms use it for native permission controls, effort choices, and budget help. Provider-owned settings definitions contribute schemas and sections.
 
 Providers emit common activity events and normalized presentation details for shared rendering. Native event payloads remain available for inspection. Activity rendering reads explicit presentation metadata; Claude SDK decoding happens in the Claude provider.
 
@@ -39,3 +39,24 @@ Providers emit common activity events and normalized presentation details for sh
 New providers can validate and resolve their isolated `provider_options.<provider_id>` namespace without adding fields to the shared task schema. Native input descriptions and approval labels can be supplied through the optional presentation argument to `RunContext.input`.
 
 Provider-owned settings retain their existing persisted names. Claude tasks persist native permission mode, approval routing, permission source, and resolved session restrictions under `provider_options.claude`. The shared `approval_mode` remains for providers using whole-execution approval. Execution default updates do not change Claude native defaults. Pending input has an explicit kind.
+
+## Provider lifecycle methods
+
+`capabilities` declares supported task features and limits. The control plane
+rejects unsupported budgets before execution. Capability discovery advertises
+workspace and runtime features; presentation metadata supplies UI controls and
+help. Optional `readiness()` checks the local runtime and
+can block starting a task without hiding the worker. It does not establish
+authentication or network readiness. Optional `models()` supplies model and
+effort suggestions; custom model IDs are still accepted.
+
+When a native session is created, call `RunContext.session(id, stateRef)` so
+the service can store its identity, host owner and state reference.
+`deleteSession(task)` deletes provider state only when task deletion requests
+it; an already absent session must not fail deletion. A deletion error retains
+the local task resources for retry. `close()` releases provider resources during
+service shutdown.
+
+The development-only fixture provider implements this contract for deterministic
+checks; see [Fixture scenarios](fixture-scenarios.md). It is excluded from
+production registration and bundles.

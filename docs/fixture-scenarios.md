@@ -1,14 +1,18 @@
 # Fixture provider scenarios
 
-The fixture provider and demo service are documented in [Development: Demo](development.md#demo).
+Use this guide to choose deterministic provider and control-plane scenarios.
+Start the fixture service with [Development: Demo](development.md#demo).
 This guide lists the message keys, startup options, control paths, and error cases available for
-deterministic provider and UI testing. The fixture makes no model calls or real tool execution.
+deterministic provider and UI testing. The fixture makes no model calls and simulates tool execution. The explicit
+`[fixture:change]` scenario writes a sample file in an isolated worktree.
 
 The fixture worker (`dev/service/fixture-provider.ts`) and demo entry
 (`dev/service/demo-service.ts`, run through `tsx`) are in `dev/`, excluded from production bundles
 and the distributed package. Tests also import the fixture worker. It streams its reply in small
 pieces and records the completed reply in its in-memory session history. Add scenario keys anywhere
 in a task description or follow-up message. Multiple keys can be combined in one message.
+
+## Prompt markers
 
 - **Key:** `[fixture:question]` or `[fixture:question count=2]`
   - **Scenario:** Ask one or more questions and wait for answers. `[input]` remains an alias for one
@@ -136,7 +140,7 @@ The fixture advertises the same task-level permission controls as Claude so the 
 approval routing can be exercised. `[fixture:permission]` requests an action; the selected simulated
 mode determines whether it waits, allows, or denies:
 
-- `inherit` follows the configured fixture permission mode.
+- `inherit` follows the saved `claude_permission_mode`, which the fixture also uses.
 - `default` follows the fixture execution approval mode.
 - `plan` and `dontAsk` deny; `acceptEdits` allows edit tools.
 - `auto` and `bypassPermissions` allow.
@@ -257,7 +261,7 @@ Task scheduling order is controlled by eligibility, dependencies, and the concur
 task list has no manual priority/reorder control; use `depends_on` when one task must wait for
 another. Chat message order is rearrangeable as described above.
 
-## Failure scenarios
+## Provider failure scenarios
 
 - **Provider unavailable before start**
   - **Trigger:** Start the demo with `CODEX_SUBAGENT_EXTENSION_FIXTURE_READINESS=unavailable`; try
@@ -350,7 +354,11 @@ another. Chat message order is rearrangeable as described above.
     `CODEX_SUBAGENT_EXTENSION_FIXTURE_CLOSE=error` before a graceful service shutdown.
   - **Expected:** Shutdown reports the provider close error.
 
-Other service-level rejections use the real API inputs and task controls:
+## Service validation and authority scenarios
+
+These use real API inputs and task controls. The permission and lifecycle
+contracts are documented in [Configuration](configuration.md) and
+[MCP reference](mcp-reference.md); this section provides ways to exercise them.
 
 - **Invalid task request or provider options**
   - **Trigger:** Call `start_agent_task` with a whitespace-only description, or
@@ -363,14 +371,13 @@ Other service-level rejections use the real API inputs and task controls:
     cost/runtime budgets but not token budgets.
 
 - **Parent approval escalation**
-  - **Trigger:** With the user default still `ask_user` / `approval_decider: "user"`, call
+  - **Trigger:** With saved `default_approval_mode: "ask_user"` and `default_approval_decider: "user"`, call
     `start_agent_task` as the parent with `approval_mode: "parent_agent"` or fixture
-    `approval_decider: "parent_agent"`; try `update_agent_settings` as the parent.
+    `provider_options: { fixture: { approval_decider: "parent_agent" } }`. Try to change a user-only setting such as `default_approval_decider` through `update_agent_settings` as the parent.
 
 - **Unapproved repository**
   - **Trigger:** Call `start_agent_task` with an absolute repository path that is not returned by
-    `list_agent_projects`; the demo has only its disposable repository approved. In the panel, ask
-    to use **Add project** or **Browse** in the panel.
+    `list_agent_projects`; the demo has only its disposable repository approved. Use **Add project** or **Browse** in the panel to register it before retrying.
 
 - **Invalid worktree revision**
   - **Trigger:** Create a worktree task with a revision that does not exist. Creation is accepted
@@ -409,8 +416,8 @@ Other service-level rejections use the real API inputs and task controls:
     `[fixture:wait ms=15000]` and raise while the turn is running.
 
 - **Invalid budget update**
-  - **Trigger:** Start without a cost limit, then try to lower a finite budget, set a runtime/cost
-    value outside the schema bounds, or submit an empty/unknown settings field to
+  - **Trigger:** Start without a cost limit, then try to apply a finite cost limit. For settings,
+    submit a zero or negative runtime/cost value, an empty update, or an unknown field to
     `update_agent_settings`.
 
 - **Dependency prevents deletion**
@@ -449,8 +456,11 @@ Other service-level rejections use the real API inputs and task controls:
     task inspection, input, queue, or delete controls. These resolve as not found. The single-owner
     demo token cannot create this condition.
 
-Queue, ownership, budget, dependency, workspace, and project cleanup rejection tests are in
-[`control.test.ts`](../src/service/features/tasks/runtime/control.test.ts),
-[`approval.test.ts`](../src/service/features/tasks/input/approval.test.ts),
-and
-[`conversation-tools.test.ts`](../src/service/platform/server/conversation-tools.test.ts).
+In a source checkout, queue, ownership, budget, dependency, workspace and project
+cleanup rejection tests are in:
+
+- `src/service/features/tasks/runtime/control.test.ts`
+- `src/service/features/tasks/input/approval.test.ts`
+- `src/service/platform/server/conversation-tools.test.ts`
+
+These test sources are not included in the plugin package.

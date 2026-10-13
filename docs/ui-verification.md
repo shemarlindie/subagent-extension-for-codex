@@ -1,6 +1,7 @@
 # UI verification
 
-Use this guide for browser checks. Setup, live service connections and fixture
+Use this guide to verify the React UI in a browser and in Codex, covering both
+the inline widget and expanded panel. Setup, live service connections and fixture
 recording are in [Local development](development.md#panel-dev-host).
 
 ## Workflow
@@ -10,8 +11,9 @@ recording are in [Local development](development.md#panel-dev-host).
    user when starting or restarting a server; leave existing servers running
    otherwise.
 2. Open `http://localhost:5317`, set **Data** to `fixtures`, and **Relaunch**.
-   The iframe may stay blank briefly. Fixtures do not send Chat messages or
-   start workers. Use live data only for behavior fixtures cannot show; select
+   The iframe may stay blank briefly. Fixture mode does not send messages to a real parent chat or
+   start provider workers; its simulated interactions can still update fixture
+   state and temporary Git repositories. Use live data only for behavior fixtures cannot show; select
    **Launch: global** and do not start tasks during a read-only check.
 3. Check relevant scenarios below at narrow and wide widths and in both themes
    when layout or styling changes. Check keyboard navigation, focus, loading,
@@ -80,7 +82,7 @@ repositories. `large-files.ts` supplies the 60-file diff, minified JSON,
 20,000-row CSV, 30,000-line log, long Markdown whose contents links jump to
 headings, single 250 KB line, and SVG over 64 KiB that displays as source.
 
-## Measurement and native host checks
+## Measurement and checks in Codex
 
 The panel is an iframe; inspect its `contentDocument` when the browser tool
 supports DOM inspection. Host selects require setting `.value` and dispatching
@@ -90,11 +92,19 @@ feeds. Hidden panes throttle frames: sample animations by pausing
 `element.getAnimations()` and setting `currentTime`, instead of timing them.
 
 The dev host omits style variables by default; enter JSON in the inspector to
-test them. Light and dark captures from Codex desktop's MCP App context on
-2026-10-12 are kept as development references. The panel filters style keys the
-installed SDK does not recognize, so later host additions do not fail app
-initialization. The dev host does not reproduce Codex's sandbox, CSP or native
-placement. For changes affecting those boundaries, build and open an approved
+test them. Light and dark captures from Codex desktop's MCP App context are kept
+as development references. The panel filters style keys the installed SDK does
+not recognize, so later host additions do not fail app initialization. The dev host does not reproduce Codex's iframe sandbox, CSP or
+container placement. For changes affecting the React UI in Codex, build and open an approved
 repository in Codex, check scope and New task prefills without submitting, and
-reopen an existing task. Automated transport/DOM tests and fixture screenshots
-cannot establish native host delivery or placement.
+reopen an existing task. Check the sidebar entrypoint and inline/expanded switching
+when their integration changes. For folder browsing changes, use **Browse** on
+macOS, verify that cancelling leaves the selection unchanged, and that selecting
+a valid Git root registers and selects it without starting a task. For scope
+changes, use two chats with different projects and confirm they stay separate.
+Automated transport/DOM tests and fixture screenshots
+cannot establish panel message delivery or its placement in Codex.
+
+For composer mention changes, verify that search finds Claude, selecting it
+delivers the provider hint, and the delegation flow uses that hint. See
+[Composer mentions](host-capabilities.md#composer-mentions).

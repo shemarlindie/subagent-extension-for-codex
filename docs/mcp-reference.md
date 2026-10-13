@@ -1,5 +1,9 @@
 # MCP reference
 
+Use this guide when integrating task tools or the React panel.
+Tool discovery supplies the current input schemas; this guide explains behavior
+and authority that callers must preserve.
+
 Both the stdio proxy and authenticated HTTP `/mcp` endpoint expose task tools and the Delegated Work MCP App. See [host capabilities](host-capabilities.md) for host context, entrypoints, mention integration and verification gaps; [configuration](configuration.md) owns settings and authority rules.
 
 The HTTP endpoint uses the MCP 2.0 server SDK for protocol revision `2026-07-28`,
@@ -11,12 +15,15 @@ Tool schemas are the authoritative field reference. The normal delegation flow i
 
 1. Discover the repository with `get_current_agent_project` and approved roots with `list_agent_projects`; inspect enabled profiles with `list_available_workers`.
 2. If access needs approval, direct the user to **Add project** or **Browse** in the panel, or the [projects CLI](configuration.md#repository-access), and wait for registration. Pass an explicit absolute `repository` to `start_agent_task`.
-3. Read replies with `get_agent_messages`, which supports long polling. Read live Git changes with `get_agent_changes`, using `scope: "turn"` for one turn.
+3. Read replies with `get_agent_messages`, which supports long polling. Read attributed Git changes with `get_agent_changes`, using `scope: "turn"` for one turn.
 4. Continue with `send_agent_message`; inspect pending input before answering with its request ID.
 
 `start_agent_task` requires `description` containing the full request (1–20,000 characters; whitespace-only text is rejected). The default title comes from its first line or sentence, limited to 120 characters. Optional `title` accepts 1–120 characters. Workers receive the description, while lists show the title.
 
-Task creation defaults to the current repository, including existing changes. `workspace_strategy: "worktree"` starts from a committed revision on a task branch. Conversation scope and workspace are retained for continuations; selecting a project for a new task does not change other chats. See [setup and continuation](setup-and-resume.md) for recovery semantics.
+Task creation defaults to `workspace_strategy: "current_repo"`, using the
+explicit approved repository and its existing changes. `workspace_strategy: "worktree"` starts from a committed revision on a task branch. Conversation scope and workspace are retained for continuations; selecting a project for a new task does not change other chats. See [Task continuation](task-continuation.md) for recovery semantics and
+[change comparisons](panel-guide.md#change-comparisons) for the difference
+between agent snapshots and the panel's uncommitted changes.
 
 ## App and user authority
 
@@ -24,7 +31,7 @@ Model-visible tools may read settings and change ordinary defaults. App-only ali
 
 For Claude permissions routed to `parent_agent`, model-visible `submit_agent_input` can approve or deny the exact pending request. User-routed permissions require panel **Approve**/**Deny** buttons. Questions can use model-visible submission. All answers enforce ownership and request identity.
 
-The App resource is `ui://codex-subagent-extension/app-v6` with empty network allowlists. The standalone console uses authenticated HTTP tools and SSE; the embedded app uses portable MCP Apps calls. Panel HTML is read from `dist` on every resource request, so a rebuild can update it without restarting the service. Server changes need a restart; changed resource URIs or opener metadata need MCP reconnection.
+The App resource is `ui://codex-subagent-extension/app-v6` with empty network allowlists. The standalone console uses authenticated HTTP tools and SSE; the embedded app uses portable MCP Apps calls. See [What reloads when](development.md#what-reloads-when) for applying panel and server changes.
 
 ## Provider messages to the parent
 
@@ -92,4 +99,4 @@ characters. `remove_user_agent_project` accepts `repository` and optional
 `delete_tasks` (default `false`). Both require user-interface authority and use
 the saved canonical path as identity, so a directory that no longer exists can
 still be renamed or removed. The global **Projects** page owns these actions;
-see [Manage projects](codex-panel.md#manage-projects) for removal behavior.
+see [Manage projects](panel-guide.md#manage-projects) for removal behavior.

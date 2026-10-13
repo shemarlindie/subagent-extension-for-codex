@@ -10,16 +10,16 @@
 
 Read the matching guide's relevant sections before working in an area; unrelated guides do not need to be loaded.
 
-| Work area                                                  | Read                                                                                                                               |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| UI components, styles or client state                      | Prefer Base UI where suitable; see [React UI architecture](docs/react-ui.md) and [Panel behavior](docs/codex-panel.md).            |
-| Provider execution, permissions or session policy          | [Provider contract](docs/provider-contract.md) and relevant [Configuration](docs/configuration.md) sections.                       |
-| Claude executable selection, readiness or SDK/CLI upgrades | [Claude Code CLI](docs/claude-cli.md) and [version qualification](docs/development.md#qualifying-claude-code-versions).            |
-| Settings, budgets or repository access                     | Relevant [Configuration](docs/configuration.md) sections.                                                                          |
-| MCP tools, user authority or forms                         | [MCP reference](docs/mcp-reference.md).                                                                                            |
-| Host context, project/chat scope, entrypoints or mentions  | [Host capabilities](docs/host-capabilities.md).                                                                                    |
-| Startup, continuation, recovery or storage                 | [Setup and task continuation](docs/setup-and-resume.md); [Database](docs/development.md#database) for schema changes or migration. |
-| Capability claims or verification gaps                     | [Implementation status](docs/implementation-status.md); inspect dated evidence only for the claim being assessed.                  |
+| Work area                                                  | Read                                                                                                                                                                 |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UI components, styles or client state                      | Prefer Base UI where suitable; see [Panel architecture](docs/panel-architecture.md) and [Panel behavior](docs/panel-guide.md).                                       |
+| Provider execution, permissions or session policy          | [Provider contract](docs/provider-contract.md) and relevant [Configuration](docs/configuration.md) sections.                                                         |
+| Claude executable selection, readiness or SDK/CLI upgrades | [Claude Code CLI](docs/claude-cli.md) and [version qualification](docs/claude-verification.md#qualifying-claude-code-versions).                                      |
+| Settings, budgets or repository access                     | Relevant [Configuration](docs/configuration.md) sections.                                                                                                            |
+| MCP tools, user authority or panel inputs                  | [MCP reference](docs/mcp-reference.md).                                                                                                                              |
+| Host context, project/chat scope, entrypoints or mentions  | [Host capabilities](docs/host-capabilities.md).                                                                                                                      |
+| Startup, continuation, recovery or storage                 | [Task continuation](docs/task-continuation.md); [Database and migrations](docs/database.md) for schema changes or migration.                                         |
+| Capability claims or verification gaps                     | [Host capabilities](docs/host-capabilities.md) and [Claude execution verification](docs/claude-verification.md); inspect evidence only for the claim being assessed. |
 
 ## Validation
 
@@ -44,7 +44,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
 - Give each guide a clear purpose and audience. Keep the README focused on orientation and setup; place detailed procedures and contracts in their owning guides. Include implementation details only when they help that audience.
 - Keep one canonical home for each explanation and link to it elsewhere, repeating only a brief summary needed locally. Update explanations in place, consolidate overlap and remove superseded material after retaining useful details. Check affected links and headings.
 - Use short paragraphs and descriptive headings, numbered steps, bullets for parallel points and tables for comparisons. Add small command or code examples when they make a workflow usable.
-- Describe current behavior. Keep history only when it explains a current decision or constraint. Resolve discrepancies with code and tests, checking commands, examples, defaults and capability claims. Date evidence and state its scope; local tests do not establish live-host support.
+- Describe current behavior. Keep history only when it explains a current decision or constraint. Resolve discrepancies with code and tests, checking commands, examples, defaults and capability claims. State the scope of evidence; local tests do not establish live-host support.
 
 ## Component and change conventions
 

@@ -1,8 +1,8 @@
 # Delegated Work panel
 
-The embedded panel and standalone console share one frontend. This guide owns
-user-visible behavior; [React UI architecture](react-ui.md), including its
-[loading and pending UI approach](react-ui.md#loading-and-pending-ui), covers
+Use this guide to operate Delegated Work or check its user-visible behavior.
+The embedded panel and standalone console share one frontend; [Panel architecture](panel-architecture.md), including its
+[loading and pending UI approach](panel-architecture.md#loading-and-pending-ui), covers
 implementation. [Local development](development.md) covers setup, and
 [UI verification](ui-verification.md) covers browser checks.
 
@@ -32,7 +32,8 @@ change the conversation.
 - The adapter accepts local `sandboxCwd` file URIs through
   `codex/sandbox-state-meta`; explicit context wins and invalid hints fall back.
   Conversation correlation uses explicit arguments, `threadId` and
-  `openai/session`. Actual desktop delivery must be checked in the host.
+  `openai/session`. See [Host capabilities](host-capabilities.md#project-context-and-registration)
+  for what desktop hosts deliver.
 
 On narrow panels, header actions move into **Panel actions**, including
 **Settings**, with **Add chat project** first when registration is needed.
@@ -84,7 +85,9 @@ selection and dialogs while keeping the Projects page open. Other panels reconci
 refresh. Rename drafts survive refresh and failed saves; destructive choices
 are not restored after reload.
 
-## Panel behavior
+## Tasks and settings
+
+### Find and inspect tasks
 
 The task rail searches and filters by **Needs input**, **Failed**, **Active**,
 **Done**, then **All**. The default is the first nonempty filter. Questions and
@@ -99,13 +102,15 @@ Wide panels show rail and inspector together; narrow ones switch between them
 with a back action. Until the first task read selects a task, the inspector
 shows a spinner; its empty message appears only after loading when no task is
 selected. Drag the divider to resize the task rail; its width is saved
-in this browser. Focus the divider and use Left/Right arrows to resize, Home/End
+in local storage when the browser or host permits it. Focus the divider and use Left/Right arrows to resize, Home/End
 for the minimum/maximum width, or double-click to restore the default width.
 Custom scrollbars appear during scrolling or pointer interaction and disappear
 after one second of inactivity. They remain visible while dragging.
 Details includes description, worker, revision, turns,
 budgets, session, workspace/branch, changes, dependencies and usage. Runtime in
 the rail and Details accumulates across turns and includes the active run.
+
+### Create and rename tasks
 
 **New task** reads defaults and worker availability without changing settings.
 It collects the request, explicit context, workspace/revision, dependencies and
@@ -117,6 +122,8 @@ The service derives a title from the request. Click the inspector title to edit:
 Enter or an outside click saves, Escape cancels, and blank/failed saves stay open.
 `rename_user_agent_task` accepts a trimmed title of 1–200 characters.
 
+### Edit settings
+
 **Settings** opens a full-width page with **← Tasks** to return. It uses
 server-defined sections and rows, supports per-section resets, validates
 budgets, and asks before discarding unsaved edits. **Save** sits in the page
@@ -124,7 +131,7 @@ header, keeps the page open, and sends only changed fields through the app-only
 `update_user_agent_settings`. Permission and approval defaults are described in
 [Configuration](configuration.md).
 The form and section tabs appear before the settings read finishes, and the
-last selected section is restored. Wide pages use a vertical section rail;
+last selected section is restored in the standalone console and development host. Wide pages use a vertical section rail;
 narrow pages use a horizontally scrolling tab strip that reaches the page edges
 and brings the selected section into view. Tab panels stay mounted so drafts
 survive section changes. Pending fields remain in place with a spinner; a
@@ -133,8 +140,9 @@ disabled.
 
 Per-task tabs, composer drafts/visibility, question answers, Chat/Activity
 reading positions and the Changes position, opened files and viewed files last
-for the panel session. Browser view state and dialog form drafts have separate
-reload persistence; see [State and persistence](react-ui.md#state-and-persistence).
+for the panel session. The standalone console and development host also persist view state and
+dialog form drafts across reloads; the production embedded panel keeps them
+only while mounted. For the storage boundaries, see [State and persistence](panel-architecture.md#state-and-persistence).
 
 ## Chat tab
 
@@ -165,6 +173,8 @@ Draft text streams with a caret and is replaced by its stored message.
 | Shift+Enter                       | Insert a newline.                                      |
 | Waiting for a question/permission | Messages can only be queued.                           |
 
+### Steering, queues and budgets
+
 Pending steers offer **Interrupt and send now**. Queued messages offer Edit and
 Remove, and can be reordered by dragging or with Alt+Up/Alt+Down on a focused
 message; a paused queue offers Resume and Clear. An unconsumed steer stays at
@@ -177,6 +187,8 @@ Every pending question or permission request collapses it automatically,
 including requests opened through **Review request**. It can be reopened to
 queue a message without changing its ordinary visibility preference.
 
+### Questions and permissions
+
 Questions appear as inline cards, with single/multiple choices, custom answers,
 skips and **Respond**. Several questions form a navigable stack. Switching tasks
 preserves unsent answers until reload. Permission requests show their complete
@@ -184,6 +196,8 @@ payload in Chat, with commands formatted as code and **Deny**/**Approve** action
 available inline. An optional message can be added before deciding. Requests
 default to deny. Replies include the exact request ID; the service rejects
 stale answers. Mutations are never automatically retried.
+
+### Reading and loading
 
 Chat follows new messages while the reader is at the end. Scrolling into history
 preserves the visible message as replies stream or earlier pages load, and a
@@ -264,6 +278,8 @@ arrive. Opening a changed file shows a centered loading spinner until its
 first read finishes. When moving between files, the current preview stays visible
 with loading progress until the next file replaces it.
 
+### Change comparisons
+
 The panel and agent APIs answer different questions:
 
 | Consumer                                      | Comparison                                                                                                                                                                                                                        |
@@ -278,9 +294,11 @@ be distinguished from later edits and the service reports that limitation.
 Snapshots use a temporary Git index without changing the user's index or files.
 They write blob/tree objects and pin task baselines under
 `refs/agent-tasks/<task-id>/`; deleting a worktree task's branch removes its
-snapshot refs. See `src/service/features/workspaces/changes.ts` for snapshot and paging
+snapshot refs. See `src/service/features/workspaces/workspace.ts` for snapshot and paging
 implementation; the browser-safe change contract lives in
 `src/shared/workspaces/changes.ts`.
+
+### Diffs and file previews
 
 Files expand into complete diffs and previews; a text file's preview adds a
 **Diff** view of its changes. The header of the file being read stays pinned at
@@ -292,7 +310,7 @@ In long lists, only the first file opens by default; files the reader has opened
 or closed keep that choice.
 The badge pops in when a count first appears.
 Counts above 999 abbreviate, such as 1.1K or 2K. The badge sits outside the tab's layout,
-so the count never changes the tab's width. A reload keeps the count already shown.
+so the count never changes the tab's width. A mounted panel keeps the last known count during refresh.
 Large content renders in deferred row blocks, collapsed files unmount rows, and
 cursor pages are read to completion. Refresh retains the last result; failures
 mark it stale. Switching comparison scope clears the old result while loading.
@@ -316,6 +334,8 @@ start. The heading shows the position, such as `3 / 12`, before previous
 and next buttons that step through the files in list order, wrapping at either
 end; a lone file shows only its position. The chosen view carries over, and the
 last file stays visible until the next one is read.
+
+### Worktree actions
 
 Worktree headers offer branch/path and copyable checkout/diff/push commands.
 **Remove worktree** keeps the branch and asks before discarding uncommitted

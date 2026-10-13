@@ -1,4 +1,8 @@
-# React UI architecture
+# Panel architecture
+
+Use this guide when changing the React panel, its state or transports. It owns
+frontend implementation patterns; [the panel guide](panel-guide.md) owns
+user-visible behavior, and [UI verification](ui-verification.md) owns browser checks.
 
 Delegated Work is the only UI. It runs embedded in a host and in a regular browser tab against the HTTP service. One entrypoint (`src/panel/app/app.ts`) builds one page, `dist/app.html`. At runtime `src/panel/app/environment.ts` picks the transport from where the page renders (an iframe uses the host bridge, a top-level page with an injected API origin uses HTTP, anything else shows "Open through MCP"), and `src/panel/app/bootstrap.tsx` creates the controller and mounts the shell. Fixtures exist only in development, through the panel dev host; `scripts/build-panel.mjs` fails the build if fixtures or the dev host reach the production bundle. Service APIs, MCP resources, and standalone routes remain the integration boundaries.
 
@@ -7,7 +11,7 @@ Delegated Work is the only UI. It runs embedded in a host and in a regular brows
 | Directory or file                                                   | Responsibility                                                                                                                                                                |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/panel/app/`                                                    | Entrypoints, environment selection, page shell, and HTML template.                                                                                                            |
-| `src/panel/features/tasks/`                                         | Task list, inspector, Chat, activity, evidence, and task-control subfeatures.                                                                                                 |
+| `src/panel/features/tasks/`                                         | Task list, inspector, Chat, activity, evidence tabs, and task controls.                                                                                                       |
 | `src/panel/features/file-preview/`                                  | File previews: format detection and the code, Markdown, table, diff and image viewers, used by the Changes tab; Chat and Activity share the Markdown view.                    |
 | `src/panel/features/projects/`, `delegation/`, `settings/`, `auth/` | Project management, registration and scope, task delegation, settings, and login.                                                                                             |
 | `src/panel/app/state/`                                              | Application controller coordination, persisted UI state, composed snapshots, selector exports, and React context. Feature-owned types and selectors stay with their features. |
@@ -16,6 +20,10 @@ Delegated Work is the only UI. It runs embedded in a host and in a regular brows
 | `dev/panel/scenarios/`, `dev/panel/host/`                           | Development fixtures and the mock MCP Apps host; excluded from production bundles.                                                                                            |
 | `src/panel/styles/app.css`                                          | Global stylesheet index; feature styles live beside their feature modules.                                                                                                    |
 | Co-located `*.test.ts`; `tests/integration/`                        | Focused tests sit by the modules; cross-feature and environment tests stay in the integration suite.                                                                          |
+
+The Changes feature (`src/panel/features/changes/`) owns change reads, file
+selection, worktree actions and the Changes tab. File viewers remain in
+`file-preview/`, so their rendering can be reused outside task changes.
 
 The panel imports browser-safe contracts and domain functions from
 `src/shared/<feature>/`, never service modules. The shared runtime boundary is
@@ -37,6 +45,8 @@ Application state groups dialog descriptors and restoration in
 `app/state/persistence/`, and in-memory session state and hooks in
 `app/state/session/`. Transport size tracing stays with `transports/`.
 
+## State ownership and component patterns
+
 The controller owns UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.
 
 Components read session memory with `useSessionState(scope, id, select?)` and
@@ -53,6 +63,8 @@ animated indicator. When a selection can change outside the tab list, use
 `useActiveTabInView` with stable tab IDs so only the strip scrolls to reveal the
 selected tab. Horizontal strips in narrow layouts can extend to the container
 edges while padding their labels back into alignment with the panel content.
+
+## Motion
 
 Motion is short and quiet. Its purpose is to show what changed and to ease layout shifts. In `src/panel/shared/components/motion/motion.css`, `--motion-fast`, `--motion-base`, `--motion-slow`, and `--motion-loading-crossfade` mirror the matching duration fields in `MOTION` from `src/panel/shared/components/motion/motion-utils.ts`; `--ease-out` mirrors its `easing` field. Keep these definitions in sync. Base UI dialogs, popups, and collapsible panels animate through their `data-starting-style` and `data-ending-style` attributes. A collapsible panel uses the `collapse-panel` class and puts its padding and border on an inner element, so the height animation stays smooth. For other content, use the primitives in `src/panel/shared/components/motion/motion.tsx` and the reduced-motion helpers in `src/panel/shared/components/motion/motion-utils.ts`:
 
@@ -146,8 +158,10 @@ without a spinner. Disable actions that depend on pending data, leave unrelated
 controls responsive, and replace failed reads with local error and retry UI.
 
 See [Slow async reads](ui-verification.md#scope-and-host-controls) to inspect
-pending states in the fixture UI; [the panel guide](codex-panel.md) describes
+pending states in the fixture UI; [the panel guide](panel-guide.md) describes
 their user-visible behavior.
+
+## Shared controls
 
 Banner messages use `Notice`, `CollapsibleNotice` and `NoticeText` from `src/panel/shared/components/notice/notice.tsx`. Pass `tone` (`warning`, the default, `error`, `info` or the accent-free `plain`) rather than adding a new banner class; the tone only changes the accent color in `.notice[data-tone]`. `NoticeText` clamps long text behind **Show more**. `ExpandableNotice` shows text as one clamped line that grows in place when toggled; text that already fits on one line has no toggle.
 
@@ -201,17 +215,28 @@ Keep scope handling centralized. Task/detail generation checks discard delayed r
 
 ## State and persistence
 
-The controller separates session memory from recoverable view state:
+The controller separates session memory from recoverable view state.
+`bootstrap.tsx` installs reload persistence for the standalone console and the
+development host. The production embedded panel has no persistence adapter, so
+its controller-owned view choices and drafts last only while that controller
+remains mounted. The task rail width is separate: `TaskLayout` reads and writes
+`dw_task_list_width` directly in local storage wherever storage is available.
 
-- `controller.session` stores per-task tabs, composer drafts/visibility, reading
-  positions (including Changes' opened files), viewed changed files, and
-  question answers until the controller is replaced.
-- Browser URL state stores scope, selected task/list, tab, search and status
-  filter. The dev host mirrors it into its outer URL; Codex has no URL-state
+`controller.session` stores per-task tabs, composer drafts/visibility, reading
+positions (including Changes' opened files), viewed changed files, and question
+answers until the controller is replaced. This session memory does not persist
+across reloads.
+
+The console and development host persist the following state:
+
+- Browser URL state stores the application page, project selection, selected
+  task/list, tab, search and status filter. It does not store the conversation
+  ID. The dev host mirrors view state into its outer URL; Codex has no URL-state
   bridge. Search and form drafts persist after a 250 ms debounce, flushed on
   page exit.
 - Boolean `dw_dlg_<name>=1` flags record open dialogs. Ordered descriptors and
-  compatible form drafts live in local storage. The newest dialog restores
+  compatible form drafts live in local storage, falling back to session storage
+  if local storage is unavailable. The newest dialog restores
   first. Closing removes a descriptor, and successful dialog submissions do
   the same. Settings keeps its descriptor while the page is open so its draft
   can restore after reload; saving updates its baseline and leaves the page
@@ -240,15 +265,17 @@ panel hides dialogs while preserving their drafts for expansion.
   starts only when its inspector opens.
 - **File preview:** `src/panel/features/file-preview/` owns format detection and
   Markdown, source, diff, table and image views. Render the whole file with
-  deferred row blocks for large content. Syntax highlighting stops above
-  200,000 characters; SVG images over 64 KiB show as source only.
+  deferred row blocks for large content. SVG images over 64 KiB show as source
+  only. See the
+  [file-preview guide](../src/panel/features/file-preview/README.md) for format
+  behavior and rendering limits.
 
 For user-visible behavior and host scope rules, see the
-[panel guide](codex-panel.md). For fixture scenarios and browser checks, see
+[panel guide](panel-guide.md). For fixture scenarios and browser checks, see
 [UI verification](ui-verification.md).
 
 ## Build and verification
 
 `scripts/build-panel.mjs` bundles the entrypoint with Vite's build API (one minified ES module, the automatic JSX runtime through `@vitejs/plugin-react`, and `process.env.NODE_ENV="production"`). It does not read `vite.config.ts`, which configures only the dev host. It embeds JavaScript and CSS into `dist/app.html`, preserving self-contained HTML delivery without runtime CDN requests. The build also parses the final embedded module with Vite's `parseAst` to catch template replacement corruption. Edit source files, then rebuild; generated HTML is not the source of truth. Run `npm run typecheck` and `npm test` as described in [Local development](development.md#checks).
 
-Typechecking covers server TypeScript, the browser/TSX configuration in `tsconfig.panel.json`, and the tests and Vite configs through `tsconfig.test.json`. The test suite includes controller scope/race/lifecycle checks, HTTP and host transport contracts, and React Testing Library/user-event interactions in Vitest's jsdom environment. React interaction tests cover keyboard tabs, dialog focus restoration, draft preservation through refresh, budgets, worker input, the Chat composer's keys, queue controls and budget raise, explicit handoff submission, and literal text rendering. Existing HTTP/MCP and generated-panel checks remain relevant. Automated DOM/protocol checks do not establish actual browser layout or native host placement; verify those separately for changes affecting them.
+Typechecking covers server TypeScript, the browser/TSX configuration in `tsconfig.panel.json`, and the tests and Vite configs through `tsconfig.test.json`. The test suite includes controller scope/race/lifecycle checks, HTTP and host transport contracts, and React Testing Library/user-event interactions in Vitest's jsdom environment. React interaction tests cover keyboard tabs, dialog focus restoration, draft preservation through refresh, budgets, worker input, the Chat composer's keys, queue controls and budget raise, explicit handoff submission, and literal text rendering. Automated DOM/protocol checks do not establish actual browser layout or native host placement; verify those separately for changes affecting them.

@@ -15,8 +15,7 @@ Requires Node.js 24+, Git and a [supported Claude Code CLI](docs/claude-cli.md) 
 
 2. [Connect Codex](#connect-codex) using stdio or Streamable HTTP. The stdio
    launcher can start the service automatically; HTTP requires starting the
-   service yourself. For development testing in Codex, build before running
-   `npm run dev`; see [Run the service](docs/development.md#run-the-service).
+   service yourself.
 3. Reload the MCP connection and open **Delegated Work** in Codex. Use
    **Manage → Add project** to approve a Git repository root with at least one
    commit.
@@ -50,7 +49,7 @@ command = "node"
 args = ["<checkout-root>/dist/stdio.js"]
 ```
 
-The launcher connects to the local service or starts it when needed. It reads the admin token itself. If you override `CODEX_SUBAGENT_EXTENSION_DATA`, give the service and MCP launcher the same absolute path through `[mcp_servers.codex_subagent_extension.env]`. See [task continuation](docs/setup-and-resume.md) for recovery and state preservation, and [Configuration](docs/configuration.md#admin-token) for token overrides.
+The launcher connects to the local service or starts it when needed. It reads the admin token itself. If you override `CODEX_SUBAGENT_EXTENSION_DATA`, give the service and MCP launcher the same absolute path through `[mcp_servers.codex_subagent_extension.env]`. See [task continuation](docs/task-continuation.md) for recovery and state preservation, and [Configuration](docs/configuration.md#admin-token) for token overrides.
 
 ### Streamable HTTP
 
@@ -92,9 +91,8 @@ you to keep the service running; Codex does not start it through this transport.
 After saving the configuration, reload the MCP connection in Codex and open
 **Delegated Work** from a chat. Use `codex mcp list` to check the configured server;
 opening the panel verifies the connection. Changed tool metadata also requires
-MCP reconnection. Host
-placement, metadata and mention handoff still need live
-verification; see [host capabilities](docs/host-capabilities.md).
+MCP reconnection. To check UI changes in Codex, see
+[UI verification](docs/ui-verification.md#measurement-and-checks-in-codex).
 
 `npm run package:plugin` builds an npm tarball containing the service, proxy, panel and delegation skill. Extract its `package/` directory as the local plugin root. Installation alone does not start the service; the host starts the stdio launcher. [Build details](docs/development.md#build) cover packaging and checks.
 
@@ -109,23 +107,39 @@ verification; see [host capabilities](docs/host-capabilities.md).
 
 Questions and permissions wait for an answer tied to the exact request ID. Permissions route to the user by default; user-approved settings can route them to the parent. Claude's own permission rules can allow or deny an action before it reaches that route.
 
-Use [the panel guide](docs/codex-panel.md) for delegation, Chat, Changes and project scope, and [the continuation guide](docs/setup-and-resume.md) for recovery and backups. This single-user service defaults to loopback. See [local network access](docs/development.md#access-from-your-local-network) for trusted LAN development; public or multi-user hosting needs separate authentication and deployment work.
+Use [the panel guide](docs/panel-guide.md) for delegation, Chat, Changes and project scope, and [the continuation guide](docs/task-continuation.md) for recovery and backups. This single-user service defaults to loopback. See [local network access](docs/development.md#access-from-your-local-network) for trusted LAN development; public or multi-user hosting needs separate authentication and deployment work.
 
 ## Documentation
 
-| Read when                                                   | Guide                                                   |
-| ----------------------------------------------------------- | ------------------------------------------------------- |
-| Contributing to any area                                    | [Agent instructions](AGENTS.md)                         |
-| Setting up or continuing tasks                              | [Setup and task continuation](docs/setup-and-resume.md) |
-| Changing service settings, permissions or repository access | [Configuration](docs/configuration.md)                  |
-| Building, testing, previewing or packaging                  | [Local development](docs/development.md)                |
-| Working on the panel's behavior                             | [Panel guide](docs/codex-panel.md)                      |
-| Working on React components and state                       | [React UI architecture](docs/react-ui.md)               |
-| Working on system boundaries                                | [Architecture](docs/architecture.md)                    |
-| Implementing a provider or task execution                   | [Provider contract](docs/provider-contract.md)          |
-| Changing MCP tools or forms                                 | [MCP reference](docs/mcp-reference.md)                  |
-| Integrating with Codex or other MCP hosts                   | [Host capabilities](docs/host-capabilities.md)          |
-| Diagnosing Claude executable readiness                      | [Claude Code CLI](docs/claude-cli.md)                   |
-| Assessing verified behavior and remaining gaps              | [Implementation status](docs/implementation-status.md)  |
+Start with the guide for your task. Each guide owns its procedures or contract;
+[Architecture](docs/architecture.md) maps the code boundaries.
 
-The implementation and tests establish current behavior. [Sanitized live Claude evidence](docs/live-claude-verification.json) records the scenarios tested on this machine; [live checks](docs/development.md#live-claude-checks) explain how to repeat them.
+### Use and operate the extension
+
+| Task                                                 | Guide                                          |
+| ---------------------------------------------------- | ---------------------------------------------- |
+| Start, recover, back up or continue tasks            | [Task continuation](docs/task-continuation.md) |
+| Configure permissions, budgets and repository access | [Configuration](docs/configuration.md)         |
+| Delegate and review work in Codex or the console     | [Panel guide](docs/panel-guide.md)             |
+| Diagnose Claude executable readiness                 | [Claude Code CLI](docs/claude-cli.md)          |
+
+### Develop and verify changes
+
+| Task                                                          | Guide                                                        |
+| ------------------------------------------------------------- | ------------------------------------------------------------ |
+| Follow contribution and documentation conventions             | [Agent instructions](AGENTS.md)                              |
+| Understand runtime ownership and system boundaries            | [Architecture](docs/architecture.md)                         |
+| Build, test, preview or package the extension                 | [Local development](docs/development.md)                     |
+| Change React components, styling and client state             | [Panel architecture](docs/panel-architecture.md)             |
+| Check UI layouts and behavior in the browser                  | [UI verification](docs/ui-verification.md)                   |
+| Exercise fake-worker task behavior without model calls        | [Fixture scenarios](docs/fixture-scenarios.md)               |
+| Change storage, migrations or transactions                    | [Database and migrations](docs/database.md)                  |
+| Qualify Claude CLI/SDK updates or run authenticated scenarios | [Claude execution verification](docs/claude-verification.md) |
+
+### Integrate providers and hosts
+
+| Task                                             | Guide                                          |
+| ------------------------------------------------ | ---------------------------------------------- |
+| Implement provider execution and task policy     | [Provider contract](docs/provider-contract.md) |
+| Change MCP tools, user authority or panel inputs | [MCP reference](docs/mcp-reference.md)         |
+| Integrate project/chat context and host delivery | [Host capabilities](docs/host-capabilities.md) |

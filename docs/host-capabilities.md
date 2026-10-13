@@ -1,14 +1,14 @@
 # Host capabilities
 
-This guide separates integration implemented in this repository from capabilities
-that depend on the connected host. Local code was reviewed on October 9, 2026.
-External references below retain the scope of the October 2–5 documentation/source
-review; they are not a fresh compatibility claim for every desktop release.
+Use this guide when integrating a host or assessing a host capability claim.
+It separates implemented repository behavior from capabilities that depend on
+the connected host. External references describe the documentation and source
+they cite; they are not a compatibility claim for every desktop release.
 
 For system responsibilities see [Architecture](architecture.md); for panel
-behavior and activation see [Codex panel](codex-panel.md).
+behavior see [Panel guide](panel-guide.md).
 
-## Display modes and native extension surfaces
+## React UI surfaces
 
 `src/service/platform/panel/panel.ts` advertises `inline` and `fullscreen` and prefers
 `inline`. `open_codex_subagent_extension` exposes the thread entrypoint;
@@ -16,7 +16,9 @@ behavior and activation see [Codex panel](codex-panel.md).
 entrypoint. Task creation also attaches the panel resource and selects the new
 task on Chat. Display-mode preferences are hints; the host owns physical placement.
 
-The extension does not advertise PiP or a native pinned-summary surface. Its compact inline summary is part of the widget; display-mode requests do not guarantee desktop pane geometry.
+The inline widget and expanded panel render the extension's React UI. Its compact
+summary is part of that widget. Codex owns the container and placement;
+display-mode requests do not guarantee desktop pane geometry.
 
 ### Sidebar icon
 
@@ -40,8 +42,7 @@ the MCP connection.
 
 ## Panel network access
 
-Observed in the target Codex desktop installation: the embedded panel uses a
-fixed sandbox CSP and cannot connect directly to the loopback service. All panel
+In Codex desktop, the embedded panel uses a fixed sandbox CSP and cannot connect directly to the loopback service. All panel
 reads and writes therefore use the authenticated MCP Apps bridge. Streaming
 replies use chained `get_user_agent_draft` polls; the standalone console uses
 HTTP and SSE.
@@ -59,15 +60,13 @@ queues a durable `parent.message` event. While a thread-scoped embedded panel is
 mounted, connected and advertises `openai/message`, its normal refresh claims
 one ID-only notification and sends it through `App.sendMessage` with
 `_meta["openai/message"]: { target: "active", send: true }`. Ordinary **Ask Codex**
-uses the portable bridge call. In the October 11, 2026 live check, that portable
-call put the worker message into the composer or queue, as confirmed by the user.
-Automatic submission uses the OpenAI extension capability explicitly. A second
-probe with `send: true` was accepted by the host and appeared in the queue while
-the parent turn was active, as confirmed by the user. The installed message
-API has no steer option. After the parent turn ended, the first queued marker
-arrived as an MCP App message and started the next parent turn. This verifies
-queued continuation with the panel open; delivery to a thread already idle at
-the time of submission remains untested.
+uses the portable bridge call, which puts the worker message into the composer
+or queue. Automatic submission uses the OpenAI extension capability explicitly:
+with `send: true`, the host accepts the message and queues it while the parent
+turn is active. The message API has no steer option. After the parent turn ends,
+the first queued message arrives as an MCP App message and starts the next
+parent turn. Delivery to a thread that is already idle when the message is sent
+is untested.
 The mounted panel attempts parent delivery on its five-second timer even while
 hidden or busy; UI reads can remain paused. Host suspension or panel teardown
 can stop that timer, so this does not establish background host delivery.
@@ -79,8 +78,8 @@ Polling returns the same report ID; see [MCP reference](mcp-reference.md#provide
 for retrieval, polling supervision and durable acknowledgement.
 Worker content does not grant user authority. A claim is persisted before sending to prevent duplicate attempts from multiple panels. The panel rechecks acknowledgement before submission and records a skip if
 already processed. It records host acceptance or failure; an ambiguous failure or teardown is not
-automatically retried. This proof of concept favors avoiding duplicates over
-recovering every interrupted delivery.
+automatically retried. Claims are single-attempt delivery records, so interrupted delivery can be lost
+even though the report remains available through polling.
 
 Delivery while a panel is closed, unrendered, offscreen, or in another chat is
 unverified. A queued result does not mean Codex received the message or began a
@@ -151,8 +150,8 @@ Search accepts worker/profile terms and the server name as an alias, and returns
 Claude when the reviewer profile is available. A selected mention is a provider
 hint; it selects no repository and changes no permissions.
 
-The prior review confirmed the server appeared in the desktop picker; delivery
-of the selected item and the full delegation flow still need a live host check.
+The server appears in the desktop picker; delivery of the selected item and the
+full delegation flow are unverified.
 Use ordinary MCP tools and the delegation skill when mentions are unavailable.
 The [extension guide](https://developers.openai.com/plugins/build/extensions)
 and [mention specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#composer-at-mentions)
@@ -173,12 +172,14 @@ There are no packaged lifecycle hooks or native settings entrypoint. The panel i
 
 Transport/context tests establish explicit precedence, scope isolation, validation
 and protocol behavior. Browser fixtures establish rendering without paid workers.
-They do not establish native desktop placement, selected-mention delivery,
-folder-picker interaction, or sandbox metadata delivery.
+Live UI checks must cover the inline widget and expanded panel: layout, host styles,
+sidebar launch, display-mode switching, chat/project scope, the macOS folder picker
+and parent-message delivery. Sidebar startup works; that does not establish
+placement or folder-selection behavior. The folder picker runs on the service
+machine, separately from Codex presentation. Composer mention checks cover
+selection and handoff; search results alone do not establish that flow. Do not
+infer support from a product name or an installed library version alone.
 
-For changes in these areas, reload the MCP connection and verify the affected
-flow on the target host, including two concurrent chats/projects. UI resource
-HTML is read from `dist` on each request, so rebuilding UI can update it without a
-service restart. Server changes require restart; changed discovery metadata or
-resource URIs require MCP reload. Do not infer support from a product name or an
-installed library version alone.
+[UI verification](ui-verification.md#measurement-and-checks-in-codex) lists the
+checks to run in Codex, and [What reloads when](development.md#what-reloads-when)
+covers applying changes.
