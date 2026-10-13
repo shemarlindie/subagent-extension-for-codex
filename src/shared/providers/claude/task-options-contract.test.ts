@@ -1,7 +1,11 @@
 import { expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
 
-import { approvalDeciderSchema, permissionModeSchema } from "./permissions.js";
+import {
+  approvalDeciderSchema,
+  claudePermissionModeSchema,
+  permissionModeSchema,
+} from "./permissions.js";
 import { readClaudeTaskOptions } from "./task-options.js";
 import {
   claudeStartOptionsSchema,
@@ -30,12 +34,33 @@ test("generated Claude option outputs match source contracts", () => {
   >().toEqualTypeOf<ClaudeTaskOptions>();
 });
 
-test.each([claudeStartOptionsSchema, claudeTaskOptionsSchema])(
+// Starting a task accepts `inherit`; a stored task holds the resolved mode.
+const optionSchemas = [
+  [claudeStartOptionsSchema, permissionModeSchema],
+  [claudeTaskOptionsSchema, claudePermissionModeSchema],
+] as const;
+
+test("a stored task rejects an unresolved permission mode or unknown source", () => {
+  expect(
+    claudeStartOptionsSchema.parse({ permission_mode: "inherit" }),
+  ).toEqual({ permission_mode: "inherit" });
+
+  expect(
+    claudeTaskOptionsSchema.safeParse({ permission_mode: "inherit" }).success,
+  ).toBe(false);
+
+  expect(
+    claudeTaskOptionsSchema.safeParse({ permission_source: "user_config" })
+      .success,
+  ).toBe(false);
+});
+
+test.each(optionSchemas)(
   "accepts all permission modes and approval deciders and rejects unknown fields",
-  (schema) => {
+  (schema, modes) => {
     expect(schema.parse({})).toEqual({});
 
-    for (const permission_mode of permissionModeSchema.options) {
+    for (const permission_mode of modes.options) {
       for (const approval_decider of approvalDeciderSchema.options) {
         const input = { permission_mode, approval_decider };
 
@@ -63,12 +88,12 @@ test.each([claudeStartOptionsSchema, claudeTaskOptionsSchema])(
 );
 
 test("retains handwritten permission enum metadata in generated JSON Schema", () => {
-  for (const schema of [claudeStartOptionsSchema, claudeTaskOptionsSchema]) {
+  for (const [schema, modes] of optionSchemas) {
     const json = z.toJSONSchema(schema);
 
     expect(json.properties?.permission_mode).toMatchObject({
       type: "string",
-      enum: permissionModeSchema.options,
+      enum: modes.options,
     });
 
     expect(json.properties?.approval_decider).toMatchObject({
@@ -83,10 +108,10 @@ test("retains handwritten permission enum metadata in generated JSON Schema", ()
 test("keeps policy validation and nested unknown-field stripping", () => {
   expect(
     claudeTaskOptionsSchema.parse({
-      permission_source: "task_profile",
+      permission_source: "task",
       claude_policy: { ...policy, unexpected: true },
     }),
-  ).toEqual({ permission_source: "task_profile", claude_policy: policy });
+  ).toEqual({ permission_source: "task", claude_policy: policy });
 
   for (const claude_policy of [
     { ...policy, tools: "profile" },

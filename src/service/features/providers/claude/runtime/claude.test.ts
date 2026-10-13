@@ -159,7 +159,7 @@ async function context() {
       claude: {
         permission_mode: "plan",
         approval_decider: "user",
-        permission_source: "task_profile",
+        permission_source: "task",
         claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "reviewer"),
       },
     },
@@ -683,10 +683,6 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
     );
   }
 
-  // Old persisted task options used inherit. The provider keeps them concrete.
-  setClaudeOptions(c.task, { permission_mode: "inherit" });
-  await provider.run(c, "Implement");
-  assert.equal(options!.permissionMode, "default");
   c.task.worker_profile = "reviewer";
   setClaudeOptions(c.task, { permission_mode: "bypassPermissions" });
   await provider.run(c, "Review");
@@ -1247,48 +1243,6 @@ test("Claude extension sandbox modes add the sandbox and lock network domains at
 
   const noSubagents = await runWithPolicy({ ...parity, subagents: false });
   assert.deepEqual(noSubagents.options.disallowedTools, ["Agent", "Task"]);
-});
-
-test("Claude legacy inherit tasks run with a concrete Default mode and CLI parity", async () => {
-  const { c } = await context();
-  c.task.worker_profile = "implementer";
-
-  setClaudeOptions(c.task, {
-    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
-  });
-
-  setClaudeOptions(c.task, { permission_mode: "inherit" });
-  let options: Options | undefined;
-
-  await new ClaudeAgentProvider(
-    (args) => {
-      options = args.options;
-
-      return Object.assign(
-        (async function* () {
-          yield {
-            type: "result",
-            subtype: "success",
-            result: reply,
-            total_cost_usd: 0,
-            usage: {},
-          };
-        })(),
-        { close: () => {} },
-      ) as unknown as Query;
-    },
-    undefined,
-    readyClaudeCli,
-  ).run(c, "Implement");
-
-  assert.equal(options!.sandbox, undefined);
-  assert.equal(options!.pathToClaudeCodeExecutable, fakeClaudePath);
-  assert.equal(options!.permissionMode, "default");
-  assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
-  assert.deepEqual(options!.tools, { type: "preset", preset: "claude_code" });
-  assert.deepEqual(options!.disallowedTools, []);
-  assert.equal(options!.env!.PATH, process.env.PATH);
-  assert.equal(new ClaudeAgentProvider().capabilities.subagents, true);
 });
 
 test("Claude rejects unresolved native task state before launching a harness", async () => {

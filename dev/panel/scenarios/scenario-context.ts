@@ -16,7 +16,7 @@ export const taskBase = {
   provider_options: {
     claude: {
       permission_mode: "plan",
-      permission_source: "task_profile",
+      permission_source: "task",
       approval_decider: "user",
     },
   },

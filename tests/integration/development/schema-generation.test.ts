@@ -340,7 +340,7 @@ test("resolves feature-owned handwritten validator mappings without overwriting 
 
   assert.match(
     output,
-    /import \{\s*approvalDeciderSchema,\s*claudePolicySchema,\s*permissionModeSchema,?\s*\} from "\.\/permissions\.js"/,
+    /import \{\s*approvalDeciderSchema,\s*claudePermissionModeSchema,\s*claudePolicySchema,\s*permissionModeSchema,?\s*\} from "\.\/permissions\.js"/,
   );
 
   assert.match(output, /permission_mode: permissionModeSchema\.optional\(\)/);

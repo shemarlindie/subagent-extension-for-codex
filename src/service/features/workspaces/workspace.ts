@@ -50,10 +50,10 @@ function changesBase(t: Task, scope: ChangeScope) {
         ? t.branch && t.base_commit
         : t.start_tree;
 
-  // No compatibility for tasks created before branches and snapshots.
+  // Without its starting snapshot, there is nothing to compare against.
   if (!base)
     throw new Error(
-      "This task predates change tracking, so its changes aren't available.",
+      "This task has no change snapshot, so its changes aren't available.",
     );
 
   return base;

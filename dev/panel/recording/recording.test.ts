@@ -12,7 +12,6 @@ const root = "/private/var/folders/xy/T/run-abc";
 const repository = `${root}/repo`;
 const workspace = `${root}/wt/task_123`;
 
-// A task record from before messages had ids and the queue existed.
 const task = {
   ...startSchema.parse({ description: "Review", repository }),
   id: "task_123",
@@ -27,8 +26,12 @@ const task = {
   session_id: "real-session",
   session_owner: "Someones-Mac.local",
   session_state_ref: `${home}/.claude/projects/${workspace.replace(/[^a-zA-Z0-9]/g, "-")}/real-session.jsonl`,
-  instructions: ["Carry on"],
-  attempt: 2,
+  created_by: "user",
+  instructions: [{ id: "msg_1", message: "Carry on", from: "parent" }],
+  instructions_sent: 1,
+  pending_steers: [],
+  queue: [],
+  turn: 2,
 } as unknown as Task;
 
 const init = {
@@ -161,16 +164,7 @@ test("a recording is renumbered, moved to its start and owned by the preview", (
   );
 });
 
-test("an older task record gets the current shape, and provider events their presentation again", () => {
-  assert.deepEqual(recorded.task.instructions, [
-    { id: "msg_1", message: "Carry on", from: "parent" },
-  ]);
-
-  assert.equal(recorded.task.turn, 2);
-  assert.equal("attempt" in recorded.task, false);
-  assert.deepEqual(recorded.task.queue, []);
-  assert.deepEqual(recorded.task.pending_steers, []);
-
+test("provider events get their presentation again", () => {
   const [started] = recorded.events;
   const { activity, ...data } = started.data;
 

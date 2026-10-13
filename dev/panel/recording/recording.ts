@@ -197,8 +197,7 @@ export function recordFixture(
     };
   });
 
-  const clean = sanitize(upgradeTask(task, sorted)) as Task &
-    Record<string, unknown>;
+  const clean = sanitize(task) as Task & Record<string, unknown>;
 
   for (const field of WORKSPACE_FIELDS) delete clean[field];
 
@@ -256,41 +255,4 @@ function scrubRateLimits(value: unknown, start: string) {
       };
     } else scrubRateLimits(child, start);
   }
-}
-
-/**
- * A task record from an earlier version in the current shape: messages as
- * `{ id, message, from }`, with the ids their `task.instruction` events
- * gave them, and the queue fields it didn't have yet.
- */
-function upgradeTask(task: Task, events: Event[]): Task {
-  const old = task as Task & { attempt?: number; instructions: unknown[] };
-  const { attempt, ...rest } = old;
-
-  const sent = events.filter(
-    (event) => event.type === "task.instruction" && event.data.message_id,
-  );
-
-  const instructions = old.instructions.map((message, index) =>
-    typeof message === "string"
-      ? {
-          id: String(
-            sent[index]?.data.message_id ?? `msg_recorded_${index + 1}`,
-          ),
-          message,
-          from: (sent[index]?.data.from === "parent" ? "parent" : "user") as
-            "user" | "parent",
-        }
-      : (message as Task["instructions"][number]),
-  );
-
-  return {
-    ...rest,
-    created_by: task.created_by ?? "user",
-    instructions,
-    instructions_sent: task.instructions_sent ?? instructions.length,
-    pending_steers: task.pending_steers ?? [],
-    queue: task.queue ?? [],
-    turn: task.turn ?? attempt ?? 1,
-  };
 }

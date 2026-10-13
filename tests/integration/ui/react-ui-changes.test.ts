@@ -94,7 +94,7 @@ test("the Changes tab offers This turn after a second turn and explains empty st
 
   transport.tool = async <T>(name: string, args?: Record<string, unknown>) => {
     if (name === "get_user_agent_changes")
-      throw new Error("This task predates change tracking.");
+      throw new Error("This task has no change snapshot.");
 
     return tool<T>(name, args);
   };
@@ -103,7 +103,7 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   await act(() => controller.refresh());
   const alert = await screen.findByRole("alert");
 
-  assert.match(alert.textContent ?? "", /This task predates change tracking\./);
+  assert.match(alert.textContent ?? "", /This task has no change snapshot\./);
   assert.match(alert.textContent ?? "", /last.*loaded/i);
   assert.ok(screen.getByText(/The worktree was removed/));
   assert.ok(screen.getByText("git checkout agent/one"));

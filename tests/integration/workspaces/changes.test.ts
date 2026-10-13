@@ -201,7 +201,7 @@ test("pages hold whole files, list every file, and keep reading the same state",
   }
 });
 
-test("a removed worktree's changes are its branch's commits, and older tasks get an error", async () => {
+test("a removed worktree's changes are its branch's commits, and a task without snapshots gets an error", async () => {
   const s = await setup();
 
   try {
@@ -260,15 +260,19 @@ test("a removed worktree's changes are its branch's commits, and older tasks get
       /were deleted/,
     );
 
-    const older = await s.task("current_repo");
-    delete older.start_tree;
-    await assert.rejects(s.workspaces.changes(older), /predates/);
-    delete older.turn_start_tree;
-    await assert.rejects(s.workspaces.changes(older, "turn"), /predates/);
+    const untracked = await s.task("current_repo");
+    delete untracked.start_tree;
+    await assert.rejects(s.workspaces.changes(untracked), /no change snapshot/);
+    delete untracked.turn_start_tree;
+
+    await assert.rejects(
+      s.workspaces.changes(untracked, "turn"),
+      /no change snapshot/,
+    );
 
     // A task that hasn't started has no changes yet.
-    delete older.workspace;
-    assert.deepEqual((await s.workspaces.changes(older)).files, []);
+    delete untracked.workspace;
+    assert.deepEqual((await s.workspaces.changes(untracked)).files, []);
   } finally {
     await s.close();
   }

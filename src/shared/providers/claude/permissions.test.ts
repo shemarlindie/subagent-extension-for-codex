@@ -25,23 +25,8 @@ import {
   permissionLabel,
   resolveClaudePermission,
   resolveClaudePolicy,
-  taskClaudeMode,
 } from "./permissions.js";
 import { readClaudeTaskOptions } from "./task-options.js";
-
-test("task-level inherit stays available and legacy stored modes become Default", () => {
-  assert.equal(
-    taskClaudeMode({
-      permission_mode: "inherit",
-    }),
-    "default",
-  );
-
-  assert.equal(taskClaudeMode({}), "default");
-
-  for (const mode of claudePermissionModes)
-    assert.equal(taskClaudeMode({ permission_mode: mode }), mode);
-});
 
 test("an SDK mode without a custom label uses its raw value", () => {
   const futureMode = "futureMode" as (typeof claudePermissionModes)[number];
@@ -190,27 +175,6 @@ test("settings default to Default, expose only SDK permission modes, persist ove
   );
 
   assert.equal(reloaded.values("bob").claude_permission_mode, "default");
-});
-
-test("legacy persisted Claude setting inherit is read as Default", async (t) => {
-  const { c, store } = await setup(t);
-
-  c.settings.update("legacy", {
-    set: { claude_permission_mode: "default" },
-  });
-
-  const stored = store.database.client
-    .prepare("SELECT body FROM user_settings WHERE owner = ?")
-    .get("legacy") as { body: string };
-
-  const body = JSON.parse(stored.body) as Record<string, unknown>;
-  body.claude_permission_mode = "inherit";
-
-  store.database.client
-    .prepare("UPDATE user_settings SET body = ? WHERE owner = ?")
-    .run(JSON.stringify(body), "legacy");
-
-  assert.equal(c.settings.values("legacy").claude_permission_mode, "default");
 });
 
 test("task arguments cannot spoof parent permissions and resolved source is stored", async (t) => {

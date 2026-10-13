@@ -9,10 +9,10 @@ export const claudePermissionModes = [
   "bypassPermissions",
 ] as const;
 
-export type ClaudePermissionMode = (typeof claudePermissionModes)[number];
-
 /** Modes the extension stores and always passes to the Claude SDK. */
-export const claudePermissionSettingSchema = z.enum(claudePermissionModes);
+export const claudePermissionModeSchema = z.enum(claudePermissionModes);
+
+export type ClaudePermissionMode = z.infer<typeof claudePermissionModeSchema>;
 
 export const permissionModeSchema = z.enum([
   "inherit",
@@ -114,33 +114,21 @@ export const readOnlyProfile = (role: string) =>
   ["researcher", "reviewer", "security_reviewer"].includes(role);
 
 export function resolveClaudePermission(
-  input: { permission_mode?: z.infer<typeof permissionModeSchema> },
-  configured: z.infer<typeof permissionModeSchema>,
+  input: { permission_mode?: PermissionMode },
+  configured: ClaudePermissionMode,
 ) {
   if (input.permission_mode && input.permission_mode !== "inherit")
     return { mode: input.permission_mode, source: "task" as const };
 
-  // Older saved extension settings used `inherit` to defer the mode to Claude
-  // Code. Keep reading that sentinel, but resolve it to the new safe default.
-  return {
-    mode: configured === "inherit" ? ("default" as const) : configured,
-    source: "setting" as const,
-  };
+  return { mode: configured, source: "setting" as const };
 }
 
 /** Whether a model-selected mode could allow more than the user-approved baseline. */
 export function exceedsPermission(
-  requested: z.infer<typeof permissionModeSchema>,
-  baseline: z.infer<typeof permissionModeSchema>,
+  requested: ClaudePermissionMode,
+  baseline: ClaudePermissionMode,
 ) {
   if (requested === baseline) return false;
-  if (requested === "inherit") return true;
-  // Treat legacy inherited baselines conservatively when comparing overrides.
-  if (baseline === "inherit")
-    return (
-      permissionRank[requested] === undefined ||
-      permissionRank[requested]! > permissionRank.dontAsk!
-    );
 
   const requestedRank = permissionRank[requested],
     baselineRank = permissionRank[baseline];
@@ -150,15 +138,6 @@ export function exceedsPermission(
   if (requestedRank === undefined || baselineRank === undefined) return true;
 
   return requestedRank > baselineRank;
-}
-
-/** Resolve legacy or missing task modes to the explicit extension default. */
-export function taskClaudeMode(options: {
-  permission_mode?: z.infer<typeof permissionModeSchema>;
-}): ClaudePermissionMode {
-  return !options.permission_mode || options.permission_mode === "inherit"
-    ? "default"
-    : options.permission_mode;
 }
 
 export const claudePolicySchema = z.object({

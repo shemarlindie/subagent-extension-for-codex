@@ -237,11 +237,6 @@ export class Settings {
     const record = `settings for ${owner}`;
     const body = decodeStored(z.looseObject({}), row.body, record);
 
-    // Older settings used `inherit` to defer permission mode to Claude Code.
-    // The extension now owns this mode, so preserve those users with Default.
-    if (body.claude_permission_mode === "inherit")
-      body.claude_permission_mode = "default";
-
     if (!this.providers().includes(body.default_provider as string))
       body.default_provider = this.providers()[0];
 

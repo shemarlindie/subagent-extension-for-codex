@@ -590,8 +590,8 @@ export const activityTasks: Task[] = [
     worker_profile: "implementer",
     provider_options: {
       claude: {
-        permission_mode: "inherit",
-        permission_source: "user_config",
+        permission_mode: "default",
+        permission_source: "setting",
         approval_decider: "user",
       },
     },

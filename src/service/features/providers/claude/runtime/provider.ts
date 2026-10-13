@@ -16,7 +16,6 @@ import {
   claudeOverrideDefaults,
   readOnlyProfile,
 } from "../../../../../shared/providers/claude/permissions.js";
-import { taskClaudeMode } from "../../../../../shared/providers/claude/permissions.js";
 import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
 import { claudeMetadata } from "../../../../../shared/providers/metadata.js";
 import {
@@ -224,12 +223,11 @@ export class ClaudeAgentProvider implements Provider {
         "Claude task is missing resolved native permission state",
       );
     const policy = taskOptions.claude_policy;
+    const nativeMode = taskOptions.permission_mode;
 
     const workspace = c.task.workspace!;
     // Stops the process: only when an interrupt doesn't end the turn.
     const abortController = new AbortController();
-    // Task policy resolves the extension setting to an explicit native mode.
-    const nativeMode = taskClaudeMode(taskOptions);
     const restricted = policy.tools === "restricted";
 
     const readOnly =

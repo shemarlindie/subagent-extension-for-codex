@@ -1,5 +1,6 @@
 import type {
   ApprovalDecider,
+  ClaudePermissionMode,
   ClaudePolicy,
   PermissionMode,
 } from "./permissions.js";
@@ -10,8 +11,14 @@ export interface ClaudeStartOptions {
   approval_decider?: ApprovalDecider;
 }
 
-/** @strict */
-export interface ClaudeTaskOptions extends ClaudeStartOptions {
-  permission_source?: "task" | "setting" | "task_profile" | "user_config";
+/**
+ * Options stored on a task, with the permission mode resolved.
+ *
+ * @strict
+ */
+export interface ClaudeTaskOptions {
+  permission_mode?: ClaudePermissionMode;
+  approval_decider?: ApprovalDecider;
+  permission_source?: "task" | "setting";
   claude_policy?: ClaudePolicy;
 }

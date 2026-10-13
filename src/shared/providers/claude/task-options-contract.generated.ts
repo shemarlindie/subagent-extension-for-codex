@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   approvalDeciderSchema,
+  claudePermissionModeSchema,
   claudePolicySchema,
   permissionModeSchema,
 } from "./permissions.js";
@@ -12,14 +13,11 @@ export const claudeStartOptionsSchema = z.strictObject({
   approval_decider: approvalDeciderSchema.optional(),
 });
 
-export const claudeTaskOptionsSchema = claudeStartOptionsSchema.extend({
+export const claudeTaskOptionsSchema = z.strictObject({
+  permission_mode: claudePermissionModeSchema.optional(),
+  approval_decider: approvalDeciderSchema.optional(),
   permission_source: z
-    .union([
-      z.literal("task"),
-      z.literal("setting"),
-      z.literal("task_profile"),
-      z.literal("user_config"),
-    ])
+    .union([z.literal("task"), z.literal("setting")])
     .optional(),
   claude_policy: claudePolicySchema.optional(),
 });

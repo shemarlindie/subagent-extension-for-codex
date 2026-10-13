@@ -11,7 +11,7 @@ import {
   claudeOverrideLabels,
   claudePathGuardSchema,
   claudePermissionModes,
-  claudePermissionSettingSchema,
+  claudePermissionModeSchema,
   claudeSandboxSchema,
   claudeToolsSchema,
   permissionLabel,
@@ -41,7 +41,7 @@ const options = (labels: Record<string, string>) =>
   Object.entries(labels).map(([value, label]) => ({ value, label }));
 
 export const claudeSettingsShape = {
-  claude_permission_mode: claudePermissionSettingSchema.meta({
+  claude_permission_mode: claudePermissionModeSchema.meta({
     title: "Claude permission mode",
     description: settingHelp.claude_permission_mode,
   }),
@@ -73,7 +73,7 @@ export const claudeSettingsShape = {
 };
 
 export const claudeStoredSettingsShape = {
-  claude_permission_mode: claudePermissionSettingSchema.default("default"),
+  claude_permission_mode: claudePermissionModeSchema.default("default"),
   default_approval_decider: approvalDeciderSchema.default("user"),
   claude_sandbox: claudeSandboxSchema.default(
     claudeOverrideDefaults.claude_sandbox,

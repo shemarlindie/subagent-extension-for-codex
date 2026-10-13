@@ -137,7 +137,7 @@ export const inputTasks: Task[] = [
     worker_profile: "implementer",
     provider_options: {
       claude: {
-        permission_mode: "inherit",
+        permission_mode: "default",
         permission_source: "user_config",
         approval_decider: "user",
       },
@@ -182,7 +182,7 @@ export const inputTasks: Task[] = [
     worker_profile: "debugger",
     provider_options: {
       claude: {
-        permission_mode: "inherit",
+        permission_mode: "default",
         permission_source: "user_config",
         approval_decider: "user",
       },

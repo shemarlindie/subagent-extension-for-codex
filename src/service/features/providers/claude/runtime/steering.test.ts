@@ -71,7 +71,7 @@ async function context() {
       claude: {
         permission_mode: "plan",
         approval_decider: "user",
-        permission_source: "task_profile",
+        permission_source: "task",
         claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "reviewer"),
       },
     },

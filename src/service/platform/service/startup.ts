@@ -106,7 +106,7 @@ async function handleExistingService(error: ExistingServiceError) {
       [
         {
           type: "message",
-          text: "Could not verify that this process owns the service lock. It may be a stale lock, an unrelated process, or a service started by an older version without process identity metadata. Verify the executable before stopping it manually. No signal was sent.",
+          text: "Could not verify that this process owns the service lock. It may be a stale lock or an unrelated process. Verify the executable before stopping it manually. No signal was sent.",
         },
         {
           type: "message",
