@@ -1,4 +1,5 @@
 import type { Event } from "../../../../../shared/events/types.js";
+import { contentText } from "../../../../../shared/providers/activity/content-text.js";
 import type { ActivityPresentation } from "../../../../../shared/providers/activity/types.js";
 import { claudeRateLimitWindows } from "../../../../../shared/providers/claude/rate-limit-windows.js";
 
@@ -160,8 +161,7 @@ const sdkTitles: Record<string, string> = {
 function failureSummary(event: Pick<Event, "type" | "data">) {
   const d = event.data;
 
-  const textOutput =
-    typeof d.content === "string" ? d.content : textBlocks(d.content);
+  const textOutput = contentText(d.content);
 
   return [
     d.compact_error,
@@ -176,17 +176,6 @@ function failureSummary(event: Pick<Event, "type" | "data">) {
     (value): value is string =>
       typeof value === "string" && value.trim().length > 0,
   );
-}
-
-/** Joins the text blocks of an SDK message's content array. */
-function textBlocks(content: unknown) {
-  if (!Array.isArray(content)) return undefined;
-
-  return content
-    .filter((block) => object(block).type === "text")
-    .map((block) => string(object(block).text))
-    .filter(Boolean)
-    .join("\n");
 }
 
 /** Labels an SDK activity event, or a transcript content row. */

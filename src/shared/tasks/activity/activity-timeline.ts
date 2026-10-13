@@ -1,4 +1,5 @@
 import type { Event } from "../../events/types.js";
+import { contentText } from "../../providers/activity/content-text.js";
 import { activityPresentation } from "../../providers/activity/presentation.js";
 import type { Task } from "../model.js";
 
@@ -217,23 +218,11 @@ function toolTitle(events: Event[]) {
   };
 }
 
-/** A tool result's text: its string content, or the text blocks of its content array. */
-function resultText(content: unknown) {
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return undefined;
-
-  return content
-    .filter((block) => object(block).type === "text")
-    .map((block) => string(object(block).text))
-    .filter(Boolean)
-    .join("\n");
-}
-
 // Prefer actionable error prose over tool paths and routine operation descriptions.
 function failureSummary(event: Event) {
   const d = event.data;
 
-  const textOutput = resultText(d.content);
+  const textOutput = contentText(d.content);
 
   return [
     d.error,
