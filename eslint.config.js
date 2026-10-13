@@ -27,7 +27,6 @@ const SOURCE_FILE_LINE_CEILINGS = [
   ["src/service/features/tasks/runtime/control.ts", 1150],
   ["src/service/features/workspaces/workspace.ts", 700],
   ["src/service/platform/server/tools.ts", 750],
-  ["src/service/platform/service/startup.ts", 475],
   ["src/shared/tasks/activity/activity-timeline.ts", 600],
   ["dev/panel/host/host.tsx", 800],
   ["dev/panel/scenarios/activity-scenarios.ts", 575],

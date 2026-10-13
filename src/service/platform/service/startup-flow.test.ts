@@ -59,7 +59,7 @@ function setTerminalInput(t: import("vitest").TestContext) {
 
 async function setup(
   t: import("vitest").TestContext,
-  answer: string,
+  answer: string | undefined,
   owner: ProcessInfo,
 ) {
   const directory = await mkdtemp(join(tmpdir(), "service-startup-flow-"));
@@ -72,7 +72,9 @@ async function setup(
     close: vi.fn(),
     off: vi.fn(),
     once: vi.fn(),
-    question: vi.fn(async (_prompt: string) => answer),
+    question: vi.fn(
+      async (_prompt: string): Promise<string | undefined> => answer,
+    ),
   };
 
   mocks.serve
@@ -198,4 +200,81 @@ test("does not signal if process identity changes after confirmation", async (t)
   assert.equal(kill.mock.calls.length, 0);
   assert.equal(mocks.serve.mock.calls.length, 1);
   assert.equal(process.exitCode, 1);
+});
+
+test("an interrupted prompt exits as interrupted without signaling", async (t) => {
+  if (process.platform === "win32") {
+    t.skip("Windows uses manual process handling");
+
+    return;
+  }
+
+  const owner: ProcessInfo = {
+    pid: process.pid + 1000,
+    name: "node",
+    executablePath: process.execPath,
+    commandLine: "node src/service/main.ts",
+    startedAt: "started-at-test-value",
+  };
+
+  await setup(t, undefined, owner);
+  const kill = vi.spyOn(process, "kill");
+
+  await startService();
+
+  assert.equal(kill.mock.calls.length, 0);
+  assert.equal(mocks.serve.mock.calls.length, 1);
+  assert.equal(process.exitCode, 130);
+});
+
+test("offers SIGKILL when the owner outlives SIGTERM, then retries", async (t) => {
+  if (process.platform === "win32") {
+    t.skip("Windows uses manual process handling");
+
+    return;
+  }
+
+  const owner: ProcessInfo = {
+    pid: process.pid + 1000,
+    name: "node",
+    executablePath: process.execPath,
+    commandLine: "node src/service/main.ts",
+    startedAt: "started-at-test-value",
+  };
+
+  const { readline } = await setup(t, "y", owner);
+  let running = true;
+  mocks.isProcessRunning.mockImplementation(() => running);
+
+  const kill = vi.spyOn(process, "kill").mockImplementation((_pid, signal) => {
+    if (signal === "SIGKILL") running = false;
+
+    return true;
+  });
+
+  vi.useFakeTimers({ toFake: ["setTimeout", "Date"] });
+
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const started = startService();
+  // SIGTERM's wait for the process to stop runs out.
+  await vi.advanceTimersByTimeAsync(6000);
+  await started;
+
+  assert.deepEqual(
+    readline.question.mock.calls.map(([prompt]) => prompt),
+    [
+      "\nSend SIGTERM to this process and retry startup? [y/N] ",
+      "\nIt is still running. Force terminate it with SIGKILL? [y/N] ",
+    ],
+  );
+
+  assert.deepEqual(kill.mock.calls, [
+    [owner.pid, "SIGTERM"],
+    [owner.pid, "SIGKILL"],
+  ]);
+
+  assert.equal(mocks.serve.mock.calls.length, 2);
 });

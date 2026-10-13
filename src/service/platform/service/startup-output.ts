@@ -94,3 +94,16 @@ function wrapText(
 
   return lines.join("\n");
 }
+
+/** Writes startup output to stderr, wrapped to the terminal when there is one. */
+export function writeStartupOutput(
+  blocks: readonly StartupOutputBlock[],
+  leadingBlank = false,
+) {
+  process.stderr.write(
+    formatStartupOutput(blocks, {
+      leadingBlank,
+      width: Math.max(40, process.stderr.isTTY ? process.stderr.columns : 100),
+    }),
+  );
+}

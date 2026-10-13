@@ -159,11 +159,6 @@
       "count": 1
     }
   },
-  "src/service/platform/service/startup.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/shared/settings/settings-document.ts": {
     "complexity": {
       "count": 1
