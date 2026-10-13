@@ -39,12 +39,17 @@
       "count": 1
     }
   },
-  "src/panel/features/delegation/delegate-fields.tsx": {
+  "src/panel/features/delegation/delegate-form.tsx": {
     "complexity": {
-      "count": 2
+      "count": 1
     }
   },
-  "src/panel/features/delegation/delegate-form.tsx": {
+  "src/panel/features/delegation/fields/model-fields.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/panel/features/delegation/fields/project-field.tsx": {
     "complexity": {
       "count": 1
     }

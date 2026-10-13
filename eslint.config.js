@@ -21,7 +21,6 @@ const TESTS = ["tests/**/*.ts", "**/*.test.{ts,tsx}", "**/*-test-harness.ts"];
 // review rationale.
 const SOURCE_FILE_LINE_CEILINGS = [
   ["src/panel/app/state/controller.ts", 2025],
-  ["src/panel/features/delegation/delegate-fields.tsx", 700],
   ["src/panel/features/settings/settings-form.tsx", 450],
   ["src/service/features/providers/claude/runtime/provider.ts", 550],
   ["src/service/features/settings/settings.ts", 450],

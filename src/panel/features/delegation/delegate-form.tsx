@@ -16,17 +16,15 @@ import { Field } from "../../shared/forms/fields";
 import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormFooter } from "../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
-import {
-  ApprovalField,
-  BudgetFields,
-  type DelegateValues,
-  DependencyField,
-  ModelFields,
-  ProjectField,
-  WorkerFields,
-  WorkspaceField,
-} from "./delegate-fields";
+import type { DelegateValues } from "./delegate-values";
 import { taskProjects, workerChoice } from "./delegation";
+import { ApprovalField } from "./fields/approval-field";
+import { BudgetFields } from "./fields/budget-fields";
+import { DependencyField } from "./fields/dependency-field";
+import { ModelFields } from "./fields/model-fields";
+import { ProjectField } from "./fields/project-field";
+import { WorkerFields } from "./fields/worker-fields";
+import { WorkspaceField } from "./fields/workspace-field";
 import { providerOptionDefaults } from "./provider-defaults";
 
 type DelegateFormDialog =

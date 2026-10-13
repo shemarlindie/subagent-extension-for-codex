@@ -1,9 +1,12 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useController, useFormContext } from "react-hook-form";
 
-import { matchesProjectQuery, projectDisplayName } from "../projects/selectors";
-import type { Project } from "../projects/types";
-import type { DelegateValues } from "./delegate-fields";
+import {
+  matchesProjectQuery,
+  projectDisplayName,
+} from "../../projects/selectors";
+import type { Project } from "../../projects/types";
+import type { DelegateValues } from "../delegate-values";
 
 /** Suggestions never restrict a path inside an approved parent; the service validates it. */
 interface ProjectAutocompleteProps {

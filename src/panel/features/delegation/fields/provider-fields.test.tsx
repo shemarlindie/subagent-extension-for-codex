@@ -5,15 +5,13 @@ import { cleanup, render } from "@testing-library/react";
 import { FormProvider, useForm } from "react-hook-form";
 import { expect, test } from "vitest";
 
-import type { Worker } from "../providers/types";
-import {
-  ApprovalField,
-  BudgetFields,
-  type DelegateValues,
-  WorkerFields,
-  WorkspaceField,
-} from "./delegate-fields";
-import { providerOptionDefaults } from "./provider-defaults";
+import type { Worker } from "../../providers/types";
+import type { DelegateValues } from "../delegate-values";
+import { providerOptionDefaults } from "../provider-defaults";
+import { ApprovalField } from "./approval-field";
+import { BudgetFields } from "./budget-fields";
+import { WorkerFields } from "./worker-fields";
+import { WorkspaceField } from "./workspace-field";
 
 function ProviderFields({ worker }: { worker: Worker }) {
   const form = useForm<DelegateValues>({
