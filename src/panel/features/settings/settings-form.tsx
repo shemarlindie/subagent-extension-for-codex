@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { type FieldErrors, useWatch } from "react-hook-form";
 
-import { settingsSections as buildSettingsSections } from "../../../shared/settings/settings-document";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
@@ -15,12 +14,7 @@ import {
   usePersistedDialogField,
   usePersistedDialogForm,
 } from "../../shared/forms/use-persisted-dialog-form";
-import {
-  Help,
-  SettingRowView,
-  SettingsContext,
-  type SettingsControls,
-} from "./settings-fields";
+import { Help, SettingRowView, SettingsContext } from "./settings-fields";
 import {
   activeSection,
   changes,
@@ -29,9 +23,12 @@ import {
   rowForm,
   sectionKeys,
   sectionsForm,
-  type SettingSection,
   type Values,
 } from "./settings-layout";
+import {
+  loadingSections,
+  LoadingSettingsSection,
+} from "./settings-loading-section";
 import { SettingsLoadingTaskDefaults } from "./settings-loading-task-defaults";
 import { ModelTable } from "./settings-model-table";
 import {
@@ -53,64 +50,6 @@ interface SettingsFormProps {
   saveActionPlacement?: "header" | "footer";
   onSaveActionChange?: (state: SettingsSaveActionState) => void;
 }
-
-interface LoadingSettingsSectionProps extends SettingsControls {
-  section: SettingSection;
-}
-
-function LoadingSettingsSection({
-  section,
-  control,
-  register,
-}: LoadingSettingsSectionProps) {
-  const keys = sectionKeys(section);
-
-  return (
-    <SettingsContext.Provider
-      value={{
-        show: () => {},
-        sectionOf: () => undefined,
-        current: keys,
-        form: {},
-      }}
-    >
-      <div className="settings-section-intro">
-        <Help id={`settings-${section.id}-help`} parts={section.help} />
-      </div>
-      {section.rows.map((row) =>
-        row.kind === "models" ? (
-          <ModelTable
-            key="models"
-            scopes={row.scopes}
-            control={control}
-            register={register}
-            loading
-            reserveProviderScope={section.id === "models"}
-          />
-        ) : (
-          <SettingRowView
-            key={row.key}
-            row={row}
-            control={control}
-            register={register}
-            loading
-          />
-        ),
-      )}
-    </SettingsContext.Provider>
-  );
-}
-
-// Use the shared settings definitions for all structure that is known before
-// the settings read. Dynamic provider scopes are added after the read returns.
-const loadingSections = buildSettingsSections({
-  values: {},
-  providers: [],
-  catalogs: [],
-  modelProviders: [],
-  shown: {},
-  remembered: { max_cost_usd: 5, max_runtime_minutes: 20 },
-});
 
 function saveButtonText(busy: boolean, total: number) {
   if (busy) return "Working…";
