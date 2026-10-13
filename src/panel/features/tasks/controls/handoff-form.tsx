@@ -40,11 +40,16 @@ export function HandoffForm({ task, target }: HandoffFormProps) {
   return (
     <form
       className="handoff-form"
-      onSubmit={handleSubmit((values) =>
-        controller.submit(async () => {
-          if (canSend) await controller.transport.send?.(values.message);
-          else if (canCopy) await navigator.clipboard.writeText(values.message);
-        }),
+      onSubmit={controller.handle(
+        handleSubmit((values) =>
+          controller.submit(async () => {
+            if (canSend) {
+              await controller.transport.send?.(values.message);
+            } else if (canCopy) {
+              await navigator.clipboard.writeText(values.message);
+            }
+          }),
+        ),
       )}
     >
       <p className="form-note">

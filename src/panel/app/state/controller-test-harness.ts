@@ -87,7 +87,7 @@ export class FakeTransport implements Transport {
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     this.calls.push({ name, args });
     const answer = this.handler?.(name, args);
-    if (answer !== undefined) return (await answer) as T;
+    if (answer !== undefined) return (await Promise.resolve(answer)) as T;
 
     const values: Record<string, unknown> = {
       get_agent_panel_context: this.context,

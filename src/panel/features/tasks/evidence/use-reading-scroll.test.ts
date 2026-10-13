@@ -447,7 +447,9 @@ test("a smooth return that never moves is judged where it stopped", (t) => {
     view.getByRole("button", { name: "Scroll to latest message" }),
   );
 
-  act(() => vi.advanceTimersByTime(1500));
+  act(() => {
+    vi.advanceTimersByTime(1500);
+  });
 
   assert.ok(view.getByRole("button", { name: "Scroll to latest message" }));
 });

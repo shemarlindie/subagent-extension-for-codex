@@ -6,6 +6,8 @@ import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { Field } from "../../shared/forms/fields";
 
+type LoginValues = { token: string };
+
 export function LoginForm() {
   const controller = useController(),
     state = useSnapshot(),
@@ -16,7 +18,17 @@ export function LoginForm() {
     handleSubmit,
     reset,
     formState: { isSubmitting },
-  } = useForm({ defaultValues: { token: "" } });
+  } = useForm<LoginValues>({ defaultValues: { token: "" } });
+
+  const login = async (values: LoginValues) => {
+    try {
+      setError("");
+      await controller.login(values.token);
+      reset();
+    } catch (error) {
+      setError(String(error));
+    }
+  };
 
   return (
     <Dialog.Root
@@ -39,15 +51,7 @@ export function LoginForm() {
           </Dialog.Description>
           <form
             id="login-form"
-            onSubmit={handleSubmit(async (values) => {
-              try {
-                setError("");
-                await controller.login(values.token);
-                reset();
-              } catch (error) {
-                setError(String(error));
-              }
-            })}
+            onSubmit={controller.handle(handleSubmit(login))}
           >
             <Field id="token" label="Console token">
               <input

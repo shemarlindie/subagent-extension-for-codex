@@ -308,7 +308,7 @@ test("completed chat turns show a quiet summary with a completion time on hover"
 
   assertAbsent(within(row as HTMLElement).queryByRole("separator"));
 
-  await act(() =>
+  await act(async () =>
     transport.events.host({
       ...transport.host,
       timeZone: "America/New_York",

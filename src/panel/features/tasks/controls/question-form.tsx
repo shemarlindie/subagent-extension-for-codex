@@ -99,12 +99,12 @@ function QuestionCard({
     presetField = register(`answers.${index}`),
     customField = register(`custom.${index}`);
 
-  // A single choice and a typed answer are alternatives.
+  // A single choice and a typed answer are alternatives. The fields have no
+  // async validation, so RHF's change promise has nothing to report.
   const handlePresetChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (!multiple) setValue(`custom.${index}`, "");
     onUnskip();
-
-    return presetField.onChange(event);
+    void presetField.onChange(event);
   };
 
   const handleOtherChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -113,7 +113,7 @@ function QuestionCard({
       onUnskip();
     }
 
-    return customField.onChange(event);
+    void customField.onChange(event);
   };
 
   // Enter moves to the next card; on the last one it submits as usual.
@@ -126,8 +126,7 @@ function QuestionCard({
 
   const handleTextChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     if (event.target.value.trim()) onUnskip();
-
-    return customField.onChange(event);
+    void customField.onChange(event);
   };
 
   return (
@@ -339,29 +338,28 @@ export function QuestionForm({ task }: { task: Task }) {
     return false;
   };
 
+  const respond = async () => {
+    if (!advance()) return;
+    // Set before sending: a successful answer can unmount the form before
+    // the call returns, and an answered request must not leave a draft.
+    sent.current = true;
+
+    const failure = await controller.answer(
+      task,
+      Object.fromEntries(
+        questions.map((question, index) => [question.question, answers[index]]),
+      ),
+    );
+
+    sent.current = !failure;
+    setError(failure);
+  };
+
   return (
     <form
       ref={form}
       className="question-form"
-      onSubmit={handleSubmit(async () => {
-        if (!advance()) return;
-        // Set before sending: a successful answer can unmount the form before
-        // the call returns, and an answered request must not leave a draft.
-        sent.current = true;
-
-        const failure = await controller.answer(
-          task,
-          Object.fromEntries(
-            questions.map((question, index) => [
-              question.question,
-              answers[index],
-            ]),
-          ),
-        );
-
-        sent.current = !failure;
-        setError(failure);
-      })}
+      onSubmit={controller.handle(handleSubmit(respond))}
     >
       {stacked && (
         <div className="question-progress">

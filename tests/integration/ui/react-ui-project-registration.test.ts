@@ -279,7 +279,7 @@ test("a chat project hint prefills registration without registering it automatic
     configureProjectRegistration(transport),
   );
 
-  await act(() =>
+  await act(async () =>
     controller.applyScope({
       panel_scope: { conversation_id: "chat-project" },
       panel_project_candidate: { repository: "/repo/chat-project" },
@@ -377,7 +377,7 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
     within(firstDialog).getByRole("button", { name: "Browse…" }),
   );
 
-  await act(() =>
+  await act(async () =>
     controller.applyScope({
       panel_scope: { conversation_id: null, repository: "/repo/other" },
     }),
@@ -593,7 +593,7 @@ test("pending task project browsing disables Start and ignores selection after s
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   assert.equal(start.disabled, true);
 
-  await act(() =>
+  await act(async () =>
     controller.applyScope({ panel_scope: { conversation_id: "new-chat" } }),
   );
 
@@ -777,7 +777,7 @@ test("a picker finishing after leaving Add cannot replace a new draft", async (t
 test("Manage opens a page and Back restores task selection, filters and focus", async (t) => {
   const { controller, user } = await setup(t);
   const selected = controller.getSnapshot().selected;
-  await act(() => controller.setSearch("Review"));
+  await act(async () => controller.setSearch("Review"));
   const search = controller.getSnapshot().search;
   await user.click(screen.getByRole("button", { name: "Manage" }));
   expect(screen.queryByRole("dialog")).toBeNull();

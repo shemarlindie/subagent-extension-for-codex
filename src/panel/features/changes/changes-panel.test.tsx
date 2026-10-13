@@ -130,7 +130,10 @@ test("keeps the Changes header and content placeholders together through the fir
   try {
     const { view, update } = setup();
 
-    act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay));
+    act(() => {
+      vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay);
+    });
+
     expect(view.container.querySelector(".changes-skeleton")).not.toBeNull();
 
     expect(
@@ -139,7 +142,9 @@ test("keeps the Changes header and content placeholders together through the fir
 
     update(loaded);
 
-    act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible));
+    act(() => {
+      vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible);
+    });
 
     expect(view.container.querySelector(".changes-skeleton")).not.toBeNull();
 
@@ -149,11 +154,15 @@ test("keeps the Changes header and content placeholders together through the fir
 
     expect(view.container.querySelector(".diff-file")).not.toBeNull();
 
-    act(() => vi.advanceTimersByTime(MOTION.loadingCrossfade - 1));
+    act(() => {
+      vi.advanceTimersByTime(MOTION.loadingCrossfade - 1);
+    });
 
     expect(view.container.querySelector(".changes-skeleton")).not.toBeNull();
 
-    act(() => vi.advanceTimersByTime(1));
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
 
     expect(view.container.querySelector(".changes-skeleton")).toBeNull();
     expect(view.container.querySelector(".changes-header-skeleton")).toBeNull();

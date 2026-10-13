@@ -368,7 +368,7 @@ test("project names are trimmed, persisted, and retained by repeated registratio
   const f = await fixture(t);
   const repository = await f.repo("repo");
   await f.projects.register(repository);
-  await f.projects.rename(repository, "  My project  ");
+  f.projects.rename(repository, "  My project  ");
   await f.projects.register(repository);
   assert.equal(f.projects.list()[0].name, "My project");
   const reopened = new Store(f.db);
@@ -380,7 +380,7 @@ test("project names are trimmed, persisted, and retained by repeated registratio
     );
 
     assert.equal(registry.list()[0].name, "My project");
-    await registry.rename(repository, "x".repeat(200));
+    registry.rename(repository, "x".repeat(200));
     assert.equal(f.projects.list()[0].name, "x".repeat(200));
   } finally {
     reopened.close();
@@ -452,8 +452,8 @@ test("project removal is idempotent even after its directory disappears", async 
   await f.projects.register(retained);
   await rm(join(f.dir, "gone"), { recursive: true });
   await writeFile(join(f.dir, "gone"), "no longer a directory");
-  await f.projects.remove(repository);
-  await f.projects.remove(repository);
+  f.projects.remove(repository);
+  f.projects.remove(repository);
 
   assert.deepEqual(
     f.projects.list().map((project) => project.repository),
@@ -470,7 +470,7 @@ test("removing a listed child preserves its explicit parent grant", async (t) =>
   const parent = join(f.dir, "parent");
   await f.projects.register(parent, "parent");
   await f.projects.register(repository);
-  await f.projects.remove(repository);
+  f.projects.remove(repository);
 
   assert.deepEqual(f.projects.list(), [
     { repository: parent, name: "parent", kind: "parent" },
@@ -524,7 +524,7 @@ test("removing approval preserves task history and files but blocks new tasks an
     assert.equal(f.store.get(task.id, "owner").status, "waiting");
     await control.interrupt("owner", task.id);
     const before = f.store.get(task.id, "owner");
-    await f.projects.remove(repository);
+    f.projects.remove(repository);
     assert.deepEqual(f.store.get(task.id, "owner"), before);
     assert.equal(await realpath(file), file);
 

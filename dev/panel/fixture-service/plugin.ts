@@ -17,7 +17,7 @@ export function fixtureServicePlugin(): Plugin {
           const chunks: Buffer[] = [];
           request.on("data", (chunk: Buffer) => chunks.push(chunk));
 
-          request.on("end", async () => {
+          const respond = async () => {
             const send = (status: number, body: unknown) => {
               response.statusCode = status;
               response.setHeader("Content-Type", "application/json");
@@ -45,6 +45,11 @@ export function fixtureServicePlugin(): Plugin {
                 error: error instanceof Error ? error.message : String(error),
               });
             }
+          };
+
+          // Anything respond's own catch misses goes to Vite's error handler.
+          request.on("end", () => {
+            respond().catch(next);
           });
         },
       );

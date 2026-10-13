@@ -155,7 +155,7 @@ test("a thread panel keeps Settings available and leaves other global actions to
   assertAbsent(document.querySelector("header .brand-text strong"));
   assert.ok(document.querySelector("header .brand [role=status]"));
 
-  await act(() =>
+  await act(async () =>
     controller.applyScope({ panel_scope: { conversation_id: "thread" } }),
   );
 
@@ -283,7 +283,7 @@ describe("nonembedded panels retain the full interface in inline mode", () => {
 
 test("inline preview renders refresh errors without exposing the full interface", async (t) => {
   const { controller } = await setup(t, undefined, { displayMode: "inline" });
-  await act(() => controller.report(new Error("Refresh unavailable")));
+  await act(async () => controller.report(new Error("Refresh unavailable")));
   assert.equal(screen.getByRole("alert").textContent, "Refresh unavailable");
   assert.ok(screen.getByText("Review authentication"));
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
@@ -320,7 +320,7 @@ test("inline preview summarizes repository scope independently of list filters",
     { displayMode: "inline", scoped: true },
   );
 
-  await act(() => {
+  await act(async () => {
     controller.setFilter("completed");
     controller.setSearch("no matching task");
   });
@@ -371,7 +371,7 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
       assertAbsent(screen.queryByText("No delegated tasks yet."));
       assertAbsent(screen.queryByRole("button", { name: "New Task" }));
 
-      await act(() => controller.showHostRequired());
+      await act(async () => controller.showHostRequired());
 
       await act(() =>
         vi.advanceTimersByTime(
@@ -396,7 +396,7 @@ test("a panel opened outside a host points developers at the dev host", async (t
     { start: false },
   );
 
-  await act(() => controller.showHostRequired());
+  await act(async () => controller.showHostRequired());
 
   assert.ok(
     screen.getByText(

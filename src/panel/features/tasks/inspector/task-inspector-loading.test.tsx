@@ -79,7 +79,9 @@ test("keeps the spinner through its fade-out, then removes it", () => {
   expect(leaving?.hasAttribute("data-leaving")).toBe(true);
   expect(view.queryByRole("status")).toBeNull();
 
-  act(() => vi.advanceTimersByTime(MOTION.loadingCrossfade));
+  act(() => {
+    vi.advanceTimersByTime(MOTION.loadingCrossfade);
+  });
 
   expect(view.container.querySelector(".task-inspector-loading")).toBeNull();
 });

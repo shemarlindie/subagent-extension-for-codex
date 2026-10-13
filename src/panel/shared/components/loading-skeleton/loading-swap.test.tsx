@@ -29,7 +29,9 @@ function panel(loading: boolean) {
 }
 
 function advanceSkeletonDelay() {
-  act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay));
+  act(() => {
+    vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay);
+  });
 }
 
 test("skips the skeleton when a request resolves before its delay", () => {
@@ -45,7 +47,10 @@ test("skips the skeleton when a request resolves before its delay", () => {
   expect(view.queryByRole("status", { name: "Loading records" })).toBeNull();
 
   if (LOADING_SKELETON_CONFIG.delay > 1) {
-    act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay - 1));
+    act(() => {
+      vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay - 1);
+    });
+
     expect(view.queryByRole("status", { name: "Loading records" })).toBeNull();
   }
 
@@ -80,14 +85,16 @@ test("shows the labeled skeleton after the configured delay and hands off access
   expect(skeleton?.getAttribute("aria-hidden")).toBeNull();
 
   if (LOADING_SKELETON_CONFIG.minimumVisible > 1) {
-    act(() =>
-      vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible - 1),
-    );
+    act(() => {
+      vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible - 1);
+    });
 
     expect(view.getByRole("status", { name: "Loading records" })).toBeTruthy();
   }
 
-  act(() => vi.advanceTimersByTime(1));
+  act(() => {
+    vi.advanceTimersByTime(1);
+  });
 
   expect(view.queryByRole("status", { name: "Loading records" })).toBeNull();
   expect(root?.getAttribute("aria-busy")).toBeNull();
@@ -130,9 +137,13 @@ test("unmounts the faded skeleton after the content handoff", () => {
   view.rerender(panel(false));
   expect(view.container.querySelector(".loading-swap-skeleton")).not.toBeNull();
 
-  act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible));
+  act(() => {
+    vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible);
+  });
 
-  act(() => vi.advanceTimersByTime(MOTION.loadingCrossfade));
+  act(() => {
+    vi.advanceTimersByTime(MOTION.loadingCrossfade);
+  });
 
   expect(view.container.querySelector(".loading-swap-skeleton")).toBeNull();
   expect(view.getByText("Loaded records")).toBeTruthy();
@@ -145,13 +156,19 @@ test("keeps the outgoing skeleton for the shared cross-fade", () => {
   advanceSkeletonDelay();
   view.rerender(panel(false));
 
-  act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible));
+  act(() => {
+    vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible);
+  });
 
-  act(() => vi.advanceTimersByTime(MOTION.loadingCrossfade - 1));
+  act(() => {
+    vi.advanceTimersByTime(MOTION.loadingCrossfade - 1);
+  });
 
   expect(view.container.querySelector(".loading-swap-skeleton")).not.toBeNull();
 
-  act(() => vi.advanceTimersByTime(1));
+  act(() => {
+    vi.advanceTimersByTime(1);
+  });
 
   expect(view.container.querySelector(".loading-swap-skeleton")).toBeNull();
 });
@@ -164,9 +181,13 @@ test("removes the outgoing skeleton after its minimum dwell with reduced motion"
   advanceSkeletonDelay();
   view.rerender(panel(false));
 
-  act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible));
+  act(() => {
+    vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible);
+  });
 
-  act(() => vi.advanceTimersByTime(0));
+  act(() => {
+    vi.advanceTimersByTime(0);
+  });
 
   expect(view.container.querySelector(".loading-swap-skeleton")).toBeNull();
 });

@@ -54,6 +54,18 @@ export function MessageQueue({ task }: MessageQueueProps) {
     return !error;
   };
 
+  const interrupt = async () => {
+    setError(await controller.interruptTask(task, true));
+  };
+
+  const resume = async () => {
+    setError(await controller.resumeQueue(task));
+  };
+
+  const clear = async () => {
+    setError(await controller.clearQueue(task));
+  };
+
   const drop = () => {
     if (!drag || drag.over === undefined) return setDrag(undefined);
 
@@ -62,7 +74,7 @@ export function MessageQueue({ task }: MessageQueueProps) {
       to = Math.max(drag.over > from ? drag.over - 1 : drag.over, first);
 
     setDrag(undefined);
-    if (from >= 0 && to !== from) void move(drag.id, to);
+    if (from >= 0 && to !== from) controller.run(() => move(drag.id, to));
   };
 
   const moveRow = (messageId: string, index: number, offset: number) => {
@@ -99,9 +111,7 @@ export function MessageQueue({ task }: MessageQueueProps) {
                 variant="text"
                 underline
                 disabled={busy}
-                onClick={async () =>
-                  setError(await controller.interruptTask(task, true))
-                }
+                onClick={() => controller.run(interrupt)}
               >
                 Interrupt and send now
               </Button>
@@ -133,9 +143,7 @@ export function MessageQueue({ task }: MessageQueueProps) {
                     variant="text"
                     underline
                     disabled={busy}
-                    onClick={async () =>
-                      setError(await controller.resumeQueue(task))
-                    }
+                    onClick={() => controller.run(resume)}
                   >
                     Resume
                   </Button>
@@ -143,9 +151,7 @@ export function MessageQueue({ task }: MessageQueueProps) {
                     variant="text"
                     underline
                     disabled={busy}
-                    onClick={async () =>
-                      setError(await controller.clearQueue(task))
-                    }
+                    onClick={() => controller.run(clear)}
                   >
                     Clear
                   </Button>

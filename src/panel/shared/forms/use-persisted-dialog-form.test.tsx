@@ -78,7 +78,9 @@ test("shared form hook restores and records values through the controller", (t) 
   );
   const input = view.getByRole("textbox", { name: "Instruction" });
 
-  act(() => fireEvent.change(input, { target: { value: "edited request" } }));
+  act(() => {
+    fireEvent.change(input, { target: { value: "edited request" } });
+  });
 
   assert.deepEqual(first.getDialogDraft("handoff"), {
     instruction: "edited request",

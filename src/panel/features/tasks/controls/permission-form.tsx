@@ -28,15 +28,17 @@ export function PermissionForm({ task }: { task: Task }) {
   const disabled = state.busy || state.dialog?.scope !== state.scopeVersion;
 
   const decide = (approved: boolean) =>
-    handleSubmit((values) =>
-      controller.submit(async () => {
-        await controller.tool("submit_agent_input", {
-          task_id: task.id,
-          request_id: request.id,
-          approved,
-          message: values.response,
-        });
-      }),
+    controller.handle(
+      handleSubmit((values) =>
+        controller.submit(async () => {
+          await controller.tool("submit_agent_input", {
+            task_id: task.id,
+            request_id: request.id,
+            approved,
+            message: values.response,
+          });
+        }),
+      ),
     );
 
   return (

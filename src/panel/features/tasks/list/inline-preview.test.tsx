@@ -32,7 +32,9 @@ test("shows the task skeleton before the initial connection finishes", () => {
     ),
     view = render(preview());
 
-  act(() => vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay));
+  act(() => {
+    vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.delay);
+  });
 
   expect(
     view.getByRole("status", { name: "Loading delegated tasks" }),
@@ -47,11 +49,11 @@ test("shows the task skeleton before the initial connection finishes", () => {
 
   view.rerender(preview());
 
-  act(() =>
+  act(() => {
     vi.advanceTimersByTime(
       LOADING_SKELETON_CONFIG.minimumVisible + MOTION.loadingCrossfade,
-    ),
-  );
+    );
+  });
 
   expect(view.getByRole("status").textContent).toBe("Open through MCP");
 

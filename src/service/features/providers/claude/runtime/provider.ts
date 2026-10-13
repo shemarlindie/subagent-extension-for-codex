@@ -97,7 +97,7 @@ export class ClaudeAgentProvider implements Provider {
 
   private catalog?: { expires: number; models: ModelChoice[] };
   private catalogRequest?: Promise<ModelChoice[]>;
-  private catalogFailure?: { expires: number; error: unknown };
+  private catalogFailure?: { expires: number; error: Error };
   constructor(
     private launch: typeof query = query,
     private removeSession: typeof deleteSession = deleteSession,
@@ -216,7 +216,11 @@ export class ClaudeAgentProvider implements Provider {
       return models;
     } catch (error) {
       // Polling must not repeatedly launch a failing harness.
-      this.catalogFailure = { expires: Date.now() + 30000, error };
+      this.catalogFailure = {
+        expires: Date.now() + 30000,
+        error: error instanceof Error ? error : new Error(String(error)),
+      };
+
       throw error;
     } finally {
       clearTimeout(timer);

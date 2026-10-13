@@ -187,12 +187,13 @@ export function Composer({
 
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      const steer = event.metaKey || event.ctrlKey;
 
-      // A worker waiting for input can't be steered, so every Enter queues.
-      void send(
-        mode === "idle" || (mode === "busy" && steer) ? "steer" : "queue",
-      );
+      const steer = event.metaKey || event.ctrlKey,
+        // A worker waiting for input can't be steered, so every Enter queues.
+        delivery =
+          mode === "idle" || (mode === "busy" && steer) ? "steer" : "queue";
+
+      controller.run(() => send(delivery));
     }
   };
 
@@ -204,7 +205,7 @@ export function Composer({
         data-action="stop"
         aria-label="Stop the turn"
         disabled={disabled || busy}
-        onClick={stop}
+        onClick={() => controller.run(stop)}
       >
         <Icon name="stop-solid" size={9} />
       </Button>
@@ -301,7 +302,7 @@ export function Composer({
                       data-action="send"
                       aria-label={mode === "busy" ? "Steer" : "Send"}
                       disabled={disabled || busy || !message || !canContinue}
-                      onClick={() => send("steer")}
+                      onClick={() => controller.run(() => send("steer"))}
                     >
                       <Icon name="enter" size={12} />
                     </Button>

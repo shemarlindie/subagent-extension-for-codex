@@ -75,6 +75,10 @@ export function QueuedMessageRow({
     if (!error) toggleEditing();
   };
 
+  const remove = async () => {
+    onError(await controller.removeQueued(task, message.id));
+  };
+
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
     if (!canMove || busy) return;
     event.dataTransfer.effectAllowed = "move";
@@ -87,7 +91,7 @@ export function QueuedMessageRow({
     onDragOver(event.clientY > box.top + box.height / 2);
   };
 
-  const handleRowKeyDown = async (event: KeyboardEvent<HTMLDivElement>) => {
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (
       !canMove ||
       event.target !== event.currentTarget ||
@@ -99,8 +103,12 @@ export function QueuedMessageRow({
 
     event.preventDefault();
     if (busy) return;
-    // Reordering can move the focused row out of the DOM and back.
-    if (await onMove(event.key === "ArrowUp" ? -1 : 1)) row.current?.focus();
+    const offset = event.key === "ArrowUp" ? -1 : 1;
+
+    controller.run(async () => {
+      // Reordering can move the focused row out of the DOM and back.
+      if (await onMove(offset)) row.current?.focus();
+    });
   };
 
   const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -113,7 +121,7 @@ export function QueuedMessageRow({
       !event.nativeEvent.isComposing
     ) {
       event.preventDefault();
-      void save();
+      controller.run(save);
     }
   };
 
@@ -183,9 +191,7 @@ export function QueuedMessageRow({
                 className="chat-queue-icon-button"
                 aria-label="Remove"
                 disabled={busy}
-                onClick={async () =>
-                  onError(await controller.removeQueued(task, message.id))
-                }
+                onClick={() => controller.run(remove)}
               >
                 <Icon name="close" size={10} />
               </Button>
@@ -199,7 +205,7 @@ export function QueuedMessageRow({
                 className="chat-queue-icon-button"
                 aria-label="Save"
                 disabled={busy}
-                onClick={save}
+                onClick={() => controller.run(save)}
               >
                 <Icon name="check" size={10} />
               </Button>

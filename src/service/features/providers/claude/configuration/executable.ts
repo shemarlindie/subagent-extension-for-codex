@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { constants } from "node:fs";
 import { access, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, win32 } from "node:path";
+import { promisify } from "node:util";
 
 /**
  * Minimum Claude Code release qualified against the bundled Agent SDK.
@@ -24,6 +25,7 @@ const FRESH_MS = 5 * 60 * 1000;
 const FAILED_FRESH_MS = 30 * 1000;
 const VERSION_TIMEOUT_MS = 10_000;
 const VERSION_OUTPUT_BYTES = 4096;
+const execFileAsync = promisify(execFile);
 
 export type ClaudeCliProblem =
   "missing" | "invalid_override" | "unlaunchable" | "unrecognized" | "too_old";
@@ -200,19 +202,14 @@ function updateStep(path: string) {
 }
 
 /** The version line `--version` prints, read without a shell and within bounds. */
-function versionOutput(path: string, timeout: number) {
-  return new Promise<string>((resolve, reject) => {
-    execFile(
-      path,
-      ["--version"],
-      {
-        timeout,
-        maxBuffer: VERSION_OUTPUT_BYTES,
-        windowsHide: true,
-      },
-      (error, stdout) => (error ? reject(error) : resolve(stdout)),
-    );
+async function versionOutput(path: string, timeout: number) {
+  const { stdout } = await execFileAsync(path, ["--version"], {
+    timeout,
+    maxBuffer: VERSION_OUTPUT_BYTES,
+    windowsHide: true,
   });
+
+  return stdout;
 }
 
 /** Explains why `--version` could not run: a timeout, or the error it raised. */

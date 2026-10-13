@@ -138,15 +138,24 @@ test("copying again restarts the feedback duration", async () => {
     fireEvent.click(view.getByRole("button", { name: "Copy branch" }));
   });
 
-  act(() => vi.advanceTimersByTime(1000));
+  act(() => {
+    vi.advanceTimersByTime(1000);
+  });
 
   await act(async () => {
     fireEvent.click(view.getByRole("button", { name: "Copy branch — copied" }));
   });
 
-  act(() => vi.advanceTimersByTime(1000));
+  act(() => {
+    vi.advanceTimersByTime(1000);
+  });
+
   assert.ok(view.getByRole("button", { name: "Copy branch — copied" }));
-  act(() => vi.advanceTimersByTime(500));
+
+  act(() => {
+    vi.advanceTimersByTime(500);
+  });
+
   assert.ok(view.getByRole("button", { name: "Copy branch" }));
 });
 

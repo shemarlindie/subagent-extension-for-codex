@@ -1442,7 +1442,7 @@ export class Control {
     );
 
     const providers = await Promise.allSettled(
-      [...this.providers.values()].map((provider) => provider.close?.()),
+      [...this.providers.values()].map(async (provider) => provider.close?.()),
     );
 
     this.store.close();

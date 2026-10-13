@@ -38,7 +38,7 @@ test("delegation submits the full request without a title and search matches des
   );
 
   assertAbsent(screen.queryByRole("button", { name: /^Other task/ }));
-  await act(() => controller.setSearch(""));
+  await act(async () => controller.setSearch(""));
   await user.click(screen.getByRole("button", { name: "New Task" }));
   assertAbsent(screen.queryByLabelText("Task title"));
 

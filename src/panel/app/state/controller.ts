@@ -419,6 +419,12 @@ export class Controller {
     void action().catch(this.report);
   };
 
+  /** Adapts an async event handler, such as a form submit, through `run`. */
+  handle =
+    <Args extends unknown[]>(action: (...args: Args) => Promise<unknown>) =>
+    (...args: Args) =>
+      this.run(() => action(...args));
+
   showHostRequired() {
     this.patch({
       connection: "Open through MCP",
@@ -490,20 +496,23 @@ export class Controller {
     clearTimeout(this.timer);
     if (this.disposed) return;
 
-    this.timer = setTimeout(async () => {
-      try {
-        // Parent reports should still attempt delivery while UI reads are paused.
-        this.forwardParentMessage();
+    this.timer = setTimeout(
+      () => this.run(() => this.poll()),
+      POLL_INTERVAL_MS,
+    );
+  }
 
-        if (!this.environment.hidden() && !this.state.busy) {
-          await this.refresh();
-        }
-      } catch (error) {
-        this.report(error);
-      } finally {
-        if (!this.disposed) this.schedule();
+  private async poll() {
+    try {
+      // Parent reports should still attempt delivery while UI reads are paused.
+      this.forwardParentMessage();
+
+      if (!this.environment.hidden() && !this.state.busy) {
+        await this.refresh();
       }
-    }, POLL_INTERVAL_MS);
+    } finally {
+      if (!this.disposed) this.schedule();
+    }
   }
 
   dispose() {
