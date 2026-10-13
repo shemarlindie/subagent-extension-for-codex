@@ -1,6 +1,6 @@
 # MCP reference
 
-Both the stdio proxy and authenticated HTTP `/mcp` endpoint expose task tools and the Delegated Work MCP App. The HTTP endpoint additionally serves native task/input forms. See [host capabilities](host-capabilities.md) for host context, entrypoints, mention integration and verification gaps; [configuration](configuration.md) owns settings and authority rules.
+Both the stdio proxy and authenticated HTTP `/mcp` endpoint expose task tools and the Delegated Work MCP App. See [host capabilities](host-capabilities.md) for host context, entrypoints, mention integration and verification gaps; [configuration](configuration.md) owns settings and authority rules.
 
 The HTTP endpoint uses the MCP 2.0 server SDK for protocol revision `2026-07-28`,
 including `server/discover`, tools, resources and stateless connections.
@@ -10,7 +10,7 @@ including `server/discover`, tools, resources and stateless connections.
 Tool schemas are the authoritative field reference. The normal delegation flow is:
 
 1. Discover the repository with `get_current_agent_project` and approved roots with `list_agent_projects`; inspect enabled profiles with `list_available_workers`.
-2. If access needs approval, use `request_agent_project` and wait for acceptance. Pass an explicit absolute `repository` to `start_agent_task`.
+2. If access needs approval, direct the user to **Add project** or **Browse** in the panel, or the [projects CLI](configuration.md#repository-access), and wait for registration. Pass an explicit absolute `repository` to `start_agent_task`.
 3. Read replies with `get_agent_messages`, which supports long polling. Read live Git changes with `get_agent_changes`, using `scope: "turn"` for one turn.
 4. Continue with `send_agent_message`; inspect pending input before answering with its request ID.
 
@@ -22,7 +22,7 @@ Task creation defaults to the current repository, including existing changes. `w
 
 Model-visible tools may read settings and change ordinary defaults. App-only aliases (`start_user_agent_task`, `submit_user_agent_input`, `update_user_agent_settings`, `raise_user_agent_budget`) authorize user task overrides, user permission answers, sensitive settings and budget increases on existing tasks. Direct registration and folder browsing are also app-only. MCP hosts must enforce their visibility. Authenticated raw service clients are trusted administrators.
 
-For Claude permissions routed to `parent_agent`, model-visible `submit_agent_input` can approve or deny the exact pending request. User-routed permissions require app buttons or `request_agent_input`. Questions can use model-visible submission. All answers enforce ownership and request identity.
+For Claude permissions routed to `parent_agent`, model-visible `submit_agent_input` can approve or deny the exact pending request. User-routed permissions require panel **Approve**/**Deny** buttons. Questions can use model-visible submission. All answers enforce ownership and request identity.
 
 The App resource is `ui://codex-subagent-extension/app-v6` with empty network allowlists. The standalone console uses authenticated HTTP tools and SSE; the embedded app uses portable MCP Apps calls. Panel HTML is read from `dist` on every resource request, so a rebuild can update it without restarting the service. Server changes need a restart; changed resource URIs or opener metadata need MCP reconnection.
 
@@ -84,18 +84,6 @@ exactly-once execution guarantee.
 The worker cannot choose another conversation through the tool. See
 [Host capabilities](host-capabilities.md#worker-messages-to-the-parent-chat)
 for submission support, the observed active-turn queue, and lifecycle limits.
-
-## Host forms
-
-`request_agent_task` asks the user to confirm or complete a task request, including its description, worker, workspace/revision and budgets. `request_agent_input` presents the exact pending question or permission request. Forms generate titles from descriptions rather than showing a title field. Discovered models become labelled choices; without discovery, the model field accepts text. Direct task creation and panel settings also accept custom model IDs.
-
-Question forms support titled choices and multiple selection. Permission forms default to deny; cancellation preserves the pending request. The panel uses direct **Approve**/**Deny** buttons for permissions.
-
-HTTP forms use MCP `input_required` round trips. Hosts return opaque `requestState` together with `inputResponses.form`. State is durable, bound to the authenticated owner and original arguments, and expires after ten minutes. Identical repeat submissions return the original outcome. Changed arguments, invalid responses, expired state and stale input IDs are rejected. Interrupted submissions are not replayed after recovery; inspect tasks before submitting a replacement request.
-
-Task and worker-input forms are HTTP-only. `request_agent_project` uses the durable HTTP flow or SDK form elicitation over stdio when supported. Otherwise use **Add project**, **Browse** or the local registration CLI; supplying a path cannot bypass confirmation. Without task/input form support, use `start_agent_task` and `submit_agent_input` for questions and parent-approved permissions, and panel buttons for user permissions.
-
-Local tests exercise actual protocol round trips with fixture workers. Native host rendering remains unverified.
 
 ## Project management in the panel
 

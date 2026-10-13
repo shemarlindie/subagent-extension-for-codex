@@ -24,7 +24,6 @@ import { Settings } from "../../settings/settings.js";
 import { headCommit, Workspaces } from "../../workspaces/workspace.js";
 import { Drafts } from "../conversation/drafts.js";
 import { SessionPrompts } from "../conversation/session-prompts.js";
-import { Forms } from "../input/forms.js";
 import { PendingInput } from "../input/pending-input.js";
 import { ActivityPages } from "../storage/activity-pages.js";
 import { Store } from "../storage/store.js";
@@ -61,7 +60,6 @@ export class Control {
   ownerWorker = hostname();
   private prompts: SessionPrompts;
   settings: Settings;
-  forms: Forms;
   /** Running tasks' unfinished messages, kept in memory. */
   drafts: Drafts;
   /** The panel's activity pages, with each task's tally of older events. */
@@ -82,14 +80,11 @@ export class Control {
     );
 
     this.prompts = new SessionPrompts(store, workspaces);
-    this.forms = new Forms(this);
     this.drafts = new Drafts(store.bus);
     this.activity = new ActivityPages(store);
   }
 
   async recover() {
-    this.forms.recover();
-
     for (const t of this.store.all()) {
       if (
         ["starting", "running", "waiting"].includes(t.status) &&
@@ -1335,7 +1330,7 @@ export class Control {
       !this.providers.get(t.provider)?.taskPolicy.parentMayApprove(t)
     )
       throw new Error(
-        "This permission requires user approval; use the approval buttons or request_agent_input",
+        "This permission requires user approval; use the approval buttons in the panel",
       );
     const a = this.active.get(id);
     if (!a?.input.waiting) throw new Error("No active input request");

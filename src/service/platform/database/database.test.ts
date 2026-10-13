@@ -47,7 +47,6 @@ test("a fresh database gets every active table and the connection settings", (t)
   assert.deepEqual(tables(db.client), [
     "__drizzle_migrations",
     "events",
-    "form_requests",
     "project_roots",
     "tasks",
     "user_settings",
@@ -308,11 +307,92 @@ test("removing webhooks preserves tasks and activity while dropping populated de
   assert.deepEqual(tables(upgraded.client), [
     "__drizzle_migrations",
     "events",
-    "form_requests",
     "project_roots",
     "tasks",
     "user_settings",
   ]);
+
+  assert.deepEqual(
+    { ...upgraded.client.prepare("SELECT * FROM tasks").get() },
+    { id: "kept", owner: "alice", body: "{}" },
+  );
+
+  assert.deepEqual(
+    { ...upgraded.client.prepare("SELECT * FROM events").get() },
+    {
+      id: 7,
+      task_id: "kept",
+      type: "task.completed",
+      timestamp: "now",
+      data: "{}",
+    },
+  );
+
+  assert.equal(
+    upgraded.client
+      .prepare(
+        "INSERT INTO events(task_id,type,timestamp,data) VALUES(?,?,?,?)",
+      )
+      .run("kept", "task.started", "later", "{}").lastInsertRowid,
+    8,
+  );
+
+  assert.deepEqual(
+    upgraded.client.prepare("PRAGMA foreign_key_check").all(),
+    [],
+  );
+});
+
+test("removing native forms discards pending requests and preserves task activity", (t) => {
+  const dir = scratch(t);
+  const path = join(dir, "console.sqlite");
+  const older = join(dir, "older-migrations");
+  mkdirSync(older);
+
+  const names = readdirSync(migrationsFolder)
+    .filter((name) => /^\d{14}_/.test(name))
+    .sort();
+
+  const removal = names.findIndex((name) =>
+    name.endsWith("_remove-native-forms"),
+  );
+
+  assert.ok(removal > 0);
+
+  for (const name of names.slice(0, removal))
+    cpSync(join(migrationsFolder, name), join(older, name), {
+      recursive: true,
+    });
+
+  const before = openDatabase(path, older);
+
+  before.client
+    .prepare("INSERT INTO tasks VALUES(?,?,?)")
+    .run("kept", "alice", "{}");
+
+  before.client
+    .prepare(
+      "INSERT INTO events(id,task_id,type,timestamp,data) VALUES(?,?,?,?,?)",
+    )
+    .run(7, "kept", "task.completed", "now", "{}");
+
+  before.client
+    .prepare(
+      "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
+    )
+    .run("pending", "alice", 9e12, "kept", "malformed");
+
+  before.client
+    .prepare(
+      "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
+    )
+    .run("taskless", "alice", 9e12, null, "malformed");
+
+  before.close();
+
+  const upgraded = openDatabase(path);
+  t.onTestFinished(() => upgraded.close());
+  assert.ok(!tables(upgraded.client).includes("form_requests"));
 
   assert.deepEqual(
     { ...upgraded.client.prepare("SELECT * FROM tasks").get() },

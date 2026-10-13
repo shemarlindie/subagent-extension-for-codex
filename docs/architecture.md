@@ -73,7 +73,7 @@ development tooling and tests. See
 [Checks](development.md#checks) for the validation commands.
 
 The service task feature groups scheduling and execution in `runtime/`,
-questions, permissions and forms in `input/`, durable records in `storage/`,
+questions and permissions in `input/`, durable records in `storage/`,
 and draft delivery and message polling in `conversation/`. Input can be answered
 by the user or an authorized parent agent. Claude integration groups execution
 and session handling in `runtime/`, SDK event translation in `events/`, and
@@ -99,7 +99,7 @@ control layer records delivery and preserves steers the provider did not take.
 Worker replies are plain text or Markdown; provider activity is a separate event
 stream. Draft deltas are transient, while completed messages and task events persist.
 
-SQLite stores tasks, events, settings, approved projects and form requests.
+SQLite stores tasks, events, settings, and approved projects.
 WAL and synchronous transactions protect related durable writes;
 notifications run after commit. On restart, in-flight work becomes interrupted
 and requires a follow-up, while queued tasks and dependency waits recover.

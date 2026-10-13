@@ -141,13 +141,13 @@ export function definitions(
   const tools = {
     get_agent_panel_context: tool({
       description:
-        "Resolve panel repository/revision defaults from explicit approved context or the latest task in this conversation. task_id selects an owned task. null conversation_id explicitly requests all conversations. This never registers a project or starts work; for a returned panel_project_candidate, ask the user whether to add it with request_agent_project.",
+        "Resolve panel repository/revision defaults from explicit approved context or the latest task in this conversation. task_id selects an owned task. null conversation_id explicitly requests all conversations. This never registers a project or starts work; for a returned panel_project_candidate, ask the user to use Add project in the panel.",
       schema: panelContextInput,
       run: (a) => resolvePanelContext(c, owner, a),
     }),
     list_agent_projects: tool({
       description:
-        "List persistently approved project roots. Never registers. Pass an explicit absolute repository to start_agent_task. If the chat's project is missing, ask the user whether to add it by calling request_agent_project. Task arguments never grant access.",
+        "List persistently approved project roots. Never registers. Pass an explicit absolute repository to start_agent_task. If the chat's project is missing, ask the user to use Add project in the panel. Task arguments never grant access.",
       schema: z.strictObject({}),
       run: () =>
         c.projects?.list() ?? [
@@ -156,7 +156,7 @@ export function definitions(
     }),
     get_current_agent_project: tool({
       description:
-        "Resolve the current chat's local Git root from host directory metadata and report whether it is registered. Never registers. When it is unregistered, follow next_step: starting a task for it from this chat adds it if auto_register_on_task_start is true; otherwise ask the user with request_agent_project. Tool arguments cannot grant directory access.",
+        "Resolve the current chat's local Git root from host directory metadata and report whether it is registered. Never registers. When it is unregistered, follow next_step: starting a task for it from this chat adds it if auto_register_on_task_start is true; otherwise ask the user to use Add project in the panel. Tool arguments cannot grant directory access.",
       schema: z.strictObject({}),
       run: () => currentChatProject(c, owner, hostMeta),
     }),
@@ -293,7 +293,7 @@ export function definitions(
     }),
     submit_agent_input: tool({
       description:
-        "Respond to a pending question, or decide execution permission when provider_options.claude.approval_decider is parent_agent for Claude (or approval_mode is parent_agent for execution-approval providers). Ask-user permissions require user buttons or request_agent_input. Request ID prevents stale approvals.",
+        "Respond to a pending question, or decide execution permission when provider_options.claude.approval_decider is parent_agent for Claude (or approval_mode is parent_agent for execution-approval providers). Ask-user permissions require the panel approval buttons. Request ID prevents stale approvals.",
       schema: taskId.extend({
         request_id: z.string(),
         approved: z.boolean(),

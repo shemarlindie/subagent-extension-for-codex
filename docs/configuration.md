@@ -32,7 +32,7 @@ Do not paste the token into a chat or commit it. Authenticated raw service clien
 
 ## Repository access
 
-Targets must be canonical Git repository roots with at least one commit. A model-supplied path never grants access. Approve individual roots through global **Manage → Add project**, accepted `request_agent_project` confirmation, or the local CLI:
+Targets must be canonical Git repository roots with at least one commit. A model-supplied path never grants access. Approve individual roots through global **Manage → Add project**, the local CLI:
 
 ```sh
 node dist/projects-cli.js register /absolute/path/to/repository
@@ -49,7 +49,7 @@ Parent approval permits validated descendant roots; register individual children
 
 **Automatically add chat projects** (`auto_register_chat_project`, default `true`) is a user-only setting. It registers an unapproved chat Git root only when a task starts for that root, using original host sandbox metadata. Explicit task paths and `host_directory` hints do not grant access. Project listing, context discovery and opening panels remain read-only. Disabling the setting preserves existing grants. Host metadata delivery still needs registered-host verification; see [host capabilities](host-capabilities.md).
 
-Use `list_agent_projects`, then pass the intended absolute `repository` to `start_agent_task`. `get_current_agent_project` discovers the chat root; missing registration can be requested through `request_agent_project`. Existing tasks keep their original repository and workspace.
+Use `list_agent_projects`, then pass the intended absolute `repository` to `start_agent_task`. `get_current_agent_project` discovers the chat root; ask the user to use **Add project** or **Browse** in the panel when registration is missing. Existing tasks keep their original repository and workspace.
 
 ## Task defaults
 
@@ -99,9 +99,9 @@ The extension owns Claude's native permission mode. `claude_permission_mode` app
 | `auto`              | Use the native classifier for permission decisions.                  |
 | `bypassPermissions` | Skip ordinary native approval checks.                                |
 
-Enabled session restrictions apply in every mode. Model-selected overrides cannot increase authority beyond the user-approved baseline. A trusted panel task submission or user-confirmed host form can authorize a broader task-level override.
+Enabled session restrictions apply in every mode. Model-selected overrides cannot increase authority beyond the user-approved baseline. A trusted panel task submission can authorize a broader task-level override.
 
-Approval routing is separate: `provider_options.claude.approval_decider` accepts `user` or `parent_agent`, inheriting `default_approval_decider`. It handles requests left unresolved by native checks; it does not force every action to prompt. User permission decisions require panel **Approve**/**Deny** or a host form. Model-visible `submit_agent_input` can decide permissions only when the parent is the approver. Stale request IDs and cross-owner answers are rejected. `dontAsk` may deny questions without invoking the callback.
+Approval routing is separate: `provider_options.claude.approval_decider` accepts `user` or `parent_agent`, inheriting `default_approval_decider`. It handles requests left unresolved by native checks; it does not force every action to prompt. User permission decisions require panel **Approve**/**Deny**. Model-visible `submit_agent_input` can decide permissions only when the parent is the approver. Stale request IDs and cross-owner answers are rejected. `dontAsk` may deny questions without invoking the callback.
 
 There is no extension-wide auto-approval policy for Claude. Repository approval and resolved session restrictions remain separate from native permission mode.
 

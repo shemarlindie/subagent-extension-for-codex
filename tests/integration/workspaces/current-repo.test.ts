@@ -17,7 +17,6 @@ import type {
   Query,
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { ServerContext } from "@modelcontextprotocol/server";
 import { test } from "vitest";
 
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
@@ -293,111 +292,6 @@ test("current repository settings persist, are owner-scoped, and allow task over
         .default_workspace_strategy,
       "worktree",
     );
-  } finally {
-    await s.close();
-  }
-});
-
-test("task form offers current repository and submits its selected strategy", async () => {
-  const s = await setup();
-  s.c.stopped = true;
-
-  try {
-    const args = {
-      title: "Review edits",
-      description: "Review edits",
-      workspace_strategy: "worktree",
-    };
-
-    const requested = (await s.c.forms.handle(
-      "alice",
-      "request_agent_task",
-      args,
-      { mcpReq: { requestState: () => undefined } } as unknown as ServerContext,
-    )) as any;
-
-    const schema = requested.inputRequests.form.params.requestedSchema;
-
-    assert.ok(
-      schema.properties.workspace_strategy.oneOf.some(
-        (choice: any) => choice.const === "current_repo",
-      ),
-    );
-
-    const result = await s.c.forms.handle("alice", "request_agent_task", args, {
-      mcpReq: {
-        requestState: () => requested.requestState,
-        inputResponses: {
-          form: {
-            action: "accept",
-            content: {
-              repository: s.repo,
-              description: "Review edits",
-              worker: "fixture:reviewer",
-              revision: "HEAD",
-              workspace_strategy: "current_repo",
-              max_runtime_minutes: 2,
-              max_cost_usd: 1,
-            },
-          },
-        },
-      },
-    } as unknown as ServerContext);
-
-    assert.ok(!result.isError, JSON.stringify(result));
-    assert.equal(s.c.store.all()[0].workspace_strategy, "current_repo");
-  } finally {
-    await s.close();
-  }
-});
-
-test("host task form defaults current repository to HEAD and forces HEAD on submit", async () => {
-  const s = await setup();
-  s.c.stopped = true;
-
-  try {
-    const args = {
-      title: "Review edits",
-      description: "Review edits",
-      revision: "feature-branch",
-      workspace_strategy: "current_repo",
-    };
-
-    const requested = (await s.c.forms.handle(
-      "alice",
-      "request_agent_task",
-      args,
-      { mcpReq: { requestState: () => undefined } } as unknown as ServerContext,
-    )) as any;
-
-    const schema = requested.inputRequests.form.params.requestedSchema;
-    assert.equal(schema.properties.workspace_strategy.default, "current_repo");
-    assert.equal(schema.properties.revision.default, "HEAD");
-
-    const result = await s.c.forms.handle("alice", "request_agent_task", args, {
-      mcpReq: {
-        requestState: () => requested.requestState,
-        inputResponses: {
-          form: {
-            action: "accept",
-            content: {
-              repository: s.repo,
-              description: "Review edits",
-              worker: "fixture:reviewer",
-              revision: "feature-branch",
-              workspace_strategy: "current_repo",
-              max_runtime_minutes: 2,
-              max_cost_usd: 1,
-            },
-          },
-        },
-      },
-    } as unknown as ServerContext);
-
-    assert.ok(!result.isError, JSON.stringify(result));
-    const task = s.c.store.all()[0];
-    assert.equal(task.workspace_strategy, "current_repo");
-    assert.equal(task.revision, "HEAD");
   } finally {
     await s.close();
   }

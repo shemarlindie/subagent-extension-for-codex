@@ -370,7 +370,7 @@ Other service-level rejections use the real API inputs and task controls:
 - **Unapproved repository**
   - **Trigger:** Call `start_agent_task` with an absolute repository path that is not returned by
     `list_agent_projects`; the demo has only its disposable repository approved. In the panel, ask
-    to add the repository and decline `request_agent_project`.
+    to use **Add project** or **Browse** in the panel.
 
 - **Invalid worktree revision**
   - **Trigger:** Create a worktree task with a revision that does not exist. Creation is accepted
@@ -449,93 +449,8 @@ Other service-level rejections use the real API inputs and task controls:
     task inspection, input, queue, or delete controls. These resolve as not found. The single-owner
     demo token cannot create this condition.
 
-### MCP form scenarios and protocol errors
-
-These use a client that advertises `elicitation.form`. Begin with the named MCP request, save its
-`requestState`, and send the response as `inputResponses.form`. Prompt keys select provider
-behavior; request state and the submitted form control the protocol scenarios.
-
-- **Accept and replay task delegation**
-  - **Trigger:** Call `request_agent_task`, accept its form with all required fields, then submit
-    the identical request, state, and response again.
-  - **Expected:** The first response creates one task; an identical retry returns the same result.
-
-- **Cancel a task form**
-  - **Trigger:** Call `request_agent_task`, then answer `{ action: "cancel" }` with its request
-    state.
-  - **Expected:** No task is created.
-
-- **Client has no form support**
-  - **Trigger:** Call `request_agent_task` with client capabilities `{}` and no response.
-  - **Expected:** MCP returns protocol error `-32021`; no task is created.
-
-- **Missing, altered, expired, or wrong-owner state**
-  - **Trigger:** Submit `inputResponses.form` without `requestState`; change one character of the
-    returned state; wait more than 10 minutes; or replay it as another owner. Expiration and another
-    owner require the focused service test because the demo uses one owner.
-  - **Expected:** The request is rejected before a task or project is created.
-
-- **State reused for another request**
-  - **Trigger:** Reuse a task form's state with changed arguments (including a different
-    conversation or worker), or with a different form tool.
-  - **Expected:** The request is rejected because state binds the original form kind and arguments.
-
-- **Invalid or unsolicited form answer**
-  - **Trigger:** Submit an answer with no state, omit a required field, use an unavailable
-    worker/model, add an unknown field, or submit an invalid enum value.
-  - **Expected:** The response fails schema or request validation; nothing is created.
-
-- **Submit a different answer twice**
-  - **Trigger:** Submit one response, then reuse its state with different response content.
-  - **Expected:** The second response is rejected; an exact retry is idempotent.
-
-- **Question answer is bound to its request**
-  - **Trigger:** Start a task with `[fixture:question]`, call `request_agent_input`, then answer
-    with its form state. To make the answer stale, interrupt/resume the task before submitting the
-    saved response.
-  - **Expected:** The matching answer resolves the question; a stale request cannot resolve a later
-    input.
-
-- **Permission form cannot grant on cancel**
-  - **Trigger:** Start `[fixture:permission tool=Bash]`, call `request_agent_input`, cancel the
-    form, then inspect the task's pending input.
-  - **Expected:** Cancellation leaves permission pending; submit `decision: "deny"` or use the user
-    approval button to resolve it.
-
-- **Permission form rejects replacement commands**
-  - **Trigger:** In the same Bash permission form, submit `decision: "allow"` plus a different
-    `command` field.
-  - **Expected:** The response is rejected; the originally requested command remains bound to the
-    approval.
-
-- **Project registration requires explicit allow**
-  - **Trigger:** Call `request_agent_project`, then submit `action: "accept"` with
-    `decision: "allow"`. Submit `decision: "deny"`, `action: "decline"`, or `action: "cancel"` in
-    separate requests to exercise no-grant outcomes.
-  - **Expected:** Only explicit allow registers the approved Git repository. Deny and cancel create
-    no task and grant no repository access.
-
-- **Project registration rejects invalid paths or content**
-  - **Trigger:** Accept `request_agent_project` with a relative path, a file, a non-Git directory,
-    an empty repository, an unknown form field, or no decision.
-  - **Expected:** Registration is rejected and the project list stays unchanged. A response without
-    request state is rejected as unsolicited.
-
-- **Recover a submission interrupted by restart**
-  - **Trigger:** In the focused test, mark a stored form row `status: "processing"` with the
-    canonical accepted response, replace the `Forms` service, call `recover()`, and replay the same
-    request. This simulates a process exit after saving the response but before completing the
-    operation.
-  - **Expected:** The response returns an explicit “service restarted during form submission” error;
-    inspect task/project state before retrying.
-
-- **Recover malformed stored form data**
-  - **Trigger:** Insert a `form_requests` row with an invalid body such as `{ "kind": "unknown" }`,
-    then call `Forms.recover()`.
-  - **Expected:** Recovery fails with the stored request ID in the error.
-
 Queue, ownership, budget, dependency, workspace, and project cleanup rejection tests are in
 [`control.test.ts`](../src/service/features/tasks/runtime/control.test.ts),
 [`approval.test.ts`](../src/service/features/tasks/input/approval.test.ts),
-[`forms.test.ts`](../src/service/features/tasks/input/forms.test.ts), and
+and
 [`conversation-tools.test.ts`](../src/service/platform/server/conversation-tools.test.ts).

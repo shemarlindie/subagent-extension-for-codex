@@ -131,9 +131,6 @@ never registers it. Registration is available through:
 - **Browse…** in New task: the native macOS folder picker registers the selected
   root and selects it for the draft. It does not start the task. The dialog runs
   on the service machine; other platforms use the path field.
-- `request_agent_project`: explicit accepted allow through supported elicitation.
-  Decline/cancel never registers or starts work. HTTP uses durable multi-round-trip
-  requests; stdio uses legacy SDK form elicitation when advertised by the host.
 - **Automatically add chat projects**, a user-only persistent setting, enabled
   by default. It registers the host's local Git root when a task starts for that
   root from the chat. Only original transport directory metadata can trigger
@@ -177,7 +174,7 @@ There are no packaged lifecycle hooks or native settings entrypoint. The panel i
 Transport/context tests establish explicit precedence, scope isolation, validation
 and protocol behavior. Browser fixtures establish rendering without paid workers.
 They do not establish native desktop placement, selected-mention delivery,
-elicitation rendering, folder-picker interaction, or sandbox metadata delivery.
+folder-picker interaction, or sandbox metadata delivery.
 
 For changes in these areas, reload the MCP connection and verify the affected
 flow on the target host, including two concurrent chats/projects. UI resource

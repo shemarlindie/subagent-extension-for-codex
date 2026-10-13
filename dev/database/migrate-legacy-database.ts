@@ -14,7 +14,6 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import { Settings } from "../../src/service/features/settings/settings.js";
-import { decodeRequest } from "../../src/service/features/tasks/input/forms.js";
 import {
   decodeEvent,
   decodeTask,
@@ -203,24 +202,6 @@ function copy(
     )
     .run(sequence);
 
-  for (const row of rows("form_requests")) {
-    const request = decodeRequest(String(row.id), String(row.body));
-
-    // A form about a task that no longer exists can't be answered.
-    if (request.task_id !== undefined && !tasks.has(request.task_id)) {
-      count("dropped", "form_requests");
-      continue;
-    }
-
-    client
-      .prepare(
-        "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
-      )
-      .run(row.id, row.owner, row.expires, request.task_id ?? null, row.body);
-
-    count("copied", "form_requests");
-  }
-
   for (const row of rows("project_roots")) {
     client
       .prepare("INSERT INTO project_roots(path,kind) VALUES(?,?)")
@@ -243,6 +224,7 @@ function copy(
   for (const row of rows("user_settings")) settings.values(String(row.owner));
 
   for (const table of [
+    "form_requests",
     "event_subscriptions",
     "event_outbox",
     "event_checkpoint",

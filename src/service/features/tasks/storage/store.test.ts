@@ -33,24 +33,11 @@ function deletionFixture() {
     const current = { ...task, id };
     store.save(current);
     store.event(current, "task.completed", {});
-
-    store.database.client
-      .prepare(
-        "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
-      )
-      .run(id, task.owner, 0, id, JSON.stringify({ task_id: id }));
   }
-
-  // Forms that register a project or start a task belong to no task.
-  store.database.client
-    .prepare(
-      "INSERT INTO form_requests(id,owner,expires,task_id,body) VALUES(?,?,?,?,?)",
-    )
-    .run("taskless", task.owner, 0, null, "{}");
 
   const snapshot = () =>
     Object.fromEntries(
-      ["tasks", "events", "form_requests"].map((table) => [
+      ["tasks", "events"].map((table) => [
         table,
         store.database.client
           .prepare(`SELECT * FROM ${table} ORDER BY rowid`)
@@ -61,7 +48,7 @@ function deletionFixture() {
   return { store, task, snapshot };
 }
 
-test("task deletion removes auxiliary records and preserves other tasks, including matching prefixes", (t) => {
+test("task deletion removes events and preserves other tasks, including matching prefixes", (t) => {
   const { store, task, snapshot } = deletionFixture();
   t.onTestFinished(() => store.close());
   const before = snapshot();
@@ -73,11 +60,6 @@ test("task deletion removes auxiliary records and preserves other tasks, includi
   const after = snapshot();
   for (const table of ["tasks", "events"])
     assert.equal(after[table].length, 2, table);
-
-  assert.deepEqual(
-    after.form_requests.map((row) => row.id),
-    [`${task.id}_1`, "unrelated", "taskless"],
-  );
 
   assert.equal(store.get(`${task.id}_1`, task.owner).id, `${task.id}_1`);
   assert.equal(store.events(`${task.id}_1`, task.owner).length, 1);

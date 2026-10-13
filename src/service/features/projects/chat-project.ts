@@ -43,7 +43,7 @@ async function isApproved(c: Control, root: string) {
 /**
  * Register the thread's Git root when a task is started from that thread.
  * `repository` is the task target: an explicit target must be inside the thread
- * root, while an omitted one (a task form the user completes) may use it.
+ * root, while an omitted one may use it as the task default.
  * Best-effort: a failure here never blocks the task itself.
  */
 export async function autoRegisterChatProject(
@@ -80,7 +80,7 @@ export async function currentChatProject(
   const root = await hostProjectCandidate(hostDirectoryFromMeta(meta));
   if (!root)
     throw new Error(
-      "The host supplied no usable local project directory. Use the actual absolute repository from the task context, and call request_agent_project if it is not registered.",
+      "The host supplied no usable local project directory. Use the actual absolute repository from the task context, and ask the user to use Add project in the panel if it is not registered.",
     );
   const registered = await isApproved(c, root);
 
@@ -96,8 +96,8 @@ export async function currentChatProject(
       ? {}
       : {
           next_step: auto
-            ? "Starting a task for this repository from this chat adds it automatically. Otherwise ask the user whether to add it by calling request_agent_project."
-            : "Ask the user whether to add this project by calling request_agent_project before delegating to it.",
+            ? "Starting a task for this repository from this chat adds it automatically. Otherwise ask the user to use Add project in the panel."
+            : "Ask the user to use Add project in the panel before delegating to this project.",
         }),
   };
 }

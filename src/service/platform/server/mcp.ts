@@ -1,9 +1,7 @@
 import { McpServer, type ServerContext } from "@modelcontextprotocol/server";
-import { z } from "zod";
 
 import { PARENT_DELEGATION_PROTOCOL } from "../../../shared/tasks/conversation/parent-protocol.js";
 import type { Task } from "../../../shared/tasks/model.js";
-import { autoRegisterChatProject } from "../../features/projects/chat-project.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { codexContextCapability } from "../panel/host-context.js";
 import { delegationPanel, panelUri } from "../panel/panel.js";
@@ -45,9 +43,8 @@ export function mcp(
         ...codexContextCapability,
         tools: {},
       },
-      requestState: { verify: (state) => c.forms.verify(owner, state) },
       instructions:
-        "Use get_current_agent_project and list_available_workers before delegation. A selected Claude composer mention is a provider hint only; use the available reviewer profile for review requests, and resolve the repository through existing project checks. Mention selection does not authorize a project or change permissions. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user, then pass its explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input; Claude permission decisions require provider_options.claude.approval_decider to be parent_agent. Use request_agent_input or user buttons for permissions routed to the user. Provider-owned task settings are isolated under provider_options.<provider_id>. Worktree changes are on the task's branch, <worktree_branch_prefix><task-id> (task.branch), in its worktree; current_repo write profiles edit the checkout directly. Read what a task changed with get_agent_changes, which diffs live from Git; never rely on the worker's own list of changed files. A task is a conversation: read its replies with get_agent_messages (a long poll with wait_seconds), and send follow-ups, steers or queued messages with send_agent_message. A completed task stays open for more messages until it is deleted." +
+        "Use get_current_agent_project and list_available_workers before delegation. A selected Claude composer mention is a provider hint only; use the available reviewer profile for review requests, and resolve the repository through existing project checks. Mention selection does not authorize a project or change permissions. Starting a task for the current chat project registers it when the user setting allows; otherwise ask the user to use Add project in the panel, then pass its explicit repository. Tasks run asynchronously in the current repository by default, including uncommitted changes; choose workspace_strategy worktree for an isolated committed revision. Inspect pending_input before submit_agent_input; Claude permission decisions require provider_options.claude.approval_decider to be parent_agent. Use the panel approval buttons for permissions routed to the user. Provider-owned task settings are isolated under provider_options.<provider_id>. Worktree changes are on the task's branch, <worktree_branch_prefix><task-id> (task.branch), in its worktree; current_repo write profiles edit the checkout directly. Read what a task changed with get_agent_changes, which diffs live from Git; never rely on the worker's own list of changed files. A task is a conversation: read its replies with get_agent_messages (a long poll with wait_seconds), and send follow-ups, steers or queued messages with send_agent_message. A completed task stays open for more messages until it is deleted." +
         " " +
         PARENT_DELEGATION_PROTOCOL,
     },
@@ -67,80 +64,6 @@ export function mcp(
     claudeMentionUri,
     claudeMentionResource,
     () => readClaudeMention(),
-  );
-
-  server.registerTool(
-    "request_agent_task",
-    {
-      description:
-        "Ask the user for the full request as the description, worker and budgets using a host form, then delegate asynchronously with an automatically generated title. Use start_agent_task for clients without forms.",
-      inputSchema: definitions(c, owner).start_agent_task.schema.extend({
-        description: z.string().max(20000).optional(),
-      }),
-      annotations: { openWorldHint: true },
-    },
-    async (args, ctx) => {
-      try {
-        await autoRegisterChatProject(
-          c,
-          owner,
-          ctx.mcpReq._meta,
-          typeof args.repository === "string" ? args.repository : undefined,
-        );
-
-        return await c.forms.handle(owner, "request_agent_task", args, ctx);
-      } catch (error) {
-        return {
-          isError: true,
-          content: [{ type: "text", text: String(error) }],
-        };
-      }
-    },
-  );
-
-  server.registerTool(
-    "request_agent_project",
-    {
-      description:
-        "Ask the user to approve registering a local Git repository from this chat. Supply its actual absolute path, or omit it to prefill host directory metadata. Registers only after an accepted user approval; then continue delegation with the returned repository.",
-      inputSchema: z.strictObject({
-        repository: z.string().min(1).max(4096).optional(),
-      }),
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        openWorldHint: false,
-      },
-    },
-    async (args, ctx) => {
-      try {
-        return await c.forms.handle(owner, "request_agent_project", args, ctx);
-      } catch (error) {
-        return {
-          isError: true,
-          content: [{ type: "text", text: String(error) }],
-        };
-      }
-    },
-  );
-
-  server.registerTool(
-    "request_agent_input",
-    {
-      description:
-        "Present a task's pending question or permission request in a host form. The response is bound to that exact pending request. User buttons are also available; submit_agent_input can decide Claude permissions only when provider_options.claude.approval_decider is parent_agent.",
-      inputSchema: z.strictObject({ task_id: z.string() }),
-    },
-    async (args, ctx) => {
-      try {
-        return await c.forms.handle(owner, "request_agent_input", args, ctx);
-      } catch (error) {
-        return {
-          isError: true,
-          content: [{ type: "text", text: String(error) }],
-        };
-      }
-    },
   );
 
   const tools: Record<string, AnyTool> = definitions(c, owner);

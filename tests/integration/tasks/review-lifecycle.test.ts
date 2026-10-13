@@ -55,20 +55,6 @@ test(
       repository,
     );
 
-    const formBody = JSON.stringify({
-      kind: "request_agent_task",
-      args: { description: "Review" },
-      form: { type: "object", properties: {} },
-      message: "Choose task",
-      status: "processing",
-    });
-
-    store.database.client
-      .prepare(
-        "INSERT INTO form_requests(id,owner,expires,body) VALUES(?,?,?,?)",
-      )
-      .run("processing-form", "owner", Date.now() + 60000, formBody);
-
     const projects = new Projects(
       store.database,
       new Workspaces(join(data, "worktrees"), []),
@@ -154,52 +140,6 @@ test(
       assert.deepEqual(
         before.map((task) => reopened.events(task.id, task.owner)),
         beforeEvents,
-      );
-
-      const formRow = () =>
-        reopened.database.client
-          .prepare("SELECT body FROM form_requests WHERE id=?")
-          .get("processing-form");
-
-      assert.equal(formRow()!.body, formBody);
-
-      const recovering = new Control(
-        reopened,
-        new Workspaces(join(data, "worktrees"), []),
-        new Map([["fixture", new FixtureProvider()]]),
-        repository,
-      );
-
-      assert.equal(
-        formRow()!.body,
-        formBody,
-        "constructing Forms must not recover submissions",
-      );
-
-      recovering.forms.recover();
-      const completed = String(formRow()!.body);
-      const result = JSON.parse(completed);
-      assert.equal(result.status, "complete");
-      assert.equal(result.result.isError, true);
-
-      assert.match(
-        result.result.content[0].text,
-        /Service restarted during form submission/,
-      );
-
-      const changes = reopened.database.client
-        .prepare("SELECT total_changes() AS count")
-        .get()!.count;
-
-      recovering.forms.recover();
-      assert.equal(formRow()!.body, completed);
-
-      assert.equal(
-        reopened.database.client
-          .prepare("SELECT total_changes() AS count")
-          .get()!.count,
-        changes,
-        "repeated recovery must not rewrite a completed submission",
       );
     } finally {
       reopened.close();

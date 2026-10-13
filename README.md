@@ -92,7 +92,7 @@ you to keep the service running; Codex does not start it through this transport.
 After saving the configuration, reload the MCP connection in Codex and open
 **Delegated Work** from a chat. Use `codex mcp list` to check the configured server;
 opening the panel verifies the connection. Changed tool metadata also requires
-MCP reconnection. Task/input host forms are HTTP-only. Host
+MCP reconnection. Host
 placement, metadata and mention handoff still need live
 verification; see [host capabilities](docs/host-capabilities.md).
 

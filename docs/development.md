@@ -399,8 +399,7 @@ before any feature reads it.
 - Each feature declares its tables with Drizzle in its own `schema.ts`;
   `src/service/platform/database/schema.ts` collects them for drizzle-kit.
 - Each feature queries only its own tables, through the shared `Database`:
-  tasks and events in `tasks/store.ts`, form requests in
-  `tasks/form-requests.ts`, and settings and
+  tasks and events in `tasks/storage/store.ts`, and settings and
   project roots in their services. Other features read tasks and events
   through `Store`. Queries use Drizzle; raw SQL is kept where it is clearer,
   such as the JSON predicates in `Store.chatEvents`.
@@ -430,10 +429,12 @@ before any feature reads it.
   copies every record into a new database, keeping event ids and filling in
   the task references,
   checks each record as the service would, and keeps the old file as
-  `console.sqlite.pre-migration`. Forms whose task is gone and retired tables are dropped and reported.
+  `console.sqlite.pre-migration`. Retired host-form and webhook tables are dropped and reported.
   Worktrees and other data-directory files are untouched.
 - `migrations/` ships in the package and is read with `packagePath`, so
   source checkouts and installed packages use the same folder.
+
+The native-form removal migration drops stored host-form requests and preserves tasks and activity.
 
 The webhook-removal migration drops obsolete subscriptions, deliveries and capture
 state while preserving task events and parent-message delivery records. Existing

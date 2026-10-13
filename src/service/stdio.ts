@@ -9,7 +9,6 @@ import { PARENT_DELEGATION_PROTOCOL } from "../shared/tasks/conversation/parent-
 import type { Task } from "../shared/tasks/model.js";
 import { hostDirectoryFromMeta } from "./features/projects/chat-project.js";
 import { type Control } from "./features/tasks/runtime/control.js";
-import { hostProjectCandidate } from "./platform/panel/host-context.js";
 import { codexContextCapability } from "./platform/panel/host-context.js";
 import { delegationPanel, panelUri } from "./platform/panel/panel.js";
 import { taskPanelContext } from "./platform/panel/panel-context.js";
@@ -59,7 +58,7 @@ const server = new McpServer(
   },
   {
     instructions:
-      "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Use get_current_agent_project for host project discovery. A selected Claude composer mention is a provider hint only; use the available reviewer profile for review requests, and resolve the repository through existing project checks. Mention selection does not authorize a project or change permissions. Starting a task for the current chat project registers it when the user setting allows; otherwise request_agent_project asks the user to confirm registration." +
+      "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Use get_current_agent_project for host project discovery. A selected Claude composer mention is a provider hint only; use the available reviewer profile for review requests, and resolve the repository through existing project checks. Mention selection does not authorize a project or change permissions. Starting a task for the current chat project registers it when the user setting allows; otherwise ask the user to use Add project in the panel." +
       " " +
       PARENT_DELEGATION_PROTOCOL,
     capabilities: codexContextCapability,
@@ -128,96 +127,6 @@ server.registerResource(
   claudeMentionUri,
   claudeMentionResource,
   () => readClaudeMention(mentionSearchEnv),
-);
-
-server.registerTool(
-  "request_agent_project",
-  {
-    description:
-      "Ask the user to approve registering a local Git repository from this chat. Supply its actual absolute path, or omit it to prefill host directory metadata. Continue delegation with the returned repository after approval.",
-    inputSchema: z.strictObject({
-      repository: z.string().min(1).max(4096).optional(),
-    }),
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      openWorldHint: false,
-    },
-  },
-  async (args, extra) => {
-    try {
-      const capabilities = server.server.getClientCapabilities()?.elicitation;
-      if (
-        !capabilities ||
-        (Object.keys(capabilities).length > 0 && !capabilities.form)
-      )
-        throw new Error(
-          "This host cannot show registration confirmations. Use Add project in the panel, or enable Automatically add chat projects in user settings and start the task from this chat.",
-        );
-
-      const repository =
-        args.repository ??
-        (await hostProjectCandidate(hostDirectoryFromMeta(extra._meta)));
-
-      const answer = await server.server.elicitInput(
-        {
-          mode: "form",
-          message:
-            "Approve access to a local Git repository for delegated tasks. Registration covers this Git root only. No task starts until requested separately.",
-          requestedSchema: {
-            type: "object",
-            properties: {
-              repository: {
-                type: "string",
-                title: "Repository path",
-                minLength: 1,
-                maxLength: 4096,
-                ...(repository ? { default: repository } : {}),
-              },
-              decision: {
-                type: "string",
-                title: "Repository access",
-                enum: ["deny", "allow"],
-                default: "deny",
-              },
-            },
-            required: ["repository", "decision"],
-          },
-        },
-        { timeout: 600000 },
-      );
-
-      if (answer.action !== "accept")
-        return {
-          content: [{ type: "text", text: "Project registration cancelled." }],
-          structuredContent: { result: { cancelled: true } },
-        };
-
-      const content = z
-        .strictObject({
-          repository: z.string().min(1).max(4096),
-          decision: z.enum(["deny", "allow"]),
-        })
-        .parse(answer.content);
-
-      const result =
-        content.decision === "allow"
-          ? await serviceTool("register_user_agent_project", {
-              repository: content.repository,
-            })
-          : { cancelled: true };
-
-      return {
-        content: [{ type: "text", text: JSON.stringify(result) }],
-        structuredContent: { result },
-      };
-    } catch (error) {
-      return {
-        isError: true,
-        content: [{ type: "text", text: String(error) }],
-      };
-    }
-  },
 );
 
 // Definitions supply schemas only; the proxy forwards calls to the service.

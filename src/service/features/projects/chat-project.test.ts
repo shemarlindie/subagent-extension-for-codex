@@ -128,7 +128,7 @@ test("current chat project lookup is read-only and suggests asking the user", as
 
   await assert.rejects(
     currentChatProject(f.control, "alice", undefined),
-    /request_agent_project/,
+    /Add project/,
   );
 
   const missing = await currentChatProject(
@@ -139,7 +139,7 @@ test("current chat project lookup is read-only and suggests asking the user", as
 
   assert.equal(missing.registered, false);
   assert.equal(missing.auto_register_on_task_start, true);
-  assert.match(String(missing.next_step), /request_agent_project/);
+  assert.match(String(missing.next_step), /Add project/);
   assert.deepEqual(f.control.projects!.list(), []);
   f.enable("alice", false);
 

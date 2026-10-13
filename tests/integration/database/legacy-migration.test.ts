@@ -175,12 +175,11 @@ test("an old database migrates with its records, task references and event ids",
     copied: {
       tasks: 2,
       events: 2,
-      form_requests: 2,
       project_roots: 1,
       user_settings: 1,
     },
     dropped: {
-      form_requests: 1,
+      form_requests: 3,
       event_subscriptions: 1,
       event_outbox: 3,
       event_checkpoint: 1,
@@ -213,33 +212,11 @@ test("an old database migrates with its records, task references and event ids",
 
   assert.deepEqual(
     client
-      .prepare("SELECT id, task_id FROM form_requests ORDER BY id")
-      .all()
-      .map((row) => ({ ...row })),
-    [
-      { id: "input", task_id: "task_a_1" },
-      { id: "start", task_id: null },
-    ],
-  );
-
-  assert.deepEqual(
-    client
       .prepare(
-        "SELECT name FROM sqlite_master WHERE name IN ('event_subscriptions','event_outbox','event_checkpoint')",
+        "SELECT name FROM sqlite_master WHERE name IN ('form_requests','event_subscriptions','event_outbox','event_checkpoint')",
       )
       .all(),
     [],
-  );
-
-  // Forms still cascade when their task is deleted.
-  store.delete("task_a_1", "alice");
-
-  assert.deepEqual(
-    client
-      .prepare("SELECT id FROM form_requests ORDER BY id")
-      .all()
-      .map((row) => String(row.id)),
-    ["start"],
   );
 
   assert.throws(() => migrateLegacyDatabase(data), /already exists/);
@@ -292,14 +269,16 @@ test("a running service or an already versioned database is refused", (t) => {
   assert.throws(() => migrateLegacyDatabase(current), /already versioned/);
 });
 
-test("retired webhook records are discarded without decoding their contents", (t) => {
+test("retired form and webhook records are discarded without decoding their contents", (t) => {
   const { data, legacy } = legacyDataDirectory(t);
+  legacy.prepare("UPDATE form_requests SET body='malformed'").run();
   legacy.prepare("UPDATE event_subscriptions SET body='malformed'").run();
   legacy.prepare("UPDATE event_outbox SET body='malformed'").run();
   legacy.close();
 
   const report = migrateLegacyDatabase(data);
   assert.equal(report.copied.tasks, 2);
+  assert.equal(report.dropped.form_requests, 3);
   assert.equal(report.dropped.event_subscriptions, 1);
   assert.equal(report.dropped.event_outbox, 3);
 });

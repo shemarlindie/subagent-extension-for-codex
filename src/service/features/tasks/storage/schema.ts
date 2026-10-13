@@ -20,16 +20,3 @@ export const events = sqliteTable(
   },
   (t) => [index("events_task").on(t.task_id, t.id)],
 );
-
-/** Pending form requests; `task_id` is empty for forms that create a task or register a project. */
-export const formRequests = sqliteTable(
-  "form_requests",
-  {
-    id: text().primaryKey(),
-    owner: text().notNull(),
-    expires: integer().notNull(),
-    task_id: text().references(() => tasks.id, { onDelete: "cascade" }),
-    body: text().notNull(),
-  },
-  (t) => [index("form_requests_task").on(t.task_id)],
-);

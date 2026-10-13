@@ -87,13 +87,7 @@ async function setup(t: TestContext) {
       body: JSON.stringify(body),
     });
 
-  const rpc = async (
-    name: string,
-    args: object,
-    meta: object = {},
-    state?: string,
-    response?: object,
-  ) => {
+  const rpc = async (name: string, args: object, meta: object = {}) => {
     const res = await post(
       "/mcp",
       {
@@ -103,17 +97,13 @@ async function setup(t: TestContext) {
         params: {
           name,
           arguments: args,
-          ...(state ? { requestState: state } : {}),
-          ...(response ? { inputResponses: { form: response } } : {}),
           _meta: {
             "io.modelcontextprotocol/protocolVersion": "2026-07-28",
             "io.modelcontextprotocol/clientInfo": {
               name: "permission-tests",
               version: "1",
             },
-            "io.modelcontextprotocol/clientCapabilities": {
-              elicitation: { form: {} },
-            },
+            "io.modelcontextprotocol/clientCapabilities": {},
             ...meta,
           },
         },
@@ -214,56 +204,6 @@ test("cookie-authenticated user tasks use the extension permission setting acros
     assert.equal(result.provider_options.claude.permission_mode, "auto");
     assert.equal(result.provider_options.claude.permission_source, "setting");
   }
-});
-
-test("host delegation forms resolve inherit to the extension permission setting on submission", async (t) => {
-  const { c, dir, rpc, request } = await setup(t);
-  c.settings.update("local", { set: { claude_permission_mode: "auto" } });
-
-  const args = {
-    ...request,
-    provider_options: { claude: { permission_mode: "inherit" } },
-  };
-
-  const initial = await rpc("request_agent_task", args, parentMeta);
-
-  assert.equal(
-    initial.result.resultType,
-    "input_required",
-    JSON.stringify(initial),
-  );
-
-  assert.equal(c.store.all().length, 0);
-  const state = initial.result.requestState;
-
-  const submission = await rpc("request_agent_task", args, {}, state, {
-    action: "accept",
-    content: {
-      repository: dir,
-      description: "User accepted task",
-      worker: "claude:implementer",
-      workspace_strategy: "current_repo",
-      revision: "HEAD",
-      permission_mode: "inherit",
-      max_runtime_minutes: 2,
-      max_cost_usd: 1,
-    },
-  });
-
-  assert.equal(
-    submission.result.isError,
-    undefined,
-    JSON.stringify(submission),
-  );
-
-  const task = submission.result.structuredContent.result;
-  assert.equal(task.provider_options.claude.permission_mode, "auto");
-  assert.equal(task.provider_options.claude.permission_source, "setting");
-
-  assert.equal(
-    c.store.get(task.id, "local").provider_options?.claude?.permission_source,
-    "setting",
-  );
 });
 
 test("stdio proxy starts tasks with the extension permission setting", async (t) => {
