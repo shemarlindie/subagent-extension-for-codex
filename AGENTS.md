@@ -25,7 +25,8 @@ Read the matching guide's relevant sections before working in an area; unrelated
 
 - Validate the resulting behavior and relevant architectural boundaries. Match checks to the change and prefer focused checks during iteration. You may skip or defer expensive checks when their runtime outweighs the confidence they add; report what was skipped and why.
 - Before committing, run the relevant formatting, lint, type, test, build and browser checks against the final changes being committed. Unrelated checks do not need to run.
-- Format changed files with `npx eslint --fix <files> && npx prettier --write <files>`. ESLint enforces blank-line layout.
+- Follow the repository's ESLint rules when editing code.
+- Format changed files with `npx eslint --fix <files> && npx prettier --write <files>`.
 - Unit tests time out after 15 seconds, and only `tests/integration` gets longer. Compare DOM nodes with `expect`, never `assert.deepEqual`; see [Checks](docs/development.md#checks).
 - Before running HTTP integration suites, ensure the sandbox permits localhost TCP listeners (`127.0.0.1`); request escalation up front if needed. CI runners need the same access. Do not skip these tests because listener binding is denied.
 - Update affected documentation and report meaningful design decisions, intentional differences from established patterns, and remaining concerns in proportion to the change.
@@ -36,7 +37,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
 
 - Follow [UI verification](docs/ui-verification.md) for dev-server setup, fixture cases, host controls and browser measurements. Use fixture data; use live data only for behavior fixtures cannot show, and do not start tasks in live mode.
 - Build preview events with the typed builder in `dev/panel/scenarios/timeline.ts` or [record them](docs/development.md#recorded-fixtures) with `npm run fixture:record`. Add a fixture for every new event or activity row kind; `dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays synthetic and recorded events through the provider.
-- Start or restart a needed dev server without asking for permission and notify the user. Otherwise leave existing servers running.
+- Start or restart a needed dev server without asking for permission and notify the user. Stop any dev server you started for validation when you are done; leave pre-existing servers running.
 
 ## Documentation style
 
