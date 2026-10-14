@@ -11,6 +11,7 @@ import {
   assert,
   assertAbsent,
   describe,
+  openAdvancedTask,
   screen,
   setup,
   task,
@@ -99,7 +100,7 @@ test("inline preview expands and collapses while preserving the selected task", 
   await act(() => controller.select("two"));
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByText("Running", { exact: true }));
-  assertAbsent(screen.queryByRole("button", { name: "New Task" }));
+  assertAbsent(screen.queryByRole("button", { name: "New task" }));
   assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
 
   assertAbsent(
@@ -109,7 +110,7 @@ test("inline preview expands and collapses while preserving the selected task", 
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   assert.equal(transport.expandCalls, 1);
   assert.equal(controller.getSnapshot().selected, "two");
-  assert.ok(screen.getByRole("button", { name: "New Task" }));
+  assert.ok(screen.getByRole("button", { name: "New task" }));
 
   assert.equal(
     screen.getByRole("heading", { level: 1 }).textContent,
@@ -139,7 +140,7 @@ test("the header menu offers the secondary actions and runs them", async (t) => 
 
   assert.deepEqual(
     (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
-    ["Refresh", "Collapse", "Settings", "New Task"],
+    ["Refresh", "Collapse", "Settings", "New task", "Advanced task…"],
   );
 
   await user.click(screen.getByRole("menuitem", { name: "Settings" }));
@@ -173,12 +174,14 @@ test("a thread panel keeps Settings available and leaves other global actions to
 
   assertAbsent(screen.queryByRole("button", { name: "Project" }));
   assert.ok(screen.getByRole("button", { name: "Settings" }));
-  assertAbsent(screen.queryByRole("button", { name: "New Task" }));
+  assertAbsent(screen.queryByRole("button", { name: "New task" }));
   await user.click(screen.getByRole("button", { name: "Panel actions" }));
 
   const items = await screen.findAllByRole("menuitem");
   assert.ok(items.some((item) => item.textContent === "Settings"));
-  expect(screen.queryByRole("menuitem", { name: "New Task" })).toBeNull();
+  expect(screen.queryByRole("menuitem", { name: "New task" })).toBeNull();
+
+  expect(screen.queryByRole("menuitem", { name: /Advanced task…/ })).toBeNull();
 });
 
 test("inline host without expansion offers the chat controls fallback", async (t) => {
@@ -192,7 +195,7 @@ test("inline host without expansion offers the chat controls fallback", async (t
 
   assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   assert.ok(screen.getByText("Expand this app using the chat controls."));
-  assertAbsent(screen.queryByRole("button", { name: "New Task" }));
+  assertAbsent(screen.queryByRole("button", { name: "New task" }));
 });
 
 test("failed expansion keeps the inline preview and displays the host error", async (t) => {
@@ -223,7 +226,7 @@ test("failed expansion keeps the inline preview and displays the host error", as
 
 test("host collapse preserves a delegation draft until scope changes", async (t) => {
   const { controller, transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   const field = await screen.findByLabelText("Description");
   await user.type(field, "Preserve this suspended draft");
   const dialogState = controller.getSnapshot().dialog;
@@ -255,10 +258,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   assert.equal(controller.getSnapshot().dialog, undefined);
   await user.click(screen.getByRole("button", { name: "Open panel" }));
   assertAbsent(screen.queryByRole("dialog"));
-  const [newTask] = screen.getAllByRole("button", { name: "New Task" });
-
-  assert.ok(newTask);
-  await user.click(newTask);
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
 
   assert.equal(
@@ -282,7 +282,7 @@ describe("nonembedded panels retain the full interface in inline mode", () => {
       { displayMode: "inline" },
     );
 
-    assert.ok(screen.getByRole("button", { name: "New Task" }));
+    assert.ok(screen.getByRole("button", { name: "New task" }));
     assert.ok(screen.getByRole("region", { name: "Task inspector" }));
     assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   });
@@ -376,7 +376,7 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
       );
 
       assertAbsent(screen.queryByText("No delegated tasks yet."));
-      assertAbsent(screen.queryByRole("button", { name: "New Task" }));
+      assertAbsent(screen.queryByRole("button", { name: "New task" }));
 
       await act(async () => controller.showHostRequired());
 

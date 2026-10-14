@@ -422,6 +422,18 @@ export async function selectOption(
   );
 }
 
+export async function openAdvancedTask(
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  await user.click(
+    screen.getByRole("button", { name: "More ways to start a task" }),
+  );
+
+  await user.click(
+    await screen.findByRole("menuitem", { name: /Advanced task…/ }),
+  );
+}
+
 export function selectedProjectPath() {
   const project = screen.getByRole("combobox", { name: "Project" });
 

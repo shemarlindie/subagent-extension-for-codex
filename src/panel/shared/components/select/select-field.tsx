@@ -111,7 +111,8 @@ function SelectTrigger({
   );
 }
 
-function SelectOptions({ options }: { options: SelectOption[] }) {
+/** The shared dropdown list, reused by compact selects such as `ChipSelect`. */
+export function SelectOptions({ options }: { options: SelectOption[] }) {
   return (
     <Select.Portal>
       <Select.Positioner

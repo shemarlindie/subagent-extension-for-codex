@@ -14,6 +14,7 @@ import type {
   DelegateDialogRead,
   DialogReadStatus,
   DialogState,
+  PersistedDialogDraft,
   SettingsDocument,
   Snapshot,
 } from "./types";
@@ -26,13 +27,15 @@ interface DialogLoaderContext extends DelegateReadContext {
   snapshot(): Snapshot;
   closed(): boolean;
   patch(patch: Partial<Snapshot>): void;
+  /** Records a draft for a dialog before it opens, so its form starts with it. */
+  seedDraft(dialog: DialogState, draft: PersistedDialogDraft): void;
   explicitSelection(): boolean;
   /** Retries the panel context read through the next refresh. */
   refresh(): void;
 }
 
 /**
- * Opens the settings and New Task dialogs while their reads load, then fills
+ * Opens the settings and Advanced task dialogs while their reads load, then fills
  * them in. Each opening or retry gets a request number, so a late read for an
  * older one is dropped.
  */
@@ -53,10 +56,12 @@ export class DialogLoader {
     void this.loadSettings(dialog);
   }
 
+  /** Opens the Advanced task dialog; `draft` prefills its fields. */
   openDelegate(
     preferredWorker?: string,
     repository?: string,
     revision?: string,
+    draft?: PersistedDialogDraft,
   ) {
     const state = this.context.snapshot();
 
@@ -70,6 +75,7 @@ export class DialogLoader {
       statuses: initialDelegateStatuses(state),
     };
 
+    if (draft) this.context.seedDraft(dialog, draft);
     this.context.patch({ dialog, formError: "" });
     this.loadDelegate(dialog);
   }
@@ -123,6 +129,24 @@ export class DialogLoader {
 
     if (delegateReadsReady(updated)) {
       this.finishDelegate(updated, updated.defaults);
+    }
+  }
+
+  /** Records the panel context read, which the controller's refresh owns. */
+  contextRead(status: DialogReadStatus, error?: unknown) {
+    const dialog = this.context.snapshot().dialog;
+
+    if (
+      dialog?.kind === "delegate-loading" &&
+      dialog.statuses.context !== "ready"
+    ) {
+      this.updateDelegateRead(
+        dialog.request,
+        "context",
+        status,
+        undefined,
+        error,
+      );
     }
   }
 

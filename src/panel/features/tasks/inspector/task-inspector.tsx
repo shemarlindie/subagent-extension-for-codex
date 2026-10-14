@@ -11,6 +11,7 @@ import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading
 import { MotionContent } from "../../../shared/components/motion/motion-content";
 import { BackButton } from "../../../shared/components/navigation/back-button";
 import { Notice } from "../../../shared/components/notice/notice";
+import { NewTaskView } from "../../delegation/new-task/new-task-view";
 import { projectApproved } from "../../projects/selectors";
 import { EvidenceTabs } from "../evidence/evidence-tabs";
 import { TaskStatus } from "../shared/status";
@@ -41,6 +42,14 @@ export function TaskInspector() {
   const loading = !task && Boolean(state.selected) && state.taskListLoading;
   // Hosts without a restored selection pick a task once the list loads.
   const awaitingSelection = !task && !loading && state.taskListLoading;
+
+  if (state.newTask) {
+    return (
+      <section id="detail" className="detail has-task" aria-label="New task">
+        <NewTaskView newTask={state.newTask} />
+      </section>
+    );
+  }
 
   return (
     <section

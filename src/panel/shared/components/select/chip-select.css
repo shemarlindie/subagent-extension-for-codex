@@ -1,0 +1,43 @@
+/* Compact pill selects that sit beside an input, such as composer options. */
+.chip-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+  height: 26px;
+  padding: 0 7px 0 9px;
+  border-color: transparent;
+  border-radius: 999px;
+  background: var(--hover);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.chip-select:hover,
+.chip-select[data-popup-open] {
+  background: color-mix(in srgb, var(--color-text-primary) 11%, transparent);
+  color: var(--text);
+}
+.chip-select:disabled {
+  opacity: 0.55;
+}
+.chip-select-icon {
+  flex: none;
+}
+.chip-select-value {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip-select-caret {
+  display: inline-flex;
+  flex: none;
+  opacity: 0.7;
+}
+.chip-select-caret .loading-spinner {
+  width: 10px;
+  height: 10px;
+}

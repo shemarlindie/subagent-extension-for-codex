@@ -27,6 +27,7 @@ import { ProjectField } from "./fields/project-field";
 import { WorkerFields } from "./fields/worker-fields";
 import { WorkspaceField } from "./fields/workspace-field";
 import { startTaskArguments } from "./start-task";
+import { useAsyncDefaults } from "./use-async-defaults";
 
 interface DelegateFormProps {
   dialog: DelegateFormDialog;
@@ -46,27 +47,12 @@ function DelegateForm({ dialog }: DelegateFormProps) {
       draft: persistedDraft.current,
     });
 
-  const previousInitialValues = useRef(initialValues),
-    form = usePersistedDialogForm<DelegateValues>("delegate", initialValues);
+  const form = usePersistedDialogForm<DelegateValues>(
+    "delegate",
+    initialValues,
+  );
 
-  // Async defaults fill untouched fields while preserving saved and active edits.
-  useEffect(() => {
-    for (const key of Object.keys(initialValues) as (keyof DelegateValues)[]) {
-      if (Object.is(initialValues[key], previousInitialValues.current[key])) {
-        continue;
-      }
-
-      const field = form.getFieldState(key);
-
-      if (key in persistedDraft.current || field.isDirty || field.isTouched) {
-        continue;
-      }
-
-      form.setValue(key, initialValues[key], { shouldDirty: false });
-    }
-
-    previousInitialValues.current = initialValues;
-  });
+  useAsyncDefaults(form, initialValues, persistedDraft.current);
 
   const [repository, selectedWorker] = useWatch({
     control: form.control,
@@ -266,7 +252,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
 }
 
 export const delegateDialog = defineDialog<"delegate">({
-  title: () => "New Task",
+  title: () => "Advanced task",
   render: (dialog) => <DelegateForm dialog={dialog} />,
   // With a known repository the project is settled, so start on the description.
   initialFocus: (popup, { repository }) =>
@@ -276,7 +262,7 @@ export const delegateDialog = defineDialog<"delegate">({
 });
 
 export const delegateLoadingDialog = defineDialog<"delegate-loading">({
-  title: () => "New Task",
+  title: () => "Advanced task",
   render: (dialog) => <DelegateForm dialog={dialog} />,
   initialFocus: (popup) =>
     popup?.querySelector<HTMLElement>("#description") ?? null,

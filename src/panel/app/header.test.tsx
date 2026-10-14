@@ -39,6 +39,7 @@ function setup(overrides: Partial<Snapshot> = {}) {
 
   const delegate = vi.spyOn(controller, "delegate").mockResolvedValue();
   const settings = vi.spyOn(controller, "settings").mockResolvedValue();
+  const newTask = vi.spyOn(controller.newTasks, "open").mockReturnValue();
 
   const view = render(
     <ControllerContext.Provider value={controller}>
@@ -48,7 +49,14 @@ function setup(overrides: Partial<Snapshot> = {}) {
     </ControllerContext.Provider>,
   );
 
-  return { view, user: userEvent.setup(), addProject, delegate, settings };
+  return {
+    view,
+    user: userEvent.setup(),
+    addProject,
+    delegate,
+    settings,
+    newTask,
+  };
 }
 
 test("global header offers project scope and Manage without the thread title", () => {
@@ -68,7 +76,7 @@ test("thread header shows settings and omits other global controls", async () =>
   expect(view.queryByRole("combobox", { name: "Project scope" })).toBeNull();
   expect(view.queryByRole("button", { name: "Manage" })).toBeNull();
   const settingsButton = view.getByRole("button", { name: "Settings" });
-  expect(view.queryByRole("button", { name: "New Task" })).toBeNull();
+  expect(view.queryByRole("button", { name: "New task" })).toBeNull();
 
   await user.click(settingsButton);
   await waitFor(() => assert.equal(settings.mock.calls.length, 1));
@@ -76,7 +84,8 @@ test("thread header shows settings and omits other global controls", async () =>
   await user.click(view.getByRole("button", { name: "Panel actions" }));
   await view.findByRole("menuitem", { name: "Refresh" });
   const settingsItem = view.getByRole("menuitem", { name: "Settings" });
-  expect(view.queryByRole("menuitem", { name: "New Task" })).toBeNull();
+  expect(view.queryByRole("menuitem", { name: "New task" })).toBeNull();
+  expect(view.queryByRole("menuitem", { name: "Advanced task…" })).toBeNull();
 
   await user.click(settingsItem);
   await waitFor(() => assert.equal(settings.mock.calls.length, 2));
@@ -135,10 +144,29 @@ test.each([{ connected: false }, { scopeKnown: false }, { busy: true }])(
   },
 );
 
-test.each(["Settings", "New Task"] as const)(
+test("New task opens the composer and its menu opens the Advanced task dialog", async () => {
+  const { view, user, delegate, newTask } = setup();
+
+  await user.click(view.getByRole("button", { name: "New task" }));
+  assert.equal(newTask.mock.calls.length, 1);
+  assert.equal(delegate.mock.calls.length, 0);
+
+  await user.click(
+    view.getByRole("button", { name: "More ways to start a task" }),
+  );
+
+  await user.click(
+    await view.findByRole("menuitem", { name: /^Advanced task…/ }),
+  );
+
+  await waitFor(() => assert.equal(delegate.mock.calls.length, 1));
+});
+
+test.each(["Settings", "New task", "Advanced task…"] as const)(
   "global menu invokes %s without offering unsupported expansion",
   async (label) => {
-    const { view, user, delegate, settings } = setup();
+    const { view, user, delegate, settings, newTask } = setup();
+    const calls = { Settings: settings, "New task": newTask };
 
     expect(view.queryByRole("button", { name: "Expand" })).toBeNull();
     await user.click(view.getByRole("button", { name: "Panel actions" }));
@@ -155,7 +183,8 @@ test.each(["Settings", "New Task"] as const)(
 
     await waitFor(() =>
       assert.equal(
-        (label === "Settings" ? settings : delegate).mock.calls.length,
+        (label === "Advanced task…" ? delegate : calls[label]).mock.calls
+          .length,
         1,
       ),
     );

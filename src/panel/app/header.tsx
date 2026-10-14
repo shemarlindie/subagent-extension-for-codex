@@ -1,6 +1,7 @@
 import { Menu } from "@base-ui/react/menu";
 import { useRef } from "react";
 
+import { NewTaskButton } from "../features/delegation/new-task/new-task-button";
 import { ProjectScope } from "../features/projects/project-scope";
 import { Button, buttonClass } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
@@ -184,28 +185,30 @@ export function Header() {
                   Settings
                 </Menu.Item>
                 {!threadMode && (
-                  <Menu.Item
-                    className="menu-item"
-                    disabled={blocked}
-                    onClick={() => controller.run(() => controller.delegate())}
-                  >
-                    New Task
-                  </Menu.Item>
+                  <>
+                    <Menu.Item
+                      className="menu-item"
+                      disabled={blocked}
+                      onClick={() => controller.newTasks.open()}
+                    >
+                      New task
+                    </Menu.Item>
+                    <Menu.Item
+                      className="menu-item"
+                      disabled={blocked}
+                      onClick={() =>
+                        controller.run(() => controller.delegate())
+                      }
+                    >
+                      Advanced task…
+                    </Menu.Item>
+                  </>
                 )}
               </Menu.Popup>
             </Menu.Positioner>
           </Menu.Portal>
         </Menu.Root>
-        {!threadMode && (
-          <Button
-            id="delegate"
-            variant="primary"
-            disabled={blocked}
-            onClick={() => controller.run(() => controller.delegate())}
-          >
-            New Task
-          </Button>
-        )}
+        {!threadMode && <NewTaskButton disabled={blocked} />}
       </div>
     </header>
   );

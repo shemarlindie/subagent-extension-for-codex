@@ -7,6 +7,7 @@ import {
   assertAbsent,
   configureProjectRegistration,
   enterTask,
+  openAdvancedTask,
   screen,
   selectedProjectPath,
   selectOption,
@@ -414,7 +415,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Review this new project with my draft intact");
   await selectOption(user, "Worker", "fixture · reviewer");
@@ -494,7 +495,7 @@ test("task project registration failure preserves the selected project and draft
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Keep this description after registration failure");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
@@ -518,7 +519,7 @@ test("cancelling the task project picker preserves selection and task draft with
     configureProjectRegistration(transport),
   );
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Preserve task while browsing");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
@@ -575,7 +576,7 @@ test("pending task project browsing disables Start and ignores selection after s
     };
   });
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "A pending folder selection");
 

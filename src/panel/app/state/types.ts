@@ -39,6 +39,15 @@ export type DialogReadStatus = "loading" | "ready" | "error";
 export type DelegateDialogRead =
   "context" | "settings" | "projects" | "workers";
 
+/** The new-task composer's reads; present while the user composes a task. */
+export type NewTaskState = {
+  scope: number;
+  request: number;
+  statuses: Record<DelegateDialogRead, DialogReadStatus>;
+  errors?: Partial<Record<DelegateDialogRead, string>>;
+  defaults?: Defaults;
+};
+
 export type DialogState =
   | { kind: "remove-project"; project: Project; scope: number }
   | { kind: "project"; repository?: string; scope: number }
@@ -157,6 +166,8 @@ export type Snapshot = {
   /** The selected task's message being written, streamed or read. */
   draft?: DraftState;
   selected?: string;
+  /** Set while the inspector shows the new-task composer instead of a task. */
+  newTask?: NewTaskState;
   conversation?: string;
   repository?: string;
   projectCandidate?: string;

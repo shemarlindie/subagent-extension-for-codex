@@ -1,0 +1,225 @@
+import {
+  type KeyboardEvent,
+  type SubmitEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
+
+import {
+  useController,
+  useSnapshot,
+} from "../../../app/state/controller-context";
+import { useSessionState } from "../../../app/state/session/use-session-state";
+import type { NewTaskState } from "../../../app/state/types";
+import { Button } from "../../../shared/components/button/button";
+import { Icon } from "../../../shared/components/icons/icons";
+import { TooltipWrapper } from "../../../shared/components/tooltip";
+import { FormFieldError } from "../../../shared/forms/form-field-error";
+import { FormFieldHint } from "../../../shared/forms/form-field-hint";
+import { workerChoices } from "../delegate-initial-values";
+import type { DelegateValues } from "../delegate-values";
+import { workerChoice } from "../delegation";
+import { useAsyncDefaults } from "../use-async-defaults";
+import { NEW_TASK_SESSION_ID, newTaskInitialValues } from "./new-task-values";
+import { NewTaskOptions } from "./options/new-task-options";
+
+type NewTaskComposerProps = { newTask: NewTaskState };
+
+const HINT = "Enter to start · Shift + Enter for a new line";
+
+/** Fields the Advanced task dialog receives from the composer. */
+const HANDOFF_FIELDS = [
+  "repository",
+  "description",
+  "worker",
+  "model",
+  "reasoning_effort",
+  "permission_mode",
+] as const satisfies (keyof DelegateValues)[];
+
+/** Why the composer's options are unavailable, for a failed read. */
+function readFailure(errors: NewTaskState["errors"]) {
+  if (errors?.settings) {
+    return `Task defaults could not be loaded: ${errors.settings}`;
+  }
+
+  return `Some task options could not be loaded: ${Object.values(errors ?? {}).join(" ")}`;
+}
+
+/**
+ * Starts a task from a first message. Enter sends; the chips below the
+ * message choose the project, profile, model, reasoning and permission
+ * mode, and **More options** opens the Advanced task dialog with them.
+ */
+export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
+  const controller = useController(),
+    state = useSnapshot(),
+    [saved, updateSession] = useSessionState(
+      "newTask",
+      NEW_TASK_SESSION_ID,
+      (session) => session.draft,
+    ),
+    savedAtMount = useRef(saved).current,
+    initialValues = newTaskInitialValues(newTask, state),
+    form = useForm<DelegateValues>({
+      defaultValues: { ...initialValues, ...savedAtMount },
+    }),
+    input = useRef<HTMLTextAreaElement>(null),
+    [error, setError] = useState<string>();
+
+  useAsyncDefaults(form, initialValues, savedAtMount);
+
+  // Keep the message and changed options in session memory until sent.
+  useEffect(() => {
+    const subscription = form.watch((_values, { name }) => {
+      if (!name) return;
+      const field = name.split(".")[0] as keyof DelegateValues;
+
+      updateSession({
+        draft: {
+          ...controller.session.get("newTask", NEW_TASK_SESSION_ID).draft,
+          [field]: form.getValues(field),
+        },
+      });
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, controller, updateSession]);
+
+  useEffect(() => {
+    input.current?.focus({ preventScroll: true });
+  }, []);
+
+  const [description, chosenRepository, worker] = useWatch({
+      control: form.control,
+      name: ["description", "repository", "worker"],
+    }),
+    // A scoped panel targets its project; the chip only shows for All projects.
+    repository = state.repository ?? chosenRepository;
+
+  const { statuses, errors } = newTask,
+    readsReady = Object.values(statuses).every((status) => status === "ready"),
+    failed = Object.values(statuses).some((status) => status === "error"),
+    readiness = state.workers.find(
+      (item) => item.provider === workerChoice(worker).provider,
+    )?.readiness,
+    canSubmit =
+      readsReady &&
+      !state.busy &&
+      Boolean(description.trim()) &&
+      Boolean(repository) &&
+      workerChoices(state.workers).includes(worker) &&
+      readiness?.ready !== false;
+
+  const submit = form.handleSubmit(async (values) => {
+    const failure = await controller.newTasks.start({
+      ...values,
+      repository,
+      description: values.description.trim(),
+      // Another project's checkout starts from its own HEAD.
+      revision: repository === state.repository ? values.revision : "HEAD",
+    });
+
+    // On success the composer closes and the controller clears its draft.
+    if (failure) setError(failure);
+  });
+
+  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (canSubmit) void submit(event);
+  }
+
+  const keys = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.nativeEvent.isComposing) return;
+
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (canSubmit) void submit();
+    } else if (event.key === "Escape" && !description) {
+      event.preventDefault();
+      controller.back();
+    }
+  };
+
+  const advanced = () => {
+    const values = { ...form.getValues(), repository };
+
+    controller.run(() =>
+      controller.delegate(
+        values.worker || undefined,
+        Object.fromEntries(HANDOFF_FIELDS.map((key) => [key, values[key]])),
+      ),
+    );
+  };
+
+  const { ref: messageRef, ...messageField } = form.register("description");
+
+  const setInput = (element: HTMLTextAreaElement | null) => {
+    input.current = element;
+    messageRef(element);
+  };
+
+  return (
+    <FormProvider {...form}>
+      <form
+        className="new-task-composer"
+        noValidate
+        aria-busy={state.busy || undefined}
+        onSubmit={handleSubmit}
+      >
+        <div className="new-task-box">
+          <textarea
+            id="new-task-message"
+            aria-label="Task message"
+            aria-describedby="new-task-hint"
+            rows={3}
+            maxLength={20000}
+            placeholder="Describe the task. Include files, constraints and what done looks like."
+            disabled={state.busy}
+            {...messageField}
+            ref={setInput}
+            onKeyDown={keys}
+          />
+          <div className="new-task-box-footer">
+            <NewTaskOptions newTask={newTask} state={state} />
+            <div className="new-task-actions">
+              <Button
+                variant="text"
+                className="new-task-more"
+                disabled={state.busy || Boolean(state.dialog)}
+                onClick={advanced}
+              >
+                More options…
+              </Button>
+              <TooltipWrapper label="Start task (Enter)">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="chat-icon-button"
+                  aria-label="Start task"
+                  disabled={!canSubmit}
+                >
+                  <Icon name="enter" size={12} />
+                </Button>
+              </TooltipWrapper>
+            </div>
+          </div>
+        </div>
+        <FormFieldHint id="new-task-hint" message={HINT} />
+        {failed && (
+          <div className="form-error new-task-error" role="alert">
+            <span>{readFailure(errors)}</span>
+            <Button variant="text" onClick={() => controller.newTasks.retry()}>
+              Retry loading
+            </Button>
+          </div>
+        )}
+        <FormFieldError
+          message={readiness?.ready === false ? readiness.message : error}
+        />
+      </form>
+    </FormProvider>
+  );
+}

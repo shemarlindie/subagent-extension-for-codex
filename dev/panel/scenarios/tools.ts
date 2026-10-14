@@ -509,7 +509,7 @@ export function previewTool(
     list_available_workers: [
       {
         provider: "claude",
-        profiles: ["reviewer", "researcher", "implementer", "debugger"],
+        profiles: [...roles],
         // The service skips model discovery while the CLI isn't ready.
         ...(options.claudeUnavailable
           ? { readiness: previewClaudeUnavailable }

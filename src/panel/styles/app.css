@@ -7,6 +7,7 @@
 @import "../app/styles/panel-narrow.css";
 @import "./primitives.css";
 @import "../shared/components/select/select-field.css";
+@import "../shared/components/select/chip-select.css";
 @import "../shared/components/loading-spinner/loading-spinner.css";
 @import "../features/tasks/activity/activity.css";
 @import "../features/tasks/inspector/task-details.css";
@@ -29,4 +30,5 @@
 @import "../features/file-preview/file-preview.css";
 @import "../features/changes/changes.css";
 @import "../features/tasks/chat/chat.css";
+@import "../features/delegation/new-task/new-task.css";
 @import "../shared/components/editable-text/editable-text.css";

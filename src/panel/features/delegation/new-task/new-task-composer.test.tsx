@@ -1,0 +1,206 @@
+// @vitest-environment jsdom
+import assert from "node:assert/strict";
+
+import { Tooltip } from "@base-ui/react/tooltip";
+import { cleanup, render, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { expect, onTestFinished, test, vi } from "vitest";
+
+import { roles } from "../../../../shared/tasks/model";
+import { Controller } from "../../../app/state/controller";
+import { ControllerContext } from "../../../app/state/controller-context";
+import { defaults } from "../../../app/state/controller-test-harness";
+import type {
+  NewTaskState,
+  Snapshot,
+  Transport,
+} from "../../../app/state/types";
+import { NewTaskComposer } from "./new-task-composer";
+
+const ready: NewTaskState = {
+  scope: 0,
+  request: 1,
+  statuses: {
+    context: "ready",
+    settings: "ready",
+    projects: "ready",
+    workers: "ready",
+  },
+  defaults: { ...defaults, claude_permission_mode: "acceptEdits" },
+};
+
+function setup(
+  newTask: NewTaskState = ready,
+  overrides: Partial<Snapshot> = {},
+) {
+  onTestFinished(cleanup);
+
+  const controller = new Controller(
+    { embedded: true, dispose() {} } as unknown as Transport,
+    { hidden: () => false, wide: () => false },
+  );
+
+  onTestFinished(() => controller.dispose());
+
+  const state: Snapshot = {
+    ...controller.getSnapshot(),
+    connected: true,
+    scopeKnown: true,
+    repository: "/repo",
+    projects: [{ repository: "/repo", kind: "repository" }],
+    projectsLoaded: true,
+    workers: [{ provider: "claude", profiles: [...roles], capabilities: {} }],
+    workersLoaded: true,
+    newTask,
+    ...overrides,
+  };
+
+  vi.spyOn(controller, "getSnapshot").mockReturnValue(state);
+
+  const start = vi
+    .spyOn(controller.newTasks, "start")
+    .mockResolvedValue(undefined);
+
+  const retry = vi.spyOn(controller.newTasks, "retry").mockReturnValue();
+  const back = vi.spyOn(controller, "back").mockReturnValue();
+  const delegate = vi.spyOn(controller, "delegate").mockResolvedValue();
+
+  const view = render(
+    <ControllerContext.Provider value={controller}>
+      <Tooltip.Provider>
+        <NewTaskComposer newTask={newTask} />
+      </Tooltip.Provider>
+    </ControllerContext.Provider>,
+  );
+
+  return {
+    view,
+    user: userEvent.setup(),
+    start,
+    retry,
+    back,
+    delegate,
+  };
+}
+
+test("Enter starts a General task with the settings defaults in the scoped project", async () => {
+  const { view, user, start } = setup();
+  const send = view.getByRole("button", { name: "Start task" });
+  const message = view.getByRole("textbox", { name: "Task message" });
+
+  expect(message).toBe(document.activeElement);
+  assert.equal((send as HTMLButtonElement).disabled, true);
+  assert.ok(view.getByRole("combobox", { name: "Profile: General" }));
+
+  await user.type(message, "  Fix the flaky login test  {Enter}");
+
+  await waitFor(() => assert.equal(start.mock.calls.length, 1));
+
+  expect(start.mock.calls[0]?.[0]).toMatchObject({
+    repository: "/repo",
+    description: "Fix the flaky login test",
+    worker: "claude:general",
+    model: "",
+    reasoning_effort: "default",
+    permission_mode: "acceptEdits",
+    revision: "HEAD",
+  });
+});
+
+test("Shift+Enter adds a line instead of sending", async () => {
+  const { view, user, start } = setup();
+  const message = view.getByRole("textbox", { name: "Task message" });
+
+  await user.type(message, "First{Shift>}{Enter}{/Shift}Second");
+
+  assert.equal((message as HTMLTextAreaElement).value, "First\nSecond");
+  assert.equal(start.mock.calls.length, 0);
+});
+
+test("a read-only profile replaces the permission choice with Read only", async () => {
+  const { view, user } = setup();
+
+  await user.click(view.getByRole("combobox", { name: "Profile: General" }));
+  await user.click(await view.findByRole("option", { name: "Reviewer" }));
+
+  const permission = await view.findByRole("combobox", {
+    name: "Permission mode: Read only",
+  });
+
+  assert.equal(permission.getAttribute("data-disabled"), "");
+});
+
+test("the project chip appears only without a scoped project", () => {
+  const scoped = setup();
+
+  expect(scoped.view.queryByRole("combobox", { name: /^Project/ })).toBeNull();
+  cleanup();
+
+  const global = setup(ready, {
+    repository: undefined,
+    projects: [
+      { repository: "/repo", kind: "repository" },
+      { repository: "/other", kind: "repository" },
+    ],
+  });
+
+  assert.ok(
+    global.view.getByRole("combobox", { name: "Project: Choose a project" }),
+  );
+
+  assert.equal(
+    (
+      global.view.getByRole("button", {
+        name: "Start task",
+      }) as HTMLButtonElement
+    ).disabled,
+    true,
+  );
+});
+
+test("Escape in an empty composer returns to the task list", async () => {
+  const { view, user, back } = setup();
+
+  await user.click(view.getByRole("textbox", { name: "Task message" }));
+  await user.keyboard("{Escape}");
+
+  assert.equal(back.mock.calls.length, 1);
+});
+
+test("More options hands the message and options to the Advanced task dialog", async () => {
+  const { view, user, delegate } = setup();
+
+  await user.type(
+    view.getByRole("textbox", { name: "Task message" }),
+    "Audit the API",
+  );
+
+  await user.click(view.getByRole("button", { name: "More options…" }));
+
+  expect(delegate.mock.calls[0]).toEqual([
+    "claude:general",
+    {
+      repository: "/repo",
+      description: "Audit the API",
+      worker: "claude:general",
+      model: "",
+      reasoning_effort: "default",
+      permission_mode: "acceptEdits",
+    },
+  ]);
+});
+
+test("failed reads show the error with a retry", async () => {
+  const { view, user, retry } = setup({
+    ...ready,
+    statuses: { ...ready.statuses, settings: "error" },
+    errors: { settings: "Service unavailable" },
+  });
+
+  assert.ok(
+    view.getByText("Task defaults could not be loaded: Service unavailable"),
+  );
+
+  await user.click(view.getByRole("button", { name: "Retry loading" }));
+  assert.equal(retry.mock.calls.length, 1);
+});

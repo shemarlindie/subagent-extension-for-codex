@@ -20,6 +20,7 @@ import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading
 import { useListMotion } from "../../../shared/components/motion/use-list-motion";
 import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
 import { useNow } from "../../../shared/utils/use-now";
+import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
 import { TaskListScrollbar } from "./task-list-scrollbar";
@@ -245,7 +246,12 @@ export function TaskList() {
             loading={state.taskListLoading}
             skeleton={<TaskListSkeleton showProject={!state.repository} />}
           >
-            {state.taskListLoading ? null : renderRows()}
+            {state.taskListLoading ? null : (
+              <>
+                {state.newTask && <NewTaskRow />}
+                {renderRows()}
+              </>
+            )}
           </LoadingSwap>
         </div>
         {!state.taskListLoading && <TaskListScrollbar scrollerRef={listRef} />}

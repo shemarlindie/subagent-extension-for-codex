@@ -8,6 +8,11 @@ import type {
   WorktreeRemoval,
 } from "../../features/changes/types";
 import {
+  NewTaskLoader,
+  rescopedNewTask,
+} from "../../features/delegation/new-task/new-task-loader";
+import { NEW_TASK_SESSION_ID } from "../../features/delegation/new-task/new-task-values";
+import {
   renamedProject,
   withoutProject,
 } from "../../features/projects/project-list";
@@ -60,6 +65,13 @@ import { UpdateFollower } from "./update-follower";
 
 /** How long a quiet panel waits before refreshing anyway, for writes the service can't announce. */
 const FALLBACK_REFRESH_MS = 30_000;
+
+/** Ends the first-read placeholders when the panel can't read tasks. */
+const READS_STOPPED = {
+  taskListLoading: false,
+  chatHistoryLoading: undefined,
+  activityHistoryLoading: undefined,
+} satisfies Partial<Snapshot>;
 
 function availableFilter(state: Snapshot, filter: Filter | null) {
   if (!filter || filter === "all") return filter;
@@ -135,11 +147,13 @@ export class Controller {
     this.tool<Worker[]>("list_available_workers"),
   );
 
-  private dialogLoader = new DialogLoader({
+  /** What the new-task forms share: state access and the reads they need. */
+  private formContext = {
     snapshot: () => this.state,
     closed: () => this.disposed,
-    patch: (patch) => this.patch(patch),
-    tool: (name) => this.tool(name),
+    patch: (patch: Partial<Snapshot>) => this.patch(patch),
+    tool: <T>(name: string, args?: Record<string, unknown>) =>
+      this.tool<T>(name, args),
     readProjects: () => this.readProjects(),
     readWorkers: async () => {
       const workers = await this.readWorkers();
@@ -147,8 +161,22 @@ export class Controller {
 
       return workers;
     },
-    explicitSelection: () => this.explicitSelection,
     refresh: () => this.run(() => this.refresh()),
+  };
+
+  private dialogLoader = new DialogLoader({
+    ...this.formContext,
+    seedDraft: (dialog, draft) => this.dialogs.seed(dialog, draft, false),
+    explicitSelection: () => this.explicitSelection,
+  });
+
+  /** The new-task composer: opening, its reads and starting the task. */
+  readonly newTasks = new NewTaskLoader({
+    ...this.formContext,
+    addChatProjectForTask: (repository) =>
+      this.addChatProjectForTask(repository),
+    leaveSelection: () => this.leaveSelection(false),
+    created: (task) => this.showCreated(task),
   });
 
   readonly taskActions = new TaskActions({
@@ -294,6 +322,7 @@ export class Controller {
 
     if (
       this.browsing ||
+      this.state.newTask ||
       !(this.environment.wide() || conversation || repository)
     ) {
       return undefined;
@@ -345,12 +374,7 @@ export class Controller {
   }
 
   showHostRequired() {
-    this.patch({
-      connection: "Open through MCP",
-      taskListLoading: false,
-      chatHistoryLoading: undefined,
-      activityHistoryLoading: undefined,
-    });
+    this.patch({ connection: "Open through MCP", ...READS_STOPPED });
   }
 
   async start() {
@@ -361,13 +385,7 @@ export class Controller {
       await this.transport.connect({
         scope: (data) => this.applyScope(data),
         status: (connection) => this.showConnection(connection),
-        login: () =>
-          this.patch({
-            loginRequired: true,
-            taskListLoading: false,
-            chatHistoryLoading: undefined,
-            activityHistoryLoading: undefined,
-          }),
+        login: () => this.patch({ loginRequired: true, ...READS_STOPPED }),
         host: (host) => this.patch({ host }),
         teardown: () => this.dispose(),
         draft: (update) => this.draftFollower.apply(update),
@@ -400,12 +418,7 @@ export class Controller {
       this.schedule();
     } catch (error) {
       if (!this.state.connected) {
-        this.patch({
-          connection: "Connection failed",
-          taskListLoading: false,
-          chatHistoryLoading: undefined,
-          activityHistoryLoading: undefined,
-        });
+        this.patch({ connection: "Connection failed", ...READS_STOPPED });
       } else {
         // Keep following changes when the first host read fails transiently.
         this.followUpdates();
@@ -712,20 +725,7 @@ export class Controller {
       });
     } catch (error) {
       if (this.stale(version)) return;
-      const dialog = this.state.dialog;
-
-      if (
-        dialog?.kind === "delegate-loading" &&
-        dialog.statuses.context === "loading"
-      ) {
-        this.dialogLoader.updateDelegateRead(
-          dialog.request,
-          "context",
-          "error",
-          undefined,
-          error,
-        );
-      }
+      this.contextRead("error", error);
 
       if (!this.transportStatus) this.patch({ connection: "Reconnecting…" });
       throw error;
@@ -884,12 +884,17 @@ export class Controller {
   }
 
   back() {
+    this.leaveSelection(true);
+  }
+
+  /** Clears the selection; `browsing` keeps the list from choosing one again. */
+  private leaveSelection(browsing: boolean) {
     this.explicitSelection = false;
-    this.browsing = true;
+    this.browsing = browsing;
     ++this.generation;
     this.tabIntentRevision++;
 
-    this.patch(selectionPatch(undefined));
+    this.patch({ ...selectionPatch(undefined), newTask: undefined });
     this.run(() => this.share());
   }
 
@@ -1080,6 +1085,7 @@ export class Controller {
       scopeVersion,
       tasks: [],
       taskListLoading: true,
+      newTask: rescopedNewTask(this.state, patch, scopeVersion),
       ...selectionPatch(restoredSelection),
       ...(this.state.busy
         ? {
@@ -1189,18 +1195,16 @@ export class Controller {
       });
     }
 
-    const dialog = this.state.dialog;
-
-    if (
-      dialog?.kind === "delegate-loading" &&
-      dialog.statuses.context !== "ready"
-    ) {
-      this.dialogLoader.updateDelegateRead(dialog.request, "context", "ready");
-    }
-
+    this.contextRead("ready");
     if (refresh) this.run(() => this.refresh());
 
     return true;
+  }
+
+  /** Records the panel context read for the forms waiting on it. */
+  private contextRead(status: "ready" | "error", error?: unknown) {
+    this.dialogLoader.contextRead(status, error);
+    this.newTasks.contextRead(status, error);
   }
 
   async changeProject(repository?: string) {
@@ -1529,10 +1533,42 @@ export class Controller {
     this.navigate(DEFAULT_PAGE);
   }
 
-  async delegate(preferredWorker?: string) {
+  /**
+   * Opens the Advanced task dialog; `draft` prefills its fields, as when the
+   * new-task composer hands its message and options over.
+   */
+  async delegate(preferredWorker?: string, draft?: PersistedDialogDraft) {
     if (this.state.dialog || this.state.busy) return;
 
-    this.dialogLoader.openDelegate(preferredWorker);
+    this.dialogLoader.openDelegate(
+      preferredWorker,
+      undefined,
+      undefined,
+      draft,
+    );
+  }
+
+  /** Lists and selects a task this panel just started. */
+  private selectStarted(task: Task) {
+    this.choose();
+    this.restoredView = undefined;
+    // Starting a task while composing, here or from Advanced, sends the draft.
+    if (this.state.newTask) this.session.remove("newTask", NEW_TASK_SESSION_ID);
+
+    this.patch({
+      tasks: [task, ...this.state.tasks.filter((item) => item.id !== task.id)],
+      ...selectionPatch(task.id),
+      tab: this.session.get("task", task.id).tab,
+      repository: task.repository,
+      revision: task.revision,
+    });
+  }
+
+  /** Shows a task the new-task composer started on its Chat tab. */
+  private async showCreated(task: Task) {
+    this.selectStarted(task);
+    await this.refresh().catch(this.report);
+    await this.share().catch(this.report);
   }
 
   /** Retries the open loading dialog's failed reads. */
@@ -1661,21 +1697,7 @@ export class Controller {
         );
       }
 
-      if (task && selectReturned) {
-        this.choose();
-        this.restoredView = undefined;
-
-        this.patch({
-          tasks: [
-            task,
-            ...this.state.tasks.filter((item) => item.id !== task.id),
-          ],
-          ...selectionPatch(task.id),
-          tab: this.session.get("task", task.id).tab,
-          repository: task.repository,
-          revision: task.revision,
-        });
-      }
+      if (task && selectReturned) this.selectStarted(task);
 
       afterSuccess?.();
       if (closeOnSuccess) this.closeDialog();

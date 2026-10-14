@@ -3,6 +3,7 @@ import {
   assert,
   configureModelDefaults,
   enterTask,
+  openAdvancedTask,
   screen,
   selectOption,
   setup,
@@ -29,7 +30,7 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
     ),
   );
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   const model = screen.getByLabelText<HTMLInputElement>("Model");
   assert.equal(model.placeholder, "limited-model");
@@ -83,7 +84,7 @@ test("runtime default model metadata blocks unsupported effort and permits nativ
     ]),
   );
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Check native default metadata");
   assert.equal(screen.getByLabelText<HTMLInputElement>("Model").value, "");
@@ -134,7 +135,7 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
     ]),
   );
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Use custom model ID");
   await user.type(screen.getByLabelText("Model"), "custom-model");
@@ -159,7 +160,7 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
 
 test("model selection retains unsupported effort on Claude and blocks submission until corrected", async (t) => {
   const { transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Investigate effort selection");
   await selectOption(user, "Worker", "fixture · reviewer");
@@ -202,7 +203,7 @@ test("model selection rejects unsupported inherited Claude effort and accepts an
     configureModelDefaults(transport, { default_reasoning_effort: "none" }),
   );
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Investigate inherited effort");
 
@@ -249,7 +250,7 @@ test("model selection updates role and provider defaults while preserving explic
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   const field = screen.getByLabelText<HTMLInputElement>("Model");
   assert.equal(field.placeholder, "review-model");

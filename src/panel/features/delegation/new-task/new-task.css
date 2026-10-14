@@ -1,0 +1,139 @@
+/* The new-task composer: an empty conversation with the composer where Chat's will be. */
+.new-task-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+}
+.new-task-title {
+  margin: 4px 0 0;
+  padding-inline: var(--detail-pad);
+  font-size: 16px;
+  font-weight: 550;
+  letter-spacing: -0.2px;
+}
+.new-task-empty {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  max-width: 340px;
+  margin: 0 auto;
+  padding: 32px var(--detail-pad);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.new-task-empty p {
+  margin: 0;
+}
+.new-task-footer {
+  padding-inline: var(--detail-pad);
+}
+.new-task-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.new-task-composer[aria-busy] {
+  opacity: 0.7;
+}
+.new-task-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 8px 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
+}
+.new-task-box:focus-within {
+  border-color: var(--accent);
+}
+.new-task-box textarea {
+  width: 100%;
+  min-height: 60px;
+  max-height: 240px;
+  field-sizing: content;
+  resize: none;
+  border: 0;
+  padding: 2px 6px 2px 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.5;
+  outline: none;
+}
+.new-task-box-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.new-task-options {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  /* Line the first chip's text up with the message text. */
+  margin-inline-start: -6px;
+}
+.new-task-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  margin-inline-start: auto;
+}
+.new-task-more {
+  font-size: 12px;
+}
+.new-task-composer .form-field-hint,
+.new-task-composer .form-field-error {
+  padding-inline: 4px;
+}
+.new-task-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding-inline: 4px;
+}
+/* A chip still waiting for a choice, such as the project, invites one. */
+.new-task-options .chip-select[data-placeholder]:not([aria-busy]) {
+  border: 1px dashed var(--accent);
+  background: transparent;
+  color: var(--accent);
+}
+
+/* The task rail's draft placeholder. */
+.row-new-task {
+  border: 1px dashed var(--line);
+}
+.row-new-task[aria-current="true"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+/* The header's New task split button. */
+.split-button {
+  display: inline-flex;
+  align-items: stretch;
+}
+.split-button-main {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+.split-button-menu {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-inline-start-color: color-mix(in srgb, var(--bg) 35%, var(--text));
+}
+.new-task-menu-item {
+  justify-content: flex-start;
+}

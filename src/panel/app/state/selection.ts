@@ -3,11 +3,13 @@ import type { Snapshot, Task } from "./types";
 
 /**
  * Selects a task, or none, with its detail cleared: its chat and activity
- * show as loading until their first reads return.
+ * show as loading until their first reads return. Selecting a task closes
+ * the new-task composer.
  */
 export function selectionPatch(selected: string | undefined) {
   return {
     selected,
+    ...(selected ? { newTask: undefined } : {}),
     events: [],
     droppedEvents: undefined,
     activityFocus: undefined,

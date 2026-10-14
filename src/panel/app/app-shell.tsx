@@ -18,11 +18,14 @@ export function AppShell() {
   const expandedPanel = !compact;
   useEffect(() => trackIdleScrollbars(document), []);
 
+  // Composing a task shows the inspector in place of the list, like a selection.
+  const showsDetail = Boolean(state.selected || state.newTask);
+
   useEffect(() => {
-    document.body.dataset.selected = String(Boolean(state.selected));
+    document.body.dataset.selected = String(showsDetail);
     document.body.dataset.displayMode = state.host.displayMode;
     document.body.dataset.expandedPanel = String(expandedPanel);
-  }, [state.selected, state.host.displayMode, expandedPanel]);
+  }, [showsDetail, state.host.displayMode, expandedPanel]);
 
   return (
     <>

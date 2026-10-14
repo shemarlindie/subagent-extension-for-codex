@@ -1,4 +1,5 @@
 import type { ChangesReading } from "../../../features/changes/changes-reading";
+import type { DelegateValues } from "../../../features/delegation/delegate-values";
 import type { ReadingState } from "../../../features/tasks/evidence/reading-state";
 import type { QuestionDraft, Tab } from "../types";
 
@@ -20,9 +21,15 @@ type QuestionSessionState = {
   draft?: QuestionDraft;
 };
 
+/** The new-task composer's message and the options the user changed. */
+type NewTaskSessionState = {
+  draft: Partial<DelegateValues>;
+};
+
 type SessionStates = {
   task: TaskSessionState;
   question: QuestionSessionState;
+  newTask: NewTaskSessionState;
 };
 
 export type SessionScope = keyof SessionStates;
@@ -43,11 +50,16 @@ const defaults = {
     viewedChanges: new Map(),
   }),
   question: (): QuestionSessionState => ({}),
+  newTask: (): NewTaskSessionState => ({ draft: {} }),
 };
 
 /** In-memory UI state. Its lifetime is the owning controller's session. */
 export class SessionStateStore {
-  private entries: SessionEntries = { task: new Map(), question: new Map() };
+  private entries: SessionEntries = {
+    task: new Map(),
+    question: new Map(),
+    newTask: new Map(),
+  };
 
   private entry<S extends SessionScope>(scope: S, id: string) {
     const entries = this.entries[scope] as Map<

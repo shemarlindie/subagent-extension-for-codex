@@ -7,6 +7,7 @@ import {
   assertAbsent,
   enterTask,
   executionPresentation,
+  openAdvancedTask,
   screen,
   selectedProjectPath,
   selectOption,
@@ -42,7 +43,7 @@ test("delegation submits the full request without a title and search matches des
 
   assertAbsent(screen.queryByRole("button", { name: /^Other task/ }));
   await act(async () => controller.setSearch(""));
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   assertAbsent(screen.queryByLabelText("Task title"));
 
   const request =
@@ -69,8 +70,12 @@ test("delegation submits the full request without a title and search matches des
 
 test("dialog focuses task, preserves the draft and field node during refresh, and restores trigger focus", async (t) => {
   const { controller, transport, user } = await setup(t);
-  const trigger = screen.getByRole("button", { name: "New Task" });
-  await user.click(trigger);
+
+  const trigger = screen.getByRole("button", {
+    name: "More ways to start a task",
+  });
+
+  await openAdvancedTask(user);
   const field = await screen.findByLabelText("Description");
 
   await waitFor(() =>
@@ -107,7 +112,7 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
 
 test("task form keeps fractional runtime defaults and rejects cost budgets for unsupported workers", async (t) => {
   const { transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
 
   await waitFor(() =>
@@ -171,7 +176,7 @@ test("changing projects clears revision and dependencies while retaining the tas
     transport.tasks.push(task("two", "/repo/b"));
   });
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await selectOption(user, "Project", /repo\/a$/);
   await enterTask(user, "Persistent task");
@@ -225,7 +230,7 @@ test("changing projects clears revision and dependencies while retaining the tas
 
 test("delegation selects support keyboard choice and Escape preserves the draft dialog", async (t) => {
   const { user, transport } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Keyboard worker selection");
   const worker = screen.getByRole("combobox", { name: "Worker" });
@@ -291,7 +296,7 @@ test("dependency multiselect retains multiple choices until explicit submission"
     transport.tasks.push(second);
   });
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Wait for both reviews");
 
@@ -330,7 +335,7 @@ test("approved parent project suggestions allow an unlisted nested repository pa
     transport.projects.push({ repository: "/approved", kind: "parent" });
   });
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
 
   const project = screen.getByRole("combobox", {
@@ -365,7 +370,7 @@ test("approved parent project suggestions find saved names and submit the select
     );
   });
 
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
 
   const project = screen.getByRole("combobox", { name: "Project" });
@@ -394,7 +399,7 @@ test("approved parent project suggestions find saved names and submit the select
 
 test("zero runtime and cost budgets cannot launch a task", async (t) => {
   const { transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Budget validation");
   const runtime = screen.getByLabelText("Runtime limit (mins)");
@@ -480,7 +485,7 @@ test("permission buttons allow explicit inline approval without a dropdown", asy
 
 test("current repository selection locks revision to HEAD and submits the checkout strategy", async (t) => {
   const { transport, user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   const revision = screen.getByLabelText<HTMLInputElement>("Revision");
   assert.equal(revision.value, "HEAD");
@@ -525,7 +530,7 @@ test("current repository selection locks revision to HEAD and submits the checko
 
 test("delegation uses the extension permission setting by default and separately selects the approval decision maker", async (t) => {
   const { user, transport } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "New Task" }));
+  await openAdvancedTask(user);
   await screen.findByRole("dialog");
 
   assert.equal(
