@@ -9,6 +9,11 @@ export const NEW_TASK_SESSION_ID = "draft";
 /** The profile a composed task starts with unless the user picks another. */
 const NEW_TASK_PROFILE = "general";
 
+/** A draft's first line, which stands in for the title until the task starts. */
+export function draftTitle(description = "") {
+  return description.trim().split("\n")[0] ?? "";
+}
+
 /** Projects a composed task can target. */
 export function newTaskProjects(state: Snapshot) {
   return taskProjects(state).filter((project) => project.kind === "repository");

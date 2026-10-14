@@ -6,6 +6,7 @@ import {
   retryDelegateStatuses,
   startDelegateReads,
 } from "../../../app/state/delegate-reads";
+import type { TaskSessionState } from "../../../app/state/session/session-state";
 import type {
   DelegateDialogRead,
   DialogReadStatus,
@@ -25,8 +26,8 @@ interface NewTaskLoaderContext extends DelegateReadContext {
   addChatProjectForTask(repository: string): Promise<void>;
   /** Clears the task selection, closing any open composer too. */
   leaveSelection(): void;
-  /** Selects a task the composer just created. */
-  created(task: Task): Promise<void>;
+  /** Selects a task the composer just created, with Chat's arrival state. */
+  created(task: Task, arrival: Partial<TaskSessionState>): Promise<void>;
   /** Retries the panel context read through the next refresh. */
   refresh(): void;
 }
@@ -114,9 +115,13 @@ export class NewTaskLoader {
 
   /**
    * Starts the task; returns an error message for the composer to show.
-   * The composer closes and the task is selected once it starts.
+   * The composer closes and the task is selected once it starts;
+   * `composerHeight` lets Chat's composer ease in from the composer's box.
    */
-  async start(values: DelegateValues): Promise<string | undefined> {
+  async start(
+    values: DelegateValues,
+    composerHeight?: number,
+  ): Promise<string | undefined> {
     const state = this.context.snapshot(),
       newTask = state.newTask;
 
@@ -145,7 +150,11 @@ export class NewTaskLoader {
       return "The project or conversation changed while the task was starting. Find it in its original scope.";
     }
 
-    await this.context.created(task);
+    // Chat's composer eases down from this box's height and takes over focus.
+    await this.context.created(task, {
+      composerArrival: composerHeight,
+      composerFocus: true,
+    });
 
     return undefined;
   }

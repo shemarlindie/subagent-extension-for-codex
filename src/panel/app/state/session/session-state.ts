@@ -7,6 +7,13 @@ export type TaskSessionState = {
   tab: Tab;
   composerDraft: string;
   composerCollapsed: boolean;
+  /**
+   * The new-task composer box's height when this task started from it, so
+   * Chat's composer can ease down from it on arrival.
+   */
+  composerArrival?: number;
+  /** Chat's composer takes focus once it can, after the new-task composer started the task. */
+  composerFocus?: boolean;
   // Scroll hooks mutate these stable cells without rendering on every scroll event.
   reading: {
     chat: ReadingState;

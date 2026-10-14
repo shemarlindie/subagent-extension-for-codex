@@ -152,8 +152,7 @@ export class Controller {
     snapshot: () => this.state,
     closed: () => this.disposed,
     patch: (patch: Partial<Snapshot>) => this.patch(patch),
-    tool: <T>(name: string, args?: Record<string, unknown>) =>
-      this.tool<T>(name, args),
+    tool: this.tool.bind(this),
     readProjects: () => this.readProjects(),
     readWorkers: async () => {
       const workers = await this.readWorkers();
@@ -176,7 +175,13 @@ export class Controller {
     addChatProjectForTask: (repository) =>
       this.addChatProjectForTask(repository),
     leaveSelection: () => this.leaveSelection(false),
-    created: (task) => this.showCreated(task),
+    // Shows the started task on its Chat tab.
+    created: async (task, arrival) => {
+      this.session.update("task", task.id, arrival);
+      this.selectStarted(task);
+      await this.refresh().catch(this.report);
+      await this.share().catch(this.report);
+    },
   });
 
   readonly taskActions = new TaskActions({
@@ -1562,13 +1567,6 @@ export class Controller {
       repository: task.repository,
       revision: task.revision,
     });
-  }
-
-  /** Shows a task the new-task composer started on its Chat tab. */
-  private async showCreated(task: Task) {
-    this.selectStarted(task);
-    await this.refresh().catch(this.report);
-    await this.share().catch(this.report);
   }
 
   /** Retries the open loading dialog's failed reads. */

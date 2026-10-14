@@ -116,6 +116,18 @@ export function Composer({
     }
   }, [collapsed]);
 
+  // A task started from the new-task composer keeps typing focus here once
+  // its events load and the composer is enabled.
+  useEffect(() => {
+    const { session } = controller;
+
+    if (disabled || collapsed) return;
+    if (!session.get("task", sessionTaskId).composerFocus) return;
+
+    session.update("task", sessionTaskId, { composerFocus: undefined });
+    input.current?.focus({ preventScroll: true });
+  }, [controller, collapsed, disabled, sessionTaskId]);
+
   const toggle = (hide: boolean) => {
     if (disabled) return;
 

@@ -121,7 +121,9 @@ button or, on narrow panels, **Panel actions**:
 - **New task** opens an empty chat in the inspector, with a **New task** draft
   row at the top of the task list. Your first message becomes the request:
   Enter starts the task and opens it on Chat, and Shift+Enter adds a line.
-  Chips below the message choose the options:
+  The composer sits where Chat's does; when the task starts, its header and
+  tabs ease in above while the composer settles in place and keeps focus for
+  your next message. Chips below the message choose the options:
   - **Project**, shown only under **All projects**.
   - **Profile**, which defaults to **General**. A profile works as a preset:
     model and reasoning left at their defaults follow that profile's settings.

@@ -1,15 +1,12 @@
 import { useSessionState } from "../../../app/state/session/use-session-state";
 import { Icon } from "../../../shared/components/icons/icons";
-import { NEW_TASK_SESSION_ID } from "./new-task-values";
+import { draftTitle, NEW_TASK_SESSION_ID } from "./new-task-values";
 
 /** The task rail's placeholder for the task being composed. */
 export function NewTaskRow() {
-  const [message] = useSessionState(
-      "newTask",
-      NEW_TASK_SESSION_ID,
-      (session) => session.draft.description ?? "",
-    ),
-    title = message.trim().split("\n")[0];
+  const [title] = useSessionState("newTask", NEW_TASK_SESSION_ID, (session) =>
+    draftTitle(session.draft.description),
+  );
 
   const focusComposer = () =>
     document.getElementById("new-task-message")?.focus();

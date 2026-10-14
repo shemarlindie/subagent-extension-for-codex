@@ -19,6 +19,7 @@ import { TaskInspectorLoading } from "./task-inspector-loading";
 import { TaskHeaderSkeleton } from "./task-inspector-skeleton";
 import { TaskMenu } from "./task-menu";
 import { TaskTitle } from "./task-title";
+import { useArrivalMotion } from "./use-arrival-motion";
 
 export function TaskInspector() {
   const controller = useController(),
@@ -26,6 +27,8 @@ export function TaskInspector() {
     task = selectedTask(state);
 
   const { detailRef, headerRef, stacked } = useStackedLayout(task?.id);
+
+  useArrivalMotion(detailRef, task?.id);
 
   // Only a running task has live detail beyond its status label.
   // Events load after selection; until then the label alone is accurate.

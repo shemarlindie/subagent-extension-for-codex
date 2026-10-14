@@ -67,6 +67,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
       defaultValues: { ...initialValues, ...savedAtMount },
     }),
     input = useRef<HTMLTextAreaElement>(null),
+    box = useRef<HTMLDivElement>(null),
     [error, setError] = useState<string>();
 
   useAsyncDefaults(form, initialValues, savedAtMount);
@@ -114,13 +115,16 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
       readiness?.ready !== false;
 
   const submit = form.handleSubmit(async (values) => {
-    const failure = await controller.newTasks.start({
-      ...values,
-      repository,
-      description: values.description.trim(),
-      // Another project's checkout starts from its own HEAD.
-      revision: repository === state.repository ? values.revision : "HEAD",
-    });
+    const failure = await controller.newTasks.start(
+      {
+        ...values,
+        repository,
+        description: values.description.trim(),
+        // Another project's checkout starts from its own HEAD.
+        revision: repository === state.repository ? values.revision : "HEAD",
+      },
+      box.current?.offsetHeight,
+    );
 
     // On success the composer closes and the controller clears its draft.
     if (failure) setError(failure);
@@ -163,53 +167,65 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
 
   return (
     <FormProvider {...form}>
+      {/* Chat's composer layout, so sending leaves the box where Chat's will be. */}
       <form
-        className="new-task-composer"
+        className="chat-composer new-task-composer"
         noValidate
         aria-busy={state.busy || undefined}
         onSubmit={handleSubmit}
       >
-        <div className="new-task-box">
-          <textarea
-            id="new-task-message"
-            aria-label="Task message"
-            aria-describedby="new-task-hint"
-            rows={3}
-            maxLength={20000}
-            placeholder="Describe the task. Include files, constraints and what done looks like."
-            disabled={state.busy}
-            {...messageField}
-            ref={setInput}
-            onKeyDown={keys}
-          />
-          <div className="new-task-box-footer">
-            <NewTaskOptions newTask={newTask} state={state} />
-            <div className="new-task-actions">
-              <Button
-                variant="text"
-                className="new-task-more"
-                disabled={state.busy || Boolean(state.dialog)}
-                onClick={advanced}
-              >
-                More options…
-              </Button>
-              <TooltipWrapper label="Start task (Enter)">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="chat-icon-button"
-                  aria-label="Start task"
-                  disabled={!canSubmit}
-                >
-                  <Icon name="enter" size={12} />
-                </Button>
-              </TooltipWrapper>
+        <div className="chat-composer-body">
+          <div className="chat-composer-input-row">
+            {/* Holds the place of Chat's hide-composer caret. */}
+            <span className="chat-composer-gutter" aria-hidden="true" />
+            <div ref={box} className="chat-composer-box new-task-box">
+              <textarea
+                id="new-task-message"
+                aria-label="Task message"
+                aria-describedby="new-task-hint"
+                rows={2}
+                maxLength={20000}
+                placeholder="Describe the task. Include files, constraints and what done looks like."
+                disabled={state.busy}
+                {...messageField}
+                ref={setInput}
+                onKeyDown={keys}
+              />
+              <div className="new-task-box-footer">
+                <NewTaskOptions newTask={newTask} state={state} />
+                <div className="chat-composer-actions">
+                  <Button
+                    variant="text"
+                    className="new-task-more"
+                    disabled={state.busy || Boolean(state.dialog)}
+                    onClick={advanced}
+                  >
+                    More options…
+                  </Button>
+                  <TooltipWrapper label="Start task (Enter)">
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      className="chat-icon-button"
+                      aria-label="Start task"
+                      disabled={!canSubmit}
+                    >
+                      <Icon name="enter" size={12} />
+                    </Button>
+                  </TooltipWrapper>
+                </div>
+              </div>
             </div>
           </div>
+          <div className="chat-composer-meta chat-composer-field-feedback">
+            <FormFieldHint id="new-task-hint" message={HINT} />
+          </div>
         </div>
-        <FormFieldHint id="new-task-hint" message={HINT} />
         {failed && (
-          <div className="form-error new-task-error" role="alert">
+          <div
+            className="form-error chat-error chat-composer-field-feedback new-task-error"
+            role="alert"
+          >
             <span>{readFailure(errors)}</span>
             <Button variant="text" onClick={() => controller.newTasks.retry()}>
               Retry loading
@@ -217,6 +233,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
           </div>
         )}
         <FormFieldError
+          className="chat-error chat-composer-field-feedback"
           message={readiness?.ready === false ? readiness.message : error}
         />
       </form>

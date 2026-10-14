@@ -69,6 +69,11 @@ dialog share their settings, project and worker reads
 (`start-task.ts`), model and reasoning defaults (`model-defaults.ts`) and the
 async-default fill (`use-async-defaults.ts`). The composer keeps its draft in
 session memory, not in dialog persistence, so it doesn't survive a reload.
+The composer reuses Chat's composer markup and styles. On start it records its
+box height as the task session's `composerArrival`, and the inspector's
+`useArrivalMotion` reveals the header and tabs and settles the Chat composer
+from that height. It also sets `composerFocus`, and Chat's composer takes
+focus once the task's events load and it is enabled.
 
 ## State ownership and component patterns
 

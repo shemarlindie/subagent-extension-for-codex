@@ -1,15 +1,21 @@
-/* The new-task composer: an empty conversation with the composer where Chat's will be. */
+/*
+ * The new-task view reuses the task view, Chat panel and composer styles, so
+ * the composer stays put when the task starts. These rules cover only what
+ * composing adds.
+ */
+/* The empty state fills the view so the composer sits at the bottom. */
 .new-task-view {
   display: flex;
   flex-direction: column;
   min-height: 420px;
 }
-.new-task-title {
-  margin: 4px 0 0;
-  padding-inline: var(--detail-pad);
-  font-size: 16px;
-  font-weight: 550;
-  letter-spacing: -0.2px;
+.new-task-view .evidence,
+.new-task-view .chat-panel,
+.new-task-view .chat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 .new-task-empty {
   flex: 1;
@@ -17,60 +23,44 @@
   place-content: center;
   justify-items: center;
   gap: 10px;
-  max-width: 340px;
-  margin: 0 auto;
-  padding: 32px var(--detail-pad);
   color: var(--muted);
   font-size: 12px;
   text-align: center;
 }
 .new-task-empty p {
+  max-width: 320px;
   margin: 0;
 }
-.new-task-footer {
-  padding-inline: var(--detail-pad);
-}
-.new-task-composer {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.new-task-empty .new-task-prompt {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 550;
 }
 .new-task-composer[aria-busy] {
   opacity: 0.7;
 }
-.new-task-box {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 8px 8px 14px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--bg);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
+/* Takes the width of Chat's hide-composer caret. */
+.chat-composer-gutter {
+  flex: none;
+  width: var(--composer-caret-size);
 }
-.new-task-box:focus-within {
-  border-color: var(--accent);
+/* The message gets a little more room, with the option chips beneath it. */
+.new-task-box {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
 }
 .new-task-box textarea {
-  width: 100%;
-  min-height: 60px;
-  max-height: 240px;
-  field-sizing: content;
-  resize: none;
-  border: 0;
-  padding: 2px 6px 2px 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  line-height: 1.5;
-  outline: none;
+  flex: none;
+  align-self: stretch;
+  min-height: 48px;
 }
 .new-task-box-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px 8px;
 }
 .new-task-options {
   display: flex;
@@ -78,29 +68,21 @@
   flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
-  /* Line the first chip's text up with the message text. */
+  /* Bring the first chip's text closer to the message text. */
   margin-inline-start: -6px;
 }
-.new-task-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
+.new-task-box .chat-composer-actions {
   gap: 10px;
   margin-inline-start: auto;
 }
 .new-task-more {
   font-size: 12px;
 }
-.new-task-composer .form-field-hint,
-.new-task-composer .form-field-error {
-  padding-inline: 4px;
-}
 .new-task-error {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
-  padding-inline: 4px;
 }
 /* A chip still waiting for a choice, such as the project, invites one. */
 .new-task-options .chip-select[data-placeholder]:not([aria-busy]) {
