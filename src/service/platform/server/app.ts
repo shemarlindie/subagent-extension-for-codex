@@ -4,7 +4,6 @@ import { toNodeHandler } from "@modelcontextprotocol/node";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import express from "express";
 
-import { type Event } from "../../../shared/events/types.js";
 import type { DraftUpdate } from "../../../shared/tasks/conversation/drafts.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { Auth } from "./auth.js";
@@ -221,31 +220,24 @@ export function application(
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
-    let cursor = Number(req.headers["last-event-id"] ?? req.query.after ?? 0);
-    if (!Number.isFinite(cursor) || cursor < 0) cursor = 0;
     const owner = res.locals.owner;
 
-    const send = (e: Event, eventOwner: string) => {
-      if (owner !== eventOwner || e.id <= cursor) return;
-      cursor = e.id;
-      res.write(`id: ${e.id}\nevent: activity\ndata: ${JSON.stringify(e)}\n\n`);
-    }; // Subscribe before replay so events cannot fall through a connection gap.
+    // A hint to refresh: the owner's revision now, then after each change.
+    const sendChange = (changedOwner?: string) => {
+      if (changedOwner === undefined || changedOwner === owner) {
+        res.write(`event: change\ndata: ${c.store.revision(owner)}\n\n`);
+      }
+    };
 
-    // Drafts stream as `delta` events without an id, so replay ignores them.
     const sendDraft = (update: DraftUpdate, updateOwner: string) => {
       if (owner === updateOwner) {
         res.write(`event: delta\ndata: ${JSON.stringify(update)}\n\n`);
       }
     };
 
-    c.store.bus.on("event", send);
+    c.store.bus.on("change", sendChange);
     c.store.bus.on("draft", sendDraft);
-    let replay;
-
-    do {
-      replay = c.store.streamEvents(owner, cursor);
-      for (const e of replay) send(e, owner);
-    } while (replay.length === 1000);
+    sendChange();
 
     // A client that connects mid-message gets the draft so far.
     for (const draft of c.drafts.forOwner(owner)) {
@@ -264,7 +256,7 @@ export function application(
 
     req.on("close", () => {
       clearInterval(heartbeat);
-      c.store.bus.off("event", send);
+      c.store.bus.off("change", sendChange);
       c.store.bus.off("draft", sendDraft);
     });
   });

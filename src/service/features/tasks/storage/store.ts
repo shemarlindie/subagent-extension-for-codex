@@ -373,25 +373,6 @@ export class Store {
       .map(decodeEvent);
   }
 
-  /** An owner's events across tasks, after a cursor, a page at a time. */
-  streamEvents(owner: string, after: number): Event[] {
-    return this.orm
-      .select({
-        id: events.id,
-        task_id: events.task_id,
-        type: events.type,
-        timestamp: events.timestamp,
-        data: events.data,
-      })
-      .from(events)
-      .innerJoin(tasks, eq(tasks.id, events.task_id))
-      .where(and(eq(tasks.owner, owner), gt(events.id, after)))
-      .orderBy(events.id)
-      .limit(PAGE)
-      .all()
-      .map(decodeEvent);
-  }
-
   /** The oldest unclaimed, unacknowledged parent message belonging to this owner and chat. */
   pendingParentMessage(owner: string, conversation: string): Event | undefined {
     const row = this.orm

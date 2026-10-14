@@ -1789,10 +1789,7 @@ test("a task is deleted in any state with everything related to it", async () =>
     assert.deepEqual(sessions, [t.id]);
     assert.throws(() => store.get(t.id, "alice"), /Task not found/);
 
-    assert.deepEqual(
-      store.streamEvents("alice", 0).filter((e) => e.task_id === t.id),
-      [],
-    );
+    assert.deepEqual(store.taskEvents(t.id, 0), []);
 
     assert.equal(existsSync(stopped.workspace), false);
     assert.equal(git("branch", "--list", "agent/*").includes(t.id), false);

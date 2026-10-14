@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 import { McpUiHostStylesSchema } from "@modelcontextprotocol/ext-apps";
-import { test, vi } from "vitest";
+import { test } from "vitest";
 
 import type { TransportEvents } from "../app/state/types";
 import { ConsoleTransport } from "./console";
@@ -59,12 +59,12 @@ function callbacks() {
 class FakeStream {
   onopen?: () => void;
   onerror?: () => void;
-  activity?: () => void;
+  change?: (event: { data: string }) => void;
   delta?: (event: { data: string }) => void;
   closes = 0;
-  addEventListener(name: string, listener: () => void) {
-    assert.ok(name === "activity" || name === "delta", name);
-    if (name === "activity") this.activity = listener;
+  addEventListener(name: string, listener: (event: { data: string }) => void) {
+    assert.ok(name === "change" || name === "delta", name);
+    if (name === "change") this.change = listener;
     else this.delta = listener;
   }
 
@@ -175,13 +175,7 @@ test("console authentication failure requests login and server failures retain t
   transport.dispose();
 });
 
-test("console SSE coalesces activity refreshes and disposal cancels pending refreshes", async (t) => {
-  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-
-  t.onTestFinished(() => {
-    vi.useRealTimers();
-  });
-
+test("console SSE reports each stream's revisions, and disposal closes the stream", async () => {
   const streams: FakeStream[] = [];
   const urls: string[] = [];
 
@@ -200,30 +194,28 @@ test("console SSE coalesces activity refreshes and disposal cancels pending refr
   const observed = callbacks();
   await transport.connect(observed.events);
   transport.watch();
+  assert.equal(transport.streamsChanges, true);
   assert.deepEqual(urls, ["https://console.example/api/events"]);
   const [first] = streams;
   assert.ok(first);
   first.onopen?.();
+  first.change?.({ data: "boot:1" });
   first.onerror?.();
   assert.deepEqual(observed.statuses, ["● Live", "Reconnecting…"]);
-  first.activity?.();
-  vi.advanceTimersByTime(50);
-  first.activity?.();
-  vi.advanceTimersByTime(99);
-  assert.equal(observed.counts().refreshes, 0);
-  vi.advanceTimersByTime(1);
-  assert.equal(observed.counts().refreshes, 1);
+
+  // A new stream starts with the revision now, which the controller compares.
   transport.watch();
   assert.equal(first.closes, 1);
   const [, second] = streams;
   assert.ok(second);
-  second.activity?.();
+  second.change?.({ data: "boot:2" });
+  assert.deepEqual(observed.revisions, ["boot:1", "boot:2"]);
+
   transport.dispose();
-  vi.advanceTimersByTime(1000);
   assert.equal(second.closes, 1);
-  assert.equal(observed.counts().refreshes, 1);
   transport.watch();
   assert.equal(streams.length, 2);
+  assert.equal(observed.counts().refreshes, 0);
 });
 
 function hostApp(submit = false) {

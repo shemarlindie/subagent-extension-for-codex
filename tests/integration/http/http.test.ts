@@ -11,6 +11,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { test } from "vitest";
 
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import { Projects } from "../../../src/service/features/projects/projects.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
@@ -1039,13 +1040,19 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
   }
 });
 
-test("SSE requires authentication, replays owned events in global cursor order and streams drafts without ids", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ac-sse-"));
+test("SSE requires authentication, streams the owner's revision on each change and drafts, and replays no events", async () => {
+  const dir = await realpath(await mkdtemp(join(tmpdir(), "ac-sse-")));
+  const repository = join(dir, "repo");
+  execFileSync("git", ["init", "-q", repository]);
 
   const c = new Control(
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
     new Map(),
+  );
+
+  c.projects = new Projects(c.store.database, c.workspaces, () =>
+    c.store.projectsChanged(),
   );
 
   const auth = new Auth("token");
@@ -1082,9 +1089,8 @@ test("SSE requires authentication, replays owned events in global cursor order a
 
   c.store.save(a);
   c.store.save(b);
-  const first = c.store.eventOpaque(a, "test.first");
+  c.store.eventOpaque(a, "test.first");
   c.store.eventOpaque(b, "test.secret");
-  const last = c.store.eventOpaque(a, "test.last");
   // A client that connects mid-message gets the draft so far.
   c.drafts.append("local", "a", "msg_a", "Hel");
   c.drafts.append("other", "b", "msg_b", "secret draft");
@@ -1094,41 +1100,74 @@ test("SSE requires authentication, replays owned events in global cursor order a
     const abort = new AbortController();
 
     const response = await fetch(base + "/api/events", {
-      headers: {
-        Authorization: "Bearer token",
-        "Last-Event-ID": String(first.id),
-      },
+      headers: { Authorization: "Bearer token" },
       signal: abort.signal,
     });
 
     assert.equal(response.status, 200);
     const reader = response.body!.getReader();
-    const { value } = await reader.read();
-    const data = new TextDecoder().decode(value);
-    assert.ok(data.includes(`id: ${last.id}`));
-    assert.ok(data.includes("test.last"));
-    assert.ok(!data.includes("test.secret"));
-    assert.ok(!data.includes("test.first"));
+    const decoder = new TextDecoder();
+    let buffered = "";
 
-    assert.ok(
-      data.includes(
-        'event: delta\ndata: {"task_id":"a","message_id":"msg_a","text":"Hel","offset":0}\n\n',
-      ),
+    // Reads through `text`, returning it and what came before; keeps the rest.
+    const until = async (text: string) => {
+      while (!buffered.includes(text)) {
+        const { value, done } = await reader.read();
+        if (done) throw new Error(`Stream ended before ${text}`);
+        buffered += decoder.decode(value);
+      }
+
+      const end = buffered.indexOf(text) + text.length;
+      const read = buffered.slice(0, end);
+      buffered = buffered.slice(end);
+
+      return read;
+    };
+
+    const change = () =>
+      `event: change\ndata: ${c.store.revision("local")}\n\n`;
+
+    const initial = await until(change());
+
+    await until(
+      'event: delta\ndata: {"task_id":"a","message_id":"msg_a","text":"Hel","offset":0}\n\n',
     );
 
-    assert.ok(!data.includes("secret draft"));
-    const pending = reader.read();
+    // Each write, deletion and project change sends the revision again.
     c.store.eventOpaque(a, "test.live");
-    const live = new TextDecoder().decode((await pending).value);
-    assert.ok(live.includes("test.live"));
-    const delta = reader.read();
-    c.drafts.append("local", "a", "msg_a", "lo");
+    const afterEvent = await until(change());
+    await c.projects.register(repository);
+    const afterProject = await until(change());
+    c.store.delete(a.id, "local");
+    const afterDelete = await until(change());
 
-    // A delta has no id, so a reconnect's replay cursor skips it.
-    assert.equal(
-      new TextDecoder().decode((await delta).value),
-      'event: delta\ndata: {"task_id":"a","message_id":"msg_a","offset":3,"text":"lo"}\n\n',
+    const revisions = [initial, afterEvent, afterProject, afterDelete].map(
+      (text) => /event: change\ndata: (.+)\n/.exec(text)?.[1],
     );
+
+    assert.equal(new Set(revisions).size, 4);
+
+    // Another owner's writes send nothing; a draft still streams.
+    c.store.eventOpaque(b, "test.secret_live");
+    c.drafts.append("local", "x", "msg_x", "lo");
+
+    const delta = await until(
+      'event: delta\ndata: {"task_id":"x","message_id":"msg_x","offset":0,"text":"lo"}\n\n',
+    );
+
+    assert.ok(!delta.includes("event: change"));
+
+    const streamed = [
+      initial,
+      afterEvent,
+      afterProject,
+      afterDelete,
+      delta,
+    ].join("");
+
+    assert.ok(!streamed.includes("secret"));
+    assert.ok(!streamed.includes("test."));
+    assert.ok(!streamed.includes("id:"));
 
     abort.abort();
     await reader.cancel().catch(() => {});

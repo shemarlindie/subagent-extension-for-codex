@@ -3,11 +3,11 @@ import { decodePanelToolResult } from "./event-decoding";
 
 export class ConsoleTransport implements Transport {
   readonly embedded = false;
-  // Drafts arrive as `delta` events on the event stream.
+  // Revisions and drafts arrive as `change` and `delta` events on the event stream.
+  readonly streamsChanges = true;
   readonly streamsDrafts = true;
   private events?: TransportEvents;
   private stream?: EventSource;
-  private timer?: ReturnType<typeof setTimeout>;
   private disposed = false;
   constructor(
     private origin: string,
@@ -62,10 +62,9 @@ export class ConsoleTransport implements Transport {
     this.stream.onopen = () => this.events?.status("● Live");
     this.stream.onerror = () => this.events?.status("Reconnecting…");
 
-    this.stream.addEventListener("activity", () => {
-      clearTimeout(this.timer);
-      this.timer = setTimeout(() => this.events?.refresh(), 100);
-    });
+    this.stream.addEventListener("change", (event) =>
+      this.events?.revision(event.data),
+    );
 
     this.stream.addEventListener("delta", (event) =>
       this.events?.draft(JSON.parse(event.data)),
@@ -74,7 +73,6 @@ export class ConsoleTransport implements Transport {
 
   dispose() {
     this.disposed = true;
-    clearTimeout(this.timer);
     this.stream?.close();
   }
 }

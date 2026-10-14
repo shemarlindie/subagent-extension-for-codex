@@ -27,6 +27,8 @@ export type TransportEvents = {
 
 export interface Transport {
   embedded: boolean;
+  /** Revisions arrive as the service changes; otherwise the panel waits for them. */
+  streamsChanges?: boolean;
   /** Drafts arrive as they're written; otherwise the panel reads them. */
   streamsDrafts?: boolean;
   connect(events: TransportEvents): Promise<void>;
