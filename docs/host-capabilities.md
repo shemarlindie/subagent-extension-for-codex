@@ -43,11 +43,12 @@ the MCP connection.
 ## Panel network access
 
 In Codex desktop, the embedded panel uses a fixed sandbox CSP and cannot connect directly to the loopback service. All panel
-reads and writes therefore use the authenticated MCP Apps bridge. Streaming
-replies use chained `get_user_agent_draft` polls; the standalone console uses
-HTTP and SSE.
+reads and writes therefore use the authenticated MCP Apps bridge. The panel
+learns of changes and streaming replies through one `wait_user_agent_updates`
+long poll at a time; the standalone console uses HTTP and SSE. See
+[Transport](panel-guide.md#transport) for refresh behavior.
 
-Draft polls wait at most 25 seconds. Transport timeouts add a 10-second margin
+Update waits hold at most 25 seconds. Transport timeouts add a 10-second margin
 for these calls; the stdio proxy's ordinary service timeout is 30 seconds.
 These limits are implemented contracts, not a guarantee that every host permits
 long-lived calls. The panel requires no browser bearer token.
@@ -57,8 +58,8 @@ long-lived calls. The panel requires no browser bearer token.
 Claude receives `mcp__codex_parent__message_parent` and environment instructions
 for task identity, workspace, parent conversation and delivery limits. The tool
 queues a durable `parent.message` event. While a thread-scoped embedded panel is
-mounted, connected and advertises `openai/message`, its normal refresh claims
-one ID-only notification and sends it through `App.sendMessage` with
+mounted, connected and advertises `openai/message`, each refresh claims the
+queued ID-only notifications one at a time and sends each through `App.sendMessage` with
 `_meta["openai/message"]: { target: "active", send: true }`. Ordinary **Ask Codex**
 uses the portable bridge call, which puts the worker message into the composer
 or queue. Automatic submission uses the OpenAI extension capability explicitly:
@@ -67,9 +68,10 @@ turn is active. The message API has no steer option. After the parent turn ends,
 the first queued message arrives as an MCP App message and starts the next
 parent turn. Delivery to a thread that is already idle when the message is sent
 is untested.
-The mounted panel attempts parent delivery on its five-second timer even while
-hidden or busy; UI reads can remain paused. Host suspension or panel teardown
-can stop that timer, so this does not establish background host delivery.
+The mounted panel attempts parent delivery when the service changes and on its
+30-second fallback timer, even while hidden or busy; UI reads can remain
+paused. Host suspension or panel teardown can stop both, so this does not
+establish background host delivery.
 Global panels and the standalone console do not forward worker messages.
 
 The host uses a user-message envelope, so the notification identifies its worker-report source, task

@@ -160,8 +160,13 @@ stale responses. Opening or resolving context is read-only. Registration is a
 separate user operation or the configured policy for a task started from its host
 chat project. See [Host capabilities](host-capabilities.md#project-context-and-registration).
 
-Internal task events support activity and persistence. Console progress uses SSE;
-MCP callers retrieve task/message results. Explicit provider parent messages use
+Internal task events support activity and persistence. After each commit, the
+store's bus announces `event` for each event and `change` for each owner whose
+tasks changed; project registration, renames and removals announce a `change`
+for every owner. Each owner has a revision that changes with them, scoped to
+the service process. Panels refresh when it changes: the console hears it as an
+SSE `change` event, and the embedded panel through the `wait_user_agent_updates`
+long poll. SSE replays no events. MCP callers retrieve task/message results. Explicit provider parent messages use
 a durable queue. The mounted
 embedded thread panel claims them and forwards their task/message IDs through
 the host message bridge. The parent retrieves the stored reports by ID or

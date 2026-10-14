@@ -86,4 +86,5 @@ Event listeners on `store.bus` hear an event only after its transaction
 commits, in order, and never one that rolled back. A notification is a hint
 that rows exist: a listener that throws is logged without affecting the
 commit or other listeners, and consumers recover what they miss from the
-database (long polls by re-reading, SSE clients through `Last-Event-ID`).
+database: long polls re-read it, and panels refresh when the owner's revision
+changes. `change` follows the same rules, once per owner per transaction.

@@ -51,13 +51,18 @@ collaborators that receive a small context of callbacks: `DialogLoader` opens
 the settings and New Task dialogs while their reads load,
 `PersistedDialogs` keeps the dialog stack a reload reopens, and the
 feature-owned `ChangeLoader` and `DraftFollower` read changes and drafts for the
-selected task. Components call `controller.taskActions` for task actions taken
+selected task. `RevisionTrigger` turns the service revisions a transport reports
+into throttled refreshes, deferred while the panel is hidden or busy. On
+transports that don't stream changes (`streamsChanges`), `UpdateFollower` holds
+the `wait_user_agent_updates` long poll that reports them, carrying
+`DraftFollower`'s draft target. See [Transport](panel-guide.md#transport) for
+the refresh behavior. Components call `controller.taskActions` for task actions taken
 outside a dialog, such as sending messages, editing the queue, raising budgets
 and answering worker requests.
 
 ## State ownership and component patterns
 
-The controller owns UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so polling does not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.
+The controller owns UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so refreshes do not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.
 
 Components read session memory with `useSessionState(scope, id, select?)` and
 partial updates. Select a stable field/reference to avoid unrelated rerenders.
@@ -263,7 +268,7 @@ panel hides dialogs while preserving their drafts for expansion.
 
 - **Chat:** `src/shared/tasks/conversation/chat.ts` supplies `chatItems` to both the service
   and preview. `mergeChat` updates repeated items in place. HTTP transports use
-  SSE drafts; host transports use chained `get_user_agent_draft` reads.
+  SSE drafts; host transports receive drafts through `UpdateFollower`'s waits.
   `TaskActions` (`controller.taskActions`) runs queue/send/interrupt actions and
   returns their failures for inline display.
 - **Settings:** `src/shared/settings/settings-document.ts` supplies typed

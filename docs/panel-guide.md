@@ -398,16 +398,27 @@ Dependent tasks must be deleted first.
 
 ## Transport
 
+The panel refreshes when the service changes. The service keeps a revision for
+each owner's tasks and the shared project list, and the panel refreshes when the
+revision it hears differs from the last one, within about 100 ms. A task
+streaming events refreshes at most every 100 ms. Refreshes preserve forms and
+reading positions. A hidden panel waits until it is shown, and a panel
+submitting a form waits until the submission finishes. A 30-second fallback
+refresh, restarted by every completed refresh, catches writes the service can't
+announce, such as the projects CLI's.
+
 The embedded panel uses the MCP Apps bridge; it needs no direct service fetch,
 credential entry or SSE connection. The stdio resource allows no external
-assets/connections. Reads poll every five seconds while visible and not
-submitting, preserving forms and reading positions. Running Chat drafts use
-chained `get_user_agent_draft` long polls (the controller requests 20 seconds;
-the tool accepts up to 25), with at least 100 ms between reads. They pause when
-hidden or no longer viewing running Chat. Changes use explicit refreshes rather
-than polling; diff pages are limited to 1,000,000 characters.
+assets/connections. It holds one `wait_user_agent_updates` call at a time (the
+controller requests 20 seconds; the tool accepts up to 25), which returns when
+the revision changes or, while Chat shows a running task, when its draft does.
+Waits stay at least 100 ms apart, and one that returns at once with nothing new
+pauses for a second. A failed wait shows **Reconnecting…** and retries after 2
+seconds, doubling to 30. Changes use explicit refreshes; diff pages are limited
+to 1,000,000 characters.
 
-The standalone console uses authenticated HTTP and SSE, with the same five-second
-refresh fallback to reconcile project changes and deletions from other panels. See
+The standalone console uses authenticated HTTP and SSE: `/api/events` sends the
+revision on connect and after each change, and streams drafts as they're
+written. See
 [Host capabilities](host-capabilities.md) for embedded network restrictions,
 and [Local development](development.md#what-reloads-when) for activation/reloads.
