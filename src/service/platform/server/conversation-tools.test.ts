@@ -16,7 +16,7 @@ import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
-import { callTool, definitions, isUserTool } from "./tools.js";
+import { callTool, definitions, isReadOnlyTool, isUserTool } from "./tools.js";
 
 async function until(fn: () => boolean) {
   for (let i = 0; i < 300; i++) {
@@ -79,6 +79,20 @@ test("exactly the tools named for the user are refused to other callers", () => 
 
   for (const name of names) {
     assert.equal(isUserTool(name), name.includes("_user_"), name);
+  }
+});
+
+test("reads and the update wait are read-only; writes are not", () => {
+  for (const name of [
+    "get_agent_messages",
+    "list_agent_tasks",
+    "wait_user_agent_updates",
+  ]) {
+    assert.equal(isReadOnlyTool(name), true, name);
+  }
+
+  for (const name of ["send_agent_message", "delete_user_agent_task"]) {
+    assert.equal(isReadOnlyTool(name), false, name);
   }
 });
 

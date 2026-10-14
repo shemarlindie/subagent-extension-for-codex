@@ -86,6 +86,15 @@ export function isUserTool(name: string) {
   return userToolNames.has(name);
 }
 
+/** Whether a tool only reads state; waiting for updates changes nothing. */
+export function isReadOnlyTool(name: string) {
+  return (
+    name.startsWith("get_") ||
+    name.startsWith("list_") ||
+    name === "wait_user_agent_updates"
+  );
+}
+
 export async function callTool(
   c: Control,
   owner: string,

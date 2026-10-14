@@ -26,6 +26,7 @@ import {
 import { productGlyphIcons } from "./platform/server/product-glyph.js";
 import {
   definitions,
+  isReadOnlyTool,
   isUserTool,
   withConversation,
 } from "./platform/server/tools.js";
@@ -145,7 +146,7 @@ for (const [name, d] of Object.entries(tools)) {
       inputSchema: d.schema,
       ...(d.outputSchema ? { outputSchema: d.outputSchema } : {}),
       annotations: {
-        readOnlyHint: name.startsWith("get_") || name.startsWith("list_"),
+        readOnlyHint: isReadOnlyTool(name),
         destructiveHint: [
           "remove_user_agent_worktree",
           "delete_user_agent_task",

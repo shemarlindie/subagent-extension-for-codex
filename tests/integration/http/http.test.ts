@@ -868,6 +868,17 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       assert.equal(proxyOpener.description, opener.description);
       assert.equal(proxyOpener.annotations?.readOnlyHint, true);
 
+      const httpWait = tools.tools.find(
+        (tool) => tool.name === "wait_user_agent_updates",
+      )!;
+
+      const proxyWait = inventory.tools.find(
+        (tool) => tool.name === "wait_user_agent_updates",
+      )!;
+
+      assert.equal(httpWait.annotations?.readOnlyHint, true);
+      assert.deepEqual(proxyWait.annotations, httpWait.annotations);
+
       assert.deepEqual(
         (
           inventory.tools.find((tool) => tool.name === "list_agent_tasks")!
