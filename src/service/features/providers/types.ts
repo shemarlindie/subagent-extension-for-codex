@@ -34,8 +34,8 @@ export interface RunContext {
    * is emitted. Deltas aren't stored.
    */
   delta(messageId: string, text: string): void;
-  /** Queue a worker message for the open parent panel; returns its durable event ID. */
-  messageParent?(text: string): number;
+  /** Send an immediate blocker update or request a report after successful turn completion. */
+  messageParent?(text: string, kind?: "blocker" | "completion"): number | void;
   /** Emits a known project event while retaining provider-specific typed fields. */
   emit: EventEmitter;
   /** Explicit escape path for provider-owned or future event names. */

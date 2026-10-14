@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
 import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import { claudeMetadata } from "../../../../shared/providers/metadata.js";
@@ -2463,5 +2463,192 @@ test("a task whose first event can't be written is never created", async () => {
     assert.deepEqual(heard, []);
   } finally {
     await c.close();
+  }
+});
+
+test("completion reports wait for successful finalization while blockers persist immediately", async () => {
+  const started = Promise.withResolvers<RunContext>();
+  const finish = Promise.withResolvers<void>();
+  const provider = new FixtureProvider();
+
+  provider.run = async (context) => {
+    started.resolve(context);
+    await finish.promise;
+
+    return { reply: "Done" };
+  };
+
+  const { c, store, repo } = await setup(provider);
+
+  try {
+    const task = await c.start("alice", {
+      ...input(repo),
+      conversation_id: "parent-chat",
+    });
+
+    const context = await started.promise;
+    assert.equal(context.messageParent!("  Done  "), undefined);
+    assert.deepEqual(eventData(store, task.id, "parent.message"), []);
+
+    assert.throws(
+      () => context.messageParent!("Duplicate", "completion"),
+      /already has a parent completion report/,
+    );
+
+    const blocker = context.messageParent!("  Need attention  ", "blocker");
+    assert.equal(typeof blocker, "number");
+
+    assert.deepEqual(eventData(store, task.id, "parent.message"), [
+      { text: "Need attention" },
+    ]);
+
+    finish.resolve();
+    await until(() => !c.active.has(task.id));
+    assert.equal(store.get(task.id, "alice").status, "completed");
+
+    assert.deepEqual(eventData(store, task.id, "parent.message"), [
+      { text: "Need attention" },
+      { text: "Done" },
+    ]);
+
+    const events = store.events(task.id, "alice");
+
+    const report = events
+      .filter((event) => event.type === "parent.message")
+      .at(-1)!;
+
+    const completed = events.find((event) => event.type === "task.completed")!;
+    assert.ok(report.id > completed.id);
+  } finally {
+    finish.resolve();
+    await c.close();
+  }
+});
+
+test.each(["failed", "interrupted"] as const)(
+  "a %s turn discards its completion report and its follow-up gets a fresh report",
+  async (outcome) => {
+    const started = Promise.withResolvers<RunContext>();
+    const finish = Promise.withResolvers<void>();
+    const provider = new FixtureProvider();
+
+    provider.run = async (context) => {
+      if (context.task.turn === 1) {
+        context.messageParent!("Discard this completion");
+        context.messageParent!("Immediate blocker", "blocker");
+        started.resolve(context);
+        await finish.promise;
+
+        if (outcome === "failed") {
+          throw new Error("Provider failed after reporting");
+        }
+
+        return { reply: "Interrupted output" };
+      }
+
+      context.messageParent!("Follow-up completion");
+
+      return { reply: "Follow-up done" };
+    };
+
+    const { c, store, repo } = await setup(provider);
+
+    try {
+      const task = await c.start("alice", {
+        ...input(repo),
+        conversation_id: "parent-chat",
+      });
+
+      const context = await started.promise;
+
+      if (outcome === "interrupted") {
+        const stopping = c.interrupt("alice", task.id);
+        await until(() => context.signal.aborted);
+        finish.resolve();
+        await stopping;
+      } else {
+        finish.resolve();
+      }
+
+      await until(() => !c.active.has(task.id));
+      assert.equal(store.get(task.id, "alice").status, outcome);
+
+      assert.deepEqual(eventData(store, task.id, "parent.message"), [
+        { text: "Immediate blocker" },
+      ]);
+
+      await c.send("alice", task.id, "Try again", "parent");
+
+      await until(
+        () => store.get(task.id, "alice").turn === 2 && !c.active.has(task.id),
+      );
+
+      assert.equal(store.get(task.id, "alice").status, "completed");
+
+      assert.deepEqual(eventData(store, task.id, "parent.message"), [
+        { text: "Immediate blocker" },
+        { text: "Follow-up completion" },
+      ]);
+    } finally {
+      finish.resolve();
+      await c.close();
+    }
+  },
+);
+
+test("runtime budget expiring during reply snapshot discards the completion report", async () => {
+  const started = Promise.withResolvers<RunContext>();
+  const snapshotStarted = Promise.withResolvers<void>();
+  const finishSnapshot = Promise.withResolvers<void>();
+  const provider = new FixtureProvider();
+
+  provider.run = async (context) => {
+    context.messageParent!("Must not deliver");
+    started.resolve(context);
+
+    return { reply: "Provider returned before deadline" };
+  };
+
+  const { c, store, repo } = await setup(provider);
+  const originalSnapshot = c.workspaces.snapshot.bind(c.workspaces);
+
+  vi.spyOn(c.workspaces, "snapshot").mockImplementation(async (workspace) => {
+    if (
+      store
+        .all("alice")
+        .some((task) => task.status === "running" && task.turn === 1)
+    ) {
+      snapshotStarted.resolve();
+      await finishSnapshot.promise;
+    }
+
+    return originalSnapshot(workspace);
+  });
+
+  try {
+    const task = await c.start("alice", {
+      ...input(repo),
+      conversation_id: "parent-chat",
+      budget: { max_runtime_minutes: 0.002, max_cost_usd: null },
+    });
+
+    const context = await started.promise;
+    await snapshotStarted.promise;
+    await until(() => context.signal.aborted);
+    finishSnapshot.resolve();
+    await until(() => !c.active.has(task.id));
+    assert.equal(store.get(task.id, "alice").status, "failed");
+
+    assert.match(
+      store.get(task.id, "alice").error!,
+      /Runtime budget exhausted/,
+    );
+
+    assert.deepEqual(eventData(store, task.id, "agent.reply"), []);
+    assert.deepEqual(eventData(store, task.id, "parent.message"), []);
+  } finally {
+    finishSnapshot.resolve();
+    await c.close();
+    vi.restoreAllMocks();
   }
 });

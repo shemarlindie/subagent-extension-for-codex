@@ -114,6 +114,8 @@ interface Active {
   sendPending?: boolean;
   /** Where the provider takes steers, once it registers. */
   sink?: (steer: Steer) => boolean;
+  /** Completion report held until a successful turn is recorded. */
+  parentMessage?: string;
   abort: AbortController;
   done: Promise<void>;
 }
@@ -445,7 +447,7 @@ export class Control {
       const output = await provider.run(this.runContext(t, a), prompt);
       a.abort.signal.throwIfAborted();
       reply = output.reply;
-      await this.recordReply(t, reply);
+      await this.recordReply(t, reply, a.abort.signal);
       t.status = "completed";
     } catch (error) {
       if (a.stopStatus) {
@@ -624,7 +626,7 @@ export class Control {
         t.session_owner = this.ownerWorker;
         this.store.save(t);
       },
-      messageParent: (text) => {
+      messageParent: (text, kind = "completion") => {
         if (!t.conversation_id) {
           throw new Error("Task has no parent conversation");
         }
@@ -636,7 +638,17 @@ export class Control {
           throw new Error("Invalid parent message");
         }
 
-        return this.store.event(t, "parent.message", { text: message }).id;
+        if (kind === "blocker") {
+          return this.store.event(t, "parent.message", { text: message }).id;
+        }
+
+        if (a.parentMessage) {
+          throw new Error("This turn already has a parent completion report");
+        }
+
+        a.parentMessage = message;
+
+        return;
       },
       input: a.input.request,
     };
@@ -689,6 +701,10 @@ export class Control {
         this.endTurn(t, outcome, a.sendPending);
         this.store.save(t);
         recordStatusEvent(this.store, t, turn.reply);
+
+        if (outcome === "completed" && a.parentMessage) {
+          this.store.event(t, "parent.message", { text: a.parentMessage });
+        }
       });
     } finally {
       // A failed write must not leave the task held as running.
@@ -767,7 +783,7 @@ export class Control {
    * A current_repo task's end is the one its changes stop at; a worktree's is
    * taken now. A failed snapshot leaves the end out.
    */
-  private async recordReply(t: Task, text: string) {
+  private async recordReply(t: Task, text: string, signal: AbortSignal) {
     const turn = t.turn;
     let end: string | undefined;
 
@@ -785,6 +801,8 @@ export class Control {
       end = undefined;
     }
 
+    // Snapshot recording can outlast the runtime budget or an interrupt.
+    signal.throwIfAborted();
     this.drafts.clear(t.id);
 
     this.store.event(t, "agent.reply", {

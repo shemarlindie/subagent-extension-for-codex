@@ -56,8 +56,11 @@ long-lived calls. The panel requires no browser bearer token.
 ## Worker messages to the parent chat
 
 Claude receives `mcp__codex_parent__message_parent` and environment instructions
-for task identity, workspace, parent conversation and delivery limits. The tool
-queues a durable `parent.message` event. While a thread-scoped embedded panel is
+for task identity, workspace, parent conversation and delivery limits. Claude
+can send important blocker updates immediately; it holds one completion report
+in memory until the turn completes successfully. Failed or interrupted turns
+discard that pending completion report. Each persisted report becomes a durable
+`parent.message` event. While a thread-scoped embedded panel is
 mounted, connected and advertises `openai/message`, each refresh claims the
 queued ID-only notifications one at a time and sends each through `App.sendMessage` with
 `_meta["openai/message"]: { target: "active", send: true }`. Ordinary **Ask Codex**

@@ -166,9 +166,11 @@ tasks changed; project registration, renames and removals announce a `change`
 for every owner. Each owner has a revision that changes with them, scoped to
 the service process. Panels refresh when it changes: the console hears it as an
 SSE `change` event, and the embedded panel through the `wait_user_agent_updates`
-long poll. SSE replays no events. MCP callers retrieve task/message results. Explicit provider parent messages use
-a durable queue. The mounted
-embedded thread panel claims them and forwards their task/message IDs through
+long poll. SSE replays no events. MCP callers retrieve task/message results.
+Explicit provider parent messages use a durable queue. Claude sends blocker
+updates immediately and persists completion reports only after successful turn
+completion. The mounted embedded thread panel claims them and forwards their
+task/message IDs through
 the host message bridge. The parent retrieves the stored reports by ID or
 through message polling; both paths share stable IDs for duplicate handling. See
 [Host capabilities](host-capabilities.md#worker-messages-to-the-parent-chat)

@@ -37,8 +37,11 @@ The embedded app learns of changes through app-only `wait_user_agent_updates({ a
 
 ## Provider messages to the parent
 
-Claude's injected `codex_parent.message_parent` SDK tool queues worker updates
-for the task's existing conversation. App-only
+Claude's injected `codex_parent.message_parent` SDK tool accepts `kind: blocker`
+for immediate updates and `kind: completion` (the default) for one report per
+turn. A second completion report in the same turn is rejected. A completion
+report is persisted only after a successful turn; a failed
+or interrupted turn discards it. App-only
 `claim_user_agent_parent_message` and `record_user_agent_parent_delivery` let
 the mounted embedded panel forward an ID-only notification once and record host acceptance.
 Each notification contains the task ID and stable `parent_<event-id>` message

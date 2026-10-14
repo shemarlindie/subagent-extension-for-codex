@@ -6,7 +6,9 @@ import type { RunContext } from "../../types.js";
 import { parentServer } from "./parent-tool.js";
 
 async function connect(conversation: string | undefined) {
-  const messageParent = vi.fn(() => 27);
+  const messageParent = vi.fn<NonNullable<RunContext["messageParent"]>>(
+    (_message, kind) => (kind === "blocker" ? 27 : undefined),
+  );
 
   const server = parentServer({
     task: { conversation_id: conversation },
@@ -44,11 +46,14 @@ test("injected SDK tool validates input and queues only into its bound parent co
     expect(result.content).toEqual([
       {
         type: "text",
-        text: "Queued parent message parent_27. Host delivery is pending.",
+        text: "Queued for delivery after this turn completes successfully. Host delivery is pending.",
       },
     ]);
 
-    expect(fixture.messageParent).toHaveBeenCalledExactlyOnceWith("Done");
+    expect(fixture.messageParent).toHaveBeenCalledExactlyOnceWith(
+      "Done",
+      "completion",
+    );
 
     const blank = await fixture.client.callTool({
       name: "message_parent",
@@ -73,6 +78,73 @@ test("SDK tool reports tasks with no parent route instead of queueing", async ()
 
     expect(result.isError).toBe(true);
     expect(fixture.messageParent).not.toHaveBeenCalled();
+  } finally {
+    await fixture.close();
+  }
+});
+
+test.each(["completion", "blocker"] as const)(
+  "SDK tool dispatches explicit %s reports with the matching receipt",
+  async (kind) => {
+    const fixture = await connect("parent-chat");
+
+    try {
+      const result = await fixture.client.callTool({
+        name: "message_parent",
+        arguments: { message: "Report", kind },
+      });
+
+      expect(result.isError).not.toBe(true);
+
+      expect(fixture.messageParent).toHaveBeenCalledExactlyOnceWith(
+        "Report",
+        kind,
+      );
+
+      expect(result.content).toEqual([
+        {
+          type: "text",
+          text:
+            kind === "blocker"
+              ? "Queued parent message parent_27. Host delivery is pending."
+              : "Queued for delivery after this turn completes successfully. Host delivery is pending.",
+        },
+      ]);
+    } finally {
+      await fixture.close();
+    }
+  },
+);
+
+test("SDK tool rejects invalid kinds and reports callback failures", async () => {
+  const fixture = await connect("parent-chat");
+
+  try {
+    const invalid = await fixture.client.callTool({
+      name: "message_parent",
+      arguments: { message: "Report", kind: "progress" },
+    });
+
+    expect(invalid.isError).toBe(true);
+    expect(fixture.messageParent).not.toHaveBeenCalled();
+
+    fixture.messageParent.mockImplementation(() => {
+      throw new Error("This turn already has a parent completion report");
+    });
+
+    const duplicate = await fixture.client.callTool({
+      name: "message_parent",
+      arguments: { message: "Another completion" },
+    });
+
+    expect(duplicate.isError).toBe(true);
+
+    expect(duplicate.content).toEqual([
+      {
+        type: "text",
+        text: expect.stringContaining("already has a parent completion report"),
+      },
+    ]);
   } finally {
     await fixture.close();
   }
