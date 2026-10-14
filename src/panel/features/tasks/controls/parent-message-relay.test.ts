@@ -27,7 +27,7 @@ function fixture() {
   return { tool, send, transport, scope, relay };
 }
 
-test("relay forwards a claimed worker message and records host delivery", async () => {
+test("relay forwards each claimed worker message, records host delivery and stops when none remains", async () => {
   const { relay, tool, send } = fixture();
   await relay.forward("parent");
 
@@ -43,6 +43,8 @@ test("relay forwards a claimed worker message and records host delivery", async 
         delivered: true,
       },
     ],
+    // It claims again until no message remains.
+    ["claim_user_agent_parent_message", { conversation_id: "parent" }],
   ]);
 
   expect(send).toHaveBeenCalledExactlyOnceWith(message.text, {
@@ -118,7 +120,7 @@ test("a claimed message from another conversation cannot be sent", async () => {
   );
 });
 
-test("overlapping refreshes share one active delivery and the guard resets afterwards", async () => {
+test("a forward during another claims again once that one finishes, and the guard resets afterwards", async () => {
   const { relay, tool, send } = fixture();
   let resolve!: () => void;
 
@@ -135,9 +137,33 @@ test("overlapping refreshes share one active delivery and the guard resets after
   expect(tool).toHaveBeenCalledTimes(2);
   resolve();
   await pending;
+
+  // Record, the claim that found none, and the claim the second forward asked for.
+  expect(tool).toHaveBeenCalledTimes(5);
   tool.mockResolvedValue(null);
   await relay.forward("parent");
-  expect(tool).toHaveBeenCalledTimes(4);
+  expect(tool).toHaveBeenCalledTimes(6);
+});
+
+test("several queued messages are all delivered by one forward", async () => {
+  const { relay, tool, send } = fixture();
+  const second = { ...message, attempt_id: 3, text: "Second notification" };
+
+  tool
+    .mockReset()
+    .mockResolvedValueOnce(message)
+    .mockResolvedValueOnce({ message: { id: message.message_id } })
+    .mockResolvedValueOnce(undefined)
+    .mockResolvedValueOnce(second)
+    .mockResolvedValueOnce({ message: { id: second.message_id } })
+    .mockResolvedValue(undefined);
+
+  await relay.forward("parent");
+
+  expect(send.mock.calls).toEqual([
+    [message.text, { submit: true }],
+    [second.text, { submit: true }],
+  ]);
 });
 
 test("send failures are logged once with bounded error text and allow later refreshes", async () => {
@@ -174,7 +200,7 @@ test("a report acknowledged after claim skips sending and records the reason", a
   await relay.forward("parent");
   expect(send).not.toHaveBeenCalled();
 
-  expect(tool).toHaveBeenLastCalledWith("record_user_agent_parent_delivery", {
+  expect(tool).toHaveBeenNthCalledWith(3, "record_user_agent_parent_delivery", {
     task_id: "worker",
     attempt_id: 2,
     conversation_id: "parent",

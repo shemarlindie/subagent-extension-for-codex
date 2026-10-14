@@ -11,6 +11,18 @@ const parentNotification = {
   text: "Delegated worker message available. Message ID: parent_1.",
 };
 
+/** Answers the first claim with `message`; the queue is empty after it. */
+function claimOnce(message: unknown = parentNotification) {
+  let claimed = false;
+
+  return () => {
+    if (claimed) return null;
+    claimed = true;
+
+    return message;
+  };
+}
+
 test.each([
   {
     label: "supported visible scoped host",
@@ -69,8 +81,10 @@ test.each([
 
     environment.hidden = () => state.hidden;
 
+    const claim = claimOnce();
+
     transport.handler = (name) => {
-      if (name === "claim_user_agent_parent_message") return parentNotification;
+      if (name === "claim_user_agent_parent_message") return claim();
       if (name === "record_user_agent_parent_delivery") return {};
 
       return undefined;
@@ -90,16 +104,13 @@ test.each([
       (call) => call.name === "claim_user_agent_parent_message",
     );
 
-    expect(claims).toEqual(
-      state.expected
-        ? [
-            {
-              name: "claim_user_agent_parent_message",
-              args: { conversation_id: "parent-chat" },
-            },
-          ]
-        : [],
-    );
+    // It claims until the queue is empty.
+    const claimCall = {
+      name: "claim_user_agent_parent_message",
+      args: { conversation_id: "parent-chat" },
+    };
+
+    expect(claims).toEqual(state.expected ? [claimCall, claimCall] : []);
 
     expect(transport.send).toHaveBeenCalledTimes(state.expected ? 1 : 0);
 
@@ -145,9 +156,10 @@ test.each([
     });
 
     const claim = deferred<typeof parentNotification>();
+    const claimPending = claimOnce(claim.promise);
 
     transport.handler = (name) => {
-      if (name === "claim_user_agent_parent_message") return claim.promise;
+      if (name === "claim_user_agent_parent_message") return claimPending();
       if (name === "record_user_agent_parent_delivery") return {};
 
       return undefined;
@@ -208,9 +220,11 @@ test("controller waits for known conversation scope before claiming parent notif
 
   const context = deferred<PanelData>();
 
+  const claim = claimOnce();
+
   transport.handler = (name) => {
     if (name === "get_agent_panel_context") return context.promise;
-    if (name === "claim_user_agent_parent_message") return parentNotification;
+    if (name === "claim_user_agent_parent_message") return claim();
     if (name === "record_user_agent_parent_delivery") return {};
 
     return undefined;
@@ -245,7 +259,7 @@ test("controller waits for known conversation scope before claiming parent notif
   });
 });
 
-test("scheduled parent delivery continues while hidden UI polling is paused", async (t) => {
+test("the fallback refresh still delivers parent messages while a hidden panel's reads are paused", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
   t.onTestFinished(() => {
@@ -260,8 +274,10 @@ test("scheduled parent delivery continues while hidden UI polling is paused", as
     .fn<NonNullable<Transport["send"]>>()
     .mockResolvedValue(undefined);
 
+  const claim = claimOnce();
+
   transport.handler = (name) => {
-    if (name === "claim_user_agent_parent_message") return parentNotification;
+    if (name === "claim_user_agent_parent_message") return claim();
     if (name === "record_user_agent_parent_delivery") return {};
 
     return undefined;
@@ -280,7 +296,7 @@ test("scheduled parent delivery continues while hidden UI polling is paused", as
     (call) => call.name === "list_agent_tasks",
   ).length;
 
-  vi.advanceTimersByTime(5000);
+  vi.advanceTimersByTime(30000);
   await flush();
 
   expect(transport.send).toHaveBeenCalledExactlyOnceWith(

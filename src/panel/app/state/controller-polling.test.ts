@@ -6,7 +6,7 @@ import { deferred, flush, setup, task } from "./controller-test-harness";
 import type { Task } from "./types";
 
 for (const phase of ["connect", "read", "poll"] as const) {
-  test(`host teardown during ${phase} stops further reads and polling`, async (t) => {
+  test(`host teardown during ${phase} stops further reads and refreshes`, async (t) => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
     t.onTestFinished(() => {
@@ -34,7 +34,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
       transport.handler = (name) =>
         name === "list_agent_tasks" ? gate.promise.then(() => []) : undefined;
 
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(30000);
       await flush();
     }
 
@@ -52,7 +52,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
   });
 }
 
-test("embedded polling skips hidden panels and waits for a pending refresh", async (t) => {
+test("the fallback refresh skips hidden panels and waits for a pending refresh", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
   t.onTestFinished(() => {
@@ -65,7 +65,7 @@ test("embedded polling skips hidden panels and waits for a pending refresh", asy
   let hidden = true;
   environment.hidden = () => hidden;
   const initial = transport.calls.length;
-  vi.advanceTimersByTime(5000);
+  vi.advanceTimersByTime(30000);
   await flush();
   assert.equal(transport.calls.length, initial);
   hidden = false;
@@ -74,22 +74,22 @@ test("embedded polling skips hidden panels and waits for a pending refresh", asy
   transport.handler = (name) =>
     name === "list_agent_tasks" ? gate.promise : undefined;
 
-  vi.advanceTimersByTime(5000);
+  vi.advanceTimersByTime(30000);
   await flush();
   const pending = transport.calls.length;
   // Each refresh reads the project list, then the tasks.
   assert.equal(pending, initial + 2);
-  vi.advanceTimersByTime(30000);
+  vi.advanceTimersByTime(60000);
   await flush();
   assert.equal(transport.calls.length, pending);
   gate.resolve([]);
   await flush();
-  vi.advanceTimersByTime(5000);
+  vi.advanceTimersByTime(30000);
   await flush();
   assert.equal(transport.calls.length, pending + 2);
 });
 
-test("embedded polling reports tool failures then retries successfully", async (t) => {
+test("the fallback refresh reports tool failures then retries successfully", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
   t.onTestFinished(() => {
@@ -106,18 +106,15 @@ test("embedded polling reports tool failures then retries successfully", async (
       ? Promise.reject(new Error("Host temporarily unavailable"))
       : undefined;
 
-  vi.advanceTimersByTime(5000);
+  vi.advanceTimersByTime(30000);
   await flush();
   assert.equal(controller.getSnapshot().connection, "Reconnecting…");
   assert.match(controller.getSnapshot().error, /temporarily unavailable/);
   fails = false;
-  vi.advanceTimersByTime(5000);
+  vi.advanceTimersByTime(30000);
   await flush();
 
-  assert.equal(
-    controller.getSnapshot().connection,
-    "Connected · refreshes every 5s",
-  );
+  assert.equal(controller.getSnapshot().connection, "Connected");
 
   assert.equal(controller.getSnapshot().error, "");
 });
@@ -149,7 +146,7 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
     (call) => call.name === "list_agent_tasks",
   ).length;
 
-  vi.advanceTimersByTime(5000);
+  vi.advanceTimersByTime(30000);
   await flush();
 
   assert.equal(
@@ -157,10 +154,7 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
     previousReads + 1,
   );
 
-  assert.equal(
-    controller.getSnapshot().connection,
-    "Connected · refreshes every 5s",
-  );
+  assert.equal(controller.getSnapshot().connection, "Connected");
 
   assert.equal(controller.getSnapshot().error, "");
 });
@@ -270,4 +264,48 @@ test("a new revision refreshes a visible panel, and once it is shown or no longe
   await resuming;
   await flush();
   assert.ok(reads() > beforeBusyChange);
+});
+
+test("each completed refresh restarts the fallback wait", async (t) => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  await controller.start();
+
+  const reads = () =>
+    transport.calls.filter((call) => call.name === "list_agent_tasks").length;
+
+  const initial = reads();
+  vi.advanceTimersByTime(20000);
+  await controller.refresh();
+  vi.advanceTimersByTime(20000);
+  await flush();
+  assert.equal(reads(), initial + 1);
+  vi.advanceTimersByTime(10000);
+  await flush();
+  assert.equal(reads(), initial + 2);
+});
+
+test("a refresh leaves the connection status the transport reports", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  await controller.start();
+  assert.equal(controller.getSnapshot().connection, "Connected");
+
+  transport.events.status("● Live");
+  await controller.refresh();
+  assert.equal(controller.getSnapshot().connection, "● Live");
+
+  transport.handler = (name) =>
+    name === "list_agent_tasks"
+      ? Promise.reject(new Error("Host temporarily unavailable"))
+      : undefined;
+
+  await assert.rejects(controller.refresh(), /temporarily unavailable/);
+  assert.equal(controller.getSnapshot().connection, "● Live");
 });

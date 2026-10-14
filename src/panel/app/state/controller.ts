@@ -58,7 +58,8 @@ import type {
 } from "./types";
 import { UpdateFollower } from "./update-follower";
 
-const POLL_INTERVAL_MS = 5000;
+/** How long a quiet panel waits before refreshing anyway, for writes the service can't announce. */
+const FALLBACK_REFRESH_MS = 30_000;
 
 function availableFilter(state: Snapshot, filter: Filter | null) {
   if (!filter || filter === "all") return filter;
@@ -103,6 +104,8 @@ export class Controller {
   });
 
   private stopVisibility?: () => void;
+  /** Whether the transport has reported its connection status. */
+  private transportStatus = false;
 
   private listeners = new Set<() => void>();
   readonly session = new SessionStateStore();
@@ -335,7 +338,9 @@ export class Controller {
     (...args: Args) =>
       this.run(() => action(...args));
 
+  /** Shows the transport's connection status, which refreshes then leave alone. */
   private showConnection(connection: string) {
+    this.transportStatus = true;
     if (connection !== this.state.connection) this.patch({ connection });
   }
 
@@ -417,18 +422,21 @@ export class Controller {
     if (!this.transport.streamsChanges) this.updates.follow();
   }
 
-  // Registry changes and idle task deletions do not always produce stream events.
+  /**
+   * Refreshes after a quiet spell, for writes the service doesn't announce,
+   * such as the projects CLI's. Each completed refresh restarts the wait.
+   */
   private schedule() {
     clearTimeout(this.timer);
     if (this.disposed) return;
 
     this.timer = setTimeout(
-      () => this.run(() => this.poll()),
-      POLL_INTERVAL_MS,
+      () => this.run(() => this.fallbackRefresh()),
+      FALLBACK_REFRESH_MS,
     );
   }
 
-  private async poll() {
+  private async fallbackRefresh() {
     try {
       // Parent reports should still attempt delivery while UI reads are paused.
       this.forwardParentMessage();
@@ -700,7 +708,7 @@ export class Controller {
       if (this.stale(version)) return;
 
       this.patch({
-        connection: `Connected · refreshes every ${POLL_INTERVAL_MS / 1000}s`,
+        ...(this.transportStatus ? {} : { connection: "Connected" }),
         error: "",
       });
     } catch (error) {
@@ -720,10 +728,11 @@ export class Controller {
         );
       }
 
-      this.patch({ connection: "Reconnecting…" });
+      if (!this.transportStatus) this.patch({ connection: "Reconnecting…" });
       throw error;
     } finally {
       this.refreshing = false;
+      if (this.started) this.schedule();
 
       if (
         !this.isDisposed() &&
