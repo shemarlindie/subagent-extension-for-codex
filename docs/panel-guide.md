@@ -156,7 +156,10 @@ while defaults and choices load; only controls and actions that depend on
 pending data are disabled.
 
 Below a task's Chat composer, the hint line lists the profile, model, reasoning
-effort and permission mode the task started with. Later turns keep them.
+effort and permission mode the task started with. Later turns keep them. The
+profile keeps a pill and the rest shorten beside it, as in the new-task
+composer's summary (`Haiku 4.5 · M · Read`); hover for full names. Narrow
+panels put them on their own line.
 
 The service derives a title from the request. Click the inspector title to edit:
 Enter or an outside click saves, Escape cancels, and blank/failed saves stay open.

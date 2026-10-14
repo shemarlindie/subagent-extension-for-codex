@@ -670,23 +670,64 @@ body[data-expanded-panel="true"]
   gap: 4px 12px;
   min-height: 1lh;
 }
+/*
+ * The profile keeps a pill and the rest follow as one abbreviated line, as
+ * the new-task composer summarizes them.
+ */
 .task-run-settings {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
   margin: 0 0 0 auto;
   padding: 0;
   list-style: none;
   color: var(--muted);
   font-size: 11px;
+  white-space: nowrap;
 }
 .task-run-settings li {
   display: inline-flex;
+  flex: none;
   align-items: center;
+}
+.task-run-settings li:first-child {
   gap: 4px;
+  margin-inline-end: 6px;
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--hover);
+}
+/* The model name is the one that can run long. */
+.task-run-settings li:nth-child(2) {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-run-settings li + li + li::before {
+  content: "·" / "";
+  margin-inline: 4px;
+}
+.task-run-settings li[data-compact="hidden"] {
+  display: none;
+}
+/* Full labels stay for assistive tech. */
+.task-run-setting-full {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Narrow panels give the settings their own line under the hint. */
+@media (max-width: 640px) {
+  .task-run-settings {
+    flex: 1 0 100%;
+    margin: 0;
+  }
 }
 .chat-error {
   margin: 0;
