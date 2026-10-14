@@ -442,10 +442,24 @@ directory is both a Codex marketplace and the plugin. Install it locally with
 `codex plugin marketplace add ./release`, then
 `codex plugin add codex-subagent-extension@shemarlindie`. The marketplace name
 `shemarlindie` is part of the plugin ID and its `PLUGIN_DATA` path, so it must
-not change. `tests/integration/package/marketplace-install.test.ts` installs
-the assembled directory into a temporary `CODEX_HOME` and runs the MCP command
-Codex reports. It needs the Codex CLI (`CODEX_BIN` or `codex` on `PATH`) and is
-skipped without it.
+not change.
+
+`tests/integration/package/marketplace-install.test.ts` assembles its own copy
+from `dist/`, installs it with the Codex CLI into a temporary `CODEX_HOME`, and
+runs the MCP command Codex reports against an isolated data directory and port.
+It checks that the installed plugin reports the package version, lists and
+answers tools, and starts the service itself. It runs in `npm test`, needs the
+Codex CLI (`CODEX_BIN` or `codex` on `PATH`) and is skipped without it. To run
+it alone after a build:
+
+```sh
+npx vitest run tests/integration/package/marketplace-install.test.ts
+```
+
+Set `MARKETPLACE_SOURCE` to a published marketplace, such as
+`owner/repo@v1.2.3`, to install that instead. Its version must match the
+checkout's `package.json`, which the test compares against. The release
+workflow does this after publishing.
 
 ## Releasing
 
@@ -462,12 +476,12 @@ startup and reinstalls the plugin when the branch moves, so every push to
 3. Merge to `main`, then run the **Release** workflow from `main` in GitHub
    Actions.
 
-The workflow (`.github/workflows/release.yml`) runs the CI checks, assembles
-and installs the release with Codex, commits it to `release` with the source
-commit in the message, tags it, attaches an attested zip to a GitHub release,
-and then installs `<owner>/<repo>@v<version>` from GitHub with Codex on Linux,
-macOS and Windows. The source commit on `main` isn't tagged, because user-facing
-tags name release commits.
+The workflow (`.github/workflows/release.yml`) runs the CI checks and the
+marketplace install test, assembles the release, commits it to `release` with
+the source commit in the message, tags it, attaches an attested zip to a
+GitHub release, and then installs `<owner>/<repo>@v<version>` from GitHub with
+Codex on Linux, macOS and Windows. The source commit on `main` isn't tagged,
+because user-facing tags name release commits.
 
 Repository settings the workflow relies on, set by hand:
 

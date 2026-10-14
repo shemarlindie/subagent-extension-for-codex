@@ -49,6 +49,7 @@ const codex = findCodex();
  */
 const published = process.env.MARKETPLACE_SOURCE;
 
+/** The fields of a `codex mcp list --json` entry that this test reads. */
 type McpServer = {
   name: string;
   transport: {
@@ -77,6 +78,7 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     await mkdir(codexHome);
     service = { data: join(root, "data"), port: await freePort() };
 
+    // A published marketplace is fetched by Codex; there is nothing to assemble.
     if (published) return;
 
     // Assemble from the existing build (pretest builds it).
@@ -106,6 +108,7 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
 
     const { version } = JSON.parse(await readFile("package.json", "utf8"));
 
+    // Codex's own cache layout: plugins/cache/<marketplace>/<plugin>/<version>.
     const installed = join(
       codexHome,
       "plugins/cache/shemarlindie/codex-subagent-extension",
@@ -158,6 +161,8 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     ).json();
 
     assert.equal(health.version, version);
+    // The plugin's proxy started this service, so a later plugin update can
+    // hand it over to the new version.
     assert.equal(health.launcher, "stdio");
   });
 });
