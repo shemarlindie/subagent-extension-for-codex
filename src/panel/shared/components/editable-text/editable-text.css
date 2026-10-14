@@ -13,6 +13,19 @@
 .editable-text-measure::before {
   content: attr(data-value);
 }
+/* The read-only title owns its natural height immediately, before layout
+   effects measure the editor. Parent arrival animations can then measure it. */
+.editable-text:not([data-editing]) {
+  padding-block: 2px;
+}
+.editable-text:not([data-editing]) .editable-text-measure {
+  position: relative;
+  display: block;
+}
+.editable-text:not([data-editing]) .editable-text-editor {
+  position: absolute;
+  inset: 0;
+}
 .editable-text-trigger {
   position: absolute;
   inset: 0;

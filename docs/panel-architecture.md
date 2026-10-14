@@ -41,6 +41,11 @@ helpers live in `shared/utils/`. Global tokens, resets and primitive styles
 remain in `styles/`; application layouts live in `app/styles/`. `app.css`
 imports all production CSS in cascade order.
 
+Editable text keeps its hidden text measurement in normal flow while read-only,
+so titles have their natural height on the first render. Only editing uses the
+measured control height. This lets parent arrival animations measure a settled
+header before the editor's layout state updates.
+
 Application state groups dialog descriptors, saved drafts and restoration in
 `app/state/persistence/`, and in-memory session state and hooks in
 `app/state/session/`. Transport size tracing stays with `transports/`.

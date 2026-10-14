@@ -8,7 +8,9 @@ import {
 
 /** Grows an element in from nothing, fading it in as it opens. */
 function reveal(element: HTMLElement) {
-  const height = element.offsetHeight;
+  // Layout can land between pixels; rounding the endpoint makes it snap when
+  // the animation releases the element back to its natural height.
+  const height = element.getBoundingClientRect().height;
 
   element.animate(
     [
@@ -48,7 +50,10 @@ export function useArrivalMotion(
     box?.animate(
       [
         { height: `${from}px`, overflow: "hidden" },
-        { height: `${box.offsetHeight}px`, overflow: "hidden" },
+        {
+          height: `${box.getBoundingClientRect().height}px`,
+          overflow: "hidden",
+        },
       ],
       { duration: MOTION.slow, easing: MOTION.easing },
     );
