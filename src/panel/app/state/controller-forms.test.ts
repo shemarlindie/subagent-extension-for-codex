@@ -309,7 +309,11 @@ test("permission decisions submit the request id and optional worker message", a
     },
   };
 
-  await controller.decidePermission(pendingTask, true, "Run only the checks.");
+  await controller.taskActions.decidePermission(
+    pendingTask,
+    true,
+    "Run only the checks.",
+  );
 
   assert.deepEqual(transport.calls, [
     {

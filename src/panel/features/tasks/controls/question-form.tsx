@@ -171,7 +171,7 @@ export function QuestionForm({ task }: QuestionFormProps) {
     // the call returns, and an answered request must not leave a draft.
     sent.current = true;
 
-    const failure = await controller.answer(
+    const failure = await controller.taskActions.answer(
       task,
       Object.fromEntries(answerEntries),
     );

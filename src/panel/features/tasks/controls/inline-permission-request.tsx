@@ -36,7 +36,7 @@ export function InlinePermissionRequest({ task }: { task: Task }) {
     void (async () => {
       setError(undefined);
 
-      const failure = await controller.decidePermission(
+      const failure = await controller.taskActions.decidePermission(
         task,
         approved,
         message,

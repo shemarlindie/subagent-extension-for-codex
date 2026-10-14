@@ -51,7 +51,9 @@ collaborators that receive a small context of callbacks: `DialogLoader` opens
 the settings and New Task dialogs while their reads load,
 `PersistedDialogs` keeps the dialog stack a reload reopens, and the
 feature-owned `ChangeLoader` and `DraftFollower` read changes and drafts for the
-selected task.
+selected task. Components call `controller.taskActions` for task actions taken
+outside a dialog, such as sending messages, editing the queue, raising budgets
+and answering worker requests.
 
 ## State ownership and component patterns
 
@@ -261,8 +263,9 @@ panel hides dialogs while preserving their drafts for expansion.
 
 - **Chat:** `src/shared/tasks/conversation/chat.ts` supplies `chatItems` to both the service
   and preview. `mergeChat` updates repeated items in place. HTTP transports use
-  SSE drafts; host transports use chained `get_user_agent_draft` reads. The
-  controller handles queue/send/interrupt actions and inline failures.
+  SSE drafts; host transports use chained `get_user_agent_draft` reads.
+  `TaskActions` (`controller.taskActions`) runs queue/send/interrupt actions and
+  returns their failures for inline display.
 - **Settings:** `src/shared/settings/settings-document.ts` supplies typed
   sections and rows. `src/panel/features/settings/settings-layout.ts` owns form logic.
   Save only changed fields; preserve disabled budget amounts. Inactive tab

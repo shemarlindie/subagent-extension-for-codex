@@ -48,22 +48,27 @@ export function MessageQueue({ task }: MessageQueueProps) {
     [queueList] = useAutoList<HTMLUListElement>();
 
   const move = async (messageId: string, index: number) => {
-    const error = await controller.moveQueued(task, messageId, index);
+    const error = await controller.taskActions.moveQueued(
+      task,
+      messageId,
+      index,
+    );
+
     setError(error);
 
     return !error;
   };
 
   const interrupt = async () => {
-    setError(await controller.interruptTask(task, true));
+    setError(await controller.taskActions.interruptTask(task, true));
   };
 
   const resume = async () => {
-    setError(await controller.resumeQueue(task));
+    setError(await controller.taskActions.resumeQueue(task));
   };
 
   const clear = async () => {
-    setError(await controller.clearQueue(task));
+    setError(await controller.taskActions.clearQueue(task));
   };
 
   const drop = () => {

@@ -68,13 +68,19 @@ export function QueuedMessageRow({
 
   const save = async () => {
     if (!draft?.trim()) return;
-    const error = await controller.editQueued(task, message.id, draft.trim());
+
+    const error = await controller.taskActions.editQueued(
+      task,
+      message.id,
+      draft.trim(),
+    );
+
     onError(error);
     if (!error) toggleEditing();
   };
 
   const remove = async () => {
-    onError(await controller.removeQueued(task, message.id));
+    onError(await controller.taskActions.removeQueued(task, message.id));
   };
 
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {

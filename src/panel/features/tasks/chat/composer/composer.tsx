@@ -165,7 +165,12 @@ export function Composer({
     if (disabled || !task || !message || busy || !canContinue) return;
 
     setShowContinuePrompt(false);
-    const failure = await controller.sendMessage(task, message, delivery);
+
+    const failure = await controller.taskActions.sendMessage(
+      task,
+      message,
+      delivery,
+    );
 
     setError(failure);
     if (!failure) edit("");
@@ -176,7 +181,10 @@ export function Composer({
     if (disabled || !task) return;
 
     setError(
-      await controller.interruptTask(task, task.pending_steers.length > 0),
+      await controller.taskActions.interruptTask(
+        task,
+        task.pending_steers.length > 0,
+      ),
     );
   };
 

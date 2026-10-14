@@ -18,7 +18,7 @@ test("permission request is actionable inline with a focused optional message", 
   const controller = {
     subscribe: () => () => {},
     getSnapshot: () => snapshot,
-    decidePermission,
+    taskActions: { decidePermission },
   } as unknown as Controller;
 
   const task: Task = {

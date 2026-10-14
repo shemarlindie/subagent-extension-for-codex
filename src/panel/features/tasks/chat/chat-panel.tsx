@@ -38,7 +38,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
   const applyBudgetRaise = async (value: BudgetRaise) => {
     if (!task) return;
 
-    const error = await controller.applyBudget(task, value);
+    const error = await controller.taskActions.applyBudget(task, value);
     if (!error) setBudgetApplyVersion((version) => version + 1);
 
     return error;
