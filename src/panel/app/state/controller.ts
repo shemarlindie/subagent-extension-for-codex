@@ -8,6 +8,10 @@ import type {
   WorktreeRemoval,
 } from "../../features/changes/types";
 import {
+  renamedProject,
+  withoutProject,
+} from "../../features/projects/project-list";
+import {
   activityCursor,
   mergeActivity,
   turnStart,
@@ -1321,13 +1325,11 @@ export class Controller {
       this.patch({
         projects:
           name === undefined
-            ? this.state.projects.filter(
-                (project) => project.repository !== repository,
-              )
-            : this.state.projects.map((project) =>
-                project.repository === repository
-                  ? { ...project, name: result.name ?? name.trim() }
-                  : project,
+            ? withoutProject(this.state.projects, repository)
+            : renamedProject(
+                this.state.projects,
+                repository,
+                result.name ?? name.trim(),
               ),
       });
 
@@ -1401,15 +1403,9 @@ export class Controller {
       // A picker can outlive its chat; only the original draft may register its selection.
       if (!picked.repository || !active()) return;
 
-      const registered = await this.tool<{ repository: string }>(
-        "register_user_agent_project",
-        { repository: picked.repository },
-      );
-
+      const registered = await this.registerAndList(picked.repository);
       if (!active()) return;
-      const projects = await this.tool<Project[]>("list_agent_projects");
-      if (!active()) return;
-      this.patch({ projects, projectsLoaded: true });
+      this.patch({ projects: registered.projects, projectsLoaded: true });
 
       return registered.repository;
     } catch (error) {
@@ -1425,6 +1421,21 @@ export class Controller {
     return undefined;
   }
 
+  /**
+   * Registers a project, then reads the list that includes it. The read is
+   * new rather than shared, since a read already in flight may predate it.
+   */
+  private async registerAndList(repository: string) {
+    const registered = await this.tool<{ repository: string }>(
+      "register_user_agent_project",
+      { repository },
+    );
+
+    const projects = await this.tool<Project[]>("list_agent_projects");
+
+    return { repository: registered.repository, projects };
+  }
+
   /** Add the chat project the user chose in New task before its task starts. */
   async addChatProjectForTask(repository: string) {
     const state = this.state;
@@ -1437,8 +1448,7 @@ export class Controller {
       return;
     }
 
-    await this.tool("register_user_agent_project", { repository });
-    const projects = await this.tool<Project[]>("list_agent_projects");
+    const { projects } = await this.registerAndList(repository);
 
     if (!this.disposed) {
       this.patch({
@@ -1452,18 +1462,14 @@ export class Controller {
 
   async registerProject(repository: string) {
     const scope = this.state.scopeVersion;
-    let registered: { repository: string } | undefined;
+    let registered: string | undefined;
 
     await this.submit(async () => {
-      registered = await this.tool<{ repository: string }>(
-        "register_user_agent_project",
-        { repository },
-      );
-
-      const projects = await this.tool<Project[]>("list_agent_projects");
+      const result = await this.registerAndList(repository);
+      registered = result.repository;
 
       if (!this.disposed && scope === this.state.scopeVersion) {
-        this.patch({ projects, projectsLoaded: true });
+        this.patch({ projects: result.projects, projectsLoaded: true });
       }
     });
 
@@ -1476,7 +1482,7 @@ export class Controller {
       this.patch({ projectCandidate: undefined, projectCandidateAuto: false });
 
       if (this.state.page === "tasks") {
-        await this.changeProject(registered.repository);
+        await this.changeProject(registered);
       }
     }
   }
