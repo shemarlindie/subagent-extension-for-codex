@@ -428,3 +428,63 @@ test("removing native forms discards pending requests and preserves task activit
     [],
   );
 });
+
+test("the General profile upgrade adds its model defaults without changing saved ones", (t) => {
+  const dir = scratch(t);
+  const path = join(dir, "console.sqlite");
+  const older = join(dir, "older-migrations");
+  mkdirSync(older);
+
+  const migrationNames = readdirSync(migrationsFolder)
+    .filter((name) => /^\d{14}_/.test(name))
+    .sort();
+
+  const backfill = migrationNames.findIndex((name) =>
+    name.endsWith("_general-profile-settings"),
+  );
+
+  assert.ok(backfill > 0);
+
+  for (const name of migrationNames.slice(0, backfill)) {
+    cpSync(join(migrationsFolder, name), join(older, name), {
+      recursive: true,
+    });
+  }
+
+  const before = openDatabase(path, older);
+  const insert = before.client.prepare("INSERT INTO user_settings VALUES(?,?)");
+
+  insert.run("older", JSON.stringify({ reviewer_default_model: "opus" }));
+
+  insert.run(
+    "newer",
+    JSON.stringify({
+      general_default_model: "sonnet",
+      general_default_reasoning_effort: "high",
+    }),
+  );
+
+  before.close();
+
+  const upgraded = openDatabase(path);
+  t.onTestFinished(() => upgraded.close());
+
+  const bodies = Object.fromEntries(
+    upgraded.client
+      .prepare("SELECT owner, body FROM user_settings")
+      .all()
+      .map((row) => [row.owner, JSON.parse(String(row.body))]),
+  );
+
+  assert.deepEqual(bodies, {
+    older: {
+      reviewer_default_model: "opus",
+      general_default_model: "",
+      general_default_reasoning_effort: "default",
+    },
+    newer: {
+      general_default_model: "sonnet",
+      general_default_reasoning_effort: "high",
+    },
+  });
+});
