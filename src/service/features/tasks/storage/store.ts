@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 
 import { and, desc, eq, gt, inArray, lt, lte, max, or, sql } from "drizzle-orm";
@@ -25,7 +26,9 @@ const toTask = (row: { id: string; body: string }) =>
   decodeTask(row.id, row.body);
 
 /**
- * Task and event persistence, and the bus that announces committed events.
+ * Task and event persistence, and the bus that announces committed changes:
+ * `event` for each event, and `change` with the owner whose tasks changed,
+ * or no owner when the shared project list did.
  * Methods taking an owner are the public, owner-checked reads; the others
  * are internal reads for code that already holds the task.
  */
@@ -34,6 +37,12 @@ export class Store {
   readonly database: Database;
   /** The tasks saved in the open transaction, with the `updated_at` to restore on rollback. */
   private saved?: [Task, string][];
+  /** The owners whose tasks the open transaction changed. */
+  private changed?: Set<string>;
+  /** Distinguishes this process's revisions from a restarted service's. */
+  private readonly bootId = randomUUID();
+  private revisions = new Map<string, number>();
+  private projectRevision = 0;
   // Long-poll reads each listen while they wait, so there can be many.
   bus = new EventEmitter().setMaxListeners(0);
   constructor(path: string) {
@@ -56,6 +65,7 @@ export class Store {
 
     const saved: [Task, string][] = [];
     this.saved = saved;
+    this.changed = new Set();
 
     try {
       return this.database.transaction(() => {
@@ -64,6 +74,7 @@ export class Store {
         } finally {
           // Closed before the commit's listeners run, so they can open their own.
           this.saved = undefined;
+          this.changed = undefined;
         }
       });
     } catch (error) {
@@ -89,6 +100,7 @@ export class Store {
     }
 
     this.saved?.push([t, updated]);
+    this.markChanged(t.owner);
   }
 
   /**
@@ -102,6 +114,49 @@ export class Store {
       .delete(tasks)
       .where(and(eq(tasks.id, id), eq(tasks.owner, owner)))
       .run();
+
+    this.markChanged(owner);
+  }
+
+  /**
+   * Announces `change` for an owner once the open transaction commits, once
+   * per transaction however many writes it holds; at once outside one.
+   */
+  private markChanged(owner: string) {
+    const changed = this.changed;
+
+    if (!changed) {
+      this.announce([owner]);
+
+      return;
+    }
+
+    if (!changed.size) this.database.afterCommit(() => this.announce(changed));
+    changed.add(owner);
+  }
+
+  private announce(owners: Iterable<string>) {
+    for (const owner of owners) {
+      this.revisions.set(owner, (this.revisions.get(owner) ?? 0) + 1);
+      this.publish("change", owner);
+    }
+  }
+
+  /** Announces a change to the project list, which every owner shares. */
+  projectsChanged() {
+    this.projectRevision++;
+    this.publish("change", undefined);
+  }
+
+  /**
+   * An opaque token for the state of an owner's tasks and the project list.
+   * It differs whenever either has changed, including across a restart, so
+   * clients compare it only for equality.
+   */
+  revision(owner: string) {
+    const count = (this.revisions.get(owner) ?? 0) + this.projectRevision;
+
+    return `${this.bootId}:${count}`;
   }
 
   /** An owner's tasks, or every task without one, newest first. */
@@ -116,15 +171,21 @@ export class Store {
   }
 
   get(id: string, owner: string): Task {
+    const task = this.find(id, owner);
+    if (!task) throw new Error("Task not found");
+
+    return task;
+  }
+
+  /** An owner's task, or undefined when it has none with this id. */
+  find(id: string, owner: string): Task | undefined {
     const row = this.orm
       .select({ id: tasks.id, body: tasks.body })
       .from(tasks)
       .where(and(eq(tasks.id, id), eq(tasks.owner, owner)))
       .get();
 
-    if (!row) throw new Error("Task not found");
-
-    return toTask(row);
+    return row && toTask(row);
   }
 
   event<K extends EventType, D extends EventPayloadMap[K] = EventPayloadMap[K]>(
@@ -162,22 +223,23 @@ export class Store {
       .get();
 
     const event = decodedEvent({ id, task_id: t.id, type, timestamp, data });
-    this.database.afterCommit(() => this.notify(event, t.owner));
+    this.database.afterCommit(() => this.publish("event", event, t.owner));
+    this.markChanged(t.owner);
 
     return event;
   }
 
   /**
-   * Tells each event listener about a committed event. A notification is a
-   * hint that rows exist, so a failing listener is logged and the others
-   * still run; consumers catch up on what they missed from the database.
+   * Tells each listener about a committed change. A notification is a hint
+   * that rows changed, so a failing listener is logged and the others still
+   * run; consumers catch up on what they missed from the database.
    */
-  private notify(e: Event, owner: string) {
-    for (const listener of this.bus.listeners("event")) {
+  private publish(name: "event" | "change", ...args: unknown[]) {
+    for (const listener of this.bus.listeners(name)) {
       try {
-        listener(e, owner);
+        listener(...args);
       } catch (error) {
-        console.error("Event listener failed", error);
+        console.error(`${name} listener failed`, error);
       }
     }
   }

@@ -33,7 +33,9 @@ import {
 } from "../navigation/pages";
 import { DialogLoader } from "./dialog-loader";
 import { initialState } from "./initial-state";
+import { browserEnvironment, type PanelEnvironment } from "./panel-environment";
 import { PersistedDialogs } from "./persistence/persisted-dialogs";
+import { RevisionTrigger } from "./revision-trigger";
 import { projectRemovalReset } from "./scope-reconciliation";
 import { defaultTask, selectionPatch } from "./selection";
 import { filterCounts, selectedTask } from "./selectors";
@@ -81,6 +83,16 @@ export class Controller {
   });
 
   private parentRelay: ParentMessageRelay;
+
+  private revisions = new RevisionTrigger({
+    closed: () => this.disposed,
+    hidden: () => this.environment.hidden(),
+    busy: () => this.state.busy,
+    refresh: () => this.run(() => this.refresh()),
+    forwardParentMessage: () => this.forwardParentMessage(),
+  });
+
+  private stopVisibility?: () => void;
 
   private listeners = new Set<() => void>();
   readonly session = new SessionStateStore();
@@ -140,10 +152,7 @@ export class Controller {
 
   constructor(
     readonly transport: Transport,
-    private environment = {
-      hidden: () => document.hidden,
-      wide: () => window.innerWidth > 640,
-    },
+    private environment: PanelEnvironment = browserEnvironment,
     private viewState?: UiStatePersistence,
   ) {
     this.parentRelay = new ParentMessageRelay(transport, () =>
@@ -208,6 +217,7 @@ export class Controller {
       this.dialogs.shown(this.state.dialog, patch.dialog);
     }
 
+    const wasBusy = this.state.busy;
     this.state = { ...this.state, ...patch };
 
     if (this.state.selected) {
@@ -216,6 +226,7 @@ export class Controller {
 
     this.listeners.forEach((listener) => listener());
     if (this.viewStateReady) this.saveViewState();
+    if (wasBusy && !this.state.busy) this.revisions.resume();
   }
 
   private saveViewState() {
@@ -337,9 +348,14 @@ export class Controller {
         host: (host) => this.patch({ host }),
         teardown: () => this.dispose(),
         draft: (update) => this.draftFollower.apply(update),
+        revision: (value) => this.revisions.report(value),
       });
 
       if (this.isDisposed()) return;
+
+      this.stopVisibility = this.environment.onVisibilityChange?.(() =>
+        this.revisions.resume(),
+      );
 
       this.patch({ connected: true, loginRequired: false });
       const savedDialog = this.dialogs.latest();
@@ -404,6 +420,8 @@ export class Controller {
     this.disposed = true;
     ++this.generation;
     clearTimeout(this.timer);
+    this.revisions.dispose();
+    this.stopVisibility?.();
     this.transport.dispose();
     this.listeners.clear();
   }

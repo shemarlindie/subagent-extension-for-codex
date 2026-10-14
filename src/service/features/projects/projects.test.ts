@@ -833,3 +833,20 @@ test("project removal retains mutation locks until every interrupted turn settle
   assert.equal(f.projects.list().length, 1);
   assert.equal(f.store.all().length, 2);
 });
+
+test("registering, renaming and removing a project each report a change", async (t) => {
+  const { store, workspaces, repo } = await fixture(t);
+  let changes = 0;
+  const projects = new Projects(store.database, workspaces, () => changes++);
+  const repository = await repo("changes");
+
+  await projects.register(repository);
+  projects.rename(repository, "Renamed");
+  projects.remove(repository);
+  assert.equal(changes, 3);
+
+  // Nothing changes when a rename fails or the list is only read.
+  assert.throws(() => projects.rename(repository, "Gone"), /no longer/);
+  projects.list();
+  assert.equal(changes, 3);
+});

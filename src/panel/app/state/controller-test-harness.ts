@@ -133,9 +133,21 @@ export class FakeTransport implements Transport {
 export function setup(wide = false) {
   const transport = new FakeTransport();
 
+  const visibility = new Set<() => void>();
+
   const environment = {
     hidden: () => false,
     wide: () => wide,
+    onVisibilityChange(listener: () => void) {
+      visibility.add(listener);
+
+      return () => visibility.delete(listener);
+    },
+    /** Shows or hides the panel and tells the controller, as the browser does. */
+    setHidden(hidden: boolean) {
+      environment.hidden = () => hidden;
+      for (const listener of visibility) listener();
+    },
   };
 
   const controller = new Controller(transport, environment);

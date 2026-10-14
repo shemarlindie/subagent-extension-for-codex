@@ -13,6 +13,7 @@ function callbacks() {
   const scopes: unknown[] = [];
   const hosts: unknown[] = [];
   const drafts: unknown[] = [];
+  const revisions: string[] = [];
   let refreshes = 0,
     logins = 0,
     teardowns = 0;
@@ -39,6 +40,9 @@ function callbacks() {
     draft: (update) => {
       drafts.push(update);
     },
+    revision: (value) => {
+      revisions.push(value);
+    },
   };
 
   return {
@@ -47,6 +51,7 @@ function callbacks() {
     scopes,
     hosts,
     drafts,
+    revisions,
     counts: () => ({ refreshes, logins, teardowns }),
   };
 }

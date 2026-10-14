@@ -10,9 +10,11 @@ import { projectRoots } from "./schema.js";
 
 /** Only explicit user registration (UI/CLI) or configuration grants roots, never task arguments. */
 export class Projects {
+  /** `onChange` hears each committed registration, rename and removal. */
   constructor(
     private database: Database,
     private workspaces: Workspaces,
+    private onChange: () => void = () => {},
   ) {
     this.refresh();
   }
@@ -50,6 +52,7 @@ export class Projects {
       .run();
 
     this.refresh();
+    this.onChange();
 
     return { repository: actual, kind };
   }
@@ -83,6 +86,7 @@ export class Projects {
       .run();
 
     if (!result.changes) throw new Error("Project is no longer registered");
+    this.onChange();
 
     return { repository, name: trimmed };
   }
@@ -95,6 +99,7 @@ export class Projects {
       .run();
 
     this.refresh();
+    this.onChange();
 
     return { repository };
   }

@@ -21,6 +21,8 @@ export type TransportEvents = {
   teardown(): void;
   /** A streamed change to a running task's draft. */
   draft(update: DraftUpdate): void;
+  /** The service's current revision, an opaque token that changes with its data. */
+  revision(value: string): void;
 };
 
 export interface Transport {

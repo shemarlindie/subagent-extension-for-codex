@@ -405,6 +405,92 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
   }
 });
 
+test("an update wait returns once the owner's revision changes, and a change ends its draft wait", async () => {
+  let finish!: () => void;
+  const finished = new Promise<void>((resolve) => (finish = resolve));
+
+  class Streaming extends FixtureProvider {
+    override async run(c: RunContext) {
+      c.delta("msg_live", "Half ");
+      await finished;
+
+      return { reply: "Done." };
+    }
+  }
+
+  const { c, store, user, start } = await setup(new Streaming());
+
+  type Update = { revision: string; draft?: unknown; running?: boolean };
+
+  const wait = (args: Record<string, unknown>) =>
+    user<Update>("wait_user_agent_updates", args);
+
+  try {
+    const t = await start("Write");
+    await until(() => c.drafts.get(t.id)?.text === "Half ");
+
+    // Without a revision, or with another boot's, it returns at once.
+    const { revision } = await wait({ wait_ms: 5000 });
+    assert.equal(revision, store.revision("alice"));
+
+    assert.deepEqual(await wait({ after: "restarted:0", wait_ms: 5000 }), {
+      revision,
+    });
+
+    // Another owner's change doesn't wake it.
+    const started = Date.now();
+    const quiet = wait({ after: revision, wait_ms: 200 });
+    store.save({ ...store.get(t.id, "alice"), id: "other", owner: "bob" });
+    assert.deepEqual(await quiet, { revision });
+    assert.ok(Date.now() - started >= 150);
+
+    // The owner's change ends a draft wait, with the draft unchanged.
+    const waiting = wait({
+      after: revision,
+      draft: { task_id: t.id, message_id: "msg_live", after_length: 5 },
+      wait_ms: 5000,
+    });
+
+    await user("rename_user_agent_task", { task_id: t.id, title: "Renamed" });
+    const changed = await waiting;
+    assert.notEqual(changed.revision, revision);
+
+    assert.deepEqual(changed, {
+      revision: store.revision("alice"),
+      draft: { message_id: "msg_live", text: "Half " },
+      running: true,
+    });
+
+    // A target whose turn has ended still waits for the revision.
+    finish();
+    await until(() => store.get(t.id, "alice").status === "completed");
+    const ended = store.revision("alice");
+    const idleStart = Date.now();
+
+    assert.deepEqual(
+      await wait({ after: ended, draft: { task_id: t.id }, wait_ms: 200 }),
+      { revision: ended, draft: null, running: false },
+    );
+
+    assert.ok(Date.now() - idleStart >= 150);
+
+    // Another owner's task has no draft to show.
+    assert.deepEqual(
+      await callTool(
+        c,
+        "bob",
+        "wait_user_agent_updates",
+        { draft: { task_id: t.id } },
+        "user",
+      ),
+      { revision: store.revision("bob"), draft: null, running: false },
+    );
+  } finally {
+    finish();
+    await c.close();
+  }
+});
+
 test("parent message relay tools require app authority and preserve conversation scope", async () => {
   const { c, store, parent, user, start } = await setup();
 

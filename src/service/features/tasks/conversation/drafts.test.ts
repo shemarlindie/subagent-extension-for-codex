@@ -84,3 +84,21 @@ test("a draft read waits for growth, a clear or the turn's end, or times out", a
   assert.ok(Date.now() - started >= 40);
   assert.equal(bus.listenerCount("draft"), 0);
 });
+
+test("a draft wait also ends when its wake signal aborts", async () => {
+  const bus = new EventEmitter();
+  const drafts = new Drafts(bus);
+  drafts.append("alice", "t", "m", "Hi");
+  const known = { message_id: "m", length: 2 };
+
+  const wake = new AbortController();
+  const waiting = drafts.wait("t", known, 5000, () => false, wake.signal);
+  wake.abort();
+  assert.deepEqual(await waiting, { message_id: "m", text: "Hi" });
+  assert.equal(bus.listenerCount("draft"), 0);
+
+  // An aborted signal returns at once.
+  const started = Date.now();
+  await drafts.wait("t", known, 5000, () => false, wake.signal);
+  assert.ok(Date.now() - started < 1000);
+});

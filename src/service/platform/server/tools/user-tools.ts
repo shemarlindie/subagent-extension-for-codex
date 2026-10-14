@@ -12,6 +12,7 @@ import {
   claimParentMessage,
   recordParentDelivery,
 } from "../../../features/tasks/conversation/parent-messages.js";
+import { waitForUpdates } from "../../../features/tasks/conversation/updates.js";
 import type { agentTools } from "./agent-tools.js";
 import { queuedMessage, taskId, tool, type ToolContext } from "./definition.js";
 
@@ -191,6 +192,21 @@ export function userTools(
           ),
         };
       },
+    }),
+    wait_user_agent_updates: tool({
+      description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears, or its turn ends; otherwise after wait_ms (at most ${MAX_DRAFT_WAIT_MS}). Without after, it returns at once. The revision is opaque: compare it only for equality.`,
+      schema: z.strictObject({
+        after: z.string().max(200).optional(),
+        draft: taskId
+          .extend({
+            message_id: z.string().max(200).optional(),
+            after_length: z.number().int().nonnegative().default(0),
+          })
+          .strict()
+          .optional(),
+        wait_ms: z.number().int().min(0).max(MAX_DRAFT_WAIT_MS).default(0),
+      }),
+      run: (a) => waitForUpdates(c.store, c.drafts, owner, a),
     }),
     edit_user_agent_queued_message: tool({
       description:

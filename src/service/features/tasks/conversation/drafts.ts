@@ -67,13 +67,14 @@ export class Drafts {
   /**
    * Waits until a task's draft differs from what the reader has: it grew
    * past `length`, became another message, or was cleared. Also returns
-   * when `ended` says the turn is over, or after `waitMs`.
+   * when `ended` says the turn is over, when `wake` aborts, or after `waitMs`.
    */
   async wait(
     taskId: string,
     known: { message_id?: string; length: number },
     waitMs: number,
     ended: () => boolean,
+    wake?: AbortSignal,
   ) {
     const changed = () => {
       const draft = this.drafts.get(taskId);
@@ -84,21 +85,25 @@ export class Drafts {
         : known.message_id !== undefined;
     };
 
-    if (changed() || ended() || waitMs <= 0) return this.get(taskId);
-    let wake!: () => void;
-    const woken = new Promise<void>((resolve) => (wake = resolve));
+    if (changed() || ended() || wake?.aborted || waitMs <= 0) {
+      return this.get(taskId);
+    }
+
+    let resolve!: () => void;
+    const woken = new Promise<void>((done) => (resolve = done));
 
     const onDraft = (update: DraftUpdate) => {
-      if (update.task_id === taskId && changed()) wake();
+      if (update.task_id === taskId && changed()) resolve();
     };
 
     const onEvent = (e: { task_id: string; type: string }) => {
-      if (e.task_id === taskId && e.type === "task.turn_ended") wake();
+      if (e.task_id === taskId && e.type === "task.turn_ended") resolve();
     };
 
     this.bus.on("draft", onDraft);
     this.bus.on("event", onEvent);
-    const timer = setTimeout(wake, waitMs);
+    wake?.addEventListener("abort", resolve);
+    const timer = setTimeout(resolve, waitMs);
 
     try {
       await woken;
@@ -108,6 +113,7 @@ export class Drafts {
       clearTimeout(timer);
       this.bus.off("draft", onDraft);
       this.bus.off("event", onEvent);
+      wake?.removeEventListener("abort", resolve);
     }
   }
 }

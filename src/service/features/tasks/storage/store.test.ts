@@ -281,6 +281,73 @@ test("a failing listener neither undoes the commit nor stops other listeners", (
   assert.equal(errors.mock.calls.length, 2);
 });
 
+test("a transaction announces one change per owner after it commits, and a rollback none", (t) => {
+  const { store, task } = transactionFixture(t);
+  const changes: (string | undefined)[] = [];
+  store.bus.on("change", (owner?: string) => changes.push(owner));
+  const before = store.revision("alice");
+  const other = { ...task, id: "other", owner: "bob" };
+
+  store.transaction(() => {
+    store.save(task);
+    store.event(task, "task.started");
+    store.save(other);
+    store.event(task, "task.queue_changed", { queue: [], paused: false });
+    assert.deepEqual(changes, []);
+  });
+
+  assert.deepEqual(changes, ["alice", "bob"]);
+  const committed = store.revision("alice");
+  assert.notEqual(committed, before);
+
+  assert.throws(() =>
+    store.transaction(() => {
+      store.save(task);
+      throw new Error("write failed");
+    }),
+  );
+
+  assert.deepEqual(changes, ["alice", "bob"]);
+  assert.equal(store.revision("alice"), committed);
+
+  // A later transaction still announces after the rollback.
+  store.transaction(() => store.event(task, "task.completed"));
+  assert.deepEqual(changes, ["alice", "bob", "alice"]);
+});
+
+test("writes outside a transaction, and deletions, change only their owner's revision", (t) => {
+  const { store, task } = transactionFixture(t);
+  const other = { ...task, id: "other", owner: "bob" };
+  store.save(other);
+  const alice = store.revision("alice");
+  const bob = store.revision("bob");
+
+  store.event(task, "task.started");
+  assert.notEqual(store.revision("alice"), alice);
+  assert.equal(store.revision("bob"), bob);
+
+  store.delete(other.id, "bob");
+  assert.notEqual(store.revision("bob"), bob);
+});
+
+test("a project change reaches every owner, and another store's revisions differ", (t) => {
+  const { store } = transactionFixture(t);
+  const changes: (string | undefined)[] = [];
+  store.bus.on("change", (owner?: string) => changes.push(owner));
+  const alice = store.revision("alice");
+  const bob = store.revision("bob");
+
+  store.projectsChanged();
+  assert.deepEqual(changes, [undefined]);
+  assert.notEqual(store.revision("alice"), alice);
+  assert.notEqual(store.revision("bob"), bob);
+
+  // A restarted service starts counting again, under another boot id.
+  const restarted = new Store(":memory:");
+  t.onTestFinished(() => restarted.close());
+  assert.notEqual(restarted.revision("bob"), bob);
+});
+
 test("stored tasks round-trip open provider state, and malformed ones fail with their id", (t) => {
   const { store, task } = transactionFixture(t);
 

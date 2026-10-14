@@ -25,8 +25,8 @@ class SizeTracingApp extends App {
 function toolRequestOptions(name: string, args: Record<string, unknown>) {
   if (name === "browse_user_agent_project") return { timeout: 150000 };
 
-  // A draft read waits as long as it was asked to, plus a margin.
-  if (name === "get_user_agent_draft") {
+  // Draft and update reads wait as long as they were asked to, plus a margin.
+  if (name === "get_user_agent_draft" || name === "wait_user_agent_updates") {
     return { timeout: Number(args.wait_ms ?? 0) + 10000 };
   }
 

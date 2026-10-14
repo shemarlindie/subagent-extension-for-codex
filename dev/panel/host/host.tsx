@@ -75,6 +75,7 @@ const fixtureReadTools = new Set([
   "list_agent_projects",
   "list_agent_tasks",
   "list_available_workers",
+  "wait_user_agent_updates",
 ]);
 
 const defaults: Settings = {

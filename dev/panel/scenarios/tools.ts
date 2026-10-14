@@ -485,6 +485,26 @@ export function previewTool(
         (task) => task.id === args.task_id && task.status === "running",
       ),
     },
+    // Fixtures don't change on their own, so the revision stays the same.
+    wait_user_agent_updates: (() => {
+      const target = args.draft as { task_id?: unknown } | undefined;
+
+      return {
+        revision: "preview:0",
+        ...(target
+          ? {
+              draft:
+                target.task_id === previewStreamingDraft.taskId
+                  ? streamingDraft()
+                  : null,
+              running: previewTasks.some(
+                (task) =>
+                  task.id === target.task_id && task.status === "running",
+              ),
+            }
+          : {}),
+      };
+    })(),
     get_user_agent_activity: windowActivity(
       previewEvents.filter((event) => event.task_id === args.task_id),
       Number(args.after ?? 0),
