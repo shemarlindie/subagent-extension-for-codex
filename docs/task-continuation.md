@@ -78,16 +78,16 @@ live SQLite database can omit its write-ahead log. Keep the Claude runtime state
 alongside the machine that owns the worktrees. Moving this state to another
 machine does not ensure native session continuation.
 
-For database upgrades and legacy conversion, see [Database](database.md).
+For versioned database upgrades, see [Database](database.md).
 
 ## Troubleshooting
 
-| Symptom                       | Check                                                                                                                                          |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Service port is in use        | Identify the service on that port and confirm its data directory before starting another service.                                              |
-| MCP proxy cannot authenticate | Use the same absolute data directory for the service and MCP client, or matching token and URL overrides.                                      |
-| Claude tasks cannot start     | Read the worker's readiness message; [Claude Code CLI](claude-cli.md) explains executable selection and fixes.                                 |
-| A turn starts a new session   | Confirm the original service host and Claude state are available. A fresh session carries the bounded conversation described above.            |
-| Startup refuses the database  | Stop the service and back up its data. Follow [Database](database.md) for legacy conversion or use a build that knows all recorded migrations. |
+| Symptom                       | Check                                                                                                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Service port is in use        | Identify the service on that port and confirm its data directory before starting another service.                                                              |
+| MCP proxy cannot authenticate | Use the same absolute data directory for the service and MCP client, or matching token and URL overrides.                                                      |
+| Claude tasks cannot start     | Read the worker's readiness message; [Claude Code CLI](claude-cli.md) explains executable selection and fixes.                                                 |
+| A turn starts a new session   | Confirm the original service host and Claude state are available. A fresh session carries the bounded conversation described above.                            |
+| Startup refuses the database  | See [Database](database.md#migration-application) for the fresh baseline policy. If a database has a migration this build lacks, use a build that includes it. |
 
 [Host capabilities](host-capabilities.md) covers host integration limits.

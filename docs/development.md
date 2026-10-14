@@ -391,8 +391,8 @@ runs model discovery through it.
 
 ## Storage and Claude verification
 
-- [Database and migrations](database.md) covers schema changes, legacy database
-  conversion, transactions and event notifications.
+- [Database and migrations](database.md) covers schema changes, transactions
+  and event notifications.
 - [Claude execution verification](claude-verification.md) covers CLI/SDK
   qualification and opt-in authenticated scenarios.
 

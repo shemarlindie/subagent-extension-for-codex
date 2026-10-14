@@ -284,7 +284,7 @@ The console and development host persist the following state:
   bridge. Search and form drafts persist after a 250 ms debounce, flushed on
   page exit.
 - Boolean `dw_dlg_<name>=1` flags record open dialogs. Ordered descriptors and
-  compatible form drafts live in local storage, falling back to session storage
+  form drafts with matching value types live in local storage, falling back to session storage
   if local storage is unavailable. The newest dialog restores
   first. Closing removes a descriptor, and successful dialog submissions do
   the same. Settings keeps its descriptor while the page is open so its draft

@@ -10,10 +10,7 @@ import { reducedMotion } from "../../shared/components/motion/motion-utils";
 import { Presence } from "../../shared/components/motion/presence";
 import { Notice } from "../../shared/components/notice/notice";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
-import {
-  usePersistedDialogField,
-  usePersistedDialogForm,
-} from "../../shared/forms/use-persisted-dialog-form";
+import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
 import { Help, SettingRowView, SettingsContext } from "./settings-fields";
 import {
   activeSection,
@@ -93,10 +90,8 @@ export function SettingsForm({
     ),
     total = edits.reduce((sum, count) => sum + count, 0);
 
-  const [selection, setSelection] = usePersistedDialogField(
-      "settings",
-      "openSections",
-      [controller.getLastSettingsSection()],
+  const [selectedSection, setSelectedSection] = useState(
+      controller.getLastSettingsSection(),
     ),
     [discarding, setDiscarding] = useState(false),
     element = useRef<HTMLFormElement>(null),
@@ -191,7 +186,7 @@ export function SettingsForm({
     sections.find((section) => sectionKeys(section).includes(key));
 
   const selectSection = (section: string) => {
-    setSelection([section]);
+    setSelectedSection(section);
     controller.saveSettingsSection(section);
   };
 
@@ -304,7 +299,7 @@ export function SettingsForm({
           ),
       }));
 
-  const sectionSelection = activeSection(selection, sectionViews);
+  const activeSectionId = activeSection(selectedSection, sectionViews);
 
   const submit = handleSubmit((submitted) => {
     if (!settings) return;
@@ -369,7 +364,7 @@ export function SettingsForm({
           >
             <SettingsSectionTabs
               sections={sectionViews}
-              value={sectionSelection ?? ""}
+              value={activeSectionId ?? ""}
               loading={isLoading}
               onValueChange={selectSection}
             />

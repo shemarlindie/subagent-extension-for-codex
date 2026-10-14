@@ -179,8 +179,7 @@ test("text rows send their string as typed", () => {
 });
 
 test("saved section selection falls back to a valid section", () => {
-  assert.equal(activeSection(["models"], sections), "models");
-  assert.equal(activeSection(["gone", "task"], sections), "task");
-  assert.equal(activeSection(["gone"], sections), "task");
-  assert.equal(activeSection([], []), undefined);
+  assert.equal(activeSection("models", sections), "models");
+  assert.equal(activeSection("gone", sections), "task");
+  assert.equal(activeSection("gone", []), undefined);
 });

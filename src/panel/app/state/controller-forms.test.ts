@@ -11,7 +11,7 @@ import {
 } from "./controller-test-harness";
 import type { Defaults, Task } from "./types";
 
-test("settings opens before its read and keeps its draft across scope changes", async (t) => {
+test("settings opens before its read and keeps its section across scope changes", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   await controller.start();
@@ -26,9 +26,8 @@ test("settings opens before its read and keeps its draft across scope changes", 
 
   controller.saveSettingsSection("models");
 
-  assert.deepEqual(controller.getDialogDraft("settings")?.openSections, [
-    "models",
-  ]);
+  assert.equal(controller.getLastSettingsSection(), "models");
+  assert.equal(controller.getDialogDraft("settings"), undefined);
 
   controller.applyScope(
     { panel_scope: { conversation_id: "another-chat" } },
@@ -37,31 +36,27 @@ test("settings opens before its read and keeps its draft across scope changes", 
 
   assert.equal(controller.getSnapshot().dialog?.kind, "settings-loading");
 
-  assert.deepEqual(controller.getDialogDraft("settings")?.openSections, [
-    "models",
-  ]);
+  assert.equal(controller.getLastSettingsSection(), "models");
+  assert.equal(controller.getDialogDraft("settings"), undefined);
 
   settingsRead.resolve({ sections: [], values: defaults });
   await flush();
 
   assert.equal(controller.getSnapshot().dialog?.kind, "settings");
   assert.equal(controller.getLastSettingsSection(), "models");
-
-  assert.deepEqual(controller.getDialogDraft("settings")?.openSections, [
-    "models",
-  ]);
+  assert.equal(controller.getDialogDraft("settings"), undefined);
 });
 
-test("form updates preserve other state saved for the same dialog", (t) => {
+test("form updates preserve component state saved for the same dialog", (t) => {
   const { controller } = setup();
   t.onTestFinished(() => controller.dispose());
 
   controller.open({ kind: "handoff", task: task("task-1") });
-  controller.saveDialogField("handoff", "openSections", ["advanced"]);
+  controller.saveDialogField("handoff", "customValue", "selected");
   controller.saveDialogDraft("handoff", { message: "keep going" });
 
   assert.deepEqual(controller.getDialogDraft("handoff"), {
-    openSections: ["advanced"],
+    customValue: "selected",
     message: "keep going",
   });
 });

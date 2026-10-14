@@ -35,7 +35,7 @@ function storedEvent(t: TestContext, data = '{"future":{"nested":[1,null]}}') {
   return db.orm.select().from(events).get()!;
 }
 
-test("decodes migrated event rows without changing metadata or arbitrary JSON fields", (t) => {
+test("decodes event rows without changing metadata or arbitrary JSON fields", (t) => {
   const row = storedEvent(t);
 
   expect(decodeEvent(row)).toEqual({

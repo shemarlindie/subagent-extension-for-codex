@@ -1,8 +1,8 @@
 # Database and migrations
 
 For contributors changing durable storage. This guide owns schema changes,
-legacy conversion, transaction rules and event notification semantics. For
-operational backups and continuation, see [Task continuation](task-continuation.md).
+transaction rules and event notification semantics. For operational backups
+and continuation, see [Task continuation](task-continuation.md).
 
 ## Connection and ownership
 
@@ -47,32 +47,11 @@ before any feature reads it.
   `__drizzle_migrations` ledger, so a service and a CLI starting together
   migrate once. It refuses a database whose ledger names a migration this
   build lacks.
+- This checkout starts from a fresh baseline because the app has not launched.
+  Databases with an earlier migration history or created before versioned
+  migrations are not upgraded; remove their data directory to start over.
 - `migrations/` ships in the package and is read with `packagePath`, so
   source checkouts and installed packages use the same folder.
-
-## Convert an unversioned database
-
-Startup refuses databases from before versioned migrations. To preserve their
-records, use the checkout-only converter in
-`dev/database/migrate-legacy-database.ts` rather than deleting the data directory.
-
-1. Stop the service and back up the data directory.
-2. Inspect the conversion without replacing the database:
-
-   ```sh
-   npm run db:migrate-legacy -- --dry-run <data-directory>
-   ```
-
-3. Run the conversion:
-
-   ```sh
-   npm run db:migrate-legacy -- <data-directory>
-   ```
-
-The converter copies retained records into a new database, keeps event IDs,
-fills in task references and validates records as the service would. It keeps
-the old file as `console.sqlite.pre-migration`. Retired tables are dropped and reported. Worktrees and other data-directory files
-are untouched.
 
 ## Transactions and notifications
 

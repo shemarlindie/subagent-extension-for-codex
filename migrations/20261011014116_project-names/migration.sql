@@ -1,1 +1,0 @@
-ALTER TABLE `project_roots` ADD `name` text;

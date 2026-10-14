@@ -31,20 +31,6 @@ interface SavedDialogs {
   lastSettingsSection?: string;
 }
 
-/** The latest open-section from an older settings draft, when nothing newer was saved. */
-function savedSettingsSection(dialogs: PersistedDialog[]) {
-  const latest = dialogs.at(-1);
-
-  const sections =
-    latest?.kind === "settings" ? latest.draft?.openSections : undefined;
-
-  return Array.isArray(sections)
-    ? [...sections]
-        .reverse()
-        .find((section): section is string => typeof section === "string")
-    : undefined;
-}
-
 /**
  * The dialogs the panel reopens after a reload, oldest first, with their
  * unsent drafts. The last one is the open dialog. Restoring one reads fresh
@@ -60,8 +46,7 @@ export class PersistedDialogs {
   ) {
     this.dialogs = saved.dialogs ?? [];
 
-    this.settingsSection =
-      saved.lastSettingsSection ?? savedSettingsSection(this.dialogs);
+    this.settingsSection = saved.lastSettingsSection;
   }
 
   latest() {
@@ -128,9 +113,7 @@ export class PersistedDialogs {
 
   saveSettingsSection(section: string) {
     this.settingsSection = section;
-
-    // Keep the persisted array field compatible with drafts from the accordion UI.
-    this.saveField("settings", "openSections", [section]);
+    this.context.changed();
   }
 
   saveDraft(kind: PersistedDialog["kind"], draft: PersistedDialogDraft) {

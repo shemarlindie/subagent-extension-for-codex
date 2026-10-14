@@ -1,10 +1,10 @@
 {
-  "id": "8071d3dc-fe34-4a24-80a1-ee3fe198afe9",
-  "prevIds": [
-    "1daf600d-ff31-4d0e-9bfb-6ad64f8c6af3"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "31ad21b2-4e60-4f6a-9b21-87b1e0a4dd39",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
   "ddl": [
     {
       "name": "project_roots",

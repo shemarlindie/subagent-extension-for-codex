@@ -55,7 +55,7 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
 
     if (unknown.length) {
       throw new Error(
-        `${path} was migrated by a newer version (${unknown.join(", ")}). Update codex-subagent-extension.`,
+        `${path} has migration history this build does not recognize (${unknown.join(", ")}). Use a build that includes those migrations, or delete its data directory to start over.`,
       );
     }
 

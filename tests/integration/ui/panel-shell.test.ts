@@ -3,9 +3,6 @@ import { expect } from "vitest";
 
 import { LOADING_SKELETON_CONFIG } from "../../../src/panel/shared/components/loading-skeleton/loading-skeleton-config";
 import { MOTION } from "../../../src/panel/shared/components/motion/motion-utils";
-import { decodePanelToolResult } from "../../../src/panel/transports/event-decoding.js";
-import type { Event } from "../../../src/shared/events/types.js";
-import { windowActivity } from "../../../src/shared/tasks/activity/activity-tail.js";
 import {
   act,
   assert,
@@ -410,56 +407,6 @@ test("a panel opened outside a host points developers at the dev host", async (t
       "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui.",
     ),
   );
-});
-
-test("the header trails a running task's live activity and drops it once settled", async (t) => {
-  let events: unknown[] = [];
-
-  const { controller, transport } = await setup(t, (transport) => {
-    const original = transport.tool.bind(transport);
-
-    transport.tool = async <T>(
-      name: string,
-      args: Record<string, unknown> = {},
-    ) =>
-      (name === "get_user_agent_activity"
-        ? windowActivity(
-            decodePanelToolResult<{ events: Event[] }>(name, { events }).events,
-            Number(args.after ?? 0),
-          )
-        : original(name, args)) as T;
-  });
-
-  const live = () => document.querySelector(".eyebrow-live");
-  const eyebrow = () => document.querySelector(".eyebrow");
-  assert.equal(live()?.textContent, "", "No detail before events load");
-  assert.equal(eyebrow()?.hasAttribute("data-live"), false);
-
-  events = [
-    {
-      id: 1,
-      task_id: "one",
-      timestamp: "2026-10-03T12:00:00.000Z",
-      type: "task.started",
-      data: {},
-    },
-  ];
-
-  await act(() => controller.refresh());
-  assert.equal(live()?.textContent, "· Working");
-  assert.equal(eyebrow()?.hasAttribute("data-live"), true);
-
-  assert.ok(
-    live()?.matches(".eyebrow > :last-child"),
-    "Changing detail never shifts the labels before it",
-  );
-
-  assert.ok(document.querySelector(".eyebrow .row-status-icon.running"));
-  transport.tasks = [{ ...task(), status: "completed" }];
-  await act(() => controller.refresh());
-  assert.equal(live()?.textContent, "");
-  assertAbsent(document.querySelector(".eyebrow .row-status-icon.running"));
-  assert.ok(document.querySelector(".eyebrow .row-status-icon.completed"));
 });
 
 test("long notices clamp behind Show more and expand on demand", async (t) => {

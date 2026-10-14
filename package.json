@@ -28,7 +28,6 @@
     "knip": "knip",
     "fixture:record": "tsx dev/panel/recording/record-fixture.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate-legacy": "tsx --env-file-if-exists=.env dev/database/migrate-legacy-database.ts",
     "schemas:generate": "node scripts/generate-schemas.mjs",
     "schemas:check": "node scripts/generate-schemas.mjs --check",
     "predev": "npm run schemas:generate"

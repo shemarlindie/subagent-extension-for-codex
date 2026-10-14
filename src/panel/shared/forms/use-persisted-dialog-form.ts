@@ -20,7 +20,7 @@ import type {
   PersistedDialogDraft,
 } from "../../app/state/types";
 
-function compatible(value: unknown, example: unknown): boolean {
+function matchesShape(value: unknown, example: unknown): boolean {
   if (Array.isArray(example)) return Array.isArray(value);
   if (example === null) return value === null;
 
@@ -48,7 +48,7 @@ function restoredValues<T extends FieldValues>(
     Object.entries(draft).filter(
       ([key, value]) =>
         key in defaults &&
-        compatible(value, (defaults as Record<string, unknown>)[key]),
+        matchesShape(value, (defaults as Record<string, unknown>)[key]),
     ),
   );
 
@@ -113,7 +113,7 @@ export function usePersistedDialogField<T>(
     [value, setValue] = useState(() => {
       const draftValue = controller.getDialogDraft(kind)?.[name];
 
-      return compatible(draftValue, initial) ? (draftValue as T) : initial;
+      return matchesShape(draftValue, initial) ? (draftValue as T) : initial;
     });
 
   useEffect(() => {

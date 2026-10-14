@@ -73,6 +73,34 @@ test("browser view state seeds the first render, restores a task, and persists l
   assert.equal(saved.at(-1)?.view.search, "Changed");
 });
 
+test("settings section preference persists separately from dialog drafts", async (t) => {
+  const transport = new FakeTransport();
+  const saved: UiStatePersistence["initial"][] = [];
+
+  const controller = new Controller(
+    transport,
+    { hidden: () => false, wide: () => true },
+    { initial: { view: {} }, save: (state) => saved.push(state) },
+  );
+
+  t.onTestFinished(() => controller.dispose());
+  await controller.start();
+
+  controller.saveSettingsSection("models");
+
+  assert.equal(saved.at(-1)?.lastSettingsSection, "models");
+  assert.equal(saved.at(-1)?.dialogs, undefined);
+
+  const restored = new Controller(
+    new FakeTransport(),
+    { hidden: () => false, wide: () => true },
+    { initial: saved.at(-1)!, save: () => {} },
+  );
+
+  t.onTestFinished(() => restored.dispose());
+  assert.equal(restored.getLastSettingsSection(), "models");
+});
+
 test("restores saved dialogs in order and removes each deliberate close", async (t) => {
   const transport = new FakeTransport();
   transport.tasks = [task("task-1")];

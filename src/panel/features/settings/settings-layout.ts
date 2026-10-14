@@ -122,12 +122,12 @@ export function editCount(
 
 /** The selected section, or the first section when the saved choice is stale. */
 export function activeSection(
-  selection: string[],
+  selection: string,
   sections: ReadonlyArray<Pick<SettingSection, "id">>,
 ): string | undefined {
   const ids = new Set(sections.map((section) => section.id));
 
-  return [...selection].reverse().find((id) => ids.has(id)) ?? sections[0]?.id;
+  return (ids.has(selection) ? selection : undefined) ?? sections[0]?.id;
 }
 
 export const helpId = (key: string) => `setting-${key}-help`;

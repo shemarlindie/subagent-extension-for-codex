@@ -93,9 +93,8 @@ options, settings and presentation remain in `src/shared/providers/`.
 
 Development tooling lives outside production source. `dev/panel/` separates
 host controls, scenarios, recording, recorded data and the fixture service.
-`dev/service/` owns the demo worker and service, and `dev/database/` owns the
-legacy migration utility. Focused tests stay beside their owning modules;
-`tests/integration/` covers runtime and environment boundaries.
+`dev/service/` owns the demo worker and service. Focused tests stay beside their
+owning modules; `tests/integration/` covers runtime and environment boundaries.
 
 See [Panel architecture](panel-architecture.md) for panel architecture,
 [Local development](development.md) for tooling and
