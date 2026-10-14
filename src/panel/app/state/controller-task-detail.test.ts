@@ -265,51 +265,52 @@ test("View activity scrolls to a turn in the window and reads one outside it", a
   assert.equal(controller.getSnapshot().events.length, 200);
 });
 
-test("the panel follows a running task's draft by chained reads, then reads the stored message", async (t) => {
+test("the panel follows a running task's draft through update waits, then reads the stored message", async (t) => {
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a")];
   const drafts = ["Hel", "Hello", "Hello there"];
+  let waits = 0;
+  const answered = drafts.length + 1;
 
-  transport.handler = (name, args) => {
-    if (name !== "get_user_agent_draft") return undefined;
+  transport.handler = (name) => {
+    // Selecting the task shows its draft at once; it has none yet.
+    if (name === "get_user_agent_draft") return { draft: null, running: true };
+    if (name !== "wait_user_agent_updates") return undefined;
+    // Later waits hold, as if nothing changes.
+    if (waits++ >= answered) return new Promise(() => {});
     const text = drafts.shift();
 
     // After the last piece the message is stored and the turn has ended.
-    return Promise.resolve(
-      text
-        ? { draft: { message_id: "m", text }, running: true }
-        : { draft: null, running: false },
-    ).then((read) => {
-      assert.equal(args.wait_ms, 20000);
-
-      return read;
-    });
+    return text
+      ? { revision: "r1", draft: { message_id: "m", text }, running: true }
+      : { revision: "r2", draft: null, running: false };
   };
 
   // A wide panel selects the running task on start.
   await controller.start();
   assert.equal(controller.getSnapshot().selected, "a");
 
-  await vi.waitFor(() =>
-    assert.ok(
-      transport.calls.filter((call) => call.name === "get_user_agent_draft")
-        .length >= 4,
-    ),
+  const calls = () =>
+    transport.calls.filter((call) => call.name === "wait_user_agent_updates");
+
+  await vi.waitFor(() => assert.ok(calls().length >= 5));
+
+  // Each wait sends the revision it has and asks only for what follows the
+  // draft it has.
+  assert.deepEqual(
+    calls()
+      .slice(0, 4)
+      .map((call) => call.args),
+    [
+      { draft: { task_id: "a" }, wait_ms: 20000 },
+      ...[3, 5, 11].map((length) => ({
+        after: "r1",
+        draft: { task_id: "a", message_id: "m", after_length: length },
+        wait_ms: 20000,
+      })),
+    ],
   );
-
-  const reads = transport.calls
-    .filter((call) => call.name === "get_user_agent_draft")
-    .map((call) => [call.args.message_id, call.args.after_length])
-    .slice(0, 4);
-
-  // Each read asks only for what follows the draft it has.
-  assert.deepEqual(reads, [
-    [undefined, undefined],
-    ["m", 3],
-    ["m", 5],
-    ["m", 11],
-  ]);
 
   await vi.waitFor(() =>
     assert.equal(controller.getSnapshot().draft, undefined),

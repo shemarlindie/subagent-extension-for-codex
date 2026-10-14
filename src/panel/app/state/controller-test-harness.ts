@@ -93,6 +93,9 @@ export class FakeTransport implements Transport {
       return decodePanelToolResult<T>(name, await Promise.resolve(answer));
     }
 
+    // Without a handler, the update wait holds as if nothing changes.
+    if (name === "wait_user_agent_updates") return new Promise<T>(() => {});
+
     const values: Record<string, unknown> = {
       get_agent_panel_context: this.context,
       list_agent_projects: this.projects,

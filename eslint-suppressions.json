@@ -89,11 +89,6 @@
       "count": 1
     }
   },
-  "src/panel/features/tasks/chat/drafts/draft-follower.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/panel/features/tasks/chat/timeline/chat-timeline.tsx": {
     "complexity": {
       "count": 1

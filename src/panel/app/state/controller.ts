@@ -25,6 +25,7 @@ import {
 import { ParentMessageRelay } from "../../features/tasks/controls/parent-message-relay";
 import { TaskActions } from "../../features/tasks/controls/task-actions";
 import { errorMessage } from "../../shared/utils/error-message";
+import { sharedRequest } from "../../shared/utils/shared-request";
 import {
   canNavigate,
   DEFAULT_PAGE,
@@ -55,6 +56,7 @@ import type {
   UiStatePersistence,
   Worker,
 } from "./types";
+import { UpdateFollower } from "./update-follower";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -73,7 +75,6 @@ export class Controller {
   private state: Snapshot;
   private draftFollower = new DraftFollower({
     snapshot: () => this.state,
-    closed: () => this.disposed,
     hidden: () => this.environment.hidden(),
     streamsDrafts: () => this.transport.streamsDrafts,
     patch: (patch) => this.patch(patch),
@@ -90,6 +91,15 @@ export class Controller {
     busy: () => this.state.busy,
     refresh: () => this.run(() => this.refresh()),
     forwardParentMessage: () => this.forwardParentMessage(),
+  });
+
+  private updates = new UpdateFollower({
+    closed: () => this.disposed,
+    tool: (name, args) => this.tool(name, args),
+    status: (text) => this.showConnection(text),
+    revision: (value) => this.revisions.report(value),
+    draftTarget: () => this.draftFollower.target(),
+    receiveDraft: (target, read) => this.draftFollower.receive(target, read),
   });
 
   private stopVisibility?: () => void;
@@ -114,8 +124,13 @@ export class Controller {
   private timer?: ReturnType<typeof setTimeout>;
   /** When workers were last read, so a CLI that breaks mid-session still shows. */
   private workersReadAt = 0;
-  private projectsRead?: Promise<Project[]>;
-  private workersRead?: Promise<Worker[]>;
+  private readProjects = sharedRequest(() =>
+    this.tool<Project[]>("list_agent_projects"),
+  );
+
+  private readWorkers = sharedRequest(() =>
+    this.tool<Worker[]>("list_available_workers"),
+  );
 
   private dialogLoader = new DialogLoader({
     snapshot: () => this.state,
@@ -320,6 +335,10 @@ export class Controller {
     (...args: Args) =>
       this.run(() => action(...args));
 
+  private showConnection(connection: string) {
+    if (connection !== this.state.connection) this.patch({ connection });
+  }
+
   showHostRequired() {
     this.patch({
       connection: "Open through MCP",
@@ -337,7 +356,7 @@ export class Controller {
       await this.transport.connect({
         scope: (data) => this.applyScope(data),
         refresh: () => this.run(() => this.refresh()),
-        status: (connection) => this.patch({ connection }),
+        status: (connection) => this.showConnection(connection),
         login: () =>
           this.patch({
             loginRequired: true,
@@ -373,6 +392,7 @@ export class Controller {
       await this.refresh();
       if (this.isDisposed()) return;
       this.transport.watch();
+      this.followUpdates();
       this.schedule();
     } catch (error) {
       if (!this.state.connected) {
@@ -384,11 +404,17 @@ export class Controller {
         });
       } else {
         // Keep the panel polling when its first host read fails transiently.
+        this.followUpdates();
         this.schedule();
       }
 
       this.report(error);
     }
+  }
+
+  /** Waits for service changes where the transport doesn't stream them. */
+  private followUpdates() {
+    if (!this.transport.streamsChanges) this.updates.follow();
   }
 
   // Registry changes and idle task deletions do not always produce stream events.
@@ -464,42 +490,6 @@ export class Controller {
     this.assertOpen();
 
     return this.transport.tool<T>(name, args);
-  }
-
-  private readProjects() {
-    if (this.projectsRead) return this.projectsRead;
-
-    const request = this.tool<Project[]>("list_agent_projects");
-    this.projectsRead = request;
-
-    void request.then(
-      () => {
-        if (this.projectsRead === request) this.projectsRead = undefined;
-      },
-      () => {
-        if (this.projectsRead === request) this.projectsRead = undefined;
-      },
-    );
-
-    return request;
-  }
-
-  private readWorkers() {
-    if (this.workersRead) return this.workersRead;
-
-    const request = this.tool<Worker[]>("list_available_workers");
-    this.workersRead = request;
-
-    void request.then(
-      () => {
-        if (this.workersRead === request) this.workersRead = undefined;
-      },
-      () => {
-        if (this.workersRead === request) this.workersRead = undefined;
-      },
-    );
-
-    return request;
   }
 
   private forwardParentMessage() {
@@ -864,7 +854,7 @@ export class Controller {
             : this.state.chatHistoryLoading,
       });
 
-      this.draftFollower.follow();
+      this.draftFollower.show();
     });
 
     await Promise.all([activityRead, chatRead]);
@@ -921,7 +911,7 @@ export class Controller {
   setTab(tab: Snapshot["tab"]) {
     if (tab !== this.state.tab) this.tabIntentRevision++;
     this.patch({ tab });
-    this.draftFollower.follow();
+    this.draftFollower.show();
     this.run(() => this.loadChangesIfStale());
   }
 

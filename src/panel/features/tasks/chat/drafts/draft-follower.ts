@@ -9,7 +9,6 @@ import { applyDraftUpdate } from "./draft-state";
 
 interface DraftContext {
   snapshot(): Snapshot;
-  closed(): boolean;
   hidden(): boolean;
   streamsDrafts(): boolean | undefined;
   patch(patch: Partial<Snapshot>): void;
@@ -18,13 +17,20 @@ interface DraftContext {
   refresh(): Promise<void>;
 }
 
-/** How long one draft read waits for the draft to change. */
-const DRAFT_WAIT_MS = 20000;
-/** The least time between draft reads. */
-const DRAFT_READ_GAP_MS = 100;
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** The draft the panel shows, and how much of it the panel already has. */
+export type DraftTarget = {
+  task_id: string;
+  message_id?: string;
+  after_length?: number;
+};
 
-/** Reconciles streamed drafts and follows drafts on transports without streaming. */
+/** A draft read: the draft now, or null, and whether its task still runs. */
+export type DraftRead = { draft: Draft | null; running: boolean };
+
+/**
+ * Reconciles streamed drafts, and on transports without streaming, names the
+ * draft to wait for and applies what the wait returns.
+ */
 export class DraftFollower {
   constructor(private context: DraftContext) {}
 
@@ -60,88 +66,73 @@ export class DraftFollower {
     }
   }
 
-  private followingDraft = false;
+  /**
+   * The draft to wait for, where the transport can't stream it: a running
+   * selected task's while Chat shows it.
+   */
+  target(): DraftTarget | undefined {
+    const snapshot = this.context.snapshot();
+    const task = selectedTask(snapshot);
+
+    if (
+      this.context.streamsDrafts() ||
+      !task ||
+      composerMode(task) === "idle" ||
+      snapshot.tab !== "chat" ||
+      this.context.hidden()
+    ) {
+      return undefined;
+    }
+
+    const known = snapshot.draft?.task === task.id ? snapshot.draft : undefined;
+
+    return known
+      ? {
+          task_id: task.id,
+          message_id: known.message_id,
+          after_length: known.text.length,
+        }
+      : { task_id: task.id };
+  }
+
+  /** The task whose draft `show` last read. */
+  private shown?: string;
 
   /**
-   * Follows a running task's draft while Chat shows it, where the transport
-   * can't stream it: each read waits until the draft changes, then the next
-   * one starts.
+   * Shows a newly shown target's draft at once, before a wait picks it up.
+   * Chat calls this after each read, so it reads only for a new target.
    */
-  follow() {
-    if (this.context.streamsDrafts() || this.followingDraft) return;
-    this.followingDraft = true;
+  show() {
+    const target = this.target();
 
-    void (async () => {
-      try {
-        while (!this.context.closed()) {
-          const task = selectedTask(this.context.snapshot());
+    if (target?.task_id !== this.shown) {
+      this.shown = target?.task_id;
 
-          if (
-            !task ||
-            composerMode(task) === "idle" ||
-            this.context.snapshot().tab !== "chat" ||
-            this.context.hidden()
-          ) {
-            break;
-          }
-
-          const known =
-            this.context.snapshot().draft?.task === task.id
-              ? this.context.snapshot().draft
-              : undefined;
-
-          const started = Date.now();
-          let read: { draft: Draft | null; running: boolean };
-
-          try {
-            read = await this.context.tool("get_user_agent_draft", {
-              task_id: task.id,
-              ...(known
-                ? {
-                    message_id: known.message_id,
-                    after_length: known.text.length,
-                  }
-                : {}),
-              wait_ms: DRAFT_WAIT_MS,
-            });
-          } catch {
-            await sleep(2000);
-            continue;
-          }
-
-          if (
-            this.context.closed() ||
-            this.context.snapshot().selected !== task.id
-          ) {
-            continue;
-          }
-
-          const draft = read.draft
-            ? { task: task.id, ...read.draft }
-            : undefined;
-
-          const changed =
-            draft?.message_id !== known?.message_id ||
-            draft?.text !== known?.text;
-
-          this.context.patch({ draft });
-          // The whole message, or the turn's end, is stored now; read it.
-          if (known && !draft) this.context.run(() => this.context.refresh());
-          if (!read.running) break;
-          // A read that came back at once with nothing new waits a little,
-          // and reads stay at least DRAFT_READ_GAP_MS apart, so a fast stream
-          // renders at most that often.
-          const elapsed = Date.now() - started;
-
-          if (!changed && elapsed < 500) {
-            await sleep(1000);
-          } else if (elapsed < DRAFT_READ_GAP_MS) {
-            await sleep(DRAFT_READ_GAP_MS - elapsed);
-          }
-        }
-      } finally {
-        this.followingDraft = false;
+      if (target && target.message_id === undefined) {
+        this.context.run(() => this.readDraft());
       }
-    })();
+    }
+  }
+
+  /** Applies a wait's draft for `target`; returns whether it changed. */
+  receive(target: DraftTarget, read: DraftRead) {
+    if (this.context.snapshot().selected !== target.task_id) return false;
+
+    const draft = read.draft
+      ? { task: target.task_id, ...read.draft }
+      : undefined;
+
+    const changed =
+      draft?.message_id !== target.message_id ||
+      draft?.text.length !== target.after_length;
+
+    this.context.patch({ draft });
+
+    // The whole message, or the turn's end, is stored now; read it.
+    if (target.message_id !== undefined && !draft) {
+      this.context.run(() => this.context.refresh());
+    }
+
+    return changed;
   }
 }
