@@ -2,6 +2,7 @@ import { useController as useFieldController } from "react-hook-form";
 
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import type { DelegateValues } from "../../delegate-values";
+import { shortPermissionLabel } from "../../permission-label";
 
 type PermissionChipProps = {
   /** The provider's native permission modes; absent when it has none. */
@@ -11,14 +12,6 @@ type PermissionChipProps = {
   loading: boolean;
   disabled: boolean;
 };
-
-/** "Plan — read only" reads "Plan" on the chip; the menu keeps the detail. */
-function shortLabel({ value, label }: { value: string; label: string }) {
-  if (value === "inherit") return "Extension setting";
-  if (value === "default") return "Ask for approval";
-
-  return label.split(" — ")[0] ?? label;
-}
 
 /** Chooses the provider's native permission mode for the task. */
 export function PermissionChip({
@@ -51,7 +44,7 @@ export function PermissionChip({
           ? [{ value: "read-only", label: "Read only" }]
           : (options ?? []).map((option) => ({
               ...option,
-              chipLabel: shortLabel(option),
+              chipLabel: shortPermissionLabel(option.label),
             }))
       }
     />

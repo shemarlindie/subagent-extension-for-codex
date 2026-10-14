@@ -17,6 +17,7 @@ import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { FormFieldError } from "../../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
 import { composerMode, type SpentBudget, spentBudget } from "../chat-model";
+import { TaskRunSettings } from "./task-run-settings";
 
 const PLACEHOLDERS = {
   idle: "What's next?",
@@ -319,11 +320,13 @@ export function Composer({
               </div>
             </div>
           </div>
-          <FormFieldHint
-            id="chat-composer-hint"
-            className="chat-composer-field-feedback"
-            message={spent ? undefined : hint}
-          />
+          <div className="chat-composer-meta chat-composer-field-feedback">
+            <FormFieldHint
+              id="chat-composer-hint"
+              message={spent ? undefined : hint}
+            />
+            {task && <TaskRunSettings task={task} />}
+          </div>
         </div>
       )}
       <FormFieldError
