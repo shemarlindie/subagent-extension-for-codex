@@ -7,6 +7,7 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { MOTION, reducedMotion } from "./motion-utils";
 
 const timing = { duration: MOTION.base, easing: MOTION.easing };
+const exitInert = new WeakMap<Element, boolean>();
 
 /**
  * AutoAnimate effects with the panel's tokens: rows fade in, fade out while
@@ -20,6 +21,16 @@ export const autoListEffects: AutoAnimationPlugin = (
   previous,
   next,
 ) => {
+  // AutoAnimate reinserts removed nodes for their exit. Keep those controls out
+  // of the tab order and accessibility tree, restoring any reused node's state.
+  if (action === "remove") {
+    if (!exitInert.has(el)) exitInert.set(el, el.hasAttribute("inert"));
+    el.setAttribute("inert", "");
+  } else if (exitInert.has(el)) {
+    el.toggleAttribute("inert", exitInert.get(el));
+    exitInert.delete(el);
+  }
+
   // An empty effect finishes at once, so a removed row is cleaned up immediately.
   if (reducedMotion(el)) return new KeyframeEffect(el, [], { duration: 0 });
 

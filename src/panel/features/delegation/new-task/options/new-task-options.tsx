@@ -1,9 +1,10 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions";
 import { providerMetadata } from "../../../../../shared/providers/metadata";
 import type { NewTaskState, Snapshot } from "../../../../app/state/types";
+import { useAutoList } from "../../../../shared/components/motion/auto-list";
 import type { DelegateValues } from "../../delegate-values";
 import { workerChoice } from "../../delegation";
 import { modelDefaults } from "../../model-defaults";
@@ -101,7 +102,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
         Boolean(getValues("model")) ||
         !["", "default"].includes(getValues("reasoning_effort")),
     ),
-    settingsId = useId(),
+    [optionsRef] = useAutoList<HTMLDivElement>(),
     { statuses } = newTask,
     loading = statuses.workers === "loading" || statuses.settings === "loading",
     disabled =
@@ -111,7 +112,13 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     resolved = resolvedOptions(newTask, state, worker, model);
 
   return (
-    <div className="new-task-options" role="group" aria-label="Task options">
+    <div
+      ref={optionsRef}
+      className="new-task-options"
+      data-expanded={expanded}
+      role="group"
+      aria-label="Task options"
+    >
       {!state.repository && (
         <ProjectChip
           projects={newTaskProjects(state)}
@@ -126,13 +133,9 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
         loading={loading && !worker}
         disabled={disabled}
       />
+      {/* Direct children keep their own boxes for list motion and chip wrapping. */}
       {expanded && (
-        <div
-          id={settingsId}
-          className="profile-settings"
-          role="group"
-          aria-label="Profile settings"
-        >
+        <>
           <ModelChip
             models={resolved.models}
             inherited={resolved.model}
@@ -151,10 +154,16 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
             loading={loading}
             disabled={disabled}
           />
-        </div>
+        </>
       )}
       <ProfileSettingsToggle
-        controls={settingsId}
+        controls={[
+          "new-task-model",
+          "new-task-reasoning",
+          (resolved.permissions || loading) && "new-task-permission",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         expanded={expanded}
         {...settingsSummary(resolved, values.slice(1))}
         loading={loading}

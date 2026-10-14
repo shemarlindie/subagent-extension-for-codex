@@ -130,8 +130,9 @@ button or, on narrow panels, **Panel actions**:
     Beside it, a one-line summary such as `Sonnet 5.5 · H · Edits` shows what
     the profile sets, abbreviating reasoning (L, M, H, H+, Max) and permission
     (Read, Ask, Edits); hover it for full names. Click it to edit these chips,
-    and the caret to collapse them again. A draft that already overrides the
-    profile opens with them shown.
+    and the caret to collapse them again. The pills fade and ease into place as
+    they expand or collapse; reduced motion makes the change immediate.
+    A draft that already overrides the profile opens with them shown.
   - **Model**, from the discovered models or the inherited default.
   - **Reasoning effort**, limited to levels the selected model supports.
   - **Permission mode**. Read-only profiles show **Read only** instead.

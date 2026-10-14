@@ -129,7 +129,15 @@ test("the profile's settings collapse into a summary that expands for editing", 
   assert.match(toggle.textContent ?? "", / · Edits$/);
   await user.click(toggle);
 
-  assert.ok(view.getByRole("group", { name: "Profile settings" }));
+  const controls = toggle.getAttribute("aria-controls")?.split(" ") ?? [];
+
+  expect(controls).toEqual([
+    "new-task-model",
+    "new-task-reasoning",
+    "new-task-permission",
+  ]);
+
+  for (const id of controls) expect(document.getElementById(id)).not.toBeNull();
   assert.ok(view.getByRole("combobox", { name: /^Model: / }));
   assert.ok(view.getByRole("combobox", { name: "Reasoning effort: Default" }));
 
@@ -145,7 +153,9 @@ test("the profile's settings collapse into a summary that expands for editing", 
   assert.ok(view.getByRole("combobox", { name: "Permission mode: Ask" }));
   await user.click(view.getByRole("button", { name: "Hide profile settings" }));
 
-  expect(view.queryByRole("group", { name: "Profile settings" })).toBeNull();
+  expect(view.queryByRole("combobox", { name: /^Model/ })).toBeNull();
+  expect(toggle.getAttribute("aria-controls")).toBeNull();
+  expect(document.activeElement).toBe(toggle);
 });
 
 test("choosing a profile returns model and reasoning to its defaults", async () => {

@@ -114,5 +114,23 @@ test("autoListEffects applies changes at once under reduced motion", (t) => {
 
     expect(instant.frames).toEqual([]);
     expect(instant.timing.duration).toBe(0);
+    expect(row.hasAttribute("inert")).toBe(action === "remove");
+  }
+});
+
+test("exiting controls are inert and reused nodes recover their original state", (t) => {
+  mockEffects(t);
+
+  for (const originallyInert of [false, true]) {
+    const control = document.createElement("button");
+
+    control.toggleAttribute("inert", originallyInert);
+    effect(control, "remove", box(0, 26));
+    expect(control.hasAttribute("inert")).toBe(true);
+
+    // A repeated exit must not overwrite the original state.
+    effect(control, "remove", box(0, 26));
+    effect(control, "add", box(0, 26));
+    expect(control.hasAttribute("inert")).toBe(originallyInert);
   }
 });

@@ -72,16 +72,12 @@
   margin-inline-start: -6px;
 }
 /* Collapsed, the summary truncates beside the profile rather than wrapping. */
-.new-task-options:not(:has(.profile-settings)) {
+.new-task-options[data-expanded="false"] {
   flex-wrap: nowrap;
 }
-.new-task-options:not(:has(.profile-settings)) > .chip-select {
+.new-task-options[data-expanded="false"] > .chip-select {
   flex: none;
   max-width: 50%;
-}
-/* The profile's settings wrap with the other chips while open. */
-.profile-settings {
-  display: contents;
 }
 /* A quiet preview of the profile's settings beside its chip. */
 .profile-settings-toggle {

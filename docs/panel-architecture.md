@@ -107,7 +107,7 @@ Motion is short and quiet. Its purpose is to show what changed and to ease layou
 - `useListPresence` pairs a keyed list with `Presence` (use `as="li"` inside lists): removed items stay in place while they exit, and items added after the first render are marked to appear.
 - `useAnimatedHeight` eases a size change in place.
 - `useListMotion` slides keyed rows to their new positions, including rows that move between parents.
-- `useAutoList` (in `auto-list.ts`) wraps AutoAnimate (`@formkit/auto-animate`) with the shared tokens. Attach its ref to a list, as in the chat message queue, and its direct children fade in, fade out and slide when reordered. The list eases its own size, so content around it follows. Children need boxes of their own, so don't wrap them in `Presence`.
+- `useAutoList` (in `auto-list.ts`) wraps AutoAnimate (`@formkit/auto-animate`) with the shared tokens. Attach its ref to a list, as in the chat message queue, and its direct children fade in, fade out and slide when reordered. The list eases its own size, so content around it follows. Removed controls become inert while they fade out. Children need boxes of their own, so don't wrap them in `Presence`.
 - `MotionContent` keys changing text or counts and applies a fade or rise without moving surrounding content.
 
 Animations that run while the activity timeline measures positions change only opacity, so they never disturb its reading position. Reduced-motion preferences turn every animation off. The Web Animations helpers also skip animation where the API is missing, as in jsdom tests.

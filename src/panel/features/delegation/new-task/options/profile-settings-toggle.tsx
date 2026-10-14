@@ -2,7 +2,7 @@ import { Chevron } from "../../../../shared/components/chevron";
 import { LoadingSpinner } from "../../../../shared/components/loading-spinner/loading-spinner";
 
 type ProfileSettingsToggleProps = {
-  /** The element the toggle shows and hides. */
+  /** IDs of the controls the toggle shows and hides. */
   controls: string;
   expanded: boolean;
   /** The settings in effect, abbreviated, such as "Sonnet 5.5 · M · Ask". */
