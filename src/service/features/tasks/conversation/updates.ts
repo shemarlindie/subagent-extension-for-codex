@@ -58,8 +58,7 @@ export async function waitForUpdates(
         target.task_id,
         { message_id: target.message_id, length: target.after_length },
         waitMs,
-        // A turn's end commits events, which change the revision.
-        () => false,
+        // A turn's end commits events, which change the revision and end this.
         changed.signal,
       ));
 

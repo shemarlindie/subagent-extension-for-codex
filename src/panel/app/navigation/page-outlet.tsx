@@ -39,7 +39,7 @@ export function PageOutlet() {
   }, []);
 
   useLayoutEffect(() => {
-    // Keep the return direction through polling; a new task restores detail motion.
+    // Keep the return direction through refreshes; a new task restores detail motion.
     const slots = root.current?.querySelectorAll<HTMLElement>("[data-page]");
 
     slots?.forEach((slot) => {

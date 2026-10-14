@@ -478,13 +478,6 @@ export function previewTool(
         next_cursor: Math.max(after, events.at(-1)?.id ?? 0),
       };
     })(),
-    get_user_agent_draft: {
-      draft:
-        args.task_id === previewStreamingDraft.taskId ? streamingDraft() : null,
-      running: previewTasks.some(
-        (task) => task.id === args.task_id && task.status === "running",
-      ),
-    },
     // Fixtures don't change on their own, so the revision stays the same.
     wait_user_agent_updates: (() => {
       const target = args.draft as { task_id?: unknown } | undefined;

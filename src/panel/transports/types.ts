@@ -14,7 +14,6 @@ export type HostState = {
 
 export type TransportEvents = {
   scope(data: PanelData): void;
-  refresh(): void;
   status(text: string): void;
   login(): void;
   host(state: HostState): void;

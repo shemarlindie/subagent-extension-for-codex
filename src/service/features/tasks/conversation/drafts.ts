@@ -67,13 +67,12 @@ export class Drafts {
   /**
    * Waits until a task's draft differs from what the reader has: it grew
    * past `length`, became another message, or was cleared. Also returns
-   * when `ended` says the turn is over, when `wake` aborts, or after `waitMs`.
+   * when `wake` aborts, or after `waitMs`.
    */
   async wait(
     taskId: string,
     known: { message_id?: string; length: number },
     waitMs: number,
-    ended: () => boolean,
     wake?: AbortSignal,
   ) {
     const changed = () => {
@@ -85,7 +84,7 @@ export class Drafts {
         : known.message_id !== undefined;
     };
 
-    if (changed() || ended() || wake?.aborted || waitMs <= 0) {
+    if (changed() || wake?.aborted || waitMs <= 0) {
       return this.get(taskId);
     }
 
@@ -96,12 +95,7 @@ export class Drafts {
       if (update.task_id === taskId && changed()) resolve();
     };
 
-    const onEvent = (e: { task_id: string; type: string }) => {
-      if (e.task_id === taskId && e.type === "task.turn_ended") resolve();
-    };
-
     this.bus.on("draft", onDraft);
-    this.bus.on("event", onEvent);
     wake?.addEventListener("abort", resolve);
     const timer = setTimeout(resolve, waitMs);
 
@@ -112,7 +106,6 @@ export class Drafts {
     } finally {
       clearTimeout(timer);
       this.bus.off("draft", onDraft);
-      this.bus.off("event", onEvent);
       wake?.removeEventListener("abort", resolve);
     }
   }

@@ -68,7 +68,7 @@ const server = new McpServer(
 
 /**
  * How long a proxied call may take: the folder picker waits for the user,
- * and message, draft and update reads wait as long as they were asked to, plus a
+ * and message and update reads wait as long as they were asked to, plus a
  * margin.
  */
 function serviceTimeout(name: string, args: Record<string, unknown>) {
@@ -78,7 +78,7 @@ function serviceTimeout(name: string, args: Record<string, unknown>) {
     return Math.min(Number(args.wait_seconds) || 0, 50) * 1000 + 10000;
   }
 
-  if (name === "get_user_agent_draft" || name === "wait_user_agent_updates") {
+  if (name === "wait_user_agent_updates") {
     return Math.min(Number(args.wait_ms) || 0, 25000) + 10000;
   }
 

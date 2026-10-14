@@ -273,10 +273,14 @@ test("the panel follows a running task's draft through update waits, then reads 
   let waits = 0;
   const answered = drafts.length + 1;
 
-  transport.handler = (name) => {
-    // Selecting the task shows its draft at once; it has none yet.
-    if (name === "get_user_agent_draft") return { draft: null, running: true };
+  transport.handler = (name, args) => {
     if (name !== "wait_user_agent_updates") return undefined;
+
+    // Selecting the task reads its draft at once; it has none yet.
+    if (args.wait_ms === 0) {
+      return { revision: "r0", draft: null, running: true };
+    }
+
     // Later waits hold, as if nothing changes.
     if (waits++ >= answered) return new Promise(() => {});
     const text = drafts.shift();
@@ -292,7 +296,9 @@ test("the panel follows a running task's draft through update waits, then reads 
   assert.equal(controller.getSnapshot().selected, "a");
 
   const calls = () =>
-    transport.calls.filter((call) => call.name === "wait_user_agent_updates");
+    transport.calls.filter(
+      (call) => call.name === "wait_user_agent_updates" && call.args.wait_ms,
+    );
 
   await vi.waitFor(() => assert.ok(calls().length >= 5));
 

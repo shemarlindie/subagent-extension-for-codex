@@ -360,7 +360,6 @@ export class Controller {
     try {
       await this.transport.connect({
         scope: (data) => this.applyScope(data),
-        refresh: () => this.run(() => this.refresh()),
         status: (connection) => this.showConnection(connection),
         login: () =>
           this.patch({
@@ -408,7 +407,7 @@ export class Controller {
           activityHistoryLoading: undefined,
         });
       } else {
-        // Keep the panel polling when its first host read fails transiently.
+        // Keep following changes when the first host read fails transiently.
         this.followUpdates();
         this.schedule();
       }
@@ -1382,7 +1381,7 @@ export class Controller {
       }
     }
 
-    // Never retry a mutation. Polling reconciles other panels after a successful write.
+    // Never retry a mutation. Other panels refresh on the change a successful write makes.
     // Cleanup can fail after deleting some tasks; always reconcile that outcome too.
     await this.refresh().catch(this.report);
 

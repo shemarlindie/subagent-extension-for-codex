@@ -4,7 +4,7 @@ import {
   CHAT_EVENTS,
   chatItems,
 } from "../../../../shared/tasks/conversation/chat.js";
-import { MAX_DRAFT_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
+import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
 import { browseProject } from "../../../features/projects/project-picker.js";
@@ -166,35 +166,8 @@ export function userTools(
         };
       },
     }),
-    get_user_agent_draft: tool({
-      description: `User interface only: the message the worker is writing in a running task. It returns as soon as the draft grows past after_length or becomes another message, the message is stored, or the turn ends, or after wait_ms (at most ${MAX_DRAFT_WAIT_MS}).`,
-      schema: taskId.extend({
-        message_id: z.string().max(200).optional(),
-        after_length: z.number().int().nonnegative().default(0),
-        wait_ms: z.number().int().min(0).max(MAX_DRAFT_WAIT_MS).default(0),
-      }),
-      run: async (a) => {
-        c.store.get(a.task_id, owner);
-
-        const draft = await c.drafts.wait(
-          a.task_id,
-          { message_id: a.message_id, length: a.after_length },
-          a.wait_ms,
-          () => !c.active.has(a.task_id),
-        );
-
-        const t = c.store.get(a.task_id, owner);
-
-        return {
-          draft: draft ?? null,
-          running: ["queued", "starting", "running", "waiting"].includes(
-            t.status,
-          ),
-        };
-      },
-    }),
     wait_user_agent_updates: tool({
-      description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears, or its turn ends; otherwise after wait_ms (at most ${MAX_DRAFT_WAIT_MS}). Without after, it returns at once. The revision is opaque: compare it only for equality.`,
+      description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears; otherwise after wait_ms (at most ${MAX_UPDATE_WAIT_MS}). Without after, or with wait_ms 0, it returns at once, so it also reads a draft. The revision is opaque: compare it only for equality.`,
       schema: z.strictObject({
         after: z.string().max(200).optional(),
         draft: taskId
@@ -204,7 +177,7 @@ export function userTools(
           })
           .strict()
           .optional(),
-        wait_ms: z.number().int().min(0).max(MAX_DRAFT_WAIT_MS).default(0),
+        wait_ms: z.number().int().min(0).max(MAX_UPDATE_WAIT_MS).default(0),
       }),
       run: (a) => waitForUpdates(c.store, c.drafts, owner, a),
     }),

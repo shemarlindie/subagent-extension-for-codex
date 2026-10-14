@@ -10,5 +10,5 @@ export type DraftUpdate =
   | { task_id: string; message_id: string; offset: number; text: string }
   | { task_id: string; message_id: string; cleared: true };
 
-/** The longest a draft read may wait for the draft to change. */
-export const MAX_DRAFT_WAIT_MS = 25_000;
+/** The longest the panel's update wait may hold. */
+export const MAX_UPDATE_WAIT_MS = 25_000;

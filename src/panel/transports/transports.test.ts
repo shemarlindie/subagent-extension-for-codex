@@ -14,8 +14,7 @@ function callbacks() {
   const hosts: unknown[] = [];
   const drafts: unknown[] = [];
   const revisions: string[] = [];
-  let refreshes = 0,
-    logins = 0,
+  let logins = 0,
     teardowns = 0;
 
   const events: TransportEvents = {
@@ -24,9 +23,6 @@ function callbacks() {
     },
     host: (host) => {
       hosts.push(host);
-    },
-    refresh: () => {
-      refreshes++;
     },
     login: () => {
       logins++;
@@ -52,7 +48,7 @@ function callbacks() {
     hosts,
     drafts,
     revisions,
-    counts: () => ({ refreshes, logins, teardowns }),
+    counts: () => ({ logins, teardowns }),
   };
 }
 
@@ -215,7 +211,6 @@ test("console SSE reports each stream's revisions, and disposal closes the strea
   assert.equal(second.closes, 1);
   transport.watch();
   assert.equal(streams.length, 2);
-  assert.equal(observed.counts().refreshes, 0);
 });
 
 function hostApp(submit = false) {

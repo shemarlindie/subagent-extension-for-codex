@@ -357,11 +357,16 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
 
     // Waits for the draft to grow past what the panel has.
     const read = await user<{ draft: unknown; running: boolean }>(
-      "get_user_agent_draft",
-      { task_id: t.id, message_id: "msg_live", after_length: 5, wait_ms: 5000 },
+      "wait_user_agent_updates",
+      {
+        after: store.revision("alice"),
+        draft: { task_id: t.id, message_id: "msg_live", after_length: 5 },
+        wait_ms: 5000,
+      },
     );
 
     assert.deepEqual(read, {
+      revision: store.revision("alice"),
       draft: { message_id: "msg_live", text: "Half a reply" },
       running: true,
     });
@@ -382,16 +387,32 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
     assert.deepEqual(messages.messages, []);
     assert.deepEqual(messages.draft, read.draft);
 
-    // Storing the message clears the draft, which a waiting read reports.
-    const cleared = user<{ draft: unknown }>("get_user_agent_draft", {
-      task_id: t.id,
-      message_id: "msg_live",
-      after_length: 12,
-      wait_ms: 5000,
-    });
+    // Storing the message, which clears the draft, ends a waiting read.
+    const before = store.revision("alice");
+
+    const cleared = user<{ revision: string; draft: unknown }>(
+      "wait_user_agent_updates",
+      {
+        after: before,
+        draft: { task_id: t.id, message_id: "msg_live", after_length: 12 },
+        wait_ms: 5000,
+      },
+    );
 
     finish();
-    assert.equal((await cleared).draft, null);
+    const woken = await cleared;
+    assert.ok(woken.draft === null || woken.revision !== before);
+    await until(() => c.drafts.get(t.id) === undefined);
+
+    assert.equal(
+      (
+        await user<{ draft: unknown }>("wait_user_agent_updates", {
+          draft: { task_id: t.id },
+        })
+      ).draft,
+      null,
+    );
+
     await until(() => store.get(t.id, "alice").status === "completed");
     assert.equal(c.drafts.get(t.id), undefined);
 

@@ -70,7 +70,6 @@ const fixtureReadTools = new Set([
   "get_user_agent_changed_file",
   "get_user_agent_changes",
   "get_user_agent_chat",
-  "get_user_agent_draft",
   "get_user_agent_turn_activity",
   "list_agent_projects",
   "list_agent_tasks",

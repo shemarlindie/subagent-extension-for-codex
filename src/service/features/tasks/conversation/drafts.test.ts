@@ -37,68 +37,49 @@ test("drafts grow by deltas, start over for another message and publish each cha
   ]);
 });
 
-test("a draft read waits for growth, a clear or the turn's end, or times out", async () => {
+test("a draft read waits for growth or a clear, or times out", async () => {
   const bus = new EventEmitter();
   const drafts = new Drafts(bus);
   drafts.append("alice", "t", "m", "Hi");
 
   // Already ahead of the reader: returns at once.
-  assert.deepEqual(await drafts.wait("t", { length: 0 }, 1000, () => false), {
+  assert.deepEqual(await drafts.wait("t", { length: 0 }, 1000), {
     message_id: "m",
     text: "Hi",
   });
 
-  const grown = drafts.wait(
-    "t",
-    { message_id: "m", length: 2 },
-    5000,
-    () => false,
-  );
+  const grown = drafts.wait("t", { message_id: "m", length: 2 }, 5000);
 
   drafts.append("alice", "t", "m", " there");
   assert.deepEqual(await grown, { message_id: "m", text: "Hi there" });
 
-  const cleared = drafts.wait(
-    "t",
-    { message_id: "m", length: 8 },
-    5000,
-    () => false,
-  );
+  const cleared = drafts.wait("t", { message_id: "m", length: 8 }, 5000);
 
   drafts.clear("t");
   assert.equal(await cleared, undefined);
 
-  let ended = false;
-  const turnEnd = drafts.wait("t", { length: 0 }, 5000, () => ended);
-  ended = true;
-  bus.emit("event", { task_id: "t", type: "task.turn_ended" });
-  assert.equal(await turnEnd, undefined);
-
   const started = Date.now();
 
-  assert.equal(
-    await drafts.wait("t", { length: 0 }, 50, () => false),
-    undefined,
-  );
+  assert.equal(await drafts.wait("t", { length: 0 }, 50), undefined);
 
   assert.ok(Date.now() - started >= 40);
   assert.equal(bus.listenerCount("draft"), 0);
 });
 
-test("a draft wait also ends when its wake signal aborts", async () => {
+test("a draft wait ends when its wake signal aborts", async () => {
   const bus = new EventEmitter();
   const drafts = new Drafts(bus);
   drafts.append("alice", "t", "m", "Hi");
   const known = { message_id: "m", length: 2 };
 
   const wake = new AbortController();
-  const waiting = drafts.wait("t", known, 5000, () => false, wake.signal);
+  const waiting = drafts.wait("t", known, 5000, wake.signal);
   wake.abort();
   assert.deepEqual(await waiting, { message_id: "m", text: "Hi" });
   assert.equal(bus.listenerCount("draft"), 0);
 
   // An aborted signal returns at once.
   const started = Date.now();
-  await drafts.wait("t", known, 5000, () => false, wake.signal);
+  await drafts.wait("t", known, 5000, wake.signal);
   assert.ok(Date.now() - started < 1000);
 });

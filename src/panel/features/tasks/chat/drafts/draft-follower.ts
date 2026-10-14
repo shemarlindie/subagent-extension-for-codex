@@ -55,8 +55,8 @@ export class DraftFollower {
     if (!id) return;
 
     const read = await this.context.tool<{ draft: Draft | null }>(
-      "get_user_agent_draft",
-      { task_id: id },
+      "wait_user_agent_updates",
+      { draft: { task_id: id }, wait_ms: 0 },
     );
 
     if (this.context.snapshot().selected === id) {

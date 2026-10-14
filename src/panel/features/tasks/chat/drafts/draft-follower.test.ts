@@ -24,7 +24,7 @@ function fixture() {
     streamsDrafts: () => false,
     patch: (patch) => (state = { ...state, ...patch }),
     tool: async <T>(name: string, args: Record<string, unknown>) => {
-      reads.push(`${name}:${String(args.task_id)}`);
+      reads.push(`${name}:${(args.draft as { task_id: string }).task_id}`);
 
       return { draft: null } as T;
     },
@@ -65,7 +65,7 @@ test("showing reads a draft only for a new target", () => {
   const { follower, reads, set } = fixture();
   follower.show();
   follower.show();
-  assert.deepEqual(reads, ["get_user_agent_draft:a"]);
+  assert.deepEqual(reads, ["wait_user_agent_updates:a"]);
 
   // Leaving Chat and coming back reads it again.
   set({ tab: "activity" });
