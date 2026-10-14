@@ -1,36 +1,34 @@
 import { delegationDialog } from "../../features/delegation/delegation";
 import { errorMessage } from "../../shared/utils/error-message";
+import {
+  applyDelegateRead,
+  type DelegateReadContext,
+  type DelegateReadResult,
+  delegateReadsReady,
+  initialDelegateStatuses,
+  retryDelegateStatuses,
+  startDelegateReads,
+} from "./delegate-reads";
 import type {
   Defaults,
   DelegateDialogRead,
   DialogReadStatus,
   DialogState,
-  Project,
   SettingsDocument,
   Snapshot,
-  Worker,
 } from "./types";
 
 type SettingsLoading = Extract<DialogState, { kind: "settings-loading" }>;
 
 type DelegateLoading = Extract<DialogState, { kind: "delegate-loading" }>;
 
-interface DialogLoaderContext {
+interface DialogLoaderContext extends DelegateReadContext {
   snapshot(): Snapshot;
   closed(): boolean;
   patch(patch: Partial<Snapshot>): void;
-  tool<T>(name: string): Promise<T>;
-  readProjects(): Promise<Project[]>;
-  /** Reads workers and records when they were read. */
-  readWorkers(): Promise<Worker[]>;
   explicitSelection(): boolean;
   /** Retries the panel context read through the next refresh. */
   refresh(): void;
-}
-
-interface DelegateReadResult {
-  defaults?: Defaults;
-  snapshot?: Partial<Snapshot>;
 }
 
 /**
@@ -69,12 +67,7 @@ export class DialogLoader {
       preferredWorker,
       ...(repository ? { repository } : {}),
       ...(revision ? { revision } : {}),
-      statuses: {
-        context: state.scopeKnown ? "ready" : "loading",
-        settings: "loading",
-        projects: state.projectsLoaded ? "ready" : "loading",
-        workers: state.workersLoaded ? "ready" : "loading",
-      } satisfies Record<DelegateDialogRead, DialogReadStatus>,
+      statuses: initialDelegateStatuses(state),
     };
 
     this.context.patch({ dialog, formError: "" });
@@ -124,24 +117,11 @@ export class DialogLoader {
       return;
     }
 
-    const errors = { ...current.errors };
-
-    if (status === "error") errors[resource] = errorMessage(error);
-    else delete errors[resource];
-
-    const updated = {
-      ...current,
-      statuses: { ...current.statuses, [resource]: status },
-      errors,
-      ...(result && "defaults" in result ? { defaults: result.defaults } : {}),
-    };
+    const updated = applyDelegateRead(current, resource, status, result, error);
 
     this.context.patch({ ...result?.snapshot, dialog: updated });
 
-    if (
-      Object.values(updated.statuses).every((item) => item === "ready") &&
-      updated.defaults
-    ) {
+    if (delegateReadsReady(updated)) {
       this.finishDelegate(updated, updated.defaults);
     }
   }
@@ -193,41 +173,10 @@ export class DialogLoader {
   }
 
   /** Starts the New Task dialog's reads that are still loading. */
-  private loadDelegate(dialog: DelegateLoading) {
-    const { request, statuses } = dialog;
-
-    const failed = (resource: DelegateDialogRead) => (error: unknown) =>
-      this.updateDelegateRead(request, resource, "error", undefined, error);
-
-    if (statuses.settings === "loading") {
-      void this.context.tool<{ values: Defaults }>("get_agent_settings").then(
-        ({ values }) =>
-          this.updateDelegateRead(request, "settings", "ready", {
-            defaults: values,
-          }),
-        failed("settings"),
-      );
-    }
-
-    if (statuses.projects === "loading") {
-      void this.context.readProjects().then(
-        (projects) =>
-          this.updateDelegateRead(request, "projects", "ready", {
-            snapshot: { projects, projectsLoaded: true },
-          }),
-        failed("projects"),
-      );
-    }
-
-    if (statuses.workers === "loading") {
-      void this.context.readWorkers().then(
-        (workers) =>
-          this.updateDelegateRead(request, "workers", "ready", {
-            snapshot: { workers, workersLoaded: true },
-          }),
-        failed("workers"),
-      );
-    }
+  private loadDelegate({ request, statuses }: DelegateLoading) {
+    startDelegateReads(this.context, statuses, (...update) =>
+      this.updateDelegateRead(request, ...update),
+    );
   }
 
   /** Replaces a fully read loading dialog with the New Task form. */
@@ -266,26 +215,11 @@ export class DialogLoader {
   }
 
   private retryDelegate(dialog: DelegateLoading) {
-    const statuses = { ...dialog.statuses };
-    const errors = { ...dialog.errors };
-    const retryContext = statuses.context === "error";
-
-    for (const resource of [
-      "context",
-      "settings",
-      "projects",
-      "workers",
-    ] as const) {
-      if (statuses[resource] !== "error") continue;
-      statuses[resource] = "loading";
-      delete errors[resource];
-    }
+    const retryContext = dialog.statuses.context === "error";
 
     const retry = {
-      ...dialog,
+      ...retryDelegateStatuses(dialog),
       request: ++this.request,
-      statuses,
-      errors,
       message: undefined,
     };
 

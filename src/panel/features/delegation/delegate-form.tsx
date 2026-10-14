@@ -1,7 +1,6 @@
 import { type SubmitEvent, useEffect, useRef } from "react";
 import { FormProvider, useWatch } from "react-hook-form";
 
-import { providerMetadata } from "../../../shared/providers/metadata";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { Task } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
@@ -27,6 +26,7 @@ import { ModelFields } from "./fields/model-fields";
 import { ProjectField } from "./fields/project-field";
 import { WorkerFields } from "./fields/worker-fields";
 import { WorkspaceField } from "./fields/workspace-field";
+import { startTaskArguments } from "./start-task";
 
 interface DelegateFormProps {
   dialog: DelegateFormDialog;
@@ -97,56 +97,12 @@ function DelegateForm({ dialog }: DelegateFormProps) {
     ),
     submit = form.handleSubmit((values) =>
       controller.submit(async () => {
-        const { provider, profile: worker_profile } = workerChoice(
-          values.worker,
-        );
-
-        const worker = state.workers.find((item) => item.provider === provider);
-
-        const permissions = providerMetadata(
-          provider,
-          worker?.metadata,
-        )?.nativePermissions;
-
-        const nativeOptions = permissions
-          ? {
-              [permissions.permissionOption]: values.permission_mode,
-              ...(permissions.approvalDeciderOption
-                ? {
-                    [permissions.approvalDeciderOption]:
-                      values.approval_decider,
-                  }
-                : {}),
-            }
-          : undefined;
-
         await controller.addChatProjectForTask(values.repository);
 
-        return controller.tool<Task>("start_agent_task", {
-          ...(nativeOptions
-            ? { provider_options: { [provider]: nativeOptions } }
-            : {}),
-          repository: values.repository,
-          description: values.description,
-          provider,
-          worker_profile,
-          model: values.model,
-          reasoning_effort: values.reasoning_effort,
-          revision:
-            values.workspace_strategy === "current_repo"
-              ? "HEAD"
-              : values.revision,
-          workspace_strategy: values.workspace_strategy,
-          conversation_id: conversation ?? null,
-          context: values.context.trim() ? [values.context] : [],
-          depends_on: values.deps,
-          budget: {
-            max_runtime_minutes:
-              values.runtimeMode === "none" ? null : Number(values.runtime),
-            max_cost_usd:
-              values.costMode === "none" ? null : Number(values.cost),
-          },
-        });
+        return controller.tool<Task>(
+          "start_agent_task",
+          startTaskArguments(values, state.workers, conversation),
+        );
       }, true),
     );
 

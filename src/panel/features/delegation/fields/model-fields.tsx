@@ -1,13 +1,12 @@
 import { useFormContext, useWatch } from "react-hook-form";
 
-import { providerMetadata } from "../../../../shared/providers/metadata";
 import { reasoningLevels } from "../../../../shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../../app/state/types";
 import { AsyncControl } from "../../../shared/forms/async-control";
 import { Field } from "../../../shared/forms/fields";
 import { FormSelect } from "../../../shared/forms/form-select";
 import { type DelegateValues, pendingPlaceholder } from "../delegate-values";
-import { workerChoice } from "../delegation";
+import { modelDefaults, validateReasoning } from "../model-defaults";
 import { ModelAutocomplete } from "./model-autocomplete";
 
 interface ModelFieldsProps {
@@ -34,31 +33,8 @@ export function ModelFields({
     name: ["worker", "model", "reasoning_effort"],
   });
 
-  const { provider, profile: role } = workerChoice(worker);
-
-  const model =
-    defaults[`${role}_default_model`] ||
-    defaults[`${provider}_default_model`] ||
-    defaults.default_model;
-
-  const reasoning = [
-    defaults[`${role}_default_reasoning_effort`],
-    defaults[`${provider}_default_reasoning_effort`],
-    defaults.default_reasoning_effort,
-  ].find((value) => value && value !== "default");
-
-  const workerInfo = workers.find((item) => item.provider === provider);
-
-  const metadata = workerInfo?.models?.find(
-    (item) => item.value === (selectedModel.trim() || model || "default"),
-  );
-
-  const supported =
-    metadata?.supportsEffort === false
-      ? []
-      : (metadata?.supportedEffortLevels ??
-        providerMetadata(provider, workerInfo?.metadata)?.defaultEffortLevels ??
-        reasoningLevels);
+  const resolved = modelDefaults(defaults, workers, worker, selectedModel),
+    { provider, model, reasoning, workerInfo, metadata, supported } = resolved;
 
   return (
     <>
@@ -107,17 +83,7 @@ export function ModelFields({
               ? pendingPlaceholder(settingsLoading)
               : undefined
           }
-          rules={{
-            validate: (value) => {
-              const resolved = value === "default" ? reasoning : value;
-
-              return (
-                !resolved ||
-                supported.some((level) => level === resolved) ||
-                `Choose a reasoning effort supported by ${provider}${metadata ? ` model ${metadata.value}` : ""}: ${supported.length ? supported.join(", ") : "use the provider runtime default"}.`
-              );
-            },
-          }}
+          rules={{ validate: (value) => validateReasoning(value, resolved) }}
           options={[
             {
               value: "default",
