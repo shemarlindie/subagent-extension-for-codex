@@ -48,7 +48,7 @@ Application state groups dialog descriptors, saved drafts and restoration in
 `Controller` is the one facade components call. It keeps scope versions,
 selection and refresh sequencing, and delegates self-contained work to
 collaborators that receive a small context of callbacks: `DialogLoader` opens
-the settings and New Task dialogs while their reads load,
+the settings and Advanced task dialogs while their reads load,
 `PersistedDialogs` keeps the dialog stack a reload reopens, and the
 feature-owned `ChangeLoader` and `DraftFollower` read changes and drafts for the
 selected task. `RevisionTrigger` turns the service revisions a transport reports
@@ -60,6 +60,16 @@ the refresh behavior. Components call `controller.taskActions` for task actions 
 outside a dialog, such as sending messages, editing the queue, raising budgets
 and answering worker requests.
 
+The new-task composer lives in `features/delegation/new-task/`. Components call
+`controller.newTasks`, a feature-owned `NewTaskLoader`, to open the composer,
+retry its reads and start the task. While it is open, `Snapshot.newTask` holds
+its read state; selecting a task clears it. The composer and the Advanced task
+dialog share their settings, project and worker reads
+(`app/state/delegate-reads.ts`), the `start_agent_task` arguments
+(`start-task.ts`), model and reasoning defaults (`model-defaults.ts`) and the
+async-default fill (`use-async-defaults.ts`). The composer keeps its draft in
+session memory, not in dialog persistence, so it doesn't survive a reload.
+
 ## State ownership and component patterns
 
 The controller owns UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so refreshes do not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.
@@ -70,7 +80,7 @@ Scroll hooks mutate stable reading cells without notifying on every scroll;
 answered questions clear their entry. See [State and persistence](#state-and-persistence)
 for lifetime and storage boundaries.
 
-Use Base UI (`@base-ui/react`) primitives for dialogs, tabs (with an animated indicator), the task filter radio group, single and multiple selection, project suggestions, and settings switches, including focus management and keyboard navigation. `SelectField` and `MultiSelectField` share dropdown structure and styling; `FormSelect` connects selection to React Hook Form. Project and dependency selectors opt into `LookupField`, which uses Base UI Combobox with a search input in the popup; search text stays separate from selected values. The project autocomplete accepts both registered projects and explicit absolute paths. Keep simple buttons, text inputs, and textareas as native controls. Base UI provides unstyled components; keep their styling in this project's stylesheets and application decisions in the controller/forms. React, React DOM, React Hook Form, and the official MCP Apps bridge supply existing infrastructure rather than custom equivalents.
+Use Base UI (`@base-ui/react`) primitives for dialogs, tabs (with an animated indicator), the task filter radio group, single and multiple selection, project suggestions, and settings switches, including focus management and keyboard navigation. `SelectField` and `MultiSelectField` share dropdown structure and styling; `FormSelect` connects selection to React Hook Form. `ChipSelect` reuses that dropdown behind a compact pill trigger for options beside an input, such as the new-task composer's chips. Project and dependency selectors opt into `LookupField`, which uses Base UI Combobox with a search input in the popup; search text stays separate from selected values. The project autocomplete accepts both registered projects and explicit absolute paths. Keep simple buttons, text inputs, and textareas as native controls. Base UI provides unstyled components; keep their styling in this project's stylesheets and application decisions in the controller/forms. React, React DOM, React Hook Form, and the official MCP Apps bridge supply existing infrastructure rather than custom equivalents.
 
 Build tab strips with the shared `TabList` in
 `src/panel/shared/components/tabs/`; it provides the standard focus behavior and

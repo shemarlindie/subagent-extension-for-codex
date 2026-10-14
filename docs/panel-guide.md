@@ -115,15 +115,41 @@ Details accumulates across turns and includes the active run.
 
 ### Create and rename tasks
 
-**New task** reads defaults and worker availability without changing settings.
-It collects the request, explicit context, workspace/revision, dependencies and
-budgets. Conversation text is not attached automatically. Unsupported numeric
-cost budgets block submission; Claude's response-boundary limit is disclosed.
-The dialog opens with its form structure while defaults and choices load; only
-controls and actions that depend on pending data are disabled.
-Use **Wait for tasks** to search task titles or IDs in the selected project and
-select multiple dependencies. Searching preserves selections; reopening the
-dropdown clears the search.
+Global launch offers two ways to start a task, from the **New task** split
+button or, on narrow panels, **Panel actions**:
+
+- **New task** opens an empty chat in the inspector, with a **New task** draft
+  row at the top of the task list. Your first message becomes the request:
+  Enter starts the task and opens it on Chat, and Shift+Enter adds a line.
+  Chips below the message choose the options:
+  - **Project**, shown only under **All projects**.
+  - **Profile**, which defaults to **General**. A profile works as a preset:
+    model and reasoning left at their defaults follow that profile's settings.
+  - **Model**, from the discovered models or the inherited default.
+  - **Reasoning effort**, limited to levels the selected model supports.
+  - **Permission mode**. Read-only profiles show **Read only** instead.
+
+  Workspace, revision and budgets use your settings defaults. **More
+  options…** opens Advanced task with the message and chips filled in. Escape
+  in an empty message, **← Tasks** or selecting another task leaves the draft,
+  which stays in memory until sent or the panel reloads. Changing the global
+  project keeps it open; a chat scope closes it.
+
+- **Advanced task…**, in the split button's menu, opens the full dialog. It
+  collects the request, explicit context, workspace/revision, approval decision
+  maker, dependencies and budgets. Unsupported numeric cost budgets block
+  submission; Claude's response-boundary limit is disclosed. Use **Wait for
+  tasks** to search task titles or IDs in the selected project and select
+  multiple dependencies. Searching preserves selections; reopening the
+  dropdown clears the search.
+
+Both read defaults and worker availability without changing settings, and
+neither attaches conversation text automatically. They show their structure
+while defaults and choices load; only controls and actions that depend on
+pending data are disabled.
+
+Below a task's Chat composer, the hint line lists the profile, model, reasoning
+effort and permission mode the task started with. Later turns keep them.
 
 The service derives a title from the request. Click the inspector title to edit:
 Enter or an outside click saves, Escape cancels, and blank/failed saves stay open.

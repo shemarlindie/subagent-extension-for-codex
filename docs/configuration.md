@@ -33,7 +33,7 @@ Do not paste the token into a chat or commit it. Authenticated raw service clien
 
 ## Repository access
 
-Targets must be canonical Git repository roots with at least one commit. A model-supplied path never grants access. Approve individual roots through global **Manage → Add project**, **Browse** in New task, or the local CLI:
+Targets must be canonical Git repository roots with at least one commit. A model-supplied path never grants access. Approve individual roots through global **Manage → Add project**, **Browse** in Advanced task, or the local CLI:
 
 ```sh
 node dist/projects-cli.js register /absolute/path/to/repository
@@ -67,6 +67,9 @@ Open **Settings** in the panel header. Values persist per user in SQLite and app
 | Claude permission mode  | `default`                                             |
 | Approval decision maker | `user`                                                |
 
+The worker profile setting applies to model calls and the Advanced task dialog.
+The panel's **New task** composer starts with the General profile instead.
+
 `get_agent_settings` returns values, reset defaults, field schemas and the sections used by the panel. `update_agent_settings` accepts ordinary defaults as `{ "set": { "max_runtime_minutes": 10 } }`, preserving omitted fields. Unknown settings, unavailable providers and invalid budgets are rejected. User-only settings require app-only `update_user_agent_settings` or authenticated console authority. Hosts must enforce app-only visibility; this is not cryptographic proof of a human decision.
 
 A budget reads as a positive number or `null` for no limit. Updates can use `use_cost_budget` and `use_runtime_budget` to disable a limit while remembering its amount. Changing an amount while disabled leaves the limit disabled; enabling restores it. The app does not impose a maximum runtime or cost limit. Providers that cannot enforce a numeric limit reject it before execution. See [continuation and budgets](task-continuation.md#raise-a-task-budget) for raising limits on existing tasks.
@@ -80,7 +83,7 @@ Each field resolves independently: task override → worker profile → provider
 - Global: `default_model`, `default_reasoning_effort`.
 - Provider: `claude_default_model`, `claude_default_reasoning_effort` (or `fixture`).
 - Profile: `reviewer_default_model`, `reviewer_default_reasoning_effort` (or another worker profile).
-- Task: `model`, `reasoning_effort` in `start_agent_task` or the panel’s New task form.
+- Task: `model`, `reasoning_effort` in `start_agent_task`, the panel's New task chips or the Advanced task dialog.
 
 Profile defaults apply across providers, so choose a compatible model or override it on the task. Claude accepts `low`, `medium`, `high`, `xhigh` and `max`, subject to model support. Unsupported choices are rejected before queuing when metadata is known; otherwise native validation may fail during execution.
 

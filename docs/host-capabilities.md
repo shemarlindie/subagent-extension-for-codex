@@ -132,7 +132,7 @@ Read-only context resolution may return an **Add chat project** suggestion but
 never registers it. Registration is available through:
 
 - Panel **Add project**, the local projects CLI, or configured approved roots.
-- **Browse…** in New task: the native macOS folder picker registers the selected
+- **Browse…** in Advanced task: the native macOS folder picker registers the selected
   root and selects it for the draft. It does not start the task. The dialog runs
   on the service machine; other platforms use the path field.
 - **Automatically add chat projects**, a user-only persistent setting, enabled

@@ -15,7 +15,9 @@ repository approvals and permissions.
    including staged, unstaged and untracked files. `worktree` creates a separate
    branch from a committed revision. Both default to `HEAD`; `current_repo`
    rejects another revision.
-3. Select the worker profile and limits, then submit the task. Keep provider
+3. Select the worker profile and limits, then submit the task. In the panel,
+   **New task** offers the profile, model, reasoning and permission chips;
+   limits are in **Advanced task…**. Keep provider
    credentials on the service host; the extension uses the host's Claude Code
    configuration.
 
