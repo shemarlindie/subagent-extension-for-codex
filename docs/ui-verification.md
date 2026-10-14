@@ -1,6 +1,6 @@
 # UI verification
 
-Use this guide to verify the React UI in a browser and in Codex, covering both
+Use this guide to verify the panel in a browser and in Codex, covering both
 the inline widget and expanded panel. Setup, live service connections and fixture
 recording are in [Local development](development.md#panel-dev-host).
 
@@ -95,7 +95,7 @@ The dev host omits style variables by default; enter JSON in the inspector to
 test them. Light and dark captures from Codex desktop's MCP App context are kept
 as development references. The panel filters style keys the installed SDK does
 not recognize, so later host additions do not fail app initialization. The dev host does not reproduce Codex's iframe sandbox, CSP or
-container placement. For changes affecting the React UI in Codex, build and open an approved
+container placement. For changes affecting the panel in Codex, build and open an approved
 repository in Codex, check scope and New task prefills without submitting, and
 reopen an existing task. Check the sidebar entrypoint and inline/expanded switching
 when their integration changes. For folder browsing changes, use **Browse** on

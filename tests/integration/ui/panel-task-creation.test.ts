@@ -14,7 +14,7 @@ import {
   task,
   test,
   waitFor,
-} from "./react-ui-test-support";
+} from "./panel-test-support";
 
 test("delegation submits the full request without a title and search matches description", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {

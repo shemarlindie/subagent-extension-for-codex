@@ -18,7 +18,7 @@ import {
   vi,
   waitFor,
   within,
-} from "./react-ui-test-support";
+} from "./panel-test-support";
 
 test("the inspector omits task descriptions across refresh and task selection", async (t) => {
   const literal =

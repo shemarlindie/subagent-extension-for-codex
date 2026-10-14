@@ -12,7 +12,7 @@ import {
   test,
   waitFor,
   within,
-} from "./react-ui-test-support";
+} from "./panel-test-support";
 
 test("the Changes tab reads every page and shows the worktree branch and its commands", async (t) => {
   const { transport, user } = await setup(t, (transport) => {

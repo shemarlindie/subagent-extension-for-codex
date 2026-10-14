@@ -8,7 +8,7 @@ they cite; they are not a compatibility claim for every desktop release.
 For system responsibilities see [Architecture](architecture.md); for panel
 behavior see [Panel guide](panel-guide.md).
 
-## React UI surfaces
+## Panel surfaces
 
 `src/service/platform/panel/panel.ts` advertises `inline` and `fullscreen` and prefers
 `inline`. `open_codex_subagent_extension` exposes the thread entrypoint;
@@ -16,8 +16,8 @@ behavior see [Panel guide](panel-guide.md).
 entrypoint. Task creation also attaches the panel resource and selects the new
 task on Chat. Display-mode preferences are hints; the host owns physical placement.
 
-The inline widget and expanded panel render the extension's React UI. Its compact
-summary is part of that widget. Codex owns the container and placement;
+The inline widget and expanded panel display the extension interface. The inline
+widget includes a compact summary. Codex owns the container and placement;
 display-mode requests do not guarantee desktop pane geometry.
 
 ### Sidebar icon

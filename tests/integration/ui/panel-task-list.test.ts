@@ -12,7 +12,7 @@ import {
   test,
   vi,
   waitFor,
-} from "./react-ui-test-support";
+} from "./panel-test-support";
 
 test("task filters keep exactly one filter selected", async (t) => {
   const { user } = await setup(t);

@@ -11,7 +11,7 @@ import {
   setup,
   test,
   waitFor,
-} from "./react-ui-test-support";
+} from "./panel-test-support";
 
 async function waitForSettingsSaved() {
   await waitFor(() =>

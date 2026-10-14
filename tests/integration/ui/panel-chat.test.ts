@@ -13,7 +13,7 @@ import {
   vi,
   waitFor,
   within,
-} from "./react-ui-test-support";
+} from "./panel-test-support";
 
 type User = ReturnType<typeof userEvent.setup>;
 

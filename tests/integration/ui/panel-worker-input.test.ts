@@ -10,7 +10,7 @@ import {
   SKIPPED_ANSWER,
   test,
   waitFor,
-} from "./react-ui-test-support";
+} from "./panel-test-support";
 
 test("worker question accepts a custom answer with no preset selection", async (t) => {
   const { transport, user } = await setup(t, (transport) => {

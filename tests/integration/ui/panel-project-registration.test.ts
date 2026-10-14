@@ -14,7 +14,7 @@ import {
   test,
   waitFor,
   within,
-} from "./react-ui-test-support";
+} from "./panel-test-support";
 
 test("project picker uses accessible options, changes scope by keyboard, and preserves its trigger during refresh", async (t) => {
   const { controller, user } = await setup(t);

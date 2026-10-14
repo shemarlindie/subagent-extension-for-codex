@@ -8,7 +8,7 @@ import {
   setup,
   test,
   waitFor,
-} from "./react-ui-test-support";
+} from "./panel-test-support";
 
 test("discovered model metadata offers suggestions and rejects unsupported inherited effort until corrected", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
