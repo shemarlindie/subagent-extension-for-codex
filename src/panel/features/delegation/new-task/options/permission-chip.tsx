@@ -13,6 +13,29 @@ type PermissionChipProps = {
   disabled: boolean;
 };
 
+// The chip itself shortens the longest modes; its menu keeps their names.
+const chipWords: Record<string, string> = {
+  "Ask for approval": "Ask",
+  "Bypass permission prompts": "Bypass",
+};
+
+function chipText(label: string) {
+  return chipWords[label] ?? label;
+}
+
+/** The chip's text for a permission mode, if the provider offers it. */
+export function permissionChipLabel(
+  options: PermissionChipProps["options"],
+  value: string,
+  readOnly: boolean,
+) {
+  if (readOnly) return "Read only";
+
+  const option = options?.find((candidate) => candidate.value === value);
+
+  return option && shortPermissionLabel(option.label);
+}
+
 /** Chooses the provider's native permission mode for the task. */
 export function PermissionChip({
   options,
@@ -44,7 +67,7 @@ export function PermissionChip({
           ? [{ value: "read-only", label: "Read only" }]
           : (options ?? []).map((option) => ({
               ...option,
-              chipLabel: shortPermissionLabel(option.label),
+              chipLabel: chipText(shortPermissionLabel(option.label)),
             }))
       }
     />

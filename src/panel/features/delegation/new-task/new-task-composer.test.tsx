@@ -117,11 +117,67 @@ test("Shift+Enter adds a line instead of sending", async () => {
   assert.equal(start.mock.calls.length, 0);
 });
 
+test("the profile's settings collapse into a summary that expands for editing", async () => {
+  const { view, user } = setup();
+
+  expect(view.queryByRole("combobox", { name: /^Model/ })).toBeNull();
+
+  const toggle = view.getByRole("button", { name: /^Edit .* · Accept edits$/ });
+
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  // The visible line abbreviates; the label above keeps the full names.
+  assert.match(toggle.textContent ?? "", / · Edits$/);
+  await user.click(toggle);
+
+  assert.ok(view.getByRole("group", { name: "Profile settings" }));
+  assert.ok(view.getByRole("combobox", { name: /^Model: / }));
+
+  await user.click(
+    view.getByRole("combobox", { name: "Permission mode: Accept edits" }),
+  );
+
+  // The menu names the mode in full; the chip shortens it.
+  await user.click(
+    await view.findByRole("option", { name: /ask for approval/i }),
+  );
+
+  assert.ok(view.getByRole("combobox", { name: "Permission mode: Ask" }));
+  await user.click(view.getByRole("button", { name: "Hide profile settings" }));
+
+  expect(view.queryByRole("group", { name: "Profile settings" })).toBeNull();
+});
+
+test("choosing a profile returns model and reasoning to its defaults", async () => {
+  const { view, user, start } = setup();
+
+  await user.click(view.getByRole("button", { name: /^Edit / }));
+  await user.click(view.getByRole("combobox", { name: /^Reasoning effort/ }));
+  await user.click(await view.findByRole("option", { name: "High" }));
+  await user.click(view.getByRole("combobox", { name: "Profile: General" }));
+  await user.click(await view.findByRole("option", { name: "Implementer" }));
+
+  await user.type(
+    view.getByRole("textbox", { name: "Task message" }),
+    "Ship it{Enter}",
+  );
+
+  await waitFor(() => assert.equal(start.mock.calls.length, 1));
+
+  expect(start.mock.calls[0]?.[0]).toMatchObject({
+    worker: "claude:implementer",
+    model: "",
+    reasoning_effort: "default",
+  });
+});
+
 test("a read-only profile replaces the permission choice with Read only", async () => {
   const { view, user } = setup();
 
   await user.click(view.getByRole("combobox", { name: "Profile: General" }));
   await user.click(await view.findByRole("option", { name: "Reviewer" }));
+
+  assert.ok(view.getByRole("button", { name: /· Read only$/ }));
+  await user.click(view.getByRole("button", { name: /^Edit / }));
 
   const permission = await view.findByRole("combobox", {
     name: "Permission mode: Read only",

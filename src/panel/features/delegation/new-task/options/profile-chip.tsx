@@ -1,4 +1,7 @@
-import { useController as useFieldController } from "react-hook-form";
+import {
+  useController as useFieldController,
+  useFormContext,
+} from "react-hook-form";
 
 import { titleCase } from "../../../../../shared/settings/settings-document";
 import type { Worker } from "../../../../app/state/types";
@@ -13,21 +16,28 @@ type ProfileChipProps = {
 };
 
 /**
- * Chooses the worker profile. A profile works as a preset: model and
- * reasoning left at default follow that profile's configured defaults.
+ * Chooses the worker profile. A profile works as a preset: choosing one
+ * returns model and reasoning to that profile's configured defaults.
  */
 export function ProfileChip({ workers, loading, disabled }: ProfileChipProps) {
-  const { field } = useFieldController<DelegateValues, "worker">({
+  const { setValue } = useFormContext<DelegateValues>(),
+    { field } = useFieldController<DelegateValues, "worker">({
       name: "worker",
     }),
     multipleProviders = workers.length > 1;
+
+  const choose = (worker: string) => {
+    field.onChange(worker);
+    setValue("model", "");
+    setValue("reasoning_effort", "default");
+  };
 
   return (
     <ChipSelect
       id="new-task-profile"
       label="Profile"
       value={field.value}
-      onValueChange={field.onChange}
+      onValueChange={choose}
       loading={loading}
       disabled={disabled}
       options={workers.flatMap((worker) =>

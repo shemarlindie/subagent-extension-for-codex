@@ -3,6 +3,7 @@ import { useController as useFieldController } from "react-hook-form";
 import type { ModelChoice } from "../../../../../shared/providers/types";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import type { DelegateValues } from "../../delegate-values";
+import { modelName } from "../../setting-labels";
 
 type ModelChipProps = {
   models: ModelChoice[];
@@ -12,9 +13,15 @@ type ModelChipProps = {
   disabled: boolean;
 };
 
-/** A model's display name, falling back to its ID for undiscovered models. */
-function modelName(models: ModelChoice[], value: string) {
-  return models.find((model) => model.value === value)?.displayName ?? value;
+/** The chip's text for a model choice; blank reads as the inherited model. */
+export function modelChipLabel(
+  models: ModelChoice[],
+  value: string,
+  inherited?: string,
+) {
+  if (value) return modelName(models, value);
+
+  return inherited ? modelName(models, inherited) : "Default model";
 }
 
 /**
@@ -45,7 +52,7 @@ export function ModelChip({
         {
           value: "",
           label: `Default (${inherited ? modelName(models, inherited) : "provider runtime"})`,
-          chipLabel: inherited ? modelName(models, inherited) : "Default model",
+          chipLabel: modelChipLabel(models, "", inherited),
         },
         ...models
           .filter((model) => model.value !== "default")

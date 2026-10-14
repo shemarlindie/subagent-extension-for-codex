@@ -126,7 +126,12 @@ button or, on narrow panels, **Panel actions**:
   your next message. Chips below the message choose the options:
   - **Project**, shown only under **All projects**.
   - **Profile**, which defaults to **General**. A profile works as a preset:
-    model and reasoning left at their defaults follow that profile's settings.
+    choosing one returns model and reasoning to that profile's settings.
+    Beside it, a one-line summary such as `Sonnet 5.5 · H · Edits` shows what
+    the profile sets, abbreviating reasoning (L, M, H, H+, Max) and permission
+    (Read, Ask, Edits); hover it for full names. Click it to edit these chips,
+    and the caret to collapse them again. A draft that already overrides the
+    profile opens with them shown.
   - **Model**, from the discovered models or the inherited default.
   - **Reasoning effort**, limited to levels the selected model supports.
   - **Permission mode**. Read-only profiles show **Read only** instead.

@@ -71,6 +71,66 @@
   /* Bring the first chip's text closer to the message text. */
   margin-inline-start: -6px;
 }
+/* Collapsed, the summary truncates beside the profile rather than wrapping. */
+.new-task-options:not(:has(.profile-settings)) {
+  flex-wrap: nowrap;
+}
+.new-task-options:not(:has(.profile-settings)) > .chip-select {
+  flex: none;
+  max-width: 50%;
+}
+/* The profile's settings wrap with the other chips while open. */
+.profile-settings {
+  display: contents;
+}
+/* A quiet preview of the profile's settings beside its chip. */
+.profile-settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  height: 26px;
+  padding: 0 7px;
+  border-color: transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.profile-settings-toggle:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+.profile-settings-summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-settings-caret {
+  display: inline-flex;
+  flex: none;
+  opacity: 0.7;
+}
+.profile-settings-caret .loading-spinner {
+  width: 10px;
+  height: 10px;
+}
+/* Points toward what a click does: right to open, left to close. */
+.profile-settings-caret .chevron {
+  transform: rotate(-90deg);
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.profile-settings-toggle[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-settings-caret .chevron {
+    transition: none;
+  }
+}
 .new-task-box .chat-composer-actions {
   gap: 10px;
   margin-inline-start: auto;

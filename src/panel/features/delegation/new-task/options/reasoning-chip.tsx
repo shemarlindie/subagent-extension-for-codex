@@ -15,6 +15,16 @@ type ReasoningChipProps = {
 };
 
 /**
+ * The chip's text for an effort; the default reads as the inherited level.
+ * A bare "Default" wouldn't say what it is, so that keeps its noun.
+ */
+export function reasoningChipLabel(value: string, inherited?: string) {
+  const level = value === "default" ? inherited : value;
+
+  return level ? titleCase(level) : "Default effort";
+}
+
+/**
  * Chooses a reasoning effort the selected model supports. Switching to a
  * model without the chosen level returns it to the default.
  */
@@ -52,12 +62,12 @@ export function ReasoningChip({
         {
           value: "default",
           label: `Default (${inherited ?? "provider runtime"})`,
-          chipLabel: `${titleCase(inherited ?? "default")} effort`,
+          chipLabel: reasoningChipLabel("default", inherited),
         },
         ...supported.map((level) => ({
           value: level,
           label: titleCase(level),
-          chipLabel: `${titleCase(level)} effort`,
+          chipLabel: reasoningChipLabel(level),
         })),
       ]}
     />

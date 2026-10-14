@@ -1,3 +1,4 @@
+import { useId, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions";
@@ -6,17 +7,22 @@ import type { NewTaskState, Snapshot } from "../../../../app/state/types";
 import type { DelegateValues } from "../../delegate-values";
 import { workerChoice } from "../../delegation";
 import { modelDefaults } from "../../model-defaults";
+import { compactPermissionLabel } from "../../permission-label";
+import { compactReasoningLabel } from "../../setting-labels";
 import { newTaskProjects } from "../new-task-values";
-import { ModelChip } from "./model-chip";
-import { PermissionChip } from "./permission-chip";
+import { ModelChip, modelChipLabel } from "./model-chip";
+import { PermissionChip, permissionChipLabel } from "./permission-chip";
 import { ProfileChip } from "./profile-chip";
+import { ProfileSettingsToggle } from "./profile-settings-toggle";
 import { ProjectChip } from "./project-chip";
-import { ReasoningChip } from "./reasoning-chip";
+import { ReasoningChip, reasoningChipLabel } from "./reasoning-chip";
 
 type NewTaskOptionsProps = {
   newTask: NewTaskState;
   state: Snapshot;
 };
+
+type ResolvedOptions = ReturnType<typeof resolvedOptions>;
 
 /** What the selected worker resolves to, once settings have loaded. */
 function resolvedOptions(
@@ -41,10 +47,61 @@ function resolvedOptions(
   };
 }
 
-/** The composer's option chips: project, profile, model, reasoning and permission. */
+/**
+ * The model, reasoning and permission in effect: abbreviated for the
+ * summary (`Sonnet 5.5 · H · Ask`) and in full, as the chips read them, for
+ * its label.
+ */
+function settingsSummary(
+  resolved: ResolvedOptions,
+  [model = "", reasoning = "default", permission = ""]: string[],
+) {
+  const modelLabel = modelChipLabel(resolved.models, model, resolved.model),
+    supportsReasoning = resolved.supported.length > 0,
+    reasoningShort = compactReasoningLabel(reasoning, resolved.reasoning),
+    reasoningText = reasoningChipLabel(reasoning, resolved.reasoning),
+    permissionText = permissionChipLabel(
+      resolved.permissions,
+      permission,
+      resolved.readOnly,
+    ),
+    line = (parts: (string | false | undefined)[]) =>
+      parts.filter(Boolean).join(" · ");
+
+  return {
+    summary: line([
+      modelLabel,
+      supportsReasoning && reasoningShort,
+      permissionText && compactPermissionLabel(permissionText),
+    ]),
+    description: line([
+      modelLabel,
+      supportsReasoning &&
+        (reasoningShort ? `${reasoningText} reasoning` : reasoningText),
+      permissionText,
+    ]),
+  };
+}
+
+/**
+ * The composer's options. The profile leads; the model, reasoning and
+ * permission it sets collapse into a summary that expands for editing.
+ */
 export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
-  const { control } = useFormContext<DelegateValues>(),
-    [worker, model] = useWatch({ control, name: ["worker", "model"] }),
+  const { control, getValues } = useFormContext<DelegateValues>(),
+    values = useWatch({
+      control,
+      name: ["worker", "model", "reasoning_effort", "permission_mode"],
+    }),
+    [worker, model] = values,
+    // A draft that already overrides the profile opens with its settings shown.
+    // Reasoning stays blank until settings load.
+    [expanded, setExpanded] = useState(
+      () =>
+        Boolean(getValues("model")) ||
+        !["", "default"].includes(getValues("reasoning_effort")),
+    ),
+    settingsId = useId(),
     { statuses } = newTask,
     loading = statuses.workers === "loading" || statuses.settings === "loading",
     disabled =
@@ -69,23 +126,39 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
         loading={loading && !worker}
         disabled={disabled}
       />
-      <ModelChip
-        models={resolved.models}
-        inherited={resolved.model}
+      {expanded && (
+        <div
+          id={settingsId}
+          className="profile-settings"
+          role="group"
+          aria-label="Profile settings"
+        >
+          <ModelChip
+            models={resolved.models}
+            inherited={resolved.model}
+            loading={loading}
+            disabled={disabled}
+          />
+          <ReasoningChip
+            supported={resolved.supported}
+            inherited={resolved.reasoning}
+            loading={loading}
+            disabled={disabled}
+          />
+          <PermissionChip
+            options={resolved.permissions}
+            readOnly={resolved.readOnly}
+            loading={loading}
+            disabled={disabled}
+          />
+        </div>
+      )}
+      <ProfileSettingsToggle
+        controls={settingsId}
+        expanded={expanded}
+        {...settingsSummary(resolved, values.slice(1))}
         loading={loading}
-        disabled={disabled}
-      />
-      <ReasoningChip
-        supported={resolved.supported}
-        inherited={resolved.reasoning}
-        loading={loading}
-        disabled={disabled}
-      />
-      <PermissionChip
-        options={resolved.permissions}
-        readOnly={resolved.readOnly}
-        loading={loading}
-        disabled={disabled}
+        onToggle={() => setExpanded(!expanded)}
       />
     </div>
   );
