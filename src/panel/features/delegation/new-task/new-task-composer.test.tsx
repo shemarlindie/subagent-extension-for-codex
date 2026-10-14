@@ -131,6 +131,7 @@ test("the profile's settings collapse into a summary that expands for editing", 
 
   assert.ok(view.getByRole("group", { name: "Profile settings" }));
   assert.ok(view.getByRole("combobox", { name: /^Model: / }));
+  assert.ok(view.getByRole("combobox", { name: "Reasoning effort: Default" }));
 
   await user.click(
     view.getByRole("combobox", { name: "Permission mode: Accept edits" }),

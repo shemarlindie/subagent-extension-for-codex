@@ -16,12 +16,11 @@ type ReasoningChipProps = {
 
 /**
  * The chip's text for an effort; the default reads as the inherited level.
- * A bare "Default" wouldn't say what it is, so that keeps its noun.
  */
 export function reasoningChipLabel(value: string, inherited?: string) {
   const level = value === "default" ? inherited : value;
 
-  return level ? titleCase(level) : "Default effort";
+  return level ? titleCase(level) : "Default";
 }
 
 /**
