@@ -3,6 +3,7 @@ import { z } from "zod";
 import { reasoningLevels } from "./reasoning.js";
 
 export const roles = [
+  "general",
   "researcher",
   "reviewer",
   "implementer",

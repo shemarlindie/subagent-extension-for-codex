@@ -79,6 +79,7 @@ test("worker profiles use distinct icons on the same fixed drawing canvas", (t) 
   t.onTestFinished(cleanup);
 
   const profiles = [
+      "general",
       "researcher",
       "reviewer",
       "implementer",

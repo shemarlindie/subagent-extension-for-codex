@@ -559,6 +559,7 @@ test("profile restriction values restrict read-only profiles and explicit values
   }
 
   for (const role of [
+    "general",
     "implementer",
     "debugger",
     "test_engineer",

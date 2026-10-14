@@ -12,6 +12,7 @@ import {
   type Delivery,
   type InputAuthority,
   pendingInputKind,
+  roles,
   type Sender,
   startSchema,
   type Task,
@@ -185,15 +186,7 @@ export class Control {
       provider: p.id,
       capabilities: p.capabilities,
       metadata: p.metadata,
-      profiles: [
-        "researcher",
-        "reviewer",
-        "implementer",
-        "debugger",
-        "test_engineer",
-        "refactorer",
-        "security_reviewer",
-      ],
+      profiles: [...roles],
     }));
   }
 

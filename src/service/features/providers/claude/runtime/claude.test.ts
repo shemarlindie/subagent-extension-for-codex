@@ -1164,6 +1164,14 @@ const parity = {
   subagents: true,
 } as const;
 
+test("Claude frames the general profile as a coding agent and lets it write", async () => {
+  const { options } = await runWithPolicy(parity, "general"),
+    { append } = options.systemPrompt as { append: string };
+
+  assert.match(append, /You are an independent coding agent\./);
+  assert.match(append, /Follow the configured native permission mode/);
+});
+
 test("Claude parity policy leaves sandbox, tools and paths to the user's configuration and routes prompts to the approver", async () => {
   vi.stubEnv("USER_TOOLCHAIN_HOME", "/synthetic/toolchain");
   vi.stubEnv("CODEX_SUBAGENT_EXTENSION_TOKEN", "synthetic-service-token");

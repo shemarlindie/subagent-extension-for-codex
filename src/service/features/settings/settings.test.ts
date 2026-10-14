@@ -401,12 +401,13 @@ test("native model controls scope discovered models and derive reasoning choices
   assert.ok(sectionKeys(profiles).includes("reviewer_default_model"));
 
   // Model options carry display names and keep a saved custom ID.
-  const reviewer = profiles.rows.flatMap((row) =>
-    row.kind === "models" ? row.scopes : [],
-  )[1];
+  const scopes = profiles.rows.flatMap((row) =>
+      row.kind === "models" ? row.scopes : [],
+    ),
+    reviewer = scopes.find((scope) => scope.label === "Reviewer");
 
+  assert.equal(scopes[0]?.label, "General");
   assert.ok(reviewer);
-  assert.equal(reviewer.label, "Reviewer");
 
   assert.deepEqual(
     reviewer.model.options?.map((option) => option.label),

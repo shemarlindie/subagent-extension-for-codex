@@ -134,7 +134,7 @@ export async function claudeTurnOptions(
     systemPrompt: {
       type: "preset",
       preset: "claude_code",
-      append: `${parentEnvironment(c)}\n\nYou are an independent ${c.task.worker_profile}. Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Follow the configured native permission mode for tool execution."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
+      append: `${parentEnvironment(c)}\n\nYou are an independent ${c.task.worker_profile === "general" ? "coding agent" : c.task.worker_profile}. Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Follow the configured native permission mode for tool execution."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
     },
     hooks: {
       PreToolUse: [

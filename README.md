@@ -99,7 +99,7 @@ MCP reconnection. To check UI changes in Codex, see
 ## Working with tasks
 
 - **Workspace:** tasks default to `current_repo`, editing the approved checkout with its existing changes. Choose `worktree` to start from a committed revision on a separate branch (`agent/<task-id>` by default). The service never merges changes automatically. A worktree separates code; it does not contain the operating system.
-- **Profiles:** researcher, reviewer and security reviewer inspect only by default. Implementer, debugger, test engineer and refactorer can write. User settings control permissions and restrictions.
+- **Profiles:** researcher, reviewer and security reviewer inspect only by default. General, implementer, debugger, test engineer and refactorer can write; General is a role-neutral coding agent and the default for tasks started from the composer. User settings control permissions and restrictions.
 - **Conversation:** completed, failed and interrupted tasks accept follow-ups. During a turn, messages can steer at the next tool boundary, queue another turn, or interrupt and start a new turn. A plain interrupt pauses the queue.
 - **Review:** replies stream into Chat. Claude can send an immediate blocker update or a completion report after a successful turn. The Changes tab reads live Git changes; `get_agent_messages` and `get_agent_changes` let the parent retrieve replies and patches. Concurrent edits to files touched by the task can also appear in its changes.
 - **Continuation:** a later turn resumes the Claude session when its original worker and transcript are available; otherwise it starts a fresh session carrying the conversation. Removing a worktree keeps its branch, and the next turn recreates it.
