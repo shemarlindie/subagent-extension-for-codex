@@ -4,6 +4,7 @@ import {
   access,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   realpath,
   rm,
@@ -109,11 +110,21 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     const { version } = JSON.parse(await readFile("package.json", "utf8"));
 
     // Codex's own cache layout: plugins/cache/<marketplace>/<plugin>/<version>.
-    const installed = join(
+    const plugin = join(
       codexHome,
       "plugins/cache/shemarlindie/codex-subagent-extension",
-      version,
     );
+
+    // A published source must be the checkout's version, which the checks below expect.
+    const versions = await readdir(plugin);
+
+    assert.deepEqual(
+      versions,
+      [version],
+      `Codex installed ${versions.join(", ")}, but the checkout is ${version}`,
+    );
+
+    const installed = join(plugin, version);
 
     await access(join(installed, "dist/stdio.js"));
 
