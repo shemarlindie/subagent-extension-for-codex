@@ -22,6 +22,20 @@ export function Header() {
 
   // One full turn acknowledges the click, however quickly the refresh returns.
   const glyph = useRef<HTMLSpanElement>(null);
+  const newTaskFocus = useRef(false);
+
+  const openNewTask = () => {
+    newTaskFocus.current = true;
+    controller.newTasks.open();
+  };
+
+  const menuFinalFocus = () => {
+    if (!newTaskFocus.current) return true;
+    newTaskFocus.current = false;
+
+    // Closing the menu must not take focus back from the arriving composer.
+    return document.getElementById("new-task-message") ?? true;
+  };
 
   const refresh = () => {
       if (canAnimate(glyph.current)) {
@@ -157,7 +171,7 @@ export function Header() {
               align="end"
               sideOffset={4}
             >
-              <Menu.Popup className="menu-popup">
+              <Menu.Popup className="menu-popup" finalFocus={menuFinalFocus}>
                 {state.projectCandidate && (
                   <Menu.Item
                     className="menu-item"
@@ -189,7 +203,7 @@ export function Header() {
                     <Menu.Item
                       className="menu-item"
                       disabled={blocked}
-                      onClick={() => controller.newTasks.open()}
+                      onClick={openNewTask}
                     >
                       New task
                     </Menu.Item>

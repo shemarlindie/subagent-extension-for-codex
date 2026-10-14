@@ -29,16 +29,6 @@ type NewTaskComposerProps = { newTask: NewTaskState };
 
 const HINT = "Enter to start · Shift + Enter for a new line";
 
-/** Fields the Advanced task dialog receives from the composer. */
-const HANDOFF_FIELDS = [
-  "repository",
-  "description",
-  "worker",
-  "model",
-  "reasoning_effort",
-  "permission_mode",
-] as const satisfies (keyof DelegateValues)[];
-
 /** Why the composer's options are unavailable, for a failed read. */
 function readFailure(errors: NewTaskState["errors"]) {
   if (errors?.settings) {
@@ -150,11 +140,24 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
   const advanced = () => {
     const values = { ...form.getValues(), repository };
 
+    // Pending defaults are placeholders, not saved choices. Let Advanced
+    // fill them from its reads instead of pinning a blank worker or effort.
+    const draft = {
+      description: values.description,
+      model: values.model,
+      ...(values.repository ? { repository: values.repository } : {}),
+      ...(values.worker ? { worker: values.worker } : {}),
+      ...(values.reasoning_effort
+        ? { reasoning_effort: values.reasoning_effort }
+        : {}),
+      ...((statuses.settings === "ready" && statuses.workers === "ready") ||
+      "permission_mode" in savedAtMount
+        ? { permission_mode: values.permission_mode }
+        : {}),
+    };
+
     controller.run(() =>
-      controller.delegate(
-        values.worker || undefined,
-        Object.fromEntries(HANDOFF_FIELDS.map((key) => [key, values[key]])),
-      ),
+      controller.delegate(values.worker || undefined, draft),
     );
   };
 

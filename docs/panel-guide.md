@@ -137,7 +137,8 @@ button or, on narrow panels, **Panel actions**:
   - **Permission mode**. Read-only profiles show **Read only** instead.
 
   Workspace, revision and budgets use your settings defaults. **More
-  options…** opens Advanced task with the message and chips filled in. Escape
+  options…** opens Advanced task with the message and loaded choices filled in;
+  defaults still pending finish loading there. Escape
   in an empty message, **← Tasks** or selecting another task leaves the draft,
   which stays in memory until sent or the panel reloads. Changing the global
   project keeps it open; a chat scope closes it.
