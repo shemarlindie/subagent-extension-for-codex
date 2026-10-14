@@ -1051,8 +1051,9 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
   }
 });
 
-test("SSE requires authentication, streams the owner's revision on each change and drafts, and replays no events", async () => {
-  const dir = await realpath(await mkdtemp(join(tmpdir(), "ac-sse-")));
+/** A service with projects enabled, serving the console on a local port. */
+async function changeService(prefix: string) {
+  const dir = await realpath(await mkdtemp(join(tmpdir(), prefix)));
   const repository = join(dir, "repo");
   execFileSync("git", ["init", "-q", repository]);
 
@@ -1078,12 +1079,12 @@ test("SSE requires authentication, streams the owner's revision on each change a
   await waitForListening(server);
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 
-  const make = (id: string, owner: string) => ({
-    ...startSchema.parse({ repository: "/repo", description: "test" }),
+  const task = (id: string, owner: string) => ({
+    ...startSchema.parse({ repository, description: "test" }),
     id,
     title: "test",
     owner,
-    status: "queued" as const,
+    status: "completed" as const,
     created_at: now(),
     updated_at: now(),
     created_by: "user" as const,
@@ -1095,8 +1096,91 @@ test("SSE requires authentication, streams the owner's revision on each change a
     instructions: [],
   });
 
-  const a = make("a", "local"),
-    b = make("b", "other");
+  // Calls a user tool as the console does, with the owner's session cookie.
+  const userTool = async (owner: string, name: string, args: object) => {
+    const response = await fetch(`${base}/api/user-tools/${name}`, {
+      method: "POST",
+      headers: {
+        Cookie: `ac_session=${auth.session(owner)}`,
+        "Content-Type": "application/json",
+        "X-Codex-Subagent-Extension": "1",
+      },
+      body: JSON.stringify(args),
+    });
+
+    const body = (await response.json()) as {
+      result?: unknown;
+      error?: string;
+    };
+
+    assert.equal(response.status, 200, `${name}: ${body.error}`);
+
+    return body.result;
+  };
+
+  const close = async () => {
+    server.closeAllConnections();
+    await new Promise<void>((r) => server.close(() => r()));
+    await c.close();
+  };
+
+  return { c, auth, base, repository, task, userTool, close };
+}
+
+/** Polls until `ready` holds, so tests can wait on listener bookkeeping. */
+async function eventually(ready: () => boolean) {
+  for (let i = 0; i < 300 && !ready(); i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  assert.ok(ready());
+}
+
+/** An open console event stream and a reader that consumes it. */
+async function eventStream(base: string, headers: Record<string, string>) {
+  const abort = new AbortController();
+
+  const response = await fetch(base + "/api/events", {
+    headers,
+    signal: abort.signal,
+  });
+
+  assert.equal(response.status, 200);
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffered = "";
+
+  // Reads through `text`, returning it and what came before; keeps the rest.
+  const until = async (text: string) => {
+    while (!buffered.includes(text)) {
+      const { value, done } = await reader.read();
+      if (done) throw new Error(`Stream ended before ${text}`);
+      buffered += decoder.decode(value);
+    }
+
+    const end = buffered.indexOf(text) + text.length;
+    const read = buffered.slice(0, end);
+    buffered = buffered.slice(end);
+
+    return read;
+  };
+
+  const close = async () => {
+    abort.abort();
+    await reader.cancel().catch(() => {});
+  };
+
+  return { until, close };
+}
+
+const changeCount = (text: string) => text.split("event: change").length - 1;
+
+test("SSE requires authentication, streams each owner's revision on its changes and drafts, replays no events and releases its listeners", async () => {
+  const { c, auth, base, repository, task, userTool, close } =
+    await changeService("ac-sse-");
+
+  const a = task("a", "local"),
+    b = task("b", "other");
 
   c.store.save(a);
   c.store.save(b);
@@ -1108,49 +1192,35 @@ test("SSE requires authentication, streams the owner's revision on each change a
 
   try {
     assert.equal((await fetch(base + "/api/events")).status, 401);
-    const abort = new AbortController();
 
-    const response = await fetch(base + "/api/events", {
-      headers: { Authorization: "Bearer token" },
-      signal: abort.signal,
+    const local = await eventStream(base, { Authorization: "Bearer token" });
+
+    const other = await eventStream(base, {
+      Cookie: `ac_session=${auth.session("other")}`,
     });
 
-    assert.equal(response.status, 200);
-    const reader = response.body!.getReader();
-    const decoder = new TextDecoder();
-    let buffered = "";
+    const change = (owner = "local") =>
+      `event: change\ndata: ${c.store.revision(owner)}\n\n`;
 
-    // Reads through `text`, returning it and what came before; keeps the rest.
-    const until = async (text: string) => {
-      while (!buffered.includes(text)) {
-        const { value, done } = await reader.read();
-        if (done) throw new Error(`Stream ended before ${text}`);
-        buffered += decoder.decode(value);
-      }
+    const initial = await local.until(change());
+    await other.until(change("other"));
 
-      const end = buffered.indexOf(text) + text.length;
-      const read = buffered.slice(0, end);
-      buffered = buffered.slice(end);
-
-      return read;
-    };
-
-    const change = () =>
-      `event: change\ndata: ${c.store.revision("local")}\n\n`;
-
-    const initial = await until(change());
-
-    await until(
+    await local.until(
       'event: delta\ndata: {"task_id":"a","message_id":"msg_a","text":"Hel","offset":0}\n\n',
     );
 
     // Each write, deletion and project change sends the revision again.
     c.store.eventOpaque(a, "test.live");
-    const afterEvent = await until(change());
-    await c.projects.register(repository);
-    const afterProject = await until(change());
+    const afterEvent = await local.until(change());
+
+    await userTool("local", "register_user_agent_project", { repository });
+    const afterProject = await local.until(change());
+    // The project list is shared, so the other owner hears of it too, and of
+    // nothing in between: the local write sent it no change.
+    assert.equal(changeCount(await other.until(change("other"))), 1);
+
     c.store.delete(a.id, "local");
-    const afterDelete = await until(change());
+    const afterDelete = await local.until(change());
 
     const revisions = [initial, afterEvent, afterProject, afterDelete].map(
       (text) => /event: change\ndata: (.+)\n/.exec(text)?.[1],
@@ -1158,11 +1228,12 @@ test("SSE requires authentication, streams the owner's revision on each change a
 
     assert.equal(new Set(revisions).size, 4);
 
-    // Another owner's writes send nothing; a draft still streams.
+    // Another owner's writes reach only its stream; a draft still streams.
     c.store.eventOpaque(b, "test.secret_live");
+    assert.equal(changeCount(await other.until(change("other"))), 1);
     c.drafts.append("local", "x", "msg_x", "lo");
 
-    const delta = await until(
+    const delta = await local.until(
       'event: delta\ndata: {"task_id":"x","message_id":"msg_x","offset":0,"text":"lo"}\n\n',
     );
 
@@ -1180,12 +1251,52 @@ test("SSE requires authentication, streams the owner's revision on each change a
     assert.ok(!streamed.includes("test."));
     assert.ok(!streamed.includes("id:"));
 
-    abort.abort();
-    await reader.cancel().catch(() => {});
+    // Disconnected streams stop listening, so reconnects don't accumulate.
+    await local.close();
+    await other.close();
+
+    await eventually(
+      () =>
+        c.store.bus.listenerCount("change") === 0 &&
+        c.store.bus.listenerCount("draft") === 0,
+    );
   } finally {
-    server.closeAllConnections();
-    await new Promise<void>((r) => server.close(() => r()));
-    await c.close();
+    await close();
+  }
+});
+
+test("a held update wait on the user-tools route returns the new revision when a task is deleted", async () => {
+  const { c, task, userTool, close } = await changeService("ac-wait-");
+  c.store.save(task("a", "local"));
+
+  try {
+    const before = c.store.revision("local");
+
+    const waiting = userTool("local", "wait_user_agent_updates", {
+      after: before,
+      wait_ms: 25_000,
+    });
+
+    // If an assertion fails first, closing the server rejects the wait.
+    waiting.catch(() => {});
+
+    // The wait is held once it listens for changes.
+    await eventually(() => c.store.bus.listenerCount("change") === 1);
+
+    const deleting = Date.now();
+
+    assert.deepEqual(
+      await userTool("local", "delete_user_agent_task", { task_id: "a" }),
+      { status: "deleted" },
+    );
+
+    const { revision } = (await waiting) as { revision: string };
+    // Woken by the deletion, well before its 25 s wait would end.
+    assert.ok(Date.now() - deleting < 10_000);
+    assert.notEqual(revision, before);
+    assert.equal(revision, c.store.revision("local"));
+  } finally {
+    await close();
   }
 });
 
