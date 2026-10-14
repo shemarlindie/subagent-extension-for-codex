@@ -80,6 +80,20 @@ box height as the task session's `composerArrival`, and the inspector's
 from that height. It also sets `composerFocus`, and Chat's composer takes
 focus once the task's events load and it is enabled.
 
+Selecting an existing task from the draft also uses `useArrivalMotion`: the
+draft's ref cleanup measures its box before removal, so the selected task's
+header and tabs open while its composer settles from that height. The task's
+saved tab and composer focus behavior stay intact. Arrival animations cancel
+when the destination changes or the inspector unmounts.
+
+When an existing task switches to the composer, `useNewTaskMotion` reverses
+that motion. It measures the outgoing view before removal and briefly collapses
+inert visual copies of its header and tabs while the draft box expands from
+Chat's box height. The task's content unmounts immediately; completion or a
+navigation change removes the copies and cancels the animations. During this
+transition, the draft skips its screen fade so the outgoing copies remain
+visible as they collapse. Both directions animate the tab strip's spacing.
+
 ## State ownership and component patterns
 
 The controller owns UI state and async coordination. Components subscribe to immutable snapshots and call controller actions. Forms own their editable drafts through React Hook Form, so refreshes do not replace field nodes or reset unsent input. Pure rendering components can receive props without needing controller access. Feature and component tests live beside those modules; the Vitest and TypeScript test configurations discover them separately from production builds.

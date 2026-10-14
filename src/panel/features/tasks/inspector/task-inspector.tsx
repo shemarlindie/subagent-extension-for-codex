@@ -17,6 +17,7 @@ import { TaskHeaderSkeleton } from "./task-inspector-skeleton";
 import { TaskMenu } from "./task-menu";
 import { TaskTitle } from "./task-title";
 import { useArrivalMotion } from "./use-arrival-motion";
+import { useNewTaskMotion } from "./use-new-task-motion";
 
 export function TaskInspector() {
   const controller = useController(),
@@ -25,7 +26,17 @@ export function TaskInspector() {
 
   const { detailRef, headerRef, stacked } = useStackedLayout(task?.id);
 
-  useArrivalMotion(detailRef, task?.id);
+  const newTaskViewRef = useArrivalMotion(
+    detailRef,
+    state.selected ?? undefined,
+    Boolean(state.newTask),
+  );
+
+  const taskViewRef = useNewTaskMotion(
+    detailRef,
+    Boolean(state.newTask),
+    task?.id,
+  );
 
   const loading = !task && Boolean(state.selected) && state.taskListLoading;
   // Hosts without a restored selection pick a task once the list loads.
@@ -33,8 +44,13 @@ export function TaskInspector() {
 
   if (state.newTask) {
     return (
-      <section id="detail" className="detail has-task" aria-label="New task">
-        <NewTaskView newTask={state.newTask} />
+      <section
+        ref={detailRef}
+        id="detail"
+        className="detail has-task"
+        aria-label="New task"
+      >
+        <NewTaskView newTask={state.newTask} viewRef={newTaskViewRef} />
       </section>
     );
   }
@@ -50,7 +66,7 @@ export function TaskInspector() {
       aria-busy={loading || undefined}
     >
       {task || loading ? (
-        <div key={state.selected} className="task-view">
+        <div ref={taskViewRef} key={state.selected} className="task-view">
           <div ref={headerRef} className="task-header">
             <LoadingSwap
               className="task-header-loading-swap"

@@ -119,7 +119,12 @@ Global launch offers two ways to start a task, from the **New task** split
 button or, on narrow panels, **Panel actions**:
 
 - **New task** opens an empty chat in the inspector, with a **New task** draft
-  row at the top of the task list. Your first message becomes the request:
+  row at the top of the task list.
+  Opening it from an existing task folds the task header and tabs away while
+  the composer expands to show the draft options.
+  Selecting an existing task from the draft plays the opening transition too,
+  restoring that task's saved tab.
+  Your first message becomes the request:
   Enter starts the task and opens it on Chat, and Shift+Enter adds a line.
   The composer sits where Chat's does; when the task starts, its header and
   tabs ease in above while the composer settles in place and keeps focus for

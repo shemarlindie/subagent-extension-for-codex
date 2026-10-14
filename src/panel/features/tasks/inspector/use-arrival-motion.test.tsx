@@ -17,33 +17,49 @@ afterEach(() => {
 
 type ArrivalProps = {
   taskId?: string;
+  composing?: boolean;
 };
 
-function Arrival({ taskId }: ArrivalProps) {
+function Arrival({ taskId, composing = false }: ArrivalProps) {
   const ref = useRef<HTMLDivElement>(null);
-  useArrivalMotion(ref, taskId);
+  const draftRef = useArrivalMotion(ref, taskId, composing);
+
+  if (composing) {
+    return (
+      <div ref={draftRef} key="draft">
+        <div className="chat-composer-box new-task-box" />
+      </div>
+    );
+  }
 
   return (
     <div ref={ref}>
       <div className="task-header" />
       <div className="evidence">
-        <div className="tabs" />
+        <div className="tabs" style={{ marginTop: 20 }} />
       </div>
       <div className="chat-composer-box" />
     </div>
   );
 }
 
-function content(controller: Controller, taskId?: string) {
+function content(controller: Controller, taskId?: string, composing = false) {
   return (
     <ControllerContext value={controller}>
-      <Arrival taskId={taskId} />
+      <Arrival taskId={taskId} composing={composing} />
     </ControllerContext>
   );
 }
 
 function mockLayout(reduced = false) {
-  const animate = vi.fn();
+  const animations: { cancel: ReturnType<typeof vi.fn> }[] = [];
+
+  const animate = vi.fn(() => {
+    const animation = { cancel: vi.fn() };
+    animations.push(animation);
+
+    return animation;
+  });
 
   const original = Object.getOwnPropertyDescriptor(
     HTMLElement.prototype,
@@ -63,6 +79,7 @@ function mockLayout(reduced = false) {
         "task-header": 64.3984375,
         tabs: 38.5,
         "chat-composer-box": 92.25,
+        "chat-composer-box new-task-box": 168.5,
       };
 
       return new DOMRect(0, 0, 400, heights[this.className] ?? 0);
@@ -77,6 +94,7 @@ function mockLayout(reduced = false) {
 
   return {
     animate,
+    animations,
     restore() {
       if (original) {
         Object.defineProperty(HTMLElement.prototype, "animate", original);
@@ -109,10 +127,19 @@ test("arrival settles each element at its fractional layout height only once", (
       [
         index === 2
           ? { height: "168.5px", overflow: "hidden" }
-          : { height: "0px", opacity: 0, overflow: "hidden" },
+          : expect.objectContaining({
+              height: "0px",
+              opacity: 0,
+              overflow: "hidden",
+              marginTop: "0px",
+            }),
         index === 2
           ? { height: `${height}px`, overflow: "hidden" }
-          : { height: `${height}px`, opacity: 1, overflow: "hidden" },
+          : expect.objectContaining({
+              height: `${height}px`,
+              opacity: 1,
+              overflow: "hidden",
+            }),
       ],
       { duration: MOTION.slow, easing: MOTION.easing },
     );
@@ -121,6 +148,14 @@ test("arrival settles each element at its fractional layout height only once", (
   expect(
     controller.session.get("task", "task-1").composerArrival,
   ).toBeUndefined();
+
+  expect(motion.animate.mock.calls[1]).toMatchObject([
+    [
+      expect.objectContaining({ marginTop: "0px" }),
+      expect.objectContaining({ marginTop: "20px" }),
+    ],
+    { duration: MOTION.slow },
+  ]);
 
   view.unmount();
   render(content(controller, "task-1"));
@@ -143,4 +178,81 @@ test("reduced motion consumes arrival without animating", (t) => {
   expect(
     controller.session.get("task", "task-1").composerArrival,
   ).toBeUndefined();
+});
+
+test("selecting an existing task from the draft uses the measured composer height once", (t) => {
+  const { controller } = setup();
+  const motion = mockLayout();
+
+  t.onTestFinished(() => {
+    motion.restore();
+    controller.dispose();
+  });
+
+  const view = render(content(controller, undefined, true));
+  view.rerender(content(controller, "existing-task"));
+  expect(motion.animate).toHaveBeenCalledTimes(3);
+
+  expect(motion.animate).toHaveBeenLastCalledWith(
+    [
+      { height: "168.5px", overflow: "hidden" },
+      { height: "92.25px", overflow: "hidden" },
+    ],
+    { duration: MOTION.slow, easing: MOTION.easing },
+  );
+
+  expect(
+    controller.session.get("task", "existing-task").composerArrival,
+  ).toBeUndefined();
+
+  view.rerender(content(controller, "another-task"));
+  expect(motion.animate).toHaveBeenCalledTimes(3);
+});
+
+test("leaving the draft without selecting a task does not animate a later selection", (t) => {
+  const { controller } = setup();
+  const motion = mockLayout();
+
+  t.onTestFinished(() => {
+    motion.restore();
+    controller.dispose();
+  });
+
+  const view = render(content(controller, undefined, true));
+  view.rerender(content(controller));
+  view.rerender(content(controller, "existing-task"));
+  expect(motion.animate).not.toHaveBeenCalled();
+});
+
+test("selecting from the draft respects reduced motion", (t) => {
+  const { controller } = setup();
+  const motion = mockLayout(true);
+
+  t.onTestFinished(() => {
+    motion.restore();
+    controller.dispose();
+  });
+
+  const view = render(content(controller, undefined, true));
+  view.rerender(content(controller, "existing-task"));
+  expect(motion.animate).not.toHaveBeenCalled();
+});
+
+test("leaving an arriving task cancels each animation before another view opens", (t) => {
+  const { controller } = setup();
+  const motion = mockLayout();
+
+  t.onTestFinished(() => {
+    motion.restore();
+    controller.dispose();
+  });
+
+  const view = render(content(controller, undefined, true));
+  view.rerender(content(controller, "existing-task"));
+  expect(motion.animations).toHaveLength(3);
+  view.rerender(content(controller, undefined, true));
+
+  for (const animation of motion.animations) {
+    expect(animation.cancel).toHaveBeenCalledOnce();
+  }
 });
