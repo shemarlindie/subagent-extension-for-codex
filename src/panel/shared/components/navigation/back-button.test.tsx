@@ -7,13 +7,15 @@ import { BackButton } from "./back-button";
 
 afterEach(cleanup);
 
-test("uses the supplied accessible label without the decorative arrow", () => {
+test("uses the supplied accessible label for the caret icon button", () => {
   render(<BackButton label="Tasks" className="custom-back" />);
   const button = screen.getByRole("button", { name: /^Tasks$/ });
 
   expect(button.getAttribute("type")).toBe("button");
   expect(button.classList.contains("custom-back")).toBe(true);
-  expect(screen.queryByRole("button", { name: "← Tasks" })).toBeNull();
+  expect(button.textContent).toBe("");
+  expect(button.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+  expect(button.classList.contains("toolbar-icon-button")).toBe(true);
 });
 
 test("invokes the supplied handler and blocks it when disabled", async () => {

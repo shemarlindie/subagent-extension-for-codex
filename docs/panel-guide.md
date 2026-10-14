@@ -17,7 +17,7 @@ change the conversation.
 - **Thread launch:** scopes tasks to the conversation, with a read-only project
   name/path beside **Delegated Work** in the header. The project name is bold,
   separated from the extension name by a pipe. **Settings** remains available
-  in the header and opens a full-width page with **← Tasks** to return.
+  in the header and opens a full-width page with the **Back to Tasks** caret button to return.
   **Add chat project** is the first header action when
   registration is needed.
 - **Global launch:** shows all conversations and offers the project selector,
@@ -55,7 +55,7 @@ count-and-task skeleton in place of its summary.
 ### Manage projects
 
 **Manage** is available only in global mode. It opens a full-width Projects page
-with **← Tasks** to return to the previous task view. The page lists saved names and
+with a **Back to Tasks** caret button beside the title to return to the previous task view. The page lists saved names and
 repository paths, including parent approvals. **Add project** opens a focused
 dialog for entering a path or using the service host's folder picker.
 The saved-project list shows name, path and action placeholders while its first
@@ -139,7 +139,7 @@ button or, on narrow panels, **Panel actions**:
   Workspace, revision and budgets use your settings defaults. **More
   options…** opens Advanced task with the message and loaded choices filled in;
   defaults still pending finish loading there. Escape
-  in an empty message, **← Tasks** or selecting another task leaves the draft,
+  in an empty message, using the **Back to Tasks** caret button or selecting another task leaves the draft,
   which stays in memory until sent or the panel reloads. Changing the global
   project keeps it open; a chat scope closes it.
 
@@ -168,7 +168,7 @@ Enter or an outside click saves, Escape cancels, and blank/failed saves stay ope
 
 ### Edit settings
 
-**Settings** opens a full-width page with **← Tasks** to return. It uses
+**Settings** opens a full-width page with the **Back to Tasks** caret button to return. It uses
 server-defined sections and rows, supports per-section resets, validates
 budgets, and asks before discarding unsaved edits. **Save** sits in the page
 header, keeps the page open, and sends only changed fields through the app-only
@@ -425,7 +425,7 @@ message delivery offer text to copy manually.
 Selecting a task can share its identity when supported. Context sharing never
 blocks inspection or triggers an automatic follow-up.
 
-The circled ellipsis beside the task status opens **Task actions**, including handoff
+The circled ellipsis to the right of the task heading opens **Task actions**, including handoff
 and deletion. **Delete task** stops running/queued/waiting work, then
 removes task history, requests and its worktree/branch/refs.
 Current-repo files stay intact. **Also delete the agent task**, off by default,

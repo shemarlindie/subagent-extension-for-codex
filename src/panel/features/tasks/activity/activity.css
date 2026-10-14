@@ -261,55 +261,6 @@
   background: inherit;
   opacity: 0.15;
 }
-/* On narrow screens Back shares the status line. */
-.task-topline {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  /* The 14px icon is centered in a 32px button: allow 9px beyond the content edge. */
-  padding-inline: var(--detail-pad) calc(var(--detail-pad) - 9px);
-}
-@media (max-width: 640px) {
-  .task-topline {
-    padding-inline-start: calc(var(--detail-pad) - 3px);
-  }
-}
-.task-meta {
-  flex: 1;
-  min-width: 0;
-}
-.task-meta .eyebrow {
-  gap: 0.3em;
-  /* Clip a long line without cutting off the status dot's halo. */
-  overflow: clip;
-  overflow-clip-margin: 4px;
-  white-space: nowrap;
-}
-/* Stays at the row's end whatever the live detail does. */
-.task-topline .task-menu {
-  flex: none;
-  align-self: flex-start;
-}
-.task-topline .eyebrow-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-/* Only the live detail gives way, so the labels before it never move. */
-.eyebrow-live {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.eyebrow-live:empty {
-  display: none;
-}
-/* Narrow screens give live detail the worker's room; Details still names the worker. */
-@media (max-width: 400px) {
-  .eyebrow[data-live] .eyebrow-worker {
-    display: none;
-  }
-}
 /* Timeline: the rail runs between the first and last markers rather than past them. */
 .timeline-item {
   /* Rail to content, and item top to marker centre. */

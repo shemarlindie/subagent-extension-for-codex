@@ -39,9 +39,6 @@
   body[data-selected="false"] #task-rail {
     animation: motion-slide-start var(--motion-base) var(--ease-out);
   }
-  .task-inspector-back {
-    display: inline-block;
-  }
   /* Tabs run edge to edge, scrolling past the content margin and resting inside it. */
   .evidence {
     --tab-strip-inset: 0px;

@@ -14,26 +14,17 @@ export function TaskHeaderSkeleton({ title }: TaskHeaderSkeletonProps) {
       className="task-inspector-skeleton-header"
     >
       <div className="task-topline">
-        <SkeletonShape className="task-inspector-skeleton-back" />
-        <div className="task-meta">
-          <div className="eyebrow">
-            <span className="eyebrow-status">
-              <SkeletonShape className="task-inspector-skeleton-status-dot" />
-              <SkeletonShape className="task-inspector-skeleton-status" />
-            </span>
-            <span className="eyebrow-worker">
-              <SkeletonShape className="task-inspector-skeleton-worker" />
-            </span>
-          </div>
+        <div className="task-heading">
+          <SkeletonShape className="task-inspector-skeleton-back" />
+          <h1 className="task-title task-inspector-skeleton-title">
+            <SkeletonShape
+              className="task-inspector-skeleton-title-shape"
+              measureText={title ?? ""}
+            />
+          </h1>
         </div>
         <SkeletonShape className="task-inspector-skeleton-menu" />
       </div>
-      <h1 className="task-title task-inspector-skeleton-title">
-        <SkeletonShape
-          className="task-inspector-skeleton-title-shape"
-          measureText={title ?? ""}
-        />
-      </h1>
     </LoadingSkeleton>
   );
 }

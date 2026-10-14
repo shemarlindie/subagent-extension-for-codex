@@ -1,5 +1,12 @@
 .back {
-  padding: 2px;
+  color: var(--muted);
+}
+.back:not(:disabled):is(:hover, :focus-visible) {
+  color: var(--text);
+}
+
+.back-caret {
+  transform: rotate(90deg);
 }
 
 .page-frame {
@@ -12,7 +19,7 @@
 }
 .page-frame-inner {
   min-height: 100%;
-  padding: 0 18px 18px;
+  padding-bottom: 18px;
 }
 .page-frame-heading {
   position: sticky;
@@ -23,11 +30,12 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 18px;
-  padding-block: 9px;
+  /* Account for the caret inset while keeping actions on the content edge. */
+  padding: 9px 18px 9px 6px;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
   width: 100%;
-  max-width: 880px;
+  max-width: 916px;
   margin-inline: auto;
 }
 .page-frame-title {
@@ -46,6 +54,7 @@
   outline: none;
 }
 .page-frame-content {
-  max-width: 880px;
+  padding-inline: 18px;
+  max-width: 916px;
   margin-inline: auto;
 }

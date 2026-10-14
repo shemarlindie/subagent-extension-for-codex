@@ -343,9 +343,6 @@ header .toolbar {
 .task-view {
   padding: 8px 0 22px;
 }
-.task-header .task-title {
-  padding-inline: var(--detail-pad);
-}
 /* How far the tab bar sits in from the panel's edge, and the padding that lines
    its text up with the content; strips under the tabs match it. */
 .evidence {
@@ -361,13 +358,6 @@ header .toolbar {
 .detail:not(.has-task) {
   display: grid;
   place-items: center;
-}
-.eyebrow {
-  font-size: 11px;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 h1 {
   font-size: 20px;
@@ -628,10 +618,6 @@ footer {
 .form-note--first {
   margin-top: 0;
 }
-.task-inspector-back {
-  display: none;
-}
-
 /* Project dropdown default; the context bar and narrow rules override it. */
 .select-trigger {
   width: 100%;

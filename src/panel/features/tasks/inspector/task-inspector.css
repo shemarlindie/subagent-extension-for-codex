@@ -1,34 +1,37 @@
+/* Desktop keeps the title on the content edge while the task list is visible. */
+.task-topline {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  /* The 14px icon is centered in a 32px button: allow 9px beyond the content edge. */
+  padding-inline: var(--detail-pad) calc(var(--detail-pad) - 9px);
+}
+.task-topline .task-inspector-back {
+  display: none;
+}
+.task-heading {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.task-heading .task-title {
+  flex: 1;
+  min-width: 0;
+}
+.task-topline .task-menu {
+  flex: none;
+}
 .task-inspector-skeleton-header {
   min-width: 0;
 }
 .task-inspector-skeleton-back {
   display: none;
 }
-.task-inspector-skeleton-status-dot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-.task-inspector-skeleton-status,
-.task-inspector-skeleton-worker {
-  flex: none;
-  height: 8px;
-  border-radius: 999px;
-}
-.task-inspector-skeleton-header .eyebrow-worker {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-}
-.task-inspector-skeleton-status {
-  width: 55px;
-}
-.task-inspector-skeleton-worker {
-  width: 100px;
-}
 .task-inspector-skeleton-menu {
   flex: none;
+  margin-inline-start: auto;
   width: 32px;
   height: 32px;
   border-radius: 6px;
@@ -45,10 +48,19 @@
   height: 1lh;
 }
 @media (max-width: 640px) {
+  .task-topline .task-inspector-back {
+    display: inline-flex;
+  }
+  /* Narrow layouts show Back; offset its inset with container padding. */
+  .task-topline {
+    padding-inline-start: calc(var(--detail-pad) - 12px);
+  }
   .task-inspector-skeleton-back {
     display: block;
-    width: 42px;
-    height: 19px;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
   }
 }
 .detail {

@@ -33,8 +33,8 @@ export function PageFrame({
     >
       <div className="page-frame-inner">
         <div className="page-frame-heading">
-          {back}
           <div className="page-frame-title">
+            {back}
             <h1 id={headingId} ref={heading} tabIndex={-1}>
               {title}
             </h1>

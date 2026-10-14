@@ -1,20 +1,17 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
-import { currentActivityStatus } from "../../../../shared/tasks/activity/activity-status";
 import {
   useController,
   useSnapshot,
 } from "../../../app/state/controller-context";
-import { profileLabel, selectedTask } from "../../../app/state/selectors";
+import { selectedTask } from "../../../app/state/selectors";
 import { Icon } from "../../../shared/components/icons/icons";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
-import { MotionContent } from "../../../shared/components/motion/motion-content";
 import { BackButton } from "../../../shared/components/navigation/back-button";
 import { Notice } from "../../../shared/components/notice/notice";
 import { NewTaskView } from "../../delegation/new-task/new-task-view";
 import { projectApproved } from "../../projects/selectors";
 import { EvidenceTabs } from "../evidence/evidence-tabs";
-import { TaskStatus } from "../shared/status";
 import { TaskInspectorLoading } from "./task-inspector-loading";
 import { TaskHeaderSkeleton } from "./task-inspector-skeleton";
 import { TaskMenu } from "./task-menu";
@@ -29,18 +26,6 @@ export function TaskInspector() {
   const { detailRef, headerRef, stacked } = useStackedLayout(task?.id);
 
   useArrivalMotion(detailRef, task?.id);
-
-  // Only a running task has live detail beyond its status label.
-  // Events load after selection; until then the label alone is accurate.
-  const live =
-    task?.status === "running" && !task.pending_input && state.events.length
-      ? currentActivityStatus(state.events, task)
-      : undefined;
-
-  const displayTask =
-    task?.status === "running" && live?.state === "failed"
-      ? { ...task, status: "failed" as const }
-      : task;
 
   const loading = !task && Boolean(state.selected) && state.taskListLoading;
   // Hosts without a restored selection pick a task once the list loads.
@@ -76,44 +61,17 @@ export function TaskInspector() {
               {task ? (
                 <>
                   <div className="task-topline">
-                    <BackButton
-                      id="back"
-                      className="task-inspector-back"
-                      label="Tasks"
-                      onClick={() => controller.back()}
-                    />
-                    <div className="task-meta">
-                      <div
-                        className="eyebrow"
-                        data-live={
-                          live && live.state !== "failed" ? "" : undefined
-                        }
-                      >
-                        <span className="eyebrow-status">
-                          <TaskStatus
-                            task={displayTask ?? task}
-                            activity={live}
-                          />
-                        </span>
-                        <span className="eyebrow-worker">
-                          {task.provider} · {profileLabel(task.worker_profile)}
-                        </span>
-                        {/* Trails the line so changing detail never shifts the labels before it. */}
-                        <span className="eyebrow-live" role="status">
-                          {live && (
-                            <>
-                              <span aria-hidden="true">· </span>
-                              <MotionContent changeKey={live.text}>
-                                {live.text}
-                              </MotionContent>
-                            </>
-                          )}
-                        </span>
-                      </div>
+                    <div className="task-heading">
+                      <BackButton
+                        id="back"
+                        className="task-inspector-back"
+                        label="Tasks"
+                        onClick={() => controller.back()}
+                      />
+                      <TaskTitle task={task} />
                     </div>
                     <TaskMenu task={task} />
                   </div>
-                  <TaskTitle task={task} />
                   {state.projectsLoaded &&
                     !projectApproved(state.projects, task.repository) && (
                       <Notice>
