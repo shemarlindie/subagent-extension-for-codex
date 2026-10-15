@@ -50,7 +50,8 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
 
   const ready = Boolean(task && state.chat?.task === task.id);
 
-  const newFrom = useNewMessagesFrom(task, ready);
+  const divider = useNewMessagesFrom(task, ready);
+  const newFrom = divider.from;
 
   const [reading] = useSessionState(
     "task",
@@ -72,7 +73,13 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
     reportPositionRestored: true,
     itemAttribute: "data-chat-item",
     focus:
-      newFrom === undefined ? undefined : { id: NEW_MESSAGES_ID, request: 1 },
+      newFrom === undefined
+        ? undefined
+        : {
+            id: NEW_MESSAGES_ID,
+            request: divider.request,
+            reveal: divider.reveal,
+          },
   });
 
   useMarkSeen({ task, ready: ready && positionRestored, atLatest: pinned });

@@ -73,14 +73,17 @@ function setup(
 
   const getSnapshot = controller.getSnapshot.bind(controller);
   let snapshotBusy = snapshot.busy;
+  let snapshotMark = snapshot.newMark;
   let visibleSnapshot = snapshot;
 
   vi.spyOn(controller, "getSnapshot").mockImplementation(() => {
-    const busy = getSnapshot().busy;
+    const { busy, newMark } = getSnapshot();
 
-    if (busy !== snapshotBusy) {
+    // Actions that change these show here; the rest of the snapshot stays fixed.
+    if (busy !== snapshotBusy || newMark !== snapshotMark) {
       snapshotBusy = busy;
-      visibleSnapshot = { ...snapshot, busy };
+      snapshotMark = newMark;
+      visibleSnapshot = { ...snapshot, busy, newMark };
     }
 
     return visibleSnapshot;
@@ -1396,6 +1399,112 @@ test("a failed send keeps the draft and shows why", async () => {
   );
 
   assert.equal((composer as HTMLTextAreaElement).value, "Keep me");
+});
+
+const replyItems = (): ChatItem[] => [
+  {
+    kind: "message",
+    id: "response",
+    event_id: 7,
+    message: {
+      id: "response",
+      event_id: 7,
+      timestamp: "2026-10-09T12:00:00Z",
+      turn: 1,
+      from: "worker",
+      kind: "message",
+      text: "Response text",
+    },
+  },
+  {
+    kind: "outcome",
+    id: "outcome",
+    event_id: 8,
+    timestamp: "2026-10-09T12:00:01Z",
+    turn: 1,
+    outcome: "completed",
+    runtime_ms: 1000,
+    cost_usd: 0,
+  },
+];
+
+test("a reply's Mark as unseen from here marks the task unseen from that reply", async () => {
+  const { tool, task, view } = setup({}, [], replyItems());
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Mark as unseen from here" }),
+  );
+
+  await waitFor(() =>
+    assert.deepEqual(
+      tool.mock.calls.filter(
+        ([name]) => name === "mark_user_agent_task_unseen_from",
+      ),
+      [["mark_user_agent_task_unseen_from", { task_id: task.id, event_id: 7 }]],
+    ),
+  );
+
+  // The New divider goes straight above the reply that was marked.
+  const divider = view.getByRole("separator", { name: "New messages" });
+  const reply = view.container.querySelector('[data-chat-item="response"]');
+  assert.ok(reply);
+
+  assert.ok(
+    divider.compareDocumentPosition(reply) & Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+});
+
+test("marking unseen from a reply scrolls its New divider into view only when it is out of view", async () => {
+  // Just below the 200 px viewport; the history scrolls at most 400 px.
+  let dividerTop = 200;
+
+  const bounds = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: HTMLElement) {
+      const rect = (top: number, height: number) =>
+        ({
+          top,
+          bottom: top + height,
+          left: 0,
+          right: 300,
+          width: 300,
+          height,
+        }) as DOMRect;
+
+      if (this.classList.contains("chat-timeline")) return rect(0, 200);
+
+      if (this.getAttribute("data-chat-item") === "new-messages") {
+        return rect(dividerTop, 20);
+      }
+
+      return rect(0, 0);
+    });
+
+  onTestFinished(() => bounds.mockRestore());
+
+  const { view } = setup({}, [], replyItems());
+  scrollIntoHistory(view);
+
+  const history = view.getByRole("region", { name: "Chat history" });
+  const before = history.scrollTop;
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Mark as unseen from here" }),
+  );
+
+  await waitFor(() => assert.equal(history.scrollTop - before, 200));
+
+  dividerTop = 60;
+  scrollIntoHistory(view);
+  const shown = history.scrollTop;
+
+  // A second mark whose divider is already in view leaves the reader where they are.
+  fireEvent.click(
+    view.getByRole("button", { name: "Mark as unseen from here" }),
+  );
+
+  await act(async () => {});
+  assert.equal(history.scrollTop, shown);
 });
 
 const seenNotes: ChatItem[] = Array.from({ length: 6 }, (_, index) => ({

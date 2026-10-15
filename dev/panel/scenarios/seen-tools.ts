@@ -8,6 +8,7 @@ import { previewEvents, previewTasks } from "./fixtures";
 /** Seen tools the browser fixtures answer by changing what the user has seen in memory. */
 export const PREVIEW_SEEN_TOOLS = [
   "mark_user_agent_task_seen",
+  "mark_user_agent_task_unseen_from",
   "mark_user_agent_tasks_seen",
 ];
 
@@ -87,6 +88,15 @@ export function previewSeenTool(name: string, args: Record<string, unknown>) {
   }
 
   const id = known(args.task_id);
+
+  if (name === "mark_user_agent_task_unseen_from") {
+    const mark = markFor(id);
+    mark.through = Math.min(Number(args.event_id) - 1, newest(id));
+    mark.unseen = false;
+
+    return previewSeen(id);
+  }
+
   const through = typeof args.through === "number" ? args.through : undefined;
 
   if (args.seen) see(id, through);

@@ -165,3 +165,47 @@ test("the list takes the service's marker, so a task reopened later divides at t
     task({ id: "a", unseen: true, seen_through: 9 }),
   );
 });
+
+test("marking unseen from a message moves the divider at once, and back if the service fails", async () => {
+  const open = task({ id: "a", unseen: true, seen_through: 2 });
+  const { seen, tool, snapshot } = setup([open], "a");
+  let fail!: (error: Error) => void;
+
+  tool.mockReturnValueOnce(
+    new Promise((_resolve, reject) => {
+      fail = reject;
+    }),
+  );
+
+  const marking = seen.markUnseenFrom(open, 5);
+  assert.deepEqual(snapshot().newMark, { task: "a", through: 4, revision: 1 });
+
+  fail(new Error("offline"));
+  await assert.rejects(marking, /offline/);
+  assert.equal(snapshot().newMark, undefined);
+
+  // The failed mark no longer holds the task, so reading it sees it again.
+  await seen.read(open, 6);
+
+  assert.deepEqual(tool.mock.calls.at(-1), [
+    "mark_user_agent_task_seen",
+    { task_id: "a", seen: true, through: 6 },
+  ]);
+});
+
+test("marking unseen from a message sends its event, and the open task stays unseen while read", async () => {
+  const open = task({ id: "a" });
+  const { seen, tool, unseen } = setup([open], "a");
+
+  tool.mockResolvedValueOnce({ unseen: true, through: 3 } as never);
+  await seen.markUnseenFrom(open, 4);
+
+  assert.deepEqual(tool.mock.calls, [
+    ["mark_user_agent_task_unseen_from", { task_id: "a", event_id: 4 }],
+  ]);
+
+  assert.deepEqual(unseen(), ["a"]);
+
+  await seen.read({ ...open, unseen: true }, 9);
+  assert.equal(tool.mock.calls.length, 1);
+});

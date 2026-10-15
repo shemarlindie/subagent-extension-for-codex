@@ -105,6 +105,26 @@ test("marking a task unseen holds until the user sees it again", (t) => {
   assert.equal(store.seen(task.id).unseen, false);
 });
 
+test("marking unseen from an event leaves what came before it seen, even moving the seen point back", (t) => {
+  const { store, task } = fixture(t);
+  const first = store.event(task, "agent.reply", { text: "One", turn: 1 });
+  const second = store.event(task, "agent.reply", { text: "Two", turn: 1 });
+  store.markSeen(task);
+
+  store.markUnseenFrom(task, second.id);
+  assert.deepEqual(store.seen(task.id), { unseen: true, through: first.id });
+
+  store.markUnseenFrom(task, first.id);
+
+  assert.deepEqual(store.seen(task.id), {
+    unseen: true,
+    through: first.id - 1,
+  });
+
+  store.markSeen(task);
+  assert.equal(store.seen(task.id).unseen, false);
+});
+
 test("marking seen or unseen announces a change without touching the task", (t) => {
   const { store, task } = fixture(t);
   const before = store.get(task.id, "alice");

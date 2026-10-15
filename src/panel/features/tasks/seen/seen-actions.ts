@@ -1,5 +1,5 @@
 import type { SeenState } from "../../../../shared/tasks/conversation/seen.js";
-import type { Snapshot, Task } from "../../../app/state/types";
+import type { NewMark, Snapshot, Task } from "../../../app/state/types";
 
 interface SeenContext {
   snapshot(): Snapshot;
@@ -118,6 +118,38 @@ export class SeenActions {
     return this.mark(task, false);
   }
 
+  /**
+   * Marks a task unseen from event `from` on, so that message and the ones
+   * after it are new. Like `markUnseen`, an open task stays unseen while read.
+   */
+  async markUnseenFrom(task: Task, from: number) {
+    if (task.id === this.context.snapshot().selected) this.held = task.id;
+
+    const previous = this.context.snapshot().newMark;
+
+    this.moveDivider({
+      task: task.id,
+      through: from - 1,
+      revision: (previous?.revision ?? 0) + 1,
+    });
+
+    try {
+      await this.record(
+        task,
+        { unseen: true },
+        "mark_user_agent_task_unseen_from",
+        {
+          task_id: task.id,
+          event_id: from,
+        },
+      );
+    } catch (error) {
+      this.moveDivider(previous);
+      this.release(task.id);
+      throw error;
+    }
+  }
+
   /** Marks an unseen task seen, and any other task unseen. */
   toggle(task: Task) {
     return task.unseen ? this.markSeen(task) : this.markUnseen(task);
@@ -139,29 +171,47 @@ export class SeenActions {
     }
   }
 
+  private mark(task: Task, seen: boolean) {
+    return this.record(
+      task,
+      seen ? {} : { unseen: true },
+      "mark_user_agent_task_seen",
+      { task_id: task.id, seen },
+    );
+  }
+
   /**
    * Shows the change at once, then what the service recorded. Until it
    * answers, a task marked unseen has no marker, so it opens without a
    * "New" divider; the service's answer adds the marker.
    */
-  private async mark(task: Task, seen: boolean) {
+  private async record(
+    task: Task,
+    shown: SeenFields,
+    name: string,
+    args: Record<string, unknown>,
+  ) {
     if (this.context.closed()) return;
     this.sent.delete(task.id);
     this.settled.delete(task.id);
 
-    this.show(new Map([[task.id, seen ? {} : { unseen: true }]]));
+    this.show(new Map([[task.id, shown]]));
 
     try {
-      const result = await this.context.tool<SeenState>(
-        "mark_user_agent_task_seen",
-        { task_id: task.id, seen },
-      );
+      const result = await this.context.tool<SeenState>(name, args);
 
       this.show(new Map([[task.id, fieldsFrom(result)]]));
     } catch (error) {
       this.show(new Map([[task.id, fieldsOf(task)]]));
       throw error;
     }
+  }
+
+  /** Moves Chat's "New" divider, or clears it with undefined. */
+  private moveDivider(mark: NewMark | undefined) {
+    if (this.context.closed()) return;
+
+    this.context.patch({ newMark: mark });
   }
 
   /** Replaces the listed tasks' seen fields. */

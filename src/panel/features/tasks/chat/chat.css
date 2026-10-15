@@ -284,6 +284,12 @@ body[data-expanded-panel="true"]
   gap: var(--chat-outcome-line-item-gap);
   white-space: nowrap;
 }
+/* Icon buttons side by side, 2 px apart. */
+.chat-outcome-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
 .chat-outcome-copy-separator {
   /* Balance an 8px visual gap, including the copy icon's 5px button inset. */
   margin-inline: -3px 2px;

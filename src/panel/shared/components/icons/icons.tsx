@@ -13,6 +13,7 @@ const ICON_NAMES = [
   "worker",
   "quiet-constellation",
   "eye",
+  "eye-off",
   "code",
   "flask",
   "arrows-horizontal",

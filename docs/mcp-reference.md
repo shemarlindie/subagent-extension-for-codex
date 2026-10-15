@@ -36,7 +36,8 @@ The App resource is `ui://codex-subagent-extension/app-v6` with empty network al
 The panel records what the user has seen with app-only
 `mark_user_agent_task_seen({ task_id, seen, through? })`, where `through` is the
 newest event Chat has read, which returns the task's `{ unseen, through }`, and
-`mark_user_agent_tasks_seen({ task_ids })`.
+`mark_user_agent_tasks_seen({ task_ids })`. `mark_user_agent_task_unseen_from({ task_id, event_id })`
+marks a task unseen from one of its events on, moving the seen point back to just before it.
 `list_agent_tasks` includes `unseen: true` for a task with a worker message,
 reply, turn end, failure or input request after what the user saw, and
 `seen_through`, the newest event they had seen, where Chat's **New** divider

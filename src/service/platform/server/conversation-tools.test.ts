@@ -984,10 +984,38 @@ test("the panel records what the user has seen, and lists show what they haven't
 
     assert.equal(await listed(), undefined);
 
+    // Marking from the turn's end leaves that end unseen.
+    assert.deepEqual(
+      await user("mark_user_agent_task_unseen_from", {
+        task_id: t.id,
+        event_id: chat.next_cursor,
+      }),
+      { unseen: true, through: chat.next_cursor - 1 },
+    );
+
     // Only the user marks tasks, and only their own.
     await assert.rejects(
       parent("mark_user_agent_task_seen", { task_id: t.id, seen: true }),
       /User tools require a user interface/,
+    );
+
+    await assert.rejects(
+      parent("mark_user_agent_task_unseen_from", {
+        task_id: t.id,
+        event_id: chat.next_cursor,
+      }),
+      /User tools require a user interface/,
+    );
+
+    await assert.rejects(
+      callTool(
+        c,
+        "bob",
+        "mark_user_agent_task_unseen_from",
+        { task_id: t.id, event_id: chat.next_cursor },
+        "user",
+      ),
+      /Task not found/,
     );
 
     await assert.rejects(

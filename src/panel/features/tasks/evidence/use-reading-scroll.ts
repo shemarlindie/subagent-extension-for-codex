@@ -47,7 +47,12 @@ export type ReadingScrollOptions = {
   focus?: ReadingFocus;
 };
 
-type ReadingFocus = { id: string; request: number };
+type ReadingFocus = {
+  id: string;
+  request: number;
+  /** Scroll only when the row is out of view, rather than to the top. */
+  reveal?: boolean;
+};
 
 /**
  * Keep an oldest-first timeline at its latest row while the reader is there,
@@ -247,7 +252,8 @@ export function useReadingScroll({
 
   const focused = useRef<number | undefined>(undefined),
     focusId = focus?.id,
-    focusRequest = focus?.request;
+    focusRequest = focus?.request,
+    focusReveal = focus?.reveal;
 
   // After the restore above, so the requested row wins over the saved place.
   useLayoutEffect(() => {
@@ -262,14 +268,19 @@ export function useReadingScroll({
     if (!element) return;
     focused.current = focusRequest;
     const container = scrollContainer(viewport);
+    const row = element.getBoundingClientRect();
+    const frame = container.getBoundingClientRect();
+
+    if (focusReveal && row.top >= frame.top && row.bottom <= frame.bottom) {
+      return;
+    }
+
     window.clearTimeout(glideTimer.current);
     glide.current = undefined;
     stopAnimations();
     const before = container.scrollTop;
 
-    container.scrollTop +=
-      element.getBoundingClientRect().top -
-      container.getBoundingClientRect().top;
+    container.scrollTop += row.top - frame.top;
 
     if (Math.abs(container.scrollTop - before) >= 1) {
       correctedScrollTop.current = container.scrollTop;
@@ -283,6 +294,7 @@ export function useReadingScroll({
   }, [
     focusId,
     focusRequest,
+    focusReveal,
     active,
     ready,
     itemAttribute,

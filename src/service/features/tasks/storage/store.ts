@@ -353,6 +353,20 @@ export class Store {
     this.markChanged(t.owner);
   }
 
+  /** Marks a task unseen from event `from` on; unlike `markSeen`, it can move the seen point back. */
+  markUnseenFrom(t: Task, from: number) {
+    const through = Math.min(from - 1, this.lastEventId(t.id));
+    const mark = { through, unseen: false };
+
+    this.orm
+      .insert(taskSeen)
+      .values({ task_id: t.id, ...mark })
+      .onConflictDoUpdate({ target: taskSeen.task_id, set: mark })
+      .run();
+
+    this.markChanged(t.owner);
+  }
+
   /** Marks a task unseen until the owner next sees it. */
   markUnseen(t: Task) {
     this.orm

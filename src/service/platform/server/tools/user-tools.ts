@@ -299,6 +299,18 @@ export function userTools(
         return c.store.seen(t.id);
       },
     }),
+    mark_user_agent_task_unseen_from: tool({
+      description:
+        "User interface only: mark a task unseen from event event_id on, so the replies, outcomes and requests from that event are new while earlier events stay seen. Returns whether the task is still unseen, and through, the newest event the user has seen.",
+      schema: taskId.extend({ event_id: z.number().int().positive() }),
+      run: (a) => {
+        const t = c.store.get(a.task_id, owner);
+
+        c.store.markUnseenFrom(t, a.event_id);
+
+        return c.store.seen(t.id);
+      },
+    }),
     mark_user_agent_tasks_seen: tool({
       description:
         "User interface only: record that the user has seen every reply, outcome and request of these tasks so far.",

@@ -17,6 +17,8 @@ type TurnOutcomeRowProps = {
   outcome: TurnOutcome;
   response?: string;
   action?: ReactNode;
+  /** Beside the copy button, for a response. */
+  markUnseen?: ReactNode;
 };
 
 const OUTCOME_LABELS: Record<TurnOutcome["outcome"], string> = {
@@ -30,6 +32,7 @@ export function TurnOutcomeRow({
   outcome,
   response,
   action,
+  markUnseen,
 }: TurnOutcomeRowProps) {
   const controller = useController(),
     { host } = useSnapshot();
@@ -64,12 +67,15 @@ export function TurnOutcomeRow({
           <span className="chat-outcome-detail">
             {response !== undefined && (
               <>
-                <CopyButton
-                  text={response}
-                  label="Copy response"
-                  iconOnly
-                  iconSize={10}
-                />
+                <span className="chat-outcome-tools">
+                  <CopyButton
+                    text={response}
+                    label="Copy response"
+                    iconOnly
+                    iconSize={10}
+                  />
+                  {markUnseen}
+                </span>
                 <span
                   className="chat-outcome-copy-separator"
                   aria-hidden="true"
