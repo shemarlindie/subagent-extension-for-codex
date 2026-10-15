@@ -1164,7 +1164,7 @@ export class Controller {
       // Opening data carries the full list, so select now as the refresh would
       // rather than showing the empty inspector until that read returns.
       this.patch({
-        tasks,
+        tasks: this.taskActions.seen.settle(tasks),
         taskListLoading: false,
         ...(hostTaskId ? {} : this.fallbackSelection(tasks)),
       });

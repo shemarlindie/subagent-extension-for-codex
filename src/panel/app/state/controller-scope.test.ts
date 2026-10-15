@@ -313,6 +313,61 @@ test("opening data selects the default task before the task-list read returns", 
   assert.equal(controller.getSnapshot().selected, "waiting");
 });
 
+test("opening data gives Chat each task's seen state before the task-list read returns", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+
+  // A reload opens Chat from opening data; its "New" divider comes from the
+  // task's seen state at that moment.
+  transport.handler = (name) =>
+    name === "list_agent_tasks" ? deferred<Task[]>().promise : undefined;
+
+  const unseen: Task = {
+    ...task("unseen", "/repo/a", "chat"),
+    status: "completed",
+    unseen: true,
+    seen_through: 3,
+  };
+
+  void controller.start();
+  await flush();
+
+  transport.events.scope({
+    panel_scope: { conversation_id: "chat" },
+    tasks: [unseen],
+  });
+
+  const [opened] = controller.getSnapshot().tasks;
+  assert.equal(opened?.unseen, true);
+  assert.equal(opened?.seen_through, 3);
+});
+
+test("opening data keeps the task Chat is reading at its latest message seen", (t) => {
+  const { controller } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+
+  controller.taskActions.seen.watch("a");
+
+  controller.applyScope(
+    {
+      panel_scope: { conversation_id: "chat" },
+      tasks: [
+        { ...task("a", "/repo/a", "chat"), unseen: true, seen_through: 1 },
+        { ...task("b", "/repo/a", "chat"), unseen: true, seen_through: 1 },
+      ],
+    },
+    false,
+  );
+
+  assert.deepEqual(
+    controller.getSnapshot().tasks.map((item) => [item.id, item.unseen]),
+    [
+      ["a", undefined],
+      ["b", true],
+    ],
+  );
+});
+
 test("opening data defers to the host selection and to narrow unscoped panels", (t) => {
   const hosted = setup(true);
   t.onTestFinished(() => hosted.controller.dispose());

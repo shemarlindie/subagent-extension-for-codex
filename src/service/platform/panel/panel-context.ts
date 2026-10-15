@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { Task } from "../../../shared/tasks/model.js";
+import { seenFields } from "../../../shared/tasks/task-list.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import { hostProjectCandidate, withHostRepository } from "./host-context.js";
 
@@ -117,4 +118,20 @@ export async function resolvePanelContext(
         }
       : {}),
   };
+}
+
+/**
+ * The tasks the panel's opening data carries, with their seen state. Chat
+ * takes its "New" divider when a task opens, so a reload must not wait for
+ * the list read to learn the task is unseen.
+ */
+export function openingTasks(
+  c: Control,
+  owner: string,
+  conversationId?: string,
+) {
+  return c.store
+    .all(owner)
+    .filter((t) => !conversationId || t.conversation_id === conversationId)
+    .map((t) => ({ ...t, ...seenFields(c.store.seen(t.id)) }));
 }

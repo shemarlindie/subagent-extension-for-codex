@@ -33,6 +33,13 @@ export function replyFrom(event?: Event): ReplyExcerpt | undefined {
   };
 }
 
+/** A task's seen fields: present only while the user has something unseen in it. */
+export function seenFields(seen?: SeenState) {
+  return seen?.unseen
+    ? { unseen: true as const, seen_through: seen.through }
+    : {};
+}
+
 /** Activity summaries are derived for the list, never persisted as task state. */
 export function listedTask(
   task: Task,
@@ -50,9 +57,7 @@ export function listedTask(
       : {}),
     ...(excerpt ? { reply: excerpt } : {}),
     ...(draft ? { draft } : {}),
-    ...(seen?.unseen
-      ? { unseen: true as const, seen_through: seen.through }
-      : {}),
+    ...seenFields(seen),
     queued_messages: task.queue.length,
   };
 }

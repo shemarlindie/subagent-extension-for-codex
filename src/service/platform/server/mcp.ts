@@ -6,6 +6,7 @@ import { type Control } from "../../features/tasks/runtime/control.js";
 import { codexContextCapability } from "../panel/host-context.js";
 import { delegationPanel, panelUri } from "../panel/panel.js";
 import {
+  openingTasks,
   resolvePanelContext,
   taskPanelContext,
 } from "../panel/panel-context.js";
@@ -136,10 +137,7 @@ export function mcp(
 
   const panel = delegationPanel(
     nativeHtmlPath,
-    (conversationId) =>
-      c.store
-        .all(owner)
-        .filter((t) => !conversationId || t.conversation_id === conversationId),
+    (conversationId) => openingTasks(c, owner, conversationId),
     (args) => resolvePanelContext(c, owner, args),
   );
 

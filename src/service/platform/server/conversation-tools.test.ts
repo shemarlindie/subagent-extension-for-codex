@@ -17,6 +17,7 @@ import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
+import { openingTasks } from "../panel/panel-context.js";
 import { callTool, definitions, isReadOnlyTool, isUserTool } from "./tools.js";
 
 async function until(fn: () => boolean) {
@@ -1028,6 +1029,25 @@ test("the panel records what the user has seen, and lists show what they haven't
       ),
       /Task not found/,
     );
+  } finally {
+    await c.close();
+  }
+});
+
+test("the panel's opening tasks carry their seen state", async () => {
+  const { c, store, start } = await setup();
+
+  try {
+    const t = await start("Review the parser");
+    await until(() => store.get(t.id, "alice").status === "completed");
+
+    // A reload opens the panel from these tasks, before its list read returns.
+    const [opened] = openingTasks(c, "alice").filter(
+      (task) => task.id === t.id,
+    );
+
+    assert.equal(opened?.unseen, true);
+    assert.equal(opened?.seen_through, 0);
   } finally {
     await c.close();
   }

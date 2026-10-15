@@ -10,7 +10,7 @@ import {
   roles,
   type Task,
 } from "../../../src/shared/tasks/model";
-import { listedTask } from "../../../src/shared/tasks/task-list";
+import { listedTask, seenFields } from "../../../src/shared/tasks/task-list";
 import {
   previewEvents,
   previewProjects,
@@ -286,7 +286,7 @@ function panelContext(args: Record<string, unknown>, options: PreviewOptions) {
   };
 }
 
-/** Mirrors delegationPanel's open: the context plus the tasks in scope. */
+/** Mirrors delegationPanel's open: the context plus the tasks in scope, with their seen state. */
 function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
   const context = panelContext(args, options);
 
@@ -295,9 +295,9 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
     ...context,
     ...(!options.deferTaskList
       ? {
-          tasks: newestFirst.filter((task) =>
-            inScope(task, context.panel_scope),
-          ),
+          tasks: newestFirst
+            .filter((task) => inScope(task, context.panel_scope))
+            .map((task) => ({ ...task, ...seenFields(previewSeen(task.id)) })),
         }
       : {}),
   };
