@@ -10,13 +10,18 @@ import type {
   HasNoPayload,
 } from "../../../../shared/events/event-types.js";
 import type { Event } from "../../../../shared/events/types.js";
+import {
+  isUnseen,
+  SEEN_EVENTS,
+  type SeenState,
+} from "../../../../shared/tasks/conversation/seen.js";
 import { type Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import {
   type Database,
   openDatabase,
 } from "../../../platform/database/database.js";
-import { events, tasks } from "./schema.js";
+import { events, tasks, taskSeen } from "./schema.js";
 import { decodeEvent, decodeTask } from "./stored.js";
 
 /** The 1,000-event page that event reads return at most. */
@@ -302,6 +307,61 @@ export class Store {
         .offset(depth - 1)
         .get()?.id ?? after + 1
     );
+  }
+
+  /**
+   * What the owner has seen of a task: whether it has a reply, outcome or
+   * request they haven't seen, and the newest event they had seen.
+   */
+  seen(id: string): SeenState {
+    const mark = this.orm
+      .select({ through: taskSeen.through, unseen: taskSeen.unseen })
+      .from(taskSeen)
+      .where(eq(taskSeen.task_id, id))
+      .get();
+
+    const latest = this.orm
+      .select({ id: max(events.id) })
+      .from(events)
+      .where(and(eq(events.task_id, id), inArray(events.type, SEEN_EVENTS)))
+      .get();
+
+    return {
+      unseen: isUnseen(latest?.id ?? 0, mark),
+      through: mark?.through ?? 0,
+    };
+  }
+
+  /**
+   * Records that the owner has seen a task through event `through`, or its
+   * newest event without one. It never moves back, never passes the newest
+   * event and clears the task's unseen mark.
+   */
+  markSeen(t: Task, through?: number) {
+    const newest = this.lastEventId(t.id);
+    const seen = Math.min(through ?? newest, newest);
+
+    this.orm
+      .insert(taskSeen)
+      .values({ task_id: t.id, through: seen, unseen: false })
+      .onConflictDoUpdate({
+        target: taskSeen.task_id,
+        set: { through: sql`max(${taskSeen.through}, ${seen})`, unseen: false },
+      })
+      .run();
+
+    this.markChanged(t.owner);
+  }
+
+  /** Marks a task unseen until the owner next sees it. */
+  markUnseen(t: Task) {
+    this.orm
+      .insert(taskSeen)
+      .values({ task_id: t.id, through: 0, unseen: true })
+      .onConflictDoUpdate({ target: taskSeen.task_id, set: { unseen: true } })
+      .run();
+
+    this.markChanged(t.owner);
   }
 
   /** The id of a task's `task.turn_ended` event for a turn; absent until it ends. */

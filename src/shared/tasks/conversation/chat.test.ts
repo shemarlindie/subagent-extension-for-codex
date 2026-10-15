@@ -6,6 +6,7 @@ import { Store } from "../../../service/features/tasks/storage/store.js";
 import { decodedEvent } from "../../events/decode.js";
 import { startSchema, type Task } from "../model.js";
 import { CHAT_EVENTS, chatItems } from "./chat.js";
+import { SEEN_EVENTS } from "./seen.js";
 
 const task: Task = {
   ...startSchema.parse({
@@ -196,5 +197,20 @@ test("Chat orders explicit parent reports before the matching final reply's upda
   assert.equal(
     report.kind === "message" && report.message.text,
     "Worker report",
+  );
+});
+
+test("Chat reads every event that leaves a task unseen, and an input request adds no item", () => {
+  for (const type of SEEN_EVENTS) assert.ok(CHAT_EVENTS.includes(type), type);
+
+  const items = chatItems(task, [
+    event(1, "agent.reply", { text: "Need a decision", turn: 2 }),
+    event(2, "agent.input_required", { request: { id: "req" } }),
+  ]);
+
+  // The request, then the reply.
+  assert.deepEqual(
+    items.map((item) => item.event_id),
+    [0, 1],
   );
 });

@@ -4,7 +4,11 @@ import { scalarText } from "../../text.js";
 import type { Task } from "../model.js";
 import { conversation, type ConversationMessage } from "./messages.js";
 
-/** Events Chat is built from, besides compaction markers. */
+/**
+ * Events Chat is built from, besides compaction markers. Input requests add
+ * no item, since Chat shows the pending request from the task, but reading
+ * them moves Chat's cursor past every `SEEN_EVENTS` event it has shown.
+ */
 export const CHAT_EVENTS = [
   "task.started",
   "task.instruction",
@@ -14,6 +18,7 @@ export const CHAT_EVENTS = [
   "task.failed",
   "task.session_started",
   "task.worktree_recreated",
+  "agent.input_required",
 ];
 
 /** How a turn ended, for its outcome row. */

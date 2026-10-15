@@ -12,6 +12,7 @@ import {
   PARENT_REPORT_PROTOCOL,
 } from "../../../shared/tasks/conversation/parent-protocol.js";
 import type { Task } from "../../../shared/tasks/model.js";
+import type { ListedTask } from "../../../shared/tasks/task-list.js";
 import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { Store } from "../../features/tasks/storage/store.js";
@@ -930,4 +931,76 @@ test("parent message tools publish the canonical polling and processing protocol
   expect(tools.ack_agent_message.description).toContain(
     "after you successfully process",
   );
+});
+
+test("the panel records what the user has seen, and lists show what they haven't", async () => {
+  const { c, store, parent, user, start } = await setup();
+
+  try {
+    const t = await start("Review the parser");
+    await until(() => store.get(t.id, "alice").status === "completed");
+
+    const listed = async () =>
+      (
+        await parent<ListedTask[]>("list_agent_tasks", {
+          conversation_id: null,
+        })
+      ).find((task) => task.id === t.id)?.unseen;
+
+    assert.equal(await listed(), true);
+
+    // A task never seen is new from its start.
+    const [never] = await parent<ListedTask[]>("list_agent_tasks", {
+      conversation_id: null,
+    });
+
+    assert.equal(never?.seen_through, 0);
+
+    // Chat's cursor covers the reply and the turn's end.
+    const chat = await user<{ next_cursor: number }>("get_user_agent_chat", {
+      task_id: t.id,
+    });
+
+    assert.deepEqual(
+      await user("mark_user_agent_task_seen", {
+        task_id: t.id,
+        seen: true,
+        through: chat.next_cursor,
+      }),
+      { unseen: false, through: chat.next_cursor },
+    );
+
+    assert.equal(await listed(), undefined);
+
+    assert.deepEqual(
+      await user("mark_user_agent_task_seen", { task_id: t.id, seen: false }),
+      { unseen: true, through: chat.next_cursor },
+    );
+
+    assert.deepEqual(
+      await user("mark_user_agent_tasks_seen", { task_ids: [t.id] }),
+      { task_ids: [t.id] },
+    );
+
+    assert.equal(await listed(), undefined);
+
+    // Only the user marks tasks, and only their own.
+    await assert.rejects(
+      parent("mark_user_agent_task_seen", { task_id: t.id, seen: true }),
+      /User tools require a user interface/,
+    );
+
+    await assert.rejects(
+      callTool(
+        c,
+        "bob",
+        "mark_user_agent_tasks_seen",
+        { task_ids: [t.id] },
+        "user",
+      ),
+      /Task not found/,
+    );
+  } finally {
+    await c.close();
+  }
 });

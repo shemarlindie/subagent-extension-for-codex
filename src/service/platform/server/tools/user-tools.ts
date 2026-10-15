@@ -283,6 +283,38 @@ export function userTools(
       schema: taskId.extend({ title: z.string().trim().min(1).max(200) }),
       run: (a) => c.rename(owner, a.task_id, a.title),
     }),
+    mark_user_agent_task_seen: tool({
+      description:
+        "User interface only: record whether the user has seen a task's replies, outcomes and requests. seen true records them seen through event through, the newest event the panel has shown, or through the task's newest event without it. seen false marks the task unseen until the user next sees it. Returns whether the task is still unseen, and through, the newest event the user has seen.",
+      schema: taskId.extend({
+        seen: z.boolean(),
+        through: z.number().int().nonnegative().optional(),
+      }),
+      run: (a) => {
+        const t = c.store.get(a.task_id, owner);
+
+        if (a.seen) c.store.markSeen(t, a.through);
+        else c.store.markUnseen(t);
+
+        return c.store.seen(t.id);
+      },
+    }),
+    mark_user_agent_tasks_seen: tool({
+      description:
+        "User interface only: record that the user has seen every reply, outcome and request of these tasks so far.",
+      schema: z.strictObject({
+        task_ids: z.array(z.string()).min(1).max(1000),
+      }),
+      run: (a) => {
+        const marked = a.task_ids.map((id) => c.store.get(id, owner));
+
+        c.store.transaction(() => {
+          for (const t of marked) c.store.markSeen(t);
+        });
+
+        return { task_ids: marked.map((t) => t.id) };
+      },
+    }),
     delete_user_agent_task: tool({
       description:
         "User interface only: delete a stopped task with its events, requests, worktree and branch. With delete_agent_task it also deletes the provider's session for the task. This can't be undone.",

@@ -20,3 +20,16 @@ export const events = sqliteTable(
   },
   (t) => [index("events_task").on(t.task_id, t.id)],
 );
+
+/**
+ * What the user has seen of each task: its events through `through`, and
+ * whether they marked it unseen since. A task without a row has been seen
+ * through none of its events.
+ */
+export const taskSeen = sqliteTable("task_seen", {
+  task_id: text()
+    .primaryKey()
+    .references(() => tasks.id, { onDelete: "cascade" }),
+  through: integer().notNull(),
+  unseen: integer({ mode: "boolean" }).notNull(),
+});
