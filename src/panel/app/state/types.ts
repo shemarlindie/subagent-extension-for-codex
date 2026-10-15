@@ -143,8 +143,8 @@ export type PersistedDialog =
 
 /**
  * The "New" divider's position for the open task after the user marks it: the
- * seen point just before the message they marked unseen from, or no `through`
- * once they mark it seen. Each mark gets a newer `revision`.
+ * read point just before the message they marked unread from, or no `through`
+ * once they mark it read. Each mark gets a newer `revision`.
  */
 export type NewMark = { task: string; through?: number; revision: number };
 
@@ -172,7 +172,7 @@ export type Snapshot = {
   taskListLoading: boolean;
   /** The selected task's message being written, streamed or read. */
   draft?: DraftState;
-  /** Where Chat's "New" divider moved when the user marked the task unseen from a message. */
+  /** Where Chat's "New" divider moved when the user marked the task unread from a message. */
   newMark?: NewMark;
   selected?: string;
   /** Set while the inspector shows the new-task composer instead of a task. */

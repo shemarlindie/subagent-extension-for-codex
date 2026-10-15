@@ -26,8 +26,8 @@ export function TaskMenu({ task }: TaskMenuProps) {
       !controller.transport.embedded,
     );
 
-  const toggleSeen = () =>
-    controller.run(() => controller.taskActions.seen.toggle(task));
+  const toggleRead = () =>
+    controller.run(() => controller.taskActions.unread.toggle(task));
 
   return (
     <Menu.Root>
@@ -47,10 +47,10 @@ export function TaskMenu({ task }: TaskMenuProps) {
           <Menu.Popup className="menu-popup">
             <Menu.Item
               className="menu-item"
-              data-action={task.unseen ? "mark-seen" : "mark-unseen"}
-              onClick={toggleSeen}
+              data-action={task.unread ? "mark-read" : "mark-unread"}
+              onClick={toggleRead}
             >
-              {task.unseen ? "Mark as seen" : "Mark as unseen"}
+              {task.unread ? "Mark read" : "Mark unread"}
             </Menu.Item>
             <Menu.Item
               className="menu-item"

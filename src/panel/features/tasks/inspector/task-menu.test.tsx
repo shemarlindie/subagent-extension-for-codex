@@ -120,11 +120,11 @@ test("task menu does not offer renaming", async () => {
 });
 
 test.each([
-  [false, "Mark as unseen"],
-  [true, "Mark as seen"],
+  [false, "Mark unread"],
+  [true, "Mark read"],
 ] as const)(
-  "task menu offers the opposite of the task's seen state (unseen: %s)",
-  async (unseen, label) => {
+  "task menu offers the opposite of the task's read state (unread: %s)",
+  async (unread, label) => {
     onTestFinished(cleanup);
 
     const controller = new Controller(
@@ -133,12 +133,12 @@ test.each([
     );
 
     onTestFinished(() => controller.dispose());
-    const tool = vi.spyOn(controller, "tool").mockResolvedValue({ unseen });
+    const tool = vi.spyOn(controller, "tool").mockResolvedValue({ unread });
 
     const view = render(
       <ControllerContext.Provider value={controller}>
         <Tooltip.Provider>
-          <TaskMenu task={{ ...task, ...(unseen ? { unseen } : {}) }} />
+          <TaskMenu task={{ ...task, ...(unread ? { unread } : {}) }} />
         </Tooltip.Provider>
       </ControllerContext.Provider>,
     );
@@ -148,7 +148,7 @@ test.each([
     await user.click(await view.findByRole("menuitem", { name: label }));
 
     assert.deepEqual(tool.mock.calls, [
-      ["mark_user_agent_task_seen", { task_id: task.id, seen: unseen }],
+      ["mark_user_agent_task_read", { task_id: task.id, read: unread }],
     ]);
   },
 );

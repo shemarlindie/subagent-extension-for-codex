@@ -283,37 +283,37 @@ export function userTools(
       schema: taskId.extend({ title: z.string().trim().min(1).max(200) }),
       run: (a) => c.rename(owner, a.task_id, a.title),
     }),
-    mark_user_agent_task_seen: tool({
+    mark_user_agent_task_read: tool({
       description:
-        "User interface only: record whether the user has seen a task's replies, outcomes and requests. seen true records them seen through event through, the newest event the panel has shown, or through the task's newest event without it. seen false marks the task unseen until the user next sees it. Returns whether the task is still unseen, and through, the newest event the user has seen.",
+        "User interface only: record whether the user has read a task's replies, outcomes and requests. read true records them read through event through, the newest event the panel has shown, or through the task's newest event without it. read false marks the task unread until the user next sees it. Returns whether the task is still unread, and through, the newest event the user has read.",
       schema: taskId.extend({
-        seen: z.boolean(),
+        read: z.boolean(),
         through: z.number().int().nonnegative().optional(),
       }),
       run: (a) => {
         const t = c.store.get(a.task_id, owner);
 
-        if (a.seen) c.store.markSeen(t, a.through);
-        else c.store.markUnseen(t);
+        if (a.read) c.store.markRead(t, a.through);
+        else c.store.markUnread(t);
 
-        return c.store.seen(t.id);
+        return c.store.readState(t.id);
       },
     }),
-    mark_user_agent_task_unseen_from: tool({
+    mark_user_agent_task_unread_from: tool({
       description:
-        "User interface only: mark a task unseen from event event_id on, so the replies, outcomes and requests from that event are new while earlier events stay seen. Returns whether the task is still unseen, and through, the newest event the user has seen.",
+        "User interface only: mark a task unread from event event_id on, so the replies, outcomes and requests from that event are new while earlier events stay read. Returns whether the task is still unread, and through, the newest event the user has read.",
       schema: taskId.extend({ event_id: z.number().int().positive() }),
       run: (a) => {
         const t = c.store.get(a.task_id, owner);
 
-        c.store.markUnseenFrom(t, a.event_id);
+        c.store.markUnreadFrom(t, a.event_id);
 
-        return c.store.seen(t.id);
+        return c.store.readState(t.id);
       },
     }),
-    mark_user_agent_tasks_seen: tool({
+    mark_user_agent_tasks_read: tool({
       description:
-        "User interface only: record that the user has seen every reply, outcome and request of these tasks so far.",
+        "User interface only: record that the user has read every reply, outcome and request of these tasks so far.",
       schema: z.strictObject({
         task_ids: z.array(z.string()).min(1).max(1000),
       }),
@@ -321,7 +321,7 @@ export function userTools(
         const marked = a.task_ids.map((id) => c.store.get(id, owner));
 
         c.store.transaction(() => {
-          for (const t of marked) c.store.markSeen(t);
+          for (const t of marked) c.store.markRead(t);
         });
 
         return { task_ids: marked.map((t) => t.id) };

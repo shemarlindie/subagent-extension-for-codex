@@ -8,7 +8,7 @@ import { rowStatus } from "./task-status.js";
 
 // Display order of the filters; the panel hides "attention" without the capability.
 export const FILTER_LABELS: Record<Filter, string> = {
-  unseen: "Unseen",
+  unread: "Unread",
   attention: "Needs input",
   failed: "Failed",
   active: "Active",
@@ -18,8 +18,8 @@ export const FILTER_LABELS: Record<Filter, string> = {
 
 const FILTERS = Object.keys(FILTER_LABELS) as Filter[];
 
-// Reading a task changes Unseen's count, so the list never opens on it by itself.
-const DEFAULT_FILTERS = FILTERS.filter((filter) => filter !== "unseen");
+// Reading a task changes Unread's count, so the list never opens on it by itself.
+const DEFAULT_FILTERS = FILTERS.filter((filter) => filter !== "unread");
 
 export const terminal = (task: Task) =>
   ["completed", "failed"].includes(task.status);
@@ -51,11 +51,11 @@ export const pendingQuestions = (task: Task): Question[] => {
   return Array.isArray(questions) ? (questions as Question[]) : [];
 };
 
-// Each task lands in one status filter besides All; see failedStatus. Unseen
+// Each task lands in one status filter besides All; see failedStatus. Unread
 // cuts across them.
 const matchesFilter = (task: Task, filter: Filter) =>
   filter === "all" ||
-  (filter === "unseen" && Boolean(task.unseen)) ||
+  (filter === "unread" && Boolean(task.unread)) ||
   (filter === "active" && !terminal(task) && !failedStatus(task)) ||
   (filter === "attention" && needsInput(task) && !failedStatus(task)) ||
   (filter === "completed" && task.status === "completed") ||
@@ -83,14 +83,14 @@ export function effectiveFilter(state: Snapshot): Filter {
   return DEFAULT_FILTERS.find((filter) => counts[filter] > 0) ?? "all";
 }
 
-// Under Unseen, the open task stays listed once seen, until another is chosen.
+// Under Unread, the open task stays listed once read, until another is chosen.
 export const visibleTasks = (state: Snapshot) => {
   const filter = effectiveFilter(state);
 
   return scopedTasks(state).filter(
     (task) =>
       matchesFilter(task, filter) ||
-      (filter === "unseen" && task.id === state.selected),
+      (filter === "unread" && task.id === state.selected),
   );
 };
 

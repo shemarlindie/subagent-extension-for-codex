@@ -74,7 +74,7 @@ const row = (task: Task) =>
     task,
     selected: false,
     onSelect() {},
-    onToggleSeen() {},
+    onToggleRead() {},
   });
 
 const rowRuntime = (view: ReturnType<typeof render>) =>

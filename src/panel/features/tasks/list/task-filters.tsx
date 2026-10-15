@@ -165,8 +165,8 @@ export function TaskFilters() {
                     ? ""
                     : undefined
                 }
-                data-unseen={
-                  !loading && filter === "unseen" && counts[filter] > 0
+                data-unread={
+                  !loading && filter === "unread" && counts[filter] > 0
                     ? ""
                     : undefined
                 }

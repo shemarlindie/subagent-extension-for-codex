@@ -3,7 +3,7 @@ import type { ConversationMessage } from "../../../../../shared/tasks/conversati
 import type { Task } from "../../../../app/state/types";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
 import { AskReplyButton } from "./ask-reply-button";
-import { MarkUnseenButton } from "./mark-unseen-button";
+import { MarkUnreadButton } from "./mark-unread-button";
 import { TurnOutcomeRow } from "./turn-outcome-row";
 
 type ChatMessageViewProps = {
@@ -32,9 +32,9 @@ export function ChatMessageView({
       <AskReplyButton task={task} message={message} inline={Boolean(outcome)} />
     ) : undefined;
 
-  const markUnseenButton =
+  const markUnreadButton =
     task && outcome ? (
-      <MarkUnseenButton task={task} eventId={message.event_id} />
+      <MarkUnreadButton task={task} eventId={message.event_id} />
     ) : undefined;
 
   return (
@@ -57,7 +57,7 @@ export function ChatMessageView({
           outcome={outcome}
           response={message.text}
           action={askButton}
-          markUnseen={markUnseenButton}
+          markUnread={markUnreadButton}
         />
       ) : (
         askButton

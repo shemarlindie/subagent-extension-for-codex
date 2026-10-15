@@ -14,9 +14,9 @@ type OpenedChat = {
 
 /**
  * Where Chat's "New" divider sits, and the request that scrolls to it. The
- * divider is the newest event the user had seen when an unseen task opened.
- * It moves when the user marks the task unseen from one of its messages, and
- * goes when they mark the task seen.
+ * divider is the newest event the user had read when an unread task opened.
+ * It moves when the user marks the task unread from one of its messages, and
+ * goes when they mark the task read.
  */
 export type NewMessages = {
   from?: number;
@@ -27,10 +27,10 @@ export type NewMessages = {
 };
 
 /**
- * The newest event the user had seen when an unseen task opened, which
+ * The newest event the user had read when an unread task opened, which
  * Chat's "New" divider follows while the task stays open; undefined without
  * a divider. Chat remounts for each task, so the marker is taken once,
- * before Chat sees the task and the task stops being unseen.
+ * before Chat sees the task and the task stops being unread.
  */
 export function useNewMessagesFrom(
   task: Task | undefined,
@@ -39,12 +39,12 @@ export function useNewMessagesFrom(
   const state = useSnapshot();
   const [opened, setOpened] = useState<OpenedChat>();
 
-  // The service sends a marker with every unseen task. Only a task the user
-  // just marked unseen lacks one until the service answers, and it has
+  // The service sends a marker with every unread task. Only a task the user
+  // just marked unread lacks one until the service answers, and it has
   // nothing new, so it gets no divider.
   if (!opened && task) {
     setOpened({
-      newFrom: task.unseen ? task.seen_through : undefined,
+      newFrom: task.unread ? task.read_through : undefined,
       markRevision: state.newMark?.revision,
     });
   }

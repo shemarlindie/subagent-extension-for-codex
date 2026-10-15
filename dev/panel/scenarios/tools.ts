@@ -10,7 +10,7 @@ import {
   roles,
   type Task,
 } from "../../../src/shared/tasks/model";
-import { listedTask, seenFields } from "../../../src/shared/tasks/task-list";
+import { listedTask, readFields } from "../../../src/shared/tasks/task-list";
 import {
   previewEvents,
   previewProjects,
@@ -18,7 +18,11 @@ import {
   previewTasks,
 } from "./fixtures";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
-import { PREVIEW_SEEN_TOOLS, previewSeen, previewSeenTool } from "./seen-tools";
+import {
+  PREVIEW_UNREAD_TOOLS,
+  previewReadState,
+  previewUnreadTool,
+} from "./unread-tools";
 
 const streamStart = Date.now();
 
@@ -286,7 +290,7 @@ function panelContext(args: Record<string, unknown>, options: PreviewOptions) {
   };
 }
 
-/** Mirrors delegationPanel's open: the context plus the tasks in scope, with their seen state. */
+/** Mirrors delegationPanel's open: the context plus the tasks in scope, with their read state. */
 function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
   const context = panelContext(args, options);
 
@@ -297,7 +301,10 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
       ? {
           tasks: newestFirst
             .filter((task) => inScope(task, context.panel_scope))
-            .map((task) => ({ ...task, ...seenFields(previewSeen(task.id)) })),
+            .map((task) => ({
+              ...task,
+              ...readFields(previewReadState(task.id)),
+            })),
         }
       : {}),
   };
@@ -426,7 +433,7 @@ export function previewTool(
     );
   }
 
-  if (PREVIEW_SEEN_TOOLS.includes(name)) return previewSeenTool(name, args);
+  if (PREVIEW_UNREAD_TOOLS.includes(name)) return previewUnreadTool(name, args);
 
   if (name === "rename_user_agent_task") {
     const task = previewTasks.find((task) => task.id === args.task_id);
@@ -465,7 +472,7 @@ export function previewTool(
           task.id === previewStreamingDraft.taskId
             ? streamingDraft()
             : undefined,
-          previewSeen(task.id),
+          previewReadState(task.id),
         );
       }),
     get_user_agent_chat: (() => {

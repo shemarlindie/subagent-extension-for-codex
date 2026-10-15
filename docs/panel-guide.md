@@ -91,13 +91,13 @@ are not restored after reload.
 
 ### Find and inspect tasks
 
-The task rail searches and filters by **Unseen**, **Needs input**, **Failed**,
+The task rail searches and filters by **Unread**, **Needs input**, **Failed**,
 **Active**, **Done**, then **All**. The default is the first nonempty filter
-other than Unseen. Questions and
+other than Unread. Questions and
 permissions count as Needs input; failures, interruptions and compaction
 failures as Failed; other unfinished tasks as Active. Queued follow-up turns
-keep a task active between runs. Unseen cuts across the others; see
-[Seen and unseen tasks](#seen-and-unseen-tasks). Counts respect project and
+keep a task active between runs. Unread cuts across the others; see
+[Read and unread tasks](#read-and-unread-tasks). Counts respect project and
 search filters.
 The first task read shows card-like rows with placeholders for titles, worker
 profiles, runtime and status until the list arrives. Press `/` for search and
@@ -116,43 +116,43 @@ revision, turns, budgets, session, workspace/branch, changes, dependencies and
 usage. Dates follow the host locale and time zone. Runtime in the rail and
 Details accumulates across turns and includes the active run.
 
-### Seen and unseen tasks
+### Read and unread tasks
 
-A task becomes unseen when it has something you haven't viewed: a worker
+A task becomes unread when it has something you haven't viewed: a worker
 message or reply, a turn's end, a failure, or a question or permission request.
-Your own messages never make a task unseen. Unseen tasks show an accent dot at
-the top right of their row, and the compact panel adds **N unseen** to its
+Your own messages never make a task unread. Unread tasks show an accent dot at
+the top right of their row, and the compact panel adds **N unread** to its
 counts.
 
-A task becomes seen when its Chat is on screen and scrolled to the latest
+A task becomes read when its Chat is on screen and scrolled to the latest
 message: the panel must be visible, on the Tasks page and the Chat tab. Only
-what Chat has loaded counts as seen, so a reply that arrives after it stays
-unseen until Chat shows it.
+what Chat has loaded counts as read, so a reply that arrives after it stays
+unread until Chat shows it.
 
-Opening an unseen task places a **New** divider above the first worker message,
-outcome or failure after what you had seen, and Chat opens with the divider at
-the top. If everything new fits on screen, the task is seen at once; otherwise
-it stays unseen until you scroll to the latest message, and the
-**Scroll to unseen messages** button carries a dot. The divider stays until you
-leave the task or mark it seen. A task you marked unseen with nothing new opens
+Opening an unread task places a **New** divider above the first worker message,
+outcome or failure after what you had read, and Chat opens with the divider at
+the top. If everything new fits on screen, the task is read at once; otherwise
+it stays unread until you scroll to the latest message, and the
+**Scroll to unread messages** button carries a dot. The divider stays until you
+leave the task or mark it read. A task you marked unread with nothing new opens
 at the end.
 
-- **Task actions → Mark as unseen** or **Mark as seen**, or right-clicking
-  (long-pressing on touch) a task row, sets it by hand. A task you mark unseen
-  while reading it stays unseen until you scroll its Chat or open another task.
-- A reply's copy button row has **Mark as unseen from here**, an eye icon. It
-  marks the task unseen from that reply on, so earlier messages stay seen. The
+- **Task actions → Mark unread** or **Mark read**, or right-clicking
+  (long-pressing on touch) a task row, sets it by hand. A task you mark unread
+  while reading it stays unread until you scroll its Chat or open another task.
+- A reply's copy button row has **Mark unread from here**, an eye icon. It
+  marks the task unread from that reply on, so earlier messages stay read. The
   **New** divider moves to just above that reply and opens its space smoothly;
   Chat smoothly scrolls to it if it is out of view.
-- **Unseen** lists unseen tasks. The task you open stays listed after it is
-  seen until you choose another, and the filter is never picked by default,
-  since reading empties it. **Mark all seen** beside the count sees every
+- **Unread** lists unread tasks. The task you open stays listed after it is
+  read until you choose another, and the filter is never picked by default,
+  since reading empties it. **Mark all read** beside the count marks every
   listed task; with no search to clear, it takes **Clear filter**'s place.
 
-The standalone console's tab title leads with the unseen count, as in
-**(2) Delegated Work**. Seen state is stored by the service, so the embedded
+The standalone console's tab title leads with the unread count, as in
+**(2) Delegated Work**. Read state is stored by the service, so the embedded
 panel and the standalone console agree and it survives reloads. Codex reading
-replies through `get_agent_messages` doesn't mark tasks seen.
+replies through `get_agent_messages` doesn't mark tasks read.
 
 ### Create and rename tasks
 

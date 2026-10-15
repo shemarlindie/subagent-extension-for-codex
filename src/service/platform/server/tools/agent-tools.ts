@@ -128,7 +128,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     }),
     list_agent_tasks: tool({
       description:
-        "List owned tasks, optionally scoped to a conversation and repository. Each includes an excerpt of its latest reply, its number of queued messages and unseen: true when the user hasn't viewed its latest reply, outcome or request in the panel, with seen_through, the newest event they had seen. null conversation_id explicitly requests all conversations.",
+        "List owned tasks, optionally scoped to a conversation and repository. Each includes an excerpt of its latest reply, its number of queued messages and unread: true when the user hasn't viewed its latest reply, outcome or request in the panel, with read_through, the newest event they had read. null conversation_id explicitly requests all conversations.",
       schema: z.object({
         conversation_id: z.string().nullable().optional(),
         repository: z.string().optional(),
@@ -147,7 +147,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
               t.status === "running" ? c.store.recentEvents(t.id, owner) : [],
               c.store.latestEvent(t.id, "agent.reply"),
               c.drafts.get(t.id),
-              c.store.seen(t.id),
+              c.store.readState(t.id),
             ),
           ),
     }),

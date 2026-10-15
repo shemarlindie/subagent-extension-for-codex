@@ -9,10 +9,10 @@ import type { Task } from "../../../../app/state/types";
 import { LoadingSwap } from "../../../../shared/components/loading-skeleton/loading-swap";
 import { rowStatus } from "../../list/task-status";
 import { TaskStatusIcon } from "../../list/task-status-icon";
-import { newMessagesIndex } from "../../seen/new-messages";
-import { NewMessagesDivider } from "../../seen/new-messages-divider";
-import { useLeavingDivider } from "../../seen/use-leaving-divider";
-import type { NewMessages } from "../../seen/use-new-messages-from";
+import { newMessagesIndex } from "../../unread/new-messages";
+import { NewMessagesDivider } from "../../unread/new-messages-divider";
+import { useLeavingDivider } from "../../unread/use-leaving-divider";
+import type { NewMessages } from "../../unread/use-new-messages-from";
 import { composerMode, responseOutcome, spentBudget } from "../chat-model";
 import { PendingInput } from "../composer/pending-input";
 import { BudgetLimitNotice } from "./budget-limit-notice";
@@ -29,7 +29,7 @@ type ChatTimelineProps = {
   budgetRaise: BudgetRaise;
   onBudgetRaiseChange: (value: BudgetRaise) => void;
   onBudgetApply: (value: BudgetRaise) => Promise<string | undefined>;
-  /** Where the "New" divider sits; it follows the newest seen event. */
+  /** Where the "New" divider sits; it follows the newest read event. */
   newMessages?: NewMessages;
 };
 

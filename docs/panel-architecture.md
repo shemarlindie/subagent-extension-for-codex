@@ -25,16 +25,16 @@ The Changes feature (`src/panel/features/changes/`) owns change reads, file
 selection, worktree actions and the Changes tab. File viewers remain in
 `file-preview/`, so their rendering can be reused outside task changes.
 
-Seen tracking (`src/panel/features/tasks/seen/`) owns the unseen dot, the
-**New** divider, `SeenActions` (`controller.taskActions.seen`) with its
-unseen-from-a-message action, `useMarkSeen`, which Chat calls with its reading
+Read tracking (`src/panel/features/tasks/unread/`) owns the unread dot, the
+**New** divider, `UnreadActions` (`controller.taskActions.unread`) with its
+unread-from-a-message action, `useMarkRead`, which Chat calls with its reading
 position, and the console's title count.
-`useNewMessagesFrom` takes the task's `seen_through` when Chat mounts for it,
+`useNewMessagesFrom` takes the task's `read_through` when Chat mounts for it,
 keeps it once Chat loads only if something new follows, and Chat opens at the
-divider through `useReadingScroll`'s `focus`. Marking a task unseen from a
+divider through `useReadingScroll`'s `focus`. Marking a task unread from a
 message sets the snapshot's `newMark`, which moves the divider and asks `focus`
-to reveal it only if it is out of view; marking the open task seen, alone or
-with **Mark all seen**, sets a `newMark` without `through`, which removes it.
+to reveal it only if it is out of view; marking the open task read, alone or
+with **Mark all read**, sets a `newMark` without `through`, which removes it.
 A reveal glides with a smooth scroll, and `NewMessagesDivider` grows from zero
 height, with a negative margin
 cancelling its row gap, so the rows below ease down rather than jump.
@@ -43,11 +43,11 @@ same way, until that animation ends. Out of view or partly above it, it
 collapses at once, in the render that moved it, so the reading scroll corrects
 for it in the same frame. The divider has `overflow-anchor: none`, which
 `useReadingScroll` honours, so it never holds the reading position. Reads Chat sends in the
-background fail quietly; the next refresh retries them. The service stores what was seen; the panel
-patches the task list at once and keeps no seen state of its own. While Chat is
-at the latest message, `useMarkSeen` has `SeenActions` watch the task, and
-`settle` keeps it seen in task-list reads until Chat reads the new events and
-records them, so the open task doesn't flash unseen.
+background fail quietly; the next refresh retries them. The service stores what was read; the panel
+patches the task list at once and keeps no read state of its own. While Chat is
+at the latest message, `useMarkRead` has `UnreadActions` watch the task, and
+`settle` keeps it read in task-list fetches until Chat reads the new events and
+records them, so the open task doesn't flash unread.
 
 The panel imports browser-safe contracts and domain functions from
 `src/shared/<feature>/`, never service modules. The shared runtime boundary is

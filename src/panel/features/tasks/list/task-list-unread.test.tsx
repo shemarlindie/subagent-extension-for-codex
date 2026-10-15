@@ -25,11 +25,11 @@ function setup(patch: Partial<Snapshot>) {
     connected: true,
     taskListLoading: false,
     tasks: [
-      { ...task("a"), unseen: true },
-      { ...task("b"), unseen: true },
+      { ...task("a"), unread: true },
+      { ...task("b"), unread: true },
       task("c"),
     ],
-    filter: "unseen",
+    filter: "unread",
     ...patch,
   };
 
@@ -45,25 +45,25 @@ function setup(patch: Partial<Snapshot>) {
   return { tool, view };
 }
 
-test("under Unseen, Mark all seen takes Clear filter's place and sees the listed tasks", () => {
+test("under Unread, Mark all read takes Clear filter's place and marks the listed tasks read", () => {
   const { tool, view } = setup({});
   expect(view.queryByRole("button", { name: "Clear filter" })).toBeNull();
 
-  fireEvent.click(view.getByRole("button", { name: "Mark all seen" }));
+  fireEvent.click(view.getByRole("button", { name: "Mark all read" }));
 
   assert.deepEqual(tool.mock.calls, [
-    ["mark_user_agent_tasks_seen", { task_ids: ["a", "b"] }],
+    ["mark_user_agent_tasks_read", { task_ids: ["a", "b"] }],
   ]);
 });
 
-test("with a search to clear, Unseen shows both actions", () => {
+test("with a search to clear, Unread shows both actions", () => {
   const { view } = setup({ search: "review" });
-  expect(view.getByRole("button", { name: "Mark all seen" })).toBeTruthy();
+  expect(view.getByRole("button", { name: "Mark all read" })).toBeTruthy();
   expect(view.getByRole("button", { name: "Clear filter" })).toBeTruthy();
 });
 
-test("with nothing unseen, Unseen says so and offers no Mark all seen", () => {
+test("with nothing unread, Unread says so and offers no Mark all read", () => {
   const { view } = setup({ tasks: [task("c")] });
-  expect(view.queryByRole("button", { name: "Mark all seen" })).toBeNull();
+  expect(view.queryByRole("button", { name: "Mark all read" })).toBeNull();
   expect(view.getByText("You're all caught up.")).toBeTruthy();
 });

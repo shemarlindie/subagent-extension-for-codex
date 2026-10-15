@@ -19,7 +19,7 @@ function fixture(t: { onTestFinished(fn: () => void): void }) {
   const task: Task = {
     ...startSchema.parse({ repository: "/repo", description: "Review" }),
     title: "Review",
-    id: "seen",
+    id: "read",
     owner: "alice",
     status: "running",
     created_at: "now",
@@ -38,10 +38,10 @@ function fixture(t: { onTestFinished(fn: () => void): void }) {
   return { store, task };
 }
 
-test("a task is unseen once it has a reply, outcome or request after what the user saw", (t) => {
+test("a task is unread once it has a reply, outcome or request after what the user saw", (t) => {
   const { store, task } = fixture(t);
 
-  // The user's own messages leave it seen.
+  // The user's own messages leave it read.
   store.event(task, "task.started", {});
 
   store.event(task, "task.instruction", {
@@ -51,13 +51,13 @@ test("a task is unseen once it has a reply, outcome or request after what the us
     delivery: "queue",
   });
 
-  assert.equal(store.seen(task.id).unseen, false);
+  assert.equal(store.readState(task.id).unread, false);
 
   const reply = store.event(task, "agent.reply", { text: "Done", turn: 1 });
-  assert.equal(store.seen(task.id).unseen, true);
+  assert.equal(store.readState(task.id).unread, true);
 
-  store.markSeen(task, reply.id);
-  assert.equal(store.seen(task.id).unseen, false);
+  store.markRead(task, reply.id);
+  assert.equal(store.readState(task.id).unread, false);
 
   for (const type of [
     "agent.message",
@@ -66,92 +66,96 @@ test("a task is unseen once it has a reply, outcome or request after what the us
     "agent.input_required",
   ]) {
     const event = store.eventOpaque(task, type);
-    assert.equal(store.seen(task.id).unseen, true, type);
-    store.markSeen(task, event.id);
-    assert.equal(store.seen(task.id).unseen, false, type);
+    assert.equal(store.readState(task.id).unread, true, type);
+    store.markRead(task, event.id);
+    assert.equal(store.readState(task.id).unread, false, type);
   }
 });
 
-test("seeing an earlier event never undoes a later one, nor sees events still to come", (t) => {
+test("reading an earlier event never undoes a later one, nor marks events still to come", (t) => {
   const { store, task } = fixture(t);
   const first = store.event(task, "agent.reply", { text: "One", turn: 1 });
   const second = store.event(task, "agent.reply", { text: "Two", turn: 1 });
 
-  store.markSeen(task, first.id);
-  assert.equal(store.seen(task.id).unseen, true);
+  store.markRead(task, first.id);
+  assert.equal(store.readState(task.id).unread, true);
 
-  store.markSeen(task, second.id);
-  store.markSeen(task, first.id);
-  assert.equal(store.seen(task.id).unseen, false);
+  store.markRead(task, second.id);
+  store.markRead(task, first.id);
+  assert.equal(store.readState(task.id).unread, false);
 
-  // A cursor past the newest event sees only what exists now.
-  store.markSeen(task, second.id + 100);
+  // A cursor past the newest event marks only what exists now.
+  store.markRead(task, second.id + 100);
   store.event(task, "agent.reply", { text: "Three", turn: 1 });
-  assert.equal(store.seen(task.id).unseen, true);
+  assert.equal(store.readState(task.id).unread, true);
 
-  // Without a cursor, everything so far is seen.
-  store.markSeen(task);
-  assert.equal(store.seen(task.id).unseen, false);
+  // Without a cursor, everything so far is read.
+  store.markRead(task);
+  assert.equal(store.readState(task.id).unread, false);
 });
 
-test("marking a task unseen holds until the user sees it again", (t) => {
+test("marking a task unread holds until the user sees it again", (t) => {
   const { store, task } = fixture(t);
-  assert.equal(store.seen(task.id).unseen, false);
+  assert.equal(store.readState(task.id).unread, false);
 
-  store.markUnseen(task);
-  assert.equal(store.seen(task.id).unseen, true);
+  store.markUnread(task);
+  assert.equal(store.readState(task.id).unread, true);
 
-  store.markSeen(task);
-  assert.equal(store.seen(task.id).unseen, false);
+  store.markRead(task);
+  assert.equal(store.readState(task.id).unread, false);
 });
 
-test("marking unseen from an event leaves what came before it seen, even moving the seen point back", (t) => {
+test("marking unread from an event leaves what came before it read, even moving the read point back", (t) => {
   const { store, task } = fixture(t);
   const first = store.event(task, "agent.reply", { text: "One", turn: 1 });
   const second = store.event(task, "agent.reply", { text: "Two", turn: 1 });
-  store.markSeen(task);
+  store.markRead(task);
 
-  store.markUnseenFrom(task, second.id);
-  assert.deepEqual(store.seen(task.id), { unseen: true, through: first.id });
+  store.markUnreadFrom(task, second.id);
 
-  store.markUnseenFrom(task, first.id);
+  assert.deepEqual(store.readState(task.id), {
+    unread: true,
+    through: first.id,
+  });
 
-  assert.deepEqual(store.seen(task.id), {
-    unseen: true,
+  store.markUnreadFrom(task, first.id);
+
+  assert.deepEqual(store.readState(task.id), {
+    unread: true,
     through: first.id - 1,
   });
 
-  store.markSeen(task);
-  assert.equal(store.seen(task.id).unseen, false);
+  store.markRead(task);
+  assert.equal(store.readState(task.id).unread, false);
 });
 
-test("marking seen or unseen announces a change without touching the task", (t) => {
+test("marking read or unread announces a change without touching the task", (t) => {
   const { store, task } = fixture(t);
   const before = store.get(task.id, "alice");
   const revision = store.revision("alice");
 
-  store.markUnseen(task);
-  const unseen = store.revision("alice");
-  assert.notEqual(unseen, revision);
+  store.markUnread(task);
+  const unread = store.revision("alice");
+  assert.notEqual(unread, revision);
 
-  store.markSeen(task);
-  assert.notEqual(store.revision("alice"), unseen);
+  store.markRead(task);
+  assert.notEqual(store.revision("alice"), unread);
   assert.deepEqual(store.get(task.id, "alice"), before);
 });
 
 test("deleting a task deletes what the user saw of it", (t) => {
   const { store, task } = fixture(t);
-  store.markUnseen(task);
+  store.markUnread(task);
   store.delete(task.id, "alice");
 
   assert.deepEqual(
-    store.database.client.prepare("SELECT * FROM task_seen").all(),
+    store.database.client.prepare("SELECT * FROM task_read").all(),
     [],
   );
 });
 
-test("tasks from before seen tracking start seen through their newest event", (t) => {
-  const dir = mkdtempSync(join(tmpdir(), "seen-migration-"));
+test("tasks from before read tracking start read through their newest event", (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "read-migration-"));
   t.onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
   const folder = join(dir, "migrations");
   mkdirSync(folder);
@@ -181,22 +185,25 @@ test("tasks from before seen tracking start seen through their newest event", (t
   assert.deepEqual(
     after.client
       .prepare(
-        "SELECT task_id, through, unseen FROM task_seen ORDER BY task_id",
+        "SELECT task_id, through, unread FROM task_read ORDER BY task_id",
       )
       .all()
       .map((row) => ({ ...row })),
     [
-      { task_id: "quiet", through: 0, unseen: 0 },
-      { task_id: "replied", through: 2, unseen: 0 },
+      { task_id: "quiet", through: 0, unread: 0 },
+      { task_id: "replied", through: 2, unread: 0 },
     ],
   );
 });
 
-test("a task's seen state keeps where the user stopped reading", (t) => {
+test("a task's read state keeps where the user stopped reading", (t) => {
   const { store, task } = fixture(t);
   const first = store.event(task, "agent.reply", { text: "One", turn: 1 });
-  store.markSeen(task, first.id);
+  store.markRead(task, first.id);
   store.event(task, "agent.reply", { text: "Two", turn: 1 });
 
-  assert.deepEqual(store.seen(task.id), { unseen: true, through: first.id });
+  assert.deepEqual(store.readState(task.id), {
+    unread: true,
+    through: first.id,
+  });
 });

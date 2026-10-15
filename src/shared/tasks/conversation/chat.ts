@@ -7,7 +7,7 @@ import { conversation, type ConversationMessage } from "./messages.js";
 /**
  * Events Chat is built from, besides compaction markers. Input requests add
  * no item, since Chat shows the pending request from the task, but reading
- * them moves Chat's cursor past every `SEEN_EVENTS` event it has shown.
+ * them moves Chat's cursor past every `READ_EVENTS` event it has shown.
  */
 export const CHAT_EVENTS = [
   "task.started",

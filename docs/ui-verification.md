@@ -78,11 +78,11 @@ recorded fixtures through the provider.
 | Profile the production build                | Large added files and multiple pages of diff/file previews.                                                                                      |
 
 Audit dependency licences, Fix the flaky retry test, Migrate the config loader
-and Investigate session expiry regression start unseen, for the row dot and the
-**Unseen** filter. Move the screens to the new layout starts seen through the
+and Investigate session expiry regression start unread, for the row dot and the
+**Unread** filter. Move the screens to the new layout starts read through the
 middle of its conversation, so Chat opens at its **New** divider partway down.
-The other fixtures start seen. Seen and unseen marks stay
-until the preview reloads (`dev/panel/scenarios/seen-tools.ts`).
+The other fixtures start read. Read and unread marks stay
+until the preview reloads (`dev/panel/scenarios/unread-tools.ts`).
 
 Changes fixtures in `dev/panel/scenarios/change-fixtures.ts` use real temporary Git
 repositories. `large-files.ts` supplies the 60-file diff, minified JSON,

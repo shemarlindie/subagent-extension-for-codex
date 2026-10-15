@@ -13,7 +13,7 @@ export interface ScrollLatestButtonProps {
   label: string;
   /** Positions the button within its owner. */
   className?: string;
-  /** A marker over the button's corner, such as a dot for unseen content. */
+  /** A marker over the button's corner, such as a dot for unread content. */
   badge?: ReactNode;
   onClick: () => void;
 }

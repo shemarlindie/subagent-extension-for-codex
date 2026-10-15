@@ -690,7 +690,7 @@ export class Controller {
       this.viewStateReady = Boolean(this.viewState);
 
       this.patch({
-        tasks: this.taskActions.seen.settle(tasks),
+        tasks: this.taskActions.unread.settle(tasks),
         taskListLoading: false,
         selected,
         // Keep each first history read pending across polls until it succeeds.
@@ -1164,7 +1164,7 @@ export class Controller {
       // Opening data carries the full list, so select now as the refresh would
       // rather than showing the empty inspector until that read returns.
       this.patch({
-        tasks: this.taskActions.seen.settle(tasks),
+        tasks: this.taskActions.unread.settle(tasks),
         taskListLoading: false,
         ...(hostTaskId ? {} : this.fallbackSelection(tasks)),
       });

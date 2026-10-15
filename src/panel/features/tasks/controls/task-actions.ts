@@ -1,7 +1,7 @@
 import type { BudgetRaise, Delivery } from "../../../../shared/tasks/model";
 import type { Snapshot, Task } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
-import { SeenActions } from "../seen/seen-actions";
+import { UnreadActions } from "../unread/unread-actions";
 
 interface TaskActionContext {
   snapshot(): Snapshot;
@@ -20,11 +20,11 @@ interface TaskActionContext {
  * has reloaded.
  */
 export class TaskActions {
-  /** Records what the user has seen, without making the panel busy. */
-  readonly seen: SeenActions;
+  /** Records what the user has read, without making the panel busy. */
+  readonly unread: UnreadActions;
 
   constructor(private context: TaskActionContext) {
-    this.seen = new SeenActions(context);
+    this.unread = new UnreadActions(context);
   }
 
   /** Answers a worker's pending question from the task inspector. */

@@ -1437,19 +1437,17 @@ const replyItems = (): ChatItem[] => [
   },
 ];
 
-test("a reply's Mark as unseen from here marks the task unseen from that reply", async () => {
+test("a reply's Mark unread from here marks the task unread from that reply", async () => {
   const { tool, task, view } = setup({}, [], replyItems());
 
-  fireEvent.click(
-    view.getByRole("button", { name: "Mark as unseen from here" }),
-  );
+  fireEvent.click(view.getByRole("button", { name: "Mark unread from here" }));
 
   await waitFor(() =>
     assert.deepEqual(
       tool.mock.calls.filter(
-        ([name]) => name === "mark_user_agent_task_unseen_from",
+        ([name]) => name === "mark_user_agent_task_unread_from",
       ),
-      [["mark_user_agent_task_unseen_from", { task_id: task.id, event_id: 7 }]],
+      [["mark_user_agent_task_unread_from", { task_id: task.id, event_id: 7 }]],
     ),
   );
 
@@ -1463,7 +1461,7 @@ test("a reply's Mark as unseen from here marks the task unseen from that reply",
   );
 });
 
-test("marking unseen from another reply moves the New divider without leaving a copy behind", async () => {
+test("marking unread from another reply moves the New divider without leaving a copy behind", async () => {
   const second = replyItems().map((item) => ({
     ...item,
     id: `${item.id}-2`,
@@ -1477,7 +1475,7 @@ test("marking unseen from another reply moves the New divider without leaving a 
   const { view } = setup({}, [], [...replyItems(), ...second]);
 
   const [first, last] = view.getAllByRole("button", {
-    name: "Mark as unseen from here",
+    name: "Mark unread from here",
   });
 
   assert.ok(first && last);
@@ -1497,7 +1495,7 @@ test("marking unseen from another reply moves the New divider without leaving a 
   });
 });
 
-test("marking unseen from a reply scrolls its New divider into view only when it is out of view", async () => {
+test("marking unread from a reply scrolls its New divider into view only when it is out of view", async () => {
   // Just below the 200 px viewport; the history scrolls at most 400 px.
   let dividerTop = 200;
 
@@ -1531,9 +1529,7 @@ test("marking unseen from a reply scrolls its New divider into view only when it
   const history = view.getByRole("region", { name: "Chat history" });
   const before = history.scrollTop;
 
-  fireEvent.click(
-    view.getByRole("button", { name: "Mark as unseen from here" }),
-  );
+  fireEvent.click(view.getByRole("button", { name: "Mark unread from here" }));
 
   await waitFor(() => assert.equal(history.scrollTop - before, 200));
 
@@ -1542,15 +1538,13 @@ test("marking unseen from a reply scrolls its New divider into view only when it
   const shown = history.scrollTop;
 
   // A second mark whose divider is already in view leaves the reader where they are.
-  fireEvent.click(
-    view.getByRole("button", { name: "Mark as unseen from here" }),
-  );
+  fireEvent.click(view.getByRole("button", { name: "Mark unread from here" }));
 
   await act(async () => {});
   assert.equal(history.scrollTop, shown);
 });
 
-test("marking unseen from a reply glides to its New divider where smooth scrolling is available", async () => {
+test("marking unread from a reply glides to its New divider where smooth scrolling is available", async () => {
   const bounds = vi
     .spyOn(HTMLElement.prototype, "getBoundingClientRect")
     .mockImplementation(function (this: HTMLElement) {
@@ -1572,9 +1566,7 @@ test("marking unseen from a reply glides to its New divider where smooth scrolli
   const scrollTo = vi.fn();
   history.scrollTo = scrollTo;
 
-  fireEvent.click(
-    view.getByRole("button", { name: "Mark as unseen from here" }),
-  );
+  fireEvent.click(view.getByRole("button", { name: "Mark unread from here" }));
 
   await waitFor(() =>
     expect(scrollTo).toHaveBeenCalledWith({
@@ -1586,7 +1578,7 @@ test("marking unseen from a reply glides to its New divider where smooth scrolli
   assert.equal(history.scrollTop, before);
 });
 
-const seenNotes: ChatItem[] = Array.from({ length: 6 }, (_, index) => ({
+const noteItems: ChatItem[] = Array.from({ length: 6 }, (_, index) => ({
   kind: "note",
   id: `note-${index}`,
   event_id: index,
@@ -1595,8 +1587,8 @@ const seenNotes: ChatItem[] = Array.from({ length: 6 }, (_, index) => ({
   text: `Note ${index}`,
 }));
 
-const seenCalls = (tool: ReturnType<typeof setup>["tool"]) =>
-  tool.mock.calls.filter(([name]) => name === "mark_user_agent_task_seen");
+const markReadCalls = (tool: ReturnType<typeof setup>["tool"]) =>
+  tool.mock.calls.filter(([name]) => name === "mark_user_agent_task_read");
 
 /** A Chat history 600 px tall in a 200 px viewport, scrolled into its history. */
 function scrollIntoHistory(view: ReturnType<typeof setup>["view"]) {
@@ -1619,56 +1611,56 @@ function scrollIntoHistory(view: ReturnType<typeof setup>["view"]) {
   fireEvent.scroll(history);
 }
 
-test("Chat at its latest message sees an unseen task through the events it has read", async () => {
-  const { tool, task } = setup({ unseen: true }, [], seenNotes);
+test("Chat at its latest message marks an unread task read through the events it has read", async () => {
+  const { tool, task } = setup({ unread: true }, [], noteItems);
 
   await waitFor(() =>
-    assert.deepEqual(seenCalls(tool), [
+    assert.deepEqual(markReadCalls(tool), [
       [
-        "mark_user_agent_task_seen",
-        { task_id: task.id, seen: true, through: seenNotes.length },
+        "mark_user_agent_task_read",
+        { task_id: task.id, read: true, through: noteItems.length },
       ],
     ]),
   );
 });
 
-test("Chat in its history leaves a task unseen until the reader returns to the latest", async () => {
-  const { tool, task, view, updateTask } = setup({}, [], seenNotes);
+test("Chat in its history leaves a task unread until the reader returns to the latest", async () => {
+  const { tool, task, view, updateTask } = setup({}, [], noteItems);
   scrollIntoHistory(view);
-  updateTask({ unseen: true });
+  updateTask({ unread: true });
   await act(async () => {});
-  assert.deepEqual(seenCalls(tool), []);
+  assert.deepEqual(markReadCalls(tool), []);
 
   fireEvent.click(
-    view.getByRole("button", { name: "Scroll to unseen messages" }),
+    view.getByRole("button", { name: "Scroll to unread messages" }),
   );
 
   await waitFor(() =>
-    assert.deepEqual(seenCalls(tool), [
+    assert.deepEqual(markReadCalls(tool), [
       [
-        "mark_user_agent_task_seen",
-        { task_id: task.id, seen: true, through: seenNotes.length },
+        "mark_user_agent_task_read",
+        { task_id: task.id, read: true, through: noteItems.length },
       ],
     ]),
   );
 });
 
-test("list reads keep the task seen only while Chat is at its latest message", async () => {
-  const { controller, task, view } = setup({}, [], seenNotes);
-  const listed: Task[] = [{ ...task, unseen: true, seen_through: 2 }];
+test("list fetches keep the task read only while Chat is at its latest message", async () => {
+  const { controller, task, view } = setup({}, [], noteItems);
+  const listed: Task[] = [{ ...task, unread: true, read_through: 2 }];
 
   await waitFor(() =>
     assert.equal(
-      controller.taskActions.seen.settle(listed)[0]?.unseen,
+      controller.taskActions.unread.settle(listed)[0]?.unread,
       undefined,
     ),
   );
 
   scrollIntoHistory(view);
-  assert.equal(controller.taskActions.seen.settle(listed), listed);
+  assert.equal(controller.taskActions.unread.settle(listed), listed);
 });
 
-test("a hidden panel sees nothing until it is shown", async () => {
+test("a hidden panel marks nothing read until it is shown", async () => {
   Object.defineProperty(document, "hidden", {
     configurable: true,
     value: true,
@@ -1678,9 +1670,9 @@ test("a hidden panel sees nothing until it is shown", async () => {
     Reflect.deleteProperty(document, "hidden");
   });
 
-  const { tool } = setup({ unseen: true }, [], seenNotes);
+  const { tool } = setup({ unread: true }, [], noteItems);
   await act(async () => {});
-  assert.deepEqual(seenCalls(tool), []);
+  assert.deepEqual(markReadCalls(tool), []);
 
   Reflect.deleteProperty(document, "hidden");
 
@@ -1688,11 +1680,11 @@ test("a hidden panel sees nothing until it is shown", async () => {
     document.dispatchEvent(new window.Event("visibilitychange"));
   });
 
-  await waitFor(() => assert.equal(seenCalls(tool).length, 1));
+  await waitFor(() => assert.equal(markReadCalls(tool).length, 1));
 });
 
-test("an unseen task opens with a New divider after what the user had seen, which stays once seen", () => {
-  const notes = seenNotes.map((_, index): ChatItem => ({
+test("an unread task opens with a New divider after what the user had read, which stays once read", () => {
+  const notes = noteItems.map((_, index): ChatItem => ({
     kind: "note",
     id: `note-${index}`,
     event_id: index,
@@ -1702,7 +1694,7 @@ test("an unseen task opens with a New divider after what the user had seen, whic
   }));
 
   const { view, updateTask } = setup(
-    { unseen: true, seen_through: 3 },
+    { unread: true, read_through: 3 },
     [],
     notes,
   );
@@ -1713,12 +1705,12 @@ test("an unseen task opens with a New divider after what the user had seen, whic
     "note-4",
   );
 
-  updateTask({ unseen: undefined, seen_through: undefined });
+  updateTask({ unread: undefined, read_through: undefined });
   expect(view.getByRole("separator", { name: "New messages" })).toBe(divider);
 });
 
-test("marking the open task seen removes its New divider", async () => {
-  const notes = seenNotes.map((_, index): ChatItem => ({
+test("marking the open task read removes its New divider", async () => {
+  const notes = noteItems.map((_, index): ChatItem => ({
     kind: "note",
     id: `note-${index}`,
     event_id: index,
@@ -1728,7 +1720,7 @@ test("marking the open task seen removes its New divider", async () => {
   }));
 
   const { controller, task, view, reopen } = setup(
-    { unseen: true, seen_through: 3 },
+    { unread: true, read_through: 3 },
     [],
     notes,
   );
@@ -1739,25 +1731,25 @@ test("marking the open task seen removes its New divider", async () => {
     selected: task.id,
   });
 
-  await act(() => controller.taskActions.seen.markSeen(task));
+  await act(() => controller.taskActions.unread.markRead(task));
   expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
 
-  // The mark belongs to that opening; unseen again later, the task divides anew.
-  reopen({ unseen: true, seen_through: 3 });
+  // The mark belongs to that opening; unread again later, the task divides anew.
+  reopen({ unread: true, read_through: 3 });
   expect(view.getByRole("separator", { name: "New messages" })).toBeTruthy();
 });
 
-test("a seen task opens without a New divider", () => {
-  const { view } = setup({}, [], seenNotes);
+test("a read task opens without a New divider", () => {
+  const { view } = setup({}, [], noteItems);
 
   expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
 });
 
-test("a task marked unseen with nothing new opens without a divider, and a later reply adds none", () => {
+test("a task marked unread with nothing new opens without a divider, and a later reply adds none", () => {
   const { controller, view, updateTask } = setup(
-    { unseen: true, seen_through: seenNotes.length },
+    { unread: true, read_through: noteItems.length },
     [],
-    seenNotes,
+    noteItems,
   );
 
   expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
@@ -1765,7 +1757,7 @@ test("a task marked unseen with nothing new opens without a divider, and a later
   const later: ChatItem = {
     kind: "note",
     id: "later",
-    event_id: seenNotes.length + 1,
+    event_id: noteItems.length + 1,
     timestamp: "",
     note: "failure",
     text: "Later failure",
@@ -1777,18 +1769,18 @@ test("a task marked unseen with nothing new opens without a divider, and a later
     ...snapshot,
     chat: {
       task: "task-1",
-      items: [...seenNotes, later],
+      items: [...noteItems, later],
       cursor: later.event_id,
     },
   });
 
-  updateTask({ unseen: true });
+  updateTask({ unread: true });
   expect(view.getByText("Later failure")).toBeTruthy();
   expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
 });
 
-test("a task just marked unseen, before the service gives its marker, opens without a divider", () => {
-  const { view } = setup({ unseen: true }, [], seenNotes);
+test("a task just marked unread, before the service gives its marker, opens without a divider", () => {
+  const { view } = setup({ unread: true }, [], noteItems);
 
   expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
 });

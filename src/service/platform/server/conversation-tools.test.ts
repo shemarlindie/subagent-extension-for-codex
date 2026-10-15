@@ -934,7 +934,7 @@ test("parent message tools publish the canonical polling and processing protocol
   );
 });
 
-test("the panel records what the user has seen, and lists show what they haven't", async () => {
+test("the panel records what the user has read, and lists show what they haven't", async () => {
   const { c, store, parent, user, start } = await setup();
 
   try {
@@ -946,16 +946,16 @@ test("the panel records what the user has seen, and lists show what they haven't
         await parent<ListedTask[]>("list_agent_tasks", {
           conversation_id: null,
         })
-      ).find((task) => task.id === t.id)?.unseen;
+      ).find((task) => task.id === t.id)?.unread;
 
     assert.equal(await listed(), true);
 
-    // A task never seen is new from its start.
+    // A task never read is new from its start.
     const [never] = await parent<ListedTask[]>("list_agent_tasks", {
       conversation_id: null,
     });
 
-    assert.equal(never?.seen_through, 0);
+    assert.equal(never?.read_through, 0);
 
     // Chat's cursor covers the reply and the turn's end.
     const chat = await user<{ next_cursor: number }>("get_user_agent_chat", {
@@ -963,45 +963,45 @@ test("the panel records what the user has seen, and lists show what they haven't
     });
 
     assert.deepEqual(
-      await user("mark_user_agent_task_seen", {
+      await user("mark_user_agent_task_read", {
         task_id: t.id,
-        seen: true,
+        read: true,
         through: chat.next_cursor,
       }),
-      { unseen: false, through: chat.next_cursor },
+      { unread: false, through: chat.next_cursor },
     );
 
     assert.equal(await listed(), undefined);
 
     assert.deepEqual(
-      await user("mark_user_agent_task_seen", { task_id: t.id, seen: false }),
-      { unseen: true, through: chat.next_cursor },
+      await user("mark_user_agent_task_read", { task_id: t.id, read: false }),
+      { unread: true, through: chat.next_cursor },
     );
 
     assert.deepEqual(
-      await user("mark_user_agent_tasks_seen", { task_ids: [t.id] }),
+      await user("mark_user_agent_tasks_read", { task_ids: [t.id] }),
       { task_ids: [t.id] },
     );
 
     assert.equal(await listed(), undefined);
 
-    // Marking from the turn's end leaves that end unseen.
+    // Marking from the turn's end leaves that end unread.
     assert.deepEqual(
-      await user("mark_user_agent_task_unseen_from", {
+      await user("mark_user_agent_task_unread_from", {
         task_id: t.id,
         event_id: chat.next_cursor,
       }),
-      { unseen: true, through: chat.next_cursor - 1 },
+      { unread: true, through: chat.next_cursor - 1 },
     );
 
     // Only the user marks tasks, and only their own.
     await assert.rejects(
-      parent("mark_user_agent_task_seen", { task_id: t.id, seen: true }),
+      parent("mark_user_agent_task_read", { task_id: t.id, read: true }),
       /User tools require a user interface/,
     );
 
     await assert.rejects(
-      parent("mark_user_agent_task_unseen_from", {
+      parent("mark_user_agent_task_unread_from", {
         task_id: t.id,
         event_id: chat.next_cursor,
       }),
@@ -1012,7 +1012,7 @@ test("the panel records what the user has seen, and lists show what they haven't
       callTool(
         c,
         "bob",
-        "mark_user_agent_task_unseen_from",
+        "mark_user_agent_task_unread_from",
         { task_id: t.id, event_id: chat.next_cursor },
         "user",
       ),
@@ -1023,7 +1023,7 @@ test("the panel records what the user has seen, and lists show what they haven't
       callTool(
         c,
         "bob",
-        "mark_user_agent_tasks_seen",
+        "mark_user_agent_tasks_read",
         { task_ids: [t.id] },
         "user",
       ),
@@ -1034,7 +1034,7 @@ test("the panel records what the user has seen, and lists show what they haven't
   }
 });
 
-test("the panel's opening tasks carry their seen state", async () => {
+test("the panel's opening tasks carry their read state", async () => {
   const { c, store, start } = await setup();
 
   try {
@@ -1046,8 +1046,8 @@ test("the panel's opening tasks carry their seen state", async () => {
       (task) => task.id === t.id,
     );
 
-    assert.equal(opened?.unseen, true);
-    assert.equal(opened?.seen_through, 0);
+    assert.equal(opened?.unread, true);
+    assert.equal(opened?.read_through, 0);
   } finally {
     await c.close();
   }

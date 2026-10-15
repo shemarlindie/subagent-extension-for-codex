@@ -49,7 +49,7 @@ function collapsesAtOnce(element: HTMLElement) {
   return row.top < frame.top || row.top >= frame.bottom;
 }
 
-/** Marks where Chat's unseen messages start when an unseen task opens. */
+/** Marks where Chat's unread messages start when an unread task opens. */
 export function NewMessagesDivider({
   animate,
   leaving,

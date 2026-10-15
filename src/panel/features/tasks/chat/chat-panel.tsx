@@ -9,10 +9,10 @@ import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { Task } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
 import { useReadingScroll } from "../evidence/use-reading-scroll";
-import { NEW_MESSAGES_ID } from "../seen/new-messages";
-import { UnseenDot } from "../seen/unseen-dot";
-import { useMarkSeen } from "../seen/use-mark-seen";
-import { useNewMessagesFrom } from "../seen/use-new-messages-from";
+import { NEW_MESSAGES_ID } from "../unread/new-messages";
+import { UnreadDot } from "../unread/unread-dot";
+import { useMarkRead } from "../unread/use-mark-read";
+import { useNewMessagesFrom } from "../unread/use-new-messages-from";
 import { Composer } from "./composer/composer";
 import { MessageQueue } from "./queue/message-queue";
 import { ChatTimeline } from "./timeline/chat-timeline";
@@ -82,9 +82,9 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
           },
   });
 
-  useMarkSeen({ task, ready: ready && positionRestored, atLatest: pinned });
+  useMarkRead({ task, ready: ready && positionRestored, atLatest: pinned });
 
-  const unseen = Boolean(task?.unseen);
+  const unread = Boolean(task?.unread);
 
   return (
     <div className="chat">
@@ -104,10 +104,10 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
           show={ready && positionRestored && !pinned}
           direction="down"
           label={
-            unseen ? "Scroll to unseen messages" : "Scroll to latest message"
+            unread ? "Scroll to unread messages" : "Scroll to latest message"
           }
           className="chat-scroll-latest"
-          badge={unseen && <UnseenDot className="scroll-latest-unseen" />}
+          badge={unread && <UnreadDot className="scroll-latest-unread" />}
           onClick={scrollToLatest}
         />
         {/* Keyed so switching tasks swaps the queue instead of animating its rows. */}

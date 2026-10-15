@@ -23,7 +23,7 @@ import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into
 import { useNow } from "../../../shared/utils/use-now";
 import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
-import { UnseenDot } from "../seen/unseen-dot";
+import { UnreadDot } from "../unread/unread-dot";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
 import { TaskListScrollbar } from "./task-list-scrollbar";
 import { TaskListSkeleton } from "./task-list-skeleton";
@@ -36,17 +36,17 @@ interface TaskRowProps {
   projectName?: string;
   selected: boolean;
   onSelect(): void;
-  /** Marks the task seen when it's unseen, otherwise unseen. */
-  onToggleSeen(): void;
+  /** Marks the task read when it's unread, otherwise unread. */
+  onToggleRead(): void;
 }
 
-/** A task in the list; right-click or long-press marks it seen or unseen. */
+/** A task in the list; right-click or long-press marks it read or unread. */
 export function TaskRow({
   task,
   projectName,
   selected,
   onSelect,
-  onToggleSeen,
+  onToggleRead,
 }: TaskRowProps) {
   return (
     <ContextMenu.Root>
@@ -55,7 +55,7 @@ export function TaskRow({
           <button
             className="row"
             data-task={task.id}
-            data-unseen={task.unseen ? "" : undefined}
+            data-unread={task.unread ? "" : undefined}
             aria-current={selected}
             onClick={onSelect}
           />
@@ -68,10 +68,10 @@ export function TaskRow({
           <ContextMenu.Popup className="menu-popup">
             <ContextMenu.Item
               className="menu-item"
-              data-action={task.unseen ? "mark-seen" : "mark-unseen"}
-              onClick={onToggleSeen}
+              data-action={task.unread ? "mark-read" : "mark-unread"}
+              onClick={onToggleRead}
             >
-              {task.unseen ? "Mark as seen" : "Mark as unseen"}
+              {task.unread ? "Mark read" : "Mark unread"}
             </ContextMenu.Item>
           </ContextMenu.Popup>
         </ContextMenu.Positioner>
@@ -85,7 +85,7 @@ type TaskRowContentProps = Pick<TaskRowProps, "task" | "projectName">;
 function TaskRowContent({ task, projectName }: TaskRowContentProps) {
   return (
     <>
-      {task.unseen && <UnseenDot className="row-unseen" />}
+      {task.unread && <UnreadDot className="row-unread" />}
       {projectName && (
         <span className="row-project" title={projectName}>
           {projectName}
@@ -154,7 +154,7 @@ function runtimeText(task: Task, live: boolean, duration: string) {
 
 const EMPTY_FILTER: Record<Filter, string> = {
   all: "No tasks yet.",
-  unseen: "You're all caught up.",
+  unread: "You're all caught up.",
   active: "No active tasks.",
   attention: "No tasks need input.",
   completed: "No completed tasks.",
@@ -230,7 +230,7 @@ export function TaskList() {
           }
           selected={task.id === state.selected}
           onSelect={() => controller.run(() => controller.select(task.id))}
-          onToggleSeen={() => toggleSeen(task)}
+          onToggleRead={() => toggleRead(task)}
         />
       ));
     }
@@ -249,16 +249,16 @@ export function TaskList() {
     controller.setFilter("all");
   };
 
-  const toggleSeen = (task: Task) =>
-    controller.run(() => controller.taskActions.seen.toggle(task));
+  const toggleRead = (task: Task) =>
+    controller.run(() => controller.taskActions.unread.toggle(task));
 
-  // Under Unseen, the listed tasks can all be seen at once. Without a search
+  // Under Unread, the listed tasks can all be read at once. Without a search
   // to clear, this takes Clear filter's place; the All pill does the same.
-  const unseenShown = filter === "unseen" && tasks.some((task) => task.unseen);
-  const clearShown = narrowed && (!unseenShown || Boolean(state.search));
+  const unreadShown = filter === "unread" && tasks.some((task) => task.unread);
+  const clearShown = narrowed && (!unreadShown || Boolean(state.search));
 
-  const markAllSeen = () =>
-    controller.run(() => controller.taskActions.seen.markAllSeen(tasks));
+  const markAllRead = () =>
+    controller.run(() => controller.taskActions.unread.markAllRead(tasks));
 
   return (
     <>
@@ -267,9 +267,9 @@ export function TaskList() {
           {state.conversation ? "This conversation" : "All conversations"}
         </span>
         <span className="list-count">
-          {unseenShown && (
-            <Button variant="text" underline onClick={markAllSeen}>
-              Mark all seen
+          {unreadShown && (
+            <Button variant="text" underline onClick={markAllRead}>
+              Mark all read
             </Button>
           )}
           {clearShown && (

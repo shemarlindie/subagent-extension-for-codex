@@ -44,7 +44,7 @@ const note = (event_id: number, kind: "compaction" | "failure"): ChatItem => ({
   text: "",
 });
 
-test("new messages start at the first item from the task after what was seen", () => {
+test("new messages start at the first item from the task after what was read", () => {
   const items = [
     message(1, "user"),
     message(2, "worker"),
@@ -59,7 +59,7 @@ test("new messages start at the first item from the task after what was seen", (
   assert.equal(newMessagesIndex([...items, note(6, "failure")], 5), 5);
 });
 
-test("a new outcome shown with a seen response puts the divider above that response", () => {
+test("a new outcome shown with a read response puts the divider above that response", () => {
   const items = [message(1, "user"), message(2, "worker"), outcome(3)];
 
   assert.equal(newMessagesIndex(items, 2), 1);

@@ -3,7 +3,7 @@ import type { Event } from "../events/types.js";
 import { currentActivityStatus } from "./activity/activity-status.js";
 import type { Draft } from "./conversation/drafts.js";
 import { replyExcerpt } from "./conversation/reply.js";
-import type { SeenState } from "./conversation/seen.js";
+import type { ReadState } from "./conversation/unread.js";
 import type { Task } from "./model.js";
 
 /** The start of a task's latest reply, so a list can be scanned without opening each task. */
@@ -15,10 +15,10 @@ export type ListedTask = Task & {
   queued_messages?: number;
   /** The worker's unfinished message, as a fallback to streaming it. */
   draft?: Draft;
-  /** The task has a reply, outcome or request the user hasn't seen. */
-  unseen?: true;
-  /** With `unseen`, the newest event the user had seen; Chat marks what follows as new. */
-  seen_through?: number;
+  /** The task has a reply, outcome or request the user hasn't read. */
+  unread?: true;
+  /** With `unread`, the newest event the user had read; Chat marks what follows as new. */
+  read_through?: number;
 };
 
 /** A latest `agent.reply` event as a listed task's excerpt. */
@@ -33,10 +33,10 @@ export function replyFrom(event?: Event): ReplyExcerpt | undefined {
   };
 }
 
-/** A task's seen fields: present only while the user has something unseen in it. */
-export function seenFields(seen?: SeenState) {
-  return seen?.unseen
-    ? { unseen: true as const, seen_through: seen.through }
+/** A task's read fields: present only while the user has something unread in it. */
+export function readFields(read?: ReadState) {
+  return read?.unread
+    ? { unread: true as const, read_through: read.through }
     : {};
 }
 
@@ -46,7 +46,7 @@ export function listedTask(
   events: Event[],
   reply?: Event,
   draft?: Draft,
-  seen?: SeenState,
+  read?: ReadState,
 ): ListedTask {
   const excerpt = replyFrom(reply);
 
@@ -57,7 +57,7 @@ export function listedTask(
       : {}),
     ...(excerpt ? { reply: excerpt } : {}),
     ...(draft ? { draft } : {}),
-    ...seenFields(seen),
+    ...readFields(read),
     queued_messages: task.queue.length,
   };
 }

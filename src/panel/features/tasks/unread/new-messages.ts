@@ -13,7 +13,7 @@ const fromTask = (item: ChatItem) =>
 
 /**
  * Where Chat's "New" divider goes: before the first item from the task after
- * event `through`, the newest the user had seen. An outcome shows with the
+ * event `through`, the newest the user had read. An outcome shows with the
  * worker response before it, so the divider then goes above that response.
  */
 export function newMessagesIndex(items: ChatItem[], through: number) {

@@ -36,7 +36,7 @@ const filters: Filter[] = [
   "attention",
   "completed",
   "failed",
-  "unseen",
+  "unread",
 ];
 
 const tabs: Tab[] = ["chat", "changes", "activity", "details"];

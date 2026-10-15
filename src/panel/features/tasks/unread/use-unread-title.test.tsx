@@ -6,10 +6,10 @@ import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import { task } from "../../../app/state/controller-test-harness";
 import type { Task, Transport } from "../../../app/state/types";
-import { useUnseenTitle } from "./use-unseen-title";
+import { useUnreadTitle } from "./use-unread-title";
 
 function Title() {
-  useUnseenTitle();
+  useUnreadTitle();
 
   return null;
 }
@@ -45,25 +45,25 @@ function setup(embedded: boolean) {
   return { show, view };
 }
 
-const unseen = (id: string): Task => ({ ...task(id), unseen: true });
+const unread = (id: string): Task => ({ ...task(id), unread: true });
 
-test("the console's tab title leads with its unseen task count", () => {
+test("the console's tab title leads with its unread task count", () => {
   const { show, view } = setup(false);
   expect(document.title).toBe("Delegated Work");
 
-  show([unseen("a"), unseen("b"), task("c")]);
+  show([unread("a"), unread("b"), task("c")]);
   expect(document.title).toBe("(2) Delegated Work");
 
   show([task("a")]);
   expect(document.title).toBe("Delegated Work");
 
-  show([unseen("a")]);
+  show([unread("a")]);
   view.unmount();
   expect(document.title).toBe("Delegated Work");
 });
 
 test("the embedded panel leaves its title to the host", () => {
   const { show } = setup(true);
-  show([unseen("a")]);
+  show([unread("a")]);
   expect(document.title).toBe("Delegated Work");
 });

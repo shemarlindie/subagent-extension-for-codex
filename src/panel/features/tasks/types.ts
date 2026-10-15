@@ -4,7 +4,7 @@ export type Task = ListedTask;
 export type Tab = "chat" | "changes" | "activity" | "details";
 
 export type Filter =
-  "all" | "active" | "attention" | "completed" | "failed" | "unseen";
+  "all" | "active" | "attention" | "completed" | "failed" | "unread";
 
 export type Question = {
   question: string;

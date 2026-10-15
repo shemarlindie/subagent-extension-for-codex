@@ -4,16 +4,16 @@ import { Button } from "../../../../shared/components/button/button";
 import { Icon } from "../../../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 
-type MarkUnseenButtonProps = {
+type MarkUnreadButtonProps = {
   task: Task;
-  /** The message's event; it and the events after it become unseen. */
+  /** The message's event; it and the events after it become unread. */
   eventId: number;
 };
 
-/** Marks the task unseen from one of its messages, so that message and the ones after it are new. */
-export function MarkUnseenButton({ task, eventId }: MarkUnseenButtonProps) {
+/** Marks the task unread from one of its messages, so that message and the ones after it are new. */
+export function MarkUnreadButton({ task, eventId }: MarkUnreadButtonProps) {
   const controller = useController();
-  const label = "Mark as unseen from here";
+  const label = "Mark unread from here";
 
   return (
     <TooltipWrapper label={label}>
@@ -23,7 +23,7 @@ export function MarkUnseenButton({ task, eventId }: MarkUnseenButtonProps) {
         aria-label={label}
         onClick={() =>
           controller.run(() =>
-            controller.taskActions.seen.markUnseenFrom(task, eventId),
+            controller.taskActions.unread.markUnreadFrom(task, eventId),
           )
         }
       >

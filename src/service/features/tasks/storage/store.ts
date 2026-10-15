@@ -11,17 +11,17 @@ import type {
 } from "../../../../shared/events/event-types.js";
 import type { Event } from "../../../../shared/events/types.js";
 import {
-  isUnseen,
-  SEEN_EVENTS,
-  type SeenState,
-} from "../../../../shared/tasks/conversation/seen.js";
+  isUnread,
+  READ_EVENTS,
+  type ReadState,
+} from "../../../../shared/tasks/conversation/unread.js";
 import { type Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import {
   type Database,
   openDatabase,
 } from "../../../platform/database/database.js";
-import { events, tasks, taskSeen } from "./schema.js";
+import { events, taskRead, tasks } from "./schema.js";
 import { decodeEvent, decodeTask } from "./stored.js";
 
 /** The 1,000-event page that event reads return at most. */
@@ -310,69 +310,69 @@ export class Store {
   }
 
   /**
-   * What the owner has seen of a task: whether it has a reply, outcome or
-   * request they haven't seen, and the newest event they had seen.
+   * What the owner has read of a task: whether it has a reply, outcome or
+   * request they haven't read, and the newest event they had read.
    */
-  seen(id: string): SeenState {
+  readState(id: string): ReadState {
     const mark = this.orm
-      .select({ through: taskSeen.through, unseen: taskSeen.unseen })
-      .from(taskSeen)
-      .where(eq(taskSeen.task_id, id))
+      .select({ through: taskRead.through, unread: taskRead.unread })
+      .from(taskRead)
+      .where(eq(taskRead.task_id, id))
       .get();
 
     const latest = this.orm
       .select({ id: max(events.id) })
       .from(events)
-      .where(and(eq(events.task_id, id), inArray(events.type, SEEN_EVENTS)))
+      .where(and(eq(events.task_id, id), inArray(events.type, READ_EVENTS)))
       .get();
 
     return {
-      unseen: isUnseen(latest?.id ?? 0, mark),
+      unread: isUnread(latest?.id ?? 0, mark),
       through: mark?.through ?? 0,
     };
   }
 
   /**
-   * Records that the owner has seen a task through event `through`, or its
+   * Records that the owner has read a task through event `through`, or its
    * newest event without one. It never moves back, never passes the newest
-   * event and clears the task's unseen mark.
+   * event and clears the task's unread mark.
    */
-  markSeen(t: Task, through?: number) {
+  markRead(t: Task, through?: number) {
     const newest = this.lastEventId(t.id);
-    const seen = Math.min(through ?? newest, newest);
+    const read = Math.min(through ?? newest, newest);
 
     this.orm
-      .insert(taskSeen)
-      .values({ task_id: t.id, through: seen, unseen: false })
+      .insert(taskRead)
+      .values({ task_id: t.id, through: read, unread: false })
       .onConflictDoUpdate({
-        target: taskSeen.task_id,
-        set: { through: sql`max(${taskSeen.through}, ${seen})`, unseen: false },
+        target: taskRead.task_id,
+        set: { through: sql`max(${taskRead.through}, ${read})`, unread: false },
       })
       .run();
 
     this.markChanged(t.owner);
   }
 
-  /** Marks a task unseen from event `from` on; unlike `markSeen`, it can move the seen point back. */
-  markUnseenFrom(t: Task, from: number) {
+  /** Marks a task unread from event `from` on; unlike `markRead`, it can move the read point back. */
+  markUnreadFrom(t: Task, from: number) {
     const through = Math.min(from - 1, this.lastEventId(t.id));
-    const mark = { through, unseen: false };
+    const mark = { through, unread: false };
 
     this.orm
-      .insert(taskSeen)
+      .insert(taskRead)
       .values({ task_id: t.id, ...mark })
-      .onConflictDoUpdate({ target: taskSeen.task_id, set: mark })
+      .onConflictDoUpdate({ target: taskRead.task_id, set: mark })
       .run();
 
     this.markChanged(t.owner);
   }
 
-  /** Marks a task unseen until the owner next sees it. */
-  markUnseen(t: Task) {
+  /** Marks a task unread until the owner next sees it. */
+  markUnread(t: Task) {
     this.orm
-      .insert(taskSeen)
-      .values({ task_id: t.id, through: 0, unseen: true })
-      .onConflictDoUpdate({ target: taskSeen.task_id, set: { unseen: true } })
+      .insert(taskRead)
+      .values({ task_id: t.id, through: 0, unread: true })
+      .onConflictDoUpdate({ target: taskRead.task_id, set: { unread: true } })
       .run();
 
     this.markChanged(t.owner);

@@ -48,7 +48,7 @@ test("a fresh database gets every active table and the connection settings", (t)
     "__drizzle_migrations",
     "events",
     "project_roots",
-    "task_seen",
+    "task_read",
     "tasks",
     "user_settings",
   ]);

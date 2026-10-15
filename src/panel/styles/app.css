@@ -27,7 +27,7 @@
 @import "../shared/components/button/button.css";
 @import "../shared/components/scroll-latest-button/scroll-latest-button.css";
 @import "../features/tasks/list/filters.css";
-@import "../features/tasks/seen/seen.css";
+@import "../features/tasks/unread/unread.css";
 @import "../features/file-preview/file-preview.css";
 @import "../features/changes/changes.css";
 @import "../features/tasks/chat/chat.css";

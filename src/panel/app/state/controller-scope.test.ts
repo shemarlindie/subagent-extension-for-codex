@@ -313,20 +313,20 @@ test("opening data selects the default task before the task-list read returns", 
   assert.equal(controller.getSnapshot().selected, "waiting");
 });
 
-test("opening data gives Chat each task's seen state before the task-list read returns", async (t) => {
+test("opening data gives Chat each task's read state before the task-list fetch returns", async (t) => {
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
 
   // A reload opens Chat from opening data; its "New" divider comes from the
-  // task's seen state at that moment.
+  // task's read state at that moment.
   transport.handler = (name) =>
     name === "list_agent_tasks" ? deferred<Task[]>().promise : undefined;
 
-  const unseen: Task = {
-    ...task("unseen", "/repo/a", "chat"),
+  const unread: Task = {
+    ...task("unread", "/repo/a", "chat"),
     status: "completed",
-    unseen: true,
-    seen_through: 3,
+    unread: true,
+    read_through: 3,
   };
 
   void controller.start();
@@ -334,33 +334,33 @@ test("opening data gives Chat each task's seen state before the task-list read r
 
   transport.events.scope({
     panel_scope: { conversation_id: "chat" },
-    tasks: [unseen],
+    tasks: [unread],
   });
 
   const [opened] = controller.getSnapshot().tasks;
-  assert.equal(opened?.unseen, true);
-  assert.equal(opened?.seen_through, 3);
+  assert.equal(opened?.unread, true);
+  assert.equal(opened?.read_through, 3);
 });
 
-test("opening data keeps the task Chat is reading at its latest message seen", (t) => {
+test("opening data keeps the task Chat is reading at its latest message read", (t) => {
   const { controller } = setup(true);
   t.onTestFinished(() => controller.dispose());
 
-  controller.taskActions.seen.watch("a");
+  controller.taskActions.unread.watch("a");
 
   controller.applyScope(
     {
       panel_scope: { conversation_id: "chat" },
       tasks: [
-        { ...task("a", "/repo/a", "chat"), unseen: true, seen_through: 1 },
-        { ...task("b", "/repo/a", "chat"), unseen: true, seen_through: 1 },
+        { ...task("a", "/repo/a", "chat"), unread: true, read_through: 1 },
+        { ...task("b", "/repo/a", "chat"), unread: true, read_through: 1 },
       ],
     },
     false,
   );
 
   assert.deepEqual(
-    controller.getSnapshot().tasks.map((item) => [item.id, item.unseen]),
+    controller.getSnapshot().tasks.map((item) => [item.id, item.unread]),
     [
       ["a", undefined],
       ["b", true],

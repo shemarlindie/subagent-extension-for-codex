@@ -1,5 +1,5 @@
-/* Something the user hasn't seen: an accent dot at a task row's top right. */
-.unseen-dot {
+/* Something the user hasn't read: an accent dot at a task row's top right. */
+.unread-dot {
   display: inline-block;
   width: 7px;
   height: 7px;
@@ -7,7 +7,7 @@
   background: var(--accent);
   flex-shrink: 0;
 }
-.unseen-dot-label {
+.unread-dot-label {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -15,35 +15,35 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.row[data-unseen] {
+.row[data-unread] {
   position: relative;
 }
-.row-unseen {
+.row-unread {
   position: absolute;
   top: 14px;
   right: 10px;
 }
 /* The dot comes first, so the line after it, the project or the title, clears it. */
-.row[data-unseen] > :nth-child(2) {
+.row[data-unread] > :nth-child(2) {
   padding-right: 14px;
 }
-/* The Unseen pill's count takes the accent while any task is unseen. */
-.filter-count[data-unseen] {
+/* The Unread pill's count takes the accent while any task is unread. */
+.filter-count[data-unread] {
   background: var(--accent);
   color: var(--bg);
 }
-/* A dot on the return-to-latest button: what's below hasn't been seen. */
-.scroll-latest-unseen {
+/* A dot on the return-to-latest button: what's below hasn't been read. */
+.scroll-latest-unread {
   position: absolute;
   top: 1px;
   right: 1px;
   border: 1.5px solid var(--bg);
   box-sizing: content-box;
 }
-/* Where an unseen task's new messages start: a rule labelled "New" at its right. */
+/* Where an unread task's new messages start: a rule labelled "New" at its right. */
 .new-messages-divider {
   box-sizing: border-box;
-  /* It moves when a task is marked unseen, so it never holds the reading position. */
+  /* It moves when a task is marked unread, so it never holds the reading position. */
   overflow-anchor: none;
   /* Chat opens with the divider at its top edge; keep the label off the tabs. */
   padding-top: 8px;

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 import { LoginForm } from "../features/auth/login-form";
 import { InlinePreview } from "../features/tasks/list/inline-preview";
-import { useUnseenTitle } from "../features/tasks/seen/use-unseen-title";
+import { useUnreadTitle } from "../features/tasks/unread/use-unread-title";
 import { Presence } from "../shared/components/motion/presence";
 import { DialogHost } from "../shared/dialogs/dialog-host";
 import { trackIdleScrollbars } from "../shared/utils/idle-scrollbars";
@@ -18,7 +18,7 @@ export function AppShell() {
 
   const expandedPanel = !compact;
   useEffect(() => trackIdleScrollbars(document), []);
-  useUnseenTitle();
+  useUnreadTitle();
 
   // Composing a task shows the inspector in place of the list, like a selection.
   const showsDetail = Boolean(state.selected || state.newTask);
