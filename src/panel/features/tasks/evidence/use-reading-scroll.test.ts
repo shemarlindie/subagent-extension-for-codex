@@ -278,6 +278,35 @@ test("a dropped anchor falls back to the next row that was visible", () => {
   assert.equal(reading.position?.pinned, false);
 });
 
+test("a row that opts out of scroll anchoring never holds the reader's place", () => {
+  // "b" stands in for a marker, such as Chat's New divider, that moves.
+  const computed = window.getComputedStyle.bind(window);
+
+  vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+    const style = computed(element);
+    if (element.getAttribute("data-chat-item") !== "b") return style;
+
+    return { ...style, overflowY: style.overflowY, overflowAnchor: "none" };
+  });
+
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+  viewport.scrollTop = 125;
+  fireEvent.scroll(viewport);
+  assert.deepEqual(reading.position?.anchor, { id: "c", top: 75 });
+
+  view.rerender(
+    createElement(Chat, {
+      reading,
+      items: [...items.filter((id) => id !== "b"), "b"],
+    }),
+  );
+
+  // "c" stays 75px below the top, rather than following "b" to the end.
+  assert.equal(viewport.scrollTop, 25);
+});
+
 test("chat follows new replies and remounted updates only while pinned", () => {
   const reading: ReadingState = {};
   const view = render(createElement(Chat, { reading, items }));

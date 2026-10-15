@@ -11,6 +11,8 @@ import { rowStatus } from "../../list/task-status";
 import { TaskStatusIcon } from "../../list/task-status-icon";
 import { newMessagesIndex } from "../../seen/new-messages";
 import { NewMessagesDivider } from "../../seen/new-messages-divider";
+import { useLeavingDivider } from "../../seen/use-leaving-divider";
+import type { NewMessages } from "../../seen/use-new-messages-from";
 import { composerMode, responseOutcome, spentBudget } from "../chat-model";
 import { PendingInput } from "../composer/pending-input";
 import { BudgetLimitNotice } from "./budget-limit-notice";
@@ -27,8 +29,8 @@ type ChatTimelineProps = {
   budgetRaise: BudgetRaise;
   onBudgetRaiseChange: (value: BudgetRaise) => void;
   onBudgetApply: (value: BudgetRaise) => Promise<string | undefined>;
-  /** The newest event seen when the task opened unseen; a "New" divider follows it. */
-  newFrom?: number;
+  /** Where the "New" divider sits; it follows the newest seen event. */
+  newMessages?: NewMessages;
 };
 
 /**
@@ -44,7 +46,7 @@ export function ChatTimeline({
   budgetRaise,
   onBudgetRaiseChange,
   onBudgetApply,
-  newFrom,
+  newMessages,
 }: ChatTimelineProps) {
   const state = useSnapshot(),
     chat = task && state.chat?.task === task.id ? state.chat : undefined,
@@ -92,10 +94,15 @@ export function ChatTimeline({
       task.status === "running" && activity ? activity.text : statusLabel(task);
   }
 
+  const newFrom = newMessages?.from;
+
   const newIndex =
     items && newFrom !== undefined
       ? newMessagesIndex(items, newFrom)
       : undefined;
+
+  const newId = newIndex === undefined ? undefined : items?.[newIndex]?.id;
+  const { leaving, left } = useLeavingDivider(newId);
 
   const latest = items?.at(-1);
   const workingShownInNote = latest?.kind === "note" && latest.text === working;
@@ -147,7 +154,19 @@ export function ChatTimeline({
 
                   return (
                     <Fragment key={item.id}>
-                      {index === newIndex && <NewMessagesDivider />}
+                      {item.id === newId && (
+                        <NewMessagesDivider
+                          key="new"
+                          animate={newMessages?.reveal}
+                        />
+                      )}
+                      {item.id === leaving && (
+                        <NewMessagesDivider
+                          key="leaving"
+                          leaving
+                          onLeft={left}
+                        />
+                      )}
                       {row}
                     </Fragment>
                   );

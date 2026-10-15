@@ -96,7 +96,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
         budgetRaise={budgetRaise}
         onBudgetRaiseChange={changeBudgetRaise}
         onBudgetApply={applyBudgetRaise}
-        newFrom={newFrom}
+        newMessages={divider}
       />
       <div className="chat-footer">
         {/* Never replace a saved reading position with the empty loading layout. */}

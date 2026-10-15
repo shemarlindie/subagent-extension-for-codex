@@ -33,7 +33,14 @@ position, and the console's title count.
 keeps it once Chat loads only if something new follows, and Chat opens at the
 divider through `useReadingScroll`'s `focus`. Marking a task unseen from a
 message sets the snapshot's `newMark`, which moves the divider and asks `focus`
-to reveal it only if it is out of view. Reads Chat sends in the
+to reveal it only if it is out of view. A reveal glides with a smooth scroll,
+and `NewMessagesDivider` grows from zero height, with a negative margin
+cancelling its row gap, so the rows below ease down rather than jump.
+`useLeavingDivider` keeps a divider at the row it just left, collapsing the
+same way, until that animation ends. Out of view or partly above it, it
+collapses at once, in the render that moved it, so the reading scroll corrects
+for it in the same frame. The divider has `overflow-anchor: none`, which
+`useReadingScroll` honours, so it never holds the reading position. Reads Chat sends in the
 background fail quietly; the next refresh retries them. The service stores what was seen; the panel
 patches the task list at once and keeps no seen state of its own. While Chat is
 at the latest message, `useMarkSeen` has `SeenActions` watch the task, and

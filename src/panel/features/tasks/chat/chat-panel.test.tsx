@@ -1454,6 +1454,40 @@ test("a reply's Mark as unseen from here marks the task unseen from that reply",
   );
 });
 
+test("marking unseen from another reply moves the New divider without leaving a copy behind", async () => {
+  const second = replyItems().map((item) => ({
+    ...item,
+    id: `${item.id}-2`,
+    event_id: item.event_id + 2,
+    ...(item.kind === "message" && {
+      message: { ...item.message, id: "response-2", event_id: 9, turn: 2 },
+    }),
+    ...(item.kind === "outcome" && { turn: 2 }),
+  })) as ChatItem[];
+
+  const { view } = setup({}, [], [...replyItems(), ...second]);
+
+  const [first, last] = view.getAllByRole("button", {
+    name: "Mark as unseen from here",
+  });
+
+  assert.ok(first && last);
+  fireEvent.click(first);
+  await waitFor(() => view.getByRole("separator", { name: "New messages" }));
+  fireEvent.click(last);
+
+  // Without Web Animations, the divider it left is removed at once.
+  await waitFor(() => {
+    const dividers = view.container.querySelectorAll(".new-messages-divider");
+    assert.equal(dividers.length, 1);
+
+    assert.equal(
+      dividers[0]?.nextElementSibling?.getAttribute("data-chat-item"),
+      "response-2",
+    );
+  });
+});
+
 test("marking unseen from a reply scrolls its New divider into view only when it is out of view", async () => {
   // Just below the 200 px viewport; the history scrolls at most 400 px.
   let dividerTop = 200;
@@ -1505,6 +1539,42 @@ test("marking unseen from a reply scrolls its New divider into view only when it
 
   await act(async () => {});
   assert.equal(history.scrollTop, shown);
+});
+
+test("marking unseen from a reply glides to its New divider where smooth scrolling is available", async () => {
+  const bounds = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: HTMLElement) {
+      const top =
+        this.getAttribute("data-chat-item") === "new-messages" ? 200 : 0;
+
+      const height = this.classList.contains("chat-timeline") ? 200 : 20;
+
+      return { top, bottom: top + height, height } as DOMRect;
+    });
+
+  onTestFinished(() => bounds.mockRestore());
+
+  const { view } = setup({}, [], replyItems());
+  scrollIntoHistory(view);
+
+  const history = view.getByRole("region", { name: "Chat history" });
+  const before = history.scrollTop;
+  const scrollTo = vi.fn();
+  history.scrollTo = scrollTo;
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Mark as unseen from here" }),
+  );
+
+  await waitFor(() =>
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: before + 200,
+      behavior: "smooth",
+    }),
+  );
+
+  assert.equal(history.scrollTop, before);
 });
 
 const seenNotes: ChatItem[] = Array.from({ length: 6 }, (_, index) => ({

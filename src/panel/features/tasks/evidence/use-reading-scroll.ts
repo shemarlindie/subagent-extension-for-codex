@@ -25,6 +25,33 @@ function distanceFromEnd(container: HTMLElement) {
   return end(container) - container.scrollTop;
 }
 
+/** The scroll position that puts `row` at the top, or the end without one. */
+function glideTarget(container: HTMLElement, row?: HTMLElement) {
+  if (!row) return end(container);
+
+  const top =
+    container.scrollTop +
+    row.getBoundingClientRect().top -
+    container.getBoundingClientRect().top;
+
+  return Math.min(end(container), Math.max(0, top));
+}
+
+/**
+ * A visible row that can hold the reader's place. A marker that moves, such
+ * as Chat's New divider, opts out with `overflow-anchor: none`.
+ */
+function anchorable(position: RowPosition) {
+  return (
+    position.bottom > 0 &&
+    getComputedStyle(position.element).overflowAnchor !== "none"
+  );
+}
+
+function canGlide(container: HTMLElement) {
+  return typeof container.scrollTo === "function" && !reducedMotion(container);
+}
+
 export type ReadingScrollOptions = {
   /** Where the reader was; kept by the owner so it survives remounts. */
   reading?: ReadingState;
@@ -81,8 +108,10 @@ export function useReadingScroll({
   const rows = useRef(new Map<string, RowPosition>());
   const animations = useRef<Animation[]>([]);
 
+  // A smooth scroll in progress: to the latest row, or to a focused `row`.
   const glide = useRef<
-    { target: number; distance: number; moved: boolean } | undefined
+    | { target: number; distance: number; moved: boolean; row?: HTMLElement }
+    | undefined
   >(undefined);
 
   const glideTimer = useRef<number | undefined>(undefined);
@@ -96,8 +125,8 @@ export function useReadingScroll({
     (viewport: HTMLElement, container: HTMLElement) => {
       rows.current = measureRows(viewport, container, itemAttribute);
 
-      const anchor = [...rows.current].find(
-        ([, position]) => position.bottom > 0,
+      const anchor = [...rows.current].find(([, position]) =>
+        anchorable(position),
       );
 
       reading.position = {
@@ -142,7 +171,8 @@ export function useReadingScroll({
         const anchor = element
           ? { element, top: saved.anchor!.top }
           : [...rows.current.values()].find(
-              (position) => position.bottom > 0 && position.element.isConnected,
+              (position) =>
+                anchorable(position) && position.element.isConnected,
             );
 
         if (anchor) {
@@ -201,10 +231,15 @@ export function useReadingScroll({
     stopAnimations();
 
     if (glide.current) {
-      const target = end(container);
+      const { row } = glide.current;
 
-      // A render caused by hiding the button must not turn a smooth return into
-      // a jump. If the timeline grew, finish at the new live edge instead.
+      const target =
+        row && !row.isConnected
+          ? glide.current.target
+          : glideTarget(container, row);
+
+      // A render caused by hiding the button must not turn a smooth scroll into
+      // a jump. If the timeline changed, finish at the new target instead.
       if (Math.abs(target - glide.current.target) >= 1) {
         window.clearTimeout(glideTimer.current);
         glide.current = undefined;
@@ -250,6 +285,32 @@ export function useReadingScroll({
     return blockUserScroll(viewport);
   }, [active, blockScrollWhileLoading, ready]);
 
+  const judge = useCallback(
+    (viewport: HTMLElement, container: HTMLElement) => {
+      stopAnimations();
+      const next = distanceFromEnd(container) <= END_SLACK_PX;
+      pinnedRef.current = next;
+      setPinned(next);
+      remember(viewport, container);
+    },
+    [remember, stopAnimations],
+  );
+
+  const awaitGlide = useCallback(() => {
+    const started = glide.current;
+    window.clearTimeout(glideTimer.current);
+
+    glideTimer.current = window.setTimeout(() => {
+      if (!started || glide.current !== started) return;
+      glide.current = undefined;
+      const viewport = viewportRef.current;
+
+      if (viewport && activeRef.current) {
+        judge(viewport, scrollContainer(viewport));
+      }
+    }, GLIDE_STALL_MS);
+  }, [judge]);
+
   const focused = useRef<number | undefined>(undefined),
     focusId = focus?.id,
     focusRequest = focus?.request,
@@ -279,17 +340,28 @@ export function useReadingScroll({
     glide.current = undefined;
     stopAnimations();
     const before = container.scrollTop;
-
-    container.scrollTop += row.top - frame.top;
-
-    if (Math.abs(container.scrollTop - before) >= 1) {
-      correctedScrollTop.current = container.scrollTop;
-    }
+    const target = glideTarget(container, element);
+    const distance = Math.abs(target - before);
 
     // Reading from the row unpins, unless the row already sits at the end.
-    const next = distanceFromEnd(container) <= END_SLACK_PX;
+    const next = end(container) - target <= END_SLACK_PX;
     pinnedRef.current = next;
     setPinned(next);
+
+    // Revealing a row the reader asked for glides to it; opening at one jumps.
+    if (focusReveal && distance >= 1 && canGlide(container)) {
+      correctedScrollTop.current = undefined;
+      glide.current = { target, distance, moved: false, row: element };
+      container.scrollTo({ top: target, behavior: "smooth" });
+      awaitGlide();
+    } else {
+      container.scrollTop = target;
+
+      if (Math.abs(container.scrollTop - before) >= 1) {
+        correctedScrollTop.current = container.scrollTop;
+      }
+    }
+
     remember(viewport, container);
   }, [
     focusId,
@@ -300,6 +372,7 @@ export function useReadingScroll({
     itemAttribute,
     remember,
     stopAnimations,
+    awaitGlide,
   ]);
 
   useLayoutEffect(() => {
@@ -329,32 +402,6 @@ export function useReadingScroll({
 
     return () => observer.disconnect();
   }, [reading, restore, remember, blockScrollWhileLoading]);
-
-  const judge = useCallback(
-    (viewport: HTMLElement, container: HTMLElement) => {
-      stopAnimations();
-      const next = distanceFromEnd(container) <= END_SLACK_PX;
-      pinnedRef.current = next;
-      setPinned(next);
-      remember(viewport, container);
-    },
-    [remember, stopAnimations],
-  );
-
-  const awaitGlide = useCallback(() => {
-    const started = glide.current;
-    window.clearTimeout(glideTimer.current);
-
-    glideTimer.current = window.setTimeout(() => {
-      if (!started || glide.current !== started) return;
-      glide.current = undefined;
-      const viewport = viewportRef.current;
-
-      if (viewport && activeRef.current) {
-        judge(viewport, scrollContainer(viewport));
-      }
-    }, GLIDE_STALL_MS);
-  }, [judge]);
 
   const onScroll = useEffectEvent(() => {
     const viewport = viewportRef.current;
@@ -433,11 +480,7 @@ export function useReadingScroll({
     pinnedRef.current = true;
     setPinned(true);
 
-    if (
-      distance >= 1 &&
-      typeof container.scrollTo === "function" &&
-      !reducedMotion(container)
-    ) {
+    if (distance >= 1 && canGlide(container)) {
       correctedScrollTop.current = undefined;
       glide.current = { target, distance, moved: false };
       container.scrollTo({ top: target, behavior: "smooth" });

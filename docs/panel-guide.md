@@ -141,8 +141,8 @@ leave the task. A task you marked unseen with nothing new opens at the end.
   while reading it stays unseen until you scroll its Chat or open another task.
 - A reply's copy button row has **Mark as unseen from here**, an eye icon. It
   marks the task unseen from that reply on, so earlier messages stay seen. The
-  **New** divider moves to just above that reply, and Chat scrolls to it if it
-  is out of view.
+  **New** divider moves to just above that reply and opens its space smoothly;
+  Chat smoothly scrolls to it if it is out of view.
 - **Unseen** lists unseen tasks. The task you open stays listed after it is
   seen until you choose another, and the filter is never picked by default,
   since reading empties it. **Mark all seen** beside the count sees every
