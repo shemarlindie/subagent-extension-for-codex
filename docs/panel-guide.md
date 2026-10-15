@@ -121,8 +121,8 @@ Details accumulates across turns and includes the active run.
 A task becomes unseen when it has something you haven't viewed: a worker
 message or reply, a turn's end, a failure, or a question or permission request.
 Your own messages never make a task unseen. Unseen tasks show an accent dot at
-the top right of their row and a bolder title, and the compact panel adds
-**N unseen** to its counts.
+the top right of their row, and the compact panel adds **N unseen** to its
+counts.
 
 A task becomes seen when its Chat is on screen and scrolled to the latest
 message: the panel must be visible, on the Tasks page and the Chat tab. Only

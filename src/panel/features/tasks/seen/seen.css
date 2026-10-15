@@ -1,4 +1,4 @@
-/* Something the user hasn't seen: an accent dot at a task row's top right, and a bolder title. */
+/* Something the user hasn't seen: an accent dot at a task row's top right. */
 .unseen-dot {
   display: inline-block;
   width: 7px;
@@ -26,9 +26,6 @@
 /* The dot comes first, so the line after it, the project or the title, clears it. */
 .row[data-unseen] > :nth-child(2) {
   padding-right: 14px;
-}
-.row[data-unseen] .row-title {
-  font-weight: 600;
 }
 /* The Unseen pill's count takes the accent while any task is unseen. */
 .filter-count[data-unseen] {
