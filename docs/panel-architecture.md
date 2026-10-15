@@ -32,7 +32,10 @@ which Chat calls with its reading position, and the console's title count.
 keeps it once Chat loads only if something new follows, and Chat opens at the
 divider through `useReadingScroll`'s `focus`. Reads Chat sends in the
 background fail quietly; the next refresh retries them. The service stores what was seen; the panel
-patches the task list at once and keeps no seen state of its own.
+patches the task list at once and keeps no seen state of its own. While Chat is
+at the latest message, `useMarkSeen` has `SeenActions` watch the task, and
+`settle` keeps it seen in task-list reads until Chat reads the new events and
+records them, so the open task doesn't flash unseen.
 
 The panel imports browser-safe contracts and domain functions from
 `src/shared/<feature>/`, never service modules. The shared runtime boundary is

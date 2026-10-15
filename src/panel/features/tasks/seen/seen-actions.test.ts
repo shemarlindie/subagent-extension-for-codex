@@ -50,6 +50,37 @@ test("reading sends each Chat cursor once, and only for an unseen task", async (
   assert.deepEqual(unseen(), []);
 });
 
+test("a list read keeps the watched task seen until Chat reads its new messages", async () => {
+  const { seen, tool } = setup([task({ id: "a" })], "a");
+
+  const listed = [
+    task({ id: "a", unseen: true, seen_through: 4 }),
+    task({ id: "b", unseen: true }),
+  ];
+
+  assert.deepEqual(seen.settle(listed), listed);
+
+  seen.watch("a");
+  const settled = seen.settle(listed);
+  assert.deepEqual(settled[0], task({ id: "a" }));
+  assert.equal(settled[1], listed[1]);
+
+  await seen.read(settled[0], 6);
+
+  assert.deepEqual(tool.mock.calls, [
+    ["mark_user_agent_task_seen", { task_id: "a", seen: true, through: 6 }],
+  ]);
+});
+
+test("a list read leaves a watched task unseen when the user marked it so", async () => {
+  const { seen } = setup([task({ id: "a" })], "a");
+  await seen.markUnseen(task({ id: "a" }));
+  seen.watch("a");
+
+  const listed = [task({ id: "a", unseen: true })];
+  assert.equal(seen.settle(listed), listed);
+});
+
 test("an open task marked unseen stays unseen while read, until the reader leaves its end", async () => {
   const open = task({ id: "a" });
   const { seen, tool, unseen } = setup([open], "a");

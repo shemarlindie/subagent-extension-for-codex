@@ -690,7 +690,7 @@ export class Controller {
       this.viewStateReady = Boolean(this.viewState);
 
       this.patch({
-        tasks,
+        tasks: this.taskActions.seen.settle(tasks),
         taskListLoading: false,
         selected,
         // Keep each first history read pending across polls until it succeeds.

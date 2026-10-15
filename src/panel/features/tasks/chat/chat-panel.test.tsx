@@ -1465,6 +1465,21 @@ test("Chat in its history leaves a task unseen until the reader returns to the l
   );
 });
 
+test("list reads keep the task seen only while Chat is at its latest message", async () => {
+  const { controller, task, view } = setup({}, [], seenNotes);
+  const listed: Task[] = [{ ...task, unseen: true, seen_through: 2 }];
+
+  await waitFor(() =>
+    assert.equal(
+      controller.taskActions.seen.settle(listed)[0]?.unseen,
+      undefined,
+    ),
+  );
+
+  scrollIntoHistory(view);
+  assert.equal(controller.taskActions.seen.settle(listed), listed);
+});
+
 test("a hidden panel sees nothing until it is shown", async () => {
   Object.defineProperty(document, "hidden", {
     configurable: true,
