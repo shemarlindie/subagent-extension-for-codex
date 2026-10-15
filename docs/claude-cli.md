@@ -4,7 +4,7 @@ Claude tasks run your installed `claude`. The package doesn't include one, and t
 
 ## Supported versions
 
-This checkout requires Claude Code 2.1.285 or newer, with no upper version limit. Older versions and prereleases are rejected. This checkout records Agent SDK 0.3.296 as its qualification baseline; accepting newer CLI releases does not mean each release has been verified. See [Qualifying Claude Code versions](claude-verification.md#qualifying-claude-code-versions) for compatibility checks.
+This checkout requires Claude Code 2.1.285 or newer, with no upper version limit. Older versions and prereleases are rejected. This checkout records Agent SDK 0.3.300 as its qualification baseline; accepting newer CLI releases does not mean each release has been verified. See [Qualifying Claude Code versions](claude-verification.md#qualifying-claude-code-versions) for compatibility checks.
 
 The minimum is defined in `src/service/features/providers/claude/configuration/executable.ts`. Use the readiness message to choose an installation or path override.
 
