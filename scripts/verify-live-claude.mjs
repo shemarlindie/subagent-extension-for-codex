@@ -31,6 +31,13 @@ assert.ok(
   "Choose read, resume, sandbox, mcp, budget, parity, or parent",
 );
 
+// Every task runs on this model and effort; an empty value inherits the CLI default.
+const modelChoice = {
+  model: process.env.CODEX_SUBAGENT_EXTENSION_LIVE_MODEL ?? "haiku",
+  reasoning_effort:
+    (process.env.CODEX_SUBAGENT_EXTENSION_LIVE_EFFORT ?? "medium") || "default",
+};
+
 // Every scenario runs the installed CLI the service would pick, passed to the SDK as pathToClaudeCodeExecutable.
 const cli = new ClaudeCli();
 const executable = await cli.status();
@@ -42,6 +49,10 @@ if (!executable.ready) {
 
 console.log(
   `Claude Code ${executable.version} at ${executable.path} (supported ${executable.supported})`,
+);
+
+console.log(
+  `Model ${modelChoice.model || "default"}, effort ${modelChoice.reasoning_effort}`,
 );
 
 const provider = () => new ClaudeAgentProvider(undefined, undefined, cli);
@@ -141,18 +152,20 @@ execFileSync("git", [
   "Verification fixture",
 ]);
 
+// Fields every task shares: the fixture repository, provider and model choice.
+const taskBase = { provider: "claude", ...modelChoice, repository: repo };
+
 const store = new Store(join(root, "tasks.sqlite"));
 
 const control = new Control(
   store,
   new Workspaces(join(root, "worktrees"), [repo]),
   new Map([["claude", provider()]]),
-  repo,
 );
 
 if (scenario === "parent") {
   const task = await control.start("verification", {
-    provider: "claude",
+    ...taskBase,
     worker_profile: "reviewer",
     conversation_id: "parent-verification",
     description:
@@ -201,9 +214,8 @@ if (scenario === "parent") {
   }
 } else if (scenario === "read") {
   const task = await control.start("verification", {
-    provider: "claude",
+    ...taskBase,
     worker_profile: "reviewer",
-    title: "Read the verification marker",
     description:
       "Read README.md using the native Read tool. Report the exact verification marker in your reply. Do not ask questions, run commands or edit files.",
     budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
@@ -269,9 +281,8 @@ if (scenario === "parent") {
   }
 } else if (scenario === "resume") {
   const task = await control.start("verification", {
-    provider: "claude",
+    ...taskBase,
     worker_profile: "reviewer",
-    title: "Ask before reading README",
     description:
       "Before reading anything, use the native AskUserQuestion tool to ask: May I inspect README now? Offer Proceed and Wait. Wait for the user response before inspecting README. Afterwards report its exact verification marker in your reply.",
     budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
@@ -301,7 +312,7 @@ if (scenario === "parent") {
     assert.equal(waiting.pending_input?.tool, "AskUserQuestion");
     assert.ok(waiting.session_id && waiting.session_state_ref);
     const session = waiting.session_id;
-    await control.stop("verification", task.id, "interrupted");
+    await control.interrupt("verification", task.id);
     assert.equal(store.get(task.id, "verification").status, "interrupted");
     await control.close();
     const nextStore = new Store(join(root, "tasks.sqlite"));
@@ -310,12 +321,11 @@ if (scenario === "parent") {
       nextStore,
       new Workspaces(join(root, "worktrees"), [repo]),
       new Map([["claude", provider()]]),
-      repo,
     );
 
     await reopened.recover();
 
-    await reopened.followUp(
+    await reopened.send(
       "verification",
       task.id,
       "Proceed now. Read README.md with the Read tool and report its exact marker in your reply. Do not ask another question or run commands.",
@@ -425,9 +435,8 @@ if (scenario === "parent") {
     assert.ok(workers.some((w) => w.provider === "claude"));
 
     const task = await call("start_agent_task", {
-      provider: "claude",
+      ...taskBase,
       worker_profile: "reviewer",
-      title: "Read the verification marker",
       description:
         "Read README.md with the native Read tool. Include its exact verification marker in your reply. Do not ask questions, edit files or run commands.",
       budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
@@ -500,9 +509,8 @@ if (scenario === "parent") {
   const limit = 0.001;
 
   const task = await control.start("verification", {
-    provider: "claude",
+    ...taskBase,
     worker_profile: "reviewer",
-    title: "Read the verification marker",
     description:
       "Read README.md using Read and report its exact marker in your reply. Do not ask questions, edit files or run shell commands.",
     budget: { max_runtime_minutes: 1, max_cost_usd: limit },
@@ -569,11 +577,10 @@ if (scenario === "parent") {
   const { access } = await import("node:fs/promises");
 
   const task = await control.start("verification", {
-    provider: "claude",
+    ...taskBase,
     worker_profile: "implementer",
-    title: "Use project tools",
     description:
-      "Do exactly these steps and nothing else: 1. Invoke the marker-skill skill with the Skill tool and note its marker. 2. Call the fixture_marker tool of the fixture MCP server and note its marker. 3. Use the Agent tool to start one subagent that reads README.md with the Read tool and returns its verification marker. Report all three markers in your reply. Do not edit files or run shell commands.",
+      "Do exactly these steps and nothing else: 1. Invoke the marker-skill skill with the Skill tool and note its marker. 2. Call the fixture_marker tool of the fixture MCP server and note its marker. 3. Use the Agent tool with run_in_background set to false to start one subagent that reads README.md with the Read tool and returns its verification marker, and wait for its result. Report all three markers in your reply. Do not edit files or run shell commands.",
     budget: { max_runtime_minutes: 3, max_cost_usd: 0.5 },
   });
 
@@ -700,13 +707,12 @@ if (scenario === "parent") {
   });
 
   const task = await control.start("verification", {
-    provider: "claude",
+    ...taskBase,
     worker_profile: "test_engineer",
     // Fixture writes stay out of the primary checkout.
     workspace_strategy: "worktree",
     // Ask for every command so only the exact fixture commands are approved.
     provider_options: { claude: { permission_mode: "default" } },
-    title: "Verify scoped command permissions",
     description:
       "Run each of these exact Bash commands once, sequentially. Do not change, combine or retry the commands; do not use other tools. Expected permission failures are evidence, not errors in this verification. Report which commands succeeded or were blocked in your reply. Commands: " +
       JSON.stringify(commands),

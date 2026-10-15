@@ -41,6 +41,16 @@ CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs pa
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs parent
 ```
 
+Tasks run on `haiku` at `medium` effort to keep checks cheap. Set
+`CODEX_SUBAGENT_EXTENSION_LIVE_MODEL` (a model ID or alias) or
+`CODEX_SUBAGENT_EXTENSION_LIVE_EFFORT` (`default` or a reasoning level) to
+override them; an empty value inherits the Claude Code default:
+
+```sh
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 CODEX_SUBAGENT_EXTENSION_LIVE_MODEL=sonnet \
+  CODEX_SUBAGENT_EXTENSION_LIVE_EFFORT=high npx tsx scripts/verify-live-claude.mjs read
+```
+
 The `parent` scenario verifies the injected SDK tool queues a message with no
 permission prompt. It does not exercise the Codex host bridge; use an open
 thread panel for that check.
