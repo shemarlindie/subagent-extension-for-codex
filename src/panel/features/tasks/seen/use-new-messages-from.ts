@@ -14,8 +14,9 @@ type OpenedChat = {
 
 /**
  * Where Chat's "New" divider sits, and the request that scrolls to it. The
- * divider is the newest event the user had seen when an unseen task opened,
- * and moves when the user marks the task unseen from one of its messages.
+ * divider is the newest event the user had seen when an unseen task opened.
+ * It moves when the user marks the task unseen from one of its messages, and
+ * goes when they mark the task seen.
  */
 export type NewMessages = {
   from?: number;
@@ -58,7 +59,7 @@ export function useNewMessagesFrom(
       from !== undefined &&
       newMessagesIndex(state.chat.items, from) !== undefined;
 
-    setOpened({ loaded: true, newFrom: found ? from : undefined });
+    setOpened({ ...opened, loaded: true, newFrom: found ? from : undefined });
   }
 
   // A mark made since Chat opened moves the divider to it.

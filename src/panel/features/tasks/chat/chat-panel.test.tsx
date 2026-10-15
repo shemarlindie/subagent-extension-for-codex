@@ -89,10 +89,13 @@ function setup(
     return visibleSnapshot;
   });
 
+  // Chat remounts for each opening, as the inspector keys it by task.
+  let opening = 0;
+
   const panel = (current: Task) => (
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
-        <ChatPanel task={current} taskId={current.id} />
+        <ChatPanel key={opening} task={current} taskId={current.id} />
       </Tooltip.Provider>
     </ControllerContext.Provider>
   );
@@ -101,6 +104,11 @@ function setup(
 
   const updateTask = (patch: Partial<Task>) =>
     view.rerender(panel({ ...task, ...patch }));
+
+  const reopen = (patch: Partial<Task>) => {
+    opening++;
+    updateTask(patch);
+  };
 
   const getComposer = () => view.getByRole("textbox", { name: "Message" });
 
@@ -112,6 +120,7 @@ function setup(
     task,
     tool,
     view,
+    reopen,
     get composer() {
       return getComposer();
     },
@@ -1706,6 +1715,36 @@ test("an unseen task opens with a New divider after what the user had seen, whic
 
   updateTask({ unseen: undefined, seen_through: undefined });
   expect(view.getByRole("separator", { name: "New messages" })).toBe(divider);
+});
+
+test("marking the open task seen removes its New divider", async () => {
+  const notes = seenNotes.map((_, index): ChatItem => ({
+    kind: "note",
+    id: `note-${index}`,
+    event_id: index,
+    timestamp: "",
+    note: "failure",
+    text: `Failure ${index}`,
+  }));
+
+  const { controller, task, view, reopen } = setup(
+    { unseen: true, seen_through: 3 },
+    [],
+    notes,
+  );
+
+  view.getByRole("separator", { name: "New messages" });
+
+  (controller as unknown as { patch(patch: object): void }).patch({
+    selected: task.id,
+  });
+
+  await act(() => controller.taskActions.seen.markSeen(task));
+  expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
+
+  // The mark belongs to that opening; unseen again later, the task divides anew.
+  reopen({ unseen: true, seen_through: 3 });
+  expect(view.getByRole("separator", { name: "New messages" })).toBeTruthy();
 });
 
 test("a seen task opens without a New divider", () => {

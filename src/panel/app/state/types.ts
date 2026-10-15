@@ -142,10 +142,11 @@ export type PersistedDialog =
     };
 
 /**
- * The "New" divider's position for a task the user marked unseen from a
- * message: the seen point just before it. Each mark gets a newer `revision`.
+ * The "New" divider's position for the open task after the user marks it: the
+ * seen point just before the message they marked unseen from, or no `through`
+ * once they mark it seen. Each mark gets a newer `revision`.
  */
-export type NewMark = { task: string; through: number; revision: number };
+export type NewMark = { task: string; through?: number; revision: number };
 
 export type Snapshot = {
   page: PageId;

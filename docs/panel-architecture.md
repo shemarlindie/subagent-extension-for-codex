@@ -33,8 +33,10 @@ position, and the console's title count.
 keeps it once Chat loads only if something new follows, and Chat opens at the
 divider through `useReadingScroll`'s `focus`. Marking a task unseen from a
 message sets the snapshot's `newMark`, which moves the divider and asks `focus`
-to reveal it only if it is out of view. A reveal glides with a smooth scroll,
-and `NewMessagesDivider` grows from zero height, with a negative margin
+to reveal it only if it is out of view; marking the open task seen, alone or
+with **Mark all seen**, sets a `newMark` without `through`, which removes it.
+A reveal glides with a smooth scroll, and `NewMessagesDivider` grows from zero
+height, with a negative margin
 cancelling its row gap, so the rows below ease down rather than jump.
 `useLeavingDivider` keeps a divider at the row it just left, collapsing the
 same way, until that animation ends. Out of view or partly above it, it

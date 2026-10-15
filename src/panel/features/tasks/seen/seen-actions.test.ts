@@ -120,6 +120,39 @@ test("marking shows at once and returns to what the task was when it fails", asy
   assert.deepEqual(unseen(), ["a"]);
 });
 
+test("marking the open task seen removes its New divider, and restores it if the service fails", async () => {
+  const open = task({ id: "a", unseen: true, seen_through: 2 });
+  const { seen, tool, snapshot } = setup([open, task({ id: "b" })], "a");
+
+  await seen.markUnseenFrom(open, 5);
+  const mark = snapshot().newMark;
+
+  // Another task leaves the open task's divider alone.
+  await seen.markSeen(task({ id: "b", unseen: true }));
+  assert.equal(snapshot().newMark, mark);
+
+  tool.mockRejectedValueOnce(new Error("offline"));
+  await assert.rejects(seen.markSeen(open), /offline/);
+  assert.equal(snapshot().newMark, mark);
+
+  await seen.markSeen(open);
+
+  assert.deepEqual(snapshot().newMark, {
+    task: "a",
+    through: undefined,
+    revision: 2,
+  });
+
+  await seen.markUnseenFrom(open, 5);
+  await seen.markAllSeen([task({ id: "a", unseen: true })]);
+
+  assert.deepEqual(snapshot().newMark, {
+    task: "a",
+    through: undefined,
+    revision: 4,
+  });
+});
+
 test("Mark all seen sends only the unseen tasks", async () => {
   const tasks = [
     task({ id: "a", unseen: true }),

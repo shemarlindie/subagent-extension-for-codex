@@ -134,7 +134,8 @@ outcome or failure after what you had seen, and Chat opens with the divider at
 the top. If everything new fits on screen, the task is seen at once; otherwise
 it stays unseen until you scroll to the latest message, and the
 **Scroll to unseen messages** button carries a dot. The divider stays until you
-leave the task. A task you marked unseen with nothing new opens at the end.
+leave the task or mark it seen. A task you marked unseen with nothing new opens
+at the end.
 
 - **Task actions → Mark as unseen** or **Mark as seen**, or right-clicking
   (long-pressing on touch) a task row, sets it by hand. A task you mark unseen

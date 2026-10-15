@@ -105,10 +105,17 @@ export class SeenActions {
     if (this.held === taskId) this.held = undefined;
   }
 
-  markSeen(task: Task) {
+  /** Marks a task seen, clearing the open task's "New" divider. */
+  async markSeen(task: Task) {
     if (this.held === task.id) this.held = undefined;
+    const previous = this.clearDivider([task.id]);
 
-    return this.mark(task, true);
+    try {
+      await this.mark(task, true);
+    } catch (error) {
+      this.moveDivider(previous);
+      throw error;
+    }
   }
 
   /** Marks a task unseen; while it stays open and unscrolled, reading it doesn't see it again. */
@@ -125,13 +132,7 @@ export class SeenActions {
   async markUnseenFrom(task: Task, from: number) {
     if (task.id === this.context.snapshot().selected) this.held = task.id;
 
-    const previous = this.context.snapshot().newMark;
-
-    this.moveDivider({
-      task: task.id,
-      through: from - 1,
-      revision: (previous?.revision ?? 0) + 1,
-    });
+    const previous = this.markDivider(task.id, from - 1);
 
     try {
       await this.record(
@@ -161,11 +162,13 @@ export class SeenActions {
     const ids = unseen.map((task) => task.id);
     if (!ids.length || this.context.closed()) return;
     if (this.held && ids.includes(this.held)) this.held = undefined;
+    const previous = this.clearDivider(ids);
     this.show(new Map(ids.map((id) => [id, {}])));
 
     try {
       await this.context.tool("mark_user_agent_tasks_seen", { task_ids: ids });
     } catch (error) {
+      this.moveDivider(previous);
       this.show(new Map(unseen.map((task) => [task.id, fieldsOf(task)])));
       throw error;
     }
@@ -207,9 +210,40 @@ export class SeenActions {
     }
   }
 
+  /**
+   * Moves Chat's "New" divider in a task to just after event `through`, or
+   * removes it without `through`, returning the mark this replaces.
+   */
+  private markDivider(task: string, through?: number) {
+    const previous = this.context.snapshot().newMark;
+
+    this.moveDivider({
+      task,
+      through,
+      revision: (previous?.revision ?? 0) + 1,
+    });
+
+    return previous;
+  }
+
+  /**
+   * Removes the open task's "New" divider when it is one of these tasks,
+   * returning the mark this replaces. Only the open task's Chat shows a
+   * divider; any other opens with its own.
+   */
+  private clearDivider(ids: string[]) {
+    const { selected, newMark } = this.context.snapshot();
+
+    return selected && ids.includes(selected)
+      ? this.markDivider(selected)
+      : newMark;
+  }
+
   /** Moves Chat's "New" divider, or clears it with undefined. */
   private moveDivider(mark: NewMark | undefined) {
-    if (this.context.closed()) return;
+    if (this.context.closed() || this.context.snapshot().newMark === mark) {
+      return;
+    }
 
     this.context.patch({ newMark: mark });
   }
