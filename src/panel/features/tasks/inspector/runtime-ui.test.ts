@@ -70,7 +70,12 @@ test("a running task's runtime ticks and a finished task's stays fixed", (t) => 
 });
 
 const row = (task: Task) =>
-  createElement(TaskRow, { task, selected: false, onSelect() {} });
+  createElement(TaskRow, {
+    task,
+    selected: false,
+    onSelect() {},
+    onToggleSeen() {},
+  });
 
 const rowRuntime = (view: ReturnType<typeof render>) =>
   view.container.querySelector(".row-runtime")?.textContent;

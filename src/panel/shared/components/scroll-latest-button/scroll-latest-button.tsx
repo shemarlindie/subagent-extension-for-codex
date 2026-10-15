@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { Icon } from "../icons/icons";
 import { Presence } from "../motion/presence";
 
@@ -11,6 +13,8 @@ export interface ScrollLatestButtonProps {
   label: string;
   /** Positions the button within its owner. */
   className?: string;
+  /** A marker over the button's corner, such as a dot for unseen content. */
+  badge?: ReactNode;
   onClick: () => void;
 }
 
@@ -20,6 +24,7 @@ export function ScrollLatestButton({
   direction,
   label,
   className,
+  badge,
   onClick,
 }: ScrollLatestButtonProps) {
   return (
@@ -37,6 +42,7 @@ export function ScrollLatestButton({
         onClick={onClick}
       >
         <Icon name="chevron-down" size={12} />
+        {badge}
       </button>
     </Presence>
   );

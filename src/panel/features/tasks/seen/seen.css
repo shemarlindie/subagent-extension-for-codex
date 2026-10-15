@@ -1,0 +1,61 @@
+/* Something the user hasn't seen: an accent dot at a task row's top right, and a bolder title. */
+.unseen-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.unseen-dot-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.row[data-unseen] {
+  position: relative;
+}
+.row-unseen {
+  position: absolute;
+  top: 14px;
+  right: 10px;
+}
+/* The dot comes first, so the line after it, the project or the title, clears it. */
+.row[data-unseen] > :nth-child(2) {
+  padding-right: 14px;
+}
+.row[data-unseen] .row-title {
+  font-weight: 600;
+}
+/* The Unseen pill's count takes the accent while any task is unseen. */
+.filter-count[data-unseen] {
+  background: var(--accent);
+  color: var(--bg);
+}
+/* A dot on the return-to-latest button: what's below hasn't been seen. */
+.scroll-latest-unseen {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  border: 1.5px solid var(--bg);
+  box-sizing: content-box;
+}
+/* Where an unseen task's new messages start: a rule labelled "New" at its right. */
+.new-messages-divider {
+  /* Chat opens with the divider at its top edge; keep the label off the tabs. */
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.new-messages-divider::before {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--accent);
+}

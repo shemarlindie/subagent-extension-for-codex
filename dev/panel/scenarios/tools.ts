@@ -18,6 +18,7 @@ import {
   previewTasks,
 } from "./fixtures";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
+import { PREVIEW_SEEN_TOOLS, previewSeen, previewSeenTool } from "./seen-tools";
 
 const streamStart = Date.now();
 
@@ -425,6 +426,8 @@ export function previewTool(
     );
   }
 
+  if (PREVIEW_SEEN_TOOLS.includes(name)) return previewSeenTool(name, args);
+
   if (name === "rename_user_agent_task") {
     const task = previewTasks.find((task) => task.id === args.task_id);
     if (!task) throw new Error("Task not found");
@@ -462,6 +465,7 @@ export function previewTool(
           task.id === previewStreamingDraft.taskId
             ? streamingDraft()
             : undefined,
+          previewSeen(task.id),
         );
       }),
     get_user_agent_chat: (() => {

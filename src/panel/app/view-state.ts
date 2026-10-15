@@ -30,7 +30,15 @@ const SETTINGS_SECTION_STORAGE_KEY =
 
 const INPUT_PERSISTENCE_DEBOUNCE_MS = 250;
 
-const filters: Filter[] = ["all", "active", "attention", "completed", "failed"];
+const filters: Filter[] = [
+  "all",
+  "active",
+  "attention",
+  "completed",
+  "failed",
+  "unseen",
+];
+
 const tabs: Tab[] = ["chat", "changes", "activity", "details"];
 
 const dialogKey = (id: PersistedDialogId) => `dw_dlg_${id}`;

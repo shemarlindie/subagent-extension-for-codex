@@ -26,6 +26,9 @@ export function TaskMenu({ task }: TaskMenuProps) {
       !controller.transport.embedded,
     );
 
+  const toggleSeen = () =>
+    controller.run(() => controller.taskActions.seen.toggle(task));
+
   return (
     <Menu.Root>
       <TooltipWrapper label="Task actions">
@@ -42,6 +45,13 @@ export function TaskMenu({ task }: TaskMenuProps) {
       <Menu.Portal>
         <Menu.Positioner className="menu-positioner" align="end" sideOffset={4}>
           <Menu.Popup className="menu-popup">
+            <Menu.Item
+              className="menu-item"
+              data-action={task.unseen ? "mark-seen" : "mark-unseen"}
+              onClick={toggleSeen}
+            >
+              {task.unseen ? "Mark as seen" : "Mark as unseen"}
+            </Menu.Item>
             <Menu.Item
               className="menu-item"
               data-action="handoff"

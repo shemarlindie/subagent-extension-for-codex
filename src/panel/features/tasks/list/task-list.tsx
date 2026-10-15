@@ -1,3 +1,4 @@
+import { ContextMenu } from "@base-ui/react/context-menu";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import {
@@ -22,6 +23,7 @@ import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into
 import { useNow } from "../../../shared/utils/use-now";
 import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
+import { UnseenDot } from "../seen/unseen-dot";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
 import { TaskListScrollbar } from "./task-list-scrollbar";
 import { TaskListSkeleton } from "./task-list-skeleton";
@@ -34,21 +36,56 @@ interface TaskRowProps {
   projectName?: string;
   selected: boolean;
   onSelect(): void;
+  /** Marks the task seen when it's unseen, otherwise unseen. */
+  onToggleSeen(): void;
 }
 
+/** A task in the list; right-click or long-press marks it seen or unseen. */
 export function TaskRow({
   task,
   projectName,
   selected,
   onSelect,
+  onToggleSeen,
 }: TaskRowProps) {
   return (
-    <button
-      className="row"
-      data-task={task.id}
-      aria-current={selected}
-      onClick={onSelect}
-    >
+    <ContextMenu.Root>
+      <ContextMenu.Trigger
+        render={
+          <button
+            className="row"
+            data-task={task.id}
+            data-unseen={task.unseen ? "" : undefined}
+            aria-current={selected}
+            onClick={onSelect}
+          />
+        }
+      >
+        <TaskRowContent task={task} projectName={projectName} />
+      </ContextMenu.Trigger>
+      <ContextMenu.Portal>
+        <ContextMenu.Positioner className="menu-positioner">
+          <ContextMenu.Popup className="menu-popup">
+            <ContextMenu.Item
+              className="menu-item"
+              data-action={task.unseen ? "mark-seen" : "mark-unseen"}
+              onClick={onToggleSeen}
+            >
+              {task.unseen ? "Mark as seen" : "Mark as unseen"}
+            </ContextMenu.Item>
+          </ContextMenu.Popup>
+        </ContextMenu.Positioner>
+      </ContextMenu.Portal>
+    </ContextMenu.Root>
+  );
+}
+
+type TaskRowContentProps = Pick<TaskRowProps, "task" | "projectName">;
+
+function TaskRowContent({ task, projectName }: TaskRowContentProps) {
+  return (
+    <>
+      {task.unseen && <UnseenDot className="row-unseen" />}
       {projectName && (
         <span className="row-project" title={projectName}>
           {projectName}
@@ -70,7 +107,7 @@ export function TaskRow({
           <TaskRowStatus task={task} />
         </span>
       </span>
-    </button>
+    </>
   );
 }
 
@@ -117,6 +154,7 @@ function runtimeText(task: Task, live: boolean, duration: string) {
 
 const EMPTY_FILTER: Record<Filter, string> = {
   all: "No tasks yet.",
+  unseen: "You're all caught up.",
   active: "No active tasks.",
   attention: "No tasks need input.",
   completed: "No completed tasks.",
@@ -192,6 +230,7 @@ export function TaskList() {
           }
           selected={task.id === state.selected}
           onSelect={() => controller.run(() => controller.select(task.id))}
+          onToggleSeen={() => toggleSeen(task)}
         />
       ));
     }
@@ -210,6 +249,17 @@ export function TaskList() {
     controller.setFilter("all");
   };
 
+  const toggleSeen = (task: Task) =>
+    controller.run(() => controller.taskActions.seen.toggle(task));
+
+  // Under Unseen, the listed tasks can all be seen at once. Without a search
+  // to clear, this takes Clear filter's place; the All pill does the same.
+  const unseenShown = filter === "unseen" && tasks.some((task) => task.unseen);
+  const clearShown = narrowed && (!unseenShown || Boolean(state.search));
+
+  const markAllSeen = () =>
+    controller.run(() => controller.taskActions.seen.markAllSeen(tasks));
+
   return (
     <>
       <div className="list-label">
@@ -217,7 +267,12 @@ export function TaskList() {
           {state.conversation ? "This conversation" : "All conversations"}
         </span>
         <span className="list-count">
-          {narrowed && (
+          {unseenShown && (
+            <Button variant="text" underline onClick={markAllSeen}>
+              Mark all seen
+            </Button>
+          )}
+          {clearShown && (
             <Button variant="text" underline onClick={resetFilters}>
               Clear filter
             </Button>

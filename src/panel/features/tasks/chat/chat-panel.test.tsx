@@ -1397,3 +1397,165 @@ test("a failed send keeps the draft and shows why", async () => {
 
   assert.equal((composer as HTMLTextAreaElement).value, "Keep me");
 });
+
+const seenNotes: ChatItem[] = Array.from({ length: 6 }, (_, index) => ({
+  kind: "note",
+  id: `note-${index}`,
+  event_id: index,
+  timestamp: "",
+  note: "compaction",
+  text: `Note ${index}`,
+}));
+
+const seenCalls = (tool: ReturnType<typeof setup>["tool"]) =>
+  tool.mock.calls.filter(([name]) => name === "mark_user_agent_task_seen");
+
+/** A Chat history 600 px tall in a 200 px viewport, scrolled into its history. */
+function scrollIntoHistory(view: ReturnType<typeof setup>["view"]) {
+  const history = view.getByRole("region", { name: "Chat history" });
+  let scrollTop = 400;
+
+  Object.defineProperties(history, {
+    clientHeight: { configurable: true, value: 200 },
+    scrollHeight: { configurable: true, value: 600 },
+    scrollTop: {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value: number) => {
+        scrollTop = value;
+      },
+    },
+  });
+
+  history.scrollTop = 100;
+  fireEvent.scroll(history);
+}
+
+test("Chat at its latest message sees an unseen task through the events it has read", async () => {
+  const { tool, task } = setup({ unseen: true }, [], seenNotes);
+
+  await waitFor(() =>
+    assert.deepEqual(seenCalls(tool), [
+      [
+        "mark_user_agent_task_seen",
+        { task_id: task.id, seen: true, through: seenNotes.length },
+      ],
+    ]),
+  );
+});
+
+test("Chat in its history leaves a task unseen until the reader returns to the latest", async () => {
+  const { tool, task, view, updateTask } = setup({}, [], seenNotes);
+  scrollIntoHistory(view);
+  updateTask({ unseen: true });
+  await act(async () => {});
+  assert.deepEqual(seenCalls(tool), []);
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to unseen messages" }),
+  );
+
+  await waitFor(() =>
+    assert.deepEqual(seenCalls(tool), [
+      [
+        "mark_user_agent_task_seen",
+        { task_id: task.id, seen: true, through: seenNotes.length },
+      ],
+    ]),
+  );
+});
+
+test("a hidden panel sees nothing until it is shown", async () => {
+  Object.defineProperty(document, "hidden", {
+    configurable: true,
+    value: true,
+  });
+
+  onTestFinished(() => {
+    Reflect.deleteProperty(document, "hidden");
+  });
+
+  const { tool } = setup({ unseen: true }, [], seenNotes);
+  await act(async () => {});
+  assert.deepEqual(seenCalls(tool), []);
+
+  Reflect.deleteProperty(document, "hidden");
+
+  act(() => {
+    document.dispatchEvent(new window.Event("visibilitychange"));
+  });
+
+  await waitFor(() => assert.equal(seenCalls(tool).length, 1));
+});
+
+test("an unseen task opens with a New divider after what the user had seen, which stays once seen", () => {
+  const notes = seenNotes.map((_, index): ChatItem => ({
+    kind: "note",
+    id: `note-${index}`,
+    event_id: index,
+    timestamp: "",
+    note: "failure",
+    text: `Failure ${index}`,
+  }));
+
+  const { view, updateTask } = setup(
+    { unseen: true, seen_through: 3 },
+    [],
+    notes,
+  );
+
+  const divider = view.getByRole("separator", { name: "New messages" });
+
+  expect(divider.nextElementSibling?.getAttribute("data-chat-item")).toBe(
+    "note-4",
+  );
+
+  updateTask({ unseen: undefined, seen_through: undefined });
+  expect(view.getByRole("separator", { name: "New messages" })).toBe(divider);
+});
+
+test("a seen task opens without a New divider", () => {
+  const { view } = setup({}, [], seenNotes);
+
+  expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
+});
+
+test("a task marked unseen with nothing new opens without a divider, and a later reply adds none", () => {
+  const { controller, view, updateTask } = setup(
+    { unseen: true, seen_through: seenNotes.length },
+    [],
+    seenNotes,
+  );
+
+  expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
+
+  const later: ChatItem = {
+    kind: "note",
+    id: "later",
+    event_id: seenNotes.length + 1,
+    timestamp: "",
+    note: "failure",
+    text: "Later failure",
+  };
+
+  const snapshot = controller.getSnapshot();
+
+  vi.mocked(controller.getSnapshot).mockReturnValue({
+    ...snapshot,
+    chat: {
+      task: "task-1",
+      items: [...seenNotes, later],
+      cursor: later.event_id,
+    },
+  });
+
+  updateTask({ unseen: true });
+  expect(view.getByText("Later failure")).toBeTruthy();
+  expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
+});
+
+test("a task just marked unseen, before the service gives its marker, opens without a divider", () => {
+  const { view } = setup({ unseen: true }, [], seenNotes);
+
+  expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
+});

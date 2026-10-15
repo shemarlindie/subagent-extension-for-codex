@@ -2,7 +2,9 @@ import type { ListedTask } from "../../../shared/tasks/task-list.js";
 
 export type Task = ListedTask;
 export type Tab = "chat" | "changes" | "activity" | "details";
-export type Filter = "all" | "active" | "attention" | "completed" | "failed";
+
+export type Filter =
+  "all" | "active" | "attention" | "completed" | "failed" | "unseen";
 
 export type Question = {
   question: string;

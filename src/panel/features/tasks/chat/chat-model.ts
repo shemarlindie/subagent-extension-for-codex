@@ -1,3 +1,4 @@
+import type { ChatItem } from "../../../../shared/tasks/conversation/chat.js";
 import type { Task } from "../../../app/state/types";
 
 /** Statuses in which a turn is running, starting or about to. */
@@ -61,3 +62,13 @@ export function spentBudget(task: Task): SpentBudget | undefined {
 
 export const formatCost = (usd: number) =>
   `$${usd < 0.01 && usd > 0 ? usd.toFixed(3) : usd.toFixed(2)}`;
+
+/** Keeps an adjacent outcome with the worker response from the same turn. */
+export function responseOutcome(message?: ChatItem, outcome?: ChatItem) {
+  return message?.kind === "message" &&
+    message.message.from === "worker" &&
+    outcome?.kind === "outcome" &&
+    message.message.turn === outcome.turn
+    ? outcome
+    : undefined;
+}

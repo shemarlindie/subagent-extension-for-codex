@@ -77,6 +77,13 @@ recorded fixtures through the provider.
 | Speed up the production build               | 60-file uncommitted diff; removal asks before discarding changes.                                                                                |
 | Profile the production build                | Large added files and multiple pages of diff/file previews.                                                                                      |
 
+Audit dependency licences, Fix the flaky retry test, Migrate the config loader
+and Investigate session expiry regression start unseen, for the row dot and the
+**Unseen** filter. Move the screens to the new layout starts seen through the
+middle of its conversation, so Chat opens at its **New** divider partway down.
+The other fixtures start seen. Seen and unseen marks stay
+until the preview reloads (`dev/panel/scenarios/seen-tools.ts`).
+
 Changes fixtures in `dev/panel/scenarios/change-fixtures.ts` use real temporary Git
 repositories. `large-files.ts` supplies the 60-file diff, minified JSON,
 20,000-row CSV, 30,000-line log, long Markdown whose contents links jump to

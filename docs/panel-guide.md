@@ -91,11 +91,14 @@ are not restored after reload.
 
 ### Find and inspect tasks
 
-The task rail searches and filters by **Needs input**, **Failed**, **Active**,
-**Done**, then **All**. The default is the first nonempty filter. Questions and
+The task rail searches and filters by **Unseen**, **Needs input**, **Failed**,
+**Active**, **Done**, then **All**. The default is the first nonempty filter
+other than Unseen. Questions and
 permissions count as Needs input; failures, interruptions and compaction
 failures as Failed; other unfinished tasks as Active. Queued follow-up turns
-keep a task active between runs. Counts respect project and search filters.
+keep a task active between runs. Unseen cuts across the others; see
+[Seen and unseen tasks](#seen-and-unseen-tasks). Counts respect project and
+search filters.
 The first task read shows card-like rows with placeholders for titles, worker
 profiles, runtime and status until the list arrives. Press `/` for search and
 Escape to clear it.
@@ -112,6 +115,39 @@ Details includes task creation and latest activity dates, description, worker,
 revision, turns, budgets, session, workspace/branch, changes, dependencies and
 usage. Dates follow the host locale and time zone. Runtime in the rail and
 Details accumulates across turns and includes the active run.
+
+### Seen and unseen tasks
+
+A task becomes unseen when it has something you haven't viewed: a worker
+message or reply, a turn's end, a failure, or a question or permission request.
+Your own messages never make a task unseen. Unseen tasks show an accent dot at
+the top right of their row and a bolder title, and the compact panel adds
+**N unseen** to its counts.
+
+A task becomes seen when its Chat is on screen and scrolled to the latest
+message: the panel must be visible, on the Tasks page and the Chat tab. Only
+what Chat has loaded counts as seen, so a reply that arrives after it stays
+unseen until Chat shows it.
+
+Opening an unseen task places a **New** divider above the first worker message,
+outcome or failure after what you had seen, and Chat opens with the divider at
+the top. If everything new fits on screen, the task is seen at once; otherwise
+it stays unseen until you scroll to the latest message, and the
+**Scroll to unseen messages** button carries a dot. The divider stays until you
+leave the task. A task you marked unseen with nothing new opens at the end.
+
+- **Task actions → Mark as unseen** or **Mark as seen**, or right-clicking
+  (long-pressing on touch) a task row, sets it by hand. A task you mark unseen
+  while reading it stays unseen until you scroll its Chat or open another task.
+- **Unseen** lists unseen tasks. The task you open stays listed after it is
+  seen until you choose another, and the filter is never picked by default,
+  since reading empties it. **Mark all seen** beside the count sees every
+  listed task; with no search to clear, it takes **Clear filter**'s place.
+
+The standalone console's tab title leads with the unseen count, as in
+**(2) Delegated Work**. Seen state is stored by the service, so the embedded
+panel and the standalone console agree and it survives reloads. Codex reading
+replies through `get_agent_messages` doesn't mark tasks seen.
 
 ### Create and rename tasks
 

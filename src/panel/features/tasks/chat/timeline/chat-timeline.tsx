@@ -1,8 +1,7 @@
-import type { RefObject } from "react";
+import { Fragment, type ReactNode, type RefObject } from "react";
 
 import { providerMetadata } from "../../../../../shared/providers/metadata.js";
 import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status";
-import type { ChatItem } from "../../../../../shared/tasks/conversation/chat.js";
 import type { BudgetRaise } from "../../../../../shared/tasks/model";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import { statusLabel } from "../../../../app/state/selectors";
@@ -10,7 +9,9 @@ import type { Task } from "../../../../app/state/types";
 import { LoadingSwap } from "../../../../shared/components/loading-skeleton/loading-swap";
 import { rowStatus } from "../../list/task-status";
 import { TaskStatusIcon } from "../../list/task-status-icon";
-import { composerMode, spentBudget } from "../chat-model";
+import { newMessagesIndex } from "../../seen/new-messages";
+import { NewMessagesDivider } from "../../seen/new-messages-divider";
+import { composerMode, responseOutcome, spentBudget } from "../chat-model";
 import { PendingInput } from "../composer/pending-input";
 import { BudgetLimitNotice } from "./budget-limit-notice";
 import { ChatMessageView } from "./chat-message-view";
@@ -26,6 +27,8 @@ type ChatTimelineProps = {
   budgetRaise: BudgetRaise;
   onBudgetRaiseChange: (value: BudgetRaise) => void;
   onBudgetApply: (value: BudgetRaise) => Promise<string | undefined>;
+  /** The newest event seen when the task opened unseen; a "New" divider follows it. */
+  newFrom?: number;
 };
 
 /**
@@ -41,6 +44,7 @@ export function ChatTimeline({
   budgetRaise,
   onBudgetRaiseChange,
   onBudgetApply,
+  newFrom,
 }: ChatTimelineProps) {
   const state = useSnapshot(),
     chat = task && state.chat?.task === task.id ? state.chat : undefined,
@@ -88,6 +92,11 @@ export function ChatTimeline({
       task.status === "running" && activity ? activity.text : statusLabel(task);
   }
 
+  const newIndex =
+    items && newFrom !== undefined
+      ? newMessagesIndex(items, newFrom)
+      : undefined;
+
   const latest = items?.at(-1);
   const workingShownInNote = latest?.kind === "note" && latest.text === working;
   const spent = task ? spentBudget(task) : undefined;
@@ -117,25 +126,31 @@ export function ChatTimeline({
           <div className="chat-history">
             {items?.length
               ? items.map((item, index) => {
+                  let row: ReactNode;
+
                   if (item.kind === "message") {
-                    return (
+                    row = (
                       <ChatMessageView
-                        key={item.id}
                         task={task}
                         message={item.message}
                         worker={worker}
                         outcome={responseOutcome(item, items[index + 1])}
                       />
                     );
-                  }
-
-                  if (item.kind === "outcome") {
-                    return responseOutcome(items[index - 1], item) ? null : (
-                      <TurnOutcomeRow key={item.id} outcome={item} />
+                  } else if (item.kind === "outcome") {
+                    row = responseOutcome(items[index - 1], item) ? null : (
+                      <TurnOutcomeRow outcome={item} />
                     );
+                  } else {
+                    row = <ChatNoteRow note={item} />;
                   }
 
-                  return <ChatNoteRow key={item.id} note={item} />;
+                  return (
+                    <Fragment key={item.id}>
+                      {index === newIndex && <NewMessagesDivider />}
+                      {row}
+                    </Fragment>
+                  );
                 })
               : items &&
                 !streaming && (
@@ -177,14 +192,4 @@ export function ChatTimeline({
       {task && <PendingInput task={task} />}
     </div>
   );
-}
-
-// Keep an adjacent outcome with the worker response from the same turn.
-function responseOutcome(message?: ChatItem, outcome?: ChatItem) {
-  return message?.kind === "message" &&
-    message.message.from === "worker" &&
-    outcome?.kind === "outcome" &&
-    message.message.turn === outcome.turn
-    ? outcome
-    : undefined;
 }

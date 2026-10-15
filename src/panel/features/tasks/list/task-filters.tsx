@@ -165,6 +165,11 @@ export function TaskFilters() {
                     ? ""
                     : undefined
                 }
+                data-unseen={
+                  !loading && filter === "unseen" && counts[filter] > 0
+                    ? ""
+                    : undefined
+                }
               >
                 <LoadingSwap
                   as="span"

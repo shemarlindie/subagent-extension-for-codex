@@ -118,3 +118,37 @@ test("task menu does not offer renaming", async () => {
   await view.findByRole("menuitem", { name: "Delete task" });
   expect(view.queryByRole("menuitem", { name: /Rename/ })).toBeNull();
 });
+
+test.each([
+  [false, "Mark as unseen"],
+  [true, "Mark as seen"],
+] as const)(
+  "task menu offers the opposite of the task's seen state (unseen: %s)",
+  async (unseen, label) => {
+    onTestFinished(cleanup);
+
+    const controller = new Controller(
+      { embedded: true, dispose() {} } as unknown as Transport,
+      { hidden: () => false, wide: () => false },
+    );
+
+    onTestFinished(() => controller.dispose());
+    const tool = vi.spyOn(controller, "tool").mockResolvedValue({ unseen });
+
+    const view = render(
+      <ControllerContext.Provider value={controller}>
+        <Tooltip.Provider>
+          <TaskMenu task={{ ...task, ...(unseen ? { unseen } : {}) }} />
+        </Tooltip.Provider>
+      </ControllerContext.Provider>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(view.getByRole("button", { name: "Task actions" }));
+    await user.click(await view.findByRole("menuitem", { name: label }));
+
+    assert.deepEqual(tool.mock.calls, [
+      ["mark_user_agent_task_seen", { task_id: task.id, seen: unseen }],
+    ]);
+  },
+);

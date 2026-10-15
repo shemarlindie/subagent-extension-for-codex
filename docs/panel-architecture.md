@@ -25,6 +25,15 @@ The Changes feature (`src/panel/features/changes/`) owns change reads, file
 selection, worktree actions and the Changes tab. File viewers remain in
 `file-preview/`, so their rendering can be reused outside task changes.
 
+Seen tracking (`src/panel/features/tasks/seen/`) owns the unseen dot, the
+**New** divider, `SeenActions` (`controller.taskActions.seen`), `useMarkSeen`,
+which Chat calls with its reading position, and the console's title count.
+`useNewMessagesFrom` takes the task's `seen_through` when Chat mounts for it,
+keeps it once Chat loads only if something new follows, and Chat opens at the
+divider through `useReadingScroll`'s `focus`. Reads Chat sends in the
+background fail quietly; the next refresh retries them. The service stores what was seen; the panel
+patches the task list at once and keeps no seen state of its own.
+
 The panel imports browser-safe contracts and domain functions from
 `src/shared/<feature>/`, never service modules. The shared runtime boundary is
 explained in [Architecture](architecture.md#code-ownership).

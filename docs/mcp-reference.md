@@ -33,6 +33,16 @@ For Claude permissions routed to `parent_agent`, model-visible `submit_agent_inp
 
 The App resource is `ui://codex-subagent-extension/app-v6` with empty network allowlists. The standalone console uses authenticated HTTP tools and SSE; the embedded app uses portable MCP Apps calls.
 
+The panel records what the user has seen with app-only
+`mark_user_agent_task_seen({ task_id, seen, through? })`, where `through` is the
+newest event Chat has read, which returns the task's `{ unseen, through }`, and
+`mark_user_agent_tasks_seen({ task_ids })`.
+`list_agent_tasks` includes `unseen: true` for a task with a worker message,
+reply, turn end, failure or input request after what the user saw, and
+`seen_through`, the newest event they had seen, where Chat's **New** divider
+follows; see
+[Seen and unseen tasks](panel-guide.md#seen-and-unseen-tasks).
+
 The embedded app learns of changes through app-only `wait_user_agent_updates({ after?, draft?, wait_ms })`. It returns the caller's current `revision` as soon as it differs from `after`, which changes with the caller's tasks and the project list. With a `draft` target (`task_id`, optional `message_id` and `after_length`), it also returns as soon as that task's draft grows past `after_length`, becomes another message or clears, and includes `draft` and `running`. Otherwise it returns after `wait_ms`, at most 25,000. Without `after`, or with `wait_ms: 0`, it returns at once. Revisions are opaque and differ after a service restart; compare them only for equality. See [What reloads when](development.md#what-reloads-when) for applying panel and server changes.
 
 ## Provider messages to the parent

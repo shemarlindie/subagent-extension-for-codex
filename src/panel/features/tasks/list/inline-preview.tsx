@@ -38,6 +38,7 @@ export function InlinePreview() {
 
   const attention = tasks.filter((task) => task.pending_input);
   const active = tasks.filter((task) => !terminal(task) && !failedStatus(task));
+  const unseen = tasks.filter((task) => task.unseen).length;
 
   const task =
     tasks.find((task) => task.id === state.selected) ??
@@ -113,6 +114,7 @@ export function InlinePreview() {
               {active.length} active
               {" · "}
               {attention.length} needing attention
+              {unseen > 0 && ` · ${unseen} unseen`}
             </p>
             {task ? (
               <MotionContent

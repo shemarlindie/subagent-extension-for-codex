@@ -117,6 +117,7 @@ test("filter counts match each filter's list and follow search and scope", () =>
     attention: 0,
     completed: 1,
     failed: 1,
+    unseen: 0,
   });
 
   for (const filter of Object.keys(counts) as Filter[]) {
@@ -130,6 +131,7 @@ test("filter counts match each filter's list and follow search and scope", () =>
     attention: 0,
     completed: 1,
     failed: 0,
+    unseen: 0,
   });
 });
 
@@ -160,4 +162,34 @@ test("the filter follows the first nonempty one in order until chosen", () => {
   );
 
   assert.equal(effectiveFilter(state([asking], { filter: "all" })), "all");
+});
+
+test("Unseen cuts across the status filters and keeps the open task listed", () => {
+  const state = (patch: object) =>
+    ({
+      tasks: [
+        task({ id: "a", status: "completed", unseen: true }),
+        task({ id: "b", status: "failed", unseen: true }),
+        task({ id: "c", status: "running" }),
+      ],
+      filter: "unseen",
+      search: "",
+      ...patch,
+    }) as unknown as Snapshot;
+
+  assert.equal(filterCounts(state({})).unseen, 2);
+
+  assert.deepEqual(
+    visibleTasks(state({})).map((task) => task.id),
+    ["a", "b"],
+  );
+
+  // The task being read stays until another is chosen, but isn't counted.
+  assert.deepEqual(
+    visibleTasks(state({ selected: "c" })).map((task) => task.id),
+    ["a", "b", "c"],
+  );
+
+  // It is never chosen by default, since reading tasks empties it.
+  assert.equal(effectiveFilter(state({ filter: null })), "failed");
 });

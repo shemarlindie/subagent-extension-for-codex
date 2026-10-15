@@ -9,6 +9,10 @@ import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { Task } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
 import { useReadingScroll } from "../evidence/use-reading-scroll";
+import { NEW_MESSAGES_ID } from "../seen/new-messages";
+import { UnseenDot } from "../seen/unseen-dot";
+import { useMarkSeen } from "../seen/use-mark-seen";
+import { useNewMessagesFrom } from "../seen/use-new-messages-from";
 import { Composer } from "./composer/composer";
 import { MessageQueue } from "./queue/message-queue";
 import { ChatTimeline } from "./timeline/chat-timeline";
@@ -46,6 +50,8 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
 
   const ready = Boolean(task && state.chat?.task === task.id);
 
+  const newFrom = useNewMessagesFrom(task, ready);
+
   const [reading] = useSessionState(
     "task",
     taskId,
@@ -65,7 +71,13 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
     blockScrollWhileLoading: true,
     reportPositionRestored: true,
     itemAttribute: "data-chat-item",
+    focus:
+      newFrom === undefined ? undefined : { id: NEW_MESSAGES_ID, request: 1 },
   });
+
+  useMarkSeen({ task, ready: ready && positionRestored, atLatest: pinned });
+
+  const unseen = Boolean(task?.unseen);
 
   return (
     <div className="chat">
@@ -77,14 +89,18 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
         budgetRaise={budgetRaise}
         onBudgetRaiseChange={changeBudgetRaise}
         onBudgetApply={applyBudgetRaise}
+        newFrom={newFrom}
       />
       <div className="chat-footer">
         {/* Never replace a saved reading position with the empty loading layout. */}
         <ScrollLatestButton
           show={ready && positionRestored && !pinned}
           direction="down"
-          label="Scroll to latest message"
+          label={
+            unseen ? "Scroll to unseen messages" : "Scroll to latest message"
+          }
           className="chat-scroll-latest"
+          badge={unseen && <UnseenDot className="scroll-latest-unseen" />}
           onClick={scrollToLatest}
         />
         {/* Keyed so switching tasks swaps the queue instead of animating its rows. */}
