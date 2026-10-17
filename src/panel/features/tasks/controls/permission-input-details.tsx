@@ -76,7 +76,7 @@ export function PermissionInputDetails({
     <dl className="permission-details" aria-label="Permission request details">
       {entries.map(([key, value]) => (
         <div key={key}>
-          <dt className={key === "description" ? "permission-sr-only" : ""}>
+          <dt className={key === "description" ? "visually-hidden" : ""}>
             {labelFor(key)}
           </dt>
           <dd>

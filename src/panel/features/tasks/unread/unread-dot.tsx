@@ -4,7 +4,7 @@ type UnreadDotProps = { className?: string };
 export function UnreadDot({ className }: UnreadDotProps) {
   return (
     <span className={className ? `unread-dot ${className}` : "unread-dot"}>
-      <span className="unread-dot-label">Unread</span>
+      <span className="visually-hidden">Unread</span>
     </span>
   );
 }

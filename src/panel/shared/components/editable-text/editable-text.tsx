@@ -230,7 +230,7 @@ export function EditableText({
           aria-label={`Edit ${label.toLowerCase()}: ${value}`}
           onClick={startEditing}
         >
-          <span className="editable-text-label">{value}</span>
+          <span className="visually-hidden">{value}</span>
         </button>
       )}
       {error && (

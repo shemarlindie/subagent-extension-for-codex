@@ -96,7 +96,7 @@ export function LookupField(props: LookupFieldProps) {
         </span>
       </Combobox.Trigger>
       {props.loading && (
-        <span className="select-loading-status" role="status">
+        <span className="visually-hidden" role="status">
           {props.loadingLabel ?? `Loading ${props.label.toLowerCase()}`}
         </span>
       )}

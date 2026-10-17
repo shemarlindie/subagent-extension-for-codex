@@ -103,7 +103,7 @@ function SelectTrigger({
         </Select.Icon>
       </Select.Trigger>
       {loading && (
-        <span className="select-loading-status" role="status">
+        <span className="visually-hidden" role="status">
           {loadingLabel ?? `Loading ${label.toLowerCase()}`}
         </span>
       )}

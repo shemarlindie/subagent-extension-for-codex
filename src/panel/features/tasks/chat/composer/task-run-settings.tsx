@@ -71,7 +71,7 @@ export function TaskRunSettings({ task }: TaskRunSettingsProps) {
             label
           ) : (
             <>
-              <span className="task-run-setting-full">{label}</span>
+              <span className="visually-hidden">{label}</span>
               {compact && (
                 <span className="task-run-setting-compact" aria-hidden="true">
                   {compact}
