@@ -1,7 +1,10 @@
 # Local development
 
-How to run, change, and check this project locally. Run every command from the
-project root. Requires Node.js 24+ and Git.
+Use this guide to build, run, change and check the project locally. For code
+ownership and runtime boundaries, see [Architecture](architecture.md). For browser
+checks, see [UI verification](ui-verification.md).
+
+Run every command from the project root. Requires Node.js 24+ and Git.
 
 ## Setup
 
@@ -75,32 +78,37 @@ The runner discovers `src/**/*-contract.ts` automatically, excluding generated
 files and `*-contract.test.ts`. No central registration is needed, and imports
 between discovered contracts resolve to their generated validators.
 
-To add a contract, put exported types in a feature-owned file such as
-`src/service/features/<feature>/message-contract.ts`:
+To add a contract:
 
-```ts
-/** @strict */
-export interface Message {
-  body: string;
-}
-```
+1. Put exported types in a feature-owned file such as
+   `src/service/features/<feature>/message-contract.ts`:
 
-Run `npm run schemas:generate`. This creates the adjacent
-`message-contract.generated.ts`, exporting `messageSchema`. Call the generated
-validator at the boundary and use the source type for internal code:
+   ```ts
+   /** @strict */
+   export interface Message {
+     body: string;
+   }
+   ```
 
-```ts
-import { messageSchema } from "./message-contract.generated.js";
-import type { Message } from "./message-contract.js";
+2. Run `npm run schemas:generate`. This creates the adjacent
+   `message-contract.generated.ts`, exporting `messageSchema`.
+3. Call the generated validator at the boundary and use the source type for
+   internal code:
 
-export function decodeMessage(input: unknown): Message {
-  return messageSchema.parse(input);
-}
-```
+   ```ts
+   import { messageSchema } from "./message-contract.generated.js";
+   import type { Message } from "./message-contract.js";
 
-Add focused tests beside the contract for accepted and rejected data and any
-annotation behavior. Run `npm run typecheck`. Keep the source, generated file, and tests together
-in any requested commit. See [Checks](#checks) for the build and watch workflows.
+   export function decodeMessage(input: unknown): Message {
+     return messageSchema.parse(input);
+   }
+   ```
+
+4. Add focused tests beside the contract for accepted and rejected data and any
+   annotation behavior. Run `npm run typecheck`.
+
+Keep the source, generated file, and tests together in any requested commit. See
+[Checks](#checks) for the build and watch workflows.
 
 For a handwritten validator, add a feature-owned `schema-generation.mjs` with
 paths relative to that configuration file. Claude's configuration, for example,
@@ -297,20 +305,24 @@ It makes no model calls. Sign in at
 `http://127.0.0.1:4317` with `local-demo-only-not-a-real-token`. Stop any other
 service on port 4317 first.
 
-To combine interactive fake-worker tasks with UI hot reload, run `npm run demo`
-in one terminal, then start Vite in another with the demo connection:
+To combine interactive fake-worker tasks with UI hot reload:
 
-```sh
-CODEX_SUBAGENT_EXTENSION_DATA="$PWD/.codex-subagent-extension/demo" \
-CODEX_SUBAGENT_EXTENSION_TOKEN=local-demo-only-not-a-real-token \
-CODEX_SUBAGENT_EXTENSION_URL=http://127.0.0.1:4317 npm run dev:ui
-```
+1. Run `npm run demo` in one terminal.
+2. Start Vite in another terminal with the demo connection:
 
-Open `http://127.0.0.1:5317`, choose **Data: live** and **Launch: global**, and
-**Relaunch**. Select the demo repository in New task. The panel sends actual
-requests: create tasks, send follow-ups, answer questions and interrupt turns.
-The explicit connection overrides keep Vite from using a different service
-configured in `.env`.
+   ```sh
+   CODEX_SUBAGENT_EXTENSION_DATA="$PWD/.codex-subagent-extension/demo" \
+   CODEX_SUBAGENT_EXTENSION_TOKEN=local-demo-only-not-a-real-token \
+   CODEX_SUBAGENT_EXTENSION_URL=http://127.0.0.1:4317 npm run dev:ui
+   ```
+
+3. Open `http://127.0.0.1:5317`, choose **Data: live** and **Launch: global**, and
+   **Relaunch**.
+4. Select the demo repository in New task.
+
+The panel sends actual requests: create tasks, send follow-ups, answer questions
+and interrupt turns. The explicit connection overrides keep Vite from using a
+different service configured in `.env`.
 
 For the full fixture trigger catalog, expected outcomes, queue controls, and
 failure cases, see [Fixture scenarios](fixture-scenarios.md).

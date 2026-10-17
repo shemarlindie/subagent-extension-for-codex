@@ -44,10 +44,12 @@ Uncommitted changes discarded during removal do not return.
 
 ## Reconnect after a restart
 
-Start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value and inspect
-existing tasks in the task list. The data directory contains the database,
-worktrees and admin token. Disconnecting a client leaves the
-service and its tasks running. Stopping the service interrupts its active turns.
+1. Start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value.
+2. Inspect existing tasks in the task list.
+
+The data directory contains the database, worktrees and admin token.
+Disconnecting a client leaves the service and its tasks running. Stopping the
+service interrupts its active turns.
 
 Recovery marks a turn that was running as interrupted. Steers it had not taken
 move to the front of its queue. A non-empty recovered queue is paused until you
@@ -69,11 +71,12 @@ triggers them. Interrupted usage may be missing.
 
 ## Preserve service state
 
-Stop the service gracefully before backing up its data. Preserve the full data
-directory, including SQLite files and worktrees. Copying only a
-live SQLite database can omit its write-ahead log. Keep the Claude runtime state
-on the machine that owns the worktrees. Moving this state to another
-machine does not ensure native session continuation.
+1. Stop the service gracefully before backing up its data.
+2. Preserve the full data directory, including SQLite files and worktrees.
+
+Copying only a live SQLite database can omit its write-ahead log. Keep the Claude
+runtime state on the machine that owns the worktrees. Moving this state to
+another machine does not ensure native session continuation.
 
 For versioned database upgrades, see [Database](database.md).
 

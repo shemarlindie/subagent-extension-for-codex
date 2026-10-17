@@ -1,8 +1,9 @@
 # Architecture
 
-The extension delegates coding tasks to local Claude Code sessions while Codex
-remains the parent interface. See [Host capabilities](host-capabilities.md) for
-host integration contracts and verification limits.
+Use this guide to understand runtime ownership and code boundaries before
+changing the extension. For local workflows and checks, see
+[Local development](development.md). For host integration contracts and
+verification limits, see [Host capabilities](host-capabilities.md).
 
 ## Runtime boundaries
 

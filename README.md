@@ -116,8 +116,13 @@ is available.
 
 ## Documentation
 
-Choose a guide for your task.
-[Architecture](docs/architecture.md) explains the code boundaries.
+Choose a guide for your task from the tables below. When starting work on the
+codebase, follow this suggested reading order:
+
+1. [Architecture](docs/architecture.md) for runtime ownership and code boundaries.
+2. [Local development](docs/development.md#choosing-a-development-tool) for choosing
+   a development tool and running the relevant [checks](docs/development.md#checks).
+3. The guide for the area you are changing, listed below.
 
 ### Use and operate the extension
 

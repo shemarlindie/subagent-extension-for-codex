@@ -1,5 +1,9 @@
 # Claude Code CLI
 
+Use this guide to diagnose Claude executable selection, supported versions and
+readiness failures. For CLI or SDK upgrade checks, see
+[Claude execution verification](claude-verification.md).
+
 Claude tasks run your installed `claude`. The package doesn't include one, and the service never installs, updates or signs in to Claude Code. Install it from the [Claude Code setup guide](https://code.claude.com/docs/en/setup).
 
 ## Supported versions

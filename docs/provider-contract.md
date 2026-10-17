@@ -1,6 +1,11 @@
 # Built-in provider contract
 
-Use this guide when implementing or changing provider execution. Implement the internal `Provider` contract in `src/service/features/providers/types.ts` and register the provider in `src/service/features/providers/config.ts`.
+Use this guide when implementing or changing provider execution. It defines
+provider responsibilities and lifecycle behavior. For configurable permissions
+and session restrictions, see [Configuration](configuration.md). For execution
+checks, see [Claude execution verification](claude-verification.md).
+
+Implement the internal `Provider` contract in `src/service/features/providers/types.ts` and register the provider in `src/service/features/providers/config.ts`.
 
 The shared control plane owns scheduling, dependencies, workspaces and snapshots, budget checks, task ownership and persistence. It also manages conversation messages, steers, drafts and input serialization. Providers own model discovery, native execution, session creation and deletion, and native permissions.
 
