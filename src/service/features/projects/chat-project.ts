@@ -3,7 +3,7 @@ import { isAbsolute } from "node:path";
 
 import { hostProjectCandidate } from "../../platform/panel/host-context.js";
 import type { Control } from "../tasks/runtime/control.js";
-import { git } from "../workspaces/git.js";
+import { gitRepositoryRoot } from "../workspaces/git.js";
 
 /** Read transport metadata only; model tool arguments cannot supply this authority. */
 export function hostDirectoryFromMeta(meta?: Record<string, unknown>) {
@@ -19,9 +19,7 @@ export function hostDirectoryFromMeta(meta?: Record<string, unknown>) {
 
 async function gitRoot(path: string) {
   try {
-    return await realpath(
-      (await git(path, ["rev-parse", "--show-toplevel"])).trim(),
-    );
+    return await realpath(await gitRepositoryRoot(path));
   } catch {
     return undefined;
   }

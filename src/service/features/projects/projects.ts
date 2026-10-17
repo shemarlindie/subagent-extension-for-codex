@@ -4,7 +4,7 @@ import { basename, isAbsolute, relative } from "node:path";
 import { eq } from "drizzle-orm";
 
 import { type Database } from "../../platform/database/database.js";
-import { git } from "../workspaces/git.js";
+import { gitRepositoryRoot } from "../workspaces/git.js";
 import { Workspaces } from "../workspaces/workspace.js";
 import { projectRoots } from "./schema.js";
 
@@ -38,10 +38,7 @@ export class Projects {
       throw new Error("Project root must be a directory");
     }
 
-    if (
-      kind === "repository" &&
-      (await git(actual, ["rev-parse", "--show-toplevel"])).trim() !== actual
-    ) {
+    if (kind === "repository" && (await gitRepositoryRoot(actual)) !== actual) {
       throw new Error("Use repository root");
     }
 

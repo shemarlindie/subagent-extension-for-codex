@@ -3,7 +3,7 @@ import { isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Control } from "../../features/tasks/runtime/control.js";
-import { git } from "../../features/workspaces/git.js";
+import { gitRepositoryRoot } from "../../features/workspaces/git.js";
 
 // Version-specific Codex adapter, verified in the public rust-v0.160.0 source.
 // Panel context consumes the directory hint. Native permission inheritance
@@ -28,7 +28,7 @@ export async function withHostRepository(
   try {
     const cwd = fileURLToPath(directory);
     if (!isAbsolute(cwd)) return args;
-    const root = (await git(cwd, ["rev-parse", "--show-toplevel"])).trim();
+    const root = await gitRepositoryRoot(cwd);
 
     const repository = c.projects
       ? await c.projects.resolve(root)
@@ -49,9 +49,7 @@ export async function hostProjectCandidate(directory?: string) {
     const cwd = fileURLToPath(directory);
     if (!isAbsolute(cwd)) return undefined;
 
-    return await realpath(
-      (await git(cwd, ["rev-parse", "--show-toplevel"])).trim(),
-    );
+    return await realpath(await gitRepositoryRoot(cwd));
   } catch {
     return undefined;
   }

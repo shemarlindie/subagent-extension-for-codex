@@ -11,7 +11,7 @@ import {
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { type Task } from "../../../shared/tasks/model.js";
-import { git } from "./git.js";
+import { git, gitRepositoryRoot } from "./git.js";
 
 const exists = (path: string) =>
   access(path).then(
@@ -157,9 +157,7 @@ export class Workspaces {
       throw new Error("Repository outside allowed roots");
     }
 
-    if (
-      (await git(actual, ["rev-parse", "--show-toplevel"])).trim() !== actual
-    ) {
+    if ((await gitRepositoryRoot(actual)) !== actual) {
       throw new Error("Use repository root");
     }
 

@@ -9,10 +9,14 @@ export async function git(
   args: string[],
   env?: NodeJS.ProcessEnv,
   input?: string,
+  timeoutMs?: number,
 ) {
   const run = exec("git", ["-C", cwd, ...args], {
     // Diffs are returned whole, however large.
     maxBuffer: 1024 * 1024 * 1024,
+    ...(timeoutMs
+      ? { timeout: timeoutMs, killSignal: "SIGKILL" as const }
+      : {}),
     ...(env ? { env: { ...process.env, ...env } } : {}),
   });
 
@@ -31,4 +35,30 @@ export async function git(
   if (stdinError) throw stdinError;
 
   return stdout;
+}
+
+const ROOT_PROBE_TIMEOUT_MS = 5000;
+
+/** Bound the read-only Git probe without limiting worktree writes or snapshots. */
+export async function gitRepositoryRoot(cwd: string) {
+  try {
+    return (
+      await git(
+        cwd,
+        ["rev-parse", "--show-toplevel"],
+        undefined,
+        undefined,
+        ROOT_PROBE_TIMEOUT_MS,
+      )
+    ).trim();
+  } catch (error) {
+    if (error instanceof Error && "killed" in error && error.killed) {
+      throw new Error(
+        `Git repository validation did not finish within ${ROOT_PROBE_TIMEOUT_MS / 1000} seconds. Please retry.`,
+        { cause: error },
+      );
+    }
+
+    throw error;
+  }
 }
