@@ -203,6 +203,7 @@ export class Workspaces {
     }
 
     delete t.end_tree;
+    delete t.end_head;
   }
 
   /**
@@ -228,6 +229,7 @@ export class Workspaces {
         }
       }
 
+      t.end_head = await headCommit(t.workspace!);
       t.end_tree = end;
     } catch {
       // Left as they were.
@@ -253,6 +255,7 @@ export class Workspaces {
     }
 
     delete t.end_tree;
+    delete t.end_head;
   }
 
   /**

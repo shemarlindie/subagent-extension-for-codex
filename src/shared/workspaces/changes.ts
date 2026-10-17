@@ -18,6 +18,12 @@ export interface ChangedFile {
   binary: boolean;
   /** A binary file's current size in bytes, unless it was deleted. */
   size?: number;
+  /**
+   * Uncommitted changes only: a commit after the task's changes ended
+   * replaced the file with other content. Its stats and diff are the task's
+   * own, as they were then, and it isn't counted in the totals.
+   */
+  superseded?: true;
 }
 
 export interface Changes {
@@ -41,7 +47,10 @@ export interface Changes {
   next_cursor?: string;
 }
 
-/** A task's change totals: the file count and line stats, without the file list or diff. */
+/**
+ * A task's change totals: the file count and line stats, without the file
+ * list or diff. Superseded files aren't counted.
+ */
 export type ChangeCounts = Omit<Changes, "files" | "diff" | "next_cursor"> & {
   files: number;
 };
@@ -53,7 +62,7 @@ export function changeCounts({
   next_cursor: _next,
   ...totals
 }: Changes): ChangeCounts {
-  return { ...totals, files: files.length };
+  return { ...totals, files: files.filter((f) => !f.superseded).length };
 }
 
 /** Why an "end_unrecorded" task has no changes. */

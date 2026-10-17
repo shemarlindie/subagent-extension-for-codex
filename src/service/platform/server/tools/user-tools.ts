@@ -242,7 +242,7 @@ export function userTools(
     get_user_agent_changes: tool({
       ...tools.get_agent_changes,
       description:
-        "User interface only: a task's uncommitted changes since it started, for the panel's Changes tab, in the files the task changed (all of a worktree's, for the whole task). Each file is compared with its content at the start, or its committed content if committed since, so earlier uncommitted edits and committed work are left out. Otherwise as get_agent_changes returns them.",
+        "User interface only: a task's uncommitted changes since it started, for the panel's Changes tab, in the files the task changed (all of a worktree's, for the whole task). Each file is compared with its content at the start, or its committed content if committed since, so earlier uncommitted edits and committed work are left out. Once a current_repo task stops, files are shown as its changes left them; a file committed with other content since is marked superseded and left out of the totals. Otherwise as get_agent_changes returns them.",
       run: (a) =>
         c.workspaces.uncommittedChanges(
           c.store.get(a.task_id, owner),
@@ -348,7 +348,7 @@ export function userTools(
     get_user_agent_changed_file: tool({
       ...tools.get_agent_changed_file,
       description:
-        "User interface only: the content now of a file among a task's uncommitted changes, for the panel's preview, as get_agent_changed_file returns it.",
+        "User interface only: the content of a file among a task's uncommitted changes, for the panel's preview: as it is now, or as a stopped current_repo task's changes left it. Otherwise as get_agent_changed_file returns it.",
       run: (a) =>
         c.workspaces.changedFile(
           c.store.get(a.task_id, owner),

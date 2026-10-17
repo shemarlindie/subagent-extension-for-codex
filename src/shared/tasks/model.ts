@@ -229,6 +229,8 @@ export interface Task extends Start {
    * the worker runs.
    */
   end_tree?: string;
+  /** current_repo: the commit HEAD was on when `end_tree` was taken. */
+  end_head?: string;
   session_id?: string;
   session_owner?: string;
   session_state_ref?: string;

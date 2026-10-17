@@ -1,4 +1,8 @@
-import { changedFiles, diffParts } from "../../../shared/workspaces/changes.js";
+import {
+  type ChangedFile,
+  changedFiles,
+  diffParts,
+} from "../../../shared/workspaces/changes.js";
 import { git } from "./git.js";
 
 /**
@@ -65,4 +69,24 @@ export async function readDiff(cwd: string, base: string, current: string) {
   }
 
   return { files, parts: diffParts(patch) };
+}
+
+/** Whether a changed file has a path in `paths`; a rename counts by either. */
+export function touches(f: ChangedFile, paths: Set<string>) {
+  return (
+    paths.has(f.path) || (f.old_path !== undefined && paths.has(f.old_path))
+  );
+}
+
+/** A diff's files and their parts, kept to those `keep` accepts. */
+export function keepFiles(
+  diff: { files: ChangedFile[]; parts: string[] },
+  keep: (f: ChangedFile) => boolean,
+) {
+  const kept = diff.files.map(keep);
+
+  return {
+    files: diff.files.filter((_, index) => kept[index]),
+    parts: diff.parts.filter((_, index) => kept[index]),
+  };
 }

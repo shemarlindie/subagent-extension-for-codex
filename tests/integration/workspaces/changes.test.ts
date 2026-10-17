@@ -329,6 +329,27 @@ test("uncommitted changes keep the task's files that differ from HEAD, and drop 
     assert.match((await uncommitted()).diff, /\+task's edit/);
     assert.doesNotMatch((await uncommitted()).diff, /user's edit/);
 
+    // Pages hold whole files, and later pages read the same state.
+    const first = await s.workspaces.uncommittedChanges(
+      t,
+      "task",
+      undefined,
+      1,
+    );
+
+    assert.match(first.diff, /^diff --git a\/file-0.txt/);
+    assert.ok(first.next_cursor);
+
+    const second = await s.workspaces.uncommittedChanges(
+      t,
+      "task",
+      first.next_cursor,
+      1,
+    );
+
+    assert.match(second.diff, /^diff --git a\/task.txt[\s\S]*\+task$/m);
+    assert.equal(second.next_cursor, undefined);
+
     // Committing a file drops it; the panel previews only what's left.
     commit("file-0.txt");
     assert.deepEqual(await paths(), ["task.txt"]);
@@ -337,6 +358,26 @@ test("uncommitted changes keep the task's files that differ from HEAD, and drop 
       s.workspaces.changedFile(t, "file-0.txt", undefined, undefined, true),
       /not among this task's uncommitted changes/,
     );
+
+    // Edits after the task ended aren't its: a committed file stays out,
+    // and committing it again doesn't bring it back.
+    await edit(10, "edited again");
+    assert.deepEqual(await paths(), ["task.txt"]);
+
+    // A task from before HEAD was recorded with its end reads them live.
+    const endHead = t.end_head;
+    delete t.end_head;
+    assert.deepEqual(await paths(), ["file-0.txt", "task.txt"]);
+    t.end_head = endHead;
+
+    commit("file-0.txt");
+    assert.deepEqual(await paths(), ["task.txt"]);
+
+    // An uncommitted file shows as the task left it, and its content is
+    // read from there; discarding it drops it.
+    await writeFile(join(s.repo, "task.txt"), "user's version\n");
+    assert.match((await uncommitted()).diff, /\+task$/m);
+    assert.doesNotMatch((await uncommitted()).diff, /user's version/);
 
     assert.equal(
       (
@@ -351,47 +392,29 @@ test("uncommitted changes keep the task's files that differ from HEAD, and drop 
       "task\n",
     );
 
-    // A later edit to a task's file is uncommitted again, and shows alone:
-    // what was committed stays out.
-    await edit(10, "edited again");
-    assert.deepEqual(await paths(), ["file-0.txt", "task.txt"]);
-
-    const [again] = (await uncommitted()).files;
-
-    assert.ok(again);
-    assert.deepEqual([again.additions, again.deletions], [1, 1]);
-    assert.doesNotMatch((await uncommitted()).diff, /task's edit/);
-
-    // A deletion committed since the start leaves the baseline too.
-    await rm(join(s.repo, "file-2.txt"));
-    commit("file-2.txt");
-    assert.deepEqual(await paths(), ["file-0.txt", "task.txt"]);
-
-    // Pages hold whole files, and later pages read the same state.
-    const first = await s.workspaces.uncommittedChanges(
-      t,
-      "task",
-      undefined,
-      1,
-    );
-
-    assert.match(first.diff, /^diff --git a\/file-0.txt/);
-    assert.ok(first.next_cursor);
-    await writeFile(join(s.repo, "task.txt"), "changed between pages\n");
-
-    const second = await s.workspaces.uncommittedChanges(
-      t,
-      "task",
-      first.next_cursor,
-      1,
-    );
-
-    assert.match(second.diff, /^diff --git a\/task.txt[\s\S]*\+task$/m);
-    assert.equal(second.next_cursor, undefined);
-    await writeFile(join(s.repo, "task.txt"), "task\n");
-
-    commit("file-0.txt", "task.txt");
+    await rm(join(s.repo, "task.txt"));
     assert.deepEqual(await paths(), []);
+
+    // Committing other content over it supersedes it: it keeps the task's
+    // diff but leaves the totals.
+    await writeFile(join(s.repo, "task.txt"), "user's version\n");
+    commit("task.txt");
+    const superseded = await uncommitted();
+
+    assert.deepEqual(
+      superseded.files.map((f) => [f.path, f.superseded]),
+      [["task.txt", true]],
+    );
+
+    assert.match(superseded.diff, /\+task$/m);
+    assert.deepEqual([superseded.additions, superseded.deletions], [0, 0]);
+
+    assert.deepEqual(await s.workspaces.uncommittedCounts(t), {
+      scope: "task",
+      files: 0,
+      additions: 0,
+      deletions: 0,
+    });
 
     // The full view still lists everything the task changed.
     assert.deepEqual(
