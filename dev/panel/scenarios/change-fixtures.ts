@@ -19,6 +19,11 @@ export type ChangeFixture = {
   before?: Edits;
   /** Each turn's edits, in order. */
   turns: Turn[];
+  /**
+   * current_repo only: the task's changes end after its last turn, then the
+   * user commits these edits, superseding the task's files they replace.
+   */
+  committedAfter?: Edits;
   /** Worktree only: commit each turn on the task's branch. */
   commit?: boolean;
   /** Worktree only: the worktree was removed after the last turn. */
@@ -175,6 +180,60 @@ export const previewChanges: Partial<Record<string, () => ChangeFixture>> = {
         "assets/logo.png": pixel,
       },
     ],
+  }),
+
+  // A current_repo task that stopped; the user then committed their own
+  // limits over the task's, so that file is superseded.
+  "preview-conversation": (): ChangeFixture => ({
+    base: {
+      "src/upload.ts": lines(
+        'import { store } from "./storage";',
+        "",
+        "export async function upload(request: Request) {",
+        "  return store(await request.arrayBuffer());",
+        "}",
+      ),
+      "src/limits.ts": lines("export const limits = {};"),
+    },
+    turns: [
+      {
+        "src/limits.ts": lines(
+          "export const limits = {",
+          "  maxUploadBytes: 10 * 1024 * 1024,",
+          "};",
+        ),
+        "src/upload.ts": lines(
+          'import { limits } from "./limits";',
+          'import { store } from "./storage";',
+          "",
+          "export async function upload(request: Request) {",
+          '  const size = Number(request.headers.get("content-length"));',
+          "",
+          "  if (size > limits.maxUploadBytes) {",
+          '    return new Response("Upload too large", { status: 413 });',
+          "  }",
+          "",
+          "  return store(await request.arrayBuffer());",
+          "}",
+        ),
+      },
+      {
+        "test/upload.test.ts": lines(
+          'test("rejects uploads over the limit", async () => {',
+          "  const response = await upload(oversizedRequest());",
+          "  expect(response.status).toBe(413);",
+          "});",
+        ),
+      },
+    ],
+    committedAfter: {
+      "src/limits.ts": lines(
+        "export const limits = {",
+        "  maxUploadBytes: 25 * 1024 * 1024,",
+        "  maxFiles: 5,",
+        "};",
+      ),
+    },
   }),
 
   // A worktree that was removed; its changes are read from the branch.

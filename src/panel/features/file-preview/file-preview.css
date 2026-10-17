@@ -266,7 +266,8 @@
 .diff-sign {
   user-select: none;
 }
-.diff-empty {
+.diff-empty,
+.diff-file-note {
   padding: 4px 12px;
 }
 

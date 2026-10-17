@@ -123,6 +123,13 @@ async function seedChanges(
     }
   }
 
+  if (fixture.committedAfter) {
+    await workspaces.recordEnd(task);
+    write(workspace, fixture.committedAfter);
+    git(workspace, "add", "--", ...Object.keys(fixture.committedAfter));
+    git(workspace, "commit", "-qm", "User commit");
+  }
+
   if (fixture.removed) git(repo, "worktree", "remove", "--force", workspace);
   if (fixture.branchDeleted) git(repo, "branch", "-D", task.branch!);
 }

@@ -1,7 +1,7 @@
 import { useController } from "../../app/state/controller-context";
 import type { Task } from "../tasks/types";
 import { ChangedFileSection } from "./changed-file-section";
-import { changedFileEntries } from "./changed-files";
+import { changedFileEntries, type ChangedFileEntry } from "./changed-files";
 import type { ChangesReading } from "./changes-reading";
 import type { Changes } from "./types";
 import {
@@ -12,6 +12,11 @@ import {
 
 /** Long lists stay scannable by opening only their first file by default. */
 const OPEN_FILES = 8;
+
+/** Superseded files start closed, since a commit has replaced them. */
+const opensByDefault = (entries: ChangedFileEntry[], index: number) =>
+  !entries[index]?.file.superseded &&
+  (entries.length <= OPEN_FILES || index === 0);
 
 type ChangesViewProps = {
   task: Task;
@@ -36,7 +41,7 @@ export function ChangesView({ task, changes, reading }: ChangesViewProps) {
             key={path}
             entry={entry}
             remembered={reading.open.get(path)}
-            openByDefault={entries.length <= OPEN_FILES || index === 0}
+            openByDefault={opensByDefault(entries, index)}
             viewed={isViewed(viewed, entry)}
             changedSinceViewed={changedSinceViewed(viewed, entry)}
             onOpenChange={(open) => reading.open.set(path, open)}

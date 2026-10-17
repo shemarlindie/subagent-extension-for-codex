@@ -295,11 +295,70 @@ test("a current_repo task's changes say they're the uncommitted ones in its file
 
   assert.ok(
     await screen.findByText(
-      /^Uncommitted changes to the files this task changed, including edits to them made outside the task\. Committed changes are in the Git history\.$/,
+      /^Uncommitted changes to the files this task changed while it ran, including others' edits to them meanwhile\. Once it stops, they show as it left them\. Committed changes are in the Git history\.$/,
     ),
   );
 
   assertAbsent(screen.queryByText(/git push/));
+});
+
+test("a superseded file is tagged, starts closed and is left out of the totals", async (t) => {
+  const diff = (path: string, line: string) =>
+    `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n-old\n+${line}\n`;
+
+  const { user } = await setup(t, (transport) => {
+    transport.tasks = [{ ...task(), workspace_strategy: "current_repo" }];
+
+    transport.changes = [
+      {
+        scope: "task",
+        files: [
+          {
+            path: "kept.ts",
+            status: "modified",
+            additions: 1,
+            deletions: 1,
+            binary: false,
+          },
+          {
+            path: "replaced.ts",
+            status: "modified",
+            additions: 1,
+            deletions: 1,
+            binary: false,
+            superseded: true,
+          },
+        ],
+        additions: 1,
+        deletions: 1,
+        diff: diff("kept.ts", "kept line") + diff("replaced.ts", "task line"),
+      },
+    ];
+  });
+
+  await user.click(screen.getByRole("tab", { name: /^Changes/ }));
+  assert.ok(await screen.findByText("+1 −1, 1 file uncommitted"));
+
+  const section = (path: string) =>
+    document.querySelector<HTMLDetailsElement>(
+      `details[data-changed-file="${path}"]`,
+    )!;
+
+  await waitFor(() => assert.ok(section("kept.ts").open));
+  assert.equal(section("replaced.ts").open, false);
+  assert.ok(within(section("replaced.ts")).getByText("superseded"));
+  assertAbsent(within(section("kept.ts")).queryByText("superseded"));
+
+  // Opening it explains why it shows the task's change.
+  await user.click(within(section("replaced.ts")).getByText("replaced.ts"));
+
+  assert.ok(
+    await within(section("replaced.ts")).findByText(
+      /^Committed with other content since this task stopped\./,
+    ),
+  );
+
+  assert.ok(await within(section("replaced.ts")).findByText("task line"));
 });
 
 test("a current_repo task that ended without an end snapshot says why it has no changes", async (t) => {

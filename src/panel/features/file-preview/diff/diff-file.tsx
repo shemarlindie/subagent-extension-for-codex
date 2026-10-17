@@ -38,6 +38,10 @@ type DiffFileProps = {
   open?: boolean;
   /** Shown instead of rows when the file has none. */
   emptyNote?: string;
+  /** A tag after the file's path, such as its state. */
+  tag?: string;
+  /** Shown above the rows while the file is open. */
+  note?: string;
   /** Buttons in the file's header; using them doesn't toggle the file. */
   actions?: ReactNode;
   /** Called when the reader opens or closes the file. */
@@ -51,6 +55,8 @@ export function DiffFile({
   initiallyOpen,
   open: controlledOpen,
   emptyNote = "No content changes",
+  tag,
+  note,
   actions,
   onOpenChange,
   ...data
@@ -94,6 +100,7 @@ export function DiffFile({
         </span>
         {file.new && <span className="diff-tag">new</span>}
         {file.deleted && <span className="diff-tag">deleted</span>}
+        {tag && <span className="diff-tag">{tag}</span>}
         <DiffStat additions={file.additions} deletions={file.deletions} />
         {actions && (
           // A click in the summary would also open or close the file.
@@ -111,6 +118,7 @@ export function DiffFile({
           className="diff-progress"
         />
       )}
+      {renderRows && note && <p className="help diff-file-note">{note}</p>}
       {/* A collapsed file unmounts its rows. */}
       {renderRows && (
         <DiffRows file={file} language={language} emptyNote={emptyNote} />

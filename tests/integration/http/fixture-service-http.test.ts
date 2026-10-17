@@ -134,6 +134,26 @@ test("fixture changes come from real Git repositories built per task", async () 
   assert.ok(!paths(refactor).includes("README.md"));
   assert.ok(refactor.files.some((file) => file.binary));
 
+  // A stopped current_repo task's file the user committed over is
+  // superseded, and left out of the totals.
+  const conversation = await changes("preview-conversation");
+
+  assert.deepEqual(
+    conversation.files.map((file) => [file.path, file.superseded]),
+    [
+      ["src/limits.ts", true],
+      ["src/upload.ts", undefined],
+      ["test/upload.test.ts", undefined],
+    ],
+  );
+
+  assert.equal(
+    conversation.additions,
+    conversation.files
+      .filter((file) => !file.superseded)
+      .reduce((sum, file) => sum + file.additions, 0),
+  );
+
   // A removed worktree has nothing uncommitted; its work is on the branch.
   assert.deepEqual(await changes("preview-failed"), {
     scope: "task",

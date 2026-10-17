@@ -26,7 +26,7 @@ const SCOPES: { value: ChangeScope; label: string }[] = [
 ];
 
 const CURRENT_REPO_CHANGES_NOTE =
-  "Uncommitted changes to the files this task changed, including edits to them made outside the task. Committed changes are in the Git history.";
+  "Uncommitted changes to the files this task changed while it ran, including others' edits to them meanwhile. Once it stops, they show as it left them. Committed changes are in the Git history.";
 
 const WORKTREE_CHANGES_NOTE =
   "Uncommitted changes in the worktree. Committed changes are on the branch: Compare shows them, and Push sends only them, so commit these first to include them.";

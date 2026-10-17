@@ -39,6 +39,10 @@ function emptyDiffNote(file: ChangedFile, missing?: boolean) {
   return missing ? "Diff unavailable" : "No content changes";
 }
 
+/** Why a superseded file shows the task's diff, not the checkout's. */
+const SUPERSEDED_NOTE =
+  "Committed with other content since this task stopped. This is the task's change as it left the file.";
+
 const previewable = (file: ChangedFile) =>
   !file.binary || Boolean(imageMime(file.path));
 
@@ -79,6 +83,7 @@ export function ChangedFileSection({
       open={open}
       onOpenChange={handleOpenChange}
       emptyNote={emptyDiffNote(file, missing)}
+      {...(file.superseded ? { tag: "superseded", note: SUPERSEDED_NOTE } : {})}
       actions={
         <>
           {previewable(file) && (

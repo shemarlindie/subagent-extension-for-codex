@@ -433,6 +433,7 @@ export const conversationTasks: Task[] = [
     worker_profile: "implementer",
     created_by: "parent",
     repository: WEBSITE,
+    workspace_strategy: "current_repo",
     status: "completed",
     turn: 3,
     instructions: conversationMessages,

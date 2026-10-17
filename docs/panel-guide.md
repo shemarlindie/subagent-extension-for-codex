@@ -290,8 +290,9 @@ limitation.
 uncommitted changes from its end snapshot, so later edits don't show. A file
 drops out when it no longer differs from HEAD, or when a commit took the task's
 content. A file a commit replaced with other content before that is marked
-superseded: it keeps the task's diff and is left out of the totals. Tasks that
-ended before HEAD was recorded with their end show later edits to their files.
+superseded: it keeps the task's diff, starts collapsed with a **superseded**
+tag and is left out of the totals. Tasks that ended before HEAD was recorded
+with their end show later edits to their files.
 
 Snapshot comparisons leave the checkout's files and Git index unchanged.
 
