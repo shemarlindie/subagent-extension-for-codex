@@ -21,7 +21,7 @@ Requires Node.js 24+, Git and a [supported Claude Code CLI](docs/claude-cli.md) 
    commit.
 
 You can also manage projects in the standalone console at
-`http://127.0.0.1:4317` while the service is running. Sign in with the token in
+`http://127.0.0.1:17317` while the service is running. Sign in with the token in
 `~/.local/share/codex-subagent-extension/admin-token` (or your configured data
 directory). Treat the token as a credential. Do not paste it into chats or commit
 it.
@@ -66,7 +66,7 @@ Configure the authenticated `/mcp` endpoint:
 
 ```toml
 [mcp_servers.codex_subagent_extension]
-url = "http://127.0.0.1:4317/mcp"
+url = "http://127.0.0.1:17317/mcp"
 
 [mcp_servers.codex_subagent_extension.http_headers]
 Authorization = "Bearer <admin-token>"

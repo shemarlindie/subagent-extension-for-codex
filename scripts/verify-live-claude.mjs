@@ -423,7 +423,7 @@ if (scenario === "edits") {
   const app = application(
     control,
     new Auth(token, "verification"),
-    "http://127.0.0.1:4317",
+    "http://127.0.0.1:17317",
     fileURLToPath(new URL("../dist/app.html", import.meta.url)),
   );
 

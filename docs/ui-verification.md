@@ -7,7 +7,7 @@ recording are in [Local development](development.md#panel-dev-host).
 ## Workflow
 
 1. Reuse the `panel-dev` server from `.claude/launch.json` (port 5317), or start
-   `npm run dev:ui`. Start `service-dev` (4317) only for live data. Notify the
+   `npm run dev:ui`. Start `service-dev` (17317) only for live data. Notify the
    user when starting or restarting a server. Leave existing servers running
    otherwise. Stop servers you started when verification is complete.
 2. Open `http://localhost:5317`, set **Data** to `fixtures`, and **Relaunch**.

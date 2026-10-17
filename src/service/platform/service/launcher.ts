@@ -2,7 +2,12 @@ import { spawn } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { dataDirectory, installRoot, packagePath } from "./runtime.js";
+import {
+  dataDirectory,
+  defaultPort,
+  installRoot,
+  packagePath,
+} from "./runtime.js";
 
 class ServiceStartingError extends Error {}
 
@@ -12,7 +17,7 @@ export async function connectService() {
   let origin =
     explicit ??
     process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN ??
-    `http://127.0.0.1:${process.env.PORT ?? 4317}`;
+    `http://127.0.0.1:${process.env.PORT ?? defaultPort}`;
 
   if (
     !explicit &&

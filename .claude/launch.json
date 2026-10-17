@@ -11,7 +11,7 @@
       "name": "service-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 4317
+      "port": 17317
     }
   ]
 }

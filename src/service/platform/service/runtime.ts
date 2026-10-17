@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const packageName = "codex-subagent-extension";
 
+/** Default service port. */
+export const defaultPort = 17317;
+
 function isPackageManifest(path: string) {
   try {
     return JSON.parse(readFileSync(path, "utf8")).name === packageName;

@@ -30,8 +30,8 @@ function pageAt(base: string, host: string) {
 }
 
 test.each([
-  { network: false, origin: "http://127.0.0.1:4317" },
-  { network: true, origin: "http://127.0.0.1:4317" },
+  { network: false, origin: "http://127.0.0.1:17317" },
+  { network: true, origin: "http://127.0.0.1:17317" },
   { network: true, origin: "https://console.example" },
 ])(
   "LAN console origins are opt-in (network: $network, origin: $origin)",
@@ -39,7 +39,7 @@ test.each([
     const dir = await mkdtemp(join(tmpdir(), "ac-network-"));
     const htmlPath = join(dir, "app.html");
     await writeFile(htmlPath, "__API_ORIGIN__");
-    const lanOrigin = "http://192.168.1.20:4317";
+    const lanOrigin = "http://192.168.1.20:17317";
 
     const control = new Control(
       new Store(join(dir, "test.sqlite")),
@@ -68,11 +68,11 @@ test.each([
 
       const base = `http://127.0.0.1:${address.port}`;
 
-      expect(await pageAt(base, "192.168.1.20:4317")).toBe(
+      expect(await pageAt(base, "192.168.1.20:17317")).toBe(
         network ? lanOrigin : origin,
       );
 
-      expect(await pageAt(base, "untrusted.example:4317")).toBe(origin);
+      expect(await pageAt(base, "untrusted.example:17317")).toBe(origin);
 
       const login = await fetch(`${base}/api/login`, {
         method: "POST",
@@ -153,7 +153,7 @@ test.each([
 
       const denied = await fetch(`${base}/api/login`, {
         method: "POST",
-        headers: { Origin: "http://untrusted.example:4317" },
+        headers: { Origin: "http://untrusted.example:17317" },
       });
 
       expect(denied.status).toBe(403);

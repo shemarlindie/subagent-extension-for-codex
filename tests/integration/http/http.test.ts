@@ -124,7 +124,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
   const server = application(
     c,
     auth,
-    "http://127.0.0.1:4317",
+    "http://127.0.0.1:17317",
     resolve("dist/app.html"),
     resolve("dist/app.html"),
   ).listen(0, "127.0.0.1");
@@ -359,7 +359,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
 
     assert.ok(
       standaloneHtml.includes(
-        'window.CODEX_SUBAGENT_EXTENSION_ORIGIN = "http://127.0.0.1:4317"',
+        'window.CODEX_SUBAGENT_EXTENSION_ORIGIN = "http://127.0.0.1:17317"',
       ),
     );
 
@@ -1072,7 +1072,7 @@ async function changeService(prefix: string) {
   const server = application(
     c,
     auth,
-    "http://127.0.0.1:4317",
+    "http://127.0.0.1:17317",
     resolve("dist/app.html"),
   ).listen(0, "127.0.0.1");
 
@@ -1323,7 +1323,7 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
   const app = application(
     c,
     new Auth("token"),
-    "http://127.0.0.1:4317",
+    "http://127.0.0.1:17317",
     resolve("dist/app.html"),
   );
 

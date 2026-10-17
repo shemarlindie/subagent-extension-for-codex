@@ -12,7 +12,7 @@ import { Auth } from "../server/auth.js";
 import { lease } from "./lease.js";
 import { networkOrigins } from "./network.js";
 import { inspectProcessIdentity } from "./process-info.js";
-import { dataDirectory, packagePath } from "./runtime.js";
+import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
 import { adminToken } from "./token.js";
 
 export type ServeOptions = {
@@ -30,7 +30,7 @@ export async function serve({
   providers: makeProviders = configuredProviders,
   network = false,
 }: ServeOptions = {}) {
-  const port = Number(process.env.PORT ?? 4317);
+  const port = Number(process.env.PORT ?? defaultPort);
 
   const origin =
     process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN ?? `http://127.0.0.1:${port}`;

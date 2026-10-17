@@ -186,10 +186,10 @@ test("launcher rejects remote and credential-bearing service URLs", async (t) =>
   const dir = await data(t);
 
   for (const url of [
-    "https://127.0.0.1:4317",
+    "https://127.0.0.1:17317",
     "http://example.com",
-    "http://user:password@127.0.0.1:4317",
-    "http://127.0.0.1:4317/path",
+    "http://user:password@127.0.0.1:17317",
+    "http://127.0.0.1:17317/path",
   ]) {
     await assert.rejects(
       connect({

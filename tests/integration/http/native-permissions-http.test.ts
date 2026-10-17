@@ -59,7 +59,7 @@ async function setup(t: TestContext) {
   const app = application(
     c,
     new Auth("test-token"),
-    "http://127.0.0.1:4317",
+    "http://127.0.0.1:17317",
     resolve("dist/app.html"),
   );
 

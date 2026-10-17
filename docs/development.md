@@ -147,7 +147,7 @@ Follow [What reloads when](#what-reloads-when) to apply subsequent changes.
 For browser UI development with Fast Refresh, use the [panel dev host](#panel-dev-host).
 
 A restart interrupts active tasks. Send a follow-up after the service returns
-to continue them. Both commands run the service in the foreground at `http://127.0.0.1:4317`. Stop it with Ctrl-C. If Codex is open with
+to continue them. Both commands run the service in the foreground at `http://127.0.0.1:17317`. Stop it with Ctrl-C. If Codex is open with
 the plugin enabled, its stdio proxy may already have started one. A second service
 cannot own the same data directory. On macOS and Linux, an interactive startup
 reports process details and asks before sending SIGTERM to a verified service
@@ -157,11 +157,11 @@ before SIGKILL. Non-interactive launches and Windows do not stop processes here.
 Check it from another terminal:
 
 ```sh
-curl --fail http://127.0.0.1:4317/health
+curl --fail http://127.0.0.1:17317/health
 npm run projects -- list
 ```
 
-The standalone console is at `http://127.0.0.1:4317`. Sign in with the contents
+The standalone console is at `http://127.0.0.1:17317`. Sign in with the contents
 of `<data-directory>/admin-token`, for example
 `pbcopy < .codex-subagent-extension/live/admin-token` on macOS.
 Use the configured console origin: `localhost` and `127.0.0.1` are different
@@ -213,7 +213,7 @@ Live mode connects to the service's `/mcp` endpoint through the Vite proxy at
 `/service`. The proxy adds the admin token server-side and drops the browser
 `Origin` header, so the token never reaches the page. It checks `CODEX_SUBAGENT_EXTENSION_URL`,
 `CODEX_SUBAGENT_EXTENSION_ORIGIN`, the data directory's `service.json`, then
-port 4317. It ignores `PORT`, which in the dev host's process is its own port
+port 17317. It ignores `PORT`, which in the dev host's process is its own port
 (the `.claude/launch.json` launcher sets it). It reads the token from
 `CODEX_SUBAGENT_EXTENSION_TOKEN` or the data directory's `admin-token`. Start
 the service first, or restart Vite after it moves ports.
@@ -237,7 +237,7 @@ npm run dev:ui -- --host
 ```
 
 On the other computer, open `http://<service-computer-LAN-IP>:5317` for the
-dev UI or `http://<service-computer-LAN-IP>:4317` for the standalone console.
+dev UI or `http://<service-computer-LAN-IP>:17317` for the standalone console.
 The service binds all IPv4 interfaces and prints its network URLs at startup.
 The console still requires the admin token. LAN console origins use the service computer's interface
 addresses discovered at startup. Restart after those addresses change.
@@ -304,8 +304,8 @@ The script builds the project, registers a disposable repository at
 `.codex-subagent-extension/demo-repository`, and starts the real service with
 only the fixture worker. Its data directory is `.codex-subagent-extension/demo`.
 It makes no model calls. Sign in at
-`http://127.0.0.1:4317` with `local-demo-only-not-a-real-token`. Stop any other
-service on port 4317 first.
+`http://127.0.0.1:17317` with `local-demo-only-not-a-real-token`. Stop any other
+service on port 17317 first.
 
 To combine interactive fake-worker tasks with UI hot reload:
 
@@ -315,7 +315,7 @@ To combine interactive fake-worker tasks with UI hot reload:
    ```sh
    CODEX_SUBAGENT_EXTENSION_DATA="$PWD/.codex-subagent-extension/demo" \
    CODEX_SUBAGENT_EXTENSION_TOKEN=local-demo-only-not-a-real-token \
-   CODEX_SUBAGENT_EXTENSION_URL=http://127.0.0.1:4317 npm run dev:ui
+   CODEX_SUBAGENT_EXTENSION_URL=http://127.0.0.1:17317 npm run dev:ui
    ```
 
 3. Open `http://127.0.0.1:5317`, choose **Data: live** and **Launch: global**, and

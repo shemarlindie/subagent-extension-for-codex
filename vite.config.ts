@@ -38,7 +38,7 @@ function serviceOrigin() {
     ).origin as string;
   } catch {}
 
-  return "http://127.0.0.1:4317";
+  return "http://127.0.0.1:17317";
 }
 
 function serviceToken() {
