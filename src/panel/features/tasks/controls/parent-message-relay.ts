@@ -16,7 +16,8 @@ export class ParentMessageRelay {
 
   /** Forwards each queued message in turn, until none remains or one fails. */
   async forward(conversation: string) {
-    const send = this.transport.send;
+    // Transports implement send as a method, so it keeps its receiver.
+    const send = this.transport.send?.bind(this.transport);
     if (!send) return;
 
     if (this.running) {

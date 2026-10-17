@@ -58,6 +58,33 @@ test("relay forwards each claimed worker message, records host delivery and stop
   expect(sendOrder).toBeLessThan(thirdToolOrder);
 });
 
+test("relay sends through a class-based transport with its receiver", async () => {
+  const { tool } = fixture();
+
+  class MethodTransport {
+    sent: string[] = [];
+    tool = tool;
+    async send(text: string) {
+      this.sent.push(text);
+    }
+  }
+
+  const transport = new MethodTransport();
+
+  const relay = new ParentMessageRelay(
+    transport as unknown as Transport,
+    () => "parent",
+  );
+
+  await relay.forward("parent");
+  expect(transport.sent).toEqual([message.text]);
+
+  expect(tool).toHaveBeenCalledWith(
+    "record_user_agent_parent_delivery",
+    expect.objectContaining({ delivered: true }),
+  );
+});
+
 test("an unavailable host or empty claim does not send or log delivery", async () => {
   const { relay, transport, tool, send } = fixture();
   transport.send = undefined;
