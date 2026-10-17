@@ -192,7 +192,10 @@ and recreated worktrees.
 ### Steering, queues and budgets
 
 Pending steers offer **Interrupt and send now**. Queued messages offer Edit and
-Remove, and can be reordered by dragging or with Alt+Up/Alt+Down on a focused
+Remove. During a run, **Steer** sends a queued message into the current turn
+after its next tool call, preserving its sender. Steer is unavailable while the
+worker waits for input or for a steer already sent to the worker. Queued messages
+can be reordered by dragging or with Alt+Up/Alt+Down on a focused
 message. A paused queue offers Resume and Clear. An unconsumed steer stays at
 its front and can't be moved or passed. Sending the next message also resumes a
 paused queue. When a budget is exhausted, Chat shows the relevant cost and

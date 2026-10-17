@@ -50,6 +50,7 @@ import {
   recordQueueChange,
   removeQueuedMessage,
   requeue,
+  steerQueuedMessage,
 } from "./queue.js";
 import { generateTaskTitle } from "./task-title.js";
 
@@ -1206,6 +1207,19 @@ export class Control {
     const stored = this.mutableTask(owner, id);
 
     return this.active.get(id)?.task ?? stored;
+  }
+
+  /** Sends a queued message into the busy task without changing its identity. */
+  steerQueued(owner: string, id: string, messageId: string) {
+    const t = this.queueTask(owner, id),
+      a = this.active.get(id);
+
+    if (a?.abort.signal.aborted) throw new Error("Task was interrupted.");
+
+    const m = steerQueuedMessage(this.store, t, messageId, !!a);
+    if (a) this.deliver(t, a, m);
+
+    return t;
   }
 
   /** Changes a queued message's text before it's sent. */

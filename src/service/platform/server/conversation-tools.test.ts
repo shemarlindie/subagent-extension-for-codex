@@ -111,6 +111,7 @@ test("the old one-shot tools are gone and the conversation tools replace them", 
     "raise_user_agent_budget",
     "edit_user_agent_queued_message",
     "move_user_agent_queued_message",
+    "steer_user_agent_queued_message",
     "remove_user_agent_queued_message",
     "resume_user_agent_queue",
     "clear_user_agent_queue",
@@ -211,6 +212,52 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     assert.ok(listed);
     assert.deepEqual(listed.reply, task.reply);
     assert.equal(listed.queued_messages, 0);
+  } finally {
+    await c.close();
+  }
+});
+
+test("only the user can steer an existing queued message and its original sender survives", async () => {
+  const { c, store, parent, user, start } = await setup();
+
+  try {
+    const task = await start("[slow]");
+    await until(() => store.get(task.id, "alice").status === "running");
+
+    const queued = await parent<{ message_id: string }>("send_agent_message", {
+      task_id: task.id,
+      message: "Original parent note",
+      delivery: "queue",
+    });
+
+    const args = { task_id: task.id, message_id: queued.message_id };
+
+    await expect(
+      parent("steer_user_agent_queued_message", args),
+    ).rejects.toThrow(/User tools require a user interface/);
+
+    await expect(
+      callTool(c, "bob", "steer_user_agent_queued_message", args, "user"),
+    ).rejects.toThrow(/Task not found/);
+
+    expect(store.get(task.id, "alice").queue).toHaveLength(1);
+    await user("steer_user_agent_queued_message", args);
+    expect(store.get(task.id, "alice").queue).toEqual([]);
+
+    expect(store.eventsOfTypes(task.id, ["task.instruction"])).toMatchObject([
+      {
+        data: {
+          message_id: queued.message_id,
+          message: "Original parent note",
+          from: "parent",
+          delivery: "steer",
+        },
+      },
+    ]);
+
+    await expect(user("steer_user_agent_queued_message", args)).rejects.toThrow(
+      /no longer queued/,
+    );
   } finally {
     await c.close();
   }

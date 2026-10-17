@@ -469,12 +469,39 @@ test("fixture sends queue or steer a busy task in memory, never starting a turn"
     assert.equal(queued.state, "queued");
     assert.equal(running.queue.at(-1)!.id, queued.message_id);
     assert.equal(running.queue.at(-1)!.message, "To preview-steering by queue");
+    const message = { ...running.queue.at(-1)! };
+
+    previewTool("steer_user_agent_queued_message", {
+      task_id: running.id,
+      message_id: queued.message_id,
+    });
+
+    assert.equal(
+      running.queue.some((m) => m.id === message.id),
+      false,
+    );
+
+    assert.deepEqual(running.pending_steers.at(-1), {
+      id: message.id,
+      message: message.message,
+      from: message.from,
+    });
+
     const steered = send(running, "steer");
     assert.equal(steered.state, "started");
     assert.equal(running.pending_steers.at(-1)!.id, steered.message_id);
     assert.throws(() => send(running, "interrupt"), /Design preview only/);
     assert.throws(() => send(input, "steer"), /waiting for input/);
     assert.equal(send(input, "queue").state, "queued");
+
+    assert.throws(
+      () =>
+        previewTool("steer_user_agent_queued_message", {
+          task_id: input.id,
+          message_id: input.queue.at(-1)!.id,
+        }),
+      /busy and accepts input/,
+    );
 
     assert.throws(
       () => send(find("preview-paused"), "queue"),

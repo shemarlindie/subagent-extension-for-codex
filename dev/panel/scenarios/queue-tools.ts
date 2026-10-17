@@ -4,6 +4,7 @@ import type { Delivery, Task } from "../../../src/shared/tasks/model";
 /** Queue tools the browser fixtures answer by changing the task in memory. */
 export const PREVIEW_QUEUE_TOOLS = [
   "send_user_agent_message",
+  "steer_user_agent_queued_message",
   "edit_user_agent_queued_message",
   "move_user_agent_queued_message",
   "remove_user_agent_queued_message",
@@ -35,7 +36,26 @@ export function previewQueueTool(
   const message = task.queue.find((m) => m.id === args.message_id);
   if (!message) throw new Error("That message is no longer queued.");
 
-  if (name === "edit_user_agent_queued_message") {
+  if (name === "steer_user_agent_queued_message") {
+    if (message.recorded) {
+      throw new Error("That steer has already been sent to the worker.");
+    }
+
+    if (composerMode(task) !== "busy") {
+      throw new Error(
+        "Steer a queued message while the task is busy and accepts input.",
+      );
+    }
+
+    task.queue = task.queue.filter((m) => m !== message);
+    if (!task.queue.length) delete task.queue_paused;
+
+    task.pending_steers.push({
+      id: message.id,
+      message: message.message,
+      from: message.from,
+    });
+  } else if (name === "edit_user_agent_queued_message") {
     if (message.recorded) {
       throw new Error("A steer the worker already has can't be edited.");
     }

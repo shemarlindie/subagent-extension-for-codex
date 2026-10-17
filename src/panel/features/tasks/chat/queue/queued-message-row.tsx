@@ -11,6 +11,7 @@ import { Icon } from "../../../../shared/components/icons/icons";
 import { Presence } from "../../../../shared/components/motion/presence";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
+import { composerMode } from "../chat-model";
 
 type QueuedMessageRowProps = {
   task: Task;
@@ -32,8 +33,7 @@ type QueuedMessageRowProps = {
 };
 
 /**
- * A message waiting for its turn, which can be edited, moved or removed until
- * then.
+ * A message waiting for its turn, which can be steered, edited, moved or removed.
  */
 export function QueuedMessageRow({
   task,
@@ -81,6 +81,10 @@ export function QueuedMessageRow({
 
   const remove = async () => {
     onError(await controller.taskActions.removeQueued(task, message.id));
+  };
+
+  const steer = async () => {
+    onError(await controller.taskActions.steerQueued(task, message.id));
   };
 
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
@@ -175,6 +179,19 @@ export function QueuedMessageRow({
       <div key={String(editing)} className={`chat-queue-actions${swap}`}>
         {!editing ? (
           <>
+            {!message.recorded && composerMode(task) === "busy" && (
+              <TooltipWrapper label="Steer">
+                <Button
+                  variant="ghost"
+                  className="chat-queue-icon-button"
+                  aria-label="Steer"
+                  disabled={busy}
+                  onClick={() => controller.run(steer)}
+                >
+                  <Icon name="enter" size={10} />
+                </Button>
+              </TooltipWrapper>
+            )}
             {/* A steer the worker already has keeps its text. */}
             {!message.recorded && (
               <TooltipWrapper label="Edit">

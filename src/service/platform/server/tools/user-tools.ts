@@ -181,6 +181,12 @@ export function userTools(
       }),
       run: (a) => waitForUpdates(c.store, c.drafts, owner, a),
     }),
+    steer_user_agent_queued_message: tool({
+      description:
+        "User interface only: send a queued message into the busy task as a steer, preserving its sender and identity. Unavailable while the worker waits for input.",
+      schema: queuedMessage,
+      run: (a) => c.steerQueued(owner, a.task_id, a.message_id),
+    }),
     edit_user_agent_queued_message: tool({
       description:
         "User interface only: change a queued message's text before its turn starts.",

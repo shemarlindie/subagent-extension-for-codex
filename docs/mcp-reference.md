@@ -43,6 +43,11 @@ Read-state tools are app-only. Read points belong to the user, survive reloads
 and determine unread status and Chat's **New** divider. See
 [Read and unread tasks](panel-guide.md#read-and-unread-tasks).
 
+`steer_user_agent_queued_message` is app-only. It moves an unsent queued message
+into a busy task's current turn, preserving its ID, text and sender. The worker
+must have no pending input request. If the turn can no longer accept the steer,
+the message stays at the front of the queue under the ordinary steering rules.
+
 `wait_user_agent_updates` watches task and project revisions and optional reply drafts.
 Compare revision tokens only for equality: they are opaque and change after a
 service restart. A wait returns when the revision or targeted draft changes,

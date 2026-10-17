@@ -98,6 +98,13 @@ export class TaskActions {
     });
   }
 
+  steerQueued(task: Task, messageId: string) {
+    return this.run("steer_user_agent_queued_message", {
+      task_id: task.id,
+      message_id: messageId,
+    });
+  }
+
   editQueued(task: Task, messageId: string, message: string) {
     return this.run("edit_user_agent_queued_message", {
       task_id: task.id,

@@ -97,6 +97,44 @@ function queuedMessage(t: Task, messageId: string) {
   return m;
 }
 
+/** Moves a queued message into the turn's input, recording it exactly once. */
+export function steerQueuedMessage(
+  store: Store,
+  t: Task,
+  messageId: string,
+  active: boolean,
+) {
+  if (!["queued", "starting", "running", "waiting"].includes(t.status)) {
+    throw new Error("Steer a queued message while the task is busy.");
+  }
+
+  if (t.pending_input) {
+    throw new Error("The worker is waiting for input, so it can't be steered.");
+  }
+
+  const message = queuedMessage(t, messageId);
+
+  if (message.recorded) {
+    throw new Error("That steer has already been sent to the worker.");
+  }
+
+  const before = queueSnapshot(t);
+
+  const m: TaskMessage = {
+    id: message.id,
+    message: message.message,
+    from: message.from,
+  };
+
+  t.queue = t.queue.filter((item) => item.id !== messageId);
+  if (!t.queue.length) delete t.queue_paused;
+  if (active) t.pending_steers.push(m);
+  else t.instructions.push(m);
+  commitQueue(store, t, before, () => recordMessage(store, t, m, "steer"));
+
+  return m;
+}
+
 /** Changes a queued message's text before it's sent. */
 export function editQueuedMessage(
   store: Store,

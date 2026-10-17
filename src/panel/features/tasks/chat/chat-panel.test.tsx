@@ -933,6 +933,78 @@ test("pending steers can be sent now, and a paused queue resumed, cleared, edite
   ]);
 });
 
+test("a running task can steer an existing queued message, keeping its composer draft", async () => {
+  const { tool, view, type, composer } = setup({
+    status: "running",
+    queue: [
+      { id: "msg_q", message: "Queued", from: "parent", delivery: "queue" },
+      {
+        id: "msg_l",
+        message: "Left over",
+        from: "user",
+        delivery: "steer",
+        recorded: true,
+      },
+    ],
+  });
+
+  type("An unsent draft");
+  const row = view.container.querySelector('[data-message="msg_q"]')!;
+  const recorded = view.container.querySelector('[data-message="msg_l"]')!;
+
+  const button = row.querySelector<HTMLButtonElement>(
+    'button[aria-label="Steer"]',
+  );
+
+  expect(button).not.toBeNull();
+  expect(recorded.querySelector('button[aria-label="Steer"]')).toBeNull();
+  fireEvent.click(button!);
+
+  await waitFor(() =>
+    expect(sent(tool)).toEqual([
+      [
+        "steer_user_agent_queued_message",
+        { task_id: "task-1", message_id: "msg_q" },
+      ],
+    ]),
+  );
+
+  expect((composer as HTMLTextAreaElement).value).toBe("An unsent draft");
+
+  fireEvent.click(
+    row.querySelector<HTMLButtonElement>('button[aria-label="Edit"]')!,
+  );
+
+  expect(row.querySelector('button[aria-label="Steer"]')).toBeNull();
+});
+
+test.each([
+  { status: "completed" as const },
+  { status: "interrupted" as const, queue_paused: true },
+  {
+    status: "waiting" as const,
+    pending_input: {
+      id: "request",
+      kind: "question" as const,
+      tool: "question",
+      input: { question: "Continue?" },
+    },
+  },
+])(
+  "queued steering stays hidden when the composer cannot steer: $status",
+  (patch) => {
+    const { view } = setup({
+      ...patch,
+      queue: [
+        { id: "msg_q", message: "Queued", from: "user", delivery: "queue" },
+      ],
+    });
+
+    const row = view.container.querySelector('[data-message="msg_q"]')!;
+    expect(row.querySelector('button[aria-label="Steer"]')).toBeNull();
+  },
+);
+
 test("queued messages reorder by dragging or Alt+arrows, behind a left-over steer", async () => {
   const queued = (id: string, message: string) => ({
     id,

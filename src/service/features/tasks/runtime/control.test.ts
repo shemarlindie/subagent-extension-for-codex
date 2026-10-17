@@ -1333,6 +1333,241 @@ test("queued messages can be reordered behind the steers the worker already has"
   await c.close();
 });
 
+test.each([true, false])(
+  "steering a queued message preserves its identity and other queue order when the provider accepts it: %s",
+  async (accepted) => {
+    const provider = new PromptRecorder();
+    const run = provider.run.bind(provider);
+    let context: RunContext | undefined;
+    let finish!: () => void;
+
+    const finished = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+
+    const delivered: { id: string; text: string }[] = [];
+
+    provider.run = async (ctx, prompt) => {
+      if (!context) {
+        context = ctx;
+
+        ctx.acceptSteers((steer) => {
+          delivered.push(steer);
+
+          return accepted;
+        });
+
+        await finished;
+      }
+
+      return run(ctx, prompt);
+    };
+
+    const { c, store, repo } = await setup(provider);
+
+    try {
+      const task = await c.start("alice", input(repo));
+      await until(() => !!context);
+
+      const first = await c.send("alice", task.id, "First", "user", {
+        delivery: "queue",
+      });
+
+      const selected = await c.send(
+        "alice",
+        task.id,
+        "Keep this exact text",
+        "parent",
+        { delivery: "queue" },
+      );
+
+      const last = await c.send("alice", task.id, "Last", "user", {
+        delivery: "queue",
+      });
+
+      c.steerQueued("alice", task.id, selected.message_id);
+
+      assert.deepEqual(delivered, [
+        { id: selected.message_id, text: "Keep this exact text" },
+      ]);
+
+      const updated = store.get(task.id, "alice");
+
+      assert.deepEqual(
+        updated.queue.map((message) => message.id),
+        accepted
+          ? [first.message_id, last.message_id]
+          : [selected.message_id, first.message_id, last.message_id],
+      );
+
+      assert.deepEqual(eventData(store, task.id, "task.instruction"), [
+        {
+          message_id: selected.message_id,
+          message: "Keep this exact text",
+          from: "parent",
+          delivery: "steer",
+        },
+      ]);
+
+      if (accepted) {
+        assert.deepEqual(updated.pending_steers, [
+          {
+            id: selected.message_id,
+            message: "Keep this exact text",
+            from: "parent",
+          },
+        ]);
+
+        context!.steerTaken(selected.message_id);
+
+        assert.equal(
+          store.get(task.id, "alice").instructions.at(-1)?.id,
+          selected.message_id,
+        );
+      } else {
+        assert.deepEqual(updated.pending_steers, []);
+
+        assert.deepEqual(updated.queue[0], {
+          id: selected.message_id,
+          message: "Keep this exact text",
+          from: "parent",
+          delivery: "steer",
+          recorded: true,
+        });
+
+        assert.throws(() =>
+          c.steerQueued("alice", task.id, selected.message_id),
+        );
+      }
+
+      finish();
+      await until(() => store.get(task.id, "alice").status === "completed");
+
+      assert.deepEqual(
+        provider.prompts.slice(1),
+        accepted
+          ? ["First", "Last"]
+          : ["Keep this exact text", "First", "Last"],
+      );
+
+      assert.deepEqual(store.get(task.id, "alice").queue, []);
+
+      assert.equal(
+        eventData(store, task.id, "task.instruction").filter(
+          (event) => event.message_id === selected.message_id,
+        ).length,
+        1,
+      );
+    } finally {
+      finish();
+      await c.close();
+    }
+  },
+);
+
+test("steering the last queued message rejects stale IDs and other owners", async () => {
+  const { c, store, repo } = await setup();
+
+  try {
+    const task = await c.start("alice", input(repo, "[slow]"));
+    await until(() => store.get(task.id, "alice").status === "running");
+
+    const queued = await c.send("alice", task.id, "Use this now", "user", {
+      delivery: "queue",
+    });
+
+    assert.throws(
+      () => c.steerQueued("bob", task.id, queued.message_id),
+      /Task not found/,
+    );
+
+    c.steerQueued("alice", task.id, queued.message_id);
+    assert.deepEqual(store.get(task.id, "alice").queue, []);
+
+    assert.throws(
+      () => c.steerQueued("alice", task.id, queued.message_id),
+      /no longer queued/,
+    );
+
+    await until(() => store.get(task.id, "alice").status === "completed");
+    assert.equal(store.get(task.id, "alice").turn, 1);
+    assert.equal(eventData(store, task.id, "task.instruction").length, 1);
+  } finally {
+    await c.close();
+  }
+});
+
+test("queued steering before provider startup adds the original message to the first turn instructions", async () => {
+  const { c, store, repo } = await setup(new FixtureProvider(), 0);
+
+  try {
+    const task = await c.start("alice", input(repo));
+    assert.equal(store.get(task.id, "alice").status, "queued");
+
+    const queued = await c.send(
+      "alice",
+      task.id,
+      "Include this in the prompt",
+      "parent",
+      { delivery: "queue" },
+    );
+
+    const paused = store.get(task.id, "alice");
+    paused.queue_paused = true;
+    store.save(paused);
+    c.steerQueued("alice", task.id, queued.message_id);
+    const updated = store.get(task.id, "alice");
+    assert.deepEqual(updated.queue, []);
+    assert.equal(updated.queue_paused, undefined);
+    assert.deepEqual(updated.pending_steers, []);
+
+    assert.deepEqual(updated.instructions, [
+      {
+        id: queued.message_id,
+        message: "Include this in the prompt",
+        from: "parent",
+      },
+    ]);
+
+    assert.deepEqual(eventData(store, task.id, "task.instruction"), [
+      {
+        message_id: queued.message_id,
+        message: "Include this in the prompt",
+        from: "parent",
+        delivery: "steer",
+      },
+    ]);
+  } finally {
+    await c.close();
+  }
+});
+
+test("queued steering rejects idle tasks and input requests without removing the message", async () => {
+  const { c, store, repo } = await setup();
+
+  try {
+    const task = await c.start("alice", input(repo, "[input]"));
+    await until(() => !!store.get(task.id, "alice").pending_input);
+
+    const queued = await c.send("alice", task.id, "Later", "user", {
+      delivery: "queue",
+    });
+
+    assert.throws(
+      () => c.steerQueued("alice", task.id, queued.message_id),
+      /waiting for input/,
+    );
+
+    assert.equal(store.get(task.id, "alice").queue[0]?.id, queued.message_id);
+    await c.interrupt("alice", task.id);
+    assert.throws(() => c.steerQueued("alice", task.id, queued.message_id));
+    assert.equal(store.get(task.id, "alice").queue[0]?.id, queued.message_id);
+    assert.deepEqual(eventData(store, task.id, "task.instruction"), []);
+  } finally {
+    await c.close();
+  }
+});
+
 test("queued messages can be edited and removed until sent; the parent removes only its own", async () => {
   const recorder = new PromptRecorder();
   const { c, store, repo } = await setup(recorder);
