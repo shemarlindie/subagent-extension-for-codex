@@ -106,3 +106,20 @@ export function changedFileDiff(
 
   return entry?.file.binary || entry?.missing ? undefined : entry?.diff;
 }
+
+/** Long lists stay scannable by opening only their first file by default. */
+const OPEN_FILES = 8;
+
+/**
+ * Whether a file in the Changes list starts open: every file of a short
+ * list, or a long list's first. Superseded files start closed, since a commit
+ * has replaced them, so a long list opens its first other file instead.
+ */
+export function opensByDefault(entries: ChangedFileEntry[], index: number) {
+  if (entries[index]?.file.superseded) return false;
+
+  return (
+    entries.length <= OPEN_FILES ||
+    index === entries.findIndex((entry) => !entry.file.superseded)
+  );
+}

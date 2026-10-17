@@ -123,6 +123,8 @@ async function seedChanges(
     }
   }
 
+  // The task's changes end, then the user commits their own edits over some
+  // of its files, which supersedes them.
   if (fixture.committedAfter) {
     await workspaces.recordEnd(task);
     write(workspace, fixture.committedAfter);

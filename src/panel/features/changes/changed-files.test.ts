@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { changedFileDiff, changedFileEntries } from "./changed-files";
+import {
+  changedFileDiff,
+  changedFileEntries,
+  opensByDefault,
+} from "./changed-files";
 import type { Changes } from "./types";
 import { nextUnviewed } from "./use-viewed-files";
 
@@ -154,4 +158,34 @@ test("the next unread file follows the current one, wrapping to the start", () =
   assert.equal(nextUnviewed(viewed(a), [a, logo, b], b), logo);
   // None left but the current file.
   assert.equal(nextUnviewed(viewed(logo, b), [a, logo, b], a), undefined);
+});
+
+test("short lists open every file but superseded ones; long lists their first other file", () => {
+  const entries = (count: number, superseded: number[]) =>
+    changedFileEntries({
+      scope: "task",
+      additions: 0,
+      deletions: 0,
+      diff: "",
+      files: Array.from({ length: count }, (_, index) => ({
+        path: `file-${index}.ts`,
+        status: "modified" as const,
+        additions: 1,
+        deletions: 1,
+        binary: false,
+        ...(superseded.includes(index) ? { superseded: true as const } : {}),
+      })),
+    });
+
+  const open = (count: number, superseded: number[]) => {
+    const list = entries(count, superseded);
+
+    return list.flatMap((_, index) =>
+      opensByDefault(list, index) ? [index] : [],
+    );
+  };
+
+  assert.deepEqual(open(3, [1]), [0, 2]);
+  assert.deepEqual(open(10, []), [0]);
+  assert.deepEqual(open(10, [0, 1]), [2]);
 });

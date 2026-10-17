@@ -447,6 +447,47 @@ test("uncommitted changes keep the task's files that differ from HEAD, and drop 
   }
 });
 
+test("a file the task deleted drops out once the deletion is committed, and is superseded when committed over", async () => {
+  const s = await setup();
+
+  const commit = (...args: string[]) =>
+    s.git(
+      s.repo,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "-qm",
+      "user commit",
+      ...args,
+    );
+
+  try {
+    const t = await s.task("current_repo");
+    await rm(join(s.repo, "file-1.txt"));
+    await rm(join(s.repo, "file-2.txt"));
+    await s.workspaces.recordEnd(t);
+
+    // The user commits one deletion, and their own version of the other file.
+    s.git(s.repo, "rm", "-q", "--cached", "file-1.txt");
+    await writeFile(join(s.repo, "file-2.txt"), "user's version\n");
+    s.git(s.repo, "add", "file-2.txt");
+    commit();
+
+    assert.deepEqual(
+      (await s.workspaces.uncommittedChanges(t)).files.map((f) => [
+        f.path,
+        f.status,
+        f.superseded,
+      ]),
+      [["file-2.txt", "deleted", true]],
+    );
+  } finally {
+    await s.close();
+  }
+});
+
 test("a current_repo task's changes are the files changed while its turns ran", async () => {
   const s = await setup();
 
