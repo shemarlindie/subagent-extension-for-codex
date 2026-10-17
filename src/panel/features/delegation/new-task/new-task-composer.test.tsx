@@ -15,7 +15,9 @@ import type {
   Snapshot,
   Transport,
 } from "../../../app/state/types";
-import { NewTaskComposer } from "./new-task-composer";
+import type { DelegateValues } from "../delegate-values";
+import { NEW_TASK_SESSION_ID } from "./new-task-values";
+import { NewTaskView } from "./new-task-view";
 
 const ready: NewTaskState = {
   scope: 0,
@@ -32,6 +34,7 @@ const ready: NewTaskState = {
 function setup(
   newTask: NewTaskState = ready,
   overrides: Partial<Snapshot> = {},
+  draft: Partial<DelegateValues> = {},
 ) {
   onTestFinished(cleanup);
 
@@ -41,6 +44,7 @@ function setup(
   );
 
   onTestFinished(() => controller.dispose());
+  controller.session.update("newTask", NEW_TASK_SESSION_ID, { draft });
 
   const state: Snapshot = {
     ...controller.getSnapshot(),
@@ -68,7 +72,7 @@ function setup(
   const view = render(
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
-        <NewTaskComposer newTask={newTask} />
+        <NewTaskView newTask={newTask} />
       </Tooltip.Provider>
     </ControllerContext.Provider>,
   );
@@ -105,6 +109,42 @@ test("Enter starts a General task with the settings defaults in the scoped proje
     permission_mode: "acceptEdits",
     revision: "HEAD",
   });
+});
+
+test("the empty-state icon follows the selected profile", async () => {
+  const { view, user } = setup();
+  const emptyIcon = () => view.container.querySelector(".empty-icon");
+
+  const profileIcon = () =>
+    view.getByRole("combobox", { name: /^Profile:/ }).querySelector("svg");
+
+  expect(emptyIcon()?.innerHTML).toBe(profileIcon()?.innerHTML);
+  expect(emptyIcon()?.getAttribute("width")).toBe("28");
+  const generalArtwork = emptyIcon()?.innerHTML;
+
+  await user.click(view.getByRole("combobox", { name: "Profile: General" }));
+  await user.click(await view.findByRole("option", { name: "Implementer" }));
+
+  expect(emptyIcon()?.innerHTML).toBe(profileIcon()?.innerHTML);
+  expect(emptyIcon()?.innerHTML).not.toBe(generalArtwork);
+
+  await user.click(
+    view.getByRole("combobox", { name: "Profile: Implementer" }),
+  );
+
+  await user.click(await view.findByRole("option", { name: "General" }));
+
+  expect(emptyIcon()?.innerHTML).toBe(generalArtwork);
+});
+
+test("the empty-state icon uses the profile restored from a saved draft", () => {
+  const { view } = setup(ready, {}, { worker: "claude:reviewer" });
+  const profile = view.getByRole("combobox", { name: "Profile: Reviewer" });
+  const emptyIcon = view.container.querySelector(".empty-icon");
+
+  expect(emptyIcon).not.toBeNull();
+  expect(profile.querySelector("svg")).not.toBeNull();
+  expect(emptyIcon?.innerHTML).toBe(profile.querySelector("svg")?.innerHTML);
 });
 
 test("Shift+Enter adds a line instead of sending", async () => {

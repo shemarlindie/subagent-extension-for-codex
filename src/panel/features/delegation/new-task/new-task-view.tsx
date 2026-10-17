@@ -4,10 +4,13 @@ import {
   useController,
   useSnapshot,
 } from "../../../app/state/controller-context";
+import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { NewTaskState } from "../../../app/state/types";
-import { Icon } from "../../../shared/components/icons/icons";
 import { BackButton } from "../../../shared/components/navigation/back-button";
+import { WorkerProfileIcon } from "../../tasks/list/worker-profile-icon";
+import { workerChoice } from "../delegation";
 import { NewTaskComposer } from "./new-task-composer";
+import { NEW_TASK_SESSION_ID, newTaskInitialValues } from "./new-task-values";
 
 type NewTaskViewProps = {
   newTask: NewTaskState;
@@ -21,7 +24,13 @@ type NewTaskViewProps = {
  */
 export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
   const controller = useController(),
-    state = useSnapshot();
+    state = useSnapshot(),
+    [savedWorker] = useSessionState(
+      "newTask",
+      NEW_TASK_SESSION_ID,
+      (session) => session.draft.worker,
+    ),
+    worker = savedWorker ?? newTaskInitialValues(newTask, state).worker;
 
   return (
     <div ref={viewRef} className="task-view new-task-view">
@@ -37,7 +46,11 @@ export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
         <div className="chat-panel">
           <div className="chat">
             <div className="chat-timeline new-task-empty">
-              <Icon name="worker" size={28} className="empty-icon" />
+              <WorkerProfileIcon
+                profile={workerChoice(worker).profile ?? ""}
+                size={28}
+                className="empty-icon"
+              />
               <p className="new-task-prompt">What should Claude work on?</p>
               <p>
                 Your first message starts the task

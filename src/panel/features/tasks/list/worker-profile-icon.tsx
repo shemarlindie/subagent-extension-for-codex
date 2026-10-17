@@ -2,7 +2,7 @@ import { Icon, type IconName } from "../../../shared/components/icons/icons";
 
 /** Shared profile glyphs used in task rows and worker settings. */
 const WORKER_PROFILE_ICONS = {
-  general: "worker",
+  general: "user-round",
   researcher: "glasses",
   reviewer: "diff-search",
   implementer: "code",
