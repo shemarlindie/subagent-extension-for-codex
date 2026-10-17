@@ -6,6 +6,10 @@ import type { QuestionDraft, Tab } from "../types";
 export type TaskSessionState = {
   tab: Tab;
   composerDraft: string;
+  /** Keeps pending send feedback visible if Chat remounts during the request. */
+  composerSending?: boolean;
+  /** Retains action failures when Chat closes before the request finishes. */
+  composerError?: string;
   composerCollapsed: boolean;
   /**
    * The new-task composer box's height when this task started from it, so

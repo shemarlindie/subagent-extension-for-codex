@@ -1,6 +1,10 @@
 import { assert, expect, test, vi } from "vitest";
 
-import { task } from "../../../app/state/controller-test-harness";
+import {
+  deferred,
+  flush,
+  task,
+} from "../../../app/state/controller-test-harness";
 import type { Snapshot, Task } from "../../../app/state/types";
 import { TaskActions } from "./task-actions";
 
@@ -73,6 +77,63 @@ test("a task action waits for the last one to finish", async () => {
   );
 
   expect(context.tool).not.toHaveBeenCalled();
+});
+
+test("sending acknowledges the write before a slow refresh finishes", async () => {
+  const write = deferred<void>();
+  const refresh = deferred<void>();
+  const { actions, context, busyChanges } = setup(() => write.promise);
+  context.refresh.mockReturnValue(refresh.promise);
+  const completed = vi.fn();
+  const sending = actions.sendMessage(task("task-1"), "Hi", "queue");
+  void sending.then(completed);
+
+  await flush();
+  expect(completed).not.toHaveBeenCalled();
+  expect(context.refresh).not.toHaveBeenCalled();
+  expect(busyChanges).toEqual([true]);
+
+  write.resolve();
+  await flush();
+  expect(completed).toHaveBeenCalledWith(undefined);
+  expect(context.refresh).toHaveBeenCalledOnce();
+  expect(busyChanges).toEqual([true, false]);
+
+  refresh.resolve();
+  await sending;
+});
+
+test("a refresh failure after a send is reported without repeating the write", async () => {
+  const refresh = deferred<void>();
+  const { actions, context } = setup();
+  context.refresh.mockReturnValue(refresh.promise);
+
+  const sending = actions.sendMessage(task("task-1"), "Hi", "steer");
+  const completed = vi.fn();
+  void sending.then(completed);
+  await flush();
+  expect(completed).toHaveBeenCalledWith(undefined);
+
+  const failure = new Error("Refresh unavailable");
+  refresh.reject(failure);
+  await flush();
+  expect(context.report).toHaveBeenCalledWith(failure);
+  expect(context.tool).toHaveBeenCalledOnce();
+});
+
+test("queue actions still wait for their refresh", async () => {
+  const refresh = deferred<void>();
+  const { actions, context } = setup();
+  context.refresh.mockReturnValue(refresh.promise);
+  const completed = vi.fn();
+  const resuming = actions.resumeQueue(task("task-1"));
+  void resuming.then(completed);
+
+  await flush();
+  expect(completed).not.toHaveBeenCalled();
+  refresh.resolve();
+  await resuming;
+  expect(completed).toHaveBeenCalledWith(undefined);
 });
 
 test("a permission decision needs a pending permission request", async () => {

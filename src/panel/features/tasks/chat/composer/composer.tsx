@@ -10,6 +10,7 @@ import { useSessionState } from "../../../../app/state/session/use-session-state
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
 import { Icon } from "../../../../shared/components/icons/icons";
+import { LoadingSpinner } from "../../../../shared/components/loading-spinner/loading-spinner";
 import { MOTION } from "../../../../shared/components/motion/motion-utils";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { useListMotion } from "../../../../shared/components/motion/use-list-motion";
@@ -96,10 +97,20 @@ export function Composer({
       (state) => state.composerDraft,
     ),
     canContinue = !spent,
-    [error, setError] = useState<string>(),
+    [error] = useSessionState(
+      "task",
+      sessionTaskId,
+      (state) => state.composerError,
+    ),
+    [sending] = useSessionState(
+      "task",
+      sessionTaskId,
+      (state) => state.composerSending,
+    ),
     [showContinuePrompt, setShowContinuePrompt] = useState(false),
     previousBudgetApply = useRef(budgetApplyVersion),
-    message = text.trim();
+    message = text.trim(),
+    feedback = spent ? undefined : hint;
 
   // Animate one footprint so switching layouts never reserves both heights.
   useAnimatedHeight(container, collapsed);
@@ -175,30 +186,52 @@ export function Composer({
   ]);
 
   const send = async (delivery: Delivery) => {
-    if (disabled || !task || !message || busy || !canContinue) return;
+    if (
+      disabled ||
+      !task ||
+      !message ||
+      controller.session.get("task", sessionTaskId).composerSending ||
+      controller.getSnapshot().busy ||
+      !canContinue
+    ) {
+      return;
+    }
 
+    updateSession({ composerSending: true, composerError: undefined });
     setShowContinuePrompt(false);
 
-    const failure = await controller.taskActions.sendMessage(
-      task,
-      message,
-      delivery,
-    );
+    try {
+      const failure = await controller.taskActions.sendMessage(
+        task,
+        message,
+        delivery,
+      );
 
-    setError(failure);
-    if (!failure) edit("");
+      updateSession({ composerError: failure });
+
+      // The textarea stays editable while sending. Only clear the draft that
+      // was acknowledged, including when this composer has since unmounted.
+      if (
+        !failure &&
+        controller.session.get("task", sessionTaskId).composerDraft === text
+      ) {
+        updateSession({ composerDraft: "" });
+      }
+    } finally {
+      updateSession({ composerSending: undefined });
+    }
   };
 
   // Stopping with steers pending sends them at once as the next turn.
   const stop = async () => {
     if (disabled || !task) return;
 
-    setError(
-      await controller.taskActions.interruptTask(
+    updateSession({
+      composerError: await controller.taskActions.interruptTask(
         task,
         task.pending_steers.length > 0,
       ),
-    );
+    });
   };
 
   const keys = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -238,7 +271,7 @@ export function Composer({
       className="chat-composer"
       data-mode={mode}
       data-loading={disabled || undefined}
-      aria-busy={disabled || undefined}
+      aria-busy={disabled || sending || undefined}
     >
       {collapsed ? (
         <div className="chat-composer-toggle-row motion-swap">
@@ -255,6 +288,7 @@ export function Composer({
             <span>{expandLabel(spent, message)}</span>
           </Button>
           {mode !== "idle" && stopButton}
+          {sending && <span role="status">Sending…</span>}
         </div>
       ) : (
         <div className="chat-composer-body motion-swap">
@@ -295,7 +329,7 @@ export function Composer({
               />
               <div className="chat-composer-actions">
                 {/* While a turn runs, an empty composer's button stops it. */}
-                {mode === "idle" || (mode === "busy" && message) ? (
+                {sending || mode === "idle" || (mode === "busy" && message) ? (
                   <TooltipWrapper
                     label={
                       showContinuePrompt
@@ -319,11 +353,17 @@ export function Composer({
                       variant="primary"
                       className="chat-icon-button"
                       data-action="send"
-                      aria-label={mode === "busy" ? "Steer" : "Send"}
-                      disabled={disabled || busy || !message || !canContinue}
+                      aria-label={sending ? "Sending…" : continueLabel}
+                      disabled={
+                        disabled || busy || sending || !message || !canContinue
+                      }
                       onClick={() => controller.run(() => send("steer"))}
                     >
-                      <Icon name="enter" size={12} />
+                      {sending ? (
+                        <LoadingSpinner />
+                      ) : (
+                        <Icon name="enter" size={12} />
+                      )}
                     </Button>
                   </TooltipWrapper>
                 ) : (
@@ -333,10 +373,12 @@ export function Composer({
             </div>
           </div>
           <div className="chat-composer-meta chat-composer-field-feedback">
-            <FormFieldHint
-              id="chat-composer-hint"
-              message={spent ? undefined : hint}
-            />
+            <div role="status">
+              <FormFieldHint
+                id="chat-composer-hint"
+                message={sending ? "Sending…" : feedback}
+              />
+            </div>
             {task && <TaskRunSettings task={task} />}
           </div>
         </div>

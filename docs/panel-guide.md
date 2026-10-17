@@ -194,6 +194,10 @@ and recreated worktrees.
 | Shift+Enter                       | Insert a newline.                                      |
 | Waiting for a question/permission | Messages can only be queued.                           |
 
+While **Sending…** is shown, additional sends are blocked and the draft remains
+editable. Success clears only an unchanged draft. Failure keeps the draft and
+error, even if Chat is reopened.
+
 ### Steering, queues and budgets
 
 Pending steers offer **Interrupt and send now**. Queued messages offer Edit and

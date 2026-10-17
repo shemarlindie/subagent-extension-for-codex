@@ -16,8 +16,8 @@ interface TaskActionContext {
 
 /**
  * Runs the task actions the Chat and inspector take outside any dialog. Each
- * resolves with the failure message, or nothing once it's done and the task
- * has reloaded.
+ * resolves with the failure message, or nothing once it's done. Message sends
+ * refresh in the background so acknowledgement never waits on panel reads.
  */
 export class TaskActions {
   /** Records what the user has read, without making the panel busy. */
@@ -83,11 +83,11 @@ export class TaskActions {
 
   /** Sends the user's message to a task, as steer, queue or interrupt. */
   sendMessage(task: Task, message: string, delivery: Delivery) {
-    return this.run("send_user_agent_message", {
-      task_id: task.id,
-      message,
-      delivery,
-    });
+    return this.run(
+      "send_user_agent_message",
+      { task_id: task.id, message, delivery },
+      false,
+    );
   }
 
   /** Stops a task's turn; `sendPending` sends its pending steers at once. */
@@ -140,6 +140,7 @@ export class TaskActions {
   private async run(
     name: string,
     args: Record<string, unknown>,
+    waitForRefresh = true,
   ): Promise<string | undefined> {
     if (this.context.snapshot().busy || this.context.closed()) {
       return "Wait for the last action.";
@@ -155,7 +156,11 @@ export class TaskActions {
       this.context.patch({ busy: false });
     }
 
-    await this.context.refresh().catch((error) => this.context.report(error));
+    const refresh = this.context
+      .refresh()
+      .catch((error) => this.context.report(error));
+
+    if (waitForRefresh) await refresh;
 
     return undefined;
   }
