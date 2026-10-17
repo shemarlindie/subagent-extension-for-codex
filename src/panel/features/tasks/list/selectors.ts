@@ -84,15 +84,36 @@ export function effectiveFilter(state: Snapshot): Filter {
 }
 
 // Under Unread, the open task stays listed once read, until another is chosen.
+// Across projects, tasks come in display order: grouped by project.
 export const visibleTasks = (state: Snapshot) => {
   const filter = effectiveFilter(state);
 
-  return scopedTasks(state).filter(
+  const tasks = scopedTasks(state).filter(
     (task) =>
       matchesFilter(task, filter) ||
       (filter === "unread" && task.id === state.selected),
   );
+
+  return state.repository
+    ? tasks
+    : tasksByProject(tasks).flatMap((group) => group.tasks);
 };
+
+type ProjectTasks = { repository: string; tasks: Task[] };
+
+// Groups keep the list's order: each project sits where its first task was.
+export function tasksByProject(tasks: Task[]): ProjectTasks[] {
+  const groups = new Map<string, Task[]>();
+
+  for (const task of tasks) {
+    const group = groups.get(task.repository);
+
+    if (group) group.push(task);
+    else groups.set(task.repository, [task]);
+  }
+
+  return [...groups].map(([repository, tasks]) => ({ repository, tasks }));
+}
 
 export function filterCounts(state: Snapshot) {
   const scoped = scopedTasks(state);

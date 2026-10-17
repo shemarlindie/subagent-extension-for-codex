@@ -3,58 +3,65 @@ import {
   SkeletonShape,
 } from "../../../shared/components/loading-skeleton/loading-skeleton";
 
-const ROWS = ["wide", "medium", "short", "medium"] as const;
+type RowWidth = "wide" | "medium" | "short";
 
-type TaskListSkeletonProps = {
-  showProject: boolean;
-};
+const GROUPS: RowWidth[][] = [
+  ["wide", "medium"],
+  ["short", "medium"],
+];
 
-/** Mirrors task titles, project names, worker profiles and row metadata. */
-export function TaskListSkeleton({ showProject }: TaskListSkeletonProps) {
+/**
+ * Mirrors project groups, task titles, worker profiles and row metadata.
+ * Headers show in every scope: the scope can resolve mid-load, and a fixed
+ * shape keeps the placeholder from changing while it's on screen.
+ */
+export function TaskListSkeleton() {
   return (
     <LoadingSkeleton
       label="Loading tasks"
       blockScroll
       className="task-list-skeleton"
     >
-      {ROWS.map((width, index) => (
-        <div className="task-list-skeleton-row" key={`${width}-${index}`}>
-          {showProject && index % 2 === 0 && (
-            <span className="row-project">
-              <SkeletonShape
-                className="task-list-skeleton-project"
-                measureText="Project name"
-              />
-            </span>
-          )}
-          <span className="row-title">
+      {GROUPS.map((widths, index) => (
+        <div className="task-group" key={index}>
+          <div className="task-group-header">
             <SkeletonShape
-              className={`task-list-skeleton-title task-list-skeleton-title-${width}`}
-              measureText="Task title"
+              className="task-list-skeleton-project"
+              measureText="Project name"
             />
-          </span>
-          <div className="row-meta task-list-skeleton-meta">
-            <div className="row-worker task-list-skeleton-worker">
-              <SkeletonShape className="task-list-skeleton-profile" />
-              <span className="row-worker-label">
-                <SkeletonShape
-                  className="task-list-skeleton-worker-label"
-                  measureText="implementer"
-                />
-              </span>
-            </div>
-            <div className="task-list-skeleton-trailing">
-              <span className="row-runtime">
-                <SkeletonShape
-                  className="task-list-skeleton-runtime"
-                  measureText="Run time 5m"
-                />
-              </span>
-              <SkeletonShape className="task-list-skeleton-status" />
-            </div>
           </div>
+          {widths.map((width, row) => (
+            <SkeletonRow key={row} width={width} />
+          ))}
         </div>
       ))}
     </LoadingSkeleton>
+  );
+}
+
+type SkeletonRowProps = { width: RowWidth };
+
+function SkeletonRow({ width }: SkeletonRowProps) {
+  return (
+    <div className="task-list-skeleton-row">
+      <span className="row-title">
+        <SkeletonShape
+          className={`task-list-skeleton-title task-list-skeleton-title-${width}`}
+          measureText="Task title"
+        />
+      </span>
+      <div className="row-meta task-list-skeleton-meta">
+        <SkeletonShape className="task-list-skeleton-profile" />
+        <div className="task-list-skeleton-trailing">
+          <span className="row-runtime">
+            <SkeletonShape
+              className="task-list-skeleton-runtime"
+              measureText="Ran for 5m"
+            />
+          </span>
+          <SkeletonShape className="task-list-skeleton-status" />
+        </div>
+      </div>
+    </div>
   );
 }

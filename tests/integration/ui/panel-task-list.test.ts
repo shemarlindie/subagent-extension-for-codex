@@ -100,11 +100,12 @@ test("a chosen filter stays visible after it empties", async (t) => {
   );
 });
 
-test("the all-project task list shows each project above its task title", async (t) => {
+test("the all-project task list groups tasks under project headers in list order", async (t) => {
   await setup(t, (transport) => {
     transport.tasks = [
       { ...task(), title: "Review authentication" },
       { ...task("two", "/repo/b"), title: "Update database" },
+      { ...task("three"), title: "Fix login" },
     ];
 
     transport.projects = [
@@ -113,27 +114,20 @@ test("the all-project task list shows each project above its task title", async 
     ];
   });
 
-  const projectByTitle = new Map(
-    [...document.querySelectorAll(".row")].map((row) => [
-      row.querySelector(".row-title")?.textContent,
-      row.querySelector(".row-project")?.textContent,
-    ]),
-  );
-
-  assert.deepEqual(
-    [...projectByTitle],
-    [
-      ["Review authentication", "Alpha"],
-      ["Update database", "b"],
+  const groups = [...document.querySelectorAll("#task-list [role=group]")].map(
+    (group) => [
+      document.getElementById(group.getAttribute("aria-labelledby") ?? "")
+        ?.textContent,
+      [...group.querySelectorAll(".row-title")].map(
+        (title) => title.textContent,
+      ),
     ],
   );
 
-  for (const row of document.querySelectorAll(".row")) {
-    assert.deepEqual(
-      [...row.children].slice(0, 2).map((child) => child.className),
-      ["row-project", "row-title"],
-    );
-  }
+  assert.deepEqual(groups, [
+    ["Alpha", ["Review authentication", "Fix login"]],
+    ["b", ["Update database"]],
+  ]);
 });
 
 test("search clears with Escape and focuses with the slash key", async (t) => {

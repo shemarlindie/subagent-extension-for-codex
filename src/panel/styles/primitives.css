@@ -90,17 +90,6 @@
   align-items: center;
   gap: 4px;
 }
-.row-project {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-bottom: 2px;
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.2;
-}
 .form-error:empty {
   display: none;
 }

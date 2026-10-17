@@ -11,6 +11,7 @@ import {
   profileLabel,
   projectChoices,
   scopedTasks,
+  tasksByProject,
   terminal,
   visibleTasks,
 } from "../../../app/state/selectors";
@@ -25,6 +26,7 @@ import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
 import { UnreadDot } from "../unread/unread-dot";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
+import { TaskGroup } from "./task-group";
 import { TaskListScrollbar } from "./task-list-scrollbar";
 import { TaskListSkeleton } from "./task-list-skeleton";
 import { rowStatus } from "./task-status";
@@ -33,7 +35,6 @@ import { WorkerProfileIcon } from "./worker-profile-icon";
 
 interface TaskRowProps {
   task: Task;
-  projectName?: string;
   selected: boolean;
   onSelect(): void;
   /** Marks the task read when it's unread, otherwise unread. */
@@ -43,7 +44,6 @@ interface TaskRowProps {
 /** A task in the list; right-click or long-press marks it read or unread. */
 export function TaskRow({
   task,
-  projectName,
   selected,
   onSelect,
   onToggleRead,
@@ -61,7 +61,7 @@ export function TaskRow({
           />
         }
       >
-        <TaskRowContent task={task} projectName={projectName} />
+        <TaskRowContent task={task} />
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Positioner className="menu-positioner">
@@ -80,27 +80,24 @@ export function TaskRow({
   );
 }
 
-type TaskRowContentProps = Pick<TaskRowProps, "task" | "projectName">;
+type TaskRowContentProps = Pick<TaskRowProps, "task">;
 
-function TaskRowContent({ task, projectName }: TaskRowContentProps) {
+// The icon tells profiles apart, so the worker's name is in its tooltip and
+// for screen readers only.
+function TaskRowContent({ task }: TaskRowContentProps) {
+  const worker = profileLabel(task.worker_profile);
+
   return (
     <>
-      {task.unread && <UnreadDot className="row-unread" />}
-      {projectName && (
-        <span className="row-project" title={projectName}>
-          {projectName}
-        </span>
-      )}
       <span className="row-title">{task.title}</span>
       <span className="row-meta">
-        <span className="row-worker">
+        <span className="row-worker" title={worker}>
           <WorkerProfileIcon
             profile={task.worker_profile}
             className="row-worker-icon"
           />
-          <span className="row-worker-label">
-            {profileLabel(task.worker_profile)}
-          </span>
+          {task.unread && <UnreadDot />}
+          <span className="row-worker-label visually-hidden">{worker}</span>
         </span>
         <span className="row-trailing">
           <TaskRowRuntime task={task} />
@@ -130,6 +127,7 @@ function TaskRowRuntime({ task }: { task: Task }) {
     runtime = taskRuntimeMs(task, now);
 
   // Attention states and tasks without an active clock use their short label.
+  // Finished tasks say their time is final; the status icon says how it ended.
   const label =
     activityLabel || (!live && !terminal(task)) ? status.shortLabel : undefined;
 
@@ -140,16 +138,9 @@ function TaskRowRuntime({ task }: { task: Task }) {
       className="row-runtime"
       title={label ? status.label : "Total run time across turns"}
     >
-      {label ?? runtimeText(task, live, duration)}
+      {label ?? (terminal(task) ? `Ran for ${duration}` : duration)}
     </span>
   );
-}
-
-function runtimeText(task: Task, live: boolean, duration: string) {
-  if (task.status === "failed") return `Failed after ${duration}`;
-  if (live) return duration;
-
-  return `${terminal(task) ? "Ran for" : "Run time"} ${duration}`;
 }
 
 const EMPTY_FILTER: Record<Filter, string> = {
@@ -179,7 +170,10 @@ export function TaskList() {
     scrolledOnLoad = useRef(false),
     cancelScroll = useRef<(() => void) | undefined>(undefined);
 
-  useListMotion(listRef, "data-task", tasks.map((task) => task.id).join());
+  const order = tasks.map((task) => task.id).join();
+
+  useListMotion(listRef, "data-task", order);
+  useListMotion(listRef, "data-task-group", order);
 
   // Selection and task data can arrive after mount; scroll once the row exists.
   useLayoutEffect(() => {
@@ -217,21 +211,29 @@ export function TaskList() {
     }
 
     if (tasks.length) {
-      return tasks.map((task) => (
+      const renderRow = (task: Task) => (
         <TaskRow
           key={task.id}
           task={task}
-          projectName={
-            state.repository
-              ? undefined
-              : ((projectNames.get(task.repository) ||
-                  task.repository.split(/[\\/]/).filter(Boolean).at(-1)) ??
-                task.repository)
-          }
           selected={task.id === state.selected}
           onSelect={() => controller.run(() => controller.select(task.id))}
           onToggleRead={() => toggleRead(task)}
         />
+      );
+
+      if (state.repository) return tasks.map(renderRow);
+
+      // Across projects, each project's tasks sit under its own header.
+      return tasksByProject(tasks).map(({ repository, tasks }) => (
+        <TaskGroup
+          key={repository}
+          repository={repository}
+          name={
+            projectNames.get(repository) ?? projectDisplayName({ repository })
+          }
+        >
+          {tasks.map(renderRow)}
+        </TaskGroup>
       ));
     }
 
@@ -299,7 +301,7 @@ export function TaskList() {
           <LoadingSwap
             className="task-list-loading-swap"
             loading={state.taskListLoading}
-            skeleton={<TaskListSkeleton showProject={!state.repository} />}
+            skeleton={<TaskListSkeleton />}
           >
             {state.taskListLoading ? null : (
               <>

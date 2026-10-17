@@ -242,8 +242,8 @@ header .toolbar {
   width: 100%;
   text-align: left;
   border-color: transparent;
-  padding: 10px;
-  margin: 2px 0;
+  padding: 7px 10px;
+  margin: 1px 0;
 }
 .task-list-scroll-area {
   position: relative;
@@ -310,7 +310,7 @@ header .toolbar {
   gap: 6px;
   font-size: 11px;
   color: var(--muted);
-  margin-top: 5px;
+  margin-top: 3px;
   overflow-wrap: anywhere;
 }
 .dot {

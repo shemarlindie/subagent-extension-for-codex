@@ -115,8 +115,8 @@
 }
 .task-list-skeleton-row {
   min-width: 0;
-  margin: 2px 0;
-  padding: 10px;
+  margin: 1px 0;
+  padding: 7px 10px;
   border-radius: 6px;
 }
 .task-list-skeleton-project {
@@ -140,9 +140,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  margin-top: 5px;
+  margin-top: 3px;
 }
-.task-list-skeleton-worker,
 .task-list-skeleton-trailing {
   display: flex;
   align-items: center;
@@ -154,11 +153,38 @@
   height: 10px;
   border-radius: 50%;
 }
-.task-list-skeleton-worker-label {
-  width: 52px;
-  height: 7px;
-}
 .task-list-skeleton-runtime {
   width: 54px;
   height: 7px;
+}
+/* Project groups in the all-projects list. Medium weight sets headers apart
+   from the scope label above the list. */
+#task-list {
+  --task-group-header-height: 20px;
+}
+.task-group-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: var(--task-group-header-height);
+  overflow: hidden;
+  padding: 4px 10px 3px;
+  background: var(--sidebar-bg);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A spaced rule separates each later group. It sits on the group, so every
+   header keeps the same height and the rule scrolls away with the rows. */
+.task-group + .task-group {
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+/* Scrolling a row into view keeps it clear of its group's header. */
+.task-group .row {
+  scroll-margin-top: var(--task-group-header-height);
 }

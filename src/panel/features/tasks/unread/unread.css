@@ -1,4 +1,4 @@
-/* Something the user hasn't read: an accent dot at a task row's top right. */
+/* Something the user hasn't read: an accent dot beside a task row's worker icon. */
 .unread-dot {
   display: inline-block;
   width: 7px;
@@ -6,18 +6,6 @@
   border-radius: 50%;
   background: var(--accent);
   flex-shrink: 0;
-}
-.row[data-unread] {
-  position: relative;
-}
-.row-unread {
-  position: absolute;
-  top: 14px;
-  right: 10px;
-}
-/* The dot comes first, so the line after it, the project or the title, clears it. */
-.row[data-unread] > :nth-child(2) {
-  padding-right: 14px;
 }
 /* The Unread pill's count takes the accent while any task is unread. */
 .filter-count[data-unread] {

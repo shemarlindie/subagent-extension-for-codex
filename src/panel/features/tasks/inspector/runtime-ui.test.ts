@@ -229,9 +229,7 @@ test("task list shows a fixed final runtime for every terminal status, including
   for (const status of ["completed", "failed"] as const) {
     for (const runtime_ms of [95_000, 0]) {
       view.rerender(row(task({ status, runtime_ms })));
-      const prefix = status === "failed" ? "Failed after" : "Ran for";
-
-      const expected = `${prefix} ${runtime_ms ? "1m 35s" : "0s"}`;
+      const expected = `Ran for ${runtime_ms ? "1m 35s" : "0s"}`;
       assert.equal(rowRuntime(view), expected);
       act(() => void vi.advanceTimersByTime(5000));
       assert.equal(rowRuntime(view), expected);

@@ -79,6 +79,11 @@ keep a task active between runs. Unread applies across the other filters. See
 search filters.
 Press `/` for search and Escape to clear it.
 
+Each row shows the task title, then the worker profile icon, runtime and status
+icon. Hover the icon for the worker's name. Under **All projects**, tasks are
+grouped under a header for each project. A project's group appears where its
+newest task would be, and the header stays at the top while its rows scroll.
+
 Wide panels show the task rail and inspector together. Narrow ones switch
 between them with a back action. Drag the divider to resize the rail, or focus
 it and use Left/Right arrows. Home/End choose its limits and double-click restores
@@ -93,8 +98,8 @@ Details accumulates across turns and includes the active run.
 
 A task becomes unread when it has something you haven't viewed: a worker
 message or reply, a turn's end, a failure, or a question or permission request.
-Your own messages never make a task unread. Unread tasks show an accent dot at
-the top right of their row, and the compact panel adds **N unread** to its
+Your own messages never make a task unread. Unread tasks show an accent dot after
+the worker icon in their row, and the compact panel adds **N unread** to its
 counts.
 
 A task becomes read when its Chat is on screen and scrolled to the latest

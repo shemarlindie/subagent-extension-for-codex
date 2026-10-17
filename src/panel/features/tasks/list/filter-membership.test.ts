@@ -193,3 +193,27 @@ test("Unread cuts across the status filters and keeps the open task listed", () 
   // It is never chosen by default, since reading tasks empties it.
   assert.equal(effectiveFilter(state({ filter: null })), "failed");
 });
+
+test("across projects, visible tasks come grouped by project in list order", () => {
+  const state = (patch: object) =>
+    ({
+      tasks: [
+        task({ id: "a1", repository: "/a" }),
+        task({ id: "b1", repository: "/b" }),
+        task({ id: "a2", repository: "/a" }),
+      ],
+      filter: "all",
+      search: "",
+      ...patch,
+    }) as unknown as Snapshot;
+
+  assert.deepEqual(
+    visibleTasks(state({})).map((task) => task.id),
+    ["a1", "a2", "b1"],
+  );
+
+  assert.deepEqual(
+    visibleTasks(state({ repository: "/a" })).map((task) => task.id),
+    ["a1", "a2"],
+  );
+});
