@@ -1,6 +1,6 @@
 # Codex subagent extension
 
-Delegate Claude coding tasks from Codex through a local MCP service. Claude runs through the Claude Agent SDK and Claude Code harness; one service owns scheduling, durable task state and Git worktrees. Disconnecting a client leaves tasks running.
+Delegate Claude coding tasks from Codex through a local MCP service. Claude runs through the Claude Agent SDK and Claude Code harness. One service owns scheduling, durable task state and Git worktrees. Disconnecting a client leaves tasks running.
 
 ## Quick start
 
@@ -14,7 +14,7 @@ Requires Node.js 24+, Git and a [supported Claude Code CLI](docs/claude-cli.md) 
    ```
 
 2. [Connect Codex](#connect-codex) using stdio or Streamable HTTP. The stdio
-   launcher can start the service automatically; HTTP requires starting the
+   launcher can start the service automatically. HTTP requires starting the
    service yourself.
 3. Reload the MCP connection and open **Delegated Work** in Codex. Use
    **Manage → Add project** to approve a Git repository root with at least one
@@ -23,7 +23,7 @@ Requires Node.js 24+, Git and a [supported Claude Code CLI](docs/claude-cli.md) 
 You can also manage projects in the standalone console at
 `http://127.0.0.1:4317` while the service is running. Sign in with the token in
 `~/.local/share/codex-subagent-extension/admin-token` (or your configured data
-directory). Treat the token as a credential; do not paste it into chats or commit
+directory). Treat the token as a credential. Do not paste it into chats or commit
 it.
 
 Claude uses the host's Claude Code credentials and user, project and local settings, including instructions, skills, hooks and MCP servers. This extension does not manage provider credentials. See [configuration and permissions](docs/configuration.md) before changing execution authority or session restrictions.
@@ -34,7 +34,7 @@ For UI previews and interactive testing without model calls, see [development to
 
 Choose one transport and add its example to `~/.codex/config.toml`. Both expose
 the same task tools and MCP App. Replace the existing server entry when switching
-transports; do not combine its stdio and HTTP settings. See the
+transports. Do not combine its stdio and HTTP settings. See the
 [Codex MCP configuration reference](https://learn.chatgpt.com/docs/extend/mcp#configure-with-configtoml)
 for supported options.
 
@@ -60,7 +60,7 @@ npm run build && npm start
 ```
 
 For development, use `npm run build && npm run dev` instead. Both serve the built
-panel; follow [the reload guide](docs/development.md#what-reloads-when) after edits.
+panel. Follow [the reload guide](docs/development.md#what-reloads-when) after edits.
 
 Configure the authenticated `/mcp` endpoint:
 
@@ -82,37 +82,42 @@ the default file's token without printing it:
 pbcopy < ~/.local/share/codex-subagent-extension/admin-token
 ```
 
-Keep the token and configuration private; do not paste them into chats or commit
+Keep the token and configuration private. Do not paste them into chats or commit
 them. Update the URL if you changed the service port. HTTP connections require
-you to keep the service running; Codex does not start it through this transport.
+you to keep the service running. Codex does not start it through this transport.
 
 ### Verify either connection
 
-After saving the configuration, reload the MCP connection in Codex and open
-**Delegated Work** from a chat. Use `codex mcp list` to check the configured server;
-opening the panel verifies the connection. Changed tool metadata also requires
-MCP reconnection. To check UI changes in Codex, see
+After saving the configuration, reload the MCP connection in Codex. Check the
+configured server with `codex mcp list`, then open **Delegated Work** from a chat
+to verify the connection. Reload the MCP connection whenever tool metadata changes. To check UI changes in Codex, see
 [UI verification](docs/ui-verification.md#measurement-and-checks-in-codex).
 
-`npm run package:plugin` builds an npm tarball containing the service, proxy, panel and delegation skill. Extract its `package/` directory as the local plugin root. Installation alone does not start the service; the host starts the stdio launcher. [Build details](docs/development.md#build) cover packaging and checks.
+`npm run package:plugin` builds an npm tarball containing the service, proxy, panel and delegation skill. Extract its `package/` directory as the local plugin root. Installation alone does not start the service. The host starts the stdio launcher. [Build details](docs/development.md#build) cover packaging and checks.
 
 ## Working with tasks
 
-- **Workspace:** tasks default to `current_repo`, editing the approved checkout with its existing changes. Choose `worktree` to start from a committed revision on a separate branch (`agent/<task-id>` by default). The service never merges changes automatically. A worktree separates code; it does not contain the operating system.
-- **Profiles:** researcher, reviewer and security reviewer inspect only by default. General, implementer, debugger, test engineer and refactorer can write; General is a role-neutral coding agent and the default for tasks started from the composer. User settings control permissions and restrictions.
-- **Conversation:** completed, failed and interrupted tasks accept follow-ups. During a turn, messages can steer at the next tool boundary, queue another turn, or interrupt and start a new turn. A plain interrupt pauses the queue.
-- **Review:** replies stream into Chat. Claude can send an immediate blocker update or a completion report after a successful turn. The Changes tab reads live Git changes; `get_agent_messages` and `get_agent_changes` let the parent retrieve replies and patches. Concurrent edits to files touched by the task can also appear in its changes.
-- **Continuation:** a later turn resumes the Claude session when its original worker and transcript are available; otherwise it starts a fresh session carrying the conversation. Removing a worktree keeps its branch, and the next turn recreates it.
-- **Limits:** runtime and cost budgets span turns and can be raised from the Chat warning notice before continuing. Token budgets are unsupported. Cost ceilings are checked after responses and are not a hard billing cap.
+Tasks default to the approved checkout, including its uncommitted changes. Choose
+`worktree` to work from a committed revision in a separate checkout. The service
+never merges changes automatically, and worktrees are not security sandboxes.
+Researcher, reviewer and security reviewer profiles inspect only by default.
+Writing profiles follow the user's saved permissions and restrictions.
 
-Questions and permissions wait for an answer tied to the exact request ID. Permissions route to the user by default; user-approved settings can route them to the parent. Claude's own permission rules can allow or deny an action before it reaches that route.
+Replies stream into Chat, and Changes shows live Git changes. Tasks accept
+follow-ups after completion, failure or interruption. During a turn, a message
+can steer the worker, queue another turn, or interrupt and start a new one.
+Runtime and cost budgets span turns. Cost ceilings are not a hard billing cap.
 
-Use [the panel guide](docs/panel-guide.md) for delegation, Chat, Changes and project scope, and [the continuation guide](docs/task-continuation.md) for recovery and backups. This single-user service defaults to loopback. See [local network access](docs/development.md#access-from-your-local-network) for trusted LAN development; public or multi-user hosting needs separate authentication and deployment work.
+See [the panel guide](docs/panel-guide.md) for delegation and review,
+[configuration](docs/configuration.md) for permissions and limits, and
+[task continuation](docs/task-continuation.md) for session recovery and backups.
+This single-user service defaults to loopback. [Trusted LAN development](docs/development.md#access-from-your-local-network)
+is available.
 
 ## Documentation
 
-Start with the guide for your task. Each guide owns its procedures or contract;
-[Architecture](docs/architecture.md) maps the code boundaries.
+Choose a guide for your task.
+[Architecture](docs/architecture.md) explains the code boundaries.
 
 ### Use and operate the extension
 

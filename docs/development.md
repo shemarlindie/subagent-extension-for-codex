@@ -11,7 +11,7 @@ cp -n .env.example .env
 ```
 
 `.env` is gitignored. `npm run dev`, `npm start`, `npm run projects`, and
-`npm run dev:ui` load it when present; variables already set in the shell take
+`npm run dev:ui` load it when present. Variables already set in the shell take
 precedence. The stdio proxy reads the mention-test setting from `.env` and uses
 its `CODEX_SUBAGENT_EXTENSION_DATA` only as a fallback destination for the test
 search log. Service connection settings come from its MCP environment.
@@ -19,10 +19,10 @@ The example keeps data in `.codex-subagent-extension/live`. See the
 [configuration table](configuration.md#environment-variables) for every variable.
 
 **One data directory.** The service and panel dev host must use the same
-`CODEX_SUBAGENT_EXTENSION_DATA`; it holds the database and admin token. Choose
+`CODEX_SUBAGENT_EXTENSION_DATA`, which holds the database and admin token. Choose
 [stdio or HTTP in the connection guide](../README.md#connect-codex). For stdio,
-the Codex-launched proxy also needs that data directory and does not read `.env`,
-so add the same path, made absolute, to its MCP environment:
+the Codex-launched proxy needs that data directory in its MCP environment for
+service discovery. Add the same path, made absolute:
 
 ```toml
 [mcp_servers.codex_subagent_extension.env]
@@ -41,12 +41,13 @@ mention search locally, so the backend service does not need a restart. Every
 mention query returns a visibly labeled sample `Claude` result and is appended
 to `<data-directory>/mention-search.jsonl`. The log contains the query,
 timestamp, result names, and whether provider checks were skipped for the sample.
-Remove the setting after testing; the sample does not prove a Claude provider
+Remove the setting after testing. The sample does not prove a Claude provider
 is available.
 
-Projects need no startup registration. With **Automatically add chat projects** enabled (the default), a chat's project
-is added when a task starts from that chat, and **Manage → Add project** or `npm run projects` covers the
-rest (see [Multiple projects](configuration.md#repository-access)).
+With **Automatically add chat projects** enabled (the default), starting a task
+from a chat registers its project. Use **Manage → Add project** or
+`npm run projects` to register other projects. See
+[Repository access](configuration.md#repository-access).
 
 ## Generated validation schemas
 
@@ -54,8 +55,7 @@ Choose the source of validation according to what the contract owns:
 
 - Plain boundary data shapes use TypeScript contracts and generated Zod schemas.
   This covers settings documents, panel output,
-  and Claude start/task options. Edit the feature-owned source types rather
-  than the generated validators.
+  and Claude start/task options. Edit the source types in the owning feature and regenerate the validators.
 - Inputs with transformations, defaults, or substantial validation behavior use
   handwritten Zod and inferred TypeScript types. Task start, tool inputs,
   settings updates, stored task validation, and SDK input contracts keep this
@@ -68,7 +68,7 @@ JSDoc supplies rules that ordinary TypeScript types cannot express. For example,
 the Claude task-options contract uses `@strict` to reject extra properties.
 Supported annotations also include `@format url` for URLs and `@default` for
 omitted input values.
-Contracts describe parsed output; defaults can make an input property optional
+Contracts describe parsed output. Defaults can make an input property optional
 even when it is required in that output.
 
 The runner discovers `src/**/*-contract.ts` automatically, excluding generated
@@ -114,18 +114,14 @@ export default {
 
 These configurations run only during schema generation. Each imported type maps
 to its usual camel-case schema name (for example, `PermissionMode` maps to
-`permissionModeSchema`); a mapping can supply `getSchemaName` for another naming
+`permissionModeSchema`). A mapping can supply `getSchemaName` for another naming
 convention. The runner rejects duplicate mappings, conflicts with generated
-outputs, and permissive `z.any()` fallbacks; see [Troubleshooting](#troubleshooting).
+outputs, and permissive `z.any()` fallbacks. See [Troubleshooting](#troubleshooting).
 Do not feed Drizzle inferred types into this generator.
 
-For database rows, `createSelectSchema` from `drizzle-orm/zod` validates returned
-rows at deserialization boundaries, including task and event rows. Use `createInsertSchema` when insert validation is needed; it allows fields
-with database defaults to be omitted. These use the same Zod 4 runtime as the
-generated protocol validators. JSON bodies are decoded and validated separately:
-a task event's `data` column stores serialized JSON, so its table schema
-validates the string, not the event data inside it. Schema generation does not
-change database migrations.
+Database row validation derives from Drizzle tables at deserialization boundaries.
+Serialized JSON needs its own payload validation. See
+[Database and migrations](database.md). Schema generation does not change migrations.
 
 ## Run the service
 
@@ -134,18 +130,17 @@ HTTP or stdio:
 
 | Use           | Command                        | Backend behavior                                                                                                       |
 | ------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Development   | `npm run build && npm run dev` | Runs `src/service/main.ts` through `tsx` and Node's watch mode; restarts when an imported backend source file changes. |
-| Built service | `npm run build && npm start`   | Runs `dist/main.js`; applying backend changes requires rebuilding and restarting.                                      |
+| Development   | `npm run build && npm run dev` | Runs `src/service/main.ts` through `tsx` and Node's watch mode. Restarts when an imported backend source file changes. |
+| Built service | `npm run build && npm start`   | Runs `dist/main.js`. Applying backend changes requires rebuilding and restarting.                                      |
 
 Both modes serve the embedded Codex panel and standalone console from
-`dist/app.html`. `npm run dev` does not rebuild the panel after UI edits;
-follow [What reloads when](#what-reloads-when) to apply subsequent changes.
+`dist/app.html`. `npm run dev` does not rebuild the panel after UI edits.
+Follow [What reloads when](#what-reloads-when) to apply subsequent changes.
 For browser UI development with Fast Refresh, use the [panel dev host](#panel-dev-host).
 
-A restart interrupts active tasks; send a follow-up
-after the service returns to continue them. Either way the service runs in the
-foreground at `http://127.0.0.1:4317`; stop it with Ctrl-C. If Codex is open with
-the plugin enabled, its stdio proxy may already have started one; a second service
+A restart interrupts active tasks. Send a follow-up after the service returns
+to continue them. Both commands run the service in the foreground at `http://127.0.0.1:4317`. Stop it with Ctrl-C. If Codex is open with
+the plugin enabled, its stdio proxy may already have started one. A second service
 cannot own the same data directory. On macOS and Linux, an interactive startup
 reports process details and asks before sending SIGTERM to a verified service
 owner. If it remains alive after five seconds, a second confirmation is required
@@ -170,11 +165,10 @@ the service's origin checks.
 | Command          | Use for                                                      | Worker                                                  |
 | ---------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
 | `npm run dev:ui` | UI development, prepared scenarios and host/layout controls. | Prepared fixtures, or a connected backend in live mode. |
-| `npm run demo`   | Interactive service testing with disposable data.            | Fake worker; no model calls.                            |
-| `npm run dev`    | Backend development and Claude execution.                    | Claude; model calls can incur costs.                    |
+| `npm run demo`   | Interactive service testing with disposable data.            | Fake worker with no model calls.                        |
+| `npm run dev`    | Backend development and Claude execution.                    | Claude model calls can incur costs.                     |
 
-**Data: live** means a
-backend connection; the connected service determines whether its worker is
+**Data: live** connects to a backend. The connected service determines whether its worker is
 fake or Claude. The [Demo](#demo) instructions show how to combine it with the
 [panel dev host](#panel-dev-host). See [What reloads when](#what-reloads-when)
 for applying source changes.
@@ -186,39 +180,38 @@ npm run dev:ui
 ```
 
 This starts a Vite server at `http://127.0.0.1:5317` with React Fast Refresh and
-CSS hot replacement, for development only; production HTML comes from
+CSS hot replacement for development. Production HTML comes from
 `scripts/build-panel.mjs`.
 
 The page embeds the real panel in an iframe through the official `AppBridge`.
 Use **Data: fixtures** for UI checks without a production service. Prepared
-fixtures cannot start provider tasks; supported Chat interactions update
+fixtures cannot start provider tasks. Supported Chat interactions update
 simulated fixture state. **Launch** chooses thread or global
-scope; theme, display mode, width and host capabilities can be varied. The
+scope. You can also vary the theme, display mode, width and host capabilities. The
 **Inspector** exposes the bridge log, host settings and icon catalog. The dev
 host does not send style variables by default. Leave **Host style variable
-overrides** empty to omit them, or enter JSON to test specific values; see
+overrides** empty to omit them, or enter JSON to test specific values. See
 [UI verification](ui-verification.md#measurement-and-checks-in-codex) for the
 captured host styles and the limits of the dev host.
 
 [UI verification](ui-verification.md) documents the browser workflow, fixture
 catalogue and host controls. Fixtures in `dev/panel/scenarios/` are excluded from the
-production bundle. Most calls use browser fixtures; Changes and worktree calls
+production bundle. Most calls use browser fixtures. Changes and worktree calls
 in `FIXTURE_SERVICE_TOOLS` run real service code against disposable repositories
 on Vite. Source edits rebuild these repositories on the next call, and the
 bridge log identifies the source that served each call.
 
 Live mode connects to the service's `/mcp` endpoint through the Vite proxy at
 `/service`. The proxy adds the admin token server-side and drops the browser
-`Origin` header, so the token never reaches the page. It finds the service much
-as the stdio launcher does: `CODEX_SUBAGENT_EXTENSION_URL`,
+`Origin` header, so the token never reaches the page. It checks `CODEX_SUBAGENT_EXTENSION_URL`,
 `CODEX_SUBAGENT_EXTENSION_ORIGIN`, the data directory's `service.json`, then
 port 4317. It ignores `PORT`, which in the dev host's process is its own port
 (the `.claude/launch.json` launcher sets it). It reads the token from
 `CODEX_SUBAGENT_EXTENSION_TOKEN` or the data directory's `admin-token`. Start
 the service first, or restart Vite after it moves ports.
 
-For Claude execution against throwaway data, give both processes the same data directory;
-the dev host finds the service's port in its `service.json`:
+For Claude execution against throwaway data, give both processes the same data directory.
+The dev host finds the service's port in its `service.json`:
 
 ```sh
 CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev PORT=4399 npm run dev
@@ -238,27 +231,26 @@ npm run dev:ui -- --host
 On the other computer, open `http://<service-computer-LAN-IP>:5317` for the
 dev UI or `http://<service-computer-LAN-IP>:4317` for the standalone console.
 The service binds all IPv4 interfaces and prints its network URLs at startup.
-The console still requires the admin token; LAN console origins use the service computer's interface
+The console still requires the admin token. LAN console origins use the service computer's interface
 addresses discovered at startup. Restart after those addresses change.
 Codex and the UI proxy continue connecting through loopback.
 
-For dev UI live mode alone, only `dev:ui` needs `--host`; the service can stay
+For dev UI live mode alone, only `dev:ui` needs `--host`. The service can stay
 on loopback. The dev UI proxy adds the admin token automatically, so anyone
 who can reach that UI can control the service in live mode. Use these flags
-only on a trusted local network. They bind all interfaces; firewall rules
+only on a trusted local network. They bind all interfaces. Firewall rules
 determine which computers can connect. Public and multi-user hosting are
 outside this development option.
 
 ## Recorded fixtures
 
-Besides the fixtures built with the typed builder in `dev/panel/scenarios/timeline.ts`,
-the preview can show tasks recorded from real runs, in `dev/panel/recorded/`.
-Scenario modules live in `dev/panel/scenarios/`; `fixtures.ts` assembles the
+The preview supports synthetic fixtures built with
+`dev/panel/scenarios/timeline.ts` and tasks recorded from real Claude runs in
+`dev/panel/recorded/`. Recordings preserve SDK messages from those runs.
+Scenario modules live in `dev/panel/scenarios/`, and `fixtures.ts` assembles the
 registry used by the dev host and replay tests.
-Their SDK messages come from a real Claude run, so they show exactly what the
-SDK sends, which built fixtures can only approximate.
-`dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays them through the provider
-like the built ones.
+`dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays both kinds through the
+provider.
 
 Record a task from any service database (the service's, the demo's, or a
 temporary one such as `scripts/verify-live-claude.mjs` creates):
@@ -273,31 +265,16 @@ in `fixtures.ts` and add it to `recordedFixtures`. Choose a `--first-id` past th
 other fixtures' event ids (the recorded ones start at 3000, a hundred apart), and
 a `--start` that keeps the task where you want it in the newest-first list.
 
-Recording (`recordFixture` in `dev/panel/recording/recording.ts`) sanitizes the run so
-the file can be committed:
+The recorder replaces machine paths and identifiers, removes local Claude
+configuration and private usage details, and shifts event IDs and times for the
+preview. Recorded tasks have no workspace, so their Changes tab is empty.
 
-- Paths (the repository, the workspace and the run's directory, the home and
-  temporary directories), including Claude's dash-encoded project paths, become
-  `/demo/...` paths. The host name, the task and session ids, and API request ids
-  become fixture values.
-- `system/init` messages lose your skills, plugins, MCP servers, commands and
-  local paths, and rate-limit events keep only their status and window, not your
-  usage or your organization's overage policy.
-- Events are renumbered and moved to `--start`, keeping their spacing. Provider
-  events get their presentation again from the sanitized SDK message.
-- The task belongs to the preview owner, is renamed with `--title`, and has no
-  workspace, so its Changes tab is empty.
-
-It refuses to write a file that still contains your home directory, the
-temporary directory, the host name or your user name, as they are or
-dash-encoded. Replace anything else the run added, or what a refusal names, with
-`--replace <from>=<to>` (repeatable). Read the file before committing it anyway:
-a task's own content, such as its prompt or the files it read, is kept as it is.
-
-Replacement values are literal text. Quote the whole argument when it contains
-spaces or shell characters, for example `--replace 'internal-name=/demo/name'`.
-Claude's encoded project paths get the corresponding dash-encoded replacement;
-ordinary text keeps the replacement as written.
+Review the output before committing: prompts and file contents can still contain
+private information. The recorder rejects common machine identifiers, but that
+check cannot establish that the whole recording is safe to share. Use repeatable
+`--replace <from>=<to>` arguments for additional literal replacements, quoting
+values with spaces or shell characters, for example
+`--replace 'internal-name=/demo/name'`.
 
 ## Codex
 
@@ -315,8 +292,8 @@ npm run demo
 
 The script builds the project, registers a disposable repository at
 `.codex-subagent-extension/demo-repository`, and starts the real service with
-only the fixture worker. Its data directory is `.codex-subagent-extension/demo`;
-it makes no model calls. Sign in at
+only the fixture worker. Its data directory is `.codex-subagent-extension/demo`.
+It makes no model calls. Sign in at
 `http://127.0.0.1:4317` with `local-demo-only-not-a-real-token`. Stop any other
 service on port 4317 first.
 
@@ -344,8 +321,8 @@ failure cases, see [Fixture scenarios](fixture-scenarios.md).
 | ------------------------------------ | ----------------------------------------------------------------------- |
 | `src/panel/` in the dev host         | Nothing: Fast Refresh applies it                                        |
 | `src/panel/` in Codex or the console | `npm run build`, then reopen the panel or reload the page               |
-| `src/service/`                       | `npm run dev` restarts automatically; restart `npm start` after a build |
-| `src/shared/`                        | Refresh the panel as above; `npm run dev` restarts automatically        |
+| `src/service/`                       | `npm run dev` restarts automatically. Restart `npm start` after a build |
+| `src/shared/`                        | Refresh the panel as above. `npm run dev` restarts automatically        |
 | Tool metadata or panel resource URI  | Restart the service, then reload the MCP connection in Codex            |
 | `.env` or `vite.config.ts`           | Restart the affected processes                                          |
 
@@ -354,40 +331,19 @@ UI needs no service restart.
 
 ## Build
 
-`npm run build` regenerates validation schemas, cleans `dist/`, and type checks
-the service with `tsc --noEmit`, then runs two builds that write into `dist/` without removing each other's
-output:
+`npm run build` regenerates validation schemas, cleans `dist/`, type checks the
+service, and builds the service entrypoints and `dist/app.html`. Both builds
+reject dependencies from the opposing runtime, development tooling and tests.
 
-- `scripts/build-service.mjs` bundles `src/service/main.ts`, `src/service/stdio.ts` and
-  `src/service/projects-cli.ts` with esbuild into `dist/main.js`, `dist/stdio.js`,
-  `dist/projects-cli.js` and shared `dist/chunks/`. Runtime packages, including the Claude
-  Agent SDK, are bundled, so the package needs no `node_modules`. Node built-ins
-  stay external; `supports-color` is an optional external probe whose absence
-  falls back to the bundled dependency's default behavior. The build fails if code from `dev/`, `src/panel/`,
-  `tests/` or a test file reaches the bundle, or if an unexpected package is left external. It writes the bundled packages' licenses to
-  `dist/THIRD_PARTY_LICENSES.txt`.
-- `scripts/build-panel.mjs` builds the panel into `dist/app.html`. It rejects
-  service, development and test code in the production bundle.
+The service bundle includes its runtime packages and third-party license notices,
+so the extracted package runs without a separate `node_modules` directory. It ships no Claude Code binary.
+Launches use the installed [Claude Code CLI](claude-cli.md). Source maps omit
+embedded sources and map stack traces to the original files.
 
-The package includes the README, agent instructions, `docs/` and the feature-owned
-file-preview README so local documentation links resolve after extraction. It
-does not include service or panel source code.
-
-The package ships no Claude Code binary. Every Claude launch, `npm run dev`
-included, runs the installed CLI that `src/service/features/providers/claude/configuration/executable.ts`
-finds and validates; see [Claude Code CLI](claude-cli.md).
-
-The bundle ships source maps without embedded sources. `npm start`, `mcp.json`
-and the launcher pass `--enable-source-maps`, so stack traces point to `src/`
-files and lines.
-
-`tests/integration/package/packed-artifact.test.ts` packs the current `dist/`,
-extracts it outside the checkout and runs the projects CLI, the stdio proxy
-with launcher auto-start, the panel, the packaged `.env` and a service restart
-against the extracted copy. It also checks that the archive holds no native
-binaries, drives Claude readiness with fake CLIs (at or above the minimum, too old,
-a broken override and none on `PATH`) and, when the host has a supported CLI,
-runs model discovery through it.
+`npm run package:plugin` builds and packs the plugin. The archive includes
+migrations, assets, skills and documentation, but no service or panel source.
+`tests/integration/package/packed-artifact.test.ts` verifies startup, transports,
+CLI readiness and restart behavior from an extracted package outside the checkout.
 
 ## Storage and Claude verification
 
@@ -403,100 +359,42 @@ npm run typecheck
 npm test
 ```
 
-`npm run typecheck` runs the read-only `schemas:check` before checking the service,
-panel, shared modules, development tooling, tests, and Vite configs. `npm test` uses Vitest (`vitest.config.ts`); its
-`pretest` checks schema freshness, formatting, linting and unused code, then
-builds. Fix formatting with `npm run format`. The TypeScript configs enable
-`noImplicitOverride` and `noImplicitReturns`, so overriding members are marked
-`override` and functions that return a value on some paths return explicitly
-on all of them.
+`npm run typecheck` checks schema freshness and TypeScript across production,
+development and test code. `npm test` runs Vitest after checking schema freshness,
+formatting, lint and unused code, then building. To diagnose a preflight failure,
+run `npm run schemas:check`, `npm run format:check`, `npm run lint`,
+`npm run knip` or `npm run build` individually.
 
-They also enable `noUncheckedIndexedAccess`, so an array element or open-record
-value read by index may be `undefined`. Handle that from the data's contract
-rather than silencing it:
+During iteration, run focused tests with `npx vitest run <test-file>`. Watch mode
+(`npm run test:watch`) skips the preflight: regenerate schemas after contract
+edits and build first when a test reads `dist/`.
 
-- Traverse arrays with `for…of` or `entries()`, or destructure and check the
-  element once; a length check doesn't narrow `items[i]`.
-- Type a fixed key set as an exhaustive `Record<Key, Value>`, and a lookup whose
-  key may be absent as `Partial<Record<…>>` with a meaningful fallback.
-- Give a collection that is never empty a tuple type such as
-  `[Event, ...Event[]]`.
-- Make parsers of Git or other external output throw on truncated or malformed
-  input instead of producing empty paths or `NaN`.
-- In tests, destructure and assert presence with `assert.ok(value)` or Vitest's
-  `assert(value)`, which narrow the type; `expect(value).toBeDefined()` doesn't.
+Format edited files with `npx eslint --fix <files>` followed by
+`npx prettier --write <files>`. ESLint also checks Markdown, but cross-file links
+and heading fragments need a separate check after documentation moves.
 
-Use a non-null assertion only for a local invariant the compiler can't see, with
-a comment when it isn't obvious.
+Lint enforces the [runtime boundaries](architecture.md#code-ownership), React hook
+rules and type-aware checks. Use types that reflect the data an input can
+contain, and handle missing values when reading it. TypeScript also checks for
+missing values in indexed reads.
 
-ESLint (`eslint.config.js`) checks TypeScript
-code quality and React hook rules; explicit `any` is allowed only in tests.
-Type-aware rules read the three tsconfigs and catch unhandled or misused
-promises, deprecated APIs, non-exhaustive `switch` statements over unions, and
-values that would stringify as `[object Object]`. They also reject unnecessary
-type assertions and, outside tests, conditions the types say can't vary. When a
-check guards data the static type doesn't describe, such as host input, a
-missing record key or a browser API absent in jsdom, make the type say so
-(`Partial<Record>`, `.at()`, `unknown`) or test with `typeof` rather than
-disabling the rule. Pass async event handlers
-through `controller.run` or `controller.handle` so failures are reported, and
-narrow untyped event data with `scalarText` from `src/shared/text.ts`. A full
-`npm run lint` takes about 10 seconds.
-It rejects nested ternaries, and in panel JSX it rejects inline handlers whose
-`{ … }` body holds more than one expression, or any other statement such as
-`if`; move those into a named function. Empty no-ops and one-expression bodies,
-such as `(element) => { ref.current = element; }`, stay inline.
-Statements that fit on one line, such as `if (!task) return;`, may omit braces;
-a body on another line, or one spanning several lines, needs braces, and every
-branch of an `if`/`else` follows the same choice.
-It also checks Markdown with `@eslint/markdown`'s recommended rules, such as
-invalid same-file heading fragments, code fences without a language and malformed
-tables. It does not check that links to other files exist or that their heading
-fragments resolve; check those after documentation moves.
-The `project/source-boundaries` rule in `scripts/lint/source-boundaries.mjs`
-resolves import targets before enforcing the runtime ownership described in
-[Architecture](architecture.md#code-ownership). Service-owned panel integration
-under `src/service/platform/panel/` remains service code. Run `npm run lint`
-after moving modules to catch accidental imports across runtime boundaries.
+Lint limits file length and code complexity.
+Lower or remove exceptions when refactoring. Explain any increase needed for a change. Remove stale
+complexity suppressions with `npx eslint . --prune-suppressions`. If Knip reports a
+file loaded by path as unused, declare its entry point in `knip.json`.
 
-TypeScript under `src/` and `dev/` uses max-lines (400 nonblank, noncomment lines)
-and complexity (20) ceilings; tests and `*.generated.ts` files are exempt. These
-rules act as a ratchet. Existing complexity findings are counted in
-`eslint-suppressions.json`; normal lint rejects new findings. Lower or remove a
-per-file line ceiling when refactoring, and do not raise one to make a change pass
-without stating the review reason. Remove stale complexity exceptions with
-`npx eslint . --prune-suppressions`.
+Unit tests have a 15-second timeout. Integration suites have 60 seconds for
+process and worktree setup. Keep shared colocated test setup in a
+`<module>-test-harness.ts` file. These harnesses are treated as test code by lint,
+type checks and builds.
 
-`npm run knip` reports unused files, dependencies and exports. Its entry points
-in `knip.json` are the build entries, the panel dev host's HTML entries, the
-fixture service Vite loads by path, `scripts/` and schema-generation configs.
-Remove an export nothing imports, or drop `export` when only its own module uses
-it; add an entry when a file is loaded by path rather than imported.
+Compare DOM nodes with Vitest's `expect`, not Node's assertion equality methods:
+formatting a failed Node assertion can hang on jsdom's document graph. Use `toBe`
+for identity, `toEqual` for structural equality and `toBeNull` for absence.
 
-Vitest has two projects. Unit tests time out after 15 seconds, and
-`tests/integration` gets 60 seconds because those suites spawn processes and
-worktrees. Keep a unit test under the shorter limit, and move a suite that
-needs longer into `tests/integration`.
-
-Put setup shared by colocated tests in a `<module>-test-harness.ts` file beside
-the module. Lint, type checks and the panel build treat these files as test
-code. For example, tests that drive a real panel `Controller` use `setup()`,
-`FakeTransport` and the `task()` builder from
-`src/panel/app/state/controller-test-harness.ts`.
-
-Compare DOM nodes with Vitest's `expect`, not Node's `assert` equality methods.
-A failed Node assertion can format jsdom's document graph, including for
-identity and `null` checks, and block the worker until it is killed; a timeout
-cannot interrupt it. `expect(node).toEqual(otherNode)` compares nodes with
-`isEqualNode()`. Use `toBe` when identity matters and `toBeNull` for absence.
-
-`npm run dev` regenerates schemas at startup. `npm run test:watch` reruns affected
-tests on save without the preflight: run `npm run schemas:generate` after contract
-edits, and build first when a test reads `dist/`.
-
-UI checks are described in [UI verification](ui-verification.md). Opt-in tests
-against real Claude make model calls; see
-[Live Claude checks](claude-verification.md#live-claude-checks).
+Use [UI verification](ui-verification.md) for browser checks and
+[Claude execution verification](claude-verification.md#live-claude-checks) for
+opt-in tests that make model calls.
 
 ## Troubleshooting
 
@@ -506,8 +404,8 @@ against real Claude make model calls; see
 | Dev host live mode logs 401                    | Vite and the service use different data directories, so the token does not match                    |
 | Codex shows different tasks than the dev host  | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                                         |
 | Service exits on start                         | Another service owns the data directory, or the port is taken (for example, the demo)               |
-| `npm test` fails before running tests          | Schema freshness, formatting, lint, or build preflight failed; run the checks individually          |
+| `npm test` fails before running tests          | Schema freshness, formatting, lint, or build preflight failed. Run the checks individually          |
 | Missing or stale generated schema              | Run `npm run schemas:generate`, then `npm run schemas:check`                                        |
-| No schema contracts found under `src`          | Run the command from the project root; check that source files use `*-contract.ts`                  |
+| No schema contracts found under `src`          | Run the command from the project root. Check that source files use `*-contract.ts`                  |
 | Permissive validator rejected                  | Put imported types in a discovered `*-contract.ts` file, or add a feature-owned handwritten mapping |
-| Duplicate mapping or generated-output conflict | Remove the duplicate mapping; discovered contracts already map to their generated validators        |
+| Duplicate mapping or generated-output conflict | Remove the duplicate mapping. Discovered contracts already map to their generated validators        |

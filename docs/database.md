@@ -1,42 +1,35 @@
 # Database and migrations
 
-For contributors changing durable storage. This guide owns schema changes,
-transaction rules and event notification semantics. For operational backups
+Use this guide when changing durable storage, migrations, transactions or
+event notifications. For operational backups
 and continuation, see [Task continuation](task-continuation.md).
 
 ## Connection and ownership
 
 The service and the projects CLI share `<data directory>/console.sqlite`.
-`openDatabase` in `src/service/platform/database/database.ts` opens it, sets WAL,
-foreign keys and a 5-second busy timeout, and applies pending migrations
-before any feature reads it.
+The shared connection enables WAL and foreign keys and applies pending
+migrations before any feature reads it.
 
-- Each feature declares its tables with Drizzle in its own `schema.ts`;
+- Each feature declares its tables with Drizzle in its own `schema.ts`.
   `src/service/platform/database/schema.ts` collects them for drizzle-kit.
-- Each feature queries only its own tables, through the shared `Database`:
-  tasks and events in `tasks/storage/store.ts`, and settings and
-  project roots in their services. Other features read tasks and events
-  through `Store`. Queries use Drizzle; raw SQL is kept where it is clearer,
-  such as the JSON predicates in `Store.chatEvents`.
+- Each feature queries only its own tables through the shared `Database`. Read
+  another feature's data through its service or store. Use Drizzle for queries,
+  with raw SQL where it is clearer.
 
 ## Read validation and errors
 
-- JSON columns are checked when read (`decodeStored` in
-  `src/service/platform/database/decode.ts`, with each feature's schema). A malformed
-  record fails with an error naming it, and is never dropped or given
-  defaults. The schemas check the fields ownership and control flow rely on
-  and pass the rest, such as provider state and event data, through
-  unchanged.
-- Drizzle query failures throw SQLite's own error (such as
-  `FOREIGN KEY constraint failed`), not Drizzle's wrapper, whose message
-  holds the SQL and its parameters.
+- Validate stored JSON on read. Malformed records must fail with an error naming
+  the record. Check fields needed for ownership and control flow while preserving opaque provider state
+  and event data.
+- Query failures expose SQLite's underlying error. Keep SQL parameters and stored
+  values out of API errors and logs.
 
 ## Change a schema
 
 1. Edit the owning feature's Drizzle schema.
 2. Run `npm run db:generate -- --name <change>`. Review the SQL: SQLite
-   rebuilds a table for many column changes. Data backfills need a custom
-   migration (`npx drizzle-kit generate --custom --name <change>`).
+   rebuilds a table for many column changes. Use a custom migration for data backfills:
+   `npx drizzle-kit generate --custom --name <change>`.
 3. Run the focused database and affected feature tests. Include the new folder
    under `migrations/` in any requested commit. Never edit a committed migration.
 
@@ -45,25 +38,25 @@ before any feature reads it.
 - `src/service/platform/database/migrate.ts` applies migrations in one
   `BEGIN IMMEDIATE` transaction and records them in Drizzle's
   `__drizzle_migrations` ledger, so a service and a CLI starting together
-  migrate once. It refuses a database whose ledger names a migration this
-  build lacks.
-- This checkout starts from a fresh baseline because the app has not launched.
-  Databases with an earlier migration history or created before versioned
-  migrations are not upgraded; remove their data directory to start over.
-- `migrations/` ships in the package and is read with `packagePath`, so
-  source checkouts and installed packages use the same folder.
+  migrate once. Known migration histories receive any pending migrations.
+- Startup rejects databases created before versioned migrations and histories
+  containing migrations this build lacks. For an unrecognized history, use a
+  build containing those migrations. Otherwise start with a fresh data directory.
+- `migrations/` ships in the package. Source checkouts and installed packages use
+  the same migration files.
 
 ## Transactions and notifications
 
 Write a task change and the events that record it in one
 `store.transaction(() => …)`, so they commit together. Transactions are
 synchronous and don't nest: run Git, provider and network work before
-opening one, and call helpers that write events inside it rather than opening
-another.
+opening one, and have event-writing helpers use that transaction.
 
 Event listeners on `store.bus` hear an event only after its transaction
-commits, in order, and never one that rolled back. A notification is a hint
-that rows exist: a listener that throws is logged without affecting the
-commit or other listeners, and consumers recover what they miss from the
-database: long polls re-read it, and panels refresh when the owner's revision
-changes. `change` follows the same rules, once per owner per transaction.
+commits, in order, and never one that rolled back. If a listener throws, the
+service logs the error without affecting the commit or other listeners.
+
+Notifications tell consumers to read stored results. Consumers recover missed
+updates from the database through long polls or panel refreshes when the
+owner's revision changes. `change` follows the same notification rules, once per
+owner per transaction.

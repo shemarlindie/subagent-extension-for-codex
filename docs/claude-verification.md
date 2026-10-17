@@ -1,8 +1,8 @@
 # Claude execution verification
 
-For maintainers qualifying a Claude CLI or Agent SDK update and running native
-execution checks. These procedures make authenticated model calls; ordinary
-local checks are in [Development](development.md#checks).
+Use this guide to verify compatibility after a Claude CLI or Agent SDK update
+and to check native execution. The live checks make authenticated model calls.
+For ordinary local checks, see [Development](development.md#checks).
 
 ## Qualifying Claude Code versions
 
@@ -13,7 +13,8 @@ SDK no longer matches that version, so an SDK update requires compatibility
 checks. Run these checks when updating the SDK or changing the minimum:
 
 1. Run `npm run typecheck` and `npm test`. Recorded fixtures cover the SDK message mapping, and the
-   packed-artifact suite runs model discovery through the host's CLI.
+   packed-artifact suite checks model discovery when a supported host CLI is
+   available. That check is skipped otherwise.
 2. Run the [live Claude checks](#live-claude-checks) with that
    version selected (through `PATH` or `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`).
    They cover reads, resume, the sandbox, MCP, budgets and CLI parity
@@ -44,7 +45,7 @@ CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs pa
 Tasks run on `haiku` at `medium` effort to keep checks cheap. Set
 `CODEX_SUBAGENT_EXTENSION_LIVE_MODEL` (a model ID or alias) or
 `CODEX_SUBAGENT_EXTENSION_LIVE_EFFORT` (`default` or a reasoning level) to
-override them; an empty value inherits the Claude Code default:
+override them. An empty value inherits the Claude Code default:
 
 ```sh
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 CODEX_SUBAGENT_EXTENSION_LIVE_MODEL=sonnet \
@@ -52,17 +53,15 @@ CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 CODEX_SUBAGENT_EXTENSION_LIVE_MODEL=sonne
 ```
 
 The `parent` scenario verifies the injected SDK tool queues a message with no
-permission prompt. It does not exercise the Codex host bridge; use an open
+permission prompt. It does not exercise the Codex host bridge. Use an open
 thread panel for that check.
 
-Each uses a temporary Git fixture and a native cost limit of $0.25, or $0.50 for
-parity. The budget scenario sets $0.001 and expects budget failure. Claude checks
-cost after a response, so it can exceed the configured amount; this is not a
-hard billing cap. These checks are excluded from the ordinary test suite.
+Each scenario uses a temporary Git fixture and a small native cost limit. The budget
+scenario deliberately expects budget failure. Cost is checked after a response
+and can exceed the limit. These checks are excluded from the ordinary test suite.
 
-The sandbox scenario enables the extension sandbox, approves only its five
-exact fixture commands, denies unexpected permissions and uses a local listener.
-Parity uses default settings and project-local skill, `.mcp.json` stdio server
-and `PreToolUse` hook fixtures; it approves only fixture tools and checks a
-subagent run. Select a CLI with `PATH` or
-`CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH` when qualifying versions.
+The sandbox scenario enables the extension sandbox, permits only expected
+fixture commands and uses a local listener.
+Parity uses default settings with project-local fixtures for a skill, a
+`.mcp.json` stdio server and a `PreToolUse` hook. It approves only fixture tools and checks a
+subagent run.

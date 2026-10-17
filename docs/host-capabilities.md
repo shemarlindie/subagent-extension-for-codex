@@ -1,35 +1,25 @@
 # Host capabilities
 
-Use this guide when integrating a host or assessing a host capability claim.
-It separates implemented repository behavior from capabilities that depend on
-the connected host. External references describe the documentation and source
-they cite; they are not a compatibility claim for every desktop release.
+Use this guide to integrate a host or assess which capabilities have been
+verified. Host support can differ from the behavior implemented in this
+repository. External references document the cited source or specification
+without establishing compatibility with every desktop release.
 
-For system responsibilities see [Architecture](architecture.md); for panel
+For system responsibilities see [Architecture](architecture.md). For panel
 behavior see [Panel guide](panel-guide.md).
 
 ## Panel surfaces
 
 `src/service/platform/panel/panel.ts` advertises `inline` and `fullscreen` and prefers
-`inline`. `open_codex_subagent_extension` exposes the thread entrypoint;
+`inline`. `open_codex_subagent_extension` exposes the thread entrypoint.
 `open_codex_subagent_extension_global` is app-only and exposes the global
 entrypoint. Task creation also attaches the panel resource and selects the new
-task on Chat. Display-mode preferences are hints; the host owns physical placement.
-
-The inline widget and expanded panel display the extension interface. The inline
-widget includes a compact summary. Codex owns the container and placement;
-display-mode requests do not guarantee desktop pane geometry.
+task on Chat. Display-mode preferences are hints. The host owns physical placement.
 
 ### Sidebar icon
 
-The **Delegated Work** sidebar icon is set by the `icons` field on the
-`open_codex_subagent_extension_global` MCP tool in
-`src/service/platform/panel/panel.ts`. Its
-`_meta["openai/ui"].entrypoints: [{ type: "global" }]` registers the sidebar entry.
-
-The icon array, `productGlyphIcons`, comes from
-`src/service/platform/server/product-glyph.ts`. It encodes these SVG files as
-base64 data URIs with theme metadata:
+The global MCP entrypoint supplies theme-specific assets for the **Delegated
+Work** sidebar icon:
 
 - Light theme: [`brand-glyph-black.svg`](../assets/brand/brand-glyph-black.svg).
 - Dark theme: [`brand-glyph-white.svg`](../assets/brand/brand-glyph-white.svg).
@@ -42,49 +32,42 @@ the MCP connection.
 
 ## Panel network access
 
-In Codex desktop, the embedded panel uses a fixed sandbox CSP and cannot connect directly to the loopback service. All panel
-reads and writes therefore use the authenticated MCP Apps bridge. The panel
+Codex desktop's fixed sandbox CSP blocks direct connections from the embedded
+panel to the loopback service. All panel reads and writes use the authenticated
+MCP Apps bridge. The panel
 learns of changes and streaming replies through one `wait_user_agent_updates`
-long poll at a time; the standalone console uses HTTP and SSE. See
+long poll at a time. The standalone console uses HTTP and SSE. See
 [Transport](panel-guide.md#transport) for refresh behavior.
 
-Update waits hold at most 25 seconds. Transport timeouts add a 10-second margin
-for these calls; the stdio proxy's ordinary service timeout is 30 seconds.
-These limits are implemented contracts, not a guarantee that every host permits
-long-lived calls. The panel requires no browser bearer token.
+The panel requires no browser bearer token. Host support for long-lived MCP
+calls must be verified separately. The service's wait contract is in the
+[MCP reference](mcp-reference.md#app-and-user-authority).
 
 ## Worker messages to the parent chat
 
-Claude receives `mcp__codex_parent__message_parent` and environment instructions
-for task identity, workspace, parent conversation and delivery limits. Claude
-can send important blocker updates immediately; it holds one completion report
-in memory until the turn completes successfully. Failed or interrupted turns
-discard that pending completion report. Each persisted report becomes a durable
-`parent.message` event. While a thread-scoped embedded panel is
-mounted, connected and advertises `openai/message`, each refresh claims the
-queued ID-only notifications one at a time and sends each through `App.sendMessage` with
-`_meta["openai/message"]: { target: "active", send: true }`. Ordinary **Ask Codex**
-uses the portable bridge call, which puts the worker message into the composer
-or queue. Automatic submission uses the OpenAI extension capability explicitly:
-with `send: true`, the host accepts the message and queues it while the parent
-turn is active. The message API has no steer option. After the parent turn ends,
-the first queued message arrives as an MCP App message and starts the next
-parent turn. Delivery to a thread that is already idle when the message is sent
-is untested.
-The mounted panel attempts parent delivery when the service changes and on its
-30-second fallback timer, even while hidden or busy; UI reads can remain
-paused. Host suspension or panel teardown can stop both, so this does not
-establish background host delivery.
-Global panels and the standalone console do not forward worker messages.
+A mounted, connected thread panel can forward ID-only worker notifications
+through `App.sendMessage` when the host advertises `openai/message`. Automatic
+submission uses `_meta["openai/message"]: { target: "active", send: true }`.
+**Ask Codex** uses the portable bridge call to place text in the composer or queue.
 
-The host uses a user-message envelope, so the notification identifies its worker-report source, task
-and stable message ID, and directs the parent to retrieve the stored report.
-Polling returns the same report ID; see [MCP reference](mcp-reference.md#provider-messages-to-the-parent)
+With automatic submission, Codex has been observed accepting messages into the
+queue during an active parent turn. After that turn ends, the first queued
+message arrives as an MCP App message and starts the next parent turn. The API
+has no steer option. Delivery to an already idle thread is untested.
+
+The panel attempts delivery on service changes and a fallback timer, including
+while hidden or busy. Host suspension or panel teardown can stop it. Global
+panels and the standalone console do not forward worker messages.
+
+The host delivers notifications as user messages. Each notification identifies
+its worker source, task and stable message ID and tells the parent to retrieve
+the stored report.
+Polling returns the same report ID. See [MCP reference](mcp-reference.md#provider-messages-to-the-parent)
 for retrieval, polling supervision and durable acknowledgement.
-Worker content does not grant user authority. A claim is persisted before sending to prevent duplicate attempts from multiple panels. The panel rechecks acknowledgement before submission and records a skip if
-already processed. It records host acceptance or failure; an ambiguous failure or teardown is not
-automatically retried. Claims are single-attempt delivery records, so interrupted delivery can be lost
-even though the report remains available through polling.
+The service saves a claim before sending so multiple panels cannot attempt the
+same notification. It records host acceptance and delivery failures. An ambiguous
+failure or panel teardown does not trigger an automatic retry. The report remains available
+through polling even when notification delivery is lost.
 
 Delivery while a panel is closed, unrendered, offscreen, or in another chat is
 unverified. A queued result does not mean Codex received the message or began a
@@ -97,7 +80,7 @@ repository identity. See the [host-context reference](https://apps.extensions.mo
 An extra host property, a model-supplied directory, and a conversation identifier
 are not access grants.
 
-The implemented optional Codex adapter advertises
+The optional Codex adapter advertises
 `capabilities.experimental["codex/sandbox-state-meta"]`. It consumes
 `sandboxCwd` as a local `file:` URI, resolves its canonical Git root, and validates
 it against approved projects. Unsupported, malformed, unavailable and unapproved
@@ -116,46 +99,36 @@ and the reviewed `rust-v0.160.0` release:
   establish the camelCase cwd field and file-URI representation.
 
 Public CLI/core source does not prove metadata delivery in a particular closed
-source desktop installation. This adapter reads directory context only; it does
+source desktop installation. This adapter reads directory context only. It does
 not inherit a host permission profile.
 
 Conversation correlation prefers an explicit argument, then the documented
 optional [`openai/session`](https://developers.openai.com/plugins/reference), then
 Codex `threadId`. `sessionId` is not used as a substitute for `threadId`.
-An explicitly selected owned task supplies its own scope; conflicting explicit
-repository, revision or conversation arguments reject. Explicit
+An explicitly selected owned task supplies its own scope. Conflicting explicit
+repository, revision or conversation arguments cause an error. Explicit
 `conversation_id: null` bypasses host correlation and means all chats.
 Global launches ignore ambient chat/directory context. Same-chat history can
-supply defaults; unrelated global task history cannot.
+supply defaults. Unrelated global task history cannot.
 
-Read-only context resolution may return an **Add chat project** suggestion but
-never registers it. Registration is available through:
+Read-only context resolution can suggest **Add chat project**, but never registers
+it. Registration requires a user action or the configured task-start policy.
+[Repository access](configuration.md#repository-access) owns these rules.
+`get_current_agent_project` reports registration and task-start policy without
+changing either. Model-supplied paths cannot grant access or trigger automatic
+registration.
 
-- Panel **Add project**, the local projects CLI, or configured approved roots.
-- **Browse…** in Advanced task: the native macOS folder picker registers the selected
-  root and selects it for the draft. It does not start the task. The dialog runs
-  on the service machine; other platforms use the path field.
-- **Automatically add chat projects**, a user-only persistent setting, enabled
-  by default. It registers the host's local Git root when a task starts for that
-  root from the chat. Only original transport directory metadata can trigger
-  this policy; task paths and `host_directory` arguments cannot. Read-only calls
-  never trigger it. Disabling it retains existing registrations.
-
-`get_current_agent_project` is read-only and reports whether the host root is
-registered and whether task-start registration is enabled. All registration
-routes preserve canonical-path and Git-root validation. A repository grant
-covers that root; an explicitly approved parent grant can cover child repositories.
-MCP hosts must enforce app-only visibility; the generic model API rejects
-user-only operations.
+The native macOS folder picker runs on the service machine and registers the
+selected root without starting a task. Other platforms use the path field.
 
 ## Composer mentions
 
 Both transports expose app-only `search_mentions` and the Claude resource link.
 Search accepts worker/profile terms and the server name as an alias, and returns
 Claude when the reviewer profile is available. A selected mention is a provider
-hint; it selects no repository and changes no permissions.
+hint. It selects no repository and changes no permissions.
 
-The server appears in the desktop picker; delivery of the selected item and the
+The server appears in the desktop picker. Delivery of the selected item and the
 full delegation flow are unverified.
 Use ordinary MCP tools and the delegation skill when mentions are unavailable.
 The [extension guide](https://developers.openai.com/plugins/build/extensions)
@@ -164,26 +137,23 @@ describe the intended host surface.
 
 ## Plugin startup and hooks
 
-The distributable includes root `plugin.json`, `mcp.json`, compiled `dist`,
-migrations, assets and `skills`. `mcp.json` launches `dist/stdio.js`, which connects
-to or starts the shared local service. Disconnecting stdio does not stop the
-service or its tasks. The launcher's cwd belongs to the installed package and
-cannot identify the current chat project. A local install does not deploy a
-service to an unrelated cloud machine.
+`mcp.json` launches the packaged stdio proxy, which connects to or starts the
+shared local service. Disconnecting stdio leaves the service and tasks running.
+The launcher's cwd belongs to the installed package and cannot identify the
+current chat project. See [Build](development.md#build) for package contents.
 
-There are no packaged lifecycle hooks or native settings entrypoint. The panel is the settings editor. Project context comes from the explicit and validated metadata paths described above. See [plugin packaging](https://developers.openai.com/plugins/build/plugins).
+Use the panel to edit settings. The package has no lifecycle hooks or native
+settings entrypoint. Project context comes from explicit arguments and validated
+host metadata, as described above. See
+[plugin packaging](https://developers.openai.com/plugins/build/plugins).
 
 ## Verification boundary
 
-Transport/context tests establish explicit precedence, scope isolation, validation
-and protocol behavior. Browser fixtures establish rendering without paid workers.
-Live UI checks must cover the inline widget and expanded panel: layout, host styles,
-sidebar launch, display-mode switching, chat/project scope, the macOS folder picker
-and parent-message delivery. Sidebar startup works; that does not establish
-placement or folder-selection behavior. The folder picker runs on the service
-machine, separately from Codex presentation. Composer mention checks cover
-selection and handoff; search results alone do not establish that flow. Do not
-infer support from a product name or an installed library version alone.
+Transport/context tests establish precedence, scope isolation, validation and
+protocol behavior. Browser fixtures establish rendering without paid workers.
+Neither proves host placement, folder-selection behavior, mention handoff or
+background message delivery. Sidebar startup has been observed. Mention search
+results alone do not establish selection and handoff.
 
 [UI verification](ui-verification.md#measurement-and-checks-in-codex) lists the
 checks to run in Codex, and [What reloads when](development.md#what-reloads-when)
