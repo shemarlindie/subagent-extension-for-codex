@@ -1,3 +1,5 @@
+import type { StructuredPatchHunk as Hunk } from "diff";
+
 import type {
   EventEmitter,
   OpaqueEventEmitter,
@@ -17,7 +19,19 @@ export interface Steer {
   text: string;
 }
 
+export interface FileEdit {
+  path: string;
+  hunks: Hunk[];
+  created?: true;
+  deleted?: true;
+  source: "tool" | "command";
+}
+
 export interface RunContext {
+  /** Records a tool edit durably in the task and latest turn. */
+  fileChanged(edit: FileEdit): void;
+  /** Reports an edit whose diff could not be captured. */
+  editUnrecorded(path?: string, source?: FileEdit["source"]): void;
   task: Task;
   /** Aborted to interrupt the turn, which then ends as interrupted. */
   signal: AbortSignal;

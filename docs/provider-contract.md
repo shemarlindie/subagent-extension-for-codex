@@ -7,7 +7,7 @@ checks, see [Claude execution verification](claude-verification.md).
 
 Implement the internal `Provider` contract in `src/service/features/providers/types.ts` and register the provider in `src/service/features/providers/config.ts`.
 
-The shared control plane owns scheduling, dependencies, workspaces and snapshots, budget checks, task ownership and persistence. It also manages conversation messages, steers, drafts and input serialization. Providers own model discovery, native execution, session creation and deletion, and native permissions.
+The shared control plane owns scheduling, dependencies, workspaces, recorded diffs, budget checks, task ownership and persistence. It also manages conversation messages, steers, drafts and input serialization. Providers own model discovery, native execution, session creation and deletion, and native permissions.
 
 ## A turn
 
@@ -36,6 +36,48 @@ Queueing a report does not confirm host delivery, and providers cannot
 acknowledge it for the parent. See [parent message delivery](mcp-reference.md#provider-messages-to-the-parent)
 for retrieval and acknowledgement, and the `RunContext` interface for callback
 signatures.
+
+## Recording file edits
+
+Report each successful text edit through `RunContext.fileChanged(edit)`. `FileEdit`
+contains the tool-reported `path`, unified-diff `hunks` against the file just before
+that edit, optional `created` and `deleted` flags, and `source: "tool" | "command"`.
+Use `editUnrecorded(path, source)` when the changed file is known but its hunks
+are unavailable. Pass `"tool"` for an edit tool so an incomplete capture keeps
+its provenance. The optional source defaults to `"command"`. Omit the path when
+a command changed files it could not name.
+
+The control plane resolves paths through `realpath`, including deleted files
+through their parent directory, and drops paths outside the task workspace or
+inside `.git`. It composes each edit into durable task and latest-turn diffs
+immediately. Turn start clears only latest-turn rows. Steers the CLI executes as
+extra turns stay attributed to the current service turn. Failed and interrupted
+turns retain their edits. Providers must close execution at turn end so background
+subagents cannot keep editing between turns.
+
+Claude records edits in a `PostToolUse` hook alongside its permission hook. The
+hook maps `tool_response` through the pure `claudeFileEdits` function, including
+subagent calls. Main-worker stream results support fixture replay, but subagent
+stream results lack the response data needed for recording. Recording errors are
+logged and never block or deny a tool.
+
+The mapper reads `Write` and `Edit` structured patches, computes patches for
+notebook JSON and writes without patches, and reads Bash `bashEditDiff` entries.
+Claude runs with the `bashEditDiffEnabled` flag setting. Errored results and staged
+writes are skipped, as are no-op edits. Patch computation uses three context lines
+and discards full text after producing hunks. Git-relative `gitDiff` status does
+not determine whether an edit created a file.
+
+Claude maps Bash responses with `bashEditDiff.unavailable` or
+`bashEditDiff.skipped` to an unknown-files warning. A skipped diff can represent
+a real checkout edit, such as `git restore file.txt`. Other Git command forms
+can provide precise hunks or no edit data, so the provider follows the reported
+response fields instead of inferring changes from the command text.
+
+The changes feature owns composition and persistence. A contradictory or missing
+edit makes that file incomplete and clears its hunks. Later edits cannot restore
+that scope's diff. See [change tools](mcp-reference.md) for reads
+and recording limits.
 
 ## Lifecycle policy
 

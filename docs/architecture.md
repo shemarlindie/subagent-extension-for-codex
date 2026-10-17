@@ -41,6 +41,7 @@ provider. Worker discovery lists its supported features and limits.
 | `src/service/features/tasks`             | Task lifecycle, scheduling, draft delivery, input and storage                |
 | `src/service/features/providers`         | Provider contracts, settings, task policy and Claude integration             |
 | `src/service/features/projects`          | Approved roots, registration and host-project policy                         |
+| `src/service/features/changes`           | Recorded tool edits, running task and turn diffs and durable storage         |
 | `src/service/features/workspaces`        | Git workspaces, snapshots and change inspection                              |
 | `src/service/features/settings`          | User defaults and settings document                                          |
 | `src/service/platform/server`            | HTTP/MCP authentication, transport and tool dispatch                         |

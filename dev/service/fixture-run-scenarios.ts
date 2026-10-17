@@ -1,6 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { structuredPatch } from "diff";
+
 import type { RunContext } from "../../src/service/features/providers/types.js";
 import type { readFixtureTaskOptions } from "./fixture-provider-policy.js";
 import type { FixtureRunEvents } from "./fixture-run-events.js";
@@ -173,6 +175,21 @@ export async function runFixtureActions(
       `# Fixture change\n\nGenerated for task ${c.task.id}, turn ${c.task.turn}.\n`,
       { flag: "wx" },
     );
+
+    c.fileChanged({
+      path: relativePath,
+      source: "tool",
+      created: true,
+      hunks: structuredPatch(
+        "",
+        "",
+        "",
+        `# Fixture change\n\nGenerated for task ${c.task.id}, turn ${c.task.turn}.\n`,
+        undefined,
+        undefined,
+        { context: 3 },
+      ).hunks,
+    });
 
     events.emitActivity("files_persisted", { files: [relativePath] });
     actions.push(`Created ${relativePath} in the isolated task worktree.`);

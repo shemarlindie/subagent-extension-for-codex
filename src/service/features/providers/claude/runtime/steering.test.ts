@@ -78,6 +78,8 @@ async function context() {
   };
 
   const c: RunContext = {
+    fileChanged: () => {},
+    editUnrecorded: () => {},
     task,
     signal: abort.signal,
     emit: (type) => events.push({ type }),

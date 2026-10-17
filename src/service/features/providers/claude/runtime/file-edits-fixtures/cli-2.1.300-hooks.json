@@ -1,0 +1,37 @@
+{
+  "source": {
+    "cli": "2.1.300",
+    "sdk": "0.3.300",
+    "capture": "PostToolUse responses from authenticated edits verification on 2026-10-17. The run exposed the skipped Git diff shape.",
+    "sanitization": "Workspace paths replaced with /demo/project. Subagent identity replaced with a fixed marker. Tool responses otherwise preserved."
+  },
+  "cases": [
+    {
+      "tool": "Write",
+      "response": {
+        "type": "create",
+        "filePath": "/demo/project/subagent.txt",
+        "content": "sub",
+        "structuredPatch": [],
+        "originalFile": null,
+        "userModified": false
+      },
+      "agentId": "fixture-subagent"
+    },
+    {
+      "tool": "Bash",
+      "response": {
+        "stdout": "",
+        "stderr": "",
+        "interrupted": false,
+        "isImage": false,
+        "noOutputExpected": false,
+        "bashEditDiff": {
+          "files": [],
+          "moreFiles": 0,
+          "skipped": true
+        }
+      }
+    }
+  ]
+}

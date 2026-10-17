@@ -1,0 +1,202 @@
+{
+  "source": {
+    "cli": "2.1.300",
+    "sdk": "0.3.300",
+    "capture": "Main-worker tool_use_result values from the authenticated edits scenario on 2026-10-17. The scenario stopped at its old read-only git-status assertion.",
+    "sanitization": "Workspace paths replaced with /demo/project. One 3 MB originalFile replaced with a size marker. Other response fields preserved."
+  },
+  "cases": [
+    {
+      "tool": "Write",
+      "response": {
+        "type": "create",
+        "filePath": "/demo/project/created.txt",
+        "content": "hello",
+        "structuredPatch": [],
+        "originalFile": null,
+        "userModified": false
+      }
+    },
+    {
+      "tool": "Edit",
+      "response": {
+        "filePath": "/demo/project/created.txt",
+        "oldString": "hello",
+        "newString": "hello world",
+        "originalFile": "hello",
+        "structuredPatch": [
+          {
+            "oldStart": 1,
+            "oldLines": 1,
+            "newStart": 1,
+            "newLines": 1,
+            "lines": [
+              "-hello",
+              "\\ No newline at end of file",
+              "+hello world",
+              "\\ No newline at end of file"
+            ]
+          }
+        ],
+        "userModified": false,
+        "replaceAll": false
+      }
+    },
+    {
+      "tool": "Write",
+      "response": {
+        "type": "update",
+        "filePath": "/demo/project/write-update.txt",
+        "content": "one\n2\nthree\n",
+        "structuredPatch": [
+          {
+            "oldStart": 1,
+            "oldLines": 3,
+            "newStart": 1,
+            "newLines": 3,
+            "lines": [" one", "-two", "+2", " three"]
+          }
+        ],
+        "originalFile": "one\ntwo\nthree\n",
+        "userModified": false
+      }
+    },
+    {
+      "tool": "Edit",
+      "response": {
+        "filePath": "/demo/project/edit-created.txt",
+        "oldString": "",
+        "newString": "created by edit",
+        "originalFile": "",
+        "structuredPatch": [
+          {
+            "oldStart": 1,
+            "oldLines": 0,
+            "newStart": 1,
+            "newLines": 1,
+            "lines": ["+created by edit", "\\ No newline at end of file"]
+          }
+        ],
+        "userModified": false,
+        "replaceAll": false
+      }
+    },
+    {
+      "tool": "Edit",
+      "response": {
+        "filePath": "/demo/project/large.txt",
+        "oldString": "line 3 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "newString": "LINE 3",
+        "originalFile": "[fixture: 3,108,890-byte original omitted]",
+        "structuredPatch": [
+          {
+            "oldStart": 1,
+            "oldLines": 7,
+            "newStart": 1,
+            "newLines": 7,
+            "lines": [
+              " line 0 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              " line 1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              " line 2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              "-line 3 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              "+LINE 3",
+              " line 4 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              " line 5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              " line 6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            ]
+          }
+        ],
+        "userModified": false,
+        "replaceAll": false,
+        "contentNotInModelContext": true
+      },
+      "notes": [
+        "The large originalFile was replaced with a size marker. Mapping uses the captured structuredPatch."
+      ]
+    },
+    {
+      "tool": "NotebookEdit",
+      "response": {
+        "new_source": "print(2)",
+        "old_source": "print(1)\n",
+        "cell_type": "code",
+        "language": "python",
+        "edit_mode": "replace",
+        "cell_id": "c1",
+        "error": "",
+        "notebook_path": "/demo/project/nb.ipynb",
+        "original_file": "{\n \"cells\": [\n  {\n   \"cell_type\": \"code\",\n   \"id\": \"c1\",\n   \"metadata\": {},\n   \"source\": [\n    \"print(1)\\n\"\n   ],\n   \"outputs\": [],\n   \"execution_count\": null\n  }\n ],\n \"metadata\": {\n  \"kernelspec\": {\n   \"name\": \"python3\",\n   \"display_name\": \"Python 3\",\n   \"language\": \"python\"\n  },\n  \"language_info\": {\n   \"name\": \"python\"\n  }\n },\n \"nbformat\": 4,\n \"nbformat_minor\": 5\n}",
+        "updated_file": "{\n \"cells\": [\n  {\n   \"cell_type\": \"code\",\n   \"id\": \"c1\",\n   \"metadata\": {},\n   \"source\": \"print(2)\",\n   \"outputs\": [],\n   \"execution_count\": null\n  }\n ],\n \"metadata\": {\n  \"kernelspec\": {\n   \"name\": \"python3\",\n   \"display_name\": \"Python 3\",\n   \"language\": \"python\"\n  },\n  \"language_info\": {\n   \"name\": \"python\"\n  }\n },\n \"nbformat\": 4,\n \"nbformat_minor\": 5\n}"
+      }
+    },
+    {
+      "tool": "Bash",
+      "response": {
+        "stdout": "",
+        "stderr": "",
+        "interrupted": false,
+        "isImage": false,
+        "noOutputExpected": false,
+        "bashEditDiff": {
+          "files": [
+            {
+              "filePath": "/demo/project/command-created.txt",
+              "hunks": [
+                {
+                  "oldStart": 0,
+                  "oldLines": 0,
+                  "newStart": 1,
+                  "newLines": 1,
+                  "lines": ["+made"]
+                }
+              ],
+              "created": true
+            },
+            {
+              "filePath": "/demo/project/command-delete.txt",
+              "hunks": [
+                {
+                  "oldStart": 1,
+                  "oldLines": 1,
+                  "newStart": 0,
+                  "newLines": 0,
+                  "lines": ["-gone"]
+                }
+              ],
+              "deleted": true
+            },
+            {
+              "filePath": "/demo/project/command.txt",
+              "hunks": [
+                {
+                  "oldStart": 1,
+                  "oldLines": 2,
+                  "newStart": 1,
+                  "newLines": 2,
+                  "lines": [" alpha", "-beta", "+BETA"]
+                }
+              ]
+            }
+          ],
+          "moreFiles": 1,
+          "changedFiles": [
+            "/demo/project/binary.bin",
+            "/demo/project/command-created.txt",
+            "/demo/project/command-delete.txt",
+            "/demo/project/command.txt"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "Bash",
+      "response": {
+        "stdout": " D command-delete.txt\n M command.txt\n M large.txt\n M nb.ipynb\n M write-update.txt\n?? binary.bin\n?? command-created.txt\n?? created.txt\n?? edit-created.txt\n?? subagent.txt",
+        "stderr": "",
+        "interrupted": false,
+        "isImage": false,
+        "noOutputExpected": false
+      }
+    }
+  ]
+}

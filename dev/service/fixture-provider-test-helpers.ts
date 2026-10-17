@@ -1,4 +1,7 @@
-import type { RunContext } from "../../src/service/features/providers/types.js";
+import type {
+  FileEdit,
+  RunContext,
+} from "../../src/service/features/providers/types.js";
 import { startSchema, type Task } from "../../src/shared/tasks/model.js";
 
 export function task(id = "task_fixture"): Task {
@@ -26,6 +29,7 @@ export function task(id = "task_fixture"): Task {
 }
 
 export function context(currentTask = task()) {
+  const edits: FileEdit[] = [];
   const controller = new AbortController();
   const events: { type: string; data: Record<string, unknown> }[] = [];
   const inputs: string[] = [];
@@ -33,6 +37,10 @@ export function context(currentTask = task()) {
 
   const runContext = {
     task: currentTask,
+    fileChanged: (edit: FileEdit) => {
+      edits.push(edit);
+    },
+    editUnrecorded: () => {},
     signal: controller.signal,
     acceptSteers: () => {},
     steerTaken: () => {},
@@ -51,5 +59,5 @@ export function context(currentTask = task()) {
     },
   } as unknown as RunContext;
 
-  return { events, inputs, sessions, runContext };
+  return { edits, events, inputs, sessions, runContext };
 }

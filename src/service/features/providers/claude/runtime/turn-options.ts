@@ -15,6 +15,7 @@ import {
   toolPath,
   writeTools,
 } from "../configuration/tool-policy.js";
+import { recordClaudeFileEdits } from "./file-edits.js";
 import { PARENT_TOOL, parentEnvironment, parentServer } from "./parent-tool.js";
 
 /** The reason shown when a permission prompt is denied without a message. */
@@ -110,6 +111,7 @@ export async function claudeTurnOptions(
     // final message ends, the last moment a steer the turn won't take can
     // be withdrawn.
     includePartialMessages: true,
+    settings: { bashEditDiffEnabled: true },
     settingSources: ["user", "project", "local"],
     permissionMode: nativeMode,
     ...(nativeMode === "bypassPermissions"
@@ -137,6 +139,19 @@ export async function claudeTurnOptions(
       append: `${parentEnvironment(c)}\n\nYou are an independent ${c.task.worker_profile === "general" ? "coding agent" : c.task.worker_profile}. Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Follow the configured native permission mode for tool execution."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
     },
     hooks: {
+      PostToolUse: [
+        {
+          hooks: [
+            async (input) => {
+              if (input.hook_event_name === "PostToolUse") {
+                recordClaudeFileEdits(c, input.tool_name, input.tool_response);
+              }
+
+              return {};
+            },
+          ],
+        },
+      ],
       PreToolUse: [
         {
           hooks: [

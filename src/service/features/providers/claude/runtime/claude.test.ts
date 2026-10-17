@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
-import { test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import {
   fakeClaudePath,
@@ -28,6 +28,7 @@ import {
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { PARENT_TOOL } from "./parent-tool.js";
 import { ClaudeAgentProvider } from "./provider.js";
+import { claudeTurnOptions } from "./turn-options.js";
 
 const reply = "Reviewed: a.ts:1 is missing a check.";
 
@@ -182,6 +183,8 @@ async function context() {
   const sessions: any[] = [];
 
   const c: RunContext = {
+    fileChanged: vi.fn(),
+    editUnrecorded: vi.fn(),
     task,
     signal: new AbortController().signal,
     emit: (type, data) => events.push({ type, data }),
@@ -195,6 +198,68 @@ async function context() {
 
   return { c, events, sessions, workspace };
 }
+
+test("M6 PostToolUse records subagent edits and returns an empty result after recorder failures", async () => {
+  const { c, workspace } = await context();
+
+  const options = await claudeTurnOptions(
+    c,
+    fakeClaudePath,
+    new AbortController(),
+  );
+
+  const hook = options.hooks?.PostToolUse?.[0]?.hooks[0];
+  assert.ok(hook, "PostToolUse hook is registered");
+
+  const input = {
+    hook_event_name: "PostToolUse" as const,
+    tool_name: "Write",
+    tool_input: { file_path: join(workspace, "sub.txt"), content: "sub\n" },
+    tool_response: {
+      type: "create",
+      filePath: join(workspace, "sub.txt"),
+      content: "sub\n",
+      originalFile: null,
+      structuredPatch: [],
+    },
+    session_id: "session-test",
+    transcript_path: "transcript-test",
+    cwd: workspace,
+    tool_use_id: "subagent-write",
+    agent_id: "child-agent",
+  };
+
+  expect(options.settings).toEqual({ bashEditDiffEnabled: true });
+
+  expect(await hook(input, input.tool_use_id, { signal: c.signal })).toEqual(
+    {},
+  );
+
+  expect(c.fileChanged).toHaveBeenCalledWith(
+    expect.objectContaining({
+      path: join(workspace, "sub.txt"),
+      created: true,
+      source: "tool",
+    }),
+  );
+
+  const error = new Error("recording failed");
+
+  vi.mocked(c.fileChanged).mockImplementation(() => {
+    throw error;
+  });
+
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+  expect(await hook(input, input.tool_use_id, { signal: c.signal })).toEqual(
+    {},
+  );
+
+  expect(log).toHaveBeenCalledWith(
+    "Could not record Claude Write edits",
+    error,
+  );
+});
 
 test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async () => {
   let time = 1000;

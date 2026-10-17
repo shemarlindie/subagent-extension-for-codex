@@ -47,6 +47,7 @@ test("a fresh database gets every active table and the connection settings", (t)
   assert.deepEqual(tables(db.client), [
     "__drizzle_migrations",
     "events",
+    "file_changes",
     "project_roots",
     "task_read",
     "tasks",

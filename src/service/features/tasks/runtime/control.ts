@@ -19,6 +19,7 @@ import {
   type TaskMessage,
 } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
+import { ChangeStore } from "../../changes/store.js";
 import { Projects } from "../../projects/projects.js";
 import {
   type Provider,
@@ -123,6 +124,7 @@ interface Active {
 }
 
 export class Control {
+  changes: ChangeStore;
   active = new Map<string, Active>();
   private deleting = new Set<string>();
   scheduling = false;
@@ -142,6 +144,8 @@ export class Control {
     public providers: Map<string, Provider>,
     public concurrency = 3,
   ) {
+    this.changes = new ChangeStore(store);
+
     this.settings = new Settings(
       store.database,
       () => [...providers.keys()],
@@ -495,6 +499,7 @@ export class Control {
     // Every turn replaces the turn snapshot. A new current_repo task's
     // start snapshot is the same moment.
     await this.workspaces.startTurn(t, created);
+    this.changes.clearTurn(t);
   }
 
   /**
@@ -536,6 +541,9 @@ export class Control {
   private runContext(t: Task, a: Active): RunContext {
     return {
       task: t,
+      fileChanged: (edit) => this.changes.record(t, edit),
+      editUnrecorded: (path, source) =>
+        this.changes.unrecorded(t, path, source),
       signal: a.abort.signal,
       acceptSteers: (sink) => {
         a.sink = sink;
