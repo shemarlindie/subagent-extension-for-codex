@@ -189,7 +189,7 @@ export class SessionPrompts {
     if (!changes.diff) return notes;
 
     const shown = changes.diff.slice(0, MAX_DEPENDENCY_DIFF_CHARS),
-      count = changes.files.length - incomplete.length;
+      count = changes.files.length;
 
     return [
       `Dependency ${d.id}'s recorded edits (${count} ${count === 1 ? "file" : "files"}, +${changes.additions} −${changes.deletions}):`,

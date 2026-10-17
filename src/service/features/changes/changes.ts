@@ -48,6 +48,19 @@ function listedFile(row: RecordedChange) {
   };
 }
 
+/** The file list and totals shared by full reads and counts. */
+function listing(task: Task, rows: RecordedChange[]) {
+  const files = rows.filter((row) => row.path).map(listedFile);
+
+  return {
+    files,
+    additions: files.reduce((sum, file) => sum + file.additions, 0),
+    deletions: files.reduce((sum, file) => sum + file.deletions, 0),
+    ...(rows.some((row) => !row.path) ? { unrecorded_commands: true } : {}),
+    ...(task.branch ? { branch: task.branch } : {}),
+  };
+}
+
 function filePage(
   path: string,
   bytes: Buffer,
@@ -91,8 +104,6 @@ export class Changes extends ChangeStore {
   ): ChangesResult {
     const rows = this.rows(task, scope);
 
-    const files = rows.filter((row) => row.path).map(listedFile);
-
     const parts = rows
       .filter((row) => row.path && !row.incomplete)
       .map((row) =>
@@ -115,12 +126,8 @@ export class Changes extends ChangeStore {
 
     return {
       scope,
-      files,
-      additions: files.reduce((sum, f) => sum + f.additions, 0),
-      deletions: files.reduce((sum, f) => sum + f.deletions, 0),
+      ...listing(task, rows),
       diff,
-      ...(rows.some((row) => !row.path) ? { unrecorded_commands: true } : {}),
-      ...(task.branch ? { branch: task.branch } : {}),
       ...(end < parts.length
         ? {
             next_cursor: encodeCursor(
@@ -134,20 +141,9 @@ export class Changes extends ChangeStore {
   }
 
   counts(task: Task) {
-    const rows = this.rows(task, "task");
+    const { files, ...totals } = listing(task, this.rows(task, "task"));
 
-    const files = rows
-      .filter((row) => row.path && !row.incomplete)
-      .map(listedFile);
-
-    return {
-      scope: "task" as const,
-      files: files.length,
-      additions: files.reduce((sum, file) => sum + file.additions, 0),
-      deletions: files.reduce((sum, file) => sum + file.deletions, 0),
-      ...(rows.some((row) => !row.path) ? { unrecorded_commands: true } : {}),
-      ...(task.branch ? { branch: task.branch } : {}),
-    };
+    return { scope: "task" as const, ...totals, files: files.length };
   }
 
   async changedFile(

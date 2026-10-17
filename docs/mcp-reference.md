@@ -39,9 +39,9 @@ and note incomplete files and unrecorded command changes.
 
 Every page lists all files, sorted by path. Diff pages split between whole files.
 Files carry `source: "tool" | "command"` and `incomplete`, with statuses `added`,
-`modified` or `deleted`. An incomplete file has no diff and is excluded from
-totals. When a command changed files it could not name, the response also reports
-that some command changes were not recorded. A reverted file, or a file created
+`modified` or `deleted`. An incomplete file has no diff. It counts as a file
+but adds no lines to the totals. When a command changed files it could not name,
+the response also reports that some command changes were not recorded. A reverted file, or a file created
 and then deleted in the same scope, drops out unless it is incomplete.
 
 `get_agent_changed_file` reads the file as it is now, from the task worktree or

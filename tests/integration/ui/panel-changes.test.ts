@@ -47,7 +47,7 @@ test("the Changes tab reads every page and shows the worktree branch and its com
     ],
   );
 
-  assert.ok(screen.getByText("+1 −1, 1 file"));
+  assert.ok(screen.getByText("+1 −1, 2 files"));
   assert.ok(screen.getByText(/^Edits recorded from this task/));
 
   assert.ok(
@@ -62,7 +62,7 @@ test("the Changes tab reads every page and shows the worktree branch and its com
 
   await user.click(screen.getByRole("tab", { name: "Details" }));
   assert.ok(screen.getByText("agent/one"));
-  assert.ok(screen.getAllByText("+1 −1, 1 file").length);
+  assert.ok(screen.getAllByText("+1 −1, 2 files").length);
 });
 
 test("the Changes tab offers This turn after a second turn and explains empty states", async (t) => {
@@ -307,7 +307,7 @@ test("a current_repo task explains recorded edits and current file previews", as
   assertAbsent(screen.queryByText(/git push/));
 });
 
-test("command and incomplete edits carry notes and incomplete totals are excluded", async (t) => {
+test("command and incomplete edits carry notes and incomplete files add no lines", async (t) => {
   const { user } = await setup(t, (transport) => {
     transport.changes = [
       {
@@ -339,7 +339,7 @@ test("command and incomplete edits carry notes and incomplete totals are exclude
   });
 
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
-  await screen.findByText("+1 −1, 1 file");
+  await screen.findByText("+1 −1, 2 files");
   expect(screen.getAllByText("command")).toHaveLength(2);
 
   expect(screen.getAllByText("Changed by a command.").length).toBeGreaterThan(

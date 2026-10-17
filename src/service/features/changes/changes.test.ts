@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { changesFixture, edit } from "./changes-test-harness.js";
 
 describe("change reads", () => {
-  it("sorts files, excludes incomplete totals and pages between whole files (R1 to R3)", async (context) => {
+  it("sorts files, counts incomplete files without lines and pages between whole files (R1 to R3)", async (context) => {
     const { changes, task } = await changesFixture(context);
     changes.record(task, edit("z.txt", "", "created\n", { created: true }));
 
@@ -48,7 +48,7 @@ describe("change reads", () => {
     expect(changes.counts(task)).toMatchObject({
       additions: 1,
       deletions: 1,
-      files: 2,
+      files: 3,
     });
   });
 

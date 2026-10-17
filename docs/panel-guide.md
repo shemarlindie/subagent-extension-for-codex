@@ -275,10 +275,10 @@ The panel, agent tools and dependency prompts read the same stored net diffs in
 both workspace strategies. A reverted file drops out. Committing files, removing
 a worktree or deleting its branch leaves the recorded diff available.
 
-Files edited by a command have a **command** tag and the note **Changed by a command.** An incomplete file
-shows **An edit to this file wasn't recorded.**, without a diff or contribution
-to totals. Once a file's record becomes incomplete, later edits cannot restore
-that scope's diff. When a command's changed paths could not be captured, the tab
+Files edited by a command have a **command** tag and the note **Changed by a
+command.** An incomplete file shows **An edit to this file wasn't recorded.**,
+without a diff. It counts as a file but adds no lines to the totals. Once a
+file's record becomes incomplete, later edits cannot restore that scope's diff. When a command's changed paths could not be captured, the tab
 shows **Some changes made by commands weren't recorded.**
 
 Claude's edit tools and Bash commands are recorded. File-writing MCP tools and

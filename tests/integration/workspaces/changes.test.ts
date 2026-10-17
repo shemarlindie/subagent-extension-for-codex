@@ -169,7 +169,7 @@ test("change tools return sorted recorded edits, incomplete files and command wa
       "user",
     );
 
-    expect(counts.files).toBe(2);
+    expect(counts.files).toBe(3);
     expect(counts.additions).toBe(changes.additions);
     expect(counts.deletions).toBe(changes.deletions);
 
@@ -396,7 +396,7 @@ test("dependent prompts include the recorded diff within the existing size limit
     );
 
     expect(prompt).toContain(
-      `Dependency ${first.id}'s recorded edits (1 file, +2 −0):`,
+      `Dependency ${first.id}'s recorded edits (2 files, +2 −0):`,
     );
 
     expect(prompt).toContain(

@@ -32,7 +32,7 @@ export interface Changes {
 
 /**
  * A task's change totals: the file count and line stats, without the file
- * list or diff. Totals exclude incomplete files.
+ * list or diff. Incomplete files count as files but add no lines.
  */
 export type ChangeCounts = Omit<Changes, "files" | "diff" | "next_cursor"> & {
   files: number;
@@ -45,7 +45,7 @@ export function changeCounts({
   next_cursor: _next,
   ...totals
 }: Changes): ChangeCounts {
-  return { ...totals, files: files.filter((file) => !file.incomplete).length };
+  return { ...totals, files: files.length };
 }
 
 /** A changed file's current content, as get_agent_changed_file returns it. */
