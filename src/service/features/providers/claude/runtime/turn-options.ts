@@ -1,4 +1,4 @@
-import type { Options } from "@anthropic-ai/claude-agent-sdk";
+import type { HookJSONOutput, Options } from "@anthropic-ai/claude-agent-sdk";
 
 import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions.js";
 import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
@@ -126,7 +126,6 @@ export async function claudeTurnOptions(
         ]
       : { type: "preset", preset: "claude_code" },
     mcpServers: { codex_parent: parentServer(c) },
-    allowedTools: [PARENT_TOOL],
     disallowedTools: policy.subagents ? [] : ["Agent", "Task"],
     ...(c.task.budget.max_cost_usd === null
       ? {}
@@ -155,15 +154,26 @@ export async function claudeTurnOptions(
       PreToolUse: [
         {
           hooks: [
-            async (input) => {
+            async (input): Promise<HookJSONOutput> => {
               if (input.hook_event_name !== "PreToolUse") return {};
               const tool = input.tool_name;
               const params = input.tool_input as Record<string, unknown>;
 
-              const deny = (reason: string) => ({
+              // Approve reporting before native modes such as dontAsk can deny it,
+              // without a bare allowedTools entry that shadows canUseTool.
+              if (tool === PARENT_TOOL) {
+                return {
+                  hookSpecificOutput: {
+                    hookEventName: "PreToolUse",
+                    permissionDecision: "allow",
+                  },
+                };
+              }
+
+              const deny = (reason: string): HookJSONOutput => ({
                 hookSpecificOutput: {
-                  hookEventName: "PreToolUse" as const,
-                  permissionDecision: "deny" as const,
+                  hookEventName: "PreToolUse",
+                  permissionDecision: "deny",
                   permissionDecisionReason: reason,
                 },
               });

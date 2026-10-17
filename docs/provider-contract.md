@@ -32,6 +32,10 @@ The optional `messageParent` callback sends immediate blocker updates or holds
 one completion report until the turn succeeds. Failed and interrupted turns
 discard that completion report. Claude exposes it through the injected
 `codex_parent.message_parent` tool, independently of file/execution restrictions.
+The provider approves this tool in its `PreToolUse` hook, including in `dontAsk`
+mode. Native ask/deny rules and stronger hook decisions still apply, as described
+in [Claude's hook decision rules](https://code.claude.com/docs/en/hooks#pretooluse-decision-control).
+SDK `allowedTools` stays unset to avoid shadowing `canUseTool`.
 Queueing a report does not confirm host delivery, and providers cannot
 acknowledge it for the parent. See [parent message delivery](mcp-reference.md#provider-messages-to-the-parent)
 for retrieval and acknowledgement, and the `RunContext` interface for callback

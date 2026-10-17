@@ -451,9 +451,7 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
   assert.ok(parentServer);
   assert.equal(parentServer.type, "sdk");
 
-  assert.ok(
-    options!.allowedTools?.includes("mcp__codex_parent__message_parent"),
-  );
+  assert.equal(options!.allowedTools, undefined);
 
   assert.ok(!options!.disallowedTools!.includes("Skill"));
   assert.equal(options!.permissionMode, "plan");
@@ -530,7 +528,7 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
   assert.equal(await check("Agent", {}), "deny");
   assert.equal(await check("mcp__server__tool", {}), "deny");
   assert.equal(await check(`${PARENT_TOOL}_other`, {}), "deny");
-  assert.equal(await check(PARENT_TOOL, { message: "Done" }), undefined);
+  assert.equal(await check(PARENT_TOOL, { message: "Done" }), "allow");
 
   c.input = async () => {
     throw new Error("Parent reporting must not request approval");
@@ -725,6 +723,27 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
     );
 
     const hook = preToolUseHook(options);
+
+    assert.equal(options!.allowedTools, undefined);
+
+    const parentDecision = await hook(
+      {
+        hook_event_name: "PreToolUse",
+        tool_name: PARENT_TOOL,
+        tool_input: { message: "Done" },
+        session_id: "x",
+        transcript_path: "x",
+        cwd: workspace,
+        tool_use_id: "parent-report",
+      },
+      "parent-report",
+      { signal: c.signal },
+    );
+
+    assert.equal(
+      (parentDecision as any).hookSpecificOutput?.permissionDecision,
+      "allow",
+    );
 
     const decision = await hook(
       {
