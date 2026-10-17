@@ -277,7 +277,14 @@ export function ActivityGroupCard({
             <MarkdownView content={group.summary} />
           </div>
         ) : (
-          <p className="activity-group-summary" title={group.summary}>
+          <p
+            className={
+              group.events.some((event) => event.type === "task.turn_ended")
+                ? "activity-group-secondary"
+                : "activity-group-summary"
+            }
+            title={group.summary}
+          >
             {group.summary}
           </p>
         ))}
