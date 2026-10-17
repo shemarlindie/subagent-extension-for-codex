@@ -41,8 +41,7 @@ export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
               <p className="new-task-prompt">What should Claude work on?</p>
               <p>
                 Your first message starts the task
-                {state.repository ? " in this project" : ""}. Replies stream
-                here.
+                {state.repository ? " in this project" : ""}.
               </p>
             </div>
             <div className="chat-footer">

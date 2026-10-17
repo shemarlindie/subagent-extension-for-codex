@@ -79,10 +79,6 @@
   max-height: 320px;
   object-fit: contain;
 }
-.activity-error {
-  border-left: 2px solid var(--danger);
-  padding-left: 8px;
-}
 @media (max-width: 480px) {
   .activity-fields > div {
     grid-template-columns: 1fr;
