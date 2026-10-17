@@ -107,6 +107,13 @@ export function Composer({
       sessionTaskId,
       (state) => state.composerSending,
     ),
+    [stopping] = useSessionState(
+      "task",
+      sessionTaskId,
+      (state) => state.composerStopping,
+    ),
+    sendingFeedback = sending ? "Sending…" : undefined,
+    pendingFeedback = stopping ? "Stopping the current turn…" : sendingFeedback,
     [showContinuePrompt, setShowContinuePrompt] = useState(false),
     previousBudgetApply = useRef(budgetApplyVersion),
     message = text.trim(),
@@ -197,28 +204,44 @@ export function Composer({
       return;
     }
 
-    updateSession({ composerSending: true, composerError: undefined });
+    updateSession({
+      composerSending: true,
+      composerStopping: delivery === "interrupt",
+      composerError: undefined,
+    });
+
     setShowContinuePrompt(false);
 
+    let failure: string | undefined;
+
+    // The textarea stays editable while sending. Only clear the draft that
+    // was acknowledged, including when this composer has since unmounted or
+    // the acknowledgement arrives after the send timed out.
+    const delivered = () => {
+      const session = controller.session.get("task", sessionTaskId);
+
+      updateSession({
+        ...(session.composerDraft === text ? { composerDraft: "" } : {}),
+        ...(session.composerError === failure
+          ? { composerError: undefined }
+          : {}),
+      });
+    };
+
     try {
-      const failure = await controller.taskActions.sendMessage(
+      failure = await controller.taskActions.sendMessage(
         task,
         message,
         delivery,
+        delivered,
       );
 
       updateSession({ composerError: failure });
-
-      // The textarea stays editable while sending. Only clear the draft that
-      // was acknowledged, including when this composer has since unmounted.
-      if (
-        !failure &&
-        controller.session.get("task", sessionTaskId).composerDraft === text
-      ) {
-        updateSession({ composerDraft: "" });
-      }
     } finally {
-      updateSession({ composerSending: undefined });
+      updateSession({
+        composerSending: undefined,
+        composerStopping: undefined,
+      });
     }
   };
 
@@ -226,12 +249,18 @@ export function Composer({
   const stop = async () => {
     if (disabled || !task) return;
 
-    updateSession({
-      composerError: await controller.taskActions.interruptTask(
-        task,
-        task.pending_steers.length > 0,
-      ),
-    });
+    updateSession({ composerStopping: true, composerError: undefined });
+
+    try {
+      updateSession({
+        composerError: await controller.taskActions.interruptTask(
+          task,
+          task.pending_steers.length > 0,
+        ),
+      });
+    } finally {
+      updateSession({ composerStopping: undefined });
+    }
   };
 
   const keys = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -288,7 +317,7 @@ export function Composer({
             <span>{expandLabel(spent, message)}</span>
           </Button>
           {mode !== "idle" && stopButton}
-          {sending && <span role="status">Sending…</span>}
+          {pendingFeedback && <span role="status">{pendingFeedback}</span>}
         </div>
       ) : (
         <div className="chat-composer-body motion-swap">
@@ -376,7 +405,7 @@ export function Composer({
             <div role="status">
               <FormFieldHint
                 id="chat-composer-hint"
-                message={sending ? "Sending…" : feedback}
+                message={pendingFeedback ?? feedback}
               />
             </div>
             {task && <TaskRunSettings task={task} />}

@@ -12,6 +12,14 @@ export const taskId = z.object({ task_id: z.string() });
 export const queuedMessage = taskId.extend({ message_id: z.string().max(200) });
 
 export const messageInput = taskId.extend({
+  request_id: z
+    .string()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe(
+      "Reuse the same ID and payload when retrying an uncertain send. Accepted sends are deduplicated across service restarts.",
+    ),
   message: z.string().min(1).max(20000),
   delivery: z
     .enum(deliveries)

@@ -1,4 +1,10 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+} from "drizzle-orm/sqlite-core";
 
 /** Tasks keep their state as a JSON body; `owner` scopes every lookup. */
 export const tasks = sqliteTable("tasks", {
@@ -33,3 +39,22 @@ export const taskRead = sqliteTable("task_read", {
   through: integer().notNull(),
   unread: integer({ mode: "boolean" }).notNull(),
 });
+
+/** Accepted send receipts share the message transaction and survive restart. */
+export const sendReceipts = sqliteTable(
+  "task_send_receipts",
+  {
+    owner: text().notNull(),
+    task_id: text()
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    sender: text().notNull(),
+    request_id: text().notNull(),
+    fingerprint: text().notNull(),
+    message_id: text().notNull(),
+    state: text().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.owner, t.task_id, t.sender, t.request_id] }),
+  ],
+);

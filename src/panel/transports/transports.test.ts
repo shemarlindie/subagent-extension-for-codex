@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 
 import { McpUiHostStylesSchema } from "@modelcontextprotocol/ext-apps";
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
+import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
 import type { TransportEvents } from "../app/state/types";
 import { ConsoleTransport } from "./console";
 import { HostTransport } from "./host";
@@ -170,6 +171,27 @@ test("console authentication failure requests login and server failures retain t
 
   transport.dispose();
 });
+
+test.each([undefined, false, true])(
+  "console only marks explicit send rejection (%s)",
+  async (sendRejected) => {
+    const transport = new ConsoleTransport("", async () =>
+      Response.json(
+        { error: "Delivery failed", send_rejected: sendRejected },
+        { status: 500 },
+      ),
+    );
+
+    const failure = await transport
+      .tool("send_agent_message")
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).toHaveProperty("message", "Delivery failed");
+    expect(failure instanceof SendRejectedError).toBe(sendRejected === true);
+    transport.dispose();
+  },
+);
 
 test("console SSE reports each stream's revisions, and disposal closes the stream", async () => {
   const streams: FakeStream[] = [];
@@ -481,6 +503,31 @@ test("host tool errors and missing structured output surface meaningful failures
 
   transport.dispose();
 });
+
+test.each([undefined, false, true])(
+  "host only marks explicit send rejection (%s)",
+  async (sendRejected) => {
+    const fake = hostApp();
+    const transport = new HostTransport(fake.app as any);
+
+    fake.respond({
+      isError: true,
+      content: [{ type: "text", text: "Delivery failed" }],
+      ...(sendRejected === undefined
+        ? {}
+        : { _meta: { send_rejected: sendRejected } }),
+    });
+
+    const failure = await transport
+      .tool("send_agent_message")
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).toHaveProperty("message", "Delivery failed");
+    expect(failure instanceof SendRejectedError).toBe(sendRejected === true);
+    transport.dispose();
+  },
+);
 
 test("host sends messages, shares selection context and toggles available display modes", async () => {
   const fake = hostApp();

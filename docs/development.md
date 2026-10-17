@@ -410,6 +410,22 @@ Use [UI verification](ui-verification.md) for browser checks and
 [Claude execution verification](claude-verification.md#live-claude-checks) for
 opt-in tests that make model calls.
 
+## Send latency measurements
+
+The service writes structured `task.timing` debug records for repository
+validation, message storage, scheduler scans and interrupt shutdown. The panel
+writes transport durations to its browser console. Durations use a monotonic
+clock and milliseconds. Records exclude message text and repository paths.
+Transport duration includes service processing and bridge or HTTP overhead, so
+compare it with service phases instead of adding it to them. Scheduler scans
+report their work count so scan cost can be assessed before changing scheduling.
+An unfinished shutdown has no completion duration until it settles.
+
+Read-only Git-root validation probes have a five-second subprocess timeout.
+Timeouts leave repository approval requirements in place and report a retryable
+validation failure. See [message retry semantics](mcp-reference.md#retrying-message-sends)
+and [panel timeout behavior](panel-guide.md#chat-tab).
+
 ## Troubleshooting
 
 | Symptom                                        | Cause                                                                                               |

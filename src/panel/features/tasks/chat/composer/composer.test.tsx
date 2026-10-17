@@ -86,6 +86,7 @@ test("a slow send shows progress and blocks repeated sends until acknowledgement
     task_id: "task-1",
     message: "Follow up",
     delivery: "steer",
+    request_id: expect.any(String),
   });
 
   expect(send.disabled).toBe(true);
@@ -307,3 +308,131 @@ test.each(["before rejection", "after rejection"])(
     expect(view.getByRole("alert").textContent).toBe("Retry unavailable");
   },
 );
+
+test("a timed out send retains its draft and retry ID while late delivery leaves the retry intact", async () => {
+  vi.useFakeTimers();
+
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const { controller, view, input, send, type, enter, tool, write } = setup();
+  type("Keep this message");
+  enter();
+  const original = tool.mock.calls[0];
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30000);
+  });
+
+  expect(view.getByRole("alert").textContent).toContain(
+    "Delivery could not be confirmed",
+  );
+
+  expect(input.value).toBe("Keep this message");
+  expect(send.disabled).toBe(false);
+  expect(controller.getSnapshot().busy).toBe(false);
+
+  const retry = deferred<unknown>();
+  tool.mockReturnValue(retry.promise);
+  enter();
+  expect(tool.mock.calls[1]).toEqual(original);
+  type("A newer draft");
+
+  await act(async () => {
+    write.resolve({});
+    await flush();
+  });
+
+  expect(input.value).toBe("A newer draft");
+  expect(send.disabled).toBe(true);
+  expect(controller.getSnapshot().busy).toBe(true);
+  expect(view.getByText("Sending…")).toBeTruthy();
+
+  await act(async () => {
+    retry.resolve({});
+    await flush();
+  });
+
+  expect(input.value).toBe("A newer draft");
+  expect(send.disabled).toBe(false);
+  expect(controller.getSnapshot().busy).toBe(false);
+
+  tool.mockResolvedValue({});
+  type("Keep this message");
+
+  await act(async () => {
+    enter();
+    await flush();
+  });
+
+  expect(tool.mock.calls[2]).not.toEqual(original);
+  expect(input.value).toBe("");
+});
+
+test("a late acknowledgement clears the timed out draft and error, so the same text sends anew", async () => {
+  vi.useFakeTimers();
+
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const { view, input, type, enter, tool, write } = setup();
+  type("Continue");
+  enter();
+  const original = tool.mock.calls[0];
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30000);
+  });
+
+  expect(view.getByRole("alert").textContent).toContain(
+    "Delivery could not be confirmed",
+  );
+
+  await act(async () => {
+    write.resolve({});
+    await flush();
+  });
+
+  expect(input.value).toBe("");
+  expect(view.queryByRole("alert")).toBeNull();
+
+  tool.mockResolvedValue({});
+  type("Continue");
+
+  await act(async () => {
+    enter();
+    await flush();
+  });
+
+  expect(tool.mock.calls[1]?.[1]).toMatchObject({ message: "Continue" });
+  expect(tool.mock.calls[1]).not.toEqual(original);
+});
+
+test("a late acknowledgement keeps a newer draft and a newer error", async () => {
+  vi.useFakeTimers();
+
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const { controller, view, input, type, enter, write } = setup();
+  type("Continue");
+  enter();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30000);
+  });
+
+  type("Something else");
+  controller.session.update("task", "task-1", { composerError: "Newer" });
+
+  await act(async () => {
+    write.resolve({});
+    await flush();
+  });
+
+  expect(input.value).toBe("Something else");
+  expect(view.getByRole("alert").textContent).toBe("Newer");
+});

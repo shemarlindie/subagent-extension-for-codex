@@ -8,6 +8,7 @@ import {
   OpenAIMessageParamsSchema,
 } from "@openai/mcp-extensions/app";
 
+import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
 import type { PanelData, Transport, TransportEvents } from "../app/state/types";
 import { decodePanelToolResult } from "./event-decoding";
 import { HostContextCompatibilityTransport } from "./host-context-compat";
@@ -135,7 +136,10 @@ export class HostTransport implements Transport {
     );
 
     if (result.isError) {
-      throw new Error(
+      const Failure =
+        result._meta?.send_rejected === true ? SendRejectedError : Error;
+
+      throw new Failure(
         result.content
           .map((item) => (item.type === "text" ? item.text : ""))
           .join("\n") || "The tool failed.",

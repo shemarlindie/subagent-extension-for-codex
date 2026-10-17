@@ -8,6 +8,8 @@ export type TaskSessionState = {
   composerDraft: string;
   /** Keeps pending send feedback visible if Chat remounts during the request. */
   composerSending?: boolean;
+  /** Shows interrupt feedback until the stop request settles or times out. */
+  composerStopping?: boolean;
   /** Retains action failures when Chat closes before the request finishes. */
   composerError?: string;
   composerCollapsed: boolean;

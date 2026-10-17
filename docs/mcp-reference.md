@@ -28,6 +28,26 @@ Task creation defaults to `workspace_strategy: "current_repo"`, using the
 explicit approved repository and its existing changes. `workspace_strategy: "worktree"` starts from a committed revision on a task branch. Follow-up turns keep the task's conversation scope and workspace. Selecting a project for a new task does not change other chats. See [Task continuation](task-continuation.md) for recovery semantics and
 [recorded changes](#recorded-changes) for change inspection.
 
+### Retrying message sends
+
+Both message-send tools accept an optional `request_id`. Use a unique ID for each
+intended message and reuse it with the same task, sender, text, delivery and
+budget when retrying an uncertain response. The service coalesces concurrent
+requests and saves the receipt with the accepted message. A retry returns the
+original message ID and accepted state, with the task's current status. Reusing
+an ID with different content fails. Receipts survive service restart and remain
+until task deletion. Calls without an ID retain their ordinary send behavior.
+
+A timeout does not cancel server work. An interrupting send can be accepted
+before its current turn finishes shutting down. Retrying that send confirms the
+accepted message without interrupting again. Repository approval and ownership
+checks still govern new messages. A receipt confirms acceptance, not worker
+consumption or turn completion. When the service confirms a failed send has no
+acceptance receipt, HTTP errors include `send_rejected: true` and MCP tool errors
+include `_meta.send_rejected: true`. Clients may discard retry identity only for
+that explicit rejection. Unmarked errors can occur after acceptance and require
+retrying with the original request ID.
+
 ## Recorded changes
 
 `get_agent_changes` reads the task's recorded net edits, for `scope: "task"`

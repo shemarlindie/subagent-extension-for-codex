@@ -196,7 +196,19 @@ and recreated worktrees.
 
 While **Sending…** is shown, additional sends are blocked and the draft remains
 editable. Success clears only an unchanged draft. Failure keeps the draft and
-error, even if Chat is reopened.
+error, even if Chat is reopened. Interrupting shows **Stopping the current
+turn…** until the request finishes.
+
+After 30 seconds without confirmation, the panel releases its busy state and
+keeps the draft. The service may still accept the send. Retry the same text to
+reuse its request ID and original delivery action, even if the task has since
+stopped, and avoid a duplicate. This retry identity lasts for the mounted
+panel's controller, including closing and reopening Chat. A confirmed rejection
+clears it so you can change the delivery action. Timeouts and connection
+failures keep it until the original request or a retry is acknowledged. A late
+acknowledgement clears the unchanged draft and its timeout error, so sending the
+same text afterwards starts a new message. Reloading the panel loses the
+identity, so check Chat before resending after a reload.
 
 ### Steering, queues and budgets
 

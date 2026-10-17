@@ -5,6 +5,7 @@ import {
 } from "@modelcontextprotocol/server";
 
 import { PARENT_DELEGATION_PROTOCOL } from "../../../shared/tasks/conversation/parent-protocol.js";
+import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { codexContextCapability } from "../panel/host-context.js";
@@ -132,6 +133,9 @@ export function mcp(
         } catch (error) {
           return {
             isError: true,
+            ...(error instanceof SendRejectedError
+              ? { _meta: { send_rejected: true } }
+              : {}),
             content: [{ type: "text", text: String(error) }],
           };
         }

@@ -6,10 +6,8 @@ import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
 import { assertSelectedProviderOptions } from "../../../../shared/providers/options.js";
-import { replyExcerpt } from "../../../../shared/tasks/conversation/reply.js";
 import {
   type BudgetRaise,
-  type Delivery,
   type InputAuthority,
   pendingInputKind,
   roles,
@@ -21,11 +19,7 @@ import {
 import { now } from "../../../../shared/time.js";
 import { Changes } from "../../changes/changes.js";
 import { Projects } from "../../projects/projects.js";
-import {
-  type Provider,
-  type RunContext,
-  type Steer,
-} from "../../providers/types.js";
+import { type Provider, type RunContext } from "../../providers/types.js";
 import { Settings } from "../../settings/settings.js";
 import { Workspaces } from "../../workspaces/workspace.js";
 import { Drafts } from "../conversation/drafts.js";
@@ -53,80 +47,26 @@ import {
   requeue,
   steerQueuedMessage,
 } from "./queue.js";
+import { commitSend } from "./send-acceptance.js";
+import {
+  type RecordSend,
+  type SendOptions,
+  SendRequests,
+  type SentMessage,
+} from "./send-requests.js";
+import { deletionOrder } from "./task-deletion.js";
 import { generateTaskTitle } from "./task-title.js";
+import { measureTaskWait } from "./timing.js";
+import { type Active, recordStatusEvent } from "./turn-outcome.js";
 
 /** Statuses in which a task has a turn running, starting or about to. */
 const BUSY = ["queued", "starting", "running", "waiting"];
-
-/** The payload of a task's status event once its turn has ended. */
-function recordStatusEvent(store: Store, t: Task, reply: string | undefined) {
-  if (t.status === "queued") return store.event(t, "task.queued");
-
-  if (t.status === "completed") {
-    return store.event(t, "task.completed", {
-      ...(reply !== undefined ? { reply: replyExcerpt(reply) } : {}),
-    });
-  }
-
-  if (t.status === "failed") {
-    return store.event(t, "task.failed", {
-      ...(t.error ? { error: t.error } : {}),
-    });
-  }
-
-  if (t.status === "interrupted") {
-    return store.event(t, "task.interrupted", {
-      ...(t.error ? { error: t.error } : {}),
-    });
-  }
-
-  throw new Error(`Cannot record a turn outcome for task status ${t.status}`);
-}
-
-/**
- * Orders tasks so dependents come before their dependencies, so cleanup
- * never leaves a task without its prerequisites.
- */
-function deletionOrder(tasks: Task[]) {
-  const ordered: Task[] = [];
-  const remaining = [...tasks];
-
-  while (remaining.length) {
-    const index = remaining.findIndex(
-      (task) => !remaining.some((other) => other.depends_on.includes(task.id)),
-    );
-
-    if (index < 0) {
-      throw new Error(
-        "Project tasks have circular dependencies. Keep task data and resolve them first.",
-      );
-    }
-
-    ordered.push(...remaining.splice(index, 1));
-  }
-
-  return ordered;
-}
-
-interface Active {
-  /** The task as the turn holds it; changes while it runs go here. */
-  task: Task;
-  input: PendingInput;
-  stopStatus?: "interrupted";
-  /** Interrupt and send now: the pending steers start the next turn. */
-  sendPending?: boolean;
-  /** Where the provider takes steers, once it registers. */
-  sink?: (steer: Steer) => boolean;
-  /** Completion report held until a successful turn is recorded. */
-  parentMessage?: string;
-  abort: AbortController;
-  done: Promise<void>;
-}
 
 export class Control {
   changes: Changes;
   active = new Map<string, Active>();
   private deleting = new Set<string>();
+  private sendRequests: SendRequests;
   scheduling = false;
   stopped = false;
   ownerWorker = hostname();
@@ -145,6 +85,7 @@ export class Control {
     public concurrency = 3,
   ) {
     this.changes = new Changes(store);
+    this.sendRequests = new SendRequests(store);
 
     this.settings = new Settings(
       store.database,
@@ -319,9 +260,16 @@ export class Control {
   async schedule() {
     if (this.scheduling || this.stopped) return;
     this.scheduling = true;
+    const scanStarted = performance.now();
+    let taskCount = 0;
+    let scannedCount = 0;
 
     try {
-      for (const t of this.store.all().reverse()) {
+      const tasks = this.store.all().reverse();
+      taskCount = tasks.length;
+
+      for (const t of tasks) {
+        scannedCount++;
         if (this.active.size >= this.concurrency) break;
         if (this.deleting.has(t.id)) continue;
 
@@ -405,6 +353,13 @@ export class Control {
       }
     } finally {
       this.scheduling = false;
+
+      console.debug("task.timing", {
+        phase: "scheduler_scan",
+        duration_ms: performance.now() - scanStarted,
+        task_count: taskCount,
+        scanned_count: scannedCount,
+      });
     }
   }
 
@@ -1007,8 +962,11 @@ export class Control {
       status: "interrupted",
     });
 
-    a.abort.abort(new Error("interrupted"));
-    await a.done;
+    await measureTaskWait("interrupt_shutdown", id, () => {
+      a.abort.abort(new Error("interrupted"));
+
+      return a.done;
+    });
 
     return this.store.get(id, owner);
   }
@@ -1047,16 +1005,27 @@ export class Control {
     id: string,
     message: string,
     from: Sender,
-    options: { delivery?: Delivery; budget?: BudgetRaise } = {},
+    options: SendOptions = {},
   ) {
+    return this.sendRequests.run(owner, id, from, message, options, (record) =>
+      this.sendOnce(owner, id, message, from, options, record),
+    );
+  }
+
+  private async sendOnce(
+    owner: string,
+    id: string,
+    message: string,
+    from: Sender,
+    options: SendOptions,
+    record: RecordSend,
+  ): Promise<SentMessage> {
     const delivery = options.delivery ?? "steer";
     const stored = this.mutableTask(owner, id);
     const a = this.active.get(id);
 
     if (!a && !BUSY.includes(stored.status)) {
-      const sent = await this.followUp(owner, id, message, from, options);
-
-      return { ...sent, state: "started" as const };
+      return this.followUp(owner, id, message, from, options, record);
     }
 
     const t = a?.task ?? stored;
@@ -1067,24 +1036,33 @@ export class Control {
       );
     }
 
-    if (options.budget) raiseBudget(t, options.budget);
     const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
 
     if (delivery === "queue") {
       const before = queueSnapshot(t);
-      t.queue.push({ ...m, delivery });
-      commitQueue(this.store, t, before);
+
+      commitSend(this.store, t, () => {
+        if (options.budget) raiseBudget(t, options.budget);
+        t.queue.push({ ...m, delivery });
+        this.store.save(t);
+        recordQueueChange(this.store, t, before);
+        record(m.id, "queued");
+      });
 
       return { task: t, message_id: m.id, state: "queued" as const };
     }
 
-    // A turn that hasn't begun takes the message with its prompt.
-    if (!a) t.instructions.push(m);
-    else t.pending_steers.push(m);
-
-    this.store.transaction(() => {
+    commitSend(this.store, t, () => {
+      if (options.budget) raiseBudget(t, options.budget);
+      if (!a) t.instructions.push(m);
+      else t.pending_steers.push(m);
       recordMessage(this.store, t, m, delivery);
       this.store.save(t);
+
+      record(
+        m.id,
+        !a || delivery === "interrupt" ? "started" : "pending_steer",
+      );
     });
 
     if (!a) return { task: t, message_id: m.id, state: "started" as const };
@@ -1100,6 +1078,7 @@ export class Control {
     }
 
     const pending = this.deliver(t, a, m);
+    if (!pending) record(m.id, "queued");
 
     return {
       task: t,
@@ -1118,8 +1097,9 @@ export class Control {
     id: string,
     message: string,
     from: Sender,
-    options: { delivery?: Delivery; budget?: BudgetRaise } = {},
-  ) {
+    options: SendOptions,
+    record: RecordSend,
+  ): Promise<SentMessage> {
     const t = this.mutableTask(owner, id);
 
     if (this.active.has(id) || BUSY.includes(t.status)) {
@@ -1128,26 +1108,38 @@ export class Control {
 
     if (options.budget) raiseBudget(t, options.budget);
     validateBudgets(this.providers.get(t.provider), t);
-    if (this.projects) await this.projects.resolve(t.repository);
-    // Recheck after the awaits, so deletion can't resurrect a task.
-    this.mutableTask(owner, id);
+
+    if (this.projects) {
+      await measureTaskWait("repository_validation", id, () =>
+        this.projects!.resolve(t.repository),
+      );
+    }
+
+    // Recheck after the awaits, so deletion can't resurrect a task. A turn
+    // that started meanwhile takes the message as a running-task send.
+    const current = this.mutableTask(owner, id);
+
+    if (this.active.has(id) || BUSY.includes(current.status)) {
+      return this.sendOnce(owner, id, message, from, options, record);
+    }
+
     const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
     const before = queueSnapshot(t);
 
-    t.instructions.push(m);
-    delete t.queue_paused;
-    requeue(t);
-
-    this.store.transaction(() => {
+    commitSend(this.store, t, () => {
+      t.instructions.push(m);
+      delete t.queue_paused;
+      requeue(t);
       this.store.save(t);
       recordMessage(this.store, t, m, options.delivery ?? "steer");
       recordQueueChange(this.store, t, before);
       this.store.event(t, "task.queued");
+      record(m.id, "started");
     });
 
     void this.schedule();
 
-    return { task: t, message_id: m.id };
+    return { task: t, message_id: m.id, state: "started" };
   }
 
   /** The task's queue, as Control holds it while a turn runs. */

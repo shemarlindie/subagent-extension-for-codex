@@ -15,6 +15,7 @@ import { previewEvents } from "../../../../../dev/panel/scenarios/fixtures";
 import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
+import { deferred, flush } from "../../../app/state/controller-test-harness";
 import type { Event, Task, Transport } from "../../../app/state/types";
 import { ChatPanel } from "./chat-panel";
 
@@ -131,6 +132,92 @@ function setup(
 
 const sent = (tool: ReturnType<typeof setup>["tool"]) =>
   tool.mock.calls.map(([name, args]) => [name, args]);
+
+test("retry after a running task finishes preserves the uncertain queue request", async () => {
+  vi.useFakeTimers();
+
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const { view, tool, composer, type, updateTask } = setup({
+    status: "running",
+  });
+
+  const write = deferred<unknown>();
+  tool.mockReturnValue(write.promise);
+  type("Follow up");
+  fireEvent.keyDown(composer, { key: "Enter" });
+  const original = tool.mock.calls[0];
+  expect(original?.[1]).toMatchObject({ delivery: "queue" });
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30000);
+  });
+
+  expect(view.getByRole("alert").textContent).toContain(
+    "Delivery could not be confirmed",
+  );
+
+  updateTask({ status: "completed" });
+  tool.mockResolvedValue({});
+
+  await act(async () => {
+    fireEvent.keyDown(composer, { key: "Enter" });
+    await flush();
+  });
+
+  expect(tool.mock.calls[1]).toEqual(original);
+  expect((composer as HTMLTextAreaElement).value).toBe("");
+
+  type("Follow up");
+
+  await act(async () => {
+    fireEvent.keyDown(composer, { key: "Enter" });
+    await flush();
+  });
+
+  expect(tool.mock.calls[2]).not.toEqual(original);
+  expect(tool.mock.calls[2]?.[1]).toMatchObject({ delivery: "steer" });
+
+  await act(async () => {
+    write.resolve({});
+    await flush();
+  });
+});
+
+test.each([false, true])(
+  "Stop explains a pending shutdown with composer collapsed: %s",
+  async (collapsed) => {
+    const { view, tool } = setup({ status: "running" });
+    const stopping = deferred<unknown>();
+    tool.mockReturnValue(stopping.promise);
+
+    if (collapsed) {
+      fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+    }
+
+    fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
+    expect(view.getByText("Stopping the current turn…")).toBeTruthy();
+
+    expect(
+      (view.getByRole("button", { name: "Stop the turn" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    await act(async () => {
+      stopping.resolve({});
+      await flush();
+    });
+
+    expect(view.queryByText("Stopping the current turn…")).toBeNull();
+
+    expect(
+      (view.getByRole("button", { name: "Stop the turn" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  },
+);
 
 test("keeps the real composer disabled while the initial chat read is pending", () => {
   const { composer } = setup({}, [], null);
@@ -317,10 +404,15 @@ test("on an idle task, Enter sends the message, which starts the next turn", asy
   fireEvent.keyDown(composer, { key: "Enter" });
 
   await waitFor(() =>
-    assert.deepEqual(sent(tool), [
+    expect(sent(tool)).toEqual([
       [
         "send_user_agent_message",
-        { task_id: "task-1", message: "Next, add tests", delivery: "steer" },
+        {
+          task_id: "task-1",
+          message: "Next, add tests",
+          delivery: "steer",
+          request_id: expect.any(String),
+        },
       ],
     ]),
   );
@@ -363,14 +455,24 @@ test("while a turn runs, Cmd/Ctrl+Enter steers, Enter queues, and an empty compo
   fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
   await waitFor(() => assert.equal(tool.mock.calls.length, 3));
 
-  assert.deepEqual(sent(tool), [
+  expect(sent(tool)).toEqual([
     [
       "send_user_agent_message",
-      { task_id: "task-1", message: "Mind the edge cases", delivery: "steer" },
+      {
+        task_id: "task-1",
+        message: "Mind the edge cases",
+        delivery: "steer",
+        request_id: expect.any(String),
+      },
     ],
     [
       "send_user_agent_message",
-      { task_id: "task-1", message: "Afterwards, the docs", delivery: "queue" },
+      {
+        task_id: "task-1",
+        message: "Afterwards, the docs",
+        delivery: "queue",
+        request_id: expect.any(String),
+      },
     ],
     ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
   ]);
@@ -390,10 +492,15 @@ test("while the worker waits for input, Enter and Ctrl+Enter only queue", async 
   fireEvent.keyDown(composer, { key: "Enter", ctrlKey: true });
 
   await waitFor(() =>
-    assert.deepEqual(sent(tool), [
+    expect(sent(tool)).toEqual([
       [
         "send_user_agent_message",
-        { task_id: "task-1", message: "Later", delivery: "queue" },
+        {
+          task_id: "task-1",
+          message: "Later",
+          delivery: "queue",
+          request_id: expect.any(String),
+        },
       ],
     ]),
   );
@@ -617,7 +724,7 @@ test("Stop moves continuously between expanded and collapsed composer layouts an
   fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
 
   await waitFor(() =>
-    assert.deepEqual(sent(tool), [
+    expect(sent(tool)).toEqual([
       ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
       ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
     ]),
@@ -665,7 +772,7 @@ for (const pending_input of [
     fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
 
     await waitFor(() =>
-      assert.deepEqual(sent(tool), [
+      expect(sent(tool)).toEqual([
         ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
       ]),
     );
@@ -835,7 +942,7 @@ test("questions collapse the composer while preserving its draft and Stop action
   fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
 
   await waitFor(() =>
-    assert.deepEqual(sent(tool), [
+    expect(sent(tool)).toEqual([
       ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
     ]),
   );
@@ -861,10 +968,15 @@ test("the expanded question composer queues messages and each new request starts
   fireEvent.keyDown(composer, { key: "Enter" });
 
   await waitFor(() =>
-    assert.deepEqual(sent(tool), [
+    expect(sent(tool)).toEqual([
       [
         "send_user_agent_message",
-        { task_id: "task-1", message: "Next, add tests", delivery: "queue" },
+        {
+          task_id: "task-1",
+          message: "Next, add tests",
+          delivery: "queue",
+          request_id: expect.any(String),
+        },
       ],
     ]),
   );
@@ -918,7 +1030,7 @@ test("pending steers can be sent now, and a paused queue resumed, cleared, edite
   fireEvent.change(edit, { target: { value: "Edited" } });
   await click("Save");
 
-  assert.deepEqual(sent(tool), [
+  expect(sent(tool)).toEqual([
     ["interrupt_agent_task", { task_id: "task-1", send_pending: true }],
     ["resume_user_agent_queue", { task_id: "task-1" }],
     ["clear_user_agent_queue", { task_id: "task-1" }],
@@ -1058,7 +1170,7 @@ test("queued messages reorder by dragging or Alt+arrows, behind a left-over stee
   fireEvent.dragEnd(row("msg_b"));
   expect(view.container.querySelector("[data-drop]")).toBeNull();
 
-  assert.deepEqual(sent(tool), [
+  expect(sent(tool)).toEqual([
     [
       "move_user_agent_queued_message",
       { task_id: "task-1", message_id: "msg_a", index: 2 },
@@ -1115,7 +1227,7 @@ test("a spent budget shows its amounts and applies the raised limit", async () =
   fireEvent.click(apply);
 
   await waitFor(() =>
-    assert.deepEqual(sent(tool), [
+    expect(sent(tool)).toEqual([
       [
         "raise_user_agent_budget",
         { task_id: "task-1", budget: { max_cost_usd: 8 } },
@@ -1142,7 +1254,7 @@ test("a spent budget shows its amounts and applies the raised limit", async () =
   fireEvent.keyDown(composer, { key: "Enter" });
 
   await waitFor(() =>
-    assert.deepEqual(sent(tool), [
+    expect(sent(tool)).toEqual([
       [
         "raise_user_agent_budget",
         {
@@ -1156,6 +1268,7 @@ test("a spent budget shows its amounts and applies the raised limit", async () =
           task_id: "task-1",
           message: "Continue",
           delivery: "steer",
+          request_id: expect.any(String),
         },
       ],
     ]),
@@ -1226,7 +1339,7 @@ test("runtime limit uses the cost control pattern and accepts a higher limit", a
   fireEvent.click(apply);
 
   await waitFor(() =>
-    assert.deepEqual(sent(tool), [
+    expect(sent(tool)).toEqual([
       [
         "raise_user_agent_budget",
         { task_id: "task-1", budget: { max_runtime_minutes: 121 } },

@@ -177,6 +177,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         const sent = await c.send(owner, a.task_id, a.message, authority, {
           delivery: a.delivery,
           budget: a.budget,
+          request_id: a.request_id,
         });
 
         return {

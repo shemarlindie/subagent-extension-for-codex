@@ -1,7 +1,9 @@
+import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors";
 import type { BudgetRaise, Delivery } from "../../../../shared/tasks/model";
 import type { Snapshot, Task } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
 import { UnreadActions } from "../unread/unread-actions";
+import { boundedRequest } from "./bounded-request";
 
 interface TaskActionContext {
   snapshot(): Snapshot;
@@ -14,6 +16,20 @@ interface TaskActionContext {
   forgetQuestion(requestId: string): void;
 }
 
+type PendingMessageRequest = {
+  request_id: string;
+  delivery: Delivery;
+};
+
+type RunOptions = {
+  /** Resolve once the tool answers, refreshing in the background. */
+  background?: boolean;
+  /** Stop waiting after the bound and report this instead. */
+  timeoutMessage?: string;
+  /** Observes the tool call itself, which can settle after the bound. */
+  track?: (call: Promise<unknown>) => void;
+};
+
 /**
  * Runs the task actions the Chat and inspector take outside any dialog. Each
  * resolves with the failure message, or nothing once it's done. Message sends
@@ -22,6 +38,7 @@ interface TaskActionContext {
 export class TaskActions {
   /** Records what the user has read, without making the panel busy. */
   readonly unread: UnreadActions;
+  private readonly sendRequests = new Map<string, PendingMessageRequest>();
 
   constructor(private context: TaskActionContext) {
     this.unread = new UnreadActions(context);
@@ -81,21 +98,76 @@ export class TaskActions {
     return this.run("raise_user_agent_budget", { task_id: task.id, budget });
   }
 
-  /** Sends the user's message to a task, as steer, queue or interrupt. */
-  sendMessage(task: Task, message: string, delivery: Delivery) {
+  /**
+   * Sends the user's message to a task, as steer, queue or interrupt.
+   * `delivered` runs once the service acknowledges it: before this resolves,
+   * or later when the acknowledgement arrives after the timeout.
+   */
+  async sendMessage(
+    task: Task,
+    message: string,
+    delivery: Delivery,
+    delivered?: () => void,
+  ) {
+    // Refuse before reserving a request, so a refused send can't pin delivery.
+    if (this.context.snapshot().busy || this.context.closed()) {
+      return "Wait for the last action.";
+    }
+
+    const key = JSON.stringify([task.id, message]);
+
+    // getRandomValues also works in the supported HTTP LAN console.
+    // Preserve delivery when a task's status changes before an uncertain retry.
+    const request = this.sendRequests.get(key) ?? {
+      request_id: Array.from(
+        crypto.getRandomValues(new Uint32Array(4)),
+        (part) => part.toString(16).padStart(8, "0"),
+      ).join(""),
+      delivery,
+    };
+
+    this.sendRequests.set(key, request);
+
+    // The call's outcome, not the bounded wait, ends the retry identity. A
+    // newer request for the same text keeps its own identity.
+    const release = () => {
+      if (this.sendRequests.get(key) !== request) return false;
+      this.sendRequests.delete(key);
+
+      return true;
+    };
+
     return this.run(
       "send_user_agent_message",
-      { task_id: task.id, message, delivery },
-      false,
+      { task_id: task.id, message, ...request },
+      {
+        background: true,
+        timeoutMessage:
+          "Delivery could not be confirmed. Your draft is kept. Retry the same message to safely check or complete delivery.",
+        track: (call) => {
+          void call.then(
+            () => {
+              if (release()) delivered?.();
+            },
+            (error: unknown) => {
+              if (error instanceof SendRejectedError) release();
+            },
+          );
+        },
+      },
     );
   }
 
   /** Stops a task's turn; `sendPending` sends its pending steers at once. */
   interruptTask(task: Task, sendPending = false) {
-    return this.run("interrupt_agent_task", {
-      task_id: task.id,
-      send_pending: sendPending,
-    });
+    return this.run(
+      "interrupt_agent_task",
+      { task_id: task.id, send_pending: sendPending },
+      {
+        timeoutMessage:
+          "The current turn is still stopping. Check its status before trying again.",
+      },
+    );
   }
 
   steerQueued(task: Task, messageId: string) {
@@ -140,7 +212,7 @@ export class TaskActions {
   private async run(
     name: string,
     args: Record<string, unknown>,
-    waitForRefresh = true,
+    { background = false, timeoutMessage, track }: RunOptions = {},
   ): Promise<string | undefined> {
     if (this.context.snapshot().busy || this.context.closed()) {
       return "Wait for the last action.";
@@ -149,7 +221,13 @@ export class TaskActions {
     this.context.patch({ busy: true });
 
     try {
-      await this.context.tool(name, args);
+      const call = this.context.tool(name, args);
+      // Tracking first lets it observe a prompt outcome before this resolves.
+      track?.(call);
+
+      await (timeoutMessage
+        ? boundedRequest(name, () => call, timeoutMessage)
+        : call);
     } catch (error) {
       return errorMessage(error);
     } finally {
@@ -160,7 +238,7 @@ export class TaskActions {
       .refresh()
       .catch((error) => this.context.report(error));
 
-    if (waitForRefresh) await refresh;
+    if (!background) await refresh;
 
     return undefined;
   }

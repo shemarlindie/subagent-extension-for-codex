@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
 import {
@@ -375,6 +375,85 @@ test("MCP advertises app-only aliases and enforces approval policy for model-fac
       true,
     );
   } finally {
+    await client.close();
+    await cleanup();
+  }
+});
+
+test("HTTP and MCP mark only send failures confirmed before acceptance", async () => {
+  const { c, base, post, start, pending, cleanup } = await setup();
+  const client = new Client({ name: "send-rejection-test", version: "1.0.0" });
+  const interrupt = c.interrupt;
+
+  try {
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(base + "/mcp"), {
+        requestInit: { headers: { Authorization: "Bearer test-token" } },
+      }),
+    );
+
+    const started = await post("/api/tools/start_agent_task", start);
+    const id = (await started.json()).result.id as string;
+    await pending(id);
+
+    c.interrupt = async () => {
+      throw new Error("Shutdown failed");
+    };
+
+    const cases = [
+      {
+        label: "rejected",
+        task_id: id,
+        delivery: "steer",
+        rejected: true,
+        message: /waiting for input/,
+      },
+      {
+        label: "unknown-task",
+        task_id: "missing",
+        delivery: "queue",
+        rejected: false,
+        message: /Task not found/,
+      },
+      {
+        label: "accepted",
+        task_id: id,
+        delivery: "interrupt",
+        rejected: false,
+        message: /Shutdown failed/,
+      },
+    ];
+
+    for (const scenario of cases) {
+      const args = {
+        task_id: scenario.task_id,
+        delivery: scenario.delivery,
+        message: "Next",
+        request_id: `http-${scenario.label}`,
+      };
+
+      const response = await post("/api/tools/send_agent_message", args);
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toMatch(scenario.message);
+      expect(body.send_rejected).toBe(scenario.rejected ? true : undefined);
+
+      const result = await client.callTool({
+        name: "send_agent_message",
+        arguments: { ...args, request_id: `mcp-${scenario.label}` },
+      });
+
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result.content)).toMatch(scenario.message);
+
+      expect(result._meta?.send_rejected).toBe(
+        scenario.rejected ? true : undefined,
+      );
+    }
+
+    expect(c.store.get(id, "local").pending_steers).toHaveLength(2);
+  } finally {
+    c.interrupt = interrupt;
     await client.close();
     await cleanup();
   }

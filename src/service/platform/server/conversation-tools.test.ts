@@ -11,6 +11,7 @@ import {
   PARENT_DELEGATION_PROTOCOL,
   PARENT_REPORT_PROTOCOL,
 } from "../../../shared/tasks/conversation/parent-protocol.js";
+import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import type { ListedTask } from "../../../shared/tasks/task-list.js";
 import type { Provider, RunContext } from "../../features/providers/types.js";
@@ -212,6 +213,41 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     assert.ok(listed);
     assert.deepEqual(listed.reply, task.reply);
     assert.equal(listed.queued_messages, 0);
+  } finally {
+    await c.close();
+  }
+});
+
+test("a confirmed rejected send preserves its message and permits changed delivery", async () => {
+  const { c, store, user, start } = await setup();
+
+  try {
+    const task = await start("[input]");
+    await until(() => !!store.get(task.id, "alice").pending_input);
+
+    const rejected = await user("send_user_agent_message", {
+      task_id: task.id,
+      message: "Next",
+      delivery: "steer",
+      request_id: "rejected-steer",
+    }).catch((error: unknown) => error);
+
+    expect(rejected).toBeInstanceOf(SendRejectedError);
+
+    expect(rejected).toHaveProperty(
+      "message",
+      "The worker is waiting for input, so it can't be steered. Answer its request, or queue the message.",
+    );
+
+    const queued = await user("send_user_agent_message", {
+      task_id: task.id,
+      message: "Next",
+      delivery: "queue",
+      request_id: "new-queue",
+    });
+
+    expect(queued).toMatchObject({ state: "queued" });
+    expect(store.get(task.id, "alice").queue).toHaveLength(1);
   } finally {
     await c.close();
   }

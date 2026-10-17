@@ -5,6 +5,7 @@ import { createMcpHandler } from "@modelcontextprotocol/server";
 import express from "express";
 
 import type { DraftUpdate } from "../../../shared/tasks/conversation/drafts.js";
+import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
@@ -210,9 +211,10 @@ export function application(
 
       res.json({ result });
     } catch (e) {
-      res
-        .status(400)
-        .json({ error: e instanceof Error ? e.message : String(e) });
+      res.status(400).json({
+        error: e instanceof Error ? e.message : String(e),
+        ...(e instanceof SendRejectedError ? { send_rejected: true } : {}),
+      });
     }
   });
 

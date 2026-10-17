@@ -1,3 +1,4 @@
+import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
 import type { Transport, TransportEvents } from "../app/state/types";
 import { decodePanelToolResult } from "./event-decoding";
 
@@ -39,7 +40,11 @@ export class ConsoleTransport implements Transport {
     }
 
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error ?? "Request failed");
+
+    if (!response.ok) {
+      const Failure = result.send_rejected === true ? SendRejectedError : Error;
+      throw new Failure(result.error ?? "Request failed");
+    }
 
     return result;
   }

@@ -97,6 +97,7 @@ export function userTools(
         const sent = await c.send(owner, a.task_id, a.message, "user", {
           delivery: a.delivery,
           budget: a.budget,
+          request_id: a.request_id,
         });
 
         return {
