@@ -131,8 +131,10 @@ export async function locateClaudeCli(
 ): Promise<Located> {
   const override = environment.env[claudePathVariable];
 
-  const absolute =
-    environment.platform === "win32" ? win32.isAbsolute : isAbsolute;
+  const absolute = (path: string) =>
+    environment.platform === "win32"
+      ? win32.isAbsolute(path)
+      : isAbsolute(path);
 
   if (override) {
     if (!absolute(override)) {

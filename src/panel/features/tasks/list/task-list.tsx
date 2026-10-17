@@ -36,9 +36,9 @@ import { WorkerProfileIcon } from "./worker-profile-icon";
 interface TaskRowProps {
   task: Task;
   selected: boolean;
-  onSelect(): void;
+  onSelect: () => void;
   /** Marks the task read when it's unread, otherwise unread. */
-  onToggleRead(): void;
+  onToggleRead: () => void;
 }
 
 /** A task in the list; right-click or long-press marks it read or unread. */

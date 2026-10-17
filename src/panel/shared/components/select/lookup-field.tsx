@@ -9,8 +9,16 @@ import type { SelectFieldProps } from "./select-field";
 
 type LookupFieldProps = SelectFieldProps &
   (
-    | { multiple?: false; value: string; onValueChange(value: string): void }
-    | { multiple: true; value: string[]; onValueChange(value: string[]): void }
+    | {
+        multiple?: false;
+        value: string;
+        onValueChange: (value: string) => void;
+      }
+    | {
+        multiple: true;
+        value: string[];
+        onValueChange: (value: string[]) => void;
+      }
   );
 
 /** Search stays separate from the selected values, including multi-selection. */

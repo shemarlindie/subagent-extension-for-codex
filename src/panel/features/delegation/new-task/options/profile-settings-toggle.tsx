@@ -10,7 +10,7 @@ type ProfileSettingsToggleProps = {
   /** The same settings in full, for the label and tooltip. */
   description: string;
   loading: boolean;
-  onToggle(): void;
+  onToggle: () => void;
 };
 
 /**

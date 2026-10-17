@@ -31,7 +31,7 @@ export type SelectFieldProps = {
   invalid?: boolean;
   describedBy?: string;
   triggerRef?: Ref<HTMLButtonElement>;
-  onBlur?(): void;
+  onBlur?: () => void;
 };
 
 function SelectTrigger({
@@ -169,7 +169,7 @@ export function SelectOptions({ options }: { options: SelectOption[] }) {
 export function SelectField(
   props: SelectFieldProps & {
     value: string;
-    onValueChange(value: string): void;
+    onValueChange: (value: string) => void;
   },
 ) {
   if (props.searchable) return <LookupField {...props} />;
@@ -196,7 +196,7 @@ export function SelectField(
 export function MultiSelectField(
   props: SelectFieldProps & {
     value: string[];
-    onValueChange(value: string[]): void;
+    onValueChange: (value: string[]) => void;
   },
 ) {
   if (props.searchable) return <LookupField {...props} multiple />;

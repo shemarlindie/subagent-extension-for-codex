@@ -16,7 +16,7 @@ type ChipSelectProps = {
   label: string;
   options: ChipOption[];
   value: string;
-  onValueChange(value: string): void;
+  onValueChange: (value: string) => void;
   disabled?: boolean;
   loading?: boolean;
   /** Shown while no option is selected. */

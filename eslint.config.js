@@ -77,6 +77,15 @@ export default defineConfig(
     },
   },
   {
+    // A detached method loses `this` when called. Tests pass mocked methods
+    // to `expect`, which never calls them.
+    files: ["**/*.{ts,mts,cts,tsx}"],
+    ignores: TESTS,
+    rules: {
+      "@typescript-eslint/unbound-method": "error",
+    },
+  },
+  {
     // These ceilings block growth without requiring immediate refactors.
     files: ["src/**/*.{ts,tsx}", "dev/**/*.{ts,tsx}"],
     ignores: [...TESTS, "**/*.generated.ts"],

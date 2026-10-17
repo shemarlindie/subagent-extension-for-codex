@@ -5,8 +5,8 @@ import { LoadingSpinner } from "../components/loading-spinner/loading-spinner";
 interface FormSwitchProps {
   id?: string;
   checked: boolean;
-  onCheckedChange?(checked: boolean): void;
-  onBlur?(): void;
+  onCheckedChange?: (checked: boolean) => void;
+  onBlur?: () => void;
   labelId?: string;
   describedBy?: string;
   disabled?: boolean;
