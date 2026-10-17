@@ -811,7 +811,7 @@ test("project removal retains mutation locks until every interrupted turn settle
         f.store,
         executionTaskPolicy,
         abort.signal,
-        async () => {},
+        { recordEnd: async () => {}, resume: async () => {} },
       ),
     });
   }

@@ -18,7 +18,7 @@ import {
   imageMime,
   isBinary,
 } from "../../../shared/workspaces/changes.js";
-import { git, gitBytes } from "./git.js";
+import { changedPaths, git, gitBytes } from "./git.js";
 import { readDiff } from "./read-diff.js";
 import { buildUncommittedBase } from "./uncommitted-base.js";
 
@@ -58,27 +58,6 @@ async function headTree(cwd: string) {
   return (await git(cwd, ["rev-parse", "--verify", "HEAD^{tree}"])).trim();
 }
 
-/** Every path that differs between two trees; a rename lists both paths. */
-async function changedPaths(cwd: string, from: string, to: string) {
-  return new Set(
-    (
-      await git(cwd, [
-        "-c",
-        "core.quotePath=false",
-        "diff",
-        "--name-only",
-        "-z",
-        "--no-renames",
-        from,
-        to,
-        "--",
-      ])
-    )
-      .split("\0")
-      .filter(Boolean),
-  );
-}
-
 /** Statuses in which no turn is running or waiting for input. */
 const TURN_ENDED = ["interrupted", "completed", "failed"];
 
@@ -105,6 +84,27 @@ interface WorkspaceAccess {
   root: string;
   snapshot(cwd: string): Promise<string>;
   branchExists(t: Task): Promise<boolean>;
+  recordedPaths(t: Task, scope: ChangeScope): Promise<Set<string> | undefined>;
+}
+
+/** Whether a changed file has a path in `paths`; a rename counts by either. */
+function touches(f: ChangedFile, paths: Set<string>) {
+  return (
+    paths.has(f.path) || (f.old_path !== undefined && paths.has(f.old_path))
+  );
+}
+
+/** A diff's files and their parts, kept to those `keep` accepts. */
+function keepFiles(
+  diff: { files: ChangedFile[]; parts: string[] },
+  keep: (f: ChangedFile) => boolean,
+) {
+  const kept = diff.files.map(keep);
+
+  return {
+    files: diff.files.filter((_, index) => kept[index]),
+    parts: diff.parts.filter((_, index) => kept[index]),
+  };
 }
 
 /**
@@ -160,6 +160,31 @@ export class TaskChanges {
   }
 
   /**
+   * The files a current_repo task changed while its turns ran, for the whole
+   * task or its latest turn: those recorded as each stretch ended, and while
+   * one runs, those it has changed so far (to `now`). Undefined for a
+   * worktree, whose files are all its own, and for a task from before files
+   * were recorded.
+   */
+  private async turnPaths(
+    t: Task,
+    scope: ChangeScope,
+    cwd: string,
+    now: string,
+  ) {
+    if (t.workspace_strategy !== "current_repo") return undefined;
+    const paths = await this.workspaces.recordedPaths(t, scope);
+
+    if (paths && !t.end_tree && t.stretch_start_tree) {
+      for (const path of await changedPaths(cwd, t.stretch_start_tree, now)) {
+        paths.add(path);
+      }
+    }
+
+    return paths;
+  }
+
+  /**
    * A task's changes, read from Git: the whole task from its base (the base
    * commit of a worktree, the start snapshot of a current_repo task), or the
    * latest turn from its turn snapshot, to where its changes end.
@@ -187,7 +212,14 @@ export class TaskChanges {
     if (page && page.base !== base) throw new Error("Stale changes cursor");
     const current = page?.current ?? (await source.end());
 
-    const { files, parts } = await this.diffTrees(source.cwd, base, current),
+    const [diff, paths] = await Promise.all([
+      this.diffTrees(source.cwd, base, current),
+      this.turnPaths(t, scope, source.cwd, current),
+    ]);
+
+    const { files, parts } = paths
+        ? keepFiles(diff, (f) => touches(f, paths))
+        : diff,
       start = page?.index ?? 0,
       { diff: text, end } = diffPage(parts, start, pageChars);
 
@@ -292,27 +324,38 @@ export class TaskChanges {
       ),
       // Files that differ from HEAD now: what a commit would take.
       changedPaths(cwd, head, now),
-      // A worktree is the task's own. A current_repo task's changes end at
-      // its end snapshot, so files only others edited after that don't count.
-      t.workspace_strategy === "worktree" && scope === "task"
-        ? undefined
-        : changedPaths(cwd, start, t.end_tree ?? now),
+      this.relevantPaths(t, scope, cwd, start, now),
     ]);
 
-    // A rename counts by either path.
-    const keep = diff.files.map((f) => {
-      const paths = f.old_path === undefined ? [f.path] : [f.path, f.old_path];
+    return keepFiles(
+      diff,
+      (f) => touches(f, pending) && (!relevant || touches(f, relevant)),
+    );
+  }
 
-      return (
-        paths.some((path) => pending.has(path)) &&
-        (!relevant || paths.some((path) => relevant.has(path)))
-      );
-    });
+  /**
+   * The files a scope's uncommitted changes can include: all of a worktree's
+   * for the whole task, since it's the task's own; the files a current_repo
+   * task changed while its turns ran (see `turnPaths`); or, for a task from
+   * before those were recorded, those that changed between the scope's
+   * start and where its changes end, so files only others edited after
+   * that don't count.
+   */
+  private async relevantPaths(
+    t: Task,
+    scope: ChangeScope,
+    cwd: string,
+    start: string,
+    now: string,
+  ) {
+    if (t.workspace_strategy === "worktree" && scope === "task") {
+      return undefined;
+    }
 
-    return {
-      files: diff.files.filter((_, index) => keep[index]),
-      parts: diff.parts.filter((_, index) => keep[index]),
-    };
+    return (
+      (await this.turnPaths(t, scope, cwd, now)) ??
+      changedPaths(cwd, start, t.end_tree ?? now)
+    );
   }
 
   /**
@@ -454,26 +497,31 @@ export class TaskChanges {
       : ["task"];
 
     const changed = await Promise.all(
-      scopes.map(async (scope) =>
-        uncommitted
-          ? (await this.uncommitted(t, scope, source.cwd, tree)).files.map(
-              (f) => f.path,
-            )
-          : (
-              await git(source.cwd, [
-                "-c",
-                "core.quotePath=false",
-                "diff",
-                "--no-ext-diff",
-                "-M",
-                "--name-only",
-                "-z",
-                changesBase(t, scope),
-                tree,
-                "--",
-              ])
-            ).split("\0"),
-      ),
+      scopes.map(async (scope) => {
+        if (uncommitted) {
+          return (await this.uncommitted(t, scope, source.cwd, tree)).files.map(
+            (f) => f.path,
+          );
+        }
+
+        const [names, paths] = await Promise.all([
+          git(source.cwd, [
+            "-c",
+            "core.quotePath=false",
+            "diff",
+            "--no-ext-diff",
+            "-M",
+            "--name-only",
+            "-z",
+            changesBase(t, scope),
+            tree,
+            "--",
+          ]),
+          this.turnPaths(t, scope, source.cwd, tree),
+        ]);
+
+        return names.split("\0").filter((name) => !paths || paths.has(name));
+      }),
     );
 
     if (!changed.flat().includes(path)) {

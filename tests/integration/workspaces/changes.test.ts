@@ -70,9 +70,7 @@ async function setup() {
     };
 
     await workspaces.create(t);
-
-    t.turn_start_tree =
-      t.start_tree ?? (await workspaces.snapshot(t.workspace!));
+    await workspaces.startTurn(t, true);
 
     return t;
   };
@@ -317,7 +315,7 @@ test("uncommitted changes keep the task's files that differ from HEAD, and drop 
     await edit(19, "task's edit");
     await writeFile(join(s.repo, "task.txt"), "task\n");
     t.status = "completed";
-    t.end_tree = await s.workspaces.snapshot(s.repo);
+    await s.workspaces.recordEnd(t);
     // An edit after the task ended, to a file it didn't change.
     await writeFile(join(s.repo, "file-1.txt"), "later\n");
 
@@ -406,12 +404,11 @@ test("uncommitted changes keep the task's files that differ from HEAD, and drop 
     // uncommitted when the turn starts; only the turn's own edit shows. A
     // commit made during the turn drops the files it took.
     await edit(5, "before the turn");
-    t.turn_start_tree = await s.workspaces.snapshot(s.repo);
-    t.turn_head = s.git(s.repo, "rev-parse", "HEAD").trim();
+    await s.workspaces.startTurn(t, false);
     await edit(6, "in the turn");
     await writeFile(join(s.repo, "turn.txt"), "turn\n");
     commit("turn.txt");
-    t.end_tree = await s.workspaces.snapshot(s.repo);
+    await s.workspaces.recordEnd(t);
     const turn = await s.workspaces.uncommittedChanges(t, "turn");
 
     assert.deepEqual(
@@ -422,6 +419,81 @@ test("uncommitted changes keep the task's files that differ from HEAD, and drop 
     assert.match(turn.diff, /\+in the turn/);
     // It may be a context line, but isn't added or removed.
     assert.doesNotMatch(turn.diff, /^[-+].*before the turn/m);
+  } finally {
+    await s.close();
+  }
+});
+
+test("a current_repo task's changes are the files changed while its turns ran", async () => {
+  const s = await setup();
+
+  try {
+    const t = await s.task("current_repo");
+
+    const paths = async (scope: "task" | "turn") => ({
+      all: (await s.workspaces.changes(t, scope)).files.map((f) => f.path),
+      uncommitted: (await s.workspaces.uncommittedChanges(t, scope)).files.map(
+        (f) => f.path,
+      ),
+    });
+
+    // While a turn runs, the files it has changed so far count.
+    await writeFile(join(s.repo, "file-0.txt"), "turn 1\n");
+
+    assert.deepEqual(await paths("task"), {
+      all: ["file-0.txt"],
+      uncommitted: ["file-0.txt"],
+    });
+
+    await s.workspaces.recordEnd(t);
+
+    // Between turns, the user edits another file, and one the task changed:
+    // that file stays, with the user's edit in it.
+    await writeFile(join(s.repo, "between.txt"), "user\n");
+    await writeFile(join(s.repo, "file-0.txt"), "turn 1\nuser\n");
+    await s.workspaces.startTurn(t, false);
+
+    // The second turn waits for input; edits while it waits aren't its.
+    await writeFile(join(s.repo, "file-1.txt"), "turn 2\n");
+    await s.workspaces.recordEnd(t);
+    await writeFile(join(s.repo, "during-wait.txt"), "user\n");
+    await s.workspaces.resume(t);
+    assert.equal(t.end_tree, undefined);
+    await writeFile(join(s.repo, "file-2.txt"), "turn 2, resumed\n");
+    await s.workspaces.recordEnd(t);
+
+    assert.deepEqual(await paths("task"), {
+      all: ["file-0.txt", "file-1.txt", "file-2.txt"],
+      uncommitted: ["file-0.txt", "file-1.txt", "file-2.txt"],
+    });
+
+    assert.match((await s.workspaces.changes(t)).diff, /\+user/);
+
+    // This turn holds its own files, not the first turn's file it measures
+    // from: that one only changed between turns.
+    assert.deepEqual(await paths("turn"), {
+      all: ["file-1.txt", "file-2.txt"],
+      uncommitted: ["file-1.txt", "file-2.txt"],
+    });
+
+    for (const path of ["between.txt", "during-wait.txt"]) {
+      await assert.rejects(
+        s.workspaces.changedFile(t, path),
+        /not among this task's changes/,
+      );
+    }
+
+    // A task from before files were recorded counts every file that
+    // changed between its start and its end.
+    s.git(s.repo, "update-ref", "-d", `refs/agent-tasks/${t.id}/paths`);
+
+    assert.deepEqual((await paths("task")).all, [
+      "between.txt",
+      "during-wait.txt",
+      "file-0.txt",
+      "file-1.txt",
+      "file-2.txt",
+    ]);
   } finally {
     await s.close();
   }
@@ -510,7 +582,7 @@ test("a current_repo task that ended without an end snapshot has no changes to s
     );
 
     // With one, its changes end there.
-    t.end_tree = await s.workspaces.snapshot(s.repo);
+    await s.workspaces.recordEnd(t);
     await writeFile(join(s.repo, "file-1.txt"), "later\n");
 
     assert.deepEqual(
@@ -617,16 +689,17 @@ test("later pages reuse the diff of the first, until it expires", async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
 
   try {
-    const t = await s.task("current_repo");
+    const t = await s.task("worktree");
 
     for (let i = 0; i < 3; i++) {
-      await writeFile(join(s.repo, `file-${i}.txt`), `edited ${i}\n`);
+      await writeFile(join(t.workspace!, `file-${i}.txt`), `edited ${i}\n`);
     }
 
     const first = await s.workspaces.changes(t, "task", undefined, 10);
 
-    // Moving the checkout away makes every Git call fail, so a page that
-    // still reads must come from the cached diff.
+    // Moving the repository away makes every Git call in its worktree fail,
+    // so a page that still reads must come from the cached diff. A worktree
+    // records no files, so reading a page needs no other Git call.
     await rename(s.repo, `${s.repo}-moved`);
     const second = await s.workspaces.changes(t, "task", first.next_cursor, 10);
     assert.match(second.diff, /file-1.txt/);
@@ -647,10 +720,10 @@ test("only the two most recent diffs are kept", async () => {
   const s = await setup();
 
   try {
-    const t = await s.task("current_repo");
+    const t = await s.task("worktree");
 
     for (let i = 0; i < 3; i++) {
-      await writeFile(join(s.repo, `file-${i}.txt`), `edited ${i}\n`);
+      await writeFile(join(t.workspace!, `file-${i}.txt`), `edited ${i}\n`);
     }
 
     // Three tree pairs: the task's (from HEAD's tree), then the turn's from
@@ -658,19 +731,19 @@ test("only the two most recent diffs are kept", async () => {
     const oldest = await s.workspaces.changes(t, "task", undefined, 10);
 
     t.turn_start_tree = s
-      .git(s.repo, "hash-object", "-t", "tree", "/dev/null")
+      .git(t.workspace!, "hash-object", "-t", "tree", "/dev/null")
       .trim();
 
     await s.workspaces.changes(t, "turn", undefined, 10);
 
     for (const i of [0, 1]) {
-      await writeFile(join(s.repo, `file-${i}.txt`), "turn base\n");
+      await writeFile(join(t.workspace!, `file-${i}.txt`), "turn base\n");
     }
 
-    t.turn_start_tree = await s.workspaces.snapshot(s.repo);
+    t.turn_start_tree = await s.workspaces.snapshot(t.workspace!);
 
     for (const i of [0, 1]) {
-      await writeFile(join(s.repo, `file-${i}.txt`), "edited again\n");
+      await writeFile(join(t.workspace!, `file-${i}.txt`), "edited again\n");
     }
 
     const newest = await s.workspaces.changes(t, "turn", undefined, 10);

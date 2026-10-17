@@ -26,7 +26,7 @@ import {
   type Steer,
 } from "../../providers/types.js";
 import { Settings } from "../../settings/settings.js";
-import { headCommit, Workspaces } from "../../workspaces/workspace.js";
+import { Workspaces } from "../../workspaces/workspace.js";
 import { Drafts } from "../conversation/drafts.js";
 import { SessionPrompts } from "../conversation/session-prompts.js";
 import { PendingInput } from "../input/pending-input.js";
@@ -393,7 +393,7 @@ export class Control {
             this.store,
             this.providers.get(t.provider)!.taskPolicy,
             abort.signal,
-            () => this.recordEnd(t),
+            this.workspaces,
           ),
         };
 
@@ -494,16 +494,7 @@ export class Control {
 
     // Every turn replaces the turn snapshot. A new current_repo task's
     // start snapshot is the same moment.
-    t.turn_start_tree =
-      created && t.start_tree
-        ? t.start_tree
-        : await this.workspaces.snapshot(t.workspace!);
-
-    await this.workspaces.pin(t, "turn-start", t.turn_start_tree);
-    // Where the turn's later commits start, for its uncommitted changes.
-    t.turn_head = await headCommit(t.workspace!);
-    // Changes are live again until this turn ends.
-    delete t.end_tree;
+    await this.workspaces.startTurn(t, created);
   }
 
   /**
@@ -679,7 +670,7 @@ export class Control {
     try {
       // One stopped while waiting for input keeps the end from when it
       // began waiting, since it was blocked from then on.
-      if (turn.turnStarted && !t.end_tree) await this.recordEnd(t);
+      if (turn.turnStarted && !t.end_tree) await this.workspaces.recordEnd(t);
       const outcome = t.status as "completed" | "failed" | "interrupted";
       this.drafts.clear(t.id);
 
@@ -754,24 +745,6 @@ export class Control {
   }
 
   /**
-   * Ends a current_repo task's changes at a pinned snapshot of the checkout
-   * now, when its turn ends or it waits for input, so later edits to the
-   * shared checkout aren't counted. A failed snapshot leaves them as they
-   * were.
-   */
-  private async recordEnd(t: Task) {
-    if (t.workspace_strategy !== "current_repo") return;
-
-    try {
-      const end = await this.workspaces.snapshot(t.workspace!);
-      await this.workspaces.pin(t, "end", end);
-      t.end_tree = end;
-    } catch {
-      // Left as they were.
-    }
-  }
-
-  /**
    * Records a successful turn's reply with the snapshots its changes start
    * and end at, each pinned for the turn so a later turn can't replace it.
    * A current_repo task's end is the one its changes stop at; a worktree's is
@@ -783,7 +756,7 @@ export class Control {
 
     try {
       if (t.workspace_strategy === "current_repo") {
-        await this.recordEnd(t);
+        await this.workspaces.recordEnd(t);
         end = t.end_tree;
       } else {
         end = await this.workspaces.snapshot(t.workspace!);

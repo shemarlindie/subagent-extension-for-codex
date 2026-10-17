@@ -273,14 +273,18 @@ history. **Whole task** is the default. **This turn** appears after multiple tur
 
 The panel and agent APIs answer different questions:
 
-| Consumer                                      | Comparison                                                                                                                                                                                                                        |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Panel (`get_user_agent_changes` and counts)   | Uncommitted changes. Worktrees include all changed files. Current-repo tasks include only files attributed to the task and omit pre-existing edits. Later outside edits to those files can also appear.                           |
-| Agents (`get_agent_changes`) and dependencies | All attributed changes, committed or not. Worktrees compare base to current tree, or retained branch after removal. Current-repo tasks compare start snapshot to the live tree while running and recorded end snapshot otherwise. |
+| Consumer                                      | Comparison                                                                                                                                                                                                                                                                  |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Panel (`get_user_agent_changes` and counts)   | Uncommitted changes. Worktrees include all changed files. Current-repo tasks include only files changed while the task's turns ran, and omit pre-existing edits. Later outside edits to those files can also appear.                                                        |
+| Agents (`get_agent_changes`) and dependencies | All attributed changes, committed or not. Worktrees compare base to current tree, or retained branch after removal. Current-repo tasks compare start snapshot to the live tree while running and recorded end snapshot otherwise, limited to files changed while turns ran. |
 
-**Current-repo limit:** other edits between task start and its recorded end can
-be attributed to the task. If an end snapshot was not recorded, changes cannot
-be distinguished from later edits and the service reports that limitation.
+**Current-repo limit:** a current-repo task records the files that change while
+each turn runs. Files changed only between turns or while the task waits for
+input are left out. Other edits to recorded files still show in their diffs.
+Tasks created before files were recorded include every file changed between
+their start and recorded end. If an end snapshot was not recorded, changes
+cannot be distinguished from later edits and the service reports that
+limitation.
 Snapshot comparisons leave the checkout's files and Git index unchanged.
 
 ### Diffs and file previews

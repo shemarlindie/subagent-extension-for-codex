@@ -3,9 +3,13 @@ import { randomUUID } from "node:crypto";
 import type { Task } from "../../../../shared/tasks/model.js";
 import type { ProviderTaskPolicy } from "../../providers/task-policy.js";
 import type { RunContext } from "../../providers/types.js";
+import type { Workspaces } from "../../workspaces/workspace.js";
 import type { Store } from "../storage/store.js";
 
 type InputResponse = Awaited<ReturnType<RunContext["input"]>>;
+
+/** Where a waiting task's changes stop, and start again when it resumes. */
+type ChangeRecorder = Pick<Workspaces, "recordEnd" | "resume">;
 
 /** Cancel a queued input without letting later requests bypass its predecessor. */
 async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {
@@ -36,7 +40,7 @@ export class PendingInput {
     private store: Store,
     private policy: ProviderTaskPolicy,
     private abortSignal: AbortSignal,
-    private recordEnd: () => Promise<void>,
+    private changes: ChangeRecorder,
   ) {}
 
   get waiting() {
@@ -93,7 +97,7 @@ export class PendingInput {
       await waitForInputSlot(previous, inputSignal);
       // The worker is blocked until the input comes, so its changes
       // stop here while it waits.
-      await this.recordEnd();
+      await this.changes.recordEnd(t);
       if (inputSignal.aborted) throw new Error("Input interrupted");
       t.status = "waiting";
 
@@ -116,7 +120,7 @@ export class PendingInput {
         });
       });
 
-      return await new Promise((resolve, reject) => {
+      const response = await new Promise<InputResponse>((resolve, reject) => {
         const onAbort = () => {
           this.resolveInput = undefined;
           this.abortSignal.removeEventListener("abort", onAbort);
@@ -136,8 +140,6 @@ export class PendingInput {
           this.resolveInput = undefined;
           delete t.pending_input;
           delete t.waiting_reason;
-          // The worker resumes, so its changes are live again.
-          delete t.end_tree;
           t.status = "running";
 
           this.store.transaction(() => {
@@ -151,6 +153,14 @@ export class PendingInput {
           resolve(r);
         };
       });
+
+      // The worker stays blocked until its changes are live again.
+      if (t.end_tree) {
+        await this.changes.resume(t);
+        this.store.save(t);
+      }
+
+      return response;
     } finally {
       release();
     }

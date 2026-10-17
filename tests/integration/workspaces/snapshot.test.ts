@@ -214,6 +214,9 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
     assert.equal(reply.data.turn, 2);
     assert.equal(reply.data.end_tree, done.end_tree);
 
+    const ref = (name: string) => `refs/agent-tasks/${t.id}/${name}`,
+      blob = (name: string) => s.git("rev-parse", ref(name)).trim();
+
     assert.equal(
       s.git(
         "for-each-ref",
@@ -221,11 +224,22 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
         "refs/agent-tasks",
       ),
       `${done.end_tree} refs/agent-tasks/${t.id}/end\n` +
+        `${blob("paths")} refs/agent-tasks/${t.id}/paths\n` +
         `${done.start_tree} refs/agent-tasks/${t.id}/start\n` +
+        `${blob("turn-paths")} refs/agent-tasks/${t.id}/turn-paths\n` +
         `${done.turn_start_tree} refs/agent-tasks/${t.id}/turn-start\n` +
         `${done.end_tree} refs/agent-tasks/${t.id}/turns/2/end\n` +
         `${done.turn_start_tree} refs/agent-tasks/${t.id}/turns/2/start\n`,
     );
+
+    // The files the turns changed, without edits made while it waited or
+    // after it ended.
+    assert.equal(
+      s.git("cat-file", "blob", ref("paths")),
+      "turn-1.txt\0turn-2.txt\0",
+    );
+
+    assert.equal(s.git("cat-file", "blob", ref("turn-paths")), "turn-2.txt\0");
 
     s.git("-c", "gc.pruneExpire=now", "gc", "-q");
 
@@ -236,6 +250,70 @@ test("tasks record a start snapshot and replace the turn snapshot on each turn",
 
     await s.workspaces.unpin(done);
     assert.equal(s.git("for-each-ref", "refs/agent-tasks"), "");
+  } finally {
+    await c.close();
+    await s.close();
+  }
+});
+
+test("answering a waiting task starts a new stretch, leaving out edits made while it waited", async () => {
+  const s = await setup();
+
+  // Writes a file before and after asking a question.
+  class Asker extends FixtureProvider {
+    override async run(c: RunContext, p: string) {
+      const write = (name: string) =>
+        writeFile(join(c.task.workspace!, name), "worker\n");
+
+      await write("before.txt");
+      await c.input("AskUserQuestion", { questions: [] }, c.signal);
+      await write("after.txt");
+
+      return super.run(c, p);
+    }
+  }
+
+  const provider = new Asker();
+
+  const c = new Control(
+    new Store(join(s.dir, "tasks.sqlite")),
+    s.workspaces,
+    new Map([[provider.id, provider]]),
+  );
+
+  const until = async (done: () => boolean) => {
+    for (let i = 0; i < 300 && !done(); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    assert.ok(done(), "Timed out");
+  };
+
+  try {
+    const t = await c.start("alice", {
+      repository: s.repo,
+      provider: "fixture",
+      description: "Write files",
+      workspace_strategy: "current_repo",
+    });
+
+    await until(() => !!c.store.get(t.id, "alice").pending_input);
+    const waiting = c.store.get(t.id, "alice");
+    await writeFile(join(s.repo, "during-wait.txt"), "user\n");
+    c.input("alice", t.id, waiting.pending_input!.id, true);
+    await until(() => c.store.get(t.id, "alice").status === "completed");
+    const done = c.store.get(t.id, "alice");
+
+    // The stretch after the answer starts from a snapshot holding the
+    // user's edit, so it isn't the task's.
+    assert.notEqual(done.stretch_start_tree, done.turn_start_tree);
+
+    for (const scope of ["task", "turn"] as const) {
+      assert.deepEqual(
+        (await s.workspaces.changes(done, scope)).files.map((f) => f.path),
+        ["after.txt", "before.txt"],
+      );
+    }
   } finally {
     await c.close();
     await s.close();

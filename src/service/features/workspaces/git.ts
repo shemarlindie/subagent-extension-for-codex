@@ -42,3 +42,24 @@ export async function gitBytes(cwd: string, args: string[]) {
     })
   ).stdout;
 }
+
+/** Every path that differs between two trees; a rename lists both paths. */
+export async function changedPaths(cwd: string, from: string, to: string) {
+  return new Set(
+    (
+      await git(cwd, [
+        "-c",
+        "core.quotePath=false",
+        "diff",
+        "--name-only",
+        "-z",
+        "--no-renames",
+        from,
+        to,
+        "--",
+      ])
+    )
+      .split("\0")
+      .filter(Boolean),
+  );
+}
