@@ -47,9 +47,13 @@ test("the Changes tab reads every page and shows the worktree branch and its com
     ],
   );
 
-  assert.ok(screen.getByText("+1 −1, 2 files uncommitted"));
-  assert.ok(screen.getByText(/^Uncommitted changes in the worktree/));
-  assert.ok(screen.getByText("Binary file changed · 2.0 KB"));
+  assert.ok(screen.getByText("+1 −1, 1 file"));
+  assert.ok(screen.getByText(/^Edits recorded from this task/));
+
+  assert.ok(
+    screen.getAllByText("An edit to this file wasn't recorded.").length,
+  );
+
   assert.ok(screen.getByText("git diff abc123...agent/one"));
   assert.ok(screen.getByText("git push -u origin agent/one"));
   assert.ok(screen.getByText("cd /data/worktrees/one"));
@@ -58,7 +62,7 @@ test("the Changes tab reads every page and shows the worktree branch and its com
 
   await user.click(screen.getByRole("tab", { name: "Details" }));
   assert.ok(screen.getByText("agent/one"));
-  assert.ok(screen.getAllByText("+1 −1, 2 files uncommitted").length);
+  assert.ok(screen.getAllByText("+1 −1, 1 file").length);
 });
 
 test("the Changes tab offers This turn after a second turn and explains empty states", async (t) => {
@@ -67,14 +71,13 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   });
 
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
-  // Empty states point at the Git history for committed changes.
-  await screen.findByText(/^No uncommitted changes\. .*Git history/);
+  // Empty states say no edits were recorded for the scope.
+  await screen.findByText("No recorded edits.");
   transport.changes = [{ ...transport.changes[0], scope: "turn" }];
   await user.click(screen.getByRole("button", { name: "This turn" }));
-  await screen.findByText(/^No uncommitted changes from this turn\./);
+  await screen.findByText("No recorded edits from this turn.");
   assert.equal(transport.calls.at(-1)?.args.scope, "turn");
 
-  // A removed worktree names the branch and how to check it out.
   transport.tasks = transport.tasks.map((task) => ({
     ...task,
     workspace_removed: true,
@@ -105,6 +108,7 @@ test("the Changes tab offers This turn after a second turn and explains empty st
 
   assert.match(alert.textContent ?? "", /This task has no change snapshot\./);
   assert.match(alert.textContent ?? "", /last.*loaded/i);
+  assert.ok(screen.getByText(/The worktree was removed/));
   assert.ok(screen.getByText("git checkout agent/one"));
   assertAbsent(screen.queryByRole("progressbar"));
 });
@@ -127,7 +131,7 @@ test("Preview opens a changed file", async (t) => {
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
   // A binary file that isn't an image has no preview.
   await screen.findByRole("button", { name: "Preview src/a.ts" });
-  assertAbsent(screen.queryByRole("button", { name: "Preview data.bin" }));
+  assert.ok(screen.getByRole("button", { name: "Preview data.bin" }));
   // Opening a preview leaves the file's section as it was.
   const section = document.querySelector(".diff-file") as HTMLDetailsElement;
   await user.click(screen.getByRole("button", { name: "Preview src/a.ts" }));
@@ -268,7 +272,7 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
     within(dialog).getByRole("button", { name: "Discard changes and remove" }),
   );
 
-  await screen.findByText("git checkout agent/one");
+  await screen.findByText(/The worktree was removed/);
 
   assert.deepEqual(removals, [
     { task_id: "one" },
@@ -291,95 +295,64 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
   );
 });
 
-test("a current_repo task's changes say they're the uncommitted ones in its files, including edits made outside the task", async (t) => {
+test("a current_repo task explains recorded edits and current file previews", async (t) => {
   const { user } = await setup(t, (transport) => {
     transport.tasks = [{ ...task(), workspace_strategy: "current_repo" }];
   });
 
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
 
-  assert.ok(
-    await screen.findByText(
-      /^Uncommitted changes to the files this task changed while it ran, including others' edits to them meanwhile\. Once it stops, they show as it left them\. Committed changes are in the Git history\.$/,
-    ),
-  );
+  assert.ok(await screen.findByText(/^Edits recorded from this task/));
 
   assertAbsent(screen.queryByText(/git push/));
 });
 
-test("a superseded file is tagged, starts closed and is left out of the totals", async (t) => {
-  const diff = (path: string, line: string) =>
-    `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n-old\n+${line}\n`;
-
+test("command and incomplete edits carry notes and incomplete totals are excluded", async (t) => {
   const { user } = await setup(t, (transport) => {
-    transport.tasks = [{ ...task(), workspace_strategy: "current_repo" }];
-
     transport.changes = [
       {
         scope: "task",
         files: [
           {
-            path: "kept.ts",
+            path: "command.ts",
             status: "modified",
             additions: 1,
             deletions: 1,
-            binary: false,
+            source: "command",
+            incomplete: false,
           },
           {
-            path: "replaced.ts",
+            path: "missing.ts",
             status: "modified",
-            additions: 1,
-            deletions: 1,
-            binary: false,
-            superseded: true,
+            additions: 0,
+            deletions: 0,
+            source: "command",
+            incomplete: true,
           },
         ],
         additions: 1,
         deletions: 1,
-        diff: diff("kept.ts", "kept line") + diff("replaced.ts", "task line"),
+        diff: "diff --git a/command.ts b/command.ts\n--- a/command.ts\n+++ b/command.ts\n@@ -1 +1 @@\n-old\n+new\n",
+        unrecorded_commands: true,
       },
     ];
   });
 
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
-  assert.ok(await screen.findByText("+1 −1, 1 file uncommitted"));
+  await screen.findByText("+1 −1, 1 file");
+  expect(screen.getAllByText("command")).toHaveLength(2);
 
-  const section = (path: string) =>
-    document.querySelector<HTMLDetailsElement>(
-      `details[data-changed-file="${path}"]`,
-    )!;
-
-  await waitFor(() => assert.ok(section("kept.ts").open));
-  assert.equal(section("replaced.ts").open, false);
-  assert.ok(within(section("replaced.ts")).getByText("superseded"));
-  assertAbsent(within(section("kept.ts")).queryByText("superseded"));
-
-  // Opening it explains why it shows the task's change.
-  await user.click(within(section("replaced.ts")).getByText("replaced.ts"));
-
-  assert.ok(
-    await within(section("replaced.ts")).findByText(
-      /^Committed with other content since this task stopped\./,
-    ),
+  expect(screen.getAllByText("Changed by a command.").length).toBeGreaterThan(
+    0,
   );
 
-  assert.ok(await within(section("replaced.ts")).findByText("task line"));
-});
+  expect(
+    screen.getAllByText("An edit to this file wasn't recorded.").length,
+  ).toBeGreaterThan(0);
 
-test("a current_repo task that ended without an end snapshot says why it has no changes", async (t) => {
-  const { user } = await setup(t, (transport) => {
-    transport.tasks = [{ ...task(), workspace_strategy: "current_repo" }];
-
-    transport.changes = [
-      { ...transport.changes[0], state: "end_unrecorded", files: [] },
-    ];
-  });
-
-  await user.click(screen.getByRole("tab", { name: /^Changes/ }));
-
-  assert.ok(await screen.findByText(/ended before its end state was recorded/));
-
-  assertAbsent(screen.queryByText(/including any made outside the task/));
+  expect(
+    screen.getByText("Some changes made by commands weren't recorded."),
+  ).toBeTruthy();
 });
 
 test("Ask Codex about a previewed file prepares its context and restores the preview after sending", async (t) => {

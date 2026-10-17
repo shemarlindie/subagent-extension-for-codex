@@ -275,7 +275,9 @@ a `--start` that keeps the task where you want it in the newest-first list.
 
 The recorder replaces machine paths and identifiers, removes local Claude
 configuration and private usage details, and shifts event IDs and times for the
-preview. Recorded tasks have no workspace, so their Changes tab is empty.
+preview. Fixture replay maps recorded `tool_use_result` payloads through
+`claudeFileEdits`, so captured edit results populate Changes. File previews still
+need a fixture workspace or prepared content.
 
 Review the output before committing: prompts and file contents can still contain
 private information. The recorder rejects common machine identifiers, but that

@@ -9,7 +9,7 @@ import { largeFiles } from "../../../dev/panel/scenarios/large-files.js";
 import type {
   ChangedFileContent,
   Changes,
-} from "../../../src/shared/workspaces/changes.js";
+} from "../../../src/shared/changes/changes.js";
 
 const projectRoot = resolve(import.meta.dirname, "../../..");
 
@@ -145,6 +145,9 @@ test("fixture changes come from recorded edits built per task", async () => {
       (file) => file.path === "assets/logo.png" && file.incomplete,
     ),
   );
+
+  assert.ok(refactor.files.some((file) => file.source === "command"));
+  assert.equal(refactor.unrecorded_commands, true);
 
   // A later commit does not replace the task's recorded limits.
   const conversation = await changes("preview-conversation");

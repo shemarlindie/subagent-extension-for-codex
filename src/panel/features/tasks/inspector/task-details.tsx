@@ -57,19 +57,7 @@ function changesFact(counts?: ChangeCountsState) {
   if (counts?.error) return counts.error;
   if (!counts?.data) return "Reading…";
 
-  if (counts.data.state === "branch_deleted") {
-    return "The worktree and its branch were deleted";
-  }
-
-  if (counts.data.state === "end_unrecorded") {
-    return "Unavailable; the task ended before its end state was recorded";
-  }
-
-  if (counts.data.state === "workspace_missing") {
-    return `On branch ${counts.data.branch}; the worktree was removed`;
-  }
-
-  return `${changesSummary(counts.data)} uncommitted`;
+  return changesSummary(counts.data);
 }
 
 function taskDate(timestamp: string, preferences?: UserDateTimePreferences) {

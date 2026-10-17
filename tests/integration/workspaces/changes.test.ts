@@ -16,7 +16,7 @@ import type {
   ChangeCounts,
   ChangedFileContent,
   Changes,
-} from "../../../src/shared/workspaces/changes.js";
+} from "../../../src/shared/changes/changes.js";
 
 async function until(done: () => boolean) {
   for (let i = 0; i < 300; i++) {

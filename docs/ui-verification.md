@@ -53,29 +53,30 @@ recorded fixtures through the provider.
 
 ## Fixture catalogue
 
-| Task                                        | Scenario                                                                                                                                                                                                                    |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Refactor the billing module                 | Running task with current-repo changes that omit a pre-existing README edit and include renames, a deleted file and a binary image.                                                                                         |
-| Live: …                                     | Latest activity and clocks: thinking, tool, compaction, retry, rate limit, ordinary work, finishing, hook, background task and provider failure.                                                                            |
-| Live: streaming reply                       | Chat draft grows over time and restarts.                                                                                                                                                                                    |
-| Recorded: …                                 | Real SDK runs: steer/interrupt/send-now, streamed reply, question interrupted and resumed, read-only MCP review.                                                                                                            |
-| Limit upload sizes                          | Parent-started turns, user and parent follow-ups, Markdown lists/tables/code, footnotes, relative links and images, HTML-like prose. Stopped current-repo changes with a file the user committed over, shown as superseded. |
-| Tidy the settings copy                      | Taken and pending steers, queued messages including one from the parent. New steers and queued messages stay until reload.                                                                                                  |
-| Rename the feature flags                    | Interrupted task with a paused queue: a leftover steer, then two messages to reorder, edit or remove until reload.                                                                                                          |
-| Move the date helpers                       | Cost budget exhausted. The warning notice applies a higher limit without sending a message.                                                                                                                                 |
-| Finish the date helper migration            | Runtime-only budget exhausted. The warning notice applies the higher runtime limit without sending a message.                                                                                                               |
-| Move the screens to the new layout          | Long Chat conversation for scrolling.                                                                                                                                                                                       |
-| Stabilise the retry timer test              | Worktree recreated from its branch in a new session.                                                                                                                                                                        |
-| Migrate the config loader                   | Pending inline question and queue-only composer. Queued messages stay until reload.                                                                                                                                         |
-| Plan the sign-in rollout                    | Three stacked questions, single/multiple choices and queue-only composer.                                                                                                                                                   |
-| Convert the test suite to the new runner    | Trimmed timeline, scrolling and View activity for turns inside and outside the recent window.                                                                                                                               |
-| Move the API clients onto the retry wrapper | Many turns, including a failure. View activity loads older turns separately and scrolls to recent ones.                                                                                                                     |
-| Catalogue the design assets                 | Thinking, images, documents, web search, plugin and memory signals.                                                                                                                                                         |
-| Tighten the task inspector layout           | Two committed turns, the **This turn** option, empty uncommitted changes and clean worktree removal.                                                                                                                        |
-| Fix the flaky retry test                    | Removed worktree with branch retained.                                                                                                                                                                                      |
-| Draft the release notes                     | Removed worktree and deleted branch.                                                                                                                                                                                        |
-| Speed up the production build               | 60-file uncommitted diff. Removal asks before discarding changes.                                                                                                                                                           |
-| Profile the production build                | Large added files and multiple pages of diff/file previews.                                                                                                                                                                 |
+| Task                                        | Scenario                                                                                                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Review recorded edits                       | Typed SDK tool results replay through the mapper, covering added, modified, deleted, command and incomplete rows plus the command warning in both scopes.                                   |
+| Refactor the billing module                 | Running task with recorded modified, added and deleted files, command tags, incomplete files and a command warning in both scopes.                                                          |
+| Live: …                                     | Latest activity and clocks: thinking, tool, compaction, retry, rate limit, ordinary work, finishing, hook, background task and provider failure.                                            |
+| Live: streaming reply                       | Chat draft grows over time and restarts.                                                                                                                                                    |
+| Recorded: …                                 | Real SDK runs: steer/interrupt/send-now, streamed reply, question interrupted and resumed, read-only MCP review.                                                                            |
+| Limit upload sizes                          | Parent-started turns, user and parent follow-ups, Markdown lists/tables/code, footnotes, relative links and images, HTML-like prose. Recorded changes remain available after later commits. |
+| Tidy the settings copy                      | Taken and pending steers, queued messages including one from the parent. New steers and queued messages stay until reload.                                                                  |
+| Rename the feature flags                    | Interrupted task with a paused queue: a leftover steer, then two messages to reorder, edit or remove until reload.                                                                          |
+| Move the date helpers                       | Cost budget exhausted. The warning notice applies a higher limit without sending a message.                                                                                                 |
+| Finish the date helper migration            | Runtime-only budget exhausted. The warning notice applies the higher runtime limit without sending a message.                                                                               |
+| Move the screens to the new layout          | Long Chat conversation for scrolling.                                                                                                                                                       |
+| Stabilise the retry timer test              | Worktree recreated from its branch in a new session.                                                                                                                                        |
+| Migrate the config loader                   | Pending inline question and queue-only composer. Queued messages stay until reload.                                                                                                         |
+| Plan the sign-in rollout                    | Three stacked questions, single/multiple choices and queue-only composer.                                                                                                                   |
+| Convert the test suite to the new runner    | Trimmed timeline, scrolling and View activity for turns inside and outside the recent window.                                                                                               |
+| Move the API clients onto the retry wrapper | Many turns, including a failure. View activity loads older turns separately and scrolls to recent ones.                                                                                     |
+| Catalogue the design assets                 | Thinking, images, documents, web search, plugin and memory signals.                                                                                                                         |
+| Tighten the task inspector layout           | Two committed turns, the **This turn** option, recorded changes and clean worktree removal.                                                                                                 |
+| Fix the flaky retry test                    | Removed worktree with branch retained.                                                                                                                                                      |
+| Draft the release notes                     | Removed worktree and deleted branch.                                                                                                                                                        |
+| Speed up the production build               | 60-file recorded diff. Removal asks before discarding checkout changes.                                                                                                                     |
+| Profile the production build                | Large added files and multiple pages of diff/file previews.                                                                                                                                 |
 
 Audit dependency licences, Fix the flaky retry test, Migrate the config loader
 and Investigate session expiry regression start unread, for the row dot and the
@@ -84,8 +85,8 @@ middle of its conversation, so Chat opens at its **New** divider partway down.
 The other fixtures start read. Read and unread marks stay
 until the preview reloads (`dev/panel/scenarios/unread-tools.ts`).
 
-Changes fixtures in `dev/panel/scenarios/change-fixtures.ts` use real temporary Git
-repositories. `large-files.ts` supplies the 60-file diff, minified JSON,
+Changes fixtures in `dev/panel/scenarios/change-fixtures.ts` use recorded edits
+and real temporary Git repositories for file previews and worktree actions. `large-files.ts` supplies the 60-file diff, minified JSON,
 large CSV and log files, long Markdown with heading links, a single long line,
 and an oversized SVG that displays as source.
 

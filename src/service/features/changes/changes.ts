@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import type { Task } from "../../../shared/tasks/model.js";
 import {
   type ChangedFileContent,
   type Changes as ChangesResult,
@@ -15,7 +14,8 @@ import {
   encodeFileCursor,
   imageMime,
   isBinary,
-} from "../../../shared/workspaces/changes.js";
+} from "../../../shared/changes/changes.js";
+import type { Task } from "../../../shared/tasks/model.js";
 import { formatFileDiff } from "./compose.js";
 import { changePath } from "./paths.js";
 import { ChangeStore, type RecordedChange } from "./store.js";
@@ -43,7 +43,6 @@ function listedFile(row: RecordedChange) {
     status,
     additions: count("+"),
     deletions: count("-"),
-    binary: false,
     source: row.source,
     incomplete: row.incomplete,
   };

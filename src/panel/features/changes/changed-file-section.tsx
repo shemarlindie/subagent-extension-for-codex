@@ -1,10 +1,8 @@
 import { useState } from "react";
 
-import { imageMime } from "../../../shared/workspaces/changes";
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../shared/components/tooltip";
-import { formatBytes } from "../../shared/utils/format";
 import { DiffFile } from "../file-preview/diff/diff-file";
 import type { ChangedFileEntry } from "./changed-files";
 import { FILE_ATTRIBUTE } from "./changes-reading";
@@ -25,26 +23,15 @@ type ChangedFileSectionProps = {
   onPreview: () => void;
 };
 
-/** A binary file has no lines to show; an image can still be previewed. */
-function binaryNote(file: ChangedFile) {
-  return file.size === undefined
-    ? "Binary file changed"
-    : `Binary file changed · ${formatBytes(file.size)}`;
-}
-
 /** Why a file's diff has no lines to show. */
 function emptyDiffNote(file: ChangedFile, missing?: boolean) {
-  if (file.binary) return binaryNote(file);
+  if (file.incomplete) return "An edit to this file wasn't recorded.";
 
   return missing ? "Diff unavailable" : "No content changes";
 }
 
-/** Why a superseded file shows the task's diff, not the checkout's. */
-const SUPERSEDED_NOTE =
-  "Committed with other content since this task stopped. This is the task's change as it left the file.";
-
-const previewable = (file: ChangedFile) =>
-  !file.binary || Boolean(imageMime(file.path));
+/** The short tag keeps narrow file headers readable; the note explains it. */
+const COMMAND_NOTE = "Changed by a command.";
 
 /** One changed file in the Changes list: its diff, Preview and Viewed. */
 export function ChangedFileSection({
@@ -83,20 +70,20 @@ export function ChangedFileSection({
       open={open}
       onOpenChange={handleOpenChange}
       emptyNote={emptyDiffNote(file, missing)}
-      {...(file.superseded ? { tag: "superseded", note: SUPERSEDED_NOTE } : {})}
+      {...(file.source === "command"
+        ? { tag: "command", note: COMMAND_NOTE }
+        : {})}
       actions={
         <>
-          {previewable(file) && (
-            <TooltipWrapper label={`Preview ${file.path}`}>
-              <Button
-                variant="ghost"
-                className="diff-preview"
-                onClick={onPreview}
-              >
-                <Icon name="eye" size={14} />
-              </Button>
-            </TooltipWrapper>
-          )}
+          <TooltipWrapper label={`Preview ${file.path}`}>
+            <Button
+              variant="ghost"
+              className="diff-preview"
+              onClick={onPreview}
+            >
+              <Icon name="eye" size={14} />
+            </Button>
+          </TooltipWrapper>
           <ViewedToggle
             path={file.path}
             viewed={viewed}

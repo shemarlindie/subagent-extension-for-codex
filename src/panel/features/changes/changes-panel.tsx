@@ -1,6 +1,5 @@
 import { useRef } from "react";
 
-import { END_UNRECORDED } from "../../../shared/workspaces/changes";
 import { useSnapshot } from "../../app/state/controller-context";
 import { useSessionState } from "../../app/state/session/use-session-state";
 import { LoadingSwap } from "../../shared/components/loading-skeleton/loading-swap";
@@ -14,7 +13,7 @@ import { useChangesScroll } from "./use-changes-scroll";
 
 type ChangesPanelProps = { task?: Task; taskId?: string };
 
-/** The Changes tab: what the task changed, read live from Git. */
+/** The Changes tab: what the task changed, from recorded tool edits. */
 export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
   const id = task?.id ?? taskId ?? "";
 
@@ -25,7 +24,7 @@ export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
     loading = !task || (changes?.loading ?? (!data && !changes?.error)),
     headerLoading = !task || (loading && !data),
     reserveEmptyHeight =
-      (!data && loading) || Boolean(data && (data.state || !data.files.length)),
+      (!data && loading) || Boolean(data && !data.files.length),
     // Kept per task, so the reader's place survives tab and task switches.
     [reading] = useSessionState("task", id, (state) => state.reading.changes),
     { viewportRef, scrolled, scrollToTop } = useChangesScroll(
@@ -80,32 +79,20 @@ export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
           >
             {data && task ? (
               <>
-                {data.state === "branch_deleted" && (
-                  <p className="help changes-empty">
-                    The worktree and its branch <code>{data.branch}</code> were
-                    deleted.
+                {data.unrecorded_commands && (
+                  <p className="help changes-note">
+                    Some changes made by commands weren't recorded.
                   </p>
                 )}
-                {data.state === "end_unrecorded" && (
-                  <p className="help changes-empty">{END_UNRECORDED}</p>
-                )}
-                {data.state === "workspace_missing" && (
+                {data.files.length ? (
+                  <ChangesView task={task} changes={data} reading={reading} />
+                ) : (
                   <p className="help changes-empty">
-                    The worktree was removed, so nothing is uncommitted. Its
-                    commits are on branch <code>{data.branch}</code>.
+                    {data.scope === "turn"
+                      ? "No recorded edits from this turn."
+                      : "No recorded edits."}
                   </p>
                 )}
-                {!data.state &&
-                  (data.files.length ? (
-                    <ChangesView task={task} changes={data} reading={reading} />
-                  ) : (
-                    <p className="help changes-empty">
-                      {data.scope === "turn"
-                        ? "No uncommitted changes from this turn."
-                        : "No uncommitted changes."}{" "}
-                      Anything committed is in the Git history.
-                    </p>
-                  ))}
               </>
             ) : null}
           </LoadingSwap>

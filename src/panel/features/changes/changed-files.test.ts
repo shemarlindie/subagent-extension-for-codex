@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import {
   changedFileDiff,
@@ -18,21 +18,24 @@ const changes: Changes = {
       status: "modified",
       additions: 1,
       deletions: 1,
-      binary: false,
+      source: "tool",
+      incomplete: false,
     },
     {
       path: "logo.png",
       status: "modified",
       additions: 0,
       deletions: 0,
-      binary: true,
+      source: "command",
+      incomplete: true,
     },
     {
       path: "b.ts",
       status: "added",
       additions: 1,
       deletions: 0,
-      binary: false,
+      source: "tool",
+      incomplete: false,
     },
   ],
   additions: 2,
@@ -160,32 +163,34 @@ test("the next unread file follows the current one, wrapping to the start", () =
   assert.equal(nextUnviewed(viewed(logo, b), [a, logo, b], a), undefined);
 });
 
-test("short lists open every file but superseded ones; long lists their first other file", () => {
-  const entries = (count: number, superseded: number[]) =>
+test("short lists open every file and long lists only the first", () => {
+  const entries = (count: number) =>
     changedFileEntries({
       scope: "task",
       additions: 0,
       deletions: 0,
       diff: "",
       files: Array.from({ length: count }, (_, index) => ({
-        path: `file-${index}.ts`,
-        status: "modified" as const,
-        additions: 1,
-        deletions: 1,
-        binary: false,
-        ...(superseded.includes(index) ? { superseded: true as const } : {}),
+        path: `file-${index}`,
+        status: "modified",
+        additions: 0,
+        deletions: 0,
+        source: "tool",
+        incomplete: false,
       })),
     });
 
-  const open = (count: number, superseded: number[]) => {
-    const list = entries(count, superseded);
+  const short = entries(3),
+    long = entries(9);
 
-    return list.flatMap((_, index) =>
-      opensByDefault(list, index) ? [index] : [],
-    );
-  };
+  expect(short.map((_, i) => opensByDefault(short, i))).toEqual([
+    true,
+    true,
+    true,
+  ]);
 
-  assert.deepEqual(open(3, [1]), [0, 2]);
-  assert.deepEqual(open(10, []), [0]);
-  assert.deepEqual(open(10, [0, 1]), [2]);
+  expect(long.map((_, i) => opensByDefault(long, i))).toEqual([
+    true,
+    ...Array<boolean>(8).fill(false),
+  ]);
 });

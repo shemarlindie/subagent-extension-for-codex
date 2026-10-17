@@ -209,6 +209,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           />,
           optionsTarget,
         )}
+      <p className="help file-preview-note">File as it is now</p>
       {firstRead && (
         <div
           className="file-preview-loading"
@@ -261,6 +262,11 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             {read.status === "error" && (
               <p className="form-error" role="alert">
                 {read.message}
+              </p>
+            )}
+            {file?.state === "unavailable" && (
+              <p className="help">
+                The workspace was removed, so this file is unavailable.
               </p>
             )}
             {file?.state === "deleted" && (

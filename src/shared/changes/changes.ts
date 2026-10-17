@@ -1,46 +1,23 @@
 /**
- * A task's changes as Git reports them between two trees: per-file stats for
+ * A task's recorded tool edits: per-file stats for
  * every file, and the unified diff in pages of whole files.
  */
 
 export type ChangeScope = "task" | "turn";
 
-type ChangeStatus =
-  "added" | "modified" | "deleted" | "renamed" | "copied" | "type_changed";
+type ChangeStatus = "added" | "modified" | "deleted";
 
 export interface ChangedFile {
   path: string;
-  /** The previous path of a renamed or copied file. */
-  old_path?: string;
   status: ChangeStatus;
   additions: number;
   deletions: number;
-  binary: boolean;
-  /** A binary file's current size in bytes, unless it was deleted. */
-  size?: number;
-  /**
-   * Uncommitted changes only: a commit after the task's changes ended
-   * replaced the file with other content. Its stats and diff are the task's
-   * own, as they were then, and it isn't counted in the totals.
-   */
-  superseded?: true;
-  /** "command": a shell command made at least one of the recorded edits. */
-  source?: "tool" | "command";
-  /** An edit couldn't be recorded, so the file has no diff or stats. */
-  incomplete?: boolean;
+  source: "tool" | "command";
+  incomplete: boolean;
 }
 
 export interface Changes {
   scope: ChangeScope;
-  /**
-   * "workspace_missing": the worktree was removed, so the changes are what
-   * is committed on `branch`, and there are no uncommitted ones.
-   * "branch_deleted": the branch was deleted too, and there are none.
-   * "end_unrecorded": a current_repo task ended before end snapshots were
-   * recorded, so there are none (see END_UNRECORDED).
-   */
-  state?: "workspace_missing" | "branch_deleted" | "end_unrecorded";
-  /** A command changed files whose edits weren't recorded. */
   unrecorded_commands?: boolean;
   branch?: string;
   /** Every changed file, on every page. */
@@ -55,7 +32,7 @@ export interface Changes {
 
 /**
  * A task's change totals: the file count and line stats, without the file
- * list or diff. Superseded files aren't counted.
+ * list or diff. Totals exclude incomplete files.
  */
 export type ChangeCounts = Omit<Changes, "files" | "diff" | "next_cursor"> & {
   files: number;
@@ -68,15 +45,8 @@ export function changeCounts({
   next_cursor: _next,
   ...totals
 }: Changes): ChangeCounts {
-  return {
-    ...totals,
-    files: files.filter((f) => !f.superseded && !f.incomplete).length,
-  };
+  return { ...totals, files: files.filter((file) => !file.incomplete).length };
 }
-
-/** Why an "end_unrecorded" task has no changes. */
-export const END_UNRECORDED =
-  "This task ended before its end state was recorded, so its changes can't be told apart from later edits to this checkout.";
 
 /** A changed file's current content, as get_agent_changed_file returns it. */
 export interface ChangedFileContent {
@@ -149,7 +119,7 @@ export function diffPage(parts: string[], start: number, pageChars: number) {
   return { diff: parts.slice(start, end).join(""), end };
 }
 
-/** Cursors name the two trees, so later pages diff the same state. */
+/** Cursors fingerprint the rows and task scope, rejecting edits between pages. */
 export function encodeCursor(base: string, current: string, index: number) {
   return `${base}:${current}:${index}`;
 }

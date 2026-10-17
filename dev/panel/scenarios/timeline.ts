@@ -229,9 +229,10 @@ export class Timeline {
   }
 
   /** One user message; tool results become `tool.completed` events. */
-  userMessage(content: UserContent) {
-    const message: SDKUserMessage = {
+  userMessage(content: UserContent, toolResponse?: Data) {
+    const message: SDKUserMessage & { tool_use_result?: Data } = {
       type: "user",
+      ...(toolResponse ? { tool_use_result: toolResponse } : {}),
       message: { role: "user", content },
       parent_tool_use_id: null,
       uuid: this.uuid(),
@@ -331,10 +332,12 @@ export class Timeline {
     id: string,
     content: string | (UserBlock & { type: "text" | "image" })[],
     error?: boolean,
+    toolResponse?: Data,
   ) {
-    return this.userMessage([
-      { type: "tool_result", tool_use_id: id, content, is_error: error },
-    ]);
+    return this.userMessage(
+      [{ type: "tool_result", tool_use_id: id, content, is_error: error }],
+      toolResponse,
+    );
   }
 
   /** A complete tool call: start, optional progress ticks, then its result. */

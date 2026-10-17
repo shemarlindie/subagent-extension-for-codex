@@ -39,7 +39,7 @@ function standIn(file: ChangedFile): ParsedDiffFile {
     chunks: [],
     additions: file.additions,
     deletions: file.deletions,
-    from: file.status === "added" ? "/dev/null" : (file.old_path ?? file.path),
+    from: file.status === "added" ? "/dev/null" : file.path,
     to: file.status === "deleted" ? "/dev/null" : file.path,
     ...(file.status === "added" ? { new: true } : {}),
     ...(file.status === "deleted" ? { deleted: true } : {}),
@@ -48,7 +48,8 @@ function standIn(file: ChangedFile): ParsedDiffFile {
 
 function* signatureParts(file: ChangedFile, diff?: ParsedDiffFile) {
   yield file.status;
-  yield String(file.size ?? "");
+  yield String(file.incomplete);
+  yield file.source;
   // Without a diff, the counts stand in for its lines.
   if (!diff) yield `${file.additions}:${file.deletions}`;
 
@@ -61,7 +62,7 @@ function* signatureParts(file: ChangedFile, diff?: ParsedDiffFile) {
 // Parsed once per read, however many views ask.
 const entries = new WeakMap<Changes, ChangedFileEntry[]>();
 
-/** Each changed file in Git's order, with its diff and signature. */
+/** Each recorded changed file, with its diff and signature. */
 export function changedFileEntries(changes: Changes): ChangedFileEntry[] {
   let result = entries.get(changes);
 
@@ -93,8 +94,7 @@ export function changedFileEntries(changes: Changes): ChangedFileEntry[] {
 }
 
 /**
- * A changed file's part of the task's diff. Binary files have no lines to
- * show, and a stand-in has none, so they have none.
+ * A changed file's part of the task's diff. Incomplete files and stand-ins have no diff.
  */
 export function changedFileDiff(
   changes: Changes,
@@ -104,7 +104,7 @@ export function changedFileDiff(
     (entry) => entry.file.path === path,
   );
 
-  return entry?.file.binary || entry?.missing ? undefined : entry?.diff;
+  return entry?.file.incomplete || entry?.missing ? undefined : entry?.diff;
 }
 
 /** Long lists stay scannable by opening only their first file by default. */
@@ -112,14 +112,8 @@ const OPEN_FILES = 8;
 
 /**
  * Whether a file in the Changes list starts open: every file of a short
- * list, or a long list's first. Superseded files start closed, since a commit
- * has replaced them, so a long list opens its first other file instead.
+ * list, or a long list's first.
  */
 export function opensByDefault(entries: ChangedFileEntry[], index: number) {
-  if (entries[index]?.file.superseded) return false;
-
-  return (
-    entries.length <= OPEN_FILES ||
-    index === entries.findIndex((entry) => !entry.file.superseded)
-  );
+  return entries.length <= OPEN_FILES || index === 0;
 }

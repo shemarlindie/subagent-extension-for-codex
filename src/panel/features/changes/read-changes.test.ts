@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { changeCounts } from "../../../shared/workspaces/changes";
+import { changeCounts } from "../../../shared/changes/changes";
 import type { Task } from "../tasks/types";
 import {
   changesKey,
@@ -92,7 +92,8 @@ test("summaries count lines and files", () => {
             status: "added",
             additions: 3,
             deletions: 1,
-            binary: false,
+            source: "tool",
+            incomplete: false,
           },
         ],
       }),
@@ -105,7 +106,14 @@ test("change counts keep the totals and drop the file list and diff", () => {
   const counts = changeCounts({
     ...page("diff --git a/a b/a", "2"),
     files: [
-      { path: "a", status: "added", additions: 3, deletions: 1, binary: false },
+      {
+        path: "a",
+        status: "added",
+        additions: 3,
+        deletions: 1,
+        source: "tool",
+        incomplete: false,
+      },
     ],
   });
 

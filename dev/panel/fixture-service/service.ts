@@ -29,7 +29,8 @@ import {
   previewChanges,
   type Turn,
 } from "../scenarios/change-fixtures";
-import { previewTasks } from "../scenarios/fixtures";
+import { previewEvents, previewTasks } from "../scenarios/fixtures";
+import { replayRecordedEdits } from "./replay-edits";
 
 type FixtureStore = {
   store: Store;
@@ -110,6 +111,7 @@ function fileContents(root: string, prefix = ""): Map<string, string> {
 function recordFixtureTurn(
   control: Control,
   task: Task,
+  fixture: ChangeFixture,
   before: Map<string, string>,
   after: Map<string, string>,
 ) {
@@ -135,11 +137,17 @@ function recordFixtureTurn(
         undefined,
         { context: 3 },
       ).hunks,
-      source: "tool",
+      source: fixture.source ?? "tool",
       ...(oldText === undefined ? { created: true } : {}),
       ...(newText === undefined ? { deleted: true } : {}),
     });
   }
+
+  for (const path of fixture.incomplete ?? []) {
+    control.changes.unrecorded(task, path);
+  }
+
+  if (fixture.unrecordedCommands) control.changes.unrecorded(task);
 }
 
 /**
@@ -180,7 +188,7 @@ async function seedChanges(
     apply(workspace, turn);
     const after = fileContents(workspace);
 
-    recordFixtureTurn(control, task, before, after);
+    recordFixtureTurn(control, task, fixture, before, after);
 
     if (fixture.commit) {
       git(workspace, "add", "-A");
@@ -229,6 +237,7 @@ function fixtureStore() {
       }
 
       store.save(saved);
+      if (!changes) replayRecordedEdits(control, saved, previewEvents);
     }
 
     return fixture;

@@ -4,7 +4,7 @@ import type {
   ChangedFileContent,
   Changes,
   ChangeScope,
-} from "../../../shared/workspaces/changes.js";
+} from "../../../shared/changes/changes.js";
 
 export type {
   ChangeCounts,

@@ -16,13 +16,13 @@ import type {
   Changes,
 } from "../../../src/panel/features/changes/types";
 import { decodePanelToolResult } from "../../../src/panel/transports/event-decoding.js";
+import { changeCounts } from "../../../src/shared/changes/changes.js";
 import type { Event } from "../../../src/shared/events/types.js";
 import {
   windowActivity,
   windowTurnActivity,
 } from "../../../src/shared/tasks/activity/activity-tail.js";
 import type { InputPresentation } from "../../../src/shared/tasks/model.js";
-import { changeCounts } from "../../../src/shared/workspaces/changes.js";
 
 // UI primitives read browser capabilities at module initialization.
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -561,15 +561,16 @@ const changePages = (binary = "logo.png"): [Changes, ...Changes[]] => {
       status: "modified",
       additions: 1,
       deletions: 1,
-      binary: false,
+      source: "tool",
+      incomplete: false,
     },
     {
       path: binary,
       status: "added",
       additions: 0,
       deletions: 0,
-      binary: true,
-      size: 2048,
+      source: "command",
+      incomplete: true,
     },
   ];
 

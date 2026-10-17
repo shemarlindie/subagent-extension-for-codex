@@ -263,42 +263,37 @@ empty feed says **No activity recorded yet.**
 
 ## Changes tab
 
-Changes shows uncommitted task changes, including untracked files and excluding
-ignored files. The tab count loads in the background. The file list and diffs
-load when Changes opens. Reads refresh on task status or turn changes, when
-stale Changes opens, or with **Refresh changes**. Committed work stays in Git
-history. **Whole task** is the default. **This turn** appears after multiple turns.
+Changes shows the task's recorded tool edits. The tab count loads in the
+background. The file list and diffs load when Changes opens. Reads refresh on
+task status or turn changes, when stale Changes opens, or with **Refresh changes**.
+**Whole task** is the default. **This turn** appears after multiple turns and shows
+the latest turn's edits. Failed and interrupted turns keep their recorded edits.
 
 ### Change comparisons
 
-The panel and agent APIs answer different questions:
+The panel, agent tools and dependency prompts read the same stored net diffs in
+both workspace strategies. A reverted file drops out. Committing files, removing
+a worktree or deleting its branch leaves the recorded diff available.
 
-| Consumer                                      | Comparison                                                                                                                                                                                                                                                                                 |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Panel (`get_user_agent_changes` and counts)   | Uncommitted changes. Worktrees include all changed files. Current-repo tasks include only files changed while the task's turns ran, and omit pre-existing edits. Once the task stops, files show as its changes left them. Files committed with other content since are marked superseded. |
-| Agents (`get_agent_changes`) and dependencies | All attributed changes, committed or not. Worktrees compare base to current tree, or retained branch after removal. Current-repo tasks compare start snapshot to the live tree while running and recorded end snapshot otherwise, limited to files changed while turns ran.                |
+Files edited by a command have a **command** tag and the note **Changed by a command.** An incomplete file
+shows **An edit to this file wasn't recorded.**, without a diff or contribution
+to totals. Once a file's record becomes incomplete, later edits cannot restore
+that scope's diff. When a command's changed paths could not be captured, the tab
+shows **Some changes made by commands weren't recorded.**
 
-**Current-repo limit:** a current-repo task records the files that change while
-each turn runs. Files changed only between turns or while the task waits for
-input are left out. Other edits to recorded files still show in their diffs.
-Tasks created before files were recorded include every file changed between
-their start and recorded end. If an end snapshot was not recorded, changes
-cannot be distinguished from later edits and the service reports that
-limitation.
-
-**Superseded files:** once a current-repo task stops, the panel reads its
-uncommitted changes from its end snapshot, so later edits don't show. A file
-drops out when it no longer differs from HEAD, or when a commit took the task's
-content. A file a commit replaced with other content before that is marked
-superseded: it keeps the task's diff, starts collapsed with a **superseded**
-tag and is left out of the totals. Tasks that ended before HEAD was recorded
-with their end show later edits to their files.
-
-Snapshot comparisons leave the checkout's files and Git index unchanged.
+Claude's edit tools and Bash commands are recorded. File-writing MCP tools and
+processes a command leaves running are outside the record. Some Git checkout
+commands, such as `git restore file.txt`, produce the command warning without
+file diffs. Other Git commands can return precise diffs or no edit data.
+Read-only commands with no edit data create no warning. Highly repetitive text can
+produce a valid diff that is not minimal. An `Edit` to an existing empty file
+appears as added. Renames appear as a deletion and an addition. See
+[the change tools](mcp-reference.md#recorded-changes) for paging and read access.
 
 ### Diffs and file previews
 
 Expand a file to read its diff or open **Preview** for format-specific views.
+File previews show the file as it is now, including later edits by others.
 Images can preview. Deleted files show removed lines. Files without a matching
 diff are marked **Diff unavailable**. Long lists open only the first file by
 default and remember your choices. Large files defer offscreen rendering. See
@@ -344,7 +339,7 @@ blocks inspection or triggers an automatic follow-up.
 
 The task heading's **Task actions** menu includes handoff and deletion.
 **Delete task** stops running, queued or waiting work, then removes task history,
-requests, the worktree, branch and snapshot refs.
+requests, recorded edits, the worktree and branch.
 Current-repo files stay intact. **Also delete the agent task**, off by default,
 also removes the provider session. Provider cleanup failure retains the local
 task for retry. Later cleanup failure can leave earlier resources removed.

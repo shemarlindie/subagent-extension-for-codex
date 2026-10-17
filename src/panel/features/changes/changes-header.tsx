@@ -1,7 +1,7 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 
-import { changeCounts } from "../../../shared/workspaces/changes";
+import { changeCounts } from "../../../shared/changes/changes";
 import { useController } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
@@ -25,11 +25,8 @@ const SCOPES: { value: ChangeScope; label: string }[] = [
   { value: "turn", label: "This turn" },
 ];
 
-const CURRENT_REPO_CHANGES_NOTE =
-  "Uncommitted changes to the files this task changed while it ran, including others' edits to them meanwhile. Once it stops, they show as it left them. Committed changes are in the Git history.";
-
-const WORKTREE_CHANGES_NOTE =
-  "Uncommitted changes in the worktree. Committed changes are on the branch: Compare shows them, and Push sends only them, so commit these first to include them.";
+const CHANGES_NOTE =
+  "Edits recorded from this task's tools, including committed edits. File previews show the file as it is now.";
 
 /** Where the changes are, how to get at them, and which part is shown. */
 export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
@@ -37,13 +34,10 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
     data = changes?.data,
     removed = task.workspace_removed,
     loading = changes?.loading ?? (!data && !changes?.error),
-    summary =
-      data && !data.state
-        ? `${changesSummary(changeCounts(data))} uncommitted`
-        : "",
+    summary = data ? changesSummary(changeCounts(data)) : "",
     branch = task.branch,
     [viewed] = useViewedFiles(task.id),
-    entries = data && !data.state ? changedFileEntries(data) : [],
+    entries = data ? changedFileEntries(data) : [],
     viewedCount = entries.filter((entry) => isViewed(viewed, entry)).length,
     loadingNote = data ? "Refreshing changes…" : "Reading changes…",
     // Preview all picks up where the reader left off.
@@ -112,42 +106,42 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
         </TooltipWrapper>
         {loading && data && <Progress label="Refreshing changes" />}
       </div>
-      {task.workspace_strategy === "current_repo"
-        ? data?.state !== "end_unrecorded" && (
-            <p className="help changes-note">{CURRENT_REPO_CHANGES_NOTE}</p>
-          )
-        : branch &&
-          !task.branch_deleted && (
-            <div className="changes-commands">
-              <CommandLine label="Branch" command={branch} />
-              {removed ? (
-                <CommandLine
-                  label="Check out"
-                  command={`git checkout ${branch}`}
-                />
-              ) : (
-                task.workspace && (
-                  <CommandLine
-                    label="Worktree"
-                    command={`cd ${task.workspace}`}
-                  />
-                )
-              )}
-              {task.base_commit && (
-                <CommandLine
-                  label="Compare"
-                  command={`git diff ${task.base_commit}...${branch}`}
-                />
-              )}
+      <p className="help changes-note">{CHANGES_NOTE}</p>
+      {task.workspace_removed && (
+        <p className="help changes-note">
+          The worktree was removed. Recorded edits remain available.
+        </p>
+      )}
+      {task.workspace_strategy === "worktree" &&
+        branch &&
+        !task.branch_deleted && (
+          <div className="changes-commands">
+            <CommandLine label="Branch" command={branch} />
+            {removed ? (
               <CommandLine
-                label="Push"
-                command={`git push -u origin ${branch}`}
+                label="Check out"
+                command={`git checkout ${branch}`}
               />
-              {!removed && (
-                <p className="help changes-note">{WORKTREE_CHANGES_NOTE}</p>
-              )}
-            </div>
-          )}
+            ) : (
+              task.workspace && (
+                <CommandLine
+                  label="Worktree"
+                  command={`cd ${task.workspace}`}
+                />
+              )
+            )}
+            {task.base_commit && (
+              <CommandLine
+                label="Compare"
+                command={`git diff ${task.base_commit}...${branch}`}
+              />
+            )}
+            <CommandLine
+              label="Push"
+              command={`git push -u origin ${branch}`}
+            />
+          </div>
+        )}
       {task.workspace_strategy === "worktree" &&
         branch &&
         !task.branch_deleted && (

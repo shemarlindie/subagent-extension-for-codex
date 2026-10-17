@@ -1,7 +1,5 @@
-// What preview tasks changed, as files in a Git repository. The fixture
-// service (dev/panel/fixture-service/service.ts) builds a real repository per task from
-// these, so the Changes tab reads real Git diffs in fixtures mode. Contents are
-// built on first use, since some are large.
+// Fixture file edits become incremental recorded hunks in the real changes service.
+// Contents are built on first use, since some are large.
 import parseDiff from "parse-diff";
 
 import { largeFiles } from "./large-files";
@@ -15,13 +13,16 @@ export type Turn = Edits | { patch: string };
 export type ChangeFixture = {
   /** Files in the base commit. */
   base: Record<string, string | Uint8Array>;
+  source?: "tool" | "command";
+  incomplete?: string[];
+  unrecordedCommands?: boolean;
   /** current_repo only: uncommitted edits from before the task started. */
   before?: Edits;
   /** Each turn's edits, in order. */
   turns: Turn[];
   /**
    * current_repo only: the task's changes end after its last turn, then the
-   * user commits these edits, superseding the task's files they replace.
+   * user commits these edits. Recorded diffs retain the task edits.
    */
   committedAfter?: Edits;
   /** Worktree only: commit each turn on the task's branch. */
@@ -144,6 +145,9 @@ export const previewChanges: Partial<Record<string, () => ChangeFixture>> = {
   // A current_repo task: the user's earlier edit to README.md is left out.
   // Legacy and tax code moves (renames); the currency helper is deleted.
   "preview-refactor": (): ChangeFixture => ({
+    source: "command",
+    incomplete: ["assets/logo.png"],
+    unrecordedCommands: true,
     base: {
       "README.md": "# Billing\n",
       "billing/index.ts": billingIndex,
@@ -183,7 +187,7 @@ export const previewChanges: Partial<Record<string, () => ChangeFixture>> = {
   }),
 
   // A current_repo task that stopped; the user then committed their own
-  // limits over the task's, so that file is superseded.
+  // limits over the task's. The recorded task diff stays unchanged.
   "preview-conversation": (): ChangeFixture => ({
     base: {
       "src/upload.ts": lines(
