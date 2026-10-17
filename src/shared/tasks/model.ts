@@ -209,6 +209,8 @@ export interface Task extends Start {
   /** When the latest turn ended. */
   completed_at?: string;
   workspace?: string;
+  workspace_removed?: true;
+  branch_deleted?: true;
   base_commit?: string;
   /** The worktree's branch, `<worktree_branch_prefix><task-id>`. */
   branch?: string;

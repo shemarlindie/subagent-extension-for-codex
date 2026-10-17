@@ -18,7 +18,7 @@ To delegate a task:
 
 1. Discover the repository with `get_current_agent_project` and approved roots with `list_agent_projects`. Inspect enabled profiles with `list_available_workers`.
 2. Choose an approved root and pass its absolute path as `repository` to `start_agent_task`. For an unregistered root, use the configured [task-start registration policy](configuration.md#repository-access) when it applies. Otherwise, direct the user to **Add project**, **Browse** or the projects CLI and wait for registration before starting.
-3. Read replies with `get_agent_messages`, which supports long polling. Read attributed Git changes with `get_agent_changes`, using `scope: "turn"` for one turn.
+3. Read replies with `get_agent_messages`, which supports long polling. Read recorded edits with `get_agent_changes`, using `scope: "turn"` for the latest turn.
 4. Continue with `send_agent_message`. Inspect pending input before answering with its request ID.
 
 Put the full worker request in `description`. The service generates the task-list
@@ -26,8 +26,46 @@ title from its first line or sentence.
 
 Task creation defaults to `workspace_strategy: "current_repo"`, using the
 explicit approved repository and its existing changes. `workspace_strategy: "worktree"` starts from a committed revision on a task branch. Follow-up turns keep the task's conversation scope and workspace. Selecting a project for a new task does not change other chats. See [Task continuation](task-continuation.md) for recovery semantics and
-[change comparisons](panel-guide.md#change-comparisons) for the difference
-between agent snapshots and the panel's uncommitted changes.
+[recorded changes](#recorded-changes) for change inspection.
+
+## Recorded changes
+
+`get_agent_changes` reads the task's recorded net edits, for `scope: "task"`
+(the default) or `scope: "turn"` (the latest turn). Both workspace strategies,
+the panel and dependency prompts use these same stored diffs. Committing files,
+removing a worktree or deleting its branch does not change a recorded diff.
+Dependency prompts include these recorded edits up to the existing prompt limit,
+and note incomplete files and unrecorded command changes.
+
+Every page lists all files, sorted by path. Diff pages split between whole files.
+Files carry `source: "tool" | "command"` and `incomplete`, with statuses `added`,
+`modified` or `deleted`. An incomplete file has no diff and is excluded from
+totals. When a command changed files it could not name, the response also reports
+that some command changes were not recorded. A reverted file, or a file created
+and then deleted in the same scope, drops out unless it is incomplete.
+
+`get_agent_changed_file` reads the file as it is now, from the task worktree or
+approved checkout. Later edits by other people or processes can appear in its
+content. Only paths recorded in the task or latest-turn scope may be read. A
+missing file returns `deleted`, and a removed worktree returns `unavailable`.
+Images return base64 content. Other binary files return their size. Text and image
+content keep their existing paging behavior.
+
+The app-only `get_user_agent_changes`, change-count tool and
+`get_user_agent_changed_file` delegate to these same reads.
+
+### Recording limits
+
+- Claude's edit tools and Bash commands are recorded. File-writing MCP tools and
+  processes a command leaves running are outside the record.
+- Some Git checkout commands, such as `git restore file.txt`, report that
+  changes were not recorded, without file diffs. Other Git commands can return
+  precise diffs or no edit data. Read-only commands with no edit data create
+  no warning.
+- Highly repetitive text can produce a valid diff that is not minimal.
+- An `Edit` to an existing empty file appears as an added file.
+- Renames appear as a deletion and an addition.
+- File previews show current disk content, including later edits by others.
 
 ## App and user authority
 

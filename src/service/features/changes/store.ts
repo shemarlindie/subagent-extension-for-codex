@@ -24,7 +24,7 @@ const rowSchema = createSelectSchema(fileChanges);
 
 type StoredChange = typeof fileChanges.$inferSelect;
 
-type RecordedChange = Omit<StoredChange, "hunks"> & { hunks: Hunk[] };
+export type RecordedChange = Omit<StoredChange, "hunks"> & { hunks: Hunk[] };
 
 function decodeRow(row: StoredChange): RecordedChange {
   checkStored(

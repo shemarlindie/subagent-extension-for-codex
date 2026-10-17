@@ -10,7 +10,7 @@ import type { FileEdit } from "../providers/types.js";
 import { Store } from "../tasks/storage/store.js";
 import { ChangeStore } from "./store.js";
 
-async function createChangesFixture<T>(
+export async function createChangesFixture<T>(
   context: TestContext,
   createFactory: (store: Store) => T,
 ) {

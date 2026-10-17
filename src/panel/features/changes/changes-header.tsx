@@ -35,8 +35,7 @@ const WORKTREE_CHANGES_NOTE =
 export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
   const controller = useController(),
     data = changes?.data,
-    removed =
-      data?.state === "workspace_missing" || data?.state === "branch_deleted",
+    removed = task.workspace_removed,
     loading = changes?.loading ?? (!data && !changes?.error),
     summary =
       data && !data.state
@@ -118,7 +117,7 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
             <p className="help changes-note">{CURRENT_REPO_CHANGES_NOTE}</p>
           )
         : branch &&
-          data?.state !== "branch_deleted" && (
+          !task.branch_deleted && (
             <div className="changes-commands">
               <CommandLine label="Branch" command={branch} />
               {removed ? (
@@ -151,7 +150,7 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
           )}
       {task.workspace_strategy === "worktree" &&
         branch &&
-        data?.state !== "branch_deleted" && (
+        !task.branch_deleted && (
           <div className="changes-worktree-actions">
             <WorktreeActions task={task} changes={changes} />
           </div>

@@ -74,19 +74,15 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   await screen.findByText(/^No uncommitted changes from this turn\./);
   assert.equal(transport.calls.at(-1)?.args.scope, "turn");
 
-  // A removed worktree has nothing uncommitted; it names the branch and how
-  // to check it out.
-  transport.changes = [
-    {
-      ...transport.changes[0],
-      state: "workspace_missing",
-      branch: "agent/one",
-    },
-  ];
+  // A removed worktree names the branch and how to check it out.
+  transport.tasks = transport.tasks.map((task) => ({
+    ...task,
+    workspace_removed: true,
+  }));
 
+  await act(() => controller.refresh());
   await user.click(screen.getByRole("button", { name: "Refresh changes" }));
-  await screen.findByText(/The worktree was removed/);
-  assert.ok(screen.getByText("git checkout agent/one"));
+  await screen.findByText("git checkout agent/one");
 
   // A finished turn reloads changes; a failed read labels and retains the
   // last loaded result, so the worktree's branch remains visible.
@@ -109,7 +105,6 @@ test("the Changes tab offers This turn after a second turn and explains empty st
 
   assert.match(alert.textContent ?? "", /This task has no change snapshot\./);
   assert.match(alert.textContent ?? "", /last.*loaded/i);
-  assert.ok(screen.getByText(/The worktree was removed/));
   assert.ok(screen.getByText("git checkout agent/one"));
   assertAbsent(screen.queryByRole("progressbar"));
 });
@@ -210,10 +205,14 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
         transport.changes = [
           {
             ...transport.changes[0],
-            state: "workspace_missing",
             branch: "agent/one",
           },
         ];
+
+        transport.tasks = transport.tasks.map((task) => ({
+          ...task,
+          workspace_removed: true,
+        }));
 
         return { status: "removed" } as T;
       }
@@ -224,10 +223,14 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
         transport.changes = [
           {
             ...transport.changes[0],
-            state: "branch_deleted",
             branch: "agent/one",
           },
         ];
+
+        transport.tasks = transport.tasks.map((task) => ({
+          ...task,
+          branch_deleted: true,
+        }));
 
         return { status: "deleted" } as T;
       }
@@ -265,7 +268,7 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
     within(dialog).getByRole("button", { name: "Discard changes and remove" }),
   );
 
-  await screen.findByText(/The worktree was removed/);
+  await screen.findByText("git checkout agent/one");
 
   assert.deepEqual(removals, [
     { task_id: "one" },
@@ -279,7 +282,9 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
     within(confirm).getByRole("button", { name: "Delete branch" }),
   );
 
-  await screen.findByText(/were deleted/);
+  await waitFor(() =>
+    assertAbsent(screen.queryByRole("button", { name: "Delete branch" })),
+  );
 
   assertAbsent(
     screen.queryByRole("button", { name: /Delete branch|Remove worktree/ }),

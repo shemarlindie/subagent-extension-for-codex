@@ -103,7 +103,7 @@ never merges changes automatically, and worktrees are not security sandboxes.
 Researcher, reviewer and security reviewer profiles inspect only by default.
 Writing profiles follow the user's saved permissions and restrictions.
 
-Replies stream into Chat, and Changes shows live Git changes. Tasks accept
+Replies stream into Chat, and Changes shows the task's recorded tool edits. Tasks accept
 follow-ups after completion, failure or interruption. During a turn, a message
 can steer the worker, queue another turn, or interrupt and start a new one.
 Runtime and cost budgets span turns. Cost ceilings are not a hard billing cap.

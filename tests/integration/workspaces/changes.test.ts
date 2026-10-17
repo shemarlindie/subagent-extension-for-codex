@@ -1,20 +1,31 @@
-import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import {
-  mkdir,
-  mkdtemp,
-  realpath,
-  rename,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { test, vi } from "vitest";
+import { structuredPatch } from "diff";
+import { expect, test } from "vitest";
 
+import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import type { RunContext } from "../../../src/service/features/providers/types.js";
+import { Control } from "../../../src/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
-import { startSchema, type Task } from "../../../src/shared/tasks/model.js";
+import { callTool } from "../../../src/service/platform/server/tools.js";
+import type {
+  ChangeCounts,
+  ChangedFileContent,
+  Changes,
+} from "../../../src/shared/workspaces/changes.js";
+
+async function until(done: () => boolean) {
+  for (let i = 0; i < 300; i++) {
+    if (done()) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+
+  throw new Error("Task did not complete");
+}
 
 async function setup() {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "agent-changes-")));
@@ -25,669 +36,287 @@ async function setup() {
     execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
 
   git(repo, "init", "-q");
-
-  for (let i = 0; i < 3; i++) {
-    await writeFile(join(repo, `file-${i}.txt`), `line ${i}\n`.repeat(20));
-  }
-
+  git(repo, "config", "user.name", "Test");
+  git(repo, "config", "user.email", "test@example.invalid");
+  await writeFile(join(repo, "existing.txt"), "before\n");
   git(repo, "add", ".");
+  git(repo, "commit", "-qm", "initial");
+  const provider = new FixtureProvider();
 
-  git(
-    repo,
-    "-c",
-    "user.name=Test",
-    "-c",
-    "user.email=test@example.invalid",
-    "commit",
-    "-qm",
-    "initial",
+  const c = new Control(
+    new Store(join(dir, "tasks.sqlite")),
+    new Workspaces(join(dir, "worktrees"), [repo]),
+    new Map([[provider.id, provider]]),
   );
 
-  const workspaces = new Workspaces(join(dir, "worktrees"), [repo]);
+  const tool = <T>(
+    name: string,
+    args: Record<string, unknown>,
+    authority: "parent" | "user" = "parent",
+  ) => callTool(c, "alice", name, args, authority) as Promise<T>;
 
-  // A task as Control creates it, with its workspace made by `create`.
-  const task = async (workspace_strategy: "worktree" | "current_repo") => {
-    const t: Task = {
-      ...startSchema.parse({
-        repository: repo,
-        provider: "fixture",
-        description: "Change files",
-        workspace_strategy,
-      }),
-      id: `task_${workspace_strategy}`,
-      title: "Change files",
-      owner: "alice",
-      status: "running",
-      instructions: [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      created_by: "user",
-      instructions_sent: 0,
-      pending_steers: [],
-      queue: [],
-      turn: 1,
-      runtime_ms: 0,
+  const done = async (id: string) => {
+    await until(
+      () =>
+        !c.active.has(id) &&
+        ["completed", "failed", "interrupted"].includes(
+          c.store.get(id, "alice").status,
+        ),
+    );
+
+    return c.store.get(id, "alice");
+  };
+
+  const start = async (
+    run: (context: RunContext, prompt: string) => Promise<void>,
+    workspace_strategy: "current_repo" | "worktree" = "current_repo",
+    depends_on: string[] = [],
+  ) => {
+    provider.run = async (context, prompt) => {
+      await run(context, prompt);
+
+      return { reply: "Done" };
     };
 
-    await workspaces.create(t);
-    await workspaces.startTurn(t, true);
+    const task = await c.start("alice", {
+      repository: repo,
+      provider: "fixture",
+      description: "Edit files",
+      workspace_strategy,
+      depends_on,
+    });
 
-    return t;
+    return done(task.id);
   };
 
   return {
+    dir,
     repo,
     git,
-    workspaces,
-    task,
-    close: () => rm(dir, { recursive: true, force: true }),
+    c,
+    provider,
+    tool,
+    done,
+    start,
+    close: async () => {
+      await c.close();
+      await rm(dir, { recursive: true, force: true });
+    },
   };
 }
 
-test("worktree changes cover commits, edits, renames, deletions, new and binary files", async () => {
+async function edit(
+  c: RunContext,
+  path: string,
+  before: string,
+  after: string,
+  source: "tool" | "command" = "tool",
+) {
+  const full = join(c.task.workspace!, path);
+  if (after) await writeFile(full, after);
+  else await rm(full, { force: true });
+
+  c.fileChanged({
+    path: full,
+    hunks: structuredPatch("", "", before, after).hunks,
+    ...(!before ? { created: true as const } : {}),
+    ...(!after ? { deleted: true as const } : {}),
+    source,
+  });
+}
+
+test("change tools return sorted recorded edits, incomplete files and command warnings for both audiences", async () => {
   const s = await setup();
 
   try {
-    const t = await s.task("worktree");
-    const w = t.workspace!;
-    await writeFile(join(w, "file-0.txt"), "changed\n");
-    s.git(w, "mv", "file-1.txt", "renamed.txt");
-
-    s.git(
-      w,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@example.invalid",
-      "commit",
-      "-qam",
-      "worker commit",
-    );
-
-    s.git(w, "rm", "-q", "file-2.txt");
-    await writeFile(join(w, "new.txt"), "new\n");
-    await writeFile(join(w, "image.png"), Buffer.from([0x89, 0x50, 0, 1, 2]));
-
-    const changes = await s.workspaces.changes(t);
-
-    assert.deepEqual(
-      changes.files.map((f) => [f.path, f.status, f.old_path, f.binary]),
-      [
-        ["file-0.txt", "modified", undefined, false],
-        ["file-2.txt", "deleted", undefined, false],
-        ["image.png", "added", undefined, true],
-        ["new.txt", "added", undefined, false],
-        ["renamed.txt", "renamed", "file-1.txt", false],
-      ],
-    );
-
-    assert.equal(changes.branch, t.branch);
-    // Binary files carry their size, since they have no line counts.
-    assert.equal(changes.files.find((f) => f.path === "image.png")?.size, 5);
-    assert.equal(changes.additions, 2);
-    assert.equal(changes.deletions, 40);
-    assert.equal(changes.next_cursor, undefined);
-    assert.match(changes.diff, /^diff --git a\/file-0.txt b\/file-0.txt/);
-    assert.match(changes.diff, /Binary files \/dev\/null and b\/image.png/);
-
-    // Reading changes never touches the worktree's own index.
-    assert.match(s.git(w, "status", "--porcelain"), /^\?\? image.png$/m);
-  } finally {
-    await s.close();
-  }
-});
-
-test("turn scope diffs from the latest turn's snapshot", async () => {
-  const s = await setup();
-
-  try {
-    const t = await s.task("worktree");
-    await writeFile(join(t.workspace!, "first.txt"), "first turn\n");
-    t.turn_start_tree = await s.workspaces.snapshot(t.workspace!);
-    await writeFile(join(t.workspace!, "second.txt"), "second turn\n");
-
-    const paths = async (scope: "task" | "turn") =>
-      (await s.workspaces.changes(t, scope)).files.map((f) => f.path);
-
-    assert.deepEqual(await paths("turn"), ["second.txt"]);
-    assert.deepEqual(await paths("task"), ["first.txt", "second.txt"]);
-  } finally {
-    await s.close();
-  }
-});
-
-test("pages hold whole files, list every file, and keep reading the same state", async () => {
-  const s = await setup();
-
-  try {
-    const t = await s.task("current_repo");
-
-    for (let i = 0; i < 3; i++) {
-      await writeFile(join(s.repo, `file-${i}.txt`), `edited ${i}\n`);
-    }
-
-    const first = await s.workspaces.changes(t, "task", undefined, 10);
-    assert.equal(first.files.length, 3);
-    assert.match(first.diff, /file-0.txt/);
-    assert.doesNotMatch(first.diff, /file-1.txt/);
-
-    // An edit after the first page doesn't change the later pages.
-    await writeFile(join(s.repo, "late.txt"), "late\n");
-    const pages = [first.diff];
-
-    for (let page = first; page.next_cursor;) {
-      page = await s.workspaces.changes(t, "task", page.next_cursor, 10);
-      assert.equal(page.files.length, 3);
-      pages.push(page.diff);
-    }
-
-    // One file per page, each once, in order.
-    assert.deepEqual(
-      pages.map((page) => /^diff --git a\/(\S+)/.exec(page)?.[1]),
-      ["file-0.txt", "file-1.txt", "file-2.txt"],
-    );
-
-    assert.doesNotMatch(pages.join(""), /late.txt/);
-    assert.equal((await s.workspaces.changes(t)).files.length, 4);
-
-    // A cursor from another base is refused.
-    const other = await s.workspaces.changes(t, "turn", undefined, 10);
-    t.turn_start_tree = await s.workspaces.snapshot(s.repo);
-
-    await assert.rejects(
-      s.workspaces.changes(t, "turn", other.next_cursor),
-      /Stale changes cursor/,
-    );
-  } finally {
-    await s.close();
-  }
-});
-
-test("a removed worktree's changes are its branch's commits, and a task without snapshots gets an error", async () => {
-  const s = await setup();
-
-  try {
-    const t = await s.task("worktree");
-    const w = t.workspace!;
-    await writeFile(join(w, "committed.txt"), "committed\n");
-    s.git(w, "add", "committed.txt");
-
-    s.git(
-      w,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@example.invalid",
-      "commit",
-      "-qm",
-      "worker commit",
-    );
-
-    // Uncommitted work goes with the worktree.
-    await writeFile(join(w, "draft.txt"), "draft\n");
-    s.git(s.repo, "worktree", "remove", "--force", w);
-
-    const changes = await s.workspaces.changes(t);
-    assert.equal(changes.state, "workspace_missing");
-    assert.equal(changes.branch, t.branch);
-
-    assert.deepEqual(
-      changes.files.map((f) => f.path),
-      ["committed.txt"],
-    );
-
-    assert.match(changes.diff, /\+committed/);
-
-    // Files read from the branch, too.
-    assert.equal(
-      (await s.workspaces.changedFile(t, "committed.txt")).content,
-      "committed\n",
-    );
-
-    // Once the branch is deleted, there's nothing to read.
-    s.git(s.repo, "branch", "-D", t.branch!);
-
-    assert.deepEqual(await s.workspaces.changes(t), {
-      scope: "task",
-      state: "branch_deleted",
-      branch: t.branch,
-      files: [],
-      additions: 0,
-      deletions: 0,
-      diff: "",
-    });
-
-    await assert.rejects(
-      s.workspaces.changedFile(t, "committed.txt"),
-      /were deleted/,
-    );
-
-    const untracked = await s.task("current_repo");
-    delete untracked.start_tree;
-    await assert.rejects(s.workspaces.changes(untracked), /no change snapshot/);
-    delete untracked.turn_start_tree;
-
-    await assert.rejects(
-      s.workspaces.changes(untracked, "turn"),
-      /no change snapshot/,
-    );
-
-    // A task that hasn't started has no changes yet.
-    delete untracked.workspace;
-    assert.deepEqual((await s.workspaces.changes(untracked)).files, []);
-  } finally {
-    await s.close();
-  }
-});
-
-test("uncommitted changes keep the task's files that differ from HEAD, and drop them once committed", async () => {
-  const s = await setup();
-
-  const commit = (...paths: string[]) => {
-    s.git(s.repo, "add", "--", ...paths);
-
-    s.git(
-      s.repo,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@example.invalid",
-      "commit",
-      "-qm",
-      "user commit",
-    );
-  };
-
-  // file-0.txt is 20 lines of "line 0"; each edit replaces one line.
-  const lines = Array.from({ length: 20 }, () => "line 0");
-
-  const edit = async (line: number, text: string) => {
-    lines[line] = text;
-    await writeFile(join(s.repo, "file-0.txt"), `${lines.join("\n")}\n`);
-  };
-
-  try {
-    // The user's own uncommitted edits, from before the task: one to a file
-    // the task leaves alone, one to a file it also edits.
-    await writeFile(join(s.repo, "file-2.txt"), "user's\n");
-    await edit(0, "user's edit");
-    const t = await s.task("current_repo");
-    await edit(19, "task's edit");
-    await writeFile(join(s.repo, "task.txt"), "task\n");
-    t.status = "completed";
-    await s.workspaces.recordEnd(t);
-    // An edit after the task ended, to a file it didn't change.
-    await writeFile(join(s.repo, "file-1.txt"), "later\n");
-
-    const uncommitted = () => s.workspaces.uncommittedChanges(t);
-
-    const paths = async () => (await uncommitted()).files.map((f) => f.path);
-
-    assert.deepEqual(await paths(), ["file-0.txt", "task.txt"]);
-
-    // Only the task's edit shows, not the user's earlier one in the same file.
-    assert.match((await uncommitted()).diff, /\+task's edit/);
-    assert.doesNotMatch((await uncommitted()).diff, /user's edit/);
-
-    // Pages hold whole files, and later pages read the same state.
-    const first = await s.workspaces.uncommittedChanges(
-      t,
-      "task",
-      undefined,
-      1,
-    );
-
-    assert.match(first.diff, /^diff --git a\/file-0.txt/);
-    assert.ok(first.next_cursor);
-
-    const second = await s.workspaces.uncommittedChanges(
-      t,
-      "task",
-      first.next_cursor,
-      1,
-    );
-
-    assert.match(second.diff, /^diff --git a\/task.txt[\s\S]*\+task$/m);
-    assert.equal(second.next_cursor, undefined);
-
-    // Committing a file drops it; the panel previews only what's left.
-    commit("file-0.txt");
-    assert.deepEqual(await paths(), ["task.txt"]);
-
-    await assert.rejects(
-      s.workspaces.changedFile(t, "file-0.txt", undefined, undefined, true),
-      /not among this task's uncommitted changes/,
-    );
-
-    // Edits after the task ended aren't its: a committed file stays out,
-    // and committing it again doesn't bring it back.
-    await edit(10, "edited again");
-    assert.deepEqual(await paths(), ["task.txt"]);
-
-    // A task from before HEAD was recorded with its end reads them live.
-    const endHead = t.end_head;
-    delete t.end_head;
-    assert.deepEqual(await paths(), ["file-0.txt", "task.txt"]);
-    t.end_head = endHead;
-
-    commit("file-0.txt");
-    assert.deepEqual(await paths(), ["task.txt"]);
-
-    // An uncommitted file shows as the task left it, and its content is
-    // read from there; discarding it drops it.
-    await writeFile(join(s.repo, "task.txt"), "user's version\n");
-    assert.match((await uncommitted()).diff, /\+task$/m);
-    assert.doesNotMatch((await uncommitted()).diff, /user's version/);
-
-    assert.equal(
-      (
-        await s.workspaces.changedFile(
-          t,
-          "task.txt",
-          undefined,
-          undefined,
-          true,
-        )
-      ).content,
-      "task\n",
-    );
-
-    await rm(join(s.repo, "task.txt"));
-    assert.deepEqual(await paths(), []);
-
-    // Committing other content over it supersedes it: it keeps the task's
-    // diff but leaves the totals.
-    await writeFile(join(s.repo, "task.txt"), "user's version\n");
-    commit("task.txt");
-    const superseded = await uncommitted();
-
-    assert.deepEqual(
-      superseded.files.map((f) => [f.path, f.superseded]),
-      [["task.txt", true]],
-    );
-
-    assert.match(superseded.diff, /\+task$/m);
-    assert.deepEqual([superseded.additions, superseded.deletions], [0, 0]);
-
-    assert.deepEqual(await s.workspaces.uncommittedCounts(t), {
-      scope: "task",
-      files: 0,
-      additions: 0,
-      deletions: 0,
-    });
-
-    // The full view still lists everything the task changed.
-    assert.deepEqual(
-      (await s.workspaces.changes(t)).files.map((f) => f.path),
-      ["file-0.txt", "task.txt"],
-    );
-
-    // This turn measures from the turn's start, and from the commit HEAD was
-    // on then. file-0.txt, committed before the turn, has an edit left
-    // uncommitted when the turn starts; only the turn's own edit shows. A
-    // commit made during the turn drops the files it took.
-    await edit(5, "before the turn");
-    await s.workspaces.startTurn(t, false);
-    await edit(6, "in the turn");
-    await writeFile(join(s.repo, "turn.txt"), "turn\n");
-    commit("turn.txt");
-    await s.workspaces.recordEnd(t);
-    const turn = await s.workspaces.uncommittedChanges(t, "turn");
-
-    assert.deepEqual(
-      turn.files.map((f) => f.path),
-      ["file-0.txt"],
-    );
-
-    assert.match(turn.diff, /\+in the turn/);
-    // It may be a context line, but isn't added or removed.
-    assert.doesNotMatch(turn.diff, /^[-+].*before the turn/m);
-  } finally {
-    await s.close();
-  }
-});
-
-test("a file the task deleted drops out once the deletion is committed, and is superseded when committed over", async () => {
-  const s = await setup();
-
-  const commit = (...args: string[]) =>
-    s.git(
-      s.repo,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@example.invalid",
-      "commit",
-      "-qm",
-      "user commit",
-      ...args,
-    );
-
-  try {
-    const t = await s.task("current_repo");
-    await rm(join(s.repo, "file-1.txt"));
-    await rm(join(s.repo, "file-2.txt"));
-    await s.workspaces.recordEnd(t);
-
-    // The user commits one deletion, and their own version of the other file.
-    s.git(s.repo, "rm", "-q", "--cached", "file-1.txt");
-    await writeFile(join(s.repo, "file-2.txt"), "user's version\n");
-    s.git(s.repo, "add", "file-2.txt");
-    commit();
-
-    assert.deepEqual(
-      (await s.workspaces.uncommittedChanges(t)).files.map((f) => [
-        f.path,
-        f.status,
-        f.superseded,
-      ]),
-      [["file-2.txt", "deleted", true]],
-    );
-  } finally {
-    await s.close();
-  }
-});
-
-test("a current_repo task's changes are the files changed while its turns ran", async () => {
-  const s = await setup();
-
-  try {
-    const t = await s.task("current_repo");
-
-    const paths = async (scope: "task" | "turn") => ({
-      all: (await s.workspaces.changes(t, scope)).files.map((f) => f.path),
-      uncommitted: (await s.workspaces.uncommittedChanges(t, scope)).files.map(
-        (f) => f.path,
-      ),
-    });
-
-    // While a turn runs, the files it has changed so far count.
-    await writeFile(join(s.repo, "file-0.txt"), "turn 1\n");
-
-    assert.deepEqual(await paths("task"), {
-      all: ["file-0.txt"],
-      uncommitted: ["file-0.txt"],
-    });
-
-    await s.workspaces.recordEnd(t);
-
-    // Between turns, the user edits another file, and one the task changed:
-    // that file stays, with the user's edit in it.
-    await writeFile(join(s.repo, "between.txt"), "user\n");
-    await writeFile(join(s.repo, "file-0.txt"), "turn 1\nuser\n");
-    await s.workspaces.startTurn(t, false);
-
-    // The second turn waits for input; edits while it waits aren't its.
-    await writeFile(join(s.repo, "file-1.txt"), "turn 2\n");
-    await s.workspaces.recordEnd(t);
-    await writeFile(join(s.repo, "during-wait.txt"), "user\n");
-    await s.workspaces.resume(t);
-    assert.equal(t.end_tree, undefined);
-    await writeFile(join(s.repo, "file-2.txt"), "turn 2, resumed\n");
-    await s.workspaces.recordEnd(t);
-
-    assert.deepEqual(await paths("task"), {
-      all: ["file-0.txt", "file-1.txt", "file-2.txt"],
-      uncommitted: ["file-0.txt", "file-1.txt", "file-2.txt"],
-    });
-
-    assert.match((await s.workspaces.changes(t)).diff, /\+user/);
-
-    // This turn holds its own files, not the first turn's file it measures
-    // from: that one only changed between turns.
-    assert.deepEqual(await paths("turn"), {
-      all: ["file-1.txt", "file-2.txt"],
-      uncommitted: ["file-1.txt", "file-2.txt"],
-    });
-
-    for (const path of ["between.txt", "during-wait.txt"]) {
-      await assert.rejects(
-        s.workspaces.changedFile(t, path),
-        /not among this task's changes/,
+    const t = await s.start(async (c) => {
+      await edit(c, "z.txt", "", "last\n", "command");
+      await edit(c, "existing.txt", "before\n", "after\n");
+
+      await writeFile(
+        join(c.task.workspace!, "binary.bin"),
+        Buffer.from([0, 1]),
       );
+
+      c.editUnrecorded(join(c.task.workspace!, "binary.bin"));
+      c.editUnrecorded();
+    });
+
+    const args = { task_id: t.id };
+    const changes = await s.tool<Changes>("get_agent_changes", args);
+
+    expect(
+      changes.files.map((f) => [f.path, f.status, f.source, !!f.incomplete]),
+    ).toEqual([
+      ["binary.bin", "modified", "command", true],
+      ["existing.txt", "modified", "tool", false],
+      ["z.txt", "added", "command", false],
+    ]);
+
+    expect(changes.additions).toBe(2);
+    expect(changes.deletions).toBe(1);
+    expect(changes.diff).not.toContain("binary.bin");
+    expect(changes.diff).toContain("+after");
+    expect(changes.unrecorded_commands).toBe(true);
+
+    expect(
+      await s.tool<Changes>("get_user_agent_changes", args, "user"),
+    ).toEqual(changes);
+
+    const counts = await s.tool<ChangeCounts>(
+      "get_user_agent_change_counts",
+      args,
+      "user",
+    );
+
+    expect(counts.files).toBe(2);
+    expect(counts.additions).toBe(changes.additions);
+    expect(counts.deletions).toBe(changes.deletions);
+
+    expect(
+      await s.tool<ChangedFileContent>(
+        "get_user_agent_changed_file",
+        { ...args, path: "existing.txt" },
+        "user",
+      ),
+    ).toEqual(
+      await s.tool<ChangedFileContent>("get_agent_changed_file", {
+        ...args,
+        path: "existing.txt",
+      }),
+    );
+  } finally {
+    await s.close();
+  }
+});
+
+test("latest-turn rows clear on continuation while the task keeps its recorded history", async () => {
+  const s = await setup();
+
+  try {
+    const t = await s.start(async (c) => {
+      await edit(c, `turn-${c.task.turn}.txt`, "", "turn\n");
+    });
+
+    await s.c.send("alice", t.id, "Continue", "user");
+    await s.done(t.id);
+    const task = await s.tool<Changes>("get_agent_changes", { task_id: t.id });
+
+    const turn = await s.tool<Changes>("get_agent_changes", {
+      task_id: t.id,
+      scope: "turn",
+    });
+
+    expect(task.files.map((f) => f.path)).toEqual(["turn-1.txt", "turn-2.txt"]);
+    expect(turn.files.map((f) => f.path)).toEqual(["turn-2.txt"]);
+  } finally {
+    await s.close();
+  }
+});
+
+test("pages split only between whole files and every page lists all files", async () => {
+  const s = await setup();
+
+  try {
+    const t = await s.start(async (c) => {
+      for (const name of ["c.txt", "a.txt", "b.txt"]) {
+        await edit(c, name, "", `${name}\n`);
+      }
+    });
+
+    let page = s.c.changes.changes(t, "task", undefined, 1);
+    const diffs = [page.diff];
+
+    while (page.next_cursor) {
+      page = s.c.changes.changes(t, "task", page.next_cursor, 1);
+
+      expect(page.files.map((f) => f.path)).toEqual([
+        "a.txt",
+        "b.txt",
+        "c.txt",
+      ]);
+
+      diffs.push(page.diff);
     }
 
-    // A task from before files were recorded counts every file that
-    // changed between its start and its end.
-    s.git(s.repo, "update-ref", "-d", `refs/agent-tasks/${t.id}/paths`);
-
-    assert.deepEqual((await paths("task")).all, [
-      "between.txt",
-      "during-wait.txt",
-      "file-0.txt",
-      "file-1.txt",
-      "file-2.txt",
+    expect(diffs.map((d) => /^diff --git a\/(\S+)/.exec(d)?.[1])).toEqual([
+      "a.txt",
+      "b.txt",
+      "c.txt",
     ]);
   } finally {
     await s.close();
   }
 });
 
-test("a worktree's uncommitted changes are all of its own, and none once it's removed", async () => {
+test("recorded worktree diffs survive a commit, workspace removal and branch deletion", async () => {
   const s = await setup();
 
   try {
-    const t = await s.task("worktree");
-    const w = t.workspace!;
-    await writeFile(join(w, "committed.txt"), "committed\n");
-    s.git(w, "add", "committed.txt");
+    const t = await s.start(async (c) => {
+      await edit(c, "existing.txt", "before\n", "recorded\n");
+    }, "worktree");
 
-    s.git(
-      w,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@example.invalid",
-      "commit",
-      "-qm",
-      "worker commit",
-    );
+    const args = { task_id: t.id };
+    const original = await s.tool<Changes>("get_agent_changes", args);
+    s.git(t.workspace!, "add", ".");
+    s.git(t.workspace!, "commit", "-qm", "task edits");
+    expect(await s.tool<Changes>("get_agent_changes", args)).toEqual(original);
+    await s.c.workspaces.removeWorktree(t);
+    expect(await s.tool<Changes>("get_agent_changes", args)).toEqual(original);
 
-    await writeFile(join(w, "file-0.txt"), "draft\n");
-    await writeFile(join(w, "new.txt"), "new\n");
+    expect(
+      (
+        await s.tool<ChangedFileContent>("get_agent_changed_file", {
+          ...args,
+          path: "existing.txt",
+        })
+      ).state,
+    ).toBe("unavailable");
 
-    assert.deepEqual(
-      (await s.workspaces.uncommittedChanges(t)).files.map((f) => f.path),
-      ["file-0.txt", "new.txt"],
-    );
-
-    // This turn keeps the files changed since the turn started.
-    t.turn_start_tree = await s.workspaces.snapshot(w);
-    await writeFile(join(w, "turn.txt"), "turn\n");
-
-    assert.deepEqual(
-      (await s.workspaces.uncommittedChanges(t, "turn")).files.map(
-        (f) => f.path,
-      ),
-      ["turn.txt"],
-    );
-
-    s.git(s.repo, "worktree", "remove", "--force", w);
-
-    assert.deepEqual(await s.workspaces.uncommittedChanges(t), {
-      scope: "task",
-      state: "workspace_missing",
-      branch: t.branch,
-      files: [],
-      additions: 0,
-      deletions: 0,
-      diff: "",
-    });
+    await s.c.workspaces.deleteBranch(t);
+    expect(await s.tool<Changes>("get_agent_changes", args)).toEqual(original);
   } finally {
     await s.close();
   }
 });
 
-test("a current_repo task that ended without an end snapshot has no changes to show", async () => {
+test("file tools read current disk content, page UTF-8, preview images and restrict paths to recorded files", async () => {
   const s = await setup();
 
   try {
-    const t = await s.task("current_repo");
-    await writeFile(join(s.repo, "file-0.txt"), "changed\n");
-
-    // While a turn runs, its changes are live.
-    assert.equal((await s.workspaces.changes(t)).files.length, 1);
-
-    // Ended before end snapshots, the checkout now mixes in later edits.
-    t.status = "completed";
-
-    assert.deepEqual(await s.workspaces.changes(t), {
-      scope: "task",
-      state: "end_unrecorded",
-      files: [],
-      additions: 0,
-      deletions: 0,
-      diff: "",
-    });
-
-    await assert.rejects(
-      s.workspaces.changedFile(t, "file-0.txt"),
-      /ended before its end state was recorded/,
-    );
-
-    // With one, its changes end there.
-    await s.workspaces.recordEnd(t);
-    await writeFile(join(s.repo, "file-1.txt"), "later\n");
-
-    assert.deepEqual(
-      (await s.workspaces.changes(t)).files.map((f) => f.path),
-      ["file-0.txt"],
-    );
-  } finally {
-    await s.close();
-  }
-});
-
-test("changed files are read whole or in parts, with images as base64 and other binaries as a size", async () => {
-  const s = await setup();
-
-  try {
-    const t = await s.task("worktree");
-    const w = t.workspace!;
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 3]);
-    await writeFile(join(w, "file-0.txt"), "héllo wörld\n".repeat(10));
-    await writeFile(join(w, "logo.png"), png);
-    await writeFile(join(w, "data.bin"), Buffer.from([1, 0, 2, 0]));
-    await rm(join(w, "file-1.txt"));
 
-    const text = await s.workspaces.changedFile(t, "file-0.txt");
+    const t = await s.start(async (c) => {
+      await edit(c, "existing.txt", "before\n", "recorded\n");
+      await writeFile(join(c.task.workspace!, "logo.png"), png);
 
-    assert.deepEqual(text, {
-      path: "file-0.txt",
-      state: "present",
-      size: Buffer.byteLength("héllo wörld\n".repeat(10)),
-      encoding: "utf8",
-      content: "héllo wörld\n".repeat(10),
+      await writeFile(
+        join(c.task.workspace!, "data.bin"),
+        Buffer.from([1, 0, 2, 0]),
+      );
+
+      c.editUnrecorded(join(c.task.workspace!, "logo.png"));
+      c.editUnrecorded(join(c.task.workspace!, "data.bin"));
     });
 
-    // Parts join back into the whole file.
-    let part = await s.workspaces.changedFile(t, "file-0.txt", undefined, 50);
+    const args = { task_id: t.id };
+    const content = "héllo wörld\n".repeat(10);
+    await writeFile(join(s.repo, "existing.txt"), content);
+
+    const file = await s.tool<ChangedFileContent>("get_agent_changed_file", {
+      ...args,
+      path: "existing.txt",
+    });
+
+    expect(file.content).toBe(content);
+    let part = await s.c.changes.changedFile(t, "existing.txt", undefined, 50);
     let joined = part.content!;
 
     while (part.next_cursor) {
-      part = await s.workspaces.changedFile(
+      part = await s.c.changes.changedFile(
         t,
-        "file-0.txt",
+        "existing.txt",
         part.next_cursor,
         50,
       );
@@ -695,136 +324,89 @@ test("changed files are read whole or in parts, with images as base64 and other 
       joined += part.content;
     }
 
-    assert.equal(joined, text.content);
+    expect(joined).toBe(content);
 
-    assert.deepEqual(await s.workspaces.changedFile(t, "logo.png"), {
-      path: "logo.png",
+    expect(
+      await s.tool<ChangedFileContent>("get_agent_changed_file", {
+        ...args,
+        path: "logo.png",
+      }),
+    ).toMatchObject({
       state: "present",
-      size: png.length,
-      mime_type: "image/png",
       encoding: "base64",
       content: png.toString("base64"),
+      mime_type: "image/png",
     });
 
-    assert.deepEqual(await s.workspaces.changedFile(t, "data.bin"), {
-      path: "data.bin",
-      state: "binary",
-      size: 4,
-    });
+    expect(
+      await s.tool<ChangedFileContent>("get_agent_changed_file", {
+        ...args,
+        path: "data.bin",
+      }),
+    ).toMatchObject({ state: "binary", size: 4 });
 
-    assert.deepEqual(await s.workspaces.changedFile(t, "file-1.txt"), {
-      path: "file-1.txt",
-      state: "deleted",
-      size: 0,
-    });
+    await rm(join(s.repo, "existing.txt"));
 
-    // Unchanged files, and paths outside the repository, are refused.
-    for (const path of ["file-2.txt", "../repo/file-2.txt", ".git/config"]) {
-      await assert.rejects(
-        s.workspaces.changedFile(t, path),
-        /not among this task's changes/,
-      );
+    expect(
+      (
+        await s.tool<ChangedFileContent>("get_agent_changed_file", {
+          ...args,
+          path: "existing.txt",
+        })
+      ).state,
+    ).toBe("deleted");
+
+    for (const path of [
+      "unrecorded.txt",
+      "../repo/existing.txt",
+      ".git/config",
+    ]) {
+      await expect(
+        s.tool("get_agent_changed_file", { ...args, path }),
+      ).rejects.toThrow(/not among this task's changes/);
     }
-
-    // A later part's cursor can't reach an unchanged file either.
-    await assert.rejects(
-      s.workspaces.changedFile(
-        t,
-        "file-2.txt",
-        `${s.git(w, "rev-parse", "HEAD^{tree}").trim()}:0`,
-      ),
-      /not among this task's changes/,
-    );
-
-    // An uncommitted edit goes with a removed worktree.
-    s.git(s.repo, "worktree", "remove", "--force", w);
-
-    await assert.rejects(
-      s.workspaces.changedFile(t, "file-0.txt"),
-      /not among this task's changes/,
-    );
   } finally {
     await s.close();
   }
 });
 
-test("later pages reuse the diff of the first, until it expires", async () => {
-  const s = await setup();
-  vi.useFakeTimers({ toFake: ["Date"] });
-
-  try {
-    const t = await s.task("worktree");
-
-    for (let i = 0; i < 3; i++) {
-      await writeFile(join(t.workspace!, `file-${i}.txt`), `edited ${i}\n`);
-    }
-
-    const first = await s.workspaces.changes(t, "task", undefined, 10);
-
-    // Moving the repository away makes every Git call in its worktree fail,
-    // so a page that still reads must come from the cached diff. A worktree
-    // records no files, so reading a page needs no other Git call.
-    await rename(s.repo, `${s.repo}-moved`);
-    const second = await s.workspaces.changes(t, "task", first.next_cursor, 10);
-    assert.match(second.diff, /file-1.txt/);
-    assert.deepEqual(second.files, first.files);
-
-    vi.setSystemTime(Date.now() + 61_000);
-
-    await assert.rejects(
-      s.workspaces.changes(t, "task", second.next_cursor, 10),
-    );
-  } finally {
-    vi.useRealTimers();
-    await s.close();
-  }
-});
-
-test("only the two most recent diffs are kept", async () => {
+test("dependent prompts include the recorded diff within the existing size limit and note unrecorded edits", async () => {
   const s = await setup();
 
   try {
-    const t = await s.task("worktree");
+    const first = await s.start(async (c) => {
+      await edit(c, "large.txt", "", `${"x".repeat(60_000)}\nend-of-diff\n`);
+      c.editUnrecorded(join(c.task.workspace!, "blob.bin"));
+      c.editUnrecorded();
+    }, "worktree");
 
-    for (let i = 0; i < 3; i++) {
-      await writeFile(join(t.workspace!, `file-${i}.txt`), `edited ${i}\n`);
-    }
+    await s.c.workspaces.removeWorktree(first, true);
+    await s.c.workspaces.deleteBranch(first);
+    let prompt = "";
 
-    // Three tree pairs: the task's (from HEAD's tree), then the turn's from
-    // two other bases, the empty tree and a later snapshot.
-    const oldest = await s.workspaces.changes(t, "task", undefined, 10);
-
-    t.turn_start_tree = s
-      .git(t.workspace!, "hash-object", "-t", "tree", "/dev/null")
-      .trim();
-
-    await s.workspaces.changes(t, "turn", undefined, 10);
-
-    for (const i of [0, 1]) {
-      await writeFile(join(t.workspace!, `file-${i}.txt`), "turn base\n");
-    }
-
-    t.turn_start_tree = await s.workspaces.snapshot(t.workspace!);
-
-    for (const i of [0, 1]) {
-      await writeFile(join(t.workspace!, `file-${i}.txt`), "edited again\n");
-    }
-
-    const newest = await s.workspaces.changes(t, "turn", undefined, 10);
-    assert.ok(newest.next_cursor);
-
-    // With Git unreachable, only cached pairs can still be read: the newest
-    // pair's next page, but not the oldest pair's.
-    await rename(s.repo, `${s.repo}-moved`);
-
-    assert.match(
-      (await s.workspaces.changes(t, "turn", newest.next_cursor, 10)).diff,
-      /file-1.txt/,
+    await s.start(
+      async (_c, p) => {
+        prompt = p;
+      },
+      "worktree",
+      [first.id],
     );
 
-    await assert.rejects(
-      s.workspaces.changes(t, "task", oldest.next_cursor, 10),
+    expect(prompt).toContain(
+      `Dependency ${first.id}'s recorded edits (1 file, +2 −0):`,
     );
+
+    expect(prompt).toContain(
+      "Edits to blob.bin weren't recorded, so they have no diff.",
+    );
+
+    expect(prompt).toContain(
+      "Commands also changed files that weren't recorded.",
+    );
+
+    expect(prompt).toContain("diff --git a/large.txt b/large.txt");
+    expect(prompt).toContain("diff truncated");
+    expect(prompt).not.toContain("end-of-diff");
   } finally {
     await s.close();
   }

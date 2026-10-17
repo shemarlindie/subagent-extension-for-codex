@@ -80,6 +80,13 @@ another machine does not ensure native session continuation.
 
 For versioned database upgrades, see [Database](database.md).
 
+## Earlier development data
+
+Recorded diffs are not backfilled for tasks created before edit recording.
+Their Changes tab may be empty or unavailable. If that development data is no
+longer needed, stop the service and start with a fresh data directory. Preserve
+any needed worktrees and task history first.
+
 ## Troubleshooting
 
 | Symptom                       | Check                                                                                                                                                              |

@@ -17,7 +17,7 @@ checks. Run these checks when updating the SDK or changing the minimum:
    available. That check is skipped otherwise.
 2. Run the [live Claude checks](#live-claude-checks) with that
    version selected (through `PATH` or `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`).
-   They cover reads, resume, the sandbox, MCP, budgets and CLI parity
+   They cover reads, recorded edits, resume, the sandbox, MCP, budgets and CLI parity
    (project settings, hooks, skills and MCP servers).
 3. In a live task from the panel, steer, interrupt and answer a question.
 
@@ -34,6 +34,7 @@ in for each scenario:
 
 ```sh
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs read
+CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs edits
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs resume
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs sandbox
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs mcp
@@ -51,6 +52,31 @@ override them. An empty value inherits the Claude Code default:
 CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 CODEX_SUBAGENT_EXTENSION_LIVE_MODEL=sonnet \
   CODEX_SUBAGENT_EXTENSION_LIVE_EFFORT=high npx tsx scripts/verify-live-claude.mjs read
 ```
+
+The `edits` scenario runs file-edit cases through Claude and checks recorded
+rows through `get_agent_changes`. It checks Write, Edit, NotebookEdit, a 3 MB
+file, command-created and deleted files, binary-file warnings, subagent hooks
+and turn-end shutdown. It uses `git restore git-only.txt` to check the warning
+for a command whose checkout diff the CLI skips. Other Git commands can
+return precise diffs, including `git restore -- file.txt`. Read-only `git status`
+may return no edit data and creates no warning. Separate tasks check Bash recording in `auto` and
+`bypassPermissions` modes alongside the main task's `default` mode.
+
+The four tasks configure cost limits of $1.50, $0.25, $0.25 and $0.50. The script
+saves raw hook responses to `edit-hooks.json` in its temporary evidence directory,
+including when an assertion fails. Review and sanitize those captures before
+using them as committed fixtures. Re-run the scenario when qualifying a CLI or
+SDK version. Local mapper fixtures include captured 2.1.300 main-worker
+responses, subagent and skipped-diff hook responses, and synthetic cases.
+The captured large-file case replaces its 3 MB
+original content with a size marker while keeping its hunks. These cases do
+not establish compatibility with a different live CLI.
+
+The original probes cover Bash without flag settings and a query deliberately
+left open after a result. The service scenario closes each query at turn end.
+Staged results use synthetic mapping tests because Claude Code 2.1.300 does not
+emit them. The optional `gitDiff` status is checked only when the CLI includes
+it. A live run that omits it does not verify that status field.
 
 The `parent` scenario verifies the injected SDK tool queues a message with no
 permission prompt. It does not exercise the Codex host bridge. Use an open

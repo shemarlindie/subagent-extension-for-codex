@@ -257,27 +257,23 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     }),
     get_agent_changes: tool({
       description:
-        "Read what a task changed, live from Git: a unified diff with per-file stats, for the whole task (default) or its latest turn. Worktree tasks diff their base commit against the worktree now. current_repo tasks diff a snapshot from task start against a snapshot from when the worker last stopped (its latest turn ended, or it began waiting for input), or the checkout now while it runs, limited to files changed while its turns ran (not between turns or while it waited for input); other edits to those files are included. Every page lists every file; large diffs come in pages of whole files, so pass next_cursor back to read the rest. state workspace_missing means the worktree was removed, so the changes are those committed on branch; branch_deleted means the branch is gone too; end_unrecorded means a current_repo task ended before its end state was recorded, so its changes can't be separated from later edits.",
+        "Read the task tools’ recorded edits as a unified diff with per-file stats, for the whole task or latest turn. Every page lists every file. Pass next_cursor to read more whole files. Incomplete files have no diff. unrecorded_commands means a command changed files whose edits were not captured. Commits and worktree removal do not change these recorded diffs.",
       schema: taskId.extend({
         scope: z.enum(["task", "turn"]).default("task"),
         cursor: z.string().max(300).optional(),
       }),
       run: (a) =>
-        c.workspaces.changes(c.store.get(a.task_id, owner), a.scope, a.cursor),
+        c.changes.changes(c.store.get(a.task_id, owner), a.scope, a.cursor),
     }),
     get_agent_changed_file: tool({
       description:
-        "Read one file a task changed, where get_agent_changes ends: its worktree now (or, once removed, its branch), or a current_repo checkout as the worker last left it. path must be listed by get_agent_changes (the whole task or its latest turn). state is deleted when the change removed the file, or binary with only its size for non-image binary files; images come as base64. Large files come in parts: pass next_cursor back to read the rest.",
+        "Read a recorded changed file from disk as it is now, including later edits by others. Only paths in task or latest-turn changes are allowed. state is deleted for a missing file, unavailable for a removed workspace, or binary with its size for other binary files. Images are base64. Pass next_cursor for more content.",
       schema: taskId.extend({
         path: z.string().min(1).max(4096),
         cursor: z.string().max(300).optional(),
       }),
       run: (a) =>
-        c.workspaces.changedFile(
-          c.store.get(a.task_id, owner),
-          a.path,
-          a.cursor,
-        ),
+        c.changes.changedFile(c.store.get(a.task_id, owner), a.path, a.cursor),
     }),
     get_agent_events: tool({
       description:

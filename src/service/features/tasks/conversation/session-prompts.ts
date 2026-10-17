@@ -1,5 +1,6 @@
 import { eventPayload } from "../../../../shared/events/payload.js";
 import type { Task } from "../../../../shared/tasks/model.js";
+import type { Changes } from "../../changes/changes.js";
 import type { Provider } from "../../providers/types.js";
 import type { Workspaces } from "../../workspaces/workspace.js";
 import type { Store } from "../storage/store.js";
@@ -16,6 +17,7 @@ export class SessionPrompts {
   constructor(
     private store: Store,
     private workspaces: Workspaces,
+    private changes: Changes,
   ) {}
 
   /**
@@ -64,9 +66,7 @@ export class SessionPrompts {
 
     const dependencyContext = await Promise.all(
       deps.map(async (d) =>
-        [this.dependencyReply(d), ...(await this.dependencyChanges(d))].join(
-          "\n",
-        ),
+        [this.dependencyReply(d), ...this.dependencyChanges(d)].join("\n"),
       ),
     );
 
@@ -163,50 +163,41 @@ export class SessionPrompts {
   }
 
   /**
-   * A dependency's whole-task changes for a dependent's prompt, up to a
-   * bound, in whole files. A removed worktree's are its branch's commits.
+   * A dependency's recorded whole-task edits for a dependent's prompt, up to
+   * a bound, in whole files, with notes for edits that weren't recorded.
    */
-  private async dependencyChanges(d: Task) {
-    const changes = await this.workspaces
-      .changes(d, "task", undefined, MAX_DEPENDENCY_DIFF_CHARS)
-      .catch(() => undefined);
+  private dependencyChanges(d: Task) {
+    const changes = this.changes.changes(
+      d,
+      "task",
+      undefined,
+      MAX_DEPENDENCY_DIFF_CHARS,
+    );
 
-    if (changes?.state === "branch_deleted") {
-      return [
-        `Dependency ${d.id}'s worktree and branch were deleted, so its changes are unavailable.`,
+    const incomplete = changes.files.filter((file) => file.incomplete),
+      notes = [
+        ...(incomplete.length
+          ? [
+              `Edits to ${incomplete.map((file) => file.path).join(", ")} weren't recorded, so they have no diff.`,
+            ]
+          : []),
+        ...(changes.unrecorded_commands
+          ? ["Commands also changed files that weren't recorded."]
+          : []),
       ];
-    }
 
-    if (changes?.state === "end_unrecorded") {
-      return [
-        `Dependency ${d.id} ended before its end state was recorded, so its changes can't be told apart from later edits to its checkout.`,
-      ];
-    }
-
-    const removed = changes?.state === "workspace_missing";
-
-    if (!changes?.diff) {
-      return removed
-        ? [
-            `Dependency ${d.id}'s worktree was removed, and its branch ${changes.branch} has no committed changes.`,
-          ]
-        : [];
-    }
+    if (!changes.diff) return notes;
 
     const shown = changes.diff.slice(0, MAX_DEPENDENCY_DIFF_CHARS),
-      count = changes.files.length,
-      from = removed
-        ? `as committed on branch ${changes.branch}, since its worktree was removed`
-        : "as a diff from where the task started";
+      count = changes.files.length - incomplete.length;
 
     return [
-      `Dependency ${d.id} changes (${count} ${count === 1 ? "file" : "files"}, +${changes.additions} −${changes.deletions}), ${from}:`,
+      `Dependency ${d.id}'s recorded edits (${count} ${count === 1 ? "file" : "files"}, +${changes.additions} −${changes.deletions}):`,
       shown,
       ...(changes.next_cursor || shown.length < changes.diff.length
-        ? [
-            `… (diff truncated${d.branch ? `; the full changes are on branch ${d.branch}` : ""})`,
-          ]
+        ? ["… (diff truncated)"]
         : []),
+      ...notes,
     ];
   }
 }

@@ -24,6 +24,10 @@ export interface ChangedFile {
    * own, as they were then, and it isn't counted in the totals.
    */
   superseded?: true;
+  /** "command": a shell command made at least one of the recorded edits. */
+  source?: "tool" | "command";
+  /** An edit couldn't be recorded, so the file has no diff or stats. */
+  incomplete?: boolean;
 }
 
 export interface Changes {
@@ -36,6 +40,8 @@ export interface Changes {
    * recorded, so there are none (see END_UNRECORDED).
    */
   state?: "workspace_missing" | "branch_deleted" | "end_unrecorded";
+  /** A command changed files whose edits weren't recorded. */
+  unrecorded_commands?: boolean;
   branch?: string;
   /** Every changed file, on every page. */
   files: ChangedFile[];
@@ -62,7 +68,10 @@ export function changeCounts({
   next_cursor: _next,
   ...totals
 }: Changes): ChangeCounts {
-  return { ...totals, files: files.filter((f) => !f.superseded).length };
+  return {
+    ...totals,
+    files: files.filter((f) => !f.superseded && !f.incomplete).length,
+  };
 }
 
 /** Why an "end_unrecorded" task has no changes. */
@@ -72,8 +81,8 @@ export const END_UNRECORDED =
 /** A changed file's current content, as get_agent_changed_file returns it. */
 export interface ChangedFileContent {
   path: string;
-  /** "deleted": the change removed it. "binary": not text and not an image. */
-  state: "present" | "deleted" | "binary";
+  /** "deleted": missing now. "unavailable": workspace removed. "binary": other binary content. */
+  state: "present" | "deleted" | "binary" | "unavailable";
   /** Bytes in the file. */
   size: number;
   mime_type?: string;
@@ -103,7 +112,7 @@ export const imageMime = (path: string) =>
 export const isBinary = (bytes: Uint8Array) =>
   bytes.subarray(0, 8000).includes(0);
 
-/** File cursors name the snapshot tree, so later parts read the same file. */
+/** File cursors fingerprint the bytes, rejecting content changed between pages. */
 export function encodeFileCursor(tree: string, offset: number) {
   return `${tree}:${offset}`;
 }

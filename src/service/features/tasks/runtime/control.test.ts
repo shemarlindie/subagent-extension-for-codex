@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { structuredPatch } from "diff";
 import { test, vi } from "vitest";
 
 import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
@@ -570,7 +571,7 @@ test("dependents wait on an interrupted dependency and fail with a failed one, a
   await c.close();
 });
 
-test("dependent prompts include each dependency's reply and workspace diff", async () => {
+test("dependent prompts include each dependency's reply and recorded diff", async () => {
   const prompts = new Map<string, string>();
 
   class Writer extends FixtureProvider {
@@ -582,6 +583,13 @@ test("dependent prompts include each dependency's reply and workspace diff", asy
           join(c.task.workspace!, "added.ts"),
           "export const added = 1;\n",
         );
+
+        c.fileChanged({
+          path: join(c.task.workspace!, "added.ts"),
+          hunks: structuredPatch("", "", "", "export const added = 1;\n").hunks,
+          created: true,
+          source: "tool",
+        });
       }
 
       return super.run(c, p);
@@ -605,12 +613,12 @@ test("dependent prompts include each dependency's reply and workspace diff", asy
     ),
   );
 
-  assert.match(prompt, /changes \(1 file, \+1 −0\), as a diff/);
+  assert.match(prompt, /recorded edits \(1 file, \+1 −0\):/);
+
   assert.match(prompt, /\+export const added = 1;/);
 
-  // Once the worktree is removed, the dependent sees the branch's commits;
-  // the uncommitted file went with the worktree.
-  const { branch, workspace } = store.get(first.id, "alice");
+  // Recorded edits remain available after the worktree is removed.
+  const { workspace } = store.get(first.id, "alice");
   execFileSync("git", ["-C", workspace!, "worktree", "remove", "--force", "."]);
 
   const third = await c.start("alice", {
@@ -620,13 +628,7 @@ test("dependent prompts include each dependency's reply and workspace diff", asy
 
   await until(() => store.get(third.id, "alice").status === "completed");
 
-  assert.ok(
-    prompts
-      .get(third.id)!
-      .includes(
-        `worktree was removed, and its branch ${branch} has no committed changes.`,
-      ),
-  );
+  assert.match(prompts.get(third.id)!, /\+export const added = 1;/);
 
   await c.close();
 });
@@ -640,6 +642,13 @@ test("current_repo dependents see only the dependency's own changes", async () =
 
       if (c.task.description === "Write") {
         await writeFile(join(c.task.workspace!, "worker.ts"), "worker\n");
+
+        c.fileChanged({
+          path: join(c.task.workspace!, "worker.ts"),
+          hunks: structuredPatch("", "", "", "worker\n").hunks,
+          created: true,
+          source: "tool",
+        });
       }
 
       return super.run(c, p);
@@ -661,7 +670,7 @@ test("current_repo dependents see only the dependency's own changes", async () =
 
   const [, dependency] = prompts
     .get(second.id)!
-    .split(`Dependency ${first.id} changes`);
+    .split(`Dependency ${first.id}'s recorded edits`);
 
   assert.ok(dependency);
   assert.match(dependency, /\+worker/);
@@ -827,6 +836,13 @@ test("a completed task takes a follow-up as its next turn, with its own turn sco
         `${c.task.turn}\n`,
       );
 
+      c.fileChanged({
+        path: join(c.task.workspace!, `turn-${c.task.turn}.txt`),
+        hunks: structuredPatch("", "", "", `${c.task.turn}\n`).hunks,
+        created: true,
+        source: "tool",
+      });
+
       return super.run(c, p);
     }
   }
@@ -846,11 +862,11 @@ test("a completed task takes a follow-up as its next turn, with its own turn sco
   const done = store.get(t.id, "alice");
   assert.ok(done.runtime_ms >= first.runtime_ms);
 
-  const paths = async (scope: "task" | "turn") =>
-    (await c.workspaces.changes(done, scope)).files.map((f) => f.path);
+  const paths = (scope: "task" | "turn") =>
+    c.changes.changes(done, scope).files.map((f) => f.path);
 
-  assert.deepEqual(await paths("turn"), ["turn-2.txt"]);
-  assert.deepEqual(await paths("task"), ["turn-1.txt", "turn-2.txt"]);
+  assert.deepEqual(paths("turn"), ["turn-2.txt"]);
+  assert.deepEqual(paths("task"), ["turn-1.txt", "turn-2.txt"]);
 
   const events = store.events(t.id, "alice");
 
@@ -1758,7 +1774,7 @@ test("workspace root allowlist rejects external repositories", async () => {
   await c.close();
 });
 
-test("worktree diff includes edits, untracked files and committed changes without touching primary checkout", async () => {
+test("recorded worktree edits include committed and untracked files without touching primary checkout", async () => {
   class Writer extends FixtureProvider {
     override async run(c: RunContext, p: string) {
       await writeFile(join(c.task.workspace!, "README.md"), "changed\n");
@@ -1767,6 +1783,19 @@ test("worktree diff includes edits, untracked files and committed changes withou
         join(c.task.workspace!, "new.ts"),
         "export const answer = 42;\n",
       );
+
+      c.fileChanged({
+        path: join(c.task.workspace!, "README.md"),
+        hunks: structuredPatch("", "", "hello\n", "changed\n").hunks,
+        source: "tool",
+      });
+
+      c.fileChanged({
+        path: join(c.task.workspace!, "new.ts"),
+        hunks: structuredPatch("", "", "", "export const answer = 42;\n").hunks,
+        created: true,
+        source: "tool",
+      });
 
       execFileSync("git", ["-C", c.task.workspace!, "add", "README.md"]);
 
@@ -1808,7 +1837,7 @@ test("worktree diff includes edits, untracked files and committed changes withou
     done.branch,
   );
 
-  const { diff, files } = await c.workspaces.changes(done);
+  const { diff, files } = c.changes.changes(done);
 
   assert.deepEqual(
     files.map((file) => [file.path, file.status]),
@@ -1901,7 +1930,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     });
 
     assert.match(branches(), new RegExp(`agent/${t.id}`));
-    assert.equal((await c.workspaces.changes(t)).state, "workspace_missing");
+    assert.equal(store.get(t.id, "alice").workspace_removed, true);
     assert.match(pins(), /turn-start/);
 
     await assert.rejects(c.removeWorktree("alice", t.id), /already removed/);
@@ -1911,7 +1940,8 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     });
 
     assert.equal(branches(), "");
-    assert.equal((await c.workspaces.changes(t)).state, "branch_deleted");
+    // Deleting the branch also unpins the task's snapshots.
+    assert.equal(store.get(t.id, "alice").branch_deleted, true);
     // Deleting the branch also unpins the task's snapshots.
     assert.equal(pins(), "");
 

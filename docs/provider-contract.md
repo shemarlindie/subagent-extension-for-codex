@@ -76,7 +76,7 @@ response fields instead of inferring changes from the command text.
 
 The changes feature owns composition and persistence. A contradictory or missing
 edit makes that file incomplete and clears its hunks. Later edits cannot restore
-that scope's diff. See [change tools](mcp-reference.md) for reads
+that scope's diff. See [change tools](mcp-reference.md#recorded-changes) for reads
 and recording limits.
 
 ## Lifecycle policy

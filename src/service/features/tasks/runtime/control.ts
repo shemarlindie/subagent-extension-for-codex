@@ -19,7 +19,7 @@ import {
   type TaskMessage,
 } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
-import { ChangeStore } from "../../changes/store.js";
+import { Changes } from "../../changes/changes.js";
 import { Projects } from "../../projects/projects.js";
 import {
   type Provider,
@@ -124,7 +124,7 @@ interface Active {
 }
 
 export class Control {
-  changes: ChangeStore;
+  changes: Changes;
   active = new Map<string, Active>();
   private deleting = new Set<string>();
   scheduling = false;
@@ -144,7 +144,7 @@ export class Control {
     public providers: Map<string, Provider>,
     public concurrency = 3,
   ) {
-    this.changes = new ChangeStore(store);
+    this.changes = new Changes(store);
 
     this.settings = new Settings(
       store.database,
@@ -152,7 +152,7 @@ export class Control {
       (id) => providerMetadata(id, providers.get(id)?.metadata),
     );
 
-    this.prompts = new SessionPrompts(store, workspaces);
+    this.prompts = new SessionPrompts(store, workspaces, this.changes);
     this.drafts = new Drafts(store.bus);
     this.activity = new ActivityPages(store);
   }
@@ -489,6 +489,8 @@ export class Control {
     } else if (await this.workspaces.worktreeMissing(t)) {
       // Remove worktree only frees disk space; the next turn brings it back.
       const from = await this.workspaces.recreateWorktree(t);
+      delete t.workspace_removed;
+      delete t.branch_deleted;
 
       this.store.transaction(() => {
         this.store.save(t);
@@ -975,6 +977,9 @@ export class Control {
     const result = await this.workspaces.removeWorktree(t, force);
 
     if (result.status === "removed") {
+      t.workspace_removed = true;
+      this.store.save(t);
+
       this.store.event(t, "task.worktree_removed", {
         path: t.workspace,
         branch: t.branch,
@@ -989,6 +994,8 @@ export class Control {
   async deleteBranch(owner: string, id: string) {
     const t = this.idleWorktreeTask(owner, id);
     await this.workspaces.deleteBranch(t);
+    t.branch_deleted = true;
+    this.store.save(t);
     this.store.event(t, "task.branch_deleted", { branch: t.branch });
 
     return { status: "deleted" as const };

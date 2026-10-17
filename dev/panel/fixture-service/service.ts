@@ -2,12 +2,20 @@
 // ssrLoadModule (see vite.config.ts) and answers FIXTURE_SERVICE_TOOLS with the
 // real service code: a Store in a temporary SQLite file, seeded with the preview
 // fixture tasks, and callTool with user authority, as the console calls it.
-// Tasks with change fixtures get a real Git repository each, so their changes
-// come from Git as in production.
+// Tasks with change fixtures get disposable repositories and recorded edit hunks.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+
+import { structuredPatch } from "diff";
 
 import { Control } from "../../../src/service/features/tasks/runtime/control";
 import { Store } from "../../../src/service/features/tasks/storage/store";
@@ -77,16 +85,72 @@ function apply(root: string, turn: Turn) {
   }
 }
 
+/** Read fixture text to create the same incremental hunks a provider reports. */
+function fileContents(root: string, prefix = ""): Map<string, string> {
+  const files = new Map<string, string>();
+
+  for (const entry of readdirSync(join(root, prefix), {
+    withFileTypes: true,
+  })) {
+    if (entry.name === ".git") continue;
+    const path = join(prefix, entry.name);
+
+    if (entry.isDirectory()) {
+      for (const [key, value] of fileContents(root, path)) {
+        files.set(key, value);
+      }
+    } else if (entry.isFile()) {
+      files.set(path, readFileSync(join(root, path), "utf8"));
+    }
+  }
+
+  return files;
+}
+
+function recordFixtureTurn(
+  control: Control,
+  task: Task,
+  before: Map<string, string>,
+  after: Map<string, string>,
+) {
+  for (const path of new Set([...before.keys(), ...after.keys()])) {
+    const oldText = before.get(path),
+      newText = after.get(path);
+
+    if (oldText === newText) continue;
+
+    if (oldText?.includes("\0") || newText?.includes("\0")) {
+      control.changes.unrecorded(task, path);
+      continue;
+    }
+
+    control.changes.record(task, {
+      path,
+      hunks: structuredPatch(
+        path,
+        path,
+        oldText ?? "",
+        newText ?? "",
+        undefined,
+        undefined,
+        { context: 3 },
+      ).hunks,
+      source: "tool",
+      ...(oldText === undefined ? { created: true } : {}),
+      ...(newText === undefined ? { deleted: true } : {}),
+    });
+  }
+}
+
 /**
  * Builds a task's repository from its change fixture: a base commit, then
- * each turn. The task's workspace, branch and snapshots become real ones;
- * the turn snapshot is taken before the last turn.
+ * each turn. The task's workspace, branch become real ones. Each turn reports incremental edit hunks.
  */
 async function seedChanges(
   task: Task,
   fixture: ChangeFixture,
   root: string,
-  workspaces: Workspaces,
+  control: Control,
 ) {
   const repo = join(root, "repos", task.id);
   mkdirSync(repo, { recursive: true });
@@ -105,17 +169,18 @@ async function seedChanges(
   } else {
     write(repo, fixture.before ?? {});
     task.workspace = repo;
-    task.start_tree = await workspaces.snapshot(repo);
   }
 
   const workspace = task.workspace;
+  control.store.save(task);
 
   for (const [index, turn] of fixture.turns.entries()) {
-    if (index === fixture.turns.length - 1) {
-      task.turn_start_tree = await workspaces.snapshot(workspace);
-    }
-
+    control.changes.clearTurn(task);
+    const before = fileContents(workspace);
     apply(workspace, turn);
+    const after = fileContents(workspace);
+
+    recordFixtureTurn(control, task, before, after);
 
     if (fixture.commit) {
       git(workspace, "add", "-A");
@@ -124,16 +189,22 @@ async function seedChanges(
   }
 
   // The task's changes end, then the user commits their own edits over some
-  // of its files, which supersedes them.
+  // of its files. Recorded edits stay unchanged.
   if (fixture.committedAfter) {
-    await workspaces.recordEnd(task);
     write(workspace, fixture.committedAfter);
     git(workspace, "add", "--", ...Object.keys(fixture.committedAfter));
     git(workspace, "commit", "-qm", "User commit");
   }
 
-  if (fixture.removed) git(repo, "worktree", "remove", "--force", workspace);
-  if (fixture.branchDeleted) git(repo, "branch", "-D", task.branch!);
+  if (fixture.removed) {
+    git(repo, "worktree", "remove", "--force", workspace);
+    task.workspace_removed = true;
+  }
+
+  if (fixture.branchDeleted) {
+    git(repo, "branch", "-D", task.branch!);
+    task.branch_deleted = true;
+  }
 }
 
 /** Seeds the fixture tasks on first use. */
@@ -154,7 +225,7 @@ function fixtureStore() {
       const changes = previewChanges[task.id];
 
       if (changes) {
-        await seedChanges(saved, changes(), directory, workspaces);
+        await seedChanges(saved, changes(), directory, control);
       }
 
       store.save(saved);

@@ -91,7 +91,7 @@ test("the Vite fixture-service route parses requests and returns tool results", 
   }
 });
 
-test("fixture changes come from real Git repositories built per task", async () => {
+test("fixture changes come from recorded edits built per task", async () => {
   await fixtureServer();
 
   const changes = async (task_id: string, scope = "task") => {
@@ -115,55 +115,60 @@ test("fixture changes come from real Git repositories built per task", async () 
 
   const paths = (result: Changes) => result.files.map((file) => file.path);
 
-  // The panel shows uncommitted changes: here the 60-file diff, with its
-  // rename and deletion, in one page.
+  // A rename is recorded as a deletion and an addition.
   const build = await changes("preview-build");
-  assert.equal(build.files.length, 60);
+  assert.equal(build.files.length, 61);
   assert.equal(build.next_cursor, undefined);
-  assert.ok(build.files.some((file) => file.status === "renamed"));
+  assert.ok(build.files.some((file) => file.status === "added"));
   assert.ok(build.files.some((file) => file.status === "deleted"));
-  assert.equal(build.diff.match(/^diff --git /gm)?.length, 60);
+  assert.equal(build.diff.match(/^diff --git /gm)?.length, 61);
 
-  // Two committed turns on a worktree branch leave nothing uncommitted.
-  assert.deepEqual(paths(await changes("preview-interrupted")), []);
-  assert.deepEqual(paths(await changes("preview-interrupted", "turn")), []);
+  // Commits preserve whole-task and latest-turn records.
+  assert.deepEqual(paths(await changes("preview-interrupted")), [
+    "src/panel/inspector.css",
+    "src/panel/inspector.tsx",
+    "src/panel/task-facts.tsx",
+  ]);
 
-  // current_repo leaves out the user's earlier README edit.
+  assert.deepEqual(paths(await changes("preview-interrupted", "turn")), [
+    "src/panel/inspector.tsx",
+    "src/panel/task-facts.tsx",
+  ]);
+
+  // Earlier user edits stay out. Binary edits are incomplete records.
   const refactor = await changes("preview-refactor");
   assert.ok(paths(refactor).length);
   assert.ok(!paths(refactor).includes("README.md"));
-  assert.ok(refactor.files.some((file) => file.binary));
 
-  // A stopped current_repo task's file the user committed over is
-  // superseded, and left out of the totals.
+  assert.ok(
+    refactor.files.some(
+      (file) => file.path === "assets/logo.png" && file.incomplete,
+    ),
+  );
+
+  // A later commit does not replace the task's recorded limits.
   const conversation = await changes("preview-conversation");
 
-  assert.deepEqual(
-    conversation.files.map((file) => [file.path, file.superseded]),
-    [
-      ["src/limits.ts", true],
-      ["src/upload.ts", undefined],
-      ["test/upload.test.ts", undefined],
-    ],
-  );
+  assert.deepEqual(paths(conversation), [
+    "src/limits.ts",
+    "src/upload.ts",
+    "test/upload.test.ts",
+  ]);
+
+  assert.match(conversation.diff, /maxUploadBytes: 10/);
+  assert.doesNotMatch(conversation.diff, /maxUploadBytes: 25/);
 
   assert.equal(
     conversation.additions,
     conversation.files
-      .filter((file) => !file.superseded)
+      .filter((file) => !file.incomplete)
       .reduce((sum, file) => sum + file.additions, 0),
   );
 
-  // A removed worktree has nothing uncommitted; its work is on the branch.
-  assert.deepEqual(await changes("preview-failed"), {
-    scope: "task",
-    state: "workspace_missing",
-    branch: "agent/preview-failed",
-    files: [],
-    additions: 0,
-    deletions: 0,
-    diff: "",
-  });
+  // Removing a workspace leaves its recorded edits readable.
+  const removed = await changes("preview-failed");
+  assert.deepEqual(paths(removed), ["test/retry.test.ts"]);
+  assert.match(removed.diff, /\+test\('retries'/);
 });
 
 test("the large-file fixture's changes come in pages and its files read whole", async () => {
@@ -280,11 +285,18 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
     { status: "removed" },
   );
 
-  assert.equal(
-    (await call("get_user_agent_changes", { task_id: "preview-interrupted" }))
-      .body.result.state,
-    "workspace_missing",
-  );
+  const afterRemoval = (
+    await call("get_user_agent_changes", { task_id: "preview-interrupted" })
+  ).body.result as Changes;
+
+  assert.equal(afterRemoval.files.length, 3);
+
+  const missingPreview = await call("get_user_agent_changed_file", {
+    task_id: "preview-interrupted",
+    path: "src/panel/inspector.css",
+  });
+
+  assert.equal(missingPreview.body.result.state, "unavailable");
 
   assert.deepEqual(
     (await call("delete_user_agent_branch", { task_id: "preview-interrupted" }))
@@ -292,10 +304,10 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
     { status: "deleted" },
   );
 
-  assert.equal(
+  assert.deepEqual(
     (await call("get_user_agent_changes", { task_id: "preview-interrupted" }))
-      .body.result.state,
-    "branch_deleted",
+      .body.result,
+    afterRemoval,
   );
 
   // A running task's worktree is in use.

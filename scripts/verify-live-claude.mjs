@@ -9,6 +9,11 @@ import { ClaudeAgentProvider } from "../src/service/features/providers/claude/ru
 import { Control } from "../src/service/features/tasks/runtime/control.ts";
 import { Store } from "../src/service/features/tasks/storage/store.ts";
 import { Workspaces } from "../src/service/features/workspaces/workspace.ts";
+import {
+  observedEditsProvider,
+  prepareEditsFixture,
+  runEditsScenario,
+} from "./live-claude-edits.mjs";
 
 /** A task's latest reply text, or "" before it has replied. */
 const latestReply = (store, id) =>
@@ -16,7 +21,7 @@ const latestReply = (store, id) =>
 
 if (process.env.CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY !== "1") {
   console.error(
-    "Set CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, or $0.50 for parity. A response can exceed the budget before work stops.",
+    "Set CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, $0.50 for parity, or $1.50 for edits. The edits scenario runs four tasks. A response can exceed the budget before work stops.",
   );
 
   process.exit(1);
@@ -25,10 +30,17 @@ if (process.env.CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY !== "1") {
 const scenario = process.argv[2] ?? "read";
 
 assert.ok(
-  ["read", "resume", "sandbox", "mcp", "budget", "parity", "parent"].includes(
-    scenario,
-  ),
-  "Choose read, resume, sandbox, mcp, budget, parity, or parent",
+  [
+    "read",
+    "resume",
+    "sandbox",
+    "mcp",
+    "budget",
+    "parity",
+    "parent",
+    "edits",
+  ].includes(scenario),
+  "Choose read, resume, sandbox, mcp, budget, parity, parent, or edits",
 );
 
 // Every task runs on this model and effort; an empty value inherits the CLI default.
@@ -55,7 +67,10 @@ console.log(
   `Model ${modelChoice.model || "default"}, effort ${modelChoice.reasoning_effort}`,
 );
 
-const provider = () => new ClaudeAgentProvider(undefined, undefined, cli);
+const edits = scenario === "edits" ? observedEditsProvider(cli) : undefined;
+
+const provider = () =>
+  edits?.provider ?? new ClaudeAgentProvider(undefined, undefined, cli);
 
 const root = await realpath(
   await mkdtemp(join(tmpdir(), "codex-subagent-extension-native-proof-")),
@@ -69,6 +84,11 @@ await writeFile(
   join(repo, "README.md"),
   "# Native verification\n\nThe verification marker is COBALT-27.\n",
 );
+
+if (scenario === "edits") {
+  await prepareEditsFixture(repo);
+  execFileSync("git", ["-C", repo, "add", "."]);
+}
 
 if (scenario === "parity") {
   // Project-scoped Claude Code configuration, loaded the same way the CLI does.
@@ -163,7 +183,16 @@ const control = new Control(
   new Map([["claude", provider()]]),
 );
 
-if (scenario === "parent") {
+if (scenario === "edits") {
+  await runEditsScenario({
+    control,
+    store,
+    repo,
+    root,
+    taskBase,
+    observed: edits.observed,
+  });
+} else if (scenario === "parent") {
   const task = await control.start("verification", {
     ...taskBase,
     worker_profile: "reviewer",

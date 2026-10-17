@@ -41,8 +41,8 @@ provider. Worker discovery lists its supported features and limits.
 | `src/service/features/tasks`             | Task lifecycle, scheduling, draft delivery, input and storage                |
 | `src/service/features/providers`         | Provider contracts, settings, task policy and Claude integration             |
 | `src/service/features/projects`          | Approved roots, registration and host-project policy                         |
-| `src/service/features/changes`           | Recorded tool edits, running task and turn diffs and durable storage         |
-| `src/service/features/workspaces`        | Git workspaces, snapshots and change inspection                              |
+| `src/service/features/changes`           | Recorded edits, running task/turn diffs and change inspection                |
+| `src/service/features/workspaces`        | Git workspaces and snapshots                                                 |
 | `src/service/features/settings`          | User defaults and settings document                                          |
 | `src/service/platform/server`            | HTTP/MCP authentication, transport and tool dispatch                         |
 | `src/service/platform/panel`             | Embedded resource, launch scope and optional host context                    |
@@ -80,7 +80,9 @@ control layer records delivery and preserves steers the provider did not take.
 Worker replies are plain text or Markdown. Provider activity is a separate event
 stream. Draft deltas are transient, while completed messages and task events persist.
 
-SQLite stores tasks, events, settings and approved projects. WAL and synchronous transactions keep related writes consistent.
+SQLite stores tasks, events, recorded file changes, settings and approved projects.
+Recorded changes store hunks, without full file contents. Each edit updates the
+task and latest-turn rows in one synchronous transaction. WAL and synchronous transactions keep related writes consistent.
 Notifications run after commit. On restart, in-flight work becomes interrupted
 and requires a follow-up, while queued tasks and dependency waits recover.
 
@@ -91,8 +93,9 @@ stable workspace. When native continuation is unavailable, a new session carries
 ## Workspace and permission boundaries
 
 `current_repo` uses the approved checkout, including uncommitted files, and
-requires revision `HEAD`. Change inspection compares Git snapshots to attribute
-task and turn changes. `worktree` creates a separate checkout from the requested
+requires revision `HEAD`. The changes feature composes provider-reported edits
+into stored task and latest-turn diffs for both workspace strategies. These
+diffs survive commits, worktree removal and branch deletion. `worktree` creates a separate checkout from the requested
 committed revision. It does not copy the user's uncommitted changes. Worktrees
 provide file isolation. Execution permissions and sandbox policy apply separately.
 
