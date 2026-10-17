@@ -262,7 +262,7 @@ body[data-expanded-panel="true"]
   /* Reserve the row's space so revealing actions does not move the conversation. */
   .chat-message > .chat-outcome > .chat-outcome-line {
     opacity: 0;
-    transition-delay: 1s;
+    transition-delay: 0.5s;
   }
   .chat-message:is(:hover, :focus-within) > .chat-outcome > .chat-outcome-line {
     opacity: 1;
