@@ -6,7 +6,8 @@ markers to a task description or follow-up. Combine markers in one message to
 exercise several behaviors.
 
 The fixture simulates tools and permissions. It does not run Claude or enforce
-host isolation. `[fixture:change]` writes a generated sample file in an isolated task worktree.
+host isolation. `[fixture:change]` writes a generated sample file in an isolated task worktree
+and reports its edit through the provider contract.
 It fails if the task uses the current repository.
 Fixture code lives under `dev/service/` and is excluded from production packages.
 
@@ -20,7 +21,7 @@ Fixture code lives under `dev/service/` and is excluded from production packages
 | `[fixture:content type=image]`                     | Show a content block. `role=user` changes the sender.                  |
 | `[fixture:thinking]`                               | Show a thinking block.                                                 |
 | `[fixture:assistant-error type=rate_limit]`        | Show an SDK assistant error without failing the turn.                  |
-| `[fixture:change]`                                 | Create a sample untracked file for Changes and review checks.          |
+| `[fixture:change]`                                 | Create and record a sample file for Changes and review checks.         |
 | `[fixture:subagent count=2]`                       | Show child-worker lifecycles. Add `outcome=error` for failed children. |
 | `[fixture:restriction name=path_guard]`            | Show a synthetic restriction denial.                                   |
 | `[fixture:activity type=status status=compacting]` | Show an SDK activity event.                                            |

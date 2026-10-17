@@ -59,7 +59,7 @@ export class SessionPrompts {
             await this.workspaces.diff(
               t.workspace!,
               t.base_commit!,
-              t.turn_start_tree!,
+              await this.workspaces.snapshot(t.workspace!),
             ),
           ].join("\n\n")
         : "";

@@ -43,8 +43,6 @@ interface AgentContentPayload extends AgentMessageFields {
 interface AgentReplyPayload {
   text: string;
   turn?: number;
-  start_tree?: string;
-  end_tree?: string;
 }
 
 interface AgentStartedPayload {

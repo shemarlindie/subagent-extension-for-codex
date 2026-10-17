@@ -53,9 +53,6 @@ export const timestamps = (start: number, minutes: number) => ({
   updated_at: at(start + minutes),
 });
 
-// Stand-ins for the snapshot trees a reply records, with a turn suffix.
-export const FAKE_TREE = "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0";
-
 // Stand-ins for a worktree task's Git fields. The fixture service replaces
 // them with a real repository's (dev/panel/scenarios/change-fixtures.ts).
 export const FAKE_COMMIT = "4f1c2d9e8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e";

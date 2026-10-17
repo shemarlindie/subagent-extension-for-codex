@@ -104,11 +104,12 @@ tools. The canonical description is in
 - Worker reports do not grant user authority. Use `get_agent_task` for full state
   and `get_agent_events` for the execution log.
 
-A reply is the worker's own account. Read actual changes with `get_agent_changes`,
-using `scope: "turn"` for its latest turn or `scope: "task"` for the whole task.
-Pass `next_cursor` to read further file pages. Worktree changes live on
-`task.branch` in the task's worktree. For current-repo tasks, the comparison starts
-from the task's initial snapshot and can include later edits by anyone.
+A reply is the worker's own account. Read the worker's recorded edits with
+`get_agent_changes`, using `scope: "turn"` for its latest turn or `scope: "task"`
+for the whole task. Pass `next_cursor` to read further file pages. Commits and
+worktree removal leave these diffs unchanged. An `incomplete` file or
+`unrecorded_commands` means some edits weren't captured, so inspect the files
+directly. Worktree commits live on `task.branch`.
 
 ## Permissions and input
 

@@ -642,9 +642,7 @@
       "timestamp": "2026-10-02T11:10:06.695Z",
       "data": {
         "text": "1. Start with a short summary line of about 50 characters that states what the change does.\n2. Write the subject in the imperative mood, such as \"Fix login redirect\", so it reads as a command.\n3. Leave a blank line between the subject and the body so tools can parse them correctly.\n4. Explain why the change was made, since the diff already shows what changed.\n5. Wrap body lines at around 72 characters to keep them readable in terminals and logs.\n6. Keep each commit to one logical change so the message can describe it accurately.\n7. Be specific, and avoid vague messages like \"fix stuff\" or \"updates\".\n8. Reference related issues or tickets so readers can find the wider context.\n9. Mention side effects, trade-offs, or known limitations that a future maintainer should know.\n10. Skip the trailing period on the subject line and capitalize its first word.\n11. Follow your team's conventions, such as Conventional Commits prefixes, consistently.\n12. Reread the message before committing and ask whether someone could understand the change from it six months from now.",
-        "turn": 1,
-        "start_tree": "ea7e5d98dadec6b12a34f4703ff28e67d52512f3",
-        "end_tree": "ea7e5d98dadec6b12a34f4703ff28e67d52512f3"
+        "turn": 1
       }
     },
     {

@@ -849,9 +849,7 @@
       "timestamp": "2026-10-02T11:30:06.634Z",
       "data": {
         "text": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do.",
-        "turn": 1,
-        "start_tree": "883bbc4761832cbb0d347702e84ace59e3c59918",
-        "end_tree": "883bbc4761832cbb0d347702e84ace59e3c59918"
+        "turn": 1
       }
     },
     {

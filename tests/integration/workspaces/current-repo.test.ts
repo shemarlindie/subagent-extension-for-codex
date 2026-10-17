@@ -3,7 +3,6 @@ import { execFileSync } from "node:child_process";
 import {
   mkdir,
   mkdtemp,
-  readdir,
   readFile,
   realpath,
   rm,
@@ -17,6 +16,7 @@ import type {
   Query,
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+import { structuredPatch } from "diff";
 import { test } from "vitest";
 
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
@@ -138,20 +138,6 @@ test("current repository uses HEAD and includes staged, unstaged and untracked e
       1,
     );
 
-    // The start snapshot's temporary index is gone; no worktree was made.
-    assert.deepEqual(await readdir(s.workspaces.root), []);
-    // The start snapshot holds the user's uncommitted work.
-    const diff = await s.workspaces.diff(s.repo, t.base_commit, t.start_tree!);
-
-    for (const content of [
-      "staged content",
-      "unstaged content",
-      "untracked content",
-      "new file.txt",
-    ]) {
-      assert.ok(diff.includes(content), content);
-    }
-
     assert.equal(s.git("status", "--porcelain"), before);
   } finally {
     await s.close();
@@ -219,9 +205,7 @@ test("current repository review receives the working tree diff in its provider p
     }
 
     // The task's own changes leave out the user's earlier edits.
-    const changes = await s.c.workspaces.changes(
-      s.c.store.get(started.id, "alice"),
-    );
+    const changes = s.c.changes.changes(s.c.store.get(started.id, "alice"));
 
     assert.deepEqual(changes.files, []);
     assert.equal(s.git("status", "--porcelain"), before);
@@ -345,6 +329,17 @@ test("current repository write profiles edit the checkout while preserving unrel
         "export const value = 2;\n",
       );
 
+      context.fileChanged({
+        path: join(context.task.workspace, "implementation.ts"),
+        hunks: structuredPatch(
+          "",
+          "",
+          "export const value = 1;\n",
+          "export const value = 2;\n",
+        ).hunks,
+        source: "tool",
+      });
+
       return {
         reply: "Implemented",
       };
@@ -388,9 +383,7 @@ test("current repository write profiles edit the checkout while preserving unrel
     );
 
     // Only the worker's edit is the task's change, not the unrelated ones.
-    const changes = await s.c.workspaces.changes(
-      s.c.store.get(started.id, "alice"),
-    );
+    const changes = s.c.changes.changes(s.c.store.get(started.id, "alice"));
 
     assert.deepEqual(
       changes.files.map((file) => file.path),

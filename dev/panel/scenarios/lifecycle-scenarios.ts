@@ -2,7 +2,6 @@ import type { Task } from "../../../src/shared/tasks/model";
 import {
   at,
   FAKE_COMMIT,
-  FAKE_TREE,
   OTHER_THREAD,
   taskBase,
   timestamps,
@@ -281,8 +280,6 @@ const build = lifecycle(
     {
       text: "Cached module compilation in 60 files: every build module now uses the cached compiler.",
       turn: 1,
-      start_tree: `${FAKE_TREE}1s`,
-      end_tree: `${FAKE_TREE}1e`,
     },
   ],
   [
@@ -309,8 +306,6 @@ const profile = lifecycle(
     {
       text: "Wrote the build profile and its reports: the build log, size reports and a dependency graph.",
       turn: 1,
-      start_tree: `${FAKE_TREE}1s`,
-      end_tree: `${FAKE_TREE}1e`,
     },
   ],
   [
@@ -343,8 +338,6 @@ const resumed = lifecycle(
     {
       text: resumedReplies[0],
       turn: 1,
-      start_tree: `${FAKE_TREE}1s`,
-      end_tree: `${FAKE_TREE}1e`,
     },
   ],
   [
@@ -378,8 +371,6 @@ const resumed = lifecycle(
     {
       text: resumedReplies[1],
       turn: 2,
-      start_tree: `${FAKE_TREE}2s`,
-      end_tree: `${FAKE_TREE}2e`,
     },
   ],
   [

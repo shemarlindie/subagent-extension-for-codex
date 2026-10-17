@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { structuredPatch } from "diff";
-import { test, vi } from "vitest";
+import { test } from "vitest";
 
 import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import { claudeMetadata } from "../../../../shared/providers/metadata.js";
@@ -457,23 +457,18 @@ test("durable task completes in isolated worktree and records its reply", async 
   const reply = store.latestEvent(t.id, "agent.reply")!;
   assert.ok(String(reply.data.text).includes("Fixture"));
   assert.equal(reply.data.turn, 1);
-  assert.equal(reply.data.start_tree, done.turn_start_tree);
-  assert.match(String(reply.data.end_tree), /^[0-9a-f]{40}$/);
+  assert.equal(reply.data.start_tree, undefined);
+  assert.equal(reply.data.end_tree, undefined);
 
-  // Each replied turn's snapshots are pinned under the turn.
-  for (const name of ["start", "end"]) {
-    assert.equal(
-      execFileSync("git", [
-        "-C",
-        repo,
-        "rev-parse",
-        `refs/agent-tasks/${t.id}/turns/1/${name}`,
-      ])
-        .toString()
-        .trim(),
-      reply.data[`${name}_tree`],
-    );
-  }
+  assert.equal(
+    execFileSync("git", [
+      "-C",
+      repo,
+      "for-each-ref",
+      "refs/agent-tasks",
+    ]).toString(),
+    "",
+  );
 
   const completed = store
     .events(t.id, "alice")
@@ -1931,7 +1926,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
 
     assert.match(branches(), new RegExp(`agent/${t.id}`));
     assert.equal(store.get(t.id, "alice").workspace_removed, true);
-    assert.match(pins(), /turn-start/);
+    assert.equal(pins(), "");
 
     await assert.rejects(c.removeWorktree("alice", t.id), /already removed/);
 
@@ -1940,9 +1935,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     });
 
     assert.equal(branches(), "");
-    // Deleting the branch also unpins the task's snapshots.
     assert.equal(store.get(t.id, "alice").branch_deleted, true);
-    // Deleting the branch also unpins the task's snapshots.
     assert.equal(pins(), "");
 
     // Each outcome is a task event.
@@ -2023,7 +2016,7 @@ test("a task is deleted in any state with everything related to it", async () =>
     const stopped = store.get(t.id, "alice");
     assert.ok(stopped.workspace && existsSync(stopped.workspace));
     assert.match(git("branch", "--list", "agent/*"), new RegExp(t.id));
-    assert.match(git("for-each-ref", "refs/agent-tasks"), /turn-start/);
+    assert.equal(git("for-each-ref", "refs/agent-tasks"), "");
 
     // A task that depends on this one keeps it, whatever its state, since a
     // follow-up could still resume it.
@@ -2861,59 +2854,56 @@ test.each(["failed", "interrupted"] as const)(
   },
 );
 
-test("runtime budget expiring during reply snapshot discards the completion report", async () => {
+test("runtime budget expiry retains recorded edits and discards the completion report", async () => {
   const started = Promise.withResolvers<RunContext>();
-  const snapshotStarted = Promise.withResolvers<void>();
-  const finishSnapshot = Promise.withResolvers<void>();
+  const finish = Promise.withResolvers<void>();
   const provider = new FixtureProvider();
 
   provider.run = async (context) => {
+    await writeFile(
+      join(context.task.workspace!, "before-budget.txt"),
+      "written\n",
+    );
+
+    context.fileChanged({
+      path: join(context.task.workspace!, "before-budget.txt"),
+      hunks: structuredPatch("", "", "", "written\n").hunks,
+      created: true,
+      source: "tool",
+    });
+
     context.messageParent!("Must not deliver");
     started.resolve(context);
+    await finish.promise;
 
-    return { reply: "Provider returned before deadline" };
+    return { reply: "Provider returned after deadline" };
   };
 
   const { c, store, repo } = await setup(provider);
-  const originalSnapshot = c.workspaces.snapshot.bind(c.workspaces);
-
-  vi.spyOn(c.workspaces, "snapshot").mockImplementation(async (workspace) => {
-    if (
-      store
-        .all("alice")
-        .some((task) => task.status === "running" && task.turn === 1)
-    ) {
-      snapshotStarted.resolve();
-      await finishSnapshot.promise;
-    }
-
-    return originalSnapshot(workspace);
-  });
 
   try {
     const task = await c.start("alice", {
       ...input(repo),
       conversation_id: "parent-chat",
-      budget: { max_runtime_minutes: 0.002, max_cost_usd: null },
+      budget: { max_runtime_minutes: 0.01, max_cost_usd: null },
     });
 
     const context = await started.promise;
-    await snapshotStarted.promise;
     await until(() => context.signal.aborted);
-    finishSnapshot.resolve();
+    finish.resolve();
     await until(() => !c.active.has(task.id));
-    assert.equal(store.get(task.id, "alice").status, "failed");
-
-    assert.match(
-      store.get(task.id, "alice").error!,
-      /Runtime budget exhausted/,
-    );
-
+    const stopped = store.get(task.id, "alice");
+    assert.equal(stopped.status, "failed");
+    assert.match(stopped.error!, /Runtime budget exhausted/);
     assert.deepEqual(eventData(store, task.id, "agent.reply"), []);
     assert.deepEqual(eventData(store, task.id, "parent.message"), []);
+
+    assert.deepEqual(
+      c.changes.changes(stopped).files.map((file) => file.path),
+      ["before-budget.txt"],
+    );
   } finally {
-    finishSnapshot.resolve();
+    finish.resolve();
     await c.close();
-    vi.restoreAllMocks();
   }
 });

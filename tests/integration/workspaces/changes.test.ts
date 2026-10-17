@@ -185,6 +185,8 @@ test("change tools return sorted recorded edits, incomplete files and command wa
         path: "existing.txt",
       }),
     );
+
+    expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
   } finally {
     await s.close();
   }
@@ -209,6 +211,7 @@ test("latest-turn rows clear on continuation while the task keeps its recorded h
 
     expect(task.files.map((f) => f.path)).toEqual(["turn-1.txt", "turn-2.txt"]);
     expect(turn.files.map((f) => f.path)).toEqual(["turn-2.txt"]);
+    expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
   } finally {
     await s.close();
   }
@@ -407,6 +410,62 @@ test("dependent prompts include the recorded diff within the existing size limit
     expect(prompt).toContain("diff --git a/large.txt b/large.txt");
     expect(prompt).toContain("diff truncated");
     expect(prompt).not.toContain("end-of-diff");
+  } finally {
+    await s.close();
+  }
+});
+
+test("starting, steering, waiting for input and finishing create no task snapshot refs", async () => {
+  const s = await setup();
+  let steered: (() => void) | undefined;
+
+  const steer = new Promise<void>((resolve) => {
+    steered = resolve;
+  });
+
+  try {
+    s.provider.run = async (c) => {
+      c.acceptSteers((message) => {
+        c.steerTaken(message.id);
+        steered!();
+
+        return true;
+      });
+
+      await edit(c, "recorded.txt", "", "worker\n");
+      await steer;
+
+      await c.input(
+        "AskUserQuestion",
+        { questions: [{ question: "Continue?" }] },
+        c.signal,
+      );
+
+      return { reply: "Done" };
+    };
+
+    const t = await s.c.start("alice", {
+      repository: s.repo,
+      description: "Edit and ask",
+      provider: "fixture",
+    });
+
+    await until(() => s.c.store.get(t.id, "alice").status === "running");
+    expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
+    await s.c.send("alice", t.id, "Steer", "user");
+    await until(() => !!s.c.store.get(t.id, "alice").pending_input);
+    expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
+    await writeFile(join(s.repo, "user-during-wait.txt"), "user\n");
+    const waiting = s.c.store.get(t.id, "alice");
+    s.c.input("alice", t.id, waiting.pending_input!.id, true);
+    await s.done(t.id);
+    expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
+
+    const changes = await s.tool<Changes>("get_agent_changes", {
+      task_id: t.id,
+    });
+
+    expect(changes.files.map((f) => f.path)).toEqual(["recorded.txt"]);
   } finally {
     await s.close();
   }

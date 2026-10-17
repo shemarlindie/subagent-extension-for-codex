@@ -212,27 +212,9 @@ export interface Task extends Start {
   workspace_removed?: true;
   branch_deleted?: true;
   base_commit?: string;
-  /** The worktree's branch, `<worktree_branch_prefix><task-id>`. */
+  /** The task worktree branch. */
   branch?: string;
-  /** current_repo: snapshot tree of the checkout when the task started. */
-  start_tree?: string;
-  /** Snapshot tree of the workspace when the latest turn started. */
-  turn_start_tree?: string;
-  /** The commit the workspace's HEAD was on when the latest turn started. */
-  turn_head?: string;
-  /**
-   * current_repo: snapshot tree where the latest turn's running stretch
-   * started: the turn's start, or its latest resume after input.
-   */
-  stretch_start_tree?: string;
-  /**
-   * current_repo: snapshot tree of the checkout when the latest turn ended,
-   * or when it began waiting for input, where its changes stop; absent while
-   * the worker runs.
-   */
-  end_tree?: string;
-  /** current_repo: the commit HEAD was on when `end_tree` was taken. */
-  end_head?: string;
+
   session_id?: string;
   session_owner?: string;
   session_state_ref?: string;

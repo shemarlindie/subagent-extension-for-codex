@@ -87,6 +87,13 @@ Their Changes tab may be empty or unavailable. If that development data is no
 longer needed, stop the service and start with a fresh data directory. Preserve
 any needed worktrees and task history first.
 
+Older builds may also have left Git snapshot refs. They are no longer used.
+Remove them from a repository when that earlier build is no longer running:
+
+```sh
+git for-each-ref --format='%(refname)' refs/agent-tasks | xargs -n1 git update-ref -d
+```
+
 ## Troubleshooting
 
 | Symptom                       | Check                                                                                                                                                              |

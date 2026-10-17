@@ -130,66 +130,6 @@ export function decodeFileCursor(cursor: string) {
 /** Diff text per page. A file larger than this is still sent whole. */
 export const CHANGES_PAGE_CHARS = 1_000_000;
 
-const statuses: Partial<Record<string, ChangeStatus>> = {
-  A: "added",
-  M: "modified",
-  D: "deleted",
-  R: "renamed",
-  C: "copied",
-  T: "type_changed",
-};
-
-/**
- * Joins `git diff -z --name-status` and `git diff -z --numstat` output for
- * the same trees, which list files in the same order.
- */
-export function changedFiles(nameStatus: string, numstat: string) {
-  const names = nameStatus.split("\0"),
-    stats = numstat.split("\0"),
-    files: ChangedFile[] = [];
-
-  let n = 0,
-    s = 0;
-
-  const field = (fields: string[], index: number) => {
-    // Git never lists an empty path or record; -z output ends with a NUL.
-    const value = fields[index];
-    if (!value) throw new Error("Truncated Git diff output");
-
-    return value;
-  };
-
-  for (let code = names[n]; code; code = names[n]) {
-    n++;
-
-    const status = statuses[code.charAt(0)] ?? "modified",
-      paired = status === "renamed" || status === "copied",
-      old_path = paired ? field(names, n++) : undefined,
-      path = field(names, n++);
-
-    // "added\tdeleted\tpath", or "added\tdeleted\t" then both paths.
-    const [additions, deletions] = field(stats, s++).split("\t");
-
-    if (deletions === undefined) {
-      throw new Error("Malformed Git numstat output");
-    }
-
-    s += paired ? 2 : 0;
-    const binary = additions === "-";
-
-    files.push({
-      path,
-      ...(old_path === undefined ? {} : { old_path }),
-      status,
-      additions: binary ? 0 : Number(additions),
-      deletions: binary ? 0 : Number(deletions),
-      binary,
-    });
-  }
-
-  return files;
-}
-
 /** Splits a unified Git diff into one part per file. */
 export function diffParts(diff: string) {
   return diff.split(/^(?=diff --git )/m).filter(Boolean);

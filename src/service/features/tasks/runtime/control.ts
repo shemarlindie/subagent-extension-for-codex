@@ -397,7 +397,6 @@ export class Control {
             this.store,
             this.providers.get(t.provider)!.taskPolicy,
             abort.signal,
-            this.workspaces,
           ),
         };
 
@@ -412,7 +411,6 @@ export class Control {
   async execute(t: Task, a: Active) {
     const begin = Date.now();
     let timer: NodeJS.Timeout | undefined;
-    let turnStarted = false;
     let reply: string | undefined;
     const costBefore = t.cost_usd ?? 0;
 
@@ -420,7 +418,6 @@ export class Control {
       validateBudgets(this.providers.get(t.provider), t);
       if (this.projects) await this.projects.resolve(t.repository);
       await this.prepareWorkspace(t);
-      turnStarted = true;
       this.store.save(t);
       if (a.abort.signal.aborted) throw a.abort.signal.reason;
       const provider = this.providers.get(t.provider)!;
@@ -445,7 +442,7 @@ export class Control {
       const output = await provider.run(this.runContext(t, a), prompt);
       a.abort.signal.throwIfAborted();
       reply = output.reply;
-      await this.recordReply(t, reply, a.abort.signal);
+      this.recordReply(t, reply, a.abort.signal);
       t.status = "completed";
     } catch (error) {
       if (a.stopStatus) {
@@ -464,7 +461,6 @@ export class Control {
 
       await this.finishTurn(t, a, {
         runtime: Date.now() - begin,
-        turnStarted,
         reply,
         costBefore,
       });
@@ -473,8 +469,7 @@ export class Control {
 
   /**
    * Readies the task's workspace for a turn: creates it on the first turn,
-   * recreates a removed worktree, and pins the snapshot the turn's changes
-   * start from.
+   * recreates a removed worktree, and clears the latest-turn edits.
    */
   private async prepareWorkspace(t: Task) {
     const created = !t.workspace;
@@ -498,9 +493,7 @@ export class Control {
       });
     }
 
-    // Every turn replaces the turn snapshot. A new current_repo task's
-    // start snapshot is the same moment.
-    await this.workspaces.startTurn(t, created);
+    // Only a new control-plane turn resets the latest-turn edits.
     this.changes.clearTurn(t);
   }
 
@@ -650,7 +643,7 @@ export class Control {
   }
 
   /**
-   * Records a turn's end whatever its outcome: its runtime, final snapshot,
+   * Records a turn's end whatever its outcome: its runtime,
    * the turn-ended and status events, and what follows it. The task is
    * released for scheduling even if recording fails.
    */
@@ -659,7 +652,6 @@ export class Control {
     a: Active,
     turn: {
       runtime: number;
-      turnStarted: boolean;
       reply: string | undefined;
       costBefore: number;
     },
@@ -678,9 +670,6 @@ export class Control {
     t.completed_at = now();
 
     try {
-      // One stopped while waiting for input keeps the end from when it
-      // began waiting, since it was blocked from then on.
-      if (turn.turnStarted && !t.end_tree) await this.workspaces.recordEnd(t);
       const outcome = t.status as "completed" | "failed" | "interrupted";
       this.drafts.clear(t.id);
 
@@ -754,40 +743,11 @@ export class Control {
     return false;
   }
 
-  /**
-   * Records a successful turn's reply with the snapshots its changes start
-   * and end at, each pinned for the turn so a later turn can't replace it.
-   * A current_repo task's end is the one its changes stop at; a worktree's is
-   * taken now. A failed snapshot leaves the end out.
-   */
-  private async recordReply(t: Task, text: string, signal: AbortSignal) {
-    const turn = t.turn;
-    let end: string | undefined;
-
-    try {
-      if (t.workspace_strategy === "current_repo") {
-        await this.workspaces.recordEnd(t);
-        end = t.end_tree;
-      } else {
-        end = await this.workspaces.snapshot(t.workspace!);
-      }
-
-      await this.workspaces.pin(t, `turns/${turn}/start`, t.turn_start_tree!);
-      if (end) await this.workspaces.pin(t, `turns/${turn}/end`, end);
-    } catch {
-      end = undefined;
-    }
-
-    // Snapshot recording can outlast the runtime budget or an interrupt.
+  /** Records the successful turn's final reply. */
+  private recordReply(t: Task, text: string, signal: AbortSignal) {
     signal.throwIfAborted();
     this.drafts.clear(t.id);
-
-    this.store.event(t, "agent.reply", {
-      text,
-      turn,
-      start_tree: t.turn_start_tree,
-      ...(end ? { end_tree: end } : {}),
-    });
+    this.store.event(t, "agent.reply", { text, turn: t.turn });
   }
 
   /** Holds execution controls while asynchronous deletion removes task resources. */

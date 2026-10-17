@@ -45,10 +45,6 @@ const WORKSPACE_FIELDS = [
   "workspace",
   "branch",
   "base_commit",
-  "start_tree",
-  "turn_start_tree",
-  "turn_head",
-  "end_tree",
   "session_state_ref",
 ] as const;
 

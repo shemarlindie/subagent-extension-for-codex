@@ -48,8 +48,6 @@ const agentContentPayloadSchema = agentMessageFieldsSchema.extend({
 const agentReplyPayloadSchema = z.object({
   text: z.string(),
   turn: z.number().optional(),
-  start_tree: z.string().optional(),
-  end_tree: z.string().optional(),
 });
 
 const agentStartedPayloadSchema = z.object({

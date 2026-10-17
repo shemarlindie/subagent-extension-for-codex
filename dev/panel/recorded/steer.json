@@ -1178,9 +1178,7 @@
       "timestamp": "2026-10-02T11:00:17.873Z",
       "data": {
         "text": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA",
-        "turn": 1,
-        "start_tree": "ea7e5d98dadec6b12a34f4703ff28e67d52512f3",
-        "end_tree": "ea7e5d98dadec6b12a34f4703ff28e67d52512f3"
+        "turn": 1
       }
     },
     {
@@ -2401,9 +2399,7 @@
       "timestamp": "2026-10-02T11:00:24.371Z",
       "data": {
         "text": "PEAR",
-        "turn": 3,
-        "start_tree": "ea7e5d98dadec6b12a34f4703ff28e67d52512f3",
-        "end_tree": "ea7e5d98dadec6b12a34f4703ff28e67d52512f3"
+        "turn": 3
       }
     },
     {

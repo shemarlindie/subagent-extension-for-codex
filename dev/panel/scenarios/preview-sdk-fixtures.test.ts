@@ -236,12 +236,7 @@ test("service event payloads match what the service emits", () => {
   }
 
   for (const data of payload("agent.reply")) {
-    assert.deepEqual(Object.keys(data), [
-      "text",
-      "turn",
-      "start_tree",
-      "end_tree",
-    ]);
+    assert.deepEqual(Object.keys(data), ["text", "turn"]);
   }
 
   for (const data of payload("task.completed")) {

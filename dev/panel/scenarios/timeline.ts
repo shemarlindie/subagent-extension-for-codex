@@ -13,7 +13,7 @@ import {
 } from "../../../src/service/features/providers/claude/events/activity";
 import { decodedEvent } from "../../../src/shared/events/decode";
 import type { Event } from "../../../src/shared/events/types";
-import { at, FAKE_TREE } from "./scenario-context";
+import { at } from "./scenario-context";
 
 export type Data = Record<string, unknown>;
 
@@ -432,15 +432,13 @@ export class Timeline {
     );
   }
 
-  /** The service's record of a turn's reply, with its snapshots. */
+  /** The service's record of a turn's reply. */
   reply(text: string, turn = 1) {
     return this.add(
       "agent.reply",
       {
         text,
         turn,
-        start_tree: `${FAKE_TREE}${turn}s`,
-        end_tree: `${FAKE_TREE}${turn}e`,
       },
       100,
     );

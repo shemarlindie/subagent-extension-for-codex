@@ -32,34 +32,3 @@ export async function git(
 
   return stdout;
 }
-
-/** Git output as bytes, for file contents that may be binary. */
-export async function gitBytes(cwd: string, args: string[]) {
-  return (
-    await exec("git", ["-C", cwd, ...args], {
-      encoding: "buffer",
-      maxBuffer: 1024 * 1024 * 1024,
-    })
-  ).stdout;
-}
-
-/** Every path that differs between two trees; a rename lists both paths. */
-export async function changedPaths(cwd: string, from: string, to: string) {
-  return new Set(
-    (
-      await git(cwd, [
-        "-c",
-        "core.quotePath=false",
-        "diff",
-        "--name-only",
-        "-z",
-        "--no-renames",
-        from,
-        to,
-        "--",
-      ])
-    )
-      .split("\0")
-      .filter(Boolean),
-  );
-}

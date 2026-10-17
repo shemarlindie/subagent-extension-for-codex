@@ -806,13 +806,7 @@ test("project removal retains mutation locks until every interrupted turn settle
       task,
       abort,
       done: taskDone,
-      input: new PendingInput(
-        task,
-        f.store,
-        executionTaskPolicy,
-        abort.signal,
-        { recordEnd: async () => {}, resume: async () => {} },
-      ),
+      input: new PendingInput(task, f.store, executionTaskPolicy, abort.signal),
     });
   }
 

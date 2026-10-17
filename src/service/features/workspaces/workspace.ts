@@ -11,12 +11,7 @@ import {
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { type Task } from "../../../shared/tasks/model.js";
-import {
-  CHANGES_PAGE_CHARS,
-  type ChangeScope,
-} from "../../../shared/workspaces/changes.js";
-import { changedPaths, git } from "./git.js";
-import { TaskChanges } from "./task-changes.js";
+import { git } from "./git.js";
 
 const exists = (path: string) =>
   access(path).then(
@@ -24,90 +19,18 @@ const exists = (path: string) =>
     () => false,
   );
 
-/** Where a task's snapshot refs live: `refs/agent-tasks/<task-id>/<name>`. */
-const SNAPSHOT_REFS = "refs/agent-tasks";
-
-/**
- * The snapshots a task keeps: its start, its latest turn's start and end, and
- * each replied turn's start and end, which its `agent.reply` records. A
- * current_repo task also keeps where its running stretch started (see
- * `resume`).
- */
-export type SnapshotName =
-  | "start"
-  | "turn-start"
-  | "stretch-start"
-  | "end"
-  | `turns/${number}/${"start" | "end"}`;
-
-/**
- * The files a current_repo task's turns changed, for the whole task and for
- * its latest turn: blobs of NUL-separated paths, pinned beside its snapshots.
- * Task bodies are sent whole in task lists, so the paths stay out of them.
- */
-type PathsName = "paths" | "turn-paths";
-
-/** The commit a checkout's HEAD is on. */
-async function headCommit(cwd: string) {
-  return (await git(cwd, ["rev-parse", "--verify", "HEAD^{commit}"])).trim();
-}
-
 export class Workspaces {
-  private taskChanges = new TaskChanges(this);
-
   constructor(
     public root: string,
     public allowedRoots: string[],
   ) {}
-
-  /** A task's changes, for the whole task or its latest turn; see `TaskChanges`. */
-  changes(
-    t: Task,
-    scope: ChangeScope = "task",
-    cursor?: string,
-    pageChars = CHANGES_PAGE_CHARS,
-  ) {
-    return this.taskChanges.changes(t, scope, cursor, pageChars);
-  }
-
-  /** A task's uncommitted changes since it, or its latest turn, started. */
-  uncommittedChanges(
-    t: Task,
-    scope: ChangeScope = "task",
-    cursor?: string,
-    pageChars = CHANGES_PAGE_CHARS,
-  ) {
-    return this.taskChanges.uncommittedChanges(t, scope, cursor, pageChars);
-  }
-
-  /** A task's uncommitted change totals, without its file list or diff. */
-  uncommittedCounts(t: Task) {
-    return this.taskChanges.uncommittedCounts(t);
-  }
-
-  /** A changed file's content where the task's changes end, or as it is now. */
-  changedFile(
-    t: Task,
-    path: string,
-    cursor?: string,
-    pageChars = CHANGES_PAGE_CHARS,
-    uncommitted = false,
-  ) {
-    return this.taskChanges.changedFile(
-      t,
-      path,
-      cursor,
-      pageChars,
-      uncommitted,
-    );
-  }
 
   /**
    * Records a checkout's files, as `git add -A` would stage them, as a tree
    * id. A temporary index in the extension's directory keeps the checkout's
    * own index and files untouched. `.gitignore` applies. New content is
    * written to the object store as unreferenced blobs, which `git gc` prunes
-   * unless the snapshot is pinned.
+   * after its grace period.
    */
   async snapshot(cwd: string) {
     await mkdir(this.root, { recursive: true, mode: 0o700 });
@@ -178,172 +101,6 @@ export class Workspaces {
       return (await run(["write-tree"])).trim();
     } finally {
       await rm(dir, { recursive: true, force: true });
-    }
-  }
-
-  /**
-   * Starts a turn's changes: pins the snapshot they start from (for a new
-   * task's first turn, its start) and the commit HEAD is on. A current_repo
-   * task's turn starts with no files recorded, and its first stretch starts
-   * with it. Changes are live again until the turn ends.
-   */
-  async startTurn(t: Task, created: boolean) {
-    t.turn_start_tree =
-      created && t.start_tree
-        ? t.start_tree
-        : await this.snapshot(t.workspace!);
-
-    await this.pin(t, "turn-start", t.turn_start_tree);
-    // Where the turn's later commits start, for its uncommitted changes.
-    t.turn_head = await headCommit(t.workspace!);
-
-    if (t.workspace_strategy === "current_repo") {
-      await this.writePaths(t, "turn-paths", []);
-      t.stretch_start_tree = t.turn_start_tree;
-    }
-
-    delete t.end_tree;
-    delete t.end_head;
-  }
-
-  /**
-   * Ends a current_repo task's changes at a pinned snapshot of the checkout
-   * now, when its turn ends or it waits for input, so later edits to the
-   * shared checkout aren't counted. The files changed since its stretch
-   * started are added to the task's and the turn's. A failed snapshot leaves
-   * them as they were.
-   */
-  async recordEnd(t: Task) {
-    if (t.workspace_strategy !== "current_repo") return;
-
-    try {
-      const end = await this.snapshot(t.workspace!);
-      await this.pin(t, "end", end);
-      const start = t.stretch_start_tree ?? t.turn_start_tree;
-
-      if (start) {
-        const paths = await changedPaths(t.workspace!, start, end);
-
-        for (const name of ["paths", "turn-paths"] as const) {
-          await this.addPaths(t, name, paths);
-        }
-      }
-
-      t.end_head = await headCommit(t.workspace!);
-      t.end_tree = end;
-    } catch {
-      // Left as they were.
-    }
-  }
-
-  /**
-   * Makes a task's changes live again when it resumes after input. A
-   * current_repo task starts a new stretch, so edits to the checkout while
-   * it waited aren't counted; only when the wait's end was recorded, since
-   * that recorded the earlier stretch's files. A failed snapshot keeps the
-   * earlier start, so edits made while it waited count.
-   */
-  async resume(t: Task) {
-    if (t.workspace_strategy === "current_repo" && t.end_tree) {
-      try {
-        const start = await this.snapshot(t.workspace!);
-        await this.pin(t, "stretch-start", start);
-        t.stretch_start_tree = start;
-      } catch {
-        // The earlier start stays.
-      }
-    }
-
-    delete t.end_tree;
-    delete t.end_head;
-  }
-
-  /**
-   * The files a current_repo task's turns changed, for the whole task or its
-   * latest turn, as recorded when each stretch ended; undefined when none
-   * were recorded, as for a task from before they were.
-   */
-  recordedPaths(t: Task, scope: ChangeScope) {
-    return this.readPaths(t, scope === "turn" ? "turn-paths" : "paths");
-  }
-
-  /** A task's recorded files, if it records them. */
-  private async readPaths(t: Task, name: PathsName) {
-    const id = (
-      await git(t.repository, [
-        "for-each-ref",
-        "--format=%(objectname)",
-        `${SNAPSHOT_REFS}/${t.id}/${name}`,
-      ])
-    ).trim();
-
-    if (!id) return undefined;
-    const blob = await git(t.repository, ["cat-file", "blob", id]);
-
-    return new Set(blob.split("\0").filter(Boolean));
-  }
-
-  /** Replaces a task's recorded files. */
-  private async writePaths(t: Task, name: PathsName, paths: Iterable<string>) {
-    const blob = [...paths]
-      .sort()
-      .map((path) => `${path}\0`)
-      .join("");
-
-    const id = (
-      await git(t.repository, ["hash-object", "-w", "--stdin"], undefined, blob)
-    ).trim();
-
-    await git(t.repository, [
-      "update-ref",
-      `${SNAPSHOT_REFS}/${t.id}/${name}`,
-      id,
-    ]);
-  }
-
-  /** Adds to a task's recorded files, when it records them. */
-  private async addPaths(t: Task, name: PathsName, paths: Set<string>) {
-    const recorded = await this.readPaths(t, name);
-
-    if (recorded) {
-      await this.writePaths(t, name, new Set([...recorded, ...paths]));
-    }
-  }
-
-  /**
-   * Keeps a task's snapshot from `git gc`, which prunes unreferenced objects
-   * after two weeks, with a ref to its tree in the task's repository (whose
-   * refs its worktree shares). The ref names a tree, not a commit, so it isn't
-   * a branch and `git log --all` leaves it out. A later pin of the same name
-   * replaces it.
-   */
-  async pin(t: Task, name: SnapshotName, tree: string) {
-    await git(t.repository, [
-      "update-ref",
-      `${SNAPSHOT_REFS}/${t.id}/${name}`,
-      tree,
-    ]);
-  }
-
-  /** Removes a task's snapshot refs, so `git gc` can prune its snapshots. */
-  async unpin(t: Task) {
-    const refs = (
-      await git(t.repository, [
-        "for-each-ref",
-        "--format=%(refname)",
-        `${SNAPSHOT_REFS}/${t.id}/`,
-      ])
-    )
-      .split("\n")
-      .filter(Boolean);
-
-    if (refs.length) {
-      await git(
-        t.repository,
-        ["update-ref", "--stdin"],
-        undefined,
-        refs.map((ref) => `delete ${ref}\n`).join(""),
-      );
     }
   }
 
@@ -427,12 +184,6 @@ export class Workspaces {
     ).trim();
 
     if (t.workspace_strategy === "current_repo") {
-      // The task's changes are measured from here, leaving out work that
-      // was already uncommitted.
-      t.start_tree = await this.snapshot(t.repository);
-      await this.pin(t, "start", t.start_tree);
-      // Its turns record the files they change from here.
-      await this.writePaths(t, "paths", []);
       t.workspace = t.repository;
 
       return;
@@ -519,7 +270,6 @@ export class Workspaces {
     }
 
     await git(t.repository, ["branch", "-D", "--end-of-options", t.branch]);
-    await this.unpin(t);
   }
 
   /**
@@ -537,8 +287,6 @@ export class Workspaces {
         await git(t.repository, ["branch", "-D", "--end-of-options", t.branch]);
       }
     }
-
-    await this.unpin(t);
   }
 
   /** Whether a worktree task's worktree is gone, so its next turn recreates it. */
