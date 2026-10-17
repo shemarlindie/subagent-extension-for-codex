@@ -37,13 +37,13 @@ export function SettingsPage() {
     controller.ensureSettingsLoaded();
   }, [controller, state.connected, state.dialog, state.page]);
 
-  const dialog = isSettingsDialog(state.dialog)
+  const dialog: SettingsFormDialog = isSettingsDialog(state.dialog)
     ? state.dialog
     : {
-        kind: "settings-loading" as const,
+        kind: "settings-loading",
         scope: state.scopeVersion,
         request: 0,
-        status: "loading" as const,
+        status: "loading",
       };
 
   return (

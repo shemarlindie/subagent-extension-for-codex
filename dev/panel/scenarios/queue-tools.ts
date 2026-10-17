@@ -1,5 +1,9 @@
 import { composerMode } from "../../../src/panel/features/tasks/chat/chat-model";
-import type { Delivery, Task } from "../../../src/shared/tasks/model";
+import type {
+  Delivery,
+  Task,
+  TaskMessage,
+} from "../../../src/shared/tasks/model";
 
 /** Queue tools the browser fixtures answer by changing the task in memory. */
 export const PREVIEW_QUEUE_TOOLS = [
@@ -102,10 +106,10 @@ function previewSend(task: Task, args: Record<string, unknown>) {
     );
   }
 
-  const message = {
+  const message: TaskMessage = {
     id: `msg_preview_sent_${++sent}`,
     message: String(args.message),
-    from: "user" as const,
+    from: "user",
   };
 
   if (delivery === "queue") task.queue.push({ ...message, delivery });

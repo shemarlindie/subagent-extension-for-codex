@@ -3,6 +3,7 @@ import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
+  type ChangeCounts,
   type ChangedFileContent,
   type Changes as ChangesResult,
   CHANGES_PAGE_CHARS,
@@ -140,10 +141,10 @@ export class Changes extends ChangeStore {
     };
   }
 
-  counts(task: Task) {
+  counts(task: Task): ChangeCounts {
     const { files, ...totals } = listing(task, this.rows(task, "task"));
 
-    return { scope: "task" as const, ...totals, files: files.length };
+    return { scope: "task", ...totals, files: files.length };
   }
 
   async changedFile(

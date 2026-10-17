@@ -67,7 +67,7 @@ Avoid semicolons and dashes in sentences. Keep them where needed in code, comman
 - Keep focused tests beside their owning modules. Reserve integration suites for behavior that crosses feature, process, host, or environment boundaries.
 - Reuse existing components, logic, styles and infrastructure where responsibilities align. Preserve distinct behavior and presentation where the domain requires them. Introduce abstractions when they simplify ownership and maintenance without excessive configuration or coupling.
 - Prefer the simplest code that achieves the required behavior. Remove unnecessary duplication, obsolete code and needless indirection within the affected area. Keep components and utilities small and focused, with components responsible for rendering and reusable helpers in their owning modules. Split files by responsibility without needless fragmentation, normally keeping one React component per file. Use kebab-case component filenames.
-- Prefer named prop and state types over inline object types.
+- Prefer named prop and state types. Use existing types or `satisfies` when they simplify code or replace repeated assertions.
 - Name components for their actual scope. Use a generic name only when the component and its styling are genuinely reusable. Use a domain-specific name when behavior or styling is domain-specific.
 - Keep large collapsed sections lightweight: unmount expensive child rows while closed, and show a loader when asynchronous or deferred rendering needs feedback.
 - Categorize changes into coherent, independently understandable commit groups, and make dependencies/order clear so a requested group can be applied first. Do not auto-commit unless implementing a plan already divided into commits or the user explicitly asks.

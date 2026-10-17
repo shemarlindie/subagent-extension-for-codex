@@ -53,9 +53,9 @@ export function commitQueue(
 /** Moves the steers a turn didn't take to the front of the queue. */
 export function leaveOver(t: Task) {
   t.queue.unshift(
-    ...t.pending_steers.map((m) => ({
+    ...t.pending_steers.map((m): QueuedMessage => ({
       ...m,
-      delivery: "steer" as const,
+      delivery: "steer",
       recorded: true,
     })),
   );

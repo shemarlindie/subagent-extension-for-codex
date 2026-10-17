@@ -3,6 +3,7 @@ import { parseEnv } from "node:util";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import { PARENT_DELEGATION_PROTOCOL } from "../shared/tasks/conversation/parent-protocol.js";
@@ -164,7 +165,10 @@ for (const [name, d] of Object.entries(tools)) {
           : {}),
       },
     },
-    async (args, extra: { _meta?: Record<string, unknown> }) => {
+    async (
+      args,
+      extra: { _meta?: Record<string, unknown> },
+    ): Promise<CallToolResult> => {
       try {
         const response = await fetch(
           `${origin}/api/${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
@@ -192,7 +196,7 @@ for (const [name, d] of Object.entries(tools)) {
 
         return {
           isError: !response.ok,
-          content: [{ type: "text" as const, text: JSON.stringify(body) }],
+          content: [{ type: "text", text: JSON.stringify(body) }],
           ...(response.ok
             ? {
                 structuredContent: name.endsWith("_agent_settings")
@@ -214,7 +218,7 @@ for (const [name, d] of Object.entries(tools)) {
           isError: true,
           content: [
             {
-              type: "text" as const,
+              type: "text",
               text: `Subagent extension service unavailable: ${String(error)}`,
             },
           ],
@@ -253,28 +257,36 @@ const panel = delegationPanel(
   },
 );
 
-server.registerTool(panel.name, panel.tool, async (args, extra) => {
-  try {
-    return await panel.open(withConversation(panel.name, args, extra._meta));
-  } catch (error) {
-    return {
-      isError: true,
-      content: [{ type: "text" as const, text: String(error) }],
-    };
-  }
-});
+server.registerTool(
+  panel.name,
+  panel.tool,
+  async (args, extra): Promise<CallToolResult> => {
+    try {
+      return await panel.open(withConversation(panel.name, args, extra._meta));
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: String(error) }],
+      };
+    }
+  },
+);
 
 server.registerResource(panel.title, panel.uri, panel.resource, panel.read);
 
-server.registerTool(panel.global.name, panel.global.tool, async () => {
-  try {
-    return await panel.global.open();
-  } catch (error) {
-    return {
-      isError: true,
-      content: [{ type: "text" as const, text: String(error) }],
-    };
-  }
-});
+server.registerTool(
+  panel.global.name,
+  panel.global.tool,
+  async (): Promise<CallToolResult> => {
+    try {
+      return await panel.global.open();
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: String(error) }],
+      };
+    }
+  },
+);
 
 await server.connect(new StdioServerTransport());

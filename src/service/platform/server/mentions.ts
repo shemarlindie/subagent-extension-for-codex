@@ -117,7 +117,7 @@ export async function searchAgentMentions(
       testMode || (claude && matches)
         ? [
             {
-              type: "resource_link" as const,
+              type: "resource_link",
               uri: claudeMentionUri,
               name: "Claude",
               title: testMode ? "Claude (sample)" : "Claude",
@@ -129,7 +129,7 @@ export async function searchAgentMentions(
             },
           ]
         : [],
-  };
+  } satisfies z.infer<typeof OpenAIMentionSearchResultSchema>;
 
   if (testMode) {
     await logMentionSearch(

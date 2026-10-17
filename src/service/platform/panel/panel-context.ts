@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { PanelOutput } from "../../../shared/panel/panel-contract.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import { readFields } from "../../../shared/tasks/task-list.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
@@ -28,8 +29,8 @@ export function taskPanelContext(task: Task) {
       repository: task.repository,
       revision: task.revision,
     },
-    panel_selection: { task_id: task.id, tab: "chat" as const },
-  };
+    panel_selection: { task_id: task.id, tab: "chat" },
+  } satisfies PanelOutput;
 }
 
 /** Correlation and defaults only. Registry and task ownership remain authoritative. */
@@ -113,11 +114,11 @@ export async function resolvePanelContext(
       ? {
           panel_selection: {
             task_id: target.id,
-            tab: "chat" as const,
+            tab: "chat",
           },
         }
       : {}),
-  };
+  } satisfies PanelOutput;
 }
 
 /**

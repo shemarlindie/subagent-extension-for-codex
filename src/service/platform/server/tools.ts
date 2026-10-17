@@ -1,7 +1,7 @@
 import type { InputAuthority } from "../../../shared/tasks/model.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import { agentTools } from "./tools/agent-tools.js";
-import type { AnyTool } from "./tools/definition.js";
+import type { AnyTool, ToolContext } from "./tools/definition.js";
 import { userTools } from "./tools/user-tools.js";
 
 /** Optional host conversation correlation is a UI scope, never an access grant. */
@@ -76,7 +76,11 @@ let userToolNames: Set<string> | undefined;
  */
 export function isUserTool(name: string) {
   if (!userToolNames) {
-    const context = { c: {} as Control, owner: "", authority: "user" as const };
+    const context: ToolContext = {
+      c: {} as Control,
+      owner: "",
+      authority: "user",
+    };
 
     userToolNames = new Set(
       Object.keys(userTools(context, agentTools(context))),

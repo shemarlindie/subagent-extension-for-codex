@@ -1,39 +1,43 @@
-import type { Task } from "../../../src/shared/tasks/model";
+import type {
+  QueuedMessage,
+  Task,
+  TaskMessage,
+} from "../../../src/shared/tasks/model";
 import { at, taskBase, timestamps, WEBSITE } from "./scenario-context";
 import { begin, resultUsage, SESSION, Timeline } from "./timeline";
 
 // --- Steering a running turn: one steer taken, one pending, two queued -------
-const firstQueued = {
+const firstQueued: QueuedMessage = {
   id: "msg_preview_steering_queued_1",
   message: "Then shorten the empty-state text.",
-  from: "user" as const,
-  delivery: "queue" as const,
+  from: "user",
+  delivery: "queue",
 };
 
 const steeringMessages = {
   taken: {
     id: "msg_preview_steering_taken",
     message: "Keep the existing headings.",
-    from: "user" as const,
-  },
+    from: "user",
+  } satisfies TaskMessage,
   pending: {
     id: "msg_preview_steering_pending",
     message: "Use sentence case in the buttons too.",
-    from: "user" as const,
-  },
+    from: "user",
+  } satisfies TaskMessage,
   queued: [
     firstQueued,
     {
       id: "msg_preview_steering_queued_2",
       message: "Afterwards, list any strings you couldn't change.",
-      from: "parent" as const,
-      delivery: "queue" as const,
+      from: "parent",
+      delivery: "queue",
     },
-  ],
+  ] satisfies QueuedMessage[],
   removed: "msg_preview_steering_removed",
 };
 
-const queueEntry = (m: { id: string; message: string; from: string }) => ({
+const queueEntry = (m: TaskMessage) => ({
   message_id: m.id,
   message: m.message,
   from: m.from,
@@ -114,20 +118,20 @@ const pausedMessages = {
   steer: {
     id: "msg_preview_paused_steer",
     message: "Rename the flags in the tests as well.",
-    from: "user" as const,
+    from: "user",
   },
   queued: {
     id: "msg_preview_paused_queued",
     message: "Then remove the flags that are always on.",
-    from: "parent" as const,
+    from: "parent",
   },
   // A second movable message, so the queue can be reordered behind the steer.
   later: {
     id: "msg_preview_paused_later",
     message: "Update the flag docs last.",
-    from: "user" as const,
+    from: "user",
   },
-};
+} satisfies Record<string, TaskMessage>;
 
 const paused = new Timeline("preview-paused", at(118), 1800);
 begin(paused, ["Read", "Edit", "Grep"]);
@@ -180,7 +184,7 @@ paused.add("task.interrupted", {}, 0);
 const followUp = (
   t: Timeline,
   turn: number,
-  message: { id: string; message: string; from: "user" | "parent" },
+  message: TaskMessage,
   delivery: "steer" | "queue" = "steer",
 ) =>
   t
@@ -198,17 +202,17 @@ const followUp = (
     .add("task.started", { turn }, 300);
 
 // A multi-turn conversation: the parent starts it, the user and the parent follow up.
-const fileTypeRequest = {
+const fileTypeRequest: TaskMessage = {
   id: "msg_preview_conversation_1",
   message: "Also reject files whose extension doesn't match their type.",
-  from: "user" as const,
+  from: "user",
 };
 
-const callersQuestion = {
+const callersQuestion: TaskMessage = {
   id: "msg_preview_conversation_2",
   message:
     "Thanks. Before I review: does anything else call `saveUpload` directly?",
-  from: "parent" as const,
+  from: "parent",
 };
 
 const conversationMessages = [fileTypeRequest, callersQuestion];
@@ -354,13 +358,13 @@ begin(longChat, ["Read", "Edit"]);
 const longChatTurns = 14;
 
 /** The follow-up that starts `turn`, from turn 2 on. */
-const longChatMessage = (turn: number) => ({
+const longChatMessage = (turn: number): TaskMessage => ({
   id: `msg_preview_long_chat_${turn}`,
   message:
     turn % 3 === 0
       ? `Now the ${turn}th screen, please, and keep the spacing tokens.`
       : `Next: screen ${turn}. Same approach as before.`,
-  from: turn % 4 === 0 ? ("parent" as const) : ("user" as const),
+  from: turn % 4 === 0 ? "parent" : "user",
 });
 
 const longChatMessages = Array.from({ length: longChatTurns - 1 }, (_, index) =>

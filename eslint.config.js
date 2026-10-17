@@ -70,7 +70,10 @@ export default defineConfig(
       "@typescript-eslint/no-deprecated": "error",
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": "error",
-      "@typescript-eslint/no-unnecessary-type-assertion": "error",
+      "@typescript-eslint/no-unnecessary-type-assertion": [
+        "error",
+        { checkLiteralConstAssertions: true },
+      ],
       "@typescript-eslint/prefer-promise-reject-errors": "error",
       "@typescript-eslint/restrict-template-expressions": "error",
       "@typescript-eslint/switch-exhaustiveness-check": "error",

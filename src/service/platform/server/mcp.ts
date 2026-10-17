@@ -1,4 +1,8 @@
-import { McpServer, type ServerContext } from "@modelcontextprotocol/server";
+import {
+  type CallToolResult,
+  McpServer,
+  type ServerContext,
+} from "@modelcontextprotocol/server";
 
 import { PARENT_DELEGATION_PROTOCOL } from "../../../shared/tasks/conversation/parent-protocol.js";
 import type { Task } from "../../../shared/tasks/model.js";
@@ -98,7 +102,7 @@ export function mcp(
             : {}),
         },
       },
-      async (args, ctx: ServerContext) => {
+      async (args, ctx: ServerContext): Promise<CallToolResult> => {
         try {
           const current: Record<string, AnyTool> = definitions(
             c,
@@ -115,7 +119,7 @@ export function mcp(
           );
 
           return {
-            content: [{ type: "text" as const, text: JSON.stringify(result) }],
+            content: [{ type: "text", text: JSON.stringify(result) }],
             structuredContent: name.endsWith("_agent_settings")
               ? result
               : {
@@ -128,7 +132,7 @@ export function mcp(
         } catch (error) {
           return {
             isError: true,
-            content: [{ type: "text" as const, text: String(error) }],
+            content: [{ type: "text", text: String(error) }],
           };
         }
       },
@@ -141,31 +145,39 @@ export function mcp(
     (args) => resolvePanelContext(c, owner, args),
   );
 
-  server.registerTool(panel.name, panel.tool, async (args, ctx) => {
-    try {
-      return await panel.open(
-        withConversation(panel.name, args, ctx.mcpReq._meta),
-      );
-    } catch (error) {
-      return {
-        isError: true,
-        content: [{ type: "text" as const, text: String(error) }],
-      };
-    }
-  });
+  server.registerTool(
+    panel.name,
+    panel.tool,
+    async (args, ctx): Promise<CallToolResult> => {
+      try {
+        return await panel.open(
+          withConversation(panel.name, args, ctx.mcpReq._meta),
+        );
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: String(error) }],
+        };
+      }
+    },
+  );
 
   server.registerResource(panel.title, panel.uri, panel.resource, panel.read);
 
-  server.registerTool(panel.global.name, panel.global.tool, async () => {
-    try {
-      return await panel.global.open();
-    } catch (error) {
-      return {
-        isError: true,
-        content: [{ type: "text" as const, text: String(error) }],
-      };
-    }
-  });
+  server.registerTool(
+    panel.global.name,
+    panel.global.tool,
+    async (): Promise<CallToolResult> => {
+      try {
+        return await panel.global.open();
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: String(error) }],
+        };
+      }
+    },
+  );
 
   return server;
 }

@@ -1,4 +1,4 @@
-import type { Task } from "../../../src/shared/tasks/model";
+import type { Task, TaskMessage } from "../../../src/shared/tasks/model";
 import { at, taskBase, timestamps, WEBSITE } from "./scenario-context";
 import { begin, IMAGE, MODEL, rateLimit, text, Timeline } from "./timeline";
 
@@ -458,10 +458,10 @@ const manyTurnRequest = (turn: number) =>
     : `Now move the ${manyTurnModules[turn - 1]} client onto the retry wrapper.`;
 
 /** The follow-up that starts `turn`, from turn 2 on. */
-const manyTurnFollowUp = (turn: number) => ({
+const manyTurnFollowUp = (turn: number): TaskMessage => ({
   id: `msg_preview_many_turns_${turn}`,
   message: manyTurnRequest(turn),
-  from: "user" as const,
+  from: "user",
 });
 
 const manyTurnFollowUps = Array.from({ length: 14 }, (_, i) =>
@@ -574,7 +574,7 @@ export const activityTasks: Task[] = [
       {
         id: "msg_preview_blocks_1",
         message: "Also check the vendored icons.",
-        from: "user" as const,
+        from: "user",
       },
     ],
     instructions_sent: 1,
@@ -613,7 +613,7 @@ export const activityTasks: Task[] = [
       {
         id: "msg_preview_long_1",
         message: longFollowUp,
-        from: "user" as const,
+        from: "user",
       },
     ],
     instructions_sent: 1,

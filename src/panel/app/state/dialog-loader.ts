@@ -45,11 +45,11 @@ export class DialogLoader {
   constructor(private context: DialogLoaderContext) {}
 
   openSettings() {
-    const dialog = {
-      kind: "settings-loading" as const,
+    const dialog: SettingsLoading = {
+      kind: "settings-loading",
       scope: this.context.snapshot().scopeVersion,
       request: ++this.request,
-      status: "loading" as const,
+      status: "loading",
     };
 
     this.context.patch({ dialog, formError: "" });
@@ -65,8 +65,8 @@ export class DialogLoader {
   ) {
     const state = this.context.snapshot();
 
-    const dialog = {
-      kind: "delegate-loading" as const,
+    const dialog: DelegateLoading = {
+      kind: "delegate-loading",
       scope: state.scopeVersion,
       request: ++this.request,
       preferredWorker,
@@ -85,11 +85,11 @@ export class DialogLoader {
     const dialog = this.context.snapshot().dialog;
 
     if (dialog?.kind === "settings-loading" && dialog.status === "error") {
-      const retry = {
+      const retry: SettingsLoading = {
         ...dialog,
         scope: this.context.snapshot().scopeVersion,
         request: ++this.request,
-        status: "loading" as const,
+        status: "loading",
         error: undefined,
       };
 

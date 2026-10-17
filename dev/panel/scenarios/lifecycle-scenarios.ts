@@ -489,7 +489,7 @@ export const lifecycleTasks: Task[] = [
       {
         id: "msg_preview_interrupted_1",
         message: "Keep keyboard navigation unchanged.",
-        from: "parent" as const,
+        from: "parent",
       },
     ],
     instructions_sent: 1,
@@ -562,7 +562,7 @@ export const lifecycleTasks: Task[] = [
       {
         id: "msg_preview_resumed_1",
         message: "Also cover the timeout path.",
-        from: "user" as const,
+        from: "user",
       },
     ],
     instructions_sent: 1,
