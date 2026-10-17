@@ -39,6 +39,11 @@ Check in the browser when a change is large, when seeing it would help, or when 
 - Build preview events with the typed builder in `dev/panel/scenarios/timeline.ts` or [record them](docs/development.md#recorded-fixtures) with `npm run fixture:record`. Add a fixture for every new event or activity row kind. `dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays synthetic and recorded events through the provider.
 - Start or restart a needed dev server without asking for permission and notify the user. Stop any dev server you started for validation when you are done. Leave pre-existing servers running.
 
+### Large changes
+
+- Before building on an external behavior or an unproven approach, confirm it with a small probe or prototype. Keep it so tests can reuse it.
+- Plan a verification checklist of expected behaviors with IDs, and list accepted limits separately. In the plan, have each planned commit name the IDs it verifies.
+
 ## Writing style
 
 Use plain language, active voice, and direct statements. Start with the main point. Add the context, reasons, and examples the reader needs.
