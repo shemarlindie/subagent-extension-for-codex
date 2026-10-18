@@ -31,7 +31,14 @@ const SOURCE_FILE_LINE_CEILINGS = [
 ];
 
 export default defineConfig(
-  { ignores: ["dist/", ".codex-subagent-extension/", "node_modules/"] },
+  {
+    ignores: [
+      "dist/",
+      "release/",
+      ".codex-subagent-extension/",
+      "node_modules/",
+    ],
+  },
   {
     files: CODE,
     extends: [js.configs.recommended, tseslint.configs.recommended],
