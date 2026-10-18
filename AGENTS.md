@@ -48,7 +48,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
 
 Use plain language, active voice, and direct statements. Start with the main point. Add the context, reasons, and examples the reader needs.
 
-Be precise and consistent. Keep claims accurate, explain uncertainty, and avoid repetition.
+Be concise, precise and consistent. Keep claims accurate, explain uncertainty, and avoid repetition.
 
 Use short paragraphs. Add headings, lists, or tables when they make the writing easier to follow.
 
@@ -56,7 +56,7 @@ Avoid semicolons and dashes in sentences. Keep them where needed in code, comman
 
 ## Documentation style
 
-- Give each guide a clear purpose and audience. Keep the README focused on orientation and setup. Place detailed procedures and contracts in their owning guides. Include implementation details only when they help that audience.
+- Give each guide a clear purpose and audience. Keep the README focused on orientation and setup. Place detailed procedures and contracts in their owning guides. Include implementation details only when they help that audience, and skip obvious or expected behavior.
 - Keep one canonical home for each explanation and link to it elsewhere, repeating only a brief summary needed locally. Update explanations in place and remove superseded material after retaining useful details. Check affected links and headings.
 - Describe current behavior. Keep history only when it explains a current decision or constraint. Check commands, examples, defaults and capability claims against code and tests. State the scope of evidence. Local tests do not establish live-host support.
 
