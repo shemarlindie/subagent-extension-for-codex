@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { expect } from "vitest";
 
-import { LOADING_SKELETON_CONFIG } from "../../../src/panel/shared/components/loading-skeleton/loading-skeleton-config";
-import { MOTION } from "../../../src/panel/shared/components/motion/motion-utils";
+import { LOADING_SKELETON_CONFIG } from "../../src/panel/shared/components/loading-skeleton/loading-skeleton-config";
+import { MOTION } from "../../src/panel/shared/components/motion/motion-utils";
 import {
   act,
   assert,

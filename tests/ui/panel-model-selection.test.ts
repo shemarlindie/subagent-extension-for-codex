@@ -7,8 +7,8 @@ import {
   screen,
   selectOption,
   setup,
+  startedTask,
   test,
-  waitFor,
 } from "./panel-test-support";
 
 type Panel = Awaited<ReturnType<typeof setup>>;
@@ -30,9 +30,8 @@ async function startAfterChoosingEffort(
   assert.equal(startCalls(panel).length, 0);
   await selectOption(panel.user, "Reasoning effort", effort);
   await panel.user.click(screen.getByRole("button", { name: "Start task" }));
-  await waitFor(() => assert.equal(startCalls(panel).length, 1));
 
-  return startCalls(panel)[0]!.args;
+  return (await startedTask(panel.transport)).args;
 }
 
 test("discovered model metadata offers suggestions and rejects unsupported inherited effort until corrected", async (t) => {
@@ -130,16 +129,7 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
   await selectOption(user, "Reasoning effort", "high");
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  const call = transport.calls.find(
-    (call) => call.name === "start_agent_task",
-  )!;
+  const call = await startedTask(transport);
 
   assert.equal(call.args.model, "custom-model");
   assert.equal(call.args.reasoning_effort, "high");
@@ -252,16 +242,7 @@ test("model selection updates role and provider defaults while preserving explic
   await enterTask(user, "Preserve explicit selections");
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  const call = transport.calls.find(
-    (call) => call.name === "start_agent_task",
-  )!;
+  const call = await startedTask(transport);
 
   assert.equal(call.args.model, "explicit-model");
   assert.equal(call.args.reasoning_effort, "high");

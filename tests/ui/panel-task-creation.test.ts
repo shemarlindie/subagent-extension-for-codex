@@ -4,8 +4,8 @@ import { expect } from "vitest";
 import {
   defaults,
   deferred,
-} from "../../../src/panel/app/state/controller-test-harness";
-import type { Defaults } from "../../../src/panel/app/state/types";
+} from "../../src/panel/app/state/controller-test-harness";
+import type { Defaults } from "../../src/panel/app/state/types";
 import {
   act,
   assert,
@@ -17,6 +17,7 @@ import {
   selectedProjectPath,
   selectOption,
   setup,
+  startedTask,
   task,
   test,
   waitFor,
@@ -58,16 +59,7 @@ test("delegation submits the full request without a title and search matches des
   await enterTask(user, request);
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  const submitted = transport.calls.find(
-    (call) => call.name === "start_agent_task",
-  )!.args;
+  const submitted = (await startedTask(transport)).args;
 
   assert.ok(!("title" in submitted));
   assert.equal(submitted.description, request);
@@ -154,16 +146,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   await user.click(screen.getByRole("switch", { name: "Cost limit" }));
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  const call = transport.calls.find(
-    (call) => call.name === "start_agent_task",
-  )!;
+  const call = await startedTask(transport);
 
   assert.deepEqual(call.args.budget, {
     max_runtime_minutes: 0.5,
@@ -518,16 +501,7 @@ test("current repository selection locks revision to HEAD and submits the checko
   assert.equal(revision.readOnly, true);
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  const call = transport.calls.find(
-    (call) => call.name === "start_agent_task",
-  )!;
+  const call = await startedTask(transport);
 
   assert.equal(call.args.workspace_strategy, "current_repo");
   assert.equal(call.args.revision, "HEAD");

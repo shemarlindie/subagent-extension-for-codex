@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { expect } from "vitest";
 
-import { decodedEvent } from "../../../src/shared/events/decode.js";
+import { decodedEvent } from "../../src/shared/events/decode.js";
 import {
   act,
   assert,

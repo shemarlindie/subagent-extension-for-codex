@@ -12,6 +12,7 @@ import {
   selectedProjectPath,
   selectOption,
   setup,
+  startedTask,
   test,
   waitFor,
   within,
@@ -460,16 +461,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
 
   await user.click(within(dialog).getByRole("button", { name: "Start task" }));
 
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  const started = transport.calls.find(
-    (call) => call.name === "start_agent_task",
-  )!;
+  const started = await startedTask(transport);
 
   assert.equal(started.args.repository, "/repo/canonical");
 

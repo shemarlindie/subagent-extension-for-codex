@@ -548,10 +548,10 @@ Lower or remove exceptions when refactoring. Explain any increase needed for a c
 complexity suppressions with `npx eslint . --prune-suppressions`. If Knip reports a
 file loaded by path as unused, declare its entry point in `knip.json`.
 
-Unit tests have a 15-second timeout. Integration suites have 60 seconds for
-process and worktree setup. Keep shared colocated test setup in a
-`<module>-test-harness.ts` file. These harnesses are treated as test code by lint,
-type checks and builds.
+Unit tests have a 15-second timeout, including the jsdom suites in `tests/ui/`.
+Integration suites have 60 seconds for process and worktree setup. Keep shared
+colocated test setup in a `<module>-test-harness.ts` file. These harnesses are
+treated as test code by lint, type checks and builds.
 
 Compare DOM nodes with Vitest's `expect`, not Node's assertion equality methods:
 formatting a failed Node assertion can hang on jsdom's document graph. Use `toBe`

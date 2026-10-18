@@ -10,19 +10,19 @@ import type {
   Task,
   Transport,
   TransportEvents,
-} from "../../../src/panel/app/state/types";
+} from "../../src/panel/app/state/types";
 import type {
   ChangedFileContent,
   Changes,
-} from "../../../src/panel/features/changes/types";
-import { decodePanelToolResult } from "../../../src/panel/transports/event-decoding.js";
-import { changeCounts } from "../../../src/shared/changes/changes.js";
-import type { Event } from "../../../src/shared/events/types.js";
+} from "../../src/panel/features/changes/types";
+import { decodePanelToolResult } from "../../src/panel/transports/event-decoding.js";
+import { changeCounts } from "../../src/shared/changes/changes.js";
+import type { Event } from "../../src/shared/events/types.js";
 import {
   windowActivity,
   windowTurnActivity,
-} from "../../../src/shared/tasks/activity/activity-tail.js";
-import type { InputPresentation } from "../../../src/shared/tasks/model.js";
+} from "../../src/shared/tasks/activity/activity-tail.js";
+import type { InputPresentation } from "../../src/shared/tasks/model.js";
 
 // UI primitives read browser capabilities at module initialization.
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -98,10 +98,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 
-import { AppShell } from "../../../src/panel/app/app-shell";
-import { Controller } from "../../../src/panel/app/state/controller";
-import { ControllerContext } from "../../../src/panel/app/state/controller-context";
-import { SKIPPED_ANSWER } from "../../../src/panel/features/tasks/controls/question-answers";
+import { AppShell } from "../../src/panel/app/app-shell";
+import { Controller } from "../../src/panel/app/state/controller";
+import { ControllerContext } from "../../src/panel/app/state/controller-context";
+import { SKIPPED_ANSWER } from "../../src/panel/features/tasks/controls/question-answers";
 
 export const executionPresentation: InputPresentation = {
   description:
@@ -140,6 +140,17 @@ export function task(id = "one", repository = "/repo/a"): Task {
     turn: 1,
     runtime_ms: 0,
   };
+}
+
+export async function startedTask(transport: FakeTransport) {
+  await waitFor(() =>
+    assert.equal(
+      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      1,
+    ),
+  );
+
+  return transport.calls.find((call) => call.name === "start_agent_task")!;
 }
 
 export class FakeTransport implements Transport {
