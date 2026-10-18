@@ -216,7 +216,7 @@ test("a global launch shows every conversation and project", () => {
 
 test("listing preview tasks filters by conversation and project", () => {
   const list = (args: Record<string, unknown>) =>
-    previewTool("list_agent_tasks", args) as Opened["tasks"];
+    previewTool("list_tasks", args) as Opened["tasks"];
 
   assert.equal(list({ conversation_id: null }).length, previewTasks.length);
 
@@ -256,7 +256,7 @@ test("the chat project candidate follows the auto-add setting", () => {
       auto_register: autoRegisterChatProject,
     });
 
-    const settings = previewTool("get_agent_settings", {}, options) as {
+    const settings = previewTool("get_settings", {}, options) as {
       values: Record<string, unknown>;
     };
 
@@ -306,11 +306,11 @@ test("fixture registration validates the root and the caller keeps it", () => {
   }
 
   // Nothing is remembered until the caller passes it back.
-  const fixed = previewTool("list_agent_projects") as { repository: string }[];
+  const fixed = previewTool("list_projects") as { repository: string }[];
   assert.ok(!fixed.some((project) => project.repository === "/new/repo"));
   const options = { addedProjects: ["/new/repo"] };
 
-  const listed = previewTool("list_agent_projects", {}, options) as {
+  const listed = previewTool("list_projects", {}, options) as {
     repository: string;
     name: string;
   }[];
@@ -345,7 +345,7 @@ test("fixture registration validates the root and the caller keeps it", () => {
 
 test("an explicit revision scopes the panel to that revision", () => {
   const context = (args: Record<string, unknown>) =>
-    (previewTool("get_agent_panel_context", args) as Opened).panel_scope;
+    (previewTool("get_panel_context", args) as Opened).panel_scope;
 
   assert.equal(
     context({ conversation_id: PREVIEW_THREAD, revision: "v2" }).revision,
@@ -366,7 +366,7 @@ test("fixture task renaming updates listed titles and validates input", () => {
       title: "  Renamed task  ",
     });
 
-    const tasks = previewTool("list_agent_tasks") as typeof previewTasks;
+    const tasks = previewTool("list_tasks") as typeof previewTasks;
 
     assert.equal(
       tasks.find((entry) => entry.id === task.id)?.title,
@@ -395,7 +395,7 @@ test("fixture queues reorder, edit and remove in memory behind a left-over steer
     original = structuredClone(task.queue);
 
   const order = () =>
-    (previewTool("list_agent_tasks") as Task[])
+    (previewTool("list_tasks") as Task[])
       .find((entry) => entry.id === task.id)!
       .queue.map((m) => m.id);
 
@@ -544,7 +544,7 @@ test("successful budget updates can be enabled for preview fixtures", () => {
       assert.deepEqual(result.budget, { ...originalBudget, ...raise });
       assert.deepEqual(task.budget_raised_for_turn, raised);
 
-      const listed = (previewTool("list_agent_tasks") as Task[]).find(
+      const listed = (previewTool("list_tasks") as Task[]).find(
         (candidate) => candidate.id === id,
       );
 
@@ -583,13 +583,13 @@ test("the Claude unavailable option reports the worker not ready and skips its m
     };
   };
 
-  const [ready] = previewTool("list_available_workers", {}) as Worker[];
+  const [ready] = previewTool("list_workers", {}) as Worker[];
   assert.ok(ready);
   assert.equal(ready.readiness.ready, true);
   assert.ok(ready.models?.length);
 
   const [unavailable] = previewTool(
-    "list_available_workers",
+    "list_workers",
     {},
     { claudeUnavailable: true },
   ) as Worker[];

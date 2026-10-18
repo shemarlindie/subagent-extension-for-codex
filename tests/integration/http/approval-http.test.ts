@@ -140,12 +140,12 @@ test("console cookie can configure modes and approve while generic bearer API ca
 
   try {
     const change = { set: { default_approval_mode: "parent_agent" } };
-    const blocked = await post("/api/tools/update_agent_settings", change);
+    const blocked = await post("/api/tools/update_settings", change);
     assert.equal(blocked.status, 400);
     assert.match((await blocked.json()).error, /require a user decision/);
 
     assert.equal(
-      (await post("/api/tools/update_agent_settings", change, cookie)).status,
+      (await post("/api/tools/update_settings", change, cookie)).status,
       200,
     );
 
@@ -157,7 +157,7 @@ test("console cookie can configure modes and approve while generic bearer API ca
     assert.equal(
       (
         await post(
-          "/api/tools/update_agent_settings",
+          "/api/tools/update_settings",
           { set: { default_approval_mode: "ask_user" } },
           cookie,
         )
@@ -165,13 +165,13 @@ test("console cookie can configure modes and approve while generic bearer API ca
       200,
     );
 
-    const started = await post("/api/tools/start_agent_task", start);
+    const started = await post("/api/tools/start_task", start);
     assert.equal(started.status, 200);
     const id = (await started.json()).result.id;
     const approval = await pending(id);
 
     for (const approved of [true, false]) {
-      const decision = await post("/api/tools/submit_agent_input", {
+      const decision = await post("/api/tools/submit_input", {
         ...approval,
         approved,
       });
@@ -186,7 +186,7 @@ test("console cookie can configure modes and approve while generic bearer API ca
     );
 
     assert.equal(
-      (await post("/api/tools/submit_agent_input", approval, cookie)).status,
+      (await post("/api/tools/submit_input", approval, cookie)).status,
       200,
     );
 
@@ -218,7 +218,7 @@ test("authenticated admin user-tools route supports user settings, starts, and d
 
     assert.equal(c.settings.values("local").default_approval_mode, "deny");
 
-    const restricted = await post("/api/tools/start_agent_task", {
+    const restricted = await post("/api/tools/start_task", {
       ...start,
       approval_mode: "ask_user",
     });
@@ -254,7 +254,7 @@ test("authenticated admin user-tools route supports user settings, starts, and d
 
     assert.equal(
       (
-        await post("/api/user-tools/update_agent_settings", {
+        await post("/api/user-tools/update_settings", {
           set: { default_approval_mode: "auto_approve" },
         })
       ).status,
@@ -314,15 +314,15 @@ test("MCP advertises app-only aliases and lets the parent agent answer delegated
     }
 
     assert.deepEqual(
-      (tools.find((entry) => entry.name === "submit_agent_input")!._meta as any)
-        .ui.visibility,
+      (tools.find((entry) => entry.name === "submit_input")!._meta as any).ui
+        .visibility,
       ["model", "app"],
     );
 
     assert.equal(
       (
         await post(
-          "/api/tools/update_agent_settings",
+          "/api/tools/update_settings",
           { set: { default_approval_mode: "parent_agent" } },
           cookie,
         )
@@ -331,7 +331,7 @@ test("MCP advertises app-only aliases and lets the parent agent answer delegated
     );
 
     const delegated = await client.callTool({
-      name: "start_agent_task",
+      name: "start_task",
       arguments: start,
     });
 
@@ -340,7 +340,7 @@ test("MCP advertises app-only aliases and lets the parent agent answer delegated
     ).result.id;
 
     const allowed = await client.callTool({
-      name: "submit_agent_input",
+      name: "submit_input",
       arguments: await pending(delegatedId),
     });
 
@@ -371,7 +371,7 @@ test("HTTP and MCP mark only send failures confirmed before acceptance", async (
       }),
     );
 
-    const started = await post("/api/tools/start_agent_task", start);
+    const started = await post("/api/tools/start_task", start);
     const id = (await started.json()).result.id as string;
     await pending(id);
 
@@ -411,14 +411,14 @@ test("HTTP and MCP mark only send failures confirmed before acceptance", async (
         request_id: `http-${scenario.label}`,
       };
 
-      const response = await post("/api/tools/send_agent_message", args);
+      const response = await post("/api/tools/send_message", args);
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.error).toMatch(scenario.message);
       expect(body.send_rejected).toBe(scenario.rejected ? true : undefined);
 
       const result = await client.callTool({
-        name: "send_agent_message",
+        name: "send_message",
         arguments: { ...args, request_id: `mcp-${scenario.label}` },
       });
 

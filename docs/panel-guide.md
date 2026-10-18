@@ -129,7 +129,7 @@ at the end.
 The standalone console's tab title leads with the unread count, as in
 **(2) Delegated Work**. Read state is stored by the service, so the embedded
 panel and the standalone console agree and it survives reloads. Codex reading
-replies through `get_agent_messages` doesn't mark tasks read.
+replies through `list_messages` doesn't mark tasks read.
 
 ### Archive tasks
 
@@ -296,7 +296,7 @@ delivered as the turn ends.
 
 The latest view keeps the most recent 200 events and tallies earlier events in a
 trimmed-history note. Open debug disclosures survive refresh while their rows
-remain in that window. `get_agent_events` exposes the full stored history. An
+remain in that window. `list_events` exposes the full stored history. An
 empty feed says **No activity recorded yet.**
 
 ## Changes tab

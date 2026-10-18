@@ -92,7 +92,7 @@ export function userTools(
       },
     }),
     app_start_task: tool({
-      ...tools.start_agent_task,
+      ...tools.start_task,
       // The panel already shows the new task, so it opens no inline panel.
       panel: false,
       description:
@@ -108,9 +108,9 @@ export function userTools(
       },
     }),
     app_send_message: tool({
-      ...tools.send_agent_message,
+      ...tools.send_message,
       description:
-        "User interface only: send the user's message to a task, as send_agent_message does.",
+        "User interface only: send the user's message to a task, as send_message does.",
       run: async (a) => {
         const sent = await c.send(owner, a.task_id, a.message, "user", {
           delivery: a.delivery,
@@ -240,7 +240,7 @@ export function userTools(
       run: (a) => c.clearQueue(owner, a.task_id),
     }),
     app_submit_input: tool({
-      ...tools.submit_agent_input,
+      ...tools.submit_input,
       description:
         "User interface only: submit the user decision for the exact pending request.",
       run: (a) =>
@@ -255,7 +255,7 @@ export function userTools(
         ),
     }),
     app_update_settings: tool({
-      ...tools.update_agent_settings,
+      ...tools.update_settings,
       description:
         "User interface only: save delegation defaults, including native permission mode and approval decision maker.",
       run: (a) => c.settings.update(owner, a, "user"),

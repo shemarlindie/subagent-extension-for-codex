@@ -11,8 +11,9 @@ import { productGlyphIcons } from "../server/product-glyph.js";
 import { type PanelContextInput, panelContextInput } from "./panel-context.js";
 import { preloadPanelHtml, readPanelHtml } from "./panel-html.js";
 
-// Bump the URI when resource metadata changes to invalidate host caches.
-export const panelUri = "ui://codex-subagent-extension/app-v6";
+// Bump the URI when resource metadata or the panel's tool calls change, to
+// invalidate host caches.
+export const panelUri = "ui://codex-subagent-extension/app-v7";
 const globalPanelToolName = "app_open_codex_subagent_extension_global";
 
 const entrypoints = {
@@ -69,7 +70,7 @@ export function delegationPanel(
         content: [
           {
             type: "text" as const,
-            text: "Delegated Work ready. Use list_agent_tasks to retrieve tasks.",
+            text: "Delegated Work ready. Use list_tasks to retrieve tasks.",
           },
         ],
         structuredContent: {

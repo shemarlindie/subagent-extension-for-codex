@@ -54,8 +54,7 @@ export function restoreDialog(
 
     case "settings": {
       return (async () => {
-        const settings =
-          await context.tool<SettingsDocument>("get_agent_settings");
+        const settings = await context.tool<SettingsDocument>("get_settings");
 
         if (!context.active()) return;
 
@@ -72,7 +71,7 @@ export function restoreDialog(
     case "delegate": {
       return (async () => {
         const { values: defaults } = await context.tool<{ values: Defaults }>(
-          "get_agent_settings",
+          "get_settings",
         );
 
         if (!context.active()) return;

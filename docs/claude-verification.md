@@ -54,7 +54,7 @@ CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 CODEX_SUBAGENT_EXTENSION_LIVE_MODEL=sonne
 ```
 
 The `edits` scenario runs file-edit cases through Claude and checks recorded
-rows through `get_agent_changes`. It checks Write, Edit, NotebookEdit, a 3 MB
+rows through `get_changes`. It checks Write, Edit, NotebookEdit, a 3 MB
 file, command-created and deleted files, binary-file warnings, subagent hooks
 and turn-end shutdown. It uses `git restore git-only.txt` to check the warning
 for a command whose checkout diff the CLI skips. Other Git commands can

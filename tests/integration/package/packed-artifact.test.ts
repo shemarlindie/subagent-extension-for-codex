@@ -85,7 +85,7 @@ async function fakeClaude(path: string, version: string) {
 }
 
 async function claudeWorker(client: Client) {
-  const { result: workers } = await callJson(client, "list_available_workers");
+  const { result: workers } = await callJson(client, "list_workers");
 
   return workers.find(
     (worker: { provider: string }) => worker.provider === "claude",
@@ -323,14 +323,11 @@ describe("packed artifact", () => {
 
       assert.ok(
         (await client.listTools()).tools.some(
-          (tool) => tool.name === "start_agent_task",
+          (tool) => tool.name === "start_task",
         ),
       );
 
-      const { result: projects } = await callJson(
-        client,
-        "list_agent_projects",
-      );
+      const { result: projects } = await callJson(client, "list_projects");
 
       expect(projects).toEqual(
         expect.arrayContaining([expect.objectContaining({ repository })]),
@@ -388,10 +385,7 @@ describe("packed artifact", () => {
     const client = await connectStdio();
 
     try {
-      const { result: projects } = await callJson(
-        client,
-        "list_agent_projects",
-      );
+      const { result: projects } = await callJson(client, "list_projects");
 
       expect(projects).toEqual(
         expect.arrayContaining([
@@ -408,14 +402,11 @@ describe("packed artifact", () => {
     const client = await connectStdio();
 
     try {
-      await callJson(client, "list_agent_projects");
+      await callJson(client, "list_projects");
       await stopService(main);
       await assert.rejects(health());
 
-      const { result: projects } = await callJson(
-        client,
-        "list_agent_projects",
-      );
+      const { result: projects } = await callJson(client, "list_projects");
 
       expect(projects).toEqual(
         expect.arrayContaining([expect.objectContaining({ repository })]),
@@ -451,7 +442,7 @@ describe("packed artifact", () => {
     const previous = await connectStdio(service, {}, older);
 
     try {
-      await callJson(previous, "list_agent_projects");
+      await callJson(previous, "list_projects");
       assert.equal((await status()).version, "0.0.1");
     } finally {
       await previous.close();
@@ -462,7 +453,7 @@ describe("packed artifact", () => {
 
     try {
       // The idle older service drains at once. The next call starts this version.
-      await callJson(client, "list_agent_projects");
+      await callJson(client, "list_projects");
       const current = await status();
       assert.equal(current.version, manifest.version);
       assert.equal(current.launcher, "stdio");
@@ -483,7 +474,7 @@ describe("packed artifact", () => {
     const client = await connectStdio(service, {}, removed);
 
     try {
-      await callJson(client, "list_agent_projects");
+      await callJson(client, "list_projects");
       await rm(removed, { recursive: true, force: true });
 
       const page = await fetch(`http://127.0.0.1:${service.port}/`);
@@ -561,7 +552,7 @@ describe("packed artifact", () => {
         assert.match(worker.readiness.message!, /2\.0\.0 .* older than/);
         assert.equal(worker.models, undefined);
 
-        const refused = await callError(client, "start_agent_task", {
+        const refused = await callError(client, "start_task", {
           provider: "claude",
           description: "Review the README",
           worker_profile: "reviewer",
@@ -570,8 +561,8 @@ describe("packed artifact", () => {
 
         assert.match(refused, /older than the supported/);
         // Projects and task history stay available.
-        await callJson(client, "list_agent_projects");
-        await callJson(client, "list_agent_tasks");
+        await callJson(client, "list_projects");
+        await callJson(client, "list_tasks");
 
         await retarget(newer);
         worker = await claudeWorker(client);

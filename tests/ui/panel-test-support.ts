@@ -145,12 +145,12 @@ export function task(id = "one", repository = "/repo/a"): Task {
 export async function startedTask(transport: FakeTransport) {
   await waitFor(() =>
     assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      transport.calls.filter((call) => call.name === "start_task").length,
       1,
     ),
   );
 
-  return transport.calls.find((call) => call.name === "start_agent_task")!;
+  return transport.calls.find((call) => call.name === "start_task")!;
 }
 
 export class FakeTransport implements Transport {
@@ -164,14 +164,14 @@ export class FakeTransport implements Transport {
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
   /**
-   * get_agent_changes pages; a cursor is the next page's index. The
+   * get_changes pages; a cursor is the next page's index. The
    * first page also answers app_get_change_counts, so one is required.
    */
   changes: [Changes, ...Changes[]] = [
     { scope: "task", files: [], additions: 0, deletions: 0, diff: "" },
   ];
 
-  /** get_agent_changed_file results by path. */
+  /** get_changed_file results by path. */
   changedFiles: Record<string, ChangedFileContent> = {};
   shared: Record<string, unknown>[] = [];
   messages: string[] = [];
@@ -212,9 +212,9 @@ export class FakeTransport implements Transport {
     ).events;
 
     const values: Record<string, unknown> = {
-      get_agent_panel_context: { panel_scope: { conversation_id: null } },
-      list_agent_projects: this.projects,
-      list_available_workers: [
+      get_panel_context: { panel_scope: { conversation_id: null } },
+      list_projects: this.projects,
+      list_workers: [
         {
           provider: "claude",
           profiles: ["reviewer"],
@@ -226,7 +226,7 @@ export class FakeTransport implements Transport {
           capabilities: { cost_budget: false },
         },
       ],
-      list_agent_tasks: this.tasks,
+      list_tasks: this.tasks,
       app_get_activity: windowActivity(activityEvents, Number(args.after ?? 0)),
       app_get_turn_activity: windowTurnActivity(
         activityEvents,
@@ -234,9 +234,9 @@ export class FakeTransport implements Transport {
       ),
       app_get_chat: { items: this.chat, next_cursor: 0 },
       app_get_change_counts: changeCounts(this.changes[0]),
-      get_agent_changes: this.changes[Number(args.cursor ?? 0)],
-      get_agent_changed_file: this.changedFiles[String(args.path)],
-      get_agent_settings: {
+      get_changes: this.changes[Number(args.cursor ?? 0)],
+      get_changed_file: this.changedFiles[String(args.path)],
+      get_settings: {
         values: {
           default_provider: "claude",
           default_worker_profile: "reviewer",
@@ -244,8 +244,8 @@ export class FakeTransport implements Transport {
           max_cost_usd: null,
         },
       },
-      start_agent_task: this.tasks[0],
-      submit_agent_input: {},
+      start_task: this.tasks[0],
+      submit_input: {},
     };
 
     assert.ok(name in values, `Unexpected tool ${name}`);
@@ -470,11 +470,11 @@ export function configureModelDefaults(
   transport.tool = async <T>(name: string, args = {}) => {
     const result = await original<any>(name, args);
 
-    if (name === "get_agent_settings") {
+    if (name === "get_settings") {
       return { ...result, values: { ...result.values, ...defaults } } as T;
     }
 
-    if (name === "list_available_workers") {
+    if (name === "list_workers") {
       return result.map((worker: any) => ({
         ...worker,
         profiles: ["reviewer", "researcher"],
@@ -495,13 +495,13 @@ export function serveSettings(
   const original = transport.tool.bind(transport);
 
   transport.tool = async <T>(name: string, args = {}) => {
-    if (name === "update_agent_settings") {
+    if (name === "update_settings") {
       transport.calls.push({ name, args });
 
       return { values: {} } as T;
     }
 
-    if (name === "get_agent_settings") {
+    if (name === "get_settings") {
       return {
         schema: { type: "object", properties: {} },
         values: {},

@@ -122,7 +122,7 @@ export class ChangeLoader {
       const data = await readChanges(
         task.id,
         changes.scope,
-        (args) => this.context.tool<Changes>("get_agent_changes", args),
+        (args) => this.context.tool<Changes>("get_changes", args),
         live,
       );
 

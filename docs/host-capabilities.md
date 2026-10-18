@@ -114,7 +114,7 @@ supply defaults. Unrelated global task history cannot.
 Read-only context resolution can suggest **Add chat project**, but never registers
 it. Registration requires a user action or the configured task-start policy.
 [Repository access](configuration.md#repository-access) owns these rules.
-`get_current_agent_project` reports registration and task-start policy without
+`get_current_project` reports registration and task-start policy without
 changing either. Model-supplied paths cannot grant access or trigger automatic
 registration.
 

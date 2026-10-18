@@ -182,10 +182,10 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     try {
       assert.equal(client.getServerVersion()?.version, version);
       const { tools } = await client.listTools();
-      assert.ok(tools.some((tool) => tool.name === "start_agent_task"));
+      assert.ok(tools.some((tool) => tool.name === "start_task"));
 
       const result = await client.callTool({
-        name: "list_agent_projects",
+        name: "list_projects",
         arguments: {},
       });
 

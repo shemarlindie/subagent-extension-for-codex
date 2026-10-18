@@ -29,9 +29,9 @@ Running sessions keep their process.
 
 A missing or unsupported CLI blocks new Claude execution, while projects, task
 history and the panel stay usable. The panel shows the readiness error, and
-`list_available_workers` reports the selected executable, version and supported
+`list_workers` reports the selected executable, version and supported
 range. Restart the service after changing its environment. After fixing the
-installation, refresh the panel or call `list_available_workers` again. Failed
+installation, refresh the panel or call `list_workers` again. Failed
 checks are cached briefly.
 
 | Message                                    | Fix                                                                                                            |

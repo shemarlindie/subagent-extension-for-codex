@@ -33,7 +33,7 @@ test("relay forwards each claimed worker message, records host delivery and stop
 
   expect(tool.mock.calls).toEqual([
     ["app_claim_parent_message", { conversation_id: "parent" }],
-    ["get_agent_message", { task_id: "worker", message_id: "parent_1" }],
+    ["get_message", { task_id: "worker", message_id: "parent_1" }],
     [
       "app_record_parent_delivery",
       {

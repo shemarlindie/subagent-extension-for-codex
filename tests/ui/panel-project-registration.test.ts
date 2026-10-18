@@ -440,7 +440,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
   );
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    transport.calls.filter((call) => call.name === "start_task").length,
     0,
   );
 
@@ -491,7 +491,7 @@ test("task project registration failure preserves the selected project and draft
   );
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    transport.calls.filter((call) => call.name === "start_task").length,
     0,
   );
 });
@@ -529,7 +529,7 @@ test("cancelling the task project picker preserves selection and task draft with
   );
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    transport.calls.filter((call) => call.name === "start_task").length,
     0,
   );
 });
@@ -583,7 +583,7 @@ test("pending task project browsing disables Start and ignores selection after s
   );
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    transport.calls.filter((call) => call.name === "start_task").length,
     0,
   );
 });

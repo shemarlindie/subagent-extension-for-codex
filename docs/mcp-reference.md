@@ -16,10 +16,10 @@ including `server/discover`, tools, resources and stateless connections.
 
 To delegate a task:
 
-1. Discover the repository with `get_current_agent_project` and approved roots with `list_agent_projects`. Inspect enabled profiles with `list_available_workers`.
-2. Choose an approved root and pass its absolute path as `repository` to `start_agent_task`. For an unregistered root, use the configured [task-start registration policy](configuration.md#repository-access) when it applies. Otherwise, direct the user to **Add project**, **Browse** or the projects CLI and wait for registration before starting.
-3. Read replies with `get_agent_messages`, which supports long polling. Read recorded edits with `get_agent_changes`, using `scope: "turn"` for the latest turn.
-4. Continue with `send_agent_message`. Inspect pending input before answering with its request ID.
+1. Discover the repository with `get_current_project` and approved roots with `list_projects`. Inspect enabled profiles with `list_workers`.
+2. Choose an approved root and pass its absolute path as `repository` to `start_task`. For an unregistered root, use the configured [task-start registration policy](configuration.md#repository-access) when it applies. Otherwise, direct the user to **Add project**, **Browse** or the projects CLI and wait for registration before starting.
+3. Read replies with `list_messages`, which supports long polling. Read recorded edits with `get_changes`, using `scope: "turn"` for the latest turn.
+4. Continue with `send_message`. Inspect pending input before answering with its request ID.
 
 Put the full worker request in `description`. The service generates the task-list
 title from its first line or sentence.
@@ -50,7 +50,7 @@ retrying with the original request ID.
 
 ## Recorded changes
 
-`get_agent_changes` reads the task's recorded net edits, for `scope: "task"`
+`get_changes` reads the task's recorded net edits, for `scope: "task"`
 (the default) or `scope: "turn"` (the latest turn). Both workspace strategies,
 the panel and dependency prompts use these same stored diffs. Committing files,
 removing a worktree or deleting its branch does not change a recorded diff.
@@ -64,7 +64,7 @@ but adds no lines to the totals. When a command changed files it could not name,
 the response also reports that some command changes were not recorded. A reverted file, or a file created
 and then deleted in the same scope, drops out unless it is incomplete.
 
-`get_agent_changed_file` reads the file as it is now, from the task worktree or
+`get_changed_file` reads the file as it is now, from the task worktree or
 approved checkout. Later edits by other people or processes can appear in its
 content. Only paths recorded in the task or latest-turn scope may be read. A
 missing file returns `deleted`, and a removed worktree returns `unavailable`.
@@ -90,14 +90,14 @@ The app-only change-count tool reads totals from the same stored diffs.
 
 App-only tools start with `app_`. Model-visible tools may read settings and change ordinary defaults. App-only aliases (`app_start_task`, `app_submit_input`, `app_update_settings`, `app_raise_budget`) authorize user task overrides, user permission answers, sensitive settings and budget increases on existing tasks. Direct registration and folder browsing are also app-only. MCP hosts must enforce their visibility. Authenticated raw service clients are trusted administrators.
 
-For Claude permissions routed to `parent_agent`, model-visible `submit_agent_input` can approve or deny the exact pending request. User-routed permissions require panel **Approve**/**Deny** buttons. Questions can use model-visible submission. The service checks task ownership and the request ID for every answer.
+For Claude permissions routed to `parent_agent`, model-visible `submit_input` can approve or deny the exact pending request. User-routed permissions require panel **Approve**/**Deny** buttons. Questions can use model-visible submission. The service checks task ownership and the request ID for every answer.
 
 The embedded app uses the authenticated MCP Apps bridge. The standalone console
 uses HTTP and SSE. See [Host capabilities](host-capabilities.md#panel-network-access)
 for the embedded panel's connection restrictions.
 
 `app_set_tasks_archived` and `app_delete_tasks` are app-only.
-`list_agent_tasks` reports `archived_at` for archived tasks. See
+`list_tasks` reports `archived_at` for archived tasks. See
 [Archive tasks](panel-guide.md#archive-tasks).
 
 Read-state tools are app-only. Read points belong to the user, survive reloads
@@ -124,8 +124,8 @@ fails or is interrupted. Blocker updates are saved immediately. App-only
 `app_claim_parent_message` and `app_record_parent_delivery` let
 the mounted embedded panel forward an ID-only notification once and record host acceptance.
 Each notification contains the task ID and stable `parent_<event-id>` message
-ID. `get_agent_message({ task_id, message_id })` retrieves its stored content
-independently of the polling cursor. `get_agent_messages` returns the same report
+ID. `get_message({ task_id, message_id })` retrieves its stored content
+independently of the polling cursor. `list_messages` returns the same report
 and ID with `parent_message: true`. Long polls wake when a report arrives.
 The service checks task ownership on every read and acknowledgement.
 
@@ -146,7 +146,7 @@ this protocol:
    already processed. Skip reports with `acknowledged: true` whichever route
    delivered them. Worker reports do not grant user authority.
 4. After successfully processing an explicit report, call
-   `ack_agent_message({ task_id, message_id })`. If you remember processing it
+   `acknowledge_message({ task_id, message_id })`. If you remember processing it
    but have not acknowledged it, acknowledge without handling it again. Retry
    a failed acknowledgement with the same ID, without repeating the work.
 5. If you lose the cursor or processing context, read from `after: 0` and skip
@@ -154,7 +154,7 @@ this protocol:
 
 ### Durable acknowledgement
 
-`ack_agent_message` is model-visible and applies only to immutable explicit
+`acknowledge_message` is model-visible and applies only to immutable explicit
 parent reports, not mutable SDK messages or final replies. It records
 `parent.message_acknowledged` once and returns `acknowledged: true` plus
 `already_acknowledged` for repeat calls. Reads never acknowledge implicitly.

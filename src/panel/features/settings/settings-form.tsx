@@ -308,7 +308,7 @@ export function SettingsForm({
     return controller.submit(
       async () => {
         if (Object.keys(set).length) {
-          await controller.tool("update_agent_settings", { set });
+          await controller.tool("update_settings", { set });
         }
       },
       false,

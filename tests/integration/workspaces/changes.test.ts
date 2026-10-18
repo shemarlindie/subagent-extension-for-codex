@@ -143,7 +143,7 @@ test("change tools return sorted recorded edits, incomplete files and command wa
     });
 
     const args = { task_id: t.id };
-    const changes = await s.tool<Changes>("get_agent_changes", args);
+    const changes = await s.tool<Changes>("get_changes", args);
 
     expect(
       changes.files.map((f) => [f.path, f.status, f.source, !!f.incomplete]),
@@ -185,9 +185,9 @@ test("latest-turn rows clear on continuation while the task keeps its recorded h
 
     await s.c.send("alice", t.id, "Continue", "user");
     await s.done(t.id);
-    const task = await s.tool<Changes>("get_agent_changes", { task_id: t.id });
+    const task = await s.tool<Changes>("get_changes", { task_id: t.id });
 
-    const turn = await s.tool<Changes>("get_agent_changes", {
+    const turn = await s.tool<Changes>("get_changes", {
       task_id: t.id,
       scope: "turn",
     });
@@ -244,16 +244,16 @@ test("recorded worktree diffs survive a commit, workspace removal and branch del
     }, "worktree");
 
     const args = { task_id: t.id };
-    const original = await s.tool<Changes>("get_agent_changes", args);
+    const original = await s.tool<Changes>("get_changes", args);
     s.git(t.workspace!, "add", ".");
     s.git(t.workspace!, "commit", "-qm", "task edits");
-    expect(await s.tool<Changes>("get_agent_changes", args)).toEqual(original);
+    expect(await s.tool<Changes>("get_changes", args)).toEqual(original);
     await s.c.workspaces.removeWorktree(t);
-    expect(await s.tool<Changes>("get_agent_changes", args)).toEqual(original);
+    expect(await s.tool<Changes>("get_changes", args)).toEqual(original);
 
     expect(
       (
-        await s.tool<ChangedFileContent>("get_agent_changed_file", {
+        await s.tool<ChangedFileContent>("get_changed_file", {
           ...args,
           path: "existing.txt",
         })
@@ -261,7 +261,7 @@ test("recorded worktree diffs survive a commit, workspace removal and branch del
     ).toBe("unavailable");
 
     await s.c.workspaces.deleteBranch(t);
-    expect(await s.tool<Changes>("get_agent_changes", args)).toEqual(original);
+    expect(await s.tool<Changes>("get_changes", args)).toEqual(original);
   } finally {
     await s.close();
   }
@@ -290,7 +290,7 @@ test("file tools read current disk content, page UTF-8, preview images and restr
     const content = "héllo wörld\n".repeat(10);
     await writeFile(join(s.repo, "existing.txt"), content);
 
-    const file = await s.tool<ChangedFileContent>("get_agent_changed_file", {
+    const file = await s.tool<ChangedFileContent>("get_changed_file", {
       ...args,
       path: "existing.txt",
     });
@@ -313,7 +313,7 @@ test("file tools read current disk content, page UTF-8, preview images and restr
     expect(joined).toBe(content);
 
     expect(
-      await s.tool<ChangedFileContent>("get_agent_changed_file", {
+      await s.tool<ChangedFileContent>("get_changed_file", {
         ...args,
         path: "logo.png",
       }),
@@ -325,7 +325,7 @@ test("file tools read current disk content, page UTF-8, preview images and restr
     });
 
     expect(
-      await s.tool<ChangedFileContent>("get_agent_changed_file", {
+      await s.tool<ChangedFileContent>("get_changed_file", {
         ...args,
         path: "data.bin",
       }),
@@ -335,7 +335,7 @@ test("file tools read current disk content, page UTF-8, preview images and restr
 
     expect(
       (
-        await s.tool<ChangedFileContent>("get_agent_changed_file", {
+        await s.tool<ChangedFileContent>("get_changed_file", {
           ...args,
           path: "existing.txt",
         })
@@ -348,7 +348,7 @@ test("file tools read current disk content, page UTF-8, preview images and restr
       ".git/config",
     ]) {
       await expect(
-        s.tool("get_agent_changed_file", { ...args, path }),
+        s.tool("get_changed_file", { ...args, path }),
       ).rejects.toThrow(/not among this task's changes/);
     }
   } finally {
@@ -444,7 +444,7 @@ test("starting, steering, waiting for input and finishing create no task snapsho
     await s.done(t.id);
     expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
 
-    const changes = await s.tool<Changes>("get_agent_changes", {
+    const changes = await s.tool<Changes>("get_changes", {
       task_id: t.id,
     });
 

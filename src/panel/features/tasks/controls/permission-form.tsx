@@ -31,7 +31,7 @@ function PermissionForm({ task }: { task: Task }) {
     controller.handle(
       handleSubmit((values) =>
         controller.submit(async () => {
-          await controller.tool("submit_agent_input", {
+          await controller.tool("submit_input", {
             task_id: task.id,
             request_id: request.id,
             approved,

@@ -15,7 +15,7 @@ test("project management discards a stale registry read and reconciles selected 
   let reads = 0;
 
   transport.handler = (name) => {
-    if (name === "list_agent_projects" && reads++ === 0) return gate.promise;
+    if (name === "list_projects" && reads++ === 0) return gate.promise;
 
     if (name === "app_remove_project") {
       transport.projects = [];
@@ -49,7 +49,7 @@ test("other-panel removal clears selected project while renaming preserves scope
   transport.handler = (name) => {
     if (name === "app_rename_project") return { name: "Renamed" };
 
-    if (name === "list_agent_projects") {
+    if (name === "list_projects") {
       return [{ repository: "/repo/a", name: "Renamed", kind: "repository" }];
     }
 
@@ -63,8 +63,7 @@ test("other-panel removal clears selected project while renaming preserves scope
   assert.equal(renamed.name, "Renamed");
   assert.equal(controller.getSnapshot().repository, "/repo/a");
 
-  transport.handler = (name) =>
-    name === "list_agent_projects" ? [] : undefined;
+  transport.handler = (name) => (name === "list_projects" ? [] : undefined);
 
   await controller.refresh();
   assert.equal(controller.getSnapshot().repository, undefined);

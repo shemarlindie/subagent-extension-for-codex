@@ -76,7 +76,7 @@ export class ParentMessageRelay {
       // A parent may acknowledge through polling while the claim is in flight.
       const report = await this.transport.tool<{
         message: ConversationMessage;
-      }>("get_agent_message", {
+      }>("get_message", {
         task_id: message.task_id,
         message_id: message.message_id,
       });

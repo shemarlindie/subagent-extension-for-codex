@@ -59,7 +59,7 @@ Environment-provided parent approvals are saved too. To revoke one, remove its e
 
 **Automatically add chat projects** (`auto_register_chat_project`, default `true`) is a user-only setting. It registers an unapproved chat Git root only when a task starts for that root, using original host sandbox metadata. Explicit task paths and `host_directory` hints do not grant access. Project listing, context discovery and opening panels remain read-only. Disabling the setting preserves existing grants. Host metadata delivery from registered hosts is unverified. See [host capabilities](host-capabilities.md).
 
-Use `list_agent_projects`, then pass the intended absolute `repository` to `start_agent_task`. `get_current_agent_project` discovers the chat root. Direct the user to the panel or local CLI if registration is needed. Existing tasks keep their original repository and workspace.
+Use `list_projects`, then pass the intended absolute `repository` to `start_task`. `get_current_project` discovers the chat root. Direct the user to the panel or local CLI if registration is needed. Existing tasks keep their original repository and workspace.
 
 ## Task defaults
 
@@ -79,7 +79,7 @@ Open **Settings** in the panel header. Values persist per user in SQLite and app
 The worker profile setting applies to model calls and the Advanced task dialog.
 The panel's **New task** composer starts with the General profile.
 
-For programmatic updates, use `get_agent_settings` to discover supported fields and `update_agent_settings` to change ordinary defaults. User-only settings require app-only `app_update_settings` or authenticated console authority. See [app and user authority](mcp-reference.md#app-and-user-authority) for the host enforcement boundary.
+For programmatic updates, use `get_settings` to discover supported fields and `update_settings` to change ordinary defaults. User-only settings require app-only `app_update_settings` or authenticated console authority. See [app and user authority](mcp-reference.md#app-and-user-authority) for the host enforcement boundary.
 
 Budget controls can disable a limit while remembering its amount. Editing that amount leaves the limit disabled until enabled again. The app sets no upper bound on runtime or cost. Providers reject limits they cannot support before execution. See [continuation and budgets](task-continuation.md#raise-a-task-budget) for raising limits on existing tasks.
 
@@ -92,7 +92,7 @@ Each field resolves independently: task override → worker profile → provider
 - Global: `default_model`, `default_reasoning_effort`.
 - Provider: `claude_default_model`, `claude_default_reasoning_effort` (or `fixture`).
 - Profile: `reviewer_default_model`, `reviewer_default_reasoning_effort` (or another worker profile).
-- Task: `model`, `reasoning_effort` in `start_agent_task`, the panel's New task chips or the Advanced task dialog.
+- Task: `model`, `reasoning_effort` in `start_task`, the panel's New task chips or the Advanced task dialog.
 
 Profile defaults apply across providers, so choose a compatible model or override it on the task. Claude accepts `low`, `medium`, `high`, `xhigh` and `max`, subject to model support. Unsupported choices are rejected before queuing when metadata is known. Otherwise native validation may fail during execution.
 
@@ -114,7 +114,7 @@ The extension owns Claude's native permission mode. `claude_permission_mode` app
 
 Enabled session restrictions apply in every mode. Model-selected overrides cannot increase authority beyond the user-approved baseline. A trusted panel task submission can authorize a broader task-level override.
 
-Approval routing is separate: `provider_options.claude.approval_decider` accepts `user` or `parent_agent`, inheriting `default_approval_decider`. It handles requests left unresolved by native checks. It does not force every action to prompt. User permission decisions require panel **Approve**/**Deny**. Model-visible `submit_agent_input` can decide permissions only when the parent is the approver. Stale request IDs and cross-owner answers are rejected. `dontAsk` may deny questions without invoking the callback.
+Approval routing is separate: `provider_options.claude.approval_decider` accepts `user` or `parent_agent`, inheriting `default_approval_decider`. It handles requests left unresolved by native checks. It does not force every action to prompt. User permission decisions require panel **Approve**/**Deny**. Model-visible `submit_input` can decide permissions only when the parent is the approver. Stale request IDs and cross-owner answers are rejected. `dontAsk` may deny questions without invoking the callback.
 
 There is no extension-wide auto-approval policy for Claude. Repository approval and resolved session restrictions remain separate from native permission mode.
 

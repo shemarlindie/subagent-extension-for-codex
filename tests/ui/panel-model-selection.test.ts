@@ -14,7 +14,7 @@ import {
 type Panel = Awaited<ReturnType<typeof setup>>;
 
 const startCalls = ({ transport }: Panel) =>
-  transport.calls.filter((call) => call.name === "start_agent_task");
+  transport.calls.filter((call) => call.name === "start_task");
 
 /**
  * Starting is blocked with `message` and sends nothing until `effort` is

@@ -86,7 +86,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
         await controller.addChatProjectForTask(values.repository);
 
         return controller.tool<Task>(
-          "start_agent_task",
+          "start_task",
           startTaskArguments(values, state.workers, conversation),
         );
       }, true),

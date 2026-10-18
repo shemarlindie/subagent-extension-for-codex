@@ -141,7 +141,7 @@ async function setup(t: TestContext) {
 test("HTTP MCP resolves the extension permission setting regardless of host or argument permission metadata", async (t) => {
   const { c, rpc, request } = await setup(t);
   c.settings.update("local", { set: { claude_permission_mode: "auto" } });
-  const started = await rpc("start_agent_task", request, parentMeta);
+  const started = await rpc("start_task", request, parentMeta);
   assert.equal(started.result.isError, undefined, JSON.stringify(started));
   const task = started.result.structuredContent.result;
   assert.equal(task.provider_options.claude.permission_mode, "auto");
@@ -152,7 +152,7 @@ test("HTTP MCP resolves the extension permission setting regardless of host or a
     "auto",
   );
 
-  const spoofed = await rpc("start_agent_task", {
+  const spoofed = await rpc("start_task", {
     ...request,
     parent_permissions: {
       provider: "claude",

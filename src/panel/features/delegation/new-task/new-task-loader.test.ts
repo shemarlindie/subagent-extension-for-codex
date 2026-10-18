@@ -67,8 +67,8 @@ test("starting a composed task sends its options, selects it and clears the draf
   const created = { ...task("new"), worker_profile: "general" as const };
 
   transport.handler = (name) => {
-    if (name === "start_agent_task") return created;
-    if (name === "list_agent_tasks") return [created, task("a")];
+    if (name === "start_task") return created;
+    if (name === "list_tasks") return [created, task("a")];
 
     return undefined;
   };
@@ -82,7 +82,7 @@ test("starting a composed task sends its options, selects it and clears the draf
 
   assert.equal(await controller.newTasks.start(values), undefined);
 
-  const call = transport.calls.find((item) => item.name === "start_agent_task");
+  const call = transport.calls.find((item) => item.name === "start_task");
 
   assert.deepEqual(call?.args, {
     provider_options: {
@@ -118,7 +118,7 @@ test("a failed start keeps the composer and its draft and returns the error", as
   t.onTestFinished(() => controller.dispose());
 
   transport.handler = (name) =>
-    name === "start_agent_task"
+    name === "start_task"
       ? Promise.reject(new Error("Repository is not approved"))
       : undefined;
 
@@ -149,7 +149,7 @@ test("a task that starts after the scope changes is not selected", async (t) => 
   const gate = deferred<ReturnType<typeof task>>();
 
   transport.handler = (name) =>
-    name === "start_agent_task" ? gate.promise : undefined;
+    name === "start_task" ? gate.promise : undefined;
 
   controller.newTasks.open();
   await flush();

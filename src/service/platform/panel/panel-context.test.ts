@@ -361,11 +361,11 @@ test("host correlation honors explicit values and isolates supported tools", () 
   };
 
   for (const name of [
-    "start_agent_task",
+    "start_task",
     "app_start_task",
-    "list_agent_tasks",
+    "list_tasks",
     "open_codex_subagent_extension",
-    "get_agent_panel_context",
+    "get_panel_context",
   ]) {
     assert.equal(
       withConversation(hints(name), {}, meta).conversation_id,
@@ -388,29 +388,23 @@ test("host correlation honors explicit values and isolates supported tools", () 
 
   for (const value of ["", "   ", "x".repeat(257), 7, null]) {
     assert.equal(
-      withConversation(
-        hints("list_agent_tasks"),
-        {},
-        { "openai/session": value },
-      ).conversation_id,
+      withConversation(hints("list_tasks"), {}, { "openai/session": value })
+        .conversation_id,
       undefined,
     );
   }
 
   assert.deepEqual(
-    withConversation(hints("get_agent_task"), { task_id: "owned" }, meta),
+    withConversation(hints("get_task"), { task_id: "owned" }, meta),
     { task_id: "owned" },
   );
 
   assert.equal(
-    withConversation(hints("start_agent_task"), {}, meta).host_directory,
+    withConversation(hints("start_task"), {}, meta).host_directory,
     undefined,
   );
 
-  for (const name of [
-    "open_codex_subagent_extension",
-    "get_agent_panel_context",
-  ]) {
+  for (const name of ["open_codex_subagent_extension", "get_panel_context"]) {
     assert.deepEqual(
       withConversation(hints(name), { conversation_id: null }, meta),
       {
@@ -470,10 +464,7 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
     f.seed("task-owner-without-conversation-id", repository),
     f.seed("another-chat", repository, { conversation_id: "task-chat" }),
   ]) {
-    for (const name of [
-      "open_codex_subagent_extension",
-      "get_agent_panel_context",
-    ]) {
+    for (const name of ["open_codex_subagent_extension", "get_panel_context"]) {
       const args = withConversation(
         hints(name),
         { task_id: selected.id },

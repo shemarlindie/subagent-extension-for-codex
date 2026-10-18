@@ -64,7 +64,7 @@ export class TaskActions {
     this.context.patch({ busy: true });
 
     try {
-      await this.context.tool("submit_agent_input", {
+      await this.context.tool("submit_input", {
         task_id: task.id,
         request_id: request.id,
         approved: true,
@@ -91,7 +91,7 @@ export class TaskActions {
       return Promise.resolve("The permission request is no longer available.");
     }
 
-    return this.run("submit_agent_input", {
+    return this.run("submit_input", {
       task_id: task.id,
       request_id: request.id,
       approved,
@@ -167,7 +167,7 @@ export class TaskActions {
   /** Stops a task's turn; `sendPending` sends its pending steers at once. */
   interruptTask(task: Task, sendPending = false) {
     return this.run(
-      "interrupt_agent_task",
+      "interrupt_task",
       { task_id: task.id, send_pending: sendPending },
       {
         timeoutMessage:

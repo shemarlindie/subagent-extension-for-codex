@@ -48,7 +48,7 @@ export function changeCounts({
   return { ...totals, files: files.length };
 }
 
-/** A changed file's current content, as get_agent_changed_file returns it. */
+/** A changed file's current content, as get_changed_file returns it. */
 export interface ChangedFileContent {
   path: string;
   /** "deleted": missing now. "unavailable": workspace removed. "binary": other binary content. */

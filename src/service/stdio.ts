@@ -90,7 +90,7 @@ const server = new McpServer(
   },
   {
     instructions:
-      "Use list_agent_projects and pass an explicit approved absolute repository to start_agent_task. current cannot identify the host chat project. Use get_current_agent_project for host project discovery. A selected Claude composer mention is a provider hint only; use the available reviewer profile for review requests, and resolve the repository through existing project checks. Mention selection does not authorize a project or change permissions. Starting a task for the current chat project registers it when the user setting allows; otherwise ask the user to use Add project in the panel." +
+      "Use list_projects and pass an explicit approved absolute repository to start_task. current cannot identify the host chat project. Use get_current_project for host project discovery. A selected Claude composer mention is a provider hint only; use the available reviewer profile for review requests, and resolve the repository through existing project checks. Mention selection does not authorize a project or change permissions. Starting a task for the current chat project registers it when the user setting allows; otherwise ask the user to use Add project in the panel." +
       " " +
       PARENT_DELEGATION_PROTOCOL,
     capabilities: codexContextCapability,
@@ -105,7 +105,7 @@ const server = new McpServer(
 function serviceTimeout(name: string, args: Record<string, unknown>) {
   if (name === "app_browse_project") return 150000;
 
-  if (name === "get_agent_messages") {
+  if (name === "list_messages") {
     return Math.min(Number(args.wait_seconds) || 0, 50) * 1000 + 10000;
   }
 
@@ -201,7 +201,7 @@ const panel = delegationPanel(
   packagePath("dist/app.html"),
   undefined,
   async (args) => {
-    const response = await postService("get_agent_panel_context", args, 30000);
+    const response = await postService("get_panel_context", args, 30000);
 
     const body = await response.json();
 

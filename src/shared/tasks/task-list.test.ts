@@ -12,7 +12,7 @@ import type { Event } from "../events/types.js";
 import { type ListedTask, listedTask } from "./task-list.js";
 
 test("preview task listing exposes the latest rate limit and provider failure summaries", () => {
-  const tasks = previewTool("list_agent_tasks", {
+  const tasks = previewTool("list_tasks", {
     conversation_id: null,
   }) as ListedTask[];
 

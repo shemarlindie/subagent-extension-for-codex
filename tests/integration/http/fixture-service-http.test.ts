@@ -87,10 +87,10 @@ test("the Vite fixture-service route parses requests and returns tool results", 
     resolve(projectRoot, "dev/panel/host/host-helpers.ts"),
   )) as { FIXTURE_SERVICE_TOOLS: string[] };
 
-  helpers.FIXTURE_SERVICE_TOOLS.push("list_agent_tasks");
+  helpers.FIXTURE_SERVICE_TOOLS.push("list_tasks");
 
   try {
-    const { response, body } = await call("list_agent_tasks", {
+    const { response, body } = await call("list_tasks", {
       conversation_id: null,
     });
 
@@ -115,7 +115,7 @@ test("fixture changes come from recorded edits built per task", async () => {
   await fixtureServer();
 
   const changes = (task_id: string, scope = "task") =>
-    result<Changes>("get_agent_changes", { task_id, scope });
+    result<Changes>("get_changes", { task_id, scope });
 
   const paths = (result: Changes) => result.files.map((file) => file.path);
 
@@ -182,14 +182,14 @@ test("the large-file fixture's changes come in pages and its files read whole", 
   await fixtureServer();
 
   // Several megabytes of new files cross in pages of whole files.
-  let page = await result<Changes>("get_agent_changes", {
+  let page = await result<Changes>("get_changes", {
     task_id: "preview-profile",
   });
 
   const pages = [page];
 
   while (page.next_cursor) {
-    page = await result<Changes>("get_agent_changes", {
+    page = await result<Changes>("get_changes", {
       task_id: "preview-profile",
       cursor: page.next_cursor,
     });
@@ -213,7 +213,7 @@ test("the large-file fixture's changes come in pages and its files read whole", 
   let content = "";
 
   do {
-    part = await result<ChangedFileContent>("get_agent_changed_file", {
+    part = await result<ChangedFileContent>("get_changed_file", {
       task_id: "preview-profile",
       path,
       cursor: part?.next_cursor,
@@ -233,15 +233,15 @@ test("the large-file fixture's changes come in pages and its files read whole", 
 test("the Vite fixture-service route serializes service errors as JSON", async () => {
   await fixtureServer();
 
-  const response = await fetch(
-    `${origin}/fixture-service/tools/list_agent_tasks`,
-    { method: "POST", body: "{}" },
-  );
+  const response = await fetch(`${origin}/fixture-service/tools/list_tasks`, {
+    method: "POST",
+    body: "{}",
+  });
 
   assert.equal(response.status, 400);
 
   assert.deepEqual(await response.json(), {
-    error: "The fixture service does not serve list_agent_tasks",
+    error: "The fixture service does not serve list_tasks",
   });
 });
 
@@ -268,12 +268,12 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
   );
 
   const afterRemoval = (
-    await call("get_agent_changes", { task_id: "preview-interrupted" })
+    await call("get_changes", { task_id: "preview-interrupted" })
   ).body.result as Changes;
 
   assert.equal(afterRemoval.files.length, 3);
 
-  const missingPreview = await call("get_agent_changed_file", {
+  const missingPreview = await call("get_changed_file", {
     task_id: "preview-interrupted",
     path: "src/panel/inspector.css",
   });
@@ -287,8 +287,7 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
   );
 
   assert.deepEqual(
-    (await call("get_agent_changes", { task_id: "preview-interrupted" })).body
-      .result,
+    (await call("get_changes", { task_id: "preview-interrupted" })).body.result,
     afterRemoval,
   );
 

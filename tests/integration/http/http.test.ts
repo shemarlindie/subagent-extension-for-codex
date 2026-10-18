@@ -31,7 +31,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
   test("auth, CSRF and origin checks", async () => {
     const { post } = fixture;
-    assert.equal((await post("/api/tools/list_agent_tasks", {})).status, 401);
+    assert.equal((await post("/api/tools/list_tasks", {})).status, 401);
     assert.equal((await post("/api/login", { token: "wrong" })).status, 401);
 
     assert.equal(
@@ -52,15 +52,14 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     assert.match(login.headers.get("set-cookie")!, /HttpOnly/);
 
     assert.equal(
-      (await post("/api/tools/list_agent_tasks", {}, { Cookie: cookie }))
-        .status,
+      (await post("/api/tools/list_tasks", {}, { Cookie: cookie })).status,
       403,
     );
 
     assert.equal(
       (
         await post(
-          "/api/tools/list_agent_tasks",
+          "/api/tools/list_tasks",
           {},
           { Cookie: cookie, "X-Codex-Subagent-Extension": "1" },
         )
@@ -87,10 +86,10 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       undefined,
     );
 
-    assert.ok(tools.tools.some((t) => t.name === "start_agent_task"));
+    assert.ok(tools.tools.some((t) => t.name === "start_task"));
 
     const ackTool = tools.tools.find(
-      (tool) => tool.name === "ack_agent_message",
+      (tool) => tool.name === "acknowledge_message",
     );
 
     assert.ok(ackTool);
@@ -123,7 +122,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     );
 
     const workers = await client.callTool({
-      name: "list_available_workers",
+      name: "list_workers",
       arguments: {},
     });
 
@@ -143,7 +142,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       );
     }
 
-    for (const name of ["get_agent_settings", "update_agent_settings"]) {
+    for (const name of ["get_settings", "update_settings"]) {
       assert.ok(
         tools.tools.find((tool) => tool.name === name)?.outputSchema?.properties
           ?.values,
@@ -153,7 +152,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
     assert.equal(
       (opener._meta as any).ui.resourceUri,
-      "ui://codex-subagent-extension/app-v6",
+      "ui://codex-subagent-extension/app-v7",
     );
 
     const resources = await client.listResources();
@@ -162,7 +161,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       resources.resources.some(
         (resource) =>
           resource.name === "Delegated Work" &&
-          resource.uri === "ui://codex-subagent-extension/app-v6",
+          resource.uri === "ui://codex-subagent-extension/app-v7",
       ),
     );
 
@@ -213,7 +212,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
     assert.ok(uiContent);
 
-    assert.equal(uiContent.uri, "ui://codex-subagent-extension/app-v6");
+    assert.equal(uiContent.uri, "ui://codex-subagent-extension/app-v7");
     assert.equal(uiContent.mimeType, "text/html;profile=mcp-app");
     assert.ok("text" in uiContent);
 
@@ -222,9 +221,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       preferredDisplayMode: "inline",
     });
 
-    const starter = tools.tools.find(
-      (tool) => tool.name === "start_agent_task",
-    )!;
+    const starter = tools.tools.find((tool) => tool.name === "start_task")!;
 
     assert.equal(
       (starter._meta as any).ui.resourceUri,
@@ -264,7 +261,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     });
 
     assert.deepEqual(
-      (tools.tools.find((t) => t.name === "list_agent_tasks")!._meta as any).ui
+      (tools.tools.find((t) => t.name === "list_tasks")!._meta as any).ui
         .visibility,
       ["model", "app"],
     );
@@ -332,7 +329,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     );
 
     const globalContext = await client.callTool({
-      name: "get_agent_panel_context",
+      name: "get_panel_context",
       arguments: { conversation_id: null },
       _meta: ambientMeta,
     });
@@ -376,7 +373,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     });
 
     const nativeTasks = await client.callTool({
-      name: "list_agent_tasks",
+      name: "list_tasks",
       arguments: {},
       _meta: { "openai/session": "conversation-a" },
     });
@@ -387,7 +384,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     );
 
     const explicitTasks = await client.callTool({
-      name: "list_agent_tasks",
+      name: "list_tasks",
       arguments: { conversation_id: "conversation-b" },
       _meta: { "openai/session": "conversation-a" },
     });
@@ -416,7 +413,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     const { client, checkGlobalCreation, dir } = fixture;
 
     const started = await client.callTool({
-      name: "start_agent_task",
+      name: "start_task",
       arguments: {
         title: "Review [input]",
         description: "Review [input]",
@@ -527,7 +524,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.deepEqual(definitionsByName(stdioTools), definitionsByName(tools));
 
       const settingsRead = await stdio.callTool({
-        name: "get_agent_settings",
+        name: "get_settings",
         arguments: {},
       });
 
@@ -539,7 +536,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       );
 
       const nativeUpdated = await stdio.callTool({
-        name: "update_agent_settings",
+        name: "update_settings",
         arguments: {
           set: {
             default_model: "native-proxy-model",
@@ -562,7 +559,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       );
 
       const nativeReadback = await stdio.callTool({
-        name: "get_agent_settings",
+        name: "get_settings",
         arguments: {},
       });
 
@@ -619,7 +616,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.equal(panel(globalProxyOpen)?.tasks, undefined);
 
       const globalProxyContext = await stdio.callTool({
-        name: "get_agent_panel_context",
+        name: "get_panel_context",
         arguments: { conversation_id: null },
         _meta: ambientMeta,
       });
@@ -643,7 +640,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       });
 
       const nativeProxyTasks = await stdio.callTool({
-        name: "list_agent_tasks",
+        name: "list_tasks",
         arguments: {},
         _meta: { "openai/session": "conversation-a" },
       });
@@ -669,7 +666,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.equal(panel(proxyOpen)?.conversation_id, "conversation-a");
 
       const proxyWorkers = await stdio.callTool({
-        name: "list_available_workers",
+        name: "list_workers",
         arguments: {},
       });
 
@@ -688,7 +685,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       });
 
       const proxyStarted = await stdio.callTool({
-        name: "start_agent_task",
+        name: "start_task",
         arguments: {
           title: "Review [input]",
           description: "Review [input]",
@@ -1074,7 +1071,7 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
     const tools = await rpc("tools/list");
 
     const settings = await rpc("tools/call", {
-      name: "get_agent_settings",
+      name: "get_settings",
       arguments: {},
     });
 
@@ -1084,25 +1081,25 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
     );
 
     const updated = await rpc("tools/call", {
-      name: "update_agent_settings",
+      name: "update_settings",
       arguments: { set: { max_cost_usd: 2, use_cost_budget: true } },
     });
 
     assert.equal(updated.json.result.structuredContent.values.max_cost_usd, 2);
 
     const invalid = await rpc("tools/call", {
-      name: "update_agent_settings",
+      name: "update_settings",
       arguments: { set: { max_cost_usd: -1 } },
     });
 
     assert.ok(invalid.json.result?.isError || invalid.json.error);
 
     assert.ok(
-      tools.json.result.tools.some((t: any) => t.name === "start_agent_task"),
+      tools.json.result.tools.some((t: any) => t.name === "start_task"),
     );
 
     const result = await rpc("tools/call", {
-      name: "list_available_workers",
+      name: "list_workers",
       arguments: {},
     });
 

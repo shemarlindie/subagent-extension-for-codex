@@ -131,9 +131,9 @@ export function fixtureLaunchArgs(
  * repositories built from dev/panel/scenarios/change-fixtures.ts.
  */
 export const FIXTURE_SERVICE_TOOLS: string[] = [
-  "get_agent_changes",
+  "get_changes",
   "app_get_change_counts",
-  "get_agent_changed_file",
+  "get_changed_file",
   "app_remove_worktree",
   "app_delete_branch",
 ];
@@ -189,7 +189,7 @@ export function fixtureCall(
     // The openers and settings tools return their payload unwrapped.
     const unwrapped =
       name.includes("open_codex_subagent_extension") ||
-      name.endsWith("_agent_settings");
+      name.endsWith("_settings");
 
     return {
       content: [{ type: "text", text: JSON.stringify(result) }],

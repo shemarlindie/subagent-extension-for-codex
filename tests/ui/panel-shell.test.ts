@@ -130,9 +130,7 @@ test("the header menu offers the secondary actions and runs them", async (t) => 
   await user.click(screen.getByRole("menuitem", { name: "Settings" }));
 
   await waitFor(() =>
-    assert.ok(
-      transport.calls.some((call) => call.name === "get_agent_settings"),
-    ),
+    assert.ok(transport.calls.some((call) => call.name === "get_settings")),
   );
 });
 
@@ -221,7 +219,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   );
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    transport.calls.filter((call) => call.name === "start_task").length,
     0,
   );
 
@@ -240,7 +238,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   );
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    transport.calls.filter((call) => call.name === "start_task").length,
     0,
   );
 });

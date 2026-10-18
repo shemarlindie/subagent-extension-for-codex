@@ -56,7 +56,7 @@ async function setup(provider: Provider = new FixtureProvider()) {
     callTool(c, "alice", name, args, "user") as Promise<T>;
 
   const start = (description: string, budget?: Task["budget"]) =>
-    parent<Task>("start_agent_task", {
+    parent<Task>("start_task", {
       provider: "fixture",
       description,
       workspace_strategy: "worktree",
@@ -150,18 +150,18 @@ test("tools declare their read-only and destructive annotations", () => {
     "app_get_turn_activity",
     "app_search_mentions",
     "app_wait_for_updates",
-    "get_agent_changed_file",
-    "get_agent_changes",
-    "get_agent_events",
-    "get_agent_message",
-    "get_agent_messages",
-    "get_agent_panel_context",
-    "get_agent_settings",
-    "get_agent_task",
-    "get_current_agent_project",
-    "list_agent_projects",
-    "list_agent_tasks",
-    "list_available_workers",
+    "get_changed_file",
+    "get_changes",
+    "get_current_project",
+    "get_message",
+    "get_panel_context",
+    "get_settings",
+    "get_task",
+    "list_events",
+    "list_messages",
+    "list_projects",
+    "list_tasks",
+    "list_workers",
   ]);
 
   expect(flagged("destructive")).toEqual([
@@ -179,14 +179,14 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     assert.equal(t.created_by, "parent");
 
     // Waits until the turn ends, then returns its complete messages.
-    const first = await parent<Messages>("get_agent_messages", {
+    const first = await parent<Messages>("list_messages", {
       task_id: t.id,
       wait_seconds: 5,
     });
 
     await until(() => store.get(t.id, "alice").status === "completed");
 
-    const all = await parent<Messages>("get_agent_messages", {
+    const all = await parent<Messages>("list_messages", {
       task_id: t.id,
     });
 
@@ -205,7 +205,7 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
 
     // Nothing after the cursor: an immediate read is empty, and a wait
     // returns at its end.
-    const quiet = await parent<Messages>("get_agent_messages", {
+    const quiet = await parent<Messages>("list_messages", {
       task_id: t.id,
       after: all.next_cursor,
       wait_seconds: 0.2,
@@ -215,13 +215,13 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     assert.equal(quiet.next_cursor, all.next_cursor);
 
     const sent = await parent<{ message_id: string; state: string }>(
-      "send_agent_message",
+      "send_message",
       { task_id: t.id, message: "Check the lexer too" },
     );
 
     assert.equal(sent.state, "started");
 
-    const next = await parent<Messages>("get_agent_messages", {
+    const next = await parent<Messages>("list_messages", {
       task_id: t.id,
       after: all.next_cursor,
       wait_seconds: 5,
@@ -238,7 +238,7 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     await until(() => store.get(t.id, "alice").status === "completed");
 
     const task = await parent<Task & { reply: { turn: number; text: string } }>(
-      "get_agent_task",
+      "get_task",
       { task_id: t.id },
     );
 
@@ -248,7 +248,7 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
 
     const [listed] = await parent<
       (Task & { reply: unknown; queued_messages: number })[]
-    >("list_agent_tasks", {});
+    >("list_tasks", {});
 
     assert.ok(listed);
     assert.deepEqual(listed.reply, task.reply);
@@ -300,7 +300,7 @@ test("the user can steer an existing queued message and its original sender surv
     const task = await start("[slow]");
     await until(() => store.get(task.id, "alice").status === "running");
 
-    const queued = await parent<{ message_id: string }>("send_agent_message", {
+    const queued = await parent<{ message_id: string }>("send_message", {
       task_id: task.id,
       message: "Original parent note",
       delivery: "queue",
@@ -347,12 +347,12 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
     await until(() => !!store.get(t.id, "alice").pending_input);
 
     await assert.rejects(
-      parent("send_agent_message", { task_id: t.id, message: "Steer" }),
+      parent("send_message", { task_id: t.id, message: "Steer" }),
       /waiting for input/,
     );
 
     const queued = await parent<{ message_id: string; state: string }>(
-      "send_agent_message",
+      "send_message",
       { task_id: t.id, message: "Queued by parent", delivery: "queue" },
     );
 
@@ -370,13 +370,13 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
     );
 
     assert.equal(
-      (await parent<Messages>("get_agent_messages", { task_id: t.id }))
+      (await parent<Messages>("list_messages", { task_id: t.id }))
         .queued_messages,
       2,
     );
 
     await assert.rejects(
-      parent("remove_agent_queued_message", {
+      parent("remove_queued_message", {
         task_id: t.id,
         message_id: mine.message_id,
       }),
@@ -389,7 +389,7 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
       message: "Edited",
     });
 
-    await parent("remove_agent_queued_message", {
+    await parent("remove_queued_message", {
       task_id: t.id,
       message_id: queued.message_id,
     });
@@ -400,7 +400,7 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
     );
 
     // Interrupt pauses the queue; resume starts it; clear empties it.
-    await parent("interrupt_agent_task", { task_id: t.id });
+    await parent("interrupt_task", { task_id: t.id });
     assert.equal(store.get(t.id, "alice").queue_paused, true);
     await user("app_resume_queue", { task_id: t.id });
     await until(() => store.get(t.id, "alice").status === "completed");
@@ -429,14 +429,14 @@ test("interrupt with send_pending sends the pending steers as the next turn", as
     const t = await start("[late]");
     await until(() => store.get(t.id, "alice").status === "running");
 
-    const steer = await parent<{ state: string }>("send_agent_message", {
+    const steer = await parent<{ state: string }>("send_message", {
       task_id: t.id,
       message: "Now this",
     });
 
     assert.equal(steer.state, "pending_steer");
 
-    await parent("interrupt_agent_task", {
+    await parent("interrupt_task", {
       task_id: t.id,
       send_pending: true,
     });
@@ -479,14 +479,13 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
 
     // Task reads include it as a fallback.
     assert.deepEqual(
-      (await parent<{ draft: unknown }>("get_agent_task", { task_id: t.id }))
-        .draft,
+      (await parent<{ draft: unknown }>("get_task", { task_id: t.id })).draft,
       read.draft,
     );
 
     // A parent's read that waits out its time includes it.
     const messages = await parent<Messages & { draft?: unknown }>(
-      "get_agent_messages",
+      "list_messages",
       { task_id: t.id, after: store.lastEventId(t.id), wait_seconds: 0.1 },
     );
 
@@ -662,13 +661,13 @@ test("acknowledgement after claim records a skipped delivery through app tools",
       attempt_id: number;
     }>("app_claim_parent_message", { conversation_id: "parent-chat" });
 
-    await parent("ack_agent_message", {
+    await parent("acknowledge_message", {
       task_id: task.id,
       message_id: claimed.message_id,
     });
 
     const report = await user<{ message: { acknowledged?: true } }>(
-      "get_agent_message",
+      "get_message",
       { task_id: task.id, message_id: claimed.message_id },
     );
 
@@ -719,7 +718,7 @@ test.each(["poll-first", "notification-first"])(
 
       const poll = () =>
         parent<Messages & { messages: { parent_message?: true }[] }>(
-          "get_agent_messages",
+          "list_messages",
           { task_id: task.id, after: before },
         );
 
@@ -754,18 +753,18 @@ test.each(["poll-first", "notification-first"])(
 
       expect(notification).toMatchObject({ task_id: task.id, message_id: id });
       expect(notification.text).toContain("already processed");
-      expect(notification.text).toContain("get_agent_message");
+      expect(notification.text).toContain("get_message");
       expect(notification.text).not.toContain("An explicit worker report.");
 
       // Advancing the polling cursor does not remove the stored report's lookup route.
-      const quiet = await parent<Messages>("get_agent_messages", {
+      const quiet = await parent<Messages>("list_messages", {
         task_id: task.id,
         after: polled.next_cursor,
       });
 
       expect(quiet.messages).toEqual([]);
 
-      const exact = await parent<{ message: unknown }>("get_agent_message", {
+      const exact = await parent<{ message: unknown }>("get_message", {
         task_id: task.id,
         message_id: id,
       });
@@ -776,7 +775,7 @@ test.each(["poll-first", "notification-first"])(
         store.eventsOfTypes(task.id, ["parent.message_acknowledged"]),
       ).toEqual([]);
 
-      const acknowledged = await parent("ack_agent_message", {
+      const acknowledged = await parent("acknowledge_message", {
         task_id: task.id,
         message_id: id,
       });
@@ -788,7 +787,7 @@ test.each(["poll-first", "notification-first"])(
         already_acknowledged: false,
       });
 
-      const afterAck = await parent<{ message: unknown }>("get_agent_message", {
+      const afterAck = await parent<{ message: unknown }>("get_message", {
         task_id: task.id,
         message_id: id,
       });
@@ -798,7 +797,7 @@ test.each(["poll-first", "notification-first"])(
         acknowledged: true,
       });
 
-      const replay = await parent<Messages>("get_agent_messages", {
+      const replay = await parent<Messages>("list_messages", {
         task_id: task.id,
         after: 0,
       });
@@ -807,7 +806,7 @@ test.each(["poll-first", "notification-first"])(
         afterAck.message,
       );
 
-      const afterCursor = await parent<Messages>("get_agent_messages", {
+      const afterCursor = await parent<Messages>("list_messages", {
         task_id: task.id,
         after: polled.next_cursor,
       });
@@ -819,21 +818,21 @@ test.each(["poll-first", "notification-first"])(
       );
 
       await expect(
-        parent("ack_agent_message", { task_id: task.id, message_id: id }),
+        parent("acknowledge_message", { task_id: task.id, message_id: id }),
       ).resolves.toMatchObject({ already_acknowledged: true });
 
       await expect(
         callTool(
           c,
           "bob",
-          "ack_agent_message",
+          "acknowledge_message",
           { task_id: task.id, message_id: id },
           "parent",
         ),
       ).rejects.toThrow(/Task not found/);
 
       await expect(
-        parent("get_agent_message", {
+        parent("get_message", {
           task_id: task.id,
           message_id: "parent_missing",
         }),
@@ -874,7 +873,7 @@ test("explicit parent reports wake an outstanding conversation long poll", async
 
     const pending = parent<
       Messages & { messages: { parent_message?: true }[] }
-    >("get_agent_messages", {
+    >("list_messages", {
       task_id: task.id,
       after: store.lastEventId(task.id),
       wait_seconds: 5,
@@ -920,9 +919,9 @@ test("reading reports leaves them available for host delivery, while model ackno
       text: "Processed and acknowledged",
     });
 
-    await parent("get_agent_messages", { task_id: task.id });
+    await parent("list_messages", { task_id: task.id });
 
-    await parent("get_agent_message", {
+    await parent("get_message", {
       task_id: task.id,
       message_id: `parent_${first.id}`,
     });
@@ -931,7 +930,7 @@ test("reading reports leaves them available for host delivery, while model ackno
       store.eventsOfTypes(task.id, ["parent.message_acknowledged"]),
     ).toEqual([]);
 
-    await parent("ack_agent_message", {
+    await parent("acknowledge_message", {
       task_id: task.id,
       message_id: `parent_${second.id}`,
     });
@@ -960,13 +959,11 @@ test("reading reports leaves them available for host delivery, while model ackno
 test("parent message tools publish the canonical polling and processing protocol", () => {
   const tools = definitions({} as Control, "alice");
 
-  expect(tools.get_agent_messages.description).toContain(
-    PARENT_DELEGATION_PROTOCOL,
-  );
+  expect(tools.list_messages.description).toContain(PARENT_DELEGATION_PROTOCOL);
 
-  expect(tools.get_agent_message.description).toContain(PARENT_REPORT_PROTOCOL);
+  expect(tools.get_message.description).toContain(PARENT_REPORT_PROTOCOL);
 
-  expect(tools.ack_agent_message.description).toContain(
+  expect(tools.acknowledge_message.description).toContain(
     "after you successfully process",
   );
 });
@@ -980,7 +977,7 @@ test("the panel records what the user has read, and lists show what they haven't
 
     const listed = async () =>
       (
-        await parent<ListedTask[]>("list_agent_tasks", {
+        await parent<ListedTask[]>("list_tasks", {
           conversation_id: null,
         })
       ).find((task) => task.id === t.id)?.unread;
@@ -988,7 +985,7 @@ test("the panel records what the user has read, and lists show what they haven't
     assert.equal(await listed(), true);
 
     // A task never read is new from its start.
-    const [never] = await parent<ListedTask[]>("list_agent_tasks", {
+    const [never] = await parent<ListedTask[]>("list_tasks", {
       conversation_id: null,
     });
 
@@ -1043,7 +1040,7 @@ test("the panel archives, unarchives and deletes tasks, and a follow-up unarchiv
 
     const listed = async () =>
       (
-        await parent<ListedTask[]>("list_agent_tasks", {
+        await parent<ListedTask[]>("list_tasks", {
           conversation_id: null,
         })
       ).find((task) => task.id === t.id)?.archived_at;
@@ -1062,7 +1059,7 @@ test("the panel archives, unarchives and deletes tasks, and a follow-up unarchiv
     assert.equal(typeof archivedAt, "string");
 
     // Sending a message runs the task again, so it's listed again.
-    await parent("send_agent_message", { task_id: t.id, message: "Again" });
+    await parent("send_message", { task_id: t.id, message: "Again" });
     assert.equal(await listed(), undefined);
 
     await until(() => store.get(t.id, "alice").status === "completed");

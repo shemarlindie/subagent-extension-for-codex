@@ -139,7 +139,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   );
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    transport.calls.filter((call) => call.name === "start_task").length,
     0,
   );
 
@@ -271,8 +271,7 @@ test("delegation selects support keyboard choice and Escape preserves the draft 
 
   await waitFor(() =>
     assert.equal(
-      transport.calls.find((call) => call.name === "start_agent_task")?.args
-        .provider,
+      transport.calls.find((call) => call.name === "start_task")?.args.provider,
       "fixture",
     ),
   );
@@ -312,7 +311,7 @@ test("dependency multiselect retains multiple choices until explicit submission"
 
   await waitFor(() =>
     assert.deepEqual(
-      transport.calls.find((call) => call.name === "start_agent_task")?.args
+      transport.calls.find((call) => call.name === "start_task")?.args
         .depends_on,
       ["one", "two"],
     ),
@@ -340,7 +339,7 @@ test("approved parent project suggestions allow an unlisted nested repository pa
 
   await waitFor(() =>
     assert.equal(
-      transport.calls.find((call) => call.name === "start_agent_task")?.args
+      transport.calls.find((call) => call.name === "start_task")?.args
         .repository,
       "/approved/new/nested-repo",
     ),
@@ -380,7 +379,7 @@ test("approved parent project suggestions find saved names and submit the select
 
   await waitFor(() =>
     expect(
-      transport.calls.find((call) => call.name === "start_agent_task")?.args
+      transport.calls.find((call) => call.name === "start_task")?.args
         .repository,
     ).toBe("/approved/client"),
   );
@@ -412,7 +411,7 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   await screen.findByText("Runtime limit must be greater than zero.");
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    transport.calls.filter((call) => call.name === "start_task").length,
     0,
   );
 
@@ -425,7 +424,7 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
+    transport.calls.filter((call) => call.name === "start_task").length,
     0,
   );
 
@@ -435,8 +434,7 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
 
   await waitFor(() =>
     assert.deepEqual(
-      transport.calls.find((call) => call.name === "start_agent_task")?.args
-        .budget,
+      transport.calls.find((call) => call.name === "start_task")?.args.budget,
       { max_runtime_minutes: 1, max_cost_usd: 0.01 },
     ),
   );
@@ -465,7 +463,7 @@ test("permission buttons allow explicit inline approval without a dropdown", asy
 
   await waitFor(() =>
     assert.equal(
-      transport.calls.find((call) => call.name === "submit_agent_input")?.args
+      transport.calls.find((call) => call.name === "submit_input")?.args
         .approved,
       true,
     ),
@@ -525,19 +523,15 @@ test("delegation uses the extension permission setting by default and separately
 
   await waitFor(() =>
     assert.equal(
-      (
-        transport.calls.find((call) => call.name === "start_agent_task")
-          ?.args as any
-      ).provider_options.claude.approval_decider,
+      (transport.calls.find((call) => call.name === "start_task")?.args as any)
+        .provider_options.claude.approval_decider,
       "parent_agent",
     ),
   );
 
   assert.equal(
-    (
-      transport.calls.find((call) => call.name === "start_agent_task")
-        ?.args as any
-    ).provider_options.claude.permission_mode,
+    (transport.calls.find((call) => call.name === "start_task")?.args as any)
+      .provider_options.claude.permission_mode,
     "acceptEdits",
   );
 });
@@ -555,7 +549,7 @@ test("the new-task composer starts the task and keeps typing focus in Chat", asy
 
   await waitFor(() =>
     assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
+      transport.calls.filter((call) => call.name === "start_task").length,
       1,
     ),
   );
@@ -615,7 +609,7 @@ test("More options preserves a pending composer draft and fills Advanced task de
     const original = transport.tool.bind(transport);
 
     transport.tool = async <T>(name: string, args = {}): Promise<T> => {
-      if (name === "get_agent_settings") {
+      if (name === "get_settings") {
         transport.calls.push({ name, args });
 
         return (await settings.promise) as T;
@@ -677,7 +671,7 @@ test("More options preserves a pending composer draft and fills Advanced task de
 
   await waitFor(() => {
     const submissions = transport.calls.filter(
-      (call) => call.name === "start_agent_task",
+      (call) => call.name === "start_task",
     );
 
     expect(submissions).toHaveLength(1);

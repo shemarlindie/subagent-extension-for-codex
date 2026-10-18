@@ -65,7 +65,7 @@ export const startSchema = z.object({
     .regex(/^[a-z][a-z0-9_-]{0,39}$/)
     .default("claude")
     .describe(
-      "Worker provider id from list_available_workers; only enabled providers can run.",
+      "Worker provider id from list_workers; only enabled providers can run.",
     ),
   worker_profile: z.enum(roles).default("reviewer"),
   model: modelNameSchema
@@ -85,7 +85,7 @@ export const startSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "Explicit absolute Git repository root approved by list_agent_projects.",
+      "Explicit absolute Git repository root approved by list_projects.",
     ),
   revision: z.string().default("HEAD"),
   conversation_id: z.string().optional(),

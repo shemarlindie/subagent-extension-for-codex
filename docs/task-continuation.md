@@ -25,7 +25,7 @@ control execution authority.
 
 ## Continue a task
 
-Send a message in Chat, or use `send_agent_message` from the parent agent, to
+Send a message in Chat, or use `send_message` from the parent agent, to
 start another turn on a completed, failed or interrupted task. Running turns
 also accept queued messages and steers. See the
 [panel conversation controls](panel-guide.md).
@@ -84,7 +84,7 @@ Keep development services on their own `CODEX_SUBAGENT_EXTENSION_DATA` and
 
 Runtime and cost limits accumulate across turns. Use the budget controls in
 Chat to apply a higher limit while the task is idle, without sending a message.
-A continuation can also carry a `budget` update through `send_agent_message`.
+A continuation can also carry a `budget` update through `send_message`.
 
 Each limit can only increase. `null` removes it, and an unlimited limit cannot
 be replaced with a finite one. Applying a budget without a message requires at

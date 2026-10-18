@@ -40,7 +40,7 @@ export function ProjectArchive({
     [pending, setPending] = useState(false);
 
   const load = useCallback(async () => {
-    const listed = await controller.tool<Task[]>("list_agent_tasks", {
+    const listed = await controller.tool<Task[]>("list_tasks", {
       conversation_id: null,
       repository,
     });

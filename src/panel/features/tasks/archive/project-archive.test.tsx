@@ -39,7 +39,7 @@ function setup() {
     .spyOn(controller, "tool")
     .mockImplementation((name: string) =>
       Promise.resolve(
-        name === "list_agent_tasks"
+        name === "list_tasks"
           ? [
               archived("old", "2026-01-01T00:00:00Z"),
               task("listed"),
@@ -55,8 +55,7 @@ function setup() {
     </ControllerContext.Provider>,
   );
 
-  const calls = () =>
-    tool.mock.calls.filter(([name]) => name !== "list_agent_tasks");
+  const calls = () => tool.mock.calls.filter(([name]) => name !== "list_tasks");
 
   return { view, calls };
 }

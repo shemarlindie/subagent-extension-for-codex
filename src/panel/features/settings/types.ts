@@ -20,7 +20,7 @@ export type Defaults = {
 export type SettingValue = string | number | boolean | null;
 
 /**
- * `get_agent_settings` as the dialog reads it: current values, the defaults a
+ * `get_settings` as the dialog reads it: current values, the defaults a
  * reset restores, and the sections and rows to show. The JSON `schema` is for
  * agents; the dialog ignores it.
  */

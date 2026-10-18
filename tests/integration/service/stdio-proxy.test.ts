@@ -79,7 +79,7 @@ test("the proxy completes the MCP handshake while the service is still starting"
   const client = await proxy(t, port);
   const { tools } = await client.listTools();
 
-  assert.ok(tools.some((tool) => tool.name === "start_agent_task"));
+  assert.ok(tools.some((tool) => tool.name === "start_task"));
 
   assert.ok(
     Date.now() < readyAt,
@@ -88,7 +88,7 @@ test("the proxy completes the MCP handshake while the service is still starting"
 
   // The first call waits for the service to become ready.
   const result = await client.callTool({
-    name: "list_agent_projects",
+    name: "list_projects",
     arguments: {},
   });
 

@@ -19,7 +19,7 @@ test("settings opens before its read and keeps its section across scope changes"
   const settingsRead = deferred<{ sections: never[]; values: Defaults }>();
 
   transport.handler = (name) =>
-    name === "get_agent_settings" ? settingsRead.promise : undefined;
+    name === "get_settings" ? settingsRead.promise : undefined;
 
   await controller.settings();
   assert.equal(controller.getSnapshot().dialog?.kind, "settings-loading");
@@ -84,7 +84,7 @@ test("delegation project lookup discarded when conversation changes", async (t) 
   const gate = deferred<{ values: Defaults }>();
 
   transport.handler = (name) =>
-    name === "get_agent_settings" ? gate.promise : undefined;
+    name === "get_settings" ? gate.promise : undefined;
 
   const opening = controller.delegate();
   await flush();
@@ -248,7 +248,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
     await controller.addChatProjectForTask("/repo/a");
 
     transport.handler = (name) => {
-      if (name === "list_agent_projects") {
+      if (name === "list_projects") {
         return [
           ...transport.projects,
           { repository: "/repo/chat", kind: "repository" },

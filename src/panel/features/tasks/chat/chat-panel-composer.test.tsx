@@ -325,7 +325,7 @@ test("while a turn runs, Cmd/Ctrl+Enter steers, Enter queues, and an empty compo
         request_id: expect.any(String),
       },
     ],
-    ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
+    ["interrupt_task", { task_id: "task-1", send_pending: false }],
   ]);
 });
 
@@ -576,8 +576,8 @@ test("Stop moves continuously between expanded and collapsed composer layouts an
 
   await waitFor(() =>
     expect(sent(tool)).toEqual([
-      ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
-      ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
+      ["interrupt_task", { task_id: "task-1", send_pending: false }],
+      ["interrupt_task", { task_id: "task-1", send_pending: false }],
     ]),
   );
 });
@@ -624,7 +624,7 @@ for (const pending_input of [
 
     await waitFor(() =>
       expect(sent(tool)).toEqual([
-        ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
+        ["interrupt_task", { task_id: "task-1", send_pending: false }],
       ]),
     );
   });
@@ -794,7 +794,7 @@ test("questions collapse the composer while preserving its draft and Stop action
 
   await waitFor(() =>
     expect(sent(tool)).toEqual([
-      ["interrupt_agent_task", { task_id: "task-1", send_pending: false }],
+      ["interrupt_task", { task_id: "task-1", send_pending: false }],
     ]),
   );
 

@@ -111,13 +111,10 @@ test.each([
 
         expect(wrongToken.status).toBe(401);
 
-        const unauthenticated = await fetch(
-          `${base}/api/tools/list_agent_tasks`,
-          {
-            method: "POST",
-            headers: { Origin: lanOrigin },
-          },
-        );
+        const unauthenticated = await fetch(`${base}/api/tools/list_tasks`, {
+          method: "POST",
+          headers: { Origin: lanOrigin },
+        });
 
         expect(unauthenticated.status).toBe(401);
 
@@ -125,7 +122,7 @@ test.each([
 
         assert(session);
 
-        const csrf = await fetch(`${base}/api/tools/list_agent_tasks`, {
+        const csrf = await fetch(`${base}/api/tools/list_tasks`, {
           method: "POST",
           headers: { Origin: lanOrigin, Cookie: session },
         });
@@ -133,19 +130,16 @@ test.each([
         expect(csrf.status).toBe(403);
         expect(await csrf.json()).toEqual({ error: "CSRF header required" });
 
-        const authenticated = await fetch(
-          `${base}/api/tools/list_agent_tasks`,
-          {
-            method: "POST",
-            headers: {
-              Origin: lanOrigin,
-              Cookie: session,
-              "X-Codex-Subagent-Extension": "1",
-              "Content-Type": "application/json",
-            },
-            body: "{}",
+        const authenticated = await fetch(`${base}/api/tools/list_tasks`, {
+          method: "POST",
+          headers: {
+            Origin: lanOrigin,
+            Cookie: session,
+            "X-Codex-Subagent-Extension": "1",
+            "Content-Type": "application/json",
           },
-        );
+          body: "{}",
+        });
 
         expect(authenticated.status).toBe(200);
         expect(await authenticated.json()).toEqual({ result: [] });

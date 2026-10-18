@@ -74,7 +74,7 @@ test("a call to a stopped service reconnects and is sent again", async (t) => {
   const client = serviceClient(connect);
 
   const response = await client.post(
-    "tools/start_agent_task",
+    "tools/start_task",
     {},
     {
       timeout: 5000,
@@ -93,7 +93,7 @@ test("a reset write is not sent again, but a reset read is", async (t) => {
 
   await assert.rejects(
     serviceClient(write.connect).post(
-      "tools/start_agent_task",
+      "tools/start_task",
       {},
       {
         timeout: 5000,
@@ -107,7 +107,7 @@ test("a reset write is not sent again, but a reset read is", async (t) => {
   const read = connections(exiting.connection, live.connection);
 
   const response = await serviceClient(read.connect).post(
-    "tools/list_agent_tasks",
+    "tools/list_tasks",
     {},
     { timeout: 5000, readOnly: true },
   );
@@ -127,12 +127,12 @@ test("a failed connection attempt is forgotten, and a slow one times out", async
   });
 
   await assert.rejects(
-    client.post("tools/list_agent_tasks", {}, { timeout: 5000 }),
+    client.post("tools/list_tasks", {}, { timeout: 5000 }),
     /Service startup failed/,
   );
 
   const response = await client.post(
-    "tools/list_agent_tasks",
+    "tools/list_tasks",
     {},
     {
       timeout: 5000,
@@ -144,7 +144,7 @@ test("a failed connection attempt is forgotten, and a slow one times out", async
   const slow = serviceClient(() => new Promise(() => {}), 50);
 
   await assert.rejects(
-    slow.post("tools/list_agent_tasks", {}, { timeout: 5000 }),
+    slow.post("tools/list_tasks", {}, { timeout: 5000 }),
     /did not start within 0\.05 s/,
   );
 });

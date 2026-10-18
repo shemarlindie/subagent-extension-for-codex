@@ -28,7 +28,7 @@ export function claimParentMessage(
       attempt_id: attempt.id,
       message_id: messageId,
       conversation_id: conversation,
-      text: `Delegated worker message available. Task ID: ${task.id}. Message ID: ${messageId}. Retrieve with get_agent_message(${JSON.stringify({ task_id: task.id, message_id: messageId })}) unless already processed. ${PARENT_REPORT_PROTOCOL}`,
+      text: `Delegated worker message available. Task ID: ${task.id}. Message ID: ${messageId}. Retrieve with get_message(${JSON.stringify({ task_id: task.id, message_id: messageId })}) unless already processed. ${PARENT_REPORT_PROTOCOL}`,
     };
   });
 }

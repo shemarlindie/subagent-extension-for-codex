@@ -121,7 +121,7 @@ test("Ask Codex about an older reply prepares that reply and sends only the edit
   expect(field.value).toContain("Earlier reply about the authentication bug.");
   expect(field.value).not.toContain("Latest reply is unrelated");
   expect(field.value).toContain("/repo/a");
-  expect(field.value).toContain("get_agent_messages");
+  expect(field.value).toContain("list_messages");
   expect(transport.messages).toEqual([]);
   const sharedBeforeRefresh = [...transport.shared];
   await act(() => controller.refresh());

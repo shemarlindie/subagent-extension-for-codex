@@ -140,11 +140,11 @@ export class Controller {
   /** When workers were last read, so a CLI that breaks mid-session still shows. */
   private workersReadAt = 0;
   private readProjects = sharedRequest(() =>
-    this.tool<Project[]>("list_agent_projects"),
+    this.tool<Project[]>("list_projects"),
   );
 
   private readWorkers = sharedRequest(() =>
-    this.tool<Worker[]>("list_available_workers"),
+    this.tool<Worker[]>("list_workers"),
   );
 
   /** What the new-task forms share: state access and the reads they need. */
@@ -548,7 +548,7 @@ export class Controller {
 
     try {
       if (!this.state.scopeKnown) {
-        const context = await this.tool<PanelData>("get_agent_panel_context", {
+        const context = await this.tool<PanelData>("get_panel_context", {
           conversation_id: null,
         });
 
@@ -599,7 +599,7 @@ export class Controller {
       }
 
       if (this.state.conversation && removedProjects.length) {
-        const context = await this.tool<PanelData>("get_agent_panel_context", {
+        const context = await this.tool<PanelData>("get_panel_context", {
           conversation_id: this.state.conversation,
         });
 
@@ -645,7 +645,7 @@ export class Controller {
 
       const { conversation, repository } = this.state;
 
-      const next = await this.tool<Task[]>("list_agent_tasks", {
+      const next = await this.tool<Task[]>("list_tasks", {
         conversation_id: conversation ?? null,
         ...(repository ? { repository } : {}),
       });
@@ -1453,7 +1453,7 @@ export class Controller {
       { repository },
     );
 
-    const projects = await this.tool<Project[]>("list_agent_projects");
+    const projects = await this.tool<Project[]>("list_projects");
 
     return { repository: registered.repository, projects };
   }

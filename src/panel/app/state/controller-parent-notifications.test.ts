@@ -194,7 +194,7 @@ test("controller waits for known conversation scope before claiming parent notif
   const claim = claimOnce();
 
   transport.handler = (name) => {
-    if (name === "get_agent_panel_context") return context.promise;
+    if (name === "get_panel_context") return context.promise;
     if (name === "app_claim_parent_message") return claim();
     if (name === "app_record_parent_delivery") return {};
 
@@ -262,7 +262,7 @@ test("the fallback refresh still delivers parent messages while a hidden panel's
   environment.hidden = () => true;
 
   const listReads = transport.calls.filter(
-    (call) => call.name === "list_agent_tasks",
+    (call) => call.name === "list_tasks",
   ).length;
 
   vi.advanceTimersByTime(30000);
@@ -274,6 +274,6 @@ test("the fallback refresh still delivers parent messages while a hidden panel's
   );
 
   expect(
-    transport.calls.filter((call) => call.name === "list_agent_tasks"),
+    transport.calls.filter((call) => call.name === "list_tasks"),
   ).toHaveLength(listReads);
 });

@@ -96,7 +96,7 @@ export async function connectService() {
       );
     }
 
-    const auth = await fetch(`${origin}/api/tools/list_agent_projects`, {
+    const auth = await fetch(`${origin}/api/tools/list_projects`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token()}`,

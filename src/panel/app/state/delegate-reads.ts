@@ -60,7 +60,7 @@ export function startDelegateReads(
 
   if (statuses.settings === "loading") {
     void context
-      .tool<{ values: Defaults }>("get_agent_settings")
+      .tool<{ values: Defaults }>("get_settings")
       .then(
         ({ values }) => update("settings", "ready", { defaults: values }),
         failed("settings"),

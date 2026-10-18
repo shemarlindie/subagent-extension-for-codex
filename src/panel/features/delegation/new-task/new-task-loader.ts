@@ -134,7 +134,7 @@ export class NewTaskLoader {
       await this.context.addChatProjectForTask(values.repository);
 
       task = await this.context.tool<Task>(
-        "start_agent_task",
+        "start_task",
         startTaskArguments(values, state.workers, state.conversation),
       );
     } catch (error) {

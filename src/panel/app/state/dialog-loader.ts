@@ -153,7 +153,7 @@ export class DialogLoader {
   private async loadSettings(dialog: SettingsLoading) {
     try {
       const settings =
-        await this.context.tool<SettingsDocument>("get_agent_settings");
+        await this.context.tool<SettingsDocument>("get_settings");
 
       if (!this.isSettingsRequest(dialog.request)) return;
 

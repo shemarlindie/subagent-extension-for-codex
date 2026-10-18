@@ -81,7 +81,7 @@ test("console default fetch preserves the browser receiver", async () => {
 
   try {
     const transport = new ConsoleTransport("https://console.example");
-    assert.deepEqual(await transport.tool("list_agent_tasks"), { ok: true });
+    assert.deepEqual(await transport.tool("list_tasks"), { ok: true });
     await transport.login("local-token");
   } finally {
     globalThis.fetch = original;
@@ -108,7 +108,7 @@ test("console requests use browser credentials and required headers for tools an
   await transport.connect(events);
 
   assert.deepEqual(
-    await transport.tool("list_agent_tasks", { conversation_id: null }),
+    await transport.tool("list_tasks", { conversation_id: null }),
     { ok: true },
   );
 
@@ -117,7 +117,7 @@ test("console requests use browser credentials and required headers for tools an
   assert.deepEqual(
     calls.map((call) => call.url),
     [
-      "https://console.example/api/tools/list_agent_tasks",
+      "https://console.example/api/tools/list_tasks",
       "https://console.example/api/login",
     ],
   );
@@ -144,7 +144,7 @@ test("console requests use browser credentials and required headers for tools an
   });
 
   transport.dispose();
-  await assert.rejects(transport.tool("list_agent_tasks"), /closed/);
+  await assert.rejects(transport.tool("list_tasks"), /closed/);
   assert.equal(calls.length, 2);
 });
 
@@ -156,18 +156,12 @@ test("console authentication failure requests login and server failures retain t
   const observed = callbacks();
   await transport.connect(observed.events);
 
-  await assert.rejects(
-    transport.tool("list_agent_tasks"),
-    /Connect the console/,
-  );
+  await assert.rejects(transport.tool("list_tasks"), /Connect the console/);
 
   assert.equal(observed.counts().logins, 1);
   response = Response.json({ error: "Project unavailable" }, { status: 500 });
 
-  await assert.rejects(
-    transport.tool("list_agent_projects"),
-    /Project unavailable/,
-  );
+  await assert.rejects(transport.tool("list_projects"), /Project unavailable/);
 
   transport.dispose();
 });
@@ -183,7 +177,7 @@ test.each([undefined, false, true])(
     );
 
     const failure = await transport
-      .tool("send_agent_message")
+      .tool("send_message")
       .catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(Error);
@@ -359,7 +353,7 @@ test("host folder browsing allows native interaction time while ordinary tools u
   });
 
   assert.deepEqual(fake.toolOptions[0], { timeout: 150000 });
-  await transport.tool("list_agent_projects");
+  await transport.tool("list_projects");
 
   await transport.tool("app_register_project", {
     repository: "/repo/new",
@@ -401,18 +395,18 @@ test("host preserves structured settings envelopes and unwraps other tools", asy
   ]);
 
   assert.deepEqual(
-    await transport.tool("list_agent_tasks", { conversation_id: null }),
+    await transport.tool("list_tasks", { conversation_id: null }),
     ["task"],
   );
 
   assert.deepEqual(fake.calls[0], {
-    name: "list_agent_tasks",
+    name: "list_tasks",
     arguments: { conversation_id: null },
   });
 
   const settings = { values: { max_runtime_minutes: 0.5, max_cost_usd: null } };
   fake.respond({ structuredContent: settings });
-  assert.deepEqual(await transport.tool("get_agent_settings"), settings);
+  assert.deepEqual(await transport.tool("get_settings"), settings);
 
   assert.deepEqual(
     await transport.tool("set_agent_settings", { max_runtime_minutes: 0.5 }),
@@ -488,18 +482,15 @@ test("host tool errors and missing structured output surface meaningful failures
   });
 
   await assert.rejects(
-    transport.tool("list_agent_projects"),
+    transport.tool("list_projects"),
     /Repository missing[\s\S]*Register it first/,
   );
 
   fake.respond({ isError: true, content: [] });
-  await assert.rejects(transport.tool("list_agent_projects"), /tool failed/);
+  await assert.rejects(transport.tool("list_projects"), /tool failed/);
   fake.respond({ content: [{ type: "text", text: "unstructured" }] });
 
-  await assert.rejects(
-    transport.tool("list_agent_tasks"),
-    /no structured data/,
-  );
+  await assert.rejects(transport.tool("list_tasks"), /no structured data/);
 
   transport.dispose();
 });
@@ -519,7 +510,7 @@ test.each([undefined, false, true])(
     });
 
     const failure = await transport
-      .tool("send_agent_message")
+      .tool("send_message")
       .catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(Error);
@@ -567,7 +558,7 @@ test("host teardown suppresses subsequent scope delivery and tools", async () =>
   });
 
   assert.deepEqual(observed.scopes, []);
-  await assert.rejects(transport.tool("list_agent_tasks"), /closed/);
+  await assert.rejects(transport.tool("list_tasks"), /closed/);
   assert.deepEqual(fake.calls, []);
 });
 
@@ -613,7 +604,7 @@ test("host routes user actions through app-only aliases and preserves settings e
       },
     });
 
-    assert.deepEqual(await transport.tool("start_agent_task", taskArgs), task);
+    assert.deepEqual(await transport.tool("start_task", taskArgs), task);
 
     const decision = {
       task_id: "created",
@@ -626,7 +617,7 @@ test("host routes user actions through app-only aliases and preserves settings e
       structuredContent: { result: { id: "created", status: "running" } },
     });
 
-    assert.deepEqual(await transport.tool("submit_agent_input", decision), {
+    assert.deepEqual(await transport.tool("submit_input", decision), {
       id: "created",
       status: "running",
     });
@@ -642,7 +633,7 @@ test("host routes user actions through app-only aliases and preserves settings e
     fake.respond({ structuredContent: settings });
 
     assert.deepEqual(
-      await transport.tool("update_agent_settings", settingsArgs),
+      await transport.tool("update_settings", settingsArgs),
       settings,
     );
 

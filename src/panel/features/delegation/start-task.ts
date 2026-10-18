@@ -3,7 +3,7 @@ import type { Worker } from "../../app/state/types";
 import type { DelegateValues } from "./delegate-values";
 import { workerChoice } from "./delegation";
 
-/** The `start_agent_task` arguments for a new task's form values. */
+/** The `start_task` arguments for a new task's form values. */
 export function startTaskArguments(
   values: DelegateValues,
   workers: Worker[],

@@ -120,7 +120,7 @@ test("settings page renders server sections and saves only changed fields", asyn
   assert.ok(screen.getByRole("heading", { name: "Settings" }));
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "update_agent_settings")!.args,
+    transport.calls.find((call) => call.name === "update_settings")!.args,
     {
       set: {
         claude_subagents: false,
@@ -165,7 +165,7 @@ test("settings edits made during a save remain as unsaved changes", async (t) =>
 
   transport.tool = async <T>(name: string, args = {}) => {
     const result = await original<T>(name, args);
-    if (name === "update_agent_settings") await updateGate;
+    if (name === "update_settings") await updateGate;
 
     return result;
   };
@@ -188,7 +188,7 @@ test("settings edits made during a save remain as unsaved changes", async (t) =>
   ).toBe("true");
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "update_agent_settings")?.args,
+    transport.calls.find((call) => call.name === "update_settings")?.args,
     { set: { claude_subagents: false } },
   );
 });
@@ -245,7 +245,7 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
   );
 
   assert.equal(
-    transport.calls.some((call) => call.name === "update_agent_settings"),
+    transport.calls.some((call) => call.name === "update_settings"),
     false,
   );
 
@@ -282,7 +282,7 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
   await waitFor(() => expect(document.activeElement).toBe(amount));
 
   assert.equal(
-    transport.calls.some((call) => call.name === "update_agent_settings"),
+    transport.calls.some((call) => call.name === "update_settings"),
     false,
   );
 
@@ -291,7 +291,7 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
   await waitForSettingsSaved();
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "update_agent_settings")!.args,
+    transport.calls.find((call) => call.name === "update_settings")!.args,
     {
       set: {
         use_cost_budget: true,
@@ -325,7 +325,7 @@ test("settings explains invalid disabled budgets and lets the user restore editi
   await waitFor(() => expect(document.activeElement).toBe(toggle));
 
   assert.equal(
-    transport.calls.some((call) => call.name === "update_agent_settings"),
+    transport.calls.some((call) => call.name === "update_settings"),
     false,
   );
 
@@ -337,7 +337,7 @@ test("settings explains invalid disabled budgets and lets the user restore editi
   await waitForSettingsSaved();
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "update_agent_settings")!.args,
+    transport.calls.find((call) => call.name === "update_settings")!.args,
     { set: { use_cost_budget: false, max_cost_usd: 8 } },
   );
 });
@@ -480,7 +480,7 @@ test("settings resets restore defaults only per section", async (t) => {
   await waitForSettingsSaved();
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "update_agent_settings")!.args,
+    transport.calls.find((call) => call.name === "update_settings")!.args,
     {
       set: {
         claude_subagents: true,
@@ -646,7 +646,7 @@ test("leaving settings with unsaved edits asks before discarding them", async (t
   );
 
   assert.equal(
-    transport.calls.some((call) => call.name === "update_agent_settings"),
+    transport.calls.some((call) => call.name === "update_settings"),
     false,
   );
 });

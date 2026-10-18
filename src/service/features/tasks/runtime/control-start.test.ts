@@ -304,7 +304,7 @@ test("task tools honor defaults and explicit overrides without changing existing
     },
   });
 
-  const task: any = await callTool(c, "alice", "start_agent_task", {
+  const task: any = await callTool(c, "alice", "start_task", {
     repository: repo,
     description: "Test default merge",
     budget: { max_cost_usd: 1 },
@@ -317,7 +317,7 @@ test("task tools honor defaults and explicit overrides without changing existing
   c.settings.update("alice", { set: { max_runtime_minutes: 7 } });
   assert.equal(c.store.get(task.id, "alice").budget.max_runtime_minutes, 9);
 
-  const other: any = await callTool(c, "bob", "start_agent_task", {
+  const other: any = await callTool(c, "bob", "start_task", {
     repository: repo,
     title: "Other owner defaults",
     description: "Other owner defaults",

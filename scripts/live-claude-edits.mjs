@@ -137,18 +137,13 @@ async function waitForTask(control, store, task, timeoutMs = 185000) {
 async function recordedChanges(control, id, scope = "task") {
   const args = { task_id: id, scope };
 
-  const first = await callTool(
-    control,
-    "verification",
-    "get_agent_changes",
-    args,
-  );
+  const first = await callTool(control, "verification", "get_changes", args);
 
   let diff = first.diff;
   let cursor = first.next_cursor;
 
   while (cursor) {
-    const page = await callTool(control, "verification", "get_agent_changes", {
+    const page = await callTool(control, "verification", "get_changes", {
       ...args,
       cursor,
     });

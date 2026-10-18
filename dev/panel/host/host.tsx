@@ -63,17 +63,17 @@ const fixtureReadDelayMs = 1200;
 
 // Keep mutations out of this list so the inspection toggle never delays writes.
 const fixtureReadTools = new Set([
-  "get_agent_changed_file",
-  "get_agent_changes",
-  "get_agent_panel_context",
-  "get_agent_settings",
+  "get_changed_file",
+  "get_changes",
+  "get_panel_context",
+  "get_settings",
   "app_get_activity",
   "app_get_change_counts",
   "app_get_chat",
   "app_get_turn_activity",
-  "list_agent_projects",
-  "list_agent_tasks",
-  "list_available_workers",
+  "list_projects",
+  "list_tasks",
+  "list_workers",
   "app_wait_for_updates",
 ]);
 
@@ -129,7 +129,7 @@ function hostContext(settings: Settings): McpUiHostContext {
 }
 
 const fixtureThreads = threadsOf(
-  previewTool("list_agent_tasks", { conversation_id: null }) as Task[],
+  previewTool("list_tasks", { conversation_id: null }) as Task[],
 );
 
 // The only export, so Fast Refresh can swap it in place. main.tsx mounts it.
@@ -307,7 +307,7 @@ export function Host() {
       void service()
         .then((connection) =>
           connection.callTool({
-            name: "list_agent_tasks",
+            name: "list_tasks",
             arguments: { conversation_id: null },
           }),
         )

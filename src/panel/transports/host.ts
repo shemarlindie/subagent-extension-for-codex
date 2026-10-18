@@ -121,11 +121,11 @@ export class HostTransport implements Transport {
     if (this.disposed) throw new Error("The console has closed.");
 
     const userTools: Record<string, string> = {
-      start_agent_task: "app_start_task",
-      submit_agent_input: "app_submit_input",
-      send_agent_message: "app_send_message",
-      remove_agent_queued_message: "app_remove_queued_message",
-      update_agent_settings: "app_update_settings",
+      start_task: "app_start_task",
+      submit_input: "app_submit_input",
+      send_message: "app_send_message",
+      remove_queued_message: "app_remove_queued_message",
+      update_settings: "app_update_settings",
     };
 
     const result = await this.app.callServerTool(
@@ -151,7 +151,7 @@ export class HostTransport implements Transport {
 
     if (!body) throw new Error("The service returned no structured data.");
 
-    return name.endsWith("_agent_settings")
+    return name.endsWith("_settings")
       ? (body as T)
       : decodePanelToolResult<T>(name, body.result);
   }

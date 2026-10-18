@@ -297,7 +297,7 @@ test("permission decisions submit the request id and optional worker message", a
     await actions.decidePermission(pending, true, "Run only the checks."),
   ).toBeUndefined();
 
-  expect(context.tool).toHaveBeenCalledExactlyOnceWith("submit_agent_input", {
+  expect(context.tool).toHaveBeenCalledExactlyOnceWith("submit_input", {
     task_id: "task-1",
     request_id: "request-1",
     approved: true,
@@ -310,7 +310,7 @@ test("an answered question is forgotten before the task reloads", async () => {
 
   expect(await actions.answer(question, { Pick: "A" })).toBeUndefined();
 
-  expect(context.tool).toHaveBeenCalledWith("submit_agent_input", {
+  expect(context.tool).toHaveBeenCalledWith("submit_input", {
     task_id: "task-1",
     request_id: "request-1",
     approved: true,

@@ -164,7 +164,7 @@ export async function httpFixture(t: TestContext) {
 
       for (const name of [
         "open_codex_subagent_extension",
-        "get_agent_panel_context",
+        "get_panel_context",
       ]) {
         const selected = await transportClient.callTool({
           name,
@@ -179,7 +179,7 @@ export async function httpFixture(t: TestContext) {
         );
 
         const context =
-          name === "get_agent_panel_context"
+          name === "get_panel_context"
             ? (panel(selected)?.result as any)
             : selected.structuredContent;
 
@@ -209,7 +209,7 @@ export async function httpFixture(t: TestContext) {
 
   const checkGlobalCreation = async (transportClient: Client) => {
     const started = await transportClient.callTool({
-      name: "start_agent_task",
+      name: "start_task",
       arguments: {
         title: "Global review [input]",
         description: "Global review [input]",

@@ -459,11 +459,11 @@ if (scenario === "edits") {
   try {
     await client.connect(transport);
     const tools = await client.listTools();
-    assert.ok(tools.tools.some((t) => t.name === "start_agent_task"));
-    const workers = await call("list_available_workers");
+    assert.ok(tools.tools.some((t) => t.name === "start_task"));
+    const workers = await call("list_workers");
     assert.ok(workers.some((w) => w.provider === "claude"));
 
-    const task = await call("start_agent_task", {
+    const task = await call("start_task", {
       ...taskBase,
       worker_profile: "reviewer",
       description:
@@ -479,7 +479,7 @@ if (scenario === "edits") {
     let completed;
 
     while (Date.now() < deadline) {
-      const current = await call("get_agent_task", { task_id: task.id });
+      const current = await call("get_task", { task_id: task.id });
 
       if (["completed", "failed", "interrupted"].includes(current.status)) {
         assert.equal(current.status, "completed", current.error);
@@ -491,7 +491,7 @@ if (scenario === "edits") {
     }
 
     assert.ok(completed, "Native MCP verification timed out");
-    const report = await call("get_agent_messages", { task_id: task.id });
+    const report = await call("list_messages", { task_id: task.id });
 
     assert.ok(
       report.messages
@@ -499,7 +499,7 @@ if (scenario === "edits") {
         .text.includes("COBALT-27"),
     );
 
-    const events = await call("get_agent_events", { task_id: task.id });
+    const events = await call("list_events", { task_id: task.id });
 
     assert.ok(
       events.some((e) => e.type === "tool.started" && e.data.name === "Read"),

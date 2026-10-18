@@ -97,7 +97,7 @@ test("only the administrator token can drain the service, which then closes conn
   assert.equal(status.status, 200);
   assert.equal(status.body.status, "draining");
 
-  const call = await post("/api/tools/list_agent_tasks", bearer);
+  const call = await post("/api/tools/list_tasks", bearer);
   assert.equal(call.status, 200);
   assert.equal(call.headers.get("connection"), "close");
 });
@@ -115,7 +115,7 @@ test("a stopping service reports it and refuses calls", async (t) => {
   assert.equal(status.status, 503);
   assert.equal(status.body.status, "stopping");
 
-  const call = await post("/api/tools/list_agent_tasks", bearer);
+  const call = await post("/api/tools/list_tasks", bearer);
   assert.equal(call.status, 503);
   assert.deepEqual(await call.json(), { error: "The service is stopping" });
 });

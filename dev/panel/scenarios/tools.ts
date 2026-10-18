@@ -469,9 +469,9 @@ export function previewTool(
       options,
     ),
     app_claim_parent_message: null,
-    get_agent_panel_context: panelContext(args, options),
-    list_agent_projects: projectsWith(options),
-    list_agent_tasks: newestFirst
+    get_panel_context: panelContext(args, options),
+    list_projects: projectsWith(options),
+    list_tasks: newestFirst
       .filter((task) => inScope(task, args))
       .map((task) => {
         const events = previewEvents.filter(
@@ -531,7 +531,7 @@ export function previewTool(
       previewEvents.filter((event) => event.task_id === args.task_id),
       Number(args.turn),
     ),
-    list_available_workers: [
+    list_workers: [
       {
         provider: "claude",
         profiles: [...roles],
@@ -548,7 +548,7 @@ export function previewTool(
       },
     ],
     // Built with the service's own section builder, so the preview matches it.
-    get_agent_settings: (() => {
+    get_settings: (() => {
       const values = {
         ...previewSettingsDefaults,
         auto_register_chat_project: options.autoRegisterChatProject ?? true,

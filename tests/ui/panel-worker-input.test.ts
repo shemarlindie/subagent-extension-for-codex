@@ -74,14 +74,13 @@ test("worker question accepts a custom answer with no preset selection", async (
 
   await waitFor(() =>
     assert.equal(
-      transport.calls.filter((call) => call.name === "submit_agent_input")
-        .length,
+      transport.calls.filter((call) => call.name === "submit_input").length,
       1,
     ),
   );
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "submit_agent_input")?.args,
+    transport.calls.find((call) => call.name === "submit_input")?.args,
     {
       task_id: "one",
       request_id: "request",
@@ -114,7 +113,7 @@ test("permission requests can be denied inline", async (t) => {
   assertAbsent(screen.queryByRole("dialog"));
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "submit_agent_input").length,
+    transport.calls.filter((call) => call.name === "submit_input").length,
     0,
   );
 
@@ -122,15 +121,13 @@ test("permission requests can be denied inline", async (t) => {
 
   await waitFor(() =>
     assert.equal(
-      transport.calls.filter((call) => call.name === "submit_agent_input")
-        .length,
+      transport.calls.filter((call) => call.name === "submit_input").length,
       1,
     ),
   );
 
   assert.equal(
-    transport.calls.find((call) => call.name === "submit_agent_input")?.args
-      .approved,
+    transport.calls.find((call) => call.name === "submit_input")?.args.approved,
     false,
   );
 });
@@ -188,7 +185,7 @@ test("worker questions submit preset multiple answers and a custom override toge
   await waitFor(() =>
     assert.deepEqual(
       (
-        transport.calls.find((call) => call.name === "submit_agent_input")?.args
+        transport.calls.find((call) => call.name === "submit_input")?.args
           .input as any
       )?.answers,
       {
@@ -226,7 +223,7 @@ test("a single worker question can be skipped and the skip undone", async (t) =>
 
   await waitFor(() =>
     assert.deepEqual(
-      transport.calls.find((call) => call.name === "submit_agent_input")?.args,
+      transport.calls.find((call) => call.name === "submit_input")?.args,
       {
         task_id: "one",
         request_id: "request",
@@ -295,7 +292,7 @@ test("a skipped stacked question sends an explicit skipped answer", async (t) =>
   await waitFor(() =>
     assert.deepEqual(
       (
-        transport.calls.find((call) => call.name === "submit_agent_input")?.args
+        transport.calls.find((call) => call.name === "submit_input")?.args
           .input as any
       )?.answers,
       { "Which format?": SKIPPED_ANSWER, "Which scope?": "Changed" },
@@ -323,7 +320,7 @@ test("a question without options answers in a text box and shows send failures i
       name: string,
       args: Record<string, unknown> = {},
     ): Promise<T> => {
-      if (name === "submit_agent_input" && failures-- > 0) {
+      if (name === "submit_input" && failures-- > 0) {
         transport.calls.push({ name, args });
         throw new Error("Input request is stale");
       }
@@ -344,14 +341,13 @@ test("a question without options answers in a text box and shows send failures i
 
   await waitFor(() =>
     assert.equal(
-      transport.calls.filter((call) => call.name === "submit_agent_input")
-        .length,
+      transport.calls.filter((call) => call.name === "submit_input").length,
       2,
     ),
   );
 
   assert.deepEqual(
-    transport.calls.findLast((call) => call.name === "submit_agent_input")?.args
+    transport.calls.findLast((call) => call.name === "submit_input")?.args
       .input,
     {
       questions: [{ question: "Which branch?" }],
@@ -399,7 +395,7 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
       name: string,
       args: Record<string, unknown> = {},
     ): Promise<T> => {
-      if (name === "submit_agent_input") {
+      if (name === "submit_input") {
         const [answered] = transport.tasks;
 
         assert.ok(answered);
@@ -457,7 +453,7 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
   await waitFor(() =>
     assert.deepEqual(
       (
-        transport.calls.find((call) => call.name === "submit_agent_input")?.args
+        transport.calls.find((call) => call.name === "submit_input")?.args
           .input as any
       )?.answers,
       {
@@ -588,7 +584,7 @@ test("stacked worker questions return to the first unanswered card before sendin
   assert.ok(screen.getByText("Question 1 of 2"));
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "submit_agent_input").length,
+    transport.calls.filter((call) => call.name === "submit_input").length,
     0,
   );
 
@@ -598,7 +594,7 @@ test("stacked worker questions return to the first unanswered card before sendin
   await waitFor(() =>
     assert.deepEqual(
       (
-        transport.calls.find((call) => call.name === "submit_agent_input")?.args
+        transport.calls.find((call) => call.name === "submit_input")?.args
           .input as any
       )?.answers,
       { "Which format?": "JSON", "Which extras?": "Docs, Examples" },
@@ -623,7 +619,7 @@ test("permission approval includes the optional message after an explicit decisi
   assertAbsent(screen.queryByRole("dialog"));
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "submit_agent_input").length,
+    transport.calls.filter((call) => call.name === "submit_input").length,
     0,
   );
 
@@ -644,7 +640,7 @@ test("permission approval includes the optional message after an explicit decisi
 
   await waitFor(() =>
     assert.deepEqual(
-      transport.calls.find((call) => call.name === "submit_agent_input")?.args,
+      transport.calls.find((call) => call.name === "submit_input")?.args,
       {
         task_id: "one",
         request_id: "message-request",

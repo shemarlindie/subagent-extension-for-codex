@@ -31,7 +31,7 @@ describe("handoffMessage", () => {
 
     expect(message).not.toContain("Latest reply.");
     expect(message).toContain('task_id="task-one"');
-    expect(message).toContain("get_agent_messages");
+    expect(message).toContain("list_messages");
     expect(message).toContain("following next_cursor");
     expect(message).toContain("Repository: /repo/auth");
     expect(message).toContain("Branch: agent/task-one");
@@ -46,8 +46,8 @@ describe("handoffMessage", () => {
 
     expect(message).toContain('File path: "src/session.ts"');
     expect(message).toContain('path="src/session.ts"');
-    expect(message).toContain("get_agent_changes");
-    expect(message).toContain("get_agent_changed_file");
+    expect(message).toContain("get_changes");
+    expect(message).toContain("get_changed_file");
 
     expect(message).toContain(
       "pass next_cursor back as cursor until all contents are read",
@@ -77,7 +77,7 @@ describe("handoffMessage", () => {
     expect(message).toContain('File path: "huge.ts"');
     expect(message).toContain("x".repeat(5000) + "… (truncated)");
     expect(message).not.toContain("x".repeat(5001));
-    expect(message).toContain("get_agent_changed_file");
+    expect(message).toContain("get_changed_file");
   });
 
   test("whole-task handoff retains the latest reply and task description", () => {
@@ -88,6 +88,6 @@ describe("handoffMessage", () => {
     );
 
     expect(message).toContain("Latest reply excerpt: Latest reply.");
-    expect(message).toContain("send_agent_message");
+    expect(message).toContain("send_message");
   });
 });

@@ -47,7 +47,7 @@ test("pending steers can be sent now, and a paused queue resumed, cleared, edite
   await click("Save");
 
   expect(sent(tool)).toEqual([
-    ["interrupt_agent_task", { task_id: "task-1", send_pending: true }],
+    ["interrupt_task", { task_id: "task-1", send_pending: true }],
     ["app_resume_queue", { task_id: "task-1" }],
     ["app_clear_queue", { task_id: "task-1" }],
     ["app_remove_queued_message", { task_id: "task-1", message_id: "msg_l" }],

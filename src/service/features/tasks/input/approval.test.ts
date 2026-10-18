@@ -91,12 +91,7 @@ test("ask_user blocks parent approval and accepts an owner user decision", async
   const { c, store, request, cleanup } = await setup();
 
   try {
-    const task = (await callTool(
-      c,
-      "alice",
-      "start_agent_task",
-      request,
-    )) as Task;
+    const task = (await callTool(c, "alice", "start_task", request)) as Task;
 
     await until(() => !!store.get(task.id, "alice").pending_input);
     const pending = store.get(task.id, "alice").pending_input!;
@@ -109,7 +104,7 @@ test("ask_user blocks parent approval and accepts an owner user decision", async
 
     for (const approved of [true, false]) {
       await assert.rejects(
-        callTool(c, "alice", "submit_agent_input", { ...response, approved }),
+        callTool(c, "alice", "submit_input", { ...response, approved }),
         /requires user approval/,
       );
     }
@@ -145,17 +140,12 @@ test("parent_agent permits parent decisions only after user configuration", asyn
       "user",
     );
 
-    const task = (await callTool(
-      c,
-      "alice",
-      "start_agent_task",
-      request,
-    )) as Task;
+    const task = (await callTool(c, "alice", "start_task", request)) as Task;
 
     assert.equal(task.approval_mode, "parent_agent");
     await until(() => !!store.get(task.id, "alice").pending_input);
 
-    await callTool(c, "alice", "submit_agent_input", {
+    await callTool(c, "alice", "submit_input", {
       task_id: task.id,
       request_id: store.get(task.id, "alice").pending_input!.id,
       approved: true,
@@ -179,7 +169,7 @@ test("parent cannot raise approval authority or mutate approval settings", async
   try {
     for (const mode of ["parent_agent", "auto_approve"]) {
       await assert.rejects(
-        callTool(c, "alice", "start_agent_task", {
+        callTool(c, "alice", "start_task", {
           ...request,
           approval_mode: mode,
         }),
@@ -187,7 +177,7 @@ test("parent cannot raise approval authority or mutate approval settings", async
       );
 
       await assert.rejects(
-        callTool(c, "alice", "update_agent_settings", {
+        callTool(c, "alice", "update_settings", {
           set: { default_approval_mode: mode },
         }),
         /require a user decision/,
@@ -197,7 +187,7 @@ test("parent cannot raise approval authority or mutate approval settings", async
     assert.equal(store.all().length, 0);
     assert.equal(c.settings.values("alice").default_approval_mode, "ask_user");
 
-    await callTool(c, "alice", "update_agent_settings", {
+    await callTool(c, "alice", "update_settings", {
       set: { default_model: "Updated" },
     });
 
@@ -239,12 +229,7 @@ for (const mode of approvalModes) {
         "user",
       );
 
-      const task = (await callTool(
-        c,
-        "alice",
-        "start_agent_task",
-        request,
-      )) as Task;
+      const task = (await callTool(c, "alice", "start_task", request)) as Task;
 
       assert.equal(task.approval_mode, mode);
 
@@ -299,7 +284,7 @@ for (const mode of ["auto_approve", "deny"] as const) {
         "waiting_for_user",
       );
 
-      await callTool(c, "alice", "submit_agent_input", {
+      await callTool(c, "alice", "submit_input", {
         task_id: task.id,
         request_id: store.get(task.id, "alice").pending_input!.id,
         approved: true,
@@ -375,7 +360,7 @@ test("parents can restrict approval authority but cannot escalate any saved mode
           const count = store.all().length;
 
           await assert.rejects(
-            callTool(c, "alice", "start_agent_task", {
+            callTool(c, "alice", "start_task", {
               ...request,
               approval_mode,
             }),
@@ -384,7 +369,7 @@ test("parents can restrict approval authority but cannot escalate any saved mode
 
           assert.equal(store.all().length, count);
         } else {
-          const task = (await callTool(c, "alice", "start_agent_task", {
+          const task = (await callTool(c, "alice", "start_task", {
             ...request,
             approval_mode,
           })) as Task;

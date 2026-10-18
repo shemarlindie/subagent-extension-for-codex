@@ -69,7 +69,7 @@ for (const tab of ["changes", "details"] as const) {
     transport.tasks = [task("a"), task("b")];
 
     transport.handler = (name, args) => {
-      if (name === "get_agent_changes") {
+      if (name === "get_changes") {
         return {
           scope: "task",
           files: [],
@@ -119,10 +119,7 @@ for (const tab of ["changes", "details"] as const) {
 
     assert.deepEqual(readsOf("app_get_change_counts"), ["a"]);
 
-    assert.deepEqual(
-      readsOf("get_agent_changes"),
-      tab === "changes" ? ["a"] : [],
-    );
+    assert.deepEqual(readsOf("get_changes"), tab === "changes" ? ["a"] : []);
   });
 }
 
@@ -141,11 +138,11 @@ test("a host link opens the Changes tab, and a read for a replaced task is dropp
   });
 
   transport.handler = (name, args) => {
-    if (name === "get_agent_changes" && args.task_id === "a") {
+    if (name === "get_changes" && args.task_id === "a") {
       return gate.promise;
     }
 
-    if (name === "get_agent_changes") return changes("b");
+    if (name === "get_changes") return changes("b");
 
     return undefined;
   };
@@ -185,8 +182,7 @@ test("same-scope refresh retains the last changes while reading and after failur
     diff: "",
   };
 
-  transport.handler = (name) =>
-    name === "get_agent_changes" ? data : undefined;
+  transport.handler = (name) => (name === "get_changes" ? data : undefined);
 
   await controller.start();
   await controller.select("a");
@@ -195,7 +191,7 @@ test("same-scope refresh retains the last changes while reading and after failur
   const refreshGate = deferred<Changes>();
 
   transport.handler = (name) =>
-    name === "get_agent_changes" ? refreshGate.promise : undefined;
+    name === "get_changes" ? refreshGate.promise : undefined;
 
   const refresh = controller.loadChanges();
 
@@ -210,7 +206,7 @@ test("same-scope refresh retains the last changes while reading and after failur
   const scopeGate = deferred<Changes>();
 
   transport.handler = (name) =>
-    name === "get_agent_changes" ? scopeGate.promise : undefined;
+    name === "get_changes" ? scopeGate.promise : undefined;
 
   const switching = controller.loadChanges("turn");
 
@@ -242,11 +238,11 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
   };
 
   transport.handler = (name, args) => {
-    if (name === "get_agent_changes" && args.scope === "task") {
+    if (name === "get_changes" && args.scope === "task") {
       return gate.promise;
     }
 
-    if (name === "get_agent_changes") return turn;
+    if (name === "get_changes") return turn;
 
     return undefined;
   };
@@ -280,5 +276,5 @@ test("selecting a task loads its change counts without reading its changes", asy
   const names = transport.calls.map((call) => call.name);
 
   assert.ok(names.includes("app_get_change_counts"));
-  assert.ok(!names.includes("get_agent_changes"));
+  assert.ok(!names.includes("get_changes"));
 });

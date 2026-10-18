@@ -118,23 +118,23 @@ test("HTTP auto-registration happens only on task start for the trusted thread r
 
   const header = { ...f.bearer, ...hostHeader(repository) };
   // Read-only tools never register, even with trusted metadata.
-  const listed = await f.post("/api/tools/list_agent_projects", {}, header);
+  const listed = await f.post("/api/tools/list_projects", {}, header);
   assert.equal(listed.status, 200);
   assert.deepEqual((await listed.json()).result, []);
 
   assert.equal(
-    (await f.post("/api/tools/get_agent_panel_context", {}, header)).status,
+    (await f.post("/api/tools/get_panel_context", {}, header)).status,
     200,
   );
 
   assert.deepEqual(registered(f), []);
   // A task for a different repository does not register the thread root.
-  await f.post("/api/tools/start_agent_task", startTask(other), header);
+  await f.post("/api/tools/start_task", startTask(other), header);
   assert.deepEqual(registered(f), []);
 
   // Registration precedes task validation, so it holds even if the start fails.
   await f.post(
-    "/api/tools/start_agent_task",
+    "/api/tools/start_task",
     startTask(join(repository, ".")),
     header,
   );
@@ -146,7 +146,7 @@ test("HTTP auto-registration rejects model opt-out, body and cookie spoofing, an
   const f = await fixture(t);
   const repository = await f.repo("trusted");
 
-  const modelChange = await f.post("/api/tools/update_agent_settings", {
+  const modelChange = await f.post("/api/tools/update_settings", {
     set: { auto_register_chat_project: false },
   });
 
@@ -155,7 +155,7 @@ test("HTTP auto-registration rejects model opt-out, body and cookie spoofing, an
 
   assert.equal(
     (
-      await f.post("/api/tools/start_agent_task", {
+      await f.post("/api/tools/start_task", {
         ...startTask(repository),
         host_directory: pathToFileURL(repository).href,
       })
@@ -163,12 +163,12 @@ test("HTTP auto-registration rejects model opt-out, body and cookie spoofing, an
     400,
   );
 
-  await f.post("/api/tools/start_agent_task", startTask(repository), {
+  await f.post("/api/tools/start_task", startTask(repository), {
     ...f.cookie,
     ...hostHeader(repository),
   });
 
-  await f.post("/api/tools/start_agent_task", startTask(repository), {
+  await f.post("/api/tools/start_task", startTask(repository), {
     ...f.bearer,
     "X-Codex-Host-Directory": "%E0%A4%A",
   });
@@ -176,7 +176,7 @@ test("HTTP auto-registration rejects model opt-out, body and cookie spoofing, an
   assert.deepEqual(registered(f), []);
   await f.setAuto(false);
 
-  await f.post("/api/tools/start_agent_task", startTask(repository), {
+  await f.post("/api/tools/start_task", startTask(repository), {
     ...f.bearer,
     ...hostHeader(repository),
   });
@@ -184,7 +184,7 @@ test("HTTP auto-registration rejects model opt-out, body and cookie spoofing, an
   assert.deepEqual(registered(f), []);
 });
 
-test("MCP get_current_agent_project reports the thread root without registering it", async (t) => {
+test("MCP get_current_project reports the thread root without registering it", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("mcp-project");
   const client = new Client({ name: "chat-project-test", version: "1.0.0" });
@@ -197,7 +197,7 @@ test("MCP get_current_agent_project reports the thread root without registering 
   );
 
   const missing = await client.callTool({
-    name: "get_current_agent_project",
+    name: "get_current_project",
     arguments: {},
   });
 
@@ -209,7 +209,7 @@ test("MCP get_current_agent_project reports the thread root without registering 
   };
 
   const result = await client.callTool({
-    name: "get_current_agent_project",
+    name: "get_current_project",
     arguments: {},
     _meta,
   });

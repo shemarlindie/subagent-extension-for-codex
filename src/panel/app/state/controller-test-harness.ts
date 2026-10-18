@@ -98,12 +98,12 @@ export class FakeTransport implements Transport {
     if (name === "app_wait_for_updates") return new Promise<T>(() => {});
 
     const values: Record<string, unknown> = {
-      get_agent_panel_context: this.context,
-      list_agent_projects: this.projects,
-      list_available_workers: [
+      get_panel_context: this.context,
+      list_projects: this.projects,
+      list_workers: [
         { provider: "claude", profiles: ["reviewer"], capabilities: {} },
       ],
-      list_agent_tasks: this.tasks,
+      list_tasks: this.tasks,
       app_get_activity: { events: [] },
       app_get_change_counts: {
         scope: "task",
@@ -112,8 +112,8 @@ export class FakeTransport implements Transport {
         deletions: 0,
       },
       app_get_chat: { items: [], next_cursor: 0 },
-      get_agent_message: { message: { id: "parent_1" } },
-      get_agent_settings: { values: defaults },
+      get_message: { message: { id: "parent_1" } },
+      get_settings: { values: defaults },
     };
 
     assert.ok(name in values, `Unexpected tool ${name}`);

@@ -79,9 +79,9 @@ test("fixture results are shaped like the service's tool results", () => {
   // Openers and settings return their payload; other tools wrap it in result.
   const opened = fixtureCall("open_codex_subagent_extension", {}, {});
   expect(opened.structuredContent).toHaveProperty("panel_scope");
-  const listed = fixtureCall("list_agent_projects", {}, {});
+  const listed = fixtureCall("list_projects", {}, {});
   expect(Array.isArray(listed.structuredContent!.result)).toBe(true);
-  const failed = fixtureCall("start_agent_task", {}, {});
+  const failed = fixtureCall("start_task", {}, {});
   expect(failed.isError).toBe(true);
   expect(String(failed.content[0]?.text)).toMatch(/Design preview only/);
 });
