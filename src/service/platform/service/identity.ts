@@ -12,8 +12,8 @@ export const launcherEnv = "CODEX_SUBAGENT_EXTENSION_LAUNCHER";
 
 /**
  * Who started a service. Only `stdio` services are replaced after an
- * update; a `foreground` service (npm run dev, npm start, a supervisor) is
- * never stopped by a launcher.
+ * update. A launcher never stops a `foreground` service (npm run dev,
+ * npm start, a supervisor).
  */
 type ServiceLauncher = "stdio" | "foreground";
 
@@ -33,7 +33,7 @@ export function serviceIdentity(env = process.env): ServiceIdentity {
   };
 }
 
-/** Compares release versions by their numeric parts; a prerelease suffix is ignored. */
+/** Compares release versions by their numeric parts, ignoring a prerelease suffix. */
 export function compareVersions(a: string, b: string) {
   const parts = (version: string) =>
     version
@@ -51,7 +51,7 @@ export function compareVersions(a: string, b: string) {
   return 0;
 }
 
-/** What a launcher knows about a running service; older services omit fields. */
+/** What a launcher knows about a running service. Older services omit fields. */
 export type RunningService = Partial<Omit<ServiceIdentity, "installRoot">> & {
   /** Whether the service's install root still exists, or isn't known. */
   installed: boolean;
@@ -65,7 +65,7 @@ export type Handoff =
 /**
  * Whether a launcher uses a running service, replaces it with its own
  * version, or must refuse it. Replacement applies only to services a stdio
- * launcher started that are older or whose installation was removed; a
+ * launcher started that are older or whose installation was removed. A
  * replaced service that speaks the same API keeps serving (`forward`) while
  * its running turns finish.
  */

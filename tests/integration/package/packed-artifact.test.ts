@@ -422,7 +422,7 @@ describe("packed artifact", () => {
     const client = await connectStdio(service);
 
     try {
-      // The idle older service drains at once; the next call starts this version.
+      // The idle older service drains at once. The next call starts this version.
       await callJson(client, "list_agent_projects");
       const current = await status();
       assert.equal(current.version, manifest.version);

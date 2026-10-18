@@ -1263,7 +1263,7 @@ export class Control {
   /**
    * Prepares for a newer service to take over: starts no more turns, then
    * waits up to `limit` ms for running ones to end. Queued tasks stay queued
-   * for the next service; close() interrupts any turn still running.
+   * for the next service. close() interrupts any turn still running.
    */
   async drain(limit: number) {
     this.stopped = true;

@@ -1,7 +1,8 @@
 /**
  * Why this Node.js can't run the service, or undefined when it can. The
  * build compiles this check into each public entry for old runtimes, so an
- * unsupported Node gets this message instead of a syntax or import error.
+ * unsupported Node prints this message and exits before loading code it
+ * can't parse.
  */
 export function nodeVersionError(
   version: string,

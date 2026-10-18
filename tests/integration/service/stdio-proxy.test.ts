@@ -86,7 +86,7 @@ test("the proxy completes the MCP handshake while the service is still starting"
     `the handshake waited ${Date.now() - started} ms for the service`,
   );
 
-  // The first call waits for the service instead of failing.
+  // The first call waits for the service to become ready.
   const result = await client.callTool({
     name: "list_agent_projects",
     arguments: {},

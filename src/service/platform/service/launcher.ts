@@ -22,7 +22,7 @@ import {
   packagePath,
 } from "./runtime.js";
 
-/** A service that is starting or stopping: wait instead of launching or failing. */
+/** A service that is starting or stopping, which the launcher waits for. */
 class ServiceTransitionError extends Error {}
 
 /** How long to wait for a replaced service that can't serve this launcher to exit. */
@@ -197,13 +197,13 @@ export async function connectService() {
       );
     }
 
-    // A compatible service keeps serving until it exits; the proxy then reconnects and starts this version.
+    // A compatible service keeps serving until it exits. The proxy then reconnects and starts this version.
     if (decision.forward) return { origin: found.origin, token: found.token };
     await waitForExit();
     needsLaunch = true;
   } catch (error) {
     // Only a refused connection authorizes starting a process. Never replace
-    // a live service; one starting or stopping is waited for below.
+    // a live service. The loop below waits for one starting or stopping.
     if (!(error instanceof ServiceTransitionError)) {
       if (explicit || !refused(error)) {
         throw error;

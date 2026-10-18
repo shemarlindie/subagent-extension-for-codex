@@ -57,7 +57,7 @@ export function readPackageFile(...segments: string[]) {
   }
 }
 
-/** The installed package's version; package.json is the only version source. */
+/** The installed package's version. package.json is the only version source. */
 export const packageVersion: string = JSON.parse(
   readPackageFile("package.json"),
 ).version;

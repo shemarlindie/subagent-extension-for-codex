@@ -214,7 +214,7 @@ export function application(
     next();
   });
 
-  // Only an administrator token may hand the service over; console sessions can't.
+  // Only an administrator token may hand the service over. Console sessions can't.
   app.post("/api/service/drain", (req, res) => {
     if (!bearer(req)) {
       res.status(403).json({ error: "Administrator token required" });

@@ -77,7 +77,7 @@ function postService(
   );
 }
 
-// Start finding or launching the service now; calls wait for it.
+// Start finding or launching the service now. Calls wait for it.
 service.connect().catch(() => {});
 
 const server = new McpServer(

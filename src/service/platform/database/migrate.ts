@@ -94,7 +94,7 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
   }
 }
 
-/** Applied migration names, oldest first; none before the ledger exists. */
+/** Applied migration names, oldest first. Empty before the ledger exists. */
 function ledger(client: DatabaseSync) {
   const exists = client
     .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?")

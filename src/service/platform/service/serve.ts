@@ -156,7 +156,7 @@ export async function serve({
   }
 
   const prune = setInterval(() => auth.prune(), 60000);
-  // Calls are POSTs; GETs include event streams that never end on their own.
+  // Calls are POSTs. GETs include event streams that never end on their own.
   let calls = 0;
 
   server.on("request", (req, res) => {

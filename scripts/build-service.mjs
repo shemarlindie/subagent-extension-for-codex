@@ -8,7 +8,7 @@ import { testModule } from "./lint/source-boundaries.mjs";
 
 const outdir = "dist";
 
-// package.json is the version source; plugin.json repeats it for Codex, so a mismatch fails the build.
+// package.json is the version source. plugin.json repeats it for Codex, so a mismatch fails the build.
 const packageManifest = JSON.parse(readFileSync("package.json", "utf8"));
 const plugin = JSON.parse(readFileSync("plugin.json", "utf8"));
 

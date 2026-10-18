@@ -53,7 +53,7 @@ for (const { path } of files) {
   cpSync(path, join(out, path));
 }
 
-// Nothing installs dependencies or runs scripts from the release; the
+// Nothing installs dependencies or runs scripts from the release. The
 // manifest only marks the package root and carries its metadata.
 const manifest = JSON.parse(readFileSync("package.json", "utf8"));
 

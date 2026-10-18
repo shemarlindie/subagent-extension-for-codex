@@ -246,7 +246,7 @@ test(
       PORT: String(port),
     });
 
-    // The first launch loses the lease and exits; then the old service exits.
+    // The first launch loses the lease and exits. Then the old service exits.
     await new Promise((done) => setTimeout(done, 1500));
     stopping.kill();
     const result = JSON.parse((await connecting).stdout);

@@ -30,7 +30,7 @@ const exec = promisify(execFile);
 /**
  * The Codex CLI to install with, as a command and leading arguments:
  * CODEX_BIN, or codex on PATH. On Windows, npm's codex shims need a shell,
- * so the npm package's script beside them runs through this Node instead.
+ * so this Node runs the npm package's script beside them.
  */
 function findCodex(): [string, string[]] | undefined {
   if (process.env.CODEX_BIN) return [process.env.CODEX_BIN, []];
@@ -65,8 +65,8 @@ function findCodex(): [string, string[]] | undefined {
 const codex = findCodex();
 
 /**
- * A published marketplace to install from instead of the assembled build,
- * such as owner/repo@v1.2.3; the release workflow sets it after publishing.
+ * A published marketplace to install in place of the assembled build, such
+ * as owner/repo@v1.2.3. The release workflow sets it after publishing.
  */
 const published = process.env.MARKETPLACE_SOURCE;
 
@@ -81,7 +81,7 @@ type McpServer = {
   };
 };
 
-// CI installs @openai/codex; without it there is nothing to install with.
+// CI installs @openai/codex. Without it there is nothing to install with.
 describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
   let root: string;
   let codexHome: string;
@@ -99,7 +99,7 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     await mkdir(codexHome);
     service = { data: join(root, "data"), port: await freePort() };
 
-    // A published marketplace is fetched by Codex; there is nothing to assemble.
+    // Codex fetches a published marketplace, so there is nothing to assemble.
     if (published) return;
 
     // Assemble from the existing build (pretest builds it).
