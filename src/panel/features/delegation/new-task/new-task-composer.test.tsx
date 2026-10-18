@@ -113,18 +113,18 @@ test("Enter starts a General task with the settings defaults in the scoped proje
 
 test("profile changes preserve the product glyph and its animation source", async () => {
   const { view, user } = setup(ready, {}, { worker: "claude:reviewer" });
-  const glyph = view.container.querySelector("img.empty-icon");
-  const source = glyph?.getAttribute("src");
+  const glyph = view.container.querySelector<HTMLElement>(".new-task-glyph");
+  const source = glyph?.style.getPropertyValue("--new-task-glyph");
 
   expect(glyph).not.toBeNull();
-  expect(source).toMatch(/^data:image\/svg\+xml,/);
-  expect(glyph?.getAttribute("alt")).toBe("");
+  expect(source).toMatch(/^url\("data:image\/svg\+xml,/);
+  expect(glyph?.getAttribute("aria-hidden")).toBe("true");
 
   await user.click(view.getByRole("combobox", { name: "Profile: Reviewer" }));
   await user.click(await view.findByRole("option", { name: "Implementer" }));
 
-  expect(view.container.querySelector("img.empty-icon")).toBe(glyph);
-  expect(glyph?.getAttribute("src")).toBe(source);
+  expect(view.container.querySelector(".new-task-glyph")).toBe(glyph);
+  expect(glyph?.style.getPropertyValue("--new-task-glyph")).toBe(source);
 
   await user.click(
     view.getByRole("combobox", { name: "Profile: Implementer" }),
@@ -132,8 +132,8 @@ test("profile changes preserve the product glyph and its animation source", asyn
 
   await user.click(await view.findByRole("option", { name: "Reviewer" }));
 
-  expect(view.container.querySelector("img.empty-icon")).toBe(glyph);
-  expect(glyph?.getAttribute("src")).toBe(source);
+  expect(view.container.querySelector(".new-task-glyph")).toBe(glyph);
+  expect(glyph?.style.getPropertyValue("--new-task-glyph")).toBe(source);
 });
 
 test("Shift+Enter adds a line instead of sending", async () => {

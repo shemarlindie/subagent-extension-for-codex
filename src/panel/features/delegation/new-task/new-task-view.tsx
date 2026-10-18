@@ -1,15 +1,17 @@
-import type { Ref } from "react";
+import type { CSSProperties, Ref } from "react";
 
 import animatedGlyph from "../../../../../assets/brand/brand-glyph-animated.svg?raw";
-import {
-  useController,
-  useSnapshot,
-} from "../../../app/state/controller-context";
+import { useController } from "../../../app/state/controller-context";
 import type { NewTaskState } from "../../../app/state/types";
 import { BackButton } from "../../../shared/components/navigation/back-button";
 import { NewTaskComposer } from "./new-task-composer";
 
 const glyphSource = `data:image/svg+xml,${encodeURIComponent(animatedGlyph)}`;
+
+// Masking the animated glyph lets it take the empty state's dimmed text color.
+const glyphStyle = {
+  "--new-task-glyph": `url("${glyphSource}")`,
+} as CSSProperties;
 
 type NewTaskViewProps = {
   newTask: NewTaskState;
@@ -22,8 +24,7 @@ type NewTaskViewProps = {
  * once the task starts.
  */
 export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
-  const controller = useController(),
-    state = useSnapshot();
+  const controller = useController();
 
   return (
     <div ref={viewRef} className="task-view new-task-view">
@@ -39,18 +40,13 @@ export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
         <div className="chat-panel">
           <div className="chat">
             <div className="chat-timeline new-task-empty">
-              <img
-                src={glyphSource}
-                width={64}
-                height={64}
-                className="empty-icon"
-                alt=""
+              <span
+                className="empty-icon new-task-glyph"
+                style={glyphStyle}
                 aria-hidden="true"
               />
-              <p className="new-task-prompt">What should Claude work on?</p>
-              <p>
-                Your first message starts the task
-                {state.repository ? " in this project" : ""}.
+              <p className="new-task-prompt">
+                What would you like to work on next?
               </p>
             </div>
             <div className="chat-footer">

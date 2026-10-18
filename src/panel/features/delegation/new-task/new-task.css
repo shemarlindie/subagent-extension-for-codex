@@ -27,6 +27,12 @@
   font-size: 12px;
   text-align: center;
 }
+.new-task-glyph {
+  width: 52px;
+  height: 52px;
+  background: currentColor;
+  mask: var(--new-task-glyph) center / contain no-repeat;
+}
 .new-task-empty p {
   max-width: 320px;
   margin: 0;
