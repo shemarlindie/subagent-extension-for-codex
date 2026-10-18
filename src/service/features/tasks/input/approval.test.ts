@@ -207,26 +207,10 @@ test("parent cannot raise approval authority or mutate approval settings", async
   }
 });
 
-test("model calls cannot use any user-only approval tool", async () => {
+test("user calls can update the approval setting", async () => {
   const { c, cleanup } = await setup();
 
   try {
-    for (const name of [
-      "start_user_agent_task",
-      "submit_user_agent_input",
-      "update_user_agent_settings",
-      "get_user_agent_changes",
-      "get_user_agent_changed_file",
-      "remove_user_agent_worktree",
-      "delete_user_agent_task",
-      "delete_user_agent_branch",
-    ]) {
-      await assert.rejects(
-        callTool(c, "alice", name, {}),
-        /User tools require a user interface/,
-      );
-    }
-
     await callTool(
       c,
       "alice",

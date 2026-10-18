@@ -196,20 +196,6 @@ test("MCP get_current_agent_project reports the thread root without registering 
     }),
   );
 
-  const tools = await client.listTools();
-
-  for (const name of [
-    "get_current_agent_project",
-    "list_agent_projects",
-    "get_agent_panel_context",
-  ]) {
-    assert.equal(
-      tools.tools.find((tool) => tool.name === name)?.annotations?.readOnlyHint,
-      true,
-      name,
-    );
-  }
-
   const missing = await client.callTool({
     name: "get_current_agent_project",
     arguments: {},

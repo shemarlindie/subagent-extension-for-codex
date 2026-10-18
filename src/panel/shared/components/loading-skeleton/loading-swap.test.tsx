@@ -129,32 +129,13 @@ test("lets a parent own the busy announcement", () => {
   expect(view.getByRole("status", { name: "Loading records" })).toBeTruthy();
 });
 
-test("unmounts the faded skeleton after the content handoff", () => {
-  vi.useFakeTimers();
-  const view = render(panel(true));
-
-  advanceSkeletonDelay();
-  view.rerender(panel(false));
-  expect(view.container.querySelector(".loading-swap-skeleton")).not.toBeNull();
-
-  act(() => {
-    vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible);
-  });
-
-  act(() => {
-    vi.advanceTimersByTime(MOTION.loadingCrossfade);
-  });
-
-  expect(view.container.querySelector(".loading-swap-skeleton")).toBeNull();
-  expect(view.getByText("Loaded records")).toBeTruthy();
-});
-
 test("keeps the outgoing skeleton for the shared cross-fade", () => {
   vi.useFakeTimers();
   const view = render(panel(true));
 
   advanceSkeletonDelay();
   view.rerender(panel(false));
+  expect(view.container.querySelector(".loading-swap-skeleton")).not.toBeNull();
 
   act(() => {
     vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible);
@@ -171,6 +152,7 @@ test("keeps the outgoing skeleton for the shared cross-fade", () => {
   });
 
   expect(view.container.querySelector(".loading-swap-skeleton")).toBeNull();
+  expect(view.getByText("Loaded records")).toBeTruthy();
 });
 
 test("removes the outgoing skeleton after its minimum dwell with reduced motion", () => {
