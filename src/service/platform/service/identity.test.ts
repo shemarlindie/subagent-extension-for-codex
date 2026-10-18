@@ -10,14 +10,13 @@ import {
 } from "./identity.js";
 import { installRoot, packageVersion } from "./runtime.js";
 
-const own = { version: "0.2.0", apiVersion: 2, installRoot: "/plugins/0.2.0" };
+const own = { version: "0.2.0", apiVersion: 2 };
 const origin = "http://127.0.0.1:17317";
 
 const service = (fields: Partial<RunningService>): RunningService => ({
   version: "0.2.0",
   apiVersion: 2,
   launcher: "stdio",
-  installRoot: "/plugins/0.2.0",
   installed: true,
   ...fields,
 });

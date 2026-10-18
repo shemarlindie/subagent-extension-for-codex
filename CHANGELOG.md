@@ -1,6 +1,6 @@
 # Changelog
 
-Each release's notes come from its section here; the release workflow fails
+Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
 ## 0.1.0

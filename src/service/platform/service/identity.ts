@@ -53,9 +53,7 @@ export function compareVersions(a: string, b: string) {
 
 /** What a launcher knows about a running service; older services omit fields. */
 export type RunningService = Partial<Omit<ServiceIdentity, "installRoot">> & {
-  /** Undefined when the service's metadata doesn't name one. */
-  installRoot?: string;
-  /** Whether that install root still exists. */
+  /** Whether the service's install root still exists, or isn't known. */
   installed: boolean;
 };
 
@@ -73,7 +71,7 @@ export type Handoff =
  */
 export function handoff(
   running: RunningService,
-  own: Omit<ServiceIdentity, "launcher">,
+  own: Pick<ServiceIdentity, "version" | "apiVersion">,
   origin: string,
 ): Handoff {
   const compatible = running.apiVersion === own.apiVersion;

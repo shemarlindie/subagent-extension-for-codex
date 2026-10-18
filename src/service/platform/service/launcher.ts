@@ -141,7 +141,6 @@ export async function connectService() {
       apiVersion: health.apiVersion,
       // An explicit URL names a service to use, never one to replace.
       launcher: explicit ? "foreground" : health.launcher,
-      installRoot: root,
       installed: !root || existsSync(root),
     };
   };

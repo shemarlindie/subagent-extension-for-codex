@@ -463,8 +463,8 @@ workflow does this after publishing.
 
 ## Releasing
 
-Users install from the `release` branch, which holds only assembled releases;
-each release commit is tagged `v<version>`. Codex refreshes Git marketplaces on
+Users install from the `release` branch, which holds only assembled releases.
+Each release commit is tagged `v<version>`. Codex refreshes Git marketplaces on
 startup and reinstalls the plugin when the branch moves, so every push to
 `release` reaches users.
 

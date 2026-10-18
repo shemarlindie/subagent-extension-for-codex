@@ -67,13 +67,13 @@ and the `installRoot` in `service.json`:
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Same version, installation present                             | Uses it.                                                                        |
 | Started by a stdio proxy, older or its installation removed    | Asks it to drain, then starts the new version once it exits.                    |
-| Started by a stdio proxy, newer                                | Uses it if `apiVersion` matches; otherwise asks you to update the plugin.       |
-| Started another way (`npm run dev`, `npm start`, a supervisor) | Uses it if `apiVersion` matches; otherwise refuses. It never stops the service. |
+| Started by a stdio proxy, newer                                | Uses it if `apiVersion` matches. Otherwise asks you to update the plugin.       |
+| Started another way (`npm run dev`, `npm start`, a supervisor) | Uses it if `apiVersion` matches. Otherwise refuses. It never stops the service. |
 
 A draining service starts no more turns and lets running turns finish for up
 to 10 minutes, then interrupts any left, as a restart does. Queued tasks stay
 queued, and the new service starts them. While a draining service still speaks
-the same API, proxies keep using it; when it exits, their next call starts the
+the same API, proxies keep using it. When it exits, their next call starts the
 new version. Otherwise calls wait for the new service.
 
 Keep development services on their own `CODEX_SUBAGENT_EXTENSION_DATA` and

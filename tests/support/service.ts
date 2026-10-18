@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
+import { join } from "node:path";
 
 import { waitForListening } from "./helpers.js";
 
@@ -46,7 +47,7 @@ export function serviceEnv(
 
 /** Stops the service that owns the data directory, if one is running. */
 export async function stopService({ data }: Pick<Service, "data">) {
-  const pid = Number(await readFile(`${data}/service.pid`, "utf8"));
+  const pid = Number(await readFile(join(data, "service.pid"), "utf8"));
 
   try {
     process.kill(pid, "SIGTERM");
