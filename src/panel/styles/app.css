@@ -1,4 +1,4 @@
-/* The one stylesheet. Order is the cascade order; build-ui.mjs inlines these imports. */
+/* The one stylesheet. Order is the cascade order; build-panel.mjs inlines these imports. */
 @import "./theme.css";
 @import "./base.css";
 @import "../app/styles/panel.css";

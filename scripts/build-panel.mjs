@@ -15,7 +15,7 @@ async function inlineImports(file) {
   const parts = [];
   let last = 0;
 
-  for (const match of source.matchAll(/^@import "(\.[^"]+)";\n/gm)) {
+  for (const match of source.matchAll(/^@import "(\.[^"]+)";\r?\n/gm)) {
     parts.push(source.slice(last, match.index));
     parts.push(await inlineImports(resolve(dirname(file), match[1])));
     last = match.index + match[0].length;
