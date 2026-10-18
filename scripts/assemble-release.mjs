@@ -32,12 +32,18 @@ for (const entry of ["dist/main.js", "dist/stdio.js", "dist/app.html"]) {
   }
 }
 
+// Under npm, its own script runs through this Node, since Windows can't start
+// the npm.cmd shim without a shell. tests/support/npm.ts does the same.
+const npmCli = process.env.npm_execpath;
+const npm = npmCli?.endsWith(".js") ? [process.execPath, npmCli] : ["npm"];
+
 // npm's file list, so the plugin and any npm package ship the same files.
 const [{ files }] = JSON.parse(
-  execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-  }),
+  execFileSync(
+    npm[0],
+    [...npm.slice(1), "pack", "--dry-run", "--json", "--ignore-scripts"],
+    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  ),
 );
 
 rmSync(out, { recursive: true, force: true });

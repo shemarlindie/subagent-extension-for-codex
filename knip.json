@@ -11,6 +11,7 @@
     "dev/service/demo-service.ts",
     "scripts/*.mjs"
   ],
+  "ignoreBinaries": ["where"],
   "project": [
     "src/**/*.{ts,tsx,mjs}",
     "dev/**/*.{ts,tsx}",

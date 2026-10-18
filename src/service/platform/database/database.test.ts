@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readdirSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -234,6 +235,31 @@ test("only the newest three backups are kept", (t) => {
   assert.deepEqual(
     backups().map((file) => file.match(/_(first|second|third)-/)?.[1]),
     ["first", "second", "third"],
+  );
+});
+
+test("backups are pruned by the time in their names, whatever their file times", (t) => {
+  const { dir, path, folder, addMigration, backups } = migratedCopy(t);
+  const older = join(dir, "backups");
+  mkdirSync(older);
+
+  // Copied backups can share one modification time, newest name first here.
+  for (const year of ["2003", "2002", "2001"]) {
+    const file = join(
+      older,
+      `console-0_init-${year}-01-01T00-00-00-000Z.sqlite`,
+    );
+
+    writeFileSync(file, "");
+    utimesSync(file, 1, 1);
+  }
+
+  addMigration("29990101000000_notes");
+  openDatabase(path, folder).close();
+
+  assert.deepEqual(
+    backups().map((file) => file.match(/-(\d{4})-/)?.[1]),
+    ["2002", "2003", String(new Date().getUTCFullYear())],
   );
 });
 

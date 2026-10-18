@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
+import { mkdirSync, readdirSync, rmSync } from "node:fs";
 import { basename, dirname, extname, join } from "node:path";
 import { type DatabaseSync } from "node:sqlite";
 
@@ -24,12 +24,24 @@ export function backUpDatabase(
 
   client.prepare("VACUUM INTO ?").run(backup);
 
-  const backups = readdirSync(directory)
-    .filter((file) => file.startsWith(`${name}-`) && file.endsWith(".sqlite"))
-    .map((file) => join(directory, file))
-    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+  // Newest first by the timestamp in each name, then by its migration.
+  // Modification times can't order them, since some filesystems keep those
+  // only to the second.
+  const stamped = new RegExp(`^${name}-.+-(\\d{4}-[\\dT-]+Z)\\.sqlite$`);
 
-  for (const old of backups.slice(KEEP)) rmSync(old, { force: true });
+  const backups = readdirSync(directory)
+    .flatMap((file) => {
+      const time = file.match(stamped)?.[1];
+
+      return time ? [{ file, time }] : [];
+    })
+    .sort(
+      (a, b) => b.time.localeCompare(a.time) || b.file.localeCompare(a.file),
+    );
+
+  for (const { file } of backups.slice(KEEP)) {
+    rmSync(join(directory, file), { force: true });
+  }
 
   return backup;
 }

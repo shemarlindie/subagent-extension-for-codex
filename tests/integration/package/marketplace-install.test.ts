@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import {
   access,
   mkdir,
@@ -10,7 +11,7 @@ import {
   rm,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -26,17 +27,36 @@ import {
 
 const exec = promisify(execFile);
 
-/** The Codex CLI to install with: CODEX_BIN, or codex on PATH. */
-function findCodex() {
-  if (process.env.CODEX_BIN) return process.env.CODEX_BIN;
+/**
+ * The Codex CLI to install with, as a command and leading arguments:
+ * CODEX_BIN, or codex on PATH. On Windows, npm's codex shims need a shell,
+ * so the npm package's script beside them runs through this Node instead.
+ */
+function findCodex(): [string, string[]] | undefined {
+  if (process.env.CODEX_BIN) return [process.env.CODEX_BIN, []];
+
+  if (process.platform !== "win32") {
+    try {
+      return [execFileSync("which", ["codex"]).toString().trim(), []];
+    } catch {
+      return undefined;
+    }
+  }
 
   try {
-    return execFileSync(process.platform === "win32" ? "where" : "which", [
-      "codex",
-    ])
+    const shim = execFileSync("where", ["codex"])
       .toString()
-      .split(/\r?\n/)[0]
-      ?.trim();
+      .split(/\r?\n/)[0]!
+      .trim();
+
+    if (/\.exe$/i.test(shim)) return [shim, []];
+
+    const script = join(
+      dirname(shim),
+      "node_modules/@openai/codex/bin/codex.js",
+    );
+
+    return existsSync(script) ? [process.execPath, [script]] : undefined;
   } catch {
     return undefined;
   }
@@ -68,7 +88,7 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
   let service: Service;
 
   const runCodex = (...args: string[]) =>
-    exec(codex!, args, {
+    exec(codex![0], [...codex![1], ...args], {
       env: { ...process.env, CODEX_HOME: codexHome },
       maxBuffer: 16 * 1024 * 1024,
     });

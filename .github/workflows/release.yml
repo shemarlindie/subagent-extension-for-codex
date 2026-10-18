@@ -67,7 +67,7 @@ jobs:
 
       - run: npm run build
       - run: npm run release:assemble
-      - run: npm install --global @openai/codex
+      - run: npm install --global @openai/codex@0.162.1
       - name: Install the assembled marketplace with Codex
         run: npx vitest run tests/integration/package/marketplace-install.test.ts
 
@@ -127,7 +127,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm install --global @openai/codex
+      - run: npm install --global @openai/codex@0.162.1
       - name: Install from GitHub with Codex
         env:
           MARKETPLACE_SOURCE: ${{ github.repository }}@v${{ needs.publish.outputs.version }}

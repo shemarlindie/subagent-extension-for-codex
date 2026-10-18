@@ -30,6 +30,7 @@ import {
 } from "vitest";
 
 import type { ProviderReadiness } from "../../../src/shared/providers/types.js";
+import { npmCommand } from "../../support/npm.js";
 import {
   freePort,
   type Service,
@@ -149,14 +150,20 @@ beforeAll(async () => {
   await access(resolve("dist/main.js"));
 
   const { stdout } = await exec(
-    "npm",
-    ["pack", "--ignore-scripts", "--json", "--pack-destination", root],
+    ...npmCommand([
+      "pack",
+      "--ignore-scripts",
+      "--json",
+      "--pack-destination",
+      root,
+    ]),
     { maxBuffer: 64 * 1024 * 1024 },
   );
 
   const [{ filename, files }] = JSON.parse(stdout);
   packedFiles = files.map((file: { path: string }) => file.path);
-  await exec("tar", ["-xzf", join(root, filename), "-C", root]);
+  // A relative archive path, since GNU tar reads "C:" in a path as a remote host.
+  await exec("tar", ["-xzf", filename], { cwd: root });
   pkg = join(root, "package");
 
   // A packaged .env is read relative to the package; test mode makes mention search log locally.

@@ -492,6 +492,9 @@ Repository settings the workflow relies on, set by hand:
 - A public repository, since `codex plugin marketplace add owner/repo` fetches
   without credentials.
 
+The workflows pin the Codex CLI to the version the README lists as tested.
+Change them together.
+
 `.github/workflows/ci.yml` runs the checks on Linux and macOS for pushes to
 `main` and pull requests. Windows runs only the build and packaging tests,
 because parts of the suite use POSIX shell fakes.
