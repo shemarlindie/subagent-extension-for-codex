@@ -21,10 +21,17 @@ const service = (fields: Partial<RunningService>): RunningService => ({
   ...fields,
 });
 
-test("compares release versions numerically", () => {
+test("compares versions by semver precedence", () => {
   assert.equal(compareVersions("0.10.0", "0.9.9"), 1);
   assert.equal(compareVersions("1.2", "1.2.0"), 0);
-  assert.equal(compareVersions("1.2.3-beta.1", "1.2.3"), 0);
+  assert.equal(compareVersions("1.2.3-beta.1", "1.2.3"), -1);
+  assert.equal(compareVersions("1.2.3", "1.2.3-rc.1"), 1);
+  assert.equal(compareVersions("1.2.3-beta.2", "1.2.3-beta.10"), -1);
+  assert.equal(compareVersions("1.2.3-alpha.1", "1.2.3-beta.1"), -1);
+  assert.equal(compareVersions("1.2.3-beta", "1.2.3-beta.1"), -1);
+  assert.equal(compareVersions("1.2.3-1", "1.2.3-alpha"), -1);
+  assert.equal(compareVersions("1.2.3-beta.1", "1.2.3-beta.1+build"), 0);
+  assert.equal(compareVersions("1.3.0-alpha.1", "1.2.9"), 1);
   assert.equal(compareVersions("1.2.3", "1.3.0"), -1);
 });
 
@@ -58,6 +65,13 @@ test("replaces an older or uninstalled plugin service, forwarding while it speak
   );
 
   assert.deepEqual(handoff(service({ installed: false }), own, origin), {
+    action: "replace",
+    forward: true,
+  });
+});
+
+test("replaces a prerelease with its final release", () => {
+  assert.deepEqual(handoff(service({ version: "0.2.0-beta.1" }), own, origin), {
     action: "replace",
     forward: true,
   });

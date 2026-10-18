@@ -33,19 +33,48 @@ export function serviceIdentity(env = process.env): ServiceIdentity {
   };
 }
 
-/** Compares release versions by their numeric parts, ignoring a prerelease suffix. */
+/**
+ * Compares versions by semver precedence: numeric parts first, then a
+ * prerelease sorts before its release and prereleases compare by identifier.
+ * Build metadata is ignored.
+ */
 export function compareVersions(a: string, b: string) {
-  const parts = (version: string) =>
-    version
-      .replace(/-.*/, "")
-      .split(".")
-      .map((part) => Number(part) || 0);
+  const parse = (version: string) => {
+    const [core = "", ...pre] = version.replace(/\+.*/, "").split("-");
+    const prerelease = pre.join("-");
 
-  const [left, right] = [parts(a), parts(b)];
+    return {
+      core: core.split(".").map((part) => Number(part) || 0),
+      prerelease: prerelease ? prerelease.split(".") : [],
+    };
+  };
 
-  for (let i = 0; i < Math.max(left.length, right.length); i++) {
-    const difference = (left[i] ?? 0) - (right[i] ?? 0);
+  const [left, right] = [parse(a), parse(b)];
+
+  for (let i = 0; i < Math.max(left.core.length, right.core.length); i++) {
+    const difference = (left.core[i] ?? 0) - (right.core[i] ?? 0);
     if (difference) return Math.sign(difference);
+  }
+
+  if (!left.prerelease.length || !right.prerelease.length) {
+    return Math.sign(right.prerelease.length - left.prerelease.length);
+  }
+
+  for (
+    let i = 0;
+    i < Math.max(left.prerelease.length, right.prerelease.length);
+    i++
+  ) {
+    const [x, y] = [left.prerelease[i], right.prerelease[i]];
+    if (x === y) continue;
+    if (x === undefined) return -1;
+    if (y === undefined) return 1;
+
+    const [xNumeric, yNumeric] = [/^\d+$/.test(x), /^\d+$/.test(y)];
+    if (xNumeric && yNumeric) return Math.sign(Number(x) - Number(y));
+    if (xNumeric !== yNumeric) return xNumeric ? -1 : 1;
+
+    return x < y ? -1 : 1;
   }
 
   return 0;

@@ -61,7 +61,8 @@ uncertain, inspect Chat and Activity before sending it again.
 A plugin update installs the new version while the previous version's service
 may still be running. The next stdio proxy to start compares itself with that
 service, using the `version`, `apiVersion` and `launcher` fields of `/health`
-and the `installRoot` in `service.json`:
+and the `installRoot` in `service.json`. Versions compare by semver
+precedence, so a prerelease such as `0.2.0-beta.1` is older than `0.2.0`.
 
 | Running service                                                | The proxy                                                                       |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
