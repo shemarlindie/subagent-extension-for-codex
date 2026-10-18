@@ -289,8 +289,6 @@ test("MCP advertises app-only aliases and lets the parent agent answer delegated
       "update_user_agent_settings",
       "register_user_agent_project",
       "browse_user_agent_project",
-      "get_user_agent_changes",
-      "get_user_agent_changed_file",
       "remove_user_agent_worktree",
       "delete_user_agent_task",
       "delete_user_agent_branch",

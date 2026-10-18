@@ -164,14 +164,14 @@ export class FakeTransport implements Transport {
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
   /**
-   * get_user_agent_changes pages; a cursor is the next page's index. The
+   * get_agent_changes pages; a cursor is the next page's index. The
    * first page also answers get_user_agent_change_counts, so one is required.
    */
   changes: [Changes, ...Changes[]] = [
     { scope: "task", files: [], additions: 0, deletions: 0, diff: "" },
   ];
 
-  /** get_user_agent_changed_file results by path. */
+  /** get_agent_changed_file results by path. */
   changedFiles: Record<string, ChangedFileContent> = {};
   shared: Record<string, unknown>[] = [];
   messages: string[] = [];
@@ -237,8 +237,8 @@ export class FakeTransport implements Transport {
       ),
       get_user_agent_chat: { items: this.chat, next_cursor: 0 },
       get_user_agent_change_counts: changeCounts(this.changes[0]),
-      get_user_agent_changes: this.changes[Number(args.cursor ?? 0)],
-      get_user_agent_changed_file: this.changedFiles[String(args.path)],
+      get_agent_changes: this.changes[Number(args.cursor ?? 0)],
+      get_agent_changed_file: this.changedFiles[String(args.path)],
       get_agent_settings: {
         values: {
           default_provider: "claude",

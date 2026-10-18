@@ -240,13 +240,6 @@ export function userTools(
         "User interface only: save delegation defaults, including native permission mode and approval decision maker.",
       run: (a) => c.settings.update(owner, a, "user"),
     }),
-    get_user_agent_changes: tool({
-      ...tools.get_agent_changes,
-      description:
-        "User interface only: the task tools’ recorded edits, as get_agent_changes returns them.",
-      run: (a) =>
-        c.changes.changes(c.store.get(a.task_id, owner), a.scope, a.cursor),
-    }),
     get_user_agent_change_counts: tool({
       description:
         "User interface only: recorded change totals for the Changes tab and Details.",
@@ -359,13 +352,6 @@ export function userTools(
         "User interface only: delete a stopped worktree task's branch once its worktree is removed.",
       schema: taskId,
       run: (a) => c.deleteBranch(owner, a.task_id),
-    }),
-    get_user_agent_changed_file: tool({
-      ...tools.get_agent_changed_file,
-      description:
-        "User interface only: a recorded changed file as it is now, as get_agent_changed_file returns it.",
-      run: (a) =>
-        c.changes.changedFile(c.store.get(a.task_id, owner), a.path, a.cursor),
     }),
   };
 }

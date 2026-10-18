@@ -41,7 +41,7 @@ function useChangedFile(task: Task, path: string) {
     let current = true;
 
     readChangedFile(task.id, path, (args) =>
-      controller.tool<ChangedFileContent>("get_user_agent_changed_file", args),
+      controller.tool<ChangedFileContent>("get_agent_changed_file", args),
     ).then(
       (file) =>
         current && setRead({ taskId: task.id, path, status: "ready", file }),

@@ -82,7 +82,7 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   const tool = transport.tool.bind(transport);
 
   transport.tool = async <T>(name: string, args?: Record<string, unknown>) => {
-    if (name === "get_user_agent_changes") {
+    if (name === "get_agent_changes") {
       throw new Error("This task has no change snapshot.");
     }
 
@@ -161,7 +161,7 @@ test("previews say when a file was deleted, is binary, or can't be read", async 
         name: string,
         args?: Record<string, unknown>,
       ) => {
-        if (name === "get_user_agent_changed_file") {
+        if (name === "get_agent_changed_file") {
           throw new Error("The service returned no file.");
         }
 

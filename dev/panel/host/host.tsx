@@ -63,12 +63,12 @@ const fixtureReadDelayMs = 1200;
 
 // Keep mutations out of this list so the inspection toggle never delays writes.
 const fixtureReadTools = new Set([
+  "get_agent_changed_file",
+  "get_agent_changes",
   "get_agent_panel_context",
   "get_agent_settings",
   "get_user_agent_activity",
   "get_user_agent_change_counts",
-  "get_user_agent_changed_file",
-  "get_user_agent_changes",
   "get_user_agent_chat",
   "get_user_agent_turn_activity",
   "list_agent_projects",

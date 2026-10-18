@@ -159,10 +159,6 @@ test("change tools return sorted recorded edits, incomplete files and command wa
     expect(changes.diff).toContain("+after");
     expect(changes.unrecorded_commands).toBe(true);
 
-    expect(
-      await s.tool<Changes>("get_user_agent_changes", args, "user"),
-    ).toEqual(changes);
-
     const counts = await s.tool<ChangeCounts>(
       "get_user_agent_change_counts",
       args,
@@ -172,19 +168,6 @@ test("change tools return sorted recorded edits, incomplete files and command wa
     expect(counts.files).toBe(3);
     expect(counts.additions).toBe(changes.additions);
     expect(counts.deletions).toBe(changes.deletions);
-
-    expect(
-      await s.tool<ChangedFileContent>(
-        "get_user_agent_changed_file",
-        { ...args, path: "existing.txt" },
-        "user",
-      ),
-    ).toEqual(
-      await s.tool<ChangedFileContent>("get_agent_changed_file", {
-        ...args,
-        path: "existing.txt",
-      }),
-    );
 
     expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
   } finally {

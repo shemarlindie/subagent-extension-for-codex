@@ -131,9 +131,9 @@ export function fixtureLaunchArgs(
  * repositories built from dev/panel/scenarios/change-fixtures.ts.
  */
 export const FIXTURE_SERVICE_TOOLS: string[] = [
-  "get_user_agent_changes",
+  "get_agent_changes",
   "get_user_agent_change_counts",
-  "get_user_agent_changed_file",
+  "get_agent_changed_file",
   "remove_user_agent_worktree",
   "delete_user_agent_branch",
 ];

@@ -71,8 +71,7 @@ missing file returns `deleted`, and a removed worktree returns `unavailable`.
 Images return base64 content. Other binary files return their size. Text and image
 content keep their existing paging behavior.
 
-The app-only `get_user_agent_changes`, change-count tool and
-`get_user_agent_changed_file` delegate to these same reads.
+The app-only change-count tool reads totals from the same stored diffs.
 
 ### Recording limits
 

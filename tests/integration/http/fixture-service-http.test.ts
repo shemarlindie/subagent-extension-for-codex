@@ -115,7 +115,7 @@ test("fixture changes come from recorded edits built per task", async () => {
   await fixtureServer();
 
   const changes = (task_id: string, scope = "task") =>
-    result<Changes>("get_user_agent_changes", { task_id, scope });
+    result<Changes>("get_agent_changes", { task_id, scope });
 
   const paths = (result: Changes) => result.files.map((file) => file.path);
 
@@ -182,14 +182,14 @@ test("the large-file fixture's changes come in pages and its files read whole", 
   await fixtureServer();
 
   // Several megabytes of new files cross in pages of whole files.
-  let page = await result<Changes>("get_user_agent_changes", {
+  let page = await result<Changes>("get_agent_changes", {
     task_id: "preview-profile",
   });
 
   const pages = [page];
 
   while (page.next_cursor) {
-    page = await result<Changes>("get_user_agent_changes", {
+    page = await result<Changes>("get_agent_changes", {
       task_id: "preview-profile",
       cursor: page.next_cursor,
     });
@@ -213,7 +213,7 @@ test("the large-file fixture's changes come in pages and its files read whole", 
   let content = "";
 
   do {
-    part = await result<ChangedFileContent>("get_user_agent_changed_file", {
+    part = await result<ChangedFileContent>("get_agent_changed_file", {
       task_id: "preview-profile",
       path,
       cursor: part?.next_cursor,
@@ -268,12 +268,12 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
   );
 
   const afterRemoval = (
-    await call("get_user_agent_changes", { task_id: "preview-interrupted" })
+    await call("get_agent_changes", { task_id: "preview-interrupted" })
   ).body.result as Changes;
 
   assert.equal(afterRemoval.files.length, 3);
 
-  const missingPreview = await call("get_user_agent_changed_file", {
+  const missingPreview = await call("get_agent_changed_file", {
     task_id: "preview-interrupted",
     path: "src/panel/inspector.css",
   });
@@ -287,8 +287,8 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
   );
 
   assert.deepEqual(
-    (await call("get_user_agent_changes", { task_id: "preview-interrupted" }))
-      .body.result,
+    (await call("get_agent_changes", { task_id: "preview-interrupted" })).body
+      .result,
     afterRemoval,
   );
 
