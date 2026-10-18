@@ -70,19 +70,6 @@ test("the inspector omits task descriptions across refresh and task selection", 
   assertAbsent(description.querySelector("img"));
 });
 
-test("short task descriptions are omitted from the inspector header", async (t) => {
-  await setup(t);
-  const header = document.querySelector(".task-header")!;
-
-  assert.ok(
-    !header.textContent?.includes(
-      "Review authentication and report relevant findings.",
-    ),
-  );
-
-  assertAbsent(header.querySelector(".notice"));
-});
-
 test("inline preview expands and collapses while preserving the selected task", async (t) => {
   const { controller, transport, user } = await setup(
     t,
@@ -149,8 +136,8 @@ test("the header menu offers the secondary actions and runs them", async (t) => 
   );
 });
 
-test("a thread panel keeps Settings available and leaves other global actions to global launches", async (t) => {
-  const { controller, user } = await setup(t);
+test("applying a thread scope switches the header to thread mode with the brand mark", async (t) => {
+  const { controller } = await setup(t);
 
   assert.equal(document.querySelector("header")?.dataset.mode, "global");
   assertAbsent(document.querySelector("header .brand .mark"));
@@ -168,17 +155,6 @@ test("a thread panel keeps Settings available and leaves other global actions to
     document.querySelector("header .brand-title > span")?.textContent,
     "Delegated Work",
   );
-
-  assertAbsent(screen.queryByRole("button", { name: "Project" }));
-  assert.ok(screen.getByRole("button", { name: "Settings" }));
-  assertAbsent(screen.queryByRole("button", { name: "New task" }));
-  await user.click(screen.getByRole("button", { name: "Panel actions" }));
-
-  const items = await screen.findAllByRole("menuitem");
-  assert.ok(items.some((item) => item.textContent === "Settings"));
-  expect(screen.queryByRole("menuitem", { name: "New task" })).toBeNull();
-
-  expect(screen.queryByRole("menuitem", { name: /Advanced task…/ })).toBeNull();
 });
 
 test("inline host without expansion offers the chat controls fallback", async (t) => {

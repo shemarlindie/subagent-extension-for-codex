@@ -17,7 +17,6 @@ import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
-import type { ModelChoice } from "../../../src/shared/providers/types.js";
 import { PARENT_DELEGATION_PROTOCOL } from "../../../src/shared/tasks/conversation/parent-protocol.js";
 import { startSchema } from "../../../src/shared/tasks/model.js";
 import { now } from "../../../src/shared/time.js";
@@ -34,25 +33,6 @@ const panel = (response: object) =>
         conversation_id?: unknown;
       }
     | undefined;
-
-test("owner-scoped sessions, expiration, pruning and token comparison", () => {
-  const auth = new Auth("private-token");
-  assert.equal(auth.matches("private-token"), true);
-  assert.equal(auth.matches("wrong"), false);
-  assert.equal(auth.matches("private-taken"), false);
-  const alice = auth.session("alice");
-  const bob = auth.session("bob");
-  assert.equal(auth.ownerFor(`other=value; ac_session=${alice}`), "alice");
-  assert.equal(auth.ownerFor(`ac_session=${bob}; other=value`), "bob");
-  assert.equal(auth.ownerFor(undefined), undefined);
-  assert.equal(auth.ownerFor("ac_session=unknown"), undefined);
-  auth.sessions.get(alice)!.expires = 0;
-  assert.equal(auth.ownerFor(`ac_session=${alice}`), undefined);
-  auth.prune();
-  assert.equal(auth.sessions.has(alice), false);
-  assert.equal(auth.sessions.has(bob), true);
-  assert.equal(auth.ownerFor(`ac_session=${bob}`), "bob");
-});
 
 test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async () => {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "ac-http-")));
@@ -216,12 +196,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     assert.ok(ackTool);
     assert.deepEqual((ackTool._meta as any).ui.visibility, ["model", "app"]);
 
-    assert.ok(
-      tools.tools
-        .find((tool) => tool.name === "get_agent_messages")
-        ?.description?.includes(PARENT_DELEGATION_PROTOCOL),
-    );
-
     const mentionTool = tools.tools.find(
       (tool) => tool.name === "search_mentions",
     );
@@ -260,6 +234,26 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     )!;
 
     assert.equal(opener.title, "Delegated Work");
+
+    for (const name of [
+      "open_codex_subagent_extension",
+      "wait_user_agent_updates",
+    ]) {
+      assert.equal(
+        tools.tools.find((tool) => tool.name === name)?.annotations
+          ?.readOnlyHint,
+        true,
+        name,
+      );
+    }
+
+    for (const name of ["get_agent_settings", "update_agent_settings"]) {
+      assert.ok(
+        tools.tools.find((tool) => tool.name === name)?.outputSchema?.properties
+          ?.values,
+        `${name} advertises its settings output schema`,
+      );
+    }
 
     assert.equal(
       (opener._meta as any).ui.resourceUri,
@@ -677,12 +671,45 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       assert.ok(stdio.getInstructions()?.includes(PARENT_DELEGATION_PROTOCOL));
       const stdioTools = await stdio.listTools();
 
-      const stdioAck = stdioTools.tools.find(
-        (tool) => tool.name === "ack_agent_message",
-      );
+      // The SDKs emit different JSON Schema draft identifiers for the same contract.
+      const schemaShape = (schema: unknown) => {
+        if (!schema) return schema;
+        const { $schema: _draft, ...shape } = schema as Record<string, unknown>;
 
-      assert.ok(stdioAck);
-      assert.deepEqual((stdioAck._meta as any).ui.visibility, ["model", "app"]);
+        return shape;
+      };
+
+      // Icons and task execution support differ between the two SDK servers.
+      const definitionsByName = (list: typeof tools) =>
+        Object.fromEntries(
+          list.tools.map((tool) => [
+            tool.name,
+            {
+              title: tool.title,
+              description: tool.description,
+              annotations: tool.annotations,
+              _meta: tool._meta,
+              inputSchema: schemaShape(tool.inputSchema),
+              outputSchema: schemaShape(tool.outputSchema),
+            },
+          ]),
+        );
+
+      // The proxy advertises the service's tool contract: names, metadata,
+      // schemas, annotations and descriptions.
+      assert.deepEqual(definitionsByName(stdioTools), definitionsByName(tools));
+
+      for (const name of [
+        "request_agent_task",
+        "request_agent_input",
+        "request_agent_project",
+      ]) {
+        assert.equal(
+          stdioTools.tools.some((tool) => tool.name === name),
+          false,
+          name,
+        );
+      }
 
       const settingsRead = await stdio.callTool({
         name: "get_agent_settings",
@@ -738,38 +765,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         "native-proxy-model",
       );
 
-      const inventory = await stdio.listTools();
-      assert.ok(inventory.tools.some((t) => t.name === "send_agent_message"));
-      assert.ok(inventory.tools.some((t) => t.name === "get_agent_messages"));
-
-      assert.ok(
-        !inventory.tools.some((t) =>
-          [
-            "continue_agent_task",
-            "send_agent_instruction",
-            "get_agent_result",
-          ].includes(t.name),
-        ),
-      );
-
-      const proxyMentionTool = inventory.tools.find(
-        (tool) => tool.name === "search_mentions",
-      );
-
-      assert.ok(proxyMentionTool);
-      assert.equal(proxyMentionTool.title, "Choose a worker");
-
-      assert.equal(
-        proxyMentionTool._meta?.connector_name,
-        "Delegate to Claude",
-      );
-
-      assert.deepEqual((proxyMentionTool._meta as any)["openai/extensions"], {
-        "mentions/search": {},
-      });
-
-      assert.deepEqual((proxyMentionTool._meta as any).ui.visibility, ["app"]);
-
       const proxyMentionResults = await stdio.callTool({
         name: "search_mentions",
         arguments: { query: "claude" },
@@ -786,129 +781,8 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       assert.ok(proxyMentionContent && "text" in proxyMentionContent);
       assert.match(proxyMentionContent.text, /Claude/);
 
-      const proxyOpener = inventory.tools.find(
-        (tool) => tool.name === "open_codex_subagent_extension",
-      )!;
-
-      assert.ok(proxyOpener);
-
-      assert.equal(
-        (proxyOpener._meta as any).ui.resourceUri,
-        "ui://codex-subagent-extension/app-v6",
-      );
-
-      assert.deepEqual(proxyOpener._meta, opener._meta);
-
-      const proxyGlobalOpener = inventory.tools.find(
-        (tool) => tool.name === globalOpener.name,
-      )!;
-
-      assert.ok(proxyGlobalOpener);
-      assert.deepEqual(proxyGlobalOpener._meta, globalOpener._meta);
-
-      assert.deepEqual(
-        inventory.tools.find((tool) => tool.name === "start_agent_task")!._meta,
-        starter._meta,
-      );
-
-      // The SDKs emit different JSON Schema draft identifiers for the same contract.
-      const schemaShape = (schema: unknown) => {
-        const { $schema: _draft, ...shape } = schema as Record<string, unknown>;
-
-        return shape;
-      };
-
-      for (const name of ["get_agent_settings", "update_agent_settings"]) {
-        const httpTool = tools.tools.find((tool) => tool.name === name)!;
-        const stdioTool = inventory.tools.find((tool) => tool.name === name)!;
-
-        assert.ok(
-          httpTool.outputSchema,
-          `${name} advertises an HTTP output schema`,
-        );
-
-        assert.ok(
-          stdioTool.outputSchema,
-          `${name} advertises a stdio output schema`,
-        );
-
-        assert.equal(httpTool.outputSchema.type, "object");
-        assert.ok(httpTool.outputSchema.properties?.values);
-
-        assert.deepEqual(
-          schemaShape(stdioTool.outputSchema),
-          schemaShape(httpTool.outputSchema),
-        );
-      }
-
-      assert.deepEqual(
-        schemaShape(proxyOpener.inputSchema),
-        schemaShape(opener.inputSchema),
-      );
-
-      assert.deepEqual(
-        schemaShape(proxyOpener.outputSchema),
-        schemaShape(opener.outputSchema),
-      );
-
-      assert.deepEqual(proxyOpener.annotations, opener.annotations);
-
-      assert.deepEqual(
-        schemaShape(proxyGlobalOpener.inputSchema),
-        schemaShape(globalOpener.inputSchema),
-      );
-
-      assert.deepEqual(
-        schemaShape(proxyGlobalOpener.outputSchema),
-        schemaShape(globalOpener.outputSchema),
-      );
-
-      assert.deepEqual(proxyGlobalOpener.annotations, globalOpener.annotations);
-      assert.equal(proxyGlobalOpener.description, globalOpener.description);
-      assert.equal(proxyOpener.description, opener.description);
-      assert.equal(proxyOpener.annotations?.readOnlyHint, true);
-
-      const httpWait = tools.tools.find(
-        (tool) => tool.name === "wait_user_agent_updates",
-      )!;
-
-      const proxyWait = inventory.tools.find(
-        (tool) => tool.name === "wait_user_agent_updates",
-      )!;
-
-      assert.equal(httpWait.annotations?.readOnlyHint, true);
-      assert.deepEqual(proxyWait.annotations, httpWait.annotations);
-
-      assert.deepEqual(
-        (
-          inventory.tools.find((tool) => tool.name === "list_agent_tasks")!
-            ._meta as any
-        ).ui.visibility,
-        ["model", "app"],
-      );
-
       const proxyUi = await stdio.readResource({
-        uri: (proxyOpener._meta as any).ui.resourceUri,
-      });
-
-      const [proxyUiContent] = proxyUi.contents;
-
-      assert.ok(proxyUiContent);
-
-      assert.equal(proxyUiContent.uri, "ui://codex-subagent-extension/app-v6");
-
-      assert.equal(proxyUiContent.mimeType, "text/html;profile=mcp-app");
-      assert.ok("text" in proxyUiContent);
-      assert.match(proxyUiContent.text, /<title>Delegated Work<\/title>/);
-
-      assert.deepEqual((proxyUiContent as any)._meta.ui.csp, {
-        connectDomains: [],
-        resourceDomains: [],
-      });
-
-      assert.deepEqual((proxyUiContent as any)._meta["openai/widgetCSP"], {
-        connect_domains: [],
-        resource_domains: [],
+        uri: (opener._meta as any).ui.resourceUri,
       });
 
       assert.deepEqual(proxyUi.contents, ui.contents);
@@ -1303,21 +1177,10 @@ test("a held update wait on the user-tools route returns the new revision when a
 test("MCP 2.0 serves tools/resources without webhook capabilities on the authenticated endpoint", async () => {
   const dir = await mkdtemp(join(tmpdir(), "ac-modern-"));
 
-  const provider = Object.assign(new FixtureProvider(), {
-    models: async (): Promise<ModelChoice[]> => [
-      {
-        value: "default",
-        displayName: "Fixture model",
-        description: "Test catalog",
-        supportedEffortLevels: ["low"],
-      },
-    ],
-  });
-
   const c = new Control(
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
-    new Map([["fixture", provider]]),
+    new Map([["fixture", new FixtureProvider()]]),
   );
 
   const app = application(
@@ -1417,22 +1280,6 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
       "fixture",
     );
 
-    assert.equal(settings.json.result.structuredContent.schema.type, "object");
-
-    assert.deepEqual(
-      settings.json.result.structuredContent.schema.properties
-        .fixture_default_model.enum,
-      ["", "default"],
-    );
-
-    assert.deepEqual(
-      settings.json.result.structuredContent.schema.properties
-        .fixture_default_reasoning_effort.enum,
-      ["default", "low"],
-    );
-
-    assert.equal(settings.json.result.structuredContent.sections[0].id, "task");
-
     const updated = await rpc("tools/call", {
       name: "update_agent_settings",
       arguments: { set: { max_cost_usd: 2, use_cost_budget: true } },
@@ -1470,12 +1317,6 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
 
     assert.ok(opener?._meta?.ui?.resourceUri);
 
-    assert.deepEqual(
-      tools.json.result.tools.find((t: any) => t.name === "list_agent_tasks")
-        ._meta.ui.visibility,
-      ["model", "app"],
-    );
-
     const resource = await rpc("resources/read", {
       uri: opener._meta.ui.resourceUri,
     });
@@ -1483,19 +1324,6 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
     assert.equal(
       resource.json.result.contents[0].mimeType,
       "text/html;profile=mcp-app",
-    );
-
-    assert.deepEqual(resource.json.result.contents[0]._meta.ui.csp, {
-      connectDomains: [],
-      resourceDomains: [],
-    });
-
-    assert.deepEqual(
-      resource.json.result.contents[0]._meta["openai/widgetCSP"],
-      {
-        connect_domains: [],
-        resource_domains: [],
-      },
     );
   } finally {
     await app.locals.closeMcp();

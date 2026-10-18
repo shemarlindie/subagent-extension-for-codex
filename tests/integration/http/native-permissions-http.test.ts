@@ -4,8 +4,6 @@ import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { test, type TestContext } from "vitest";
 
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
@@ -137,7 +135,7 @@ async function setup(t: TestContext) {
     workspace_strategy: "current_repo",
   };
 
-  return { c, base, dir, rpc, post, request };
+  return { c, rpc, post, request };
 }
 
 test("HTTP MCP resolves the extension permission setting regardless of host or argument permission metadata", async (t) => {
@@ -178,7 +176,7 @@ test("HTTP MCP resolves the extension permission setting regardless of host or a
   );
 });
 
-test("cookie-authenticated user tasks use the extension permission setting across profiles", async (t) => {
+test("cookie-authenticated user tasks use the extension permission setting", async (t) => {
   const { c, post, request } = await setup(t);
   c.settings.update("local", { set: { claude_permission_mode: "auto" } });
   const login = await post("/api/login", { token: "test-token" });
@@ -186,67 +184,21 @@ test("cookie-authenticated user tasks use the extension permission setting acros
 
   assert.ok(cookie);
 
-  for (const worker_profile of ["reviewer", "implementer"]) {
-    const res = await post(
-      "/api/user-tools/start_user_agent_task",
-      { ...request, worker_profile },
-      {
-        Cookie: cookie,
-        "X-Codex-Subagent-Extension": "1",
-        "X-Codex-Parent-Permissions": JSON.stringify({
-          provider: "claude",
-          permission_mode: "bypassPermissions",
-        }),
-      },
-    );
-
-    assert.equal(res.status, 200);
-    const { result } = await res.json();
-    assert.equal(result.provider_options.claude.permission_mode, "auto");
-    assert.equal(result.provider_options.claude.permission_source, "setting");
-  }
-});
-
-test("stdio proxy starts tasks with the extension permission setting", async (t) => {
-  const { base, c, request } = await setup(t);
-  c.settings.update("local", { set: { claude_permission_mode: "auto" } });
-  const client = new Client({ name: "permission-stdio-test", version: "1" });
-
-  try {
-    await client.connect(
-      new StdioClientTransport({
-        command: process.execPath,
-        args: ["--import", "tsx", resolve("src/service/stdio.ts")],
-        env: {
-          ...Object.fromEntries(
-            Object.entries(process.env).filter(
-              (entry): entry is [string, string] =>
-                typeof entry[1] === "string",
-            ),
-          ),
-          CODEX_SUBAGENT_EXTENSION_URL: base,
-          CODEX_SUBAGENT_EXTENSION_TOKEN: "test-token",
-        },
-        stderr: "pipe",
+  const res = await post(
+    "/api/user-tools/start_user_agent_task",
+    { ...request, worker_profile: "reviewer" },
+    {
+      Cookie: cookie,
+      "X-Codex-Subagent-Extension": "1",
+      "X-Codex-Parent-Permissions": JSON.stringify({
+        provider: "claude",
+        permission_mode: "bypassPermissions",
       }),
-    );
+    },
+  );
 
-    const response = await client.callTool({
-      name: "start_agent_task",
-      arguments: request,
-      _meta: parentMeta,
-    });
-
-    assert.equal(response.isError, false, JSON.stringify(response));
-    const task = (response.structuredContent as any).result;
-    assert.equal(task.provider_options.claude.permission_mode, "auto");
-    assert.equal(task.provider_options.claude.permission_source, "setting");
-
-    assert.equal(
-      c.store.get(task.id, "local").provider_options?.claude?.permission_mode,
-      "auto",
-    );
-  } finally {
-    await client.close();
-  }
+  assert.equal(res.status, 200);
+  const { result } = await res.json();
+  assert.equal(result.provider_options.claude.permission_mode, "auto");
+  assert.equal(result.provider_options.claude.permission_source, "setting");
 });

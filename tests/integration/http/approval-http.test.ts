@@ -270,7 +270,7 @@ test("authenticated admin user-tools route supports user settings, starts, and d
   }
 });
 
-test("MCP advertises app-only aliases and enforces approval policy for model-facing tools", async () => {
+test("MCP advertises app-only aliases and lets the parent agent answer delegated approvals", async () => {
   const { c, base, post, cookie, start, pending, cleanup } = await setup();
   const client = new Client({ name: "approval-test", version: "1.0.0" });
 
@@ -305,40 +305,6 @@ test("MCP advertises app-only aliases and enforces approval policy for model-fac
         .ui.visibility,
       ["model", "app"],
     );
-
-    const raised = await client.callTool({
-      name: "update_agent_settings",
-      arguments: { set: { default_approval_mode: "parent_agent" } },
-    });
-
-    assert.equal(raised.isError, true);
-
-    const started = await client.callTool({
-      name: "start_agent_task",
-      arguments: start,
-    });
-
-    assert.notEqual(started.isError, true);
-
-    const id = (started.structuredContent as { result: { id: string } }).result
-      .id;
-
-    const approval = await pending(id);
-
-    const blocked = await client.callTool({
-      name: "submit_agent_input",
-      arguments: approval,
-    });
-
-    assert.equal(blocked.isError, true);
-    assert.match(JSON.stringify(blocked.content), /requires user approval/);
-
-    assert.equal(
-      (await post("/api/tools/submit_agent_input", approval, cookie)).status,
-      200,
-    );
-
-    await until(() => c.store.get(id, "local").status === "completed");
 
     assert.equal(
       (

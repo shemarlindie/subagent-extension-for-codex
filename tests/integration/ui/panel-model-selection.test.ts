@@ -11,8 +11,32 @@ import {
   waitFor,
 } from "./panel-test-support";
 
+type Panel = Awaited<ReturnType<typeof setup>>;
+
+const startCalls = ({ transport }: Panel) =>
+  transport.calls.filter((call) => call.name === "start_agent_task");
+
+/**
+ * Starting is blocked with `message` and sends nothing until `effort` is
+ * chosen. Returns the arguments of the single start that follows.
+ */
+async function startAfterChoosingEffort(
+  panel: Panel,
+  message: RegExp,
+  effort: string,
+) {
+  await panel.user.click(screen.getByRole("button", { name: "Start task" }));
+  await screen.findByText(message);
+  assert.equal(startCalls(panel).length, 0);
+  await selectOption(panel.user, "Reasoning effort", effort);
+  await panel.user.click(screen.getByRole("button", { name: "Start task" }));
+  await waitFor(() => assert.equal(startCalls(panel).length, 1));
+
+  return startCalls(panel)[0]!.args;
+}
+
 test("discovered model metadata offers suggestions and rejects unsupported inherited effort until corrected", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const panel = await setup(t, (transport) =>
     configureModelDefaults(
       transport,
       {
@@ -30,6 +54,8 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
     ),
   );
 
+  const { user } = panel;
+
   await openAdvancedTask(user);
   await screen.findByRole("dialog");
   const model = screen.getByLabelText<HTMLInputElement>("Model");
@@ -44,36 +70,18 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
   assert.match(suggestion.textContent ?? "", /SDK model/);
   await user.keyboard("{Escape}");
   await enterTask(user, "Check discovered metadata");
-  await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  await screen.findByText(
+  const args = await startAfterChoosingEffort(
+    panel,
     /Choose a reasoning effort supported by claude model limited-model: low/,
-  );
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
-    0,
-  );
-
-  await selectOption(user, "Reasoning effort", "low");
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  assert.equal(
-    transport.calls.find((call) => call.name === "start_agent_task")!.args
-      .reasoning_effort,
     "low",
   );
+
+  assert.equal(args.reasoning_effort, "low");
 });
 
 test("runtime default model metadata blocks unsupported effort and permits native default reasoning", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const panel = await setup(t, (transport) =>
     configureModelDefaults(transport, {}, [
       {
         value: "default",
@@ -84,43 +92,22 @@ test("runtime default model metadata blocks unsupported effort and permits nativ
     ]),
   );
 
+  const { user } = panel;
+
   await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Check native default metadata");
   assert.equal(screen.getByLabelText<HTMLInputElement>("Model").value, "");
   await selectOption(user, "Reasoning effort", "high (unsupported by claude)");
-  await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  await screen.findByText(
+  const args = await startAfterChoosingEffort(
+    panel,
     /Choose a reasoning effort supported by claude model default/,
-  );
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
-    0,
-  );
-
-  await selectOption(
-    user,
-    "Reasoning effort",
     "Use default (provider runtime)",
   );
 
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  const call = transport.calls.find(
-    (call) => call.name === "start_agent_task",
-  )!;
-
-  assert.equal(call.args.model, "");
-  assert.equal(call.args.reasoning_effort, "default");
+  assert.equal(args.model, "");
+  assert.equal(args.reasoning_effort, "default");
 });
 
 test("unknown model metadata keeps generic reasoning choices and accepts custom model IDs", async (t) => {
@@ -159,7 +146,8 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
 });
 
 test("model selection retains unsupported effort on Claude and blocks submission until corrected", async (t) => {
-  const { transport, user } = await setup(t);
+  const panel = await setup(t);
+  const { user } = panel;
   await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Investigate effort selection");
@@ -173,35 +161,21 @@ test("model selection retains unsupported effort on Claude and blocks submission
     /none \(unsupported by claude\)/,
   );
 
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-  await screen.findByText(/Choose a reasoning effort supported by claude/);
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
-    0,
-  );
-
-  await selectOption(user, "Reasoning effort", "high");
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  assert.equal(
-    transport.calls.find((call) => call.name === "start_agent_task")!.args
-      .reasoning_effort,
+  const args = await startAfterChoosingEffort(
+    panel,
+    /Choose a reasoning effort supported by claude/,
     "high",
   );
+
+  assert.equal(args.reasoning_effort, "high");
 });
 
 test("model selection rejects unsupported inherited Claude effort and accepts an explicit supported override", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const panel = await setup(t, (transport) =>
     configureModelDefaults(transport, { default_reasoning_effort: "none" }),
   );
+
+  const { user } = panel;
 
   await openAdvancedTask(user);
   await screen.findByRole("dialog");
@@ -213,29 +187,13 @@ test("model selection rejects unsupported inherited Claude effort and accepts an
     /Use default \(none\)/,
   );
 
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-  await screen.findByText(/Choose a reasoning effort supported by claude/);
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "start_agent_task").length,
-    0,
-  );
-
-  await selectOption(user, "Reasoning effort", "medium");
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_agent_task").length,
-      1,
-    ),
-  );
-
-  assert.equal(
-    transport.calls.find((call) => call.name === "start_agent_task")!.args
-      .reasoning_effort,
+  const args = await startAfterChoosingEffort(
+    panel,
+    /Choose a reasoning effort supported by claude/,
     "medium",
   );
+
+  assert.equal(args.reasoning_effort, "medium");
 });
 
 test("model selection updates role and provider defaults while preserving explicit drafts", async (t) => {

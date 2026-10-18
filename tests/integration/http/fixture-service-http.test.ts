@@ -57,6 +57,28 @@ async function fixtureServer() {
   }
 }
 
+/** Posts a tool call to the fixture service as JSON. */
+async function call(name: string, args: Record<string, unknown>) {
+  const response = await fetch(`${origin}/fixture-service/tools/${name}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+
+  return {
+    response,
+    body: (await response.json()) as { result?: any; error?: string },
+  };
+}
+
+/** Posts a tool call that must succeed and returns its result. */
+async function result<T>(name: string, args: Record<string, unknown>) {
+  const { response, body } = await call(name, args);
+  assert.equal(response.status, 200, body.error);
+
+  return body.result as T;
+}
+
 test("the Vite fixture-service route parses requests and returns tool results", async () => {
   const created = await fixtureServer();
 
@@ -68,14 +90,9 @@ test("the Vite fixture-service route parses requests and returns tool results", 
   helpers.FIXTURE_SERVICE_TOOLS.push("list_agent_tasks");
 
   try {
-    const response = await fetch(
-      `${origin}/fixture-service/tools/list_agent_tasks`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversation_id: null }),
-      },
-    );
+    const { response, body } = await call("list_agent_tasks", {
+      conversation_id: null,
+    });
 
     assert.equal(response.status, 200);
 
@@ -84,8 +101,11 @@ test("the Vite fixture-service route parses requests and returns tool results", 
       /application\/json/,
     );
 
-    const body = (await response.json()) as { result: { id: string }[] };
-    assert.ok(body.result.some((task) => task.id === "preview-blocks"));
+    assert.ok(
+      (body.result as { id: string }[]).some(
+        (task) => task.id === "preview-blocks",
+      ),
+    );
   } finally {
     helpers.FIXTURE_SERVICE_TOOLS.pop();
   }
@@ -94,24 +114,8 @@ test("the Vite fixture-service route parses requests and returns tool results", 
 test("fixture changes come from recorded edits built per task", async () => {
   await fixtureServer();
 
-  const changes = async (task_id: string, scope = "task") => {
-    const response = await fetch(
-      `${origin}/fixture-service/tools/get_user_agent_changes`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task_id, scope }),
-      },
-    );
-
-    assert.equal(response.status, 200);
-
-    return (
-      (await response.json()) as {
-        result: Changes;
-      }
-    ).result;
-  };
+  const changes = (task_id: string, scope = "task") =>
+    result<Changes>("get_user_agent_changes", { task_id, scope });
 
   const paths = (result: Changes) => result.files.map((file) => file.path);
 
@@ -177,27 +181,15 @@ test("fixture changes come from recorded edits built per task", async () => {
 test("the large-file fixture's changes come in pages and its files read whole", async () => {
   await fixtureServer();
 
-  const call = async <T>(name: string, args: Record<string, unknown>) => {
-    const response = await fetch(`${origin}/fixture-service/tools/${name}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(args),
-    });
-
-    assert.equal(response.status, 200);
-
-    return ((await response.json()) as { result: T }).result;
-  };
-
   // Several megabytes of new files cross in pages of whole files.
-  let page = await call<Changes>("get_user_agent_changes", {
+  let page = await result<Changes>("get_user_agent_changes", {
     task_id: "preview-profile",
   });
 
   const pages = [page];
 
   while (page.next_cursor) {
-    page = await call<Changes>("get_user_agent_changes", {
+    page = await result<Changes>("get_user_agent_changes", {
       task_id: "preview-profile",
       cursor: page.next_cursor,
     });
@@ -221,7 +213,7 @@ test("the large-file fixture's changes come in pages and its files read whole", 
   let content = "";
 
   do {
-    part = await call<ChangedFileContent>("get_user_agent_changed_file", {
+    part = await result<ChangedFileContent>("get_user_agent_changed_file", {
       task_id: "preview-profile",
       path,
       cursor: part?.next_cursor,
@@ -256,19 +248,6 @@ test("the Vite fixture-service route serializes service errors as JSON", async (
 // Last: it changes the fixture repositories the tests above read.
 test("fixture worktrees can be removed and their branches deleted with real Git", async () => {
   await fixtureServer();
-
-  const call = async (name: string, args: Record<string, unknown>) => {
-    const response = await fetch(`${origin}/fixture-service/tools/${name}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(args),
-    });
-
-    return {
-      status: response.status,
-      body: (await response.json()) as { result?: any; error?: string },
-    };
-  };
 
   // Uncommitted work keeps the worktree until the removal is forced.
   const build = await call("remove_user_agent_worktree", {

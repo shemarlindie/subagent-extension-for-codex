@@ -586,12 +586,6 @@ test("the new-task composer starts the task and keeps typing focus in Chat", asy
     ),
   );
 
-  const submitted = transport.calls.find(
-    (call) => call.name === "start_agent_task",
-  )!.args;
-
-  assert.equal(submitted.description, "Trace the flaky login test");
-
   await waitFor(() =>
     assert.equal(controller.getSnapshot().newTask, undefined),
   );

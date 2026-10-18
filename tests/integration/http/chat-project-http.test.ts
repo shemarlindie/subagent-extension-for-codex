@@ -2,11 +2,10 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { test, type TestContext } from "vitest";
 
@@ -203,7 +202,6 @@ test("MCP get_current_agent_project reports the thread root without registering 
     "get_current_agent_project",
     "list_agent_projects",
     "get_agent_panel_context",
-    "open_codex_subagent_extension",
   ]) {
     assert.equal(
       tools.tools.find((tool) => tool.name === name)?.annotations?.readOnlyHint,
@@ -249,125 +247,72 @@ test("MCP get_current_agent_project reports the thread root without registering 
   assert.deepEqual(registered(f), []);
 });
 
-for (const transport of ["HTTP", "stdio"] as const) {
-  test(`${transport} exposes React project registration while retired host form tools are unavailable`, async (t) => {
-    const f = await fixture(t);
-    const repository = await f.repo("panel-project");
-    const client = new Client({ name: "panel-project-test", version: "1.0.0" });
-    t.onTestFinished(() => client.close());
+test("HTTP exposes React project registration while retired host form tools are unavailable", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("panel-project");
+  const client = new Client({ name: "panel-project-test", version: "1.0.0" });
+  t.onTestFinished(() => client.close());
 
-    await client.connect(
-      transport === "HTTP"
-        ? new StreamableHTTPClientTransport(new URL(f.base + "/mcp"), {
-            requestInit: {
-              headers: { Authorization: "Bearer project-test-token" },
-            },
-          })
-        : new StdioClientTransport({
-            command: process.execPath,
-            args: [resolve("dist/stdio.js")],
-            env: {
-              ...Object.fromEntries(
-                Object.entries(process.env).filter(
-                  (entry): entry is [string, string] =>
-                    typeof entry[1] === "string",
-                ),
-              ),
-              CODEX_SUBAGENT_EXTENSION_URL: f.base,
-              CODEX_SUBAGENT_EXTENSION_TOKEN: "project-test-token",
-            },
-            stderr: "pipe",
-          }),
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(f.base + "/mcp"), {
+      requestInit: {
+        headers: { Authorization: "Bearer project-test-token" },
+      },
+    }),
+  );
+
+  const { tools } = await client.listTools();
+
+  for (const name of [
+    "request_agent_task",
+    "request_agent_input",
+    "request_agent_project",
+  ]) {
+    assert.equal(
+      tools.some((tool) => tool.name === name),
+      false,
+      name,
     );
 
-    const { tools } = await client.listTools();
-
-    for (const name of [
-      "request_agent_task",
-      "request_agent_input",
-      "request_agent_project",
-    ]) {
-      assert.equal(
-        tools.some((tool) => tool.name === name),
-        false,
-        name,
-      );
-
-      if (transport === "HTTP") {
-        await assert.rejects(
-          client.callTool({ name, arguments: {} }),
-          /not found|unknown tool/i,
-        );
-      } else {
-        const rejected = await client.callTool({ name, arguments: {} });
-        assert.equal(rejected.isError, true);
-
-        assert.match(
-          JSON.stringify(rejected.content),
-          /not found|unknown tool/i,
-        );
-      }
-    }
-
-    for (const name of [
-      "open_codex_subagent_extension",
-      "open_codex_subagent_extension_global",
-      "search_mentions",
-    ]) {
-      assert.ok(
-        tools.some((tool) => tool.name === name),
-        name,
-      );
-    }
-
-    const resources = await client.listResources();
-
-    assert.ok(
-      resources.resources.some(
-        (resource) => resource.uri === "ui://codex-subagent-extension/app-v6",
-      ),
+    await assert.rejects(
+      client.callTool({ name, arguments: {} }),
+      /not found|unknown tool/i,
     );
+  }
 
-    assert.ok(
-      resources.resources.some(
-        (resource) => resource.name === "Claude provider mention",
-      ),
-    );
+  const register = tools.find(
+    (tool) => tool.name === "register_user_agent_project",
+  );
 
-    const register = tools.find(
-      (tool) => tool.name === "register_user_agent_project",
-    );
+  assert.ok(register);
 
-    assert.ok(register);
+  assert.deepEqual(
+    (register._meta as { ui: { visibility: string[] } }).ui.visibility,
+    ["app"],
+  );
 
-    assert.deepEqual(
-      (register._meta as { ui: { visibility: string[] } }).ui.visibility,
-      ["app"],
-    );
+  assert.deepEqual(registered(f), []);
 
-    assert.deepEqual(registered(f), []);
-
-    const rejected = await f.post("/api/tools/register_user_agent_project", {
-      repository,
-    });
-
-    assert.equal(rejected.status, 400);
-    assert.deepEqual(registered(f), []);
-
-    const accepted = await f.post(
-      "/api/user-tools/register_user_agent_project",
-      { repository },
-      f.cookie,
-    );
-
-    assert.equal(accepted.status, 200);
-
-    assert.deepEqual((await accepted.json()).result, {
-      repository,
-      kind: "repository",
-    });
-
-    assert.equal(await f.c.projects!.resolve(repository), repository);
-    assert.equal(f.c.store.all().length, 0);
+  const rejected = await f.post("/api/tools/register_user_agent_project", {
+    repository,
   });
-}
+
+  assert.equal(rejected.status, 400);
+  assert.deepEqual(registered(f), []);
+
+  const accepted = await f.post(
+    "/api/user-tools/register_user_agent_project",
+    { repository },
+    f.cookie,
+  );
+
+  assert.equal(accepted.status, 200);
+
+  assert.deepEqual((await accepted.json()).result, {
+    repository,
+    kind: "repository",
+  });
+
+  assert.equal(await f.c.projects!.resolve(repository), repository);
+  assert.equal(f.c.store.all().length, 0);
+});

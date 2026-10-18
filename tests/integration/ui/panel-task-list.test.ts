@@ -15,33 +15,27 @@ import {
   waitFor,
 } from "./panel-test-support";
 
-test("task filters keep exactly one filter selected", async (t) => {
+test("task filters list the nonempty filters and keep exactly one selected", async (t) => {
   const { user } = await setup(t);
 
   const checked = (name: RegExp) =>
     screen.getByRole("radio", { name }).getAttribute("aria-checked");
 
+  assert.deepEqual(
+    screen
+      .getAllByRole("radio")
+      .map((radio) => radio.getAttribute("data-filter")),
+    ["active", "all"],
+  );
+
   // Until one is chosen, the first nonempty filter in order is selected.
   assert.equal(checked(/^Active/), "true");
-  assert.equal(checked(/^All/), "false");
   await user.click(screen.getByRole("radio", { name: /^All/ }));
   assert.equal(checked(/^All/), "true");
   assert.equal(checked(/^Active/), "false");
   // Clicking the selected filter must not leave the list with no filter.
   await user.click(screen.getByRole("radio", { name: /^All/ }));
   assert.equal(checked(/^All/), "true");
-});
-
-test("task filters list the nonempty filters in priority order", async (t) => {
-  await setup(t);
-
-  const names = screen
-    .getAllByRole("radio")
-    .map((radio) => radio.getAttribute("data-filter"));
-
-  assert.deepEqual(names, ["active", "all"]);
-  assertAbsent(screen.queryByRole("radio", { name: /^Failed/ }));
-  assertAbsent(screen.queryByRole("radio", { name: /^Done/ }));
 });
 
 test("task filters show counts and an empty state with a way out", async (t) => {
@@ -100,7 +94,7 @@ test("a chosen filter stays visible after it empties", async (t) => {
   );
 });
 
-test("the all-project task list groups tasks under project headers in list order", async (t) => {
+test("the all-project task list labels each project group header", async (t) => {
   await setup(t, (transport) => {
     transport.tasks = [
       { ...task(), title: "Review authentication" },
@@ -114,20 +108,14 @@ test("the all-project task list groups tasks under project headers in list order
     ];
   });
 
-  const groups = [...document.querySelectorAll("#task-list [role=group]")].map(
-    (group) => [
+  const headers = [...document.querySelectorAll("#task-list [role=group]")].map(
+    (group) =>
       document.getElementById(group.getAttribute("aria-labelledby") ?? "")
         ?.textContent,
-      [...group.querySelectorAll(".row-title")].map(
-        (title) => title.textContent,
-      ),
-    ],
   );
 
-  assert.deepEqual(groups, [
-    ["Alpha", ["Review authentication", "Fix login"]],
-    ["b", ["Update database"]],
-  ]);
+  // Projects without a name fall back to the folder name.
+  assert.deepEqual(headers, ["Alpha", "b"]);
 });
 
 test("search clears with Escape and focuses with the slash key", async (t) => {

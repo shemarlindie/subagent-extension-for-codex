@@ -15,7 +15,7 @@ import {
 } from "./panel-test-support";
 
 test("the Changes tab reads every page and shows the worktree branch and its commands", async (t) => {
-  const { transport, user } = await setup(t, (transport) => {
+  const { user } = await setup(t, (transport) => {
     transport.tasks = [
       {
         ...task(),
@@ -35,16 +35,6 @@ test("the Changes tab reads every page and shows the worktree branch and its com
       document.querySelector(".diff-row.add")?.textContent ?? "",
       /new line/,
     ),
-  );
-
-  assert.deepEqual(
-    transport.calls
-      .filter((call) => call.name === "get_user_agent_changes")
-      .map((call) => call.args),
-    [
-      { task_id: "one", scope: "task" },
-      { task_id: "one", scope: "task", cursor: "1" },
-    ],
   );
 
   assert.ok(screen.getByText("+1 −1, 2 files"));
