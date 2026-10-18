@@ -77,6 +77,8 @@ export function userTools(
     }),
     start_user_agent_task: tool({
       ...tools.start_agent_task,
+      // The panel already shows the new task, so it opens no inline panel.
+      panel: false,
       description:
         "User interface only: create a task with the user-selected native permission mode.",
       run: async (a) => {
@@ -149,6 +151,7 @@ export function userTools(
       },
     }),
     get_user_agent_chat: tool({
+      readOnly: true,
       description:
         "User interface only: a task's Chat after a cursor: its messages, an outcome row for each turn's end, and notes for a new session, a recreated worktree and compaction. An item read again replaces the earlier one with its id.",
       schema: taskId.extend({
@@ -168,6 +171,7 @@ export function userTools(
       },
     }),
     wait_user_agent_updates: tool({
+      readOnly: true,
       description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears; otherwise after wait_ms (at most ${MAX_UPDATE_WAIT_MS}). Without after, or with wait_ms 0, it returns at once, so it also reads a draft. The revision is opaque: compare it only for equality.`,
       schema: z.strictObject({
         after: z.string().max(200).optional(),
@@ -241,12 +245,14 @@ export function userTools(
       run: (a) => c.settings.update(owner, a, "user"),
     }),
     get_user_agent_change_counts: tool({
+      readOnly: true,
       description:
         "User interface only: recorded change totals for the Changes tab and Details.",
       schema: taskId,
       run: (a) => c.changes.counts(c.store.get(a.task_id, owner)),
     }),
     get_user_agent_activity: tool({
+      readOnly: true,
       description:
         "User interface only: a task's activity for the panel's Activity tab: its newest events after a cursor, and a tally of the older events outside the window (the summary's count, timestamps, tool calls, messages, failures and retries).",
       schema: taskId.extend({
@@ -259,6 +265,7 @@ export function userTools(
       },
     }),
     get_user_agent_turn_activity: tool({
+      readOnly: true,
       description:
         "User interface only: one turn's activity for the panel's Activity tab: the events after the previous turn's closing status event through this turn's, or to the newest event while the turn runs. Its newest events come with a tally of the older ones, as get_user_agent_activity gives them.",
       schema: taskId.extend({ turn: z.number().int().positive() }),
@@ -269,6 +276,7 @@ export function userTools(
       },
     }),
     remove_user_agent_worktree: tool({
+      destructive: true,
       description:
         "User interface only: remove a stopped worktree task's worktree and keep its branch. With uncommitted changes it removes nothing and returns status uncommitted with the files, unless force discards them.",
       schema: taskId.extend({ force: z.boolean().default(false) }),
@@ -333,12 +341,14 @@ export function userTools(
       run: (a) => c.archive.setArchived(owner, a.task_ids, a.archived),
     }),
     delete_user_agent_task: tool({
+      destructive: true,
       description:
         "User interface only: delete a stopped task with its events, requests, worktree and branch. With delete_agent_task it also deletes the provider's session for the task. This can't be undone.",
       schema: taskId.extend({ delete_agent_task: z.boolean().default(false) }),
       run: (a) => c.delete(owner, a.task_id, a.delete_agent_task),
     }),
     delete_user_agent_tasks: tool({
+      destructive: true,
       description:
         "User interface only: delete several tasks like delete_user_agent_task, dependents first. A task outside them that depends on one stops the whole deletion. This can't be undone.",
       schema: z.strictObject({
@@ -348,6 +358,7 @@ export function userTools(
       run: (a) => c.delete(owner, a.task_ids, a.delete_agent_task),
     }),
     delete_user_agent_branch: tool({
+      destructive: true,
       description:
         "User interface only: delete a stopped worktree task's branch once its worktree is removed.",
       schema: taskId,

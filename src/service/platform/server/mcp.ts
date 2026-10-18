@@ -6,15 +6,10 @@ import {
 
 import { PARENT_DELEGATION_PROTOCOL } from "../../../shared/tasks/conversation/parent-protocol.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
-import type { Task } from "../../../shared/tasks/model.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { codexContextCapability } from "../panel/host-context.js";
-import { delegationPanel, panelUri } from "../panel/panel.js";
-import {
-  openingTasks,
-  resolvePanelContext,
-  taskPanelContext,
-} from "../panel/panel-context.js";
+import { delegationPanel } from "../panel/panel.js";
+import { openingTasks, resolvePanelContext } from "../panel/panel-context.js";
 import { packageVersion } from "../service/runtime.js";
 import {
   claudeMentionResource,
@@ -27,8 +22,8 @@ import {
 import { productGlyphIcons } from "./product-glyph.js";
 import {
   definitions,
-  isReadOnlyTool,
-  isUserTool,
+  toolRegistration,
+  toolStructuredContent,
   withConversation,
 } from "./tools.js";
 import type { AnyTool } from "./tools/definition.js";
@@ -81,29 +76,7 @@ export function mcp(
 
     server.registerTool(
       name,
-      {
-        description: d.description,
-        inputSchema: d.schema,
-        ...(d.outputSchema ? { outputSchema: d.outputSchema } : {}),
-        annotations: {
-          readOnlyHint: isReadOnlyTool(name),
-          destructiveHint: [
-            "remove_user_agent_worktree",
-            "delete_user_agent_task",
-            "delete_user_agent_branch",
-          ].includes(name),
-          openWorldHint: name === "start_agent_task",
-        },
-        _meta: {
-          ui: {
-            visibility: isUserTool(name) ? ["app"] : ["model", "app"],
-            ...(name === "start_agent_task" ? { resourceUri: panelUri } : {}),
-          },
-          ...(name === "start_agent_task"
-            ? { "openai/ui": { preferredModelDisplayMode: "inline" } }
-            : {}),
-        },
-      },
+      toolRegistration(name, d),
       async (args, ctx: ServerContext): Promise<CallToolResult> => {
         try {
           const current: Record<string, AnyTool> = definitions(
@@ -117,19 +90,12 @@ export function mcp(
           if (!definition) throw new Error(`Unknown tool: ${name}`);
 
           const result = await definition.run(
-            withConversation(name, args, ctx.mcpReq._meta),
+            withConversation(definition.conversation, args, ctx.mcpReq._meta),
           );
 
           return {
             content: [{ type: "text", text: JSON.stringify(result) }],
-            structuredContent: name.endsWith("_agent_settings")
-              ? result
-              : {
-                  result,
-                  ...(name === "start_agent_task"
-                    ? { ...taskPanelContext(result as Task), tasks: [result] }
-                    : {}),
-                },
+            structuredContent: toolStructuredContent(definition, result),
           };
         } catch (error) {
           return {
@@ -156,7 +122,7 @@ export function mcp(
     async (args, ctx): Promise<CallToolResult> => {
       try {
         return await panel.open(
-          withConversation(panel.name, args, ctx.mcpReq._meta),
+          withConversation("panel", args, ctx.mcpReq._meta),
         );
       } catch (error) {
         return {

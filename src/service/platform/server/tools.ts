@@ -1,19 +1,23 @@
-import type { InputAuthority } from "../../../shared/tasks/model.js";
+import type { InputAuthority, Task } from "../../../shared/tasks/model.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
+import { panelUri } from "../panel/panel.js";
+import { taskPanelContext } from "../panel/panel-context.js";
 import { agentTools } from "./tools/agent-tools.js";
-import type { AnyTool, ToolContext } from "./tools/definition.js";
+import type {
+  AnyTool,
+  ConversationHints,
+  ToolContext,
+} from "./tools/definition.js";
 import { userTools } from "./tools/user-tools.js";
 
 /** Optional host conversation correlation is a UI scope, never an access grant. */
 export function withConversation(
-  name: string,
+  hints: ConversationHints | undefined,
   args: Record<string, unknown>,
   meta?: Record<string, unknown>,
 ) {
   if (
-    ["open_codex_subagent_extension", "get_agent_panel_context"].includes(
-      name,
-    ) &&
+    hints === "panel" &&
     args.conversation_id !== null &&
     args.task_id === undefined &&
     args.host_directory === undefined
@@ -31,18 +35,9 @@ export function withConversation(
 
   // A selected task supplies its own scope; ambient chat hints cannot constrain it.
   if (
-    ![
-      "open_codex_subagent_extension",
-      "start_agent_task",
-      "start_user_agent_task",
-      "list_agent_tasks",
-      "get_agent_panel_context",
-    ].includes(name) ||
+    !hints ||
     args.conversation_id !== undefined ||
-    (["open_codex_subagent_extension", "get_agent_panel_context"].includes(
-      name,
-    ) &&
-      args.task_id !== undefined)
+    (hints === "panel" && args.task_id !== undefined)
   ) {
     return args;
   }
@@ -90,13 +85,44 @@ export function isUserTool(name: string) {
   return userToolNames.has(name);
 }
 
-/** Whether a tool only reads state; waiting for updates changes nothing. */
-export function isReadOnlyTool(name: string) {
-  return (
-    name.startsWith("get_") ||
-    name.startsWith("list_") ||
-    name === "wait_user_agent_updates"
-  );
+/** A task tool's MCP registration, shared by the HTTP and stdio servers. */
+export function toolRegistration(name: string, d: AnyTool) {
+  return {
+    description: d.description,
+    inputSchema: d.schema,
+    ...(d.outputSchema ? { outputSchema: d.outputSchema } : {}),
+    annotations: {
+      readOnlyHint: d.readOnly === true,
+      destructiveHint: d.destructive === true,
+      openWorldHint: d.openWorld === true,
+    },
+    _meta: {
+      ui: {
+        visibility: isUserTool(name)
+          ? (["app"] as const)
+          : (["model", "app"] as const),
+        ...(d.panel ? { resourceUri: panelUri } : {}),
+      },
+      ...(d.panel
+        ? { "openai/ui": { preferredModelDisplayMode: "inline" as const } }
+        : {}),
+    },
+  };
+}
+
+/**
+ * A tool result's structured content. A declared output schema describes the
+ * result itself; panel tools add the context that selects the new task.
+ */
+export function toolStructuredContent(d: AnyTool, result: unknown) {
+  if (d.outputSchema) return result as Record<string, unknown>;
+
+  return {
+    result,
+    ...(d.panel
+      ? { ...taskPanelContext(result as Task), tasks: [result] }
+      : {}),
+  };
 }
 
 export async function callTool(

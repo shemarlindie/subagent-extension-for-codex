@@ -7,12 +7,10 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import { PARENT_DELEGATION_PROTOCOL } from "../shared/tasks/conversation/parent-protocol.js";
-import type { Task } from "../shared/tasks/model.js";
 import { hostDirectoryFromMeta } from "./features/projects/chat-project.js";
 import { type Control } from "./features/tasks/runtime/control.js";
 import { codexContextCapability } from "./platform/panel/host-context.js";
-import { delegationPanel, panelUri } from "./platform/panel/panel.js";
-import { taskPanelContext } from "./platform/panel/panel-context.js";
+import { delegationPanel } from "./platform/panel/panel.js";
 import {
   claudeMentionResource,
   claudeMentionUri,
@@ -27,8 +25,9 @@ import {
 import { productGlyphIcons } from "./platform/server/product-glyph.js";
 import {
   definitions,
-  isReadOnlyTool,
   isUserTool,
+  toolRegistration,
+  toolStructuredContent,
   withConversation,
 } from "./platform/server/tools.js";
 import type { AnyTool } from "./platform/server/tools/definition.js";
@@ -58,9 +57,12 @@ try {
 
 const service = serviceClient(connectService);
 
+// Definitions supply schemas only; the proxy forwards calls to the service.
+const tools: Record<string, AnyTool> = definitions({} as Control, "local");
+
 /** Read-only tools, which the proxy may safely send twice. */
 function readOnly(name: string) {
-  return isReadOnlyTool(name) || name === mentionSearchToolName;
+  return tools[name]?.readOnly === true || name === mentionSearchToolName;
 }
 
 /** Forwards a tool call to the service's tool API. */
@@ -147,37 +149,12 @@ server.registerResource(
   () => readClaudeMention(mentionSearchEnv),
 );
 
-// Definitions supply schemas only; the proxy forwards calls to the service.
-const tools: Record<string, AnyTool> = definitions({} as Control, "local");
-
 for (const [name, d] of Object.entries(tools)) {
   if (name === mentionSearchToolName) continue;
 
   server.registerTool(
     name,
-    {
-      description: d.description,
-      inputSchema: d.schema,
-      ...(d.outputSchema ? { outputSchema: d.outputSchema } : {}),
-      annotations: {
-        readOnlyHint: isReadOnlyTool(name),
-        destructiveHint: [
-          "remove_user_agent_worktree",
-          "delete_user_agent_task",
-          "delete_user_agent_branch",
-        ].includes(name),
-        openWorldHint: name === "start_agent_task",
-      },
-      _meta: {
-        ui: {
-          visibility: isUserTool(name) ? ["app"] : ["model", "app"],
-          ...(name === "start_agent_task" ? { resourceUri: panelUri } : {}),
-        },
-        ...(name === "start_agent_task"
-          ? { "openai/ui": { preferredModelDisplayMode: "inline" } }
-          : {}),
-      },
-    },
+    toolRegistration(name, d),
     async (
       args,
       extra: { _meta?: Record<string, unknown> },
@@ -187,7 +164,7 @@ for (const [name, d] of Object.entries(tools)) {
 
         const response = await postService(
           name,
-          withConversation(name, args, extra._meta),
+          withConversation(d.conversation, args, extra._meta),
           serviceTimeout(name, args),
           hostDirectory
             ? { "X-Codex-Host-Directory": encodeURIComponent(hostDirectory) }
@@ -201,17 +178,7 @@ for (const [name, d] of Object.entries(tools)) {
           content: [{ type: "text", text: JSON.stringify(body) }],
           ...(response.ok
             ? {
-                structuredContent: name.endsWith("_agent_settings")
-                  ? body.result
-                  : {
-                      ...body,
-                      ...(name === "start_agent_task"
-                        ? {
-                            ...taskPanelContext(body.result as Task),
-                            tasks: [body.result],
-                          }
-                        : {}),
-                    },
+                structuredContent: toolStructuredContent(d, body.result),
               }
             : {}),
         };
@@ -251,7 +218,7 @@ server.registerTool(
   panel.tool,
   async (args, extra): Promise<CallToolResult> => {
     try {
-      return await panel.open(withConversation(panel.name, args, extra._meta));
+      return await panel.open(withConversation("panel", args, extra._meta));
     } catch (error) {
       return {
         isError: true,

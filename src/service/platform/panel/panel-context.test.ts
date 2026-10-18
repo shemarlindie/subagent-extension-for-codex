@@ -12,13 +12,23 @@ import { Projects } from "../../features/projects/projects.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
-import { withConversation } from "../server/tools.js";
+import { definitions, withConversation } from "../server/tools.js";
+import type { AnyTool } from "../server/tools/definition.js";
 import { withHostRepository } from "./host-context.js";
 import {
   openingTasks,
   resolvePanelContext,
   taskPanelContext,
 } from "./panel-context.js";
+
+/** The host hints a tool declares. The panel entrypoint always takes panel hints. */
+function hints(name: string) {
+  const tools: Record<string, AnyTool> = definitions({} as Control, "alice");
+
+  return name === "open_codex_subagent_extension"
+    ? "panel"
+    : tools[name]?.conversation;
+}
 
 async function fixture(t: TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "panel-context-")));
@@ -352,20 +362,25 @@ test("host correlation honors explicit values and isolates supported tools", () 
 
   for (const name of [
     "start_agent_task",
+    "start_user_agent_task",
     "list_agent_tasks",
     "open_codex_subagent_extension",
     "get_agent_panel_context",
   ]) {
-    assert.equal(withConversation(name, {}, meta).conversation_id, "session");
+    assert.equal(
+      withConversation(hints(name), {}, meta).conversation_id,
+      "session",
+    );
 
     assert.equal(
-      withConversation(name, {}, { threadId: "thread" }).conversation_id,
+      withConversation(hints(name), {}, { threadId: "thread" }).conversation_id,
       "thread",
     );
 
     for (const conversation_id of ["explicit", null]) {
       assert.equal(
-        withConversation(name, { conversation_id }, meta).conversation_id,
+        withConversation(hints(name), { conversation_id }, meta)
+          .conversation_id,
         conversation_id,
       );
     }
@@ -373,19 +388,22 @@ test("host correlation honors explicit values and isolates supported tools", () 
 
   for (const value of ["", "   ", "x".repeat(257), 7, null]) {
     assert.equal(
-      withConversation("list_agent_tasks", {}, { "openai/session": value })
-        .conversation_id,
+      withConversation(
+        hints("list_agent_tasks"),
+        {},
+        { "openai/session": value },
+      ).conversation_id,
       undefined,
     );
   }
 
   assert.deepEqual(
-    withConversation("get_agent_task", { task_id: "owned" }, meta),
+    withConversation(hints("get_agent_task"), { task_id: "owned" }, meta),
     { task_id: "owned" },
   );
 
   assert.equal(
-    withConversation("start_agent_task", {}, meta).host_directory,
+    withConversation(hints("start_agent_task"), {}, meta).host_directory,
     undefined,
   );
 
@@ -393,18 +411,24 @@ test("host correlation honors explicit values and isolates supported tools", () 
     "open_codex_subagent_extension",
     "get_agent_panel_context",
   ]) {
-    assert.deepEqual(withConversation(name, { conversation_id: null }, meta), {
-      conversation_id: null,
-    });
+    assert.deepEqual(
+      withConversation(hints(name), { conversation_id: null }, meta),
+      {
+        conversation_id: null,
+      },
+    );
 
     assert.equal(
-      withConversation(name, {}, meta).host_directory,
+      withConversation(hints(name), {}, meta).host_directory,
       "file:///project",
     );
 
     assert.equal(
-      withConversation(name, { host_directory: "file:///explicit" }, meta)
-        .host_directory,
+      withConversation(
+        hints(name),
+        { host_directory: "file:///explicit" },
+        meta,
+      ).host_directory,
       "file:///explicit",
     );
   }
@@ -450,7 +474,12 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
       "open_codex_subagent_extension",
       "get_agent_panel_context",
     ]) {
-      const args = withConversation(name, { task_id: selected.id }, meta);
+      const args = withConversation(
+        hints(name),
+        { task_id: selected.id },
+        meta,
+      );
+
       assert.deepEqual(args, { task_id: selected.id });
 
       assert.deepEqual(
@@ -463,7 +492,7 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
           f.c,
           "alice",
           withConversation(
-            name,
+            hints(name),
             {
               task_id: selected.id,
               conversation_id: "explicit-conflict",

@@ -45,24 +45,29 @@ import {
 export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
   return {
     get_agent_panel_context: tool({
+      readOnly: true,
+      conversation: "panel",
       description:
         "Resolve panel repository/revision defaults from explicit approved context or the latest task in this conversation. task_id selects an owned task. null conversation_id explicitly requests all conversations. This never registers a project or starts work; for a returned panel_project_candidate, ask the user to use Add project in the panel.",
       schema: panelContextInput,
       run: (a) => resolvePanelContext(c, owner, a),
     }),
     list_agent_projects: tool({
+      readOnly: true,
       description:
         "List persistently approved project roots. Never registers. Pass an explicit absolute repository to start_agent_task. If the chat's project is missing, ask the user to use Add project in the panel. Task arguments never grant access.",
       schema: z.strictObject({}),
       run: () => c.projects?.list() ?? [],
     }),
     get_current_agent_project: tool({
+      readOnly: true,
       description:
         "Resolve the current chat's local Git root from host directory metadata and report whether it is registered. Never registers. When it is unregistered, follow next_step: starting a task for it from this chat adds it if auto_register_on_task_start is true; otherwise ask the user to use Add project in the panel. Tool arguments cannot grant directory access.",
       schema: z.strictObject({}),
       run: () => currentChatProject(c, owner, hostMeta),
     }),
     get_agent_settings: tool({
+      readOnly: true,
       description: "Read persistent user defaults for delegation and budgets.",
       schema: z.strictObject({}),
       outputSchema: settingsReadOutputSchema,
@@ -76,6 +81,9 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       run: (a) => c.settings.update(owner, a, authority),
     }),
     start_agent_task: tool({
+      openWorld: true,
+      panel: true,
+      conversation: "chat",
       description:
         "Create durable asynchronous work from the full request in description; a concise title is generated automatically. Work starts in the current repository by default, including uncommitted changes, or in a committed-revision worktree when requested. Supply an explicit absolute repository from list_agent_projects; current does not identify the host chat project. Reopen existing work with open_codex_subagent_extension(task_id), never another start call.",
       schema: startSchema.extend({
@@ -111,6 +119,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       },
     }),
     get_agent_task: tool({
+      readOnly: true,
       description:
         "Inspect a task: its draft (the message the worker is writing, if any), its status and turn (the number of turns started), pending input, pending steers (sent into the running turn and not yet taken), queue (messages waiting for turns of their own, and whether an interrupt paused it) and an excerpt of its latest reply.",
       schema: taskId,
@@ -127,6 +136,8 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       },
     }),
     list_agent_tasks: tool({
+      readOnly: true,
+      conversation: "chat",
       description:
         "List owned tasks, optionally scoped to a conversation and repository. Each includes an excerpt of its latest reply, its number of queued messages and unread: true when the user hasn't viewed its latest reply, outcome or request in the panel, with read_through, the newest event they had read, and archived_at when the user archived it from the panel's lists. null conversation_id explicitly requests all conversations.",
       schema: z.object({
@@ -156,6 +167,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       },
     }),
     list_available_workers: tool({
+      readOnly: true,
       description:
         "Discover installed providers, profiles, supported capabilities, and whether each provider's runtime is ready to start tasks.",
       schema: z.object({}),
@@ -218,6 +230,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         ),
     }),
     get_agent_messages: tool({
+      readOnly: true,
       description: `Read a task's conversation after a cursor: its request, the messages you and the user sent, the worker's messages, and each successful turn's reply (kind reply, the text that ended the turn). Pass next_cursor back as after to read only what follows. With wait_seconds (at most ${MAX_MESSAGE_WAIT_SECONDS}), it waits until a message follows the cursor, the turn ends or input is needed. Only complete messages are returned; a read that waits out its time includes draft, the text of the message being written. Also returns the task's status, turn, whether a turn is still running, any pending_input and its number of queued messages. Read what a turn changed with get_agent_changes(scope: "turn"). ${PARENT_DELEGATION_PROTOCOL}`,
       schema: taskId.extend({
         after: z.number().int().nonnegative().default(0),
@@ -238,6 +251,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         ),
     }),
     get_agent_message: tool({
+      readOnly: true,
       description: `Retrieve one stored conversation message by task ID and stable message ID, independently of the polling cursor. ${PARENT_REPORT_PROTOCOL}`,
       schema: taskId.extend({ message_id: z.string().min(1) }),
       run: (a) => {
@@ -261,6 +275,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         acknowledgeParentMessage(c.store, owner, a.task_id, a.message_id),
     }),
     get_agent_changes: tool({
+      readOnly: true,
       description:
         "Read the task tools’ recorded edits as a unified diff with per-file stats, for the whole task or latest turn. Every page lists every file. Pass next_cursor to read more whole files. Incomplete files have no diff. unrecorded_commands means a command changed files whose edits were not captured. Commits and worktree removal do not change these recorded diffs.",
       schema: taskId.extend({
@@ -271,6 +286,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         c.changes.changes(c.store.get(a.task_id, owner), a.scope, a.cursor),
     }),
     get_agent_changed_file: tool({
+      readOnly: true,
       description:
         "Read a recorded changed file from disk as it is now, including later edits by others. Only paths in task or latest-turn changes are allowed. state is deleted for a missing file, unavailable for a removed workspace, or binary with its size for other binary files. Images are base64. Pass next_cursor for more content.",
       schema: taskId.extend({
@@ -281,6 +297,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         c.changes.changedFile(c.store.get(a.task_id, owner), a.path, a.cursor),
     }),
     get_agent_events: tool({
+      readOnly: true,
       description:
         "Retrieve the full ordered execution log after an optional cursor: tool calls, worker messages and lifecycle events. For the conversation, use get_agent_messages.",
       schema: taskId.extend({

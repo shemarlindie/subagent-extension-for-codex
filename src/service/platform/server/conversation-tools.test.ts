@@ -18,7 +18,8 @@ import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
-import { callTool, definitions, isReadOnlyTool, isUserTool } from "./tools.js";
+import { callTool, definitions, isUserTool } from "./tools.js";
+import type { AnyTool } from "./tools/definition.js";
 
 async function until(fn: () => boolean) {
   for (let i = 0; i < 300; i++) {
@@ -118,11 +119,15 @@ type Messages = {
   queued_messages: number;
 };
 
-test("exactly the tools named for the user are refused to other callers", async () => {
+test("tool names mark app-only tools and fit the host name budget", async () => {
   const names = Object.keys(definitions({} as Control, "alice"));
 
   for (const name of names) {
     assert.equal(isUserTool(name), name.includes("_user_"), name);
+
+    // Hosts qualify names as mcp__codex-subagent-extension__<tool> (31
+    // characters) within a 64-character function-name limit.
+    if (!isUserTool(name)) assert.ok(name.length <= 33, name);
   }
 
   await expect(
@@ -130,18 +135,40 @@ test("exactly the tools named for the user are refused to other callers", async 
   ).rejects.toThrow(/User tools require a user interface/);
 });
 
-test("reads and the update wait are read-only; writes are not", () => {
-  for (const name of [
-    "get_agent_messages",
-    "list_agent_tasks",
-    "wait_user_agent_updates",
-  ]) {
-    assert.equal(isReadOnlyTool(name), true, name);
-  }
+test("tools declare their read-only and destructive annotations", () => {
+  const tools: Record<string, AnyTool> = definitions({} as Control, "alice");
 
-  for (const name of ["send_agent_message", "delete_user_agent_task"]) {
-    assert.equal(isReadOnlyTool(name), false, name);
-  }
+  const flagged = (flag: "readOnly" | "destructive") =>
+    Object.keys(tools)
+      .filter((name) => tools[name]?.[flag])
+      .sort();
+
+  expect(flagged("readOnly")).toEqual([
+    "get_agent_changed_file",
+    "get_agent_changes",
+    "get_agent_events",
+    "get_agent_message",
+    "get_agent_messages",
+    "get_agent_panel_context",
+    "get_agent_settings",
+    "get_agent_task",
+    "get_current_agent_project",
+    "get_user_agent_activity",
+    "get_user_agent_change_counts",
+    "get_user_agent_chat",
+    "get_user_agent_turn_activity",
+    "list_agent_projects",
+    "list_agent_tasks",
+    "list_available_workers",
+    "wait_user_agent_updates",
+  ]);
+
+  expect(flagged("destructive")).toEqual([
+    "delete_user_agent_branch",
+    "delete_user_agent_task",
+    "delete_user_agent_tasks",
+    "remove_user_agent_worktree",
+  ]);
 });
 
 test("a parent reads replies by long poll and sends follow-ups as messages", async () => {

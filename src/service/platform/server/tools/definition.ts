@@ -42,8 +42,21 @@ type Tool<S extends z.ZodType, R> = {
   description: string;
   schema: S;
   outputSchema?: z.ZodType;
+  /** Only reads state, so the proxy may safely send it twice. */
+  readOnly?: boolean;
+  destructive?: boolean;
+  openWorld?: boolean;
+  /** Returns a task and opens the panel inline beside the chat. */
+  panel?: boolean;
+  /**
+   * Which host hints fill missing arguments: the chat for `chat`, and also
+   * the host directory for `panel`. See withConversation.
+   */
+  conversation?: ConversationHints;
   run(args: z.output<S>): R;
 };
+
+export type ConversationHints = "chat" | "panel";
 
 export type AnyTool = Tool<z.ZodType<Record<string, unknown>>, unknown>;
 
