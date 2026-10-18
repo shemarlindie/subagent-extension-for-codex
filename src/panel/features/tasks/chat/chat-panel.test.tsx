@@ -312,45 +312,14 @@ test.each([
   },
 );
 
-test("Chat exposes a scroll-to-latest control and returns focus to its history", () => {
-  const notes: ChatItem[] = Array.from({ length: 6 }, (_, index) => ({
-    kind: "note",
-    id: `note-${index}`,
-    event_id: index,
-    timestamp: "",
-    note: "compaction",
-    text: `Note ${index}`,
-  }));
-
-  const { view } = setup({}, [], notes);
-  const history = view.getByRole("region", { name: "Chat history" });
-  let scrollTop = 400;
-
-  Object.defineProperties(history, {
-    clientHeight: { configurable: true, value: 200 },
-    scrollHeight: { configurable: true, value: 600 },
-    scrollTop: {
-      configurable: true,
-      get: () => scrollTop,
-      set: (value: number) => {
-        scrollTop = value;
-      },
-    },
-  });
-
-  history.scrollTop = 100;
-  fireEvent.scroll(history);
-
-  fireEvent.click(
-    view.getByRole("button", { name: "Scroll to latest message" }),
-  );
-
-  assert.equal(history.scrollTop, 400);
-  expect(document.activeElement).toBe(history);
+// useReadingScroll's tests cover the control's behavior.
+test("Chat exposes a scroll-to-latest control once the reader leaves its latest message", () => {
+  const { view } = setup({}, [], noteItems);
+  scrollIntoHistory(view);
 
   expect(
-    view.queryByRole("button", { name: "Scroll to latest message" }),
-  ).toBeNull();
+    view.getByRole("button", { name: "Scroll to latest message" }),
+  ).toBeTruthy();
 });
 
 test("dependency waiting shows a paused status instead of the running indicator", () => {
@@ -1423,59 +1392,56 @@ test("combined budget notice prompts after both spent dimensions are raised", as
   });
 });
 
-test("a limit below the current budget shows validation feedback", () => {
-  const { view } = setup({
-    status: "failed",
-    error: "Runtime budget exhausted",
-    budget: { ...base.budget, max_cost_usd: null },
-    runtime_ms: 22 * 60_000,
-    cost_usd: 0.44,
-  });
-
-  const apply = view.getByRole("button", { name: "Apply" });
-
-  const limit = view.getByRole("spinbutton", {
+test.each([
+  {
+    kind: "runtime",
+    task: {
+      status: "failed",
+      error: "Runtime budget exhausted",
+      budget: { ...base.budget, max_cost_usd: null },
+      runtime_ms: 22 * 60_000,
+      cost_usd: 0.44,
+    },
     name: "Runtime limit (minutes)",
-  });
+    below: "19",
+    above: "21",
+    message: "Enter a limit higher than 20 mins.",
+  },
+  {
+    kind: "cost",
+    task: {
+      status: "failed",
+      error: "Claude result: error_max_budget_usd",
+      cost_usd: 5.02,
+    },
+    name: "Cost limit",
+    below: "4",
+    above: "8",
+    message: "Enter a limit higher than $5.00.",
+  },
+] satisfies {
+  kind: string;
+  task: Partial<Task>;
+  name: string;
+  below: string;
+  above: string;
+  message: string;
+}[])(
+  "a $kind limit below the current budget shows validation feedback",
+  ({ task, name, below, above, message }) => {
+    const { view } = setup(task);
+    const apply = view.getByRole("button", { name: "Apply" });
+    const limit = view.getByRole("spinbutton", { name });
 
-  fireEvent.change(limit, { target: { value: "19" } });
+    fireEvent.change(limit, { target: { value: below } });
+    assert.equal(view.getByRole("alert").textContent, message);
+    assert.equal(limit.getAttribute("aria-invalid"), "true");
+    assert.equal((apply as HTMLButtonElement).disabled, true);
 
-  const validationError = view.getByRole("alert");
-
-  assert.equal(
-    validationError.textContent,
-    "Enter a limit higher than 20 mins.",
-  );
-
-  assert.equal(limit.getAttribute("aria-invalid"), "true");
-  assert.equal((apply as HTMLButtonElement).disabled, true);
-
-  fireEvent.change(limit, { target: { value: "21" } });
-  expect(view.queryByRole("alert")).toBeNull();
-});
-
-test("a cost limit below the current budget shows validation feedback", () => {
-  const { view } = setup({
-    status: "failed",
-    error: "Claude result: error_max_budget_usd",
-    cost_usd: 5.02,
-  });
-
-  const apply = view.getByRole("button", { name: "Apply" });
-  const limit = view.getByRole("spinbutton", { name: "Cost limit" });
-
-  fireEvent.change(limit, { target: { value: "4" } });
-
-  const validationError = view.getByRole("alert");
-
-  assert.equal(validationError.textContent, "Enter a limit higher than $5.00.");
-
-  assert.equal(limit.getAttribute("aria-invalid"), "true");
-  assert.equal((apply as HTMLButtonElement).disabled, true);
-
-  fireEvent.change(limit, { target: { value: "8" } });
-  expect(view.queryByRole("alert")).toBeNull();
-});
+    fireEvent.change(limit, { target: { value: above } });
+    expect(view.queryByRole("alert")).toBeNull();
+  },
+);
 
 test("budget controls lock while a limit update is in flight", async () => {
   const { tool, view, composer, updateTask } = setup({
@@ -1868,20 +1834,20 @@ test("a hidden panel marks nothing read until it is shown", async () => {
   await waitFor(() => assert.equal(markReadCalls(tool).length, 1));
 });
 
-test("an unread task opens with a New divider after what the user had read, which stays once read", () => {
-  const notes = noteItems.map((_, index): ChatItem => ({
-    kind: "note",
-    id: `note-${index}`,
-    event_id: index,
-    timestamp: "",
-    note: "failure",
-    text: `Failure ${index}`,
-  }));
+const failureNotes = noteItems.map((_, index): ChatItem => ({
+  kind: "note",
+  id: `note-${index}`,
+  event_id: index,
+  timestamp: "",
+  note: "failure",
+  text: `Failure ${index}`,
+}));
 
+test("an unread task opens with a New divider after what the user had read, which stays once read", () => {
   const { view, updateTask } = setup(
     { unread: true, read_through: 3 },
     [],
-    notes,
+    failureNotes,
   );
 
   const divider = view.getByRole("separator", { name: "New messages" });
@@ -1895,19 +1861,10 @@ test("an unread task opens with a New divider after what the user had read, whic
 });
 
 test("marking the open task read removes its New divider", async () => {
-  const notes = noteItems.map((_, index): ChatItem => ({
-    kind: "note",
-    id: `note-${index}`,
-    event_id: index,
-    timestamp: "",
-    note: "failure",
-    text: `Failure ${index}`,
-  }));
-
   const { controller, task, view, reopen } = setup(
     { unread: true, read_through: 3 },
     [],
-    notes,
+    failureNotes,
   );
 
   view.getByRole("separator", { name: "New messages" });
@@ -1924,11 +1881,20 @@ test("marking the open task read removes its New divider", async () => {
   expect(view.getByRole("separator", { name: "New messages" })).toBeTruthy();
 });
 
-test("a read task opens without a New divider", () => {
-  const { view } = setup({}, [], noteItems);
+test.each([
+  { name: "a read task", task: {} },
+  {
+    name: "a task just marked unread, before the service gives its marker,",
+    task: { unread: true },
+  },
+] satisfies { name: string; task: Partial<Task> }[])(
+  "$name opens without a New divider",
+  ({ task }) => {
+    const { view } = setup(task, [], noteItems);
 
-  expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
-});
+    expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
+  },
+);
 
 test("a task marked unread with nothing new opens without a divider, and a later reply adds none", () => {
   const { controller, view, updateTask } = setup(
@@ -1961,11 +1927,5 @@ test("a task marked unread with nothing new opens without a divider, and a later
 
   updateTask({ unread: true });
   expect(view.getByText("Later failure")).toBeTruthy();
-  expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
-});
-
-test("a task just marked unread, before the service gives its marker, opens without a divider", () => {
-  const { view } = setup({ unread: true }, [], noteItems);
-
   expect(view.queryByRole("separator", { name: "New messages" })).toBeNull();
 });

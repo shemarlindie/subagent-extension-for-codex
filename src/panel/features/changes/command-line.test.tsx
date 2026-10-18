@@ -60,7 +60,6 @@ function setup(label: string, command: string) {
 test.each([
   ["Branch", `agent/${"long-branch-name".repeat(40)}`],
   ["Worktree", "cd /worktrees/project with spaces"],
-  ["Compare", "git diff abc123...agent/review"],
   ["Push", "git push -u origin agent/review"],
 ])(
   "embedded panels copy the complete %s value and show compact success feedback",

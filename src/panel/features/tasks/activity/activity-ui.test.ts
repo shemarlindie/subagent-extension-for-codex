@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { expect, test, vi } from "vitest";
+import { expect, test, type TestContext, vi } from "vitest";
 
 import {
   claudeActivityPresentation,
@@ -30,7 +30,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { formatUserDateTime } from "../../../shared/utils/user-date-time";
 import { formatOutcomeTimestamp } from "../chat/timeline/outcome-timestamp";
-import type { ReadingState } from "../evidence/reading-state";
 import { ActivityContent, ActivityValue } from "./activity-content";
 import { EVENT_TAIL_SIZE } from "./event-history";
 import {
@@ -193,6 +192,22 @@ function mockActivityGeometry() {
   );
 }
 
+/** Replaces a property for one test and restores the original afterward. */
+function stubProperty(
+  t: TestContext,
+  target: object,
+  key: PropertyKey,
+  value: unknown,
+) {
+  const previous = Object.getOwnPropertyDescriptor(target, key);
+  Object.defineProperty(target, key, { configurable: true, value });
+
+  t.onTestFinished(() => {
+    if (previous) Object.defineProperty(target, key, previous);
+    else Reflect.deleteProperty(target, key);
+  });
+}
+
 function activityMessages(prefix: string, count = 4) {
   return Array.from({ length: count }, (_, i) =>
     event(
@@ -267,64 +282,10 @@ test("latest group is last and fresh progress moves an older tool to the end wit
   assert.equal(debug.getAttribute("aria-expanded"), "true");
 });
 
-test("tool debug opens only the newest raw response and preserves a manual collapse", async (t) => {
-  t.onTestFinished(cleanup);
-
-  const events = [
-    event(
-      "tool.started",
-      { id: "raw-default-read", name: "Read", input: { file_path: "a.ts" } },
-      "raw-default-start",
-    ),
-    event(
-      "tool.completed",
-      { id: "raw-default-read", name: "Read", text: "File contents" },
-      "raw-default-complete",
-    ),
-  ];
-
-  const view = render(createElement(GroupedEventList, { events }));
-  fireEvent.click(view.getByRole("button", { name: "Debug activity: Read" }));
-
-  const inspectors = Array.from(
-    view.container.querySelectorAll<HTMLDetailsElement>("details.activity-raw"),
-  );
-
-  const [newest, older] = inspectors;
-  const [, completed] = events;
-  assert.equal(inspectors.length, 2);
-  assert.ok(newest && older && completed);
-  assert.equal(newest.open, true);
-
-  assert.equal(
-    newest.querySelector("pre")?.textContent,
-    JSON.stringify(completed.data, null, 2),
-  );
-
-  assert.equal(older.open, false);
-  assertAbsent(older.querySelector("pre"));
-
-  await act(async () => {
-    newest.open = false;
-    newest.dispatchEvent(new Event("toggle"));
-  });
-
-  view.rerender(
-    createElement(GroupedEventList, {
-      events: events.map((item) => ({ ...item })),
-    }),
-  );
-
-  expect(view.container.querySelector("details.activity-raw")).toBe(newest);
-
-  assert.equal(newest.open, false);
-  assertAbsent(newest.querySelector("pre"));
-});
-
 test("grouped event counts update without closing debug or remounting raw inspectors", async (t) => {
   t.onTestFinished(cleanup);
 
-  const events = [1, 2, 3].map((index) =>
+  const events = [1, 2, 3, 4].map((index) =>
     event(
       "workspace.indexed",
       { message: "Indexed the workspace", index },
@@ -332,30 +293,37 @@ test("grouped event counts update without closing debug or remounting raw inspec
     ),
   );
 
-  const [first] = events;
-  assert.ok(first);
+  const [, second] = events;
+  assert.ok(second);
 
   const view = render(
-    createElement(GroupedEventList, { events: events.slice(0, 1) }),
+    createElement(GroupedEventList, { events: events.slice(0, 2) }),
   );
 
   const debug = view.getByRole("button", {
-    name: "Debug activity: Workspace indexed",
+    name: "Debug activity: Workspace indexed · 2 events",
   });
 
   fireEvent.click(debug);
   const panel = document.getElementById(debug.getAttribute("aria-controls")!)!;
-  const raw = panel.querySelector("details.activity-raw") as HTMLDetailsElement;
-  assert.equal(raw.open, true, "Debug opens its newest raw response");
+
+  const [raw, older] = Array.from(
+    panel.querySelectorAll<HTMLDetailsElement>("details.activity-raw"),
+  );
+
+  assert.ok(raw && older);
+  assert.equal(raw.open, true, "Debug opens only its newest raw response");
+  assert.equal(older.open, false);
+  assertAbsent(older.querySelector("pre"));
 
   await waitFor(() =>
     assert.equal(
       raw.querySelector("pre")?.textContent,
-      JSON.stringify(first.data, null, 2),
+      JSON.stringify(second.data, null, 2),
     ),
   );
 
-  for (const count of [2, 3]) {
+  for (const count of [3, 4]) {
     view.rerender(
       createElement(GroupedEventList, { events: events.slice(0, count) }),
     );
@@ -380,257 +348,14 @@ test("grouped event counts update without closing debug or remounting raw inspec
 
     assert.equal(
       raw.querySelector("pre")?.textContent,
-      JSON.stringify(first.data, null, 2),
+      JSON.stringify(second.data, null, 2),
     );
 
     assert.equal(view.container.querySelectorAll(".activity-group").length, 1);
   }
 });
 
-test("pinned updates stay at the end and manually returning within the 48px buffer repins", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-  const initial = activityMessages("pin-buffer");
-  const view = render(createElement(GroupedEventList, { events: initial }));
-  const viewport = view.getByRole("region", { name: "Activity history" });
-
-  const fab = () =>
-    view.queryByRole("button", { name: "Scroll to latest activity" });
-
-  assert.equal(viewport.scrollTop, 240, "Activity opens at its latest row");
-  assertAbsent(fab());
-  const next = [...initial, ...activityMessages("pin-buffer-next", 1)];
-  view.rerender(createElement(GroupedEventList, { events: next }));
-  assert.equal(viewport.scrollTop, 340, "Pinned updates follow the new end");
-  viewport.scrollTop = 291;
-  fireEvent.scroll(viewport);
-  assert.ok(fab(), "Beyond the buffer, the reader controls scrolling");
-  viewport.scrollTop = 292;
-  fireEvent.scroll(viewport);
-  assertAbsent(fab(), "The edge of the buffer repins");
-
-  view.rerender(
-    createElement(GroupedEventList, {
-      events: [...next, ...activityMessages("pin-buffer-last", 1)],
-    }),
-  );
-
-  assert.equal(viewport.scrollTop, 440);
-});
-
-test("scroll to latest FAB returns to the end and keeps subsequent activity pinned", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-  const initial = activityMessages("fab-pin");
-  const view = render(createElement(GroupedEventList, { events: initial }));
-  const viewport = view.getByRole("region", { name: "Activity history" });
-  viewport.scrollTop = 0;
-  fireEvent.scroll(viewport);
-
-  const fab = view.getByRole("button", { name: "Scroll to latest activity" });
-  assert.ok(fab.classList.contains("activity-scroll-latest"));
-  assert.equal(fab.dataset.direction, "down", "The chevron points to the end");
-  fireEvent.click(fab);
-
-  assert.equal(viewport.scrollTop, 240);
-
-  expect(
-    document.activeElement,
-    "Focus returns to the activity region when the FAB disappears",
-  ).toBe(viewport);
-
-  assertAbsent(
-    view.queryByRole("button", { name: "Scroll to latest activity" }),
-  );
-
-  view.rerender(
-    createElement(GroupedEventList, {
-      events: [...initial, ...activityMessages("fab-pin-next", 1)],
-    }),
-  );
-
-  assert.equal(viewport.scrollTop, 340);
-});
-
-test("scroll to latest glides back and stays pinned until the reader takes over", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-  const initial = activityMessages("glide");
-  const view = render(createElement(GroupedEventList, { events: initial }));
-  const viewport = view.getByRole("region", { name: "Activity history" });
-  // jsdom has no smooth scrolling; record requests and move scrollTop by hand.
-  const scrollTo = vi.fn();
-  Object.defineProperty(viewport, "scrollTo", { value: scrollTo });
-
-  const fab = () =>
-    view.queryByRole("button", { name: "Scroll to latest activity" });
-
-  const scrollAt = (top: number) => {
-    viewport.scrollTop = top;
-    fireEvent.scroll(viewport);
-  };
-
-  const glide = () => {
-    scrollAt(0);
-    assert.ok(fab());
-    fireEvent.click(fab()!);
-    assertAbsent(fab(), "The button leaves as the glide starts");
-  };
-
-  glide();
-
-  assert.deepEqual(scrollTo.mock.calls.at(-1), [
-    { top: 240, behavior: "smooth" },
-  ]);
-
-  assert.equal(viewport.scrollTop, 0, "The browser animates the scroll");
-  scrollAt(120);
-  assertAbsent(fab(), "Scroll events while closing in keep the feed pinned");
-  scrollAt(240);
-  assertAbsent(fab());
-
-  glide();
-  scrollAt(40);
-  scrollAt(0);
-  assert.ok(fab(), "Scrolling away during the glide hands control back");
-
-  scrollAt(0);
-  fireEvent.click(fab()!);
-  fireEvent(viewport, new Event("scrollend"));
-  assertAbsent(fab(), "A scroll end from before the glide is ignored");
-  scrollAt(90);
-  fireEvent(viewport, new Event("scrollend"));
-  assert.ok(fab(), "A glide that stops short is judged by where it stopped");
-
-  glide();
-  scrollAt(90);
-
-  view.rerender(
-    createElement(GroupedEventList, {
-      events: [...initial, ...activityMessages("glide-next", 1)],
-    }),
-  );
-
-  assert.equal(viewport.scrollTop, 340, "New activity finishes the glide");
-  assertAbsent(fab());
-
-  vi.useFakeTimers();
-
-  t.onTestFinished(() => {
-    vi.useRealTimers();
-  });
-
-  glide();
-
-  act(() => {
-    vi.advanceTimersByTime(1500);
-  });
-
-  assert.ok(fab(), "A glide that never moves is judged where it stopped");
-});
-
-// The tail window drops the oldest activity as new activity arrives, removing
-// rows above the reader. Rows are 100px, so the reader moves up by 100px.
-test("new activity preserves the visible reader anchor while unpinned", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-  const initial = activityMessages("reader-anchor");
-  const view = render(createElement(GroupedEventList, { events: initial }));
-  const viewport = view.getByRole("region", { name: "Activity history" });
-  viewport.scrollTop = 175;
-  fireEvent.scroll(viewport);
-
-  const [, anchor] =
-    view.container.querySelectorAll<HTMLElement>(".activity-group");
-
-  assert.ok(anchor);
-  const before = anchor.getBoundingClientRect().top;
-
-  view.rerender(
-    createElement(GroupedEventList, {
-      events: [
-        ...initial.slice(1),
-        ...activityMessages("reader-anchor-next", 1),
-      ],
-    }),
-  );
-
-  assert.equal(anchor.getBoundingClientRect().top, before);
-
-  assert.equal(
-    viewport.scrollTop,
-    75,
-    "Compensate for the dropped 100px group above",
-  );
-
-  assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
-});
-
-test("new activity preserves a reader scroll before its scroll event fires", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-  const initial = activityMessages("reader-scroll-race");
-  const view = render(createElement(GroupedEventList, { events: initial }));
-  const viewport = view.getByRole("region", { name: "Activity history" });
-  assert.equal(viewport.scrollTop, 240);
-  viewport.scrollTop = 175;
-
-  const [, anchor] =
-    view.container.querySelectorAll<HTMLElement>(".activity-group");
-
-  assert.ok(anchor);
-  const before = anchor.getBoundingClientRect().top;
-
-  view.rerender(
-    createElement(GroupedEventList, {
-      events: [
-        ...initial.slice(1),
-        ...activityMessages("reader-scroll-race-next", 1),
-      ],
-    }),
-  );
-
-  assert.equal(anchor.getBoundingClientRect().top, before);
-  assert.equal(viewport.scrollTop, 75);
-  assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
-});
-
-test("a hidden activity tab keeps its reading anchor through new activity", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-  const initial = activityMessages("hidden-tab");
-  const view = render(createElement(GroupedEventList, { events: initial }));
-  const viewport = view.getByRole("region", { name: "Activity history" });
-  viewport.scrollTop = 175;
-  fireEvent.scroll(viewport);
-
-  const [, anchor] =
-    view.container.querySelectorAll<HTMLElement>(".activity-group");
-
-  assert.ok(anchor);
-  const before = anchor.getBoundingClientRect().top;
-
-  const next = [...initial.slice(1), ...activityMessages("hidden-tab-next", 1)];
-
-  view.rerender(
-    createElement(GroupedEventList, { events: initial, active: false }),
-  );
-
-  // Browsers report zero while hidden and restore the offset when shown.
-  viewport.scrollTop = 0;
-  fireEvent.scroll(viewport);
-
-  view.rerender(
-    createElement(GroupedEventList, { events: next, active: false }),
-  );
-
-  viewport.scrollTop = 175;
-  view.rerender(createElement(GroupedEventList, { events: next }));
-  assert.equal(anchor.getBoundingClientRect().top, before);
-  assert.equal(viewport.scrollTop, 75);
-  assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
-});
-
+// useReadingScroll's tests own scroll behavior. This checks Activity's wiring.
 test("activity pins, anchors and returns to latest when the inspector scrolls instead", (t) => {
   t.onTestFinished(cleanup);
   const inspector = document.body.appendChild(document.createElement("div"));
@@ -698,6 +423,14 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
   inspector.scrollTop = 350;
   fireEvent.scroll(inspector);
   assert.ok(fab(), "Scrolling into history unpins");
+  assert.ok(fab()!.classList.contains("activity-scroll-latest"));
+
+  assert.equal(
+    fab()!.dataset.direction,
+    "down",
+    "The chevron points to the end",
+  );
+
   const [, anchor] = inspector.querySelectorAll<HTMLElement>(".activity-group");
   assert.ok(anchor);
   const before = anchor.getBoundingClientRect().top;
@@ -792,16 +525,6 @@ test("new groups animate in and movement animations respect reduced motion", (t)
   t.onTestFinished(cleanup);
   mockActivityGeometry();
 
-  const previousAnimate = Object.getOwnPropertyDescriptor(
-    HTMLElement.prototype,
-    "animate",
-  );
-
-  const previousMatchMedia = Object.getOwnPropertyDescriptor(
-    window,
-    "matchMedia",
-  );
-
   let reducedMotion = false;
   let cancellations = 0;
 
@@ -811,9 +534,11 @@ test("new groups animate in and movement animations respect reduced motion", (t)
     options: KeyframeAnimationOptions;
   }[] = [];
 
-  Object.defineProperty(HTMLElement.prototype, "animate", {
-    configurable: true,
-    value(
+  stubProperty(
+    t,
+    HTMLElement.prototype,
+    "animate",
+    function (
       this: HTMLElement,
       frames: Keyframe[],
       options: KeyframeAnimationOptions,
@@ -826,26 +551,9 @@ test("new groups animate in and movement animations respect reduced motion", (t)
         },
       };
     },
-  });
+  );
 
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    value: () => ({ matches: reducedMotion }),
-  });
-
-  t.onTestFinished(() => {
-    if (previousAnimate) {
-      Object.defineProperty(HTMLElement.prototype, "animate", previousAnimate);
-    } else {
-      delete (HTMLElement.prototype as any).animate;
-    }
-
-    if (previousMatchMedia) {
-      Object.defineProperty(window, "matchMedia", previousMatchMedia);
-    } else {
-      delete (window as any).matchMedia;
-    }
-  });
+  stubProperty(t, window, "matchMedia", () => ({ matches: reducedMotion }));
 
   const initial = activityMessages("animation", 4);
   const view = render(createElement(GroupedEventList, { events: [] }));
@@ -960,40 +668,48 @@ const families = [
   ["system", "future_subtype", "Future subtype"],
 ] as const;
 
-for (const [type, subtype, title] of families) {
-  test(`activity UI presents ${subtype ?? type} with friendly fields and raw inspection`, () => {
-    const raw = {
-      type,
-      ...(subtype ? { subtype } : {}),
-      extra_details: {
-        item_count: 0,
-        enabled: false,
-        description: "Readable detail",
-      },
-      uuid: "raw-only-id",
-    };
+test("an activity family presents friendly fields and keeps raw-only data behind its inspector", () => {
+  const raw = {
+    type: "system",
+    subtype: "init",
+    extra_details: {
+      item_count: 0,
+      enabled: false,
+      description: "Readable detail",
+    },
+    uuid: "raw-only-id",
+  };
+
+  const doc = markup([event("claude.activity", { ...raw, raw_response: raw })]);
+
+  assert.match(doc.body.textContent ?? "", /Extra details/);
+  assert.match(doc.body.textContent ?? "", /Item count0/);
+  assert.match(doc.body.textContent ?? "", /EnabledNo/);
+  assert.match(doc.body.textContent ?? "", /Readable detail/);
+  const disclosure = doc.querySelector("details.activity-raw");
+
+  assert.equal(
+    disclosure?.querySelector("summary")?.textContent,
+    "Raw response",
+  );
+
+  assert.equal(disclosure?.hasAttribute("open"), false);
+  assertAbsent(disclosure?.querySelector("pre") ?? null);
+  assert.ok(!doc.body.textContent?.includes("raw-only-id"));
+});
+
+test.each(families)(
+  "activity UI titles %s %s as %s",
+  (type, subtype, title) => {
+    const raw = { type, ...(subtype ? { subtype } : {}) };
 
     const doc = markup([
       event("claude.activity", { ...raw, raw_response: raw }),
     ]);
 
     assert.equal(doc.querySelector("strong")?.textContent, title);
-    assert.match(doc.body.textContent ?? "", /Extra details/);
-    assert.match(doc.body.textContent ?? "", /Item count0/);
-    assert.match(doc.body.textContent ?? "", /EnabledNo/);
-    assert.match(doc.body.textContent ?? "", /Readable detail/);
-    const disclosure = doc.querySelector("details.activity-raw");
-
-    assert.equal(
-      disclosure?.querySelector("summary")?.textContent,
-      "Raw response",
-    );
-
-    assert.equal(disclosure?.hasAttribute("open"), false);
-    assertAbsent(disclosure?.querySelector("pre") ?? null);
-    assert.ok(!doc.body.textContent?.includes("raw-only-id"));
-  });
-}
+  },
+);
 
 test("mixed content, tool inputs and tool results are readable and HTML stays literal", () => {
   const malicious = "<script>window.injected = true</script>";
@@ -1682,10 +1398,16 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   assert.ok(panel.classList.contains("activity-debug-panel"));
   assert.equal(panel.hidden, true);
   assertAbsent(view.queryByText("Raw response", { selector: "summary" }));
+  const message = view.container.querySelector(".activity-message")!;
+
+  assert.equal(
+    message.querySelector(".activity-group-secondary")?.textContent,
+    "Started a response...",
+  );
 
   assertAbsent(
-    panel.querySelector(".event"),
-    "Individual debug events mount only after first activation",
+    message.querySelector(".activity-body"),
+    "A text-only response has no bubble",
   );
 
   const outside = view.container.cloneNode(true) as HTMLElement;
@@ -1744,6 +1466,16 @@ test("a compact accessible debug toggle hides inspection until opened and preser
     raw.querySelector("pre")?.textContent,
     JSON.stringify(activity.data.raw_response, null, 2),
   );
+
+  await act(async () => {
+    raw.open = false;
+    raw.dispatchEvent(new Event("toggle"));
+  });
+
+  view.rerender(createElement(GroupedEventList, { events: [{ ...activity }] }));
+  expect(panel.querySelector("details.activity-raw")).toBe(raw);
+  assert.equal(raw.open, false, "A manual collapse survives a refresh");
+  assertAbsent(raw.querySelector("pre"));
 });
 
 test("opening debug scrolls its panel into view once the height transition settles", async (t) => {
@@ -1751,45 +1483,16 @@ test("opening debug scrolls its panel into view once the height transition settl
   const scrolled: string[] = [];
   let reducedMotion = false;
 
-  const previousScroll = Object.getOwnPropertyDescriptor(
+  stubProperty(
+    t,
     Element.prototype,
     "scrollIntoView",
-  );
-
-  const previousMatchMedia = Object.getOwnPropertyDescriptor(
-    window,
-    "matchMedia",
-  );
-
-  Object.defineProperty(Element.prototype, "scrollIntoView", {
-    configurable: true,
-    value(this: Element) {
+    function (this: Element) {
       scrolled.push(this.id);
     },
-  });
+  );
 
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    value: () => ({ matches: reducedMotion }),
-  });
-
-  t.onTestFinished(() => {
-    if (previousScroll) {
-      Object.defineProperty(
-        Element.prototype,
-        "scrollIntoView",
-        previousScroll,
-      );
-    } else {
-      delete (Element.prototype as any).scrollIntoView;
-    }
-
-    if (previousMatchMedia) {
-      Object.defineProperty(window, "matchMedia", previousMatchMedia);
-    } else {
-      delete (window as any).matchMedia;
-    }
-  });
+  stubProperty(t, window, "matchMedia", () => ({ matches: reducedMotion }));
 
   const read = event(
     "tool.started",
@@ -1878,20 +1581,22 @@ test("operation failure messages remain visible outside collapsed debug details"
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
   );
 
-  const summaries = Array.from(
-    doc.querySelectorAll(".activity-group-summary"),
-  ).map((node) => node.textContent);
-
-  assert.ok(summaries.includes("Visible hook stderr"));
-  assert.ok(summaries.some((text) => text?.includes("Visible tool error")));
-
   assert.equal(
     doc.querySelectorAll(".activity-group.activity-error").length,
     2,
   );
+
+  // activity-timeline's tests own the summary text. Here it renders outside Debug.
+  doc
+    .querySelectorAll(".activity-debug-panel")
+    .forEach((node) => node.remove());
+
+  assert.match(doc.body.textContent ?? "", /Visible hook stderr/);
+  assert.match(doc.body.textContent ?? "", /Visible tool error/);
 });
 
-test("cancelled and stopped grouped operations never display Done badges", () => {
+// activity-timeline's tests cover which terminal operations stay neutral.
+test("neutral terminal operations never display Done badges", () => {
   const events = [
     event(
       "claude.activity",
@@ -1908,58 +1613,14 @@ test("cancelled and stopped grouped operations never display Done badges", () =>
       },
       "cancel-hook-finish",
     ),
-    event(
-      "claude.activity",
-      { type: "system", subtype: "task_started", task_id: "stopped-task" },
-      "stopped-task-start",
-    ),
-    event(
-      "claude.activity",
-      {
-        type: "system",
-        subtype: "task_notification",
-        task_id: "stopped-task",
-        status: "stopped",
-      },
-      "stopped-task-finish",
-    ),
-    event(
-      "claude.activity",
-      { type: "system", subtype: "task_started", task_id: "killed-task" },
-      "killed-task-start",
-    ),
-    event(
-      "claude.activity",
-      {
-        type: "system",
-        subtype: "task_updated",
-        task_id: "killed-task",
-        patch: { status: "killed" },
-      },
-      "killed-task-finish",
-    ),
   ];
 
   const doc = parseHtml(
     renderToStaticMarkup(createElement(GroupedEventList, { events })),
   );
 
-  assert.equal(doc.querySelectorAll(".activity-group").length, 3);
+  assert.equal(doc.querySelectorAll(".activity-group").length, 1);
   assert.equal(doc.querySelectorAll(".activity-badge").length, 0);
-
-  const summaries = Array.from(
-    doc.querySelectorAll(".activity-group-summary"),
-  ).map((node) => node.textContent ?? "");
-
-  assert.equal(
-    summaries.filter((text) => text.startsWith("Cancelled")).length,
-    1,
-  );
-
-  assert.equal(
-    summaries.filter((text) => text.startsWith("Stopped")).length,
-    2,
-  );
 });
 
 test("tool result image previews and individual responses mount on first debug activation", (t) => {
@@ -2287,41 +1948,6 @@ test("thinking-only assistant messages are not styled as message cards", () => {
   cleanup();
 });
 
-test("assistant message rows use a response marker and retain raw response JSON", async () => {
-  const msg = event(
-    "agent.message",
-    {
-      role: "assistant",
-      text: "Visible once",
-      content: { type: "text", text: "Visible once" },
-    },
-    "raw-only",
-  );
-
-  const view = render(createElement(GroupedEventList, { events: [msg] }));
-
-  const group = view.container.querySelector(".activity-message")!;
-
-  assert.equal(
-    group.querySelector(".activity-group-secondary")?.textContent,
-    "Started a response...",
-  );
-
-  assertAbsent(group.querySelector(".activity-body"));
-
-  await userEvent.click(
-    view.getByRole("button", { name: "Debug activity: Assistant" }),
-  );
-
-  assert.ok(view.getByText("Raw response", { selector: "summary" }));
-
-  expect(
-    view.container.querySelector(".activity-raw pre")?.textContent,
-  ).toContain("Visible once");
-
-  cleanup();
-});
-
 test("an assistant response bubble contains only its thinking note", () => {
   const raw = {
     type: "assistant",
@@ -2560,228 +2186,6 @@ test("task completion activity includes the accumulated runtime", (t) => {
     view.container.querySelector(".activity-group-title strong")?.textContent,
     "Task completed",
   );
-});
-
-test("activity restores the visible group after remount with newer activity", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-  const reading: ReadingState = {};
-  const events = activityMessages("restore-reading", 6);
-  const view = render(createElement(GroupedEventList, { events, reading }));
-  const viewport = view.getByRole("region", { name: "Activity history" });
-  viewport.scrollTop = 175;
-  fireEvent.scroll(viewport);
-  const anchor = reading.position?.anchor;
-  assert.equal(reading.position?.pinned, false);
-  view.unmount();
-
-  // The tail window dropped the oldest group above the reader while unmounted.
-  const restored = render(
-    createElement(GroupedEventList, {
-      events: [...events.slice(1), ...activityMessages("restore-new", 1)],
-      reading,
-    }),
-  );
-
-  assert.equal(
-    restored.getByRole("region", { name: "Activity history" }).scrollTop,
-    75,
-  );
-
-  assert.deepEqual(reading.position?.anchor, anchor);
-
-  assert.ok(
-    restored.getByRole("button", { name: "Scroll to latest activity" }),
-  );
-});
-
-test("activity pinned reading follows updates received while unmounted", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-  const reading: ReadingState = {};
-  const events = activityMessages("restore-pinned", 6);
-  const view = render(createElement(GroupedEventList, { events, reading }));
-  assert.equal(reading.position?.pinned, true);
-  assert.equal(reading.position?.top, 440);
-  view.unmount();
-
-  const restored = render(
-    createElement(GroupedEventList, {
-      events: [...events, ...activityMessages("restore-pinned-new", 1)],
-      reading,
-    }),
-  );
-
-  assert.equal(
-    restored.getByRole("region", { name: "Activity history" }).scrollTop,
-    540,
-  );
-
-  assertAbsent(
-    restored.queryByRole("button", { name: "Scroll to latest activity" }),
-  );
-});
-
-test("hidden activity preserves persistent reading state until revealed", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-  const reading: ReadingState = {};
-  const events = activityMessages("hidden-reading", 6);
-
-  const view = render(
-    createElement(GroupedEventList, { events, reading, active: true }),
-  );
-
-  const viewport = view.getByRole("region", { name: "Activity history" });
-  viewport.scrollTop = 175;
-  fireEvent.scroll(viewport);
-  const saved = reading.position;
-
-  const updated = [
-    ...events.slice(1),
-    ...activityMessages("hidden-reading-new", 1),
-  ];
-
-  view.rerender(
-    createElement(GroupedEventList, {
-      events: updated,
-      reading,
-      active: false,
-    }),
-  );
-
-  viewport.scrollTop = 0;
-  fireEvent.scroll(viewport);
-  assert.equal(reading.position, saved);
-
-  view.rerender(
-    createElement(GroupedEventList, { events: updated, reading, active: true }),
-  );
-
-  assert.equal(viewport.scrollTop, 75);
-  assert.deepEqual(reading.position?.anchor, saved?.anchor);
-});
-
-test("pinned activity remount returns to latest after another tab moved the shared inspector", (t) => {
-  t.onTestFinished(cleanup);
-  const inspector = document.body.appendChild(document.createElement("div"));
-  inspector.style.overflowY = "auto";
-  // Another tab left the shared inspector far from this timeline's end.
-  inspector.scrollTop = 100;
-  t.onTestFinished(() => inspector.remove());
-
-  // A 200px header sits above the timeline in a 300px inspector, so with six
-  // groups the end is at 240 + 600 - 300.
-  mockScrollSize((element) =>
-    element === inspector
-      ? { scrollHeight: 240 + groupCount(inspector) * 100, clientHeight: 300 }
-      : undefined,
-  );
-
-  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-    function (this: HTMLElement) {
-      let top = 100;
-      let height = 300;
-
-      if (this.matches(".activity-viewport")) top = 300 - inspector.scrollTop;
-
-      if (this.matches("[data-activity-id]")) {
-        const groups = Array.from(
-          inspector.querySelectorAll("[data-activity-id]"),
-        );
-
-        top = 340 - inspector.scrollTop + groups.indexOf(this) * 100;
-        height = 100;
-      }
-
-      return {
-        top,
-        bottom: top + height,
-        left: 0,
-        right: 400,
-        width: 400,
-        height,
-        x: 0,
-        y: top,
-        toJSON: () => ({}),
-      };
-    },
-  );
-
-  const reading: ReadingState = {
-    position: { top: 200, pinned: true },
-  };
-
-  const view = render(
-    createElement(GroupedEventList, {
-      events: activityMessages("shared-pinned-remount", 6),
-      reading,
-    }),
-    { container: inspector },
-  );
-
-  assert.equal(inspector.scrollTop, 540);
-  assert.equal(reading.position?.pinned, true);
-
-  assertAbsent(
-    view.queryByRole("button", { name: "Scroll to latest activity" }),
-  );
-});
-
-test("activity waits for loaded history before restoring a saved reading position", (t) => {
-  t.onTestFinished(cleanup);
-  mockActivityGeometry();
-
-  const reading: ReadingState = {
-    position: { top: 175, pinned: false },
-  };
-
-  const saved = reading.position;
-  const view = render(createElement(GroupedEventList, { events: [], reading }));
-
-  assert.equal(reading.position, saved);
-
-  view.rerender(
-    createElement(GroupedEventList, {
-      events: activityMessages("restore-after-load", 6),
-      reading,
-    }),
-  );
-
-  assert.equal(
-    view.getByRole("region", { name: "Activity history" }).scrollTop,
-    175,
-  );
-
-  assert.equal(reading.position?.pinned, false);
-  assert.ok(view.getByRole("button", { name: "Scroll to latest activity" }));
-});
-
-test("the worker's text renders as Markdown while tool output stays plain", () => {
-  const markdown = parseHtml(
-    renderToStaticMarkup(
-      createElement(ActivityContent, {
-        content: [
-          { type: "text", text: "**Done.**\n\n- one\n- two" },
-          { type: "tool_result", content: "**not bold**\n- not a list" },
-        ],
-        markdown: true,
-      }),
-    ),
-  );
-
-  expect(markdown.querySelector(".activity-markdown strong")?.textContent).toBe(
-    "Done.",
-  );
-
-  expect(markdown.querySelectorAll(".activity-markdown li")).toHaveLength(2);
-
-  expect(markdown.querySelector(".activity-text")?.textContent).toBe(
-    "**not bold**\n- not a list",
-  );
-
-  const plain = contentMarkup({ type: "text", text: "**literal**" });
-  expect(plain.querySelector("strong")).toBeNull();
 });
 
 test("a reply shows its plain preview outside Debug with More and Less controls", (t) => {
@@ -3025,43 +2429,70 @@ test("Activity user messages use Chat bubbles with literal text outside Debug", 
   );
 });
 
-test("an assistant message body is Markdown and a user message body stays plain", () => {
-  const content = [{ type: "text", text: "**bold**" }];
+const markdownText = "**bold**\n\n- one\n- two";
 
-  const body = (type: "assistant" | "user") =>
-    markup([
-      event(
-        "claude.activity",
-        { type, message: { role: type, content } },
-        `body-${type}`,
-      ),
-    ]);
+const messageBody = (type: "assistant" | "user") =>
+  markup([
+    event(
+      "claude.activity",
+      {
+        type,
+        message: {
+          role: type,
+          content: [{ type: "text", text: markdownText }],
+        },
+      },
+      `body-${type}`,
+    ),
+  ]);
 
-  expect(body("assistant").querySelector(".markdown-body strong")).not.toBe(
-    null,
+const workerContent = (content: unknown) =>
+  parseHtml(
+    renderToStaticMarkup(
+      createElement(ActivityContent, { content, markdown: true }),
+    ),
   );
 
-  expect(body("user").querySelector(".markdown-body")).toBeNull();
+test.each([
+  {
+    name: "the worker's text",
+    render: () => workerContent([{ type: "text", text: markdownText }]),
+    markdown: true,
+  },
+  {
+    name: "tool output",
+    render: () =>
+      workerContent([{ type: "tool_result", content: markdownText }]),
+    markdown: false,
+  },
+  {
+    name: "content without the Markdown option",
+    render: () => contentMarkup({ type: "text", text: markdownText }),
+    markdown: false,
+  },
+  {
+    name: "an assistant message body",
+    render: () => messageBody("assistant"),
+    markdown: true,
+  },
+  {
+    name: "a user message body",
+    render: () => messageBody("user"),
+    markdown: false,
+  },
+])("$name renders Markdown: $markdown", ({ render, markdown }) => {
+  const doc = render();
 
-  expect(body("user").querySelector(".activity-text")?.textContent).toBe(
-    "**bold**",
-  );
-});
+  if (markdown) {
+    expect(doc.querySelector(".activity-markdown strong")?.textContent).toBe(
+      "bold",
+    );
 
-test("an expanded row hides its heading time beside the debug caption's", (t) => {
-  t.onTestFinished(cleanup);
-
-  const read = event("tool.started", { name: "Read", id: "read-hide" });
-
-  const view = render(
-    createElement(GroupedEventList, { events: [read] }),
-  ).container;
-
-  const group = view.querySelector(".activity-group")!;
-  assert.equal(group.hasAttribute("data-debug-open"), false);
-
-  fireEvent.click(view.querySelector(".activity-debug-toggle")!);
-  assert.equal(group.hasAttribute("data-debug-open"), true);
+    expect(doc.querySelectorAll(".activity-markdown li")).toHaveLength(2);
+  } else {
+    expect(doc.querySelector(".activity-markdown")).toBeNull();
+    expect(doc.querySelector(".activity-text")?.textContent).toBe(markdownText);
+  }
 });
 
 test("rate-limit details show the latest update without opening Debug", (t) => {
@@ -3116,48 +2547,6 @@ test("rate-limit details show the latest update without opening Debug", (t) => {
   expect(
     view.container.querySelector(".activity-debug-body")?.textContent,
   ).toContain("rejected");
-});
-
-test("rate-limit rows show the reported utilization and reset time outside Debug", (t) => {
-  t.onTestFinished(cleanup);
-  const preferences = { locale: "en-US", timeZone: "America/Los_Angeles" };
-  const fiveHourReset = 1791870000;
-
-  const view = render(
-    createElement(GroupedEventList, {
-      events: [
-        event(
-          "claude.activity",
-          {
-            type: "rate_limit_event",
-            rate_limit_info: {
-              status: "allowed",
-              rateLimitType: "five_hour",
-              utilization: 0.87,
-              resetsAt: fiveHourReset,
-              overageStatus: "rejected",
-            },
-          },
-          "unified-window-update",
-        ),
-      ],
-      preferences,
-    }),
-  );
-
-  const reset = (seconds: number) =>
-    formatUserDateTime(new Date(seconds * 1000).toISOString(), preferences, {
-      timeZoneName: undefined,
-      second: undefined,
-    });
-
-  expect(
-    [...view.container.querySelectorAll(".activity-group-stats")].map(
-      (row) => row.textContent,
-    ),
-  ).toEqual([`5-hour window · 87% used · Resets ${reset(fiveHourReset)}`]);
-
-  expect(view.container.querySelector(".activity-debug-body")).toBeNull();
 });
 
 test("rate-limit rows retain each window when an overage update arrives", (t) => {
@@ -3279,29 +2668,14 @@ test("the debug panel's collapse button closes it and brings its row back", asyn
   t.onTestFinished(cleanup);
   const scrolled: string[] = [];
 
-  const previousScroll = Object.getOwnPropertyDescriptor(
+  stubProperty(
+    t,
     Element.prototype,
     "scrollIntoView",
-  );
-
-  Object.defineProperty(Element.prototype, "scrollIntoView", {
-    configurable: true,
-    value(this: Element) {
+    function (this: Element) {
       scrolled.push(this.className);
     },
-  });
-
-  t.onTestFinished(() => {
-    if (previousScroll) {
-      Object.defineProperty(
-        Element.prototype,
-        "scrollIntoView",
-        previousScroll,
-      );
-    } else {
-      delete (Element.prototype as any).scrollIntoView;
-    }
-  });
+  );
 
   const read = event(
     "tool.started",
@@ -3310,9 +2684,13 @@ test("the debug panel's collapse button closes it and brings its row back", asyn
   );
 
   const view = render(createElement(GroupedEventList, { events: [read] }));
+  const group = view.container.querySelector(".activity-group")!;
   const toggle = view.getByRole("button", { name: "Debug activity: Read" });
+  assert.equal(group.hasAttribute("data-debug-open"), false);
   fireEvent.click(toggle);
   assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  // Styles hide the heading time beside the debug caption's.
+  assert.equal(group.hasAttribute("data-debug-open"), true);
 
   const collapse = view.getByRole("button", {
     name: "Collapse debug activity: Read",
@@ -3329,6 +2707,7 @@ test("the debug panel's collapse button closes it and brings its row back", asyn
   scrolled.length = 0;
   fireEvent.click(collapse);
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  assert.equal(group.hasAttribute("data-debug-open"), false);
   expect(document.activeElement).toBe(toggle);
   await waitFor(() => assert.deepEqual(scrolled, ["activity-group-heading"]));
 });

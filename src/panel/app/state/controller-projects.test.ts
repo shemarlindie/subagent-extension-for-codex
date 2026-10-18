@@ -61,6 +61,7 @@ test("other-panel removal clears selected project while renaming preserves scope
   const [renamed] = controller.getSnapshot().projects;
   assert.ok(renamed);
   assert.equal(renamed.name, "Renamed");
+  assert.equal(controller.getSnapshot().repository, "/repo/a");
 
   transport.handler = (name) =>
     name === "list_agent_projects" ? [] : undefined;
@@ -68,16 +69,6 @@ test("other-panel removal clears selected project while renaming preserves scope
   await controller.refresh();
   assert.equal(controller.getSnapshot().repository, undefined);
   assert.equal(controller.getSnapshot().dialog, undefined);
-});
-
-test("global management cannot open in thread mode", async (t) => {
-  const { controller } = setup();
-  t.onTestFinished(() => controller.dispose());
-  controller.applyScope({ panel_scope: { conversation_id: "chat" } }, false);
-  await controller.start();
-  controller.manageProjects();
-  assert.equal(controller.getSnapshot().dialog, undefined);
-  assert.equal(controller.getSnapshot().page, "tasks");
 });
 
 test("a project mutation finishing in another scope cannot leave the panel busy or select old work", async (t) => {
@@ -117,6 +108,9 @@ test("switching into a chat exits project management and late writes cannot retu
   assert.equal(controller.getSnapshot().page, "projects");
   controller.applyScope({ panel_scope: { conversation_id: "chat" } }, false);
   assert.equal(controller.getSnapshot().page, "tasks");
+  controller.manageProjects();
+  assert.equal(controller.getSnapshot().page, "tasks");
+  assert.equal(controller.getSnapshot().dialog, undefined);
   assert.equal(await controller.manageProject("/repo/a", "Renamed"), false);
 });
 

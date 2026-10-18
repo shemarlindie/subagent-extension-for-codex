@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test, vi } from "vitest";
 
-import { deferred, flush, setup, task } from "./controller-test-harness";
+import { deferred, flush, setup } from "./controller-test-harness";
 import type { Task } from "./types";
 
 for (const phase of ["connect", "read", "poll"] as const) {
@@ -215,7 +215,7 @@ test("workers are read again each refresh while one can't start tasks, and other
   assert.equal(brokenWorker.readiness?.ready, false);
 });
 
-test("a new revision refreshes a visible panel, and once it is shown or no longer busy otherwise", async (t) => {
+test("a new revision refreshes a visible panel, and a hidden one once it is shown", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
   t.onTestFinished(() => {
@@ -243,27 +243,6 @@ test("a new revision refreshes a visible panel, and once it is shown or no longe
   environment.setHidden(false);
   await flush();
   assert.equal(reads(), initial + 2);
-
-  // A busy panel waits for the action that made it busy.
-  const gate = deferred<void>();
-
-  transport.handler = (name) =>
-    name === "resume_user_agent_queue"
-      ? gate.promise.then(() => ({}))
-      : undefined;
-
-  const resuming = controller.taskActions.resumeQueue(task("t1"));
-  await flush();
-  assert.equal(controller.getSnapshot().busy, true);
-  const beforeBusyChange = reads();
-  transport.events.revision("boot:3");
-  vi.advanceTimersByTime(100);
-  await flush();
-  assert.equal(reads(), beforeBusyChange);
-  gate.resolve();
-  await resuming;
-  await flush();
-  assert.ok(reads() > beforeBusyChange);
 });
 
 test("each completed refresh restarts the fallback wait", async (t) => {

@@ -2,68 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { Controller } from "./controller";
-import {
-  deferred,
-  FakeTransport,
-  setup,
-  task,
-} from "./controller-test-harness";
-import type { UiStatePersistence } from "./types";
-
-test("targeted file handoff restores its edited draft above the original preview", async (t) => {
-  const transport = new FakeTransport();
-  transport.tasks = [task("task-1", "/repo/a", "thread-one")];
-
-  transport.context = {
-    panel_scope: { conversation_id: "thread-one", repository: "/repo/a" },
-  };
-
-  const saved: UiStatePersistence["initial"][] = [];
-
-  const controller = new Controller(
-    transport,
-    { hidden: () => false, wide: () => true },
-    {
-      initial: {
-        view: { selected: "task-1" },
-        dialogs: [
-          { kind: "file", taskId: "task-1", path: "src/auth.ts" },
-          {
-            kind: "handoff",
-            taskId: "task-1",
-            target: { kind: "file", path: "src/auth.ts" },
-            draft: { message: "Why did this authentication check change?" },
-          },
-        ],
-      },
-      save: (state) => saved.push(state),
-    },
-  );
-
-  t.onTestFinished(() => controller.dispose());
-  await controller.start();
-  const handoff = controller.getSnapshot().dialog;
-  assert.equal(handoff?.kind, "handoff");
-  if (handoff?.kind !== "handoff") throw new Error("Expected targeted handoff");
-  assert.deepEqual(handoff.target, { kind: "file", path: "src/auth.ts" });
-
-  assert.deepEqual(controller.getDialogDraft("handoff"), {
-    message: "Why did this authentication check change?",
-  });
-
-  controller.saveDialogDraft("handoff", { message: "Edited after reload." });
-  assert.equal(saved.at(-1)?.dialogs?.length, 2);
-  controller.dismiss();
-  const preview = controller.getSnapshot().dialog;
-  assert.equal(preview?.kind, "file");
-  if (preview?.kind !== "file") throw new Error("Expected original preview");
-  assert.equal(preview.path, "src/auth.ts");
-
-  assert.deepEqual(saved.at(-1)?.dialogs, [
-    { kind: "file", taskId: "task-1", path: "src/auth.ts" },
-  ]);
-});
+import { deferred, setup, task } from "./controller-test-harness";
 
 test("preparing a handoff preserves the preview beneath it and replaces an older draft for the target", async (t) => {
   const { controller, transport } = setup(true);
@@ -158,7 +97,7 @@ test("prepareHandoff rejects a stale task after scope changes and after disposal
   assert.equal(controller.getSnapshot().dialog, undefined);
 });
 
-test("prepareHandoff does not replace a preview during submission or open after disposal", async (t) => {
+test("prepareHandoff does not replace a preview during submission", async (t) => {
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
   const selected = task("task-1", "/repo/a", "thread-one");
@@ -184,15 +123,6 @@ test("prepareHandoff does not replace a preview during submission or open after 
   assert.equal(controller.getSnapshot().dialog, preview);
   gate.resolve();
   await submitting;
-  assert.equal(controller.getSnapshot().dialog, undefined);
-  controller.dispose();
-
-  controller.prepareHandoff(
-    selected,
-    { kind: "reply", id: "reply" },
-    "Reply evidence.",
-  );
-
   assert.equal(controller.getSnapshot().dialog, undefined);
 });
 

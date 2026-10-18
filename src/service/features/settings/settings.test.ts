@@ -637,28 +637,37 @@ test("effective provider and role select the matching defaults and isolate owner
   );
 });
 
-test("invalid model and reasoning updates cannot partially persist other settings", async (t) => {
+test("invalid settings updates cannot partially persist other settings", async (t) => {
   const f = await fixture(t);
 
   f.settings.update("alice", {
-    set: { default_model: "saved-model", default_reasoning_effort: "medium" },
+    set: {
+      default_model: "saved-model",
+      default_reasoning_effort: "medium",
+      max_runtime_minutes: 121,
+      use_runtime_budget: true,
+    },
   });
 
   const original = f.stored();
 
-  for (const invalid of [
-    { default_model: 123 },
-    { default_model: "x".repeat(201) },
-    { default_reasoning_effort: "unsupported" },
-    { reviewer_default_reasoning_effort: 1 },
-    { unknown_default_model: "unknown" },
+  for (const set of [
+    { default_provider: "claude", max_runtime_minutes: 10 },
+    { max_runtime_minutes: 0 },
+    { use_cost_budget: true, max_cost_usd: 0 },
+    { use_cost_budget: "yes" },
+    { approval_policy: "allow_all" },
+    { unknown: true },
+    {},
+    ...[
+      { default_model: 123 },
+      { default_model: "x".repeat(201) },
+      { default_reasoning_effort: "unsupported" },
+      { reviewer_default_reasoning_effort: 1 },
+      { unknown_default_model: "unknown" },
+    ].map((invalid) => ({ max_runtime_minutes: 11, ...invalid })),
   ]) {
-    assert.throws(() =>
-      f.settings.update("alice", {
-        set: { max_runtime_minutes: 11, ...invalid },
-      }),
-    );
-
+    assert.throws(() => f.settings.update("alice", { set }));
     assert.deepEqual(f.stored(), original);
   }
 });
@@ -788,7 +797,7 @@ test("removed providers fall back on effective reads without rewriting saved def
   assert.deepEqual(f.stored(), persisted);
 });
 
-test("null budget updates retain their amount and validation is atomic", async (t) => {
+test("null budget updates retain their amount", async (t) => {
   const f = await fixture(t);
 
   f.settings.update("alice", {
@@ -804,25 +813,6 @@ test("null budget updates retain their amount and validation is atomic", async (
     false,
     13,
   ]);
-
-  f.settings.update("alice", {
-    set: { max_runtime_minutes: 121, use_runtime_budget: true },
-  });
-
-  assert.equal(f.settings.values("alice").max_runtime_minutes, 121);
-
-  const original = f.settings.read("alice");
-
-  for (const set of [
-    { default_provider: "claude", max_runtime_minutes: 10 },
-    { use_cost_budget: true, max_cost_usd: 0 },
-    { use_cost_budget: "yes" },
-    { unknown: true },
-    {},
-  ]) {
-    assert.throws(() => f.settings.update("alice", { set }));
-    assert.deepEqual(f.settings.read("alice"), original);
-  }
 
   f.reopen();
   f.settings.update("alice", { set: { use_cost_budget: true } });

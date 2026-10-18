@@ -111,40 +111,31 @@ test("Enter starts a General task with the settings defaults in the scoped proje
   });
 });
 
-test("the empty-state icon follows the selected profile", async () => {
-  const { view, user } = setup();
+test("the empty-state icon follows the profile restored from a draft, then the selected one", async () => {
+  const { view, user } = setup(ready, {}, { worker: "claude:reviewer" });
   const emptyIcon = () => view.container.querySelector(".empty-icon");
 
   const profileIcon = () =>
     view.getByRole("combobox", { name: /^Profile:/ }).querySelector("svg");
 
+  expect(profileIcon()).not.toBeNull();
   expect(emptyIcon()?.innerHTML).toBe(profileIcon()?.innerHTML);
   expect(emptyIcon()?.getAttribute("width")).toBe("28");
-  const generalArtwork = emptyIcon()?.innerHTML;
+  const reviewerArtwork = emptyIcon()?.innerHTML;
 
-  await user.click(view.getByRole("combobox", { name: "Profile: General" }));
+  await user.click(view.getByRole("combobox", { name: "Profile: Reviewer" }));
   await user.click(await view.findByRole("option", { name: "Implementer" }));
 
   expect(emptyIcon()?.innerHTML).toBe(profileIcon()?.innerHTML);
-  expect(emptyIcon()?.innerHTML).not.toBe(generalArtwork);
+  expect(emptyIcon()?.innerHTML).not.toBe(reviewerArtwork);
 
   await user.click(
     view.getByRole("combobox", { name: "Profile: Implementer" }),
   );
 
-  await user.click(await view.findByRole("option", { name: "General" }));
+  await user.click(await view.findByRole("option", { name: "Reviewer" }));
 
-  expect(emptyIcon()?.innerHTML).toBe(generalArtwork);
-});
-
-test("the empty-state icon uses the profile restored from a saved draft", () => {
-  const { view } = setup(ready, {}, { worker: "claude:reviewer" });
-  const profile = view.getByRole("combobox", { name: "Profile: Reviewer" });
-  const emptyIcon = view.container.querySelector(".empty-icon");
-
-  expect(emptyIcon).not.toBeNull();
-  expect(profile.querySelector("svg")).not.toBeNull();
-  expect(emptyIcon?.innerHTML).toBe(profile.querySelector("svg")?.innerHTML);
+  expect(emptyIcon()?.innerHTML).toBe(reviewerArtwork);
 });
 
 test("Shift+Enter adds a line instead of sending", async () => {

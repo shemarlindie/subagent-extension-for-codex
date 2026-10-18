@@ -302,21 +302,8 @@ test("the panel follows a running task's draft through update waits, then reads 
 
   await vi.waitFor(() => assert.ok(calls().length >= 5));
 
-  // Each wait sends the revision it has and asks only for what follows the
-  // draft it has.
-  assert.deepEqual(
-    calls()
-      .slice(0, 4)
-      .map((call) => call.args),
-    [
-      { draft: { task_id: "a" }, wait_ms: 20000 },
-      ...[3, 5, 11].map((length) => ({
-        after: "r1",
-        draft: { task_id: "a", message_id: "m", after_length: length },
-        wait_ms: 20000,
-      })),
-    ],
-  );
+  // The wait protocol itself is covered by update-follower.test.ts.
+  assert.deepEqual(calls()[0]?.args.draft, { task_id: "a" });
 
   await vi.waitFor(() =>
     assert.equal(controller.getSnapshot().draft, undefined),

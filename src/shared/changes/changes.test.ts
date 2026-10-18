@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  changeCounts,
   decodeCursor,
   decodeFileCursor,
   diffPage,
@@ -48,4 +49,31 @@ test("file cursors carry the tree and the next offset", () => {
 
   assert.throws(() => decodeFileCursor("HEAD:1"), /Invalid file cursor/);
   assert.throws(() => decodeFileCursor(`${tree}:`), /Invalid file cursor/);
+});
+
+test("change counts keep the totals and drop the file list and diff", () => {
+  const counts = changeCounts({
+    scope: "task",
+    files: [
+      {
+        path: "a",
+        status: "added",
+        additions: 3,
+        deletions: 1,
+        source: "tool",
+        incomplete: false,
+      },
+    ],
+    additions: 3,
+    deletions: 1,
+    diff: "diff --git a/a b/a",
+    next_cursor: "2",
+  });
+
+  assert.deepEqual(counts, {
+    scope: "task",
+    files: 1,
+    additions: 3,
+    deletions: 1,
+  });
 });

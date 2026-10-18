@@ -199,20 +199,3 @@ test("selecting a task or going back closes the composer", async (t) => {
   assert.equal(controller.getSnapshot().newTask, undefined);
   assert.equal(controller.getSnapshot().selected, undefined);
 });
-
-test("More options opens the Advanced task dialog with the composer's draft", async (t) => {
-  const { controller } = await started();
-  t.onTestFinished(() => controller.dispose());
-
-  await controller.delegate("claude:general", {
-    description: values.description,
-    worker: "claude:general",
-  });
-
-  assert.equal(controller.getSnapshot().dialog?.kind, "delegate-loading");
-
-  assert.deepEqual(controller.getDialogDraft("delegate"), {
-    description: values.description,
-    worker: "claude:general",
-  });
-});

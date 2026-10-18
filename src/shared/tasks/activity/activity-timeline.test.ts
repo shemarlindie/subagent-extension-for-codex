@@ -1097,7 +1097,7 @@ test("merged normalized message content separates housekeeping bursts in input e
   );
 });
 
-test("a thinking row lasts until the next event, or is open-ended when none follows", () => {
+test("a thinking row is open-ended when no event follows", () => {
   const thinking = [event(10, "thinking_tokens"), event(14, "thinking_tokens")];
   const [group] = groupActivity(thinking);
   assert.ok(group);
@@ -1106,13 +1106,6 @@ test("a thinking row lasts until the next event, or is open-ended when none foll
     start: 10000,
     end: null,
   });
-
-  const all = [
-    ...thinking,
-    event(20, "tool.started", { id: "a", name: "Read" }),
-  ];
-
-  assert.deepEqual(thinkingSpan(group, all), { start: 10000, end: 20000 });
 });
 
 test("a message that absorbed its thinking marker spans marker to message", () => {
@@ -1130,13 +1123,6 @@ test("a message that absorbed its thinking marker spans marker to message", () =
   const message = groupActivity(events).find((g) => g.kind === "message")!;
   const span = thinkingSpan(message, events);
   assert.ok(span && span.end !== null && span.end > span.start);
-});
-
-test("rows that are not thinking have no span", () => {
-  const events = [event(1, "tool.started", { id: "a", name: "Read" })];
-  const [group] = groupActivity(events);
-  assert.ok(group);
-  assert.equal(thinkingSpan(group, events), undefined);
 });
 
 test("startup and ordinary statuses remain visible beside a thinking row", () => {

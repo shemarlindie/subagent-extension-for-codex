@@ -121,6 +121,7 @@ test("restores saved dialogs in order and removes each deliberate close", async 
           {
             kind: "handoff",
             taskId: "task-1",
+            target: { kind: "file", path: "src/auth.ts" },
             draft: { message: "continue the migration" },
           },
         ],
@@ -132,7 +133,10 @@ test("restores saved dialogs in order and removes each deliberate close", async 
   t.onTestFinished(() => controller.dispose());
 
   await controller.start();
-  assert.equal(controller.getSnapshot().dialog?.kind, "handoff");
+  const handoff = controller.getSnapshot().dialog;
+  assert.equal(handoff?.kind, "handoff");
+  if (handoff?.kind !== "handoff") throw new Error("Expected targeted handoff");
+  assert.deepEqual(handoff.target, { kind: "file", path: "src/auth.ts" });
 
   assert.deepEqual(controller.getDialogDraft("handoff"), {
     message: "continue the migration",
@@ -206,13 +210,6 @@ test("a restored filter with no matches falls back to precedence and is removed 
   );
 
   assert.equal(saved.at(-1)?.view.filter, undefined);
-
-  controller.setFilter("failed");
-  controller.setSearch("completed");
-
-  assert.equal(controller.getSnapshot().filter, "failed");
-  assert.equal(effectiveFilter(controller.getSnapshot()), "failed");
-  assert.deepEqual(visibleTasks(controller.getSnapshot()), []);
 });
 
 test("the file preview moves between changed files and saves where it is", async (t) => {

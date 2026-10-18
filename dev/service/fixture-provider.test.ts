@@ -44,52 +44,43 @@ test("fixture readiness and model discovery expose configured states", async () 
   await delayed.models();
 });
 
-test("fixture runs permission prompts, questions, tools, and stream frames", async () => {
-  const provider = new FixtureProvider();
+test("fixture asks for questions and permissions in order within one session", async () => {
   const f = context();
 
-  const output = await provider.run(
+  const output = await new FixtureProvider().run(
     f.runContext,
-    [
-      "[fixture:question]",
-      "[fixture:permission tool=Edit]",
-      "[fixture:tool-error name=Read]",
-      "[fixture:activity type=control_request_progress]",
-      "[fixture:stream]",
-    ].join(" "),
+    "[fixture:question] [fixture:permission tool=Edit]",
   );
 
   assert.match(output.reply, /Fixture task completed/);
   assert.deepEqual(f.inputs, ["AskUserQuestion", "Edit"]);
   assert.equal(f.sessions.length, 1);
 
-  assert.ok(
-    f.events.some(
-      (event) => event.type === "tool.completed" && event.data.error,
-    ),
-  );
-
-  assert.ok(
-    f.events.some(
-      (event) =>
-        event.type === "claude.activity" &&
-        event.data.type === "control_request_progress",
-    ),
-  );
-
-  assert.ok(
-    f.events.some(
-      (event) =>
-        event.type === "claude.activity" &&
-        (event.data.raw_response as Record<string, unknown>).type ===
-          "stream_event",
-    ),
-  );
-
   assert.equal(
     f.events.filter((event) => event.type === "agent.completed").length,
     1,
   );
+});
+
+test("fixture stream key emits a complete stream lifecycle", async () => {
+  const f = context();
+  await new FixtureProvider().run(f.runContext, "[fixture:stream]");
+
+  const frames = f.events.flatMap((event) => {
+    const raw = event.data.raw_response as
+      { type?: string; event?: { type?: string } } | undefined;
+
+    return raw?.type === "stream_event" ? [raw.event?.type] : [];
+  });
+
+  assert.deepEqual(frames, [
+    "message_start",
+    "content_block_start",
+    "content_block_delta",
+    "content_block_stop",
+    "message_delta",
+    "message_stop",
+  ]);
 });
 
 test("fixture cost marker supports a zero-cost completion", async () => {

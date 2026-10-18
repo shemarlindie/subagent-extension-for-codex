@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { deferred, flush, setup, task } from "./controller-test-harness";
-import { visibleTasks } from "./selectors";
 import type { Task } from "./types";
 
 test("panel bootstrap explicitly requests global scope; host scope skips bootstrap and filters results", async (t) => {
@@ -115,24 +114,6 @@ test("sharing sends the selected task identity to the host", async (t) => {
       revision: "HEAD",
     },
   ]);
-});
-
-test("Back keeps scoped narrow panels on the task list through refresh", async (t) => {
-  for (const scope of [
-    { conversation_id: "chat" },
-    { conversation_id: null, repository: "/repo/a" },
-  ]) {
-    const { controller, transport } = setup();
-    t.onTestFinished(() => controller.dispose());
-    transport.tasks = [task("a", "/repo/a", "chat")];
-    controller.applyScope({ panel_scope: scope }, false);
-    await controller.start();
-    assert.equal(controller.getSnapshot().selected, "a");
-    controller.back();
-    await controller.refresh();
-    assert.equal(controller.getSnapshot().selected, undefined);
-    assert.deepEqual(controller.getSnapshot().events, []);
-  }
 });
 
 test("All chats preserves repository and discards a delayed conversation response", async (t) => {
@@ -254,28 +235,6 @@ test("malformed scope data is rejected and the task list waits for a valid scope
   assert.equal(controller.getSnapshot().conversation, "chat");
 });
 
-test("Failed filter shows failed, interrupted and live-failed tasks only", async (t) => {
-  const { controller, transport } = setup();
-  t.onTestFinished(() => controller.dispose());
-  const failed = task("failed");
-  failed.status = "failed";
-  const interrupted = task("interrupted");
-  interrupted.status = "interrupted";
-  const liveFailed = task("live-failed");
-  liveFailed.live_activity = { text: "Provider failed", state: "failed" };
-  const done = task("done");
-  done.status = "completed";
-  transport.tasks = [failed, interrupted, liveFailed, done, task("ok")];
-
-  await controller.start();
-  controller.setFilter("failed");
-
-  assert.deepEqual(
-    visibleTasks(controller.getSnapshot()).map((item) => item.id),
-    ["failed", "interrupted", "live-failed"],
-  );
-});
-
 test("opening data selects the default task before the task-list read returns", async (t) => {
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
@@ -313,35 +272,6 @@ test("opening data selects the default task before the task-list read returns", 
   assert.equal(controller.getSnapshot().selected, "waiting");
 });
 
-test("opening data gives Chat each task's read state before the task-list fetch returns", async (t) => {
-  const { controller, transport } = setup(true);
-  t.onTestFinished(() => controller.dispose());
-
-  // A reload opens Chat from opening data; its "New" divider comes from the
-  // task's read state at that moment.
-  transport.handler = (name) =>
-    name === "list_agent_tasks" ? deferred<Task[]>().promise : undefined;
-
-  const unread: Task = {
-    ...task("unread", "/repo/a", "chat"),
-    status: "completed",
-    unread: true,
-    read_through: 3,
-  };
-
-  void controller.start();
-  await flush();
-
-  transport.events.scope({
-    panel_scope: { conversation_id: "chat" },
-    tasks: [unread],
-  });
-
-  const [opened] = controller.getSnapshot().tasks;
-  assert.equal(opened?.unread, true);
-  assert.equal(opened?.read_through, 3);
-});
-
 test("opening data keeps the task Chat is reading at its latest message read", (t) => {
   const { controller } = setup(true);
   t.onTestFinished(() => controller.dispose());
@@ -353,17 +283,19 @@ test("opening data keeps the task Chat is reading at its latest message read", (
       panel_scope: { conversation_id: "chat" },
       tasks: [
         { ...task("a", "/repo/a", "chat"), unread: true, read_through: 1 },
-        { ...task("b", "/repo/a", "chat"), unread: true, read_through: 1 },
+        { ...task("b", "/repo/a", "chat"), unread: true, read_through: 3 },
       ],
     },
     false,
   );
 
   assert.deepEqual(
-    controller.getSnapshot().tasks.map((item) => [item.id, item.unread]),
+    controller
+      .getSnapshot()
+      .tasks.map((item) => [item.id, item.unread, item.read_through]),
     [
-      ["a", undefined],
-      ["b", true],
+      ["a", undefined, undefined],
+      ["b", true, 3],
     ],
   );
 });

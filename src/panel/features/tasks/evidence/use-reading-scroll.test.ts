@@ -243,6 +243,19 @@ test("updates respect a reader scroll before the browser delivers its scroll eve
   assert.deepEqual(reading.position?.anchor, { id: "b", top: -75 });
 });
 
+test("a pinned reader who scrolls away before its event stops following updates", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+  assert.equal(viewport.scrollTop, 400);
+  viewport.scrollTop = 250;
+
+  view.rerender(createElement(Chat, { reading, items: [...items, "g"] }));
+
+  assert.equal(viewport.scrollTop, 250);
+  assert.ok(view.getByRole("button", { name: "Scroll to latest message" }));
+});
+
 test("a reader scroll to the end before its event repins once the event arrives", () => {
   const reading: ReadingState = {};
   const view = render(createElement(Chat, { reading, items }));
@@ -451,6 +464,30 @@ test("a smooth return stays pinned until the reader takes over", () => {
   );
 
   expect(button()).toBeNull();
+});
+
+test("a smooth return that arrives ends pinned and follows later replies", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+
+  Object.defineProperty(viewport, "scrollTo", {
+    configurable: true,
+    value: vi.fn(),
+  });
+
+  viewport.scrollTop = 100;
+  fireEvent.scroll(viewport);
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to latest message" }),
+  );
+
+  viewport.scrollTop = 400;
+  fireEvent.scroll(viewport);
+  assert.equal(reading.position?.pinned, true);
+  view.rerender(createElement(Chat, { reading, items: [...items, "g"] }));
+  assert.equal(viewport.scrollTop, 500);
 });
 
 test("a smooth return that never moves is judged where it stopped", (t) => {

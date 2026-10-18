@@ -18,14 +18,11 @@ import {
 } from "../../../../../shared/providers/claude/permissions.js";
 import { startSchema, type Task } from "../../../../../shared/tasks/model.js";
 import { now } from "../../../../../shared/time.js";
-import { Settings } from "../../../settings/settings.js";
-import { Store } from "../../../tasks/storage/store.js";
 import { type RunContext } from "../../types.js";
 import {
   claudeEnvironment,
   claudeSandbox,
 } from "../configuration/execution-environment.js";
-import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { PARENT_TOOL } from "./parent-tool.js";
 import { ClaudeAgentProvider } from "./provider.js";
 import { claudeTurnOptions } from "./turn-options.js";
@@ -802,64 +799,6 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
     ))!.behavior,
     "deny",
   );
-});
-
-test("extension Auto setting reaches a task and the SDK launch", async () => {
-  const { c } = await context();
-  const store = new Store(":memory:");
-
-  try {
-    const settings = new Settings(store.database, () => ["claude"]);
-    settings.update("alice", { set: { claude_permission_mode: "auto" } });
-
-    const input = startSchema.parse({
-      repository: "/repo",
-      description: "Implement",
-      worker_profile: "implementer",
-      provider_options: { claude: { permission_mode: "inherit" } },
-    });
-
-    const prepared = claudeTaskPolicy.prepareStart({
-      input,
-      defaults: settings.values("alice"),
-      authority: "user",
-    });
-
-    const resolvedClaudeOptions = prepared.provider_options?.claude ?? {};
-    assert.equal(resolvedClaudeOptions.permission_mode, "auto");
-    assert.equal(resolvedClaudeOptions.permission_source, "setting");
-
-    c.task.worker_profile = "implementer";
-    setClaudeOptions(c.task, resolvedClaudeOptions);
-    let options: Options | undefined;
-
-    const provider = new ClaudeAgentProvider(
-      (args) => {
-        options = args.options;
-
-        return Object.assign(
-          (async function* () {
-            yield {
-              type: "result",
-              subtype: "success",
-              result: reply,
-              total_cost_usd: 0,
-              usage: {},
-            };
-          })(),
-          { close: () => {} },
-        ) as unknown as Query;
-      },
-      undefined,
-      readyClaudeCli,
-    );
-
-    await provider.run(c, "Implement");
-    assert.equal(options!.permissionMode, "auto");
-    assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
-  } finally {
-    store.close();
-  }
 });
 
 test("unresolved SDK edits ask the configured decision maker and preserve the original input", async () => {

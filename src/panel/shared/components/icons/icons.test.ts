@@ -5,7 +5,6 @@ import { cleanup, render } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { TaskStatusIcon } from "../../../features/tasks/list/task-status-icon";
 import { Chevron } from "../chevron";
 import { Icon, type IconName, ICONS } from "./icons";
 
@@ -80,43 +79,5 @@ describe("Icon", () => {
     assert.equal(svg.getAttribute("width"), "10");
     assert.equal(svg.getAttribute("height"), "10");
     assert.equal(svg.getAttribute("stroke-width"), "1");
-  });
-});
-
-describe("TaskStatusIcon", () => {
-  test("running draws a glow and a filled dot without a path", () => {
-    const { container } = render(
-      createElement(TaskStatusIcon, { kind: "running", label: "Running" }),
-    );
-
-    const svg = svgOf(container);
-    assert.ok(svg.classList.contains("row-status-icon"));
-    assert.ok(svg.classList.contains("running"));
-    assert.ok(svg.querySelector(".row-status-glow"));
-    expect(svg.querySelector("path")).toBeNull();
-  });
-
-  test("queued draws a circle around the clock hands", () => {
-    const { container } = render(
-      createElement(TaskStatusIcon, { kind: "queued", label: "Queued" }),
-    );
-
-    const svg = svgOf(container);
-    assert.ok(svg.querySelector("circle"));
-    assert.ok(svg.querySelector("path"));
-  });
-
-  test("decorative status icons are hidden from assistive tech", () => {
-    const { container } = render(
-      createElement(TaskStatusIcon, {
-        kind: "completed",
-        label: "Completed",
-        decorative: true,
-      }),
-    );
-
-    const svg = svgOf(container);
-    assert.equal(svg.getAttribute("aria-hidden"), "true");
-    expect(svg.querySelector("title")).toBeNull();
   });
 });

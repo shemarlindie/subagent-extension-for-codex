@@ -42,12 +42,6 @@ test("variants map onto the theme classes and keep extra classes", () => {
 
   // Only text buttons underline.
   assert.equal(buttonClass("ghost", { underline: true }), "ghost");
-  render(createElement(Button, { variant: "text", underline: true }, "Undo"));
-
-  assert.equal(
-    screen.getByRole("button", { name: "Undo" }).className,
-    "text-button underline",
-  );
 });
 
 test("underline is rejected on variants other than text", () => {

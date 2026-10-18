@@ -260,7 +260,7 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
   assert.equal(controller.getSnapshot().changes?.data?.additions, 2);
 });
 
-test("tab counts load without reading the event log or the Changes tab", async (t) => {
+test("selecting a task loads its change counts without reading its changes", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a")];

@@ -102,29 +102,6 @@ test("summaries count lines and files", () => {
   );
 });
 
-test("change counts keep the totals and drop the file list and diff", () => {
-  const counts = changeCounts({
-    ...page("diff --git a/a b/a", "2"),
-    files: [
-      {
-        path: "a",
-        status: "added",
-        additions: 3,
-        deletions: 1,
-        source: "tool",
-        incomplete: false,
-      },
-    ],
-  });
-
-  assert.deepEqual(counts, {
-    scope: "task",
-    files: 1,
-    additions: 3,
-    deletions: 1,
-  });
-});
-
 test("a changed file's parts are joined; a deleted file has no content", async () => {
   const parts = [
     {

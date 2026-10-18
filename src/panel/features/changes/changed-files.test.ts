@@ -52,9 +52,8 @@ test("a changed file's diff is its part of the task's diff", () => {
   assert.equal(changedFileDiff(changes, "b.ts")?.to, "b.ts");
 });
 
-test("binary and unlisted files have no diff", () => {
+test("binary files have no diff", () => {
   assert.equal(changedFileDiff(changes, "logo.png"), undefined);
-  assert.equal(changedFileDiff(changes, "missing.ts"), undefined);
 });
 
 test("each read's diff is parsed once, however many views ask", () => {
@@ -118,10 +117,12 @@ test("a file the diff leaves out gets a stand-in without shifting the rest", () 
   assert.equal(entries.length, 3);
   assert.ok(b);
 
-  // A stand-in keeps the file's status, and offers no Diff view.
+  // A stand-in keeps the file's status, and offers no Diff view. A path the
+  // changes don't list has none either.
   assert.equal(b.diff.new, true);
   assert.equal(b.diff.additions, 1);
   assert.equal(changedFileDiff({ ...partial, diff: "" }, "b.ts"), undefined);
+  assert.equal(changedFileDiff(partial, "missing.ts"), undefined);
 });
 
 test("a path Git quoted in the diff matches its file by path, not place", () => {

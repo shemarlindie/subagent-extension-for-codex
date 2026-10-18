@@ -49,35 +49,18 @@ test("preview events cover the activity kinds the timeline renders", () => {
     ),
   );
 
+  // SDK message kinds are enforced by preview-sdk-fixtures.test.ts.
   for (const kind of [
     "agent.message",
     "agent.content",
     "tool.started",
     "tool.completed",
-    "tool_progress",
-    "stream_event",
-    "hook_started",
-    "hook_response",
-    "task_started",
-    "task_progress",
-    "task_updated",
-    "task_notification",
-    "api_retry",
-    "compact_boundary",
-    "files_persisted",
-    "notification",
-    "permission_denied",
-    "mirror_error",
-    "rate_limit_event",
-    "thinking_tokens",
     "agent.input_required",
     "agent.completed",
     "task.completed",
     "task.failed",
     "task.interrupted",
     "task.instruction",
-    "prompt_suggestion",
-    "tool_use_summary",
   ]) {
     assert.ok(kinds.has(kind), `no preview event of kind ${kind}`);
   }
@@ -291,14 +274,25 @@ test("the chat project candidate follows the auto-add setting", () => {
   );
 });
 
-test("a cwd with whitespace has no Git root, so nothing is offered", () => {
-  const opened = open("open_codex_subagent_extension", {
-    conversation_id: PREVIEW_THREAD,
-    host_directory: "file:///demo/project%20/demo/project",
-  });
+test("a cwd's Git root is offered and a cwd with whitespace has none", () => {
+  for (const [host_directory, candidate] of [
+    ["file:///repo", "/repo"],
+    ["file:///demo/project%20/demo/project", undefined],
+  ] as const) {
+    const opened = open("open_codex_subagent_extension", {
+      conversation_id: PREVIEW_THREAD,
+      host_directory,
+    });
 
-  assert.equal(opened.panel_project_candidate, undefined);
-  assert.equal(opened.panel_scope.repository, "/demo/project");
+    assert.equal(
+      opened.panel_project_candidate?.repository,
+      candidate,
+      host_directory,
+    );
+
+    // The thread keeps its own project either way.
+    assert.equal(opened.panel_scope.repository, "/demo/project");
+  }
 });
 
 test("fixture registration validates the root and the caller keeps it", () => {
@@ -527,6 +521,12 @@ test("successful budget updates can be enabled for preview fixtures", () => {
       raise: { max_runtime_minutes: 30 },
       raised: { turn: 1, runtime: true },
     },
+    // Only limits that actually increased are marked.
+    {
+      id: "preview-budget",
+      raise: { max_cost_usd: 2, max_runtime_minutes: 30 },
+      raised: { turn: 1, runtime: true },
+    },
   ] as const;
 
   for (const { id, raise, raised } of cases) {
@@ -563,9 +563,9 @@ test("successful budget updates can be enabled for preview fixtures", () => {
             {
               task_id: id,
               budget:
-                id === "preview-budget"
-                  ? { max_cost_usd: originalBudget.max_cost_usd }
-                  : { max_runtime_minutes: originalBudget.max_runtime_minutes },
+                "max_runtime_minutes" in raise
+                  ? { max_runtime_minutes: originalBudget.max_runtime_minutes }
+                  : { max_cost_usd: originalBudget.max_cost_usd },
             },
             { successfulBudgetUpdates: true },
           ),
@@ -576,35 +576,6 @@ test("successful budget updates can be enabled for preview fixtures", () => {
       if (originalRaise) task.budget_raised_for_turn = originalRaise;
       else delete task.budget_raised_for_turn;
     }
-  }
-});
-
-test("preview updates only mark limits that actually increased", () => {
-  const task = previewTasks.find(
-    (candidate) => candidate.id === "preview-budget",
-  )!;
-
-  const originalBudget = { ...task.budget };
-  const originalRaise = task.budget_raised_for_turn;
-
-  try {
-    previewTool(
-      "raise_user_agent_budget",
-      {
-        task_id: task.id,
-        budget: { max_cost_usd: 2, max_runtime_minutes: 30 },
-      },
-      { successfulBudgetUpdates: true },
-    );
-
-    assert.deepEqual(task.budget_raised_for_turn, {
-      turn: task.turn,
-      runtime: true,
-    });
-  } finally {
-    task.budget = originalBudget;
-    if (originalRaise) task.budget_raised_for_turn = originalRaise;
-    else delete task.budget_raised_for_turn;
   }
 });
 

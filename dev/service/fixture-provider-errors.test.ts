@@ -76,42 +76,40 @@ test("fixture fail alias produces a reply and failed completion", async () => {
   );
 });
 
-for (const subtype of fixtureSdkResultSubtypes.filter(
-  (subtype) => subtype !== "success",
-)) {
-  test(`fixture completion trigger emits SDK result subtype ${subtype}`, async () => {
+for (const { subtype, key, error } of [
+  ...fixtureSdkResultSubtypes
+    .filter((subtype) => subtype !== "success")
+    .map((subtype) => ({
+      subtype,
+      key: subtype,
+      error: new RegExp(`Fixture completion: ${subtype}`),
+    })),
+  // A success result marked is_error still fails the turn.
+  {
+    subtype: "success",
+    key: "success is_error=true",
+    error: /Fixture completion: success \(is_error\)/,
+  },
+]) {
+  test(`fixture completion trigger emits SDK result ${key}`, async () => {
     const f = context();
 
     await assert.rejects(
       new FixtureProvider().run(
         f.runContext,
-        `[fixture:completion subtype=${subtype}]`,
+        `[fixture:completion subtype=${key}]`,
       ),
-      new RegExp(`Fixture completion: ${subtype}`),
+      error,
     );
 
-    assert.equal(
-      f.events.find((event) => event.type === "agent.completed")?.data?.subtype,
-      subtype,
+    const completion = f.events.find(
+      (event) => event.type === "agent.completed",
     );
+
+    assert.equal(completion?.data.subtype, subtype);
+    assert.equal(completion?.data.is_error, true);
   });
 }
-
-test("fixture preserves success result messages marked is_error", async () => {
-  const f = context();
-
-  await assert.rejects(
-    new FixtureProvider().run(
-      f.runContext,
-      "[fixture:completion subtype=success is_error=true]",
-    ),
-    /Fixture completion: success \(is_error\)/,
-  );
-
-  const completion = f.events.find((event) => event.type === "agent.completed");
-  assert.equal(completion?.data.subtype, "success");
-  assert.equal(completion?.data.is_error, true);
-});
 
 test("fixture can expose provider session deletion and shutdown errors", async () => {
   const taskWithSession = { session_id: "fixture-session" } as Task;

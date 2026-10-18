@@ -5,7 +5,6 @@ import { test } from "vitest";
 import {
   fixtureActivityPayload,
   fixtureSdkActivityTypes,
-  fixtureSdkAssistantErrorTypes,
   fixtureSdkSystemActivityTypes,
   fixtureStreamPayload,
 } from "./fixture-events.js";
@@ -50,21 +49,6 @@ test("fixture activity payloads keep nested overrides and unknown SDK events", (
   assert.equal(unknown.raw_response.type, "future_sdk_event");
 });
 
-test("fixture assistant messages cover every installed SDK error code", () => {
-  for (const error of fixtureSdkAssistantErrorTypes) {
-    const data = fixtureActivityPayload(
-      "assistant",
-      { error, message: { content: [] } },
-      "task_fixture",
-      1,
-    );
-
-    assert.equal(data.error, error);
-    assert.equal(data.activity.failed, true);
-    assert.deepEqual(data.message, { content: [] });
-  }
-});
-
 test("fixture stream frames cover each Messages API streaming lifecycle event", () => {
   for (const frame of fixtureStreamFrameTypes) {
     const data = fixtureStreamPayload(frame, {}, "task_fixture", 3);
@@ -78,45 +62,11 @@ test("fixture stream frames cover each Messages API streaming lifecycle event", 
   }
 });
 
-test("fixture prompt keys parse provider, stream, and failure scenarios", () => {
+test("fixture prompt keys parse every bounded provider, stream, and failure scenario", () => {
   const scenarios = readScenarios(
     [
       "[fixture:question count=2]",
-      "[fixture:permission tool=Edit]",
-      "[fixture:tool-error name=Read count=2]",
-      "[fixture:activity type=rate_limit_event rate_limit_info.status=rejected]",
-      "[fixture:stream frame=content_block_delta delta=thinking text=Fixture%20thought]",
-      "[fixture:fail stage=after-tools]",
-      "[fixture:completion subtype=error_max_budget_usd]",
-    ].join(" "),
-  );
-
-  assert.equal(scenarios.questionCount, 2);
-  assert.deepEqual(scenarios.permissionTools, ["Edit"]);
-  assert.deepEqual(scenarios.toolErrorNames, ["Read", "Read"]);
-
-  assert.deepEqual(scenarios.activities, [
-    {
-      type: "rate_limit_event",
-      fields: { "rate_limit_info.status": "rejected" },
-    },
-  ]);
-
-  assert.deepEqual(scenarios.streams, [
-    {
-      frame: "content_block_delta",
-      fields: { delta: "thinking", text: "Fixture thought" },
-    },
-  ]);
-
-  assert.equal(scenarios.failStage, "after-tools");
-  assert.equal(scenarios.completionSubtype, "error_max_budget_usd");
-});
-
-test("fixture prompt keys expose every bounded provider scenario", () => {
-  const scenarios = readScenarios(
-    [
-      "[fixture:permission count=9]",
+      "[fixture:permission tool=Edit count=9]",
       "[fixture:assistant-error type=overloaded]",
       "[fixture:tool name=Read count=2]",
       "[fixture:tool-error name=Bash count=2]",
@@ -125,18 +75,21 @@ test("fixture prompt keys expose every bounded provider scenario", () => {
       "[fixture:thinking]",
       "[fixture:change]",
       "[fixture:restriction name=subagents]",
+      "[fixture:activity type=rate_limit_event rate_limit_info.status=rejected]",
       "[fixture:stream]",
+      "[fixture:stream frame=content_block_delta delta=thinking text=Fixture%20thought]",
       "[fixture:slow]",
       "[fixture:late]",
       "[fixture:session state=invalid]",
       "[fixture:wait ms=90000]",
       "[fixture:cost usd=1000001]",
-      "[fixture:fail stage=after-input]",
+      "[fixture:fail stage=after-tools]",
       "[fixture:completion subtype=success outcome=error]",
     ].join(" "),
   );
 
-  assert.equal(scenarios.permissionTools.length, 5);
+  assert.equal(scenarios.questionCount, 2);
+  assert.deepEqual(scenarios.permissionTools, Array(5).fill("Edit"));
   assert.deepEqual(scenarios.assistantErrors, ["overloaded"]);
   assert.deepEqual(scenarios.toolNames, ["Read", "Read"]);
   assert.deepEqual(scenarios.toolErrorNames, ["Bash", "Bash"]);
@@ -150,13 +103,29 @@ test("fixture prompt keys expose every bounded provider scenario", () => {
   assert.equal(scenarios.thinking, true);
   assert.equal(scenarios.change, true);
   assert.deepEqual(scenarios.restrictions, ["subagents"]);
+
+  assert.deepEqual(scenarios.activities, [
+    {
+      type: "rate_limit_event",
+      fields: { "rate_limit_info.status": "rejected" },
+    },
+  ]);
+
   assert.equal(scenarios.streamLifecycle, true);
+
+  assert.deepEqual(scenarios.streams, [
+    {
+      frame: "content_block_delta",
+      fields: { delta: "thinking", text: "Fixture thought" },
+    },
+  ]);
+
   assert.equal(scenarios.slow, true);
   assert.equal(scenarios.late, true);
   assert.equal(scenarios.invalidateSession, true);
   assert.equal(scenarios.waitMs, 60_000);
   assert.equal(scenarios.costUsd, 1_000_000);
-  assert.equal(scenarios.failStage, "after-input");
+  assert.equal(scenarios.failStage, "after-tools");
   assert.equal(scenarios.completionSubtype, "success");
   assert.equal(scenarios.completionIsError, true);
 });

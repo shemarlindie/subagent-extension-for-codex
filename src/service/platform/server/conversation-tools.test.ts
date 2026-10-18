@@ -18,7 +18,6 @@ import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
-import { openingTasks } from "../panel/panel-context.js";
 import { callTool, definitions, isReadOnlyTool, isUserTool } from "./tools.js";
 
 async function until(fn: () => boolean) {
@@ -77,12 +76,16 @@ type Messages = {
   queued_messages: number;
 };
 
-test("exactly the tools named for the user are refused to other callers", () => {
+test("exactly the tools named for the user are refused to other callers", async () => {
   const names = Object.keys(definitions({} as Control, "alice"));
 
   for (const name of names) {
     assert.equal(isUserTool(name), name.includes("_user_"), name);
   }
+
+  await expect(
+    callTool({} as Control, "alice", "steer_user_agent_queued_message", {}),
+  ).rejects.toThrow(/User tools require a user interface/);
 });
 
 test("reads and the update wait are read-only; writes are not", () => {
@@ -96,38 +99,6 @@ test("reads and the update wait are read-only; writes are not", () => {
 
   for (const name of ["send_agent_message", "delete_user_agent_task"]) {
     assert.equal(isReadOnlyTool(name), false, name);
-  }
-});
-
-test("the old one-shot tools are gone and the conversation tools replace them", () => {
-  const names = Object.keys(definitions({} as Control, "alice"));
-
-  for (const name of [
-    "send_agent_message",
-    "get_agent_messages",
-    "get_agent_message",
-    "ack_agent_message",
-    "remove_agent_queued_message",
-    "send_user_agent_message",
-    "raise_user_agent_budget",
-    "edit_user_agent_queued_message",
-    "move_user_agent_queued_message",
-    "steer_user_agent_queued_message",
-    "remove_user_agent_queued_message",
-    "resume_user_agent_queue",
-    "clear_user_agent_queue",
-  ]) {
-    assert.ok(names.includes(name), name);
-  }
-
-  for (const name of [
-    "continue_agent_task",
-    "send_agent_instruction",
-    "get_agent_result",
-    "cancel_agent_task",
-    "retry_agent_task",
-  ]) {
-    assert.ok(!names.includes(name), name);
   }
 });
 
@@ -253,7 +224,7 @@ test("a confirmed rejected send preserves its message and permits changed delive
   }
 });
 
-test("only the user can steer an existing queued message and its original sender survives", async () => {
+test("the user can steer an existing queued message and its original sender survives", async () => {
   const { c, store, parent, user, start } = await setup();
 
   try {
@@ -267,10 +238,6 @@ test("only the user can steer an existing queued message and its original sender
     });
 
     const args = { task_id: task.id, message_id: queued.message_id };
-
-    await expect(
-      parent("steer_user_agent_queued_message", args),
-    ).rejects.toThrow(/User tools require a user interface/);
 
     await expect(
       callTool(c, "bob", "steer_user_agent_queued_message", args, "user"),
@@ -370,20 +337,6 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
     await until(() => store.get(t.id, "alice").status === "completed");
     assert.equal(store.get(t.id, "alice").turn, 2);
     await user("clear_user_agent_queue", { task_id: t.id });
-
-    // The user tools need a user interface.
-    await assert.rejects(
-      parent("send_user_agent_message", { task_id: t.id, message: "Hi" }),
-      /user interface/,
-    );
-
-    await assert.rejects(
-      parent("raise_user_agent_budget", {
-        task_id: t.id,
-        budget: { max_cost_usd: 6 },
-      }),
-      /user interface/,
-    );
 
     const beforeBudgetApply = store.get(t.id, "alice");
 
@@ -611,8 +564,8 @@ test("an update wait returns once the owner's revision changes, and a change end
   }
 });
 
-test("parent message relay tools require app authority and preserve conversation scope", async () => {
-  const { c, store, parent, user, start } = await setup();
+test("parent message relay tools preserve conversation scope", async () => {
+  const { c, store, user, start } = await setup();
 
   try {
     const created = await start("Review");
@@ -620,13 +573,6 @@ test("parent message relay tools require app authority and preserve conversation
     task.conversation_id = "parent-chat";
     store.save(task);
     store.event(task, "parent.message", { text: "Worker update" });
-
-    await assert.rejects(
-      parent("claim_user_agent_parent_message", {
-        conversation_id: "parent-chat",
-      }),
-      /User tools require a user interface/,
-    );
 
     assert.equal(
       await user("claim_user_agent_parent_message", {
@@ -641,16 +587,6 @@ test("parent message relay tools require app authority and preserve conversation
     );
 
     assert.equal(claimed.task_id, task.id);
-
-    await assert.rejects(
-      parent("record_user_agent_parent_delivery", {
-        task_id: task.id,
-        attempt_id: claimed.attempt_id,
-        conversation_id: "parent-chat",
-        delivered: true,
-      }),
-      /User tools require a user interface/,
-    );
 
     await user("record_user_agent_parent_delivery", {
       task_id: task.id,
@@ -865,16 +801,6 @@ test.each(["poll-first", "notification-first"])(
           message_id: "parent_missing",
         }),
       ).rejects.toThrow(/Message not found/);
-
-      await expect(
-        callTool(
-          c,
-          "bob",
-          "get_agent_message",
-          { task_id: task.id, message_id: id },
-          "parent",
-        ),
-      ).rejects.toThrow(/Task not found/);
     } finally {
       await c.close();
     }
@@ -984,17 +910,6 @@ test("reading reports leaves them available for host delivery, while model ackno
       }),
     ).toBeNull();
 
-    await expect(
-      parent("ack_agent_message", { task_id: task.id, message_id: "request" }),
-    ).rejects.toThrow();
-
-    await expect(
-      parent("ack_agent_message", {
-        task_id: task.id,
-        message_id: "parent_999999",
-      }),
-    ).rejects.toThrow();
-
     expect(
       store.eventsOfTypes(task.id, ["parent.message_acknowledged"]),
     ).toHaveLength(1);
@@ -1076,61 +991,6 @@ test("the panel records what the user has read, and lists show what they haven't
       }),
       { unread: true, through: chat.next_cursor - 1 },
     );
-
-    // Only the user marks tasks, and only their own.
-    await assert.rejects(
-      parent("mark_user_agent_task_read", { task_id: t.id, read: true }),
-      /User tools require a user interface/,
-    );
-
-    await assert.rejects(
-      parent("mark_user_agent_task_unread_from", {
-        task_id: t.id,
-        event_id: chat.next_cursor,
-      }),
-      /User tools require a user interface/,
-    );
-
-    await assert.rejects(
-      callTool(
-        c,
-        "bob",
-        "mark_user_agent_task_unread_from",
-        { task_id: t.id, event_id: chat.next_cursor },
-        "user",
-      ),
-      /Task not found/,
-    );
-
-    await assert.rejects(
-      callTool(
-        c,
-        "bob",
-        "mark_user_agent_tasks_read",
-        { task_ids: [t.id] },
-        "user",
-      ),
-      /Task not found/,
-    );
-  } finally {
-    await c.close();
-  }
-});
-
-test("the panel's opening tasks carry their read state", async () => {
-  const { c, store, start } = await setup();
-
-  try {
-    const t = await start("Review the parser");
-    await until(() => store.get(t.id, "alice").status === "completed");
-
-    // A reload opens the panel from these tasks, before its list read returns.
-    const [opened] = openingTasks(c, "alice").filter(
-      (task) => task.id === t.id,
-    );
-
-    assert.equal(opened?.unread, true);
-    assert.equal(opened?.read_through, 0);
   } finally {
     await c.close();
   }

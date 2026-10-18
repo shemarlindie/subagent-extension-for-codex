@@ -14,7 +14,11 @@ import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
 import { withConversation } from "../server/tools.js";
 import { withHostRepository } from "./host-context.js";
-import { resolvePanelContext, taskPanelContext } from "./panel-context.js";
+import {
+  openingTasks,
+  resolvePanelContext,
+  taskPanelContext,
+} from "./panel-context.js";
 
 async function fixture(t: TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "panel-context-")));
@@ -471,4 +475,19 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
       );
     }
   }
+});
+
+test("the panel's opening tasks carry their read state", async (t) => {
+  const f = await fixture(t);
+
+  const task = f.seed("task_read", await f.repo("repo"), {
+    status: "completed",
+  });
+
+  f.c.store.event(task, "agent.reply", { text: "Done", turn: 1 });
+
+  // A reload opens the panel from these tasks, before its list read returns.
+  const [opened] = openingTasks(f.c, "alice");
+  assert.equal(opened?.unread, true);
+  assert.equal(opened?.read_through, 0);
 });

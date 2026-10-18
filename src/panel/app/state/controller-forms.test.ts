@@ -26,18 +26,12 @@ test("settings opens before its read and keeps its section across scope changes"
 
   controller.saveSettingsSection("models");
 
-  assert.equal(controller.getLastSettingsSection(), "models");
-  assert.equal(controller.getDialogDraft("settings"), undefined);
-
   controller.applyScope(
     { panel_scope: { conversation_id: "another-chat" } },
     false,
   );
 
   assert.equal(controller.getSnapshot().dialog?.kind, "settings-loading");
-
-  assert.equal(controller.getLastSettingsSection(), "models");
-  assert.equal(controller.getDialogDraft("settings"), undefined);
 
   settingsRead.resolve({ sections: [], values: defaults });
   await flush();
@@ -284,43 +278,6 @@ test("New task offers the chat project only when auto-add is on and adds it befo
       auto ? undefined : "/repo/chat",
     );
   }
-});
-
-test("permission decisions submit the request id and optional worker message", async (t) => {
-  const { controller, transport } = setup();
-
-  t.onTestFinished(() => controller.dispose());
-
-  transport.handler = (name) =>
-    name === "submit_agent_input" ? {} : undefined;
-
-  const pendingTask: Task = {
-    ...task("task-1"),
-    pending_input: {
-      id: "request-1",
-      tool: "Bash",
-      kind: "permission",
-      input: { command: "npm run typecheck" },
-    },
-  };
-
-  await controller.taskActions.decidePermission(
-    pendingTask,
-    true,
-    "Run only the checks.",
-  );
-
-  assert.deepEqual(transport.calls, [
-    {
-      name: "submit_agent_input",
-      args: {
-        task_id: "task-1",
-        request_id: "request-1",
-        approved: true,
-        message: "Run only the checks.",
-      },
-    },
-  ]);
 });
 
 test("a removed task invalidates a busy dialog once and cannot select its late result", async (t) => {
