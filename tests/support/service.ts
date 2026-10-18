@@ -55,15 +55,30 @@ export async function stopService({ data }: Pick<Service, "data">) {
     return;
   }
 
+  if (await waitForExit(pid)) return;
+
+  try {
+    process.kill(pid, "SIGKILL");
+  } catch {
+    return;
+  }
+
+  if (!(await waitForExit(pid))) {
+    throw new Error(`Packaged service ${pid} did not exit after SIGKILL`);
+  }
+}
+
+/** Waits for termination before callers remove files the service had open. */
+async function waitForExit(pid: number) {
   for (let i = 0; i < 250; i++) {
     try {
       process.kill(pid, 0);
     } catch {
-      return;
+      return true;
     }
 
     await new Promise((done) => setTimeout(done, 20));
   }
 
-  process.kill(pid, "SIGKILL");
+  return false;
 }

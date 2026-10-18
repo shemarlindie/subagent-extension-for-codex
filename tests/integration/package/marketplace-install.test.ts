@@ -114,7 +114,14 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
 
   afterAll(async () => {
     await stopService(service).catch(() => {});
-    await rm(root, { recursive: true, force: true });
+
+    // Windows can release SQLite and directory handles just after process exit.
+    await rm(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 100,
+    });
   });
 
   test("installs from the marketplace and serves over Codex's MCP command", async () => {

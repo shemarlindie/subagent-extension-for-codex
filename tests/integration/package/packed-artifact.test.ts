@@ -183,7 +183,13 @@ afterAll(async () => {
     await stopService(service).catch(() => {});
   }
 
-  await rm(root, { recursive: true, force: true });
+  // Windows can release SQLite and directory handles just after process exit.
+  await rm(root, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
 });
 
 describe("packed artifact", () => {
@@ -296,7 +302,10 @@ describe("packed artifact", () => {
 
     await run("register", repository);
     const { stdout } = await run("list");
-    assert.ok(stdout.includes(repository), stdout);
+
+    expect(JSON.parse(stdout)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ repository })]),
+    );
   });
 
   test("stdio starts the packaged service and serves tools, icons, the panel and the packaged .env", async () => {
@@ -318,8 +327,14 @@ describe("packed artifact", () => {
         ),
       );
 
-      const projects = await callJson(client, "list_agent_projects");
-      assert.ok(JSON.stringify(projects).includes(repository));
+      const { result: projects } = await callJson(
+        client,
+        "list_agent_projects",
+      );
+
+      expect(projects).toEqual(
+        expect.arrayContaining([expect.objectContaining({ repository })]),
+      );
 
       // The service itself persists this one, for the restart check below.
       await callJson(client, "register_user_agent_project", {
@@ -373,12 +388,17 @@ describe("packed artifact", () => {
     const client = await connectStdio();
 
     try {
-      const projects = JSON.stringify(
-        await callJson(client, "list_agent_projects"),
+      const { result: projects } = await callJson(
+        client,
+        "list_agent_projects",
       );
 
-      assert.ok(projects.includes(repository));
-      assert.ok(projects.includes(serviceRepository));
+      expect(projects).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ repository }),
+          expect.objectContaining({ repository: serviceRepository }),
+        ]),
+      );
     } finally {
       await client.close();
     }
@@ -392,11 +412,15 @@ describe("packed artifact", () => {
       await stopService(main);
       await assert.rejects(health());
 
-      const projects = JSON.stringify(
-        await callJson(client, "list_agent_projects"),
+      const { result: projects } = await callJson(
+        client,
+        "list_agent_projects",
       );
 
-      assert.ok(projects.includes(repository));
+      expect(projects).toEqual(
+        expect.arrayContaining([expect.objectContaining({ repository })]),
+      );
+
       assert.equal((await health()).status, "ok");
     } finally {
       await client.close();
