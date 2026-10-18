@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { test, vi } from "vitest";
+import { test, type TestContext, vi } from "vitest";
 
 import { type Event } from "../../../../shared/events/types.js";
 import {
@@ -12,8 +12,9 @@ import { startSchema, type Task } from "../../../../shared/tasks/model.js";
 import { ActivityPages } from "./activity-pages.js";
 import { Store } from "./store.js";
 
-function fixture() {
+function fixture(t: TestContext) {
   const store = new Store(":memory:");
+  t.onTestFinished(() => store.close());
 
   const task: Task = {
     ...startSchema.parse({ repository: "/repo", description: "Activity" }),
@@ -68,8 +69,8 @@ function everything(store: Store, id: string) {
   }
 }
 
-test("a page is the newest window and the tally of the rest", () => {
-  const { store, task, write } = fixture();
+test("a page is the newest window and the tally of the rest", (t) => {
+  const { store, task, write } = fixture(t);
   write(EVENT_TAIL_SIZE + 250);
 
   const page = new ActivityPages(store).page(task.id, 0),
@@ -80,8 +81,8 @@ test("a page is the newest window and the tally of the rest", () => {
   assert.equal(page.dropped?.count, 250);
 });
 
-test("a poll returns only the events after its cursor and extends the tally", () => {
-  const { store, task, write } = fixture();
+test("a poll returns only the events after its cursor and extends the tally", (t) => {
+  const { store, task, write } = fixture(t);
   write(EVENT_TAIL_SIZE + 10);
 
   const pages = new ActivityPages(store),
@@ -97,8 +98,8 @@ test("a poll returns only the events after its cursor and extends the tally", ()
   assert.equal(next.events.length, EVENT_TAIL_SIZE);
 });
 
-test("a poll with nothing new does not count the history again", () => {
-  const { store, task, write } = fixture();
+test("a poll with nothing new does not count the history again", (t) => {
+  const { store, task, write } = fixture(t);
   write(EVENT_TAIL_SIZE + 500);
 
   const pages = new ActivityPages(store),
@@ -114,8 +115,8 @@ test("a poll with nothing new does not count the history again", () => {
   assert.deepEqual(again.events, []);
 });
 
-test("a turn reads from the previous turn's close through its own close", () => {
-  const { store, task, write } = fixture();
+test("a turn reads from the previous turn's close through its own close", (t) => {
+  const { store, task, write } = fixture(t);
 
   const end = (turn: number) => {
     store.event(task, "task.turn_ended", {

@@ -66,6 +66,48 @@ async function setup(provider: Provider = new FixtureProvider()) {
   return { c, store, parent, user, start };
 }
 
+function seedParentReport(store: Store, created: Task, text = "Worker update") {
+  const task = store.get(created.id, "alice");
+  task.conversation_id = "parent-chat";
+  store.save(task);
+  const before = store.lastEventId(task.id);
+  const report = store.event(task, "parent.message", { text });
+
+  return { task, before, report };
+}
+
+type StreamingOptions = {
+  finished: Promise<void>;
+  growDraft?: boolean;
+};
+
+class Streaming extends FixtureProvider {
+  constructor(private readonly options: StreamingOptions) {
+    super();
+  }
+
+  override async run(c: RunContext) {
+    c.delta("msg_live", "Half ");
+
+    if (this.options.growDraft) {
+      await new Promise((r) => setTimeout(r, 20));
+      c.delta("msg_live", "a reply");
+    }
+
+    await this.options.finished;
+
+    if (this.options.growDraft) {
+      c.emit("agent.message", {
+        role: "assistant",
+        text: "Half a reply, done.",
+        raw_response: { message: { id: "msg_live" } },
+      });
+    }
+
+    return { reply: this.options.growDraft ? "Half a reply, done." : "Done." };
+  }
+}
+
 type Messages = {
   messages: { id: string; kind: string; from: string; text: string }[];
   next_cursor: number;
@@ -384,24 +426,9 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
   let finish!: () => void;
   const finished = new Promise<void>((resolve) => (finish = resolve));
 
-  class Streaming extends FixtureProvider {
-    override async run(c: RunContext) {
-      c.delta("msg_live", "Half ");
-      await new Promise((r) => setTimeout(r, 20));
-      c.delta("msg_live", "a reply");
-      await finished;
-
-      c.emit("agent.message", {
-        role: "assistant",
-        text: "Half a reply, done.",
-        raw_response: { message: { id: "msg_live" } },
-      });
-
-      return { reply: "Half a reply, done." };
-    }
-  }
-
-  const { c, store, parent, user, start } = await setup(new Streaming());
+  const { c, store, parent, user, start } = await setup(
+    new Streaming({ finished, growDraft: true }),
+  );
 
   try {
     const t = await start("Write");
@@ -482,16 +509,7 @@ test("an update wait returns once the owner's revision changes, and a change end
   let finish!: () => void;
   const finished = new Promise<void>((resolve) => (finish = resolve));
 
-  class Streaming extends FixtureProvider {
-    override async run(c: RunContext) {
-      c.delta("msg_live", "Half ");
-      await finished;
-
-      return { reply: "Done." };
-    }
-  }
-
-  const { c, store, user, start } = await setup(new Streaming());
+  const { c, store, user, start } = await setup(new Streaming({ finished }));
 
   type Update = { revision: string; draft?: unknown; running?: boolean };
 
@@ -569,10 +587,7 @@ test("parent message relay tools preserve conversation scope", async () => {
 
   try {
     const created = await start("Review");
-    const task = store.get(created.id, "alice");
-    task.conversation_id = "parent-chat";
-    store.save(task);
-    store.event(task, "parent.message", { text: "Worker update" });
+    const { task } = seedParentReport(store, created);
 
     assert.equal(
       await user("claim_user_agent_parent_message", {
@@ -612,10 +627,7 @@ test("acknowledgement after claim records a skipped delivery through app tools",
   try {
     const created = await start("Review");
     await until(() => store.get(created.id, "alice").status === "completed");
-    const task = store.get(created.id, "alice");
-    task.conversation_id = "parent-chat";
-    store.save(task);
-    store.event(task, "parent.message", { text: "Worker update" });
+    const { task } = seedParentReport(store, created);
 
     const claimed = await user<{
       task_id: string;
@@ -669,14 +681,12 @@ test.each(["poll-first", "notification-first"])(
     try {
       const created = await start("Review");
       await until(() => store.get(created.id, "alice").status === "completed");
-      const task = store.get(created.id, "alice");
-      task.conversation_id = "parent-chat";
-      store.save(task);
-      const before = store.lastEventId(task.id);
 
-      const report = store.event(task, "parent.message", {
-        text: "An explicit worker report.",
-      });
+      const { task, before, report } = seedParentReport(
+        store,
+        created,
+        "An explicit worker report.",
+      );
 
       const id = `parent_${report.id}`;
 
@@ -872,10 +882,12 @@ test("reading reports leaves them available for host delivery, while model ackno
   try {
     const created = await start("Review");
     await until(() => store.get(created.id, "alice").status === "completed");
-    const task = store.get(created.id, "alice");
-    task.conversation_id = "parent-chat";
-    store.save(task);
-    const first = store.event(task, "parent.message", { text: "Read alone" });
+
+    const { task, report: first } = seedParentReport(
+      store,
+      created,
+      "Read alone",
+    );
 
     const second = store.event(task, "parent.message", {
       text: "Processed and acknowledged",

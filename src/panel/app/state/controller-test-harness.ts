@@ -10,6 +10,7 @@ import type {
   Task,
   Transport,
   TransportEvents,
+  UiStatePersistence,
 } from "./types";
 
 export function deferred<T>() {
@@ -156,4 +157,19 @@ export function setup(wide = false) {
   const controller = new Controller(transport, environment);
 
   return { transport, controller, environment };
+}
+
+export function setupWithViewState(
+  initial: UiStatePersistence["initial"],
+  transport = new FakeTransport(),
+) {
+  const saved: UiStatePersistence["initial"][] = [];
+
+  const controller = new Controller(
+    transport,
+    { hidden: () => false, wide: () => true },
+    { initial, save: (state) => saved.push(state) },
+  );
+
+  return { transport, controller, saved };
 }

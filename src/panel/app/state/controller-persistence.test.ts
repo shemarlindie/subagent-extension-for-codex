@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { Controller } from "./controller";
-import { FakeTransport, task } from "./controller-test-harness";
+import {
+  FakeTransport,
+  setupWithViewState,
+  task,
+} from "./controller-test-harness";
 import { effectiveFilter, visibleTasks } from "./selectors";
-import type { UiStatePersistence } from "./types";
 
 test("browser view state seeds the first render, restores a task, and persists list navigation", async (t) => {
   const transport = new FakeTransport();
@@ -18,10 +21,9 @@ test("browser view state seeds the first render, restores a task, and persists l
   const selectedTask = task("b", "/repo/b");
   selectedTask.title = "Migrate config";
   transport.tasks = [task("a", "/repo/a"), selectedTask];
-  const saved: UiStatePersistence["initial"][] = [];
 
-  const viewState: UiStatePersistence = {
-    initial: {
+  const { controller, saved } = setupWithViewState(
+    {
       view: {
         repository: "/repo/b",
         selected: "b",
@@ -30,13 +32,7 @@ test("browser view state seeds the first render, restores a task, and persists l
         tab: "details",
       },
     },
-    save: (state) => saved.push(state),
-  };
-
-  const controller = new Controller(
     transport,
-    { hidden: () => false, wide: () => true },
-    viewState,
   );
 
   t.onTestFinished(() => controller.dispose());
@@ -75,13 +71,8 @@ test("browser view state seeds the first render, restores a task, and persists l
 
 test("settings section preference persists separately from dialog drafts", async (t) => {
   const transport = new FakeTransport();
-  const saved: UiStatePersistence["initial"][] = [];
 
-  const controller = new Controller(
-    transport,
-    { hidden: () => false, wide: () => true },
-    { initial: { view: {} }, save: (state) => saved.push(state) },
-  );
+  const { controller, saved } = setupWithViewState({ view: {} }, transport);
 
   t.onTestFinished(() => controller.dispose());
   await controller.start();
@@ -104,30 +95,25 @@ test("settings section preference persists separately from dialog drafts", async
 test("restores saved dialogs in order and removes each deliberate close", async (t) => {
   const transport = new FakeTransport();
   transport.tasks = [task("task-1")];
-  const saved: UiStatePersistence["initial"][] = [];
 
-  const controller = new Controller(
-    transport,
-    { hidden: () => false, wide: () => true },
+  const { controller, saved } = setupWithViewState(
     {
-      initial: {
-        view: { selected: "task-1" },
-        dialogs: [
-          {
-            kind: "project",
-            repository: "/repo/draft",
-            draft: { repository: "/repo/draft" },
-          },
-          {
-            kind: "handoff",
-            taskId: "task-1",
-            target: { kind: "file", path: "src/auth.ts" },
-            draft: { message: "continue the migration" },
-          },
-        ],
-      },
-      save: (state) => saved.push(state),
+      view: { selected: "task-1" },
+      dialogs: [
+        {
+          kind: "project",
+          repository: "/repo/draft",
+          draft: { repository: "/repo/draft" },
+        },
+        {
+          kind: "handoff",
+          taskId: "task-1",
+          target: { kind: "file", path: "src/auth.ts" },
+          draft: { message: "continue the migration" },
+        },
+      ],
     },
+    transport,
   );
 
   t.onTestFinished(() => controller.dispose());
@@ -170,17 +156,12 @@ test("a restored filter with no matches falls back to precedence and is removed 
   completed.title = "Migrate completed task";
   completed.status = "completed";
   transport.tasks = [completed, failed];
-  const saved: UiStatePersistence["initial"][] = [];
 
-  const controller = new Controller(
-    transport,
-    { hidden: () => false, wide: () => true },
+  const { controller, saved } = setupWithViewState(
     {
-      initial: {
-        view: { filter: "active", search: "Migrate", browsing: true },
-      },
-      save: (state) => saved.push(state),
+      view: { filter: "active", search: "Migrate", browsing: true },
     },
+    transport,
   );
 
   t.onTestFinished(() => controller.dispose());
@@ -215,13 +196,8 @@ test("a restored filter with no matches falls back to precedence and is removed 
 test("the file preview moves between changed files and saves where it is", async (t) => {
   const transport = new FakeTransport();
   transport.tasks = [task("task-1")];
-  const saved: UiStatePersistence["initial"][] = [];
 
-  const controller = new Controller(
-    transport,
-    { hidden: () => false, wide: () => true },
-    { initial: { view: {} }, save: (state) => saved.push(state) },
-  );
+  const { controller, saved } = setupWithViewState({ view: {} }, transport);
 
   t.onTestFinished(() => controller.dispose());
   await controller.start();

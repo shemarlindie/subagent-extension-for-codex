@@ -16,6 +16,7 @@ import { promisify } from "node:util";
 import { test } from "vitest";
 
 import {
+  dataDirectory,
   findPackageRoot,
   installRoot,
   packagePath,
@@ -109,4 +110,16 @@ test("the package version comes from the installed package.json", async () => {
   );
 
   assert.equal(packageVersion, manifest.version);
+});
+
+test("data directory override is independent of packaged installation directory", () => {
+  assert.equal(
+    dataDirectory({ CODEX_SUBAGENT_EXTENSION_DATA: "/tmp/custom-agent-data" }),
+    "/tmp/custom-agent-data",
+  );
+
+  assert.equal(
+    dataDirectory({ CODEX_SUBAGENT_EXTENSION_DATA: "relative-agent-data" }),
+    resolve("relative-agent-data"),
+  );
 });

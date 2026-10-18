@@ -8,7 +8,6 @@ import { promisify } from "node:util";
 
 import { test } from "vitest";
 
-import { dataDirectory } from "../../../src/service/platform/service/runtime.js";
 import { waitForListening } from "../../support/helpers.js";
 import { freePort, stopService } from "../../support/service.js";
 
@@ -257,18 +256,6 @@ test(
     assert.equal(health.launcher, "stdio");
   },
 );
-
-test("data directory override is independent of packaged installation directory", () => {
-  assert.equal(
-    dataDirectory({ CODEX_SUBAGENT_EXTENSION_DATA: "/tmp/custom-agent-data" }),
-    "/tmp/custom-agent-data",
-  );
-
-  assert.equal(
-    dataDirectory({ CODEX_SUBAGENT_EXTENSION_DATA: "relative-agent-data" }),
-    resolve("relative-agent-data"),
-  );
-});
 
 test("launcher discovers service metadata and token without starting another service", async (t) => {
   const dir = await data(t);
