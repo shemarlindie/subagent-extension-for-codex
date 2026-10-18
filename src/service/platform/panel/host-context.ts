@@ -1,4 +1,3 @@
-import { realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,7 +48,7 @@ export async function hostProjectCandidate(directory?: string) {
     const cwd = fileURLToPath(directory);
     if (!isAbsolute(cwd)) return undefined;
 
-    return await realpath(await gitRepositoryRoot(cwd));
+    return await gitRepositoryRoot(cwd);
   } catch {
     return undefined;
   }

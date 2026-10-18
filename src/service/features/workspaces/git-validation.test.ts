@@ -78,3 +78,20 @@ test("bounded validation preserves Git errors and canonical-root approval", asyn
   await mkdir(child);
   await assert.rejects(workspaces.repository(child), /Use repository root/);
 });
+
+test("the repository root is a real path even when Git prints another spelling", async () => {
+  // Git for Windows prints `C:/...`. Here a stub prints a path with `..` instead.
+  const bin = join(directory, "bin");
+  await mkdir(bin);
+  await mkdir(join(directory, "child"));
+
+  await writeFile(
+    join(bin, "git"),
+    `#!${process.execPath}\nconsole.log(${JSON.stringify(join(directory, "child", ".."))} + "/");\n`,
+    { mode: 0o700 },
+  );
+
+  vi.stubEnv("PATH", bin);
+
+  assert.equal(await gitRepositoryRoot(directory), directory);
+});

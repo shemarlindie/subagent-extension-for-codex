@@ -1,4 +1,3 @@
-import { realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 
 import { hostProjectCandidate } from "../../platform/panel/host-context.js";
@@ -19,7 +18,7 @@ export function hostDirectoryFromMeta(meta?: Record<string, unknown>) {
 
 async function gitRoot(path: string) {
   try {
-    return await realpath(await gitRepositoryRoot(path));
+    return await gitRepositoryRoot(path);
   } catch {
     return undefined;
   }

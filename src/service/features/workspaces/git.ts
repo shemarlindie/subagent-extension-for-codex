@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
@@ -39,18 +40,24 @@ export async function git(
 
 const ROOT_PROBE_TIMEOUT_MS = 5000;
 
-/** Bound the read-only Git probe without limiting worktree writes or snapshots. */
+/**
+ * Bound the read-only Git probe without limiting worktree writes or snapshots.
+ * Returns the root's real path, which compares equal to other real paths. Git
+ * prints `C:/...` on Windows, where Node paths use backslashes.
+ */
 export async function gitRepositoryRoot(cwd: string) {
   try {
-    return (
-      await git(
-        cwd,
-        ["rev-parse", "--show-toplevel"],
-        undefined,
-        undefined,
-        ROOT_PROBE_TIMEOUT_MS,
-      )
-    ).trim();
+    return await realpath(
+      (
+        await git(
+          cwd,
+          ["rev-parse", "--show-toplevel"],
+          undefined,
+          undefined,
+          ROOT_PROBE_TIMEOUT_MS,
+        )
+      ).trim(),
+    );
   } catch (error) {
     if (error instanceof Error && "killed" in error && error.killed) {
       throw new Error(
