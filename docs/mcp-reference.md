@@ -117,7 +117,7 @@ arguments, and [Transport](panel-guide.md#transport) for panel refresh behavior.
 
 ## Provider messages to the parent
 
-Claude's injected `codex_parent.message_parent` SDK tool accepts `kind: blocker`
+Claude's injected `codex_parent.send_message` SDK tool accepts `kind: blocker`
 for immediate updates and `kind: completion` (the default) for one report per
 turn. The service rejects a second completion report in the same turn. It saves completion reports after a successful turn and discards them if the turn
 fails or is interrupted. Blocker updates are saved immediately. App-only

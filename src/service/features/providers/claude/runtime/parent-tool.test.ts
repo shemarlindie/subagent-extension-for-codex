@@ -37,7 +37,7 @@ test("injected SDK tool validates input and queues only into its bound parent co
 
   try {
     const result = await fixture.client.callTool({
-      name: "message_parent",
+      name: "send_message",
       arguments: { message: "  Done  " },
     });
 
@@ -56,7 +56,7 @@ test("injected SDK tool validates input and queues only into its bound parent co
     );
 
     const blank = await fixture.client.callTool({
-      name: "message_parent",
+      name: "send_message",
       arguments: { message: " " },
     });
 
@@ -72,7 +72,7 @@ test("SDK tool reports tasks with no parent route instead of queueing", async ()
 
   try {
     const result = await fixture.client.callTool({
-      name: "message_parent",
+      name: "send_message",
       arguments: { message: "Done" },
     });
 
@@ -90,7 +90,7 @@ test.each(["completion", "blocker"] as const)(
 
     try {
       const result = await fixture.client.callTool({
-        name: "message_parent",
+        name: "send_message",
         arguments: { message: "Report", kind },
       });
 
@@ -121,7 +121,7 @@ test("SDK tool rejects invalid kinds and reports callback failures", async () =>
 
   try {
     const invalid = await fixture.client.callTool({
-      name: "message_parent",
+      name: "send_message",
       arguments: { message: "Report", kind: "progress" },
     });
 
@@ -133,7 +133,7 @@ test("SDK tool rejects invalid kinds and reports callback failures", async () =>
     });
 
     const duplicate = await fixture.client.callTool({
-      name: "message_parent",
+      name: "send_message",
       arguments: { message: "Another completion" },
     });
 

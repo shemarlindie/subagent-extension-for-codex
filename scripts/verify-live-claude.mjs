@@ -198,7 +198,7 @@ if (scenario === "edits") {
     worker_profile: "reviewer",
     conversation_id: "parent-verification",
     description:
-      "Use mcp__codex_parent__message_parent exactly once to send PARENT-POC-27. Do not inspect files, run commands, or use any other tools. Then reply with DONE. This is a delivery verification; do not send a second completion update.",
+      "Use mcp__codex_parent__send_message exactly once to send PARENT-POC-27. Do not inspect files, run commands, or use any other tools. Then reply with DONE. This is a delivery verification; do not send a second completion update.",
     budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
   });
 

@@ -28,7 +28,7 @@ export type ConversationMessage = {
   /** `reply` is the text that ended a successful turn. */
   kind: "request" | "message" | "reply";
   text: string;
-  /** An explicit worker report sent through message_parent. */
+  /** An explicit worker report sent through send_message. */
   parent_message?: true;
   /** Durable acknowledgement after the parent processed this explicit report. */
   acknowledged?: true;
