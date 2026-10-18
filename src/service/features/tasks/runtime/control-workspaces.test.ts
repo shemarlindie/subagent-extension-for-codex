@@ -312,8 +312,18 @@ test("a task is deleted in any state with everything related to it", async () =>
     const kept = await c.start("alice", input(repo, "[input]"));
     await until(() => !!store.get(kept.id, "alice").pending_input);
     await c.interrupt("alice", kept.id);
-    await c.delete("alice", kept.id);
+
+    // Deleting a task with its dependent removes the dependent first.
+    const follower = await c.start("alice", {
+      ...input(repo, "[input]"),
+      depends_on: [kept.id],
+    });
+
+    await until(() => store.get(follower.id, "alice").status === "waiting");
+    await c.interrupt("alice", follower.id);
+    await c.delete("alice", [kept.id, follower.id]);
     assert.deepEqual(sessions, [t.id]);
+    assert.deepEqual(store.all("alice"), []);
   } finally {
     await c.close();
   }

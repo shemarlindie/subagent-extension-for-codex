@@ -126,8 +126,9 @@ export class Store {
   /**
    * Announces `change` for an owner once the open transaction commits, once
    * per transaction however many writes it holds; at once outside one.
+   * Other task storage built on this connection announces its writes here.
    */
-  private markChanged(owner: string) {
+  markChanged(owner: string) {
     const changed = this.changed;
 
     if (!changed) {

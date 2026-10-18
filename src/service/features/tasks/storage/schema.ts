@@ -40,6 +40,17 @@ export const taskRead = sqliteTable("task_read", {
   unread: integer({ mode: "boolean" }).notNull(),
 });
 
+/**
+ * Tasks the user archived to keep them out of the panel's task lists, and
+ * when. A task without a row isn't archived.
+ */
+export const taskArchive = sqliteTable("task_archive", {
+  task_id: text()
+    .primaryKey()
+    .references(() => tasks.id, { onDelete: "cascade" }),
+  archived_at: text().notNull(),
+});
+
 /** Accepted send receipts share the message transaction and survive restart. */
 export const sendReceipts = sqliteTable(
   "task_send_receipts",

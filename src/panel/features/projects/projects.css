@@ -74,6 +74,9 @@
   min-width: 0;
   line-height: 24px;
 }
+.managed-project-archive {
+  white-space: nowrap;
+}
 .managed-project-remove {
   color: var(--muted);
 }

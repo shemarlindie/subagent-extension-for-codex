@@ -26,6 +26,7 @@ import { Drafts } from "../conversation/drafts.js";
 import { SessionPrompts } from "../conversation/session-prompts.js";
 import { PendingInput } from "../input/pending-input.js";
 import { ActivityPages } from "../storage/activity-pages.js";
+import { ArchiveStore } from "../storage/archive-store.js";
 import { Store } from "../storage/store.js";
 import {
   raiseBudget,
@@ -54,7 +55,7 @@ import {
   SendRequests,
   type SentMessage,
 } from "./send-requests.js";
-import { deletionOrder } from "./task-deletion.js";
+import { deletionBatch, deletionOrder } from "./task-deletion.js";
 import { generateTaskTitle } from "./task-title.js";
 import { measureTaskWait } from "./timing.js";
 import { type Active, recordStatusEvent } from "./turn-outcome.js";
@@ -64,6 +65,8 @@ const BUSY = ["queued", "starting", "running", "waiting"];
 
 export class Control {
   changes: Changes;
+  /** Which tasks the user archived from the panel's lists. */
+  archive: ArchiveStore;
   active = new Map<string, Active>();
   private deleting = new Set<string>();
   private sendRequests: SendRequests;
@@ -85,6 +88,7 @@ export class Control {
     public concurrency = 3,
   ) {
     this.changes = new Changes(store);
+    this.archive = new ArchiveStore(store);
     this.sendRequests = new SendRequests(store);
 
     this.settings = new Settings(
@@ -754,24 +758,27 @@ export class Control {
    * interrupted first, since deleting is the only way to end a task for good.
    * `deleteAgentTask` also deletes the provider's session, which the task
    * could otherwise continue from. A task others depend on stays until they
-   * are deleted, since a follow-up can still resume them.
+   * are deleted, since a follow-up can still resume them. Several tasks are
+   * deleted dependents first, and a dependent outside them stops them all.
    */
-  async delete(owner: string, id: string, deleteAgentTask = false) {
-    this.mutableTask(owner, id);
+  async delete(owner: string, ids: string | string[], deleteAgentTask = false) {
+    const batch = [...new Set([ids].flat())].map((id) =>
+      this.mutableTask(owner, id),
+    );
 
-    const dependent = this.store
-      .all(owner)
-      .find((d) => d.depends_on.includes(id));
+    const ordered = deletionBatch(this.store.all(owner), batch);
+    const doomed = ordered.map((t) => t.id);
+    for (const id of doomed) this.deleting.add(id);
 
-    if (dependent) {
-      throw new Error(
-        `Task ${dependent.id} depends on this task. Delete it first.`,
-      );
+    try {
+      for (const t of ordered) {
+        await this.deleteResources(owner, t.id, deleteAgentTask);
+      }
+    } finally {
+      for (const id of doomed) this.deleting.delete(id);
     }
 
-    this.deleting.add(id);
-
-    return this.deleteResources(owner, id, deleteAgentTask);
+    return { status: "deleted" as const };
   }
 
   /** Holds the whole batch against scheduling and new dependencies before cleanup yields. */
@@ -1134,6 +1141,8 @@ export class Control {
       recordMessage(this.store, t, m, options.delivery ?? "steer");
       recordQueueChange(this.store, t, before);
       this.store.event(t, "task.queued");
+      // A task that runs again is back in the user's lists.
+      this.archive.unarchive(t);
       record(m.id, "started");
     });
 

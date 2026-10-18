@@ -50,6 +50,7 @@ test("a fresh database gets every active table and the connection settings", (t)
     "events",
     "file_changes",
     "project_roots",
+    "task_archive",
     "task_read",
     "task_send_receipts",
     "tasks",

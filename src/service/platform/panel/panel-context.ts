@@ -122,7 +122,7 @@ export async function resolvePanelContext(
 }
 
 /**
- * The tasks the panel's opening data carries, with their read state. Chat
+ * The tasks the panel's opening data carries, with their read and archive state. Chat
  * takes its "New" divider when a task opens, so a reload must not wait for
  * the list fetch to learn the task is unread.
  */
@@ -131,8 +131,18 @@ export function openingTasks(
   owner: string,
   conversationId?: string,
 ) {
+  const archived = c.archive.times(owner);
+
   return c.store
     .all(owner)
     .filter((t) => !conversationId || t.conversation_id === conversationId)
-    .map((t) => ({ ...t, ...readFields(c.store.readState(t.id)) }));
+    .map((t) => {
+      const archivedAt = archived.get(t.id);
+
+      return {
+        ...t,
+        ...readFields(c.store.readState(t.id)),
+        ...(archivedAt ? { archived_at: archivedAt } : {}),
+      };
+    });
 }

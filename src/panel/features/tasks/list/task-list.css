@@ -166,16 +166,47 @@
   position: sticky;
   top: 0;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   height: var(--task-group-header-height);
-  overflow: hidden;
-  padding: 4px 10px 3px;
+  padding: 4px 6px 3px 10px;
   background: var(--sidebar-bg);
   color: var(--muted);
   font-size: 11px;
   font-weight: 500;
   line-height: 13px;
+}
+.task-group-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* The project menu fits the short header and shows on hover or focus, or
+   always where nothing hovers. */
+.task-group-menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: -3px 0 -2px;
+  padding: 0;
+  color: var(--muted);
+  opacity: 0;
+}
+.task-group-header:hover .task-group-menu,
+.task-group-menu:focus-visible,
+.task-group-menu[data-popup-open] {
+  opacity: 1;
+}
+@media (hover: none) {
+  .task-group-menu {
+    opacity: 1;
+  }
 }
 /* A spaced rule separates each later group. It sits on the group, so every
    header keeps the same height and the rule scrolls away with the rows. */

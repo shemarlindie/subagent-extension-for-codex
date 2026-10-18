@@ -19,6 +19,7 @@
 @import "../features/tasks/controls/questions.css";
 @import "../features/settings/settings.css";
 @import "../features/projects/projects.css";
+@import "../features/tasks/archive/archive.css";
 @import "../shared/components/navigation/navigation.css";
 @import "../shared/components/motion/motion.css";
 @import "../shared/components/loading-skeleton/loading-skeleton.css";

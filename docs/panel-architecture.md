@@ -174,7 +174,7 @@ The controller separates session memory from recoverable view state.
 `bootstrap.tsx` installs reload persistence for the standalone console and the
 development host. The production embedded panel has no persistence adapter, so
 its controller-owned view choices and drafts last only while that controller
-remains mounted. The task rail width is saved separately wherever browser storage is available.
+remains mounted. The task list width is saved separately wherever browser storage is available.
 
 `controller.session` stores per-task tabs, composer drafts/visibility, reading
 positions (including Changes' opened files), viewed changed files, and question

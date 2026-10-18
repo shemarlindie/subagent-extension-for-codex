@@ -192,6 +192,7 @@ export class Controller {
     refresh: () => this.refresh(),
     report: (error) => this.report(error),
     forgetQuestion: (requestId) => this.session.remove("question", requestId),
+    leaveSelection: () => this.leaveSelection(true),
   });
 
   private changeLoader = new ChangeLoader({

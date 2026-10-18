@@ -62,11 +62,13 @@ const matchesFilter = (task: Task, filter: Filter) =>
   (filter === "failed" && failedStatus(task));
 
 // Tasks in the chosen project and search, before the status filter applies.
+// Archived tasks are left out. The Projects page lists them.
 export function scopedTasks(state: Snapshot) {
   const search = state.search.toLowerCase();
 
   return state.tasks.filter(
     (task) =>
+      !task.archived_at &&
       (!state.repository || task.repository === state.repository) &&
       (!search ||
         `${task.title} ${task.description} ${task.worker_profile} ${task.id}`

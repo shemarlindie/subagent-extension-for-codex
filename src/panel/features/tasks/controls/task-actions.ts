@@ -2,6 +2,7 @@ import { SendRejectedError } from "../../../../shared/tasks/conversation/send-er
 import type { BudgetRaise, Delivery } from "../../../../shared/tasks/model";
 import type { Snapshot, Task } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
+import { ArchiveActions } from "../archive/archive-actions";
 import { UnreadActions } from "../unread/unread-actions";
 import { boundedRequest } from "./bounded-request";
 
@@ -14,6 +15,8 @@ interface TaskActionContext {
   report(error: unknown): void;
   /** Drops the remembered draft of an answered question. */
   forgetQuestion(requestId: string): void;
+  /** Closes the open task and returns to the task list. */
+  leaveSelection(): void;
 }
 
 type PendingMessageRequest = {
@@ -38,10 +41,13 @@ type RunOptions = {
 export class TaskActions {
   /** Records what the user has read, without making the panel busy. */
   readonly unread: UnreadActions;
+  /** Archives and unarchives tasks, without making the panel busy. */
+  readonly archive: ArchiveActions;
   private readonly sendRequests = new Map<string, PendingMessageRequest>();
 
   constructor(private context: TaskActionContext) {
     this.unread = new UnreadActions(context);
+    this.archive = new ArchiveActions(context);
   }
 
   /** Answers a worker's pending question from the task inspector. */

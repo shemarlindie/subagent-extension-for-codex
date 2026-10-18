@@ -24,3 +24,23 @@ export function deletionOrder(tasks: Task[]) {
 
   return ordered;
 }
+
+/**
+ * Orders tasks for deletion. A task outside them that depends on one of them
+ * stops the deletion, since a follow-up can still resume its dependency.
+ */
+export function deletionBatch(owned: Task[], batch: Task[]) {
+  const ids = new Set(batch.map((task) => task.id));
+
+  const dependent = owned.find(
+    (task) => !ids.has(task.id) && task.depends_on.some((id) => ids.has(id)),
+  );
+
+  if (dependent) {
+    throw new Error(
+      `Task ${dependent.id} depends on this task. Delete it first.`,
+    );
+  }
+
+  return deletionOrder(batch);
+}

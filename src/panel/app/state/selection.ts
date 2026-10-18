@@ -20,11 +20,16 @@ export function selectionPatch(selected: string | undefined) {
   } satisfies Partial<Snapshot>;
 }
 
-/** The task worth opening first: one waiting for input, then an unfinished one, then the newest. */
+/**
+ * The task worth opening first: one waiting for input, then an unfinished one,
+ * then the newest. Archived tasks are never opened by default.
+ */
 export function defaultTask(tasks: Task[]) {
+  const listed = tasks.filter((task) => !task.archived_at);
+
   return (
-    tasks.find((task) => task.pending_input) ??
-    tasks.find((task) => !terminal(task)) ??
-    tasks[0]
+    listed.find((task) => task.pending_input) ??
+    listed.find((task) => !terminal(task)) ??
+    listed[0]
   );
 }

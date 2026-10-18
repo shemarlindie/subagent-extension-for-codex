@@ -330,11 +330,29 @@ export function userTools(
         return { task_ids: marked.map((t) => t.id) };
       },
     }),
+    set_user_agent_tasks_archived: tool({
+      description:
+        "User interface only: archive or unarchive tasks. Archived tasks leave the panel's task lists until unarchived or sent a message. Archiving skips tasks that haven't stopped or that have a pending request or queued messages. Returns task_ids, the tasks changed, and skipped.",
+      schema: z.strictObject({
+        task_ids: z.array(z.string()).min(1).max(1000),
+        archived: z.boolean(),
+      }),
+      run: (a) => c.archive.setArchived(owner, a.task_ids, a.archived),
+    }),
     delete_user_agent_task: tool({
       description:
         "User interface only: delete a stopped task with its events, requests, worktree and branch. With delete_agent_task it also deletes the provider's session for the task. This can't be undone.",
       schema: taskId.extend({ delete_agent_task: z.boolean().default(false) }),
       run: (a) => c.delete(owner, a.task_id, a.delete_agent_task),
+    }),
+    delete_user_agent_tasks: tool({
+      description:
+        "User interface only: delete several tasks like delete_user_agent_task, dependents first. A task outside them that depends on one stops the whole deletion. This can't be undone.",
+      schema: z.strictObject({
+        task_ids: z.array(z.string()).min(1).max(1000),
+        delete_agent_task: z.boolean().default(false),
+      }),
+      run: (a) => c.delete(owner, a.task_ids, a.delete_agent_task),
     }),
     delete_user_agent_branch: tool({
       description:

@@ -128,13 +128,15 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     }),
     list_agent_tasks: tool({
       description:
-        "List owned tasks, optionally scoped to a conversation and repository. Each includes an excerpt of its latest reply, its number of queued messages and unread: true when the user hasn't viewed its latest reply, outcome or request in the panel, with read_through, the newest event they had read. null conversation_id explicitly requests all conversations.",
+        "List owned tasks, optionally scoped to a conversation and repository. Each includes an excerpt of its latest reply, its number of queued messages and unread: true when the user hasn't viewed its latest reply, outcome or request in the panel, with read_through, the newest event they had read, and archived_at when the user archived it from the panel's lists. null conversation_id explicitly requests all conversations.",
       schema: z.object({
         conversation_id: z.string().nullable().optional(),
         repository: z.string().optional(),
       }),
-      run: (a) =>
-        c.store
+      run: (a) => {
+        const archived = c.archive.times(owner);
+
+        return c.store
           .all(owner)
           .filter(
             (t) =>
@@ -148,8 +150,10 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
               c.store.latestEvent(t.id, "agent.reply"),
               c.drafts.get(t.id),
               c.store.readState(t.id),
+              archived.get(t.id),
             ),
-          ),
+          );
+      },
     }),
     list_available_workers: tool({
       description:

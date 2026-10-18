@@ -217,3 +217,22 @@ test("across projects, visible tasks come grouped by project in list order", () 
     ["a1", "a2"],
   );
 });
+
+test("archived tasks leave the list and its counts", () => {
+  const state = {
+    tasks: [
+      task({ id: "a", status: "completed" }),
+      task({ id: "b", status: "completed", archived_at: "then", unread: true }),
+    ],
+    filter: "all",
+    search: "",
+  } as unknown as Snapshot;
+
+  assert.deepEqual(
+    visibleTasks(state).map((item) => item.id),
+    ["a"],
+  );
+
+  assert.equal(filterCounts(state).completed, 1);
+  assert.equal(filterCounts(state).unread, 0);
+});

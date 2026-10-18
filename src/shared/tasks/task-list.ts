@@ -19,6 +19,8 @@ export type ListedTask = Task & {
   unread?: true;
   /** With `unread`, the newest event the user had read; Chat marks what follows as new. */
   read_through?: number;
+  /** When the user archived the task; the panel lists it only under Archived. */
+  archived_at?: string;
 };
 
 /** A latest `agent.reply` event as a listed task's excerpt. */
@@ -47,6 +49,7 @@ export function listedTask(
   reply?: Event,
   draft?: Draft,
   read?: ReadState,
+  archivedAt?: string,
 ): ListedTask {
   const excerpt = replyFrom(reply);
 
@@ -58,6 +61,7 @@ export function listedTask(
     ...(excerpt ? { reply: excerpt } : {}),
     ...(draft ? { draft } : {}),
     ...readFields(read),
+    ...(archivedAt ? { archived_at: archivedAt } : {}),
     queued_messages: task.queue.length,
   };
 }

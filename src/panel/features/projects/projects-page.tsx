@@ -1,3 +1,5 @@
+import { useLayoutEffect, useRef, useState } from "react";
+
 import { PAGES } from "../../app/navigation/pages";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
@@ -7,18 +9,44 @@ import { LoadingSwap } from "../../shared/components/loading-skeleton/loading-sw
 import { BackButton } from "../../shared/components/navigation/back-button";
 import { PageFrame } from "../../shared/components/navigation/page-frame";
 import { TooltipWrapper } from "../../shared/components/tooltip";
+import { ProjectArchive } from "../tasks/archive/project-archive";
 import { ProjectListSkeleton } from "./project-list-skeleton";
 import { projectDisplayName } from "./selectors";
 
 export function ProjectsPage() {
   const controller = useController(),
-    state = useSnapshot();
+    state = useSnapshot(),
+    // The project whose archive replaces the list, until the user goes back.
+    [archive, setArchive] = useState<{ repository: string; name: string }>(),
+    closedArchive = useRef<string>(undefined);
+
+  // Back from an archive, focus returns to the button that opened it.
+  useLayoutEffect(() => {
+    if (archive || !closedArchive.current) return;
+
+    document
+      .querySelector<HTMLElement>(
+        `.managed-project-archive[data-repository="${CSS.escape(closedArchive.current)}"]`,
+      )
+      ?.focus();
+
+    closedArchive.current = undefined;
+  }, [archive]);
 
   const disabled =
     state.busy ||
     !state.connected ||
     !state.scopeKnown ||
     Boolean(state.dialog);
+
+  if (archive) {
+    const closeArchive = () => {
+      closedArchive.current = archive.repository;
+      setArchive(undefined);
+    };
+
+    return <ProjectArchive {...archive} onBack={closeArchive} />;
+  }
 
   return (
     <PageFrame
@@ -99,6 +127,18 @@ export function ProjectsPage() {
                         {project.repository}
                       </code>
                     </div>
+                    <Button
+                      variant="text"
+                      className="managed-project-archive"
+                      disabled={disabled}
+                      aria-label={`View archived tasks in ${name}`}
+                      data-repository={project.repository}
+                      onClick={() =>
+                        setArchive({ repository: project.repository, name })
+                      }
+                    >
+                      View archived tasks
+                    </Button>
                     <TooltipWrapper
                       label="Remove project"
                       triggerLabel={`Remove ${name}`}

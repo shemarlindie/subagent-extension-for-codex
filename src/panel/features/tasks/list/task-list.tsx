@@ -1,6 +1,7 @@
 import { ContextMenu } from "@base-ui/react/context-menu";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
+import { archivable } from "../../../../shared/tasks/archive.js";
 import {
   useController,
   useSnapshot,
@@ -24,6 +25,7 @@ import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into
 import { useNow } from "../../../shared/utils/use-now";
 import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
+import { ProjectArchiveMenu } from "../archive/project-archive-menu";
 import { UnreadDot } from "../unread/unread-dot";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
 import { TaskGroup } from "./task-group";
@@ -39,14 +41,17 @@ interface TaskRowProps {
   onSelect: () => void;
   /** Marks the task read when it's unread, otherwise unread. */
   onToggleRead: () => void;
+  /** Archives the task, once it has stopped. */
+  onArchive: () => void;
 }
 
-/** A task in the list; right-click or long-press marks it read or unread. */
+/** A task in the list; right-click or long-press marks it read or unread, or archives it. */
 export function TaskRow({
   task,
   selected,
   onSelect,
   onToggleRead,
+  onArchive,
 }: TaskRowProps) {
   return (
     <ContextMenu.Root>
@@ -72,6 +77,14 @@ export function TaskRow({
               onClick={onToggleRead}
             >
               {task.unread ? "Mark read" : "Mark unread"}
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              className="menu-item"
+              data-action="archive"
+              disabled={!archivable(task)}
+              onClick={onArchive}
+            >
+              Archive
             </ContextMenu.Item>
           </ContextMenu.Popup>
         </ContextMenu.Positioner>
@@ -166,6 +179,8 @@ export function TaskList() {
         projectDisplayName(project),
       ]),
     ),
+    projectName = (repository: string) =>
+      projectNames.get(repository) ?? projectDisplayName({ repository }),
     listRef = useRef<HTMLDivElement>(null),
     scrolledOnLoad = useRef(false),
     cancelScroll = useRef<(() => void) | undefined>(undefined);
@@ -218,6 +233,7 @@ export function TaskList() {
           selected={task.id === state.selected}
           onSelect={() => controller.run(() => controller.select(task.id))}
           onToggleRead={() => toggleRead(task)}
+          onArchive={() => archive(task)}
         />
       );
 
@@ -228,8 +244,12 @@ export function TaskList() {
         <TaskGroup
           key={repository}
           repository={repository}
-          name={
-            projectNames.get(repository) ?? projectDisplayName({ repository })
+          name={projectName(repository)}
+          actions={
+            <ProjectArchiveMenu
+              repository={repository}
+              name={projectName(repository)}
+            />
           }
         >
           {tasks.map(renderRow)}
@@ -253,6 +273,11 @@ export function TaskList() {
 
   const toggleRead = (task: Task) =>
     controller.run(() => controller.taskActions.unread.toggle(task));
+
+  const archive = (task: Task) =>
+    controller.run(() =>
+      controller.taskActions.archive.setArchived([task], true),
+    );
 
   // Under Unread, the listed tasks can all be read at once. Without a search
   // to clear, this takes Clear filter's place; the All pill does the same.

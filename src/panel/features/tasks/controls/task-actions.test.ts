@@ -34,6 +34,7 @@ function setup(
     refresh: vi.fn(async () => {}),
     report: vi.fn(),
     forgetQuestion: vi.fn(),
+    leaveSelection: vi.fn(),
   };
 
   return {

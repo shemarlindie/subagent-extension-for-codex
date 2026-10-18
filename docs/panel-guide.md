@@ -69,7 +69,7 @@ are not restored after reload.
 
 ### Find and inspect tasks
 
-The task rail searches and filters by **Unread**, **Needs input**, **Failed**,
+The task list searches and filters by **Unread**, **Needs input**, **Failed**,
 **Active**, **Done**, then **All**. The default is the first nonempty filter
 other than Unread. Questions and
 permissions count as Needs input. Failures, interruptions and compaction
@@ -84,14 +84,14 @@ icon. Hover the icon for the worker's name. Under **All projects**, tasks are
 grouped under a header for each project. A project's group appears where its
 newest task would be, and the header stays at the top while its rows scroll.
 
-Wide panels show the task rail and inspector together. Narrow ones switch
-between them with a back action. Drag the divider to resize the rail, or focus
+Wide panels show the task list and inspector together. Narrow ones switch
+between them with a back action. Drag the divider to resize the list, or focus
 it and use Left/Right arrows. Home/End choose its limits and double-click restores
 the default. The width is saved when browser storage is available.
 
 Details includes task creation and latest activity dates, description, worker,
 revision, turns, budgets, session, workspace/branch, changes, dependencies and
-usage. Dates follow the host locale and time zone. Runtime in the rail and
+usage. Dates follow the host locale and time zone. Runtime in the task list and
 Details accumulates across turns and includes the active run.
 
 ### Read and unread tasks
@@ -130,6 +130,28 @@ The standalone console's tab title leads with the unread count, as in
 **(2) Delegated Work**. Read state is stored by the service, so the embedded
 panel and the standalone console agree and it survives reloads. Codex reading
 replies through `get_agent_messages` doesn't mark tasks read.
+
+### Archive tasks
+
+Archiving hides a task from the task list. Only stopped tasks with nothing
+waiting can be archived.
+
+- Right-click or long-press a task row, or open **Task actions**, and choose
+  **Archive**.
+- Under **All projects**, each project header has an actions menu. **Archive
+  completed** archives every completed task of that project in the current
+  scope, and **Archive all** every stopped one, whatever the search or filter
+  shows.
+
+**View archived tasks** beside each project on the Projects page opens that
+project's archive. It lists archived tasks from every chat, newest first.
+Select tasks to act on them, or select none to act on all of them.
+
+- **Unarchive** returns the tasks to the task list.
+- **Delete** asks first, then deletes the tasks like **Delete task**. Turn on
+  **Also delete the agent tasks** to include provider sessions.
+
+A task returns to the task list if Codex sends it a message.
 
 ### Create and rename tasks
 

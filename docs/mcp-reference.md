@@ -97,6 +97,10 @@ The embedded app uses the authenticated MCP Apps bridge. The standalone console
 uses HTTP and SSE. See [Host capabilities](host-capabilities.md#panel-network-access)
 for the embedded panel's connection restrictions.
 
+`set_user_agent_tasks_archived` and `delete_user_agent_tasks` are app-only.
+`list_agent_tasks` reports `archived_at` for archived tasks. See
+[Archive tasks](panel-guide.md#archive-tasks).
+
 Read-state tools are app-only. Read points belong to the user, survive reloads
 and determine unread status and Chat's **New** divider. See
 [Read and unread tasks](panel-guide.md#read-and-unread-tasks).

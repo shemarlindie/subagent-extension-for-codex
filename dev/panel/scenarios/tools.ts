@@ -12,6 +12,11 @@ import {
 } from "../../../src/shared/tasks/model";
 import { listedTask, readFields } from "../../../src/shared/tasks/task-list";
 import {
+  PREVIEW_ARCHIVE_TOOLS,
+  previewArchivedAt,
+  previewArchiveTool,
+} from "./archive-tools";
+import {
   previewEvents,
   previewProjects,
   previewStreamingDraft,
@@ -415,13 +420,17 @@ export function previewTool(
     return { repository: args.repository, name };
   }
 
-  if (name === "remove_user_agent_project") {
-    if (args.delete_tasks) {
-      throw new Error(
-        "Task data deletion requires a service; fixture tasks are preserved.",
-      );
-    }
+  const deletesTasks =
+    name.startsWith("delete_user_agent_task") ||
+    (name === "remove_user_agent_project" && args.delete_tasks);
 
+  if (deletesTasks) {
+    throw new Error(
+      "Task data deletion requires a service; fixture tasks are preserved.",
+    );
+  }
+
+  if (name === "remove_user_agent_project") {
     return { repository: args.repository };
   }
 
@@ -434,6 +443,10 @@ export function previewTool(
   }
 
   if (PREVIEW_UNREAD_TOOLS.includes(name)) return previewUnreadTool(name, args);
+
+  if (PREVIEW_ARCHIVE_TOOLS.includes(name)) {
+    return previewArchiveTool(previewTasks, args);
+  }
 
   if (name === "rename_user_agent_task") {
     const task = previewTasks.find((task) => task.id === args.task_id);
@@ -473,6 +486,7 @@ export function previewTool(
             ? streamingDraft()
             : undefined,
           previewReadState(task.id),
+          previewArchivedAt(task.id),
         );
       }),
     get_user_agent_chat: (() => {

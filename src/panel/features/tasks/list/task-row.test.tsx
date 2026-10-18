@@ -25,6 +25,7 @@ test.each([
         selected={false}
         onSelect={onSelect}
         onToggleRead={onToggleRead}
+        onArchive={() => {}}
       />,
     );
 
@@ -42,5 +43,35 @@ test.each([
 
     assert.equal(onToggleRead.mock.calls.length, 1);
     assert.equal(onSelect.mock.calls.length, 0);
+  },
+);
+
+test.each([
+  ["completed", false],
+  ["running", true],
+] as const)(
+  "right-clicking a %s row offers Archive (disabled: %s)",
+  async (status, disabled) => {
+    onTestFinished(cleanup);
+    const onArchive = vi.fn();
+
+    const view = render(
+      <TaskRow
+        task={{ ...task("a"), status }}
+        selected={false}
+        onSelect={() => {}}
+        onToggleRead={() => {}}
+        onArchive={onArchive}
+      />,
+    );
+
+    const row = view.container.querySelector<HTMLElement>("[data-task]");
+    assert.ok(row);
+    fireEvent.contextMenu(row);
+    const item = await view.findByRole("menuitem", { name: "Archive" });
+    expect(item.hasAttribute("data-disabled")).toBe(disabled);
+    await userEvent.click(item);
+
+    assert.equal(onArchive.mock.calls.length, disabled ? 0 : 1);
   },
 );

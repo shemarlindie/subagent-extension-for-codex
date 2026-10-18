@@ -1007,3 +1007,65 @@ test("the panel records what the user has read, and lists show what they haven't
     await c.close();
   }
 });
+
+test("the panel archives, unarchives and deletes tasks, and a follow-up unarchives", async () => {
+  const { c, store, parent, user, start } = await setup();
+
+  try {
+    const t = await start("Review the parser");
+    await until(() => store.get(t.id, "alice").status === "completed");
+
+    const listed = async () =>
+      (
+        await parent<ListedTask[]>("list_agent_tasks", {
+          conversation_id: null,
+        })
+      ).find((task) => task.id === t.id)?.archived_at;
+
+    assert.equal(await listed(), undefined);
+
+    assert.deepEqual(
+      await user("set_user_agent_tasks_archived", {
+        task_ids: [t.id],
+        archived: true,
+      }),
+      { task_ids: [t.id], skipped: [] },
+    );
+
+    const archivedAt = await listed();
+    assert.equal(typeof archivedAt, "string");
+
+    // Sending a message runs the task again, so it's listed again.
+    await parent("send_agent_message", { task_id: t.id, message: "Again" });
+    assert.equal(await listed(), undefined);
+
+    await until(() => store.get(t.id, "alice").status === "completed");
+
+    assert.deepEqual(
+      await user("set_user_agent_tasks_archived", {
+        task_ids: [t.id],
+        archived: true,
+      }),
+      { task_ids: [t.id], skipped: [] },
+    );
+
+    assert.deepEqual(
+      await user("set_user_agent_tasks_archived", {
+        task_ids: [t.id],
+        archived: false,
+      }),
+      { task_ids: [t.id], skipped: [] },
+    );
+
+    assert.equal(await listed(), undefined);
+
+    assert.deepEqual(
+      await user("delete_user_agent_tasks", { task_ids: [t.id] }),
+      { status: "deleted" },
+    );
+
+    assert.throws(() => store.get(t.id, "alice"), /not found/);
+  } finally {
+    await c.close();
+  }
+});

@@ -2,7 +2,7 @@ import { useSessionState } from "../../../app/state/session/use-session-state";
 import { Icon } from "../../../shared/components/icons/icons";
 import { draftTitle, NEW_TASK_SESSION_ID } from "./new-task-values";
 
-/** The task rail's placeholder for the task being composed. */
+/** The task list's placeholder for the task being composed. */
 export function NewTaskRow() {
   const [title] = useSessionState("newTask", NEW_TASK_SESSION_ID, (session) =>
     draftTitle(session.draft.description),

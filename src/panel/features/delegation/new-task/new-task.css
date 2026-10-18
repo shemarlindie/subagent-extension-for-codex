@@ -147,7 +147,7 @@
   color: var(--accent);
 }
 
-/* The task rail's draft placeholder. */
+/* The task list's draft placeholder. */
 .row-new-task {
   border: 1px dashed var(--line);
 }

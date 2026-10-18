@@ -8,6 +8,7 @@ import type { Task } from "../../../app/state/types";
 import { buttonClass } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
+import { canToggleArchive } from "../archive/archive-actions";
 
 type TaskMenuProps = { task: Task };
 
@@ -28,6 +29,9 @@ export function TaskMenu({ task }: TaskMenuProps) {
 
   const toggleRead = () =>
     controller.run(() => controller.taskActions.unread.toggle(task));
+
+  const toggleArchive = () =>
+    controller.run(() => controller.taskActions.archive.toggle(task));
 
   return (
     <Menu.Root>
@@ -51,6 +55,14 @@ export function TaskMenu({ task }: TaskMenuProps) {
               onClick={toggleRead}
             >
               {task.unread ? "Mark read" : "Mark unread"}
+            </Menu.Item>
+            <Menu.Item
+              className="menu-item"
+              data-action={task.archived_at ? "unarchive" : "archive"}
+              disabled={!canToggleArchive(task)}
+              onClick={toggleArchive}
+            >
+              {task.archived_at ? "Unarchive" : "Archive"}
             </Menu.Item>
             <Menu.Item
               className="menu-item"
