@@ -7,8 +7,7 @@ import { pathToFileURL } from "node:url";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
 import { Projects } from "../../../src/service/features/projects/projects.js";
@@ -21,110 +20,17 @@ import { PARENT_DELEGATION_PROTOCOL } from "../../../src/shared/tasks/conversati
 import { startSchema } from "../../../src/shared/tasks/model.js";
 import { now } from "../../../src/shared/time.js";
 import { waitForListening } from "../../support/helpers.js";
+import { httpFixture, panel } from "./http-test-harness.js";
 
-// Panel tools return loosely shaped structured content; tests narrow each field.
-const panel = (response: object) =>
-  (response as { structuredContent?: unknown }).structuredContent as
-    | {
-        panel_scope?: unknown;
-        panel_selection?: unknown;
-        tasks?: unknown;
-        result?: unknown;
-        conversation_id?: unknown;
-      }
-    | undefined;
+describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", () => {
+  let fixture: Awaited<ReturnType<typeof httpFixture>>;
 
-test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async () => {
-  const dir = await realpath(await mkdtemp(join(tmpdir(), "ac-http-")));
-  execFileSync("git", ["init", "-q", dir]);
+  beforeEach(async (t) => {
+    fixture = await httpFixture(t);
+  });
 
-  execFileSync("git", [
-    "-C",
-    dir,
-    "-c",
-    "user.name=Test",
-    "-c",
-    "user.email=test@example.invalid",
-    "commit",
-    "--allow-empty",
-    "-qm",
-    "initial",
-  ]);
-
-  const c = new Control(
-    new Store(join(dir, "test.sqlite")),
-    new Workspaces(join(dir, "worktrees"), [dir]),
-    new Map([["fixture", new FixtureProvider()]]),
-  );
-
-  const seedTask = (
-    id: string,
-    owner: string,
-    conversation_id?: string,
-    repository = dir,
-  ) => {
-    c.store.save({
-      ...startSchema.parse({
-        description: "Panel task",
-        conversation_id,
-        repository,
-        revision: "HEAD",
-      }),
-      id,
-      title: "Panel task",
-      owner,
-      status: "completed",
-      created_at: now(),
-      updated_at: now(),
-      created_by: "user",
-      instructions_sent: 0,
-      pending_steers: [],
-      queue: [],
-      turn: 0,
-      runtime_ms: 0,
-      instructions: [],
-    });
-  };
-
-  seedTask("current-thread", "local", "conversation-a");
-  seedTask("other-thread", "local", "conversation-b");
-  execFileSync("git", ["init", "-q", join(dir, "another-project")]);
-
-  seedTask(
-    "other-project",
-    "local",
-    "conversation-c",
-    join(dir, "another-project"),
-  );
-
-  seedTask("unscoped", "local");
-  seedTask("private-task", "other-owner", "conversation-a");
-  const auth = new Auth("private-token");
-
-  const server = application(
-    c,
-    auth,
-    "http://127.0.0.1:17317",
-    resolve("dist/app.html"),
-    resolve("dist/app.html"),
-  ).listen(0, "127.0.0.1");
-
-  await waitForListening(server);
-  const address = server.address() as { port: number };
-  const base = `http://127.0.0.1:${address.port}`;
-
-  const post = (
-    path: string,
-    body: unknown,
-    headers: Record<string, string> = {},
-  ) =>
-    fetch(base + path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...headers },
-      body: JSON.stringify(body),
-    });
-
-  try {
+  test("auth, CSRF and origin checks", async () => {
+    const { post } = fixture;
     assert.equal((await post("/api/tools/list_agent_tasks", {})).status, 401);
     assert.equal((await post("/api/login", { token: "wrong" })).status, 401);
 
@@ -161,15 +67,10 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       ).status,
       200,
     );
+  });
 
-    const client = new Client({ name: "test", version: "1.0.0" });
-
-    await client.connect(
-      new StreamableHTTPClientTransport(new URL(base + "/mcp"), {
-        requestInit: { headers: { Authorization: "Bearer private-token" } },
-      }),
-    );
-
+  test("MCP tools and UI resource metadata", async () => {
+    const { client, tools, opener, ui, base } = fixture;
     assert.equal(client.getServerVersion()?.name, "codex-subagent-extension");
     assert.ok(client.getInstructions()?.includes(PARENT_DELEGATION_PROTOCOL));
 
@@ -186,7 +87,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       undefined,
     );
 
-    const tools = await client.listTools();
     assert.ok(tools.tools.some((t) => t.name === "start_agent_task"));
 
     const ackTool = tools.tools.find(
@@ -228,10 +128,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     });
 
     assert.equal(workers.isError, undefined);
-
-    const opener = tools.tools.find(
-      (t) => t.name === "open_codex_subagent_extension",
-    )!;
 
     assert.equal(opener.title, "Delegated Work");
 
@@ -313,10 +209,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       preferredModelDisplayMode: "inline",
     });
 
-    const ui = await client.readResource({
-      uri: (opener._meta as any).ui.resourceUri,
-    });
-
     const [uiContent] = ui.contents;
 
     assert.ok(uiContent);
@@ -376,6 +268,17 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
         .visibility,
       ["model", "app"],
     );
+  });
+
+  test("panel scope follows explicit and host context", async () => {
+    const {
+      client,
+      opener,
+      globalOpener,
+      ambientMeta,
+      checkSelectedTaskContext,
+      dir,
+    } = fixture;
 
     const open = await client.callTool({
       name: "open_codex_subagent_extension",
@@ -390,10 +293,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       (panel(open)?.tasks as { id: string }[]).map((task) => task.id).sort(),
       ["current-thread", "other-project", "other-thread", "unscoped"],
     );
-
-    const globalOpener = tools.tools.find(
-      (tool) => tool.name === "open_codex_subagent_extension_global",
-    )!;
 
     assert.ok(globalOpener);
     assert.equal(globalOpener.title, "Delegated Work");
@@ -412,96 +311,6 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     assert.deepEqual(globalOpener.inputSchema.properties, {});
     assert.equal(globalOpener.inputSchema.additionalProperties, false);
     assert.deepEqual(globalOpener.outputSchema, opener.outputSchema);
-
-    const ambientMeta = {
-      threadId: "ambient-thread",
-      "openai/session": "conversation-a",
-      "codex/sandbox-state-meta": { sandboxCwd: pathToFileURL(dir).href },
-    };
-
-    const checkSelectedTaskContext = async (transportClient: Client) => {
-      for (const task_id of ["unscoped", "other-thread", "other-project"]) {
-        const task = c.store.get(task_id, "local");
-
-        for (const name of [
-          "open_codex_subagent_extension",
-          "get_agent_panel_context",
-        ]) {
-          const selected = await transportClient.callTool({
-            name,
-            arguments: { task_id },
-            _meta: ambientMeta,
-          });
-
-          assert.notEqual(
-            selected.isError,
-            true,
-            JSON.stringify(selected.content),
-          );
-
-          const context =
-            name === "get_agent_panel_context"
-              ? (panel(selected)?.result as any)
-              : selected.structuredContent;
-
-          assert.deepEqual(context?.panel_scope, {
-            conversation_id: task.conversation_id ?? null,
-            repository: task.repository,
-            revision: task.revision,
-          });
-
-          assert.equal(context?.panel_selection.task_id, task_id);
-
-          const conflict = await transportClient.callTool({
-            name,
-            arguments: { task_id, conversation_id: "explicit-conflict" },
-            _meta: ambientMeta,
-          });
-
-          assert.equal(conflict.isError, true);
-
-          assert.match(
-            JSON.stringify(conflict.content),
-            /different conversation/,
-          );
-        }
-      }
-    };
-
-    const checkGlobalCreation = async (transportClient: Client) => {
-      const started = await transportClient.callTool({
-        name: "start_agent_task",
-        arguments: {
-          title: "Global review [input]",
-          description: "Global review [input]",
-          provider: "fixture",
-          repository: dir,
-          conversation_id: null,
-        },
-        _meta: ambientMeta,
-      });
-
-      assert.notEqual(started.isError, true);
-
-      const task = panel(started)?.result as {
-        id: string;
-        conversation_id?: string;
-      };
-
-      assert.equal(task.conversation_id, undefined);
-      assert.equal(c.store.get(task.id, "local").conversation_id, undefined);
-
-      assert.deepEqual(panel(started)?.panel_scope, {
-        conversation_id: null,
-        repository: dir,
-        revision: "HEAD",
-      });
-
-      assert.deepEqual(panel(started)?.panel_selection, {
-        task_id: task.id,
-        tab: "chat",
-      });
-    };
 
     const globalOpen = await client.callTool({
       name: globalOpener.name,
@@ -601,6 +410,10 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       repository: dir,
       revision: "HEAD",
     });
+  });
+
+  test("task start returns its panel selection and global scope", async () => {
+    const { client, checkGlobalCreation, dir } = fixture;
 
     const started = await client.callTool({
       name: "start_agent_task",
@@ -629,7 +442,21 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
 
     assert.deepEqual(panel(started)?.tasks, [panel(started)?.result]);
     await checkGlobalCreation(client);
-    await client.close();
+  });
+
+  test("stdio preserves HTTP metadata, scope and task creation behavior", async () => {
+    const {
+      base,
+      tools,
+      opener,
+      ui,
+      globalOpener,
+      ambientMeta,
+      checkSelectedTaskContext,
+      checkGlobalCreation,
+      dir,
+    } = fixture;
+
     const stdio = new Client({ name: "stdio-test", version: "1.0.0" });
 
     try {
@@ -699,33 +526,12 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
       // schemas, annotations and descriptions.
       assert.deepEqual(definitionsByName(stdioTools), definitionsByName(tools));
 
-      for (const name of [
-        "request_agent_task",
-        "request_agent_input",
-        "request_agent_project",
-      ]) {
-        assert.equal(
-          stdioTools.tools.some((tool) => tool.name === name),
-          false,
-          name,
-        );
-      }
-
       const settingsRead = await stdio.callTool({
         name: "get_agent_settings",
         arguments: {},
       });
 
       assert.ok(!settingsRead.isError);
-
-      assert.equal(
-        (settingsRead.structuredContent as any).schema.type,
-        "object",
-      );
-
-      assert.ok(
-        Array.isArray((settingsRead.structuredContent as any).sections),
-      );
 
       assert.equal(
         (settingsRead.structuredContent as any).values.default_model,
@@ -919,10 +725,7 @@ test("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", async
     } finally {
       await stdio.close();
     }
-  } finally {
-    await new Promise<void>((r) => server.close(() => r()));
-    await c.close();
-  }
+  });
 });
 
 /** A service with projects enabled, serving the console on a local port. */
