@@ -42,6 +42,8 @@ The new version takes over from the running service once its running turns finis
 
 To stay on one version, add the marketplace at a release tag instead of the branch, for example `codex plugin marketplace add shemarlindie/codex-subagent-extension@v0.1.0`. Remove the marketplace first if it's already added.
 
+Alpha and beta versions, such as `v0.2.0-beta.1`, are published only as tags and marked as prereleases on GitHub. The `release` branch never receives them. To try one, add the marketplace at its tag the same way. To move to a newer prerelease or back to stable releases, remove the marketplace and add it again at the new tag or at `@release`.
+
 ## Uninstall
 
 ```sh

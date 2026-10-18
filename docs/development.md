@@ -476,6 +476,14 @@ startup and reinstalls the plugin when the branch moves, so every push to
 3. Merge to `main`, then run the **Release** workflow from `main` in GitHub
    Actions.
 
+A version with a prerelease suffix, such as `1.2.0-beta.1`, makes a
+prerelease. It needs its own `## 1.2.0-beta.1` section in `CHANGELOG.md`. The
+workflow builds its commit on top of `release` and pushes only the tag, so
+users following the branch don't receive it. The GitHub release is marked as a
+prerelease. Testers install it at its tag, and a later release replaces its
+running service as described in
+[updates and service handoff](task-continuation.md#updates-and-service-handoff).
+
 The workflow (`.github/workflows/release.yml`) runs the CI checks and the
 marketplace install test, assembles the release, commits it to `release` with
 the source commit in the message, tags it, attaches an attested zip to a
