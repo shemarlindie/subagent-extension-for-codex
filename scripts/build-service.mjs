@@ -1,10 +1,11 @@
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { builtinModules } from "node:module";
 import { join } from "node:path";
 
 import { build } from "esbuild";
 
 import { testModule } from "./lint/source-boundaries.mjs";
+import { writeThirdPartyNotices } from "./third-party-notices.mjs";
 
 const outdir = "dist";
 
@@ -80,41 +81,10 @@ if (unexpected.length) {
   );
 }
 
-// Bundling drops the packages' own license files, so collect them into one notice.
-const packageDirectory = (path) =>
-  path.match(/^(.*node_modules\/(?:@[^/]+\/)?[^/]+)\//)?.[1];
-
-const packages = [
-  ...new Set(Object.keys(inputs).map(packageDirectory).filter(Boolean)),
-];
-
-const notices = packages
-  .map((directory) => {
-    const manifest = JSON.parse(
-      readFileSync(join(directory, "package.json"), "utf8"),
-    );
-
-    const licenseFile = readdirSync(directory).find((file) =>
-      /^(licen[cs]e|copying)/i.test(file),
-    );
-
-    const text = licenseFile
-      ? readFileSync(join(directory, licenseFile), "utf8").trim()
-      : `License: ${manifest.license ?? "unspecified"} (no license file in the package)`;
-
-    return { id: `${manifest.name}@${manifest.version}`, text };
-  })
-  .sort((a, b) => a.id.localeCompare(b.id))
-  .filter((notice, index, all) => notice.id !== all[index - 1]?.id);
-
-writeFileSync(
+const packages = writeThirdPartyNotices(
   join(outdir, "THIRD_PARTY_LICENSES.txt"),
-  `Third-party software bundled into this package's dist/ JavaScript.\n\n${notices
-    .map(
-      ({ id, text }) =>
-        `${"=".repeat(72)}\n${id}\n${"=".repeat(72)}\n\n${text}\n`,
-    )
-    .join("\n")}`,
+  "the service JavaScript in dist/bundle/",
+  Object.keys(inputs),
 );
 
 // An old Node fails to parse or link the bundle before any check in it runs, so
@@ -160,5 +130,5 @@ const javascript = Object.entries(outputs)
 const mb = (bytes) => `${(bytes / 1e6).toFixed(1)} MB`;
 
 console.log(
-  `Backend: ${mb(javascript)} JavaScript, ${packages.length} bundled packages`,
+  `Backend: ${mb(javascript)} JavaScript, ${packages} bundled packages`,
 );

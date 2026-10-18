@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { build, parseAst } from "vite";
 
 import { testModule } from "./lint/source-boundaries.mjs";
+import { writeThirdPartyNotices } from "./third-party-notices.mjs";
 
 await mkdir("dist", { recursive: true });
 
@@ -85,6 +86,12 @@ async function inlineImports(file) {
       `Service, development, or test modules reached ${output}:\n${leaked.join("\n")}`,
     );
   }
+
+  writeThirdPartyNotices(
+    "dist/app.html.THIRD_PARTY_LICENSES.txt",
+    output,
+    chunks[0].moduleIds,
+  );
 
   const css = await inlineImports(stylesheet);
 

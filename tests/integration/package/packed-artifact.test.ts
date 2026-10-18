@@ -219,6 +219,7 @@ describe("packed artifact", () => {
       "dist/projects-cli.js",
       "dist/app.html",
       "dist/THIRD_PARTY_LICENSES.txt",
+      "dist/app.html.THIRD_PARTY_LICENSES.txt",
       "assets/brand/brand-glyph-dark.svg",
       "mcp.json",
     ]) {
@@ -246,6 +247,20 @@ describe("packed artifact", () => {
     }
 
     assert.deepEqual(native, []);
+  });
+
+  test("license notices list the packages bundled into each build", async () => {
+    const notice = (file: string) => readFile(join(pkg, "dist", file), "utf8");
+
+    expect(await notice("THIRD_PARTY_LICENSES.txt")).toMatch(/^express@\d/m);
+
+    const panel = await notice("app.html.THIRD_PARTY_LICENSES.txt");
+
+    for (const name of ["react", "react-dom", "highlight.js"]) {
+      expect(panel).toMatch(
+        new RegExp(`^${name.replace(".", "\\.")}@\\d`, "m"),
+      );
+    }
   });
 
   test("each public entry refuses an unsupported Node with a clear message", async () => {

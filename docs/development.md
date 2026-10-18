@@ -416,8 +416,11 @@ installation before the service hands over.
 service, and builds the service entrypoints and `dist/app.html`. Both builds
 reject dependencies from the opposing runtime, development tooling and tests.
 
-The service bundle includes its runtime packages and third-party license notices,
-so the extracted package runs without a separate `node_modules` directory. It ships no Claude Code binary.
+The service bundle includes its runtime packages, so the extracted package runs
+without a separate `node_modules` directory. It ships no Claude Code binary.
+Bundling drops the packages' license files, so each build collects them into a
+notice: `dist/THIRD_PARTY_LICENSES.txt` for the service and
+`dist/app.html.THIRD_PARTY_LICENSES.txt` for the panel.
 Launches use the installed [Claude Code CLI](claude-cli.md). Source maps omit
 embedded sources and map stack traces to the original files.
 
