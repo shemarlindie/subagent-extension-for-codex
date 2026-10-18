@@ -15,12 +15,7 @@ import {
   serviceIdentity,
 } from "./identity.js";
 import { isProcessRunning } from "./process-info.js";
-import {
-  dataDirectory,
-  defaultPort,
-  installRoot,
-  packagePath,
-} from "./runtime.js";
+import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
 
 /** A service that is starting or stopping, which the launcher waits for. */
 class ServiceTransitionError extends Error {}
@@ -239,7 +234,9 @@ export async function connectService() {
       process.execPath,
       ["--enable-source-maps", packagePath("dist/main.js")],
       {
-        cwd: installRoot,
+        // Windows cannot delete a running process's working directory, so the
+        // service runs in its data directory and updates can remove the package.
+        cwd: data,
         detached: true,
         stdio: ["ignore", log, log],
         env: {
