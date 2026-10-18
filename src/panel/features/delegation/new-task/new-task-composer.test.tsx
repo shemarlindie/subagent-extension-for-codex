@@ -111,23 +111,20 @@ test("Enter starts a General task with the settings defaults in the scoped proje
   });
 });
 
-test("the empty-state icon follows the profile restored from a draft, then the selected one", async () => {
+test("profile changes preserve the product glyph and its animation source", async () => {
   const { view, user } = setup(ready, {}, { worker: "claude:reviewer" });
-  const emptyIcon = () => view.container.querySelector(".empty-icon");
+  const glyph = view.container.querySelector("img.empty-icon");
+  const source = glyph?.getAttribute("src");
 
-  const profileIcon = () =>
-    view.getByRole("combobox", { name: /^Profile:/ }).querySelector("svg");
-
-  expect(profileIcon()).not.toBeNull();
-  expect(emptyIcon()?.innerHTML).toBe(profileIcon()?.innerHTML);
-  expect(emptyIcon()?.getAttribute("width")).toBe("28");
-  const reviewerArtwork = emptyIcon()?.innerHTML;
+  expect(glyph).not.toBeNull();
+  expect(source).toMatch(/^data:image\/svg\+xml,/);
+  expect(glyph?.getAttribute("alt")).toBe("");
 
   await user.click(view.getByRole("combobox", { name: "Profile: Reviewer" }));
   await user.click(await view.findByRole("option", { name: "Implementer" }));
 
-  expect(emptyIcon()?.innerHTML).toBe(profileIcon()?.innerHTML);
-  expect(emptyIcon()?.innerHTML).not.toBe(reviewerArtwork);
+  expect(view.container.querySelector("img.empty-icon")).toBe(glyph);
+  expect(glyph?.getAttribute("src")).toBe(source);
 
   await user.click(
     view.getByRole("combobox", { name: "Profile: Implementer" }),
@@ -135,7 +132,8 @@ test("the empty-state icon follows the profile restored from a draft, then the s
 
   await user.click(await view.findByRole("option", { name: "Reviewer" }));
 
-  expect(emptyIcon()?.innerHTML).toBe(reviewerArtwork);
+  expect(view.container.querySelector("img.empty-icon")).toBe(glyph);
+  expect(glyph?.getAttribute("src")).toBe(source);
 });
 
 test("Shift+Enter adds a line instead of sending", async () => {

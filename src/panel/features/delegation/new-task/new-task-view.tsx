@@ -1,16 +1,15 @@
 import type { Ref } from "react";
 
+import animatedGlyph from "../../../../../assets/brand/brand-glyph-animated.svg?raw";
 import {
   useController,
   useSnapshot,
 } from "../../../app/state/controller-context";
-import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { NewTaskState } from "../../../app/state/types";
 import { BackButton } from "../../../shared/components/navigation/back-button";
-import { WorkerProfileIcon } from "../../tasks/list/worker-profile-icon";
-import { workerChoice } from "../delegation";
 import { NewTaskComposer } from "./new-task-composer";
-import { NEW_TASK_SESSION_ID, newTaskInitialValues } from "./new-task-values";
+
+const glyphSource = `data:image/svg+xml,${encodeURIComponent(animatedGlyph)}`;
 
 type NewTaskViewProps = {
   newTask: NewTaskState;
@@ -24,13 +23,7 @@ type NewTaskViewProps = {
  */
 export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
   const controller = useController(),
-    state = useSnapshot(),
-    [savedWorker] = useSessionState(
-      "newTask",
-      NEW_TASK_SESSION_ID,
-      (session) => session.draft.worker,
-    ),
-    worker = savedWorker ?? newTaskInitialValues(newTask, state).worker;
+    state = useSnapshot();
 
   return (
     <div ref={viewRef} className="task-view new-task-view">
@@ -46,10 +39,13 @@ export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
         <div className="chat-panel">
           <div className="chat">
             <div className="chat-timeline new-task-empty">
-              <WorkerProfileIcon
-                profile={workerChoice(worker).profile ?? ""}
-                size={28}
+              <img
+                src={glyphSource}
+                width={64}
+                height={64}
                 className="empty-icon"
+                alt=""
+                aria-hidden="true"
               />
               <p className="new-task-prompt">What should Claude work on?</p>
               <p>
