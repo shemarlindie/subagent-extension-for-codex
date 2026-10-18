@@ -188,7 +188,7 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
       name: string,
       args?: Record<string, unknown>,
     ) => {
-      if (name === "remove_user_agent_worktree") {
+      if (name === "app_remove_worktree") {
         transport.calls.push({ name, args: args ?? {} });
         removals.push(args ?? {});
 
@@ -211,7 +211,7 @@ test("worktree actions remove the worktree, confirming uncommitted changes, then
         return { status: "removed" } as T;
       }
 
-      if (name === "delete_user_agent_branch") {
+      if (name === "app_delete_branch") {
         transport.calls.push({ name, args: args ?? {} });
 
         transport.changes = [

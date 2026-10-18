@@ -92,7 +92,7 @@ test("removing project task data deletes dependency leaves before their prerequi
   await callTool(
     f.control,
     "owner",
-    "remove_user_agent_project",
+    "app_remove_project",
     { repository: f.repository, delete_tasks: true },
     "user",
   );
@@ -222,9 +222,9 @@ test("project registration requires user authority and grants live persistent ac
   const repository = await f.repo("new-project");
   const control = new Control(f.store, f.workspaces, new Map());
   control.projects = f.projects;
-  const tool = "register_user_agent_project";
+  const tool = "app_register_project";
   assert.equal(isUserTool(tool), true);
-  assert.equal(isUserTool("browse_user_agent_project"), true);
+  assert.equal(isUserTool("app_browse_project"), true);
 
   await assert.rejects(
     callTool(control, "owner", tool, { repository }),
@@ -232,7 +232,7 @@ test("project registration requires user authority and grants live persistent ac
   );
 
   await assert.rejects(
-    callTool(control, "owner", "browse_user_agent_project", {}),
+    callTool(control, "owner", "app_browse_project", {}),
     /user interface/i,
   );
 
@@ -430,10 +430,7 @@ test("project rename and removal tools require user authority", async (t) => {
   const control = new Control(f.store, f.workspaces, new Map());
   control.projects = f.projects;
 
-  for (const tool of [
-    "rename_user_agent_project",
-    "remove_user_agent_project",
-  ]) {
+  for (const tool of ["app_rename_project", "app_remove_project"]) {
     assert.equal(isUserTool(tool), true);
 
     await assert.rejects(
@@ -445,7 +442,7 @@ test("project rename and removal tools require user authority", async (t) => {
   await callTool(
     control,
     "owner",
-    "rename_user_agent_project",
+    "app_rename_project",
     { repository, name: "  Renamed  " },
     "user",
   );
@@ -458,7 +455,7 @@ test("project rename and removal tools require user authority", async (t) => {
   await callTool(
     control,
     "owner",
-    "remove_user_agent_project",
+    "app_remove_project",
     { repository },
     "user",
   );

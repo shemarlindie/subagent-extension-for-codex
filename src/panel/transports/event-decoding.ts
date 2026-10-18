@@ -1,9 +1,6 @@
 import { decodeEventEnvelope } from "../../shared/events/decode.js";
 
-const eventPageTools = new Set([
-  "get_user_agent_activity",
-  "get_user_agent_turn_activity",
-]);
+const eventPageTools = new Set(["app_get_activity", "app_get_turn_activity"]);
 
 /** Revalidates event pages at the browser boundary and leaves other tool data alone. */
 export function decodePanelToolResult<T>(name: string, result: unknown): T {

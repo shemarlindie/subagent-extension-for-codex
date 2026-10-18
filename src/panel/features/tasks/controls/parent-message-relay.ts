@@ -53,7 +53,7 @@ export class ParentMessageRelay {
     send: NonNullable<Transport["send"]>,
   ) {
     const message = await this.transport.tool<ParentMessageNotification | null>(
-      "claim_user_agent_parent_message",
+      "app_claim_parent_message",
       { conversation_id: conversation },
     );
 
@@ -88,7 +88,7 @@ export class ParentMessageRelay {
       error = failure instanceof Error ? failure.message : String(failure);
     }
 
-    await this.transport.tool("record_user_agent_parent_delivery", {
+    await this.transport.tool("app_record_parent_delivery", {
       task_id: message.task_id,
       attempt_id: message.attempt_id,
       conversation_id: conversation,

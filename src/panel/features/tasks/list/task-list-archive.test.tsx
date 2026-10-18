@@ -76,7 +76,7 @@ test.each([
     await userEvent.click(await view.findByRole("menuitem", { name: item }));
 
     assert.deepEqual(tool.mock.calls, [
-      ["set_user_agent_tasks_archived", { task_ids: archived, archived: true }],
+      ["app_set_tasks_archived", { task_ids: archived, archived: true }],
     ]);
   },
 );

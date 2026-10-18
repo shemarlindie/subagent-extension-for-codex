@@ -257,7 +257,7 @@ test("on an idle task, Enter sends the message, which starts the next turn", asy
   await waitFor(() =>
     expect(sent(tool)).toEqual([
       [
-        "send_user_agent_message",
+        "app_send_message",
         {
           task_id: "task-1",
           message: "Next, add tests",
@@ -308,7 +308,7 @@ test("while a turn runs, Cmd/Ctrl+Enter steers, Enter queues, and an empty compo
 
   expect(sent(tool)).toEqual([
     [
-      "send_user_agent_message",
+      "app_send_message",
       {
         task_id: "task-1",
         message: "Mind the edge cases",
@@ -317,7 +317,7 @@ test("while a turn runs, Cmd/Ctrl+Enter steers, Enter queues, and an empty compo
       },
     ],
     [
-      "send_user_agent_message",
+      "app_send_message",
       {
         task_id: "task-1",
         message: "Afterwards, the docs",
@@ -345,7 +345,7 @@ test("while the worker waits for input, Enter and Ctrl+Enter only queue", async 
   await waitFor(() =>
     expect(sent(tool)).toEqual([
       [
-        "send_user_agent_message",
+        "app_send_message",
         {
           task_id: "task-1",
           message: "Later",
@@ -821,7 +821,7 @@ test("the expanded question composer queues messages and each new request starts
   await waitFor(() =>
     expect(sent(tool)).toEqual([
       [
-        "send_user_agent_message",
+        "app_send_message",
         {
           task_id: "task-1",
           message: "Next, add tests",

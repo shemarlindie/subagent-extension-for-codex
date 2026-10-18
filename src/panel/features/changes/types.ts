@@ -14,7 +14,7 @@ export type {
   ChangeScope,
 };
 
-/** remove_user_agent_worktree's result: removed, or kept for its changes. */
+/** app_remove_worktree's result: removed, or kept for its changes. */
 export type WorktreeRemoval =
   { status: "removed" } | { status: "uncommitted"; files: string[] };
 

@@ -15,7 +15,7 @@ interface WorkerAvailability {
   profiles: string[];
 }
 
-export const mentionSearchToolName = "search_mentions";
+export const mentionSearchToolName = "app_search_mentions";
 
 export const mentionSearchToolConfig = {
   title: "Choose a worker",

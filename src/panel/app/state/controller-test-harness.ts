@@ -95,7 +95,7 @@ export class FakeTransport implements Transport {
     }
 
     // Without a handler, the update wait holds as if nothing changes.
-    if (name === "wait_user_agent_updates") return new Promise<T>(() => {});
+    if (name === "app_wait_for_updates") return new Promise<T>(() => {});
 
     const values: Record<string, unknown> = {
       get_agent_panel_context: this.context,
@@ -104,14 +104,14 @@ export class FakeTransport implements Transport {
         { provider: "claude", profiles: ["reviewer"], capabilities: {} },
       ],
       list_agent_tasks: this.tasks,
-      get_user_agent_activity: { events: [] },
-      get_user_agent_change_counts: {
+      app_get_activity: { events: [] },
+      app_get_change_counts: {
         scope: "task",
         files: 0,
         additions: 0,
         deletions: 0,
       },
-      get_user_agent_chat: { items: [], next_cursor: 0 },
+      app_get_chat: { items: [], next_cursor: 0 },
       get_agent_message: { message: { id: "parent_1" } },
       get_agent_settings: { values: defaults },
     };

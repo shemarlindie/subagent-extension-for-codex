@@ -32,10 +32,10 @@ test("relay forwards each claimed worker message, records host delivery and stop
   await relay.forward("parent");
 
   expect(tool.mock.calls).toEqual([
-    ["claim_user_agent_parent_message", { conversation_id: "parent" }],
+    ["app_claim_parent_message", { conversation_id: "parent" }],
     ["get_agent_message", { task_id: "worker", message_id: "parent_1" }],
     [
-      "record_user_agent_parent_delivery",
+      "app_record_parent_delivery",
       {
         task_id: "worker",
         attempt_id: 2,
@@ -44,7 +44,7 @@ test("relay forwards each claimed worker message, records host delivery and stop
       },
     ],
     // It claims again until no message remains.
-    ["claim_user_agent_parent_message", { conversation_id: "parent" }],
+    ["app_claim_parent_message", { conversation_id: "parent" }],
   ]);
 
   expect(send).toHaveBeenCalledExactlyOnceWith(message.text, {
@@ -80,7 +80,7 @@ test("relay sends through a class-based transport with its receiver", async () =
   expect(transport.sent).toEqual([message.text]);
 
   expect(tool).toHaveBeenCalledWith(
-    "record_user_agent_parent_delivery",
+    "app_record_parent_delivery",
     expect.objectContaining({ delivered: true }),
   );
 });
@@ -121,7 +121,7 @@ test.each(["elsewhere", undefined])(
     expect(send).not.toHaveBeenCalled();
 
     expect(tool).toHaveBeenLastCalledWith(
-      "record_user_agent_parent_delivery",
+      "app_record_parent_delivery",
       expect.objectContaining({
         delivered: false,
         error: "Panel parent conversation changed before delivery",
@@ -142,7 +142,7 @@ test("a claimed message from another conversation cannot be sent", async () => {
   expect(send).not.toHaveBeenCalled();
 
   expect(tool).toHaveBeenLastCalledWith(
-    "record_user_agent_parent_delivery",
+    "app_record_parent_delivery",
     expect.objectContaining({ delivered: false }),
   );
 });
@@ -199,7 +199,7 @@ test("send failures are logged once with bounded error text and allow later refr
   send.mockRejectedValueOnce(new Error(failure));
   await expect(relay.forward("parent")).rejects.toThrow(failure);
 
-  expect(tool).toHaveBeenLastCalledWith("record_user_agent_parent_delivery", {
+  expect(tool).toHaveBeenLastCalledWith("app_record_parent_delivery", {
     task_id: "worker",
     attempt_id: 2,
     conversation_id: "parent",
@@ -227,7 +227,7 @@ test("a report acknowledged after claim skips sending and records the reason", a
   await relay.forward("parent");
   expect(send).not.toHaveBeenCalled();
 
-  expect(tool).toHaveBeenNthCalledWith(3, "record_user_agent_parent_delivery", {
+  expect(tool).toHaveBeenNthCalledWith(3, "app_record_parent_delivery", {
     task_id: "worker",
     attempt_id: 2,
     conversation_id: "parent",
@@ -261,7 +261,7 @@ test.each(["elsewhere", undefined])(
     expect(send).not.toHaveBeenCalled();
 
     expect(tool).toHaveBeenLastCalledWith(
-      "record_user_agent_parent_delivery",
+      "app_record_parent_delivery",
       expect.objectContaining({
         delivered: false,
         error: "Panel parent conversation changed before delivery",
@@ -283,7 +283,7 @@ test("an acknowledgement lookup failure is logged without sending", async () => 
   expect(send).not.toHaveBeenCalled();
 
   expect(tool).toHaveBeenLastCalledWith(
-    "record_user_agent_parent_delivery",
+    "app_record_parent_delivery",
     expect.objectContaining({ delivered: false, error: "Lookup unavailable" }),
   );
 });

@@ -84,7 +84,7 @@ export function ProjectArchive({
 
   const remove = (deleteAgentTasks: boolean) =>
     act(async () => {
-      await controller.tool("delete_user_agent_tasks", {
+      await controller.tool("app_delete_tasks", {
         task_ids: targets.map((task) => task.id),
         delete_agent_task: deleteAgentTasks,
       });

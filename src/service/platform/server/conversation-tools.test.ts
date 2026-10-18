@@ -123,7 +123,7 @@ test("tool names mark app-only tools and fit the host name budget", async () => 
   const names = Object.keys(definitions({} as Control, "alice"));
 
   for (const name of names) {
-    assert.equal(isUserTool(name), name.includes("_user_"), name);
+    assert.equal(isUserTool(name), name.startsWith("app_"), name);
 
     // Hosts qualify names as mcp__codex-subagent-extension__<tool> (31
     // characters) within a 64-character function-name limit.
@@ -131,7 +131,7 @@ test("tool names mark app-only tools and fit the host name budget", async () => 
   }
 
   await expect(
-    callTool({} as Control, "alice", "steer_user_agent_queued_message", {}),
+    callTool({} as Control, "alice", "app_steer_queued_message", {}),
   ).rejects.toThrow(/User tools require a user interface/);
 });
 
@@ -144,6 +144,12 @@ test("tools declare their read-only and destructive annotations", () => {
       .sort();
 
   expect(flagged("readOnly")).toEqual([
+    "app_get_activity",
+    "app_get_change_counts",
+    "app_get_chat",
+    "app_get_turn_activity",
+    "app_search_mentions",
+    "app_wait_for_updates",
     "get_agent_changed_file",
     "get_agent_changes",
     "get_agent_events",
@@ -153,21 +159,15 @@ test("tools declare their read-only and destructive annotations", () => {
     "get_agent_settings",
     "get_agent_task",
     "get_current_agent_project",
-    "get_user_agent_activity",
-    "get_user_agent_change_counts",
-    "get_user_agent_chat",
-    "get_user_agent_turn_activity",
     "list_agent_projects",
     "list_agent_tasks",
     "list_available_workers",
-    "wait_user_agent_updates",
   ]);
 
   expect(flagged("destructive")).toEqual([
-    "delete_user_agent_branch",
-    "delete_user_agent_task",
-    "delete_user_agent_tasks",
-    "remove_user_agent_worktree",
+    "app_delete_branch",
+    "app_delete_tasks",
+    "app_remove_worktree",
   ]);
 });
 
@@ -265,7 +265,7 @@ test("a confirmed rejected send preserves its message and permits changed delive
     const task = await start("[input]");
     await until(() => !!store.get(task.id, "alice").pending_input);
 
-    const rejected = await user("send_user_agent_message", {
+    const rejected = await user("app_send_message", {
       task_id: task.id,
       message: "Next",
       delivery: "steer",
@@ -279,7 +279,7 @@ test("a confirmed rejected send preserves its message and permits changed delive
       "The worker is waiting for input, so it can't be steered. Answer its request, or queue the message.",
     );
 
-    const queued = await user("send_user_agent_message", {
+    const queued = await user("app_send_message", {
       task_id: task.id,
       message: "Next",
       delivery: "queue",
@@ -309,11 +309,11 @@ test("the user can steer an existing queued message and its original sender surv
     const args = { task_id: task.id, message_id: queued.message_id };
 
     await expect(
-      callTool(c, "bob", "steer_user_agent_queued_message", args, "user"),
+      callTool(c, "bob", "app_steer_queued_message", args, "user"),
     ).rejects.toThrow(/Task not found/);
 
     expect(store.get(task.id, "alice").queue).toHaveLength(1);
-    await user("steer_user_agent_queued_message", args);
+    await user("app_steer_queued_message", args);
     expect(store.get(task.id, "alice").queue).toEqual([]);
 
     expect(store.eventsOfTypes(task.id, ["task.instruction"])).toMatchObject([
@@ -327,7 +327,7 @@ test("the user can steer an existing queued message and its original sender surv
       },
     ]);
 
-    await expect(user("steer_user_agent_queued_message", args)).rejects.toThrow(
+    await expect(user("app_steer_queued_message", args)).rejects.toThrow(
       /no longer queued/,
     );
   } finally {
@@ -358,7 +358,7 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
 
     assert.equal(queued.state, "queued");
 
-    const mine = await user<{ message_id: string }>("send_user_agent_message", {
+    const mine = await user<{ message_id: string }>("app_send_message", {
       task_id: t.id,
       message: "Queued by user",
       delivery: "queue",
@@ -383,7 +383,7 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
       /only messages it queued/,
     );
 
-    await user("edit_user_agent_queued_message", {
+    await user("app_edit_queued_message", {
       task_id: t.id,
       message_id: mine.message_id,
       message: "Edited",
@@ -402,15 +402,15 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
     // Interrupt pauses the queue; resume starts it; clear empties it.
     await parent("interrupt_agent_task", { task_id: t.id });
     assert.equal(store.get(t.id, "alice").queue_paused, true);
-    await user("resume_user_agent_queue", { task_id: t.id });
+    await user("app_resume_queue", { task_id: t.id });
     await until(() => store.get(t.id, "alice").status === "completed");
     assert.equal(store.get(t.id, "alice").turn, 2);
-    await user("clear_user_agent_queue", { task_id: t.id });
+    await user("app_clear_queue", { task_id: t.id });
 
     const beforeBudgetApply = store.get(t.id, "alice");
 
     const updated = await user<{ budget: Task["budget"]; status: string }>(
-      "raise_user_agent_budget",
+      "app_raise_budget",
       { task_id: t.id, budget: { max_cost_usd: 6 } },
     );
 
@@ -463,7 +463,7 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
 
     // Waits for the draft to grow past what the panel has.
     const read = await user<{ draft: unknown; running: boolean }>(
-      "wait_user_agent_updates",
+      "app_wait_for_updates",
       {
         after: store.revision("alice"),
         draft: { task_id: t.id, message_id: "msg_live", after_length: 5 },
@@ -497,7 +497,7 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
     const before = store.revision("alice");
 
     const cleared = user<{ revision: string; draft: unknown }>(
-      "wait_user_agent_updates",
+      "app_wait_for_updates",
       {
         after: before,
         draft: { task_id: t.id, message_id: "msg_live", after_length: 12 },
@@ -512,7 +512,7 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
 
     assert.equal(
       (
-        await user<{ draft: unknown }>("wait_user_agent_updates", {
+        await user<{ draft: unknown }>("app_wait_for_updates", {
           draft: { task_id: t.id },
         })
       ).draft,
@@ -541,7 +541,7 @@ test("an update wait returns once the owner's revision changes, and a change end
   type Update = { revision: string; draft?: unknown; running?: boolean };
 
   const wait = (args: Record<string, unknown>) =>
-    user<Update>("wait_user_agent_updates", args);
+    user<Update>("app_wait_for_updates", args);
 
   try {
     const t = await start("Write");
@@ -569,7 +569,7 @@ test("an update wait returns once the owner's revision changes, and a change end
       wait_ms: 5000,
     });
 
-    await user("rename_user_agent_task", { task_id: t.id, title: "Renamed" });
+    await user("app_rename_task", { task_id: t.id, title: "Renamed" });
     const changed = await waiting;
     assert.notEqual(changed.revision, revision);
 
@@ -597,7 +597,7 @@ test("an update wait returns once the owner's revision changes, and a change end
       await callTool(
         c,
         "bob",
-        "wait_user_agent_updates",
+        "app_wait_for_updates",
         { draft: { task_id: t.id } },
         "user",
       ),
@@ -617,20 +617,20 @@ test("parent message relay tools preserve conversation scope", async () => {
     const { task } = seedParentReport(store, created);
 
     assert.equal(
-      await user("claim_user_agent_parent_message", {
+      await user("app_claim_parent_message", {
         conversation_id: "other-chat",
       }),
       null,
     );
 
     const claimed = await user<{ task_id: string; attempt_id: number }>(
-      "claim_user_agent_parent_message",
+      "app_claim_parent_message",
       { conversation_id: "parent-chat" },
     );
 
     assert.equal(claimed.task_id, task.id);
 
-    await user("record_user_agent_parent_delivery", {
+    await user("app_record_parent_delivery", {
       task_id: task.id,
       attempt_id: claimed.attempt_id,
       conversation_id: "parent-chat",
@@ -638,7 +638,7 @@ test("parent message relay tools preserve conversation scope", async () => {
     });
 
     assert.equal(
-      await user("claim_user_agent_parent_message", {
+      await user("app_claim_parent_message", {
         conversation_id: "parent-chat",
       }),
       null,
@@ -660,7 +660,7 @@ test("acknowledgement after claim records a skipped delivery through app tools",
       task_id: string;
       message_id: string;
       attempt_id: number;
-    }>("claim_user_agent_parent_message", { conversation_id: "parent-chat" });
+    }>("app_claim_parent_message", { conversation_id: "parent-chat" });
 
     await parent("ack_agent_message", {
       task_id: task.id,
@@ -674,7 +674,7 @@ test("acknowledgement after claim records a skipped delivery through app tools",
 
     expect(report.message.acknowledged).toBe(true);
 
-    const result = await user("record_user_agent_parent_delivery", {
+    const result = await user("app_record_parent_delivery", {
       task_id: task.id,
       attempt_id: claimed.attempt_id,
       conversation_id: "parent-chat",
@@ -725,7 +725,7 @@ test.each(["poll-first", "notification-first"])(
 
       const notify = () =>
         user<{ task_id: string; message_id: string; text: string }>(
-          "claim_user_agent_parent_message",
+          "app_claim_parent_message",
           { conversation_id: "parent-chat" },
         );
 
@@ -937,14 +937,14 @@ test("reading reports leaves them available for host delivery, while model ackno
     });
 
     const notification = await user<{ message_id: string }>(
-      "claim_user_agent_parent_message",
+      "app_claim_parent_message",
       { conversation_id: "parent-chat" },
     );
 
     expect(notification.message_id).toBe(`parent_${first.id}`);
 
     expect(
-      await user("claim_user_agent_parent_message", {
+      await user("app_claim_parent_message", {
         conversation_id: "parent-chat",
       }),
     ).toBeNull();
@@ -995,12 +995,12 @@ test("the panel records what the user has read, and lists show what they haven't
     assert.equal(never?.read_through, 0);
 
     // Chat's cursor covers the reply and the turn's end.
-    const chat = await user<{ next_cursor: number }>("get_user_agent_chat", {
+    const chat = await user<{ next_cursor: number }>("app_get_chat", {
       task_id: t.id,
     });
 
     assert.deepEqual(
-      await user("mark_user_agent_task_read", {
+      await user("app_set_task_read", {
         task_id: t.id,
         read: true,
         through: chat.next_cursor,
@@ -1011,20 +1011,19 @@ test("the panel records what the user has read, and lists show what they haven't
     assert.equal(await listed(), undefined);
 
     assert.deepEqual(
-      await user("mark_user_agent_task_read", { task_id: t.id, read: false }),
+      await user("app_set_task_read", { task_id: t.id, read: false }),
       { unread: true, through: chat.next_cursor },
     );
 
-    assert.deepEqual(
-      await user("mark_user_agent_tasks_read", { task_ids: [t.id] }),
-      { task_ids: [t.id] },
-    );
+    assert.deepEqual(await user("app_mark_tasks_read", { task_ids: [t.id] }), {
+      task_ids: [t.id],
+    });
 
     assert.equal(await listed(), undefined);
 
     // Marking from the turn's end leaves that end unread.
     assert.deepEqual(
-      await user("mark_user_agent_task_unread_from", {
+      await user("app_mark_task_unread_from", {
         task_id: t.id,
         event_id: chat.next_cursor,
       }),
@@ -1052,7 +1051,7 @@ test("the panel archives, unarchives and deletes tasks, and a follow-up unarchiv
     assert.equal(await listed(), undefined);
 
     assert.deepEqual(
-      await user("set_user_agent_tasks_archived", {
+      await user("app_set_tasks_archived", {
         task_ids: [t.id],
         archived: true,
       }),
@@ -1069,7 +1068,7 @@ test("the panel archives, unarchives and deletes tasks, and a follow-up unarchiv
     await until(() => store.get(t.id, "alice").status === "completed");
 
     assert.deepEqual(
-      await user("set_user_agent_tasks_archived", {
+      await user("app_set_tasks_archived", {
         task_ids: [t.id],
         archived: true,
       }),
@@ -1077,7 +1076,7 @@ test("the panel archives, unarchives and deletes tasks, and a follow-up unarchiv
     );
 
     assert.deepEqual(
-      await user("set_user_agent_tasks_archived", {
+      await user("app_set_tasks_archived", {
         task_ids: [t.id],
         archived: false,
       }),
@@ -1086,10 +1085,9 @@ test("the panel archives, unarchives and deletes tasks, and a follow-up unarchiv
 
     assert.equal(await listed(), undefined);
 
-    assert.deepEqual(
-      await user("delete_user_agent_tasks", { task_ids: [t.id] }),
-      { status: "deleted" },
-    );
+    assert.deepEqual(await user("app_delete_tasks", { task_ids: [t.id] }), {
+      status: "deleted",
+    });
 
     assert.throws(() => store.get(t.id, "alice"), /not found/);
   } finally {

@@ -12,7 +12,7 @@ behavior see [Panel guide](panel-guide.md).
 
 `src/service/platform/panel/panel.ts` advertises `inline` and `fullscreen` and prefers
 `inline`. `open_codex_subagent_extension` exposes the thread entrypoint.
-`open_codex_subagent_extension_global` is app-only and exposes the global
+`app_open_codex_subagent_extension_global` is app-only and exposes the global
 entrypoint. Task creation also attaches the panel resource and selects the new
 task on Chat. Display-mode preferences are hints. The host owns physical placement.
 
@@ -35,7 +35,7 @@ the MCP connection.
 Codex desktop's fixed sandbox CSP blocks direct connections from the embedded
 panel to the loopback service. All panel reads and writes use the authenticated
 MCP Apps bridge. The panel
-learns of changes and streaming replies through one `wait_user_agent_updates`
+learns of changes and streaming replies through one `app_wait_for_updates`
 long poll at a time. The standalone console uses HTTP and SSE. See
 [Transport](panel-guide.md#transport) for refresh behavior.
 
@@ -123,7 +123,7 @@ selected root without starting a task. Other platforms use the path field.
 
 ## Composer mentions
 
-Both transports expose app-only `search_mentions` and the Claude resource link.
+Both transports expose app-only `app_search_mentions` and the Claude resource link.
 Search accepts worker/profile terms and the server name as an alias, and returns
 Claude when the reviewer profile is available. A selected mention is a provider
 hint. It selects no repository and changes no permissions.

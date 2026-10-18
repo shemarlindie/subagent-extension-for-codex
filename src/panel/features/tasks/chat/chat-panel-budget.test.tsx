@@ -53,10 +53,7 @@ test("a spent budget shows its amounts and applies the raised limit", async () =
 
   await waitFor(() =>
     expect(sent(tool)).toEqual([
-      [
-        "raise_user_agent_budget",
-        { task_id: "task-1", budget: { max_cost_usd: 8 } },
-      ],
+      ["app_raise_budget", { task_id: "task-1", budget: { max_cost_usd: 8 } }],
     ]),
   );
 
@@ -81,14 +78,14 @@ test("a spent budget shows its amounts and applies the raised limit", async () =
   await waitFor(() =>
     expect(sent(tool)).toEqual([
       [
-        "raise_user_agent_budget",
+        "app_raise_budget",
         {
           task_id: "task-1",
           budget: { max_cost_usd: 8 },
         },
       ],
       [
-        "send_user_agent_message",
+        "app_send_message",
         {
           task_id: "task-1",
           message: "Continue",
@@ -166,7 +163,7 @@ test("runtime limit uses the cost control pattern and accepts a higher limit", a
   await waitFor(() =>
     expect(sent(tool)).toEqual([
       [
-        "raise_user_agent_budget",
+        "app_raise_budget",
         { task_id: "task-1", budget: { max_runtime_minutes: 121 } },
       ],
     ]),

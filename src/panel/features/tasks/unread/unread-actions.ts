@@ -64,10 +64,11 @@ export class UnreadActions {
     this.settled.delete(task.id);
 
     try {
-      const result = await this.context.tool<ReadState>(
-        "mark_user_agent_task_read",
-        { task_id: task.id, read: true, through },
-      );
+      const result = await this.context.tool<ReadState>("app_set_task_read", {
+        task_id: task.id,
+        read: true,
+        through,
+      });
 
       this.show(new Map([[task.id, fieldsFrom(result)]]));
     } catch {
@@ -135,15 +136,10 @@ export class UnreadActions {
     const previous = this.markDivider(task.id, from - 1);
 
     try {
-      await this.record(
-        task,
-        { unread: true },
-        "mark_user_agent_task_unread_from",
-        {
-          task_id: task.id,
-          event_id: from,
-        },
-      );
+      await this.record(task, { unread: true }, "app_mark_task_unread_from", {
+        task_id: task.id,
+        event_id: from,
+      });
     } catch (error) {
       this.moveDivider(previous);
       this.release(task.id);
@@ -166,7 +162,7 @@ export class UnreadActions {
     this.show(new Map(ids.map((id) => [id, {}])));
 
     try {
-      await this.context.tool("mark_user_agent_tasks_read", { task_ids: ids });
+      await this.context.tool("app_mark_tasks_read", { task_ids: ids });
     } catch (error) {
       this.moveDivider(previous);
       this.show(new Map(unread.map((task) => [task.id, fieldsOf(task)])));
@@ -178,7 +174,7 @@ export class UnreadActions {
     return this.record(
       task,
       read ? {} : { unread: true },
-      "mark_user_agent_task_read",
+      "app_set_task_read",
       { task_id: task.id, read },
     );
   }

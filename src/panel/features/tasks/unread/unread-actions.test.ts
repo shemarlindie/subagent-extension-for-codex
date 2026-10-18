@@ -44,7 +44,7 @@ test("reading sends each Chat cursor once, and only for an unread task", async (
   await actions.readThrough(task({ id: "a" }), 5);
 
   assert.deepEqual(tool.mock.calls, [
-    ["mark_user_agent_task_read", { task_id: "a", read: true, through: 4 }],
+    ["app_set_task_read", { task_id: "a", read: true, through: 4 }],
   ]);
 
   assert.deepEqual(unread(), []);
@@ -68,7 +68,7 @@ test("a list fetch keeps the watched task read until Chat reads its new messages
   await actions.readThrough(settled[0], 6);
 
   assert.deepEqual(tool.mock.calls, [
-    ["mark_user_agent_task_read", { task_id: "a", read: true, through: 6 }],
+    ["app_set_task_read", { task_id: "a", read: true, through: 6 }],
   ]);
 });
 
@@ -96,7 +96,7 @@ test("an open task marked unread stays unread while the user reads it, until the
   await actions.readThrough({ ...open, unread: true }, 4);
 
   assert.deepEqual(tool.mock.calls.at(-1), [
-    "mark_user_agent_task_read",
+    "app_set_task_read",
     { task_id: "a", read: true, through: 4 },
   ]);
 });
@@ -164,7 +164,7 @@ test("Mark all read sends only the unread tasks", async () => {
   await actions.markAllRead(tasks);
 
   assert.deepEqual(tool.mock.calls, [
-    ["mark_user_agent_tasks_read", { task_ids: ["a", "c"] }],
+    ["app_mark_tasks_read", { task_ids: ["a", "c"] }],
   ]);
 
   assert.deepEqual(unread(), []);
@@ -221,7 +221,7 @@ test("marking unread from a message moves the divider at once, and back if the s
   await actions.readThrough(open, 6);
 
   assert.deepEqual(tool.mock.calls.at(-1), [
-    "mark_user_agent_task_read",
+    "app_set_task_read",
     { task_id: "a", read: true, through: 6 },
   ]);
 });
@@ -234,7 +234,7 @@ test("marking unread from a message sends its event, and the open task stays unr
   await actions.markUnreadFrom(open, 4);
 
   assert.deepEqual(tool.mock.calls, [
-    ["mark_user_agent_task_unread_from", { task_id: "a", event_id: 4 }],
+    ["app_mark_task_unread_from", { task_id: "a", event_id: 4 }],
   ]);
 
   assert.deepEqual(unread(), ["a"]);

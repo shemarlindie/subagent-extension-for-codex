@@ -91,8 +91,8 @@ test.each([false, true])(
     await waitFor(() => assert.equal(tool.mock.calls.length, 1));
 
     assert.deepEqual(tool.mock.calls[0], [
-      "delete_user_agent_task",
-      { task_id: task.id, delete_agent_task: deleteAgentTask },
+      "app_delete_tasks",
+      { task_ids: [task.id], delete_agent_task: deleteAgentTask },
     ]);
 
     await waitFor(() => assert.equal(back.mock.calls.length, 1));

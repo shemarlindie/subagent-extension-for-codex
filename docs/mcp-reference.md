@@ -88,7 +88,7 @@ The app-only change-count tool reads totals from the same stored diffs.
 
 ## App and user authority
 
-Model-visible tools may read settings and change ordinary defaults. App-only aliases (`start_user_agent_task`, `submit_user_agent_input`, `update_user_agent_settings`, `raise_user_agent_budget`) authorize user task overrides, user permission answers, sensitive settings and budget increases on existing tasks. Direct registration and folder browsing are also app-only. MCP hosts must enforce their visibility. Authenticated raw service clients are trusted administrators.
+App-only tools start with `app_`. Model-visible tools may read settings and change ordinary defaults. App-only aliases (`app_start_task`, `app_submit_input`, `app_update_settings`, `app_raise_budget`) authorize user task overrides, user permission answers, sensitive settings and budget increases on existing tasks. Direct registration and folder browsing are also app-only. MCP hosts must enforce their visibility. Authenticated raw service clients are trusted administrators.
 
 For Claude permissions routed to `parent_agent`, model-visible `submit_agent_input` can approve or deny the exact pending request. User-routed permissions require panel **Approve**/**Deny** buttons. Questions can use model-visible submission. The service checks task ownership and the request ID for every answer.
 
@@ -96,7 +96,7 @@ The embedded app uses the authenticated MCP Apps bridge. The standalone console
 uses HTTP and SSE. See [Host capabilities](host-capabilities.md#panel-network-access)
 for the embedded panel's connection restrictions.
 
-`set_user_agent_tasks_archived` and `delete_user_agent_tasks` are app-only.
+`app_set_tasks_archived` and `app_delete_tasks` are app-only.
 `list_agent_tasks` reports `archived_at` for archived tasks. See
 [Archive tasks](panel-guide.md#archive-tasks).
 
@@ -104,12 +104,12 @@ Read-state tools are app-only. Read points belong to the user, survive reloads
 and determine unread status and Chat's **New** divider. See
 [Read and unread tasks](panel-guide.md#read-and-unread-tasks).
 
-`steer_user_agent_queued_message` is app-only. It moves an unsent queued message
+`app_steer_queued_message` is app-only. It moves an unsent queued message
 into a busy task's current turn, preserving its ID, text and sender. The worker
 must have no pending input request. If the turn can no longer accept the steer,
 the message stays at the front of the queue under the ordinary steering rules.
 
-`wait_user_agent_updates` watches task and project revisions and optional reply drafts.
+`app_wait_for_updates` watches task and project revisions and optional reply drafts.
 Compare revision tokens only for equality: they are opaque and change after a
 service restart. A wait returns when the revision or targeted draft changes,
 or after at most 25 seconds. See the discovered schema for cursor and draft
@@ -121,7 +121,7 @@ Claude's injected `codex_parent.message_parent` SDK tool accepts `kind: blocker`
 for immediate updates and `kind: completion` (the default) for one report per
 turn. The service rejects a second completion report in the same turn. It saves completion reports after a successful turn and discards them if the turn
 fails or is interrupted. Blocker updates are saved immediately. App-only
-`claim_user_agent_parent_message` and `record_user_agent_parent_delivery` let
+`app_claim_parent_message` and `app_record_parent_delivery` let
 the mounted embedded panel forward an ID-only notification once and record host acceptance.
 Each notification contains the task ID and stable `parent_<event-id>` message
 ID. `get_agent_message({ task_id, message_id })` retrieves its stored content

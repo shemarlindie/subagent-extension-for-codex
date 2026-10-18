@@ -832,7 +832,7 @@ export class Controller {
       id === this.state.selected &&
       generation === this.generation;
 
-    const activityRead = this.tool<ActivityPage>("get_user_agent_activity", {
+    const activityRead = this.tool<ActivityPage>("app_get_activity", {
       task_id: id,
       after: activityCursor(this.state.events, id),
     }).then((activity) => {
@@ -854,7 +854,7 @@ export class Controller {
       });
     });
 
-    const chatRead = this.tool<ChatRead>("get_user_agent_chat", {
+    const chatRead = this.tool<ChatRead>("app_get_chat", {
       task_id: id,
       after: previousChat?.task === id ? previousChat.cursor : 0,
     }).then((chat) => {
@@ -969,10 +969,10 @@ export class Controller {
       this.state.activityFocus?.request === request;
 
     try {
-      const page = await this.tool<TurnActivityPage>(
-        "get_user_agent_turn_activity",
-        { task_id: task, turn },
-      );
+      const page = await this.tool<TurnActivityPage>("app_get_turn_activity", {
+        task_id: task,
+        turn,
+      });
 
       if (current()) {
         this.patch({
@@ -1023,7 +1023,7 @@ export class Controller {
     let result: WorktreeRemoval;
 
     try {
-      result = await this.tool<WorktreeRemoval>("remove_user_agent_worktree", {
+      result = await this.tool<WorktreeRemoval>("app_remove_worktree", {
         task_id: task.id,
       });
     } finally {
@@ -1336,9 +1336,7 @@ export class Controller {
 
     try {
       const result = await this.tool<{ name?: string }>(
-        name === undefined
-          ? "remove_user_agent_project"
-          : "rename_user_agent_project",
+        name === undefined ? "app_remove_project" : "app_rename_project",
         {
           repository,
           ...(name === undefined ? { delete_tasks: deleteTasks } : { name }),
@@ -1399,9 +1397,7 @@ export class Controller {
   }
 
   async browseProject() {
-    return this.tool<{ repository: string | null }>(
-      "browse_user_agent_project",
-    );
+    return this.tool<{ repository: string | null }>("app_browse_project");
   }
 
   async browseTaskProject(): Promise<string | undefined> {
@@ -1453,7 +1449,7 @@ export class Controller {
    */
   private async registerAndList(repository: string) {
     const registered = await this.tool<{ repository: string }>(
-      "register_user_agent_project",
+      "app_register_project",
       { repository },
     );
 

@@ -2,7 +2,7 @@ import { archivable } from "../../../src/shared/tasks/archive";
 import type { Task } from "../../../src/shared/tasks/model";
 
 /** Archive tools the browser fixtures answer by archiving tasks in memory. */
-export const PREVIEW_ARCHIVE_TOOLS = ["set_user_agent_tasks_archived"];
+export const PREVIEW_ARCHIVE_TOOLS = ["app_set_tasks_archived"];
 
 // Fixture tasks start unarchived, so existing scenarios list them as before.
 const archived = new Map<string, string>();

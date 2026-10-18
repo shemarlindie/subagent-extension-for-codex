@@ -29,8 +29,8 @@ export function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
         handleSubmit((values) =>
           controller.submit(
             async () => {
-              await controller.tool("delete_user_agent_task", {
-                task_id: task.id,
+              await controller.tool("app_delete_tasks", {
+                task_ids: [task.id],
                 delete_agent_task: values.deleteAgentTask,
               });
             },

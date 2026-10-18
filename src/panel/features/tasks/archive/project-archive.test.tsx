@@ -79,7 +79,7 @@ test("a project's archive lists its archived tasks and unarchives the selected o
   );
 
   assert.deepEqual(calls(), [
-    ["set_user_agent_tasks_archived", { task_ids: ["new"], archived: false }],
+    ["app_set_tasks_archived", { task_ids: ["new"], archived: false }],
   ]);
 });
 
@@ -99,7 +99,7 @@ test("deleting all asks first, with the choice to delete the agent tasks", async
   await waitFor(() =>
     assert.deepEqual(calls(), [
       [
-        "delete_user_agent_tasks",
+        "app_delete_tasks",
         { task_ids: ["new", "old"], delete_agent_task: true },
       ],
     ]),

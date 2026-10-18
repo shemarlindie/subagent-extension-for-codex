@@ -101,7 +101,7 @@ export class TaskActions {
 
   /** Applies a new task budget without starting the next turn. */
   applyBudget(task: Task, budget: BudgetRaise) {
-    return this.run("raise_user_agent_budget", { task_id: task.id, budget });
+    return this.run("app_raise_budget", { task_id: task.id, budget });
   }
 
   /**
@@ -144,7 +144,7 @@ export class TaskActions {
     };
 
     return this.run(
-      "send_user_agent_message",
+      "app_send_message",
       { task_id: task.id, message, ...request },
       {
         background: true,
@@ -177,14 +177,14 @@ export class TaskActions {
   }
 
   steerQueued(task: Task, messageId: string) {
-    return this.run("steer_user_agent_queued_message", {
+    return this.run("app_steer_queued_message", {
       task_id: task.id,
       message_id: messageId,
     });
   }
 
   editQueued(task: Task, messageId: string, message: string) {
-    return this.run("edit_user_agent_queued_message", {
+    return this.run("app_edit_queued_message", {
       task_id: task.id,
       message_id: messageId,
       message,
@@ -192,7 +192,7 @@ export class TaskActions {
   }
 
   moveQueued(task: Task, messageId: string, index: number) {
-    return this.run("move_user_agent_queued_message", {
+    return this.run("app_move_queued_message", {
       task_id: task.id,
       message_id: messageId,
       index,
@@ -200,18 +200,18 @@ export class TaskActions {
   }
 
   removeQueued(task: Task, messageId: string) {
-    return this.run("remove_user_agent_queued_message", {
+    return this.run("app_remove_queued_message", {
       task_id: task.id,
       message_id: messageId,
     });
   }
 
   resumeQueue(task: Task) {
-    return this.run("resume_user_agent_queue", { task_id: task.id });
+    return this.run("app_resume_queue", { task_id: task.id });
   }
 
   clearQueue(task: Task) {
-    return this.run("clear_user_agent_queue", { task_id: task.id });
+    return this.run("app_clear_queue", { task_id: task.id });
   }
 
   /** Calls one task tool while marking the panel busy, then reloads. */

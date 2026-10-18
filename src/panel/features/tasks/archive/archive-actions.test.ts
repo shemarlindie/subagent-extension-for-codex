@@ -63,7 +63,7 @@ test("archiving shows at once, sends only tasks that can change and keeps what t
   const result = await actions.setArchived(tasks, true);
 
   assert.deepEqual(tool.mock.calls, [
-    ["set_user_agent_tasks_archived", { task_ids: ["a", "b"], archived: true }],
+    ["app_set_tasks_archived", { task_ids: ["a", "b"], archived: true }],
   ]);
 
   assert.deepEqual(shown, [["a", "b", "old"]]);

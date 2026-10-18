@@ -71,7 +71,7 @@ test("inline title saves trimmed text through the rename tool before refreshing"
   await waitFor(() => expect(view.queryByRole("textbox")).toBeNull());
 
   assert.deepEqual(tool.mock.calls, [
-    ["rename_user_agent_task", { task_id: task.id, title: "Updated title" }],
+    ["app_rename_task", { task_id: task.id, title: "Updated title" }],
   ]);
 
   assert.equal(refresh.mock.calls.length, 1);

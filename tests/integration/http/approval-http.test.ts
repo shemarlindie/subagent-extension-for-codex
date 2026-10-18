@@ -209,7 +209,7 @@ test("authenticated admin user-tools route supports user settings, starts, and d
     // The bearer token authorizes this explicit admin route; generic tools retain parent authority.
     assert.equal(
       (
-        await post("/api/user-tools/update_user_agent_settings", {
+        await post("/api/user-tools/app_update_settings", {
           set: { default_approval_mode: "deny" },
         })
       ).status,
@@ -225,7 +225,7 @@ test("authenticated admin user-tools route supports user settings, starts, and d
 
     assert.equal(restricted.status, 400);
 
-    const started = await post("/api/user-tools/start_user_agent_task", {
+    const started = await post("/api/user-tools/app_start_task", {
       ...start,
       approval_mode: "ask_user",
     });
@@ -235,12 +235,12 @@ test("authenticated admin user-tools route supports user settings, starts, and d
     const approval = await pending(id);
 
     assert.equal(
-      (await post("/api/tools/submit_user_agent_input", approval)).status,
+      (await post("/api/tools/app_submit_input", approval)).status,
       400,
     );
 
     assert.equal(
-      (await post("/api/user-tools/submit_user_agent_input", approval)).status,
+      (await post("/api/user-tools/app_submit_input", approval)).status,
       200,
     );
 
@@ -262,7 +262,7 @@ test("authenticated admin user-tools route supports user settings, starts, and d
     );
 
     assert.equal(
-      (await post("/api/user-tools/update_user_agent_settings", {}, {})).status,
+      (await post("/api/user-tools/app_update_settings", {}, {})).status,
       401,
     );
   } finally {
@@ -284,18 +284,33 @@ test("MCP advertises app-only aliases and lets the parent agent answer delegated
     const { tools } = await client.listTools();
 
     for (const name of [
-      "start_user_agent_task",
-      "submit_user_agent_input",
-      "update_user_agent_settings",
-      "register_user_agent_project",
-      "browse_user_agent_project",
-      "remove_user_agent_worktree",
-      "delete_user_agent_task",
-      "delete_user_agent_branch",
+      "app_start_task",
+      "app_submit_input",
+      "app_update_settings",
+      "app_register_project",
+      "app_browse_project",
+      "app_remove_worktree",
+      "app_delete_tasks",
+      "app_delete_branch",
     ]) {
       const tool = tools.find((entry) => entry.name === name);
       assert.ok(tool, `${name} must be available to the app`);
       assert.deepEqual((tool._meta as any).ui.visibility, ["app"]);
+    }
+
+    // The app_ prefix marks exactly the tools hidden from the model. MCP Apps
+    // shows tools without a visibility to both.
+    for (const tool of tools) {
+      const visibility: string[] = (tool._meta as any)?.ui?.visibility ?? [
+        "model",
+        "app",
+      ];
+
+      assert.equal(
+        tool.name.startsWith("app_"),
+        !visibility.includes("model"),
+        tool.name,
+      );
     }
 
     assert.deepEqual(

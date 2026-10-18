@@ -79,7 +79,7 @@ Open **Settings** in the panel header. Values persist per user in SQLite and app
 The worker profile setting applies to model calls and the Advanced task dialog.
 The panel's **New task** composer starts with the General profile.
 
-For programmatic updates, use `get_agent_settings` to discover supported fields and `update_agent_settings` to change ordinary defaults. User-only settings require app-only `update_user_agent_settings` or authenticated console authority. See [app and user authority](mcp-reference.md#app-and-user-authority) for the host enforcement boundary.
+For programmatic updates, use `get_agent_settings` to discover supported fields and `update_agent_settings` to change ordinary defaults. User-only settings require app-only `app_update_settings` or authenticated console authority. See [app and user authority](mcp-reference.md#app-and-user-authority) for the host enforcement boundary.
 
 Budget controls can disable a limit while remembering its amount. Editing that amount leaves the limit disabled until enabled again. The app sets no upper bound on runtime or cost. Providers reject limits they cannot support before execution. See [continuation and budgets](task-continuation.md#raise-a-task-budget) for raising limits on existing tasks.
 

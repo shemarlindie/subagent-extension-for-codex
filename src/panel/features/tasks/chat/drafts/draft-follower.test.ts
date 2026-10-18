@@ -65,7 +65,7 @@ test("showing reads a draft only for a new target", () => {
   const { follower, reads, set } = fixture();
   follower.show();
   follower.show();
-  assert.deepEqual(reads, ["wait_user_agent_updates:a"]);
+  assert.deepEqual(reads, ["app_wait_for_updates:a"]);
 
   // Leaving Chat and coming back reads it again.
   set({ tab: "activity" });

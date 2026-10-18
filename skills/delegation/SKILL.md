@@ -138,8 +138,8 @@ mode. Model-visible `update_agent_settings` cannot change session restrictions.
 Trusted panel submissions can authorize task overrides. Model-visible
 `update_agent_settings` rejects permission, approval-authority and automatic
 project registration defaults. User changes use app-only
-`update_user_agent_settings`. The embedded panel starts tasks through app-only
-`start_user_agent_task`. The standalone console authenticates user actions
+`app_update_settings`. The embedded panel starts tasks through app-only
+`app_start_task`. The standalone console authenticates user actions
 through its session cookie.
 
 Use the exact `request_id` when answering input:
@@ -150,7 +150,7 @@ Use the exact `request_id` when answering input:
 - For user-routed permissions, show the pending action to the user and direct
   them to the panel's **Approve**/**Deny** buttons. Model-visible
   `submit_agent_input` cannot grant that permission. The panel uses app-only
-  `submit_user_agent_input`.
+  `app_submit_input`.
 
 Questions follow native SDK rules. `dontAsk` can deny them before the callback.
 

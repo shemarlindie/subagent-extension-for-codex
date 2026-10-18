@@ -89,9 +89,8 @@ test("global UI adds a manually entered project only after explicit submission a
   );
 
   assert.equal(
-    transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
-    ).length,
+    transport.calls.filter((call) => call.name === "app_register_project")
+      .length,
     0,
   );
 
@@ -102,8 +101,7 @@ test("global UI adds a manually entered project only after explicit submission a
   );
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "register_user_agent_project")
-      ?.args,
+    transport.calls.find((call) => call.name === "app_register_project")?.args,
     { repository: "/repo/new-project" },
   );
 
@@ -139,9 +137,8 @@ test("browsing a folder fills the project draft without granting access", async 
   );
 
   assert.equal(
-    transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
-    ).length,
+    transport.calls.filter((call) => call.name === "app_register_project")
+      .length,
     0,
   );
 
@@ -149,9 +146,8 @@ test("browsing a folder fills the project draft without granting access", async 
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
 
   assert.equal(
-    transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
-    ).length,
+    transport.calls.filter((call) => call.name === "app_register_project")
+      .length,
     0,
   );
 });
@@ -170,7 +166,7 @@ test("Manage adds a project through the folder picker", async (t) => {
   await waitFor(() =>
     assert.deepEqual(
       transport.calls
-        .filter((call) => call.name === "register_user_agent_project")
+        .filter((call) => call.name === "app_register_project")
         .map((call) => call.args),
       [{ repository: "/repo/picked" }],
     ),
@@ -191,14 +187,13 @@ test("cancelling the panel's folder picker adds nothing", async (t) => {
 
   await waitFor(() =>
     assert.ok(
-      transport.calls.some((call) => call.name === "browse_user_agent_project"),
+      transport.calls.some((call) => call.name === "app_browse_project"),
     ),
   );
 
   assert.equal(
-    transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
-    ).length,
+    transport.calls.filter((call) => call.name === "app_register_project")
+      .length,
     0,
   );
 
@@ -226,16 +221,15 @@ test("cancelling the native picker preserves the manual project path", async (t)
 
   await waitFor(() =>
     assert.ok(
-      transport.calls.some((call) => call.name === "browse_user_agent_project"),
+      transport.calls.some((call) => call.name === "app_browse_project"),
     ),
   );
 
   assert.equal(path.value, "/repo/manual-draft");
 
   assert.equal(
-    transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
-    ).length,
+    transport.calls.filter((call) => call.name === "app_register_project")
+      .length,
     0,
   );
 });
@@ -294,9 +288,8 @@ test("a chat project hint prefills registration without registering it automatic
   );
 
   assert.equal(
-    transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
-    ).length,
+    transport.calls.filter((call) => call.name === "app_register_project")
+      .length,
     0,
   );
 
@@ -330,9 +323,8 @@ test("folder picker failure keeps manual entry available", async (t) => {
 
   await waitFor(() =>
     assert.equal(
-      transport.calls.find(
-        (call) => call.name === "register_user_agent_project",
-      )?.args.repository,
+      transport.calls.find((call) => call.name === "app_register_project")?.args
+        .repository,
       "/repo/manual-fallback",
     ),
   );
@@ -351,7 +343,7 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
         name: string,
         args: Record<string, unknown> = {},
       ): Promise<T> => {
-        if (name === "browse_user_agent_project") {
+        if (name === "app_browse_project") {
           transport.calls.push({ name, args });
 
           return new Promise<{ repository: string }>((resolve) => {
@@ -401,9 +393,8 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
   assert.equal(path.value, "/repo/new-draft");
 
   assert.equal(
-    transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
-    ).length,
+    transport.calls.filter((call) => call.name === "app_register_project")
+      .length,
     0,
   );
 });
@@ -454,8 +445,7 @@ test("browsing a project inside delegation preserves the draft and starts only a
   );
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "register_user_agent_project")
-      ?.args,
+    transport.calls.find((call) => call.name === "app_register_project")?.args,
     { repository: "/repo/alias" },
   );
 
@@ -533,9 +523,8 @@ test("cancelling the task project picker preserves selection and task draft with
   );
 
   assert.equal(
-    transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
-    ).length,
+    transport.calls.filter((call) => call.name === "app_register_project")
+      .length,
     0,
   );
 
@@ -556,7 +545,7 @@ test("pending task project browsing disables Start and ignores selection after s
       name: string,
       args: Record<string, unknown> = {},
     ): Promise<T> => {
-      if (name === "browse_user_agent_project") {
+      if (name === "app_browse_project") {
         transport.calls.push({ name, args });
 
         return new Promise<{ repository: string }>((resolve) => {
@@ -588,9 +577,8 @@ test("pending task project browsing disables Start and ignores selection after s
   });
 
   assert.equal(
-    transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
-    ).length,
+    transport.calls.filter((call) => call.name === "app_register_project")
+      .length,
     0,
   );
 
@@ -609,7 +597,7 @@ test("Manage renames projects, preserves failed drafts, and confirms task-data r
     name: string,
     args: Record<string, unknown> = {},
   ): Promise<T> => {
-    if (name === "rename_user_agent_project") {
+    if (name === "app_rename_project") {
       transport.calls.push({ name, args });
       if (failRename) throw new Error("Rename failed");
 
@@ -621,7 +609,7 @@ test("Manage renames projects, preserves failed drafts, and confirms task-data r
       return { name: String(args.name).trim() } as T;
     }
 
-    if (name === "remove_user_agent_project") {
+    if (name === "app_remove_project") {
       transport.calls.push({ name, args });
       transport.projects = [];
       transport.tasks = [];
@@ -658,7 +646,7 @@ test("Manage renames projects, preserves failed drafts, and confirms task-data r
   ).toBe("false");
 
   expect(
-    transport.calls.filter((call) => call.name === "remove_user_agent_project"),
+    transport.calls.filter((call) => call.name === "app_remove_project"),
   ).toHaveLength(0);
 
   await user.click(
@@ -674,8 +662,7 @@ test("Manage renames projects, preserves failed drafts, and confirms task-data r
   );
 
   expect(
-    transport.calls.find((call) => call.name === "remove_user_agent_project")
-      ?.args,
+    transport.calls.find((call) => call.name === "app_remove_project")?.args,
   ).toEqual({ repository: "/repo/a", delete_tasks: true });
 });
 
@@ -687,7 +674,7 @@ test("Manage cancels edit errors and restores focus when returning from Add", as
     name: string,
     args: Record<string, unknown> = {},
   ): Promise<T> => {
-    if (name === "rename_user_agent_project") throw new Error("Rename failed");
+    if (name === "app_rename_project") throw new Error("Rename failed");
 
     return original<T>(name, args);
   };
@@ -740,7 +727,7 @@ test("a picker finishing after leaving Add cannot replace a new draft", async (t
     name: string,
     args: Record<string, unknown> = {},
   ): Promise<T> =>
-    name === "browse_user_agent_project"
+    name === "app_browse_project"
       ? ((await picked) as T)
       : original<T>(name, args);
 

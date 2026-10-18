@@ -42,10 +42,8 @@ test("a reply's Mark unread from here marks the task unread from that reply", as
 
   await waitFor(() =>
     assert.deepEqual(
-      tool.mock.calls.filter(
-        ([name]) => name === "mark_user_agent_task_unread_from",
-      ),
-      [["mark_user_agent_task_unread_from", { task_id: task.id, event_id: 7 }]],
+      tool.mock.calls.filter(([name]) => name === "app_mark_task_unread_from"),
+      [["app_mark_task_unread_from", { task_id: task.id, event_id: 7 }]],
     ),
   );
 
@@ -177,7 +175,7 @@ test("marking unread from a reply glides to its New divider where smooth scrolli
 });
 
 const markReadCalls = (tool: ReturnType<typeof setup>["tool"]) =>
-  tool.mock.calls.filter(([name]) => name === "mark_user_agent_task_read");
+  tool.mock.calls.filter(([name]) => name === "app_set_task_read");
 
 test("Chat at its latest message marks an unread task read through the events it has read", async () => {
   const { tool, task } = setup({ unread: true }, [], noteItems);
@@ -185,7 +183,7 @@ test("Chat at its latest message marks an unread task read through the events it
   await waitFor(() =>
     assert.deepEqual(markReadCalls(tool), [
       [
-        "mark_user_agent_task_read",
+        "app_set_task_read",
         { task_id: task.id, read: true, through: noteItems.length },
       ],
     ]),
@@ -206,7 +204,7 @@ test("Chat in its history leaves a task unread until the reader returns to the l
   await waitFor(() =>
     assert.deepEqual(markReadCalls(tool), [
       [
-        "mark_user_agent_task_read",
+        "app_set_task_read",
         { task_id: task.id, read: true, through: noteItems.length },
       ],
     ]),

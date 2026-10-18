@@ -8,7 +8,7 @@ export function TaskTitle({ task }: TaskTitleProps) {
   const controller = useController();
 
   const saveTitle = async (title: string) => {
-    await controller.tool("rename_user_agent_task", {
+    await controller.tool("app_rename_task", {
       task_id: task.id,
       title,
     });

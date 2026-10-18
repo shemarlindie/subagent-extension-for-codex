@@ -87,7 +87,7 @@ async function fixture(t: TestContext) {
     assert.equal(
       (
         await post(
-          "/api/user-tools/update_user_agent_settings",
+          "/api/user-tools/app_update_settings",
           { set: { auto_register_chat_project: value } },
           cookie,
         )
@@ -266,9 +266,7 @@ test("HTTP exposes React project registration while retired host form tools are 
     );
   }
 
-  const register = tools.find(
-    (tool) => tool.name === "register_user_agent_project",
-  );
+  const register = tools.find((tool) => tool.name === "app_register_project");
 
   assert.ok(register);
 
@@ -279,7 +277,7 @@ test("HTTP exposes React project registration while retired host form tools are 
 
   assert.deepEqual(registered(f), []);
 
-  const rejected = await f.post("/api/tools/register_user_agent_project", {
+  const rejected = await f.post("/api/tools/app_register_project", {
     repository,
   });
 
@@ -287,7 +285,7 @@ test("HTTP exposes React project registration while retired host form tools are 
   assert.deepEqual(registered(f), []);
 
   const accepted = await f.post(
-    "/api/user-tools/register_user_agent_project",
+    "/api/user-tools/app_register_project",
     { repository },
     f.cookie,
   );

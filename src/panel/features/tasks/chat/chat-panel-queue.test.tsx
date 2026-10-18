@@ -48,14 +48,11 @@ test("pending steers can be sent now, and a paused queue resumed, cleared, edite
 
   expect(sent(tool)).toEqual([
     ["interrupt_agent_task", { task_id: "task-1", send_pending: true }],
-    ["resume_user_agent_queue", { task_id: "task-1" }],
-    ["clear_user_agent_queue", { task_id: "task-1" }],
+    ["app_resume_queue", { task_id: "task-1" }],
+    ["app_clear_queue", { task_id: "task-1" }],
+    ["app_remove_queued_message", { task_id: "task-1", message_id: "msg_l" }],
     [
-      "remove_user_agent_queued_message",
-      { task_id: "task-1", message_id: "msg_l" },
-    ],
-    [
-      "edit_user_agent_queued_message",
+      "app_edit_queued_message",
       { task_id: "task-1", message_id: "msg_q", message: "Edited" },
     ],
   ]);
@@ -90,10 +87,7 @@ test("a running task can steer an existing queued message, keeping its composer 
 
   await waitFor(() =>
     expect(sent(tool)).toEqual([
-      [
-        "steer_user_agent_queued_message",
-        { task_id: "task-1", message_id: "msg_q" },
-      ],
+      ["app_steer_queued_message", { task_id: "task-1", message_id: "msg_q" }],
     ]),
   );
 
@@ -188,11 +182,11 @@ test("queued messages reorder by dragging or Alt+arrows, behind a left-over stee
 
   expect(sent(tool)).toEqual([
     [
-      "move_user_agent_queued_message",
+      "app_move_queued_message",
       { task_id: "task-1", message_id: "msg_a", index: 2 },
     ],
     [
-      "move_user_agent_queued_message",
+      "app_move_queued_message",
       { task_id: "task-1", message_id: "msg_c", index: 1 },
     ],
   ]);

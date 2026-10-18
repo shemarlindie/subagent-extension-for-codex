@@ -388,7 +388,7 @@ export function previewTool(
   args: Record<string, unknown> = {},
   options: PreviewOptions = {},
 ): unknown {
-  if (name === "raise_user_agent_budget") {
+  if (name === "app_raise_budget") {
     if (!options.successfulBudgetUpdates) {
       throw new Error(
         "Design preview only. No worker or service action was executed.",
@@ -398,11 +398,11 @@ export function previewTool(
     return raisePreviewBudget(args.task_id, args.budget);
   }
 
-  if (name === "register_user_agent_project") {
+  if (name === "app_register_project") {
     return registerProject(args.repository, options);
   }
 
-  if (name === "rename_user_agent_project") {
+  if (name === "app_rename_project") {
     if (
       !projectsWith(options).some(
         (project) => project.repository === args.repository,
@@ -421,8 +421,8 @@ export function previewTool(
   }
 
   const deletesTasks =
-    name.startsWith("delete_user_agent_task") ||
-    (name === "remove_user_agent_project" && args.delete_tasks);
+    name === "app_delete_tasks" ||
+    (name === "app_remove_project" && args.delete_tasks);
 
   if (deletesTasks) {
     throw new Error(
@@ -430,7 +430,7 @@ export function previewTool(
     );
   }
 
-  if (name === "remove_user_agent_project") {
+  if (name === "app_remove_project") {
     return { repository: args.repository };
   }
 
@@ -448,7 +448,7 @@ export function previewTool(
     return previewArchiveTool(previewTasks, args);
   }
 
-  if (name === "rename_user_agent_task") {
+  if (name === "app_rename_task") {
     const task = previewTasks.find((task) => task.id === args.task_id);
     if (!task) throw new Error("Task not found");
     const title = typeof args.title === "string" ? args.title.trim() : "";
@@ -464,11 +464,11 @@ export function previewTool(
 
   const fixtures: Record<string, unknown> = {
     open_codex_subagent_extension: openPanel(args, options),
-    open_codex_subagent_extension_global: openPanel(
+    app_open_codex_subagent_extension_global: openPanel(
       { conversation_id: null },
       options,
     ),
-    claim_user_agent_parent_message: null,
+    app_claim_parent_message: null,
     get_agent_panel_context: panelContext(args, options),
     list_agent_projects: projectsWith(options),
     list_agent_tasks: newestFirst
@@ -489,7 +489,7 @@ export function previewTool(
           previewArchivedAt(task.id),
         );
       }),
-    get_user_agent_chat: (() => {
+    app_get_chat: (() => {
       const task = previewTasks.find((task) => task.id === args.task_id);
       if (!task) return { items: [], next_cursor: 0 };
       const after = Number(args.after ?? 0);
@@ -504,7 +504,7 @@ export function previewTool(
       };
     })(),
     // Fixtures don't change on their own, so the revision stays the same.
-    wait_user_agent_updates: (() => {
+    app_wait_for_updates: (() => {
       const target = args.draft as { task_id?: unknown } | undefined;
 
       return {
@@ -523,11 +523,11 @@ export function previewTool(
           : {}),
       };
     })(),
-    get_user_agent_activity: windowActivity(
+    app_get_activity: windowActivity(
       previewEvents.filter((event) => event.task_id === args.task_id),
       Number(args.after ?? 0),
     ),
-    get_user_agent_turn_activity: windowTurnActivity(
+    app_get_turn_activity: windowTurnActivity(
       previewEvents.filter((event) => event.task_id === args.task_id),
       Number(args.turn),
     ),

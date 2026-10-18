@@ -70,8 +70,8 @@ test.each([
     const claim = claimOnce();
 
     transport.handler = (name) => {
-      if (name === "claim_user_agent_parent_message") return claim();
-      if (name === "record_user_agent_parent_delivery") return {};
+      if (name === "app_claim_parent_message") return claim();
+      if (name === "app_record_parent_delivery") return {};
 
       return undefined;
     };
@@ -87,7 +87,7 @@ test.each([
     await flush();
 
     const claimed = transport.calls.some(
-      (call) => call.name === "claim_user_agent_parent_message",
+      (call) => call.name === "app_claim_parent_message",
     );
 
     expect(claimed).toBe(state.expected);
@@ -130,8 +130,8 @@ test.each([
     const claimPending = claimOnce(claim.promise);
 
     transport.handler = (name) => {
-      if (name === "claim_user_agent_parent_message") return claimPending();
-      if (name === "record_user_agent_parent_delivery") return {};
+      if (name === "app_claim_parent_message") return claimPending();
+      if (name === "app_record_parent_delivery") return {};
 
       return undefined;
     };
@@ -140,7 +140,7 @@ test.each([
 
     expect(
       transport.calls.filter(
-        (call) => call.name === "claim_user_agent_parent_message",
+        (call) => call.name === "app_claim_parent_message",
       ),
     ).toHaveLength(1);
 
@@ -167,7 +167,7 @@ test.each([
     expect(transport.send).toHaveBeenCalledTimes(delivered ? 1 : 0);
 
     expect(transport.calls).toContainEqual({
-      name: "record_user_agent_parent_delivery",
+      name: "app_record_parent_delivery",
       args: {
         task_id: "worker",
         attempt_id: 2,
@@ -195,8 +195,8 @@ test("controller waits for known conversation scope before claiming parent notif
 
   transport.handler = (name) => {
     if (name === "get_agent_panel_context") return context.promise;
-    if (name === "claim_user_agent_parent_message") return claim();
-    if (name === "record_user_agent_parent_delivery") return {};
+    if (name === "app_claim_parent_message") return claim();
+    if (name === "app_record_parent_delivery") return {};
 
     return undefined;
   };
@@ -213,9 +213,7 @@ test("controller waits for known conversation scope before claiming parent notif
   expect(controller.getSnapshot().scopeKnown).toBe(false);
 
   expect(
-    transport.calls.some(
-      (call) => call.name === "claim_user_agent_parent_message",
-    ),
+    transport.calls.some((call) => call.name === "app_claim_parent_message"),
   ).toBe(false);
 
   expect(transport.send).not.toHaveBeenCalled();
@@ -248,8 +246,8 @@ test("the fallback refresh still delivers parent messages while a hidden panel's
   const claim = claimOnce();
 
   transport.handler = (name) => {
-    if (name === "claim_user_agent_parent_message") return claim();
-    if (name === "record_user_agent_parent_delivery") return {};
+    if (name === "app_claim_parent_message") return claim();
+    if (name === "app_record_parent_delivery") return {};
 
     return undefined;
   };

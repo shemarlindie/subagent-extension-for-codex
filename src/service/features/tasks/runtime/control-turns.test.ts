@@ -508,7 +508,7 @@ test("user task renaming checks ownership and persists across active turn update
     await until(() => store.get(task.id, "alice").status === "waiting");
 
     await assert.rejects(
-      callTool(c, "alice", "rename_user_agent_task", {
+      callTool(c, "alice", "app_rename_task", {
         task_id: task.id,
         title: "New title",
       }),
@@ -519,7 +519,7 @@ test("user task renaming checks ownership and persists across active turn update
       callTool(
         c,
         "bob",
-        "rename_user_agent_task",
+        "app_rename_task",
         {
           task_id: task.id,
           title: "New title",
@@ -534,7 +534,7 @@ test("user task renaming checks ownership and persists across active turn update
         callTool(
           c,
           "alice",
-          "rename_user_agent_task",
+          "app_rename_task",
           {
             task_id: task.id,
             title,
@@ -547,7 +547,7 @@ test("user task renaming checks ownership and persists across active turn update
     await callTool(
       c,
       "alice",
-      "rename_user_agent_task",
+      "app_rename_task",
       {
         task_id: task.id,
         title: "  New title  ",

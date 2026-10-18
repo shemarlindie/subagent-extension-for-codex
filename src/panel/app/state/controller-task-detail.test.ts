@@ -26,8 +26,8 @@ test("selected activity loading clears independently from chat history", async (
 
   transport.handler = (name) => {
     if (name === "list_agent_tasks") return tasksRead.promise;
-    if (name === "get_user_agent_activity") return activityRead.promise;
-    if (name === "get_user_agent_chat") return chatRead.promise;
+    if (name === "app_get_activity") return activityRead.promise;
+    if (name === "app_get_chat") return chatRead.promise;
 
     return undefined;
   };
@@ -69,8 +69,8 @@ test("selected chat history becomes available while activity is still loading", 
   const chatRead = deferred<unknown>();
 
   transport.handler = (name) => {
-    if (name === "get_user_agent_activity") return activityRead.promise;
-    if (name === "get_user_agent_chat") return chatRead.promise;
+    if (name === "app_get_activity") return activityRead.promise;
+    if (name === "app_get_chat") return chatRead.promise;
 
     return undefined;
   };
@@ -97,11 +97,11 @@ test("delayed detail from a previous selection cannot replace current events", a
   const gate = deferred<unknown>();
 
   transport.handler = (name, args) => {
-    if (name === "get_user_agent_activity" && args.task_id === "a") {
+    if (name === "app_get_activity" && args.task_id === "a") {
       return gate.promise;
     }
 
-    if (name === "get_user_agent_activity") {
+    if (name === "app_get_activity") {
       return {
         events: [{ id: 2, task_id: "b", type: "log", timestamp: "", data: {} }],
       };
@@ -143,7 +143,7 @@ test("the activity view shows the service's window and its tally, and polls for 
   );
 
   transport.handler = (name, args) =>
-    name === "get_user_agent_activity"
+    name === "app_get_activity"
       ? windowActivity(events, Number(args.after))
       : undefined;
 
@@ -158,7 +158,7 @@ test("the activity view shows the service's window and its tally, and polls for 
 
   assert.deepEqual(
     transport.calls
-      .filter((call) => call.name === "get_user_agent_activity")
+      .filter((call) => call.name === "app_get_activity")
       .map((call) => call.args.after),
     [0],
   );
@@ -166,9 +166,8 @@ test("the activity view shows the service's window and its tally, and polls for 
   await controller.refresh();
 
   assert.equal(
-    transport.calls
-      .filter((call) => call.name === "get_user_agent_activity")
-      .at(-1)?.args.after,
+    transport.calls.filter((call) => call.name === "app_get_activity").at(-1)
+      ?.args.after,
     1005,
   );
 
@@ -212,11 +211,11 @@ test("View activity scrolls to a turn in the window and reads one outside it", a
   }
 
   transport.handler = (name, args) => {
-    if (name === "get_user_agent_activity") {
+    if (name === "app_get_activity") {
       return windowActivity(events, Number(args.after));
     }
 
-    if (name === "get_user_agent_turn_activity") {
+    if (name === "app_get_turn_activity") {
       return windowTurnActivity(events, Number(args.turn));
     }
 
@@ -235,9 +234,7 @@ test("View activity scrolls to a turn in the window and reads one outside it", a
   });
 
   assert.ok(
-    !transport.calls.some(
-      (call) => call.name === "get_user_agent_turn_activity",
-    ),
+    !transport.calls.some((call) => call.name === "app_get_turn_activity"),
     "A turn in the window needs no read",
   );
 
@@ -245,8 +242,7 @@ test("View activity scrolls to a turn in the window and reads one outside it", a
   const page = windowTurnActivity(events, 1);
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "get_user_agent_turn_activity")
-      ?.args,
+    transport.calls.find((call) => call.name === "app_get_turn_activity")?.args,
     { task_id: "a", turn: 1 },
   );
 
@@ -274,7 +270,7 @@ test("the panel follows a running task's draft through update waits, then reads 
   const answered = drafts.length + 1;
 
   transport.handler = (name, args) => {
-    if (name !== "wait_user_agent_updates") return undefined;
+    if (name !== "app_wait_for_updates") return undefined;
 
     // Selecting the task reads its draft at once; it has none yet.
     if (args.wait_ms === 0) {
@@ -297,7 +293,7 @@ test("the panel follows a running task's draft through update waits, then reads 
 
   const calls = () =>
     transport.calls.filter(
-      (call) => call.name === "wait_user_agent_updates" && call.args.wait_ms,
+      (call) => call.name === "app_wait_for_updates" && call.args.wait_ms,
     );
 
   await vi.waitFor(() => assert.ok(calls().length >= 5));

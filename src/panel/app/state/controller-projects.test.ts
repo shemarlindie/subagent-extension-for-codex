@@ -17,7 +17,7 @@ test("project management discards a stale registry read and reconciles selected 
   transport.handler = (name) => {
     if (name === "list_agent_projects" && reads++ === 0) return gate.promise;
 
-    if (name === "remove_user_agent_project") {
+    if (name === "app_remove_project") {
       transport.projects = [];
 
       return { repository: "/repo/a" };
@@ -47,7 +47,7 @@ test("other-panel removal clears selected project while renaming preserves scope
   const version = controller.getSnapshot().scopeVersion;
 
   transport.handler = (name) => {
-    if (name === "rename_user_agent_project") return { name: "Renamed" };
+    if (name === "app_rename_project") return { name: "Renamed" };
 
     if (name === "list_agent_projects") {
       return [{ repository: "/repo/a", name: "Renamed", kind: "repository" }];
@@ -79,7 +79,7 @@ test("a project mutation finishing in another scope cannot leave the panel busy 
   const gate = deferred<{ repository: string }>();
 
   transport.handler = (name) =>
-    name === "remove_user_agent_project" ? gate.promise : undefined;
+    name === "app_remove_project" ? gate.promise : undefined;
 
   const removing = controller.manageProject("/repo/a");
   await flush();

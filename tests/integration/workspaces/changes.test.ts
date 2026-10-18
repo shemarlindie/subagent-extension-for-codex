@@ -160,7 +160,7 @@ test("change tools return sorted recorded edits, incomplete files and command wa
     expect(changes.unrecorded_commands).toBe(true);
 
     const counts = await s.tool<ChangeCounts>(
-      "get_user_agent_change_counts",
+      "app_get_change_counts",
       args,
       "user",
     );

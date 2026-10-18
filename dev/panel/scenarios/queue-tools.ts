@@ -7,12 +7,12 @@ import type {
 
 /** Queue tools the browser fixtures answer by changing the task in memory. */
 export const PREVIEW_QUEUE_TOOLS = [
-  "send_user_agent_message",
-  "steer_user_agent_queued_message",
-  "edit_user_agent_queued_message",
-  "move_user_agent_queued_message",
-  "remove_user_agent_queued_message",
-  "clear_user_agent_queue",
+  "app_send_message",
+  "app_steer_queued_message",
+  "app_edit_queued_message",
+  "app_move_queued_message",
+  "app_remove_queued_message",
+  "app_clear_queue",
 ];
 
 /**
@@ -28,9 +28,9 @@ export function previewQueueTool(
   args: Record<string, unknown>,
 ) {
   if (!task) throw new Error("Task not found");
-  if (name === "send_user_agent_message") return previewSend(task, args);
+  if (name === "app_send_message") return previewSend(task, args);
 
-  if (name === "clear_user_agent_queue") {
+  if (name === "app_clear_queue") {
     task.queue = [];
     delete task.queue_paused;
 
@@ -40,7 +40,7 @@ export function previewQueueTool(
   const message = task.queue.find((m) => m.id === args.message_id);
   if (!message) throw new Error("That message is no longer queued.");
 
-  if (name === "steer_user_agent_queued_message") {
+  if (name === "app_steer_queued_message") {
     if (message.recorded) {
       throw new Error("That steer has already been sent to the worker.");
     }
@@ -59,13 +59,13 @@ export function previewQueueTool(
       message: message.message,
       from: message.from,
     });
-  } else if (name === "edit_user_agent_queued_message") {
+  } else if (name === "app_edit_queued_message") {
     if (message.recorded) {
       throw new Error("A steer the worker already has can't be edited.");
     }
 
     message.message = String(args.message);
-  } else if (name === "move_user_agent_queued_message") {
+  } else if (name === "app_move_queued_message") {
     if (message.recorded) {
       throw new Error("A steer the worker already has stays at the front.");
     }

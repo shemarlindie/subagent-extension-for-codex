@@ -250,7 +250,7 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
   await fixtureServer();
 
   // Uncommitted work keeps the worktree until the removal is forced.
-  const build = await call("remove_user_agent_worktree", {
+  const build = await call("app_remove_worktree", {
     task_id: "preview-build",
   });
 
@@ -260,7 +260,7 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
 
   assert.deepEqual(
     (
-      await call("remove_user_agent_worktree", {
+      await call("app_remove_worktree", {
         task_id: "preview-interrupted",
       })
     ).body.result,
@@ -281,8 +281,8 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
   assert.equal(missingPreview.body.result.state, "unavailable");
 
   assert.deepEqual(
-    (await call("delete_user_agent_branch", { task_id: "preview-interrupted" }))
-      .body.result,
+    (await call("app_delete_branch", { task_id: "preview-interrupted" })).body
+      .result,
     { status: "deleted" },
   );
 
@@ -294,8 +294,8 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
 
   // A running task's worktree is in use.
   assert.match(
-    (await call("remove_user_agent_worktree", { task_id: "preview-refactor" }))
-      .body.error ?? "",
+    (await call("app_remove_worktree", { task_id: "preview-refactor" })).body
+      .error ?? "",
     /Wait until the task stops/,
   );
 });

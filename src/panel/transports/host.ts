@@ -25,10 +25,10 @@ class SizeTracingApp extends App {
 }
 
 function toolRequestOptions(name: string, args: Record<string, unknown>) {
-  if (name === "browse_user_agent_project") return { timeout: 150000 };
+  if (name === "app_browse_project") return { timeout: 150000 };
 
   // An update wait holds as long as it was asked to, plus a margin.
-  if (name === "wait_user_agent_updates") {
+  if (name === "app_wait_for_updates") {
     return { timeout: Number(args.wait_ms ?? 0) + 10000 };
   }
 
@@ -121,11 +121,11 @@ export class HostTransport implements Transport {
     if (this.disposed) throw new Error("The console has closed.");
 
     const userTools: Record<string, string> = {
-      start_agent_task: "start_user_agent_task",
-      submit_agent_input: "submit_user_agent_input",
-      send_agent_message: "send_user_agent_message",
-      remove_agent_queued_message: "remove_user_agent_queued_message",
-      update_agent_settings: "update_user_agent_settings",
+      start_agent_task: "app_start_task",
+      submit_agent_input: "app_submit_input",
+      send_agent_message: "app_send_message",
+      remove_agent_queued_message: "app_remove_queued_message",
+      update_agent_settings: "app_update_settings",
     };
 
     const result = await this.app.callServerTool(

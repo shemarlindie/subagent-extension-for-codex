@@ -185,7 +185,7 @@ test("cookie-authenticated user tasks use the extension permission setting", asy
   assert.ok(cookie);
 
   const res = await post(
-    "/api/user-tools/start_user_agent_task",
+    "/api/user-tools/app_start_task",
     { ...request, worker_profile: "reviewer" },
     {
       Cookie: cookie,

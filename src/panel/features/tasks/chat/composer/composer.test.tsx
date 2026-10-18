@@ -82,7 +82,7 @@ test("a slow send shows progress and blocks repeated sends until acknowledgement
     fireEvent.click(send);
   });
 
-  expect(tool).toHaveBeenCalledExactlyOnceWith("send_user_agent_message", {
+  expect(tool).toHaveBeenCalledExactlyOnceWith("app_send_message", {
     task_id: "task-1",
     message: "Follow up",
     delivery: "steer",

@@ -60,7 +60,7 @@ test("a task action marks the panel busy, then reloads", async () => {
 
   expect(await actions.resumeQueue(task("task-1"))).toBeUndefined();
 
-  expect(context.tool).toHaveBeenCalledWith("resume_user_agent_queue", {
+  expect(context.tool).toHaveBeenCalledWith("app_resume_queue", {
     task_id: "task-1",
   });
 

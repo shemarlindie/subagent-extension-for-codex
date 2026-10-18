@@ -26,7 +26,7 @@ function fixture(
   const follower = new UpdateFollower({
     closed: () => closed,
     tool: async <T>(name: string, args: Record<string, unknown>) => {
-      assert.equal(name, "wait_user_agent_updates");
+      assert.equal(name, "app_wait_for_updates");
       calls.push(args);
 
       return answer(args) as T;

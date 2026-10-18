@@ -79,7 +79,7 @@ for (const tab of ["changes", "details"] as const) {
         };
       }
 
-      if (name === "get_user_agent_change_counts") {
+      if (name === "app_get_change_counts") {
         return {
           scope: "task",
           files: 0,
@@ -117,7 +117,7 @@ for (const tab of ["changes", "details"] as const) {
         .filter((call) => call.name === name)
         .map((call) => call.args.task_id);
 
-    assert.deepEqual(readsOf("get_user_agent_change_counts"), ["a"]);
+    assert.deepEqual(readsOf("app_get_change_counts"), ["a"]);
 
     assert.deepEqual(
       readsOf("get_agent_changes"),
@@ -266,7 +266,7 @@ test("selecting a task loads its change counts without reading its changes", asy
   transport.tasks = [task("a")];
 
   transport.handler = (name) =>
-    name === "get_user_agent_change_counts"
+    name === "app_get_change_counts"
       ? { scope: "task", files: 4, additions: 9, deletions: 2 }
       : undefined;
 
@@ -279,6 +279,6 @@ test("selecting a task loads its change counts without reading its changes", asy
 
   const names = transport.calls.map((call) => call.name);
 
-  assert.ok(names.includes("get_user_agent_change_counts"));
+  assert.ok(names.includes("app_get_change_counts"));
   assert.ok(!names.includes("get_agent_changes"));
 });

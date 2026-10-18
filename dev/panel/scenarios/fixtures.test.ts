@@ -203,7 +203,7 @@ test("a registered thread cwd picks its project over the latest task", () => {
 });
 
 test("a global launch shows every conversation and project", () => {
-  const opened = open("open_codex_subagent_extension_global");
+  const opened = open("app_open_codex_subagent_extension_global");
   assert.deepEqual(opened.panel_scope, { conversation_id: null });
   assert.equal(opened.tasks.length, previewTasks.length);
 
@@ -297,14 +297,12 @@ test("a cwd's Git root is offered and a cwd with whitespace has none", () => {
 
 test("fixture registration validates the root and the caller keeps it", () => {
   assert.deepEqual(
-    previewTool("register_user_agent_project", { repository: "/new/repo/" }),
+    previewTool("app_register_project", { repository: "/new/repo/" }),
     { repository: "/new/repo", kind: "repository" },
   );
 
   for (const repository of ["relative/repo", "/demo/project/src", "/a b"]) {
-    assert.throws(() =>
-      previewTool("register_user_agent_project", { repository }),
-    );
+    assert.throws(() => previewTool("app_register_project", { repository }));
   }
 
   // Nothing is remembered until the caller passes it back.
@@ -337,7 +335,7 @@ test("fixture registration validates the root and the caller keeps it", () => {
   assert.throws(
     () =>
       previewTool(
-        "register_user_agent_project",
+        "app_register_project",
         { repository: "/new/repo/src" },
         options,
       ),
@@ -363,7 +361,7 @@ test("fixture task renaming updates listed titles and validates input", () => {
   const originalTitle = task.title;
 
   try {
-    previewTool("rename_user_agent_task", {
+    previewTool("app_rename_task", {
       task_id: task.id,
       title: "  Renamed task  ",
     });
@@ -376,11 +374,11 @@ test("fixture task renaming updates listed titles and validates input", () => {
     );
 
     assert.throws(() =>
-      previewTool("rename_user_agent_task", { task_id: task.id, title: " " }),
+      previewTool("app_rename_task", { task_id: task.id, title: " " }),
     );
 
     assert.throws(() =>
-      previewTool("rename_user_agent_task", {
+      previewTool("app_rename_task", {
         task_id: "missing",
         title: "Title",
       }),
@@ -408,16 +406,15 @@ test("fixture queues reorder, edit and remove in memory behind a left-over steer
     const [steer, queued, later] = original.map((m) => m.id);
     assert.deepEqual(order(), [steer, queued, later]);
 
-    call("move_user_agent_queued_message", { message_id: later, index: 0 });
+    call("app_move_queued_message", { message_id: later, index: 0 });
     assert.deepEqual(order(), [steer, later, queued]);
 
     assert.throws(
-      () =>
-        call("move_user_agent_queued_message", { message_id: steer, index: 2 }),
+      () => call("app_move_queued_message", { message_id: steer, index: 2 }),
       /stays at the front/,
     );
 
-    call("edit_user_agent_queued_message", {
+    call("app_edit_queued_message", {
       message_id: later,
       message: "Edited",
     });
@@ -425,16 +422,13 @@ test("fixture queues reorder, edit and remove in memory behind a left-over steer
     const [, edited] = task.queue;
     assert.ok(edited);
     assert.equal(edited.message, "Edited");
-    call("remove_user_agent_queued_message", { message_id: later });
+    call("app_remove_queued_message", { message_id: later });
     assert.deepEqual(order(), [steer, queued]);
-    call("clear_user_agent_queue", {});
+    call("app_clear_queue", {});
     assert.deepEqual(order(), []);
     assert.equal(task.queue_paused, undefined);
 
-    assert.throws(
-      () => call("resume_user_agent_queue", {}),
-      /Design preview only/,
-    );
+    assert.throws(() => call("app_resume_queue", {}), /Design preview only/);
   } finally {
     task.queue = original;
     task.queue_paused = true;
@@ -452,7 +446,7 @@ test("fixture sends queue or steer a busy task in memory, never starting a turn"
     }));
 
   const send = (task: Task, delivery: string) =>
-    previewTool("send_user_agent_message", {
+    previewTool("app_send_message", {
       task_id: task.id,
       message: `To ${task.id} by ${delivery}`,
       delivery,
@@ -465,7 +459,7 @@ test("fixture sends queue or steer a busy task in memory, never starting a turn"
     assert.equal(running.queue.at(-1)!.message, "To preview-steering by queue");
     const message = { ...running.queue.at(-1)! };
 
-    previewTool("steer_user_agent_queued_message", {
+    previewTool("app_steer_queued_message", {
       task_id: running.id,
       message_id: queued.message_id,
     });
@@ -490,7 +484,7 @@ test("fixture sends queue or steer a busy task in memory, never starting a turn"
 
     assert.throws(
       () =>
-        previewTool("steer_user_agent_queued_message", {
+        previewTool("app_steer_queued_message", {
           task_id: input.id,
           message_id: input.queue.at(-1)!.id,
         }),
@@ -538,11 +532,11 @@ test("successful budget updates can be enabled for preview fixtures", () => {
       const args = { task_id: id, budget: raise };
 
       assert.throws(
-        () => previewTool("raise_user_agent_budget", args),
+        () => previewTool("app_raise_budget", args),
         /Design preview only/,
       );
 
-      const result = previewTool("raise_user_agent_budget", args, {
+      const result = previewTool("app_raise_budget", args, {
         successfulBudgetUpdates: true,
       }) as { budget: Task["budget"]; status: Task["status"] };
 
@@ -559,7 +553,7 @@ test("successful budget updates can be enabled for preview fixtures", () => {
       assert.throws(
         () =>
           previewTool(
-            "raise_user_agent_budget",
+            "app_raise_budget",
             {
               task_id: id,
               budget:

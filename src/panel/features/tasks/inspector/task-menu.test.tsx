@@ -148,7 +148,7 @@ test.each([
     await user.click(await view.findByRole("menuitem", { name: label }));
 
     assert.deepEqual(tool.mock.calls, [
-      ["mark_user_agent_task_read", { task_id: task.id, read: unread }],
+      ["app_set_task_read", { task_id: task.id, read: unread }],
     ]);
   },
 );

@@ -72,7 +72,7 @@ export class ChangeLoader {
 
     try {
       const data = await this.context.tool<ChangeCounts>(
-        "get_user_agent_change_counts",
+        "app_get_change_counts",
         { task_id: task.id },
       );
 

@@ -157,15 +157,15 @@ export class FakeTransport implements Transport {
   embedded = true;
   events!: TransportEvents;
   tasks = [task()];
-  /** The events get_user_agent_activity windows and tallies. */
+  /** The events app_get_activity windows and tallies. */
   taskEvents: Record<string, unknown>[] = [];
-  /** get_user_agent_chat items. */
+  /** app_get_chat items. */
   chat: Record<string, unknown>[] = [];
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
   /**
    * get_agent_changes pages; a cursor is the next page's index. The
-   * first page also answers get_user_agent_change_counts, so one is required.
+   * first page also answers app_get_change_counts, so one is required.
    */
   changes: [Changes, ...Changes[]] = [
     { scope: "task", files: [], additions: 0, deletions: 0, diff: "" },
@@ -207,7 +207,7 @@ export class FakeTransport implements Transport {
     this.calls.push({ name, args });
 
     const activityEvents = decodePanelToolResult<{ events: Event[] }>(
-      "get_user_agent_activity",
+      "app_get_activity",
       { events: this.taskEvents },
     ).events;
 
@@ -227,16 +227,13 @@ export class FakeTransport implements Transport {
         },
       ],
       list_agent_tasks: this.tasks,
-      get_user_agent_activity: windowActivity(
-        activityEvents,
-        Number(args.after ?? 0),
-      ),
-      get_user_agent_turn_activity: windowTurnActivity(
+      app_get_activity: windowActivity(activityEvents, Number(args.after ?? 0)),
+      app_get_turn_activity: windowTurnActivity(
         activityEvents,
         Number(args.turn),
       ),
-      get_user_agent_chat: { items: this.chat, next_cursor: 0 },
-      get_user_agent_change_counts: changeCounts(this.changes[0]),
+      app_get_chat: { items: this.chat, next_cursor: 0 },
+      app_get_change_counts: changeCounts(this.changes[0]),
       get_agent_changes: this.changes[Number(args.cursor ?? 0)],
       get_agent_changed_file: this.changedFiles[String(args.path)],
       get_agent_settings: {
@@ -279,14 +276,14 @@ export function configureProjectRegistration(
     name: string,
     args: Record<string, unknown> = {},
   ): Promise<T> => {
-    if (name === "browse_user_agent_project") {
+    if (name === "app_browse_project") {
       transport.calls.push({ name, args });
       if (options.browseError) throw new Error(options.browseError);
 
       return { repository: options.picked ?? null } as T;
     }
 
-    if (name === "register_user_agent_project") {
+    if (name === "app_register_project") {
       transport.calls.push({ name, args });
       if (options.registerError) throw new Error(options.registerError);
 

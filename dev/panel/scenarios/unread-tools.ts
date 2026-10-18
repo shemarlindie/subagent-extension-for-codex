@@ -7,9 +7,9 @@ import { previewEvents, previewTasks } from "./fixtures";
 
 /** Read tools the browser fixtures answer by changing what the user has read in memory. */
 export const PREVIEW_UNREAD_TOOLS = [
-  "mark_user_agent_task_read",
-  "mark_user_agent_task_unread_from",
-  "mark_user_agent_tasks_read",
+  "app_set_task_read",
+  "app_mark_task_unread_from",
+  "app_mark_tasks_read",
 ];
 
 // These start unread, so the list shows the dot and the Unread filter; the
@@ -80,7 +80,7 @@ function known(taskId: unknown) {
 }
 
 export function previewUnreadTool(name: string, args: Record<string, unknown>) {
-  if (name === "mark_user_agent_tasks_read") {
+  if (name === "app_mark_tasks_read") {
     const ids = (args.task_ids as unknown[]).map(known);
     for (const id of ids) markRead(id);
 
@@ -89,7 +89,7 @@ export function previewUnreadTool(name: string, args: Record<string, unknown>) {
 
   const id = known(args.task_id);
 
-  if (name === "mark_user_agent_task_unread_from") {
+  if (name === "app_mark_task_unread_from") {
     const mark = markFor(id);
     mark.through = Math.min(Number(args.event_id) - 1, newest(id));
     mark.unread = false;

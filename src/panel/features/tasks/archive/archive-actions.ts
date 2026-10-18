@@ -42,7 +42,7 @@ export class ArchiveActions {
       this.context.leaveSelection();
     }
 
-    return this.record(changing, archived, "set_user_agent_tasks_archived", {
+    return this.record(changing, archived, "app_set_tasks_archived", {
       task_ids: changing.map((task) => task.id),
       archived,
     });

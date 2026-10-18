@@ -337,7 +337,7 @@ describe("packed artifact", () => {
       );
 
       // The service itself persists this one, for the restart check below.
-      await callJson(client, "register_user_agent_project", {
+      await callJson(client, "app_register_project", {
         repository: serviceRepository,
       });
 
@@ -351,7 +351,7 @@ describe("packed artifact", () => {
       assert.match(String((html as { text?: string }).text), /<html/i);
 
       await client.callTool({
-        name: "search_mentions",
+        name: "app_search_mentions",
         arguments: { query: "review" },
       });
 

@@ -21,7 +21,7 @@ export type DroppedSummary = {
 };
 
 /**
- * get_user_agent_activity's result: the newest events after a cursor, and a
+ * app_get_activity's result: the newest events after a cursor, and a
  * tally of the older events outside the window.
  */
 export type ActivityPage = {
@@ -92,7 +92,7 @@ export function windowActivity(events: Event[], after = 0): ActivityPage {
 }
 
 /**
- * get_user_agent_turn_activity's result: one turn's events, after the previous
+ * app_get_turn_activity's result: one turn's events, after the previous
  * turn closed through this turn's close, windowed and tallied like a page.
  */
 export type TurnActivityPage = ActivityPage & { turn: number };

@@ -117,10 +117,10 @@ test("ask_user blocks parent approval and accepts an owner user decision", async
     assert.equal(store.get(task.id, "alice").pending_input?.id, pending.id);
 
     await assert.rejects(
-      callTool(c, "bob", "submit_user_agent_input", response, "user"),
+      callTool(c, "bob", "app_submit_input", response, "user"),
     );
 
-    await callTool(c, "alice", "submit_user_agent_input", response, "user");
+    await callTool(c, "alice", "app_submit_input", response, "user");
     await until(() => store.get(task.id, "alice").status === "completed");
 
     assert.equal(
@@ -214,7 +214,7 @@ test("user calls can update the approval setting", async () => {
     await callTool(
       c,
       "alice",
-      "update_user_agent_settings",
+      "app_update_settings",
       { set: { default_approval_mode: "auto_approve" } },
       "user",
     );

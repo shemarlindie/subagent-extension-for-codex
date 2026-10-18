@@ -97,7 +97,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     assert.deepEqual((ackTool._meta as any).ui.visibility, ["model", "app"]);
 
     const mentionTool = tools.tools.find(
-      (tool) => tool.name === "search_mentions",
+      (tool) => tool.name === "app_search_mentions",
     );
 
     assert.ok(mentionTool);
@@ -111,7 +111,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     assert.deepEqual((mentionTool._meta as any).ui.visibility, ["app"]);
 
     const mentionResults = await client.callTool({
-      name: "search_mentions",
+      name: "app_search_mentions",
       arguments: { query: "claude" },
     });
 
@@ -133,7 +133,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
     for (const name of [
       "open_codex_subagent_extension",
-      "wait_user_agent_updates",
+      "app_wait_for_updates",
     ]) {
       assert.equal(
         tools.tools.find((tool) => tool.name === name)?.annotations
@@ -572,7 +572,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       );
 
       const proxyMentionResults = await stdio.callTool({
-        name: "search_mentions",
+        name: "app_search_mentions",
         arguments: { query: "claude" },
       });
 
@@ -890,7 +890,7 @@ test("SSE requires authentication, streams each owner's revision on its changes 
     c.store.eventOpaque(a, "test.live");
     const afterEvent = await local.until(change());
 
-    await userTool("local", "register_user_agent_project", { repository });
+    await userTool("local", "app_register_project", { repository });
     const afterProject = await local.until(change());
     // The project list is shared, so the other owner hears of it too, and of
     // nothing in between: the local write sent it no change.
@@ -949,7 +949,7 @@ test("a held update wait on the user-tools route returns the new revision when a
   try {
     const before = c.store.revision("local");
 
-    const waiting = userTool("local", "wait_user_agent_updates", {
+    const waiting = userTool("local", "app_wait_for_updates", {
       after: before,
       wait_ms: 25_000,
     });
@@ -963,7 +963,7 @@ test("a held update wait on the user-tools route returns the new revision when a
     const deleting = Date.now();
 
     assert.deepEqual(
-      await userTool("local", "delete_user_agent_task", { task_id: "a" }),
+      await userTool("local", "app_delete_tasks", { task_ids: ["a"] }),
       { status: "deleted" },
     );
 

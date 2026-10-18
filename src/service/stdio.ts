@@ -62,7 +62,7 @@ const tools: Record<string, AnyTool> = definitions({} as Control, "local");
 
 /** Read-only tools, which the proxy may safely send twice. */
 function readOnly(name: string) {
-  return tools[name]?.readOnly === true || name === mentionSearchToolName;
+  return tools[name]?.readOnly === true;
 }
 
 /** Forwards a tool call to the service's tool API. */
@@ -103,13 +103,13 @@ const server = new McpServer(
  * margin.
  */
 function serviceTimeout(name: string, args: Record<string, unknown>) {
-  if (name === "browse_user_agent_project") return 150000;
+  if (name === "app_browse_project") return 150000;
 
   if (name === "get_agent_messages") {
     return Math.min(Number(args.wait_seconds) || 0, 50) * 1000 + 10000;
   }
 
-  if (name === "wait_user_agent_updates") {
+  if (name === "app_wait_for_updates") {
     return Math.min(Number(args.wait_ms) || 0, 25000) + 10000;
   }
 

@@ -362,7 +362,7 @@ test("host correlation honors explicit values and isolates supported tools", () 
 
   for (const name of [
     "start_agent_task",
-    "start_user_agent_task",
+    "app_start_task",
     "list_agent_tasks",
     "open_codex_subagent_extension",
     "get_agent_panel_context",

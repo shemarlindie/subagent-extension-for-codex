@@ -14,7 +14,7 @@ test("a stalled send reports uncertain delivery without cancelling its write", a
   const timing = vi.spyOn(console, "debug").mockImplementation(() => {});
 
   const request = boundedRequest(
-    "send_user_agent_message",
+    "app_send_message",
     () => write.promise,
     "Delivery could not be confirmed",
     25,
@@ -33,7 +33,7 @@ test("a stalled send reports uncertain delivery without cancelling its write", a
 
   expect(timing).toHaveBeenCalledExactlyOnceWith("task.timing", {
     phase: "transport",
-    operation: "send_user_agent_message",
+    operation: "app_send_message",
     duration_ms: expect.any(Number),
   });
 
@@ -51,7 +51,7 @@ test("an acknowledged send returns its response and clears the deadline", async 
   const response = { accepted: true };
 
   await expect(
-    boundedRequest("send_user_agent_message", async () => response, "Late"),
+    boundedRequest("app_send_message", async () => response, "Late"),
   ).resolves.toBe(response);
 
   expect(vi.getTimerCount()).toBe(0);

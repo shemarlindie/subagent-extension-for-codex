@@ -52,7 +52,7 @@ test("under Unread, Mark all read takes Clear filter's place and marks the liste
   fireEvent.click(view.getByRole("button", { name: "Mark all read" }));
 
   assert.deepEqual(tool.mock.calls, [
-    ["mark_user_agent_tasks_read", { task_ids: ["a", "b"] }],
+    ["app_mark_tasks_read", { task_ids: ["a", "b"] }],
   ]);
 });
 

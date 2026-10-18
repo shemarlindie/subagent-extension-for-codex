@@ -29,11 +29,6 @@ import {
   resolvePanelContext,
 } from "../../panel/panel-context.js";
 import {
-  mentionSearchSchema,
-  mentionSearchToolName,
-  searchAgentMentions,
-} from "../mentions.js";
-import {
   messageInput,
   queuedMessage,
   taskId,
@@ -172,12 +167,6 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         "Discover installed providers, profiles, supported capabilities, and whether each provider's runtime is ready to start tasks.",
       schema: z.object({}),
       run: () => c.availableWorkers(),
-    }),
-    [mentionSearchToolName]: tool({
-      description:
-        "Search for the configured Claude provider in the composer mention picker.",
-      schema: mentionSearchSchema,
-      run: ({ query }) => searchAgentMentions(query, c.workers()),
     }),
     interrupt_agent_task: tool({
       description:

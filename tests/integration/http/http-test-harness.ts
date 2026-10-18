@@ -149,7 +149,7 @@ export async function httpFixture(t: TestContext) {
   });
 
   const globalOpener = tools.tools.find(
-    (tool) => tool.name === "open_codex_subagent_extension_global",
+    (tool) => tool.name === "app_open_codex_subagent_extension_global",
   )!;
 
   const ambientMeta = {

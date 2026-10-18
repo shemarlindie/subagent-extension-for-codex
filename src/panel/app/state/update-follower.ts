@@ -51,7 +51,7 @@ export class UpdateFollower {
       let read: UpdateRead;
 
       try {
-        read = await this.context.tool<UpdateRead>("wait_user_agent_updates", {
+        read = await this.context.tool<UpdateRead>("app_wait_for_updates", {
           ...(this.revision === undefined ? {} : { after: this.revision }),
           ...(target ? { draft: target } : {}),
           wait_ms: WAIT_MS,

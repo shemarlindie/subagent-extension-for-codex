@@ -67,14 +67,14 @@ const fixtureReadTools = new Set([
   "get_agent_changes",
   "get_agent_panel_context",
   "get_agent_settings",
-  "get_user_agent_activity",
-  "get_user_agent_change_counts",
-  "get_user_agent_chat",
-  "get_user_agent_turn_activity",
+  "app_get_activity",
+  "app_get_change_counts",
+  "app_get_chat",
+  "app_get_turn_activity",
   "list_agent_projects",
   "list_agent_tasks",
   "list_available_workers",
-  "wait_user_agent_updates",
+  "app_wait_for_updates",
 ]);
 
 const defaults: Settings = {
@@ -363,7 +363,7 @@ export function Host() {
       // Fixture registrations persist until Reset, like the service's registry.
       if (
         source === "fixtures" &&
-        name === "register_user_agent_project" &&
+        name === "app_register_project" &&
         !result.isError
       ) {
         const { repository } = (
@@ -385,8 +385,7 @@ export function Host() {
       if (
         source === "fixtures" &&
         !result.isError &&
-        (name === "rename_user_agent_project" ||
-          name === "remove_user_agent_project")
+        (name === "app_rename_project" || name === "app_remove_project")
       ) {
         const changed = (
           result.structuredContent as {
@@ -394,7 +393,7 @@ export function Host() {
           }
         ).result;
 
-        if (name === "rename_user_agent_project") {
+        if (name === "app_rename_project") {
           projectEdits.current.names = {
             ...projectEdits.current.names,
             [changed.repository]: changed.name!,
@@ -437,7 +436,7 @@ export function Host() {
 
       const name =
         launch === "global"
-          ? "open_codex_subagent_extension_global"
+          ? "app_open_codex_subagent_extension_global"
           : "open_codex_subagent_extension";
 
       try {

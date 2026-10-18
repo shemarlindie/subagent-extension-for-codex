@@ -132,10 +132,10 @@ export function fixtureLaunchArgs(
  */
 export const FIXTURE_SERVICE_TOOLS: string[] = [
   "get_agent_changes",
-  "get_user_agent_change_counts",
+  "app_get_change_counts",
   "get_agent_changed_file",
-  "remove_user_agent_worktree",
-  "delete_user_agent_branch",
+  "app_remove_worktree",
+  "app_delete_branch",
 ];
 
 const FIXTURE_SERVICE_PATH = "/fixture-service/tools/";
@@ -188,7 +188,7 @@ export function fixtureCall(
 
     // The openers and settings tools return their payload unwrapped.
     const unwrapped =
-      name.startsWith("open_codex_subagent_extension") ||
+      name.includes("open_codex_subagent_extension") ||
       name.endsWith("_agent_settings");
 
     return {

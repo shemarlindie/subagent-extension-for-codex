@@ -55,7 +55,7 @@ export class DraftFollower {
     if (!id) return;
 
     const read = await this.context.tool<{ draft: Draft | null }>(
-      "wait_user_agent_updates",
+      "app_wait_for_updates",
       { draft: { task_id: id }, wait_ms: 0 },
     );
 

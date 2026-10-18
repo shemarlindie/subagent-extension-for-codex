@@ -8,7 +8,7 @@ export type ChatState = {
   cursor: number;
 };
 
-/** A read of Chat after a cursor, from `get_user_agent_chat`. */
+/** A read of Chat after a cursor, from `app_get_chat`. */
 export type ChatRead = { items: ChatItem[]; next_cursor: number };
 
 /**

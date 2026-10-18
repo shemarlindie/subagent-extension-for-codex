@@ -255,7 +255,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
         ];
       }
 
-      if (name === "register_user_agent_project") {
+      if (name === "app_register_project") {
         return { repository: "/repo/chat", kind: "repository" };
       }
 
@@ -265,7 +265,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
     await controller.addChatProjectForTask("/repo/chat");
 
     const registrations = transport.calls.filter(
-      (call) => call.name === "register_user_agent_project",
+      (call) => call.name === "app_register_project",
     );
 
     assert.deepEqual(

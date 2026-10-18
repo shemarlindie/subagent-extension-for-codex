@@ -349,19 +349,19 @@ test("host folder browsing allows native interaction time while ordinary tools u
   const transport = new HostTransport(fake.app as any);
   fake.respond({ structuredContent: { result: { repository: null } } });
 
-  assert.deepEqual(await transport.tool("browse_user_agent_project"), {
+  assert.deepEqual(await transport.tool("app_browse_project"), {
     repository: null,
   });
 
   assert.deepEqual(fake.calls[0], {
-    name: "browse_user_agent_project",
+    name: "app_browse_project",
     arguments: {},
   });
 
   assert.deepEqual(fake.toolOptions[0], { timeout: 150000 });
   await transport.tool("list_agent_projects");
 
-  await transport.tool("register_user_agent_project", {
+  await transport.tool("app_register_project", {
     repository: "/repo/new",
   });
 
@@ -647,9 +647,9 @@ test("host routes user actions through app-only aliases and preserves settings e
     );
 
     assert.deepEqual(fake.calls, [
-      { name: "start_user_agent_task", arguments: taskArgs },
-      { name: "submit_user_agent_input", arguments: decision },
-      { name: "update_user_agent_settings", arguments: settingsArgs },
+      { name: "app_start_task", arguments: taskArgs },
+      { name: "app_submit_input", arguments: decision },
+      { name: "app_update_settings", arguments: settingsArgs },
     ]);
   } finally {
     transport.dispose();
