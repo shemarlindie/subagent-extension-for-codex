@@ -57,7 +57,7 @@ import {
 } from "./send-requests.js";
 import { deletionBatch, deletionOrder } from "./task-deletion.js";
 import { generateTaskTitle } from "./task-title.js";
-import { measureTaskWait } from "./timing.js";
+import { measureTaskWait, recordTaskTiming } from "./timing.js";
 import { type Active, recordStatusEvent } from "./turn-outcome.js";
 
 /** Statuses in which a task has a turn running, starting or about to. */
@@ -358,7 +358,7 @@ export class Control {
     } finally {
       this.scheduling = false;
 
-      console.debug("task.timing", {
+      recordTaskTiming({
         phase: "scheduler_scan",
         duration_ms: performance.now() - scanStarted,
         task_count: taskCount,

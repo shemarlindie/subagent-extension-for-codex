@@ -5,6 +5,10 @@ import { Projects } from "../../features/projects/projects.js";
 import { configuredProviders } from "../../features/providers/config.js";
 import type { Provider } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
+import {
+  configureTimingLog,
+  flushTimingLog,
+} from "../../features/tasks/runtime/timing.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
 import { application } from "../server/app.js";
@@ -50,6 +54,7 @@ export async function serve({
   chmodSync(data, 0o700);
   const release = lease(data);
   process.once("exit", release);
+  configureTimingLog(join(data, "timing.jsonl"));
   const processIdentity = inspectProcessIdentity(process.pid);
 
   if (
@@ -183,6 +188,7 @@ export async function serve({
       app.locals.stopping = true;
       await app.locals.closeMcp();
       await c.close();
+      await flushTimingLog();
       process.exit(0);
     })());
   }
