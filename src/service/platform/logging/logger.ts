@@ -65,6 +65,19 @@ export function withLogContext<T>(
   );
 }
 
+/**
+ * Lets other structured files join service records: the logger's instance ID
+ * and the current HTTP request's service-generated ID, when there is one.
+ */
+export function logCorrelation() {
+  const requestId = context.getStore()?.request_id;
+
+  return {
+    instance_id: instanceId,
+    ...(typeof requestId === "string" ? { request_id: requestId } : {}),
+  };
+}
+
 /** Only curated scalar metadata belongs here. Never pass bodies, prompts or credentials. */
 export function logEvent(level: Level, event: string, fields: Fields = {}) {
   if (levels[level] < levels[threshold]) return;

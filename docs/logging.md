@@ -13,7 +13,7 @@ Logs live in `CODEX_SUBAGENT_EXTENSION_DATA`, which defaults to
 | File            | Purpose                                                                       | Rotation                                |
 | --------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
 | `service.jsonl` | Structured service, HTTP, authentication, tool and task events                | 5,000,000 bytes per file, three backups |
-| `timing.jsonl`  | Task phases and panel send durations                                          | 5,000,000 bytes per file, one backup    |
+| `timing.jsonl`  | Task phases, queue and input waits, and panel call durations                  | 5,000,000 bytes per file, one backup    |
 | `service.log`   | Launcher-captured service stdout and stderr, including early startup failures | Best effort at startup, one backup      |
 
 Structured files contain one JSON object per line. The writer rotates before a
@@ -111,27 +111,100 @@ and provider turn count. These summaries help distinguish provider latency from
 service overhead without recording generated text. Missing result events can
 mean execution ended before the provider returned a result.
 
-The service appends `task.timing` records for repository validation, message
-storage, scheduler scans and interrupt shutdown to `timing.jsonl`. The panel
-measures message-send transport durations and sends them through the app-only
-`app_record_timing` tool. It batches them for up to five seconds, so their
-timestamps mark when the service received them. A failed batch or closed panel
-drops its records. Durations use a monotonic clock and milliseconds. Records
-exclude message text and repository paths.
-
-Transport duration includes service processing and bridge or HTTP overhead.
-Compare it with service phases instead of adding it to them. Scheduler scans
-report their work count so scan cost can be assessed before changing scheduling.
-An unfinished shutdown has no completion duration until it settles. HTTP and
-tool durations describe different nested boundaries and also must not be added
-together as independent costs.
-
 The default `CODEX_SUBAGENT_EXTENSION_LOG_LEVEL=info` includes ordinary service
 and resource events. Set `debug` at service startup to include health-request
 records, successful read-only tool dispatches and successful HTTP tool requests.
 `warn` or `error` suppresses lower-level service events, including
 resource samples. Task timing uses its separate file independently of this
 threshold. Invalid levels prevent service startup.
+
+### Task timing
+
+`timing.jsonl` holds `task.timing` records. Each has `timestamp`, `phase` and
+`duration_ms`, measured in milliseconds with a monotonic clock. `instance_id`
+matches the `service.jsonl` records from the same service process. A record
+written while the service handles an HTTP request also carries that request's
+`request_id`. Measured steps report `outcome` as `success`, `error`, `timeout`
+or `aborted`. Turn phases carry `task_id` and `turn`. Records written by older
+versions lack these fields. Records exclude message text and repository paths.
+
+| Phase                   | Measures                                                                   | Specific fields                          |
+| ----------------------- | -------------------------------------------------------------------------- | ---------------------------------------- |
+| `send_storage`          | Storing an accepted message                                                | `send_ref`                               |
+| `repository_validation` | Checking the approved repository for a follow-up send or a turn            | `send_ref` for a send                    |
+| `interrupt_shutdown`    | Stopping a running turn until its end is recorded                          |                                          |
+| `scheduler_scan`        | One scheduling pass                                                        | `task_count`, `scanned_count`            |
+| `queue_wait`            | Waiting to start the next turn                                             | See [queue waits](#queue-waits)          |
+| `workspace_preparation` | Creating, recreating or reusing the workspace, including Git worktree work | `workspace_strategy`, `workspace_action` |
+| `session_selection`     | Choosing to resume or start a session, then marking the turn running       | `session`, `new_session_reason`          |
+| `prompt_assembly`       | Building the turn's prompt                                                 | `session`                                |
+| `provider_run`          | The provider run, through its reply or failure                             | `input_wait_ms`                          |
+| `input_wait`            | One permission or question request waiting for the user                    | `input_kind`, `queued_ms`                |
+| `transport`             | A panel call, measured by the panel                                        | `operation`, `outcome`, `ui_timed_out`   |
+
+`send_ref` is the first 16 hexadecimal digits of the SHA-256 hash of the send's
+request ID. The service never records the ID itself. Retrying a send reuses its
+ID, so the panel's `transport` record and the service's `send_storage` record
+for the same send share a `send_ref`. Callers can reuse a request ID on another
+task, so join records on `instance_id`, `task_id` and `send_ref` together.
+`provider.first_event`, `provider.first_text`
+and HTTP or tool durations stay in `service.jsonl`.
+
+Scheduler scans report their work count so scan cost can be assessed before
+changing scheduling. An unfinished shutdown has no completion duration until it
+settles. Phases nest inside HTTP, tool and execution durations, so do not add
+them together as independent costs.
+
+#### Queue waits
+
+A queue wait starts when a task becomes ready for its next turn. `cause` is
+`start`, `followup`, `queued_message`, `interrupt_send`, `resume` or `recovery`.
+Messages queued behind a running turn and a paused queue are not timed until
+the task becomes ready. The wait ends with `success` when its turn starts,
+`error` when a dependency failed and `aborted` when the task was interrupted or
+deleted.
+
+- `capacity_ms` is the part of the wait when every execution slot was in use.
+- `dependency_observation_span_ms` spans the first to the latest scheduler scan
+  that found an unfinished dependency.
+- `since_dependency_observed_ms` runs from that first scan to the end of the
+  wait.
+
+The scheduler stops scanning once every slot is in use, so dependencies can
+finish or change between observations. The dependency fields are observations.
+They can overlap `capacity_ms` and do not split the wait into causes. Waits are
+tracked in memory: a `recovery` wait starts when the service starts, and a wait
+still open at shutdown has no record.
+
+#### User input
+
+`input_wait.duration_ms` runs from showing a request until it is answered or
+interrupted. `queued_ms` is the time before the request was shown, while an
+earlier request from the same turn waited. The service shows one request at a
+time, so `provider_run.input_wait_ms` adds up the turn's waits without overlap.
+The run's `duration_ms` minus `input_wait_ms` is the provider's elapsed time
+outside these user waits. It still includes network, model and tool waits, and
+does not measure active compute.
+
+#### Panel calls
+
+The panel measures message sends and interrupts, then sends them through the
+app-only `app_record_timing` tool. It batches them for up to five seconds, so
+their timestamps mark when the service received them. A failed batch or closed
+panel drops its records. The duration runs until the call settles, even after
+the panel stopped waiting. `ui_timed_out` records that the panel stopped
+waiting first. A `transport` record includes `task_id` when the call names a
+task, and `send_ref` for a send: the panel sends its request ID and the service
+records only the hash. A
+`transport` record has no `request_id`, because the batch's HTTP request is not
+the measured call. Transport duration includes service processing and bridge or
+HTTP overhead. Compare it with service phases instead of adding it to them.
+
+The panel and service use separate clocks, so compare durations across them,
+not timestamps. The panel does not measure time to the first visible reply.
+It receives drafts by polling the selected task, a later draft can't be matched
+reliably to a steer or queued message, and rendering doesn't prove the screen
+was painted. Use `provider.first_text` for provider response latency.
 
 ## Add diagnostics
 
@@ -143,6 +216,9 @@ Use `logEvent(level, event, fields)` for stable event names and curated scalar
 metadata, `logError(event, error, fields)` for failures, and `withLogContext` for
 bounded asynchronous correlation. Start background task execution with
 `{ inherit: false }` so it does not retain a caller's request context. Use monotonic `performance.now()` durations.
+Task feature timing uses `measureTaskWait` and `recordTaskTiming` in
+`src/service/features/tasks/runtime/timing.ts`. They follow the same metadata
+rules and never change the measured operation's result or error.
 Avoid recording every provider streaming delta. Log lifecycle transitions and
 summaries that help explain a failure or measure useful work.
 

@@ -1,3 +1,5 @@
+import type { PanelTimingRecord } from "../../../../shared/tasks/panel-timing";
+
 interface TimingReporterContext {
   closed(): boolean;
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
@@ -14,14 +16,14 @@ const MAX_BATCH = 20;
  * records, and the reporter never times its own sends.
  */
 export class TimingReporter {
-  private queue: { operation: string; duration_ms: number }[] = [];
+  private queue: PanelTimingRecord[] = [];
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private context: TimingReporterContext) {}
 
-  record(operation: string, durationMs: number) {
+  record(record: PanelTimingRecord) {
     if (this.context.closed()) return;
-    this.queue.push({ operation, duration_ms: durationMs });
+    this.queue.push(record);
 
     if (this.queue.length >= MAX_BATCH) this.flush();
     else this.timer ??= setTimeout(() => this.flush(), FLUSH_DELAY_MS);

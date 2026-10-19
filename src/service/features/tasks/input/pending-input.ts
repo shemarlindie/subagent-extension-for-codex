@@ -3,6 +3,11 @@ import { randomUUID } from "node:crypto";
 import type { Task } from "../../../../shared/tasks/model.js";
 import type { ProviderTaskPolicy } from "../../providers/task-policy.js";
 import type { RunContext } from "../../providers/types.js";
+import {
+  recordTaskTiming,
+  type TimingOutcome,
+  timingOutcome,
+} from "../runtime/timing.js";
 import type { Store } from "../storage/store.js";
 
 type InputResponse = Awaited<ReturnType<RunContext["input"]>>;
@@ -30,6 +35,19 @@ async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {
 export class PendingInput {
   private tail?: Promise<void>;
   private resolveInput?: (response: InputResponse) => void;
+  /** Finished user waits; serialization keeps them from overlapping. */
+  private waited = 0;
+  private waitingSince?: number;
+
+  /** How long this turn's requests have waited for the user so far. */
+  get waitedMs() {
+    const current =
+      this.waitingSince === undefined
+        ? 0
+        : performance.now() - this.waitingSince;
+
+    return this.waited + current;
+  }
 
   constructor(
     private task: Task,
@@ -88,6 +106,11 @@ export class PendingInput {
       ? AbortSignal.any([this.abortSignal, signal])
       : this.abortSignal;
 
+    const requested = performance.now();
+    // Only the request holding the slot owns the shared waiting clock.
+    let shown: number | undefined;
+    let outcome: TimingOutcome = "success";
+
     try {
       await waitForInputSlot(previous, inputSignal);
       if (inputSignal.aborted) throw new Error("Input interrupted");
@@ -111,6 +134,8 @@ export class PendingInput {
           request: t.pending_input,
         });
       });
+
+      shown = this.waitingSince = performance.now();
 
       const response = await new Promise<InputResponse>((resolve, reject) => {
         const onAbort = () => {
@@ -147,8 +172,38 @@ export class PendingInput {
       });
 
       return response;
+    } catch (error) {
+      outcome = timingOutcome(error, inputSignal);
+      throw error;
     } finally {
+      if (shown !== undefined) this.waitingSince = undefined;
       release();
+      this.recordWait(kind, outcome, requested, shown);
     }
   };
+
+  /**
+   * Records one request's wait for the user, from when it was shown, and how
+   * long it waited before that behind earlier requests.
+   */
+  private recordWait(
+    kind: string,
+    outcome: TimingOutcome,
+    requested: number,
+    shown: number | undefined,
+  ) {
+    const ended = performance.now();
+    const waited = shown === undefined ? 0 : ended - shown;
+    this.waited += waited;
+
+    recordTaskTiming({
+      phase: "input_wait",
+      task_id: this.task.id,
+      turn: this.task.turn,
+      input_kind: kind,
+      outcome,
+      duration_ms: waited,
+      queued_ms: (shown ?? ended) - requested,
+    });
+  }
 }

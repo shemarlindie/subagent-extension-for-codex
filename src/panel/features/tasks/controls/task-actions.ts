@@ -1,5 +1,9 @@
 import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors";
 import type { BudgetRaise, Delivery } from "../../../../shared/tasks/model";
+import {
+  isTimedPanelOperation,
+  panelTimingCorrelation,
+} from "../../../../shared/tasks/panel-timing";
 import type { Snapshot, Task } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
 import { ArchiveActions } from "../archive/archive-actions";
@@ -239,7 +243,16 @@ export class TaskActions {
         ? boundedRequest(
             () => call,
             timeoutMessage,
-            (durationMs) => this.timing.record(name, durationMs),
+            (durationMs, settled) => {
+              if (!isTimedPanelOperation(name)) return;
+
+              this.timing.record({
+                operation: name,
+                duration_ms: durationMs,
+                ...panelTimingCorrelation(args),
+                ...settled,
+              });
+            },
           )
         : call);
     } catch (error) {

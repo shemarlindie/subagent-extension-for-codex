@@ -128,7 +128,14 @@ test("a send's duration goes to the service timing log in the background", async
 
   expect(context.tool).toHaveBeenLastCalledWith("app_record_timing", {
     records: [
-      { operation: "app_send_message", duration_ms: expect.any(Number) },
+      {
+        operation: "app_send_message",
+        duration_ms: expect.any(Number),
+        // The test task ID isn't a service ID, so only the send correlates.
+        request_id: expect.stringMatching(/^[0-9a-f]{32}$/),
+        outcome: "success",
+        ui_timed_out: false,
+      },
     ],
   });
 });

@@ -134,11 +134,6 @@
       "count": 1
     }
   },
-  "src/service/features/tasks/runtime/control.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/service/platform/panel/panel-context.ts": {
     "complexity": {
       "count": 1

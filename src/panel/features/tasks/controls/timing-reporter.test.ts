@@ -25,8 +25,8 @@ function setup(tool = vi.fn(async () => ({}))) {
 test("records wait briefly and go to the service in one batch", async () => {
   const { tool, reporter } = setup();
 
-  reporter.record("app_send_message", 12);
-  reporter.record("app_send_message", 30);
+  reporter.record({ operation: "app_send_message", duration_ms: 12 });
+  reporter.record({ operation: "app_send_message", duration_ms: 30 });
   expect(tool).not.toHaveBeenCalled();
 
   await vi.advanceTimersByTimeAsync(5000);
@@ -46,13 +46,16 @@ test("a full batch goes at once, and a failed send drops its records", async () 
     vi.fn(async () => Promise.reject(new Error("offline"))),
   );
 
-  for (let i = 0; i < 20; i++) reporter.record("app_send_message", i);
+  for (let i = 0; i < 20; i++) {
+    reporter.record({ operation: "app_send_message", duration_ms: i });
+  }
+
   await vi.advanceTimersByTimeAsync(0);
 
   expect(tool).toHaveBeenCalledOnce();
   expect(vi.getTimerCount()).toBe(0);
 
-  reporter.record("app_send_message", 1);
+  reporter.record({ operation: "app_send_message", duration_ms: 1 });
   await vi.advanceTimersByTimeAsync(5000);
 
   expect(tool).toHaveBeenLastCalledWith("app_record_timing", {
@@ -63,9 +66,9 @@ test("a full batch goes at once, and a failed send drops its records", async () 
 test("a closed panel drops waiting records", async () => {
   const { tool, reporter, close } = setup();
 
-  reporter.record("app_send_message", 12);
+  reporter.record({ operation: "app_send_message", duration_ms: 12 });
   close();
-  reporter.record("app_send_message", 30);
+  reporter.record({ operation: "app_send_message", duration_ms: 30 });
   await vi.advanceTimersByTimeAsync(5000);
 
   expect(tool).not.toHaveBeenCalled();

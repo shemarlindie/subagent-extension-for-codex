@@ -31,7 +31,11 @@ test("a stalled send reports uncertain delivery without cancelling its write", a
   write.resolve("private message text");
   await flush();
 
-  expect(settled).toHaveBeenCalledExactlyOnceWith(expect.any(Number));
+  expect(settled).toHaveBeenCalledExactlyOnceWith(expect.any(Number), {
+    outcome: "success",
+    ui_timed_out: true,
+  });
+
   expect(vi.getTimerCount()).toBe(0);
 });
 
@@ -53,4 +57,26 @@ test("an acknowledged send returns its response and clears the deadline", async 
   ).resolves.toBe(response);
 
   expect(vi.getTimerCount()).toBe(0);
+});
+
+test("a failing observer keeps the call's own response and error", async () => {
+  const response = { accepted: true };
+  const failure = new Error("Rejected");
+
+  const settled = vi.fn(() => {
+    throw new Error("Observer failed");
+  });
+
+  await expect(
+    boundedRequest(async () => response, "Late", settled),
+  ).resolves.toBe(response);
+
+  await expect(
+    boundedRequest(() => Promise.reject(failure), "Late", settled),
+  ).rejects.toBe(failure);
+
+  expect(settled).toHaveBeenLastCalledWith(expect.any(Number), {
+    outcome: "error",
+    ui_timed_out: false,
+  });
 });

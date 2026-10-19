@@ -6,6 +6,7 @@ import {
 } from "../../../../shared/tasks/conversation/chat.js";
 import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
+import { panelTimingRecordSchema } from "../../../../shared/tasks/panel-timing.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
 import { browseProject } from "../../../features/projects/project-picker.js";
 import {
@@ -13,7 +14,10 @@ import {
   recordParentDelivery,
 } from "../../../features/tasks/conversation/parent-messages.js";
 import { waitForUpdates } from "../../../features/tasks/conversation/updates.js";
-import { recordTaskTiming } from "../../../features/tasks/runtime/timing.js";
+import {
+  recordTaskTiming,
+  sendRef,
+} from "../../../features/tasks/runtime/timing.js";
 import {
   mentionSearchSchema,
   mentionSearchToolName,
@@ -296,20 +300,17 @@ export function userTools(
       description:
         "User interface only: append the panel's measured tool call durations to the service timing log.",
       schema: z.strictObject({
-        records: z
-          .array(
-            z.strictObject({
-              // Only app tool names, so the log never holds arbitrary text.
-              operation: z.string().regex(/^app_[a-z_]{1,64}$/),
-              duration_ms: z.number().nonnegative().max(3_600_000),
-            }),
-          )
-          .min(1)
-          .max(50),
+        records: z.array(panelTimingRecordSchema).min(1).max(50),
       }),
       run: ({ records }) => {
-        for (const record of records) {
-          recordTaskTiming({ phase: "transport", ...record });
+        for (const { request_id: requestId, ...record } of records) {
+          recordTaskTiming({
+            phase: "transport",
+            ...record,
+            send_ref: sendRef(requestId),
+            // This batch's HTTP request isn't the measured call's.
+            request_id: undefined,
+          });
         }
 
         return { recorded: records.length };

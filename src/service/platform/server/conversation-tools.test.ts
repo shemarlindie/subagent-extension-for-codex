@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -16,12 +16,11 @@ import type { Task } from "../../../shared/tasks/model.js";
 import type { ListedTask } from "../../../shared/tasks/task-list.js";
 import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
-import {
-  configureTimingLog,
-  flushTimingLog,
-} from "../../features/tasks/runtime/timing.js";
+import { sendRef } from "../../features/tasks/runtime/timing.js";
+import { captureTiming } from "../../features/tasks/runtime/timing-test-harness.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
+import { withLogContext } from "../logging/logger.js";
 import { callTool, definitions, isUserTool } from "./tools.js";
 import type { AnyTool } from "./tools/definition.js";
 
@@ -1098,50 +1097,60 @@ test("the panel archives, unarchives and deletes tasks, and a follow-up unarchiv
 
 test("the panel appends its call durations to the timing log", async () => {
   const { c, user } = await setup();
-  const directory = await mkdtemp(join(tmpdir(), "panel-timing-"));
-  const path = join(directory, "timing.jsonl");
-  configureTimingLog(path);
+  const timing = await captureTiming();
+  const requestId = "0123456789abcdef0123456789abcdef";
+  const taskId = "task_01234567-89ab-cdef-0123-456789abcdef";
 
   try {
-    await expect(
+    for (const record of [
+      { operation: "Send the secret plan", duration_ms: 12 },
+      { operation: "app_send_message", duration_ms: 1, request_id: "My plan" },
+      { operation: "app_send_message", duration_ms: 1, task_id: "My plan" },
+    ]) {
+      await expect(
+        user("app_record_timing", { records: [record] }),
+      ).rejects.toThrow();
+    }
+
+    // Records from panels without correlation fields are still accepted.
+    const recorded = await withLogContext({ request_id: "upload" }, () =>
       user("app_record_timing", {
-        records: [{ operation: "Send the secret plan", duration_ms: 12 }],
+        records: [
+          { operation: "app_send_message", duration_ms: 12.5 },
+          {
+            operation: "app_send_message",
+            duration_ms: 40,
+            task_id: taskId,
+            request_id: requestId,
+            outcome: "success",
+            ui_timed_out: true,
+          },
+          { operation: "interrupt_task", duration_ms: 3, outcome: "error" },
+        ],
       }),
-    ).rejects.toThrow();
-
-    assert.deepEqual(
-      await user("app_record_timing", {
-        records: [{ operation: "app_send_message", duration_ms: 12.5 }],
-      }),
-      { recorded: 1 },
     );
 
-    await flushTimingLog();
+    assert.deepEqual(recorded, { recorded: 3 });
 
-    const records = (await readFile(path, "utf8"))
-      .trim()
-      .split("\n")
-      .map((line) => JSON.parse(line) as Record<string, unknown>)
-      // Scheduler scans from setup can share the file.
-      .filter(({ phase }) => phase === "transport");
+    expect(await timing.records("transport")).toEqual([
+      expect.objectContaining({
+        operation: "app_send_message",
+        duration_ms: 12.5,
+      }),
+      expect.objectContaining({
+        task_id: taskId,
+        send_ref: sendRef(requestId),
+        outcome: "success",
+        ui_timed_out: true,
+      }),
+      expect.objectContaining({ operation: "interrupt_task" }),
+    ]);
 
-    assert.deepEqual(
-      records.map(({ phase, operation, duration_ms }) => ({
-        phase,
-        operation,
-        duration_ms,
-      })),
-      [
-        {
-          phase: "transport",
-          operation: "app_send_message",
-          duration_ms: 12.5,
-        },
-      ],
-    );
+    // The upload's own HTTP request ID and the raw send ID aren't recorded.
+    const text = await readFile(timing.path, "utf8");
+    expect(text).not.toContain(requestId);
+    expect(text).not.toContain("upload");
   } finally {
-    configureTimingLog(undefined);
     await c.close();
-    await rm(directory, { recursive: true, force: true });
   }
 });

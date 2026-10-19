@@ -36,6 +36,7 @@ import {
   validateBudgets,
 } from "./budget.js";
 import { observeExecution } from "./execution-logging.js";
+import { assertModelEffort } from "./model-effort.js";
 import {
   clearQueuedMessages,
   commitQueue,
@@ -50,6 +51,7 @@ import {
   requeue,
   steerQueuedMessage,
 } from "./queue.js";
+import { type QueueCause, QueueWaits } from "./queue-wait.js";
 import { commitSend } from "./send-acceptance.js";
 import {
   type RecordSend,
@@ -59,8 +61,13 @@ import {
 } from "./send-requests.js";
 import { deletionBatch, deletionOrder } from "./task-deletion.js";
 import { generateTaskTitle } from "./task-title.js";
-import { measureTaskWait, recordTaskTiming } from "./timing.js";
+import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import { type Active, recordStatusEvent } from "./turn-outcome.js";
+import {
+  startTurn,
+  turnPrompt,
+  type TurnStartupContext,
+} from "./turn-startup.js";
 
 /** Statuses in which a task has a turn running, starting or about to. */
 const BUSY = ["queued", "starting", "running", "waiting"];
@@ -72,6 +79,8 @@ export class Control {
   active = new Map<string, Active>();
   private deleting = new Set<string>();
   private sendRequests: SendRequests;
+  /** Observes queue waits for the timing log. */
+  private queueWaits = new QueueWaits();
   scheduling = false;
   stopped = false;
   ownerWorker = hostname();
@@ -127,6 +136,8 @@ export class Control {
             reason: "service_restart",
           }),
         );
+      } else if (BUSY.includes(t.status)) {
+        this.queueWaits.queued(t.id, "recovery");
       }
     }
 
@@ -193,30 +204,7 @@ export class Control {
     if (!req.title) throw new Error("Task title is required");
     if (!req.description) throw new Error("Task description is required");
 
-    if (
-      provider.models &&
-      req.reasoning_effort &&
-      req.reasoning_effort !== "default"
-    ) {
-      // Unknown or unavailable metadata leaves final validation to the provider.
-      const models = await provider.models().catch(() => []);
-
-      const model = models.find(
-        (item) => item.value === (req.model || "default"),
-      );
-
-      if (
-        model &&
-        (model.supportsEffort === false ||
-          (model.supportedEffortLevels !== undefined &&
-            !model.supportedEffortLevels.includes(req.reasoning_effort)))
-      ) {
-        throw new Error(
-          `Model ${model.value} does not support reasoning effort ${req.reasoning_effort}`,
-        );
-      }
-    }
-
+    await assertModelEffort(provider, req.model, req.reasoning_effort);
     validateBudgets(provider, req);
 
     if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD") {
@@ -258,6 +246,7 @@ export class Control {
       this.store.event(t, "task.queued");
     });
 
+    this.queueWaits.queued(t.id, "start");
     void this.schedule();
 
     return t;
@@ -304,6 +293,7 @@ export class Control {
             this.store.event(t, "task.failed", { error: t.error });
           });
 
+          this.queueWaits.ended(t.id, "error");
           continue;
         }
 
@@ -317,6 +307,8 @@ export class Control {
         );
 
         if (pending) {
+          this.queueWaits.dependencyPending(t.id);
+
           if (t.status !== "waiting" || t.waiting_for !== pending.id) {
             t.status = "waiting";
             t.waiting_reason = "waiting_for_dependency";
@@ -355,7 +347,8 @@ export class Control {
         };
 
         this.active.set(t.id, active);
-
+        this.queueWaits.ended(t.id, "success", t.turn);
+        this.queueWaits.capacity(this.active.size >= this.concurrency);
         active.done = this.execute(t, active);
       }
     } finally {
@@ -380,14 +373,13 @@ export class Control {
     let reply: string | undefined;
     const costBefore = t.cost_usd ?? 0;
 
+    const { signal } = a.abort;
+
     try {
       validateBudgets(this.providers.get(t.provider), t);
-      if (this.projects) await this.projects.resolve(t.repository);
-      await this.prepareWorkspace(t);
-      this.store.save(t);
-      if (a.abort.signal.aborted) throw a.abort.signal.reason;
       const provider = this.providers.get(t.provider)!;
-      const newSession = await this.beginTurn(t, provider, begin);
+      const startup = this.turnStartup();
+      const newSession = await startTurn(startup, t, provider, begin, signal);
       const remaining = remainingRuntime(t);
 
       if (remaining !== Infinity) {
@@ -398,20 +390,24 @@ export class Control {
         }, remaining);
       }
 
-      const prompt = newSession
-        ? await this.prompts.sessionPrompt(t)
-        : this.prompts.resumedPrompt(t);
-
+      const prompt = await turnPrompt(startup, t, newSession, signal);
       // The session holds these from now on, so a resumed turn gets only later ones.
       t.instructions_sent = t.instructions.length;
       this.store.save(t);
-      const output = await provider.run(this.runContext(t, a), prompt);
-      a.abort.signal.throwIfAborted();
+
+      const output = await measureTaskWait(
+        "provider_run",
+        { task_id: t.id, turn: t.turn },
+        () => provider.run(this.runContext(t, a), prompt),
+        { signal, end: () => ({ input_wait_ms: a.input.waitedMs }) },
+      );
+
+      signal.throwIfAborted();
       reply = output.reply;
-      this.recordReply(t, reply, a.abort.signal);
+      this.recordReply(t, reply, signal);
       t.status = "completed";
     } catch (error) {
-      if (!a.stopStatus && !a.abort.signal.aborted) {
+      if (!a.stopStatus && !signal.aborted) {
         logError("task.execution_failed", error, { turn: t.turn });
       }
 
@@ -437,69 +433,17 @@ export class Control {
     }
   }
 
-  /**
-   * Readies the task's workspace for a turn: creates it on the first turn,
-   * recreates a removed worktree, and clears the latest-turn edits.
-   */
-  private async prepareWorkspace(t: Task) {
-    const created = !t.workspace;
-
-    if (created) {
-      await this.workspaces.create(
-        t,
-        this.settings.values(t.owner).worktree_branch_prefix,
-      );
-
-      this.store.save(t);
-    } else if (await this.workspaces.worktreeMissing(t)) {
-      // Remove worktree only frees disk space; the next turn brings it back.
-      const from = await this.workspaces.recreateWorktree(t);
-      delete t.workspace_removed;
-      delete t.branch_deleted;
-
-      this.store.transaction(() => {
-        this.store.save(t);
-        this.store.event(t, "task.worktree_recreated", { from });
-      });
-    }
-
-    // Only a new control-plane turn resets the latest-turn edits.
-    this.changes.clearTurn(t);
-  }
-
-  /**
-   * Marks the turn running, starting a new provider session when the saved
-   * one can't continue. Resolves with why a new session started, if one did.
-   */
-  private async beginTurn(t: Task, provider: Provider, begin: number) {
-    const newSession = await this.prompts.newSessionReason(
-      t,
-      provider,
-      this.ownerWorker,
-    );
-
-    if (newSession) {
-      // The session can't continue, so this turn starts another.
-      delete t.session_id;
-      delete t.session_state_ref;
-      delete t.session_cost_usd;
-    }
-
-    t.status = "running";
-    t.started_at ??= now();
-    t.run_started_at = new Date(begin).toISOString();
-    t.session_owner = this.ownerWorker;
-
-    this.store.transaction(() => {
-      if (newSession && t.turn > 1) {
-        this.store.event(t, "task.session_started", { reason: newSession });
-      }
-
-      this.store.save(t);
-      this.store.event(t, "task.started", { turn: t.turn });
-    });
-
-    return newSession;
+  private turnStartup(): TurnStartupContext {
+    return {
+      store: this.store,
+      workspaces: this.workspaces,
+      changes: this.changes,
+      prompts: this.prompts,
+      projects: this.projects,
+      ownerWorker: this.ownerWorker,
+      branchPrefix: (owner) =>
+        this.settings.values(owner).worktree_branch_prefix,
+    };
   }
 
   /** What the provider calls back into while the turn runs. */
@@ -663,6 +607,7 @@ export class Control {
     } finally {
       // A failed write must not leave the task held as running.
       this.active.delete(t.id);
+      this.queueWaits.capacity(this.active.size >= this.concurrency);
       if (!this.stopped) queueMicrotask(() => void this.schedule());
     }
   }
@@ -685,6 +630,7 @@ export class Control {
       t.instructions.push(...t.pending_steers);
       t.pending_steers = [];
       requeue(t);
+      this.queuedAfterCommit(t, "interrupt_send");
     } else {
       leaveOver(t);
 
@@ -693,10 +639,16 @@ export class Control {
       } else if (t.queue.length && !t.queue_paused) {
         deliverQueued(this.store, t, t.queue.shift()!);
         requeue(t);
+        this.queuedAfterCommit(t, "queued_message");
       }
     }
 
     recordQueueChange(this.store, t, before);
+  }
+
+  /** Starts observing a queue wait once the turn's end commits. */
+  private queuedAfterCommit(t: Task, cause: QueueCause) {
+    this.store.database.afterCommit(() => this.queueWaits.queued(t.id, cause));
   }
 
   /**
@@ -894,6 +846,7 @@ export class Control {
 
       await this.workspaces.discard(t);
       this.store.delete(id, owner);
+      this.queueWaits.ended(id, "aborted");
 
       return { status: "deleted" as const };
     } finally {
@@ -965,6 +918,7 @@ export class Control {
       this.store.event(t, "task.interrupted"),
     );
 
+    this.queueWaits.ended(id, "aborted");
     void this.schedule();
 
     return t;
@@ -980,7 +934,7 @@ export class Control {
       status: "interrupted",
     });
 
-    await measureTaskWait("interrupt_shutdown", id, () => {
+    await measureTaskWait("interrupt_shutdown", { task_id: id }, () => {
       a.abort.abort(new Error("interrupted"));
 
       return a.done;
@@ -1059,29 +1013,39 @@ export class Control {
     if (delivery === "queue") {
       const before = queueSnapshot(t);
 
-      commitSend(this.store, t, () => {
-        if (options.budget) raiseBudget(t, options.budget);
-        t.queue.push({ ...m, delivery });
-        this.store.save(t);
-        recordQueueChange(this.store, t, before);
-        record(m.id, "queued");
-      });
+      commitSend(
+        this.store,
+        t,
+        () => {
+          if (options.budget) raiseBudget(t, options.budget);
+          t.queue.push({ ...m, delivery });
+          this.store.save(t);
+          recordQueueChange(this.store, t, before);
+          record(m.id, "queued");
+        },
+        options.request_id,
+      );
 
       return { task: t, message_id: m.id, state: "queued" as const };
     }
 
-    commitSend(this.store, t, () => {
-      if (options.budget) raiseBudget(t, options.budget);
-      if (!a) t.instructions.push(m);
-      else t.pending_steers.push(m);
-      recordMessage(this.store, t, m, delivery);
-      this.store.save(t);
+    commitSend(
+      this.store,
+      t,
+      () => {
+        if (options.budget) raiseBudget(t, options.budget);
+        if (!a) t.instructions.push(m);
+        else t.pending_steers.push(m);
+        recordMessage(this.store, t, m, delivery);
+        this.store.save(t);
 
-      record(
-        m.id,
-        !a || delivery === "interrupt" ? "started" : "pending_steer",
-      );
-    });
+        record(
+          m.id,
+          !a || delivery === "interrupt" ? "started" : "pending_steer",
+        );
+      },
+      options.request_id,
+    );
 
     if (!a) return { task: t, message_id: m.id, state: "started" as const };
 
@@ -1128,8 +1092,10 @@ export class Control {
     validateBudgets(this.providers.get(t.provider), t);
 
     if (this.projects) {
-      await measureTaskWait("repository_validation", id, () =>
-        this.projects!.resolve(t.repository),
+      await measureTaskWait(
+        "repository_validation",
+        { task_id: id, send_ref: sendRef(options.request_id) },
+        () => this.projects!.resolve(t.repository),
       );
     }
 
@@ -1144,19 +1110,25 @@ export class Control {
     const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
     const before = queueSnapshot(t);
 
-    commitSend(this.store, t, () => {
-      t.instructions.push(m);
-      delete t.queue_paused;
-      requeue(t);
-      this.store.save(t);
-      recordMessage(this.store, t, m, options.delivery ?? "steer");
-      recordQueueChange(this.store, t, before);
-      this.store.event(t, "task.queued");
-      // A task that runs again is back in the user's lists.
-      this.archive.unarchive(t);
-      record(m.id, "started");
-    });
+    commitSend(
+      this.store,
+      t,
+      () => {
+        t.instructions.push(m);
+        delete t.queue_paused;
+        requeue(t);
+        this.store.save(t);
+        recordMessage(this.store, t, m, options.delivery ?? "steer");
+        recordQueueChange(this.store, t, before);
+        this.store.event(t, "task.queued");
+        // A task that runs again is back in the user's lists.
+        this.archive.unarchive(t);
+        record(m.id, "started");
+      },
+      options.request_id,
+    );
 
+    this.queueWaits.queued(id, "followup");
     void this.schedule();
 
     return { task: t, message_id: m.id, state: "started" };
@@ -1231,6 +1203,7 @@ export class Control {
         this.store.event(t, "task.queued");
       });
 
+      this.queueWaits.queued(id, "resume");
       void this.schedule();
 
       return t;

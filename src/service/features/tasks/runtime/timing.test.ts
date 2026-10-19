@@ -3,15 +3,22 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { onTestFinished, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 
+import {
+  configureLogging,
+  logCorrelation,
+  withLogContext,
+} from "../../../platform/logging/logger.js";
 import {
   configureTimingLog,
   flushTimingLog,
   measureTaskWait,
   measureTaskWrite,
   recordTaskTiming,
+  sendRef,
 } from "./timing.js";
+import { captureTiming } from "./timing-test-harness.js";
 
 test("timing records go to a private JSON Lines file, not the console", async () => {
   const directory = await mkdtemp(join(tmpdir(), "task-timing-"));
@@ -27,11 +34,15 @@ test("timing records go to a private JSON Lines file, not the console", async ()
   configureTimingLog(path);
 
   assert.equal(
-    measureTaskWrite("task-1", () => "stored"),
+    measureTaskWrite({ task_id: "task-1" }, () => "stored"),
     "stored",
   );
 
-  await measureTaskWait("repository_validation", "task-1", async () => {});
+  await measureTaskWait(
+    "repository_validation",
+    { task_id: "task-1" },
+    async () => {},
+  );
 
   await flushTimingLog();
 
@@ -66,7 +77,7 @@ test("a full timing log rolls over to one previous file", async () => {
     await rm(directory, { recursive: true, force: true });
   });
 
-  configureTimingLog(path, 200);
+  configureTimingLog(path, 300);
 
   for (const phase of ["first", "second", "third"]) {
     recordTaskTiming({ phase, detail: "x".repeat(80) });
@@ -82,4 +93,122 @@ test("a full timing log rolls over to one previous file", async () => {
 
   assert.deepEqual(await phases(`${path}.1`), ["second"]);
   assert.deepEqual(await phases(path), ["third"]);
+});
+
+test("timing records carry the service log's instance and request IDs", async () => {
+  const timing = await captureTiming();
+  configureLogging(undefined);
+  onTestFinished(() => configureLogging(undefined));
+
+  withLogContext({ request_id: "req-1", route: "/mcp", task_id: "t" }, () =>
+    recordTaskTiming({ phase: "inside" }),
+  );
+
+  recordTaskTiming({ phase: "outside" });
+
+  const [inside, outside] = await timing.records();
+
+  assert.equal(inside?.instance_id, logCorrelation().instance_id);
+  assert.equal(inside?.request_id, "req-1");
+  // Only selected correlation fields come from the log context.
+  assert.equal(inside?.route, undefined);
+  assert.equal(inside?.task_id, undefined);
+  assert.equal(outside?.instance_id, logCorrelation().instance_id);
+  assert.equal(outside?.request_id, undefined);
+});
+
+test("send references are stable for retries and never hold the raw ID", () => {
+  assert.equal(sendRef("my private request"), sendRef("my private request"));
+  assert.notEqual(sendRef("one"), sendRef("two"));
+  assert.match(sendRef("my private request") ?? "", /^[0-9a-f]{16}$/);
+  assert.equal(sendRef(undefined), undefined);
+});
+
+test("measured phases report their outcome and rethrow the same error", async () => {
+  const timing = await captureTiming();
+  const failure = new Error("boom");
+
+  const timeout = new Error("Git repository validation did not finish", {
+    cause: Object.assign(new Error("Command failed"), { killed: true }),
+  });
+
+  const abort = new AbortController();
+  abort.abort();
+
+  const outcomes = [
+    [failure, undefined],
+    [timeout, undefined],
+    [new Error("stopped"), abort.signal],
+  ] as const;
+
+  for (const [error, signal] of outcomes) {
+    await expect(
+      measureTaskWait(
+        "workspace_preparation",
+        { task_id: "task-1" },
+        () => Promise.reject(error),
+        {
+          signal,
+          detail: () => ({ workspace_action: "created" }),
+          end: () => ({ input_wait_ms: 3 }),
+        },
+      ),
+    ).rejects.toBe(error);
+  }
+
+  assert.throws(
+    () =>
+      measureTaskWrite({ task_id: "task-1" }, () => {
+        throw failure;
+      }),
+    (error) => error === failure,
+  );
+
+  const records = await timing.records();
+
+  assert.deepEqual(
+    records.map(({ phase, outcome, workspace_action, input_wait_ms }) => ({
+      phase,
+      outcome,
+      workspace_action,
+      input_wait_ms,
+    })),
+    [
+      ...["error", "timeout", "aborted"].map((outcome) => ({
+        phase: "workspace_preparation",
+        outcome,
+        // A failed step's result can't describe it.
+        workspace_action: undefined,
+        input_wait_ms: 3,
+      })),
+      {
+        phase: "send_storage",
+        outcome: "error",
+        workspace_action: undefined,
+        input_wait_ms: undefined,
+      },
+    ],
+  );
+});
+
+test("failing timing detail never replaces the measured result or error", async () => {
+  await captureTiming();
+  const failure = new Error("boom");
+
+  const throwing = () => {
+    throw new Error("detail failed");
+  };
+
+  assert.equal(
+    await measureTaskWait("prompt_assembly", {}, async () => "prompt", {
+      detail: throwing,
+    }),
+    "prompt",
+  );
+
+  await expect(
+    measureTaskWait("prompt_assembly", {}, () => Promise.reject(failure), {
+      end: throwing,
+    }),
+  ).rejects.toBe(failure);
 });
