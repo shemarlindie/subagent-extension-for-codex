@@ -13,16 +13,6 @@ import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
 import type { PanelData, Transport, TransportEvents } from "../app/state/types";
 import { decodePanelToolResult } from "./event-decoding";
 import { HostContextCompatibilityTransport } from "./host-context-compat";
-import { traceSize } from "./size-trace";
-
-// DEBUG: Trace the SDK's outgoing sizes without replacing its resize observer.
-class SizeTracingApp extends App {
-  override sendSizeChanged(params: Parameters<App["sendSizeChanged"]>[0]) {
-    traceSize("size-notification", params);
-
-    return super.sendSizeChanged(params);
-  }
-}
 
 function toolRequestOptions(name: string, args: Record<string, unknown>) {
   if (name === "app_browse_project") return { timeout: 150000 };
@@ -40,8 +30,7 @@ export class HostTransport implements Transport {
   private disposed = false;
   private events?: TransportEvents;
   constructor(
-    // DEBUG: Use the tracing subclass until the panel sizing investigation is complete.
-    private app: App = new SizeTracingApp(
+    private app: App = new App(
       { name: "Delegated Work", version },
       {},
       { autoResize: true },
@@ -50,13 +39,9 @@ export class HostTransport implements Transport {
 
   async connect(events: TransportEvents) {
     this.events = events;
-    // DEBUG: Compare handshake timing with the first compact render and size notification.
-    traceSize("bridge-connect-start");
 
     this.app.addEventListener("toolresult", (result) => {
       if (!this.disposed) {
-        // DEBUG: Mark when task data arrives without recording its contents.
-        traceSize("tool-result-received");
         const data = result.structuredContent as PanelData;
         events.scope(data);
       }
@@ -77,8 +62,6 @@ export class HostTransport implements Transport {
         : new HostContextCompatibilityTransport(),
     );
 
-    // DEBUG: Automatic resize reporting starts after this handshake completes.
-    traceSize("bridge-connected");
     if (this.disposed) return;
 
     if (!this.app.getHostCapabilities()?.serverTools) {
@@ -98,8 +81,6 @@ export class HostTransport implements Transport {
     }
 
     const displayMode = context?.displayMode ?? "inline";
-    // DEBUG: Correlate host mode changes with viewport and card measurements.
-    traceSize("host-context", { displayMode });
     const capabilities = this.app.getHostCapabilities();
 
     this.events?.host({

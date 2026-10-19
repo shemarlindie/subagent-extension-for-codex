@@ -1,5 +1,3 @@
-import { useLayoutEffect } from "react";
-
 import {
   useController,
   useSnapshot,
@@ -14,7 +12,6 @@ import {
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
 import { MotionContent } from "../../../shared/components/motion/motion-content";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
-import { traceSize } from "../../../transports/size-trace";
 import { projectDisplayName } from "../../projects/selectors";
 import { WorkerReadinessNotice } from "../../providers/worker-readiness-notice";
 import { TaskStatus } from "../shared/status";
@@ -22,14 +19,6 @@ import { TaskStatus } from "../shared/status";
 export function InlinePreview() {
   const controller = useController(),
     state = useSnapshot();
-
-  // DEBUG: Measure the first compact commit and the next frame during panel sizing diagnosis.
-  useLayoutEffect(() => {
-    traceSize("compact-render-committed");
-    const frame = requestAnimationFrame(() => traceSize("compact-next-frame"));
-
-    return () => cancelAnimationFrame(frame);
-  }, []);
 
   // Summarize the whole scope, independent of the expanded view's list filters.
   const tasks = state.tasks.filter(
