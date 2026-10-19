@@ -22,7 +22,7 @@ function setup(overrides: Partial<Snapshot> = {}) {
 
   onTestFinished(() => controller.dispose());
 
-  const state = {
+  const state: Snapshot = {
     ...controller.getSnapshot(),
     connected: true,
     scopeKnown: true,
