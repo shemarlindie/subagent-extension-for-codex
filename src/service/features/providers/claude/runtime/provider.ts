@@ -17,6 +17,7 @@ import {
   type ProviderReadiness,
 } from "../../../../../shared/providers/types.js";
 import { type Task } from "../../../../../shared/tasks/model.js";
+import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import {
   type Provider,
   type RunContext,
@@ -137,6 +138,10 @@ export class ClaudeAgentProvider implements Provider {
       session_id: "",
     });
 
+    const launched = performance.now();
+    let firstEvent = true;
+    let firstText = true;
+
     const stream = this.launch({
       prompt: inbox,
       options,
@@ -158,7 +163,10 @@ export class ClaudeAgentProvider implements Provider {
 
       Promise.resolve()
         .then(() => stream.interrupt({ cancelQueued: true }))
-        .catch(() => abortController.abort());
+        .catch((error: unknown) => {
+          logError("provider.interrupt_fallback", error);
+          abortController.abort();
+        });
     };
 
     c.signal.addEventListener("abort", interrupt, { once: true });
@@ -203,8 +211,17 @@ export class ClaudeAgentProvider implements Provider {
 
     try {
       for await (const m of stream) {
+        if (firstEvent) {
+          firstEvent = false;
+
+          logEvent("info", "provider.first_event", {
+            duration_ms: performance.now() - launched,
+          });
+        }
+
         if ("session_id" in m && m.session_id) {
           const ref = await this.sessionPath(m.session_id, c.task.workspace!);
+
           c.session(m.session_id, ref);
         }
 
@@ -233,6 +250,14 @@ export class ClaudeAgentProvider implements Provider {
               m.event.delta.type === "text_delta" &&
               streaming
             ) {
+              if (firstText && m.event.delta.text) {
+                firstText = false;
+
+                logEvent("info", "provider.first_text", {
+                  duration_ms: performance.now() - launched,
+                });
+              }
+
               c.delta(streaming, m.event.delta.text);
             }
           }
@@ -251,6 +276,19 @@ export class ClaudeAgentProvider implements Provider {
 
         normalizeClaudeMessage(c, m);
         if (m.type !== "result") continue;
+
+        logEvent("info", "provider.result", {
+          subtype: m.subtype,
+          is_error: m.is_error,
+          duration_ms: performance.now() - launched,
+          api_duration_ms: m.duration_api_ms,
+          input_tokens: m.usage.input_tokens,
+          output_tokens: m.usage.output_tokens,
+          cache_read_tokens: m.usage.cache_read_input_tokens,
+          cache_creation_tokens: m.usage.cache_creation_input_tokens,
+          cost_usd: m.total_cost_usd,
+          turn_count: m.num_turns,
+        });
 
         if (m.subtype !== "success" || m.is_error) {
           throw new Error(

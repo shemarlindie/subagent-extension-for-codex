@@ -14,6 +14,7 @@ import {
   claudeOverrideDefaults,
   resolveClaudePolicy,
 } from "../../../../../shared/providers/claude/permissions.js";
+import * as logging from "../../../../platform/logging/logger.js";
 import {
   captureOptions,
   context,
@@ -74,16 +75,15 @@ test("M6 PostToolUse records subagent edits and returns an empty result after re
     throw error;
   });
 
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  const log = vi.spyOn(logging, "logError").mockImplementation(() => {});
 
   expect(await hook(input, input.tool_use_id, { signal: c.signal })).toEqual(
     {},
   );
 
-  expect(log).toHaveBeenCalledWith(
-    "Could not record Claude Write edits",
-    error,
-  );
+  expect(log).toHaveBeenCalledWith("provider.edit_capture_failed", error, {
+    tool: "Write",
+  });
 });
 
 test("Claude read-only profile bundle denies outside paths, symlink escapes, Git metadata and disallowed tools", async () => {

@@ -3,10 +3,11 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { type Event } from "../../../../shared/events/types.js";
 import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+import * as logging from "../../../platform/logging/logger.js";
 import { Store } from "./store.js";
 
 function deletionFixture() {
@@ -264,10 +265,11 @@ test("transactions reject nesting and asynchronous callbacks", (t) => {
 
 test("a failing listener neither undoes the commit nor stops other listeners", (t) => {
   const { store, task, heard } = transactionFixture(t);
-  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  const errors = vi.spyOn(logging, "logError").mockImplementation(() => {});
+  const failure = new Error("listener failed");
 
   store.bus.prependListener("event", () => {
-    throw new Error("listener failed");
+    throw failure;
   });
 
   store.transaction(() => {
@@ -279,6 +281,14 @@ test("a failing listener neither undoes the commit nor stops other listeners", (
   assert.deepEqual(heard, ["task.started", "task.completed"]);
   assert.equal(store.events(task.id, task.owner).length, 2);
   assert.equal(errors.mock.calls.length, 2);
+
+  expect(errors).toHaveBeenNthCalledWith(1, "store.listener_failed", failure, {
+    listener: "event",
+  });
+
+  expect(errors).toHaveBeenNthCalledWith(2, "store.listener_failed", failure, {
+    listener: "event",
+  });
 });
 
 test("a transaction announces one change per owner after it commits, and a rollback none", (t) => {

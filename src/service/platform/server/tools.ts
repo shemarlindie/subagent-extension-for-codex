@@ -2,6 +2,7 @@ import type { InputAuthority, Task } from "../../../shared/tasks/model.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import { panelUri } from "../panel/panel.js";
 import { taskPanelContext } from "../panel/panel-context.js";
+import { observeTool } from "./tool-logging.js";
 import { agentTools } from "./tools/agent-tools.js";
 import type {
   AnyTool,
@@ -133,13 +134,21 @@ export async function callTool(
   authority: InputAuthority = "parent",
   hostMeta?: Record<string, unknown>,
 ) {
-  if (isUserTool(name) && authority !== "user") {
-    throw new Error("User tools require a user interface");
-  }
-
   const defs = definitions(c, owner, authority, hostMeta);
-  if (!(name in defs)) throw new Error("Unknown tool");
-  const d: AnyTool = defs[name as keyof typeof defs];
 
-  return d.run(d.schema.parse(args ?? {}));
+  return observeTool(
+    Object.hasOwn(defs, name) ? name : "unknown",
+    async () => {
+      if (isUserTool(name) && authority !== "user") {
+        throw new Error("User tools require a user interface");
+      }
+
+      if (!Object.hasOwn(defs, name)) throw new Error("Unknown tool");
+      const d: AnyTool = defs[name as keyof typeof defs];
+
+      return d.run(d.schema.parse(args ?? {}));
+    },
+    Object.hasOwn(defs, name) &&
+      defs[name as keyof typeof defs].readOnly === true,
+  );
 }

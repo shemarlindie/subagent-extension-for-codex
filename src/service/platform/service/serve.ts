@@ -11,6 +11,13 @@ import {
 } from "../../features/tasks/runtime/timing.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
+import {
+  configureLogging,
+  flushLogs,
+  logEvent,
+  setLogSecrets,
+} from "../logging/logger.js";
+import { startRuntimeMetrics } from "../logging/runtime-metrics.js";
 import { application } from "../server/app.js";
 import { Auth } from "../server/auth.js";
 import { serviceIdentity } from "./identity.js";
@@ -54,16 +61,29 @@ export async function serve({
   chmodSync(data, 0o700);
   const release = lease(data);
   process.once("exit", release);
+
+  configureLogging(
+    join(data, "service.jsonl"),
+    process.env.CODEX_SUBAGENT_EXTENSION_LOG_LEVEL,
+  );
+
   configureTimingLog(join(data, "timing.jsonl"));
+
+  logEvent("info", "service.starting", {
+    node_version: process.version,
+    version: serviceIdentity().version,
+    api_version: serviceIdentity().apiVersion,
+    launcher: serviceIdentity().launcher,
+    network,
+  });
+
   const processIdentity = inspectProcessIdentity(process.pid);
 
   if (
     !processIdentity &&
     (process.platform === "linux" || process.platform === "darwin")
   ) {
-    console.error(
-      "Could not record this service's process identity; a later launcher may require manual cleanup.",
-    );
+    logEvent("warn", "service.process_identity_unavailable");
   }
 
   const serviceFile = join(data, "service.json");
@@ -83,6 +103,13 @@ export async function serve({
   renameSync(temporaryServiceFile, serviceFile);
 
   const token = adminToken(data);
+
+  setLogSecrets([
+    token,
+    process.env.ANTHROPIC_API_KEY,
+    process.env.CLAUDE_CODE_OAUTH_TOKEN,
+  ]);
+
   const store = new Store(join(data, "console.sqlite"));
   const providers = makeProviders(store, data);
 
@@ -137,7 +164,13 @@ export async function serve({
   }
 
   try {
+    const recoveryStarted = performance.now();
     await c.recover();
+
+    logEvent("info", "service.recovered", {
+      duration_ms: performance.now() - recoveryStarted,
+    });
+
     app.locals.ready = true;
   } catch (error) {
     server.close();
@@ -160,6 +193,14 @@ export async function serve({
     );
   }
 
+  logEvent("info", "service.ready", {
+    port,
+    concurrency,
+    provider_count: providers.size,
+  });
+
+  const stopMetrics = startRuntimeMetrics(() => c.active.size);
+
   const prune = setInterval(() => auth.prune(), 60000);
   // Calls are POSTs. GETs include event streams that never end on their own.
   let calls = 0;
@@ -172,8 +213,10 @@ export async function serve({
 
   let closing: Promise<void> | undefined;
 
-  function close() {
+  function close(signal = "drain") {
     return (closing ??= (async () => {
+      logEvent("info", "service.stopping", { signal });
+      stopMetrics();
       clearInterval(prune);
       server.close();
       server.closeIdleConnections();
@@ -185,10 +228,12 @@ export async function serve({
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
 
+      logEvent("info", "service.calls_drained", { open_calls: calls });
       app.locals.stopping = true;
       await app.locals.closeMcp();
       await c.close();
-      await flushTimingLog();
+      logEvent("info", "service.stopped");
+      await Promise.all([flushTimingLog(), flushLogs()]);
       process.exit(0);
     })());
   }
@@ -200,14 +245,21 @@ export async function serve({
   app.locals.drain = () => {
     draining ??= (async () => {
       app.locals.draining = true;
-      console.error("Draining for a newer extension service");
+      logEvent("info", "service.draining", { active_tasks: c.active.size });
+      const started = performance.now();
       await c.drain(drainLimit);
+
+      logEvent("info", "service.drained", {
+        duration_ms: performance.now() - started,
+        active_tasks: c.active.size,
+      });
+
       await close();
     })();
 
     return c.active.size;
   };
 
-  process.on("SIGINT", () => void close());
-  process.on("SIGTERM", () => void close());
+  process.on("SIGINT", () => void close("SIGINT"));
+  process.on("SIGTERM", () => void close("SIGTERM"));
 }

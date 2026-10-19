@@ -5,10 +5,12 @@ import express from "express";
 import type { DraftUpdate } from "../../../shared/tasks/conversation/drafts.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
+import { logError, logEvent } from "../logging/logger.js";
 import { preloadPanelHtml, readPanelHtml } from "../panel/panel-html.js";
 import { serviceIdentity } from "../service/identity.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
+import { authRejectionLogger, requestLogging } from "./request-logging.js";
 import { callTool, isUserTool } from "./tools.js";
 
 /** Host directory forwarded by the stdio proxy; malformed values are ignored. */
@@ -35,8 +37,10 @@ export function application(
   preloadPanelHtml(htmlPath);
   preloadPanelHtml(nativeHtmlPath);
   const app = express();
+  const logAuthRejection = authRejectionLogger();
   const allowed = new Set([origin, ...additionalOrigins]);
   app.disable("x-powered-by");
+  app.use(requestLogging);
 
   app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -46,6 +50,7 @@ export function application(
     const requestOrigin = req.headers.origin;
 
     if (requestOrigin && !allowed.has(requestOrigin)) {
+      logAuthRejection(req, "origin_denied");
       res.status(403).json({ error: "Origin not permitted" });
 
       return;
@@ -140,11 +145,16 @@ export function application(
   });
 
   app.post("/api/login", (req, res) => {
-    if (!auth.matches(String(req.body.token ?? ""))) {
+    const token: unknown = req.body?.token;
+
+    if (typeof token !== "string" || !auth.matches(token)) {
+      logAuthRejection(req, token ? "invalid_token" : "missing_token");
       res.status(401).json({ error: "Invalid console token" });
 
       return;
     }
+
+    logEvent("info", "auth.login");
 
     // Origin passed the allowlist above; an HTTP LAN login needs an HTTP cookie
     // even when the canonical console origin is configured for HTTPS.
@@ -183,6 +193,7 @@ export function application(
 
   app.all("/mcp", async (req, res) => {
     if (!bearer(req)) {
+      logAuthRejection(req);
       res.status(401).json({ error: "Authentication required" });
 
       return;
@@ -195,6 +206,7 @@ export function application(
     const owner = bearer(req) ?? auth.ownerFor(req.headers.cookie);
 
     if (!owner) {
+      logAuthRejection(req);
       res.status(401).json({ error: "Authentication required" });
 
       return;
@@ -206,6 +218,7 @@ export function application(
       req.method === "POST" &&
       req.headers["x-codex-subagent-extension"] !== "1"
     ) {
+      logAuthRejection(req, "csrf_header_missing");
       res.status(403).json({ error: "CSRF header required" });
 
       return;
@@ -217,6 +230,7 @@ export function application(
   // Only an administrator token may hand the service over. Console sessions can't.
   app.post("/api/service/drain", (req, res) => {
     if (!bearer(req)) {
+      logAuthRejection(req, "admin_bearer_required");
       res.status(403).json({ error: "Administrator token required" });
 
       return;
@@ -315,6 +329,14 @@ export function application(
       res: express.Response,
       _next: express.NextFunction,
     ) => {
+      logError("http.failed", error);
+
+      if (res.headersSent) {
+        _next(error);
+
+        return;
+      }
+
       res.status(500).json({ error: error.message });
     },
   );

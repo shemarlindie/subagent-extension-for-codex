@@ -1,6 +1,7 @@
 import { structuredPatch, type StructuredPatchHunk as Hunk } from "diff";
 import { z } from "zod";
 
+import { logError } from "../../../../platform/logging/logger.js";
 import type { FileEdit, RunContext } from "../../types.js";
 
 interface FileEdits {
@@ -173,6 +174,6 @@ export function recordClaudeFileEdits(
       );
     }
   } catch (error) {
-    console.error(`Could not record Claude ${toolName} edits`, error);
+    logError("provider.edit_capture_failed", error, { tool: toolName });
   }
 }

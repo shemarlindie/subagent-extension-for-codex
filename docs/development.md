@@ -563,19 +563,10 @@ opt-in tests that make model calls.
 
 ## Send latency measurements
 
-The service appends structured `task.timing` records for repository
-validation, message storage, scheduler scans and interrupt shutdown to
-`timing.jsonl` in the data directory, one JSON object per line. When the file
-reaches 5 MB, it replaces `timing.jsonl.1` and a new file starts. The panel
-measures transport durations for message sends and sends them to the same file
-with the app-only `app_record_timing` tool. It batches them for up to five
-seconds, so their timestamps mark when the service received them. A failed
-batch or a closed panel drops its records. Durations use a monotonic
-clock and milliseconds. Records exclude message text and repository paths.
-Transport duration includes service processing and bridge or HTTP overhead, so
-compare it with service phases instead of adding it to them. Scheduler scans
-report their work count so scan cost can be assessed before changing scheduling.
-An unfinished shutdown has no completion duration until it settles.
+[Logging and diagnostics](logging.md#measure-performance) owns the task timing
+format, transport measurements, rotation and resource samples. Use those records
+to compare message latency and scheduler work before changing performance
+behavior.
 
 Read-only Git-root validation probes have a five-second subprocess timeout.
 Timeouts leave repository approval requirements in place and report a retryable

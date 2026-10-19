@@ -20,6 +20,7 @@ import {
   searchAgentMentions,
 } from "./mentions.js";
 import { productGlyphIcons } from "./product-glyph.js";
+import { observeTool } from "./tool-logging.js";
 import {
   definitions,
   toolRegistration,
@@ -89,8 +90,17 @@ export function mcp(
           const definition = current[name];
           if (!definition) throw new Error(`Unknown tool: ${name}`);
 
-          const result = await definition.run(
-            withConversation(definition.conversation, args, ctx.mcpReq._meta),
+          const result = await observeTool(
+            name,
+            () =>
+              definition.run(
+                withConversation(
+                  definition.conversation,
+                  args,
+                  ctx.mcpReq._meta,
+                ),
+              ),
+            definition.readOnly === true,
           );
 
           return {

@@ -21,6 +21,7 @@ import {
   type Database,
   openDatabase,
 } from "../../../platform/database/database.js";
+import { publishListeners } from "./publish-listeners.js";
 import { events, taskRead, tasks } from "./schema.js";
 import { decodeEvent, decodeTask } from "./stored.js";
 
@@ -235,19 +236,9 @@ export class Store {
     return event;
   }
 
-  /**
-   * Tells each listener about a committed change. A notification is a hint
-   * that rows changed, so a failing listener is logged and the others still
-   * run; consumers catch up on what they missed from the database.
-   */
+  /** Isolate listener failures after commit so consumers can still catch up. */
   private publish(name: "event" | "change", ...args: unknown[]) {
-    for (const listener of this.bus.listeners(name)) {
-      try {
-        listener(...args);
-      } catch (error) {
-        console.error(`${name} listener failed`, error);
-      }
-    }
+    publishListeners(this.bus, name, args);
   }
 
   events(id: string, owner: string, after = 0): Event[] {

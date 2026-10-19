@@ -17,6 +17,7 @@ import {
   type TaskMessage,
 } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
+import { logError } from "../../../platform/logging/logger.js";
 import { Changes } from "../../changes/changes.js";
 import { Projects } from "../../projects/projects.js";
 import { type Provider, type RunContext } from "../../providers/types.js";
@@ -34,6 +35,7 @@ import {
   remainingRuntime,
   validateBudgets,
 } from "./budget.js";
+import { observeExecution } from "./execution-logging.js";
 import {
   clearQueuedMessages,
   commitQueue,
@@ -353,6 +355,7 @@ export class Control {
         };
 
         this.active.set(t.id, active);
+
         active.done = this.execute(t, active);
       }
     } finally {
@@ -367,7 +370,11 @@ export class Control {
     }
   }
 
-  async execute(t: Task, a: Active) {
+  execute(t: Task, a: Active) {
+    return observeExecution(t, () => this.executeTurn(t, a));
+  }
+
+  private async executeTurn(t: Task, a: Active) {
     const begin = Date.now();
     let timer: NodeJS.Timeout | undefined;
     let reply: string | undefined;
@@ -404,6 +411,10 @@ export class Control {
       this.recordReply(t, reply, a.abort.signal);
       t.status = "completed";
     } catch (error) {
+      if (!a.stopStatus && !a.abort.signal.aborted) {
+        logError("task.execution_failed", error, { turn: t.turn });
+      }
+
       if (a.stopStatus) {
         t.status = a.stopStatus;
         delete t.error;

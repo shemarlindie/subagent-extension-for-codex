@@ -14,6 +14,7 @@ import {
   type RunningService,
   serviceIdentity,
 } from "./identity.js";
+import { rotateStartupLog } from "./log-rotation.js";
 import { isProcessRunning } from "./process-info.js";
 import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
 
@@ -228,6 +229,7 @@ export async function connectService() {
     launches++;
     lastLaunch.exited = false;
     mkdirSync(data, { recursive: true, mode: 0o700 });
+    rotateStartupLog(join(data, "service.log"), leaseReleased);
     const log = openSync(join(data, "service.log"), "a", 0o600);
 
     const child = spawn(

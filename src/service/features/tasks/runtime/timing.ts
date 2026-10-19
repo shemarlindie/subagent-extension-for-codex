@@ -1,72 +1,29 @@
-import { appendFile, rename, stat } from "node:fs/promises";
+import { JsonlWriter } from "../../../platform/logging/jsonl-writer.js";
 
 type Phase = "send_storage" | "repository_validation" | "interrupt_shutdown";
 
-interface TimingLog {
-  path: string;
-  maxBytes: number;
-  /** Bytes in the current file, read lazily on the first write. */
-  size?: number;
-  failureReported: boolean;
-}
+let writer: JsonlWriter | undefined;
+let previousWrites = Promise.resolve();
 
-let log: TimingLog | undefined;
-let writes = Promise.resolve();
-
-/**
- * Sends `task.timing` records to a JSON Lines file. Records are dropped until
- * this is called. Once the file would pass `maxBytes`, it replaces `<path>.1`
- * and a new file starts, so the log stays bounded.
- */
+/** Keep the task timing format stable while sharing bounded writing and rotation. */
 export function configureTimingLog(
   path: string | undefined,
   maxBytes = 5_000_000,
 ) {
-  log = path ? { path, maxBytes, failureReported: false } : undefined;
+  previousWrites = flushTimingLog();
+  writer = path ? new JsonlWriter(path, { maxBytes, backups: 1 }) : undefined;
 }
 
-/** Appends one record with opaque task IDs, never prompts or repository paths. */
 export function recordTaskTiming(fields: Record<string, unknown>) {
-  if (!log) return;
-
-  const line = `${JSON.stringify({
+  writer?.write({
+    ...fields,
     timestamp: new Date().toISOString(),
     event: "task.timing",
-    ...fields,
-  })}\n`;
-
-  const target = log;
-
-  // Chains appends so records keep their order.
-  writes = writes
-    .then(() => append(target, line))
-    .catch((error: unknown) => {
-      if (target.failureReported) return;
-      target.failureReported = true;
-      console.error(`Could not write timing log ${target.path}`, error);
-    });
+  });
 }
 
-async function append(target: TimingLog, line: string) {
-  const bytes = Buffer.byteLength(line);
-
-  target.size ??= await stat(target.path).then(
-    (s) => s.size,
-    () => 0,
-  );
-
-  if (target.size > 0 && target.size + bytes > target.maxBytes) {
-    await rename(target.path, `${target.path}.1`);
-    target.size = 0;
-  }
-
-  await appendFile(target.path, line, { mode: 0o600 });
-  target.size += bytes;
-}
-
-/** Resolves once every record queued so far is written, so an exit doesn't drop them. */
-export function flushTimingLog() {
-  return writes;
+export function flushTimingLog(): Promise<void> {
+  return Promise.all([previousWrites, writer?.flush()]).then(() => {});
 }
 
 function record(phase: Phase, taskId: string, started: number) {

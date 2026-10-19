@@ -1,6 +1,7 @@
 import { applyPatch, structuredPatch } from "diff";
 import { afterEach, expect, test, vi } from "vitest";
 
+import * as logging from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import { claudeFileEdits, recordClaudeFileEdits } from "./file-edits.js";
 import captured from "./file-edits-fixtures/cli-2.1.300.json";
@@ -467,7 +468,7 @@ test("uncaptured edit-tool patches retain tool provenance", () => {
 });
 
 test("M6 mapping and recording failures log an error and never escape the hook", () => {
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  const log = vi.spyOn(logging, "logError").mockImplementation(() => {});
   const context = recordingContext();
   const error = new Error("database unavailable");
 
@@ -479,10 +480,9 @@ test("M6 mapping and recording failures log an error and never escape the hook",
 
   expect(() => recordClaudeFileEdits(context, "Write", failure)).not.toThrow();
 
-  expect(log).toHaveBeenLastCalledWith(
-    "Could not record Claude Write edits",
-    error,
-  );
+  expect(log).toHaveBeenLastCalledWith("provider.edit_capture_failed", error, {
+    tool: "Write",
+  });
 
   vi.mocked(context.fileChanged).mockImplementation(() => {
     throw error;
@@ -490,10 +490,9 @@ test("M6 mapping and recording failures log an error and never escape the hook",
 
   expect(() => recordClaudeFileEdits(context, "Edit", edit)).not.toThrow();
 
-  expect(log).toHaveBeenLastCalledWith(
-    "Could not record Claude Edit edits",
-    error,
-  );
+  expect(log).toHaveBeenLastCalledWith("provider.edit_capture_failed", error, {
+    tool: "Edit",
+  });
 
   vi.mocked(context.editUnrecorded).mockImplementation(() => {
     throw error;

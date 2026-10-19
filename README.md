@@ -58,7 +58,7 @@ Removing the plugin leaves the service running until it stops. Stop it with `kil
 | Symptom                                        | Fix                                                                                                                                      |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `needs Node.js 24 or later` in Codex's MCP log | Install Node.js 24+ and make it the first `node` on the `PATH` Codex starts with.                                                        |
-| Tools report the service is unavailable        | Read `~/.local/share/codex-subagent-extension/service.log`.                                                                              |
+| Tools report the service is unavailable        | Read [service logs](docs/logging.md#diagnose-a-problem), starting with `service.jsonl` and `service.log` in the data directory.          |
 | `A different extension service … is running`   | Another service owns the data directory or port, for example a development checkout. Stop it, or give development its own data and port. |
 | Claude tasks can't start                       | The panel shows a readiness message above the task list. [Claude Code CLI](docs/claude-cli.md) explains fixes.                           |
 
@@ -95,12 +95,13 @@ codebase, follow this suggested reading order:
 
 ### Use and operate the extension
 
-| Task                                                 | Guide                                          |
-| ---------------------------------------------------- | ---------------------------------------------- |
-| Start, recover, back up or continue tasks            | [Task continuation](docs/task-continuation.md) |
-| Configure permissions, budgets and repository access | [Configuration](docs/configuration.md)         |
-| Delegate and review work in Codex or the console     | [Panel guide](docs/panel-guide.md)             |
-| Diagnose Claude executable readiness                 | [Claude Code CLI](docs/claude-cli.md)          |
+| Task                                                   | Guide                                          |
+| ------------------------------------------------------ | ---------------------------------------------- |
+| Start, recover, back up or continue tasks              | [Task continuation](docs/task-continuation.md) |
+| Configure permissions, budgets and repository access   | [Configuration](docs/configuration.md)         |
+| Delegate and review work in Codex or the console       | [Panel guide](docs/panel-guide.md)             |
+| Diagnose service errors, authentication or performance | [Logging and diagnostics](docs/logging.md)     |
+| Diagnose Claude executable readiness                   | [Claude Code CLI](docs/claude-cli.md)          |
 
 ### Develop and verify changes
 
