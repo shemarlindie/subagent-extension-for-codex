@@ -1,213 +1,193 @@
 # Delegated Work panel
 
-Use this guide to operate Delegated Work or check its user-visible behavior.
-The embedded panel and standalone console share one frontend. [Panel architecture](panel-architecture.md), including its
-[loading and pending UI approach](panel-architecture.md#loading-and-pending-ui), covers
-implementation. [Local development](development.md) covers setup, and
-[UI verification](ui-verification.md) covers browser checks.
+Use this guide to operate Delegated Work or check its user-visible behavior. The
+embedded panel and standalone console share one frontend.
+
+- [Panel architecture](panel-architecture.md) covers implementation, including
+  [loading and pending UI](panel-architecture.md#loading-and-pending-ui).
+- [Local development](development.md) covers setup.
+- [UI verification](ui-verification.md) covers browser checks.
 
 ## Project and chat integration
 
-- **Thread launch** shows the conversation's tasks and chat project, with
-  **Add chat project** when registration is needed.
-- **Global launch** shows tasks across conversations and offers project selection,
-  **All chats** and **Manage**.
-- Opening an explicit owned task uses its scope. Conflicting task, conversation,
-  repository or revision arguments are rejected.
+- **Thread launch** shows the conversation's tasks and chat project. It offers
+  **Add chat project** when the project needs registration.
+- **Global launch** shows tasks across conversations and offers project
+  selection, **All chats** and **Manage**.
+- Opening an owned task uses that task's scope.
 
-Explicit launch context takes precedence over optional host hints and owned
-conversation history. Global history never selects a project implicitly. See
+Global history never selects a project. See
 [Host capabilities](host-capabilities.md#project-context-and-registration) for
-context resolution and host support.
+how the panel resolves context.
 
-On narrow panels, header actions move into **Panel actions**, including
-**Settings**, with **Add chat project** first when registration is needed.
+Project dropdowns include a search field that matches saved names and
+repository paths. On narrow panels, header actions such as **Settings** move
+into **Panel actions**, with **Add chat project** first when needed.
 
-Project dropdowns include a search field that matches saved names and repository paths.
+Changing scope closes unsent forms. An action you already submitted still
+completes, but its result never selects work in the new scope.
 
-Changing scope invalidates reads, clears old evidence and closes unsent forms.
-A mutation already submitted cannot be retracted or automatically retried. Its
-late result never selects work into the new scope. Task creation validates
-approved project containment. Worktrees start from a committed revision.
-
-Inline mode shows a compact scope/count/status summary. **Open panel** requests
-fullscreen only when the host advertises it. Collapse preserves selection and
-form drafts. A standalone console always shows the full layout. The host owns
-placement and available display modes. See [Host capabilities](host-capabilities.md).
+Inline mode shows a compact summary of scope, counts and status. **Open panel**
+requests fullscreen when the host supports it. Collapsing keeps the selection
+and form drafts. The standalone console always shows the full layout. The host
+owns placement and display modes.
 
 ### Manage projects
 
-**Manage** is available only in global mode. It opens a full-width Projects page
-with **Back to Tasks** to return to the previous task view. The page lists saved
-names and repository paths, including parent approvals. **Add project** opens a focused
-dialog for entering a path or using the service host's folder picker.
-Click a project name to edit it inline, like a task title. Press Enter or click outside to save, or press Escape to cancel. Renaming changes
-the display name only. Names may repeat because paths identify projects.
+**Manage** appears only in global mode. It opens a full-width Projects page that
+lists saved names and repository paths, including parent approvals. **Back to
+Tasks** returns to the previous task view.
 
-Removal asks for confirmation. By default it removes the saved registration while
-preserving files, task history and worktrees. Running turns may finish. Later
-turns require approval. Parent grants still apply, and automatic chat registration
-can add the repository again when a task starts from its chat. Parent approvals
-configured in `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` return on service restart.
-Remove them from that configuration to keep them removed.
+- **Add project** opens a dialog where you enter a path or use the service
+  host's folder picker.
+- Click a project name to rename it. Enter or an outside click saves, and Escape
+  cancels. Names may repeat because paths identify projects. Rename drafts
+  survive refresh and failed saves.
+- **Remove project** asks for confirmation.
 
-**Also remove extension task data**, off by default, stops and removes that repository's
-tasks across all chats, matching its exact saved repository path. Removing a
-parent approval does not remove descendant repositories' tasks. Removal includes
-conversations, activity, requests and task worktrees/branches with uncommitted changes. Checkout files
-and provider sessions remain. Tasks in other projects that depend on these tasks
-block removal before cleanup starts. Dependent tasks within the repository are removed first.
-If cleanup fails, the approval and remaining tasks stay available for retry.
-The error warns that earlier task removals cannot be undone.
+By default, removal deletes only the saved registration. Files, task history and
+worktrees remain. Running turns may finish, and later turns need approval again.
+Parent approvals still apply, and starting a task from the repository's chat can
+register it again. Parent approvals set in
+`CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` return when the service restarts unless
+you remove them from that setting.
 
-Removing the selected project returns to **All projects** and clears stale task
-selection and dialogs while keeping the Projects page open. Other panels reconcile registry changes on their next
-refresh. Rename drafts survive refresh and failed saves. Destructive choices
-are not restored after reload.
+**Also remove extension task data**, off by default, stops and removes every
+task with that exact repository path across all chats. This includes
+conversations, activity, requests, and task worktrees and branches with
+uncommitted changes. Checkout files and provider sessions remain. Removing a
+parent approval leaves descendant repositories' tasks in place.
+
+- Dependent tasks in the same repository are removed first.
+- Dependent tasks in other projects block removal before cleanup starts.
+- If cleanup fails, the approval and remaining tasks stay available for retry.
+  The error warns that earlier removals cannot be undone.
+
+Removing the selected project returns the task list to **All projects**.
 
 ## Tasks and settings
 
 ### Find and inspect tasks
 
-The task list searches and filters by **Unread**, **Needs input**, **Failed**,
-**Active**, **Done**, then **All**. The default is the first nonempty filter
-other than Unread. Questions and
-permissions count as Needs input. Failures, interruptions and compaction
-failures count as Failed. Other unfinished tasks count as Active. Queued follow-up turns
-keep a task active between runs. Unread applies across the other filters. See
-[Read and unread tasks](#read-and-unread-tasks). Counts respect project and
-search filters.
-Press `/` for search and Escape to clear it.
+The task list offers search and these filters:
 
-Each row shows the task title, then the worker profile icon, runtime and status
-icon. Hover the icon for the worker's name. Under **All projects**, tasks are
-grouped under a header for each project. A project's group appears where its
-newest task would be, and the header stays at the top while its rows scroll.
+| Filter      | Tasks                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| Unread      | Tasks with something you haven't seen. See [Read and unread tasks](#read-and-unread-tasks). |
+| Needs input | Tasks waiting on a question or permission request.                                          |
+| Failed      | Failures, interruptions and compaction failures.                                            |
+| Active      | Other unfinished tasks, including tasks with queued follow-up turns.                        |
+| Done        | Completed tasks.                                                                            |
+| All         | Every task.                                                                                 |
 
-Wide panels show the task list and inspector together. Narrow ones switch
-between them with a back action. Drag the divider to resize the list, or focus
-it and use Left/Right arrows. Home/End choose its limits and double-click restores
-the default. The width is saved when browser storage is available.
+The default is the first nonempty filter after Unread. Counts respect the
+project and search filters. Press `/` to search and Escape to clear it.
 
-Details includes task creation and latest activity dates, description, worker,
-revision, turns, budgets, session, workspace/branch, changes, dependencies and
-usage. Dates follow the host locale and time zone. Runtime in the task list and
-Details accumulates across turns and includes the active run.
+Each row shows the title, worker profile icon, runtime and status icon. Hover
+the profile icon for the worker's name. Under **All projects**, tasks group
+under a header for each project. Each group appears at the position of its
+newest task, and its header stays visible while its rows scroll.
+
+Wide panels show the task list and inspector side by side, with a resizable
+divider. Narrow panels switch between them. Runtime accumulates across turns
+and includes the active run.
 
 ### Read and unread tasks
 
-A task becomes unread when it has something you haven't viewed: a worker
-message or reply, a turn's end, a failure, or a question or permission request.
-Your own messages never make a task unread. Unread tasks show an accent dot after
-the worker icon in their row, and the compact panel adds **N unread** to its
-counts.
+A task becomes unread when it has a worker message or reply, a turn end, a
+failure, or a question or permission request you haven't seen. Your own messages
+never make a task unread. Unread rows show an accent dot after the worker icon,
+and the compact panel adds **N unread** to its counts.
 
-A task becomes read when its Chat is on screen and scrolled to the latest
-message: the panel must be visible, on the Tasks page and the Chat tab. Only
-loaded content counts as read. A new reply stays unread until Chat shows it.
+A task becomes read when its Chat tab shows the latest message. Opening an
+unread task places a **New** divider above the first unseen item and scrolls to
+it.
 
-Opening an unread task places a **New** divider above the first worker message,
-outcome or failure after what you had read, and Chat opens with the divider at
-the top. If everything new fits on screen, the task is read at once. Otherwise
-it stays unread until you scroll to the latest message, and the
-**Scroll to unread messages** button carries a dot. The divider stays until you
-leave the task or mark it read. A task you marked unread with nothing new opens
-at the end.
+- **Task actions → Mark unread** or **Mark read** changes read state. Right-click
+  or long-press a task row for the same actions.
+- **Mark unread from here**, the eye icon on a reply, marks the task unread from
+  that reply on.
+- **Mark all read** beside the filter count marks every listed task.
 
-- Use **Task actions → Mark unread** or **Mark read** to change read state
-  manually. These actions also appear when you right-click a task row or
-  long-press it on touch. A task you mark unread
-  while reading it stays unread until you scroll its Chat or open another task.
-- A reply's copy button row has **Mark unread from here**, an eye icon. It
-  marks the task unread from that reply on, so earlier messages stay read. The
-  **New** divider moves above that reply and scrolls into view when needed.
-- **Unread** lists unread tasks. The task you open stays listed after it is
-  read until you choose another, and the filter is never picked by default,
-  since reading empties it. **Mark all read** beside the count marks every
-  listed task. With no search to clear, it takes **Clear filter**'s place.
-
-The standalone console's tab title leads with the unread count, as in
-**(2) Delegated Work**. Read state is stored by the service, so the embedded
-panel and the standalone console agree and it survives reloads. Codex reading
-replies through `list_messages` doesn't mark tasks read.
+The service stores read state, so the embedded panel and the console agree and
+the state survives reloads. The console's tab title starts with the unread
+count. Codex reading replies through `list_messages` doesn't mark tasks read.
 
 ### Archive tasks
 
-Archiving hides a task from the task list. Only stopped tasks with nothing
-waiting can be archived.
+Archiving hides a stopped task with nothing waiting from the task list.
 
-- Right-click or long-press a task row, or open **Task actions**, and choose
-  **Archive**.
+- To archive one task, right-click or long-press its row, or open **Task
+  actions**, and choose **Archive**.
 - Under **All projects**, each project header has an actions menu. **Archive
-  completed** archives every completed task of that project in the current
-  scope, and **Archive all** every stopped one, whatever the search or filter
-  shows.
+  completed** archives the project's completed tasks in the current scope, and
+  **Archive all** archives every stopped one. Search and filters don't limit
+  either action.
 
-**View archived tasks** beside each project on the Projects page opens that
-project's archive. It lists archived tasks from every chat, newest first.
-Select tasks to act on them, or select none to act on all of them.
+**View archived tasks** beside a project on the Projects page lists that
+project's archived tasks from every chat, newest first. Select tasks to act on
+them, or select none to act on all.
 
 - **Unarchive** returns the tasks to the task list.
 - **Delete** asks first, then deletes the tasks like **Delete task**. Turn on
   **Also delete the agent tasks** to include provider sessions.
 
-A task returns to the task list if Codex sends it a message.
+A task also returns to the task list when Codex sends it a message.
 
 ### Create and rename tasks
 
-Global launch offers **New task** and **Advanced task…** from the split button
-or, on narrow panels, **Panel actions**.
+Global launch offers **New task** and **Advanced task…** from the split button,
+or from **Panel actions** on narrow panels.
 
 **New task** opens a draft in the inspector. Your first message becomes the
-request: Enter starts the task and Shift+Enter adds a line. Choose the project,
-profile, model, reasoning and permission mode below the message. Selecting a
-profile resets model and reasoning to that profile's settings. Read-only profiles
-keep read-only permissions. Expand the profile summary to edit individual choices.
-Workspace, revision and budgets use your settings defaults.
+request. Enter starts the task and Shift+Enter adds a line. Below the message,
+choose the project, profile, model, reasoning and permission mode. Selecting a
+profile resets model and reasoning to the profile's settings, and read-only
+profiles keep read-only permissions. Expand the profile summary to change
+individual choices. Workspace, revision and budgets use your settings defaults.
 
-**More options…** carries the draft into Advanced task, where you can also set
-explicit context, workspace/revision, approval decision maker, dependencies and
-budgets. **Wait for tasks** searches titles or IDs within the selected project
-and accepts multiple dependencies. Unsupported cost budgets block submission.
-The form explains that Claude checks cost after each response, so a response
-can exceed the limit.
+**More options…** carries the draft into **Advanced task**, which adds explicit
+context, workspace and revision, approval decision maker, dependencies and
+budgets. **Wait for tasks** searches titles or IDs in the selected project and
+accepts several dependencies. The form blocks unsupported cost budgets and
+notes that Claude checks cost after each response, so a response can exceed the
+limit.
 
-Neither form changes settings or attaches conversation text automatically.
-Controls that need defaults or worker availability wait for those reads. Leaving
-the composer retains its draft until it is sent or the panel reloads. Changing
-to chat scope closes it. Existing tasks show their starting profile, model,
-reasoning and permission mode below Chat. Later turns keep these choices.
+Neither form changes settings or attaches conversation text. The composer keeps
+its draft until you send it or the panel reloads. Switching to chat scope closes
+it. Existing tasks show their starting profile, model, reasoning and permission
+mode below Chat, and later turns keep them.
 
-The service derives a title from the request. Click the inspector title to edit:
-Enter or an outside click saves, Escape cancels, and blank or failed saves stay open.
+The service derives a title from the request. Click the inspector title to edit
+it. Enter or an outside click saves, Escape cancels, and a blank or failed save
+stays open.
 
 ### Edit settings
 
-**Settings** opens a full-width page with **Back to Tasks** to return. It
-supports per-section resets, validates budgets and asks before discarding unsaved
-edits. **Save** sends changed fields and keeps the page open. Section changes
-preserve drafts. Failed reads offer a retry. See
+**Settings** opens a full-width page with **Back to Tasks**. It offers
+per-section resets, validates budgets and asks before discarding unsaved edits.
+**Save** sends changed fields and keeps the page open. Drafts survive switching
+sections, and failed reads offer a retry. See
 [Configuration](configuration.md) for permission and approval defaults.
 
-Per-task tabs, composer drafts/visibility, question answers, Chat/Activity
-reading positions and the Changes position, opened files and viewed files last
-for the panel session. The standalone console and development host also persist view state and
-dialog form drafts across reloads. The production embedded panel keeps them
-only while mounted. For the storage boundaries, see [State and persistence](panel-architecture.md#state-and-persistence).
+Tabs, drafts, answers, reading positions and viewed files last for the panel
+session. The standalone console and development host also keep view state and
+dialog drafts across reloads. See
+[State and persistence](panel-architecture.md#state-and-persistence) for what
+each host keeps.
 
 ## Chat tab
 
 The inspector offers Chat, Activity, Changes and Details. Chat shows requests,
 follow-ups, worker messages, replies and turn outcomes. Worker and parent-agent
-text renders as Markdown under the
-[shared Markdown rules](../src/panel/features/file-preview/README.md#markdown).
-User text shows as typed. Draft replies stream until replaced by their stored
-message.
+text renders as
+[Markdown](../src/panel/features/file-preview/README.md#markdown), and your text
+shows as typed. Draft replies stream until the stored message replaces them.
 
-Turn outcomes show duration, cost and time, with actions to copy a response,
-ask Codex about it or view that turn's activity. Hover a timestamp for its full
-date and time. Failures retain their error. Notes mark compaction, new sessions
-and recreated worktrees.
+Turn outcomes show duration, cost and time. Their actions copy the response, ask
+Codex about it or open that turn's activity. Hover a timestamp for its full date
+and time. Failures keep their error. Notes mark compaction, new sessions and
+recreated worktrees.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |
@@ -216,182 +196,152 @@ and recreated worktrees.
 | Shift+Enter                       | Insert a newline.                                      |
 | Waiting for a question/permission | Messages can only be queued.                           |
 
-While **Sending…** is shown, additional sends are blocked and the draft remains
-editable. Success clears only an unchanged draft. Failure keeps the draft and
-error, even if Chat is reopened. Interrupting shows **Stopping the current
-turn…** until the request finishes.
-
-After 30 seconds without confirmation, the panel releases its busy state and
-keeps the draft. The service may still accept the send. Retry the same text to
-reuse its request ID and original delivery action, even if the task has since
-stopped, and avoid a duplicate. This retry identity lasts for the mounted
-panel's controller, including closing and reopening Chat. A confirmed rejection
-clears it so you can change the delivery action. Timeouts and connection
-failures keep it until the original request or a retry is acknowledged. A late
-acknowledgement clears the unchanged draft and its timeout error, so sending the
-same text afterwards starts a new message. Reloading the panel loses the
-identity, so check Chat before resending after a reload.
+A failed send keeps the draft and its error. After 30 seconds without confirmation, the panel stops waiting and keeps the
+draft. The service may still accept the message. Sending the same text again
+from the same panel reuses the original request, so it can't create a
+duplicate. A late confirmation clears the unchanged draft. After a reload, check
+Chat before resending. See
+[Retrying message sends](mcp-reference.md#retrying-message-sends) for the
+service rules.
 
 ### Steering, queues and budgets
 
-Pending steers offer **Interrupt and send now**. Queued messages offer Edit and
-Remove. During a run, **Steer** sends a queued message into the current turn
-after its next tool call, preserving its sender. Steer is unavailable while the
-worker waits for input or for a steer already sent to the worker. Queued messages
-can be reordered by dragging or with Alt+Up/Alt+Down on a focused
-message. A paused queue offers Resume and Clear. An unconsumed steer stays at
-its front and can't be moved or passed. Sending the next message also resumes a
-paused queue. When a budget is exhausted, Chat shows the relevant cost and
-runtime controls together in the warning notice. **Apply** saves a higher limit
-without sending a message. Limits can only increase.
-The composer can be hidden while retaining its draft. Stop remains available.
-Every pending question or permission request collapses it automatically,
-including requests opened through **Review request**. It can be reopened to
-queue a message without changing its ordinary visibility preference.
+- **Steer** sends a queued message into the running turn after its next tool
+  call. It is unavailable while the worker waits for input or for an earlier
+  steer.
+- A pending steer offers **Interrupt and send now**. An unconsumed steer stays at
+  the front of the queue.
+- Queued messages offer **Edit** and **Remove**. Reorder them by dragging, or
+  with Alt+Up and Alt+Down on a focused message.
+- A paused queue offers **Resume** and **Clear**. Sending the next message also
+  resumes it.
+- When a budget runs out, Chat shows the cost and runtime limits in a warning.
+  **Apply** saves a higher limit without sending a message. Limits can only
+  increase.
+
+You can hide the composer and keep its draft. A pending question or permission
+request collapses it.
 
 ### Questions and permissions
 
-Questions appear as inline cards, with single/multiple choices, custom answers,
-skips and **Respond**. Several questions form a navigable stack. Switching tasks
-preserves unsent answers until reload. Permission requests show their complete
-payload in Chat, with commands formatted as code and **Deny**/**Approve** actions
-available inline. You can add a message before deciding. Requests
-default to deny. Replies include the exact request ID. The service rejects
-stale answers. Mutations are never automatically retried.
+Questions appear as inline cards with single or multiple choices, custom
+answers, skips and **Respond**. Several questions form a stack you can step
+through. Unsent answers survive switching tasks until reload.
 
-### Reading and loading
+Permission requests show their full payload in Chat, with commands formatted as
+code. Add an optional message, then choose **Deny** or **Approve**. Requests
+default to deny.
 
-Chat follows new messages while the reader is at the end. Scrolling into history
-preserves the visible message as replies stream or earlier pages load, and a
-button above the composer returns to the latest message. Reduced motion turns
-that return into an immediate jump.
+### Reading position
 
-Loading preserves navigation and shows a placeholder until content arrives.
-An empty conversation says **No messages yet.**
+Chat and Activity follow new content while you are at the end. When you scroll
+into history, your position holds as content streams or loads, and a button
+returns to the latest content. Each tab remembers its own position.
 
 ## Activity timeline
 
 Activity lists events oldest first. It groups related tools, hooks, background
-work, streamed responses and routine updates while keeping messages, failures
-and lifecycle transitions distinct. Progress moves an operation to the end.
-Stopped or cancelled work never appears successful. Thinking shows elapsed time,
-and rate-limit groups show the latest reported utilization and reset time for
-each window. Turn outcomes include duration, token usage and cumulative session
-cost.
+work, streamed responses and routine updates, and keeps messages, failures and
+lifecycle changes separate. Progress moves an operation to the end. Stopped or
+cancelled work never appears successful.
 
-Chat holds complete replies. Activity keeps response previews and original SDK
-events for inspection: **Debug details** exposes readable content, metadata and
-raw JSON. Raw JSON renders only when its disclosure opens. Times use the host's
-locale and time zone.
-
-Like Chat, Activity follows new content at the end and preserves position while
-you read history. Each tab remembers its own position and offers a return to the
-latest content. Reduced motion suppresses animation.
+- Thinking shows elapsed time.
+- Rate-limit groups show the latest utilization and reset time for each window.
+- Turn outcomes show duration, token usage and cumulative session cost.
+- **Debug details** shows an event's readable content, metadata and raw JSON.
 
 **View activity** on a Chat outcome opens that turn. Recent turns scroll into
 view. Older turns load separately under **Showing activity for turn n** until
-**Show latest activity** or another task is selected. A turn includes events
-after the previous closing status through its own, including queued messages
-delivered as the turn ends.
+you choose **Show latest activity** or another task. A turn covers the events
+after the previous turn's closing status through its own, including queued
+messages delivered as it ends.
 
-The latest view keeps the most recent 200 events and tallies earlier events in a
-trimmed-history note. Open debug disclosures survive refresh while their rows
-remain in that window. `list_events` exposes the full stored history. An
-empty feed says **No activity recorded yet.**
+The latest view keeps the most recent 200 events and counts earlier ones in a
+trimmed-history note. `list_events` returns the full history.
 
 ## Changes tab
 
-Changes shows the task's recorded tool edits. The tab count loads in the
-background. The file list and diffs load when Changes opens. Reads refresh on
-task status or turn changes, when stale Changes opens, or with **Refresh changes**.
-**Whole task** is the default. **This turn** appears after multiple turns and shows
-the latest turn's edits. Failed and interrupted turns keep their recorded edits.
+Changes shows the task's recorded tool edits. It refreshes when the task's
+status or turn changes, when you open a stale tab, or when you choose **Refresh
+changes**.
+
+**Whole task** is the default. **This turn** appears after several turns and
+shows the latest turn's edits. Failed and interrupted turns keep their recorded
+edits.
 
 ### Change comparisons
 
-The panel, agent tools and dependency prompts read the same stored net diffs in
-both workspace strategies. A reverted file drops out. Committing files, removing
-a worktree or deleting its branch leaves the recorded diff available.
+Changes shows net diffs, so a reverted file drops out. Committing files,
+removing a worktree or deleting its branch keeps the recorded diff.
 
-Files edited by a command have a **command** tag and the note **Changed by a
-command.** An incomplete file shows **An edit to this file wasn't recorded.**,
-without a diff. It counts as a file but adds no lines to the totals. Once a
-file's record becomes incomplete, later edits cannot restore that scope's diff. When a command's changed paths could not be captured, the tab
-shows **Some changes made by commands weren't recorded.**
+- Files edited by a command have a **command** tag.
+- A file with an unrecorded edit shows **An edit to this file wasn't recorded.**
+  without a diff.
+- When the service couldn't capture a command's changed paths, the tab shows
+  **Some changes made by commands weren't recorded.**
 
-Claude's edit tools and Bash commands are recorded. File-writing MCP tools and
-processes a command leaves running are outside the record. Some Git checkout
-commands, such as `git restore file.txt`, produce the command warning without
-file diffs. Other Git commands can return precise diffs or no edit data.
-Read-only commands with no edit data create no warning. Highly repetitive text can
-produce a valid diff that is not minimal. An `Edit` to an existing empty file
-appears as added. Renames appear as a deletion and an addition. See
-[the change tools](mcp-reference.md#recorded-changes) for paging and read access.
+The service records Claude's edit tools and Bash commands. See
+[Recording limits](mcp-reference.md#recording-limits) for what it misses.
 
 ### Diffs and file previews
 
-Expand a file to read its diff or open **Preview** for format-specific views.
-File previews show the file as it is now, including later edits by others.
-Images can preview. Deleted files show removed lines. Files without a matching
-diff are marked **Diff unavailable**. Long lists open only the first file by
-default and remember your choices. Large files defer offscreen rendering. See
-[file previews](../src/panel/features/file-preview/README.md#large-content) for
-limits.
+Expand a file to read its diff, or open **Preview** for format-specific views.
+Previews show the file as it is now, including later edits by others. Deleted
+files show removed lines. Files without a matching diff show **Diff
+unavailable**. Long lists open only the first file and remember your choices.
+See [file previews](../src/panel/features/file-preview/README.md#large-content)
+for supported formats and size limits.
 
-Refresh keeps the last result visible and marks it stale on failure. Changing
-comparison scope clears the old result. When stepping between previews, the
-current file stays visible with progress until the next file loads.
+**Viewed** marks a file read and collapses it. A later change to the file makes
+it unread again. **Preview all** starts at the first unviewed file, and marking
+a file viewed in the preview moves to the next one.
 
-**Viewed** marks a file read and collapses it. Further changes to the file make
-it unread and reopen it. **Preview all** starts at the first
-unviewed file. In the preview, marking a file viewed advances to the next unread
-one, wrapping to the start. Previous and Next step through the full file list.
-The chosen view carries across files.
-
-**File preview options → Wrap lines** wraps source and diff lines. Wrapping is
-off by default, and your choice lasts while the preview remains open. **Ask Codex about this file**
-opens the handoff flow described below.
+**File preview options → Wrap lines** wraps source and diff lines. **Ask Codex
+about this file** opens the [handoff flow](#handoff-and-deletion).
 
 ### Worktree actions
 
-Worktree headers offer branch/path and copyable checkout/diff/push commands.
-**Remove worktree** keeps the branch and asks before discarding uncommitted
-changes. **Delete branch** asks separately after removal. These actions are
-disabled during work or when change reads are loading/failed. A later message
-recreates the worktree from its branch, or base commit if the branch was deleted.
-The panel does not apply or push changes.
+Worktree headers show the branch and path, with copyable checkout, diff and push
+commands.
+
+- **Remove worktree** keeps the branch and asks before discarding uncommitted
+  changes.
+- **Delete branch** asks separately after removal.
+
+These actions are disabled while the task works or while change reads are
+loading or failed. A later message recreates the worktree from its branch, or
+from the base commit if the branch was deleted. The panel never applies or
+pushes changes.
 
 ## Handoff and deletion
 
-**Bring to Codex**, called **Copy for Codex** in the console, prepares an editable message
-with the latest reply and pointers to message/change tools. Delivery is offered
-only when supported by the host and requires submission. Otherwise copy the
-text. In thread mode, **Ask Codex about this reply/file** opens the same editable
-message flow for the exact reply or file selected. It includes an excerpt and
-identifiers for retrieving the full conversation or file changes. Nothing sends until you submit.
-Closing or sending a file handoff returns to the file preview. Hosts without
-message delivery offer text to copy manually.
+**Bring to Codex**, called **Copy for Codex** in the console, prepares an
+editable message with the latest reply and pointers to the message and change
+tools. In thread mode, **Ask Codex about this reply** and **Ask Codex about this
+file** prepare the same kind of message for the selected reply or file, with an
+excerpt and the identifiers needed to read the rest.
 
-Selecting a task can share its identity when supported. Context sharing never
-blocks inspection or triggers an automatic follow-up.
+Nothing sends until you submit. Hosts without message delivery offer the text to
+copy instead.
 
-The task heading's **Task actions** menu includes handoff and deletion.
-**Delete task** stops running, queued or waiting work, then removes task history,
-requests, recorded edits, the worktree and branch.
-Current-repo files stay intact. **Also delete the agent task**, off by default,
-also removes the provider session. Provider cleanup failure retains the local
-task for retry. Later cleanup failure can leave earlier resources removed.
-Dependent tasks must be deleted first.
+**Task actions** in the task heading includes handoff and deletion. **Delete
+task** stops running, queued or waiting work, then removes the task's history,
+requests, recorded edits, worktree and branch. Files in the current repository
+stay intact.
+
+- **Also delete the agent task**, off by default, also removes the provider
+  session. If that fails, the local task stays for retry.
+- A later cleanup failure can leave earlier resources removed.
+- Delete dependent tasks first.
 
 ## Transport
 
-The embedded panel uses the authenticated MCP Apps bridge without direct service
-fetches or credential entry. It long-polls for revisions and running reply drafts.
-The standalone console uses authenticated HTTP and SSE. Failed connections show
-**Reconnecting…** and retry with backoff.
+The panel updates as the service reports changes. Refreshes keep forms and
+reading positions, and hidden or submitting panels wait to refresh. A failed
+connection shows **Reconnecting…** and retries. Changes has
+[its own refresh rules](#changes-tab).
 
-Refreshes preserve forms and reading positions. Hidden or submitting panels defer
-refresh until ready, and a periodic fallback catches changes the service cannot
-announce. Changes has its own refresh rules, described above. See
-[Host capabilities](host-capabilities.md) for embedded network restrictions and
-[Local development](development.md#what-reloads-when) for applying source changes.
+See [Panel network access](host-capabilities.md#panel-network-access) for how
+each host connects and
+[Local development](development.md#what-reloads-when) for applying source
+changes.
