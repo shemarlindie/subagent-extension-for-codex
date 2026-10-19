@@ -523,6 +523,7 @@ export function previewTool(
           : {}),
       };
     })(),
+    app_record_timing: {},
     app_get_activity: windowActivity(
       previewEvents.filter((event) => event.task_id === args.task_id),
       Number(args.after ?? 0),

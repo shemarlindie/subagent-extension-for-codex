@@ -113,6 +113,26 @@ test("sending acknowledges the write before a slow refresh finishes", async () =
   await sending;
 });
 
+test("a send's duration goes to the service timing log in the background", async () => {
+  vi.useFakeTimers();
+
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const { actions, context } = setup();
+  await actions.sendMessage(task("task-1"), "Hi", "queue");
+  expect(context.tool).toHaveBeenCalledOnce();
+
+  await vi.advanceTimersByTimeAsync(5000);
+
+  expect(context.tool).toHaveBeenLastCalledWith("app_record_timing", {
+    records: [
+      { operation: "app_send_message", duration_ms: expect.any(Number) },
+    ],
+  });
+});
+
 test("a refresh failure after a send is reported without repeating the write", async () => {
   const refresh = deferred<void>();
   const { actions, context } = setup();

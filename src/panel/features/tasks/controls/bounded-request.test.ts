@@ -11,12 +11,12 @@ test("a stalled send reports uncertain delivery without cancelling its write", a
   });
 
   const write = deferred<string>();
-  const timing = vi.spyOn(console, "debug").mockImplementation(() => {});
+  const settled = vi.fn();
 
   const request = boundedRequest(
-    "app_send_message",
     () => write.promise,
     "Delivery could not be confirmed",
+    settled,
     25,
   );
 
@@ -26,17 +26,12 @@ test("a stalled send reports uncertain delivery without cancelling its write", a
 
   await vi.advanceTimersByTimeAsync(25);
   await failure;
-  expect(timing).not.toHaveBeenCalled();
+  expect(settled).not.toHaveBeenCalled();
 
   write.resolve("private message text");
   await flush();
 
-  expect(timing).toHaveBeenCalledExactlyOnceWith("task.timing", {
-    phase: "transport",
-    operation: "app_send_message",
-    duration_ms: expect.any(Number),
-  });
-
+  expect(settled).toHaveBeenCalledExactlyOnceWith(expect.any(Number));
   expect(vi.getTimerCount()).toBe(0);
 });
 
@@ -47,11 +42,14 @@ test("an acknowledged send returns its response and clears the deadline", async 
     vi.useRealTimers();
   });
 
-  vi.spyOn(console, "debug").mockImplementation(() => {});
   const response = { accepted: true };
 
   await expect(
-    boundedRequest("app_send_message", async () => response, "Late"),
+    boundedRequest(
+      async () => response,
+      "Late",
+      () => {},
+    ),
   ).resolves.toBe(response);
 
   expect(vi.getTimerCount()).toBe(0);

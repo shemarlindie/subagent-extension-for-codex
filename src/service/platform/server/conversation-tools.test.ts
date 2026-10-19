@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -16,6 +16,10 @@ import type { Task } from "../../../shared/tasks/model.js";
 import type { ListedTask } from "../../../shared/tasks/task-list.js";
 import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
+import {
+  configureTimingLog,
+  flushTimingLog,
+} from "../../features/tasks/runtime/timing.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
 import { callTool, definitions, isUserTool } from "./tools.js";
@@ -1089,5 +1093,55 @@ test("the panel archives, unarchives and deletes tasks, and a follow-up unarchiv
     assert.throws(() => store.get(t.id, "alice"), /not found/);
   } finally {
     await c.close();
+  }
+});
+
+test("the panel appends its call durations to the timing log", async () => {
+  const { c, user } = await setup();
+  const directory = await mkdtemp(join(tmpdir(), "panel-timing-"));
+  const path = join(directory, "timing.jsonl");
+  configureTimingLog(path);
+
+  try {
+    await expect(
+      user("app_record_timing", {
+        records: [{ operation: "Send the secret plan", duration_ms: 12 }],
+      }),
+    ).rejects.toThrow();
+
+    assert.deepEqual(
+      await user("app_record_timing", {
+        records: [{ operation: "app_send_message", duration_ms: 12.5 }],
+      }),
+      { recorded: 1 },
+    );
+
+    await flushTimingLog();
+
+    const records = (await readFile(path, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      // Scheduler scans from setup can share the file.
+      .filter(({ phase }) => phase === "transport");
+
+    assert.deepEqual(
+      records.map(({ phase, operation, duration_ms }) => ({
+        phase,
+        operation,
+        duration_ms,
+      })),
+      [
+        {
+          phase: "transport",
+          operation: "app_send_message",
+          duration_ms: 12.5,
+        },
+      ],
+    );
+  } finally {
+    configureTimingLog(undefined);
+    await c.close();
+    await rm(directory, { recursive: true, force: true });
   }
 });

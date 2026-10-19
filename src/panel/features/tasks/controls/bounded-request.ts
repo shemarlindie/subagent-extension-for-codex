@@ -1,23 +1,20 @@
 /**
  * Limits how long the panel waits for an action, without assuming the service
  * cancelled it. The timeout rejects with `timeoutMessage`, which should tell
- * the user how to check the action's outcome.
+ * the user how to check the action's outcome. `settled` receives the call's
+ * full duration once it ends, even after the timeout.
  */
 export async function boundedRequest<T>(
-  name: string,
   request: () => Promise<T>,
   timeoutMessage: string,
+  settled: (durationMs: number) => void,
   timeoutMs = 30000,
 ): Promise<T> {
   const started = performance.now();
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   const pending = request().finally(() => {
-    console.debug("task.timing", {
-      phase: "transport",
-      operation: name,
-      duration_ms: performance.now() - started,
-    });
+    settled(performance.now() - started);
   });
 
   try {

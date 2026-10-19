@@ -13,6 +13,7 @@ import {
   recordParentDelivery,
 } from "../../../features/tasks/conversation/parent-messages.js";
 import { waitForUpdates } from "../../../features/tasks/conversation/updates.js";
+import { recordTaskTiming } from "../../../features/tasks/runtime/timing.js";
 import {
   mentionSearchSchema,
   mentionSearchToolName,
@@ -289,6 +290,29 @@ export function userTools(
         c.store.get(a.task_id, owner);
 
         return c.activity.turn(a.task_id, a.turn);
+      },
+    }),
+    app_record_timing: tool({
+      description:
+        "User interface only: append the panel's measured tool call durations to the service timing log.",
+      schema: z.strictObject({
+        records: z
+          .array(
+            z.strictObject({
+              // Only app tool names, so the log never holds arbitrary text.
+              operation: z.string().regex(/^app_[a-z_]{1,64}$/),
+              duration_ms: z.number().nonnegative().max(3_600_000),
+            }),
+          )
+          .min(1)
+          .max(50),
+      }),
+      run: ({ records }) => {
+        for (const record of records) {
+          recordTaskTiming({ phase: "transport", ...record });
+        }
+
+        return { recorded: records.length };
       },
     }),
     app_remove_worktree: tool({
