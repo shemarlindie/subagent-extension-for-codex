@@ -140,7 +140,7 @@ test("applying a thread scope switches the header to thread mode with the brand 
   assert.equal(document.querySelector("header")?.dataset.mode, "global");
   assertAbsent(document.querySelector("header .brand .mark"));
   assertAbsent(document.querySelector("header .brand-text strong"));
-  assert.ok(document.querySelector("header .brand [role=status]"));
+  expect(document.querySelector("header [role=status]")).not.toBeNull();
 
   await act(async () =>
     controller.applyScope({ panel_scope: { conversation_id: "thread" } }),
