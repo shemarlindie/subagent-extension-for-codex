@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
 import { Header } from "./header";
+import { CONNECTION } from "./state/connection";
 import { Controller } from "./state/controller";
 import { ControllerContext } from "./state/controller-context";
 import type { Snapshot, Transport } from "./state/types";
@@ -62,11 +63,30 @@ function setup(overrides: Partial<Snapshot> = {}) {
 test("global header offers project scope and Manage without the thread title", () => {
   const { view } = setup();
 
-  assert.equal(view.getByRole("status").textContent, "Connected");
   assert.ok(view.getByRole("combobox", { name: "Project scope" }));
   assert.ok(view.getByRole("button", { name: "Manage" }));
   expect(view.queryByText("Delegated Work")).toBeNull();
 });
+
+test("a healthy connection is announced without taking header space", () => {
+  const { view } = setup();
+  const status = view.getByRole("status");
+
+  assert.equal(status.textContent, "Connected");
+  assert.equal(status.className, "visually-hidden");
+});
+
+test.each([CONNECTION.reconnecting, CONNECTION.failed])(
+  "the toolbar shows %s beside Refresh",
+  (connection) => {
+    const { view } = setup({ connection });
+    const status = view.getByRole("status");
+
+    assert.equal(status.textContent, connection);
+    assert.equal(status.className, "connection");
+    assert.ok(status.parentElement?.classList.contains("toolbar"));
+  },
+);
 
 test("thread header shows settings and omits other global controls", async () => {
   const { view, user, settings } = setup({ conversation: "chat-1" });

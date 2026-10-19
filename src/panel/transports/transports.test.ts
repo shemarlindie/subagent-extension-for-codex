@@ -213,7 +213,7 @@ test("console SSE reports each stream's revisions, and disposal closes the strea
   first.onopen?.();
   first.change?.({ data: "boot:1" });
   first.onerror?.();
-  assert.deepEqual(observed.statuses, ["● Live", "Reconnecting…"]);
+  assert.deepEqual(observed.statuses, ["Connected", "Reconnecting…"]);
 
   // A new stream starts with the revision now, which the controller compares.
   transport.watch();

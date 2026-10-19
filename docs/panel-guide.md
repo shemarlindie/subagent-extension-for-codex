@@ -337,8 +337,10 @@ stay intact.
 ## Transport
 
 The panel updates as the service reports changes. Refreshes keep forms and
-reading positions, and hidden or submitting panels wait to refresh. A failed
-connection shows **Reconnecting…** and retries. Changes has
+reading positions, and hidden or submitting panels wait to refresh. The header
+shows connection status only when there is a problem. A failed connection shows
+**Reconnecting…** in the header toolbar and retries, and a failed first connection
+shows **Connection failed**. Changes has
 [its own refresh rules](#changes-tab).
 
 See [Panel network access](host-capabilities.md#panel-network-access) for how

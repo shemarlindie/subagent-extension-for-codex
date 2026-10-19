@@ -273,9 +273,9 @@ test("a refresh leaves the connection status the transport reports", async (t) =
   await controller.start();
   assert.equal(controller.getSnapshot().connection, "Connected");
 
-  transport.events.status("● Live");
+  transport.events.status("Connected");
   await controller.refresh();
-  assert.equal(controller.getSnapshot().connection, "● Live");
+  assert.equal(controller.getSnapshot().connection, "Connected");
 
   transport.handler = (name) =>
     name === "list_tasks"
@@ -283,5 +283,5 @@ test("a refresh leaves the connection status the transport reports", async (t) =
       : undefined;
 
   await assert.rejects(controller.refresh(), /temporarily unavailable/);
-  assert.equal(controller.getSnapshot().connection, "● Live");
+  assert.equal(controller.getSnapshot().connection, "Connected");
 });

@@ -1,4 +1,5 @@
 import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
+import { CONNECTION } from "../app/state/connection";
 import type { Transport, TransportEvents } from "../app/state/types";
 import { decodePanelToolResult } from "./event-decoding";
 
@@ -64,8 +65,8 @@ export class ConsoleTransport implements Transport {
     if (this.disposed) return;
     this.stream?.close();
     this.stream = this.createStream(this.origin + "/api/events");
-    this.stream.onopen = () => this.events?.status("● Live");
-    this.stream.onerror = () => this.events?.status("Reconnecting…");
+    this.stream.onopen = () => this.events?.status(CONNECTION.connected);
+    this.stream.onerror = () => this.events?.status(CONNECTION.reconnecting);
 
     this.stream.addEventListener("change", (event) =>
       this.events?.revision(event.data),

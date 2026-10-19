@@ -21,6 +21,7 @@ import type { HandoffTarget } from "../../features/tasks/controls/handoff-messag
 import type { Filter, Tab, Task } from "../../features/tasks/types.js";
 import type { HostState } from "../../transports/types.js";
 import type { PageId } from "../navigation/pages";
+import type { ConnectionLabel } from "./connection.js";
 
 export type PanelData = {
   // Host data arrives unchecked; applyScope validates these before use.
@@ -193,7 +194,7 @@ export type Snapshot = {
   connected: boolean;
   scopeKnown: boolean;
   busy: boolean;
-  connection: string;
+  connection: ConnectionLabel;
   error: string;
   loginRequired: boolean;
   dialog?: DialogState;

@@ -1,4 +1,5 @@
 import { DEFAULT_PAGE } from "../navigation/pages";
+import { CONNECTION } from "./connection";
 import type { Snapshot } from "./types";
 
 export function initialState(): Snapshot {
@@ -18,7 +19,7 @@ export function initialState(): Snapshot {
     connected: false,
     scopeKnown: false,
     busy: false,
-    connection: "Connecting…",
+    connection: CONNECTION.connecting,
     error: "",
     loginRequired: false,
     formError: "",

@@ -53,9 +53,6 @@
   header[data-mode="global"] {
     padding-left: 8px;
   }
-  .toolbar .connection {
-    display: none;
-  }
   header button {
     font-size: 12px;
   }

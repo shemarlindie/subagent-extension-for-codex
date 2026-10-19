@@ -2,6 +2,7 @@ import { ContextMenu } from "@base-ui/react/context-menu";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { archivable } from "../../../../shared/tasks/archive.js";
+import { CONNECTION } from "../../../app/state/connection";
 import {
   useController,
   useSnapshot,
@@ -218,7 +219,7 @@ export function TaskList() {
     if (!state.connected) {
       return (
         <p className="help">
-          {state.connection === "Open through MCP"
+          {state.connection === CONNECTION.hostRequired
             ? "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui."
             : "Waiting for the host connection."}
         </p>

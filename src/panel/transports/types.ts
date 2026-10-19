@@ -1,4 +1,5 @@
 import type { DraftUpdate } from "../../shared/tasks/conversation/drafts.js";
+import type { ConnectionLabel } from "../app/state/connection.js";
 import type { PanelData } from "../app/state/types.js";
 
 export type HostState = {
@@ -14,7 +15,7 @@ export type HostState = {
 
 export type TransportEvents = {
   scope(data: PanelData): void;
-  status(text: string): void;
+  status(text: ConnectionLabel): void;
   login(): void;
   host(state: HostState): void;
   teardown(): void;

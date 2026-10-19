@@ -8,6 +8,7 @@ import { Icon } from "../shared/components/icons/icons";
 import { MotionContent } from "../shared/components/motion/motion-content";
 import { canAnimate, MOTION } from "../shared/components/motion/motion-utils";
 import { TooltipWrapper } from "../shared/components/tooltip";
+import { connectionTrouble } from "./state/connection";
 import { useController, useSnapshot } from "./state/controller-context";
 import { projectChoices } from "./state/selectors";
 
@@ -60,8 +61,15 @@ export function Header() {
     state.repository?.split("/").at(-1) ??
     "All projects";
 
+  // Only connection problems are visible. The task list explains a missing connection.
   const status = (
-    <span id="connection" className="connection muted" role="status">
+    <span
+      id="connection"
+      className={
+        connectionTrouble(state.connection) ? "connection" : "visually-hidden"
+      }
+      role="status"
+    >
       <MotionContent changeKey={state.connection}>
         {state.connection}
       </MotionContent>
@@ -86,11 +94,11 @@ export function Header() {
               </strong>
             </div>
           )}
-          {status}
           {!threadMode && <ProjectScope />}
         </div>
       </div>
       <div className="toolbar">
+        {status}
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
           {state.projectCandidate && (

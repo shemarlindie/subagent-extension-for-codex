@@ -33,8 +33,12 @@ small {
 small {
   font-size: 11px;
 }
-.connection {
+/* Shown in the toolbar only while the connection is down. */
+header .connection {
+  align-self: center;
+  color: var(--warn);
   font-size: 11px;
+  white-space: nowrap;
 }
 header .brand {
   flex: 1;
@@ -45,12 +49,6 @@ header .brand {
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-.brand-text .connection {
-  padding-bottom: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .project-scope {
   display: flex;

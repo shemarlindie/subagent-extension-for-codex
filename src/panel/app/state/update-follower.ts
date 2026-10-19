@@ -2,11 +2,12 @@ import type {
   DraftRead,
   DraftTarget,
 } from "../../features/tasks/chat/drafts/draft-follower";
+import { CONNECTION, type ConnectionLabel } from "./connection";
 
 interface UpdateContext {
   closed(): boolean;
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
-  status(text: string): void;
+  status(text: ConnectionLabel): void;
   revision(value: string): void;
   draftTarget(): DraftTarget | undefined;
   /** Applies the target's draft; returns whether it changed. */
@@ -58,7 +59,7 @@ export class UpdateFollower {
         });
       } catch {
         if (this.context.closed()) return;
-        this.context.status("Reconnecting…");
+        this.context.status(CONNECTION.reconnecting);
         await sleep(retryMs);
         retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
         continue;
@@ -66,7 +67,7 @@ export class UpdateFollower {
 
       if (this.context.closed()) return;
       retryMs = FIRST_RETRY_MS;
-      this.context.status("● Live");
+      this.context.status(CONNECTION.connected);
       let changed = read.revision !== this.revision;
       this.revision = read.revision;
       this.context.revision(read.revision);

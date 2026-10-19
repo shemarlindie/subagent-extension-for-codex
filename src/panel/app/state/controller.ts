@@ -37,6 +37,7 @@ import {
   type PageId,
   PAGES,
 } from "../navigation/pages";
+import { CONNECTION, type ConnectionLabel } from "./connection";
 import { DialogLoader } from "./dialog-loader";
 import { initialState } from "./initial-state";
 import { browserEnvironment, type PanelEnvironment } from "./panel-environment";
@@ -374,13 +375,13 @@ export class Controller {
       this.run(() => action(...args));
 
   /** Shows the transport's connection status, which refreshes then leave alone. */
-  private showConnection(connection: string) {
+  private showConnection(connection: ConnectionLabel) {
     this.transportStatus = true;
     if (connection !== this.state.connection) this.patch({ connection });
   }
 
   showHostRequired() {
-    this.patch({ connection: "Open through MCP", ...READS_STOPPED });
+    this.patch({ connection: CONNECTION.hostRequired, ...READS_STOPPED });
   }
 
   async start() {
@@ -424,7 +425,7 @@ export class Controller {
       this.schedule();
     } catch (error) {
       if (!this.state.connected) {
-        this.patch({ connection: "Connection failed", ...READS_STOPPED });
+        this.patch({ connection: CONNECTION.failed, ...READS_STOPPED });
       } else {
         // Keep following changes when the first host read fails transiently.
         this.followUpdates();
@@ -726,14 +727,17 @@ export class Controller {
       if (this.stale(version)) return;
 
       this.patch({
-        ...(this.transportStatus ? {} : { connection: "Connected" }),
+        ...(this.transportStatus ? {} : { connection: CONNECTION.connected }),
         error: "",
       });
     } catch (error) {
       if (this.stale(version)) return;
       this.contextRead("error", error);
 
-      if (!this.transportStatus) this.patch({ connection: "Reconnecting…" });
+      if (!this.transportStatus) {
+        this.patch({ connection: CONNECTION.reconnecting });
+      }
+
       throw error;
     } finally {
       this.refreshing = false;

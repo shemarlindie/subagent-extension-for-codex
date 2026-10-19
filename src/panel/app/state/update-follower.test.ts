@@ -73,7 +73,7 @@ test("each wait sends the last revision, and one that returns at once with nothi
   await vi.advanceTimersByTimeAsync(1);
   assert.equal(calls.length, 3);
   assert.deepEqual(revisions, ["boot:1", "boot:1", "boot:1"]);
-  assert.deepEqual(new Set(statuses), new Set(["● Live"]));
+  assert.deepEqual(new Set(statuses), new Set(["Connected"]));
 });
 
 test("a draft target goes with the wait, and its draft to the chat feature", async (t) => {
@@ -130,5 +130,5 @@ test("a failed wait reports reconnecting and retries after 2 s, doubling to 30 s
     assert.equal(calls.length, count);
   }
 
-  assert.equal(statuses.at(-1), "● Live");
+  assert.equal(statuses.at(-1), "Connected");
 });
