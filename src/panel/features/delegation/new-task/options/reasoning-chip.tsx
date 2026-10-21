@@ -57,7 +57,7 @@ export function ReasoningChip({
       options={[
         {
           value: "default",
-          label: `Default (${inherited ?? "provider runtime"})`,
+          label: inherited ? `Default (${inherited})` : "Default",
           chipLabel: reasoningChipLabel("default", inherited),
         },
         ...supported.map((level) => ({

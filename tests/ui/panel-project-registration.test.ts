@@ -686,7 +686,7 @@ test("Manage opens a page and Back restores task selection, filters and focus", 
   const search = controller.getSnapshot().search;
   await user.click(screen.getByRole("button", { name: "Manage" }));
   expect(screen.queryByRole("dialog")).toBeNull();
-  expect(screen.queryByRole("region", { name: "Task inspector" })).toBeNull();
+  expect(screen.queryByRole("region", { name: "Selected task" })).toBeNull();
 
   expect(
     screen.queryByRole("separator", { name: "Resize task list" }),

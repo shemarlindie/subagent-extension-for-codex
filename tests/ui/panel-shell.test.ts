@@ -84,7 +84,7 @@ test("inline preview expands and collapses while preserving the selected task", 
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByText("Running", { exact: true }));
   assertAbsent(screen.queryByRole("button", { name: "New task" }));
-  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
+  assertAbsent(screen.queryByRole("region", { name: "Selected task" }));
 
   assertAbsent(
     screen.queryByRole("complementary", { name: "Delegated tasks" }),
@@ -105,7 +105,7 @@ test("inline preview expands and collapses while preserving the selected task", 
   assert.equal(controller.getSnapshot().selected, "two");
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
-  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
+  assertAbsent(screen.queryByRole("region", { name: "Selected task" }));
 });
 
 test("inline host without expansion offers the chat controls fallback", async (t) => {
@@ -145,7 +145,7 @@ test("failed expansion keeps the inline preview and displays the host error", as
   assert.equal(transport.expandCalls, 1);
   assert.equal(controller.getSnapshot().host.displayMode, "inline");
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
-  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
+  assertAbsent(screen.queryByRole("region", { name: "Selected task" }));
 });
 
 test("host collapse preserves a delegation draft until scope changes", async (t) => {
@@ -207,7 +207,7 @@ describe("nonembedded panels retain the full interface in inline mode", () => {
     );
 
     assert.ok(screen.getByRole("button", { name: "New task" }));
-    assert.ok(screen.getByRole("region", { name: "Task inspector" }));
+    assert.ok(screen.getByRole("region", { name: "Selected task" }));
     assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
   });
 });
@@ -218,7 +218,7 @@ test("inline preview renders refresh errors without exposing the full interface"
   assert.equal(screen.getByRole("alert").textContent, "Refresh unavailable");
   assert.ok(screen.getByText("Review authentication"));
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
-  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
+  assertAbsent(screen.queryByRole("region", { name: "Selected task" }));
 });
 
 test("inline preview summarizes repository scope independently of list filters", async (t) => {
@@ -263,7 +263,7 @@ test("inline preview summarizes repository scope independently of list filters",
 
   assert.ok(screen.getByText("Waiting review"));
   assert.ok(screen.getByText("Needs input", { exact: true }));
-  assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
+  assertAbsent(screen.queryByRole("region", { name: "Selected task" }));
 });
 
 describe("inline preview distinguishes empty tasks from connecting state", () => {
@@ -390,7 +390,7 @@ test("the inspector stacks when its fixed header would squeeze the evidence", as
   );
 
   await setup(t);
-  const detail = screen.getByRole("region", { name: "Task inspector" });
+  const detail = screen.getByRole("region", { name: "Selected task" });
   assert.equal(detail.hasAttribute("data-stacked"), false, "300px is enough");
   height = 560;
   act(() => notify.forEach((callback) => callback()));
@@ -399,12 +399,12 @@ test("the inspector stacks when its fixed header would squeeze the evidence", as
 
 test("refresh preserves the inspector and its scroll, while Back stays on the task list", async (t) => {
   const { controller, user } = await setup(t);
-  const detail = screen.getByRole("region", { name: "Task inspector" });
+  const detail = screen.getByRole("region", { name: "Selected task" });
   const header = detail.querySelector(".task-header");
   detail.scrollTop = 160;
   await act(() => controller.refresh());
 
-  expect(screen.getByRole("region", { name: "Task inspector" })).toBe(detail);
+  expect(screen.getByRole("region", { name: "Selected task" })).toBe(detail);
   expect(detail.querySelector(".task-header")).toBe(header);
   assert.equal(detail.scrollTop, 160);
   await user.click(screen.getByRole("button", { name: "Tasks" }));

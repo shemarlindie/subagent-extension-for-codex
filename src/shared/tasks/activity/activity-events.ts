@@ -109,7 +109,7 @@ const eventTitles: Partial<Record<string, string>> = {
   "task.worktree_recreated": "Worktree recreated",
   "task.turn_ended": "Turn ended",
   "task.queue_changed": "Queue changed",
-  "task.steer_taken": "Steer taken",
+  "task.steer_taken": "Steer received",
   "task.message_removed": "Queued message removed",
 };
 

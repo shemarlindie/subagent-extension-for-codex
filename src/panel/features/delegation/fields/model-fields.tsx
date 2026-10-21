@@ -47,7 +47,7 @@ export function ModelFields({
             models={workerInfo?.models ?? []}
             placeholder={
               settingsReady
-                ? model || "Provider runtime default"
+                ? model || "Worker default"
                 : pendingPlaceholder(settingsLoading)
             }
             describedBy="model-help"
@@ -55,8 +55,8 @@ export function ModelFields({
           />
         </AsyncControl>
         <p id="model-help" className="help">
-          Leave blank to inherit {model || "the provider runtime default"}.
-          Choose a discovered model or enter a model ID or provider alias.
+          Leave blank to use {model || "the worker's default"}. Choose a
+          discovered model or enter a model ID or provider alias.
           {workerInfo?.model_discovery_error &&
             ` ${workerInfo.model_discovery_error}`}
           {(!metadata ||
@@ -87,7 +87,7 @@ export function ModelFields({
           options={[
             {
               value: "default",
-              label: `Use default (${reasoning || "provider runtime"})`,
+              label: reasoning ? `Use default (${reasoning})` : "Use default",
             },
             // Stable options preserve the draft when switching providers or correcting an effort.
             ...reasoningLevels.map((level) => ({

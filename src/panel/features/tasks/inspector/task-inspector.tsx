@@ -60,7 +60,7 @@ export function TaskInspector() {
       ref={detailRef}
       id="detail"
       className={`detail${task || loading ? " has-task" : ""}`}
-      aria-label="Task inspector"
+      aria-label="Selected task"
       data-task={task?.id}
       data-stacked={stacked || undefined}
       aria-busy={loading || undefined}

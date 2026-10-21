@@ -51,8 +51,7 @@ export function ApprovalField({
         <p className="help">
           {unresolved
             ? "Loading permission options."
-            : (permissions?.help ??
-              "Native permission mode selection is available for providers that declare it.")}
+            : (permissions?.help ?? "This worker has no permission modes.")}
         </p>
       </Field>
       <Presence show={Boolean(permissions?.approvalDecider) || unresolved}>

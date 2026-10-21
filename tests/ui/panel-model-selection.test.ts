@@ -102,7 +102,7 @@ test("runtime default model metadata blocks unsupported effort and permits nativ
   const args = await startAfterChoosingEffort(
     panel,
     /Choose a reasoning effort supported by claude model default/,
-    "Use default (provider runtime)",
+    "Use default",
   );
 
   assert.equal(args.model, "");

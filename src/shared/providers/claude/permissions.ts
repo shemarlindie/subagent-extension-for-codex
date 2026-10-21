@@ -90,7 +90,7 @@ const permissionLabels: Partial<
   acceptEdits: "Accept edits",
   plan: "Plan — read only",
   dontAsk: "Don't ask — deny unapproved actions",
-  auto: "Auto — SDK approval classifier",
+  auto: "Auto — Claude Code's classifier decides",
   bypassPermissions: "Bypass permission prompts",
 };
 

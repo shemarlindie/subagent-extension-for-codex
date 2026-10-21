@@ -31,7 +31,7 @@ export const claudeSettingHelp = {
   claude_subagents:
     "Delegated sessions may start subagents with the Agent tool.",
   default_approval_decider:
-    "Who answers permission prompts the SDK leaves unresolved.",
+    "Who answers permission prompts that Claude Code doesn't decide itself.",
 };
 
 const settingHelp = claudeSettingHelp;

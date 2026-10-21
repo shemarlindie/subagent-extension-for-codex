@@ -37,7 +37,7 @@ export const claudeMetadata: ProviderMetadata = {
     approvalDeciderSetting: "default_approval_decider",
     formTitle: "Claude permission mode",
     formHelp:
-      "Claude native SDK mode. Use extension setting follows the configured Claude permission mode.",
+      "Claude Code's permission mode for this task. Use extension setting follows your saved default.",
     options: [
       { value: "inherit", label: permissionLabel("inherit") },
       ...claudePermissionModes.map((value) => ({
@@ -45,10 +45,10 @@ export const claudeMetadata: ProviderMetadata = {
         label: permissionLabel(value),
       })),
     ],
-    help: "Claude native SDK mode. Use extension setting follows the configured Claude permission mode.",
+    help: "Claude Code's permission mode for this task. Use extension setting follows your saved default.",
     approvalDecider: true,
     approvalDeciderHelp:
-      "Who answers permission requests that the SDK leaves unresolved.",
+      "Who answers permission requests that Claude Code doesn't decide itself.",
   },
 };
 

@@ -47,7 +47,9 @@ export function ModelChip({
       options={[
         {
           value: "",
-          label: `Default (${inherited ? modelName(models, inherited) : "provider runtime"})`,
+          label: inherited
+            ? `Default (${modelName(models, inherited)})`
+            : "Default",
           chipLabel: modelChipLabel(models, "", inherited),
         },
         ...models
