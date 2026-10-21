@@ -64,6 +64,25 @@ export function emitFixturePrelude(
   }
 }
 
+// One request stacks a single choice, a multiple choice and a typed answer.
+const fixtureQuestionForm = [
+  {
+    header: "Path",
+    question: "Which fixture path should be used?",
+    options: [
+      { label: "Integration", description: "Use the integration path." },
+      { label: "Unit", description: "Use the unit path." },
+    ],
+  },
+  {
+    header: "Checks",
+    question: "Which fixture checks should run?",
+    multiSelect: true,
+    options: [{ label: "Lint" }, { label: "Types" }, { label: "Tests" }],
+  },
+  { header: "Notes", question: "Any notes for the fixture worker?" },
+];
+
 export async function runFixtureInputs(
   c: RunContext,
   scenarios: FixtureScenarios,
@@ -80,6 +99,19 @@ export async function runFixtureInputs(
           },
         ],
       },
+      c.signal,
+    );
+
+    actions.push(
+      answer.message ??
+        JSON.stringify(answer.input ?? { answer: "No response" }),
+    );
+  }
+
+  if (scenarios.questionForm) {
+    const answer = await c.input(
+      "AskUserQuestion",
+      { questions: fixtureQuestionForm },
       c.signal,
     );
 

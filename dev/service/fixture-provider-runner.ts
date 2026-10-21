@@ -168,9 +168,16 @@ export async function runFixtureTurn(
 
     failAt("before-reply");
 
-    const reply = createFixtureReply(turn, previousTurns, actions, taken);
+    const reply = createFixtureReply(
+      turn,
+      previousTurns,
+      actions,
+      taken,
+      scenarios.replyLines,
+    );
+
     turnRecord.reply = reply;
-    await emitFixtureReply(c, reply, taskId, turn);
+    await emitFixtureReply(c, reply, taskId, turn, scenarios.replyPaceMs);
 
     const usage = createUsage(prompt, reply);
     session.costUsd += scenarios.costUsd ?? 0.001;
@@ -255,6 +262,7 @@ function createFixtureReply(
   previousTurns: number,
   actions: string[],
   taken: string[],
+  lines: number,
 ) {
   return [
     "Fixture task completed. No Claude execution occurred.",
@@ -264,6 +272,11 @@ function createFixtureReply(
       : []),
     ...actions,
     ...taken.map((text) => `Also took: ${text}`),
+    // Separate paragraphs give long replies real height in Chat.
+    ...Array.from(
+      { length: lines },
+      (_, line) => `\nFixture reply line ${line + 1}.`,
+    ),
   ].join("\n");
 }
 
@@ -272,12 +285,13 @@ async function emitFixtureReply(
   reply: string,
   taskId: string,
   turn: number,
+  paceMs: number,
 ) {
   const messageId = `fixture_msg_${taskId}_${turn}`;
 
   for (const piece of reply.match(/\S+\s*/g) ?? []) {
     c.delta(messageId, piece);
-    await setTimeout(2, undefined, { signal: c.signal });
+    await setTimeout(paceMs, undefined, { signal: c.signal });
   }
 
   c.emit("agent.message", {

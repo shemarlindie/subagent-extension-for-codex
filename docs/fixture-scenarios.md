@@ -16,6 +16,7 @@ Fixture code lives under `dev/service/` and is excluded from production packages
 | Marker                                             | Use it to                                                              |
 | -------------------------------------------------- | ---------------------------------------------------------------------- |
 | `[fixture:question count=2]`                       | Ask questions and wait for answers. Omit `count` for one question.     |
+| `[fixture:question-form]`                          | Ask single-choice, multiple-choice and text questions in one request.  |
 | `[fixture:permission tool=Edit]`                   | Request approval for a simulated tool. The default tool is `Bash`.     |
 | `[fixture:tool name=Read]`                         | Show a successful tool call. Use `tool-error` for a failed result.     |
 | `[fixture:content type=image]`                     | Show a content block. `role=user` changes the sender.                  |
@@ -26,6 +27,7 @@ Fixture code lives under `dev/service/` and is excluded from production packages
 | `[fixture:restriction name=path_guard]`            | Show a synthetic restriction denial.                                   |
 | `[fixture:activity type=status status=compacting]` | Show an SDK activity event.                                            |
 | `[fixture:stream]`                                 | Show a complete streaming-message lifecycle.                           |
+| `[fixture:reply lines=40 pace=30]`                 | Add reply paragraphs and stream each word after `pace` ms.             |
 | `[fixture:session state=invalid]`                  | Make the next continuation start a fresh session.                      |
 | `[fixture:cost usd=0.25]`                          | Add a deterministic cost to the session total.                         |
 | `[fixture:wait ms=15000]`                          | Keep a turn running for steering or interruption checks.               |
@@ -34,7 +36,7 @@ Fixture code lives under `dev/service/` and is excluded from production packages
 | `[fixture:completion subtype=error_max_turns]`     | Emit a failed SDK result and fail the turn.                            |
 
 Questions, permissions and tool calls support `count`. Child lifecycles are capped
-at four. Waits last at most 60 seconds. See
+at four. Waits last at most 60 seconds. Reply `lines` and `pace` stop at 200. See
 `dev/service/fixture-scenarios.ts` for accepted arguments and aliases.
 
 ## SDK event and message scenarios

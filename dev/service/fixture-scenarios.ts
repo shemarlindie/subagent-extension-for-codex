@@ -38,6 +38,9 @@ export interface FixtureContentScenario {
 
 export interface FixtureScenarios {
   questionCount: number;
+  questionForm: boolean;
+  replyLines: number;
+  replyPaceMs: number;
   permissionTools: string[];
   assistantErrors: string[];
   toolNames: string[];
@@ -65,6 +68,9 @@ export interface FixtureScenarios {
 
 const defaultScenarios = (): FixtureScenarios => ({
   questionCount: 0,
+  questionForm: false,
+  replyLines: 0,
+  replyPaceMs: 2,
   permissionTools: [],
   assistantErrors: [],
   toolNames: [],
@@ -177,6 +183,19 @@ export function readScenarios(prompt: string): FixtureScenarios {
 
     if (kind === "question" || kind === "input") {
       scenarios.questionCount += scenarioCount(args);
+    } else if (kind === "question-form") {
+      scenarios.questionForm = true;
+    } else if (kind === "reply") {
+      const lines = Number(field(args, "lines") ?? 0);
+      const pace = Number(field(args, "pace") ?? scenarios.replyPaceMs);
+
+      if (Number.isSafeInteger(lines) && lines >= 0) {
+        scenarios.replyLines = Math.min(lines, 200);
+      }
+
+      if (Number.isSafeInteger(pace) && pace >= 0) {
+        scenarios.replyPaceMs = Math.min(pace, 200);
+      }
     } else if (kind === "permission") {
       scenarios.permissionTools.push(
         ...Array.from({ length: scenarioCount(args) }, () =>
