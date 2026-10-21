@@ -196,10 +196,12 @@ recreated worktrees.
 | Shift+Enter                       | Insert a newline.                                      |
 | Waiting for a question/permission | Messages can only be queued.                           |
 
-A failed send keeps the draft and its error. After 30 seconds without confirmation, the panel stops waiting and keeps the
-draft. The service may still accept the message. Sending the same text again
-from the same panel reuses the original request, so it can't create a
-duplicate. A late confirmation clears the unchanged draft. After a reload, check
+A failed send keeps the draft and its error. Unless the service confirms that
+it rejected the message, the error says delivery could not be confirmed. This
+covers lost responses and 30 seconds without confirmation, after which the
+panel stops waiting. The service may still accept the message. Sending the same
+text again from the same panel reuses the original request, so it can't create
+a duplicate. A late confirmation clears the unchanged draft. After a reload, check
 Chat before resending. See
 [Retrying message sends](mcp-reference.md#retrying-message-sends) for the
 service rules.

@@ -3,6 +3,7 @@ import { Tooltip } from "@base-ui/react/tooltip";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
+import { SendRejectedError } from "../../../../../shared/tasks/conversation/send-errors";
 import { ControllerContext } from "../../../../app/state/controller-context";
 import {
   deferred,
@@ -222,7 +223,7 @@ test("a failed send retains its draft, explains the failure and allows a single 
   enter();
 
   await act(async () => {
-    write.reject(new Error("Message could not be sent"));
+    write.reject(new SendRejectedError("Message could not be sent"));
     await flush();
   });
 
@@ -245,7 +246,7 @@ test("a failed send retains its draft, explains the failure and allows a single 
   expect(view.getByText("Sending…")).toBeTruthy();
 
   await act(async () => {
-    retry.reject(new Error("Still unavailable"));
+    retry.reject(new SendRejectedError("Still unavailable"));
     await flush();
   });
 
@@ -262,7 +263,7 @@ test.each(["before rejection", "after rejection"])(
     if (reopenWhen === "before rejection") reopen();
 
     await act(async () => {
-      write.reject(new Error("Send unavailable"));
+      write.reject(new SendRejectedError("Send unavailable"));
       await flush();
     });
 
@@ -300,7 +301,7 @@ test.each(["before rejection", "after rejection"])(
     expect(view.getByText("Sending…")).toBeTruthy();
 
     await act(async () => {
-      retry.reject(new Error("Retry unavailable"));
+      retry.reject(new SendRejectedError("Retry unavailable"));
       await flush();
     });
 

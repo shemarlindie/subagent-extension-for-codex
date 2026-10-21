@@ -6,6 +6,7 @@ import { expect, onTestFinished, test, vi } from "vitest";
 
 import { previewEvents } from "../../../../../dev/panel/scenarios/fixtures";
 import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
+import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors";
 import { deferred, flush } from "../../../app/state/controller-test-harness";
 import type { Task } from "../../../app/state/types";
 import {
@@ -843,7 +844,11 @@ test("the expanded question composer queues messages and each new request starts
 
 test("a failed send keeps the draft and shows why", async () => {
   const { tool, composer, type, view } = setup();
-  tool.mockRejectedValueOnce(new Error("The task is being deleted"));
+
+  tool.mockRejectedValueOnce(
+    new SendRejectedError("The task is being deleted"),
+  );
+
   type("Keep me");
   fireEvent.keyDown(composer, { key: "Enter" });
 

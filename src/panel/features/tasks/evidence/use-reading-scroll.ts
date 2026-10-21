@@ -193,14 +193,45 @@ export function useReadingScroll({
     [reading, itemAttribute],
   );
 
+  /**
+   * Keeps a smooth scroll in progress through a content or size change,
+   * returning whether one was. Its movement is not a reader scroll, so it must
+   * not unpin. A change that only rerenders must not turn the glide into a
+   * jump. If the timeline changed, finish at the new target instead.
+   */
+  const continueGlide = useCallback(
+    (viewport: HTMLElement, container: HTMLElement) => {
+      if (!glide.current) return false;
+      const { row } = glide.current;
+
+      const target =
+        row && !row.isConnected
+          ? glide.current.target
+          : glideTarget(container, row);
+
+      if (Math.abs(target - glide.current.target) >= 1) {
+        window.clearTimeout(glideTimer.current);
+        glide.current = undefined;
+        correctedScrollTop.current = target;
+        container.scrollTop = target;
+      }
+
+      remember(viewport, container);
+
+      return true;
+    },
+    [remember],
+  );
+
   const reconcileAfterContentChange = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport || !activeRef.current || !restored.current) return;
 
     const container = scrollContainer(viewport);
+    if (continueGlide(viewport, container)) return;
     restore(viewport, container, true);
     remember(viewport, container);
-  }, [remember, restore]);
+  }, [continueGlide, remember, restore]);
 
   useLayoutEffect(() => {
     activeRef.current = active;
@@ -230,25 +261,8 @@ export function useReadingScroll({
     // Measure without an in-flight transform.
     stopAnimations();
 
-    if (glide.current) {
-      const { row } = glide.current;
-
-      const target =
-        row && !row.isConnected
-          ? glide.current.target
-          : glideTarget(container, row);
-
-      // A render caused by hiding the button must not turn a smooth scroll into
-      // a jump. If the timeline changed, finish at the new target instead.
-      if (Math.abs(target - glide.current.target) >= 1) {
-        window.clearTimeout(glideTimer.current);
-        glide.current = undefined;
-        correctedScrollTop.current = target;
-        container.scrollTop = target;
-      }
-
+    if (continueGlide(viewport, container)) {
       restored.current = true;
-      remember(viewport, container);
 
       return;
     }
@@ -394,6 +408,7 @@ export function useReadingScroll({
         return;
       }
 
+      if (continueGlide(viewport, container)) return;
       restore(viewport, container, true);
       remember(viewport, container);
     });
@@ -401,7 +416,7 @@ export function useReadingScroll({
     observer.observe(viewport);
 
     return () => observer.disconnect();
-  }, [reading, restore, remember, blockScrollWhileLoading]);
+  }, [reading, restore, remember, continueGlide, blockScrollWhileLoading]);
 
   const onScroll = useEffectEvent(() => {
     const viewport = viewportRef.current;

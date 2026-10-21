@@ -163,7 +163,7 @@ test("unconfirmed sends retain their request ID and delivery until acknowledged"
   context.tool.mockRejectedValueOnce(new Error("Connection lost"));
 
   expect(await actions.sendMessage(task("task-1"), "Hi", "queue")).toBe(
-    "Connection lost",
+    "Connection lost. Delivery could not be confirmed. Your draft is kept. Retry the same message to safely check or complete delivery.",
   );
 
   const original = context.tool.mock.calls[0];

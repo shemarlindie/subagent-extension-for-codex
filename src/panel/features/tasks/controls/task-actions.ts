@@ -29,11 +29,16 @@ type PendingMessageRequest = {
   delivery: Delivery;
 };
 
+const UNCONFIRMED_SEND =
+  "Delivery could not be confirmed. Your draft is kept. Retry the same message to safely check or complete delivery.";
+
 type RunOptions = {
   /** Resolve once the tool answers, refreshing in the background. */
   background?: boolean;
   /** Stop waiting after the bound and report this instead. */
   timeoutMessage?: string;
+  /** Describes a failure for the user. Defaults to the error's message. */
+  failureMessage?: (error: unknown) => string;
   /** Observes the tool call itself, which can settle after the bound. */
   track?: (call: Promise<unknown>) => void;
 };
@@ -156,8 +161,17 @@ export class TaskActions {
       { task_id: task.id, message, ...request },
       {
         background: true,
-        timeoutMessage:
-          "Delivery could not be confirmed. Your draft is kept. Retry the same message to safely check or complete delivery.",
+        timeoutMessage: UNCONFIRMED_SEND,
+        // Only a rejection confirms that nothing was accepted. Any other
+        // failure, such as a lost response, may follow acceptance.
+        failureMessage: (error) => {
+          const message = errorMessage(error);
+
+          return error instanceof SendRejectedError ||
+            message === UNCONFIRMED_SEND
+            ? message
+            : `${message.replace(/\.$/, "")}. ${UNCONFIRMED_SEND}`;
+        },
         track: (call) => {
           void call.then(
             () => {
@@ -226,7 +240,12 @@ export class TaskActions {
   private async run(
     name: string,
     args: Record<string, unknown>,
-    { background = false, timeoutMessage, track }: RunOptions = {},
+    {
+      background = false,
+      timeoutMessage,
+      failureMessage = errorMessage,
+      track,
+    }: RunOptions = {},
   ): Promise<string | undefined> {
     if (this.context.snapshot().busy || this.context.closed()) {
       return "Wait for the last action.";
@@ -256,7 +275,7 @@ export class TaskActions {
           )
         : call);
     } catch (error) {
-      return errorMessage(error);
+      return failureMessage(error);
     } finally {
       this.context.patch({ busy: false });
     }
