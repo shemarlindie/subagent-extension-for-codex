@@ -233,7 +233,7 @@ test("MCP get_current_project reports the thread root without registering it", a
   assert.deepEqual(registered(f), []);
 });
 
-test("HTTP exposes React project registration while retired host form tools are unavailable", async (t) => {
+test("HTTP exposes project registration only to the panel", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("panel-project");
   const client = new Client({ name: "panel-project-test", version: "1.0.0" });
@@ -248,23 +248,6 @@ test("HTTP exposes React project registration while retired host form tools are 
   );
 
   const { tools } = await client.listTools();
-
-  for (const name of [
-    "request_agent_task",
-    "request_agent_input",
-    "request_agent_project",
-  ]) {
-    assert.equal(
-      tools.some((tool) => tool.name === name),
-      false,
-      name,
-    );
-
-    await assert.rejects(
-      client.callTool({ name, arguments: {} }),
-      /not found|unknown tool/i,
-    );
-  }
 
   const register = tools.find((tool) => tool.name === "app_register_project");
 

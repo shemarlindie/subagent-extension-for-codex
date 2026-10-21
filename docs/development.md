@@ -299,6 +299,9 @@ the same task tools and MCP App.
 - Remove the plugin first, or Codex runs both servers.
 - Replace the existing server entry when switching transports. Do not combine
   stdio and HTTP settings.
+- To return to the plugin, delete `[mcp_servers.codex_subagent_extension]` and
+  its `env` or `http_headers` tables, and stop the checkout's service. The
+  plugin never stops a service it didn't start.
 
 See the
 [Codex MCP configuration reference](https://learn.chatgpt.com/docs/extend/mcp#configure-with-configtoml)

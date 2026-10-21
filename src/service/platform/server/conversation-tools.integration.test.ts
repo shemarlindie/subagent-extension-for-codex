@@ -1112,7 +1112,7 @@ test("the panel appends its call durations to the timing log", async () => {
       ).rejects.toThrow();
     }
 
-    // Records from panels without correlation fields are still accepted.
+    // Correlation fields are optional, since some operations have none.
     const recorded = await withLogContext({ request_id: "upload" }, () =>
       user("app_record_timing", {
         records: [

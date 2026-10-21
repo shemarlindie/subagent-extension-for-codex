@@ -48,14 +48,6 @@ doesn't manage provider credentials. Read
 [Configuration and permissions](docs/configuration.md) before changing execution
 authority or session restrictions.
 
-### Moving from a manual setup
-
-If you connected a checkout by hand, delete
-`[mcp_servers.codex_subagent_extension]` and its `.env` or `http_headers` tables
-from `~/.codex/config.toml`. Otherwise Codex runs both servers and lists every
-tool twice. Stop the old service if it's still running, because the plugin never
-stops a service it didn't start.
-
 ## Update
 
 Codex checks the marketplace when it starts and installs new releases on its
