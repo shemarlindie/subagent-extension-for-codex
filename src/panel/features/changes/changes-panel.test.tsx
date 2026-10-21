@@ -2,7 +2,13 @@
 import assert from "node:assert/strict";
 
 import { Tooltip } from "@base-ui/react/tooltip";
-import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  waitFor,
+} from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
 import { Controller } from "../../app/state/controller";
@@ -344,4 +350,85 @@ test("a file missing from the diff still has a section to read and mark", () => 
 
   assert.match(missing?.textContent ?? "", /Diff unavailable/);
   assert.ok(view.getByRole("checkbox", { name: "Viewed src/b.ts" }));
+});
+
+test("picking the last collapsed file finishes its jump after diff rows render", async () => {
+  const paths = Array.from({ length: 9 }, (_, index) => `src/file-${index}.ts`);
+
+  const changes: Changes = {
+    ...data,
+    files: paths.map((path) => ({ ...data.files[0]!, path })),
+    diff: paths
+      .map(
+        (path) =>
+          `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n-old\n+new\n`,
+      )
+      .join(""),
+  };
+
+  const { view } = setup({ ...loaded, data: changes });
+  const scroller = view.container.querySelector<HTMLElement>(".changes")!;
+
+  const last = view.container.querySelector<HTMLDetailsElement>(
+    '[data-changed-file="src/file-8.ts"]',
+  )!;
+
+  scroller.style.overflowY = "auto";
+  let scrollTop = 0;
+
+  // The collapsed tail limits scrolling to 900px. Its deferred rows add enough
+  // height to reach the last file's header at 1000px.
+  Object.defineProperties(scroller, {
+    clientHeight: { configurable: true, value: 200 },
+    scrollHeight: {
+      configurable: true,
+      get: () => (last.querySelector(".diff-table") ? 1300 : 1100),
+    },
+    scrollTop: {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value: number) => {
+        scrollTop = Math.max(
+          0,
+          Math.min(value, scroller.scrollHeight - scroller.clientHeight),
+        );
+      },
+    },
+  });
+
+  vi.spyOn(scroller, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(0, 0, 500, 200),
+  );
+
+  vi.spyOn(last, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(0, 1000 - scrollTop, 500, 100),
+  );
+
+  expect(last.open).toBe(false);
+  fireEvent.click(view.getByRole("button", { name: "Files" }));
+
+  fireEvent.click(view.getByRole("button", { name: "src/file-8.ts" }));
+
+  await waitFor(() => expect(last.querySelector(".diff-table")).not.toBeNull());
+  expect(last.open).toBe(true);
+  expect(scroller.scrollTop).toBe(1000);
+
+  // Later manual toggles preserve the reader's new position.
+  last.scrollIntoView = vi.fn();
+  scroller.scrollTop = 850;
+
+  await act(async () => {
+    last.open = false;
+    fireEvent(last, new Event("toggle"));
+  });
+
+  expect(last.querySelector(".diff-table")).toBeNull();
+
+  await act(async () => {
+    last.open = true;
+    fireEvent(last, new Event("toggle"));
+  });
+
+  await waitFor(() => expect(last.querySelector(".diff-table")).not.toBeNull());
+  expect(scroller.scrollTop).toBe(850);
 });

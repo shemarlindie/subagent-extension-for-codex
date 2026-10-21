@@ -2,6 +2,7 @@ import {
   type ReactNode,
   type SyntheticEvent,
   useDeferredValue,
+  useLayoutEffect,
   useMemo,
   useState,
 } from "react";
@@ -46,6 +47,8 @@ type DiffFileProps = {
   actions?: ReactNode;
   /** Called when the reader opens or closes the file. */
   onOpenChange?: (open: boolean) => void;
+  /** Called after deferred rows mount, so a caller can position the reader. */
+  onContentReady?: () => void;
   /** Data attributes for the file's section, such as an identifying key. */
   [data: `data-${string}`]: string | undefined;
 };
@@ -59,6 +62,7 @@ export function DiffFile({
   note,
   actions,
   onOpenChange,
+  onContentReady,
   ...data
 }: DiffFileProps) {
   const [ownOpen, setOpen] = useState(initiallyOpen),
@@ -72,6 +76,10 @@ export function DiffFile({
       file.from !== file.to &&
       !file.new &&
       !file.deleted;
+
+  useLayoutEffect(() => {
+    if (renderRows) onContentReady?.();
+  }, [onContentReady, renderRows]);
 
   function handleToggle(event: SyntheticEvent<HTMLDetailsElement>) {
     const details = event.currentTarget;

@@ -27,7 +27,7 @@ export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
       (!data && loading) || Boolean(data && !data.files.length),
     // Kept per task, so the reader's place survives tab and task switches.
     [reading] = useSessionState("task", id, (state) => state.reading.changes),
-    { viewportRef, scrolled, scrollToTop } = useChangesScroll(
+    { viewportRef, scrolled, scrollToTop, activePath } = useChangesScroll(
       reading,
       Boolean(data),
       Boolean(data?.files.length),
@@ -85,7 +85,12 @@ export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
                   </p>
                 )}
                 {data.files.length ? (
-                  <ChangesView task={task} changes={data} reading={reading} />
+                  <ChangesView
+                    task={task}
+                    changes={data}
+                    reading={reading}
+                    activePath={activePath}
+                  />
                 ) : (
                   <p className="help changes-empty">
                     {data.scope === "turn"

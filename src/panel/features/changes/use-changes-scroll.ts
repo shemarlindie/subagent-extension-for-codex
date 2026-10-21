@@ -23,7 +23,8 @@ export function useChangesScroll(
     // The reader scrolled since the tab showed, so their place is current.
     scrolled = useRef(false);
 
-  const [atTop, setAtTop] = useState(true);
+  const [atTop, setAtTop] = useState(true),
+    [activePath, setActivePath] = useState(reading.position?.anchor?.path);
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
@@ -37,6 +38,7 @@ export function useChangesScroll(
       scrolled.current = false;
       scrollContainer(viewport).scrollTop = 0;
       setAtTop(true);
+      setActivePath(undefined);
 
       return;
     }
@@ -48,18 +50,14 @@ export function useChangesScroll(
     // restore again as the layout settles, until the reader scrolls.
     const restore = () => {
       const container = scrollContainer(viewport);
-      setAtTop(container.scrollTop <= TOP_SLACK_PX);
 
-      if (
-        !reading.position ||
-        container.scrollHeight <= container.clientHeight
-      ) {
-        return;
+      if (reading.position && container.scrollHeight > container.clientHeight) {
+        restorePosition(viewport, container, reading.position);
+        corrected = { container, top: container.scrollTop };
       }
 
-      restorePosition(viewport, container, reading.position);
+      setActivePath(measurePosition(viewport, container).anchor?.path);
       setAtTop(container.scrollTop <= TOP_SLACK_PX);
-      corrected = { container, top: container.scrollTop };
     };
 
     const observer =
@@ -93,6 +91,7 @@ export function useChangesScroll(
       scrolled.current = true;
       observer?.disconnect();
       reading.position = measurePosition(viewport, container);
+      setActivePath(reading.position.anchor?.path);
     };
 
     const { ownerDocument } = viewport;
@@ -126,8 +125,9 @@ export function useChangesScroll(
 
     container.scrollTop = 0;
     reading.position = measurePosition(viewport, container);
+    setActivePath(reading.position.anchor?.path);
     setAtTop(true);
   }, [reading]);
 
-  return { viewportRef, scrolled: !atTop, scrollToTop };
+  return { viewportRef, scrolled: !atTop, scrollToTop, activePath };
 }

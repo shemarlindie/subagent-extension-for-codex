@@ -314,6 +314,12 @@ for supported formats and size limits.
 it unread again. **Preview all** starts at the first unviewed file, and marking
 a file viewed in the preview moves to the next one.
 
+With two or more files, a floating **Files** button stays near the bottom while
+you scroll. It opens a file tree grouped by folder, with status letters, viewed
+checks and a highlight for the file being read. Picking a file opens its diff
+and scrolls to it. The navigator stays open between picks. Collapse it with its
+close button, **Files** or Escape. It starts collapsed when you open Changes.
+
 **File preview options → Wrap lines** wraps source and diff lines. **Ask Codex
 about this file** opens the [handoff flow](#handoff-and-deletion).
 

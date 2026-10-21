@@ -57,7 +57,7 @@ The browser flows verify:
 | E21 | Filter, search and rename tasks, keeping the filter and title across reload.                                                |
 | E22 | Reject an invalid setting, keep drafts, confirm discarding edits, reset a section and start from saved defaults.            |
 | E23 | Start a task with a chosen model and permission mode and see the policy applied.                                            |
-| E24 | Review several changed files across scopes, viewed marks, Preview all and line wrapping.                                    |
+| E24 | Review recorded diffs across scopes, use floating file navigation, mark viewed files and use previews.                      |
 | E25 | Delete a running task with its agent session and bulk delete archived tasks.                                                |
 | E26 | Keep a task whose agent session can't be deleted, then delete it locally.                                                   |
 | E27 | Switch between the list and a task in a narrow console without horizontal overflow.                                         |

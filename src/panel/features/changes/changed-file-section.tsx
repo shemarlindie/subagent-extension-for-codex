@@ -19,6 +19,9 @@ type ChangedFileSectionProps = {
   /** Marked viewed, then changed: it needs reading again. */
   changedSinceViewed: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Counts the reader's picks of this file in the file tree; each one opens it. */
+  revealed?: number;
+  onContentReady?: () => void;
   onViewedChange: (viewed: boolean) => void;
   onPreview: () => void;
 };
@@ -41,6 +44,8 @@ export function ChangedFileSection({
   viewed,
   changedSinceViewed,
   onOpenChange,
+  revealed,
+  onContentReady,
   onViewedChange,
   onPreview,
 }: ChangedFileSectionProps) {
@@ -53,6 +58,14 @@ export function ChangedFileSection({
   if (viewed !== wasViewed) {
     setWasViewed(viewed);
     setOpen(!viewed);
+  }
+
+  const [wasRevealed, setWasRevealed] = useState(revealed);
+
+  // Picking another file passes undefined, which leaves this one as it is.
+  if (revealed !== undefined && revealed !== wasRevealed) {
+    setWasRevealed(revealed);
+    setOpen(true);
   }
 
   const handleOpenChange = (next: boolean) => {
@@ -69,6 +82,7 @@ export function ChangedFileSection({
       initiallyOpen={open}
       open={open}
       onOpenChange={handleOpenChange}
+      onContentReady={onContentReady}
       emptyNote={emptyDiffNote(file, missing)}
       {...(file.source === "command"
         ? { tag: "command", note: COMMAND_NOTE }
