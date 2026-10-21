@@ -64,7 +64,7 @@ test("streamed replies follow the end, hold a reading position in history and re
   });
 
   // At the end, Chat follows a reply as it streams.
-  await send(page, "Stream at the end [fixture:reply lines=30 pace=20]");
+  await send(page, "Stream at the end [fixture:reply lines=30 pace=10]");
   await expect(streaming).toBeVisible();
   const partial = (await streaming.textContent())?.length ?? 0;
 
@@ -79,7 +79,7 @@ test("streamed replies follow the end, hold a reading position in history and re
   await expect(latest).toBeHidden();
 
   // In history, the paragraph being read stays put while the reply grows.
-  await send(page, "Stream while reading [fixture:reply lines=30 pace=20]");
+  await send(page, "Stream while reading [fixture:reply lines=30 pace=10]");
   await expect(streaming).toBeVisible();
   await history.hover();
   await page.mouse.wheel(0, -900);

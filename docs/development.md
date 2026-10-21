@@ -593,7 +593,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-`test:e2e` builds first and runs with two browser workers. Each test starts a
+`test:e2e` builds first and runs a browser worker for every two CPU cores. Each test starts a
 disposable service on an OS-assigned loopback port with its own SQLite database,
 settings, fixture worker and Git repository. Teardown closes the service and
 removes its files even when the test fails. Allow localhost TCP listeners and

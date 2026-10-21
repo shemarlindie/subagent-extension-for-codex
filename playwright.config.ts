@@ -4,7 +4,9 @@ export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/*.spec.ts",
   fullyParallel: true,
-  workers: 2,
+  // Each test owns its service and data, so workers scale with the machine.
+  // Half the cores measured fastest locally without slowing individual tests.
+  workers: "50%",
   forbidOnly: Boolean(process.env.CI),
   timeout: 60_000,
   expect: { timeout: 10_000 },
