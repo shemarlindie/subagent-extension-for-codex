@@ -63,7 +63,10 @@ export async function startConsoleService() {
 
     server.on("request", app);
 
-    return { origin, directory, close };
+    // Ends open requests and the event stream, as a network drop would.
+    const dropConnections = () => server.closeAllConnections();
+
+    return { origin, directory, close, dropConnections };
   } catch (error) {
     await close();
     throw error;

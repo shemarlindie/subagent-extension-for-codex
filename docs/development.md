@@ -605,9 +605,11 @@ and retains traces and screenshots from failures in
 Login and explicit project registration have one full browser flow. Other flows
 prepare these prerequisites through the public HTTP login and registration
 endpoints, sharing cookies with their fresh browser context. Task creation,
-questions, approvals, continuation, worktree actions, archive controls and
-settings still run through the browser. Reload checks establish persistence.
-Most HTTP services run inside their Playwright worker process. The recovery
+questions, approvals, continuation, worktree actions, archive controls, read
+state and settings still run through the browser. Reload checks establish
+persistence. Lost responses use Playwright routing, and a lost event stream
+closes the service's open connections. Most HTTP services run inside their
+Playwright worker process. The recovery
 browser flow starts the development fixture service in a separate process,
 crashes it and reopens the same data directory on the same port. It verifies
 reauthentication, interrupted work, scheduler-queued tasks, the paused message
@@ -640,6 +642,11 @@ The browser verification checklist is:
 | E10 | Create a dependency through the task form, preserve its wait across reload and release it after the prerequisite completes. |
 | E11 | Rename a project and verify both removal choices, retaining checkout files and cleaning task worktrees only when requested. |
 | E12 | Crash a service with running and queued work, restart, sign in and resume the recovered queue without losing its order.     |
+| E13 | Answer stacked single-choice and multiple-choice questions with a skip, then deny a tool with a message.                    |
+| E14 | Keep tasks unread until read, mark them read or unread by menu, reply or bulk action, and reload the results.               |
+| E15 | Lose a send's response, keep the draft with retry guidance and deliver the retried message once.                            |
+| E16 | Lose the event stream, show reconnection and display work finished while disconnected.                                      |
+| E17 | Follow a streaming reply at the end, hold the reading position in history and restore it when Chat returns.                 |
 
 Browser coverage currently uses desktop Chromium. The fake worker establishes
 extension routing and persistence behavior. It does not establish native Claude

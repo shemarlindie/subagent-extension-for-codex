@@ -7,14 +7,17 @@ import { expect, type Page, test as base } from "@playwright/test";
 import { CONSOLE_TOKEN, startConsoleService } from "./server";
 
 type ConsoleFixtures = {
-  consoleService: Awaited<ReturnType<typeof startConsoleService>>;
+  /** The in-process service, which a test can disconnect. */
+  inProcessService: Awaited<ReturnType<typeof startConsoleService>>;
+  /** The service the console uses, in process unless a suite overrides it. */
+  consoleService: { origin: string; directory: string };
   repository: string;
   consolePage: Page;
 };
 
 export const test = base.extend<ConsoleFixtures>({
   // eslint-disable-next-line no-empty-pattern -- Playwright requires destructured fixture dependencies.
-  consoleService: async ({}, use) => {
+  inProcessService: async ({}, use) => {
     const service = await startConsoleService();
 
     try {
@@ -22,6 +25,9 @@ export const test = base.extend<ConsoleFixtures>({
     } finally {
       await service.close();
     }
+  },
+  consoleService: async ({ inProcessService }, use) => {
+    await use(inProcessService);
   },
   baseURL: async ({ consoleService }, use) => {
     await use(consoleService.origin);
