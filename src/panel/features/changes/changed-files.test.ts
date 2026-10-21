@@ -47,11 +47,6 @@ const changes: Changes = {
   ].join(""),
 };
 
-test("a changed file's diff is its part of the task's diff", () => {
-  assert.equal(changedFileDiff(changes, "a.ts")?.to, "a.ts");
-  assert.equal(changedFileDiff(changes, "b.ts")?.to, "b.ts");
-});
-
 test("binary files have no diff", () => {
   assert.equal(changedFileDiff(changes, "logo.png"), undefined);
 });

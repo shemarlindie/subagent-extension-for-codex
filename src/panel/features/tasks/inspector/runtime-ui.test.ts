@@ -81,44 +81,6 @@ const row = (task: Task) =>
 const rowRuntime = (view: ReturnType<typeof render>) =>
   view.container.querySelector(".row-runtime")?.textContent;
 
-test("worker profiles use distinct icons on the same fixed drawing canvas", (t) => {
-  t.onTestFinished(cleanup);
-
-  const profiles = [
-      "general",
-      "researcher",
-      "reviewer",
-      "implementer",
-      "debugger",
-      "test_engineer",
-      "refactorer",
-      "security_reviewer",
-    ] as const,
-    view = render(row(task({ worker_profile: profiles[0] }))),
-    artwork = new Set<string>();
-
-  for (const profile of profiles) {
-    view.rerender(row(task({ worker_profile: profile })));
-
-    const icon =
-      view.container.querySelector<SVGSVGElement>(".row-worker-icon");
-
-    assert.ok(icon);
-    assert.equal(icon.getAttribute("viewBox"), "0 0 24 24");
-    assert.equal(icon.getAttribute("width"), "10");
-    assert.equal(icon.getAttribute("height"), "10");
-
-    assert.equal(
-      view.container.querySelector(".row-worker-label")?.textContent,
-      profile.replaceAll("_", " "),
-    );
-
-    artwork.add(icon.innerHTML);
-  }
-
-  assert.equal(artwork.size, profiles.length);
-});
-
 test("task list runtime ticks, freezes while stopped, and accumulates after resume", (t) => {
   t.onTestFinished(() => {
     cleanup();

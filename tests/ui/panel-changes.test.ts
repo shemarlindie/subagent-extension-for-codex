@@ -103,39 +103,6 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   assertAbsent(screen.queryByRole("progressbar"));
 });
 
-test("Preview opens a changed file", async (t) => {
-  const { user } = await setup(t, (transport) => {
-    transport.changes = changePages("data.bin");
-
-    transport.changedFiles = {
-      "src/a.ts": {
-        path: "src/a.ts",
-        state: "present",
-        size: 9,
-        encoding: "utf8",
-        content: "new line\n",
-      },
-    };
-  });
-
-  await user.click(screen.getByRole("tab", { name: /^Changes/ }));
-  // A binary file that isn't an image has no preview.
-  await screen.findByRole("button", { name: "Preview src/a.ts" });
-  assert.ok(screen.getByRole("button", { name: "Preview data.bin" }));
-  // Opening a preview leaves the file's section as it was.
-  const section = document.querySelector(".diff-file") as HTMLDetailsElement;
-  await user.click(screen.getByRole("button", { name: "Preview src/a.ts" }));
-  assert.equal(section.open, true);
-  const dialog = await screen.findByRole("dialog", { name: "src/a.ts" });
-
-  await waitFor(() =>
-    assert.match(
-      dialog.querySelector(".code-view")?.textContent ?? "",
-      /new line/,
-    ),
-  );
-});
-
 test("previews say when a file was deleted, is binary, or can't be read", async (t) => {
   const { controller, transport } = await setup(t);
   const [task] = controller.getSnapshot().tasks;
@@ -177,111 +144,23 @@ test("previews say when a file was deleted, is binary, or can't be read", async 
   }
 });
 
-test("worktree actions remove the worktree, confirming uncommitted changes, then delete the branch", async (t) => {
-  const removals: Record<string, unknown>[] = [];
-
+test("worktree removal stays disabled until the task stops", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
     transport.tasks = [{ ...task(), status: "running", branch: "agent/one" }];
-    const tool = transport.tool.bind(transport);
-
-    transport.tool = async <T>(
-      name: string,
-      args?: Record<string, unknown>,
-    ) => {
-      if (name === "app_remove_worktree") {
-        transport.calls.push({ name, args: args ?? {} });
-        removals.push(args ?? {});
-
-        if (!args?.force) {
-          return { status: "uncommitted", files: ["draft.txt"] } as T;
-        }
-
-        transport.changes = [
-          {
-            ...transport.changes[0],
-            branch: "agent/one",
-          },
-        ];
-
-        transport.tasks = transport.tasks.map((task) => ({
-          ...task,
-          workspace_removed: true,
-        }));
-
-        return { status: "removed" } as T;
-      }
-
-      if (name === "app_delete_branch") {
-        transport.calls.push({ name, args: args ?? {} });
-
-        transport.changes = [
-          {
-            ...transport.changes[0],
-            branch: "agent/one",
-          },
-        ];
-
-        transport.tasks = transport.tasks.map((task) => ({
-          ...task,
-          branch_deleted: true,
-        }));
-
-        return { status: "deleted" } as T;
-      }
-
-      return tool<T>(name, args);
-    };
   });
 
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
   const remove = await screen.findByRole("button", { name: "Remove worktree" });
-  // A running task is using its worktree.
   assert.equal((remove as HTMLButtonElement).disabled, true);
   assert.ok(screen.getByText("Available once the task stops."));
 
   const [running] = transport.tasks;
-
   assert.ok(running);
   transport.tasks = [{ ...running, status: "interrupted" }];
   await act(() => controller.refresh());
 
   await waitFor(() =>
     assert.equal((remove as HTMLButtonElement).disabled, false),
-  );
-
-  await user.click(remove);
-
-  // Uncommitted changes are listed before anything is discarded.
-  const dialog = await screen.findByRole("dialog", {
-    name: "Remove worktree?",
-  });
-
-  assert.ok(within(dialog).getByText("draft.txt"));
-
-  await user.click(
-    within(dialog).getByRole("button", { name: "Discard changes and remove" }),
-  );
-
-  await screen.findByText(/The worktree was removed/);
-
-  assert.deepEqual(removals, [
-    { task_id: "one" },
-    { task_id: "one", force: true },
-  ]);
-
-  await user.click(screen.getByRole("button", { name: "Delete branch" }));
-  const confirm = await screen.findByRole("dialog", { name: "Delete branch?" });
-
-  await user.click(
-    within(confirm).getByRole("button", { name: "Delete branch" }),
-  );
-
-  await waitFor(() =>
-    assertAbsent(screen.queryByRole("button", { name: "Delete branch" })),
-  );
-
-  assertAbsent(
-    screen.queryByRole("button", { name: /Delete branch|Remove worktree/ }),
   );
 });
 

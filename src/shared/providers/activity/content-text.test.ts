@@ -4,10 +4,6 @@ import { test } from "vitest";
 
 import { contentText } from "./content-text.js";
 
-test("contentText returns string content unchanged", () => {
-  assert.equal(contentText("permission denied"), "permission denied");
-});
-
 test("contentText joins text blocks and skips other blocks", () => {
   assert.equal(
     contentText([

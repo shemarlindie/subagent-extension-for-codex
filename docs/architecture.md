@@ -69,8 +69,10 @@ Runtime SDK imports stay in the service.
 
 Panel composition and state live in `src/panel/app/`. Domain UI belongs in
 `features/`, and reusable components and platform integrations in `shared/`.
-Development tooling stays under `dev/`. Focused tests live beside their modules.
-`tests/integration/` covers runtime and environment boundaries.
+Development tooling stays under `dev/`. Focused tests live beside their modules,
+including feature integration tests named `*.integration.test.ts`.
+`tests/integration/` covers runtime and environment boundaries. See
+[Choosing test coverage](development.md#choosing-test-coverage) for classification.
 
 ESLint and production builds enforce the runtime boundaries. Test harnesses may
 cross them for verification. See [Checks](development.md#checks),

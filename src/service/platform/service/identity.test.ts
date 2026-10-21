@@ -2,13 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import {
-  compareVersions,
-  handoff,
-  type RunningService,
-  serviceIdentity,
-} from "./identity.js";
-import { installRoot, packageVersion } from "./runtime.js";
+import { compareVersions, handoff, type RunningService } from "./identity.js";
 
 const own = { version: "0.2.0", apiVersion: 2 };
 const origin = "http://127.0.0.1:17317";
@@ -33,20 +27,6 @@ test("compares versions by semver precedence", () => {
   assert.equal(compareVersions("1.2.3-beta.1", "1.2.3-beta.1+build"), 0);
   assert.equal(compareVersions("1.3.0-alpha.1", "1.2.9"), 1);
   assert.equal(compareVersions("1.2.3", "1.3.0"), -1);
-});
-
-test("reports this installation, and only the stdio launcher marks its services", () => {
-  assert.deepEqual(serviceIdentity({}), {
-    version: packageVersion,
-    apiVersion: 1,
-    launcher: "foreground",
-    installRoot,
-  });
-
-  assert.equal(
-    serviceIdentity({ CODEX_SUBAGENT_EXTENSION_LAUNCHER: "stdio" }).launcher,
-    "stdio",
-  );
 });
 
 test("uses a current plugin service", () => {

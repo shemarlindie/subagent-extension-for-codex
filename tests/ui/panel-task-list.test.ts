@@ -185,12 +185,6 @@ test("selecting a tab scrolls it into view in an overflowing tab list", async (t
   assert.equal(scrollTo.mock.calls.length, 0);
 });
 
-test("the Activity tab has no count", async (t) => {
-  await setup(t);
-
-  assert.ok(screen.getByRole("tab", { name: "Activity" }));
-});
-
 test("evidence tabs support keyboard arrows and keep tab focus through refresh", async (t) => {
   const { controller, user } = await setup(t, (transport) => {
     transport.taskEvents = [

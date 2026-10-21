@@ -162,5 +162,5 @@ Use real tool calls to check the authority boundaries documented in
 
 Use service tests to check app-only tool access and cross-owner isolation. The
 demo has a single owner. Task control and approval tests and
-`src/service/platform/server/conversation-tools.test.ts` cover ownership,
+`src/service/platform/server/conversation-tools.integration.test.ts` cover ownership,
 permission routing, stale input and queue controls.

@@ -37,6 +37,8 @@ export default defineConfig(
       "release/",
       ".codex-subagent-extension/",
       "node_modules/",
+      "test-results/",
+      "playwright-report/",
     ],
   },
   {

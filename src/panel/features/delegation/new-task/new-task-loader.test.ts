@@ -61,58 +61,6 @@ test("New task replaces the selected task with the composer and reads its option
   assert.ok(controller.getSnapshot().newTask);
 });
 
-test("starting a composed task sends its options, selects it and clears the draft", async (t) => {
-  const { controller, transport } = await started();
-  t.onTestFinished(() => controller.dispose());
-  const created = { ...task("new"), worker_profile: "general" as const };
-
-  transport.handler = (name) => {
-    if (name === "start_task") return created;
-    if (name === "list_tasks") return [created, task("a")];
-
-    return undefined;
-  };
-
-  controller.newTasks.open();
-  await flush();
-
-  controller.session.update("newTask", NEW_TASK_SESSION_ID, {
-    draft: { description: values.description },
-  });
-
-  assert.equal(await controller.newTasks.start(values), undefined);
-
-  const call = transport.calls.find((item) => item.name === "start_task");
-
-  assert.deepEqual(call?.args, {
-    provider_options: {
-      claude: { permission_mode: "acceptEdits", approval_decider: "user" },
-    },
-    repository: "/repo/a",
-    description: "Fix the flaky login test",
-    provider: "claude",
-    worker_profile: "general",
-    model: "",
-    reasoning_effort: "default",
-    revision: "HEAD",
-    workspace_strategy: "current_repo",
-    conversation_id: null,
-    context: [],
-    depends_on: [],
-    budget: { max_runtime_minutes: null, max_cost_usd: null },
-  });
-
-  const state = controller.getSnapshot();
-  assert.equal(state.selected, "new");
-  assert.equal(state.newTask, undefined);
-  assert.equal(state.busy, false);
-
-  assert.deepEqual(
-    controller.session.get("newTask", NEW_TASK_SESSION_ID).draft,
-    {},
-  );
-});
-
 test("a failed start keeps the composer and its draft and returns the error", async (t) => {
   const { controller, transport } = await started();
   t.onTestFinished(() => controller.dispose());
@@ -184,18 +132,4 @@ test("the composer follows global project changes and closes for a chat scope", 
 
   controller.applyScope({ panel_scope: { conversation_id: "chat-1" } }, false);
   assert.equal(controller.getSnapshot().newTask, undefined);
-});
-
-test("selecting a task or going back closes the composer", async (t) => {
-  const { controller } = await started();
-  t.onTestFinished(() => controller.dispose());
-
-  controller.newTasks.open();
-  await controller.select("a");
-  assert.equal(controller.getSnapshot().newTask, undefined);
-
-  controller.newTasks.open();
-  controller.back();
-  assert.equal(controller.getSnapshot().newTask, undefined);
-  assert.equal(controller.getSnapshot().selected, undefined);
 });

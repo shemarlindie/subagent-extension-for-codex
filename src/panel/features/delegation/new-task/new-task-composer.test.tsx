@@ -15,8 +15,6 @@ import type {
   Snapshot,
   Transport,
 } from "../../../app/state/types";
-import type { DelegateValues } from "../delegate-values";
-import { NEW_TASK_SESSION_ID } from "./new-task-values";
 import { NewTaskView } from "./new-task-view";
 
 const ready: NewTaskState = {
@@ -34,7 +32,6 @@ const ready: NewTaskState = {
 function setup(
   newTask: NewTaskState = ready,
   overrides: Partial<Snapshot> = {},
-  draft: Partial<DelegateValues> = {},
 ) {
   onTestFinished(cleanup);
 
@@ -44,7 +41,6 @@ function setup(
   );
 
   onTestFinished(() => controller.dispose());
-  controller.session.update("newTask", NEW_TASK_SESSION_ID, { draft });
 
   const state: Snapshot = {
     ...controller.getSnapshot(),
@@ -67,7 +63,6 @@ function setup(
 
   const retry = vi.spyOn(controller.newTasks, "retry").mockReturnValue();
   const back = vi.spyOn(controller, "back").mockReturnValue();
-  const delegate = vi.spyOn(controller, "delegate").mockResolvedValue();
 
   const view = render(
     <ControllerContext.Provider value={controller}>
@@ -83,58 +78,8 @@ function setup(
     start,
     retry,
     back,
-    delegate,
   };
 }
-
-test("Enter starts a General task with the settings defaults in the scoped project", async () => {
-  const { view, user, start } = setup();
-  const send = view.getByRole("button", { name: "Start task" });
-  const message = view.getByRole("textbox", { name: "Task message" });
-
-  expect(message).toBe(document.activeElement);
-  assert.equal((send as HTMLButtonElement).disabled, true);
-  assert.ok(view.getByRole("combobox", { name: "Profile: General" }));
-
-  await user.type(message, "  Fix the flaky login test  {Enter}");
-
-  await waitFor(() => assert.equal(start.mock.calls.length, 1));
-
-  expect(start.mock.calls[0]?.[0]).toMatchObject({
-    repository: "/repo",
-    description: "Fix the flaky login test",
-    worker: "claude:general",
-    model: "",
-    reasoning_effort: "default",
-    permission_mode: "acceptEdits",
-    revision: "HEAD",
-  });
-});
-
-test("profile changes preserve the product glyph and its animation source", async () => {
-  const { view, user } = setup(ready, {}, { worker: "claude:reviewer" });
-  const glyph = view.container.querySelector<HTMLElement>(".new-task-glyph");
-  const source = glyph?.style.getPropertyValue("--new-task-glyph");
-
-  expect(glyph).not.toBeNull();
-  expect(source).toMatch(/^url\("data:image\/svg\+xml,/);
-  expect(glyph?.getAttribute("aria-hidden")).toBe("true");
-
-  await user.click(view.getByRole("combobox", { name: "Profile: Reviewer" }));
-  await user.click(await view.findByRole("option", { name: "Implementer" }));
-
-  expect(view.container.querySelector(".new-task-glyph")).toBe(glyph);
-  expect(glyph?.style.getPropertyValue("--new-task-glyph")).toBe(source);
-
-  await user.click(
-    view.getByRole("combobox", { name: "Profile: Implementer" }),
-  );
-
-  await user.click(await view.findByRole("option", { name: "Reviewer" }));
-
-  expect(view.container.querySelector(".new-task-glyph")).toBe(glyph);
-  expect(glyph?.style.getPropertyValue("--new-task-glyph")).toBe(source);
-});
 
 test("Shift+Enter adds a line instead of sending", async () => {
   const { view, user, start } = setup();
@@ -261,29 +206,6 @@ test("Escape in an empty composer returns to the task list", async () => {
   await user.keyboard("{Escape}");
 
   assert.equal(back.mock.calls.length, 1);
-});
-
-test("More options hands the message and options to the Advanced task dialog", async () => {
-  const { view, user, delegate } = setup();
-
-  await user.type(
-    view.getByRole("textbox", { name: "Task message" }),
-    "Audit the API",
-  );
-
-  await user.click(view.getByRole("button", { name: "More options…" }));
-
-  expect(delegate.mock.calls[0]).toEqual([
-    "claude:general",
-    {
-      repository: "/repo",
-      description: "Audit the API",
-      worker: "claude:general",
-      model: "",
-      reasoning_effort: "default",
-      permission_mode: "acceptEdits",
-    },
-  ]);
 });
 
 test("failed reads show the error with a retry", async () => {

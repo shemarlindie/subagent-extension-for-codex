@@ -520,18 +520,22 @@ because parts of the suite use POSIX shell fakes.
 ## Checks
 
 ```sh
+npx playwright install chromium
 npm run typecheck
 npm test
 ```
 
 `npm run typecheck` checks schema freshness and TypeScript across production,
-development and test code. `npm test` runs Vitest after checking schema freshness,
-formatting, lint and unused code, then building. To diagnose a preflight failure,
-run `npm run schemas:check`, `npm run format:check`, `npm run lint`,
+development and test code. `npm test` checks schema freshness, formatting, lint
+and unused code, then builds, runs the browser flows and runs Vitest. Install
+Chromium once after setup, and again when a Playwright upgrade requires it. To
+diagnose a preflight failure, run `npm run schemas:check`, `npm run format:check`, `npm run lint`,
 `npm run knip` or `npm run build` individually.
 
-During iteration, run focused tests with `npx vitest run <test-file>`. Watch mode
-(`npm run test:watch`) skips the preflight: regenerate schemas after contract
+During iteration, use `npm run test:e2e` for browser flows. Use
+`npm run test:integration` or `npm run test:unit` for one Vitest project, or
+`npx vitest run <test-file>` for a focused check. These Vitest commands and watch
+mode (`npm run test:watch`) skip the preflight: regenerate schemas after contract
 edits and build first when a test reads `dist/`.
 
 Format edited files with `npx eslint --fix <files>` followed by
@@ -549,9 +553,99 @@ complexity suppressions with `npx eslint . --prune-suppressions`. If Knip report
 file loaded by path as unused, declare its entry point in `knip.json`.
 
 Unit tests have a 15-second timeout, including the jsdom suites in `tests/ui/`.
-Integration suites have 60 seconds for process and worktree setup. Keep shared
-colocated test setup in a `<module>-test-harness.ts` file. These harnesses are
+Integration and browser suites have 60 seconds for process and worktree setup.
+Keep shared colocated test setup in a `<module>-test-harness.ts` file. These harnesses are
 treated as test code by lint, type checks and builds.
+
+### Choosing test coverage
+
+Start with browser end-to-end coverage for user flows. Browser flows in
+`tests/e2e/` exercise the built console against real HTTP, SSE, task controls,
+SQLite and temporary Git repositories with the fixture worker. They do not call
+Claude. Use integration tests for service, transport, process and Git boundaries
+that need direct control or cannot be reached through the console.
+
+Keep feature integration tests beside their owning code as
+`*.integration.test.ts`. Tests that combine task control, real SQLite, Git or
+worker execution belong here. Keep cross-runtime, HTTP/MCP, package and process
+suites in `tests/integration/`. Both locations run in Vitest's `integration`
+project with a 60-second timeout and are excluded from `test:unit`. Pure logic,
+mocked boundary behavior and component tests remain ordinary `*.test.ts` or
+`*.test.tsx` files in the `unit` project. Classify a test by its fixtures and
+assertions. A temporary directory alone does not make it an integration test.
+
+Add unit tests only when they protect complicated logic or a case that broader
+tests cannot reliably exercise. Examples include parser boundaries, permission
+rules, async races, stale responses, Unicode handling and state reconciliation.
+Use jsdom tests in `tests/ui/` or beside components for deterministic failures,
+concurrent edits, keyboard behavior and host bridge interactions that console
+browser tests cannot reproduce.
+
+Give each behavior one primary test layer. Remove happy-path unit and mocked UI
+tests once browser or integration coverage owns the same behavior. Keep a
+focused test only for its additional rule or edge case, and make that purpose
+clear in its name. Avoid assertions that repeat constant tables, property
+projections, CSS declarations, SVG geometry or placeholder markup. Types and
+lint cover structural rules without more tests.
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+`test:e2e` builds first and runs with two browser workers. Each test starts a
+disposable service on an OS-assigned loopback port with its own SQLite database,
+settings, fixture worker and Git repository. Teardown closes the service and
+removes its files even when the test fails. Allow localhost TCP listeners and
+browser processes when running in a sandbox. To rerun against an existing build,
+use `npx playwright test`. CI runs Chromium on Linux and macOS after the build
+and retains traces and screenshots from failures in
+`test-results/`. Inspect a trace with `npx playwright show-trace <trace.zip>`.
+
+Login and explicit project registration have one full browser flow. Other flows
+prepare these prerequisites through the public HTTP login and registration
+endpoints, sharing cookies with their fresh browser context. Task creation,
+questions, approvals, continuation, worktree actions, archive controls and
+settings still run through the browser. Reload checks establish persistence.
+Most HTTP services run inside their Playwright worker process. The recovery
+browser flow starts the development fixture service in a separate process,
+crashes it and reopens the same data directory on the same port. It verifies
+reauthentication, interrupted work, scheduler-queued tasks, the paused message
+queue and ordered continuation. Separate suites in `tests/integration/service/`
+own launcher and package lifecycle details.
+
+Measure browser performance against the same build and trace settings. Use
+`npx playwright test --workers=1 --reporter=json` to inspect serial costs, then
+compare the default worker count. Use `--repeat-each=3` to check repeatability
+and isolation. The JSON report records total runtime and individual test
+durations. Trace hooks distinguish setup time from the actual flow. Keep
+condition-based assertions and failure diagnostics when optimizing. Add workers
+only when measurements show a benefit without resource contention. Give
+concurrent Playwright commands distinct `--output` directories so one run cannot
+clean up another run's traces and screenshots.
+
+The browser verification checklist is:
+
+| ID  | Expected behavior                                                                                                           |
+| --- | --------------------------------------------------------------------------------------------------------------------------- |
+| E1  | Sign in and explicitly register a project through the console.                                                              |
+| E2  | Start a task, answer its question and approve a simulated tool request.                                                     |
+| E3  | Reload persisted history, then send a follow-up in the same worker session.                                                 |
+| E4  | Start in a worktree, preview recorded edits, remove the worktree and branch, then reload the retained diff.                 |
+| E5  | Preserve a failed turn across reload and successfully continue the same task.                                               |
+| E6  | Archive a completed task, restore it from the project archive, cancel deletion and explicitly delete it.                    |
+| E7  | Save settings, reload persisted values and retain a new-task draft while visiting settings.                                 |
+| E8  | Queue messages, edit, reorder and remove them, interrupt, reload the paused queue and resume in order.                      |
+| E9  | Exhaust a runtime budget, raise its limit, reload and successfully continue.                                                |
+| E10 | Create a dependency through the task form, preserve its wait across reload and release it after the prerequisite completes. |
+| E11 | Rename a project and verify both removal choices, retaining checkout files and cleaning task worktrees only when requested. |
+| E12 | Crash a service with running and queued work, restart, sign in and resume the recovered queue without losing its order.     |
+
+Browser coverage currently uses desktop Chromium. The fake worker establishes
+extension routing and persistence behavior. It does not establish native Claude
+permissions, live Codex placement or host message delivery. Use
+[UI verification](ui-verification.md) and
+[Claude execution verification](claude-verification.md) for those checks.
 
 Compare DOM nodes with Vitest's `expect`, not Node's assertion equality methods:
 formatting a failed Node assertion can hang on jsdom's document graph. Use `toBe`

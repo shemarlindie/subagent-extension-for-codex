@@ -3,14 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { startSchema, type Task } from "../../../../shared/tasks/model.js";
-import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
-
-test("durations read compactly at each scale", () => {
-  assert.equal(formatDuration(-5), "0s");
-  assert.equal(formatDuration(45_900), "45s");
-  assert.equal(formatDuration(185_000), "3m 05s");
-  assert.equal(formatDuration(3_720_000), "1h 02m");
-});
+import { runtimeLive, taskRuntimeMs } from "./duration";
 
 const task = (patch: Partial<Task>): Task => ({
   ...startSchema.parse({

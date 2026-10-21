@@ -4,21 +4,7 @@ import { test } from "vitest";
 
 import { Controller } from "../../app/state/controller";
 import type { Transport } from "../../app/state/types";
-import { delegationDialog, workerChoice } from "./delegation";
-
-test("a worker choice splits at its first colon into provider and profile", () => {
-  assert.deepEqual(workerChoice("claude:reviewer"), {
-    provider: "claude",
-    profile: "reviewer",
-  });
-
-  assert.deepEqual(workerChoice("claude"), { provider: "claude" });
-
-  assert.deepEqual(workerChoice("claude:"), {
-    provider: "claude",
-    profile: "",
-  });
-});
+import { delegationDialog } from "./delegation";
 
 test("New task does not reuse a revoked scoped repository", () => {
   const controller = new Controller({

@@ -24,10 +24,11 @@ Read the matching guide's relevant sections before working in an area. Unrelated
 ## Validation
 
 - Validate the resulting behavior and relevant architectural boundaries. Match checks to the change and prefer focused checks during iteration. You may skip or defer expensive checks when their runtime outweighs the confidence they add. Report what was skipped and why.
+- Prioritize browser end-to-end tests for user flows and integration tests for service boundaries. Keep unit tests for complicated logic, async races, security rules and edge cases that broader tests cannot reliably exercise. Remove overlapping tests when broader coverage owns the behavior. Follow [Choosing test coverage](docs/development.md#choosing-test-coverage).
 - Before committing, run the relevant formatting, lint, type, test, build and browser checks against the final changes being committed. Unrelated checks do not need to run.
 - Follow the repository's ESLint rules when editing code.
 - Format changed files with `npx eslint --fix <files> && npx prettier --write <files>`.
-- Unit tests time out after 15 seconds, and only `tests/integration` gets longer. Compare DOM nodes with `expect`, never `assert.deepEqual`. See [Checks](docs/development.md#checks).
+- Unit tests time out after 15 seconds. Service integration and browser end-to-end tests allow 60 seconds. Compare DOM nodes with `expect`, never `assert.deepEqual`. See [Checks](docs/development.md#checks).
 - Before running HTTP integration suites, ensure the sandbox permits localhost TCP listeners (`127.0.0.1`). Request escalation up front if needed. CI runners need the same access. Do not skip these tests because listener binding is denied.
 - Update affected documentation and report meaningful design decisions, intentional differences from established patterns, and remaining concerns in proportion to the change.
 

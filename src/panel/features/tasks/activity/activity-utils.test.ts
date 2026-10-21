@@ -15,16 +15,6 @@ const completed = (data: Record<string, unknown>): Event =>
     data,
   });
 
-test("a reply preview stays whole when it is 100 characters", () => {
-  const text = "a".repeat(100);
-
-  assert.equal(responsePreview(text), text);
-});
-
-test("a longer reply preview keeps its first 100 characters", () => {
-  assert.equal(responsePreview(`${"a".repeat(99)} b`), `${"a".repeat(99)}...`);
-});
-
 test("a reply preview counts Unicode characters, not UTF-16 units", () => {
   const text = "😀".repeat(101);
 

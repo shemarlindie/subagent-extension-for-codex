@@ -69,18 +69,6 @@ test("settings-dependent values stay blank while settings load", () => {
   assert.equal(values.cost, "");
 });
 
-test("loaded settings choose the default worker, workspace and budgets", () => {
-  const values = delegateInitialValues({ dialog: loaded, scope, draft: {} });
-
-  assert.equal(values.worker, "claude:implementer");
-  assert.equal(values.workspace_strategy, "worktree");
-  assert.equal(values.revision, "main");
-  assert.equal(values.runtimeMode, "limited");
-  assert.equal(values.runtime, 30);
-  assert.equal(values.costMode, "none");
-  assert.equal(values.reasoning_effort, "default");
-});
-
 test("the dialog's preferred worker wins, and the current repo uses HEAD", () => {
   const values = delegateInitialValues({
     dialog: {

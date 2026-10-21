@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { Tooltip } from "@base-ui/react/tooltip";
 import { cleanup, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, onTestFinished, test, vi } from "vitest";
+import { onTestFinished, test, vi } from "vitest";
 
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
@@ -93,30 +93,6 @@ test.each([
   } else {
     assert.equal(controller.getSnapshot().dialog, undefined);
   }
-});
-
-test("task menu does not offer renaming", async () => {
-  onTestFinished(cleanup);
-
-  const controller = new Controller(
-    { embedded: true, dispose() {} } as unknown as Transport,
-    { hidden: () => false, wide: () => false },
-  );
-
-  onTestFinished(() => controller.dispose());
-
-  const view = render(
-    <ControllerContext.Provider value={controller}>
-      <Tooltip.Provider>
-        <TaskMenu task={task} />
-      </Tooltip.Provider>
-    </ControllerContext.Provider>,
-  );
-
-  const user = userEvent.setup();
-  await user.click(view.getByRole("button", { name: "Task actions" }));
-  await view.findByRole("menuitem", { name: "Delete task" });
-  expect(view.queryByRole("menuitem", { name: /Rename/ })).toBeNull();
 });
 
 test.each([

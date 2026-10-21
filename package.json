@@ -23,7 +23,7 @@
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run schemas:generate && npm run clean && tsc --noEmit && node scripts/build-service.mjs && node scripts/build-panel.mjs",
     "typecheck": "npm run schemas:check && tsc --noEmit && tsc -p tsconfig.panel.json && tsc -p tsconfig.test.json",
-    "test": "vitest run",
+    "test": "playwright test && vitest run",
     "mcp": "node --enable-source-maps dist/stdio.js",
     "demo": "npm run build && node scripts/demo.mjs",
     "format": "prettier --write .",
@@ -41,7 +41,11 @@
     "schemas:generate": "node scripts/generate-schemas.mjs",
     "schemas:check": "node scripts/generate-schemas.mjs --check",
     "predev": "npm run schemas:generate",
-    "release:assemble": "node scripts/assemble-release.mjs"
+    "release:assemble": "node scripts/assemble-release.mjs",
+    "test:e2e": "playwright test",
+    "pretest:e2e": "npm run build",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration"
   },
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.300",
@@ -54,6 +58,7 @@
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@modelcontextprotocol/server": "^2.3.1",
     "@openai/mcp-extensions": "^0.1.0",
+    "@playwright/test": "^1.64.1",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",

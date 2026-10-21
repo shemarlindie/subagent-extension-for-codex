@@ -28,8 +28,15 @@ jobs:
       # pinned to the version the README says the install is tested with.
       - run: npm install --global @openai/codex@0.162.1
       - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium
       # pretest checks schemas, formatting and lint, then builds.
       - run: npm test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failures-${{ matrix.os }}
+          path: test-results/
+          if-no-files-found: ignore
 
   # Parts of the suite use POSIX shell fakes, so Windows runs the build and
   # the packaging tests until the rest is shown to run there.

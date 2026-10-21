@@ -4,7 +4,10 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-const integration = ["tests/integration/**/*.test.ts"];
+const integration = [
+  "tests/integration/**/*.test.ts",
+  "src/**/*.integration.test.ts",
+];
 
 // Unit tests fail fast: a stall should surface in seconds. Integration suites
 // spawn processes and Git worktrees, so they keep a longer limit.

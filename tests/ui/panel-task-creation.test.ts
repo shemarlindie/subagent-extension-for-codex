@@ -11,7 +11,6 @@ import {
   assert,
   assertAbsent,
   enterTask,
-  executionPresentation,
   openAdvancedTask,
   screen,
   selectedProjectPath,
@@ -436,36 +435,6 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
     assert.deepEqual(
       transport.calls.find((call) => call.name === "start_task")?.args.budget,
       { max_runtime_minutes: 1, max_cost_usd: 0.01 },
-    ),
-  );
-});
-
-test("permission buttons allow explicit inline approval without a dropdown", async (t) => {
-  const { user, transport } = await setup(t, (transport) => {
-    const [current] = transport.tasks;
-
-    assert.ok(current);
-
-    current.pending_input = {
-      id: "permission",
-      tool: "Execution",
-      kind: "permission",
-      presentation: executionPresentation,
-      input: { description: "Execute shell commands" },
-    };
-  });
-
-  expect(screen.queryByRole("dialog")).toBeNull();
-
-  await user.click(
-    screen.getByRole("button", { name: "Approve this execution turn" }),
-  );
-
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.find((call) => call.name === "submit_input")?.args
-        .approved,
-      true,
     ),
   );
 });

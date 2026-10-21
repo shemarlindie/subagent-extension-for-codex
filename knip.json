@@ -3,6 +3,7 @@
   "entry": [
     "src/service/stdio.ts",
     "src/service/projects-cli.ts",
+    "src/service/platform/service/node-version.ts",
     "src/panel/app/app.ts",
     "src/**/schema-generation.mjs",
     "dev/panel/host/panel.ts",

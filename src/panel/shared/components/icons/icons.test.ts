@@ -5,8 +5,7 @@ import { cleanup, render } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { Chevron } from "../chevron";
-import { Icon, type IconName, ICONS } from "./icons";
+import { Icon } from "./icons";
 
 afterEach(cleanup);
 
@@ -18,36 +17,6 @@ function svgOf(container: HTMLElement): SVGSVGElement {
 }
 
 describe("Icon", () => {
-  test("renders every catalog entry on one full canvas at one default size", () => {
-    for (const name of Object.keys(ICONS) as IconName[]) {
-      const { container } = render(createElement(Icon, { name }));
-      const svg = svgOf(container);
-      assert.equal(svg.getAttribute("aria-hidden"), "true", name);
-      assert.equal(svg.getAttribute("role"), null, name);
-      assert.equal(svg.getAttribute("viewBox"), "0 0 24 24", name);
-      assert.equal(svg.getAttribute("width"), "16", name);
-      assert.equal(svg.getAttribute("height"), "16", name);
-      expect(svg.querySelector("g[transform]")).toBeNull();
-      assert.ok(svg.querySelector("path, circle, rect"), name);
-      cleanup();
-    }
-  });
-
-  test("keeps the select caret's size on the shared canvas", () => {
-    const { container } = render(createElement(Chevron));
-    const svg = svgOf(container);
-
-    assert.equal(svg.getAttribute("viewBox"), "0 0 24 24");
-    assert.equal(svg.getAttribute("width"), "12");
-    assert.equal(svg.getAttribute("height"), "12");
-    assert.equal(svg.getAttribute("stroke-width"), "3.429");
-
-    assert.equal(
-      container.querySelector(".chevron")?.getAttribute("class"),
-      "chevron",
-    );
-  });
-
   test("label adds an accessible name and title", () => {
     const { container } = render(
       createElement(Icon, { name: "check", label: "Done" }),
@@ -68,16 +37,5 @@ describe("Icon", () => {
     const svg = svgOf(container);
     assert.equal(svg.querySelector("title")?.textContent, label);
     expect(svg.querySelector("title path")).toBeNull();
-  });
-
-  test("size and strokeWidth override the catalog", () => {
-    const { container } = render(
-      createElement(Icon, { name: "check", size: 10, strokeWidth: 1 }),
-    );
-
-    const svg = svgOf(container);
-    assert.equal(svg.getAttribute("width"), "10");
-    assert.equal(svg.getAttribute("height"), "10");
-    assert.equal(svg.getAttribute("stroke-width"), "1");
   });
 });

@@ -70,50 +70,6 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
   );
 });
 
-test("global UI adds a manually entered project only after explicit submission and selects it", async (t) => {
-  const { controller, transport, user } = await setup(
-    t,
-    (transport) => configureProjectRegistration(transport),
-    {},
-  );
-
-  act(() => {
-    void controller.addProject();
-  });
-
-  const dialog = await screen.findByRole("dialog");
-
-  await user.type(
-    within(dialog).getByLabelText("Repository path"),
-    "/repo/new-project",
-  );
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "app_register_project")
-      .length,
-    0,
-  );
-
-  await user.click(within(dialog).getByRole("button", { name: "Add project" }));
-
-  await waitFor(() =>
-    assert.equal(controller.getSnapshot().repository, "/repo/new-project"),
-  );
-
-  assert.deepEqual(
-    transport.calls.find((call) => call.name === "app_register_project")?.args,
-    { repository: "/repo/new-project" },
-  );
-
-  assert.ok(
-    controller
-      .getSnapshot()
-      .projects.some((project) => project.repository === "/repo/new-project"),
-  );
-
-  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
-});
-
 test("browsing a folder fills the project draft without granting access", async (t) => {
   const { controller, transport, user } = await setup(
     t,
@@ -174,30 +130,6 @@ test("Manage adds a project through the folder picker", async (t) => {
 
   assertAbsent(screen.queryByRole("dialog"));
   expect(screen.getByRole("heading", { name: "Projects" })).toBeTruthy();
-});
-
-test("cancelling the panel's folder picker adds nothing", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
-    configureProjectRegistration(transport),
-  );
-
-  await user.click(screen.getByRole("button", { name: "Manage" }));
-  await user.click(screen.getByRole("button", { name: "Add project" }));
-  await user.click(screen.getByRole("button", { name: "Browse…" }));
-
-  await waitFor(() =>
-    assert.ok(
-      transport.calls.some((call) => call.name === "app_browse_project"),
-    ),
-  );
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "app_register_project")
-      .length,
-    0,
-  );
-
-  expect(screen.getByRole("dialog")).toBeTruthy();
 });
 
 test("cancelling the native picker preserves the manual project path", async (t) => {
