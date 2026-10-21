@@ -410,7 +410,7 @@ test.concurrent(
       /approval_decider: approvalDeciderSchema\.optional\(\)/,
     );
 
-    assert.match(output, /claude_policy: claudePolicySchema\.optional\(\)/);
+    assert.match(output, /claude_policy: claudePolicySchema[,\n]/);
   },
 );
 

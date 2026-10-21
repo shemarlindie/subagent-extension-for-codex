@@ -15,10 +15,11 @@ import {
 } from "../../src/shared/providers/options.js";
 import type { Task } from "../../src/shared/tasks/model.js";
 
+/** The fixture's options. Tests may start fixture tasks with partial state. */
 export function readFixtureTaskOptions(task: Task) {
-  return claudeTaskOptionsSchema.parse(
-    optionsForProvider(task.provider_options, "fixture"),
-  );
+  return claudeTaskOptionsSchema
+    .partial()
+    .parse(optionsForProvider(task.provider_options, "fixture"));
 }
 
 export const fixtureTaskPolicy: ProviderTaskPolicy = {

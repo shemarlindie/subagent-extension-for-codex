@@ -336,7 +336,7 @@ test("Claude rejects unresolved native task state before launching a harness", a
 
     await assert.rejects(
       provider.run({ ...c, task }, "Review"),
-      /Claude task is missing resolved native permission state/,
+      new RegExp(field),
     );
 
     assert.equal(launched, false);

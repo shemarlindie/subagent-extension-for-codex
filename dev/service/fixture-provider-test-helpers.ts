@@ -2,6 +2,10 @@ import type {
   FileEdit,
   RunContext,
 } from "../../src/service/features/providers/types.js";
+import {
+  claudeOverrideDefaults,
+  resolveClaudePolicy,
+} from "../../src/shared/providers/claude/permissions.js";
 import { startSchema, type Task } from "../../src/shared/tasks/model.js";
 
 export function task(id = "task_fixture"): Task {
@@ -25,6 +29,14 @@ export function task(id = "task_fixture"): Task {
     instructions_sent: 0,
     pending_steers: [],
     queue: [],
+    provider_options: {
+      fixture: {
+        permission_mode: "default",
+        approval_decider: "user",
+        permission_source: "setting",
+        claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "reviewer"),
+      },
+    },
   };
 }
 

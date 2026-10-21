@@ -14,10 +14,8 @@ export const claudeStartOptionsSchema = z.strictObject({
 });
 
 export const claudeTaskOptionsSchema = z.strictObject({
-  permission_mode: claudePermissionModeSchema.optional(),
-  approval_decider: approvalDeciderSchema.optional(),
-  permission_source: z
-    .union([z.literal("task"), z.literal("setting")])
-    .optional(),
-  claude_policy: claudePolicySchema.optional(),
+  permission_mode: claudePermissionModeSchema,
+  approval_decider: approvalDeciderSchema,
+  permission_source: z.union([z.literal("task"), z.literal("setting")]),
+  claude_policy: claudePolicySchema,
 });

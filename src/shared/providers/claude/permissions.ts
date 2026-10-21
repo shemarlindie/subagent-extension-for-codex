@@ -84,12 +84,6 @@ export const claudeOverrideLabels: ClaudeOverrideLabels = {
   },
 };
 
-export function approvalDecider(options: {
-  approval_decider?: z.infer<typeof approvalDeciderSchema>;
-}) {
-  return options.approval_decider ?? "user";
-}
-
 const permissionLabels: Partial<
   Record<ClaudePermissionMode | "inherit", string>
 > = {

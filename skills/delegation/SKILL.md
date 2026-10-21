@@ -156,7 +156,7 @@ Questions follow native SDK rules. `dontAsk` can deny them before the callback.
 
 MCP hosts must enforce app-only visibility. Authenticated raw service clients are
 trusted administrators, and the service does not cryptographically attest human
-decisions. New Claude tasks persist native permission state under
+decisions. Claude tasks persist native permission state under
 `provider_options.claude`. Only providers with whole-execution approval accept
 `approval_mode`.
 

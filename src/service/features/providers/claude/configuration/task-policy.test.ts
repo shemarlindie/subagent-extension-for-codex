@@ -36,8 +36,8 @@ test("Claude preparation preserves native modes and restrictions independently o
     const preparedOptions = claudeOptions(prepared);
     assert.equal(preparedOptions.permission_mode, "default");
     assert.equal(preparedOptions.permission_source, "setting");
-    assert.equal(preparedOptions.claude_policy?.tools, "restricted");
-    assert.equal(preparedOptions.claude_policy?.path_guard, true);
+    assert.equal(preparedOptions.claude_policy.tools, "restricted");
+    assert.equal(preparedOptions.claude_policy.path_guard, true);
 
     assert.equal(
       claudeTaskPolicy.decideInput({ ...input } as unknown as Task, "Bash"),
@@ -47,7 +47,9 @@ test("Claude preparation preserves native modes and restrictions independently o
     assert.equal(
       claudeTaskPolicy.parentMayApprove({
         ...input,
-        provider_options: { claude: { approval_decider: "parent_agent" } },
+        provider_options: {
+          claude: { ...preparedOptions, approval_decider: "parent_agent" },
+        },
       } as unknown as Task),
       true,
     );
@@ -55,7 +57,9 @@ test("Claude preparation preserves native modes and restrictions independently o
     assert.equal(
       claudeTaskPolicy.parentMayApprove({
         ...input,
-        provider_options: { claude: { approval_decider: "user" } },
+        provider_options: {
+          claude: { ...preparedOptions, approval_decider: "user" },
+        },
       } as unknown as Task),
       false,
     );
@@ -87,8 +91,8 @@ test("Claude task-level inherit resolves to the configured extension Auto mode",
     const options = claudeOptions(prepared);
     assert.equal(options.permission_mode, "auto");
     assert.equal(options.permission_source, "setting");
-    assert.equal(options.claude_policy?.tools, "restricted");
-    assert.equal(options.claude_policy?.path_guard, true);
+    assert.equal(options.claude_policy.tools, "restricted");
+    assert.equal(options.claude_policy.path_guard, true);
   } finally {
     store.close();
   }

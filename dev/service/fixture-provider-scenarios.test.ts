@@ -163,6 +163,7 @@ test("fixture restrictions and child workers follow configured policy", async ()
 
   blocked.runContext.task.provider_options = {
     fixture: {
+      ...blocked.runContext.task.provider_options?.fixture,
       claude_policy: {
         sandbox: "extension",
         environment: "filtered",

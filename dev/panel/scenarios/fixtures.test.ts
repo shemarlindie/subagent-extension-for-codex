@@ -5,6 +5,7 @@ import { test } from "vitest";
 import type { Event } from "../../../src/panel/app/state/types";
 import { EVENT_TAIL_SIZE } from "../../../src/panel/features/tasks/activity/event-history";
 import { claudeCliSupport } from "../../../src/service/features/providers/claude/configuration/executable";
+import { readClaudeTaskOptions } from "../../../src/shared/providers/claude/task-options";
 import { currentActivityStatus } from "../../../src/shared/tasks/activity/activity-status";
 import { groupActivity } from "../../../src/shared/tasks/activity/activity-timeline";
 import type { Task } from "../../../src/shared/tasks/model";
@@ -54,6 +55,12 @@ test("preview task and event ids are unique", () => {
     new Set(previewTasks.map((task) => task.id)).size,
     previewTasks.length,
   );
+});
+
+test("Claude preview tasks store complete options, so Details shows their permissions", () => {
+  for (const task of previewTasks.filter((t) => t.provider === "claude")) {
+    assert.doesNotThrow(() => readClaudeTaskOptions(task), task.id);
+  }
 });
 
 test("each running preview task ends on a different latest activity", () => {

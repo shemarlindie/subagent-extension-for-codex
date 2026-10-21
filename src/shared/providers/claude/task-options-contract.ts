@@ -17,8 +17,8 @@ export interface ClaudeStartOptions {
  * @strict
  */
 export interface ClaudeTaskOptions {
-  permission_mode?: ClaudePermissionMode;
-  approval_decider?: ApprovalDecider;
-  permission_source?: "task" | "setting";
-  claude_policy?: ClaudePolicy;
+  permission_mode: ClaudePermissionMode;
+  approval_decider: ApprovalDecider;
+  permission_source: "task" | "setting";
+  claude_policy: ClaudePolicy;
 }

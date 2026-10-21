@@ -477,13 +477,13 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
     worker_profile: "reviewer",
   });
 
-  assert.equal(taskOptions(review).claude_policy?.tools, "restricted");
-  assert.equal(taskOptions(review).claude_policy?.path_guard, true);
+  assert.equal(taskOptions(review).claude_policy.tools, "restricted");
+  assert.equal(taskOptions(review).claude_policy.path_guard, true);
   // A later settings change does not alter started tasks.
   c.settings.update("alice", { set: { claude_tools: "restricted" } });
 
   assert.equal(
-    taskOptions(store.get(write.id, "alice")).claude_policy?.tools,
+    taskOptions(store.get(write.id, "alice")).claude_policy.tools,
     "all",
   );
 

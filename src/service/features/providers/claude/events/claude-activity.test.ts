@@ -537,6 +537,7 @@ test("run emits result accounting exactly once for success and failure", async (
         claude: {
           permission_mode: "plan",
           approval_decider: "user",
+          permission_source: "task",
           claude_policy: {
             sandbox: "user_config",
             environment: "inherit",

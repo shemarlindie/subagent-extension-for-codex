@@ -1,7 +1,6 @@
 import { access } from "node:fs/promises";
 
 import {
-  approvalDecider,
   exceedsPermission,
   resolveClaudePermission,
   resolveClaudePolicy,
@@ -81,7 +80,7 @@ export const claudeTaskPolicy: ProviderTaskPolicy = {
   // Claude's SDK applies the native mode before forwarding unresolved requests.
   decideInput: () => undefined,
   parentMayApprove: (task) =>
-    approvalDecider(readClaudeTaskOptions(task)) === "parent_agent",
+    readClaudeTaskOptions(task).approval_decider === "parent_agent",
   async validateSession(task) {
     if (task.session_state_ref) await access(task.session_state_ref);
   },

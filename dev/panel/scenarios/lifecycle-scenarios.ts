@@ -3,6 +3,7 @@ import {
   at,
   FAKE_COMMIT,
   OTHER_THREAD,
+  settingOptions,
   taskBase,
   timestamps,
   WEBSITE,
@@ -398,13 +399,7 @@ export const lifecycleTasks: Task[] = [
     description:
       "Find why retry.test.ts fails intermittently and propose a fix.",
     worker_profile: "debugger",
-    provider_options: {
-      claude: {
-        permission_mode: "default",
-        permission_source: "setting",
-        approval_decider: "user",
-      },
-    },
+    provider_options: settingOptions("debugger"),
     status: "failed",
     error: "Worker stopped: reached the maximum number of turns.",
     runtime_ms: 310000,
@@ -420,13 +415,7 @@ export const lifecycleTasks: Task[] = [
     description:
       "Split billing into invoices and payments without changing public behaviour.\n\nKeep the exported API stable: existing callers import from billing/index.\nMove invoice rendering, tax calculation and PDF export into billing/invoices, and charge, refund and webhook handling into billing/payments.\n\nDo not touch the database schema. Add tests for any code that moves, and run the full billing suite before finishing.",
     worker_profile: "implementer",
-    provider_options: {
-      claude: {
-        permission_mode: "default",
-        permission_source: "setting",
-        approval_decider: "user",
-      },
-    },
+    provider_options: settingOptions("implementer"),
     status: "running",
     workspace_strategy: "current_repo",
     budget: { max_runtime_minutes: null, max_cost_usd: null },
@@ -476,13 +465,7 @@ export const lifecycleTasks: Task[] = [
     description:
       "Improve the task inspector layout while preserving keyboard navigation and narrow-panel behavior.",
     worker_profile: "implementer",
-    provider_options: {
-      claude: {
-        permission_mode: "default",
-        permission_source: "setting",
-        approval_decider: "user",
-      },
-    },
+    provider_options: settingOptions("implementer"),
     status: "interrupted",
     turn: 2,
     instructions: [
@@ -516,13 +499,7 @@ export const lifecycleTasks: Task[] = [
     title: "Speed up the production build",
     description: "Cache module compilation across the build's source files.",
     worker_profile: "implementer",
-    provider_options: {
-      claude: {
-        permission_mode: "default",
-        permission_source: "setting",
-        approval_decider: "user",
-      },
-    },
+    provider_options: settingOptions("implementer"),
     status: "completed",
     runtime_ms: 210000,
     cost_usd: 1.04,
@@ -536,13 +513,7 @@ export const lifecycleTasks: Task[] = [
     description:
       "Profile the production build and write reports on chunk and module sizes.",
     worker_profile: "implementer",
-    provider_options: {
-      claude: {
-        permission_mode: "default",
-        permission_source: "setting",
-        approval_decider: "user",
-      },
-    },
+    provider_options: settingOptions("implementer"),
     status: "completed",
     runtime_ms: 260000,
     cost_usd: 1.31,

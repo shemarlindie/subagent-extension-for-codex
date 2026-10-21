@@ -1,5 +1,11 @@
 import type { Task, TaskMessage } from "../../../src/shared/tasks/model";
-import { at, taskBase, timestamps, WEBSITE } from "./scenario-context";
+import {
+  at,
+  settingOptions,
+  taskBase,
+  timestamps,
+  WEBSITE,
+} from "./scenario-context";
 import { begin, IMAGE, MODEL, rateLimit, text, Timeline } from "./timeline";
 
 const auditReply = `Two dependencies use licences that need review before release; the rest are permissive.
@@ -600,13 +606,7 @@ export const activityTasks: Task[] = [
     description:
       "Convert every test file to the new runner API and run each one after editing it.",
     worker_profile: "implementer",
-    provider_options: {
-      claude: {
-        permission_mode: "default",
-        permission_source: "setting",
-        approval_decider: "user",
-      },
-    },
+    provider_options: settingOptions("implementer"),
     status: "completed",
     turn: 2,
     instructions: [

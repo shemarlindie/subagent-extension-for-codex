@@ -1,3 +1,8 @@
+import {
+  claudeOverrideDefaults,
+  resolveClaudePolicy,
+} from "../../../src/shared/providers/claude/permissions";
+
 const demoProject = {
   repository: "/demo/project",
   name: "Demo project",
@@ -27,6 +32,7 @@ export const taskBase = {
       permission_mode: "plan",
       permission_source: "task",
       approval_decider: "user",
+      claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "researcher"),
     },
   },
   conversation_id: PREVIEW_THREAD,
@@ -44,6 +50,16 @@ export const taskBase = {
   turn: 1,
   runtime_ms: 0,
 };
+
+/** Claude options for a task that took its permissions from settings. */
+export const settingOptions = (profile: string) => ({
+  claude: {
+    permission_mode: "default",
+    permission_source: "setting",
+    approval_decider: "user",
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, profile),
+  },
+});
 
 export const at = (minutes: number) =>
   new Date(Date.parse("2026-10-02T08:00:00Z") + minutes * 60000).toISOString();

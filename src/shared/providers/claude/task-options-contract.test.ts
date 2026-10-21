@@ -20,35 +20,42 @@ const policy = {
   subagents: false,
 };
 
+/** A complete stored task's options. */
+const stored = {
+  permission_mode: "plan",
+  approval_decider: "user",
+  permission_source: "task",
+  claude_policy: policy,
+};
+
 // Starting a task accepts `inherit`; a stored task holds the resolved mode.
 const optionSchemas = [
-  [claudeStartOptionsSchema, permissionModeSchema],
-  [claudeTaskOptionsSchema, claudePermissionModeSchema],
+  [claudeStartOptionsSchema, permissionModeSchema, {}],
+  [claudeTaskOptionsSchema, claudePermissionModeSchema, stored],
 ] as const;
 
-test("a stored task rejects an unresolved permission mode or unknown source", () => {
+test("a stored task rejects missing state, an unresolved permission mode or an unknown source", () => {
   expect(
     claudeStartOptionsSchema.parse({ permission_mode: "inherit" }),
   ).toEqual({ permission_mode: "inherit" });
 
-  expect(
-    claudeTaskOptionsSchema.safeParse({ permission_mode: "inherit" }).success,
-  ).toBe(false);
-
-  expect(
-    claudeTaskOptionsSchema.safeParse({ permission_source: "user_config" })
-      .success,
-  ).toBe(false);
+  for (const options of [
+    {},
+    { ...stored, permission_mode: "inherit" },
+    { ...stored, permission_source: "user_config" },
+  ]) {
+    expect(claudeTaskOptionsSchema.safeParse(options).success).toBe(false);
+  }
 });
 
 test.each(optionSchemas)(
   "accepts all permission modes and approval deciders and rejects unknown fields",
-  (schema, modes) => {
-    expect(schema.parse({})).toEqual({});
+  (schema, modes, base) => {
+    expect(schema.parse(base)).toEqual(base);
 
     for (const permission_mode of modes.options) {
       for (const approval_decider of approvalDeciderSchema.options) {
-        const input = { permission_mode, approval_decider };
+        const input = { ...base, permission_mode, approval_decider };
 
         expect(schema.parse(input)).toEqual(input);
 
@@ -64,11 +71,15 @@ test.each(optionSchemas)(
       "bypass_permissions",
       true,
     ]) {
-      expect(schema.safeParse({ permission_mode }).success).toBe(false);
+      expect(schema.safeParse({ ...base, permission_mode }).success).toBe(
+        false,
+      );
     }
 
     for (const approval_decider of ["auto", "system", "none", false]) {
-      expect(schema.safeParse({ approval_decider }).success).toBe(false);
+      expect(schema.safeParse({ ...base, approval_decider }).success).toBe(
+        false,
+      );
     }
   },
 );
@@ -94,10 +105,10 @@ test("retains handwritten permission enum metadata in generated JSON Schema", ()
 test("keeps policy validation and nested unknown-field stripping", () => {
   expect(
     claudeTaskOptionsSchema.parse({
-      permission_source: "task",
+      ...stored,
       claude_policy: { ...policy, unexpected: true },
     }),
-  ).toEqual({ permission_source: "task", claude_policy: policy });
+  ).toEqual(stored);
 
   for (const claude_policy of [
     { ...policy, tools: "profile" },
@@ -105,9 +116,9 @@ test("keeps policy validation and nested unknown-field stripping", () => {
     { ...policy, sandbox: "disabled" },
     { ...policy, sandbox: false },
   ]) {
-    expect(claudeTaskOptionsSchema.safeParse({ claude_policy }).success).toBe(
-      false,
-    );
+    expect(
+      claudeTaskOptionsSchema.safeParse({ ...stored, claude_policy }).success,
+    ).toBe(false);
   }
 
   expect(
@@ -116,12 +127,7 @@ test("keeps policy validation and nested unknown-field stripping", () => {
 });
 
 test("reads only the Claude provider's options through the generated validator", () => {
-  const options = {
-    permission_mode: "plan",
-    approval_decider: "parent_agent",
-    permission_source: "task",
-    claude_policy: policy,
-  };
+  const options = { ...stored, approval_decider: "parent_agent" };
 
   expect(
     readClaudeTaskOptions({
@@ -129,13 +135,13 @@ test("reads only the Claude provider's options through the generated validator",
     }),
   ).toEqual(options);
 
-  expect(
+  expect(() =>
     readClaudeTaskOptions({ provider_options: { other: options } }),
-  ).toEqual({});
+  ).toThrow();
 
   expect(() =>
     readClaudeTaskOptions({
-      provider_options: { claude: { permission_mode: "invalid" } },
+      provider_options: { claude: { ...stored, permission_mode: "invalid" } },
     }),
   ).toThrow();
 });

@@ -1,5 +1,5 @@
 import type { Task } from "../../../src/shared/tasks/model";
-import { at, taskBase, timestamps } from "./scenario-context";
+import { at, settingOptions, taskBase, timestamps } from "./scenario-context";
 import { begin, lifecycle, Timeline } from "./timeline";
 
 const questionInput = {
@@ -135,13 +135,7 @@ export const inputTasks: Task[] = [
     description:
       "Move the config loader to a typed schema and keep backwards compatibility.",
     worker_profile: "implementer",
-    provider_options: {
-      claude: {
-        permission_mode: "default",
-        permission_source: "setting",
-        approval_decider: "user",
-      },
-    },
+    provider_options: settingOptions("implementer"),
     status: "waiting",
     waiting_reason: "waiting_for_user",
     runtime_ms: 120000,
@@ -180,13 +174,7 @@ export const inputTasks: Task[] = [
     description:
       "Trace the session expiry regression and identify the first incorrect state transition.",
     worker_profile: "debugger",
-    provider_options: {
-      claude: {
-        permission_mode: "default",
-        permission_source: "setting",
-        approval_decider: "user",
-      },
-    },
+    provider_options: settingOptions("debugger"),
     status: "waiting",
     waiting_reason: "waiting_for_permission",
     pending_input: {

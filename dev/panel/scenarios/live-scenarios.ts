@@ -1,5 +1,5 @@
 import type { Task } from "../../../src/shared/tasks/model";
-import { taskBase, timestamps } from "./scenario-context";
+import { settingOptions, taskBase, timestamps } from "./scenario-context";
 import { begin, rateLimit, Timeline } from "./timeline";
 
 // --- Running tasks, one per "latest activity" the inspector can show ----------
@@ -161,13 +161,7 @@ export const statusTasks: Task[] = liveStates.map((live, index) => ({
   title: live.title,
   description: `Shows the inspector while "${live.status}" is the latest activity.`,
   worker_profile: "implementer",
-  provider_options: {
-    claude: {
-      permission_mode: "default",
-      permission_source: "setting",
-      approval_decider: "user",
-    },
-  },
+  provider_options: settingOptions("implementer"),
   status: "running",
   workspace_strategy: "current_repo",
   budget: { max_runtime_minutes: null, max_cost_usd: null },

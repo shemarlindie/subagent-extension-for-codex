@@ -1,32 +1,30 @@
 import type { Task } from "../../tasks/model.js";
-import {
-  approvalDecider,
-  claudeOverrideLabels,
-  permissionLabel,
-} from "./permissions.js";
-import { readClaudeTaskOptions } from "./task-options.js";
+import { optionsForProvider } from "../options.js";
+import { claudeOverrideLabels, permissionLabel } from "./permissions.js";
+import { claudeTaskOptionsSchema } from "./task-options.js";
 
+/** A task's native permission facts, or none when its stored options are invalid. */
 export const claudeTaskFacts = (task: Task): Record<string, string> => {
-  const options = readClaudeTaskOptions(task),
+  const parsed = claudeTaskOptionsSchema.safeParse(
+    optionsForProvider(task.provider_options, "claude"),
+  );
+
+  if (!parsed.success) return {};
+
+  const options = parsed.data,
     policy = options.claude_policy;
 
   return {
-    "Permission mode": options.permission_mode
-      ? permissionLabel(options.permission_mode)
-      : "Provider default",
-    "Permission source": options.permission_source ?? "Provider default",
+    "Permission mode": permissionLabel(options.permission_mode),
+    "Permission source": options.permission_source,
     "Approval decision maker":
-      approvalDecider(options) === "parent_agent" ? "Parent agent" : "User",
-    ...(policy
-      ? {
-          "Session restrictions": [
-            `Sandbox: ${claudeOverrideLabels.claude_sandbox[policy.sandbox]}`,
-            `Environment: ${claudeOverrideLabels.claude_environment[policy.environment]}`,
-            `Tools: ${claudeOverrideLabels.claude_tools[policy.tools]}`,
-            `Path guard: ${policy.path_guard ? "On" : "Off"}`,
-            `Subagents: ${policy.subagents ? "On" : "Off"}`,
-          ].join(" · "),
-        }
-      : {}),
+      options.approval_decider === "parent_agent" ? "Parent agent" : "User",
+    "Session restrictions": [
+      `Sandbox: ${claudeOverrideLabels.claude_sandbox[policy.sandbox]}`,
+      `Environment: ${claudeOverrideLabels.claude_environment[policy.environment]}`,
+      `Tools: ${claudeOverrideLabels.claude_tools[policy.tools]}`,
+      `Path guard: ${policy.path_guard ? "On" : "Off"}`,
+      `Subagents: ${policy.subagents ? "On" : "Off"}`,
+    ].join(" · "),
   };
 };

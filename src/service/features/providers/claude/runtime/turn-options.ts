@@ -39,15 +39,6 @@ export async function claudeTurnOptions(
   abortController: AbortController,
 ): Promise<Options> {
   const taskOptions = readClaudeTaskOptions(c.task);
-
-  if (
-    !taskOptions.claude_policy ||
-    !taskOptions.permission_mode ||
-    !taskOptions.approval_decider
-  ) {
-    throw new Error("Claude task is missing resolved native permission state");
-  }
-
   const policy = taskOptions.claude_policy;
   const nativeMode = taskOptions.permission_mode;
 
