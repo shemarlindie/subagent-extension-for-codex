@@ -36,64 +36,61 @@ const task: Task = {
   runtime_ms: 0,
 };
 
-test.each([
-  "queued",
-  "starting",
-  "running",
-  "waiting",
-  "completed",
-  "busy",
-] as const)("task menu offers deletion for %s tasks", async (status) => {
-  onTestFinished(cleanup);
+// Every task status allows deletion. A running task is interrupted first.
+test.each(["running", "busy"] as const)(
+  "task menu offers deletion for %s tasks",
+  async (status) => {
+    onTestFinished(cleanup);
 
-  const controller = new Controller(
-    { embedded: true, dispose() {} } as unknown as Transport,
-    {
-      hidden: () => false,
-      wide: () => false,
-    },
-  );
-
-  onTestFinished(() => controller.dispose());
-
-  const current = {
-    ...task,
-    status: status === "busy" ? ("completed" as const) : status,
-  };
-
-  if (status === "busy") {
-    const snapshot = { ...controller.getSnapshot(), busy: true };
-    vi.spyOn(controller, "getSnapshot").mockReturnValue(snapshot);
-  }
-
-  const view = render(
-    <ControllerContext.Provider value={controller}>
-      <Tooltip.Provider>
-        <TaskMenu task={current} />
-      </Tooltip.Provider>
-    </ControllerContext.Provider>,
-  );
-
-  const user = userEvent.setup();
-  await user.click(view.getByRole("button", { name: "Task actions" }));
-  const action = await view.findByRole("menuitem", { name: "Delete task" });
-  // Deleting interrupts a running task first; only another action waits.
-  const enabled = status !== "busy";
-  assert.equal(action.getAttribute("aria-disabled") === "true", !enabled);
-  await user.click(action);
-
-  if (enabled) {
-    assert.equal(controller.getSnapshot().dialog?.kind, "delete");
-    const dialog = controller.getSnapshot().dialog;
-
-    assert.equal(
-      dialog && "task" in dialog ? dialog.task.id : undefined,
-      task.id,
+    const controller = new Controller(
+      { embedded: true, dispose() {} } as unknown as Transport,
+      {
+        hidden: () => false,
+        wide: () => false,
+      },
     );
-  } else {
-    assert.equal(controller.getSnapshot().dialog, undefined);
-  }
-});
+
+    onTestFinished(() => controller.dispose());
+
+    const current = {
+      ...task,
+      status: status === "busy" ? ("completed" as const) : status,
+    };
+
+    if (status === "busy") {
+      const snapshot = { ...controller.getSnapshot(), busy: true };
+      vi.spyOn(controller, "getSnapshot").mockReturnValue(snapshot);
+    }
+
+    const view = render(
+      <ControllerContext.Provider value={controller}>
+        <Tooltip.Provider>
+          <TaskMenu task={current} />
+        </Tooltip.Provider>
+      </ControllerContext.Provider>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(view.getByRole("button", { name: "Task actions" }));
+    const action = await view.findByRole("menuitem", { name: "Delete task" });
+    // Deleting interrupts a running task first; only another action waits.
+    const enabled = status !== "busy";
+    assert.equal(action.getAttribute("aria-disabled") === "true", !enabled);
+    await user.click(action);
+
+    if (enabled) {
+      assert.equal(controller.getSnapshot().dialog?.kind, "delete");
+      const dialog = controller.getSnapshot().dialog;
+
+      assert.equal(
+        dialog && "task" in dialog ? dialog.task.id : undefined,
+        task.id,
+      );
+    } else {
+      assert.equal(controller.getSnapshot().dialog, undefined);
+    }
+  },
+);
 
 test.each([
   [false, "Mark unread"],

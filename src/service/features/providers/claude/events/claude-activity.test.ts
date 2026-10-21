@@ -547,18 +547,23 @@ const assistantErrorNames = Object.keys(
   assistantErrors,
 ) as SDKAssistantMessageError[];
 
-for (const error of assistantErrorNames) {
-  test(`Claude preserves assistant error ${error}`, () => {
+// The records name every SDK value, so an SDK upgrade that adds one fails typecheck.
+test("Claude preserves every assistant error code", () => {
+  for (const error of assistantErrorNames) {
     const message = assistantMessage([], "sdk-message", { error });
 
-    assert.deepEqual(recorder().normalize(message), [
-      {
-        type: "claude.activity",
-        data: { ...message, raw_response: message },
-      },
-    ]);
-  });
-}
+    assert.deepEqual(
+      recorder().normalize(message),
+      [
+        {
+          type: "claude.activity",
+          data: { ...message, raw_response: message },
+        },
+      ],
+      error,
+    );
+  }
+});
 
 const resultSubtypes: Record<SDKResultMessage["subtype"], true> = {
   success: true,
@@ -572,18 +577,22 @@ const resultSubtypeNames = Object.keys(resultSubtypes) as Array<
   SDKResultMessage["subtype"]
 >;
 
-for (const subtype of resultSubtypeNames) {
-  test(`Claude ${subtype} result retains accounting and full result`, () => {
+test("Claude results of every subtype retain accounting and the full result", () => {
+  for (const subtype of resultSubtypeNames) {
     const message = resultMessage(subtype);
 
-    assert.deepEqual(recorder().normalize(message), [
-      {
-        type: "agent.completed",
-        data: { ...message, cost_usd: 0, raw_response: message },
-      },
-    ]);
-  });
-}
+    assert.deepEqual(
+      recorder().normalize(message),
+      [
+        {
+          type: "agent.completed",
+          data: { ...message, cost_usd: 0, raw_response: message },
+        },
+      ],
+      subtype,
+    );
+  }
+});
 
 test("run emits result accounting exactly once for success and failure", async (t) => {
   const workspace = await mkdtemp(join(tmpdir(), "claude-activity-"));

@@ -98,37 +98,43 @@ test("generated output types match all public settings contracts", () => {
   >().toEqualTypeOf<SettingSection>();
 });
 
-test.each(rows)("accepts a $kind setting row", (row) => {
-  expect(settingRowSchema.parse(row)).toEqual(row);
+test("accepts each kind of setting row", () => {
+  for (const row of rows) {
+    expect(settingRowSchema.parse(row), row.kind).toEqual(row);
+  }
 });
 
-test.each([
-  { kind: "select", key: "provider", label: "Provider" },
-  { kind: "models" },
-  {
-    kind: "models",
-    scopes: [{ ...scope, effort: { ...scope.effort, options: undefined } }],
-  },
-  {
-    kind: "text",
-    key: "prefix",
-    label: "Prefix",
-    maxLength: "100",
-    pattern: "",
-  },
-  {
-    kind: "budget",
-    key: "cost",
-    label: "Cost",
-    toggle: "enabled",
-    unit: "USD",
-    min: 0,
-    amount: false,
-  },
-  { kind: "switch", key: 1, label: "Enabled" },
-  { kind: "unknown", key: "unknown", label: "Unknown" },
-])("rejects malformed setting rows: %j", (row) => {
-  expect(settingRowSchema.safeParse(row).success).toBe(false);
+test("rejects malformed setting rows", () => {
+  for (const row of [
+    { kind: "select", key: "provider", label: "Provider" },
+    { kind: "models" },
+    {
+      kind: "models",
+      scopes: [{ ...scope, effort: { ...scope.effort, options: undefined } }],
+    },
+    {
+      kind: "text",
+      key: "prefix",
+      label: "Prefix",
+      maxLength: "100",
+      pattern: "",
+    },
+    {
+      kind: "budget",
+      key: "cost",
+      label: "Cost",
+      toggle: "enabled",
+      unit: "USD",
+      min: 0,
+      amount: false,
+    },
+    { kind: "switch", key: 1, label: "Enabled" },
+    { kind: "unknown", key: "unknown", label: "Unknown" },
+  ]) {
+    expect(settingRowSchema.safeParse(row).success, JSON.stringify(row)).toBe(
+      false,
+    );
+  }
 });
 
 test("strips unknown fields throughout the settings document", () => {

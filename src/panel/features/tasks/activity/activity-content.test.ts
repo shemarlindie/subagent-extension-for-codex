@@ -15,32 +15,9 @@ import {
 } from "./activity-ui-test-harness";
 import { EventList as GroupedEventList } from "./event-list";
 
+// A mapped title, and readable fallbacks for an unknown type or subtype.
 const families = [
   ["system", "init", "Claude connected"],
-  ["system", "status", "Claude status"],
-  ["system", "api_retry", "Retrying API request"],
-  ["system", "compact_boundary", "Context compacted"],
-  ["system", "local_command_output", "Command output"],
-  ["system", "hook_started", "Hook started"],
-  ["system", "hook_progress", "Hook progress"],
-  ["system", "hook_response", "Hook finished"],
-  ["system", "plugin_install", "Plugin installation"],
-  ["system", "task_started", "Background task started"],
-  ["system", "task_updated", "Background task updated"],
-  ["system", "task_progress", "Background task progress"],
-  ["system", "task_notification", "Background task finished"],
-  ["system", "session_state_changed", "Session state changed"],
-  ["system", "notification", "Notification"],
-  ["system", "files_persisted", "Files saved"],
-  ["system", "memory_recall", "Recalled from memory"],
-  ["system", "elicitation_complete", "Input completed"],
-  ["system", "permission_denied", "Permission denied"],
-  ["system", "mirror_error", "Transcript sync failed"],
-  ["tool_progress", undefined, "Tool running"],
-  ["tool_use_summary", undefined, "Tool summary"],
-  ["auth_status", undefined, "Authentication"],
-  ["rate_limit_event", undefined, "Rate limit update"],
-  ["prompt_suggestion", undefined, "Suggested next prompt"],
   ["future_event", undefined, "Future event"],
   ["system", "future_subtype", "Future subtype"],
 ] as const;

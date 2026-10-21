@@ -31,14 +31,14 @@ test("fixture assistant-error keys cover every SDK assistant error code", async 
   }
 });
 
-for (const stage of [
-  "start",
-  "before-input",
-  "after-input",
-  "after-tools",
-  "before-reply",
-]) {
-  test(`fixture failure trigger stops at ${stage}`, async () => {
+test("fixture failure triggers stop at each stage", async () => {
+  for (const stage of [
+    "start",
+    "before-input",
+    "after-input",
+    "after-tools",
+    "before-reply",
+  ]) {
     const f = context();
 
     await assert.rejects(
@@ -49,9 +49,10 @@ for (const stage of [
     assert.equal(
       f.events.filter((event) => event.type === "agent.completed").length,
       1,
+      stage,
     );
-  });
-}
+  }
+});
 
 test("fixture fail alias produces a reply and failed completion", async () => {
   const f = context();
@@ -76,22 +77,22 @@ test("fixture fail alias produces a reply and failed completion", async () => {
   );
 });
 
-for (const { subtype, key, error } of [
-  ...fixtureSdkResultSubtypes
-    .filter((subtype) => subtype !== "success")
-    .map((subtype) => ({
-      subtype,
-      key: subtype,
-      error: new RegExp(`Fixture completion: ${subtype}`),
-    })),
-  // A success result marked is_error still fails the turn.
-  {
-    subtype: "success",
-    key: "success is_error=true",
-    error: /Fixture completion: success \(is_error\)/,
-  },
-]) {
-  test(`fixture completion trigger emits SDK result ${key}`, async () => {
+test("fixture completion triggers emit each failed SDK result", async () => {
+  for (const { subtype, key, error } of [
+    ...fixtureSdkResultSubtypes
+      .filter((subtype) => subtype !== "success")
+      .map((subtype) => ({
+        subtype,
+        key: subtype,
+        error: new RegExp(`Fixture completion: ${subtype}`),
+      })),
+    // A success result marked is_error still fails the turn.
+    {
+      subtype: "success",
+      key: "success is_error=true",
+      error: /Fixture completion: success \(is_error\)/,
+    },
+  ]) {
     const f = context();
 
     await assert.rejects(
@@ -106,10 +107,10 @@ for (const { subtype, key, error } of [
       (event) => event.type === "agent.completed",
     );
 
-    assert.equal(completion?.data.subtype, subtype);
-    assert.equal(completion?.data.is_error, true);
-  });
-}
+    assert.equal(completion?.data.subtype, subtype, key);
+    assert.equal(completion?.data.is_error, true, key);
+  }
+});
 
 test("fixture can expose provider session deletion and shutdown errors", async () => {
   const taskWithSession = { session_id: "fixture-session" } as Task;

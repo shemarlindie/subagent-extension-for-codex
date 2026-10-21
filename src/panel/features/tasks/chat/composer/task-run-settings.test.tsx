@@ -106,11 +106,13 @@ test("defaults and read-only profiles read plainly", () => {
   ).toEqual(["Reviewer", "Default model", "Default effort", "Read only"]);
 });
 
-test.each([
-  ["Default — ask for approval", "Ask for approval"],
-  ["Plan — read only", "Plan"],
-  ["Use extension setting", "Extension setting"],
-  ["Accept edits", "Accept edits"],
-])("permission label %s reads %s", (label, short) => {
-  expect(shortPermissionLabel(label)).toBe(short);
+test("permission labels shorten to their mode", () => {
+  expect(
+    [
+      "Default — ask for approval",
+      "Plan — read only",
+      "Use extension setting",
+      "Accept edits",
+    ].map(shortPermissionLabel),
+  ).toEqual(["Ask for approval", "Plan", "Extension setting", "Accept edits"]);
 });

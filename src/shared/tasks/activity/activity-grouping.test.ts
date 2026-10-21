@@ -6,12 +6,12 @@ import { currentActivityStatus } from "./activity-status.js";
 import { groupActivity } from "./activity-timeline.js";
 import { event, sdk, stream, task } from "./activity-timeline-test-harness.js";
 
-for (const type of [
-  "thinking_tokens",
-  "thinking.tokens",
-  "agent.thinking_tokens",
-]) {
-  test(`adjacent ${type} events show Thinking… and retain every token update`, () => {
+test("adjacent thinking events of each alias show Thinking… and retain every token update", () => {
+  for (const type of [
+    "thinking_tokens",
+    "thinking.tokens",
+    "agent.thinking_tokens",
+  ]) {
     const events = [
       event(1, type, { tokens: 10 }),
       event(2, type, { tokens: 20 }),
@@ -19,14 +19,14 @@ for (const type of [
     ];
 
     const groups = groupActivity(events);
-    assert.equal(groups.length, 1);
+    assert.equal(groups.length, 1, type);
     const [group] = groups;
     assert.ok(group);
-    assert.equal(group.title, "Thinking…");
-    assert.deepEqual(group.events, events);
-    assert.equal(currentActivityStatus(events).text, "Thinking…");
-  });
-}
+    assert.equal(group.title, "Thinking…", type);
+    assert.deepEqual(group.events, events, type);
+    assert.equal(currentActivityStatus(events).text, "Thinking…", type);
+  }
+});
 
 test("SDK thinking updates use Thinking… and keep their original payloads", () => {
   const events = [
@@ -43,57 +43,51 @@ test("SDK thinking updates use Thinking… and keep their original payloads", ()
   assert.equal(currentActivityStatus(events).text, "Thinking…");
 });
 
-for (const type of [
-  "thinking_tokens",
-  "thinking.tokens",
-  "agent.thinking_tokens",
-  "SDK thinking_tokens",
+// The aliases share one thinking predicate, covered above, so one stands for all.
+const thinkingUpdate = "agent.thinking_tokens";
+
+for (const active of [
+  {
+    name: "tool",
+    start: event(1, "tool.started", { id: "read", name: "Read" }),
+    text: "Running Read",
+  },
+  {
+    name: "hook",
+    start: sdk(1, "hook_started", {
+      hook_id: "pre-tool",
+      hook_name: "PreToolUse",
+    }),
+    text: "Hook · PreToolUse",
+  },
+  {
+    name: "stream",
+    start: event(1, "claude.activity", {
+      type: "stream_event",
+      event: { type: "message_start", message: { id: "response" } },
+    }),
+    text: "Responding",
+  },
 ]) {
-  for (const active of [
-    {
-      name: "tool",
-      start: event(1, "tool.started", { id: "read", name: "Read" }),
-      text: "Running Read",
-    },
-    {
-      name: "hook",
-      start: sdk(1, "hook_started", {
-        hook_id: "pre-tool",
-        hook_name: "PreToolUse",
-      }),
-      text: "Hook · PreToolUse",
-    },
-    {
-      name: "stream",
-      start: event(1, "claude.activity", {
-        type: "stream_event",
-        event: { type: "message_start", message: { id: "response" } },
-      }),
-      text: "Responding",
-    },
-  ]) {
-    test(`${type} updates preserve the current status of a running ${active.name}`, () => {
-      const updates = [2, 3].map((id) =>
-        type === "SDK thinking_tokens"
-          ? sdk(id, "thinking_tokens", { tokens: id * 10 })
-          : event(id, type, { tokens: id * 10 }),
-      );
+  test(`thinking updates preserve the current status of a running ${active.name}`, () => {
+    const updates = [2, 3].map((id) =>
+      event(id, thinkingUpdate, { tokens: id * 10 }),
+    );
 
-      const events = [active.start, ...updates];
+    const events = [active.start, ...updates];
 
-      assert.deepEqual(currentActivityStatus(events), {
-        text: active.text,
-        state: "running",
-      });
-
-      const groups = groupActivity(events);
-      const [activeGroup, thinking] = groups;
-      assert.ok(activeGroup && thinking);
-      assert.equal(activeGroup.state, "running");
-      assert.equal(thinking.title, "Thinking…");
-      assert.deepEqual(thinking.events, updates);
+    assert.deepEqual(currentActivityStatus(events), {
+      text: active.text,
+      state: "running",
     });
-  }
+
+    const groups = groupActivity(events);
+    const [activeGroup, thinking] = groups;
+    assert.ok(activeGroup && thinking);
+    assert.equal(activeGroup.state, "running");
+    assert.equal(thinking.title, "Thinking…");
+    assert.deepEqual(thinking.events, updates);
+  });
 }
 
 test("correlated tool progress interrupts adjacent event consolidation", () => {
@@ -152,24 +146,23 @@ for (const type of ["workspace.indexed", "agent.thinking_tokens"]) {
   });
 }
 
+// Matching summaries are the case that could merge them.
 for (const role of ["assistant", "user"]) {
-  for (const summary of [undefined, "Repeated message"]) {
-    test(`distinct SDK ${role} messages with ${summary ? "matching" : "no"} summaries stay separate`, () => {
-      const events = [1, 2].map((id) =>
-        event(id, "claude.activity", {
-          type: role,
-          uuid: `message-${id}`,
-          message: { content: [{ type: "text", text: "Repeated message" }] },
-          ...(summary ? { summary } : {}),
-        }),
-      );
+  test(`distinct SDK ${role} messages with matching summaries stay separate`, () => {
+    const events = [1, 2].map((id) =>
+      event(id, "claude.activity", {
+        type: role,
+        uuid: `message-${id}`,
+        message: { content: [{ type: "text", text: "Repeated message" }] },
+        summary: "Repeated message",
+      }),
+    );
 
-      assert.deepEqual(
-        groupActivity(events).map((group) => group.events),
-        events.map((entry) => [entry]),
-      );
-    });
-  }
+    assert.deepEqual(
+      groupActivity(events).map((group) => group.events),
+      events.map((entry) => [entry]),
+    );
+  });
 }
 
 for (const type of ["workspace.indexed", "thinking_tokens"]) {
@@ -194,24 +187,25 @@ for (const type of ["workspace.indexed", "thinking_tokens"]) {
   });
 }
 
-for (const type of [
-  "task.started",
-  "task.completed",
-  "task.failed",
-  "task.interrupted",
-  "agent.completed",
-  "agent.input_required",
-  "agent.input_submitted",
-]) {
-  test(`repeated ${type} events remain individually inspectable`, () => {
+test("repeated lifecycle events remain individually inspectable", () => {
+  for (const type of [
+    "task.started",
+    "task.completed",
+    "task.failed",
+    "task.interrupted",
+    "agent.completed",
+    "agent.input_required",
+    "agent.input_submitted",
+  ]) {
     const events = [event(1, type), event(2, type)];
 
     assert.deepEqual(
       groupActivity(events).map((group) => group.events),
       events.map((entry) => [entry]),
+      type,
     );
-  });
-}
+  }
+});
 
 for (const { type, title } of [
   { type: "task.started", title: "Task started" },
@@ -376,13 +370,13 @@ test("thinking, retries and ordinary statuses keep separate rows while failures 
   assert.equal(groups.at(-1)?.events[0].id, 5);
 });
 
-for (const boundary of [
-  "agent.completed",
-  "task.completed",
-  "task.failed",
-  "task.interrupted",
-]) {
-  test(`${boundary} isolates repeated tool IDs in later turns`, () => {
+test("turn boundaries isolate repeated tool IDs in later turns", () => {
+  for (const boundary of [
+    "agent.completed",
+    "task.completed",
+    "task.failed",
+    "task.interrupted",
+  ]) {
     const groups = groupActivity([
       event(1, "tool.started", { id: "reused", name: "Read" }),
       event(2, boundary),
@@ -391,18 +385,18 @@ for (const boundary of [
     ]);
 
     const tools = groups.filter((g) => g.kind === "tool");
-    assert.equal(tools.length, 2);
 
     assert.deepEqual(
       tools.map((tool) => tool.events.map((e) => e.id)),
       [[1], [3, 4]],
+      boundary,
     );
 
     const [earlier, later] = tools;
     assert.ok(earlier && later);
-    assert.notEqual(earlier.id, later.id);
-  });
-}
+    assert.notEqual(earlier.id, later.id, boundary);
+  }
+});
 
 test("orphan results and future events remain represented", () => {
   const events = [

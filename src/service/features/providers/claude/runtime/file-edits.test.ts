@@ -337,16 +337,18 @@ test("M2 Write update computes missing hunks and drops identical content", () =>
   ).toEqual({ edits: [], unrecorded: [] });
 });
 
-test.each([
-  ["Write", { ...writeUpdate, originalFile: null, structuredPatch: [] }],
-  ["Write", { ...writeUpdate, structuredPatch: "invalid" }],
-  ["Edit", { ...edit, structuredPatch: [{ lines: ["-two", "+2"] }] }],
-  ["NotebookEdit", { notebook_path: "/repo/b.txt", updated_file: "next" }],
-])("M1 %s marks an unreadable edit incomplete", (tool, response) => {
-  expect(claudeFileEdits(tool, response)).toEqual({
-    edits: [],
-    unrecorded: ["/repo/b.txt"],
-  });
+test("M1 edit tools mark an unreadable edit incomplete", () => {
+  for (const [tool, response] of [
+    ["Write", { ...writeUpdate, originalFile: null, structuredPatch: [] }],
+    ["Write", { ...writeUpdate, structuredPatch: "invalid" }],
+    ["Edit", { ...edit, structuredPatch: [{ lines: ["-two", "+2"] }] }],
+    ["NotebookEdit", { notebook_path: "/repo/b.txt", updated_file: "next" }],
+  ] as const) {
+    expect(claudeFileEdits(tool, response), tool).toEqual({
+      edits: [],
+      unrecorded: ["/repo/b.txt"],
+    });
+  }
 });
 
 test("M3 Bash names uncaptured files once and reports only additional unknown paths", () => {
@@ -394,29 +396,21 @@ test("M3 malformed Bash hunks keep their path and do not lose other file edits",
   expect(result.unrecorded).toEqual(["/repo/new.txt", "/repo/deleted.txt"]);
 });
 
-test.each(["Write", "Edit"])(
-  "M4 staged %s responses record nothing",
-  (tool) => {
-    expect(
-      claudeFileEdits(tool, {
-        ...(tool === "Write" ? writeUpdate : edit),
-        staged: true,
-      }),
-    ).toEqual({ edits: [], unrecorded: [] });
-  },
-);
-
-test.each([
-  { ...writeUpdate, error: "failed" },
-  { ...writeUpdate, is_error: true },
-  { ...writeUpdate, isError: true },
-  "Error: file does not exist",
-  undefined,
-])("M4 errored responses record nothing", (response) => {
-  expect(claudeFileEdits("Write", response)).toEqual({
-    edits: [],
-    unrecorded: [],
-  });
+test("M4 staged and errored responses record nothing", () => {
+  for (const [tool, response] of [
+    ["Write", { ...writeUpdate, staged: true }],
+    ["Edit", { ...edit, staged: true }],
+    ["Write", { ...writeUpdate, error: "failed" }],
+    ["Write", { ...writeUpdate, is_error: true }],
+    ["Write", { ...writeUpdate, isError: true }],
+    ["Write", "Error: file does not exist"],
+    ["Write", undefined],
+  ] as const) {
+    expect(claudeFileEdits(tool, response), JSON.stringify(response)).toEqual({
+      edits: [],
+      unrecorded: [],
+    });
+  }
 });
 
 test("unrelated tools, commands without diffs, and no-op Edit hunks record nothing", () => {
