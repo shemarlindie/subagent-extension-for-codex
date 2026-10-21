@@ -635,14 +635,14 @@ The browser verification checklist is:
 | E3  | Reload persisted history, then send a follow-up in the same worker session.                                                 |
 | E4  | Start in a worktree, preview recorded edits, remove the worktree and branch, then reload the retained diff.                 |
 | E5  | Preserve a failed turn across reload and successfully continue the same task.                                               |
-| E6  | Archive a completed task, restore it from the project archive, cancel deletion and explicitly delete it.                    |
+| E6  | Start a task with Enter, keep composer focus, archive and restore it, cancel deletion and explicitly delete it.             |
 | E7  | Save settings, reload persisted values and retain a new-task draft while visiting settings.                                 |
 | E8  | Queue messages, edit, reorder and remove them, interrupt, reload the paused queue and resume in order.                      |
 | E9  | Exhaust a runtime budget, raise its limit, reload and successfully continue.                                                |
 | E10 | Create a dependency through the task form, preserve its wait across reload and release it after the prerequisite completes. |
 | E11 | Rename a project and verify both removal choices, retaining checkout files and cleaning task worktrees only when requested. |
 | E12 | Crash a service with running and queued work, restart, sign in and resume the recovered queue without losing its order.     |
-| E13 | Answer stacked single-choice and multiple-choice questions with a skip, then deny a tool with a message.                    |
+| E13 | Answer stacked questions with typed and multiple choices, undo and keep skips, then deny a tool with a message.             |
 | E14 | Keep tasks unread until read, mark them read or unread by menu, reply or bulk action, and reload the results.               |
 | E15 | Lose a send's response, keep the draft with retry guidance and deliver the retried message once.                            |
 | E16 | Lose the event stream, show reconnection and display work finished while disconnected.                                      |

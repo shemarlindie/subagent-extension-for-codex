@@ -4,7 +4,6 @@ import { expect } from "vitest";
 import {
   assert,
   assertAbsent,
-  executionPresentation,
   screen,
   setup,
   SKIPPED_ANSWER,
@@ -92,43 +91,6 @@ test("worker question accepts a custom answer with no preset selection", async (
         answers: { "Which approach?": "Custom approach" },
       },
     },
-  );
-});
-
-test("permission requests can be denied inline", async (t) => {
-  const { transport, user } = await setup(t, (transport) => {
-    const [current] = transport.tasks;
-
-    assert.ok(current);
-
-    current.pending_input = {
-      id: "permission",
-      tool: "Execution",
-      kind: "permission",
-      presentation: executionPresentation,
-      input: { description: "Execute shell commands" },
-    };
-  });
-
-  assertAbsent(screen.queryByRole("dialog"));
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "submit_input").length,
-    0,
-  );
-
-  await user.click(screen.getByRole("button", { name: "Deny" }));
-
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "submit_input").length,
-      1,
-    ),
-  );
-
-  assert.equal(
-    transport.calls.find((call) => call.name === "submit_input")?.args.approved,
-    false,
   );
 });
 
@@ -235,67 +197,6 @@ test("a single worker question can be skipped and the skip undone", async (t) =>
           answers: { "Which format?": SKIPPED_ANSWER },
         },
       },
-    ),
-  );
-});
-
-test("a skipped stacked question sends an explicit skipped answer", async (t) => {
-  const { transport, user } = await setup(t, (transport) => {
-    const [current] = transport.tasks;
-
-    assert.ok(current);
-
-    current.pending_input = {
-      id: "request",
-      tool: "AskUserQuestion",
-      kind: "question",
-      input: {
-        questions: [
-          {
-            question: "Which format?",
-            header: "Format",
-            options: [{ label: "YAML" }, { label: "JSON" }],
-          },
-          {
-            question: "Which scope?",
-            header: "Scope",
-            options: [{ label: "All" }, { label: "Changed" }],
-          },
-        ],
-      },
-    };
-  });
-
-  await user.click(screen.getByRole("radio", { name: "YAML" }));
-  // Skipping drops the partial answer and moves to the next card.
-  await user.click(screen.getByRole("button", { name: "Skip this question" }));
-  assert.ok(screen.getByText("Question 2 of 2"));
-
-  assert.ok(
-    screen.getByRole("button", { name: "Format" }).hasAttribute("data-skipped"),
-  );
-
-  await user.click(screen.getByRole("button", { name: "Format" }));
-
-  assert.equal(
-    screen.getByRole<HTMLInputElement>("radio", { name: "YAML" }).checked,
-    false,
-  );
-
-  // Picking a choice takes the skip back; Undo restores the card too.
-  await user.click(screen.getByRole("radio", { name: "JSON" }));
-  assertAbsent(screen.queryByText("Skipped", { selector: "[role=status]" }));
-  await user.click(screen.getByRole("button", { name: "Skip this question" }));
-  await user.click(screen.getByRole("radio", { name: "Changed" }));
-  await user.click(screen.getByRole("button", { name: "Respond" }));
-
-  await waitFor(() =>
-    assert.deepEqual(
-      (
-        transport.calls.find((call) => call.name === "submit_input")?.args
-          .input as any
-      )?.answers,
-      { "Which format?": SKIPPED_ANSWER, "Which scope?": "Changed" },
     ),
   );
 });
@@ -513,140 +414,5 @@ test("keyboard focus follows the stacked question cards", async (t) => {
 
   expect(document.activeElement).toBe(
     screen.getByRole("button", { name: "Respond" }),
-  );
-});
-
-test("stacked worker questions return to the first unanswered card before sending", async (t) => {
-  const { controller, transport, user } = await setup(t, (transport) => {
-    const [current] = transport.tasks;
-
-    assert.ok(current);
-
-    current.pending_input = {
-      id: "request",
-      tool: "AskUserQuestion",
-      kind: "question",
-      input: {
-        questions: [
-          {
-            question: "Which format?",
-            header: "Format",
-            options: [{ label: "YAML" }, { label: "JSON" }],
-          },
-          {
-            question: "Which extras?",
-            header: "Extras",
-            multiSelect: true,
-            options: [{ label: "Docs" }, { label: "Tests" }],
-          },
-        ],
-      },
-    };
-  });
-
-  assert.ok(screen.getByText("Question 1 of 2"));
-
-  assertAbsent(
-    screen.queryByRole("button", { name: /Claude has 2 questions/ }),
-  );
-
-  assertAbsent(screen.getByText("Which format?").closest(".notice"));
-
-  // Returning to the task shows the question directly again.
-  controller.back();
-
-  await waitFor(() =>
-    assertAbsent(screen.queryByRole("button", { name: "Respond" })),
-  );
-
-  await controller.select("one");
-  await screen.findByText("Question 1 of 2");
-
-  await user.click(screen.getByRole("button", { name: "Extras" }));
-  assert.ok(screen.getByText("Question 2 of 2"));
-  await user.click(screen.getByRole("checkbox", { name: "Docs" }));
-
-  // A typed answer joins the multiple choices.
-  await user.type(
-    screen.getByRole("textbox", { name: "Write your own answer" }),
-    "Examples",
-  );
-
-  await user.click(screen.getByRole("button", { name: "Respond" }));
-
-  assert.equal(
-    screen
-      .getByText("Answer each question before sending.")
-      .getAttribute("role"),
-    "alert",
-  );
-
-  assert.ok(screen.getByText("Question 1 of 2"));
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "submit_input").length,
-    0,
-  );
-
-  await user.click(screen.getByRole("radio", { name: "JSON" }));
-  await user.click(screen.getByRole("button", { name: "Respond" }));
-
-  await waitFor(() =>
-    assert.deepEqual(
-      (
-        transport.calls.find((call) => call.name === "submit_input")?.args
-          .input as any
-      )?.answers,
-      { "Which format?": "JSON", "Which extras?": "Docs, Examples" },
-    ),
-  );
-});
-
-test("permission approval includes the optional message after an explicit decision", async (t) => {
-  const { user, transport } = await setup(t, (transport) => {
-    const [current] = transport.tasks;
-
-    assert.ok(current);
-
-    current.pending_input = {
-      id: "message-request",
-      kind: "permission",
-      tool: "Bash",
-      input: { command: "pwd" },
-    };
-  });
-
-  assertAbsent(screen.queryByRole("dialog"));
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "submit_input").length,
-    0,
-  );
-
-  const [listed] = transport.tasks;
-
-  assert.ok(listed);
-  assert.equal(listed.pending_input?.id, "message-request");
-  await user.click(screen.getByRole("button", { name: "Add a message" }));
-
-  await user.type(
-    screen.getByRole("textbox", { name: "Optional message to worker" }),
-    "Only run this command",
-  );
-
-  await user.click(
-    screen.getByRole("button", { name: "Approve this request once" }),
-  );
-
-  await waitFor(() =>
-    assert.deepEqual(
-      transport.calls.find((call) => call.name === "submit_input")?.args,
-      {
-        task_id: "one",
-        request_id: "message-request",
-        approved: true,
-        message: "Only run this command",
-      },
-    ),
   );
 });

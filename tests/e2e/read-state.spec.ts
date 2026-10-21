@@ -59,12 +59,27 @@ test("unread replies persist until read, and manual read marks survive reload", 
   await expect(open).toContainText("Unread");
   await expect(background).not.toContainText("Unread");
 
-  await history
+  const markFrom = history
     .getByRole("button", { name: "Mark unread from here" })
-    .first()
-    .click();
+    .first();
 
+  await markFrom.click();
   await expect(background).toContainText("Unread");
+
+  await expect(
+    history.getByRole("separator", { name: "New messages" }),
+  ).toBeVisible();
+
+  // The New divider goes straight above the marked reply.
+  expect(
+    await history.evaluate((element) => {
+      const rows = [...element.querySelectorAll("[data-chat-item]")];
+      const divider = rows.findIndex((row) => row.role === "separator");
+
+      return rows[divider + 1]?.textContent;
+    }),
+  ).toContain("Fixture task completed.");
+
   await page.getByRole("radio", { name: "Unread, 2", exact: true }).click();
 
   await page

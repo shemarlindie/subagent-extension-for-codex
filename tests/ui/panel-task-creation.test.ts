@@ -505,37 +505,6 @@ test("delegation uses the extension permission setting by default and separately
   );
 });
 
-test("the new-task composer starts the task and keeps typing focus in Chat", async (t) => {
-  const { controller, transport, user } = await setup(t);
-
-  await user.click(screen.getByRole("button", { name: "New task" }));
-
-  const message = await screen.findByRole("textbox", { name: "Task message" });
-
-  // The test workers offer only Reviewer, which the composer falls back to.
-  await screen.findByRole("combobox", { name: "Profile: Reviewer" });
-  await user.type(message, "Trace the flaky login test{Enter}");
-
-  await waitFor(() =>
-    assert.equal(
-      transport.calls.filter((call) => call.name === "start_task").length,
-      1,
-    ),
-  );
-
-  await waitFor(() =>
-    assert.equal(controller.getSnapshot().newTask, undefined),
-  );
-
-  const chat = await screen.findByRole("textbox", { name: "Message" });
-
-  await waitFor(() =>
-    expect(document.activeElement, "Chat's composer should keep focus").toBe(
-      chat,
-    ),
-  );
-});
-
 for (const input of ["mouse", "keyboard"] as const) {
   test(`the Panel actions New task item leaves typing focus in the composer when opened with ${input}`, async (t) => {
     const { user } = await setup(t, undefined, { wide: false });

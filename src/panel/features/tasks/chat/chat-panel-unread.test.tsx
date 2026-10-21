@@ -35,28 +35,6 @@ const replyItems = (): ChatItem[] => [
   },
 ];
 
-test("a reply's Mark unread from here marks the task unread from that reply", async () => {
-  const { tool, task, view } = setup({}, [], replyItems());
-
-  fireEvent.click(view.getByRole("button", { name: "Mark unread from here" }));
-
-  await waitFor(() =>
-    assert.deepEqual(
-      tool.mock.calls.filter(([name]) => name === "app_mark_task_unread_from"),
-      [["app_mark_task_unread_from", { task_id: task.id, event_id: 7 }]],
-    ),
-  );
-
-  // The New divider goes straight above the reply that was marked.
-  const divider = view.getByRole("separator", { name: "New messages" });
-  const reply = view.container.querySelector('[data-chat-item="response"]');
-  assert.ok(reply);
-
-  assert.ok(
-    divider.compareDocumentPosition(reply) & Node.DOCUMENT_POSITION_FOLLOWING,
-  );
-});
-
 test("marking unread from another reply moves the New divider without leaving a copy behind", async () => {
   const second = replyItems().map((item) => ({
     ...item,
@@ -179,27 +157,6 @@ const markReadCalls = (tool: ReturnType<typeof setup>["tool"]) =>
 
 test("Chat at its latest message marks an unread task read through the events it has read", async () => {
   const { tool, task } = setup({ unread: true }, [], noteItems);
-
-  await waitFor(() =>
-    assert.deepEqual(markReadCalls(tool), [
-      [
-        "app_set_task_read",
-        { task_id: task.id, read: true, through: noteItems.length },
-      ],
-    ]),
-  );
-});
-
-test("Chat in its history leaves a task unread until the reader returns to the latest", async () => {
-  const { tool, task, view, updateTask } = setup({}, [], noteItems);
-  scrollIntoHistory(view);
-  updateTask({ unread: true });
-  await act(async () => {});
-  assert.deepEqual(markReadCalls(tool), []);
-
-  fireEvent.click(
-    view.getByRole("button", { name: "Scroll to unread messages" }),
-  );
 
   await waitFor(() =>
     assert.deepEqual(markReadCalls(tool), [

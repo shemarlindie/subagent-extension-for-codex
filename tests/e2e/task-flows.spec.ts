@@ -226,7 +226,13 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   const title = "Review archive lifecycle";
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await page.getByRole("textbox", { name: "Task message" }).fill(title);
-  await page.getByRole("button", { name: "Start task", exact: true }).click();
+
+  // Enter starts the task, and typing focus stays in Chat's composer.
+  await page.getByRole("textbox", { name: "Task message" }).press("Enter");
+
+  await expect(
+    page.getByRole("textbox", { name: "Message", exact: true }),
+  ).toBeFocused();
 
   await expect(
     page.getByRole("region", { name: "Chat history" }),
