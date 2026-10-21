@@ -4,7 +4,10 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { FixtureProvider } from "../../dev/service/fixture-provider.js";
+import {
+  FixtureProvider,
+  type FixtureProviderOptions,
+} from "../../dev/service/fixture-provider.js";
 import { Projects } from "../../src/service/features/projects/projects.js";
 import { Control } from "../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../src/service/features/tasks/storage/store.js";
@@ -16,13 +19,15 @@ import { waitForListening } from "../support/helpers.js";
 export const CONSOLE_TOKEN = "e2e-disposable-console-token-000000";
 
 /** Each test owns its database, settings, worker sessions and loopback port. */
-export async function startConsoleService() {
+export async function startConsoleService(
+  provider: FixtureProviderOptions = {},
+) {
   const directory = await realpath(await mkdtemp(join(tmpdir(), "panel-e2e-")));
 
   const control = new Control(
     new Store(join(directory, "console.sqlite")),
     new Workspaces(join(directory, "worktrees"), []),
-    new Map([["fixture", new FixtureProvider()]]),
+    new Map([["fixture", new FixtureProvider(provider)]]),
   );
 
   control.projects = new Projects(control.store.database, control.workspaces);

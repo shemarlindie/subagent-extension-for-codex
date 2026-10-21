@@ -647,6 +647,22 @@ The browser verification checklist is:
 | E15 | Lose a send's response, keep the draft with retry guidance and deliver the retried message once.                            |
 | E16 | Lose the event stream, show reconnection and display work finished while disconnected.                                      |
 | E17 | Follow a streaming reply at the end, hold the reading position in history and restore it when Chat returns.                 |
+| E18 | Steer a running turn, promote a queued message, interrupt to send it now and clear a paused queue.                          |
+| E19 | Reject a lower cost limit, raise a spent cost budget and continue.                                                          |
+| E20 | Fail a dependent with its failed prerequisite, then resume both with follow-ups.                                            |
+| E21 | Filter, search and rename tasks, keeping the filter and title across reload.                                                |
+| E22 | Reject an invalid setting, keep drafts, confirm discarding edits, reset a section and start from saved defaults.            |
+| E23 | Start a task with a chosen model and permission mode and see the policy applied.                                            |
+| E24 | Review several changed files across scopes, viewed marks, Preview all and line wrapping.                                    |
+| E25 | Delete a running task with its agent session and bulk delete archived tasks.                                                |
+| E26 | Keep a task whose agent session can't be deleted, then delete it locally.                                                   |
+| E27 | Switch between the list and a task in a narrow console without horizontal overflow.                                         |
+| E28 | Search, open a task and move between its tabs by keyboard.                                                                  |
+
+Suites configure the fixture worker with `test.use({ fixtureProvider })`, for
+example to fail provider session deletion. Browser flows don't cover large file
+previews, clipboard handoff or theme presentation. Focused component tests own
+those.
 
 Browser coverage currently uses desktop Chromium. The fake worker establishes
 extension routing and persistence behavior. It does not establish native Claude

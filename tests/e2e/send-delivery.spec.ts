@@ -1,12 +1,5 @@
-import type { Page } from "@playwright/test";
-
+import { startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
-
-async function startTask(page: Page, message: string) {
-  await page.getByRole("button", { name: "New task", exact: true }).click();
-  await page.getByRole("textbox", { name: "Task message" }).fill(message);
-  await page.getByRole("button", { name: "Start task", exact: true }).click();
-}
 
 test("a send with a lost response keeps its draft and a retry delivers it once", async ({
   consolePage: page,

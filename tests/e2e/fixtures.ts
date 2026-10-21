@@ -4,9 +4,12 @@ import { join } from "node:path";
 
 import { expect, type Page, test as base } from "@playwright/test";
 
+import type { FixtureProviderOptions } from "../../dev/service/fixture-provider.js";
 import { CONSOLE_TOKEN, startConsoleService } from "./server";
 
 type ConsoleFixtures = {
+  /** Fixture worker options, set per suite with `test.use`. */
+  fixtureProvider: FixtureProviderOptions;
   /** The in-process service, which a test can disconnect. */
   inProcessService: Awaited<ReturnType<typeof startConsoleService>>;
   /** The service the console uses, in process unless a suite overrides it. */
@@ -16,9 +19,9 @@ type ConsoleFixtures = {
 };
 
 export const test = base.extend<ConsoleFixtures>({
-  // eslint-disable-next-line no-empty-pattern -- Playwright requires destructured fixture dependencies.
-  inProcessService: async ({}, use) => {
-    const service = await startConsoleService();
+  fixtureProvider: [{}, { option: true }],
+  inProcessService: async ({ fixtureProvider }, use) => {
+    const service = await startConsoleService(fixtureProvider);
 
     try {
       await use(service);

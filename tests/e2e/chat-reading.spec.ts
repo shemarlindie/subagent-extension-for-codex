@@ -1,12 +1,7 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 
+import { send } from "./console-actions";
 import { expect, test } from "./fixtures";
-
-async function send(page: Page, message: string) {
-  const composer = page.getByRole("textbox", { name: "Message", exact: true });
-  await composer.fill(message);
-  await composer.press("Enter");
-}
 
 /** How far Chat's scroll position is from its end, in pixels. */
 const distanceFromEnd = (history: Locator) =>

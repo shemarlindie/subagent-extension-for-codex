@@ -1,18 +1,5 @@
-import type { Page } from "@playwright/test";
-
+import { openAdvancedTask, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
-
-async function startTask(page: Page, message: string) {
-  await page.getByRole("button", { name: "New task", exact: true }).click();
-  await page.getByRole("textbox", { name: "Task message" }).fill(message);
-  await page.getByRole("button", { name: "Start task", exact: true }).click();
-}
-
-async function advancedTask(page: Page, description: string) {
-  await page.getByRole("button", { name: "More ways to start a task" }).click();
-  await page.getByRole("menuitem", { name: /Advanced task/ }).click();
-  await page.getByLabel("Description", { exact: true }).fill(description);
-}
 
 test("edit, reorder and remove queued messages, then stop and resume after reload", async ({
   consolePage: page,
@@ -119,7 +106,7 @@ test("edit, reorder and remove queued messages, then stop and resume after reloa
 test("exhaust the runtime budget, apply a higher limit and continue after reload", async ({
   consolePage: page,
 }) => {
-  await advancedTask(
+  await openAdvancedTask(
     page,
     "Exercise the runtime limit [fixture:wait ms=60000]",
   );
@@ -183,7 +170,7 @@ test("a dependent task waits across reload and runs after its prerequisite compl
     page.getByRole("button", { name: "Respond", exact: true }),
   ).toBeVisible();
 
-  await advancedTask(page, "Run after the prerequisite");
+  await openAdvancedTask(page, "Run after the prerequisite");
 
   await page
     .getByRole("combobox", { name: "Wait for tasks (optional)" })
@@ -214,4 +201,74 @@ test("a dependent task waits across reload and runs after its prerequisite compl
 
   await expect(history).toContainText("Fixture session turn: 1.");
   await expect(history).not.toContainText("Waiting on dependency");
+});
+
+test("steer a running turn, interrupt to send a steer now, and clear a paused queue", async ({
+  consolePage: page,
+}) => {
+  await startTask(page, "Steer the first turn [fixture:wait ms=1500]");
+  const history = page.getByRole("region", { name: "Chat history" });
+  await expect(history).toContainText("Fixture worker running turn 1");
+  const composer = page.getByRole("textbox", { name: "Message", exact: true });
+  const queue = page.getByRole("region", { name: "Messages not sent yet" });
+
+  // Cmd/Ctrl+Enter steers the running turn at its next checkpoint.
+  await composer.fill("Use the steered path");
+  await composer.press("ControlOrMeta+Enter");
+  await expect(history).toContainText("Also took: Use the steered path");
+  await expect(history).toContainText("Fixture session turn: 1.");
+
+  // A queued message promoted to a steer waits while the turn holds steers.
+  await composer.fill(
+    "Hold the next turn [fixture:wait ms=60000] [fixture:late]",
+  );
+
+  await composer.press("Enter");
+  await expect(history).toContainText("Fixture worker running turn 2");
+  await composer.fill("Send this now");
+  await composer.press("Enter");
+  await expect(queue).toContainText("Queued · 1");
+
+  await queue
+    .getByRole("listitem")
+    .filter({ hasText: "Send this now" })
+    .getByRole("button", { name: "Steer", exact: true })
+    .click();
+
+  const sendNow = queue.getByRole("button", {
+    name: "Interrupt and send now",
+    exact: true,
+  });
+
+  await expect(sendNow).toBeVisible();
+  await expect(queue).not.toContainText("Queued ·");
+
+  // Interrupting delivers the pending steer as the next turn.
+  await sendNow.click();
+  await expect(history).toContainText("Fixture session turn: 3.");
+  await expect(queue).toHaveCount(0);
+
+  await expect(
+    history.getByRole("article", { name: "You", exact: true }).last(),
+  ).toHaveText("Send this now");
+
+  // Clearing a paused queue discards its messages without sending them.
+  await composer.fill("Hold again [fixture:wait ms=60000]");
+  await composer.press("Enter");
+  await expect(history).toContainText("Fixture worker running turn 4");
+  await composer.fill("Drop this message");
+  await composer.press("Enter");
+  await expect(queue).toContainText("Queued · 1");
+
+  await page
+    .getByRole("button", { name: "Stop the turn", exact: true })
+    .click();
+
+  await expect(queue).toContainText("Queue paused · 1");
+  await queue.getByRole("button", { name: "Clear", exact: true }).click();
+  await expect(queue).toHaveCount(0);
+  await page.reload();
+  await expect(history).toContainText("Fixture worker running turn 4");
+  await expect(queue).toHaveCount(0);
+  await expect(history).not.toContainText("Drop this message");
 });

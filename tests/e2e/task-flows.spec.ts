@@ -227,7 +227,12 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await page.getByRole("textbox", { name: "Task message" }).fill(title);
 
-  // Enter starts the task, and typing focus stays in Chat's composer.
+  // Once the composer's reads finish, Enter starts the task and typing focus
+  // stays in Chat's composer.
+  await expect(
+    page.getByRole("button", { name: "Start task", exact: true }),
+  ).toBeEnabled();
+
   await page.getByRole("textbox", { name: "Task message" }).press("Enter");
 
   await expect(
