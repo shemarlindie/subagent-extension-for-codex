@@ -1,15 +1,8 @@
 import assert from "node:assert/strict";
-import { cpSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 import { test } from "vitest";
 
 import { startSchema, type Task } from "../../../../shared/tasks/model.js";
-import {
-  migrationsFolder,
-  openDatabase,
-} from "../../../platform/database/database.js";
 import { Store } from "./store.js";
 
 function fixture(t: { onTestFinished(fn: () => void): void }) {
@@ -151,48 +144,6 @@ test("deleting a task deletes what the user saw of it", (t) => {
   assert.deepEqual(
     store.database.client.prepare("SELECT * FROM task_read").all(),
     [],
-  );
-});
-
-test("tasks from before read tracking start read through their newest event", (t) => {
-  const dir = mkdtempSync(join(tmpdir(), "read-migration-"));
-  t.onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
-  const folder = join(dir, "migrations");
-  mkdirSync(folder);
-  const initial = "20261014084019_initial";
-
-  cpSync(join(migrationsFolder, initial), join(folder, initial), {
-    recursive: true,
-  });
-
-  const path = join(dir, "console.sqlite");
-  const before = openDatabase(path, folder);
-  const insertTask = before.client.prepare("INSERT INTO tasks VALUES(?,?,?)");
-  insertTask.run("replied", "alice", "{}");
-  insertTask.run("quiet", "alice", "{}");
-
-  const insertEvent = before.client.prepare(
-    "INSERT INTO events(task_id, type, timestamp, data) VALUES(?,?,?,?)",
-  );
-
-  insertEvent.run("replied", "agent.reply", "now", "{}");
-  insertEvent.run("replied", "task.turn_ended", "now", "{}");
-  before.close();
-
-  const after = openDatabase(path);
-  t.onTestFinished(() => after.close());
-
-  assert.deepEqual(
-    after.client
-      .prepare(
-        "SELECT task_id, through, unread FROM task_read ORDER BY task_id",
-      )
-      .all()
-      .map((row) => ({ ...row })),
-    [
-      { task_id: "quiet", through: 0, unread: 0 },
-      { task_id: "replied", through: 2, unread: 0 },
-    ],
   );
 });
 
