@@ -6,20 +6,28 @@ import {
 import { titleCase } from "../../../../../shared/settings/settings-document";
 import type { Worker } from "../../../../app/state/types";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
+import type { Defaults } from "../../../settings/types";
 import { workerProfileIconName } from "../../../tasks/list/worker-profile-icon";
 import type { DelegateValues } from "../../delegate-values";
+import { profileValues } from "../new-task-values";
 
 type ProfileChipProps = {
   workers: Worker[];
+  defaults?: Defaults;
   loading: boolean;
   disabled: boolean;
 };
 
 /**
  * Chooses the worker profile. A profile works as a preset: choosing one
- * returns model and reasoning to that profile's configured defaults.
+ * returns model and reasoning to that profile's saved settings.
  */
-export function ProfileChip({ workers, loading, disabled }: ProfileChipProps) {
+export function ProfileChip({
+  workers,
+  defaults,
+  loading,
+  disabled,
+}: ProfileChipProps) {
   const { setValue } = useFormContext<DelegateValues>(),
     { field } = useFieldController<DelegateValues, "worker">({
       name: "worker",
@@ -27,9 +35,11 @@ export function ProfileChip({ workers, loading, disabled }: ProfileChipProps) {
     multipleProviders = workers.length > 1;
 
   const choose = (worker: string) => {
+    const values = profileValues(worker, defaults);
+
     field.onChange(worker);
-    setValue("model", "");
-    setValue("reasoning_effort", "default");
+    setValue("model", values.model);
+    setValue("reasoning_effort", values.reasoning_effort);
   };
 
   return (

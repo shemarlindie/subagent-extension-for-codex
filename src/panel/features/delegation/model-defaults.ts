@@ -6,7 +6,8 @@ import { workerChoice } from "./delegation";
 /**
  * What a worker choice inherits when its model and reasoning are left at
  * default: the profile's setting, then the provider's, then the global one.
- * Also returns the selected model's metadata and its supported effort levels.
+ * `providerModel` and `providerReasoning` skip the profile's setting. Also
+ * returns the selected model's metadata and its supported effort levels.
  */
 export function modelDefaults(
   defaults: Defaults,
@@ -16,16 +17,21 @@ export function modelDefaults(
 ) {
   const { provider, profile: role } = workerChoice(worker);
 
-  const model =
-    defaults[`${role}_default_model`] ||
-    defaults[`${provider}_default_model`] ||
-    defaults.default_model;
+  const providerModel =
+    defaults[`${provider}_default_model`] || defaults.default_model;
 
-  const reasoning = [
-    defaults[`${role}_default_reasoning_effort`],
+  const model = defaults[`${role}_default_model`] || providerModel;
+
+  const effort = (...levels: (string | undefined)[]) =>
+    levels.find((value) => value && value !== "default");
+
+  const providerReasoning = effort(
     defaults[`${provider}_default_reasoning_effort`],
     defaults.default_reasoning_effort,
-  ].find((value) => value && value !== "default");
+  );
+
+  const reasoning =
+    effort(defaults[`${role}_default_reasoning_effort`]) ?? providerReasoning;
 
   const workerInfo = workers.find((item) => item.provider === provider);
 
@@ -44,6 +50,8 @@ export function modelDefaults(
     provider,
     model,
     reasoning,
+    providerModel,
+    providerReasoning,
     workerInfo,
     metadata,
     supported,

@@ -1,9 +1,8 @@
 import { useEffect } from "react";
-import { useController as useFieldController } from "react-hook-form";
 
 import { titleCase } from "../../../../../shared/settings/settings-document";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
-import type { DelegateValues } from "../../delegate-values";
+import { useProfileChoice } from "./use-profile-choice";
 
 type ReasoningChipProps = {
   /** Effort levels the selected model supports. */
@@ -33,9 +32,7 @@ export function ReasoningChip({
   loading,
   disabled,
 }: ReasoningChipProps) {
-  const { field } = useFieldController<DelegateValues, "reasoning_effort">({
-      name: "reasoning_effort",
-    }),
+  const { field, choose } = useProfileChoice("reasoning_effort"),
     { value, onChange } = field,
     unsupported =
       !loading && value && value !== "default" && !supported.includes(value);
@@ -49,7 +46,7 @@ export function ReasoningChip({
       id="new-task-reasoning"
       label="Reasoning effort"
       value={value}
-      onValueChange={onChange}
+      onValueChange={choose}
       loading={loading}
       disabled={disabled || supported.length === 0}
       title={

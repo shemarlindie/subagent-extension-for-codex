@@ -1,9 +1,7 @@
-import { useController as useFieldController } from "react-hook-form";
-
 import type { ModelChoice } from "../../../../../shared/providers/types";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
-import type { DelegateValues } from "../../delegate-values";
 import { modelName } from "../../setting-labels";
+import { useProfileChoice } from "./use-profile-choice";
 
 type ModelChipProps = {
   models: ModelChoice[];
@@ -34,9 +32,7 @@ export function ModelChip({
   loading,
   disabled,
 }: ModelChipProps) {
-  const { field } = useFieldController<DelegateValues, "model">({
-      name: "model",
-    }),
+  const { field, choose } = useProfileChoice("model"),
     custom =
       field.value && !models.some((model) => model.value === field.value);
 
@@ -45,7 +41,7 @@ export function ModelChip({
       id="new-task-model"
       label="Model"
       value={field.value}
-      onValueChange={field.onChange}
+      onValueChange={choose}
       loading={loading}
       disabled={disabled}
       options={[

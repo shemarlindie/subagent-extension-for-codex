@@ -1,3 +1,4 @@
+import { titleCase } from "../../../../shared/settings/settings-document";
 import {
   applyDelegateRead,
   type DelegateReadContext,
@@ -15,7 +16,9 @@ import type {
   Task,
 } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
+import type { Defaults } from "../../settings/types";
 import type { DelegateValues } from "../delegate-values";
+import { workerChoice } from "../delegation";
 import { startTaskArguments } from "../start-task";
 
 interface NewTaskLoaderContext extends DelegateReadContext {
@@ -155,6 +158,45 @@ export class NewTaskLoader {
       composerArrival: composerHeight,
       composerFocus: true,
     });
+
+    return undefined;
+  }
+
+  /**
+   * Saves a model or reasoning choice as the profile's default setting, so
+   * choosing the profile again starts with it. Returns an error message.
+   */
+  async saveProfileSetting(
+    worker: string,
+    field: "model" | "reasoning_effort",
+    value: string,
+  ): Promise<string | undefined> {
+    const { profile } = workerChoice(worker);
+    if (!profile) return undefined;
+
+    const key = `${profile}_default_${field}` as const;
+
+    // Keeps the composer's loaded defaults in step, while it stays open.
+    const setDefault = (next: string | undefined, replacing?: string) => {
+      const newTask = this.context.snapshot().newTask;
+      if (!newTask?.defaults || newTask.defaults[key] !== replacing) return;
+
+      const defaults: Defaults = { ...newTask.defaults };
+      defaults[key] = next;
+      this.context.patch({ newTask: { ...newTask, defaults } });
+    };
+
+    const previous = this.context.snapshot().newTask?.defaults?.[key];
+    setDefault(value, previous);
+
+    try {
+      await this.context.tool("update_settings", { set: { [key]: value } });
+    } catch (error) {
+      // Restore the loaded default unless a later choice replaced it.
+      setDefault(previous, value);
+
+      return `The ${titleCase(profile)} profile's default could not be saved: ${errorMessage(error)}`;
+    }
 
     return undefined;
   }

@@ -78,7 +78,9 @@ Open **Settings** in the panel header. Values persist per user in SQLite and app
 | Approval decision maker | `user`                                                |
 
 The worker profile setting applies to model calls and the Advanced task dialog.
-The panel's **New task** composer starts with the General profile.
+The panel's **New task** composer starts with the General profile. Its model
+and reasoning chips edit the selected profile's `<profile>_default_model` and
+`<profile>_default_reasoning_effort` settings.
 
 For programmatic updates, use `get_settings` to discover supported fields and `update_settings` to change ordinary defaults. User-only settings require app-only `app_update_settings` or authenticated console authority. See [app and user authority](mcp-reference.md#app-and-user-authority) for the host enforcement boundary.
 

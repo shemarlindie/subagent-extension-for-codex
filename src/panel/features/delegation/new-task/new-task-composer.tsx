@@ -237,7 +237,11 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
         )}
         <FormFieldError
           className="chat-error chat-composer-field-feedback"
-          message={readiness?.ready === false ? readiness.message : error}
+          message={
+            readiness?.ready === false
+              ? readiness.message
+              : (error ?? form.formState.errors.root?.settings?.message)
+          }
         />
       </form>
     </FormProvider>

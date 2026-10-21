@@ -144,7 +144,15 @@ request. Enter starts the task and Shift+Enter adds a line. Below the message,
 choose the project, profile, model, reasoning and permission mode. Selecting a
 profile resets model and reasoning to the profile's settings, and read-only
 profiles keep read-only permissions. Expand the profile summary to change
-individual choices. Workspace, revision and budgets use your settings defaults.
+individual choices.
+
+The model and reasoning chips edit the selected profile's settings, so the
+profile starts with your last choice next time. **Default** clears the
+profile's setting and names the provider or global default it then inherits. A
+failed save shows an error below the composer, and the choice still applies to
+the task. Permission mode applies to this task only. Saving it would widen
+later tasks, including those agents start, so change the default in
+**Settings**. Workspace, revision and budgets use your settings defaults.
 
 **More options…** carries the draft into **Advanced task**, which adds explicit
 context, workspace and revision, approval decision maker, dependencies and
@@ -153,10 +161,10 @@ accepts several dependencies. The form blocks unsupported cost budgets and
 notes that Claude checks cost after each response, so a response can exceed the
 limit.
 
-Neither form changes settings or attaches conversation text. The composer keeps
-its draft until you send it or the panel reloads. Switching to chat scope closes
-it. Existing tasks show their starting profile, model, reasoning and permission
-mode below Chat, and later turns keep them.
+Neither form attaches conversation text, and Advanced task does not change
+settings. The composer keeps its draft until you send it or the panel reloads.
+Switching to chat scope closes it. Existing tasks show their starting profile,
+model, reasoning and permission mode below Chat, and later turns keep them.
 
 The service derives a title from the request. Click the inspector title to edit
 it. Enter or an outside click saves, Escape cancels, and a blank or failed save

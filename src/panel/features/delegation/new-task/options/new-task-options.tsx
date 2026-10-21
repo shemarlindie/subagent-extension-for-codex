@@ -10,7 +10,7 @@ import { workerChoice } from "../../delegation";
 import { modelDefaults } from "../../model-defaults";
 import { compactPermissionLabel } from "../../permission-label";
 import { compactReasoningLabel } from "../../setting-labels";
-import { newTaskProjects } from "../new-task-values";
+import { newTaskProjects, profileValues } from "../new-task-values";
 import { ModelChip, modelChipLabel } from "./model-chip";
 import { PermissionChip, permissionChipLabel } from "./permission-chip";
 import { ProfileChip } from "./profile-chip";
@@ -39,8 +39,10 @@ function resolvedOptions(
 
   return {
     models: resolved?.workerInfo?.models ?? [],
-    model: resolved?.model,
-    reasoning: resolved?.reasoning,
+    // The chips edit the profile's settings, so Default clears them and
+    // inherits the provider's.
+    model: resolved?.providerModel,
+    reasoning: resolved?.providerReasoning,
     supported: resolved?.supported ?? [],
     permissions: providerMetadata(provider, resolved?.workerInfo?.metadata)
       ?.nativePermissions?.options,
@@ -97,11 +99,14 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     [worker, model] = values,
     // A draft that already overrides the profile opens with its settings shown.
     // Reasoning stays blank until settings load.
-    [expanded, setExpanded] = useState(
-      () =>
-        Boolean(getValues("model")) ||
-        !["", "default"].includes(getValues("reasoning_effort")),
-    ),
+    [expanded, setExpanded] = useState(() => {
+      const saved = profileValues(getValues("worker"), newTask.defaults);
+
+      return (
+        getValues("model") !== saved.model ||
+        !["", saved.reasoning_effort].includes(getValues("reasoning_effort"))
+      );
+    }),
     [optionsRef] = useAutoList<HTMLDivElement>(),
     { statuses } = newTask,
     loading = statuses.workers === "loading" || statuses.settings === "loading",
@@ -130,6 +135,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
       )}
       <ProfileChip
         workers={state.workers}
+        defaults={newTask.defaults}
         loading={loading && !worker}
         disabled={disabled}
       />

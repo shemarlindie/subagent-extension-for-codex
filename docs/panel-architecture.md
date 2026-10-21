@@ -46,8 +46,10 @@ new-task composer. Transport revisions and draft following stay outside renderin
 
 The new-task composer and Advanced task dialog share settings reads and task-start
 arguments. Preserve their intentional profile difference: the composer starts
-with General, while Advanced task uses the saved profile. Other task defaults
-and submission policy use the shared delegation logic. The composer draft lives
+with General, while Advanced task uses the saved profile. The composer's model
+and reasoning chips edit the profile's settings through `controller.newTasks`,
+which also updates the composer's loaded defaults. Other task defaults and
+submission policy use the shared delegation logic. The composer draft lives
 in session memory and does not survive reload.
 
 ## State ownership and component patterns

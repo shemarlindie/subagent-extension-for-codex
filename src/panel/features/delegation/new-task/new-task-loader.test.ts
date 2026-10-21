@@ -133,3 +133,47 @@ test("the composer follows global project changes and closes for a chat scope", 
   controller.applyScope({ panel_scope: { conversation_id: "chat-1" } }, false);
   assert.equal(controller.getSnapshot().newTask, undefined);
 });
+
+test("a profile choice saves as its default and rolls back when saving fails", async (t) => {
+  const { controller, transport } = await started();
+  t.onTestFinished(() => controller.dispose());
+  controller.newTasks.open();
+  await flush();
+
+  const saved = () =>
+    controller.getSnapshot().newTask?.defaults?.general_default_model;
+
+  transport.handler = (name) => (name === "update_settings" ? {} : undefined);
+
+  assert.equal(
+    await controller.newTasks.saveProfileSetting(
+      "claude:general",
+      "model",
+      "opus",
+    ),
+    undefined,
+  );
+
+  assert.deepEqual(transport.calls.at(-1), {
+    name: "update_settings",
+    args: { set: { general_default_model: "opus" } },
+  });
+
+  assert.equal(saved(), "opus");
+
+  transport.handler = (name) =>
+    name === "update_settings"
+      ? Promise.reject(new Error("Service unavailable"))
+      : undefined;
+
+  assert.equal(
+    await controller.newTasks.saveProfileSetting(
+      "claude:general",
+      "model",
+      "haiku",
+    ),
+    "The General profile's default could not be saved: Service unavailable",
+  );
+
+  assert.equal(saved(), "opus");
+});

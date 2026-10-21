@@ -64,6 +64,10 @@ function setup(
   const retry = vi.spyOn(controller.newTasks, "retry").mockReturnValue();
   const back = vi.spyOn(controller, "back").mockReturnValue();
 
+  const saveProfileSetting = vi
+    .spyOn(controller.newTasks, "saveProfileSetting")
+    .mockResolvedValue(undefined);
+
   const view = render(
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
@@ -78,6 +82,7 @@ function setup(
     start,
     retry,
     back,
+    saveProfileSetting,
   };
 }
 
@@ -132,14 +137,34 @@ test("the profile's settings collapse into a summary that expands for editing", 
   expect(document.activeElement).toBe(toggle);
 });
 
-test("choosing a profile returns model and reasoning to its defaults", async () => {
-  const { view, user, start } = setup();
+test("reasoning choices save to the profile, and choosing a profile restores its saved settings", async () => {
+  const { view, user, start, saveProfileSetting } = setup({
+    ...ready,
+    defaults: {
+      ...defaults,
+      claude_default_reasoning_effort: "medium",
+      implementer_default_reasoning_effort: "low",
+    },
+  });
 
   await user.click(view.getByRole("button", { name: /^Edit / }));
   await user.click(view.getByRole("combobox", { name: /^Reasoning effort/ }));
   await user.click(await view.findByRole("option", { name: "High" }));
+
+  expect(saveProfileSetting.mock.calls).toEqual([
+    ["claude:general", "reasoning_effort", "high"],
+  ]);
+
   await user.click(view.getByRole("combobox", { name: "Profile: General" }));
   await user.click(await view.findByRole("option", { name: "Implementer" }));
+
+  // Default clears the profile's setting, so it names the provider's.
+  await user.click(
+    view.getByRole("combobox", { name: /^Reasoning effort: Low/ }),
+  );
+
+  assert.ok(await view.findByRole("option", { name: "Default (medium)" }));
+  await user.keyboard("{Escape}");
 
   await user.type(
     view.getByRole("textbox", { name: "Task message" }),
@@ -151,7 +176,7 @@ test("choosing a profile returns model and reasoning to its defaults", async () 
   expect(start.mock.calls[0]?.[0]).toMatchObject({
     worker: "claude:implementer",
     model: "",
-    reasoning_effort: "default",
+    reasoning_effort: "low",
   });
 });
 
