@@ -148,7 +148,7 @@ test("console requests use browser credentials and required headers for tools an
   assert.equal(calls.length, 2);
 });
 
-test("console authentication failure requests login and server failures retain their message", async () => {
+test("console authentication failure requests login, rejects sends, and server failures retain their message", async () => {
   let response = new Response(null, { status: 401 });
 
   const transport = new ConsoleTransport("", async () => response);
@@ -156,8 +156,13 @@ test("console authentication failure requests login and server failures retain t
   const observed = callbacks();
   await transport.connect(observed.events);
 
-  await assert.rejects(transport.tool("list_tasks"), /Connect the console/);
+  // Nothing ran, so a send's failure is a confirmed rejection.
+  const failure = await transport
+    .tool("send_message")
+    .catch((error: unknown) => error);
 
+  expect(failure).toBeInstanceOf(SendRejectedError);
+  expect(failure).toHaveProperty("message", "Connect the console to continue.");
   assert.equal(observed.counts().logins, 1);
   response = Response.json({ error: "Project unavailable" }, { status: 500 });
 

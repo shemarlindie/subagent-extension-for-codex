@@ -35,9 +35,11 @@ export class ConsoleTransport implements Transport {
       body: JSON.stringify(body),
     });
 
+    // Authentication rejects a request before any tool runs, so a send was
+    // not accepted and its retry identity can go.
     if (response.status === 401) {
       this.events?.login();
-      throw new Error("Connect the console to continue.");
+      throw new SendRejectedError("Connect the console to continue.");
     }
 
     const result = await response.json();
