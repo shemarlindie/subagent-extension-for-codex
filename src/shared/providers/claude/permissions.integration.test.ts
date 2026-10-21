@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
 import { test, type TestContext } from "vitest";
 
@@ -62,7 +63,7 @@ async function setup(t: TestContext, provider = new FixtureProvider()) {
     await rm(dir, { recursive: true, force: true });
   });
 
-  return { c, store, request: { ...baseRequest, repository: repo } };
+  return { c, dir, store, request: { ...baseRequest, repository: repo } };
 }
 
 const baseRequest = {
@@ -441,6 +442,8 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
       claude_sandbox: "extension_locked",
       claude_environment: "filtered",
       claude_subagents: false,
+      claude_settings_files: false,
+      claude_user_mcp: false,
     },
   });
 
@@ -455,6 +458,8 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
           tools: "all",
           path_guard: false,
           subagents: true,
+          settings_files: true,
+          user_mcp: true,
         },
       }),
       "parent",
@@ -470,6 +475,8 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
     tools: "all",
     path_guard: false,
     subagents: false,
+    settings_files: false,
+    user_mcp: false,
   });
 
   const review = await c.start("alice", {
@@ -479,13 +486,20 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
 
   assert.equal(taskOptions(review).claude_policy.tools, "restricted");
   assert.equal(taskOptions(review).claude_policy.path_guard, true);
-  // A later settings change does not alter started tasks.
-  c.settings.update("alice", { set: { claude_tools: "restricted" } });
 
-  assert.equal(
-    taskOptions(store.get(write.id, "alice")).claude_policy.tools,
-    "all",
-  );
+  // A later settings change does not alter started tasks.
+  c.settings.update("alice", {
+    set: {
+      claude_tools: "restricted",
+      claude_settings_files: true,
+      claude_user_mcp: true,
+    },
+  });
+
+  const storedPolicy = taskOptions(store.get(write.id, "alice")).claude_policy;
+  assert.equal(storedPolicy.tools, "all");
+  assert.equal(storedPolicy.settings_files, false);
+  assert.equal(storedPolicy.user_mcp, false);
 
   const bob = await c.start("bob", request);
 
@@ -493,4 +507,46 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
     taskOptions(bob).claude_policy,
     resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
   );
+});
+
+test("settings restriction migration backfills older tasks and preserves stored restrictions", async (t) => {
+  const { c, dir, request } = await setup(t);
+  const task = await c.start("alice", request);
+
+  c.settings.update("alice", {
+    set: { claude_settings_files: false, claude_user_mcp: false },
+  });
+
+  const restricted = await c.start("alice", request);
+  const path = join(dir, "tasks.sqlite");
+
+  // Store the task as an earlier build did, before the backfill migration.
+  const raw = new DatabaseSync(path);
+
+  raw
+    .prepare(
+      `UPDATE tasks SET body = json_remove(body,
+        '$.provider_options.claude.claude_policy.settings_files',
+        '$.provider_options.claude.claude_policy.user_mcp') WHERE id = ?`,
+    )
+    .run(task.id);
+
+  raw.exec(`
+    DELETE FROM __drizzle_migrations
+      WHERE name = '20261026081533_claude_settings_restrictions';
+  `);
+
+  raw.close();
+  const reopened = new Store(path);
+  t.onTestFinished(() => reopened.close());
+  const policy = taskOptions(reopened.get(task.id, "alice")).claude_policy;
+  assert.equal(policy.settings_files, true);
+  assert.equal(policy.user_mcp, true);
+
+  const restrictedPolicy = taskOptions(
+    reopened.get(restricted.id, "alice"),
+  ).claude_policy;
+
+  assert.equal(restrictedPolicy.settings_files, false);
+  assert.equal(restrictedPolicy.user_mcp, false);
 });

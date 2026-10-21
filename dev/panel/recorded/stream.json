@@ -23,7 +23,9 @@
           "environment": "inherit",
           "tools": "restricted",
           "path_guard": true,
-          "subagents": true
+          "subagents": true,
+          "settings_files": true,
+          "user_mcp": true
         }
       }
     },

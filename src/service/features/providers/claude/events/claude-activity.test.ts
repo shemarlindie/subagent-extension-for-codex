@@ -544,6 +544,8 @@ test("run emits result accounting exactly once for success and failure", async (
             tools: "restricted",
             path_guard: true,
             subagents: true,
+            settings_files: true,
+            user_mcp: true,
           },
         },
       },

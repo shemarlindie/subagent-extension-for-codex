@@ -228,21 +228,23 @@ approval and session restrictions stay separate from the permission mode.
 
 ## Claude session restrictions
 
-Delegated sessions load your user, project and local Claude Code settings. These
-include `CLAUDE.md`, rules, skills, hooks, permission allow and deny rules, MCP
-servers, connectors, sandbox settings and environment settings. A native allow
-or deny rule may decide a call before the extension sees it.
+By default, delegated sessions load your user, project and local Claude Code
+settings. These include `CLAUDE.md`, rules, skills, hooks, permission allow and
+deny rules, MCP servers, connectors, sandbox settings and environment settings.
+A native allow or deny rule may decide a call before the extension sees it.
 
 These user-only settings restrict delegated sessions. Each task stores its
 resolved restrictions, so later changes never broaden an existing task.
 
-| Setting              | Default       | Choices                                                                                                                                                                                                                                                                                                                 |
-| -------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `claude_sandbox`     | `user_config` | `user_config` uses your Claude Code sandbox settings. `extension` limits Bash writes to the workspace, protects Git metadata, blocks reads of home, the data directory and sibling worktrees, blocks the network, and never runs Bash unsandboxed. `extension_locked` also ignores network domains your settings allow. |
-| `claude_environment` | `inherit`     | `inherit` passes the service environment except `CODEX_SUBAGENT_EXTENSION_*`, `OPENAI_*` and `CLAUDE_CODE_OAUTH_TOKEN`. `filtered` passes basic process variables plus `CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`. Settings-file `env` applies in both.                                        |
-| `claude_tools`       | `profile`     | `all` offers every native tool. `restricted` offers file, search, Bash, question, skill and MCP tools, and gives read-only work only read, question and skill tools plus the parent report tool. `profile` restricts read-only profiles only.                                                                           |
-| `claude_path_guard`  | `profile`     | `on` keeps file tools inside the workspace and out of Git metadata. `off` relies on native rules. `profile` turns the guard on for read-only profiles.                                                                                                                                                                  |
-| `claude_subagents`   | `true`        | `false` blocks the Agent tool and its legacy Task name.                                                                                                                                                                                                                                                                 |
+| Setting                 | Default       | Choices                                                                                                                                                                                                                                                                                                                 |
+| ----------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `claude_sandbox`        | `user_config` | `user_config` uses your Claude Code sandbox settings. `extension` limits Bash writes to the workspace, protects Git metadata, blocks reads of home, the data directory and sibling worktrees, blocks the network, and never runs Bash unsandboxed. `extension_locked` also ignores network domains your settings allow. |
+| `claude_environment`    | `inherit`     | `inherit` passes the service environment except `CODEX_SUBAGENT_EXTENSION_*`, `OPENAI_*` and `CLAUDE_CODE_OAUTH_TOKEN`. `filtered` passes basic process variables plus `CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`. Settings-file `env` applies in both while settings files load.              |
+| `claude_tools`          | `profile`     | `all` offers every native tool. `restricted` offers file, search, Bash, question, skill and MCP tools, and gives read-only work only read, question and skill tools plus the parent report tool. `profile` restricts read-only profiles only.                                                                           |
+| `claude_path_guard`     | `profile`     | `on` keeps file tools inside the workspace and out of Git metadata. `off` relies on native rules. `profile` turns the guard on for read-only profiles.                                                                                                                                                                  |
+| `claude_subagents`      | `true`        | `false` blocks the Agent tool and its legacy Task name.                                                                                                                                                                                                                                                                 |
+| `claude_settings_files` | `true`        | `false` loads no user, project or local settings files, so their instructions, skills, hooks, permission rules, sandbox settings and MCP servers don't apply. With `claude_sandbox: user_config`, the sandbox then follows Claude Code's defaults.                                                                      |
+| `claude_user_mcp`       | `true`        | `false` ignores MCP servers from your Claude Code configuration, including `.mcp.json`, user-scope and plugin servers. `claude_settings_files: false` does the same. Sessions keep the extension's own parent report server.                                                                                            |
 
 The read-only profiles are `researcher`, `reviewer` and `security_reviewer`.
 

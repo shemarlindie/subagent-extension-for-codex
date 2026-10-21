@@ -49,9 +49,9 @@ Sign in with the token in
 `~/.local/share/codex-subagent-extension/admin-token`. Treat the token as a
 credential and keep it out of chats and commits.
 
-Claude uses the host's Claude Code credentials and its user, project and local
-settings, including instructions, skills, hooks and MCP servers. The extension
-doesn't manage provider credentials. Read
+Claude uses the host's Claude Code credentials. By default, it also loads user,
+project and local settings, including instructions, skills, hooks and MCP
+servers. The extension doesn't manage provider credentials. Read
 [Configuration and permissions](docs/configuration.md) before changing execution
 authority or session restrictions.
 

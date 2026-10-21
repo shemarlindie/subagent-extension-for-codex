@@ -19,7 +19,7 @@ import {
 
 export const claudeSettingHelp = {
   claude_permission_mode:
-    "Tasks use this mode unless you choose another. Claude Code's other user, project and local settings still apply.",
+    "Tasks use this mode unless you choose another. Your other Claude Code settings still apply while Load Claude Code settings is on.",
   claude_sandbox:
     "Your Claude Code settings decide the sandbox by default. The extension sandbox allows writes only in the workspace and blocks home and sibling reads and the network. Locking its network also ignores domains your Claude Code settings allow.",
   claude_environment:
@@ -30,6 +30,10 @@ export const claudeSettingHelp = {
     "Keeps file tools inside the task workspace and out of Git metadata. By worker profile applies it only to read-only profiles.",
   claude_subagents:
     "Delegated sessions may start subagents with the Agent tool.",
+  claude_settings_files:
+    "Sessions load your user, project and local Claude Code settings, including instructions, skills, hooks, permission rules, sandbox settings and MCP servers. Off ignores all of them, including your deny rules and sandbox.",
+  claude_user_mcp:
+    "Sessions may use MCP servers from your Claude Code configuration, such as project, user and plugin servers. This also requires Load Claude Code settings. Off leaves only the extension's own server.",
   default_approval_decider:
     "Who answers permission prompts that Claude Code doesn't decide itself.",
 };
@@ -66,6 +70,14 @@ export const claudeSettingsShape = {
     title: "Allow subagents",
     description: settingHelp.claude_subagents,
   }),
+  claude_settings_files: z.boolean().meta({
+    title: "Load Claude Code settings",
+    description: settingHelp.claude_settings_files,
+  }),
+  claude_user_mcp: z.boolean().meta({
+    title: "Your MCP servers",
+    description: settingHelp.claude_user_mcp,
+  }),
   default_approval_decider: approvalDeciderSchema.meta({
     title: "Approval decision maker",
     description: settingHelp.default_approval_decider,
@@ -88,6 +100,10 @@ export const claudeStoredSettingsShape = {
   claude_subagents: z
     .boolean()
     .default(claudeOverrideDefaults.claude_subagents),
+  claude_settings_files: z
+    .boolean()
+    .default(claudeOverrideDefaults.claude_settings_files),
+  claude_user_mcp: z.boolean().default(claudeOverrideDefaults.claude_user_mcp),
 };
 
 export const claudeApprovalRows: SettingRow[] = [
@@ -150,6 +166,18 @@ export const claudeRestrictionsSection: SettingSection = {
       key: "claude_subagents",
       label: "Allow subagents",
       help: [settingHelp.claude_subagents],
+    },
+    {
+      kind: "switch",
+      key: "claude_settings_files",
+      label: "Load Claude Code settings",
+      help: [settingHelp.claude_settings_files],
+    },
+    {
+      kind: "switch",
+      key: "claude_user_mcp",
+      label: "Your MCP servers",
+      help: [settingHelp.claude_user_mcp],
     },
   ],
 };

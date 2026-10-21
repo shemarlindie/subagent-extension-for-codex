@@ -41,6 +41,8 @@ export type ClaudeOverrides = {
   claude_tools: z.infer<typeof claudeToolsSchema>;
   claude_path_guard: z.infer<typeof claudePathGuardSchema>;
   claude_subagents: boolean;
+  claude_settings_files: boolean;
+  claude_user_mcp: boolean;
 };
 
 // Other Claude Code configuration loads by default; the extension owns the
@@ -51,13 +53,15 @@ export const claudeOverrideDefaults: ClaudeOverrides = {
   claude_tools: "profile",
   claude_path_guard: "profile",
   claude_subagents: true,
+  claude_settings_files: true,
+  claude_user_mcp: true,
 };
 
+/** Labels for each choice of the non-switch overrides. */
 type ClaudeOverrideLabels = {
-  [K in Exclude<keyof ClaudeOverrides, "claude_subagents">]: Record<
-    ClaudeOverrides[K],
-    string
-  >;
+  [
+    K in keyof ClaudeOverrides as ClaudeOverrides[K] extends string ? K : never
+  ]: Record<Extract<ClaudeOverrides[K], string>, string>;
 };
 
 export const claudeOverrideLabels: ClaudeOverrideLabels = {
@@ -144,6 +148,10 @@ export const claudePolicySchema = z.object({
   tools: z.enum(["all", "restricted"]),
   path_guard: z.boolean(),
   subagents: z.boolean(),
+  /** Load the user's, project's and local Claude Code settings. */
+  settings_files: z.boolean(),
+  /** Offer MCP servers from the user's Claude Code configuration alongside the extension's own. */
+  user_mcp: z.boolean(),
 });
 
 export type ClaudePolicy = z.infer<typeof claudePolicySchema>;
@@ -173,5 +181,7 @@ export function resolveClaudePolicy(
         ? readOnly
         : overrides.claude_path_guard === "on",
     subagents: overrides.claude_subagents,
+    settings_files: overrides.claude_settings_files,
+    user_mcp: overrides.claude_user_mcp,
   };
 }

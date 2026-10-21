@@ -165,6 +165,8 @@ export const parity = {
   tools: "all",
   path_guard: false,
   subagents: true,
+  settings_files: true,
+  user_mcp: true,
 } as const;
 
 /** A successful SDK turn that exposes the options passed to each launch. */

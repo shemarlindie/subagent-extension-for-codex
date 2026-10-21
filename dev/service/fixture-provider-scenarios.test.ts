@@ -170,6 +170,8 @@ test("fixture restrictions and child workers follow configured policy", async ()
         tools: "restricted",
         path_guard: true,
         subagents: false,
+        settings_files: true,
+        user_mcp: true,
       },
     },
   };

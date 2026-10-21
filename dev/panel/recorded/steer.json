@@ -10,7 +10,9 @@
           "environment": "inherit",
           "tools": "all",
           "path_guard": false,
-          "subagents": true
+          "subagents": true,
+          "settings_files": true,
+          "user_mcp": true
         }
       }
     },

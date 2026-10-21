@@ -127,10 +127,11 @@ requests. It is `user` or `parent_agent` and inherits `default_approval_decider`
 reaches the permission callback.
 
 With default session settings, write-profile Claude tasks use the host's native
-tools, subagents, sandbox settings and environment. Read-only profiles restrict
-tools and paths. The user can configure session restrictions through
-`claude_sandbox`, `claude_environment`, `claude_tools`, `claude_path_guard` and
-`claude_subagents` in settings.
+tools, subagents, Claude Code settings, MCP servers, sandbox settings and
+environment. Read-only profiles restrict tools and paths. The user can configure
+session restrictions through `claude_sandbox`, `claude_environment`,
+`claude_tools`, `claude_path_guard`, `claude_subagents`,
+`claude_settings_files` and `claude_user_mcp` in settings.
 Read-only profiles get restricted tools and the path guard unless the user
 loosens them. Enabled restrictions and repository checks apply in every native
 mode. Model-visible `update_settings` cannot change session restrictions.

@@ -25,6 +25,8 @@ export const claudeTaskFacts = (task: Task): Record<string, string> => {
       `Tools: ${claudeOverrideLabels.claude_tools[policy.tools]}`,
       `Path guard: ${policy.path_guard ? "On" : "Off"}`,
       `Subagents: ${policy.subagents ? "On" : "Off"}`,
+      `Claude Code settings: ${policy.settings_files ? "On" : "Off"}`,
+      `Your MCP servers: ${policy.settings_files && policy.user_mcp ? "On" : "Off"}`,
     ].join(" · "),
   };
 };

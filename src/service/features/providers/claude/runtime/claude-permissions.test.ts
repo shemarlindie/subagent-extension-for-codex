@@ -238,6 +238,8 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
       tools: "restricted",
       path_guard: true,
       subagents: false,
+      settings_files: true,
+      user_mcp: true,
     },
   });
 

@@ -1,3 +1,4 @@
+import { claudeOverrideDefaults } from "../../../src/shared/providers/claude/permissions";
 import { type ModelChoice } from "../../../src/shared/providers/types";
 import { settingsSections } from "../../../src/shared/settings/settings-document";
 import {
@@ -61,11 +62,7 @@ const previewSettingsDefaults = {
   auto_register_chat_project: true,
   claude_permission_mode: "default",
   default_approval_decider: "user",
-  claude_sandbox: "user_config",
-  claude_environment: "inherit",
-  claude_tools: "profile",
-  claude_path_guard: "profile",
-  claude_subagents: true,
+  ...claudeOverrideDefaults,
   max_cost_usd: null,
   max_runtime_minutes: null,
   ...Object.fromEntries(

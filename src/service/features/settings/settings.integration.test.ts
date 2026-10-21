@@ -828,6 +828,8 @@ test("Claude session restrictions are scalar user-only settings with stored defa
     "claude_tools",
     "claude_path_guard",
     "claude_subagents",
+    "claude_settings_files",
+    "claude_user_mcp",
   ] as const;
 
   const before = f.settings.values("alice");
@@ -858,6 +860,8 @@ test("Claude session restrictions are scalar user-only settings with stored defa
     { claude_tools: "all" },
     { claude_path_guard: "off" },
     { claude_subagents: true },
+    { claude_settings_files: true },
+    { claude_user_mcp: true },
   ]) {
     assert.throws(
       () => f.settings.update("alice", { set }, "parent"),
@@ -872,6 +876,8 @@ test("Claude session restrictions are scalar user-only settings with stored defa
       claude_sandbox: "extension_locked",
       claude_tools: "profile",
       claude_subagents: true,
+      claude_settings_files: false,
+      claude_user_mcp: false,
     },
   });
 
@@ -880,6 +886,8 @@ test("Claude session restrictions are scalar user-only settings with stored defa
   assert.equal(after.claude_sandbox, "extension_locked");
   assert.equal(after.claude_tools, "profile");
   assert.equal(after.claude_subagents, true);
+  assert.equal(after.claude_settings_files, false);
+  assert.equal(after.claude_user_mcp, false);
   assert.equal(after.max_runtime_minutes, null);
 
   assert.throws(() =>

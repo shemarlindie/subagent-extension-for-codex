@@ -17,6 +17,8 @@ const policy = {
   tools: "restricted",
   path_guard: true,
   subagents: false,
+  settings_files: true,
+  user_mcp: true,
 };
 
 /** A complete stored task's options. */

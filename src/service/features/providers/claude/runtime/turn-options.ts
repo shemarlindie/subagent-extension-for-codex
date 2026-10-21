@@ -1,6 +1,9 @@
 import type { HookJSONOutput, Options } from "@anthropic-ai/claude-agent-sdk";
 
-import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions.js";
+import {
+  type ClaudePolicy,
+  readOnlyProfile,
+} from "../../../../../shared/providers/claude/permissions.js";
 import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
 import type { RunContext } from "../../types.js";
 import {
@@ -23,6 +26,18 @@ function defaultDenialMessage(tool: string) {
   if (tool === "Bash") return "Command denied";
 
   return writeTools.includes(tool) ? "Edit denied" : "Tool call denied";
+}
+
+/** Which Claude Code settings a session loads, and whether their MCP servers join the extension's. */
+function settingsOptions(policy: ClaudePolicy): Partial<Options> {
+  return {
+    settingSources: policy.settings_files ? ["user", "project", "local"] : [],
+    // Strict MCP config also ignores servers outside settings files, such as
+    // `.mcp.json`, user-scope servers and plugins.
+    ...(policy.settings_files && policy.user_mcp
+      ? {}
+      : { strictMcpConfig: true }),
+  };
 }
 
 /**
@@ -103,7 +118,7 @@ export async function claudeTurnOptions(
     // be withdrawn.
     includePartialMessages: true,
     settings: { bashEditDiffEnabled: true },
-    settingSources: ["user", "project", "local"],
+    ...settingsOptions(policy),
     permissionMode: nativeMode,
     ...(nativeMode === "bypassPermissions"
       ? { allowDangerouslySkipPermissions: true }
