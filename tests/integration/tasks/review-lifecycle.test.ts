@@ -129,7 +129,16 @@ test(
           timeout: 15000,
         },
       ),
-      /EADDRINUSE|address already in use/,
+      (error: { stderr: string }) => {
+        // The conflict reads as a message naming the port, without a stack.
+        assert.match(
+          error.stderr,
+          new RegExp(`Port ${port} is already in use`),
+        );
+        assert.doesNotMatch(error.stderr, /\n\s+at /);
+
+        return true;
+      },
     );
 
     const reopened = new Store(join(data, "console.sqlite"));

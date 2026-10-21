@@ -39,6 +39,11 @@ cold service start can't exceed the host's MCP startup timeout.
   read-only. See `src/service/platform/service/service-client.ts`.
 - A new service that loses the lease to one still stopping starts again once the
   lease is free.
+- When another program holds the port and no service owns the data directory,
+  the proxy starts the service on the next free port. The service records its
+  origin in `service.json`, where later proxies find it. A port set with `PORT`,
+  `CODEX_SUBAGENT_EXTENSION_ORIGIN` or `CODEX_SUBAGENT_EXTENSION_URL` never
+  moves, and startup reports the conflict instead.
 - After a plugin update, the proxy asks an older service it started to drain.
   See [Updates and service handoff](task-continuation.md#updates-and-service-handoff).
 

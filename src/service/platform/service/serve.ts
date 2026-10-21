@@ -23,6 +23,7 @@ import { Auth } from "../server/auth.js";
 import { serviceIdentity } from "./identity.js";
 import { lease } from "./lease.js";
 import { networkOrigins } from "./network.js";
+import { PortInUseError } from "./port.js";
 import { inspectProcessIdentity } from "./process-info.js";
 import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
 import { adminToken } from "./token.js";
@@ -160,6 +161,11 @@ export async function serve({
     });
   } catch (error) {
     c.store.close();
+
+    if ((error as NodeJS.ErrnoException).code === "EADDRINUSE") {
+      throw new PortInUseError(port, { cause: error });
+    }
+
     throw error;
   }
 

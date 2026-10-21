@@ -311,22 +311,62 @@ test("launcher discovers service metadata and token without starting another ser
   await assert.rejects(access(join(dir, "service.log")));
 });
 
-test("incompatible live service and authentication failure never authorize auto-start", async (t) => {
+test(
+  "launcher moves off a port another program holds and later launchers follow",
+  { timeout: 30000 },
+  async (t) => {
+    const dir = await data(t);
+    stopOnFinish(t, dir);
+
+    const unrelated = await fake(t, (_req, res) => {
+      res.end("<html>another app</html>");
+    });
+
+    await writeFile(
+      join(dir, "service.json"),
+      JSON.stringify({ origin: unrelated }),
+    );
+
+    const moved = JSON.parse(
+      (await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir })).stdout,
+    );
+
+    assert.notEqual(moved.origin, unrelated);
+
+    assert.equal(
+      JSON.parse(await readFile(join(dir, "service.json"), "utf8")).origin,
+      moved.origin,
+    );
+
+    assert.deepEqual(
+      JSON.parse(
+        (await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir })).stdout,
+      ),
+      moved,
+    );
+  },
+);
+
+test("a chosen port another program holds fails with a clear message", async (t) => {
   const dir = await data(t);
 
   const unrelated = await fake(t, (_req, res) => {
     res.end(JSON.stringify({ service: "other-service" }));
   });
 
-  await writeFile(
-    join(dir, "service.json"),
-    JSON.stringify({ origin: unrelated }),
+  await assert.rejects(
+    connect({
+      CODEX_SUBAGENT_EXTENSION_DATA: dir,
+      PORT: new URL(unrelated).port,
+    }),
+    /Port \d+ is in use by another program/,
   );
 
-  await assert.rejects(
-    connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
-    /incompatible service/,
-  );
+  await assert.rejects(access(join(dir, "service.log")));
+});
+
+test("authentication failure never authorizes auto-start", async (t) => {
+  const dir = await data(t);
 
   // A service that proves the token but rejects it speaks another protocol.
   const denied = await fake(t, (req, res) => {

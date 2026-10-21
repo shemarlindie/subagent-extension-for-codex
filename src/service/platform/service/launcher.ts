@@ -16,11 +16,15 @@ import {
   serviceIdentity,
 } from "./identity.js";
 import { rotateStartupLog } from "./log-rotation.js";
+import { freeLoopbackPort } from "./port.js";
 import { isProcessRunning } from "./process-info.js";
 import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
 
 /** A service that is starting or stopping, which the launcher waits for. */
 class ServiceTransitionError extends Error {}
+
+/** Something other than an extension service holds the port. */
+class ForeignListenerError extends Error {}
 
 /** How long to wait for a replaced service that can't serve this launcher to exit. */
 const replacementTimeout = 11 * 60 * 1000;
@@ -34,9 +38,21 @@ function refused(error: unknown) {
   );
 }
 
+/** A busy service can miss the probe timeout, so a timeout never proves the port is foreign. */
+function timedOut(error: unknown) {
+  return (error as { name?: string }).name === "TimeoutError";
+}
+
 export async function connectService() {
   const data = dataDirectory();
   const explicit = process.env.CODEX_SUBAGENT_EXTENSION_URL;
+
+  // A chosen address is never moved. The discovered or default one moves
+  // off a port another program holds.
+  const pinned = Boolean(
+    explicit || process.env.PORT || process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN,
+  );
+
   let origin =
     explicit ??
     process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN ??
@@ -54,7 +70,7 @@ export async function connectService() {
     } catch {}
   }
 
-  const url = new URL(origin);
+  let url = new URL(origin);
 
   if (
     url.protocol !== "http:" ||
@@ -76,17 +92,33 @@ export async function connectService() {
     process.env.CODEX_SUBAGENT_EXTENSION_TOKEN ??
     readFileSync(join(data, "admin-token"), "utf8").trim();
 
+  const foreign = (cause?: unknown) =>
+    new ForeignListenerError(
+      `Port ${url.port || "80"} is in use by another program. Stop that program, or set PORT to a free port.`,
+      { cause },
+    );
+
   const probe = async () => {
     // The service must prove it holds the token before a request carries it.
     const challenge = newChallenge();
+    let response: Response;
 
-    const response = await fetch(`${origin}/health`, {
-      headers: { [challengeHeader]: challenge },
-      signal: AbortSignal.timeout(1000),
-      redirect: "error",
+    try {
+      response = await fetch(`${origin}/health`, {
+        headers: { [challengeHeader]: challenge },
+        signal: AbortSignal.timeout(1000),
+        redirect: "error",
+      });
+    } catch (error) {
+      if (refused(error) || timedOut(error)) throw error;
+      throw foreign(error);
+    }
+
+    const health = await response.json().catch((error: unknown) => {
+      throw foreign(error);
     });
 
-    const health = await response.json();
+    if (health?.service !== "codex-subagent-extension") throw foreign();
 
     if (
       health.service === "codex-subagent-extension" &&
@@ -96,9 +128,9 @@ export async function connectService() {
       throw new ServiceTransitionError(`The service is ${health.status}`);
     }
 
-    if (!response.ok || health.service !== "codex-subagent-extension") {
+    if (!response.ok) {
       throw new Error(
-        "Port is occupied by an incompatible service; stop or upgrade it explicitly",
+        `The extension service at ${origin} reported ${response.status}; inspect ${join(data, "service.log")}`,
       );
     }
 
@@ -173,6 +205,40 @@ export async function connectService() {
     );
   };
 
+  /** Whether no live process holds the service lease on the data directory. */
+  const leaseReleased = () => {
+    try {
+      return !isProcessRunning(
+        Number(readFileSync(join(data, "service.pid"), "utf8")),
+      );
+    } catch {
+      return true;
+    }
+  };
+
+  /**
+   * Moves to a free port when another program holds this one and no service
+   * owns the data directory. The new service records its origin in
+   * service.json, where later launchers find it.
+   */
+  const relocate = async (error: unknown) => {
+    if (
+      pinned ||
+      !(error instanceof ForeignListenerError) ||
+      !leaseReleased()
+    ) {
+      return false;
+    }
+
+    url = new URL(
+      `http://127.0.0.1:${await freeLoopbackPort(defaultPort, Number(url.port))}`,
+    );
+
+    origin = url.origin;
+
+    return true;
+  };
+
   let needsLaunch = false;
 
   try {
@@ -209,9 +275,12 @@ export async function connectService() {
     await waitForExit();
     needsLaunch = true;
   } catch (error) {
-    // Only a refused connection authorizes starting a process. Never replace
-    // a live service. The loop below waits for one starting or stopping.
-    if (!(error instanceof ServiceTransitionError)) {
+    // Only a refused connection, or a port another program holds, authorizes
+    // starting a process. Never replace a live service. The loop below waits
+    // for one starting or stopping.
+    if (await relocate(error)) {
+      needsLaunch = true;
+    } else if (!(error instanceof ServiceTransitionError)) {
       if (explicit || !refused(error)) {
         throw error;
       }
@@ -219,17 +288,6 @@ export async function connectService() {
       needsLaunch = true;
     }
   }
-
-  /** Whether no live process holds the service lease on the data directory. */
-  const leaseReleased = () => {
-    try {
-      return !isProcessRunning(
-        Number(readFileSync(join(data, "service.pid"), "utf8")),
-      );
-    } catch {
-      return true;
-    }
-  };
 
   let spawnError: Error | undefined;
   let launches = 0;
@@ -305,10 +363,11 @@ export async function connectService() {
       // last launch exited. Start again once that service has let go.
       if (
         !explicit &&
-        refused(e) &&
         (launches === 0 || lastLaunch.exited) &&
         launches < maxLaunches &&
-        leaseReleased()
+        leaseReleased() &&
+        // Another program can take the port before the service binds it.
+        (refused(e) || (await relocate(e)))
       ) {
         launch();
       }

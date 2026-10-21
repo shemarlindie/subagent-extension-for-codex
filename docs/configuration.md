@@ -28,7 +28,7 @@ give every client the same absolute data directory.
 | `CODEX_SUBAGENT_EXTENSION_TOKEN`             | Generated locally                         | Admin token override, at least 32 characters.                                                                                             |
 | `CODEX_SUBAGENT_EXTENSION_LOG_LEVEL`         | `info`                                    | Minimum service log level: `debug`, `info`, `warn` or `error`. Invalid values prevent startup. See [Logging and diagnostics](logging.md). |
 | `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`       | First `claude` on the service's `PATH`    | Absolute path to the Claude Code executable. See [Claude Code CLI](claude-cli.md#which-claude-runs).                                      |
-| `PORT`                                       | `17317`                                   | Service listener port, on loopback by default.                                                                                            |
+| `PORT`                                       | `17317`                                   | Service listener port, on loopback by default. Setting it stops the plugin from moving the service off a port another program holds.      |
 | `CODEX_SUBAGENT_EXTENSION_ORIGIN`            | `http://127.0.0.1:<PORT>`                 | Standalone origin and CORS allowlist.                                                                                                     |
 | `CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE` | Disabled                                  | Local testing only. `1` returns a sample Claude mention and logs searches to `<data-directory>/mention-search.jsonl`.                     |
 

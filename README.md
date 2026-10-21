@@ -38,7 +38,9 @@ to approve a Git repository root with at least one commit. The plugin starts its
 local service the first time Codex connects.
 
 While the service runs, you can also use the standalone console at
-`http://127.0.0.1:17317`. Sign in with the token in
+`http://127.0.0.1:17317`. If another program already uses that port, the plugin
+starts the service on the next free port and records its address as `origin` in
+`~/.local/share/codex-subagent-extension/service.json`. Sign in with the token in
 `~/.local/share/codex-subagent-extension/admin-token`. Treat the token as a
 credential and keep it out of chats and commits.
 
@@ -90,12 +92,13 @@ repositories.
 
 ## Troubleshooting
 
-| Symptom                                        | Fix                                                                                                                                      |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `needs Node.js 24 or later` in Codex's MCP log | Install Node.js 24 or later and make it the first `node` on the `PATH` Codex starts with.                                                |
-| Tools report the service is unavailable        | Read the [service logs](docs/logging.md#diagnose-a-problem), starting with `service.jsonl` and `service.log` in the data directory.      |
-| `A different extension service … is running`   | Another service owns the data directory or port, for example a development checkout. Stop it, or give development its own data and port. |
-| Claude tasks can't start                       | The panel shows a readiness message above the task list. [Claude Code CLI](docs/claude-cli.md) explains fixes.                           |
+| Symptom                                        | Fix                                                                                                                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `needs Node.js 24 or later` in Codex's MCP log | Install Node.js 24 or later and make it the first `node` on the `PATH` Codex starts with.                                                              |
+| Tools report the service is unavailable        | Read the [service logs](docs/logging.md#diagnose-a-problem), starting with `service.jsonl` and `service.log` in the data directory.                    |
+| `A different extension service … is running`   | Another service owns the data directory or port, for example a development checkout. Stop it, or give development its own data and port.               |
+| `Port … is in use by another program`          | A port you set with `PORT` or an origin override is taken. Stop the other program, choose a free port, or remove the override so the plugin picks one. |
+| Claude tasks can't start                       | The panel shows a readiness message above the task list. [Claude Code CLI](docs/claude-cli.md) explains fixes.                                         |
 
 To connect a checkout over stdio or Streamable HTTP instead of installing the
 plugin, see
