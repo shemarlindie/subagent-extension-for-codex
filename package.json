@@ -32,7 +32,7 @@
     "prepack": "npm run build",
     "package:plugin": "npm pack",
     "dev:ui": "vite",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --check --cache .",
     "test:watch": "vitest",
     "lint": "eslint .",
     "knip": "knip",

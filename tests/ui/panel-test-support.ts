@@ -354,7 +354,8 @@ export async function setup(
 
   render(createElement(Harness));
 
-  const user = userEvent.setup({ document: document });
+  // Tests await each action, so keystrokes need no macrotask between them.
+  const user = userEvent.setup({ document: document, delay: null });
 
   return { controller, transport, user };
 }
