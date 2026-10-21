@@ -1,9 +1,11 @@
 # Architecture
 
 Use this guide to understand runtime ownership and code boundaries before
-changing the extension. For local workflows and checks, see
-[Local development](development.md). For host integration contracts and
-verification limits, see [Host capabilities](host-capabilities.md).
+changing the extension.
+
+- [Local development](development.md) covers workflows and checks.
+- [Host capabilities](host-capabilities.md) covers host integration contracts
+  and verification limits.
 
 ## Runtime boundaries
 
@@ -23,26 +25,33 @@ stdio proxy ----------------------> shared loopback service
                                  local Claude Code CLI
 ```
 
-The packaged stdio entrypoint connects to or launches the shared service. It
-answers the MCP handshake from its own tool definitions and connects in the
-background, so a cold service start can't exceed the host's MCP startup
-timeout. Tool calls wait up to 60 seconds for the connection. When a call finds
-the service gone, the proxy starts a new one and sends the call again if the
-service can't have received it, or if the call is read-only
-(`src/service/platform/service/service-client.ts`). A new service that loses
-the data-directory lease to one still stopping is started again once the lease
-is free.
-Multiple host connections use the same service. Closing a proxy leaves tasks running.
-The service lease prevents competing processes from owning the same data directory.
-After a plugin update, the proxy replaces an older service it started by
-asking it to drain. See [Updates and service handoff](task-continuation.md#updates-and-service-handoff).
-See [Task continuation](task-continuation.md) for startup and recovery.
+One local service serves every host connection for one user. A data-directory
+lease stops other processes from owning the same state. Closing a host
+connection leaves tasks running.
 
-The service owns task scheduling, approval authority, dependencies, workspace
-lifecycle, messages, durable state and result delivery. The Claude provider owns
-runtime configuration, event translation, session continuation, streaming and
-interrupt behavior. The native Claude harness manages tool use and context. Claude is the only production
-provider. Worker discovery lists its supported features and limits.
+The packaged stdio proxy connects to the service or launches it. It answers the
+MCP handshake from its own tool definitions and connects in the background, so a
+cold service start can't exceed the host's MCP startup timeout.
+
+- Tool calls wait up to 60 seconds for the connection.
+- When a call finds the service gone, the proxy starts a new one. It sends the
+  call again when the service can't have received it, or when the call is
+  read-only. See `src/service/platform/service/service-client.ts`.
+- A new service that loses the lease to one still stopping starts again once the
+  lease is free.
+- After a plugin update, the proxy asks an older service it started to drain.
+  See [Updates and service handoff](task-continuation.md#updates-and-service-handoff).
+
+[Task continuation](task-continuation.md) covers startup and recovery.
+
+| Layer               | Owns                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| Service             | Scheduling, approval authority, dependencies, workspace lifecycle, messages, durable state and results |
+| Claude provider     | Runtime configuration, event translation, session continuation, streaming and interrupts               |
+| Claude Code harness | Tool use and context                                                                                   |
+
+Claude is the only production provider. Worker discovery lists its supported
+features and limits.
 
 ## Code ownership
 
@@ -52,99 +61,123 @@ provider. Worker discovery lists its supported features and limits.
 | `src/service/features/providers`         | Provider contracts, settings, task policy and Claude integration             |
 | `src/service/features/projects`          | Approved roots, registration and host-project policy                         |
 | `src/service/features/workspaces`        | Git worktree lifecycle and prompt snapshots                                  |
-| `src/service/features/changes`           | Recorded edits, running task/turn diffs and change inspection                |
+| `src/service/features/changes`           | Recorded edits, running task and turn diffs, and change inspection           |
 | `src/service/features/settings`          | User defaults and settings document                                          |
-| `src/service/platform/server`            | HTTP/MCP authentication, transport and tool dispatch                         |
+| `src/service/platform/server`            | HTTP and MCP authentication, transport and tool dispatch                     |
 | `src/service/platform/panel`             | Embedded resource, launch scope and optional host context                    |
 | `src/service/platform/service`           | Local runtime paths, launcher, lease and startup                             |
 | `src/service/platform/database`          | SQLite connection, migrations and transactions                               |
+| `src/service/platform/logging`           | Structured logs, crash logs and runtime metrics                              |
+| `src/panel/app`                          | Panel composition, navigation and application state                          |
 | `src/panel/features`, `src/panel/shared` | Feature UI and reusable panel components and integrations                    |
+| `src/panel/transports`                   | Host bridge and standalone console transports                                |
 | `src/shared/<feature>`                   | Browser-safe contracts and pure domain functions shared by service and panel |
+| `dev/`                                   | Development tooling, the panel dev host and fixtures                         |
 
-The service and panel are separate runtimes. Neither may import the other's
-implementation or development/test code. Panel code cannot import Node built-ins.
-Shared feature modules contain browser-safe contracts and pure domain functions, with no Node, database or
-provider execution dependencies. The Claude event contract may use SDK types.
-Runtime SDK imports stay in the service.
+[Panel architecture](panel-architecture.md) covers the panel's internal layout.
 
-Panel composition and state live in `src/panel/app/`. Domain UI belongs in
-`features/`, and reusable components and platform integrations in `shared/`.
-Development tooling stays under `dev/`. Focused tests live beside their modules,
-including feature integration tests named `*.integration.test.ts`.
-`tests/integration/` covers runtime and environment boundaries. See
-[Choosing test coverage](development.md#choosing-test-coverage) for classification.
+### Import rules
 
-ESLint and production builds enforce the runtime boundaries. Test harnesses may
-cross them for verification. See [Checks](development.md#checks),
-[Panel architecture](panel-architecture.md) and [Provider contract](provider-contract.md).
+ESLint and production builds enforce these boundaries. Test harnesses may cross
+them for verification.
 
-Event contracts preserve the original payload alongside a validated typed view.
-Unknown or invalid payloads remain available for inspection. Validation at storage
-and transport boundaries ensures the panel treats only valid, recognized payloads
-as known activity.
+- The service and panel are separate runtimes. Neither imports the other's
+  implementation or development and test code.
+- Panel code can't import Node built-ins.
+- Shared feature modules have no Node, database or provider execution
+  dependencies. The Claude event contract may use SDK types, but runtime SDK
+  imports stay in the service.
+
+See [Checks](development.md#checks) and
+[Provider contract](provider-contract.md).
+
+### Tests
+
+Focused tests live beside their modules, including feature integration tests
+named `*.integration.test.ts`. `tests/integration/` covers runtime and
+environment boundaries. See
+[Choosing test coverage](development.md#choosing-test-coverage).
+
+### Event payloads
+
+Event contracts keep the original payload alongside a validated typed view.
+Unknown or invalid payloads stay available for inspection. The panel treats a
+payload as known activity only after it passes validation at the storage and
+transport boundaries.
 
 ## Durable tasks and turns
 
-A task fixes its owner, provider, repository, workspace strategy and dependencies.
-It can have multiple turns in one provider session. Follow-up messages can steer
-the current turn, queue a later turn, or interrupt and start a new turn. The task
-control layer records delivery and preserves steers the provider did not take.
+A task fixes its owner, provider, repository, workspace strategy and
+dependencies. It can run multiple turns in one provider session. A follow-up
+message can steer the current turn, queue a later turn, or interrupt and start a
+new one. Task control records delivery and keeps steers the provider didn't
+take.
+
 Worker replies are plain text or Markdown. Provider activity is a separate event
-stream. Draft deltas are transient, while completed messages and task events persist.
+stream. Draft deltas are transient, while completed messages and task events
+persist.
 
-SQLite stores tasks, events, recorded file changes, settings and approved projects.
-Recorded changes store hunks, without full file contents. Each edit updates the
-task and latest-turn rows in one synchronous transaction. WAL and synchronous transactions keep related writes consistent.
-Notifications run after commit. On restart, in-flight work becomes interrupted
-and requires a follow-up, while queued tasks and dependency waits recover.
+SQLite stores tasks, events, recorded file changes, settings and approved
+projects. Recorded changes store hunks without full file contents. Related
+writes commit in one transaction, and notifications run after commit. See
+[Transactions and notifications](database.md#transactions-and-notifications).
 
-Session continuation requires the original worker's local session state and a
-stable workspace. When native continuation is unavailable, a new session carries the stored conversation. See
-[Task continuation](task-continuation.md) for recovery and worktree preservation.
+On restart, in-flight turns become interrupted and need a follow-up. Queued tasks
+and dependency waits recover.
+
+Session continuation needs the original worker's local session state and a
+stable workspace. When native continuation is unavailable, a new session carries
+the stored conversation. See [Task continuation](task-continuation.md).
 
 ## Workspace and permission boundaries
 
-`current_repo` uses the approved checkout, including uncommitted files, and
-requires revision `HEAD`. The changes feature composes provider-reported edits
-into stored task and latest-turn diffs for both workspace strategies. These
-diffs survive commits, worktree removal and branch deletion. `worktree` creates a separate checkout from the requested
-committed revision. It does not copy the user's uncommitted changes. Worktrees
-provide file isolation. Execution permissions and sandbox policy apply separately.
+| Strategy       | Workspace                                                                                       |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| `current_repo` | The approved checkout, including uncommitted files. Requires revision `HEAD`.                   |
+| `worktree`     | A separate checkout from the requested committed revision, without the user's uncommitted work. |
 
-Approved projects are canonical roots, with explicit parent grants where configured.
-Task arguments never grant access. Repository, task ownership and dependency
-validation remain server responsibilities regardless of UI visibility or tool
-annotations. Conversation IDs determine which tasks a chat displays. The service checks
-authentication and task ownership separately.
+For both strategies, the changes feature composes provider-reported edits into
+stored task and latest-turn diffs. These diffs survive commits, worktree removal
+and branch deletion. Worktrees isolate files only. Execution permissions and
+sandbox policy apply separately.
 
-The service distinguishes user actions from parent/model calls. Model calls cannot
-raise approval authority or relax configured provider restrictions. Provider-native
-permissions, tool/profile restrictions, environment filtering, path guards and
-sandbox choices are separate controls. Provider settings and task policy determine which controls apply to each task. See [Provider contract](provider-contract.md).
+Approved projects are canonical roots, with explicit parent grants where
+configured. Task arguments never grant access. The server validates
+repositories, task ownership and dependencies whatever the UI shows or tool
+annotations say. Conversation IDs decide which tasks a chat displays, and the
+service checks authentication and task ownership separately.
 
-The embedded UI uses the authenticated MCP bridge. The standalone console uses
-service HTTP endpoints and session authentication. Keep service bearer credentials
-out of URLs and model-visible output. The service runs locally for one user.
+The service distinguishes user actions from parent and model calls. Model calls
+can't raise approval authority or relax configured provider restrictions.
+Provider-native permissions, tool and profile restrictions, environment
+filtering, path guards and sandbox choices are separate controls. Provider
+settings and task policy decide which apply to each task. See
+[Provider contract](provider-contract.md).
+
+The embedded panel uses the authenticated MCP bridge. The standalone console
+uses service HTTP endpoints and session authentication. Keep service bearer
+credentials out of URLs and model-visible output.
 
 ## Context and result delivery
 
 Launch context includes repository, revision, conversation and selected task.
-Explicit repository and task arguments take precedence. Otherwise, the current
-user's tasks in the same chat and validated host hints can supply defaults. Global history never selects a project
-implicitly. The global opener starts without a selected chat or project.
+Explicit repository and task arguments take precedence. Otherwise, the user's
+tasks in the same chat and validated host hints supply defaults. Global history
+never selects a project, and the global opener starts without a chat or project.
 
-Task selection, forms and polling must respect the current scope and discard
-stale responses. Opening or resolving context is read-only. Registration is a
-separate user operation or the configured policy for a task started from its host
-chat project. See [Host capabilities](host-capabilities.md#project-context-and-registration).
+Task selection, forms and polling respect the current scope and discard stale
+responses. Opening or resolving context is read-only. Registration happens
+through a user action, or through the configured policy when a task starts from
+its host chat project. See
+[Project context and registration](host-capabilities.md#project-context-and-registration).
 
-Durable events and messages are separate from refresh notifications. The console
-uses SSE and the embedded panel uses long polling to learn when to refetch.
-Notifications do not replace stored results.
+Refresh notifications only tell clients when to refetch durable events and
+messages. The console uses SSE and the embedded panel uses long polling.
 
-Explicit worker reports use a durable delivery queue. The embedded thread panel
-forwards their task/message IDs through the host bridge, and the parent retrieves
-and acknowledges the stored reports. Host delivery and message polling share
-stable message IDs so the parent can avoid processing a report twice. See
-[Host capabilities](host-capabilities.md#worker-messages-to-the-parent-chat)
+Explicit worker reports go through a durable delivery queue. The embedded thread
+panel forwards their task and message IDs through the host bridge, and the
+parent retrieves and acknowledges the stored reports. Host delivery and message
+polling share stable message IDs, so the parent can avoid processing a report
+twice. See
+[Worker messages to the parent chat](host-capabilities.md#worker-messages-to-the-parent-chat)
 for delivery and lifecycle limits.

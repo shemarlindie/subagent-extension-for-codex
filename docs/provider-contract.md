@@ -1,140 +1,176 @@
 # Built-in provider contract
 
-Use this guide when implementing or changing provider execution. It defines
-provider responsibilities and lifecycle behavior. For configurable permissions
-and session restrictions, see [Configuration](configuration.md). For execution
-checks, see [Claude execution verification](claude-verification.md).
+Use this guide when you implement or change a provider. It defines what a
+provider owns and how it behaves across a task's lifecycle.
 
-Implement the internal `Provider` contract in `src/service/features/providers/types.ts` and register the provider in `src/service/features/providers/config.ts`.
+- [Configuration](configuration.md) covers user-facing permissions and session
+  restrictions.
+- [Claude execution verification](claude-verification.md) covers live
+  execution checks.
 
-The shared control plane owns scheduling, dependencies, workspaces, recorded diffs, budget checks, task ownership and persistence. It also manages conversation messages, steers, drafts and input serialization. Providers own model discovery, native execution, session creation and deletion, and native permissions.
+Implement the `Provider` interface in `src/service/features/providers/types.ts`
+and register the provider in `src/service/features/providers/config.ts`.
+
+| Owner                | Responsibilities                                                                                                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared control plane | Scheduling, dependencies, workspaces, recorded diffs, budget checks, task ownership, persistence, conversation messages, steers, drafts and input serialization. |
+| Provider             | Model discovery, native execution, session creation and deletion, and native permissions.                                                                        |
 
 ## A turn
 
-`Provider.run(context, prompt)` runs one turn. The task conversation layer
-assembles prompts: new sessions receive the original request, workspace and
-dependency context, and bounded conversation history. Resumed sessions receive
-unsent messages and any workspace reminder. Providers return
-the final reply on success and throw on failure or interruption. Only successful
-turns produce a recorded reply.
+`Provider.run(context, prompt)` runs one turn. It returns the final reply on
+success and throws on failure or interruption. Only successful turns record a
+reply.
 
-During a turn, the provider must distinguish accepted steers from steers the
+The task conversation layer builds the prompt. A new session receives the
+original request, workspace and dependency context, and bounded conversation
+history. A resumed session receives unsent messages and any workspace reminder.
+
+During a turn, the provider must tell accepted steers apart from steers the
 worker actually consumed. Unconsumed steers return to the front of the task's
 queue. Claude uses native streaming input and cancels untaken messages at turn
-end so the CLI cannot execute them as an extra turn. Interrupting ends the
-current turn while preserving the session where possible.
+end, so the CLI cannot run them as an extra turn. An interrupt ends the current
+turn and keeps the session where possible.
 
 Text deltas are transient drafts. Completed messages and the final reply are
-durable. Report cumulative session cost with `agent.completed`. The control
-plane accounts for the increase across resumed turns.
+durable. Report the cumulative session cost with `agent.completed`, and the
+control plane accounts for the increase across resumed turns.
 
-The optional `messageParent` callback sends immediate blocker updates or holds
-one completion report until the turn succeeds. Failed and interrupted turns
-discard that completion report. Claude exposes it through the injected
-`codex_parent.send_message` tool, independently of file/execution restrictions.
-The provider approves this tool in its `PreToolUse` hook, including in `dontAsk`
-mode. Native ask/deny rules and stronger hook decisions still apply, as described
-in [Claude's hook decision rules](https://code.claude.com/docs/en/hooks#pretooluse-decision-control).
-SDK `allowedTools` stays unset to avoid shadowing `canUseTool`.
-Queueing a report does not confirm host delivery, and providers cannot
-acknowledge it for the parent. See [parent message delivery](mcp-reference.md#provider-messages-to-the-parent)
-for retrieval and acknowledgement, and the `RunContext` interface for callback
+### Messages to the parent
+
+The optional `messageParent` callback sends a blocker update immediately, or
+holds one completion report until the turn succeeds. Failed and interrupted
+turns discard the completion report. See the `RunContext` interface for
 signatures.
+
+Claude exposes the callback through the injected `codex_parent.send_message`
+tool, whatever the file and execution restrictions. The provider approves this
+tool in its `PreToolUse` hook, including in `dontAsk` mode. Native ask and deny
+rules and stronger hook decisions still apply, as described in
+[Claude's hook decision rules](https://code.claude.com/docs/en/hooks#pretooluse-decision-control).
+SDK `allowedTools` stays unset so it cannot shadow `canUseTool`.
+
+Queueing a report does not confirm host delivery, and providers cannot
+acknowledge it for the parent. See
+[Provider messages to the parent](mcp-reference.md#provider-messages-to-the-parent)
+for retrieval and acknowledgement.
 
 ## Recording file edits
 
-Report each successful text edit through `RunContext.fileChanged(edit)`. `FileEdit`
-contains the tool-reported `path`, unified-diff `hunks` against the file just before
-that edit, optional `created` and `deleted` flags, and `source: "tool" | "command"`.
-Use `editUnrecorded(path, source)` when the changed file is known but its hunks
-are unavailable. Pass `"tool"` for an edit tool so an incomplete capture keeps
-its provenance. The optional source defaults to `"command"`. Omit the path when
-a command changed files it could not name.
+Report each successful text edit through `RunContext.fileChanged(edit)`. A
+`FileEdit` contains:
+
+- `path`, as the tool reported it.
+- `hunks`, a unified diff against the file just before that edit.
+- Optional `created` and `deleted` flags.
+- `source`, either `"tool"` or `"command"`.
+
+Call `editUnrecorded(path, source)` when you know the changed file but not its
+hunks. Pass `"tool"` for an edit tool so the incomplete capture keeps its
+source. The source defaults to `"command"`. Omit the path when a command
+changed files it could not name.
 
 The control plane resolves paths through `realpath`, including deleted files
-through their parent directory, and drops paths outside the task workspace or
-inside `.git`. It composes each edit into durable task and latest-turn diffs
-immediately. Turn start clears only latest-turn rows. Steers the CLI executes as
-extra turns stay attributed to the current service turn. Failed and interrupted
-turns retain their edits. Providers must close execution at turn end so background
-subagents cannot keep editing between turns.
+through their parent directory. It drops paths outside the task workspace or
+inside `.git`, and composes each edit into the durable task and latest-turn
+diffs immediately.
 
-Claude records edits in a `PostToolUse` hook alongside its permission hook. The
-hook maps `tool_response` through the pure `claudeFileEdits` function, including
-subagent calls. Main-worker stream results support fixture replay, but subagent
-stream results lack the response data needed for recording. Recording errors are
+- Turn start clears only the latest-turn rows.
+- Steers the CLI runs as extra turns stay attributed to the current service
+  turn.
+- Failed and interrupted turns keep their edits.
+- Providers must close execution at turn end so background subagents cannot
+  keep editing between turns.
+
+The changes feature owns composition and persistence. A contradictory or
+missing edit marks that file incomplete and clears its hunks, and later edits
+cannot restore that diff. See [Recorded changes](mcp-reference.md#recorded-changes)
+for reads and recording limits.
+
+### Claude edit recording
+
+Claude records edits in a `PostToolUse` hook beside its permission hook,
+including subagent calls. The hook maps `tool_response` through the pure
+`claudeFileEdits` function. Main-worker stream results support fixture replay,
+but subagent stream results lack the data recording needs. Recording errors are
 logged and never block or deny a tool.
 
-The mapper reads `Write` and `Edit` structured patches, computes patches for
-notebook JSON and writes without patches, and reads Bash `bashEditDiff` entries.
-Claude runs with the `bashEditDiffEnabled` flag setting. Errored results and staged
-writes are skipped, as are no-op edits. Patch computation uses three context lines
-and discards full text after producing hunks. Git-relative `gitDiff` status does
-not determine whether an edit created a file.
+The mapper handles each response this way:
 
-Claude maps Bash responses with `bashEditDiff.unavailable` or
-`bashEditDiff.skipped` to an unknown-files warning. A skipped diff can represent
-a real checkout edit, such as `git restore file.txt`. Other Git command forms
-can provide precise hunks or no edit data, so the provider follows the reported
-response fields instead of inferring changes from the command text.
+- `Write` and `Edit` use their structured patches.
+- Notebook edits and writes without a patch get computed patches with three
+  context lines. Full file text is discarded after the hunks are produced.
+- Bash uses `bashEditDiff` entries. Claude runs with the `bashEditDiffEnabled`
+  flag setting.
+- Errored results, staged writes and no-op edits record nothing.
+- Git-relative `gitDiff` status does not decide whether an edit created a file.
 
-The changes feature owns composition and persistence. A contradictory or missing
-edit makes that file incomplete and clears its hunks. Later edits cannot restore
-that scope's diff. See [change tools](mcp-reference.md#recorded-changes) for reads
-and recording limits.
+A Bash response with `bashEditDiff.unavailable` or `bashEditDiff.skipped` maps
+to an unknown-files warning. A skipped diff can hide a real checkout edit, such
+as `git restore file.txt`. Other Git commands can report precise hunks or no
+edit data, so the provider follows the reported fields and never infers changes
+from the command text.
 
 ## Lifecycle policy
 
-Each provider supplies `taskPolicy`. The control plane must not branch on
-provider identity. The policy resolves and validates options at task creation,
-decides native permission requests, selects their approver and classifies
-questions separately. Questions remain interactive. Resolved restrictions are
-persisted so later settings changes cannot broaden an existing task's authority.
+Each provider supplies a `taskPolicy`, and the control plane never branches on
+provider identity. The policy:
 
-Native policies own their defaults. Providers without per-tool native
-permissions can use `executionTaskPolicy` for whole-execution approval.
-Presentation metadata never selects policy.
+- Resolves and validates options at task creation.
+- Decides native permission requests and selects their approver.
+- Classifies questions separately. Questions stay interactive.
 
-A provider may validate local session state before resuming. Rejected state or
-a different service worker causes a fresh session in the same task, with the
-earlier conversation carried in its prompt. See `ProviderTaskPolicy` in
-`src/service/features/providers/task-policy.ts` for the interface.
+Resolved restrictions are stored with the task, so later settings changes
+cannot broaden an existing task's authority. Native policies own their
+defaults. A provider without per-tool native permissions can use
+`executionTaskPolicy` for whole-execution approval. Presentation metadata never
+selects policy.
+
+A provider may validate local session state before resuming. If it rejects the
+state, or a different service worker owns the session, the task starts a fresh
+session that carries the earlier conversation in its prompt. See
+`ProviderTaskPolicy` in `src/service/features/providers/task-policy.ts`.
 
 ## Presentation and settings
 
-Worker discovery exposes serializable `Provider.metadata` for delegation forms, including native permission controls, effort choices and budget help. Providers also define their settings schemas and sections.
+Worker discovery exposes serializable `Provider.metadata` for delegation forms,
+including native permission controls, effort choices and budget help. Providers
+also define their settings schemas and sections.
 
-Use typed `RunContext.emit` for known project events and `emitOpaque` for
+Use the typed `RunContext.emit` for known project events and `emitOpaque` for
 provider-owned or future event names. Keep native decoding in the provider and
 normalize activity and rate-limit windows for consumers. Preserve raw payloads
-for inspection, including unfamiliar or incomplete events. The shared event
-validation boundary is described in [Architecture](architecture.md#code-ownership).
+for inspection, including unfamiliar or incomplete events. See
+[Architecture](architecture.md#code-ownership) for the shared event validation
+boundary.
 
 ## Stored provider state
 
-Store and validate provider-specific options under `provider_options.<provider_id>` to keep them out of the shared task schema.
+Store and validate provider-specific options under
+`provider_options.<provider_id>` so they stay out of the shared task schema.
 
-Claude tasks persist native permission mode, approval routing, permission source, and resolved session restrictions under `provider_options.claude`. The shared `approval_mode` remains for providers using whole-execution approval. Execution default updates do not change Claude native defaults.
+Claude tasks store their native permission mode, permission source, approval
+decision maker and resolved session restrictions under
+`provider_options.claude`. The shared `approval_mode` serves providers with
+whole-execution approval. Changing the execution approval default does not
+change Claude's native defaults.
 
 ## Provider lifecycle methods
 
-`capabilities` declares supported task features and limits. The control plane
-rejects unsupported budgets before execution. Capability discovery advertises
-workspace and runtime features. Presentation metadata supplies UI controls and
-help.
+| Method                | Purpose                                                                                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities`        | Declares supported task features and limits. The control plane rejects unsupported budgets before execution.                                    |
+| `readiness()`         | Optional. Checks the local runtime and can block new tasks while the worker stays visible. Authentication and network failures can still occur. |
+| `models()`            | Optional. Supplies model and effort suggestions. Custom model IDs are still accepted.                                                           |
+| `deleteSession(task)` | Optional. Deletes provider state only when task deletion asks for it.                                                                           |
+| `close()`             | Optional. Releases provider resources during service shutdown.                                                                                  |
 
-The optional `readiness()` method checks the local runtime and can block new
-tasks while leaving the worker visible. Authentication and network failures
-can still occur during execution. The optional `models()` method supplies
-model and effort suggestions. Custom model IDs are still accepted.
+When the provider creates a native session, it calls
+`RunContext.session(id, stateRef)` so the service stores the session's
+identity, host owner and state reference. Deleting a session that is already
+gone must succeed. A deletion error keeps the local task resources so the user
+can retry.
 
-When a native session is created, call `RunContext.session(id, stateRef)` so
-the service can store its identity, host owner and state reference.
-`deleteSession(task)` deletes provider state only when task deletion requests
-it. An already absent session must not fail deletion. A deletion error retains
-the local task resources for retry. `close()` releases provider resources during
-service shutdown.
-
-The development-only fixture provider implements this contract for deterministic
-checks. See [Fixture scenarios](fixture-scenarios.md). It is excluded from
-production registration and bundles.
+The development-only fixture provider implements this contract for
+deterministic checks. Production registration and bundles exclude it. See
+[Fixture scenarios](fixture-scenarios.md).

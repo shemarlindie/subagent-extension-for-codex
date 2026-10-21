@@ -1,68 +1,74 @@
 # Task continuation and service state
 
-Use this guide to choose a workspace, continue a task and preserve service state.
-For installation and Codex MCP connection, follow the [README](../README.md).
-[Configuration](configuration.md) owns environment variables, task defaults,
-repository approvals and permissions.
+Use this guide to choose a workspace, continue a task, and keep service state
+across restarts, updates and backups.
+
+- The [README](../README.md) covers installation and connecting Codex.
+- [Configuration](configuration.md) covers environment variables, task
+  defaults, repository approvals and permissions.
+- The [panel guide](panel-guide.md) covers task controls.
 
 ## Start a task
 
-1. Choose an approved Git repository root with at least one commit. Add it through
-   **Manage → Add project** if needed. Automatic registration of the chat project
-   depends on the user setting and original host metadata. See
+1. Choose an approved Git repository root with at least one commit. Add it
+   through **Manage → Add project** if needed. The chat project can register
+   automatically, depending on the user setting and host metadata. See
    [Repository access](configuration.md#repository-access).
-2. Choose a workspace. The default `current_repo` uses the approved checkout,
-   including staged, unstaged and untracked files. `worktree` creates a separate
-   branch from a committed revision. Both default to `HEAD`. `current_repo`
-   rejects another revision.
-3. Select the worker profile and limits, then submit the task. See the
-   [panel guide](panel-guide.md) for task controls.
+2. Choose a workspace:
+   - `current_repo`, the default, uses the approved checkout, including staged,
+     unstaged and untracked files. It accepts only revision `HEAD`.
+   - `worktree` creates a separate checkout on a task branch from a committed
+     revision, `HEAD` by default. Merging its changes is up to you.
+3. Select the worker profile and limits, then submit the task.
 
-A worktree gives the task a separate checkout, and the service leaves merging
-its changes to you. Session
-restrictions in [Configuration](configuration.md#claude-session-restrictions)
-control execution authority.
+Worktrees isolate files only.
+[Session restrictions](configuration.md#claude-session-restrictions) control
+what the worker may run.
 
 ## Continue a task
 
-Send a message in Chat, or use `send_message` from the parent agent, to
-start another turn on a completed, failed or interrupted task. Running turns
-also accept queued messages and steers. See the
-[panel conversation controls](panel-guide.md).
+Send a message in Chat, or call `send_message` from the parent agent, to start
+another turn on a completed, failed or interrupted task. A running turn also
+accepts queued messages and steers.
 
-A later turn resumes the provider session when its original service host and
-saved session state are available. If there is no session, its owner differs or
-the provider rejects the saved state, the service starts a new session in the
-same task. Its prompt carries the original request and the earlier messages and
-replies, with older entries omitted when the conversation is too long. Chat
-marks this as **New session**. The Claude transcript itself is
-provider state. Copying the extension database alone does not preserve it.
+A later turn resumes the provider session when the original service host and
+saved session state are available. Otherwise the service starts a new session
+in the same task, and Chat marks it **New session**. This happens when there is
+no session, its owner differs, or the provider rejects the saved state. The new
+prompt carries the original request and the earlier messages and replies,
+omitting the oldest entries when the conversation is too long.
 
-A worktree removed with **Remove worktree** is recreated from the task's branch
-on the next turn, or from its base commit if the branch was also deleted.
+The Claude transcript is provider state, so copying the extension database alone
+does not preserve it.
+
+A worktree removed with **Remove worktree** is recreated on the next turn from
+the task's branch, or from its base commit if the branch was deleted too.
 Uncommitted changes discarded during removal do not return.
 
 ## Reconnect after a restart
 
-1. Start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value.
-2. Inspect existing tasks in the task list.
+Start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value, then
+check the task list. The data directory holds the database, worktrees and admin
+token.
 
-The data directory contains the database, worktrees and admin token.
 Disconnecting a client leaves the service and its tasks running. Stopping the
-service interrupts its active turns.
+service interrupts its active turns. On restart:
 
-Recovery marks a turn that was running as interrupted. Steers it had not taken
-move to the front of its queue. A non-empty recovered queue is paused until you
-resume it or send another message. If a submission or shutdown outcome is
-uncertain, inspect Chat and Activity before sending it again.
+- A turn that was running becomes interrupted.
+- Steers that turn had not taken move to the front of its queue.
+- A non-empty recovered queue pauses until you resume it or send another
+  message.
+
+If a submission or shutdown outcome is uncertain, check Chat and Activity before
+sending again.
 
 ## Updates and service handoff
 
-A plugin update installs the new version while the previous version's service
-may still be running. The next stdio proxy to start compares itself with that
-service, using the `version`, `apiVersion` and `launcher` fields of `/health`
-and the `installRoot` in `service.json`. Versions compare by semver
-precedence, so a prerelease such as `0.2.0-beta.1` is older than `0.2.0`.
+A plugin update installs the new version while the old version's service may
+still run. The next stdio proxy to start compares itself with that service. It
+reads `version`, `apiVersion` and `launcher` from `/health` and `installRoot`
+from `service.json`. Versions compare by semver precedence, so a prerelease
+such as `0.2.0-beta.1` is older than `0.2.0`.
 
 | Running service                                                | The proxy                                                                       |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -71,48 +77,50 @@ precedence, so a prerelease such as `0.2.0-beta.1` is older than `0.2.0`.
 | Started by a stdio proxy, newer                                | Uses it if `apiVersion` matches. Otherwise asks you to update the plugin.       |
 | Started another way (`npm run dev`, `npm start`, a supervisor) | Uses it if `apiVersion` matches. Otherwise refuses. It never stops the service. |
 
-A draining service starts no more turns and lets running turns finish for up
-to 10 minutes, then interrupts any left, as a restart does. Queued tasks stay
-queued, and the new service starts them. While a draining service still speaks
-the same API, proxies keep using it. When it exits, their next call starts the
-new version. Otherwise calls wait for the new service.
+A draining service starts no new turns. It lets running turns finish for up to
+10 minutes, then interrupts the rest as a restart does. Queued tasks stay
+queued, and the new service starts them. Proxies keep using a draining service
+that speaks the same API, and their next call after it exits starts the new
+version. Proxies on another API wait for the new service.
 
-Keep development services on their own `CODEX_SUBAGENT_EXTENSION_DATA` and
-`PORT`, so an installed plugin never finds them on its data directory.
+Give development services their own `CODEX_SUBAGENT_EXTENSION_DATA` and `PORT`
+so an installed plugin never finds them.
 
 ## Raise a task budget
 
-Runtime and cost limits accumulate across turns. Use the budget controls in
-Chat to apply a higher limit while the task is idle, without sending a message.
-A continuation can also carry a `budget` update through `send_message`.
+Runtime and cost limits accumulate across turns. While the task is idle, use the
+budget controls in Chat to raise a limit without sending a message. A
+`send_message` call can also carry a `budget` update.
 
-Each limit can only increase. `null` removes it, and an unlimited limit cannot
-be replaced with a finite one. Applying a budget without a message requires at
-least one changed limit. These updates affect that task. Settings changes
-apply to new tasks. Runtime includes time spent waiting for input. Cost limits
-are checked at response boundaries and can be exceeded by the response that
-triggers them. Interrupted usage may be missing.
+- Each limit can only increase. `null` removes it, and an unlimited limit cannot
+  become finite.
+- Applying a budget without a message needs at least one changed limit.
+- Budget updates affect that task only. Settings changes apply to new tasks.
+- Runtime includes time spent waiting for input.
+- Cost is checked at response boundaries, so the response that crosses a limit
+  can exceed it. Usage from interrupted turns may be missing.
 
 ## Preserve service state
 
-1. Stop the service gracefully before backing up its data.
-2. Preserve the full data directory, including SQLite files and worktrees.
+1. Stop the service gracefully.
+2. Back up the full data directory, including the SQLite files and worktrees.
 
-Copying only a live SQLite database can omit its write-ahead log. Keep the Claude
-runtime state on the machine that owns the worktrees. Moving this state to
+Copying only a live SQLite database can miss its write-ahead log. Keep the
+Claude runtime state on the machine that owns the worktrees. Moving it to
 another machine does not ensure native session continuation.
 
-For versioned database upgrades, see [Database](database.md).
+[Database](database.md) covers migrations and
+[restoring a pre-migration backup](database.md#restore-a-backup).
 
 ## Earlier development data
 
-Recorded diffs are not backfilled for tasks created before edit recording.
-Their Changes tab may be empty or unavailable. If that development data is no
-longer needed, stop the service and start with a fresh data directory. Preserve
-any needed worktrees and task history first.
+Tasks created before edit recording have no recorded diffs, so their Changes tab
+may be empty or unavailable. If you no longer need that data, stop the service
+and start with a fresh data directory, after saving any worktrees and history
+you need.
 
-Older builds may also have left Git snapshot refs. They are no longer used.
-Remove them from a repository when that earlier build is no longer running:
+Older builds may have left Git snapshot refs that current builds don't use. Once
+no such build is running, remove them from a repository:
 
 ```sh
 git for-each-ref --format='%(refname)' refs/agent-tasks | xargs -n1 git update-ref -d
@@ -120,13 +128,13 @@ git for-each-ref --format='%(refname)' refs/agent-tasks | xargs -n1 git update-r
 
 ## Troubleshooting
 
-| Symptom                                      | Check                                                                                                                                                              |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Service port is in use                       | Identify the service on that port and confirm its data directory before starting another service.                                                                  |
-| MCP proxy cannot authenticate                | Use the same absolute data directory for the service and MCP client, or matching token and URL overrides.                                                          |
-| Claude tasks cannot start                    | Read the worker's readiness message. [Claude Code CLI](claude-cli.md) explains executable selection and fixes.                                                     |
-| A turn starts a new session                  | Confirm the original service host and Claude state are available. A fresh session carries the bounded conversation described above.                                |
-| "A different extension service … is running" | Stop the named service, or give development its own `CODEX_SUBAGENT_EXTENSION_DATA` and `PORT`.                                                                    |
-| Startup refuses the database                 | See [Database](database.md#migration-application) for supported migration histories. If a database has a migration this build lacks, use a build that includes it. |
+| Symptom                                      | Check                                                                                                                                      |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Service port is in use                       | Identify the service on that port and confirm its data directory before starting another.                                                  |
+| MCP proxy cannot authenticate                | Use the same absolute data directory for the service and MCP client, or matching token and URL overrides.                                  |
+| Claude tasks cannot start                    | Read the worker's readiness message. [Claude Code CLI](claude-cli.md) explains executable selection and fixes.                             |
+| A turn starts a new session                  | Confirm the original service host and Claude state are available. See [Continue a task](#continue-a-task).                                 |
+| "A different extension service … is running" | Stop the named service, or give development its own `CODEX_SUBAGENT_EXTENSION_DATA` and `PORT`.                                            |
+| Startup refuses the database                 | See [Migration application](database.md#migration-application). If the database has a migration this build lacks, use a build that has it. |
 
 [Host capabilities](host-capabilities.md) covers host integration limits.

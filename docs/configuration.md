@@ -1,138 +1,244 @@
 # Configuration and permissions
 
-Use this guide to configure service startup, repository access and delegated
-execution authority. Environment variables control startup and storage. Per-user settings control new tasks, and task arguments can override ordinary defaults. Permission increases require user authority.
+Use this guide to configure the service, approve repositories, set task
+defaults and control what delegated Claude sessions may do.
 
-See [task continuation](task-continuation.md) for continuing tasks and preserving state, and the [README](../README.md#install) for installation. [Local development](development.md#connect-codex-from-a-checkout) covers connecting a checkout.
+- Environment variables control startup and storage.
+- Per-user settings supply defaults for new tasks. Task arguments can override
+  ordinary defaults.
+- Raising permissions or relaxing session restrictions requires user authority.
+
+The [README](../README.md#install) covers installation.
+[Local development](development.md#connect-codex-from-a-checkout) covers
+connecting a checkout, and [Task continuation](task-continuation.md) covers
+continuing tasks and preserving state.
 
 ## Environment variables
 
-Checkout commands load an optional `.env`, and shell variables take precedence. The packaged stdio launcher uses its MCP environment. Give every client the same absolute data override to share a service.
+Checkout commands load an optional `.env`, and shell variables take precedence.
+The packaged stdio launcher uses its MCP environment. To share one service,
+give every client the same absolute data directory.
 
-| Variable                                     | Default                                   | Meaning                                                                                                                                              |
-| -------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CODEX_SUBAGENT_EXTENSION_DATA`              | `~/.local/share/codex-subagent-extension` | Database, approved roots, worktrees, logs, service lease and token. Relative overrides resolve from the working directory where the command runs.    |
-| `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS`     | `[]`                                      | JSON array of parent-directory approvals persisted at startup. Removing an entry does not revoke its saved approval.                                 |
-| `CODEX_SUBAGENT_EXTENSION_URL`               | Discovered service or port 17317          | Plain loopback HTTP origin for the stdio proxy, without `/mcp`. An explicit URL requires a running service.                                          |
-| `CODEX_SUBAGENT_EXTENSION_CONCURRENCY`       | `3`                                       | Maximum active tasks, 1 to 20.                                                                                                                       |
-| `CODEX_SUBAGENT_EXTENSION_TOKEN`             | Generated locally                         | Admin token override, at least 32 characters.                                                                                                        |
-| `CODEX_SUBAGENT_EXTENSION_LOG_LEVEL`         | `info`                                    | Minimum structured service log level: `debug`, `info`, `warn` or `error`. Invalid values prevent startup. See [Logging and diagnostics](logging.md). |
-| `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`       | First `claude` on service `PATH`          | Absolute executable override. Failed validation blocks Claude execution.                                                                             |
-| `PORT`                                       | `17317`                                   | Service listener port (loopback by default).                                                                                                         |
-| `CODEX_SUBAGENT_EXTENSION_ORIGIN`            | `http://127.0.0.1:<PORT>`                 | Standalone origin and CORS allowlist.                                                                                                                |
-| `CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE` | Disabled                                  | `1` returns a sample Claude mention and logs searches to `<data-directory>/mention-search.jsonl` for local testing only.                             |
+| Variable                                     | Default                                   | Meaning                                                                                                                                   |
+| -------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `CODEX_SUBAGENT_EXTENSION_DATA`              | `~/.local/share/codex-subagent-extension` | Database, approved roots, worktrees, logs, service lease and token. A relative path resolves from the command's working directory.        |
+| `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS`     | `[]`                                      | JSON array of parent directories to approve at startup. See [Repository access](#repository-access) for revoking them.                    |
+| `CODEX_SUBAGENT_EXTENSION_URL`               | Discovered service or port 17317          | Plain loopback HTTP origin for the stdio proxy, without `/mcp`. An explicit URL requires a running service.                               |
+| `CODEX_SUBAGENT_EXTENSION_CONCURRENCY`       | `3`                                       | Maximum active tasks, 1 to 20.                                                                                                            |
+| `CODEX_SUBAGENT_EXTENSION_TOKEN`             | Generated locally                         | Admin token override, at least 32 characters.                                                                                             |
+| `CODEX_SUBAGENT_EXTENSION_LOG_LEVEL`         | `info`                                    | Minimum service log level: `debug`, `info`, `warn` or `error`. Invalid values prevent startup. See [Logging and diagnostics](logging.md). |
+| `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`       | First `claude` on the service's `PATH`    | Absolute path to the Claude Code executable. See [Claude Code CLI](claude-cli.md#which-claude-runs).                                      |
+| `PORT`                                       | `17317`                                   | Service listener port, on loopback by default.                                                                                            |
+| `CODEX_SUBAGENT_EXTENSION_ORIGIN`            | `http://127.0.0.1:<PORT>`                 | Standalone origin and CORS allowlist.                                                                                                     |
+| `CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE` | Disabled                                  | Local testing only. `1` returns a sample Claude mention and logs searches to `<data-directory>/mention-search.jsonl`.                     |
 
-The installed plugin keeps its data in the same default directory instead of
-the `PLUGIN_DATA` directory Codex gives plugins. Every way of running the
-service shares it, and Codex may delete `PLUGIN_DATA` when the plugin is
-uninstalled, which would take the task history and worktree records with it.
+The installed plugin uses the same default data directory as every other way of
+running the service. It avoids the `PLUGIN_DATA` directory Codex gives plugins
+because Codex may delete that directory on uninstall, along with task history
+and worktree records.
 
-See [local development](development.md) for `.env`, startup conflicts and packaging, and [Claude CLI readiness](claude-cli.md) for executable selection.
+See [Local development](development.md) for `.env`, startup conflicts and
+packaging.
 
 ## Admin token
 
-Loopback clients can start workers that edit files and run commands, so API requests require authentication. Without `CODEX_SUBAGENT_EXTENSION_TOKEN`, the service creates `<data-directory>/admin-token` when needed and reapplies owner-only permissions on each start. The file's token persists across restarts. An environment override replaces it without writing the override to that file. Configure the same override on clients. The data directory always gets owner-only permissions.
+Every API request needs the admin token, because loopback clients can start
+workers that edit files and run commands.
 
-- Console login exchanges the token for an HttpOnly session cookie valid for one hour. A service restart invalidates browser sessions.
+Without `CODEX_SUBAGENT_EXTENSION_TOKEN`, the service creates
+`<data-directory>/admin-token` when needed and keeps it across restarts. An
+environment override replaces the file's token without writing to the file.
+Give clients the same override. The service applies owner-only permissions to
+the data directory and token file on each start.
+
+- Console login exchanges the token for an HttpOnly session cookie that lasts
+  one hour. A service restart ends browser sessions.
 - The stdio proxy reads the token and adds it to forwarded requests.
 - The panel dev host adds the token server-side through the Vite proxy.
 
-Do not paste the token into a chat or commit it. Authenticated raw service clients are trusted administrators.
+Do not paste the token into a chat or commit it. Treat any authenticated raw
+service client as a trusted administrator.
 
 ## Repository access
 
-Targets must be canonical Git repository roots with at least one commit. A model-supplied path never grants access. Approve individual roots through global **Manage → Add project**, **Browse** in Advanced task, or the local CLI:
+A task target must be a canonical Git repository root with at least one commit.
+A model-supplied path never grants access. Approve a repository through global
+**Manage → Add project**, **Browse…** in Advanced task, or the local CLI:
 
 ```sh
 node dist/projects-cli.js register /absolute/path/to/repository
 node dist/projects-cli.js list
 ```
 
-To authorize repositories throughout a directory explicitly:
+To approve every repository under a directory:
 
 ```sh
 node dist/projects-cli.js approve-parent /absolute/path/to/projects
 ```
 
-Parent approval permits validated descendant roots. Register individual children to include them in project selectors. Registering a root alone does not approve independent nested repositories. Canonical path and symlink containment checks apply. Registration persists in SQLite and takes effect without a restart.
+A parent approval permits validated descendant roots. Register a child to list
+it in project selectors. Registering a repository does not approve independent
+repositories nested inside it. Canonical path and symlink containment checks
+apply. Approvals persist in SQLite and take effect without a restart.
 
-Environment-provided parent approvals are saved too. To revoke one, remove its environment entry and revoke the saved approval through Manage. If the environment entry remains, the next service start grants it again. Use global **Manage** to rename or remove saved approvals. See [Manage projects](panel-guide.md#manage-projects) for task-data deletion and remaining grants.
+The service also saves parent approvals from
+`CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS`. To revoke one, remove it from the
+variable and from **Manage**. While the variable still lists it, the next
+service start approves it again. See
+[Manage projects](panel-guide.md#manage-projects) for renaming, removal and
+task data cleanup.
 
-**Automatically add chat projects** (`auto_register_chat_project`, default `true`) is a user-only setting. It registers an unapproved chat Git root only when a task starts for that root, using original host sandbox metadata. Explicit task paths and `host_directory` hints do not grant access. Project listing, context discovery and opening panels remain read-only. Disabling the setting preserves existing grants. Host metadata delivery from registered hosts is unverified. See [host capabilities](host-capabilities.md).
+**Automatically add chat projects** (`auto_register_chat_project`, default
+`true`) is a user-only setting. When a task starts from a chat whose Git root
+is unapproved, it registers that root using the host's sandbox metadata.
 
-Use `list_projects`, then pass the intended absolute `repository` to `start_task`. `get_current_project` discovers the chat root. Direct the user to the panel or local CLI if registration is needed. Existing tasks keep their original repository and workspace.
+- Explicit task paths and `host_directory` hints never grant access.
+- Listing projects, discovering context and opening panels never register
+  anything.
+- Turning the setting off keeps existing approvals.
+
+Delivery of that metadata from a given host is unverified. See
+[Host capabilities](host-capabilities.md#project-context-and-registration).
+
+Read-only Git root validation probes time out after five seconds. A timeout
+keeps the approval requirement and reports a retryable validation failure.
+
+Existing tasks keep their original repository and workspace. See
+[Task tools](mcp-reference.md#task-tools) for how agents choose a repository.
 
 ## Task defaults
 
-Open **Settings** in the panel header. Values persist per user in SQLite and apply to new tasks. Existing tasks retain their resolved settings.
+Open **Settings** in the panel header. Values persist per user and apply to new
+tasks. Existing tasks keep their resolved settings.
 
-| Setting                 | Initial value                                         |
-| ----------------------- | ----------------------------------------------------- |
-| Provider                | Claude when enabled, otherwise first enabled provider |
-| Worker profile          | `reviewer`                                            |
-| Workspace strategy      | `current_repo`                                        |
-| Worktree branch prefix  | `agent/`                                              |
-| Runtime limit           | No limit                                              |
-| Cost limit              | No limit                                              |
-| Claude permission mode  | `default`                                             |
-| Approval decision maker | `user`                                                |
+| Setting                 | Initial value                                        |
+| ----------------------- | ---------------------------------------------------- |
+| Provider                | Claude when enabled, otherwise the first enabled one |
+| Worker profile          | `reviewer`                                           |
+| Workspace strategy      | `current_repo`                                       |
+| Worktree branch prefix  | `agent/`                                             |
+| Runtime limit           | No limit                                             |
+| Cost limit              | No limit                                             |
+| Claude permission mode  | `default`                                            |
+| Approval decision maker | `user`                                               |
 
-The worker profile setting applies to model calls and the Advanced task dialog.
-The panel's **New task** composer starts with the General profile. Its model
-and reasoning chips edit the selected profile's `<profile>_default_model` and
-`<profile>_default_reasoning_effort` settings.
+The worker profile setting applies to agent calls and the Advanced task dialog.
+The panel's **New task** composer starts with the General profile instead. Its
+model and reasoning choices save to the selected profile's
+`<profile>_default_model` and `<profile>_default_reasoning_effort` settings.
+See [Create and rename tasks](panel-guide.md#create-and-rename-tasks).
 
-For programmatic updates, use `get_settings` to discover supported fields and `update_settings` to change ordinary defaults. User-only settings require app-only `app_update_settings` or authenticated console authority. See [app and user authority](mcp-reference.md#app-and-user-authority) for the host enforcement boundary.
+Agents use `get_settings` to discover fields and `update_settings` to change
+ordinary defaults. User-only settings need the app-only `app_update_settings`
+tool or an authenticated console. See
+[App and user authority](mcp-reference.md#app-and-user-authority).
 
-Budget controls can disable a limit while remembering its amount. Editing that amount leaves the limit disabled until enabled again. The app sets no upper bound on runtime or cost. Providers reject limits they cannot support before execution. See [continuation and budgets](task-continuation.md#raise-a-task-budget) for raising limits on existing tasks.
+A budget limit can be turned off while its amount stays saved. Editing the
+amount leaves the limit off until you turn it on. The app sets no upper bound
+on runtime or cost, and a provider rejects limits it cannot support before the
+task runs. See [Raise a task budget](task-continuation.md#raise-a-task-budget)
+for existing tasks.
 
-Disabled providers' model defaults remain saved but hidden. An unavailable saved provider falls back to the first enabled provider.
+Model defaults for a disabled provider stay saved but hidden. If the saved
+provider becomes unavailable, new tasks use the first enabled provider.
 
 ## Model and reasoning defaults
 
-Each field resolves independently: task override → worker profile → provider → global → provider runtime default. Blank model fields and `default` reasoning inherit. This precedence resolves model and effort only. Permission and session restrictions have their own rules below.
+The service resolves the model and the reasoning effort separately. Each takes
+the first value set in this order:
 
-- Global: `default_model`, `default_reasoning_effort`.
-- Provider: `claude_default_model`, `claude_default_reasoning_effort` (or `fixture`).
-- Profile: `reviewer_default_model`, `reviewer_default_reasoning_effort` (or another worker profile).
-- Task: `model`, `reasoning_effort` in `start_task`, the panel's New task chips or the Advanced task dialog.
+| Scope    | Model                     | Reasoning effort                     |
+| -------- | ------------------------- | ------------------------------------ |
+| Task     | `model`                   | `reasoning_effort`                   |
+| Profile  | `<profile>_default_model` | `<profile>_default_reasoning_effort` |
+| Provider | `claude_default_model`    | `claude_default_reasoning_effort`    |
+| Global   | `default_model`           | `default_reasoning_effort`           |
 
-Profile defaults apply across providers, so choose a compatible model or override it on the task. Claude accepts `low`, `medium`, `high`, `xhigh` and `max`, subject to model support. Unsupported choices are rejected before queuing when metadata is known. Otherwise native validation may fail during execution.
+A blank model and `default` reasoning inherit from the next scope. When every
+scope inherits, the provider runtime's default applies. Task values come from
+`start_task`, the New task composer or the Advanced task dialog. Permission
+mode and session restrictions follow their own rules below.
 
-Claude model suggestions come from the installed harness. Discovery submits no user turn and disables tools, settings-file hooks and external MCP servers. Custom model IDs remain supported when discovery is unavailable. Effort support may then be unknown.
+Profile defaults apply to every provider, so choose a model each provider
+accepts or override it on the task. Claude accepts `low`, `medium`, `high`,
+`xhigh` and `max`, subject to model support. When model metadata is known, the
+service rejects unsupported choices before queuing. Otherwise the provider may
+fail the task when it runs.
+
+Claude model suggestions come from the installed CLI. Discovery submits no
+user turn and turns off tools, settings-file hooks and external MCP servers.
+Custom model IDs work when discovery is unavailable, but effort support may
+then be unknown.
 
 ## Claude permissions
 
-The extension owns Claude's native permission mode. `claude_permission_mode` applies to new tasks and defaults to `default`. The SDK receives the resolved mode explicitly. Choosing `auto` in extension settings therefore selects Auto even when Claude Code's own `permissions.defaultMode` is different. `provider_options.claude.permission_mode` overrides the saved setting when it selects a mode. For new tasks, `inherit` means use the saved extension setting. The parent agent's permission mode is not inherited. The task stores the resolved value and its source.
+The extension passes Claude's native permission mode to every session. Claude
+Code's own `permissions.defaultMode` does not apply, so choosing `auto` here
+selects Auto whatever that setting says. The parent agent's mode is not
+inherited either.
 
-| Mode                | Behavior                                                             |
-| ------------------- | -------------------------------------------------------------------- |
-| `inherit`           | Task-level option: use the extension's saved Claude permission mode. |
-| `default`           | Standard native permission checks.                                   |
-| `acceptEdits`       | Automatically approve file edits.                                    |
-| `plan`              | Plan and inspect without ordinary mutating tools.                    |
-| `dontAsk`           | Deny actions that require permission instead of prompting.           |
-| `auto`              | Use the native classifier for permission decisions.                  |
-| `bypassPermissions` | Skip ordinary native approval checks.                                |
+- `claude_permission_mode` sets the default for new tasks.
+- `provider_options.claude.permission_mode` overrides it for one task.
+  `inherit` uses the saved setting.
+- Each task stores its resolved mode and whether it came from the task or the
+  setting.
 
-Enabled session restrictions apply in every mode. Model-selected overrides cannot increase authority beyond the user-approved baseline. A trusted panel task submission can authorize a broader task-level override.
+| Mode                | Behavior                                                |
+| ------------------- | ------------------------------------------------------- |
+| `inherit`           | Task option only. Use the saved Claude permission mode. |
+| `default`           | Standard native permission checks.                      |
+| `acceptEdits`       | Approve file edits automatically.                       |
+| `plan`              | Plan and inspect without ordinary mutating tools.       |
+| `dontAsk`           | Deny actions that need permission instead of prompting. |
+| `auto`              | Let the native classifier decide permissions.           |
+| `bypassPermissions` | Skip ordinary native approval checks.                   |
 
-Approval routing is separate: `provider_options.claude.approval_decider` accepts `user` or `parent_agent`, inheriting `default_approval_decider`. It handles requests left unresolved by native checks. It does not force every action to prompt. User permission decisions require panel **Approve**/**Deny**. Model-visible `submit_input` can decide permissions only when the parent is the approver. Stale request IDs and cross-owner answers are rejected. `dontAsk` may deny questions without invoking the callback.
+Enabled session restrictions apply in every mode. An agent cannot choose a
+mode with more authority than the saved setting. A task you submit from the
+panel can.
 
-There is no extension-wide auto-approval policy for Claude. Repository approval and resolved session restrictions remain separate from native permission mode.
+`provider_options.claude.approval_decider` chooses who answers permission
+requests that native checks leave unresolved. It accepts `user` or
+`parent_agent` and defaults to the `default_approval_decider` setting. An agent
+can choose `parent_agent` only when that setting already allows it.
+
+- It never makes every action prompt.
+- User decisions require **Approve** or **Deny** in the panel.
+- The parent can answer through `submit_input` only when it is the approver.
+- Stale request IDs and answers from another owner are rejected.
+- `dontAsk` may deny questions without asking anyone.
+
+The extension has no auto-approval policy of its own for Claude. Repository
+approval and session restrictions stay separate from the permission mode.
 
 ## Claude session restrictions
 
-Claude continues to load user, project and local Claude Code settings, including `CLAUDE.md`, rules, skills, hooks, permission allow/deny rules, MCP servers and connectors. These sources also supply sandbox configuration and environment settings where applicable. Native allow/deny rules may resolve a call before extension routing. Use the user-only extension settings below to restrict delegated sessions. Each task stores its resolved policy.
+Delegated sessions load your user, project and local Claude Code settings. These
+include `CLAUDE.md`, rules, skills, hooks, permission allow and deny rules, MCP
+servers, connectors, sandbox settings and environment settings. A native allow
+or deny rule may decide a call before the extension sees it.
 
-| Setting              | Default       | Choices                                                                                                                                                                                                                                                        |
-| -------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `claude_sandbox`     | `user_config` | Use Claude Code sandbox settings. `extension` adds workspace-only Bash writes, Git metadata protection, no home/sibling-worktree reads, no network and no unsandboxed fallback. `extension_locked` also locks network domains against settings-file additions. |
-| `claude_environment` | `inherit`     | Service environment excluding `CODEX_SUBAGENT_EXTENSION_*`, `OPENAI_*` and `CLAUDE_CODE_OAUTH_TOKEN`. `filtered` passes basic process variables plus `CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`. Settings-file `env` also applies.    |
-| `claude_tools`       | `profile`     | `all` offers all native tools. `restricted` offers file/search, Bash, questions, skills and MCP tools, with only read/question/skill tools and the injected parent-report tool for read-only work. `profile` restricts read-only profiles only.                |
-| `claude_path_guard`  | `profile`     | `on` limits file tools to the workspace and denies Git metadata. `off` relies on native rules. `profile` enables the guard for read-only profiles.                                                                                                             |
-| `claude_subagents`   | `true`        | `false` disallows the Agent and legacy Task tools.                                                                                                                                                                                                             |
+These user-only settings restrict delegated sessions. Each task stores its
+resolved restrictions, so later changes never broaden an existing task.
 
-If sandbox dependencies are missing or the platform is unsupported, sandboxed tasks fail to start. Claude Code sandbox list settings, such as excluded commands and allowed domains, can add to extension policy. `extension_locked` blocks this only for network domains.
+| Setting              | Default       | Choices                                                                                                                                                                                                                                                                                     |
+| -------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `claude_sandbox`     | `user_config` | `user_config` uses your Claude Code sandbox settings. `extension` limits Bash writes to the workspace, protects Git metadata, blocks home and sibling worktree reads and the network, and never runs Bash unsandboxed. `extension_locked` also ignores network domains your settings allow. |
+| `claude_environment` | `inherit`     | `inherit` passes the service environment except `CODEX_SUBAGENT_EXTENSION_*`, `OPENAI_*` and `CLAUDE_CODE_OAUTH_TOKEN`. `filtered` passes basic process variables plus `CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`. Settings-file `env` applies in both.            |
+| `claude_tools`       | `profile`     | `all` offers every native tool. `restricted` offers file, search, Bash, question, skill and MCP tools, and gives read-only work only read, question and skill tools plus the parent report tool. `profile` restricts read-only profiles only.                                               |
+| `claude_path_guard`  | `profile`     | `on` keeps file tools inside the workspace and out of Git metadata. `off` relies on native rules. `profile` turns the guard on for read-only profiles.                                                                                                                                      |
+| `claude_subagents`   | `true`        | `false` blocks the Agent tool and its legacy Task name.                                                                                                                                                                                                                                     |
 
-Worktrees separate checkouts without restricting command execution. Default write-profile tasks have the host user's Claude Code capabilities. The model/API harness is outside the Bash sandbox, and full-harness containment is unverified. The service is intended for local, single-user use and listens on loopback by default. For trusted LAN development, see [local network access](development.md#access-from-your-local-network).
+The read-only profiles are `researcher`, `reviewer` and `security_reviewer`.
+
+Sandboxed tasks fail to start when sandbox dependencies are missing or the
+platform is unsupported. Claude Code sandbox list settings, such as excluded
+commands and allowed domains, add to the extension sandbox. `extension_locked`
+blocks this for network domains only.
+
+Worktrees separate checkouts but do not restrict commands. With default
+settings, a task with a write profile has your full Claude Code capabilities.
+The model and API harness run outside the Bash sandbox, and containment of the
+whole harness is unverified. The service is meant for local, single-user use
+and listens on loopback by default. For trusted LAN development, see
+[Access from your local network](development.md#access-from-your-local-network).

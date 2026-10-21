@@ -1,15 +1,12 @@
 # Fixture provider scenarios
 
 Use the fixture provider to test task controls and provider presentation without
-model calls. Start it with [Development: Demo](development.md#demo), then add
-markers to a task description or follow-up. Combine markers in one message to
-exercise several behaviors.
+model calls. Start it with the [demo](development.md#demo), then add markers to
+a task description or follow-up. One message can combine several markers.
 
 The fixture simulates tools and permissions. It does not run Claude or enforce
-host isolation. `[fixture:change]` writes a generated sample file in an isolated task worktree
-and reports its edit through the provider contract.
-It fails if the task uses the current repository.
-Fixture code lives under `dev/service/` and is excluded from production packages.
+host isolation. Its code lives in `dev/service/` and does not ship in the
+package.
 
 ## Prompt markers
 
@@ -22,7 +19,7 @@ Fixture code lives under `dev/service/` and is excluded from production packages
 | `[fixture:content type=image]`                     | Show a content block. `role=user` changes the sender.                  |
 | `[fixture:thinking]`                               | Show a thinking block.                                                 |
 | `[fixture:assistant-error type=rate_limit]`        | Show an SDK assistant error without failing the turn.                  |
-| `[fixture:change]`                                 | Create and record a sample file for Changes and review checks.         |
+| `[fixture:change]`                                 | Write and record a sample file. Requires a worktree task.              |
 | `[fixture:subagent count=2]`                       | Show child-worker lifecycles. Add `outcome=error` for failed children. |
 | `[fixture:restriction name=path_guard]`            | Show a synthetic restriction denial.                                   |
 | `[fixture:activity type=status status=compacting]` | Show an SDK activity event.                                            |
@@ -35,9 +32,14 @@ Fixture code lives under `dev/service/` and is excluded from production packages
 | `[fixture:fail stage=before-reply]`                | Fail at a selected boundary. Without `stage`, fail after the reply.    |
 | `[fixture:completion subtype=error_max_turns]`     | Emit a failed SDK result and fail the turn.                            |
 
-Questions, permissions and tool calls support `count`. Child lifecycles are capped
-at four. Waits last at most 60 seconds. Reply `lines` and `pace` stop at 200. See
-`dev/service/fixture-scenarios.ts` for accepted arguments and aliases.
+Limits:
+
+- Questions, permissions and tool calls accept `count` up to 5.
+- Child lifecycles stop at 4.
+- Waits last at most 60 seconds.
+- Reply `lines` and `pace` stop at 200.
+
+`dev/service/fixture-scenarios.ts` lists the accepted arguments and aliases.
 
 ## SDK event and message scenarios
 
@@ -50,25 +52,26 @@ for spaces. For example:
 [fixture:stream frame=content_block_delta delta=thinking text=Fixture%20thought]
 ```
 
-Activity fixtures use the shared presentation mapper without invoking Claude's
-SDK or provider event normalizer. Their type maps cover the installed SDK variants. See `dev/service/fixture-events.ts` and the adjacent fixture modules for the
-current variants and default payloads. Unknown activity or content types exercise
-the generic fallback.
+Activity fixtures go through the shared presentation mapper. They skip Claude's
+SDK and the provider event normalizer. Their type maps cover the installed SDK
+variants. `dev/service/fixture-events.ts` and the modules beside it hold the
+variants and default payloads. Unknown activity or content types show the
+generic fallback.
 
 Content markers support assistant/user text, thinking, image, document, tool,
 empty and error content. `type=tool_use outcome=running` leaves a started tool
 without a result. Use `outcome=error` to show a failed tool result.
 
 A turn can succeed even when it contains an assistant error or a failed tool or
-child-worker event. Pair them with a completion marker to check terminal failures:
+child worker. Add a completion marker to check a terminal failure:
 
 ```text
 [fixture:assistant-error type=rate_limit]
 [fixture:completion subtype=error_during_execution]
 ```
 
-`[fixture:completion subtype=success is_error=true]` checks error handling when
-the result has a successful subtype but carries an error flag.
+`[fixture:completion subtype=success is_error=true]` checks a result with a
+successful subtype and an error flag.
 
 ## Permission and worker-policy scenarios
 
@@ -84,12 +87,13 @@ ordinary task form, then use `[fixture:permission]`:
 | `auto`, `bypassPermissions` | Allow.                                                        |
 
 Set `claude_subagents` to `false` to check the blocked subagent path. Select a
-read-only worker profile to exercise its policy. These checks validate routing
-and presentation. Use the [authenticated Claude scenarios](claude-verification.md#live-claude-checks)
-to check native permission and sandbox behavior.
+read-only worker profile to check its policy. These checks cover routing and
+presentation only. Use the
+[live Claude checks](claude-verification.md#live-claude-checks) for native
+permission and sandbox behavior.
 
-Readiness and model discovery happen before task execution. Configure them when
-starting the demo:
+Readiness and model discovery happen before a task runs. Configure them, and
+provider failures, with environment variables when you start the demo:
 
 | Variable                                              | Values                                       |
 | ----------------------------------------------------- | -------------------------------------------- |
@@ -107,13 +111,13 @@ CODEX_SUBAGENT_EXTENSION_FIXTURE_READINESS_DELAY_MS=1500 \
 CODEX_SUBAGENT_EXTENSION_FIXTURE_MODELS=error-once npm run demo
 ```
 
-The fixture keeps sessions and costs in memory. Restarting the demo makes old provider
-sessions unavailable. The service can still continue their tasks in fresh sessions.
+The fixture keeps sessions and costs in memory. After a demo restart, old
+sessions are gone and the service continues their tasks in fresh sessions.
 
 ## Queue, scheduling, and task-control scenarios
 
-These scenarios exercise real task controls with a fake worker. See
-[Chat](panel-guide.md#chat-tab) for queue and steering controls.
+These scenarios exercise real task controls with the fake worker. See
+[Chat](panel-guide.md#chat-tab) for the queue and steering controls.
 
 | Check              | Procedure and expected result                                                                                                                                                              |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -124,8 +128,8 @@ These scenarios exercise real task controls with a fake worker. See
 | Queue editing      | Queue several messages during a wait, then edit, drag or remove them. Once a message starts, the service must reject those actions.                                                        |
 | Pending input      | Use `[fixture:question]` or `[fixture:permission]`. A steer must reject while input is pending. After resolving it, submitting its old request ID must also reject.                        |
 
-Task scheduling follows eligibility, dependencies and concurrency. Queue-row
-ordering controls the sequence of conversation messages within a task.
+Eligibility, dependencies and concurrency decide when tasks run. Queue order
+decides the order of messages within a task.
 
 ## Provider failure scenarios
 
@@ -148,21 +152,22 @@ Use real tool calls to check the authority boundaries documented in
 [Configuration](configuration.md) and [MCP reference](mcp-reference.md):
 
 - Start in an unapproved repository, request an unsupported token budget, or
-  submit invalid task/provider options. The service must reject each request before saving a task.
+  submit invalid task or provider options. The service must reject each request
+  before saving a task.
 - As the parent, request approval authority above the user's saved policy or try
   to answer a user-routed permission. Use the panel to resolve the permission.
 - Queue a user message, then try to remove it with the parent tool. Only the
   user-authorized tool can remove another sender's message.
 - Try lowering an existing budget, replacing an unlimited budget with a finite
   limit, or raising a budget while the task runs.
-- Remove a worktree while busy, delete its branch while still attached, or remove
-  a project/task with surviving dependants. Resolve the dependency or workspace
-  condition before retrying.
-- Complete `[fixture:change]` and remove the worktree without force. It must report
-  uncommitted files and preserve them. Use force only to check explicit discard
+- Remove a worktree while busy, delete its branch while still attached, or
+  remove a project or task with surviving dependants. Each must be rejected
+  until you resolve the condition.
+- Complete `[fixture:change]` and remove the worktree without force. It must
+  report uncommitted files and preserve them. Use force only to check explicit discard
   in the disposable demo repository.
 
-Use service tests to check app-only tool access and cross-owner isolation. The
-demo has a single owner. Task control and approval tests and
-`src/service/platform/server/conversation-tools.integration.test.ts` cover ownership,
-permission routing, stale input and queue controls.
+The demo has a single owner, so service tests check app-only tool access and
+cross-owner isolation. Task control and approval tests and
+`src/service/platform/server/conversation-tools.integration.test.ts` cover
+ownership, permission routing, stale input and queue controls.

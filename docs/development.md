@@ -1,10 +1,17 @@
 # Local development
 
-Use this guide to build, run, change and check the project locally. For code
-ownership and runtime boundaries, see [Architecture](architecture.md). For browser
-checks, see [UI verification](ui-verification.md).
+Use this guide to build, run, change and check the project from a checkout. It
+is for contributors and agents working on the code.
 
-Run every command from the project root. Requires Node.js 24+ and Git.
+- [Architecture](architecture.md) covers code ownership and runtime boundaries.
+- [UI verification](ui-verification.md) covers browser and Codex checks of the
+  panel.
+- [Database and migrations](database.md) covers schema changes, transactions
+  and event notifications.
+- [Claude execution verification](claude-verification.md) covers CLI and SDK
+  qualification and opt-in authenticated scenarios.
+
+Run every command from the project root. You need Node.js 24 or later and Git.
 
 ## Setup
 
@@ -13,76 +20,74 @@ npm ci
 cp -n .env.example .env
 ```
 
-`.env` is gitignored. `npm run dev`, `npm start`, `npm run projects`, and
-`npm run dev:ui` load it when present. Variables already set in the shell take
-precedence. The stdio proxy reads the mention-test setting from `.env` and uses
-its `CODEX_SUBAGENT_EXTENSION_DATA` only as a fallback destination for the test
-search log. Service connection settings come from its MCP environment.
-The example keeps data in `.codex-subagent-extension/live`. See the
-[configuration table](configuration.md#environment-variables) for every variable.
+`npm run dev`, `npm start`, `npm run projects` and `npm run dev:ui` load `.env`
+when present. Shell variables take precedence. `.env` is gitignored, and the
+example keeps data in `.codex-subagent-extension/live`. See the
+[configuration table](configuration.md#environment-variables) for every
+variable.
 
-**One data directory.** The service and panel dev host must use the same
-`CODEX_SUBAGENT_EXTENSION_DATA`, which holds the database and admin token. Choose
-[stdio or HTTP](#connect-codex-from-a-checkout). For stdio,
-the Codex-launched proxy needs that data directory in its MCP environment for
-service discovery. Add the same path, made absolute:
+The service and panel dev host must use the same
+`CODEX_SUBAGENT_EXTENSION_DATA`, which holds the database and admin token. How
+Codex finds that directory depends on the
+[transport](#connect-codex-from-a-checkout):
 
-```toml
-[mcp_servers.codex_subagent_extension.env]
-CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension/live"
-```
+- **Stdio.** The Codex-launched proxy needs the same path, made absolute, in its
+  MCP environment for service discovery:
 
-If the plugin is installed too, also give the checkout its own `PORT` (for
-example `17318`) in `.env` and the MCP environment. Otherwise the plugin's proxy
-finds the checkout's service on port 17317, and an update can
-[hand over](task-continuation.md#updates-and-service-handoff) a
-checkout service that a stdio proxy started.
+  ```toml
+  [mcp_servers.codex_subagent_extension.env]
+  CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension/live"
+  ```
 
-For HTTP, configure the [Streamable HTTP](#streamable-http) URL and Authorization header using the
-token from `<checkout-root>/.codex-subagent-extension/live/admin-token`, or the
-service's token override. Codex does not need a data-directory environment setting
-for HTTP.
+- **HTTP.** Configure the [Streamable HTTP](#streamable-http) URL and an
+  Authorization header with the token from
+  `<checkout-root>/.codex-subagent-extension/live/admin-token`, or the service's
+  token override. Codex needs no data directory setting.
 
-For composer mention diagnostics, add
-`CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE=1` to the project `.env`, then
-reload the MCP connection. The stdio proxy reads this one setting and answers
-mention search locally, so the backend service does not need a restart. Every
-mention query returns a visibly labeled sample `Claude` result and is appended
-to `<data-directory>/mention-search.jsonl`. The log contains the query,
-timestamp, result names, and whether provider checks were skipped for the sample.
-Remove the setting after testing. The sample does not prove a Claude provider
-is available.
+If the plugin is installed too, give the checkout its own `PORT`, such as
+`17318`, in `.env` and the MCP environment. Otherwise the plugin's proxy finds
+the checkout's service on port 17317, and a plugin update can
+[hand over](task-continuation.md#updates-and-service-handoff) a checkout service
+that a stdio proxy started.
 
-With **Automatically add chat projects** enabled (the default), starting a task
-from a chat registers its project. Use **Manage → Add project** or
-`npm run projects` to register other projects. See
-[Repository access](configuration.md#repository-access).
+With **Automatically add chat projects** on (the default), starting a task from
+a chat registers its project. Use **Manage → Add project** or `npm run projects`
+to register others. See [Repository access](configuration.md#repository-access).
+
+### Test composer mentions
+
+To diagnose [composer mentions](host-capabilities.md#composer-mentions), add
+`CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE=1` to `.env` and reload the MCP
+connection. The stdio proxy reads this setting from `.env` and answers mention
+search itself, so the service needs no restart.
+
+Every query then returns a labeled sample `Claude` result and appends the query,
+timestamp, result names and skipped provider checks to
+`<data-directory>/mention-search.jsonl`. The proxy uses the `.env` data
+directory for this log only when its MCP environment sets none. The sample does
+not prove that a Claude provider is available. Remove the setting after
+testing.
 
 ## Generated validation schemas
 
-Choose the source of validation according to what the contract owns:
+Pick the validation source by what the contract owns:
 
-- Plain boundary data shapes use TypeScript contracts and generated Zod schemas.
-  This covers settings documents, panel output,
-  and Claude start/task options. Edit the source types in the owning feature and regenerate the validators.
-- Inputs with transformations, defaults, or substantial validation behavior use
-  handwritten Zod and inferred TypeScript types. Task start, tool inputs,
-  settings updates, stored task validation, and SDK input contracts keep this
-  approach.
-- Database row validators derive from Drizzle tables at deserialization
-  boundaries. Internal types that need no runtime validation remain plain
-  TypeScript.
+| Contract                                                                                                                                        | Source                                                                                                                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plain boundary data, such as settings documents, panel output and Claude task options                                                           | TypeScript types with generated Zod schemas. Edit the source types and regenerate.                                                                       |
+| Inputs with transformations, defaults or substantial validation, such as task start, tool inputs, settings updates, stored tasks and SDK inputs | Handwritten Zod with inferred TypeScript types.                                                                                                          |
+| Database rows                                                                                                                                   | Validators derived from Drizzle tables at deserialization. Serialized JSON needs its own payload validation. See [Database and migrations](database.md). |
+| Internal data that needs no runtime validation                                                                                                  | Plain TypeScript.                                                                                                                                        |
 
-JSDoc supplies rules that ordinary TypeScript types cannot express. For example,
-the Claude task-options contract uses `@strict` to reject extra properties.
-Supported annotations also include `@format url` for URLs and `@default` for
-omitted input values.
-Contracts describe parsed output. Defaults can make an input property optional
-even when it is required in that output.
+The generator discovers `src/**/*-contract.ts`, excluding generated files and
+`*-contract.test.ts`. Contracts need no central registration, and imports
+between them resolve to their generated validators. Schema generation never
+changes migrations.
 
-The runner discovers `src/**/*-contract.ts` automatically, excluding generated
-files and `*-contract.test.ts`. No central registration is needed, and imports
-between discovered contracts resolve to their generated validators.
+JSDoc supplies rules that plain types cannot express. Supported annotations
+include `@strict` to reject extra properties, `@format url` and `@default` for
+omitted input values. Contracts describe parsed output, so a default can make an
+input property optional even when the output requires it.
 
 To add a contract:
 
@@ -97,9 +102,9 @@ To add a contract:
    ```
 
 2. Run `npm run schemas:generate`. This creates the adjacent
-   `message-contract.generated.ts`, exporting `messageSchema`.
-3. Call the generated validator at the boundary and use the source type for
-   internal code:
+   `message-contract.generated.ts`, which exports `messageSchema`.
+3. Call the generated validator at the boundary and use the source type
+   internally:
 
    ```ts
    import { messageSchema } from "./message-contract.generated.js";
@@ -113,12 +118,11 @@ To add a contract:
 4. Add focused tests beside the contract for accepted and rejected data and any
    annotation behavior. Run `npm run typecheck`.
 
-Keep the source, generated file, and tests together in any requested commit. See
-[Checks](#checks) for the build and watch workflows.
+Commit the source, generated file and tests together.
 
-For a handwritten validator, add a feature-owned `schema-generation.mjs` with
-paths relative to that configuration file. Claude's configuration, for example,
-keeps its permission policy in `permissions.ts`:
+A handwritten validator that imports source types needs a feature-owned
+`schema-generation.mjs`, with paths relative to that file. Claude's
+configuration, for example, keeps its permission policy in `permissions.ts`:
 
 ```js
 export default {
@@ -126,66 +130,60 @@ export default {
 };
 ```
 
-These configurations run only during schema generation. Each imported type maps
-to its usual camel-case schema name (for example, `PermissionMode` maps to
-`permissionModeSchema`). A mapping can supply `getSchemaName` for another naming
-convention. The runner rejects duplicate mappings, conflicts with generated
-outputs, and permissive `z.any()` fallbacks. See [Troubleshooting](#troubleshooting).
-Do not feed Drizzle inferred types into this generator.
-
-Database row validation derives from Drizzle tables at deserialization boundaries.
-Serialized JSON needs its own payload validation. See
-[Database and migrations](database.md). Schema generation does not change migrations.
+These files run only during schema generation. Each imported type maps to its
+camel-case schema name, so `PermissionMode` maps to `permissionModeSchema`. A
+mapping can supply `getSchemaName` for another convention. The generator rejects
+duplicate mappings, conflicts with generated outputs and permissive `z.any()`
+fallbacks. See [Troubleshooting](#troubleshooting). Do not feed Drizzle inferred
+types into this generator.
 
 ## Run the service
 
-Build before starting either service mode, including when testing in Codex over
-HTTP or stdio:
+Build before starting either mode, including when testing in Codex:
 
-| Use           | Command                        | Backend behavior                                                                                                       |
-| ------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Development   | `npm run build && npm run dev` | Runs `src/service/main.ts` through `tsx` and Node's watch mode. Restarts when an imported backend source file changes. |
-| Built service | `npm run build && npm start`   | Runs `dist/main.js`. Applying backend changes requires rebuilding and restarting.                                      |
+| Use           | Command                        | Backend behavior                                                                                     |
+| ------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Development   | `npm run build && npm run dev` | Runs `src/service/main.ts` through `tsx` in Node's watch mode. Restarts when backend sources change. |
+| Built service | `npm run build && npm start`   | Runs `dist/main.js`. Rebuild and restart to apply backend changes.                                   |
 
-Both modes serve the embedded Codex panel and standalone console from
-`dist/app.html`. `npm run dev` does not rebuild the panel after UI edits.
-Follow [What reloads when](#what-reloads-when) to apply subsequent changes.
-For browser UI development with Fast Refresh, use the [panel dev host](#panel-dev-host).
+Both modes run in the foreground at `http://127.0.0.1:17317` and serve the
+embedded panel and standalone console from `dist/app.html`. `npm run dev` does
+not rebuild the panel, so follow [What reloads when](#what-reloads-when) after
+edits. Use the [panel dev host](#panel-dev-host) for UI work with Fast Refresh.
 
-A restart interrupts active tasks. Send a follow-up after the service returns
-to continue them. Both commands run the service in the foreground at `http://127.0.0.1:17317`. Stop it with Ctrl-C. If Codex is open with
-the plugin enabled, its stdio proxy may already have started one. A second service
-cannot own the same data directory. On macOS and Linux, an interactive startup
-reports process details and asks before sending SIGTERM to a verified service
-owner. If it remains alive after five seconds, a second confirmation is required
-before SIGKILL. Non-interactive launches and Windows do not stop processes here.
+Stop the service with Ctrl-C. A restart interrupts active tasks. Send a
+follow-up after the service returns to continue them.
 
-Check it from another terminal:
+Only one service can own a data directory. If Codex is open with the plugin
+enabled, its stdio proxy may already have started one. On macOS and Linux, an
+interactive start shows the owner's process details and asks before sending it
+SIGTERM. If it is still running after five seconds, a second prompt offers
+SIGKILL. Non-interactive starts and Windows never stop other processes.
+
+Check the service from another terminal:
 
 ```sh
 curl --fail http://127.0.0.1:17317/health
 npm run projects -- list
 ```
 
-The standalone console is at `http://127.0.0.1:17317`. Sign in with the contents
-of `<data-directory>/admin-token`, for example
-`pbcopy < .codex-subagent-extension/live/admin-token` on macOS.
-Use the configured console origin: `localhost` and `127.0.0.1` are different
-browser origins, and substituting `localhost` for the default address can fail
-the service's origin checks.
+Open the standalone console at `http://127.0.0.1:17317` and sign in with the
+contents of `<data-directory>/admin-token`. On macOS,
+`pbcopy < .codex-subagent-extension/live/admin-token` copies it. Use the
+configured origin. `localhost` and `127.0.0.1` are different browser origins,
+and the service's origin checks can reject the substitute.
 
 ## Choosing a development tool
 
-| Command          | Use for                                                      | Worker                                                  |
-| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
-| `npm run dev:ui` | UI development, prepared scenarios and host/layout controls. | Prepared fixtures, or a connected backend in live mode. |
-| `npm run demo`   | Interactive service testing with disposable data.            | Fake worker with no model calls.                        |
-| `npm run dev`    | Backend development and Claude execution.                    | Claude model calls can incur costs.                     |
+| Command          | Use for                                                     | Worker                                                 |
+| ---------------- | ----------------------------------------------------------- | ------------------------------------------------------ |
+| `npm run dev:ui` | UI development, prepared scenarios and host/layout controls | Prepared fixtures, or a connected backend in live mode |
+| `npm run demo`   | Interactive service testing with disposable data            | Fake worker with no model calls                        |
+| `npm run dev`    | Backend development and Claude execution                    | Claude model calls, which can incur costs              |
 
-**Data: live** connects to a backend. The connected service determines whether its worker is
-fake or Claude. The [Demo](#demo) instructions show how to combine it with the
-[panel dev host](#panel-dev-host). See [What reloads when](#what-reloads-when)
-for applying source changes.
+In the dev host, **Data: live** connects to a running service, whose worker may
+be fake or Claude. [Demo](#demo) shows how to pair the dev host with the fake
+worker.
 
 ## Panel dev host
 
@@ -193,39 +191,34 @@ for applying source changes.
 npm run dev:ui
 ```
 
-This starts a Vite server at `http://127.0.0.1:5317` with React Fast Refresh and
-CSS hot replacement for development. Production HTML comes from
-`scripts/build-panel.mjs`.
+This starts Vite at `http://127.0.0.1:5317` with React Fast Refresh and CSS hot
+replacement. The page embeds the real panel in an iframe through the official
+`AppBridge`, and lets you vary launch scope, theme, display mode, width and host
+capabilities. Production HTML comes from `scripts/build-panel.mjs`.
+[UI verification](ui-verification.md) covers the workflow, host controls,
+fixture catalogue and style variables.
 
-The page embeds the real panel in an iframe through the official `AppBridge`.
-Use **Data: fixtures** for UI checks without a production service. Prepared
-fixtures cannot start provider tasks. Supported Chat interactions update
-simulated fixture state. **Launch** chooses thread or global
-scope. You can also vary the theme, display mode, width and host capabilities. The
-**Inspector** exposes the bridge log, host settings and icon catalog. The dev
-host does not send style variables by default. Leave **Host style variable
-overrides** empty to omit them, or enter JSON to test specific values. See
-[UI verification](ui-verification.md#measurement-and-checks-in-codex) for the
-captured host styles and the limits of the dev host.
+**Data: fixtures** checks the UI without a production service. Prepared fixtures
+cannot start provider tasks, but supported Chat interactions update simulated
+state. Fixtures live in `dev/panel/scenarios/` and stay out of the production
+bundle. Most tool calls use browser fixtures. Changes and worktree calls listed
+in `FIXTURE_SERVICE_TOOLS` run real service code on Vite against disposable
+repositories, which source edits rebuild on the next call.
 
-[UI verification](ui-verification.md) documents the browser workflow, fixture
-catalogue and host controls. Fixtures in `dev/panel/scenarios/` are excluded from the
-production bundle. Most calls use browser fixtures. Changes and worktree calls
-in `FIXTURE_SERVICE_TOOLS` run real service code against disposable repositories
-on Vite. Source edits rebuild these repositories on the next call, and the
-bridge log identifies the source that served each call.
+**Data: live** connects to the service's `/mcp` endpoint through the Vite proxy
+at `/service`. The proxy adds the admin token server-side and drops the browser
+`Origin` header, so the token never reaches the page.
 
-Live mode connects to the service's `/mcp` endpoint through the Vite proxy at
-`/service`. The proxy adds the admin token server-side and drops the browser
-`Origin` header, so the token never reaches the page. It checks `CODEX_SUBAGENT_EXTENSION_URL`,
-`CODEX_SUBAGENT_EXTENSION_ORIGIN`, the data directory's `service.json`, then
-port 17317. It ignores `PORT`, which in the dev host's process is its own port
-(the `.claude/launch.json` launcher sets it). It reads the token from
-`CODEX_SUBAGENT_EXTENSION_TOKEN` or the data directory's `admin-token`. Start
-the service first, or restart Vite after it moves ports.
+- The proxy finds the service from `CODEX_SUBAGENT_EXTENSION_URL`, then
+  `CODEX_SUBAGENT_EXTENSION_ORIGIN`, then the data directory's `service.json`,
+  then port 17317. It ignores `PORT`, which sets the dev host's own port in this
+  process.
+- It reads the token from `CODEX_SUBAGENT_EXTENSION_TOKEN` or the data
+  directory's `admin-token`.
+- Start the service first, and restart Vite after the service changes ports.
 
-For Claude execution against throwaway data, give both processes the same data directory.
-The dev host finds the service's port in its `service.json`:
+For Claude execution against throwaway data, give both processes the same data
+directory. The dev host reads the service's port from `service.json`:
 
 ```sh
 CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev PORT=4399 npm run dev
@@ -234,78 +227,87 @@ CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev npm run dev:ui
 
 ### Access from your local network
 
-Pass `--host` to either command to listen on network interfaces. Without it,
-both commands listen on loopback only:
+Both commands listen on loopback only. Pass `--host` to listen on network
+interfaces:
 
 ```sh
 npm run dev -- --host
 npm run dev:ui -- --host
 ```
 
-On the other computer, open `http://<service-computer-LAN-IP>:5317` for the
-dev UI or `http://<service-computer-LAN-IP>:17317` for the standalone console.
-The service binds all IPv4 interfaces and prints its network URLs at startup.
-The console still requires the admin token. LAN console origins use the service computer's interface
-addresses discovered at startup. Restart after those addresses change.
-Codex and the UI proxy continue connecting through loopback.
+On another computer, open `http://<service-computer-LAN-IP>:5317` for the dev UI
+or `http://<service-computer-LAN-IP>:17317` for the standalone console.
 
-For dev UI live mode alone, only `dev:ui` needs `--host`. The service can stay
-on loopback. The dev UI proxy adds the admin token automatically, so anyone
-who can reach that UI can control the service in live mode. Use these flags
-only on a trusted local network. They bind all interfaces. Firewall rules
-determine which computers can connect. Public and multi-user hosting are
-outside this development option.
+- The service binds all IPv4 interfaces and prints its network URLs at startup.
+- The console still requires the admin token. It accepts LAN origins from the
+  interface addresses found at startup, so restart after those change.
+- Codex and the dev UI proxy still connect through loopback. For dev UI live
+  mode alone, only `dev:ui` needs `--host`.
+
+The dev UI proxy adds the admin token, so anyone who can reach the dev UI can
+control the service in live mode. Use these flags only on a trusted local
+network. Firewall rules decide which computers can connect. Public and
+multi-user hosting are out of scope.
 
 ## Recorded fixtures
 
-The preview supports synthetic fixtures built with
-`dev/panel/scenarios/timeline.ts` and tasks recorded from real Claude runs in
-`dev/panel/recorded/`. Recordings preserve SDK messages from those runs.
-Scenario modules live in `dev/panel/scenarios/`, and `fixtures.ts` assembles the
-registry used by the dev host and replay tests.
-`dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays both kinds through the
-provider.
+The dev host has two kinds of task fixtures:
 
-Record a task from any service database (the service's, the demo's, or a
-temporary one such as `scripts/verify-live-claude.mjs` creates):
+- Synthetic fixtures built with `dev/panel/scenarios/timeline.ts`.
+- Tasks recorded from real Claude runs in `dev/panel/recorded/`, which preserve
+  their SDK messages.
+
+`dev/panel/scenarios/fixtures.ts` assembles both into the registry the dev host
+and replay tests use. `dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays
+both through the provider.
+
+Record a task from any service database, such as the service's, the demo's or a
+temporary one from `scripts/verify-live-claude.mjs`:
 
 ```bash
 npm run fixture:record -- --db <tasks.sqlite> --task <task id> --name <name> --title "Recorded: <what it shows>" --start 2026-10-02T11:40:00.000Z --first-id 3400
 ```
 
-It writes `dev/panel/recorded/<name>.json` for task `preview-recorded-<name>`
-in the `dev-thread` thread and the `/demo/project` project. Then import the file
-in `fixtures.ts` and add it to `recordedFixtures`. Choose a `--first-id` past the
-other fixtures' event ids (the recorded ones start at 3000, a hundred apart), and
-a `--start` that keeps the task where you want it in the newest-first list.
+This writes `dev/panel/recorded/<name>.json` for task `preview-recorded-<name>`
+in the `dev-thread` thread and `/demo/project` project. Import the file in
+`fixtures.ts` and add it to `recordedFixtures`.
+
+- Choose a `--first-id` past other fixtures' event IDs. Recorded fixtures start
+  at 3000, a hundred apart.
+- Choose a `--start` that places the task where you want it in the
+  newest-first list.
 
 The recorder replaces machine paths and identifiers, removes local Claude
-configuration and private usage details, and shifts event IDs and times for the
-preview. Fixture replay maps recorded `tool_use_result` payloads through
-`claudeFileEdits`, so captured edit results populate Changes. File previews still
-need a fixture workspace or prepared content.
+configuration and private usage details, and shifts event IDs and times.
+Replay maps recorded `tool_use_result` payloads through `claudeFileEdits`, so
+captured edits populate Changes. File previews still need a fixture workspace or
+prepared content.
 
-Review the output before committing: prompts and file contents can still contain
-private information. The recorder rejects common machine identifiers, but that
-check cannot establish that the whole recording is safe to share. Use repeatable
-`--replace <from>=<to>` arguments for additional literal replacements, quoting
-values with spaces or shell characters, for example
-`--replace 'internal-name=/demo/name'`.
+Review the output before committing, because prompts and file contents can still
+hold private information. The recorder rejects common machine identifiers, but
+that check cannot prove the recording is safe to share. Add literal
+replacements with repeatable `--replace <from>=<to>` arguments, quoting values
+with spaces or shell characters, such as `--replace 'internal-name=/demo/name'`.
 
 ## Connect Codex from a checkout
 
-Installed users get the plugin from the marketplace ([README](../README.md#install)).
-To run a checkout instead, build it, choose one transport and add its example to
-`~/.codex/config.toml`. Remove the plugin first, or Codex runs both servers. Both expose
-the same task tools and MCP App. Replace the existing server entry when switching
-transports. Do not combine its stdio and HTTP settings. See the
+Installed users get the plugin from the marketplace
+([README](../README.md#install)). To run a checkout instead, build it, pick one
+transport and add its example to `~/.codex/config.toml`. Both transports expose
+the same task tools and MCP App.
+
+- Remove the plugin first, or Codex runs both servers.
+- Replace the existing server entry when switching transports. Do not combine
+  stdio and HTTP settings.
+
+See the
 [Codex MCP configuration reference](https://learn.chatgpt.com/docs/extend/mcp#configure-with-configtoml)
 for supported options.
 
 ### Stdio
 
-Run `npm run build`, then configure the built launcher using an absolute checkout
-path:
+Run `npm run build`, then point Codex at the built launcher with an absolute
+checkout path:
 
 ```toml
 [mcp_servers.codex_subagent_extension]
@@ -313,18 +315,23 @@ command = "node"
 args = ["<checkout-root>/dist/stdio.js"]
 ```
 
-The launcher connects to the local service or starts it when needed. It reads the admin token itself. If you override `CODEX_SUBAGENT_EXTENSION_DATA`, give the service and MCP launcher the same absolute path through `[mcp_servers.codex_subagent_extension.env]`. See [task continuation](task-continuation.md) for recovery and state preservation, and [Configuration](configuration.md#admin-token) for token overrides.
+The launcher reads the admin token and connects to the local service, starting
+it when needed. If you override `CODEX_SUBAGENT_EXTENSION_DATA`, give the
+service and launcher the same absolute path through
+`[mcp_servers.codex_subagent_extension.env]`. See
+[Task continuation](task-continuation.md) for recovery and state, and
+[Admin token](configuration.md#admin-token) for token overrides.
 
 ### Streamable HTTP
 
-Start the service before connecting Codex:
+Codex does not start the service over HTTP, so keep it running:
 
 ```sh
 npm run build && npm start
 ```
 
-For development, use `npm run build && npm run dev` instead. Both serve the built
-panel. Follow [What reloads when](#what-reloads-when) after edits.
+Use `npm run build && npm run dev` for development instead, and follow
+[What reloads when](#what-reloads-when) after edits.
 
 Configure the authenticated `/mcp` endpoint:
 
@@ -336,27 +343,24 @@ url = "http://127.0.0.1:17317/mcp"
 Authorization = "Bearer <admin-token>"
 ```
 
-Replace `<admin-token>` locally with the contents of
-`~/.local/share/codex-subagent-extension/admin-token`, or
-`<data-directory>/admin-token` if you changed the data directory. If the service
-uses `CODEX_SUBAGENT_EXTENSION_TOKEN`, use that override instead. On macOS, copy
-the default file's token without printing it:
+Replace `<admin-token>` with the contents of `<data-directory>/admin-token`, or
+with `CODEX_SUBAGENT_EXTENSION_TOKEN` if the service uses that override. The
+default data directory is `~/.local/share/codex-subagent-extension`. On macOS,
+copy the token without printing it:
 
 ```sh
 pbcopy < ~/.local/share/codex-subagent-extension/admin-token
 ```
 
-Keep the token and configuration private. Do not paste them into chats or commit
-them. Update the URL if you changed the service port. HTTP connections require
-you to keep the service running. Codex does not start it through this transport.
+Update the URL if you changed the service port. Keep the token and configuration
+private, and never paste them into chats or commit them.
 
 ### Verify either connection
 
-After saving the configuration, reload the MCP connection in Codex and open
-**Delegated Work** from a chat. Use `codex mcp list` to check the configured server.
-Opening the panel verifies the connection and shows the same tasks as the dev
-host in live mode. Changed tool metadata also requires
-MCP reconnection. To check UI changes in Codex, see
+Reload the MCP connection in Codex and open **Delegated Work** from a chat. The
+panel shows the same tasks as the dev host in live mode. `codex mcp list` shows
+the configured server. Reconnect after changing tool metadata. To check UI
+changes in Codex, see
 [UI verification](ui-verification.md#measurement-and-checks-in-codex).
 
 ## Demo
@@ -365,14 +369,14 @@ MCP reconnection. To check UI changes in Codex, see
 npm run demo
 ```
 
-The script builds the project, registers a disposable repository at
-`.codex-subagent-extension/demo-repository`, and starts the real service with
-only the fixture worker. Its data directory is `.codex-subagent-extension/demo`.
-It makes no model calls. Sign in at
-`http://127.0.0.1:17317` with `local-demo-only-not-a-real-token`. Stop any other
-service on port 17317 first.
+The demo builds the project, registers a disposable repository at
+`.codex-subagent-extension/demo-repository` and starts the service with only the
+fixture worker, so it makes no model calls. Data lives in
+`.codex-subagent-extension/demo`. Stop any other service on port 17317 first,
+then sign in at `http://127.0.0.1:17317` with
+`local-demo-only-not-a-real-token`.
 
-To combine interactive fake-worker tasks with UI hot reload:
+To pair fake-worker tasks with UI hot reload:
 
 1. Run `npm run demo` in one terminal.
 2. Start Vite in another terminal with the demo connection:
@@ -383,77 +387,82 @@ To combine interactive fake-worker tasks with UI hot reload:
    CODEX_SUBAGENT_EXTENSION_URL=http://127.0.0.1:17317 npm run dev:ui
    ```
 
-3. Open `http://127.0.0.1:5317`, choose **Data: live** and **Launch: global**, and
-   **Relaunch**.
+3. Open `http://127.0.0.1:5317`, choose **Data: live** and **Launch: global**,
+   then **Relaunch**.
 4. Select the demo repository in New task.
 
-The panel sends actual requests: create tasks, send follow-ups, answer questions
-and interrupt turns. The explicit connection overrides keep Vite from using a
-different service configured in `.env`.
+The panel sends real requests, so you can create tasks, send follow-ups, answer
+questions and interrupt turns. The explicit variables keep Vite from using a
+service configured in `.env`.
 
-For the full fixture trigger catalog, expected outcomes, queue controls, and
-failure cases, see [Fixture scenarios](fixture-scenarios.md).
+[Fixture scenarios](fixture-scenarios.md) lists the prompt triggers, expected
+outcomes, queue controls and failure cases.
 
 ## What reloads when
 
 | Change                               | To see it                                                               |
 | ------------------------------------ | ----------------------------------------------------------------------- |
-| `src/panel/` in the dev host         | Nothing: Fast Refresh applies it                                        |
+| `src/panel/` in the dev host         | Nothing. Fast Refresh applies it                                        |
 | `src/panel/` in Codex or the console | `npm run build`, then reopen the panel or reload the page               |
 | `src/service/`                       | `npm run dev` restarts automatically. Restart `npm start` after a build |
 | `src/shared/`                        | Refresh the panel as above. `npm run dev` restarts automatically        |
 | Tool metadata or panel resource URI  | Restart the service, then reload the MCP connection in Codex            |
 | `.env` or `vite.config.ts`           | Restart the affected processes                                          |
 
-The service reads panel HTML from `dist/` on each resource request, so rebuilt
-UI needs no service restart. It keeps the last copy it read, and serves that
-copy if the file disappears, as when a plugin update removes the running
-installation before the service hands over.
+The service reads panel HTML from `dist/` on each resource request, so a rebuilt
+UI needs no restart. If the file disappears, as when a plugin update removes the
+running installation before handover, the service serves the last copy it read.
 
 ## Build
 
 `npm run build` regenerates validation schemas, cleans `dist/`, type checks the
-service, and builds the service entrypoints and `dist/app.html`. Both builds
-reject dependencies from the opposing runtime, development tooling and tests.
+service, and builds the service entrypoints and `dist/app.html`. Each build
+rejects imports from the other runtime, development tooling and tests.
 
-The service bundle includes its runtime packages, so the extracted package runs
-without a separate `node_modules` directory. It ships no Claude Code binary.
-Bundling drops the packages' license files, so each build collects them into a
-notice: `dist/THIRD_PARTY_LICENSES.txt` for the service and
-`dist/app.html.THIRD_PARTY_LICENSES.txt` for the panel.
-Launches use the installed [Claude Code CLI](claude-cli.md). Source maps omit
-embedded sources and map stack traces to the original files.
-
-The bundles live in `dist/bundle/`. The public entries `dist/main.js`,
-`dist/stdio.js` and `dist/projects-cli.js` are small ES2017 guards. Each checks
-Node against `engines.node` and prints what to install instead of failing on
-syntax an old runtime can't parse, then imports its bundle.
+- The service bundle includes its runtime packages, so an extracted package runs
+  without `node_modules`. It ships no Claude Code binary and launches the
+  installed [Claude Code CLI](claude-cli.md).
+- Bundling drops package license files, so each build collects them into
+  `dist/THIRD_PARTY_LICENSES.txt` for the service and
+  `dist/app.html.THIRD_PARTY_LICENSES.txt` for the panel.
+- Source maps omit embedded sources and map stack traces to the original files.
+- Bundles live in `dist/bundle/`. The public entries `dist/main.js`,
+  `dist/stdio.js` and `dist/projects-cli.js` are small ES2017 guards. Each
+  checks Node against `engines.node`, prints what to install on an old runtime,
+  then imports its bundle.
 
 `npm run package:plugin` builds and packs the plugin. The package holds only
 what the installed plugin runs or shows: `dist/`, `migrations/`, `assets/`,
-`skills/`, `plugin.json`, `mcp.json`, the README and `LICENSE`. Guides under
-`docs/` are read on GitHub, so the README's relative links to them don't resolve
-inside an extracted package. `tests/integration/package/packed-artifact.test.ts`
-verifies startup, transports, CLI readiness and restart behavior from an
-extracted package outside the checkout. It fails if the top-level file list
-changes.
+`skills/`, `plugin.json`, `mcp.json`, the README and `LICENSE`. Guides stay on
+GitHub, so the README's links to `docs/` don't resolve inside an extracted
+package.
 
-`npm run release:assemble` (after a build) writes `release/`: the packed files,
-a manifest with no scripts or dependencies, and
-`.agents/plugins/marketplace.json` listing the plugin with source `./`, so the
-directory is both a Codex marketplace and the plugin. Install it locally with
-`codex plugin marketplace add ./release`, then
-`codex plugin add codex-subagent-extension@shemarlindie`. The marketplace name
-`shemarlindie` is part of the plugin ID and its `PLUGIN_DATA` path, so it must
-not change.
+`npm run release:assemble`, run after a build, writes `release/`. It holds the
+packed files, a manifest with no scripts or dependencies, and an
+`.agents/plugins/marketplace.json` that lists the plugin with source `./`. The
+directory is both a Codex marketplace and the plugin. Install it locally with:
 
-`tests/integration/package/marketplace-install.test.ts` assembles its own copy
-from `dist/`, installs it with the Codex CLI into a temporary `CODEX_HOME`, and
-runs the MCP command Codex reports against an isolated data directory and port.
-It checks that the installed plugin reports the package version, lists and
-answers tools, and starts the service itself. It runs in `npm test`, needs the
-Codex CLI (`CODEX_BIN` or `codex` on `PATH`) and is skipped without it. To run
-it alone after a build:
+```sh
+codex plugin marketplace add ./release
+codex plugin add codex-subagent-extension@shemarlindie
+```
+
+The marketplace name `shemarlindie` is part of the plugin ID and its
+`PLUGIN_DATA` path, so it must not change.
+
+Two package suites in `npm test` cover the result:
+
+- `tests/integration/package/packed-artifact.test.ts` checks startup,
+  transports, CLI readiness and restarts from an extracted package outside the
+  checkout. It fails if the package's top-level file list changes.
+- `tests/integration/package/marketplace-install.test.ts` assembles a release
+  from `dist/`, installs it with the Codex CLI into a temporary `CODEX_HOME` and
+  runs the MCP command Codex reports against an isolated data directory and
+  port. It checks the reported version, tool listing and calls, and service
+  startup. It needs the Codex CLI (`CODEX_BIN` or `codex` on `PATH`) and skips
+  without it.
+
+To run the marketplace test alone after a build:
 
 ```sh
 npx vitest run tests/integration/package/marketplace-install.test.ts
@@ -461,61 +470,54 @@ npx vitest run tests/integration/package/marketplace-install.test.ts
 
 Set `MARKETPLACE_SOURCE` to a published marketplace, such as
 `owner/repo@v1.2.3`, to install that instead. Its version must match the
-checkout's `package.json`, which the test compares against. The release
-workflow does this after publishing.
+checkout's `package.json`. The release workflow does this after publishing.
 
 ## Releasing
 
-Users install from the `release` branch, which holds only assembled releases.
-Each release commit is tagged `v<version>`. Codex refreshes Git marketplaces on
-startup and reinstalls the plugin when the branch moves, so every push to
-`release` reaches users.
+Users install from the `release` branch, which holds only assembled releases
+tagged `v<version>`. Codex refreshes Git marketplaces on startup and reinstalls
+the plugin when the branch moves, so every push to `release` reaches users.
 
 1. Bump `version` in `package.json` and `plugin.json`. The build fails when they
-   differ, and Codex keys installed versions by it, so every release needs a
-   new one.
-2. Add a `## <version>` section to `CHANGELOG.md` for users: what changed, and
-   anything to do by hand. Its text becomes the GitHub release notes.
+   differ, and Codex keys installed versions by it, so every release needs a new
+   one.
+2. Add a `## <version>` section to `CHANGELOG.md` that tells users what changed
+   and anything they must do by hand. It becomes the GitHub release notes.
 3. Merge to `main`, then run the **Release** workflow from `main` in GitHub
    Actions.
 
-A version with a prerelease suffix, such as `1.2.0-beta.1`, makes a
-prerelease. It needs its own `## 1.2.0-beta.1` section in `CHANGELOG.md`. The
-workflow builds its commit on top of `release` and pushes only the tag, so
-users following the branch don't receive it. The GitHub release is marked as a
-prerelease. Testers install it at its tag, and a later release replaces its
-running service as described in
-[updates and service handoff](task-continuation.md#updates-and-service-handoff).
+A version with a prerelease suffix, such as `1.2.0-beta.1`, makes a prerelease
+and needs its own `CHANGELOG.md` section. The workflow builds its commit on top
+of `release` but pushes only the tag, so users on the branch don't receive it.
+Testers install it at its tag, and a later release replaces its running service
+through [updates and service handoff](task-continuation.md#updates-and-service-handoff).
 
-The workflow (`.github/workflows/release.yml`) runs the CI checks and the
-marketplace install test, assembles the release, commits it to `release` with
-the source commit in the message, tags it, attaches an attested zip to a
-GitHub release, and then installs `<owner>/<repo>@v<version>` from GitHub with
-Codex on Linux, macOS and Windows. The source commit on `main` isn't tagged,
-because user-facing tags name release commits.
+The workflow (`.github/workflows/release.yml`):
 
-Repository settings the workflow relies on, set by hand:
+1. Runs the CI checks and the marketplace install test.
+2. Assembles the release and commits it to `release`, naming the source commit
+   in the message.
+3. Tags the commit and attaches an attested zip to a GitHub release, marked as a
+   prerelease when the version has a suffix.
+4. Installs `<owner>/<repo>@v<version>` from GitHub with Codex on Linux, macOS
+   and Windows.
 
-- A ruleset on `release` that allows only GitHub Actions to push and blocks
-  force pushes and deletion.
-- A ruleset on `v*` tags that allows only GitHub Actions to create them and
-  blocks updates and deletion.
-- A public repository, since `codex plugin marketplace add owner/repo` fetches
+The source commit on `main` stays untagged, because user-facing tags name
+release commits. The workflows pin the Codex CLI to the version the README lists
+as tested, so change them together.
+
+The workflow relies on repository settings made by hand:
+
+- A ruleset on `release` that lets only GitHub Actions push and blocks force
+  pushes and deletion.
+- A ruleset on `v*` tags that lets only GitHub Actions create them and blocks
+  updates and deletion.
+- A public repository, because `codex plugin marketplace add owner/repo` fetches
   without credentials.
 
-The workflows pin the Codex CLI to the version the README lists as tested.
-Change them together.
-
 `.github/workflows/ci.yml` runs the checks on Linux and macOS for pushes to
-`main` and pull requests. Windows runs only the build and packaging tests,
+`main` and pull requests. Windows runs only the build and package tests,
 because parts of the suite use POSIX shell fakes.
-
-## Storage and Claude verification
-
-- [Database and migrations](database.md) covers schema changes, transactions
-  and event notifications.
-- [Claude execution verification](claude-verification.md) covers CLI/SDK
-  qualification and opt-in authenticated scenarios.
 
 ## Checks
 
@@ -525,108 +527,119 @@ npm run typecheck
 npm test
 ```
 
-`npm run typecheck` checks schema freshness and TypeScript across production,
-development and test code. `npm test` checks schema freshness, formatting, lint
-and unused code, then builds, runs the browser flows and runs Vitest. Install
-Chromium once after setup, and again when a Playwright upgrade requires it. To
-diagnose a preflight failure, run `npm run schemas:check`, `npm run format:check`, `npm run lint`,
-`npm run knip` or `npm run build` individually.
+Install Chromium once after setup, and again when a Playwright upgrade needs it.
 
-During iteration, use `npm run test:e2e` for browser flows. Use
-`npm run test:integration` or `npm run test:unit` for one Vitest project, or
-`npx vitest run <test-file>` for a focused check. These Vitest commands and watch
-mode (`npm run test:watch`) skip the preflight: regenerate schemas after contract
-edits and build first when a test reads `dist/`.
+- `npm run typecheck` checks schema freshness and TypeScript across production,
+  development and test code.
+- `npm test` first checks schema freshness, formatting, lint and unused code,
+  then builds. It then runs the browser flows and Vitest. To diagnose a failure
+  before the tests run, use `npm run schemas:check`, `npm run format:check`,
+  `npm run lint`, `npm run knip` or `npm run build`.
 
-Format edited files with `npx eslint --fix <files>` followed by
-`npx prettier --write <files>`. ESLint also checks Markdown, but cross-file links
-and heading fragments need a separate check after documentation moves.
+For focused checks during iteration:
 
-Lint enforces the [runtime boundaries](architecture.md#code-ownership), React hook
-rules and type-aware checks. Use types that reflect the data an input can
-contain, and handle missing values when reading it. TypeScript also checks for
-missing values in indexed reads.
+| Command                      | Runs                         |
+| ---------------------------- | ---------------------------- |
+| `npm run test:e2e`           | Browser flows, after a build |
+| `npm run test:unit`          | Vitest `unit` project        |
+| `npm run test:integration`   | Vitest `integration` project |
+| `npx vitest run <test-file>` | One test file                |
+| `npm run test:watch`         | Vitest in watch mode         |
 
-Lint limits file length and code complexity.
-Lower or remove exceptions when refactoring. Explain any increase needed for a change. Remove stale
-complexity suppressions with `npx eslint . --prune-suppressions`. If Knip reports a
-file loaded by path as unused, declare its entry point in `knip.json`.
+The Vitest commands skip the `npm test` preflight. Regenerate schemas after
+contract edits, and build first when a test reads `dist/`.
 
-Unit tests have a 15-second timeout, including the jsdom suites in `tests/ui/`.
-Integration and browser suites have 60 seconds for process and worktree setup.
-Keep shared colocated test setup in a `<module>-test-harness.ts` file. These harnesses are
-treated as test code by lint, type checks and builds.
+Format edited files with `npx eslint --fix <files>`, then
+`npx prettier --write <files>`. ESLint also lints Markdown, but check cross-file
+links and heading fragments yourself after moving documentation.
+
+Lint enforces the [runtime boundaries](architecture.md#code-ownership), React
+hook rules and type-aware checks. TypeScript checks for missing values in
+indexed reads. Type inputs by the data they can contain, and handle missing
+values when reading them.
+
+Lint also limits file length and complexity. Lower or remove exceptions when
+refactoring, and explain any increase a change needs. Remove stale complexity
+suppressions with `npx eslint . --prune-suppressions`. If Knip reports a file
+loaded by path as unused, declare its entry point in `knip.json`.
+
+Unit tests, including the jsdom suites in `tests/ui/`, time out after 15
+seconds. Integration and browser tests allow 60 seconds for process and worktree
+setup. Put shared colocated test setup in a `<module>-test-harness.ts` file,
+which lint, type checks and builds treat as test code.
+
+Compare DOM nodes with Vitest's `expect`, never Node's assertion equality
+methods. Formatting a failed Node assertion can hang on jsdom's document graph.
+Use `toBe` for identity, `toEqual` for structure and `toBeNull` for absence.
+
+[UI verification](ui-verification.md) covers manual browser checks, and
+[Live Claude checks](claude-verification.md#live-claude-checks) cover opt-in
+tests that make model calls.
 
 ### Choosing test coverage
 
-Start with browser end-to-end coverage for user flows. Browser flows in
-`tests/e2e/` exercise the built console against real HTTP, SSE, task controls,
-SQLite and temporary Git repositories with the fixture worker. They do not call
-Claude. Use integration tests for service, transport, process and Git boundaries
-that need direct control or cannot be reached through the console.
+Give each behavior one primary test layer, starting from the broadest that can
+reach it.
 
-Keep feature integration tests beside their owning code as
-`*.integration.test.ts`. Tests that combine task control, real SQLite, Git or
-worker execution belong here. Keep cross-runtime, HTTP/MCP, package and process
-suites in `tests/integration/`. Both locations run in Vitest's `integration`
-project with a 60-second timeout and are excluded from `test:unit`. Pure logic,
-mocked boundary behavior and component tests remain ordinary `*.test.ts` or
-`*.test.tsx` files in the `unit` project. Classify a test by its fixtures and
-assertions. A temporary directory alone does not make it an integration test.
+| Layer             | Location                                                                       | Covers                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Browser flows     | `tests/e2e/*.spec.ts`                                                          | User flows through the built console against real HTTP, SSE, SQLite and temporary Git repositories, with the fixture worker |
+| Integration tests | `*.integration.test.ts` beside the owning code, or `tests/integration/`        | Service, transport, process and Git boundaries that need direct control or the console cannot reach                         |
+| Unit tests        | `*.test.ts` or `*.test.tsx` beside the module, and jsdom suites in `tests/ui/` | Complicated logic and cases broader tests cannot reliably exercise                                                          |
 
-Add unit tests only when they protect complicated logic or a case that broader
-tests cannot reliably exercise. Examples include parser boundaries, permission
-rules, async races, stale responses, Unicode handling and state reconciliation.
-Use jsdom tests in `tests/ui/` or beside components for deterministic failures,
-concurrent edits, keyboard behavior and host bridge interactions that console
-browser tests cannot reproduce.
+Feature integration tests that combine task control with real SQLite, Git or
+worker execution sit beside their owning code. Cross-runtime, HTTP, MCP,
+package and process suites go in `tests/integration/`. Both run in Vitest's
+`integration` project, which `test:unit` excludes. Classify a test by its
+fixtures and assertions. A temporary directory alone does not make it an
+integration test.
 
-Give each behavior one primary test layer. Remove happy-path unit and mocked UI
-tests once browser or integration coverage owns the same behavior. Keep a
-focused test only for its additional rule or edge case, and make that purpose
-clear in its name. Avoid assertions that repeat constant tables, property
-projections, CSS declarations, SVG geometry or placeholder markup. Types and
-lint cover structural rules without more tests.
+Add unit tests only for parser boundaries, permission rules, async races, stale
+responses, Unicode handling, state reconciliation and similar rules. Use jsdom
+tests for deterministic failures, concurrent edits, keyboard behavior and host
+bridge interactions that console browser tests cannot reproduce.
 
-```sh
-npx playwright install chromium
-npm run test:e2e
-```
+Remove happy-path unit and mocked UI tests once a browser or integration test
+owns the same behavior. Keep a focused test only for an extra rule or edge case,
+and name it for that purpose. Skip assertions that repeat constant tables,
+property projections, CSS declarations, SVG geometry or placeholder markup.
+Types and lint cover structural rules.
 
-`test:e2e` builds first and runs a browser worker for every two CPU cores. Each test starts a
-disposable service on an OS-assigned loopback port with its own SQLite database,
-settings, fixture worker and Git repository. Teardown closes the service and
-removes its files even when the test fails. Allow localhost TCP listeners and
-browser processes when running in a sandbox. To rerun against an existing build,
-use `npx playwright test`. CI runs Chromium on Linux and macOS after the build
-and retains traces and screenshots from failures in
-`test-results/`. Inspect a trace with `npx playwright show-trace <trace.zip>`.
+### Browser flows
 
-Login and explicit project registration have one full browser flow. Other flows
-prepare these prerequisites through the public HTTP login and registration
-endpoints, sharing cookies with their fresh browser context. Task creation,
-questions, approvals, continuation, worktree actions, archive controls, read
-state and settings still run through the browser. Reload checks establish
-persistence. Lost responses use Playwright routing, and a lost event stream
-closes the service's open connections. Most HTTP services run inside their
-Playwright worker process. The recovery
-browser flow starts the development fixture service in a separate process,
-crashes it and reopens the same data directory on the same port. It verifies
-reauthentication, interrupted work, scheduler-queued tasks, the paused message
-queue and ordered continuation. Separate suites in `tests/integration/service/`
-own launcher and package lifecycle details.
+`npm run test:e2e` builds, then runs workers on half the CPU cores. Each test
+starts a disposable service on an OS-assigned loopback port, with its own
+SQLite database, settings, fixture worker and Git repository. Teardown closes
+the service and removes its files even when the test fails. In a sandbox, allow
+localhost TCP listeners and browser processes.
 
-Measure browser performance against the same build and trace settings. Use
-`npx playwright test --workers=1 --reporter=json` to inspect serial costs, then
-compare the default worker count. Use `--repeat-each=3` to check repeatability
-and isolation. The JSON report records total runtime and individual test
-durations. Trace hooks distinguish setup time from the actual flow. Keep
-condition-based assertions and failure diagnostics when optimizing. Add workers
-only when measurements show a benefit without resource contention. Give
-concurrent Playwright commands distinct `--output` directories so one run cannot
-clean up another run's traces and screenshots.
+Rerun against an existing build with `npx playwright test`. Failures keep
+traces and screenshots in `test-results/`, which CI uploads. Inspect a trace
+with `npx playwright show-trace <trace.zip>`. Give concurrent Playwright
+commands distinct `--output` directories so one run cannot delete another's
+results.
 
-The browser verification checklist is:
+How the flows set up their state:
+
+- One flow covers login and explicit project registration in full. Other flows
+  log in and register through the public HTTP endpoints, sharing cookies with
+  their fresh browser context.
+- Reloads establish persistence. Playwright routing drops responses, and closing
+  the service's open connections drops the event stream.
+- Most services run inside their Playwright worker process. The recovery flow
+  runs the development fixture service as a separate process, crashes it and
+  reopens the same data directory on the same port.
+- Suites configure the fixture worker with `test.use({ fixtureProvider })`, for
+  example to fail provider session deletion.
+
+To measure performance, use the same build and trace settings. Run
+`npx playwright test --workers=1 --reporter=json` to see serial costs, then
+compare the default worker count. Add `--repeat-each=3` to check repeatability
+and isolation. The JSON report records total and per-test durations, and trace
+hooks separate setup from the flow. Keep condition-based assertions and failure
+diagnostics when optimizing.
+
+The browser flows verify:
 
 | ID  | Expected behavior                                                                                                           |
 | --- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -659,47 +672,33 @@ The browser verification checklist is:
 | E27 | Switch between the list and a task in a narrow console without horizontal overflow.                                         |
 | E28 | Search, open a task and move between its tabs by keyboard.                                                                  |
 
-Suites configure the fixture worker with `test.use({ fixtureProvider })`, for
-example to fail provider session deletion. Browser flows don't cover large file
-previews, clipboard handoff or theme presentation. Focused component tests own
-those.
+Accepted limits:
 
-Browser coverage currently uses desktop Chromium. The fake worker establishes
-extension routing and persistence behavior. It does not establish native Claude
-permissions, live Codex placement or host message delivery. Use
-[UI verification](ui-verification.md) and
-[Claude execution verification](claude-verification.md) for those checks.
-
-Compare DOM nodes with Vitest's `expect`, not Node's assertion equality methods:
-formatting a failed Node assertion can hang on jsdom's document graph. Use `toBe`
-for identity, `toEqual` for structural equality and `toBeNull` for absence.
-
-Use [UI verification](ui-verification.md) for browser checks and
-[Claude execution verification](claude-verification.md#live-claude-checks) for
-opt-in tests that make model calls.
+- Focused component tests own large file previews, clipboard handoff and theme
+  presentation.
+- `tests/integration/service/` owns launcher and package lifecycle details.
+- Browser flows run desktop Chromium only.
+- The fake worker establishes extension routing and persistence. It does not
+  establish native Claude permissions, live Codex placement or host message
+  delivery. Use [UI verification](ui-verification.md) and
+  [Claude execution verification](claude-verification.md) for those.
 
 ## Send latency measurements
 
-[Logging and diagnostics](logging.md#measure-performance) owns the task timing
-format, transport measurements, rotation and resource samples. Use those records
-to compare message latency and scheduler work before changing performance
-behavior.
-
-Read-only Git-root validation probes have a five-second subprocess timeout.
-Timeouts leave repository approval requirements in place and report a retryable
-validation failure. See [message retry semantics](mcp-reference.md#retrying-message-sends)
-and [panel timeout behavior](panel-guide.md#chat-tab).
+[Measure performance](logging.md#measure-performance) covers task timing
+records, transport measurements and resource samples. Use them to compare
+message latency and scheduler work before changing performance behavior.
 
 ## Troubleshooting
 
-| Symptom                                        | Cause                                                                                               |
+| Symptom                                        | Cause and fix                                                                                       |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | Dev host live mode logs 502                    | The service is not running, or not on the port Vite resolved at startup                             |
 | Dev host live mode logs 401                    | Vite and the service use different data directories, so the token does not match                    |
 | Codex shows different tasks than the dev host  | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                                         |
-| Service exits on start                         | Another service owns the data directory, or the port is taken (for example, the demo)               |
-| `npm test` fails before running tests          | Schema freshness, formatting, lint, or build preflight failed. Run the checks individually          |
+| Service exits on start                         | Another service owns the data directory, or the port is taken, for example by the demo              |
+| `npm test` fails before running tests          | A schema, formatting, lint, unused code or build check failed. Run the checks individually          |
 | Missing or stale generated schema              | Run `npm run schemas:generate`, then `npm run schemas:check`                                        |
-| No schema contracts found under `src`          | Run the command from the project root. Check that source files use `*-contract.ts`                  |
+| No schema contracts found under `src`          | Run the command from the project root, and check that source files use `*-contract.ts`              |
 | Permissive validator rejected                  | Put imported types in a discovered `*-contract.ts` file, or add a feature-owned handwritten mapping |
 | Duplicate mapping or generated-output conflict | Remove the duplicate mapping. Discovered contracts already map to their generated validators        |

@@ -1,38 +1,52 @@
 # Claude Code CLI
 
-Use this guide to diagnose Claude executable selection, supported versions and
-readiness failures. For CLI or SDK upgrade checks, see
+Use this guide to find out which `claude` the service runs, which versions it
+accepts, and how to fix readiness failures. For upgrade checks, see
 [Claude execution verification](claude-verification.md).
 
-Claude tasks run your installed `claude`. The package doesn't include one, and the service never installs, updates or signs in to Claude Code. Install it from the [Claude Code setup guide](https://code.claude.com/docs/en/setup).
+Claude tasks run your installed `claude`. The package does not include one, and
+the service never installs, updates or signs in to Claude Code. Install it from
+the [Claude Code setup guide](https://code.claude.com/docs/en/setup).
 
 ## Supported versions
 
-This checkout requires Claude Code 2.1.285 or newer, with no upper version limit. Older versions and prereleases are rejected. This checkout records Agent SDK 0.3.300 as its qualification baseline. Accepting newer CLI releases does not mean each release has been verified. See [Qualifying Claude Code versions](claude-verification.md#qualifying-claude-code-versions) for compatibility checks.
+The service requires Claude Code 2.1.285 or newer, with no upper limit. It
+rejects older versions and prereleases. Agent SDK 0.3.300 is the qualification
+baseline. A newer CLI release is accepted without being verified. See
+[Qualifying Claude Code versions](claude-verification.md#qualifying-claude-code-versions).
 
-The version policy lives in `src/service/features/providers/claude/configuration/executable.ts`.
+The version policy lives in
+`src/service/features/providers/claude/configuration/executable.ts`.
 
 ## Which `claude` runs
 
-1. `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`, when set, names the executable as an absolute path. If it is relative or points to a missing file, Claude tasks are blocked. The service doesn't fall back to `PATH` while it is set.
-2. Otherwise, the service selects the first executable `claude` in an absolute directory on its own `PATH`. It ignores relative and empty `PATH` entries. On Windows, it selects `claude.exe` or the binary behind npm's `claude.cmd` launcher.
+1. When `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH` is set, it names the executable
+   as an absolute path. A relative path or a missing file blocks Claude tasks.
+   The service does not fall back to `PATH` while the variable is set.
+2. Otherwise, the service runs the first executable `claude` in an absolute
+   directory on its own `PATH`. It skips relative and empty entries. On
+   Windows, it runs `claude.exe` or the binary behind npm's `claude.cmd`
+   launcher.
 
-See [Configuration](configuration.md#environment-variables) for service environment overrides. The lookup runs without a shell, so shell aliases and interactive shell init don't apply: a `claude` your terminal finds through an alias or a `PATH` set in `.zshrc` may not be the one the service sees. The service resolves symlinks in either selection method to find the installed binary.
+The service resolves symlinks to find the installed binary. The lookup runs
+without a shell, so aliases and interactive shell setup do not apply. A
+`claude` your terminal finds through an alias or a `PATH` set in `.zshrc` may
+differ from the one the service sees. See
+[Environment variables](configuration.md#environment-variables) for other
+service overrides.
 
 ## When the version is checked
 
-The service validates `claude --version` before opening a session and briefly
-caches the result. Replacing or updating the executable triggers revalidation.
-Running sessions keep their process.
+The service runs `claude --version` before it opens a session and caches the
+result for five minutes. Replacing or updating the executable triggers a new
+check. Running sessions keep their process.
 
 ## When the CLI isn't ready
 
-A missing or unsupported CLI blocks new Claude execution, while projects, task
-history and the panel stay usable. The panel shows the readiness error, and
-`list_workers` reports the selected executable, version and supported
-range. Restart the service after changing its environment. After fixing the
-installation, refresh the panel or call `list_workers` again. Failed
-checks are cached briefly.
+A missing or unsupported CLI blocks new Claude tasks. Projects, task history
+and the panel stay usable. The panel shows the readiness error, and
+`list_workers` reports the selected executable, its version and the supported
+range.
 
 | Message                                    | Fix                                                                                                            |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
@@ -42,4 +56,10 @@ checks are cached briefly.
 | not a Claude Code release version          | Install a release. Prereleases aren't supported.                                                               |
 | `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH` ... | Fix or unset the override.                                                                                     |
 
-A ready CLI can still fail when it starts a session, for example on authentication or the network. Model discovery and task execution report those failures when they occur.
+After a fix, refresh the panel or call `list_workers` again. The service
+caches a failed check for about 30 seconds. Restart the service after changing
+its environment.
+
+A ready CLI can still fail when it starts a session, for example on
+authentication or the network. Model discovery and task execution report those
+failures when they happen.
