@@ -80,7 +80,7 @@ export function compareVersions(a: string, b: string) {
   return 0;
 }
 
-/** What a launcher knows about a running service. Older services omit fields. */
+/** What a launcher knows about a running service. Fields its /health omits stay unknown. */
 export type RunningService = Partial<Omit<ServiceIdentity, "installRoot">> & {
   /** Whether the service's install root still exists, or isn't known. */
   installed: boolean;

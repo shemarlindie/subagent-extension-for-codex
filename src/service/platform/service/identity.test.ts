@@ -84,7 +84,7 @@ test("never replaces a service it didn't start", () => {
     assert.deepEqual(handoff(running, own, origin), { action: "use" });
   }
 
-  // Services from before identities report no launcher or API version.
+  // A service whose /health omits its launcher or API version is never used blindly.
   for (const running of [
     service({ launcher: "foreground", apiVersion: 1 }),
     { installed: true },
