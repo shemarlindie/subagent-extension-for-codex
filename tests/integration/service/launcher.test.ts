@@ -359,7 +359,7 @@ test("a chosen port another program holds fails with a clear message", async (t)
       CODEX_SUBAGENT_EXTENSION_DATA: dir,
       PORT: new URL(unrelated).port,
     }),
-    /Port \d+ is in use by another program/,
+    /Port \d+ is already in use by another program/,
   );
 
   await assert.rejects(access(join(dir, "service.log")));

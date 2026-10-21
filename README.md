@@ -97,7 +97,7 @@ repositories.
 | `needs Node.js 24 or later` in Codex's MCP log | Install Node.js 24 or later and make it the first `node` on the `PATH` Codex starts with.                                                              |
 | Tools report the service is unavailable        | Read the [service logs](docs/logging.md#diagnose-a-problem), starting with `service.jsonl` and `service.log` in the data directory.                    |
 | `A different extension service … is running`   | Another service owns the data directory or port, for example a development checkout. Stop it, or give development its own data and port.               |
-| `Port … is in use by another program`          | A port you set with `PORT` or an origin override is taken. Stop the other program, choose a free port, or remove the override so the plugin picks one. |
+| `Port … is already in use`                     | A port you set with `PORT` or an origin override is taken. Stop the other program, choose a free port, or remove the override so the plugin picks one. |
 | Claude tasks can't start                       | The panel shows a readiness message above the task list. [Claude Code CLI](docs/claude-cli.md) explains fixes.                                         |
 
 To connect a checkout over stdio or Streamable HTTP instead of installing the

@@ -16,15 +16,12 @@ import {
   serviceIdentity,
 } from "./identity.js";
 import { rotateStartupLog } from "./log-rotation.js";
-import { freeLoopbackPort } from "./port.js";
+import { freeLoopbackPort, PortInUseError } from "./port.js";
 import { isProcessRunning } from "./process-info.js";
 import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
 
 /** A service that is starting or stopping, which the launcher waits for. */
 class ServiceTransitionError extends Error {}
-
-/** Something other than an extension service holds the port. */
-class ForeignListenerError extends Error {}
 
 /** How long to wait for a replaced service that can't serve this launcher to exit. */
 const replacementTimeout = 11 * 60 * 1000;
@@ -92,11 +89,9 @@ export async function connectService() {
     process.env.CODEX_SUBAGENT_EXTENSION_TOKEN ??
     readFileSync(join(data, "admin-token"), "utf8").trim();
 
+  /** Something other than an extension service answers on the port. */
   const foreign = (cause?: unknown) =>
-    new ForeignListenerError(
-      `Port ${url.port || "80"} is in use by another program. Stop that program, or set PORT to a free port.`,
-      { cause },
-    );
+    new PortInUseError(Number(url.port || 80), { cause });
 
   const probe = async () => {
     // The service must prove it holds the token before a request carries it.
@@ -121,7 +116,6 @@ export async function connectService() {
     if (health?.service !== "codex-subagent-extension") throw foreign();
 
     if (
-      health.service === "codex-subagent-extension" &&
       ["starting", "stopping"].includes(health.status) &&
       response.status === 503
     ) {
@@ -222,11 +216,7 @@ export async function connectService() {
    * service.json, where later launchers find it.
    */
   const relocate = async (error: unknown) => {
-    if (
-      pinned ||
-      !(error instanceof ForeignListenerError) ||
-      !leaseReleased()
-    ) {
+    if (pinned || !(error instanceof PortInUseError) || !leaseReleased()) {
       return false;
     }
 
