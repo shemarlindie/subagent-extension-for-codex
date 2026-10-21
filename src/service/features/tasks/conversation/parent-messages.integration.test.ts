@@ -316,7 +316,7 @@ test("acknowledgment validates owner, task and immutable explicit report IDs bef
     raw_response: { message: { id: "sdk_message" } },
   });
 
-  const reply = store.event(current, "agent.reply", { text: "Done" });
+  const reply = store.event(current, "agent.reply", { text: "Done", turn: 1 });
 
   expect(() =>
     acknowledgeParentMessage(store, "bob", current.id, `parent_${report.id}`),

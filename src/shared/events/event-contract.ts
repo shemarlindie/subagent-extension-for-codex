@@ -42,7 +42,7 @@ interface AgentContentPayload extends AgentMessageFields {
 
 interface AgentReplyPayload {
   text: string;
-  turn?: number;
+  turn: number;
 }
 
 interface AgentStartedPayload {

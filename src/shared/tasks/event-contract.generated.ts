@@ -4,7 +4,7 @@ import { z } from "zod";
 const emptyEventPayloadSchema = z.record(z.string(), z.never());
 
 const taskStartedPayloadSchema = z.object({
-  turn: z.number().optional(),
+  turn: z.number(),
 });
 
 const taskTurnEndedPayloadSchema = z.object({

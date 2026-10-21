@@ -1,7 +1,7 @@
 type EmptyEventPayload = Record<string, never>;
 
 interface TaskStartedPayload {
-  turn?: number;
+  turn: number;
 }
 
 interface TaskTurnEndedPayload {

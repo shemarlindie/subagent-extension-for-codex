@@ -42,7 +42,7 @@ test("a task is unread once it has a reply, outcome or request after what the us
   const { store, task } = fixture(t);
 
   // The user's own messages leave it read.
-  store.event(task, "task.started", {});
+  store.event(task, "task.started", { turn: 1 });
 
   store.event(task, "task.instruction", {
     message: "More",

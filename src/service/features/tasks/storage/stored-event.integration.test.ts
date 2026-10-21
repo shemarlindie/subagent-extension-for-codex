@@ -8,7 +8,10 @@ import { openDatabase } from "../../../platform/database/database.js";
 import { events, tasks } from "./schema.js";
 import { decodeEvent } from "./stored.js";
 
-function storedEvent(t: TestContext, data = '{"future":{"nested":[1,null]}}') {
+function storedEvent(
+  t: TestContext,
+  data = '{"turn":1,"future":{"nested":[1,null]}}',
+) {
   const dir = mkdtempSync(join(tmpdir(), "stored-event-"));
   const db = openDatabase(join(dir, "console.sqlite"));
 
@@ -40,8 +43,8 @@ test("decodes event rows without changing metadata or arbitrary JSON fields", (t
 
   expect(decodeEvent(row)).toEqual({
     ...row,
-    data: { future: { nested: [1, null] } },
-    view: { kind: "known", type: "task.started", data: {} },
+    data: { turn: 1, future: { nested: [1, null] } },
+    view: { kind: "known", type: "task.started", data: { turn: 1 } },
   });
 });
 

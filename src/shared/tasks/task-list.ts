@@ -30,7 +30,7 @@ export function replyFrom(event?: Event): ReplyExcerpt | undefined {
   if (!reply) return undefined;
 
   return {
-    turn: reply.turn ?? 0,
+    turn: reply.turn,
     text: replyExcerpt(reply.text),
   };
 }

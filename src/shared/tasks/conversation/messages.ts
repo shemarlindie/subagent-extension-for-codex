@@ -117,7 +117,7 @@ export function conversation(
 
   for (const e of [...events].sort((a, b) => a.id - b.id)) {
     const started = eventPayload(e, "task.started");
-    if (started?.turn !== undefined) turn = started.turn;
+    if (started) turn = started.turn;
 
     const instruction = eventPayload(e, "task.instruction");
 
@@ -181,7 +181,7 @@ export function conversation(
 
     if (reply) {
       const text = reply.text;
-      const replyTurn = reply.turn ?? turn;
+      const replyTurn = reply.turn;
 
       const last = messages.findLast(
         (m) => m.from === "worker" && m.turn === replyTurn && !m.parent_message,

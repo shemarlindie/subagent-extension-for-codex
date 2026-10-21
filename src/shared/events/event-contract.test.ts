@@ -14,17 +14,17 @@ import type { EventView } from "./event-types.js";
 import { eventPayload } from "./payload.js";
 
 function emissionTypes(emit: RunContext["emit"]) {
-  emit("agent.reply", { text: "Done" });
+  emit("agent.reply", { text: "Done", turn: 2 });
   emit("task.started", { turn: 2 });
 
-  // @ts-expect-error a reply requires text, not a task turn
+  // @ts-expect-error a reply requires its text
   emit("agent.reply", { turn: 2 });
   // @ts-expect-error a service restart reason is not a task-start payload
   emit("task.started", { reason: "service_restart" });
 }
 
 function storeTypes(store: Store, task: Task) {
-  store.event(task, "agent.reply", { text: "Done" });
+  store.event(task, "agent.reply", { text: "Done", turn: 1 });
   store.eventOpaque(task, "claude.activity", { type: "system" });
 
   // @ts-expect-error known event names reject mismatched payload fields
@@ -98,8 +98,12 @@ test("decoded views are rebuilt from the current raw payload", () => {
     task_id: "task",
     type: "agent.reply",
     timestamp: "2026-10-13T00:00:00.000Z",
-    data: { text: "Done", activity: { kind: 42 } },
-    view: { kind: "known", type: "agent.reply", data: { text: "Forged" } },
+    data: { text: "Done", turn: 1, activity: { kind: 42 } },
+    view: {
+      kind: "known",
+      type: "agent.reply",
+      data: { text: "Forged", turn: 1 },
+    },
     presentation: { kind: "forged" },
   });
 
