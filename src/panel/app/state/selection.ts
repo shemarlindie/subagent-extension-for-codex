@@ -4,11 +4,15 @@ import type { Snapshot, Task } from "./types";
 /**
  * Selects a task, or none, with its detail cleared: its chat and activity
  * show as loading until their first reads return. Selecting a task closes
- * the new-task composer.
+ * the new-task composer. `tab` opens the task on that tab.
  */
-export function selectionPatch(selected: string | undefined) {
+export function selectionPatch(
+  selected: string | undefined,
+  tab?: Snapshot["tab"],
+) {
   return {
     selected,
+    ...(tab ? { tab } : {}),
     ...(selected ? { newTask: undefined } : {}),
     events: [],
     droppedEvents: undefined,

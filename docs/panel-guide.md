@@ -88,6 +88,10 @@ the profile icon for the worker's name. Under **All projects**, tasks group
 under a header for each project. Each group appears at the position of its
 newest task, and its header stays visible while its rows scroll.
 
+When a task starts elsewhere, for example when Codex delegates one, the panel
+opens it. It stays where it is while you compose a task, have a dialog open, or
+went back to the list on a narrow panel.
+
 Wide panels show the task list and inspector side by side, with a resizable
 divider. Narrow panels switch between them. Runtime accumulates across turns
 and includes the active run.

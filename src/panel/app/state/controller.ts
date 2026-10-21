@@ -47,6 +47,7 @@ import { projectRemovalReset } from "./scope-reconciliation";
 import { defaultTask, selectionPatch } from "./selection";
 import { filterCounts, selectedTask } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
+import { TaskArrivals } from "./task-arrivals";
 import type {
   DialogState,
   Filter,
@@ -134,6 +135,7 @@ export class Controller {
   private reconcileShare = false;
   private browsing = false;
   private explicitSelection = false;
+  private arrivals = new TaskArrivals();
   private restoredView?: PersistedViewState;
   private dialogs: PersistedDialogs;
   private viewStateReady = false;
@@ -354,7 +356,7 @@ export class Controller {
 
     return {
       selected,
-      ...(selected ? { tab: this.session.get("task", selected).tab } : {}),
+      ...(selected ? { tab: this.tabOf(selected) } : {}),
       chatHistoryLoading: selected,
       activityHistoryLoading: selected,
     };
@@ -680,6 +682,18 @@ export class Controller {
         return;
       }
 
+      // Open a task that started elsewhere, unless the user is composing, in a
+      // dialog, waiting on a request or browsing the list.
+      const { newTask, dialog, busy, selected: current } = this.state;
+      const away = this.browsing || this.restoredView || newTask || dialog;
+      const arrived = this.arrivals.next(tasks, version);
+
+      if (arrived && arrived.id !== current && !away && !busy) {
+        this.choose();
+        this.reconcileShare = true;
+        this.patch(selectionPatch(arrived.id, this.tabOf(arrived.id)));
+      }
+
       const previousSelected = this.state.selected;
 
       const { selected, tab, filter, search } = this.reconcileSelection(
@@ -804,7 +818,7 @@ export class Controller {
       this.browsing = false;
 
       if (!preserveCurrentTab) {
-        tab = restored?.tab ?? this.session.get("task", selected).tab;
+        tab = restored?.tab ?? this.tabOf(selected);
       }
     } else if (restored?.browsing) {
       selected = undefined;
@@ -816,7 +830,7 @@ export class Controller {
       selected = this.defaultSelection(tasks);
 
       if (selected && !preserveCurrentTab) {
-        tab = this.session.get("task", selected).tab;
+        tab = this.tabOf(selected);
       }
     }
 
@@ -881,17 +895,16 @@ export class Controller {
   async select(id: string) {
     this.choose();
     this.restoredView = undefined;
-
-    this.patch({
-      ...selectionPatch(id),
-      tab: this.session.get("task", id).tab,
-    });
+    this.patch(selectionPatch(id, this.tabOf(id)));
 
     await this.loadDetail();
     this.run(() => this.loadCountsIfStale());
     this.run(() => this.loadChangesIfStale());
     await this.share();
   }
+
+  /** The tab a task last showed. */
+  private tabOf = (id: string) => this.session.get("task", id).tab;
 
   back() {
     this.leaveSelection(true);
@@ -1192,7 +1205,7 @@ export class Controller {
       ) {
         tab = hostTab;
       } else {
-        tab = this.session.get("task", taskId).tab;
+        tab = this.tabOf(taskId);
       }
 
       this.choose(!preserveCurrentTab);
@@ -1376,9 +1389,7 @@ export class Controller {
       }
     } catch (error) {
       if (active()) {
-        this.patch({
-          formError: errorMessage(error),
-        });
+        this.patch({ formError: errorMessage(error) });
       }
     } finally {
       ++this.projectGeneration;
@@ -1436,9 +1447,7 @@ export class Controller {
       return registered.repository;
     } catch (error) {
       if (active()) {
-        this.patch({
-          formError: errorMessage(error),
-        });
+        this.patch({ formError: errorMessage(error) });
       }
     } finally {
       this.patch({ busy: false });
@@ -1563,8 +1572,7 @@ export class Controller {
 
     this.patch({
       tasks: [task, ...this.state.tasks.filter((item) => item.id !== task.id)],
-      ...selectionPatch(task.id),
-      tab: this.session.get("task", task.id).tab,
+      ...selectionPatch(task.id, this.tabOf(task.id)),
       repository: task.repository,
       revision: task.revision,
     });
@@ -1702,9 +1710,7 @@ export class Controller {
       if (closeOnSuccess) this.closeDialog();
       succeeded = true;
     } catch (error) {
-      this.patch({
-        formError: errorMessage(error),
-      });
+      this.patch({ formError: errorMessage(error) });
     } finally {
       this.patch({ busy: false });
     }
