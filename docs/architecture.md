@@ -136,10 +136,10 @@ the stored conversation. See [Task continuation](task-continuation.md).
 | `current_repo` | The approved checkout, including uncommitted files. Requires revision `HEAD`.                   |
 | `worktree`     | A separate checkout from the requested committed revision, without the user's uncommitted work. |
 
-For both strategies, the changes feature composes provider-reported edits into
-stored task and latest-turn diffs. These diffs survive commits, worktree removal
-and branch deletion. Worktrees isolate files only. Execution permissions and
-sandbox policy apply separately.
+For both strategies, the changes feature stores provider-reported edits as task
+and latest-turn diffs. See [Recorded changes](mcp-reference.md#recorded-changes).
+Worktrees isolate files only. Execution permissions and sandbox policy apply
+separately.
 
 Approved projects are canonical roots, with explicit parent grants where
 configured. Task arguments never grant access. The server validates
@@ -161,23 +161,17 @@ credentials out of URLs and model-visible output.
 ## Context and result delivery
 
 Launch context includes repository, revision, conversation and selected task.
-Explicit repository and task arguments take precedence. Otherwise, the user's
-tasks in the same chat and validated host hints supply defaults. Global history
-never selects a project, and the global opener starts without a chat or project.
-
-Task selection, forms and polling respect the current scope and discard stale
-responses. Opening or resolving context is read-only. Registration happens
-through a user action, or through the configured policy when a task starts from
-its host chat project. See
-[Project context and registration](host-capabilities.md#project-context-and-registration).
+Resolving it is read-only.
+[Project context and registration](host-capabilities.md#project-context-and-registration)
+owns precedence and registration rules. Task selection, forms and polling
+respect the current scope and discard stale responses.
 
 Refresh notifications only tell clients when to refetch durable events and
 messages. The console uses SSE and the embedded panel uses long polling.
 
-Explicit worker reports go through a durable delivery queue. The embedded thread
-panel forwards their task and message IDs through the host bridge, and the
-parent retrieves and acknowledges the stored reports. Host delivery and message
-polling share stable message IDs, so the parent can avoid processing a report
-twice. See
+Explicit worker reports go through a durable delivery queue, and the parent
+retrieves and acknowledges them by stable message ID. See
+[Provider messages to the parent](mcp-reference.md#provider-messages-to-the-parent)
+for the contract and
 [Worker messages to the parent chat](host-capabilities.md#worker-messages-to-the-parent-chat)
-for delivery and lifecycle limits.
+for host delivery limits.
