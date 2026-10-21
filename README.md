@@ -1,5 +1,7 @@
 # Codex subagent extension
 
+[![CI](https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml)
+
 Delegate Claude coding tasks from Codex through a local MCP service. Claude runs
 through the Claude Agent SDK and the Claude Code harness. One service owns
 scheduling, durable task state and Git worktrees, so tasks keep running when a
@@ -18,8 +20,11 @@ You need:
   [Claude Code CLI](docs/claude-cli.md) for how the extension finds it.
 - Node.js 24 or later as the `node` on the `PATH` Codex starts with.
 - Git.
-- A Codex build with plugin marketplaces. The install is tested with Codex CLI
-  0.162.1.
+- Codex CLI 0.162.1 or later, or a Codex desktop app with plugin marketplaces.
+  CI installs the plugin with 0.162.1, and older builds are untested.
+
+macOS is the primary platform. CI runs the full test suite on macOS and Linux.
+Windows CI covers builds, plugin installation and packaged-service checks.
 
 Add the marketplace, then install the plugin:
 
@@ -151,6 +156,8 @@ codebase, read in this order:
 
 | Task                                                          | Guide                                                        |
 | ------------------------------------------------------------- | ------------------------------------------------------------ |
+| Report a problem or propose a change                          | [Contributing](CONTRIBUTING.md)                              |
+| Report a security problem                                     | [Security policy](SECURITY.md)                               |
 | Follow contribution and documentation conventions             | [Agent instructions](AGENTS.md)                              |
 | Understand runtime ownership and system boundaries            | [Architecture](docs/architecture.md)                         |
 | Build, test, connect, preview or release the extension        | [Local development](docs/development.md)                     |
