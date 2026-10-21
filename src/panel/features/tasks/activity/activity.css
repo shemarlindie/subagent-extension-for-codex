@@ -70,10 +70,6 @@
   color: var(--muted);
   font-size: 12px;
 }
-.activity-raw pre {
-  max-height: 360px;
-  overflow: auto;
-}
 .activity-image {
   max-width: 100%;
   max-height: 320px;

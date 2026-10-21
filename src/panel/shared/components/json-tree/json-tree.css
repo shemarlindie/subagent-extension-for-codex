@@ -1,0 +1,59 @@
+.json-tree {
+  font: 11px/1.6 var(--font-mono);
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 12px 12px 12px 4px;
+  max-height: 360px;
+  overflow: auto;
+  margin: 8px 0;
+}
+.json-line {
+  /* Leaves room for the toggle, so leaves align with their branch's key. */
+  padding-left: 16px;
+  white-space: pre-wrap;
+}
+.json-branch > .json-line:first-child {
+  position: relative;
+}
+.json-children {
+  margin-left: 16px;
+}
+.json-toggle {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+  cursor: pointer;
+}
+.json-toggle:hover {
+  color: var(--text);
+}
+.json-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.json-toggle[aria-expanded="false"] .chevron {
+  transform: rotate(-90deg);
+}
+.json-key {
+  color: var(--muted);
+}
+.json-number,
+.json-boolean,
+.json-null {
+  color: var(--accent);
+}
+.json-summary {
+  margin: 0 4px;
+  color: var(--muted);
+  font-style: italic;
+}

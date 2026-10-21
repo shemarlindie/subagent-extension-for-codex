@@ -8,6 +8,7 @@ import { expect, test, vi } from "vitest";
 
 import { task as buildTask } from "../../../app/state/controller-test-harness";
 import type { Event as ActivityEvent } from "../../../app/state/types";
+import { expandedJsonText } from "../../../shared/components/json-tree/json-tree-test-harness";
 import { formatUserDateTime } from "../../../shared/utils/user-date-time";
 import {
   activityMessages,
@@ -175,7 +176,7 @@ test("a reply shows its plain preview outside Debug with More and Less controls"
   expect(debug.querySelector(".activity-reply-toggle")).toBeNull();
   expect(debug.querySelector(".activity-text")).toBeNull();
 
-  expect(debug.querySelector(".activity-raw pre")?.textContent).toContain(
+  expect(expandedJsonText(debug.querySelector(".activity-raw")!)).toContain(
     JSON.stringify(text),
   );
 });
@@ -338,7 +339,7 @@ test("Activity user messages use Chat bubbles with literal text outside Debug", 
   fireEvent.click(first.querySelector(".activity-debug-toggle")!);
   expect(first.querySelector(".activity-debug-body .chat-bubble")).toBeNull();
 
-  expect(first.querySelector(".activity-raw pre")?.textContent).toContain(
+  expect(expandedJsonText(first.querySelector(".activity-raw")!)).toContain(
     JSON.stringify(text),
   );
 });
@@ -505,8 +506,8 @@ test("a turn completion shows stats and keeps its result in raw JSON", (t) => {
 
   // The result remains available in JSON, not as a second readable response.
   const debug = completion.querySelector(".activity-debug-body")!;
-  const raw = debug.querySelector(".activity-raw pre")!;
-  assert.ok(raw.textContent?.includes(result));
+  const raw = debug.querySelector(".activity-raw")!;
+  assert.ok(expandedJsonText(raw)?.includes(result));
   debug.querySelector(".activity-raw")?.remove();
   assert.ok(!debug.textContent?.includes(result));
   expect(debug.querySelector(".activity-reply-toggle")).toBeNull();

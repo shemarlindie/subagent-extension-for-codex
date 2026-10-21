@@ -11,6 +11,7 @@ import {
 import { createElement } from "react";
 import { expect, test, vi } from "vitest";
 
+import { expandedJson } from "../../../shared/components/json-tree/json-tree-test-harness";
 import {
   activityMessages,
   assertAbsent,
@@ -83,7 +84,7 @@ test("latest group is last and fresh progress moves an older tool to the end wit
   ).toContain(raw);
 
   assert.equal(raw.open, true);
-  assert.ok(raw.querySelector("pre"));
+  assert.ok(raw.querySelector(".json-tree"));
   assert.equal(debug.getAttribute("aria-expanded"), "true");
 });
 
@@ -119,14 +120,9 @@ test("grouped event counts update without closing debug or remounting raw inspec
   assert.ok(raw && older);
   assert.equal(raw.open, true, "Debug opens only its newest raw response");
   assert.equal(older.open, false);
-  assertAbsent(older.querySelector("pre"));
+  assertAbsent(older.querySelector(".json-tree"));
 
-  await waitFor(() =>
-    assert.equal(
-      raw.querySelector("pre")?.textContent,
-      JSON.stringify(second.data, null, 2),
-    ),
-  );
+  await waitFor(() => assert.deepEqual(expandedJson(raw), second.data));
 
   for (const count of [3, 4]) {
     view.rerender(
@@ -151,10 +147,7 @@ test("grouped event counts update without closing debug or remounting raw inspec
     expect(inspectors).toContain(raw);
     assert.equal(raw.open, true);
 
-    assert.equal(
-      raw.querySelector("pre")?.textContent,
-      JSON.stringify(second.data, null, 2),
-    );
+    assert.deepEqual(expandedJson(raw), second.data);
 
     assert.equal(view.container.querySelectorAll(".activity-group").length, 1);
   }

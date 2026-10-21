@@ -266,6 +266,7 @@ cancelled work never appears successful.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.
 - **Debug details** shows an event's readable content, metadata and raw JSON.
+  Objects and arrays below the second level start folded.
 
 **View activity** on a Chat outcome opens that turn. Recent turns scroll into
 view. Older turns load separately under **Showing activity for turn n** until

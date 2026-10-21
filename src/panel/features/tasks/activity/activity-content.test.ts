@@ -38,7 +38,7 @@ test("raw-only activity data stays behind its collapsed inspector", () => {
   const disclosure = doc.querySelector("details.activity-raw");
 
   assert.equal(disclosure?.hasAttribute("open"), false);
-  assertAbsent(disclosure?.querySelector("pre") ?? null);
+  assertAbsent(disclosure?.querySelector(".json-tree") ?? null);
   assert.ok(!doc.body.textContent?.includes("raw-only-id"));
 });
 

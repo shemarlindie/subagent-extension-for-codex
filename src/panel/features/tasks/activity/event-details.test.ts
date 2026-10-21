@@ -13,6 +13,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 
+import { expandedJson } from "../../../shared/components/json-tree/json-tree-test-harness";
 import {
   assertAbsent,
   event,
@@ -44,28 +45,26 @@ test("opening raw response shows the original full JSON and preserves disclosure
   ) as HTMLDetailsElement;
 
   assert.equal(details.open, false);
-  assertAbsent(details.querySelector("pre"));
+  assertAbsent(details.querySelector(".json-tree"));
 
   await act(async () => {
     details.open = true;
     details.dispatchEvent(new Event("toggle"));
   });
 
-  await waitFor(() =>
-    assert.equal(
-      details.querySelector("pre")?.textContent,
-      JSON.stringify(raw, null, 2),
-    ),
-  );
+  await waitFor(() => assert.deepEqual(expandedJson(details), raw));
+
+  const message = view.getByRole("button", { name: "message" });
+  fireEvent.click(message);
 
   view.rerender(createElement(EventList, { events: [{ ...activity }] }));
   expect(view.container.querySelector("details.activity-raw")).toBe(details);
   assert.equal(details.open, true);
 
-  assert.equal(
-    details.querySelector("pre")?.textContent,
-    JSON.stringify(raw, null, 2),
-  );
+  expect(view.getByRole("button", { name: "message" })).toBe(message);
+
+  expect(message.getAttribute("aria-expanded")).toBe("false");
+  expect(details.textContent).not.toContain("Hello <script>");
 
   assertAbsent(view.container.querySelector("script"));
 
@@ -74,7 +73,7 @@ test("opening raw response shows the original full JSON and preserves disclosure
     details.dispatchEvent(new Event("toggle"));
   });
 
-  await waitFor(() => assertAbsent(details.querySelector("pre")));
+  await waitFor(() => assertAbsent(details.querySelector(".json-tree")));
 });
 
 test("unknown events expose their entire data when no raw response exists", async (t) => {
@@ -100,12 +99,7 @@ test("unknown events expose their entire data when no raw response exists", asyn
     details.dispatchEvent(new Event("toggle"));
   });
 
-  await waitFor(() =>
-    assert.equal(
-      details.querySelector("pre")?.textContent,
-      JSON.stringify(data, null, 2),
-    ),
-  );
+  await waitFor(() => assert.deepEqual(expandedJson(details), data));
 });
 
 test("grouped tool activity retains individual raw inspections while progress refreshes", async (t) => {
@@ -170,12 +164,7 @@ test("grouped tool activity retains individual raw inspections while progress re
     raw.dispatchEvent(new Event("toggle"));
   });
 
-  await waitFor(() =>
-    assert.equal(
-      raw.querySelector("pre")?.textContent,
-      JSON.stringify(rawStart, null, 2),
-    ),
-  );
+  await waitFor(() => assert.deepEqual(expandedJson(raw), rawStart));
 
   const completed = event(
     "tool.completed",
@@ -202,10 +191,7 @@ test("grouped tool activity retains individual raw inspections while progress re
   assert.equal(raw.open, true);
   assert.equal(debug.getAttribute("aria-expanded"), "true");
 
-  assert.equal(
-    raw.querySelector("pre")?.textContent,
-    JSON.stringify(rawStart, null, 2),
-  );
+  assert.deepEqual(expandedJson(raw), rawStart);
 
   assert.equal(
     view.container.querySelectorAll("details.activity-raw").length,
@@ -422,10 +408,7 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   // The newest raw response opens automatically with the debug panel.
   assert.equal(raw.open, true);
 
-  assert.equal(
-    raw.querySelector("pre")?.textContent,
-    JSON.stringify(activity.data.raw_response, null, 2),
-  );
+  assert.deepEqual(expandedJson(raw), activity.data.raw_response);
 
   view.rerender(createElement(GroupedEventList, { events: [{ ...activity }] }));
 
@@ -448,10 +431,7 @@ test("a compact accessible debug toggle hides inspection until opened and preser
     "Closing the debug panel preserves individual raw disclosures",
   );
 
-  assert.equal(
-    raw.querySelector("pre")?.textContent,
-    JSON.stringify(activity.data.raw_response, null, 2),
-  );
+  assert.deepEqual(expandedJson(raw), activity.data.raw_response);
 
   await act(async () => {
     raw.open = false;
@@ -461,7 +441,7 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   view.rerender(createElement(GroupedEventList, { events: [{ ...activity }] }));
   expect(panel.querySelector("details.activity-raw")).toBe(raw);
   assert.equal(raw.open, false, "A manual collapse survives a refresh");
-  assertAbsent(raw.querySelector("pre"));
+  assertAbsent(raw.querySelector(".json-tree"));
 });
 
 test("opening debug scrolls its panel into view once the height transition settles", async (t) => {

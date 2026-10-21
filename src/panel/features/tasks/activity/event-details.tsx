@@ -6,6 +6,7 @@ import { activityFailed } from "../../../../shared/tasks/activity/activity-event
 import { scalarText } from "../../../../shared/text";
 import type { Event } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
+import { JsonTree } from "../../../shared/components/json-tree/json-tree";
 import { ActivityContent } from "./activity-content";
 import { eventTitle, label, responsePreview } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
@@ -36,11 +37,7 @@ function RawResponse({ event, defaultOpen }: RawResponseProps) {
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary>Raw response</summary>
-      {open && (
-        <pre data-scroll={`event-${event.id}`}>
-          {JSON.stringify(event.data.raw_response ?? event.data, null, 2)}
-        </pre>
-      )}
+      {open && <JsonTree value={event.data.raw_response ?? event.data} />}
     </details>
   );
 }
