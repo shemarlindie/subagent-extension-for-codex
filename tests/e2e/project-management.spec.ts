@@ -78,6 +78,7 @@ test("rename a project and remove its approval while retaining task history and 
     .getByRole("button", { name: "Remove project", exact: true })
     .click();
 
+  await expect(confirmation).toBeHidden();
   await expect(project).toHaveCount(0);
   await page.reload();
   await expect(project).toHaveCount(0);
@@ -143,6 +144,7 @@ test("remove project task data and worktrees while preserving checkout files acr
     .getByRole("button", { name: "Remove project and task data", exact: true })
     .click();
 
+  await expect(confirmation).toBeHidden();
   await expect(project).toHaveCount(0);
   await page.reload();
   await expect(project).toHaveCount(0);
