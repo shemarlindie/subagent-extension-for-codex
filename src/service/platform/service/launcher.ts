@@ -40,6 +40,26 @@ function timedOut(error: unknown) {
   return (error as { name?: string }).name === "TimeoutError";
 }
 
+function loopbackUrl(origin: string) {
+  const url = new URL(origin);
+
+  if (
+    url.protocol !== "http:" ||
+    !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error(
+      "Local stdio proxy requires a plain loopback HTTP service origin",
+    );
+  }
+
+  return url;
+}
+
 export async function connectService() {
   const data = dataDirectory();
   const explicit = process.env.CODEX_SUBAGENT_EXTENSION_URL;
@@ -67,21 +87,8 @@ export async function connectService() {
     } catch {}
   }
 
-  let url = new URL(origin);
-
-  if (
-    url.protocol !== "http:" ||
-    !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) ||
-    url.username ||
-    url.password ||
-    url.pathname !== "/" ||
-    url.search ||
-    url.hash
-  ) {
-    throw new Error(
-      "Local stdio proxy requires a plain loopback HTTP service origin",
-    );
-  }
+  let discoveredOrigin = origin;
+  let url = loopbackUrl(origin);
 
   origin = url.origin;
 
@@ -340,6 +347,22 @@ export async function connectService() {
   while (Date.now() < deadline) {
     if (spawnError) throw spawnError;
     await new Promise((resolve) => setTimeout(resolve, 100));
+
+    if (!pinned) {
+      try {
+        const nextOrigin = JSON.parse(
+          readFileSync(join(data, "service.json"), "utf8"),
+        ).origin;
+
+        // A concurrent launch can win the lease on another port. Follow its
+        // new metadata without restoring the stale origin we relocated from.
+        if (nextOrigin !== discoveredOrigin) {
+          url = loopbackUrl(nextOrigin);
+          origin = url.origin;
+          discoveredOrigin = nextOrigin;
+        }
+      } catch {}
+    }
 
     try {
       const { health: _, ...connection } = await probe();

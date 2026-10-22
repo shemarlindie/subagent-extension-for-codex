@@ -9,9 +9,10 @@ import {
 } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
 import {
   challengeHeader,
@@ -88,6 +89,59 @@ async function fake(t: import("vitest").TestContext, handler: RequestListener) {
 /** Stops the service a test's launcher started in `dir`, even when the test fails. */
 function stopOnFinish(t: import("vitest").TestContext, dir: string) {
   t.onTestFinished(() => stopService({ data: dir }).catch(() => {}));
+}
+
+/** Pauses a spawned service before it acquires the lease so launch races are repeatable. */
+async function pausedConnect(
+  t: import("vitest").TestContext,
+  dir: string,
+  name: string,
+) {
+  const started = join(dir, `${name}-started.json`);
+  const release = join(dir, `${name}-release`);
+  const preload = join(dir, `${name}-preload.mjs`);
+
+  await writeFile(
+    preload,
+    `import { existsSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
+import { setTimeout } from "node:timers/promises";
+if (process.argv[1]?.endsWith("main.js") && process.env.PORT) {
+  await writeFile(${JSON.stringify(started)}, JSON.stringify({ port: process.env.PORT, pid: process.pid }));
+  while (!existsSync(${JSON.stringify(release)})) await setTimeout(20);
+}`,
+  );
+
+  t.onTestFinished(async () => {
+    try {
+      const { pid } = JSON.parse(await readFile(started, "utf8"));
+      process.kill(pid);
+    } catch {}
+  });
+
+  const connection = connect({
+    CODEX_SUBAGENT_EXTENSION_DATA: dir,
+    NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${pathToFileURL(preload).href}`,
+  });
+
+  // Retain the rejection for the caller without leaving it unhandled during setup.
+  void connection.catch(() => {});
+
+  const { port } = await vi.waitFor(
+    async () => {
+      const status = JSON.parse(await readFile(started, "utf8"));
+      assert.ok(Number(status.port) > 0, JSON.stringify(status));
+
+      return status;
+    },
+    { timeout: 5000 },
+  );
+
+  return {
+    connection,
+    port: Number(port),
+    release: () => writeFile(release, ""),
+  };
 }
 
 /** A fake service with the given identity that records drain requests. */
@@ -528,5 +582,46 @@ test(
       JSON.parse(await readFile(join(dir, "service.json"), "utf8")).pid,
       pid,
     );
+  },
+);
+
+test(
+  "concurrent relocating launchers follow the service that wins the data lease",
+  { timeout: 30000 },
+  async (t) => {
+    const dir = await data(t);
+    stopOnFinish(t, dir);
+    const unrelated = await fake(t, (_req, res) => res.end("another app"));
+
+    await writeFile(
+      join(dir, "service.json"),
+      JSON.stringify({ origin: unrelated }),
+    );
+
+    const first = await pausedConnect(t, dir, "first");
+    // The second launcher must choose a different port before either child owns the lease.
+    const reservation = createServer((_req, res) => res.end("another app"));
+
+    t.onTestFinished(
+      () => new Promise<void>((done) => reservation.close(() => done())),
+    );
+
+    await waitForListening(reservation.listen(first.port, "127.0.0.1"));
+    const second = await pausedConnect(t, dir, "second");
+    assert.notEqual(first.port, second.port);
+    await new Promise<void>((done) => reservation.close(() => done()));
+
+    await first.release();
+    const winner = JSON.parse((await first.connection).stdout);
+    assert.equal(new URL(winner.origin).port, String(first.port));
+
+    assert.equal(
+      JSON.parse(await readFile(join(dir, "service.json"), "utf8")).origin,
+      winner.origin,
+    );
+
+    await second.release();
+    const follower = JSON.parse((await second.connection).stdout);
+    assert.deepEqual(follower, winner);
   },
 );
