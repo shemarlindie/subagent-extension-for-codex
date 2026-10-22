@@ -15,7 +15,7 @@ type TaskMenuProps = { task: Task };
 function handoffMenuLabel(canSend: boolean, canCopy: boolean) {
   if (canSend) return "Bring to Codex";
 
-  return canCopy ? "Copy for Codex" : "Send to Codex";
+  return canCopy ? "Copy for Codex" : "Prepare message for Codex";
 }
 
 /** Task actions beside the open task's title and status. */
