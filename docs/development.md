@@ -568,6 +568,9 @@ seconds. Integration and browser tests allow 60 seconds for process and worktree
 setup. Put shared colocated test setup in a `<module>-test-harness.ts` file,
 which lint, type checks and builds treat as test code.
 
+Keep compile-time contract assertions in `tests/contracts/*.typecheck.ts`.
+`npm run typecheck` checks these files without running a Vitest suite.
+
 Compare DOM nodes with Vitest's `expect`, never Node's assertion equality
 methods. Formatting a failed Node assertion can hang on jsdom's document graph.
 Use `toBe` for identity, `toEqual` for structure and `toBeNull` for absence.
@@ -591,8 +594,9 @@ Feature integration tests that combine task control with real SQLite, Git or
 worker execution sit beside their owning code. Cross-runtime, HTTP, MCP,
 package and process suites go in `tests/integration/`. Both run in Vitest's
 `integration` project, which `test:unit` excludes. Classify a test by its
-fixtures and assertions. A temporary directory alone does not make it an
-integration test.
+fixtures and assertions. Real socket and child-process tests belong in
+integration coverage even with fake services or executables. A temporary
+directory alone does not make a test an integration test.
 
 Add unit tests only for parser boundaries, permission rules, async races, stale
 responses, Unicode handling, state reconciliation and similar rules. Use jsdom
@@ -600,10 +604,16 @@ tests for deterministic failures, concurrent edits, keyboard behavior and host
 bridge interactions that console browser tests cannot reproduce.
 
 Remove happy-path unit and mocked UI tests once a browser or integration test
-owns the same behavior. Keep a focused test only for an extra rule or edge case,
-and name it for that purpose. Skip assertions that repeat constant tables,
-property projections, CSS declarations, SVG geometry or placeholder markup.
-Types and lint cover structural rules.
+owns the same behavior. Trim cases and assertions individually, preserving
+unique rules and edge cases. Name retained tests for the behavior they protect.
+
+Test behavior and documented contracts. Skip assertions that only copy constant
+tables, property projections, CSS declarations, SVG artwork or placeholder
+markup. Derive expected results independently of the production helper being
+tested.
+
+Keep fixture replay and preview simulation tests when production flows cannot
+exercise their behavior.
 
 ### Browser flows
 
@@ -612,6 +622,9 @@ starts a disposable service on an OS-assigned loopback port, with its own
 SQLite database, settings, fixture worker and Git repository. Teardown closes
 the service and removes its files even when the test fails. In a sandbox, allow
 localhost TCP listeners and browser processes.
+
+Wait for mutations to finish before reloading. A modal hiding background
+content from role queries does not prove that the mutation succeeded.
 
 Rerun against an existing build with `npx playwright test`. Failures keep
 traces and screenshots in `test-results/`, which CI uploads. Inspect a trace

@@ -24,11 +24,10 @@ Read the matching guide's relevant sections before working in an area. Unrelated
 ## Validation
 
 - Validate the resulting behavior and relevant architectural boundaries. Match checks to the change and prefer focused checks during iteration. You may skip or defer expensive checks when their runtime outweighs the confidence they add. Report what was skipped and why.
-- Prioritize browser end-to-end tests for user flows and integration tests for service boundaries. Keep unit tests for complicated logic, async races, security rules and edge cases that broader tests cannot reliably exercise. Remove overlapping tests when broader coverage owns the behavior. Follow [Choosing test coverage](docs/development.md#choosing-test-coverage).
+- Before adding, changing or removing tests, follow [Choosing test coverage](docs/development.md#choosing-test-coverage).
 - Before committing, run the relevant formatting, lint, type, test, build and browser checks against the final changes being committed. Unrelated checks do not need to run.
 - Follow the repository's ESLint rules when editing code.
 - Format changed files with `npx eslint --fix <files> && npx prettier --write <files>`.
-- Unit tests time out after 15 seconds. Service integration and browser end-to-end tests allow 60 seconds. Compare DOM nodes with `expect`, never `assert.deepEqual`. See [Checks](docs/development.md#checks).
 - Before running HTTP integration suites, ensure the sandbox permits localhost TCP listeners (`127.0.0.1`). Request escalation up front if needed. CI runners need the same access. Do not skip these tests because listener binding is denied.
 - Update affected documentation and report meaningful design decisions, intentional differences from established patterns, and remaining concerns in proportion to the change.
 
@@ -65,7 +64,6 @@ Avoid semicolons and dashes in sentences. Keep them where needed in code, comman
 
 - Keep responsibility boundaries clear, modules cohesive, state and lifecycle ownership appropriate, and dependency direction consistent. Follow established patterns when suitable. Address architectural weaknesses introduced or directly affected by the change. Leave broader improvements as recommendations outside the task's scope.
 - Organize modules around feature ownership and reasons to change. Keep feature logic, types, UI and styles together. Group subfolders by responsibility rather than file type. Put UI domain logic in `src/panel/features` and reusable generic helpers in `src/panel/shared/utils`. Keep browser-safe contracts and domain functions used by both runtimes in feature-scoped `src/shared` modules. These must not import service execution or panel rendering. Keep application composition and state in `src/panel/app/state`. Limit panel shared code to stable cross-feature concepts and platform integrations.
-- Keep focused tests beside their owning modules. Reserve integration suites for behavior that crosses feature, process, host, or environment boundaries. Test the behavior that matters most across the whole change, without exhaustive cases. Skip what existing tests, types or lint already cover, and remove tests a change makes redundant.
 - Reuse existing components, logic, styles and infrastructure where responsibilities align. Preserve distinct behavior and presentation where the domain requires them. Introduce abstractions when they simplify ownership and maintenance without excessive configuration or coupling.
 - Prefer the simplest code that achieves the required behavior. Remove unnecessary duplication, obsolete code and needless indirection within the affected area. Keep components and utilities small and focused, with components responsible for rendering and reusable helpers in their owning modules. Split files by responsibility without needless fragmentation, normally keeping one React component per file. Use kebab-case component filenames.
 - Prefer named prop and state types. Use existing types or `satisfies` when they simplify code or replace repeated assertions.
