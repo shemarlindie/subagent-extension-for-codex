@@ -44,7 +44,7 @@ import { browserEnvironment, type PanelEnvironment } from "./panel-environment";
 import { PersistedDialogs } from "./persistence/persisted-dialogs";
 import { RevisionTrigger } from "./revision-trigger";
 import { projectRemovalReset } from "./scope-reconciliation";
-import { defaultTask, selectionPatch } from "./selection";
+import { defaultSelection, selectionPatch } from "./selection";
 import { filterCounts, selectedTask } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
 import { TaskArrivals } from "./task-arrivals";
@@ -325,20 +325,8 @@ export class Controller {
     void this.dialogs.restore(this.state.tasks, this.state.scopeVersion);
   }
 
-  /** The task a wide or scoped panel opens when nothing is chosen, unless the user is browsing. */
-  private defaultSelection(tasks: Task[]) {
-    const { conversation, repository } = this.state;
-
-    if (
-      this.browsing ||
-      this.state.newTask ||
-      !(this.environment.wide() || conversation || repository)
-    ) {
-      return undefined;
-    }
-
-    return defaultTask(tasks)?.id;
-  }
+  private defaultSelection = (tasks: Task[]) =>
+    defaultSelection(tasks, this.state, this.browsing, this.environment.wide());
 
   /** Keeps a selection the list still contains; otherwise falls back to the default task. */
   private fallbackSelection(tasks: Task[]): Partial<Snapshot> {
@@ -547,6 +535,7 @@ export class Controller {
 
     this.refreshing = true;
     const tabIntentRevisionAtReadStart = this.tabIntentRevision;
+    const selectionAtReadStart = this.generation;
     let version = this.state.scopeVersion;
 
     try {
@@ -688,7 +677,14 @@ export class Controller {
       const away = this.browsing || this.restoredView || newTask || dialog;
       const arrived = this.arrivals.next(tasks, version);
 
-      if (arrived && arrived.id !== current && !away && !busy) {
+      // A choice made while this read was pending takes priority over arrivals.
+      if (
+        arrived &&
+        arrived.id !== current &&
+        !away &&
+        !busy &&
+        selectionAtReadStart === this.generation
+      ) {
         this.choose();
         this.reconcileShare = true;
         this.patch(selectionPatch(arrived.id, this.tabOf(arrived.id)));

@@ -37,3 +37,21 @@ export function defaultTask(tasks: Task[]) {
     listed[0]
   );
 }
+
+/** The task a wide or scoped panel opens unless the user is browsing or composing. */
+export function defaultSelection(
+  tasks: Task[],
+  state: Pick<Snapshot, "conversation" | "repository" | "newTask">,
+  browsing: boolean,
+  wide: boolean,
+) {
+  if (
+    browsing ||
+    state.newTask ||
+    !(wide || state.conversation || state.repository)
+  ) {
+    return undefined;
+  }
+
+  return defaultTask(tasks)?.id;
+}
