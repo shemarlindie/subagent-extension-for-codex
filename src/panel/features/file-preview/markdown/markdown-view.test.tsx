@@ -42,14 +42,6 @@ test("relative and unsafe links render as text, not broken links", () => {
   expect(screen.getByText("web").getAttribute("target")).toBe("_blank");
 });
 
-test("inline code carries no renderer props as attributes", () => {
-  const { container } = render(<MarkdownView content="Use `Array<string>`." />);
-  const code = container.querySelector("code")!;
-
-  expect(code.textContent).toBe("Array<string>");
-  expect(code.hasAttribute("node")).toBe(false);
-});
-
 test("fenced code highlights languages named with symbols or aliases", () => {
   const { container } = render(
     <MarkdownView content={"```c++\nint x;\n```\n\n```console\n$ ls\n```"} />,

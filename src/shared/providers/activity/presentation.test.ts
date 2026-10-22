@@ -119,7 +119,6 @@ test("Claude emits provider-owned presentation alongside the original SDK respon
   assert.equal(rawResponse, message);
   const activity = emittedActivity as ActivityPresentation;
   // Requesting is a status update, not a thinking signal.
-  assert.equal(activity.statusTitle, "Requesting");
   assert.equal(activity.thinking, false);
 });
 

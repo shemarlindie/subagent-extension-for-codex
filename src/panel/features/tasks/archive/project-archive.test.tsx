@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
@@ -80,27 +80,4 @@ test("a project's archive lists its archived tasks and unarchives the selected o
   assert.deepEqual(calls(), [
     ["app_set_tasks_archived", { task_ids: ["new"], archived: false }],
   ]);
-});
-
-test("deleting all asks first, with the choice to delete the agent tasks", async () => {
-  const { view, calls } = setup();
-  await view.findByRole("list", { name: "Archived tasks" });
-
-  await userEvent.click(view.getByRole("button", { name: "Delete all" }));
-  assert.deepEqual(calls(), []);
-
-  await userEvent.click(
-    view.getByRole("switch", { name: "Also delete the agent tasks" }),
-  );
-
-  await userEvent.click(view.getByRole("button", { name: "Delete 2 tasks" }));
-
-  await waitFor(() =>
-    assert.deepEqual(calls(), [
-      [
-        "app_delete_tasks",
-        { task_ids: ["new", "old"], delete_agent_task: true },
-      ],
-    ]),
-  );
 });

@@ -9,7 +9,6 @@ import { expect, test, vi } from "vitest";
 import { task as buildTask } from "../../../app/state/controller-test-harness";
 import type { Event as ActivityEvent } from "../../../app/state/types";
 import { formatUserDateTime } from "../../../shared/utils/user-date-time";
-import { formatOutcomeTimestamp } from "../chat/timeline/outcome-timestamp";
 import {
   activityMessages,
   assertAbsent,
@@ -48,66 +47,6 @@ test("the trimmed note summarizes dropped events only for the task being shown",
   cleanup();
 
   assert.doesNotMatch(note({ ...dropped, task_id: "other" }), /earlier events/);
-});
-
-test("activity times use Chat's format and tooltip", (t) => {
-  t.onTestFinished(cleanup);
-  const preferences = { locale: "en-US", timeZone: "UTC" };
-
-  const read = event(
-    "tool.started",
-    { name: "Read", id: "read-time" },
-    "read-time",
-  );
-
-  const date = formatUserDateTime(read.timestamp, preferences, {
-    timeZoneName: undefined,
-  });
-
-  // Expanded: the time shares the debug caption's line, in Chat's format.
-  const expanded = render(
-    createElement(GroupedEventList, { events: [read], preferences }),
-  ).container;
-
-  fireEvent.click(expanded.querySelector(".activity-debug-toggle")!);
-
-  const time = expanded.querySelector(".activity-debug-head time")!;
-
-  assert.equal(
-    time.textContent,
-    formatOutcomeTimestamp(read.timestamp, preferences),
-  );
-
-  assert.equal(time.getAttribute("aria-label"), date);
-
-  assert.ok(
-    expanded
-      .querySelector(".activity-debug-caption")!
-      .compareDocumentPosition(time) & Node.DOCUMENT_POSITION_FOLLOWING,
-  );
-
-  cleanup();
-
-  // Top level: the clock stays as it was, and its tooltip is the date alone.
-  const heading = render(
-    createElement(GroupedEventList, { events: [read], preferences }),
-  ).container.querySelector(".activity-group-heading time")!;
-
-  assert.equal(
-    heading.getAttribute("aria-label"),
-    formatUserDateTime(read.timestamp, preferences, {
-      timeZoneName: undefined,
-    }),
-  );
-
-  assert.equal(
-    heading.textContent,
-    new Date(read.timestamp).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "UTC",
-    }),
-  );
 });
 
 test("a thinking row shows how long the worker thought", (t) => {

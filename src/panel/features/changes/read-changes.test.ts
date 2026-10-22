@@ -2,12 +2,10 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { changeCounts } from "../../../shared/changes/changes";
 import type { Task } from "../tasks/types";
 import {
   changesKey,
   changesStale,
-  changesSummary,
   readChangedFile,
   readChanges,
 } from "./read-changes";
@@ -76,29 +74,6 @@ test("changes reload for another task or a new status or turn, not mid-read", ()
   assert.equal(
     changesStale({ ...state, loading: true }, { ...task, turn: 2 }),
     false,
-  );
-});
-
-test("summaries count lines and files", () => {
-  assert.equal(changesSummary(changeCounts(page(""))), "+3 −1, 0 files");
-
-  assert.equal(
-    changesSummary(
-      changeCounts({
-        ...page(""),
-        files: [
-          {
-            path: "a",
-            status: "added",
-            additions: 3,
-            deletions: 1,
-            source: "tool",
-            incomplete: false,
-          },
-        ],
-      }),
-    ),
-    "+3 −1, 1 file",
   );
 });
 

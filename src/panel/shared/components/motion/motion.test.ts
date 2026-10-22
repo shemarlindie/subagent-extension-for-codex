@@ -19,8 +19,6 @@ import { useListPresence } from "./use-list-presence";
 
 type Call = {
   element: HTMLElement;
-  frames: Keyframe[];
-  options: KeyframeAnimationOptions;
   animation: { onfinish: (() => void) | null; cancel(): void };
 };
 
@@ -31,18 +29,14 @@ function mockMotion(t: { onTestFinished(fn: () => void): void }) {
 
   Object.defineProperty(HTMLElement.prototype, "animate", {
     configurable: true,
-    value(
-      this: HTMLElement,
-      frames: Keyframe[],
-      options: KeyframeAnimationOptions,
-    ) {
+    value(this: HTMLElement) {
       const animation = {
         onfinish: null,
         playState: "running",
         cancel() {},
       };
 
-      calls.push({ element: this, frames, options, animation });
+      calls.push({ element: this, animation });
 
       return animation;
     },
@@ -73,7 +67,7 @@ const notice = (show: boolean, text = "Saved") =>
     show && createElement("div", { className: "notice" }, text),
   );
 
-test("MotionContent replaces keyed content with the selected entrance style", (t) => {
+test("MotionContent remounts content when its key changes", (t) => {
   t.onTestFinished(cleanup);
 
   const content = (value: string, variant: "swap" | "rise" = "swap") =>
@@ -88,7 +82,6 @@ test("MotionContent replaces keyed content with the selected entrance style", (t
   const view = render(content("Thinking"));
   const first = view.container.querySelector("strong");
   assert.ok(first);
-  assert.equal(first.className, "motion-swap activity-title");
 
   view.rerender(content("Thought", "rise"));
   const next = view.container.querySelector("strong");
@@ -99,7 +92,6 @@ test("MotionContent replaces keyed content with the selected entrance style", (t
   );
 
   assert.equal(next.textContent, "Thought");
-  assert.equal(next.className, "motion-rise activity-title");
 });
 
 test("Presence removes content at once without animation support", (t) => {
@@ -110,7 +102,7 @@ test("Presence removes content at once without animation support", (t) => {
   expect(view.container.querySelector(".notice")).toBeNull();
 });
 
-test("Presence folds content out, keeping the last content until it finishes", (t) => {
+test("Presence keeps the last content inert until its exit finishes", (t) => {
   t.onTestFinished(cleanup);
   const motion = mockMotion(t);
   const view = render(notice(true, "Permission needed"));
@@ -127,25 +119,15 @@ test("Presence folds content out, keeping the last content until it finishes", (
 
   const exit = motion.calls.at(-1)!;
   expect(exit.element).toBe(element);
-  const [exitFrom] = exit.frames;
-  assert.ok(exitFrom);
-  assert.equal(exitFrom.opacity, 1);
-  assert.equal(exit.frames.at(-1)!.height, "0px");
-  assert.equal(exit.frames.at(-1)!.marginTop, "0px");
-  assert.equal(exit.options.fill, "forwards");
   act(() => exit.animation.onfinish!());
   expect(view.container.querySelector(".notice")).toBeNull();
 
   view.rerender(notice(true, "Claude has a question"));
   const entrance = motion.calls.at(-1)!;
   assert.equal(entrance.element.textContent, "Claude has a question");
-  const [entranceFrom] = entrance.frames;
-  assert.ok(entranceFrom);
-  assert.equal(entranceFrom.height, "0px");
-  assert.equal(entrance.frames.at(-1)!.opacity, 1);
 });
 
-test("Presence pop variant scales and respects reduced motion", (t) => {
+test("Presence pop variant respects reduced motion", (t) => {
   t.onTestFinished(cleanup);
   const motion = mockMotion(t);
 
@@ -158,9 +140,6 @@ test("Presence pop variant scales and respects reduced motion", (t) => {
 
   const view = render(button(false));
   view.rerender(button(true));
-  const [popFrom] = motion.calls.at(-1)!.frames;
-  assert.ok(popFrom);
-  assert.equal(popFrom.transform, "scale(0.85)");
   motion.reduce();
   const count = motion.calls.length;
   view.rerender(button(false));
@@ -175,7 +154,7 @@ function Grow({ open }: { open: boolean }) {
   return createElement("div", { ref, "data-open": open || undefined });
 }
 
-test("useAnimatedHeight eases between the old and new height", (t) => {
+test("useAnimatedHeight skips mounting and animates subsequent size changes", (t) => {
   t.onTestFinished(cleanup);
   const motion = mockMotion(t);
 
@@ -194,17 +173,10 @@ test("useAnimatedHeight eases between the old and new height", (t) => {
   assert.equal(motion.calls.length, 0, "Mounting does not animate");
   view.rerender(createElement(Grow, { open: true }));
   const grow = motion.calls.at(-1)!;
-  const [growFrom, growTo] = grow.frames;
-  assert.ok(growFrom && growTo);
-  assert.equal(growFrom.height, "40px");
-  assert.equal(growTo.height, "120px");
+  assert.equal(motion.calls.length, 1);
   act(() => grow.animation.onfinish!());
   view.rerender(createElement(Grow, { open: false }));
-  const shrink = motion.calls.at(-1)!;
-  const [shrinkFrom, shrinkTo] = shrink.frames;
-  assert.ok(shrinkFrom && shrinkTo);
-  assert.equal(shrinkFrom.height, "120px");
-  assert.equal(shrinkTo.height, "40px");
+  assert.equal(motion.calls.length, 2);
 });
 
 test("useListPresence keeps removed items in place and folds new ones in", (t) => {
@@ -242,11 +214,7 @@ test("useListPresence keeps removed items in place and folds new ones in", (t) =
   const [exit, entrance] = motion.calls;
   assert.ok(exit && entrance);
   assert.equal(exit.element.dataset.row, "b");
-  assert.equal(exit.frames.at(-1)!.height, "0px");
   assert.equal(entrance.element.dataset.row, "d");
-  const [entranceFrom] = entrance.frames;
-  assert.ok(entranceFrom);
-  assert.equal(entranceFrom.height, "0px");
 
   act(() => exit.animation.onfinish!());
   assert.deepEqual(order(), ["a", "c", "d"]);

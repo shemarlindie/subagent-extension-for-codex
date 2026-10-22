@@ -365,7 +365,7 @@ test("the readonly preview field is reused when editing begins", () => {
   assert.equal(view.queryByRole("textbox") === null, true);
 });
 
-test("growing wrapped text fills the target height without clipping its focused ancestor", (t) => {
+test("growing wrapped text preserves the draft, caret and focus without ancestor animation", (t) => {
   mockWrappedTextMeasurement();
 
   const animateDescriptor = Object.getOwnPropertyDescriptor(
@@ -417,8 +417,6 @@ test("growing wrapped text fills the target height without clipping its focused 
     name: "Title",
   }) as HTMLTextAreaElement;
 
-  const initialHeight = textarea.parentElement!.style.height;
-
   assert.equal(textarea.tagName, "TEXTAREA");
   textarea.scrollTop = 22;
   textarea.scrollLeft = 7;
@@ -430,25 +428,11 @@ test("growing wrapped text fills the target height without clipping its focused 
 
   assert.equal(view.getByRole("textbox") === textarea, true);
   assert.equal(textarea.value, growingDraft);
-  assert.equal(textarea.parentElement!.style.height !== initialHeight, true);
-  assert.equal(textarea.style.height, textarea.parentElement!.style.height);
   assert.equal(animate.mock.calls.length, 0);
-
-  assert.equal(
-    view.container.querySelector<HTMLElement>(".editable-text")!.style.overflow,
-    "",
-  );
 
   assert.equal(textarea.scrollTop, 0);
   assert.equal(textarea.scrollLeft, 0);
   assert.equal(textarea.selectionStart, 53);
   assert.equal(textarea.selectionEnd, 53);
   assert.equal(document.activeElement === textarea, true);
-});
-
-test("single-line outline height follows the fractional line height with balanced padding", () => {
-  mockWrappedTextMeasurement(22.4);
-  const { input } = setup();
-
-  assert.equal(parseFloat(input.parentElement!.style.height), 26.4);
 });

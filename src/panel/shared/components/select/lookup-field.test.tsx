@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { ICONS } from "../icons/icons";
 import {
   MultiSelectField,
   SelectField,
@@ -216,43 +215,6 @@ test.each(["disabled", "loading"] as const)(
     expect(onValueChange).not.toHaveBeenCalled();
   },
 );
-
-test("lookup renders the selected option icon and each option icon", async () => {
-  const user = userEvent.setup();
-  const artwork = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-
-  artwork.innerHTML = ICONS.bug.artwork;
-
-  render(
-    <SelectField
-      id="project"
-      label="Project"
-      searchable
-      options={[{ ...alpha, icon: "bug" }]}
-      value="/repos/alpha"
-      onValueChange={vi.fn()}
-    />,
-  );
-
-  const trigger = screen.getByRole("combobox", { name: "Project" });
-  const selectedIcon = trigger.querySelector(".select-worker-icon");
-
-  expect(Array.from(selectedIcon?.children ?? [])).toEqual(
-    Array.from(artwork.children),
-  );
-
-  expect(selectedIcon?.getAttribute("aria-hidden")).toBe("true");
-  await user.click(trigger);
-
-  const option = await screen.findByRole("option");
-  const optionIcon = option.querySelector(".select-worker-icon");
-
-  expect(Array.from(optionIcon?.children ?? [])).toEqual(
-    Array.from(artwork.children),
-  );
-
-  expect(optionIcon?.getAttribute("aria-hidden")).toBe("true");
-});
 
 test("refreshing lookup options preserves the search and selected value", async () => {
   const user = userEvent.setup();

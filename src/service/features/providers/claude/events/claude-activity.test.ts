@@ -18,10 +18,7 @@ import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
 import { startSchema } from "../../../../../shared/tasks/model.js";
 import { type RunContext } from "../../types.js";
 import { ClaudeAgentProvider } from "../runtime/provider.js";
-import {
-  claudeActivityContent,
-  claudeActivityPresentation,
-} from "./activity.js";
+import { claudeActivityPresentation } from "./activity.js";
 import { normalizeClaudeMessage } from "./normalize.js";
 
 function recorder() {
@@ -357,15 +354,6 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
   normalize(assistant);
   normalize(user);
 
-  const [textBlock, toolUse] = assistant.message.content;
-  assert.ok(textBlock);
-  assert.ok(toolUse?.type === "tool_use");
-  const userContent = user.message.content;
-  assert.ok(Array.isArray(userContent));
-  const [toolResult] = userContent;
-  assert.ok(toolResult?.type === "tool_result");
-  assert.ok(Array.isArray(toolResult.content));
-
   assert.deepEqual(events, [
     {
       type: "agent.started",
@@ -378,7 +366,7 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
         message_id: assistant.message.id,
         parent_tool_use_id: assistant.parent_tool_use_id,
         text: "Checking",
-        content: claudeActivityContent(textBlock),
+        content: { type: "text", text: "Checking" },
         raw_response: assistant,
       },
     },
@@ -387,7 +375,7 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
       data: {
         id: "tool",
         name: "Read",
-        input: toolUse.input,
+        input: { file_path: "a.ts", count: 0, enabled: false },
         raw_response: assistant,
       },
     },
@@ -396,7 +384,7 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
       data: {
         id: "tool",
         error: false,
-        content: toolResult.content.map(claudeActivityContent),
+        content: [{ type: "text", text: "file output" }],
         raw_response: user,
       },
     },
@@ -418,13 +406,21 @@ test("assistant thinking blocks retain their typed content and source message", 
 
   assert.deepEqual(
     blocks.map((event) => [event.type, event.data.content, event.data.role]),
-    message.message.content
-      .slice(1)
-      .map((block) => [
+    [
+      [
         "agent.content",
-        claudeActivityContent(block),
+        { type: "thinking", thinking: "Reasoning text" },
         "assistant",
-      ]),
+      ],
+      [
+        "agent.content",
+        {
+          type: "opaque",
+          data: { type: "redacted_thinking", data: "redacted" },
+        },
+        "assistant",
+      ],
+    ],
   );
 
   for (const event of events) {
@@ -472,9 +468,10 @@ test("user image, document and tool-result blocks stay inspectable in order", ()
 
   assert.deepEqual(
     events.slice(1, -1).map((event) => [event.type, event.data.content]),
-    content
-      .slice(1, -1)
-      .map((block) => ["agent.content", claudeActivityContent(block)]),
+    [
+      ["agent.content", { type: "opaque", data: content[1] }],
+      ["agent.content", { type: "opaque", data: content[2] }],
+    ],
   );
 
   assert.equal(events.at(-1)?.type, "tool.completed");

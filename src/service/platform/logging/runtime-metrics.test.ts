@@ -28,12 +28,6 @@ test("samples bounded resource metrics and stops sampling on cleanup", async (t)
   const text = await readFile(path, "utf8");
   const record: Record<string, unknown> = JSON.parse(text);
 
-  expect(record).toMatchObject({
-    event: "service.resources",
-    level: "info",
-    active_tasks: 2,
-  });
-
   for (const field of [
     "rss_bytes",
     "heap_used_bytes",

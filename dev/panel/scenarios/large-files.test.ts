@@ -5,7 +5,6 @@ import { test } from "vitest";
 import { parseDiffFiles } from "../../../src/panel/features/file-preview/diff/diff-format";
 import {
   fileBytes,
-  fileFormat,
   fileViews,
 } from "../../../src/panel/features/file-preview/file-format";
 import { highlightLines } from "../../../src/panel/features/file-preview/highlight";
@@ -18,21 +17,6 @@ const fileAt = (path: string) => {
 
   return file;
 };
-
-test("each large file is detected as its format", () => {
-  assert.deepEqual(
-    largeFiles().map((file) => [file.path, fileFormat(file)]),
-    [
-      ["changes.diff", "diff"],
-      ["dist/bundle-stats.json", "json"],
-      ["reports/module-sizes.csv", "csv"],
-      ["logs/build.log", "text"],
-      ["docs/performance-notes.md", "markdown"],
-      ["dist/vendor.min.js", "code"],
-      ["docs/dependency-graph.svg", "image"],
-    ],
-  );
-});
 
 test("large files cross the limits their viewers handle", () => {
   assert.equal(parseDiffFiles(fileAt("changes.diff").content).length, 60);

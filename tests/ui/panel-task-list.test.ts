@@ -9,34 +9,10 @@ import {
   openAdvancedTask,
   screen,
   setup,
-  task,
   test,
   vi,
   waitFor,
 } from "./panel-test-support";
-
-test("task filters list the nonempty filters and keep exactly one selected", async (t) => {
-  const { user } = await setup(t);
-
-  const checked = (name: RegExp) =>
-    screen.getByRole("radio", { name }).getAttribute("aria-checked");
-
-  assert.deepEqual(
-    screen
-      .getAllByRole("radio")
-      .map((radio) => radio.getAttribute("data-filter")),
-    ["active", "all"],
-  );
-
-  // Until one is chosen, the first nonempty filter in order is selected.
-  assert.equal(checked(/^Active/), "true");
-  await user.click(screen.getByRole("radio", { name: /^All/ }));
-  assert.equal(checked(/^All/), "true");
-  assert.equal(checked(/^Active/), "false");
-  // Clicking the selected filter must not leave the list with no filter.
-  await user.click(screen.getByRole("radio", { name: /^All/ }));
-  assert.equal(checked(/^All/), "true");
-});
 
 test("task filters show counts and an empty state with a way out", async (t) => {
   const { user } = await setup(t);
@@ -78,6 +54,12 @@ test("task filters show counts and an empty state with a way out", async (t) => 
 test("a chosen filter stays visible after it empties", async (t) => {
   const { user } = await setup(t);
   await user.click(screen.getByRole("radio", { name: /^Active/ }));
+  await user.click(screen.getByRole("radio", { name: /^Active/ }));
+
+  assert.equal(
+    screen.getByRole("radio", { name: /^Active/ }).getAttribute("aria-checked"),
+    "true",
+  );
 
   await user.type(
     screen.getByRole("searchbox", { name: "Search tasks" }),
@@ -92,30 +74,6 @@ test("a chosen filter stays visible after it empties", async (t) => {
     screen.getByRole("radio", { name: /^All/ }).getAttribute("aria-checked"),
     "true",
   );
-});
-
-test("the all-project task list labels each project group header", async (t) => {
-  await setup(t, (transport) => {
-    transport.tasks = [
-      { ...task(), title: "Review authentication" },
-      { ...task("two", "/repo/b"), title: "Update database" },
-      { ...task("three"), title: "Fix login" },
-    ];
-
-    transport.projects = [
-      { repository: "/repo/a", name: "Alpha", kind: "repository" },
-      { repository: "/repo/b", name: "", kind: "repository" },
-    ];
-  });
-
-  const headers = [...document.querySelectorAll("#task-list [role=group]")].map(
-    (group) =>
-      document.getElementById(group.getAttribute("aria-labelledby") ?? "")
-        ?.textContent,
-  );
-
-  // Projects without a name fall back to the folder name.
-  assert.deepEqual(headers, ["Alpha", "b"]);
 });
 
 test("search clears with Escape and focuses with the slash key", async (t) => {

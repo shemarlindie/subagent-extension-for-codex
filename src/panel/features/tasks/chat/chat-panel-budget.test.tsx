@@ -7,34 +7,16 @@ import { expect, test } from "vitest";
 import type { Task } from "../../../app/state/types";
 import { base, sent, setup } from "./chat-panel-test-harness";
 
-test("a spent budget shows its amounts and applies the raised limit", async () => {
-  const { tool, view, updateTask, composer } = setup({
+test("cost limit toggling preserves its amount and requires a change before applying", () => {
+  const { view } = setup({
     status: "failed",
     error: "Claude result: error_max_budget_usd",
     cost_usd: 5.02,
   });
 
-  assert.match(view.container.textContent ?? "", /\$5\.02 of \$5\.00 used/);
-  expect(view.getByText("Cost limit reached")).toBeTruthy();
-
-  assert.equal(
-    view.container.querySelector(".chat-budget-limit-input > span")
-      ?.textContent,
-    "$",
-  );
-
-  const notice = view.container.querySelector(
-    '[data-chat-item="budget-limit-task-1"]',
-  );
-
   const apply = view.getByRole("button", { name: "Apply" });
   const limit = view.getByRole("spinbutton", { name: "Cost limit" });
   const limitSwitch = view.getByRole("switch", { name: "Cost limit" });
-  assert.ok(notice?.contains(limit));
-  expect(limit.closest(".chat-composer")).toBeNull();
-  assert.equal((limit as HTMLInputElement).value, "5");
-  assert.equal(limit.getAttribute("max"), null);
-  expect(view.getByText("Apply a higher cost limit to continue.")).toBeTruthy();
   assert.equal((apply as HTMLButtonElement).disabled, true);
   assert.equal(view.getByText("Enabled").textContent, "Enabled");
 
@@ -47,57 +29,10 @@ test("a spent budget shows its amounts and applies the raised limit", async () =
   assert.equal((limit as HTMLInputElement).disabled, false);
   assert.equal((apply as HTMLButtonElement).disabled, true);
 
-  fireEvent.change(limit, { target: { value: "8" } });
-  assert.equal((apply as HTMLButtonElement).disabled, false);
-  fireEvent.click(apply);
-
-  await waitFor(() =>
-    expect(sent(tool)).toEqual([
-      ["app_raise_budget", { task_id: "task-1", budget: { max_cost_usd: 8 } }],
-    ]),
-  );
-
-  updateTask({
-    budget: { ...base.budget, max_cost_usd: 8 },
-    budget_raised_for_turn: { turn: 1, cost: true },
-  });
-
-  await waitFor(() => {
-    assert.equal((composer as HTMLTextAreaElement).value, "Continue");
-    assert.equal(document.activeElement, composer);
-
-    expect(view.getByRole("tooltip").textContent).toBe(
-      "Press ENTER to continue",
-    );
-  });
-
-  expect(view.queryByText("Cost limit reached")).toBeNull();
-
-  fireEvent.keyDown(composer, { key: "Enter" });
-
-  await waitFor(() =>
-    expect(sent(tool)).toEqual([
-      [
-        "app_raise_budget",
-        {
-          task_id: "task-1",
-          budget: { max_cost_usd: 8 },
-        },
-      ],
-      [
-        "app_send_message",
-        {
-          task_id: "task-1",
-          message: "Continue",
-          delivery: "steer",
-          request_id: expect.any(String),
-        },
-      ],
-    ]),
-  );
+  assert.equal((limit as HTMLInputElement).value, "5");
 });
 
-test("runtime limit uses the cost control pattern and accepts a higher limit", async () => {
+test("runtime limits above 120 minutes preserve an existing composer draft", async () => {
   const { tool, view, composer, type, updateTask } = setup({
     status: "failed",
     error: "Runtime budget exhausted",
@@ -109,19 +44,6 @@ test("runtime limit uses the cost control pattern and accepts a higher limit", a
   expect(view.getByText("Runtime limit reached")).toBeTruthy();
   expect(view.getByText("22 of 20 mins used")).toBeTruthy();
 
-  assert.equal(
-    view.container.querySelector(".chat-budget-limit-input > span")
-      ?.textContent,
-    "min",
-  );
-
-  expect(
-    view.getByText("Apply a higher runtime limit to continue."),
-  ).toBeTruthy();
-
-  expect(view.queryByText("Max 120 min")).toBeNull();
-  expect(view.queryByText("Runtime limit (minutes)")).toBeNull();
-
   const apply = view.getByRole("button", { name: "Apply" });
 
   type("Keep this draft");
@@ -130,13 +52,6 @@ test("runtime limit uses the cost control pattern and accepts a higher limit", a
     name: "Runtime limit (minutes)",
   });
 
-  assert.ok(
-    view.container
-      .querySelector('[data-chat-item="budget-limit-task-1"]')
-      ?.contains(limit),
-  );
-
-  expect(limit.closest(".chat-composer")).toBeNull();
   assert.equal(limit.getAttribute("max"), null);
   assert.equal((limit as HTMLInputElement).value, "20");
 

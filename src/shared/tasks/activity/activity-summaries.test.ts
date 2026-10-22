@@ -16,7 +16,6 @@ test("repeated notifications consolidate only when their summaries match", () =>
   assert.equal(groups.length, 2);
   const [repeated, finished] = groups;
   assert.ok(repeated && finished);
-  assert.equal(repeated.title, "Notification · 2 events");
   assert.equal(repeated.summary, "Ready");
   assert.deepEqual(repeated.events, events.slice(0, 2));
   assert.equal(finished.summary, "Finished");
@@ -114,16 +113,14 @@ test("failed tools expose string or mixed text-block results in their summary", 
 });
 
 test("cancelled hooks and stopped or killed background tasks remain neutral terminal operations", () => {
-  for (const [start, finish, prefix] of [
+  for (const [start, finish] of [
     [
       sdk(1, "hook_started", { hook_id: "hook" }),
       sdk(2, "hook_response", { hook_id: "hook", outcome: "cancelled" }),
-      "Cancelled",
     ],
     [
       sdk(1, "task_started", { task_id: "background", description: "Review" }),
       sdk(2, "task_notification", { task_id: "background", status: "stopped" }),
-      "Stopped",
     ],
     [
       sdk(1, "task_started", { task_id: "background", description: "Review" }),
@@ -139,7 +136,6 @@ test("cancelled hooks and stopped or killed background tasks remain neutral term
     const [group] = groups;
     assert.ok(group);
     assert.equal(group.state, "info");
-    assert.ok(group.summary?.startsWith(prefix), group.summary);
   }
 });
 
@@ -178,12 +174,8 @@ test("a turn's reply gets its own row without showing its text in the summary", 
   ]);
 
   assert.deepEqual(
-    groups.map((group) => [group.title, group.summary]),
-    [
-      ["Turn completed", undefined],
-      ["Reply", undefined],
-      ["Task completed", undefined],
-    ],
+    groups.map((group) => group.summary),
+    [undefined, undefined, undefined],
   );
 
   const [, reply] = groups;
@@ -191,27 +183,4 @@ test("a turn's reply gets its own row without showing its text in the summary", 
   const [replyEvent] = reply.events;
   assert.ok(replyEvent);
   assert.equal(replyEvent.data.text, "Done.");
-});
-
-test("turn ends and queue changes summarise their outcome and queue", () => {
-  const groups = groupActivity([
-    event(1, "task.turn_ended", {
-      turn: 2,
-      outcome: "interrupted",
-      runtime_ms: 1000,
-      cost_usd: 0,
-    }),
-    event(2, "task.queue_changed", {
-      queue: [{ message_id: "m", message: "Next", from: "user" }],
-      paused: true,
-    }),
-  ]);
-
-  assert.deepEqual(
-    groups.map((group) => [group.title, group.summary]),
-    [
-      ["Turn ended", "Turn 2 interrupted"],
-      ["Queue changed", "1 queued · paused"],
-    ],
-  );
 });

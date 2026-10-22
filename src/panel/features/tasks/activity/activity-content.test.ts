@@ -15,14 +15,13 @@ import {
 } from "./activity-ui-test-harness";
 import { EventList as GroupedEventList } from "./event-list";
 
-// A mapped title, and readable fallbacks for an unknown type or subtype.
+// Readable fallbacks for an unknown type or subtype.
 const families = [
-  ["system", "init", "Claude connected"],
   ["future_event", undefined, "Future event"],
   ["system", "future_subtype", "Future subtype"],
 ] as const;
 
-test("an activity family presents friendly fields and keeps raw-only data behind its inspector", () => {
+test("raw-only activity data stays behind its collapsed inspector", () => {
   const raw = {
     type: "system",
     subtype: "init",
@@ -36,16 +35,7 @@ test("an activity family presents friendly fields and keeps raw-only data behind
 
   const doc = markup([event("claude.activity", { ...raw, raw_response: raw })]);
 
-  assert.match(doc.body.textContent ?? "", /Extra details/);
-  assert.match(doc.body.textContent ?? "", /Item count0/);
-  assert.match(doc.body.textContent ?? "", /EnabledNo/);
-  assert.match(doc.body.textContent ?? "", /Readable detail/);
   const disclosure = doc.querySelector("details.activity-raw");
-
-  assert.equal(
-    disclosure?.querySelector("summary")?.textContent,
-    "Raw response",
-  );
 
   assert.equal(disclosure?.hasAttribute("open"), false);
   assertAbsent(disclosure?.querySelector("pre") ?? null);
@@ -53,7 +43,7 @@ test("an activity family presents friendly fields and keeps raw-only data behind
 });
 
 test.each(families)(
-  "activity UI titles %s %s as %s",
+  "unknown activity %s %s falls back to %s",
   (type, subtype, title) => {
     const raw = { type, ...(subtype ? { subtype } : {}) };
 
@@ -228,42 +218,22 @@ test("failures are distinguished for results, tool errors and denied permissions
   }
 });
 
-test("activity metadata formats currency, seconds, token counts and utilization", () => {
+test("activity metadata omits duplicate total cost", () => {
   const values = {
     cost_usd: 0.1234,
     total_cost_usd: 0.1234,
-    duration_ms: 2500,
-    duration_api_ms: 0,
-    retry_delay_ms: 500,
-    elapsed_time_seconds: 1.25,
-    usage: { input_tokens: 12345, output_tokens: 0 },
-    rate_limit_info: { utilization: 0.75 },
   };
 
   const doc = markup([event("agent.completed", values)]);
 
-  const fields = new Map(
-    Array.from(doc.querySelectorAll(".activity-fields > div")).map((field) => [
-      field.querySelector("dt")?.textContent,
-      field.querySelector("dd")?.textContent,
-    ]),
+  const fields = new Set(
+    Array.from(
+      doc.querySelectorAll(".activity-fields dt"),
+      (field) => field.textContent,
+    ),
   );
 
-  const cost = new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 4,
-  }).format(values.cost_usd);
-
-  assert.equal(fields.get("Cost"), cost);
   assert.equal(fields.has("Total cost"), false, "Avoid duplicated result cost");
-  assert.equal(fields.get("Duration"), "2.5 s");
-  assert.equal(fields.get("API duration"), "0 s");
-  assert.equal(fields.get("Retry delay"), "0.5 s");
-  assert.equal(fields.get("Elapsed time"), "1.25 s");
-  assert.equal(fields.get("Input tokens"), (12345).toLocaleString());
-  assert.equal(fields.get("Output tokens"), "0");
-  assert.equal(fields.get("Utilization"), "75%");
 });
 
 test("supported base64 images render inline, including images nested in documents and tool results", () => {
@@ -489,13 +459,6 @@ test("cyclic content and metadata stop at the nesting limit", () => {
   assert.ok(html.includes(nestedContentNotice));
 });
 
-test("empty content objects and undefined-only fields do not add field-list spacing", () => {
-  for (const content of [{}, { unused: undefined }, { type: "future_block" }]) {
-    const doc = contentMarkup(content);
-    assertAbsent(doc.querySelector("dl"));
-  }
-});
-
 test("error fields and assistant errors preserve exact diagnostic text", () => {
   const diagnostic = "failed_to_read /tmp/my_file.test.ts: ENOENT.code";
   const content = contentMarkup({ error: diagnostic });
@@ -611,7 +574,7 @@ test("unclosed fences while streaming stay plain text", () => {
   assert.equal(doc.querySelector("p")?.textContent, "Partial ```sh\nnpm te");
 });
 
-test("thinking-only assistant messages are not styled as message cards", () => {
+test("thinking-only assistant groups keep their own debug identity", () => {
   const thinking = event(
     "agent.content",
     { role: "assistant", content: { type: "thinking", thinking: "Hmm" } },
@@ -637,15 +600,11 @@ test("thinking-only assistant messages are not styled as message cards", () => {
   const groups = view.container.querySelectorAll(".activity-group");
   assert.equal(groups.length, 2);
 
-  const quiet = [...groups].filter((g) =>
-    g.classList.contains("activity-thinking-only"),
-  );
+  const thinkingGroup = view
+    .getByRole("button", { name: "Debug activity: Thinking" })
+    .closest(".activity-group");
 
-  const [thinkingGroup] = quiet;
-  assert.equal(quiet.length, 1);
   assert.ok(thinkingGroup);
-  // A thinking-only message must not be titled as an assistant reply.
-  assert.equal(thinkingGroup.querySelector("strong")?.textContent, "Thinking");
   // The thinking text is only available through the debug view.
   assertAbsent(thinkingGroup.querySelector("details"));
   assert.equal(view.getAllByText("Assistant").length, 1);

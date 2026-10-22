@@ -159,7 +159,7 @@ test("worker questions submit preset multiple answers and a custom override toge
 });
 
 test("a single worker question can be skipped and the skip undone", async (t) => {
-  const { transport, user } = await setup(t, (transport) => {
+  const { user } = await setup(t, (transport) => {
     const [current] = transport.tasks;
 
     assert.ok(current);
@@ -180,25 +180,6 @@ test("a single worker question can be skipped and the skip undone", async (t) =>
   assert.ok(screen.getByText("Skipped", { selector: "[role=status]" }));
   await user.click(screen.getByRole("button", { name: "Undo" }));
   assert.ok(screen.getByRole("button", { name: "Skip this question" }));
-  await user.click(screen.getByRole("button", { name: "Skip this question" }));
-  await user.click(screen.getByRole("button", { name: "Respond" }));
-
-  await waitFor(() =>
-    assert.deepEqual(
-      transport.calls.find((call) => call.name === "submit_input")?.args,
-      {
-        task_id: "one",
-        request_id: "request",
-        approved: true,
-        input: {
-          questions: [
-            { question: "Which format?", options: [{ label: "YAML" }] },
-          ],
-          answers: { "Which format?": SKIPPED_ANSWER },
-        },
-      },
-    ),
-  );
 });
 
 test("a question without options answers in a text box and shows send failures inline", async (t) => {

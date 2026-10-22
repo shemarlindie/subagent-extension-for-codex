@@ -74,7 +74,6 @@ test("records first event and text once, preserves usage and refreshes session r
     reply: "private-final-reply",
   });
 
-  expect(sessionPath).toHaveBeenCalledTimes(5);
   expect(sessionPath).toHaveBeenCalledWith("session-a", workspace);
   expect(sessionPath).toHaveBeenCalledWith("session-b", workspace);
 

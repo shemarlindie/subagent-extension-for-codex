@@ -202,9 +202,6 @@ export const fixtureSdkActivityTypes: readonly FixtureSdkActivityType[] = [
   ...(Object.keys(topLevelActivityDefaults) as SdkTopLevelActivity[]),
 ];
 
-export const fixtureSdkSystemActivityTypes: readonly SdkSystemActivity[] =
-  Object.keys(systemActivityDefaults) as SdkSystemActivity[];
-
 export const fixtureSdkAssistantErrorTypes: readonly SDKAssistantMessageError[] =
   Object.keys(assistantErrorDefaults) as SDKAssistantMessageError[];
 

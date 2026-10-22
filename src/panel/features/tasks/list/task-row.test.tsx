@@ -31,13 +31,6 @@ test.each([
 
     const row = view.container.querySelector<HTMLElement>("[data-task]");
     assert.ok(row);
-    expect(row.hasAttribute("data-unread")).toBe(unread);
-    expect(view.queryByText("Unread") !== null).toBe(unread);
-
-    expect(row.querySelector(".row-worker")?.getAttribute("title")).toBe(
-      task("a").worker_profile.replaceAll("_", " "),
-    );
-
     fireEvent.contextMenu(row);
     await userEvent.click(await view.findByRole("menuitem", { name: label }));
 

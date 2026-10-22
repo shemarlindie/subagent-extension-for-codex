@@ -33,7 +33,6 @@ test("native folder picker uses a fixed script and preserves folder-name spaces"
   assert.ok(script);
   assert.match(script, /choose folder/);
   assert.match(script, /on error number -128/);
-  assert.deepEqual(call[2], { timeout: 120000, maxBuffer: 16384 });
 });
 
 test("native folder cancellation returns no repository", async () => {

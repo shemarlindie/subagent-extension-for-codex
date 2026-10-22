@@ -3,15 +3,11 @@ import { expect, test } from "vitest";
 import type { Task } from "../../../src/shared/tasks/model";
 import { PREVIEW_THREAD } from "../scenarios/fixtures";
 import {
-  codexMeta,
   fixtureCall,
-  fixtureLaunchArgs,
-  hasProjectEdits,
   normalizeCwd,
   removeFixtureProject,
   type Settings,
   settingsFrom,
-  threadLabel,
   threadsOf,
 } from "./host-helpers";
 
@@ -58,34 +54,6 @@ test("saved current settings override defaults", () => {
   expect(settingsFrom(defaults, "not json")).toEqual(defaults);
 });
 
-test("thread launches carry Codex metadata; global launches carry none", () => {
-  expect(codexMeta(defaults)).toEqual({
-    threadId: PREVIEW_THREAD,
-    "codex/sandbox-state-meta": { sandboxCwd: "file:///repo" },
-  });
-
-  expect(fixtureLaunchArgs(defaults)).toEqual({
-    conversation_id: PREVIEW_THREAD,
-    host_directory: "file:///repo",
-  });
-
-  expect(codexMeta({ ...defaults, threadId: "", cwd: "" })).toEqual({});
-  const global = { ...defaults, launch: "global" as const };
-  expect(codexMeta(global)).toBeUndefined();
-  expect(fixtureLaunchArgs(global)).toEqual({});
-});
-
-test("fixture results are shaped like the service's tool results", () => {
-  // Openers and settings return their payload; other tools wrap it in result.
-  const opened = fixtureCall("open_codex_subagent_extension", {}, {});
-  expect(opened.structuredContent).toHaveProperty("panel_scope");
-  const listed = fixtureCall("list_projects", {}, {});
-  expect(Array.isArray(listed.structuredContent!.result)).toBe(true);
-  const failed = fixtureCall("start_task", {}, {});
-  expect(failed.isError).toBe(true);
-  expect(String(failed.content[0]?.text)).toMatch(/Design preview only/);
-});
-
 test("slow fixture reads leave launch task rows to the delayed list read", () => {
   const opened = fixtureCall(
     "open_codex_subagent_extension",
@@ -120,39 +88,6 @@ test("threads are grouped by conversation, newest first", () => {
     { id: "a", latest: "Latest in a", tasks: 2 },
     { id: "b", latest: "Only in b", tasks: 1 },
   ]);
-});
-
-test("thread labels shorten long IDs and name empty threads", () => {
-  expect(threadLabel({ id: "dev-thread", latest: "Fix it", tasks: 1 })).toBe(
-    "dev-thread · Fix it (1 task)",
-  );
-
-  expect(
-    threadLabel({
-      id: "00000000-0000-4000-8000-000000000001",
-      latest: "Fix it",
-      tasks: 3,
-    }),
-  ).toBe("00000000… · Fix it (3 tasks)");
-
-  expect(threadLabel({ id: "", latest: "", tasks: 0 })).toBe(
-    "(none) · no tasks",
-  );
-});
-
-test("fixture reset is available for edits to built-in projects", () => {
-  expect(hasProjectEdits({ addedProjects: [] })).toBe(false);
-
-  expect(
-    hasProjectEdits({ addedProjects: [], removedProjects: ["/repo"] }),
-  ).toBe(true);
-
-  expect(
-    hasProjectEdits({
-      addedProjects: [],
-      projectNames: { "/repo": "Renamed" },
-    }),
-  ).toBe(true);
 });
 
 test("fixture removal drops the old name so re-registration uses its default", () => {

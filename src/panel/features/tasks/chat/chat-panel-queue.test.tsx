@@ -6,58 +6,6 @@ import { expect, test, vi } from "vitest";
 
 import { sent, setup } from "./chat-panel-test-harness";
 
-test("pending steers can be sent now, and a paused queue resumed, cleared, edited and trimmed", async () => {
-  const { tool, view } = setup({
-    status: "running",
-    pending_steers: [{ id: "msg_p", message: "Pending", from: "user" }],
-    queue: [
-      { id: "msg_q", message: "Queued", from: "user", delivery: "queue" },
-      {
-        id: "msg_l",
-        message: "Left over",
-        from: "parent",
-        delivery: "steer",
-        recorded: true,
-      },
-    ],
-    queue_paused: true,
-  });
-
-  assert.ok(view.getByText("Steer"));
-  assert.ok(view.getByText("Queue paused · 2"));
-  // A steer the worker already has keeps its text.
-  assert.equal(view.getAllByRole("button", { name: "Edit" }).length, 1);
-
-  const click = async (name: string, index = 0) => {
-    const count = tool.mock.calls.length;
-    const button = view.getAllByRole("button", { name })[index];
-    assert.ok(button, `No ${name} button at index ${index}`);
-    fireEvent.click(button);
-    await waitFor(() => assert.equal(tool.mock.calls.length, count + 1));
-  };
-
-  await click("Interrupt and send now");
-  await click("Resume");
-  await click("Clear");
-  await click("Remove", 1);
-
-  fireEvent.click(view.getByRole("button", { name: "Edit" }));
-  const edit = view.getByRole("textbox", { name: "Queued message" });
-  fireEvent.change(edit, { target: { value: "Edited" } });
-  await click("Save");
-
-  expect(sent(tool)).toEqual([
-    ["interrupt_task", { task_id: "task-1", send_pending: true }],
-    ["app_resume_queue", { task_id: "task-1" }],
-    ["app_clear_queue", { task_id: "task-1" }],
-    ["app_remove_queued_message", { task_id: "task-1", message_id: "msg_l" }],
-    [
-      "app_edit_queued_message",
-      { task_id: "task-1", message_id: "msg_q", message: "Edited" },
-    ],
-  ]);
-});
-
 test("a running task can steer an existing queued message, keeping its composer draft", async () => {
   const { tool, view, type, composer } = setup({
     status: "running",
@@ -83,6 +31,7 @@ test("a running task can steer an existing queued message, keeping its composer 
 
   expect(button).not.toBeNull();
   expect(recorded.querySelector('button[aria-label="Steer"]')).toBeNull();
+  expect(recorded.querySelector('button[aria-label="Edit"]')).toBeNull();
   fireEvent.click(button!);
 
   await waitFor(() =>

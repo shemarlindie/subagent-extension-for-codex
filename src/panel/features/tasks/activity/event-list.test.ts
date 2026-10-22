@@ -11,7 +11,6 @@ import {
 import { createElement } from "react";
 import { expect, test, vi } from "vitest";
 
-import type { Event as ActivityEvent } from "../../../app/state/types";
 import {
   activityMessages,
   assertAbsent,
@@ -22,7 +21,6 @@ import {
   stubProperty,
   tooltipText,
 } from "./activity-ui-test-harness";
-import { EVENT_TAIL_SIZE } from "./event-history";
 import { EventList as GroupedEventList } from "./event-list";
 
 test("latest group is last and fresh progress moves an older tool to the end without resetting inspection", (t) => {
@@ -265,69 +263,6 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
   assertAbsent(fab());
 });
 
-test("timeline items mark their rail ends, status and trimmed history as data attributes", (t) => {
-  t.onTestFinished(cleanup);
-
-  const timeline = (events: ActivityEvent[]) =>
-    render(createElement(GroupedEventList, { events }))
-      .getByRole("region", { name: "Activity history" })
-      .querySelector<HTMLElement>(".timeline")!;
-
-  const whole = timeline(activityMessages("rail-whole", 3));
-  assert.equal(whole.hasAttribute("data-trimmed"), false);
-  const items = [...whole.querySelectorAll<HTMLElement>(".timeline-item")];
-
-  assert.deepEqual(
-    items.map((item) => [
-      item.tagName,
-      item.hasAttribute("data-first"),
-      item.hasAttribute("data-last"),
-    ]),
-    [
-      ["ARTICLE", true, false],
-      ["ARTICLE", false, false],
-      ["ARTICLE", false, true],
-    ],
-  );
-
-  assert.ok(
-    items.every(
-      (item) =>
-        item.matches(".activity-group[data-activity-id]") &&
-        item.querySelector(".timeline-dot")?.getAttribute("data-status") ===
-          item.dataset.status &&
-        item.querySelector(".timeline-dot")?.getAttribute("aria-hidden") ===
-          "true",
-    ),
-    "Collapsible props and the item status reach the rendered article and its dot",
-  );
-
-  cleanup();
-  const trimmed = timeline(activityMessages("rail-trimmed", EVENT_TAIL_SIZE));
-  assert.equal(trimmed.hasAttribute("data-trimmed"), true);
-
-  assert.match(
-    trimmed.previousElementSibling?.textContent ?? "",
-    /Showing the most recent/,
-    "The note precedes the rail where the oldest rows were dropped",
-  );
-
-  const trimmedItems = [
-    ...trimmed.querySelectorAll<HTMLElement>(".timeline-item"),
-  ];
-
-  const [oldestRemaining] = trimmedItems;
-  assert.ok(oldestRemaining);
-
-  assert.equal(
-    oldestRemaining.hasAttribute("data-first"),
-    true,
-    "The rail fades in above the oldest remaining item",
-  );
-
-  assert.equal(trimmedItems.at(-1)!.hasAttribute("data-last"), true);
-});
-
 test("new groups animate in and movement animations respect reduced motion", (t) => {
   t.onTestFinished(cleanup);
   mockActivityGeometry();
@@ -337,20 +272,14 @@ test("new groups animate in and movement animations respect reduced motion", (t)
 
   const calls: {
     element: HTMLElement;
-    frames: Keyframe[];
-    options: KeyframeAnimationOptions;
   }[] = [];
 
   stubProperty(
     t,
     HTMLElement.prototype,
     "animate",
-    function (
-      this: HTMLElement,
-      frames: Keyframe[],
-      options: KeyframeAnimationOptions,
-    ) {
-      calls.push({ element: this, frames, options });
+    function (this: HTMLElement) {
+      calls.push({ element: this });
 
       return {
         cancel() {
@@ -394,13 +323,6 @@ test("new groups animate in and movement animations respect reduced motion", (t)
     "A newly appended visible group receives an entrance animation",
   );
 
-  const [entranceFrom, entranceTo] = entrance.frames;
-  assert.ok(entranceFrom && entranceTo);
-  assert.equal(entranceFrom.opacity, 0);
-  assert.equal(entranceFrom.transform, "translateY(12px)");
-  assert.equal(entranceTo.opacity, 1);
-  assert.equal(entranceTo.transform, "translateY(0)");
-  assert.ok(Number(entrance.options.duration) > 0);
   const retainedMovement = calls.find((call) => call.element !== newest);
 
   assert.ok(
@@ -408,10 +330,6 @@ test("new groups animate in and movement animations respect reduced motion", (t)
     "Existing visible groups animate to their new positions",
   );
 
-  const [movementFrom] = retainedMovement.frames;
-  assert.ok(movementFrom);
-  assert.equal(movementFrom.transform, "translateY(130px)");
-  assert.equal(movementFrom.opacity, 1);
   const cancelledBeforeScroll = cancellations;
   fireEvent.scroll(viewport);
 

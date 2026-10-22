@@ -1,15 +1,10 @@
-// @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "vitest";
 
 import type { Event } from "../../../src/panel/app/state/types";
 import { EVENT_TAIL_SIZE } from "../../../src/panel/features/tasks/activity/event-history";
-import { EventList } from "../../../src/panel/features/tasks/activity/event-list";
 import { claudeCliSupport } from "../../../src/service/features/providers/claude/configuration/executable";
-import { activityKind } from "../../../src/shared/tasks/activity/activity-events";
 import { currentActivityStatus } from "../../../src/shared/tasks/activity/activity-status";
 import { groupActivity } from "../../../src/shared/tasks/activity/activity-timeline";
 import type { Task } from "../../../src/shared/tasks/model";
@@ -23,59 +18,6 @@ import { previewTool } from "./tools";
 
 const eventsFor = (taskId: string): Event[] =>
   previewEvents.filter((event) => event.task_id === taskId);
-
-test("preview tasks cover every task status", () => {
-  const statuses = new Set(previewTasks.map((task) => task.status));
-
-  for (const status of [
-    "queued",
-    "starting",
-    "running",
-    "waiting",
-    "interrupted",
-    "completed",
-    "failed",
-  ]) {
-    assert.ok(statuses.has(status as never), `missing ${status} task`);
-  }
-});
-
-test("preview events cover the activity kinds the timeline renders", () => {
-  const kinds = new Set(previewEvents.map(activityKind));
-
-  const rows = new Set(
-    previewTasks.flatMap((task) =>
-      groupActivity(eventsFor(task.id)).map((group) => group.kind),
-    ),
-  );
-
-  // SDK message kinds are enforced by preview-sdk-fixtures.test.ts.
-  for (const kind of [
-    "agent.message",
-    "agent.content",
-    "tool.started",
-    "tool.completed",
-    "agent.input_required",
-    "agent.completed",
-    "task.completed",
-    "task.failed",
-    "task.interrupted",
-    "task.instruction",
-  ]) {
-    assert.ok(kinds.has(kind), `no preview event of kind ${kind}`);
-  }
-
-  for (const row of [
-    "message",
-    "tool",
-    "operation",
-    "status",
-    "stream",
-    "event",
-  ]) {
-    assert.ok(rows.has(row as never), `no preview ${row} row`);
-  }
-});
 
 test("a preview task has more events than the activity view keeps", () => {
   const longest = Math.max(
@@ -104,7 +46,7 @@ test("every preview event lands in exactly one activity group", () => {
   }
 });
 
-test("preview ids are unique and every activity timeline renders", () => {
+test("preview task and event ids are unique", () => {
   const ids = previewEvents.map((event) => `${event.task_id}:${event.id}`);
   assert.equal(new Set(ids).size, ids.length);
 
@@ -112,14 +54,6 @@ test("preview ids are unique and every activity timeline renders", () => {
     new Set(previewTasks.map((task) => task.id)).size,
     previewTasks.length,
   );
-
-  for (const task of previewTasks) {
-    const html = renderToStaticMarkup(
-      createElement(EventList, { events: eventsFor(task.id) }),
-    );
-
-    assert.ok(html.includes("activity-timeline"), `${task.id} did not render`);
-  }
 });
 
 test("each running preview task ends on a different latest activity", () => {

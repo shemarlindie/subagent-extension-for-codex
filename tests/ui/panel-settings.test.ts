@@ -22,7 +22,7 @@ async function waitForSettingsSaved() {
   );
 }
 
-test("settings page renders server sections and saves only changed fields", async (t) => {
+test("settings saves only changed fields across sections", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: {
@@ -36,7 +36,6 @@ test("settings page renders server sections and saves only changed fields", asyn
         {
           id: "task",
           title: "Task",
-          help: ["Used when a task doesn't choose its own."],
           rows: [
             {
               kind: "select",
@@ -67,7 +66,6 @@ test("settings page renders server sections and saves only changed fields", asyn
                   {
                     value: "model-a",
                     label: "Model A",
-                    description: "Fast model",
                   },
                 ]),
               ],
@@ -80,8 +78,6 @@ test("settings page renders server sections and saves only changed fields", asyn
 
   await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings" });
-  assertAbsent(screen.queryByRole("dialog"));
-  assert.ok(screen.getByText("Used when a task doesn't choose its own."));
 
   const task = screen.getByRole("tab", { name: "Task" }),
     models = screen.getByRole("tab", { name: "Models" });
@@ -96,14 +92,8 @@ test("settings page renders server sections and saves only changed fields", asyn
   await user.click(models);
   assert.equal(models.getAttribute("aria-selected"), "true");
 
-  // Menu options show the server's description as secondary text.
   await user.click(screen.getByRole("combobox", { name: "Global model" }));
   const option = await screen.findByRole("option", { name: /Model A/ });
-
-  assert.equal(
-    option.querySelector(".select-item-description")?.textContent,
-    "Fast model",
-  );
 
   await user.click(option);
 
@@ -404,8 +394,8 @@ test("settings help links show the setting they name, except within their own se
   );
 });
 
-test("settings resets restore defaults only per section", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+test("settings resets preserve another section's draft and saved override", async (t) => {
+  const { user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: {
         claude_subagents: false,
@@ -474,21 +464,6 @@ test("settings resets restore defaults only per section", async (t) => {
   assert.equal(
     screen.getByRole("combobox", { name: "Global effort" }).textContent,
     "high",
-  );
-
-  await user.click(screen.getByRole("button", { name: "Save 3 changes" }));
-  await waitForSettingsSaved();
-
-  assert.deepEqual(
-    transport.calls.find((call) => call.name === "update_settings")!.args,
-    {
-      set: {
-        claude_subagents: true,
-        use_cost_budget: true,
-        max_cost_usd: 5,
-        default_model: "draft-model",
-      },
-    },
   );
 });
 

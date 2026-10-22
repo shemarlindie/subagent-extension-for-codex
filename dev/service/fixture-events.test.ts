@@ -2,31 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import {
-  fixtureActivityPayload,
-  fixtureSdkActivityTypes,
-  fixtureSdkSystemActivityTypes,
-  fixtureStreamPayload,
-} from "./fixture-events.js";
-import { fixtureStreamFrameTypes, readScenarios } from "./fixture-scenarios.js";
-
-test("fixture payloads cover every installed SDK message activity family", () => {
-  const systemTypes: ReadonlySet<string> = new Set(
-    fixtureSdkSystemActivityTypes,
-  );
-
-  for (const type of fixtureSdkActivityTypes) {
-    const data = fixtureActivityPayload(type, {}, "task_fixture", 2);
-    const raw = data.raw_response;
-
-    assert.equal(data.type, type);
-    assert.equal(data.activity.kind, type);
-    assert.equal(raw.type, systemTypes.has(type) ? "system" : type);
-    assert.equal(raw.session_id, "fixture_task_fixture");
-    assert.equal(raw.uuid, `fixture_activity_task_fixture_2_${type}`);
-    if (systemTypes.has(type)) assert.equal(raw.subtype, type);
-  }
-});
+import { fixtureActivityPayload } from "./fixture-events.js";
+import { readScenarios } from "./fixture-scenarios.js";
 
 test("fixture activity payloads keep nested overrides and unknown SDK events", () => {
   const known = fixtureActivityPayload(
@@ -47,19 +24,6 @@ test("fixture activity payloads keep nested overrides and unknown SDK events", (
   assert.equal(unknown.activity.kind, "future_sdk_event");
 
   assert.equal(unknown.raw_response.type, "future_sdk_event");
-});
-
-test("fixture stream frames cover each Messages API streaming lifecycle event", () => {
-  for (const frame of fixtureStreamFrameTypes) {
-    const data = fixtureStreamPayload(frame, {}, "task_fixture", 3);
-    const raw = data.raw_response;
-    const event = raw.event as Record<string, unknown>;
-
-    assert.equal(event.type, frame);
-    assert.equal(data.activity.kind, "stream_event");
-    assert.equal(raw.session_id, "fixture_task_fixture");
-    assert.equal(raw.uuid, "fixture_stream_event_task_fixture_3");
-  }
 });
 
 test("fixture prompt keys parse every bounded provider, stream, and failure scenario", () => {

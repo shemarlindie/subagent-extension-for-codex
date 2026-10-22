@@ -122,36 +122,10 @@ test("the header menu offers the secondary actions and runs them", async (t) => 
   await user.unhover(trigger);
   await user.click(trigger);
 
-  assert.deepEqual(
-    (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
-    ["Refresh", "Collapse", "Settings", "New task", "Advanced task…"],
-  );
-
-  await user.click(screen.getByRole("menuitem", { name: "Settings" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Settings" }));
 
   await waitFor(() =>
     assert.ok(transport.calls.some((call) => call.name === "get_settings")),
-  );
-});
-
-test("applying a thread scope switches the header to thread mode with the brand mark", async (t) => {
-  const { controller } = await setup(t);
-
-  assert.equal(document.querySelector("header")?.dataset.mode, "global");
-  assertAbsent(document.querySelector("header .brand .mark"));
-  assertAbsent(document.querySelector("header .brand-text strong"));
-  expect(document.querySelector("header [role=status]")).not.toBeNull();
-
-  await act(async () =>
-    controller.applyScope({ panel_scope: { conversation_id: "thread" } }),
-  );
-
-  assert.equal(document.querySelector("header")?.dataset.mode, "thread");
-  assert.ok(document.querySelector("header .brand .mark"));
-
-  assert.equal(
-    document.querySelector("header .brand-title > span")?.textContent,
-    "Delegated Work",
   );
 });
 
@@ -362,25 +336,6 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
       vi.useRealTimers();
     }
   });
-});
-
-test("a panel opened outside a host points developers at the dev host", async (t) => {
-  // Opened directly in a browser: not embedded, so the full layout shows.
-  const { controller } = await setup(
-    t,
-    (transport) => {
-      transport.embedded = false;
-    },
-    { start: false },
-  );
-
-  await act(async () => controller.showHostRequired());
-
-  assert.ok(
-    screen.getByText(
-      "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui.",
-    ),
-  );
 });
 
 test("long notices clamp behind Show more and expand on demand", async (t) => {

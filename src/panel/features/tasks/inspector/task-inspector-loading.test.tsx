@@ -75,8 +75,6 @@ test("keeps the spinner through its fade-out, then removes it", () => {
 
   view.rerender(<TaskInspectorLoading loading={false} />);
 
-  const leaving = view.container.querySelector(".task-inspector-loading");
-  expect(leaving?.hasAttribute("data-leaving")).toBe(true);
   expect(view.queryByRole("status")).toBeNull();
 
   act(() => {

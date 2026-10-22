@@ -4,7 +4,7 @@ import { test } from "vitest";
 
 import { generateTaskTitle } from "./task-title.js";
 
-test("generated titles summarize the first request line and normalize whitespace", () => {
+test("generated titles normalize whitespace and respect sentence punctuation", () => {
   assert.equal(
     generateTaskTitle(
       " \n\t Review   authentication. Follow up on authorization.\nKeep all evidence.",

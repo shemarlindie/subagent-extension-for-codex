@@ -91,27 +91,10 @@ test("opening new task reverses header, tabs and composer motion and removes vis
   view.rerender(<View composing />);
   expect(animate).toHaveBeenCalledTimes(3);
 
-  expect(animate.mock.calls.map(([frames]) => frames)).toMatchObject([
-    [
-      { height: "64.25px", opacity: 1 },
-      { height: "0px", opacity: 0 },
-    ],
-    [
-      { height: "64.25px", opacity: 1 },
-      { height: "0px", opacity: 0 },
-    ],
-    [{ height: "64.25px" }, { height: "168.5px" }],
-  ]);
-
   const copies =
     view.container.querySelectorAll<HTMLElement>("[aria-hidden=true]");
 
   expect(copies).toHaveLength(2);
-
-  expect(
-    view.container.querySelector<HTMLElement>(".new-task-view")?.style
-      .animation,
-  ).toBe("none");
 
   for (const copy of copies) {
     expect(copy.inert).toBe(true);

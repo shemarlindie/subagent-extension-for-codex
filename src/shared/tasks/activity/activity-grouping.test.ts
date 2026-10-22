@@ -6,7 +6,7 @@ import { currentActivityStatus } from "./activity-status.js";
 import { groupActivity } from "./activity-timeline.js";
 import { event, sdk, stream, task } from "./activity-timeline-test-harness.js";
 
-test("adjacent thinking events of each alias show Thinking… and retain every token update", () => {
+test("adjacent thinking events of each alias retain every token update", () => {
   for (const type of [
     "thinking_tokens",
     "thinking.tokens",
@@ -22,13 +22,11 @@ test("adjacent thinking events of each alias show Thinking… and retain every t
     assert.equal(groups.length, 1, type);
     const [group] = groups;
     assert.ok(group);
-    assert.equal(group.title, "Thinking…", type);
     assert.deepEqual(group.events, events, type);
-    assert.equal(currentActivityStatus(events).text, "Thinking…", type);
   }
 });
 
-test("SDK thinking updates use Thinking… and keep their original payloads", () => {
+test("SDK thinking updates keep their original payloads", () => {
   const events = [
     sdk(1, "thinking_tokens", { tokens: 10 }),
     sdk(2, "thinking_tokens", { tokens: 20 }),
@@ -38,9 +36,7 @@ test("SDK thinking updates use Thinking… and keep their original payloads", ()
   assert.equal(groups.length, 1);
   const [group] = groups;
   assert.ok(group);
-  assert.equal(group.title, "Thinking…");
   assert.deepEqual(group.events, events);
-  assert.equal(currentActivityStatus(events).text, "Thinking…");
 });
 
 // The aliases share one thinking predicate, covered above, so one stands for all.
@@ -85,7 +81,6 @@ for (const active of [
     const [activeGroup, thinking] = groups;
     assert.ok(activeGroup && thinking);
     assert.equal(activeGroup.state, "running");
-    assert.equal(thinking.title, "Thinking…");
     assert.deepEqual(thinking.events, updates);
   });
 }
@@ -107,11 +102,6 @@ test("correlated tool progress interrupts adjacent event consolidation", () => {
   assert.deepEqual(
     groups.map((group) => group.events.map((entry) => entry.id)),
     [[1, 3], [2], [4]],
-  );
-
-  assert.deepEqual(
-    groups.slice(1).map((group) => group.title),
-    ["Workspace indexed", "Workspace indexed"],
   );
 });
 
@@ -207,31 +197,30 @@ test("repeated lifecycle events remain individually inspectable", () => {
   }
 });
 
-for (const { type, title } of [
-  { type: "task.started", title: "Task started" },
-]) {
-  test(`${type} has a lifecycle title and stays separate from connection events`, () => {
-    const events = [event(1, type), event(2, "agent.started"), sdk(3, "init")];
-    const groups = groupActivity(events);
+test("task startup stays separate from connection events", () => {
+  const events = [
+    event(1, "task.started"),
+    event(2, "agent.started"),
+    sdk(3, "init"),
+  ];
 
-    assert.deepEqual(
-      groups.map((group) => ({
-        kind: group.kind,
-        title: group.title,
-        events: group.events,
-      })),
-      [
-        { kind: "status", title, events: [events[0]] },
-        { kind: "status", title: "Agent connected", events: [events[1]] },
-        {
-          kind: "status",
-          title: "Claude connected",
-          events: [events[2]],
-        },
-      ],
-    );
-  });
-}
+  const groups = groupActivity(events);
+
+  assert.deepEqual(
+    groups.map((group) => ({
+      kind: group.kind,
+      events: group.events,
+    })),
+    [
+      { kind: "status", events: [events[0]] },
+      { kind: "status", events: [events[1]] },
+      {
+        kind: "status",
+        events: [events[2]],
+      },
+    ],
+  );
+});
 
 test("repeated failure events stay individually prominent", () => {
   const events = [

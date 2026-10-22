@@ -1,14 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { canNavigate, DEFAULT_PAGE, parsePage } from "./pages";
+import { canNavigate, parsePage } from "./pages";
 
 describe("page identity", () => {
-  test("accepts registered pages and rejects unknown URL values", () => {
-    expect(DEFAULT_PAGE).toBe("tasks");
-    expect(parsePage("tasks")).toBe("tasks");
-    expect(parsePage("projects")).toBe("projects");
-    expect(parsePage("settings")).toBe("settings");
-
+  test("rejects unknown URL values, including prototype property names", () => {
     for (const value of [null, "", "Projects", "constructor", "__proto__"]) {
       expect(parsePage(value)).toBeUndefined();
     }

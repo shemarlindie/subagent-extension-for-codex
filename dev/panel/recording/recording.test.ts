@@ -145,7 +145,6 @@ test("a recording is renumbered, moved to its start and owned by the preview", (
     {
       id: recorded.task.id,
       owner: recorded.task.owner,
-      title: recorded.task.title,
       conversation_id: recorded.task.conversation_id,
       repository: recorded.task.repository,
       workspace: recorded.task.workspace,
@@ -156,7 +155,6 @@ test("a recording is renumbered, moved to its start and owned by the preview", (
     {
       id: "preview-recorded-test",
       owner: "preview",
-      title: "Recorded: a test",
       conversation_id: "dev-thread",
       repository: "/demo/project",
       workspace: undefined,

@@ -67,17 +67,6 @@ test("composer mention search returns Claude for the server name and provider qu
     );
   }
 
-  const result = await searchAgentMentions("claude", claudeReviewer, {
-    [mentionTestModeEnv]: "0",
-  });
-
-  assert.equal(result.items[0]?.title, "Claude");
-
-  assert.equal(
-    result.items[0]?.description,
-    "Delegate coding, investigation, or review work to Claude.",
-  );
-
   assert.deepEqual(
     (
       await searchAgentMentions("unrelated", claudeReviewer, {

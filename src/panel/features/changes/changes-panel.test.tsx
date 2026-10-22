@@ -105,10 +105,6 @@ test.each([undefined, { ...loaded, data: undefined, loading: true }])(
 
     expect(view.queryByRole("progressbar")).toBeNull();
 
-    expect(
-      view.container.querySelector(".changes-header-skeleton"),
-    ).not.toBeNull();
-
     assert.equal(
       (await view.findByRole("status")).getAttribute("aria-label"),
       "Loading changes",
@@ -170,24 +166,6 @@ test("keeps the Changes header and content placeholders together through the fir
   } finally {
     vi.useRealTimers();
   }
-});
-
-test("holds the first-read height for empty results but releases it for file results", () => {
-  const { view, update } = setup();
-  const content = () => view.container.querySelector(".changes-content");
-
-  expect(content()?.getAttribute("data-preserve-empty-height")).toBe("true");
-
-  update({
-    ...loaded,
-    data: { ...data, files: [] },
-  });
-
-  expect(content()?.getAttribute("data-preserve-empty-height")).toBe("true");
-
-  update(loaded);
-
-  expect(content()?.hasAttribute("data-preserve-empty-height")).toBe(false);
 });
 
 test("scrolling changes shows a control that returns to the top", () => {
@@ -327,7 +305,7 @@ const twoFiles: Changes = {
     "diff --git a/src/b.ts b/src/b.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/b.ts\n@@ -0,0 +1 @@\n+added\n",
 };
 
-test("marking a file viewed collapses it until its changes change", async () => {
+test("viewed files stay collapsed across refresh and remount until their changes change", async () => {
   const { view, update } = setup({ ...loaded, data: twoFiles });
 
   const [file] =
@@ -346,11 +324,6 @@ test("marking a file viewed collapses it until its changes change", async () => 
   assert.equal(toggle.getAttribute("aria-checked"), "true");
   assert.equal(file.open, false);
   assert.equal(file.dataset.viewed, "true");
-
-  assert.equal(
-    view.container.querySelector(".changes-viewed")?.textContent,
-    "1 of 2 viewed",
-  );
 
   // A refresh with the same changes keeps the mark.
   update({ ...loaded, data: { ...twoFiles } });

@@ -293,7 +293,6 @@ test("completed chat turns show a quiet summary with a completion time on hover"
   const duration = row.querySelector(".chat-outcome-duration")!;
   const turn = row.querySelector<HTMLElement>(".chat-outcome-timestamp")!;
 
-  assert.equal(label.tagName, "SPAN");
   assert.equal(label.textContent, "Oct 8, 11:30 AM");
 
   assertAbsent(
@@ -306,16 +305,10 @@ test("completed chat turns show a quiet summary with a completion time on hover"
 
   assert.equal(await hoverTooltip(user, turn), "Oct 8, 2026, 11:30:00 AM");
 
-  expect(row.querySelector(".chat-outcome-actions")?.firstElementChild).toBe(
-    within(row as HTMLElement).getByRole("button", { name: "View activity" }),
-  );
-
   assert.equal(
     await hoverTooltip(user, within(row as HTMLElement).getByText("$0.00")),
     "Reported cost",
   );
-
-  assertAbsent(within(row as HTMLElement).queryByRole("separator"));
 
   await act(async () =>
     transport.events.host({

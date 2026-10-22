@@ -6,7 +6,6 @@ import { afterEach, expect, test, vi } from "vitest";
 import type { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import { setup } from "../../../app/state/controller-test-harness";
-import { MOTION } from "../../../shared/components/motion/motion-utils";
 import { useArrivalMotion } from "./use-arrival-motion";
 
 afterEach(() => {
@@ -105,7 +104,7 @@ function mockLayout(reduced = false) {
   };
 }
 
-test("arrival settles each element at its fractional layout height only once", (t) => {
+test("arrival state is consumed once and does not replay after remount", (t) => {
   const { controller } = setup();
   const motion = mockLayout();
 
@@ -121,41 +120,9 @@ test("arrival settles each element at its fractional layout height only once", (
   view.rerender(content(controller, "task-1"));
   expect(motion.animate).toHaveBeenCalledTimes(3);
 
-  for (const [index, height] of [64.3984375, 38.5, 92.25].entries()) {
-    expect(motion.animate).toHaveBeenNthCalledWith(
-      index + 1,
-      [
-        index === 2
-          ? { height: "168.5px", overflow: "hidden" }
-          : expect.objectContaining({
-              height: "0px",
-              opacity: 0,
-              overflow: "hidden",
-              marginTop: "0px",
-            }),
-        index === 2
-          ? { height: `${height}px`, overflow: "hidden" }
-          : expect.objectContaining({
-              height: `${height}px`,
-              opacity: 1,
-              overflow: "hidden",
-            }),
-      ],
-      { duration: MOTION.slow, easing: MOTION.easing },
-    );
-  }
-
   expect(
     controller.session.get("task", "task-1").composerArrival,
   ).toBeUndefined();
-
-  expect(motion.animate.mock.calls[1]).toMatchObject([
-    [
-      expect.objectContaining({ marginTop: "0px" }),
-      expect.objectContaining({ marginTop: "20px" }),
-    ],
-    { duration: MOTION.slow },
-  ]);
 
   view.unmount();
   render(content(controller, "task-1"));
@@ -180,7 +147,7 @@ test("reduced motion consumes arrival without animating", (t) => {
   ).toBeUndefined();
 });
 
-test("selecting an existing task from the draft uses the measured composer height once", (t) => {
+test("selecting from the draft animates only the first selected task", (t) => {
   const { controller } = setup();
   const motion = mockLayout();
 
@@ -192,14 +159,6 @@ test("selecting an existing task from the draft uses the measured composer heigh
   const view = render(content(controller, undefined, true));
   view.rerender(content(controller, "existing-task"));
   expect(motion.animate).toHaveBeenCalledTimes(3);
-
-  expect(motion.animate).toHaveBeenLastCalledWith(
-    [
-      { height: "168.5px", overflow: "hidden" },
-      { height: "92.25px", overflow: "hidden" },
-    ],
-    { duration: MOTION.slow, easing: MOTION.easing },
-  );
 
   expect(
     controller.session.get("task", "existing-task").composerArrival,

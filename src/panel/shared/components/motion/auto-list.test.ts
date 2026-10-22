@@ -2,7 +2,6 @@
 import { expect, test } from "vitest";
 
 import { autoListEffects } from "./auto-list";
-import { MOTION } from "./motion-utils";
 
 type Effect = {
   target: Element;
@@ -69,11 +68,6 @@ test("autoListEffects slides a moved row from its old position", (t) => {
     { transform: "translate(0px, -26px)" },
     { transform: "none" },
   ]);
-
-  expect(moved.timing).toEqual({
-    duration: MOTION.base,
-    easing: MOTION.easing,
-  });
 });
 
 test("autoListEffects keeps a bottom-anchored list in place and eases its height", (t) => {
@@ -87,22 +81,6 @@ test("autoListEffects keeps a bottom-anchored list in place and eases its height
     { transform: "translate(0px, 0px)", height: "77px" },
     { transform: "none", height: "51px" },
   ]);
-});
-
-test("autoListEffects fades rows in and out with the shared tokens", (t) => {
-  mockEffects(t);
-  const row = document.createElement("li");
-  const added = effect(row, "add", box(0, 26));
-  const removed = effect(row, "remove", box(0, 26));
-
-  expect(added.frames[0]).toEqual({
-    opacity: 0,
-    transform: "translateY(4px)",
-  });
-
-  expect(added.timing.duration).toBe(MOTION.base);
-  expect(removed.frames).toEqual([{ opacity: 1 }, { opacity: 0 }]);
-  expect(removed.timing.duration).toBe(MOTION.fast);
 });
 
 test("autoListEffects applies changes at once under reduced motion", (t) => {

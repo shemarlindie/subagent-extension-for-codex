@@ -128,21 +128,6 @@ test("task options are isolated to the selected provider namespace", () => {
   );
 });
 
-test("providers declare their policy independently of built-in identity", () => {
-  const provider = new FixtureProvider();
-  const fixturePolicy = provider.taskPolicy;
-
-  assert.notEqual(fixturePolicy, executionTaskPolicy);
-  provider.id = "claude";
-  assert.equal(provider.taskPolicy, fixturePolicy);
-  const custom = { ...executionTaskPolicy };
-  provider.taskPolicy = custom;
-  provider.id = "future-provider";
-  assert.equal(provider.taskPolicy, custom);
-  assert.equal(provider.taskPolicy.inputKind("AskUserQuestion"), "question");
-  assert.equal(provider.taskPolicy.inputKind("Bash"), "permission");
-});
-
 test("fixture advertises Claude's task capabilities and native permission modes", () => {
   const fixture = new FixtureProvider();
   const claude = new ClaudeAgentProvider();

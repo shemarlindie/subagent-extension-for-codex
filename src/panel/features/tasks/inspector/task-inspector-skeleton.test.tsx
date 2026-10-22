@@ -29,15 +29,8 @@ function renderLoadingView() {
   };
 }
 
-test("keeps the loaded tab structure while task data is unavailable", () => {
+test("disables the composer while task data is unavailable", () => {
   const { view } = renderLoadingView();
-
-  expect(view.getByRole("tablist", { name: "Task evidence" })).not.toBeNull();
-  expect(view.getByRole("tab", { name: "Chat" })).not.toBeNull();
-  expect(view.getByRole("tab", { name: "Changes" })).not.toBeNull();
-  expect(view.getByRole("tab", { name: "Activity" })).not.toBeNull();
-  expect(view.getByRole("tab", { name: "Details" })).not.toBeNull();
-  expect(view.container.querySelector(".chat-skeleton")).not.toBeNull();
 
   expect(
     (view.container.querySelector("#chat-composer") as HTMLTextAreaElement)

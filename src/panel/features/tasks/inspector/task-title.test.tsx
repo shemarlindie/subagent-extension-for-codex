@@ -63,7 +63,7 @@ function setup() {
   return { controller, tool, refresh, back, view, input };
 }
 
-test("inline title saves trimmed text through the rename tool before refreshing", async (t) => {
+test("inline title trims whitespace and waits for rename before refreshing", async (t) => {
   const { controller, tool, refresh, back, view, input } = setup();
   t.onTestFinished(() => controller.dispose());
   fireEvent.change(input, { target: { value: "  Updated title  " } });
@@ -82,7 +82,6 @@ test("inline title saves trimmed text through the rename tool before refreshing"
   assert.ok(renameOrder < refreshOrder);
 
   assert.equal(back.mock.calls.length, 0);
-  assert.equal(task.description, "Review the full authentication workflow.");
 });
 
 test("inline title keeps a failed edit for retry and refreshes only after success", async (t) => {

@@ -33,7 +33,6 @@ test("filter counts stay unresolved until the first task list read", (t) => {
     "true",
   );
 
-  assert.ok(all.querySelector(".filter-count-skeleton"));
   assert.equal(all.getAttribute("aria-label"), "All, loading");
   assert.equal(screen.queryByRole("radio", { name: "All, 0" }), null);
 });

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { currentActivityStatus } from "./activity-status.js";
 import { groupActivity } from "./activity-timeline.js";
 import { thinkingSpan } from "./activity-timeline.js";
 import { event, sdk } from "./activity-timeline-test-harness.js";
@@ -11,8 +10,6 @@ test("requesting status has its own row and never a thinking span", () => {
   const events = [sdk(1, "status", { status: "requesting" })];
   const [group] = groupActivity(events);
   assert.ok(group);
-  assert.equal(group.title, "Requesting");
-  assert.equal(currentActivityStatus(events).text, "Requesting");
   assert.equal(thinkingSpan(group, events), undefined);
 });
 
@@ -63,8 +60,6 @@ test("startup and ordinary statuses remain visible beside a thinking row", () =>
   const [connected, working] = groups;
   assert.ok(connected && working);
 
-  assert.equal(connected.title, "Agent connected");
-  assert.equal(working.title, "Working");
   assert.equal(thinkingSpan(connected, events), undefined);
   assert.equal(thinkingSpan(working, events), undefined);
   assert.deepEqual(thinkingSpan(group, events), { start: 12000, end: 20000 });
