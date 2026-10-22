@@ -1,29 +1,13 @@
-import { expect, expectTypeOf, test } from "vitest";
-import { z } from "zod";
+import { expect, test } from "vitest";
 
 import {
-  budgetSettingRowSchema,
-  helpPartSchema,
-  modelScopeSchema,
-  modelsSettingRowSchema,
-  selectSettingRowSchema,
-  settingOptionSchema,
   settingRowSchema,
   settingSectionSchema,
-  switchSettingRowSchema,
-  textSettingRowSchema,
 } from "./document-contract.generated.js";
 import type {
-  BudgetSettingRow,
-  HelpPart,
   ModelScope,
-  ModelsSettingRow,
-  SelectSettingRow,
-  SettingOption,
   SettingRow,
   SettingSection,
-  SwitchSettingRow,
-  TextSettingRow,
 } from "./document-contract.js";
 import { settingsSections } from "./settings-document.js";
 
@@ -61,42 +45,6 @@ const rows: SettingRow[] = [
   },
   { kind: "models", scopes: [scope] },
 ];
-
-test("generated output types match all public settings contracts", () => {
-  expectTypeOf<z.output<typeof helpPartSchema>>().toEqualTypeOf<HelpPart>();
-
-  expectTypeOf<
-    z.output<typeof settingOptionSchema>
-  >().toEqualTypeOf<SettingOption>();
-
-  expectTypeOf<z.output<typeof modelScopeSchema>>().toEqualTypeOf<ModelScope>();
-
-  expectTypeOf<z.output<typeof settingRowSchema>>().toEqualTypeOf<SettingRow>();
-
-  expectTypeOf<
-    z.output<typeof selectSettingRowSchema>
-  >().toEqualTypeOf<SelectSettingRow>();
-
-  expectTypeOf<
-    z.output<typeof switchSettingRowSchema>
-  >().toEqualTypeOf<SwitchSettingRow>();
-
-  expectTypeOf<
-    z.output<typeof textSettingRowSchema>
-  >().toEqualTypeOf<TextSettingRow>();
-
-  expectTypeOf<
-    z.output<typeof budgetSettingRowSchema>
-  >().toEqualTypeOf<BudgetSettingRow>();
-
-  expectTypeOf<
-    z.output<typeof modelsSettingRowSchema>
-  >().toEqualTypeOf<ModelsSettingRow>();
-
-  expectTypeOf<
-    z.output<typeof settingSectionSchema>
-  >().toEqualTypeOf<SettingSection>();
-});
 
 test("accepts each kind of setting row", () => {
   for (const row of rows) {

@@ -93,7 +93,9 @@ const publicSchemas = new Map(
   [...outputs].map((output) => [output, new Set()]),
 );
 
-for (const file of await discover("src/**/*.{ts,tsx,js,mjs}")) {
+for (const file of await discover(
+  "{src,tests/contracts}/**/*.{ts,tsx,js,mjs}",
+)) {
   const source = await readFile(file, "utf8");
 
   const imports =

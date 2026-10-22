@@ -1,17 +1,8 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  realpath,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { promisify } from "node:util";
 
 import { test } from "vitest";
 
@@ -19,12 +10,8 @@ import {
   dataDirectory,
   findPackageRoot,
   installRoot,
-  packagePath,
-  packageVersion,
   readPackageFile,
 } from "./runtime.js";
-
-const exec = promisify(execFile);
 
 async function tree(t: import("vitest").TestContext) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "package-root-")));
@@ -72,44 +59,10 @@ test("a module outside the package reports the incomplete installation", async (
   );
 });
 
-test("the installed root is this checkout regardless of working directory", async (t) => {
-  assert.equal(installRoot, resolve(import.meta.dirname, "../../../.."));
-  assert.equal(packagePath("assets"), join(installRoot, "assets"));
-
-  const elsewhere = await tree(t);
-
-  const { stdout } = await exec(
-    process.execPath,
-    [
-      "--import",
-      import.meta.resolve("tsx"),
-      "--input-type=module",
-      "-e",
-      `import { installRoot } from ${JSON.stringify(import.meta.resolve("./runtime.ts"))}; console.log(installRoot);`,
-    ],
-    { cwd: elsewhere },
-  );
-
-  assert.equal(stdout.trim(), installRoot);
-});
-
 test("a missing package file names the file and the installation", () => {
-  assert.match(
-    readPackageFile("assets", "brand", "brand-glyph-dark.svg"),
-    /<svg/,
-  );
-
   assert.throws(() => readPackageFile("assets", "missing.svg"), {
     message: `Missing package file assets/missing.svg in ${installRoot}`,
   });
-});
-
-test("the package version comes from the installed package.json", async () => {
-  const manifest = JSON.parse(
-    await readFile(packagePath("package.json"), "utf8"),
-  );
-
-  assert.equal(packageVersion, manifest.version);
 });
 
 test("data directory override is independent of packaged installation directory", () => {

@@ -1,14 +1,7 @@
-import { expect, expectTypeOf, test } from "vitest";
-import { z } from "zod";
+import { expect, test } from "vitest";
 
 import { panelOutputSchema } from "./panel-contract.generated.js";
 import type { PanelOutput } from "./panel-contract.js";
-
-test("generated output type matches the panel contract", () => {
-  expectTypeOf<
-    z.output<typeof panelOutputSchema>
-  >().toEqualTypeOf<PanelOutput>();
-});
 
 test("accepts optional and nullable panel fields", () => {
   for (const input of [

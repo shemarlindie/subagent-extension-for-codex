@@ -1,4 +1,4 @@
-import { expect, expectTypeOf, test } from "vitest";
+import { expect, test } from "vitest";
 import { z } from "zod";
 
 import {
@@ -11,10 +11,6 @@ import {
   claudeStartOptionsSchema,
   claudeTaskOptionsSchema,
 } from "./task-options-contract.generated.js";
-import type {
-  ClaudeStartOptions,
-  ClaudeTaskOptions,
-} from "./task-options-contract.js";
 
 const policy = {
   sandbox: "extension_locked",
@@ -23,16 +19,6 @@ const policy = {
   path_guard: true,
   subagents: false,
 };
-
-test("generated Claude option outputs match source contracts", () => {
-  expectTypeOf<
-    z.output<typeof claudeStartOptionsSchema>
-  >().toEqualTypeOf<ClaudeStartOptions>();
-
-  expectTypeOf<
-    z.output<typeof claudeTaskOptionsSchema>
-  >().toEqualTypeOf<ClaudeTaskOptions>();
-});
 
 // Starting a task accepts `inherit`; a stored task holds the resolved mode.
 const optionSchemas = [

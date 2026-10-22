@@ -41,6 +41,7 @@ function fixture(t: TestContext) {
     ...contracts.map((contract) => `${contract}.ts`),
     "src/shared/providers/claude/permissions.ts",
     "src/shared/providers/claude/schema-generation.mjs",
+    "tests/contracts/shared-contracts.typecheck.ts",
   ]) {
     const destination = join(directory, file);
 
@@ -119,6 +120,19 @@ test.concurrent(
     assert.equal(generated.status, 0, generated.stderr);
 
     const before = snapshot(directory);
+
+    const imported = await run(directory, [
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "--eval",
+      `import { helpPartSchema } from "./src/shared/settings/document-contract.generated.ts";
+helpPartSchema.parse("Compile-time consumers keep helper schemas public");
+`,
+    ]);
+
+    assert.equal(imported.status, 0, imported.stderr);
+
     const checked = await generate(directory, true);
 
     assert.equal(checked.status, 0, checked.stderr);

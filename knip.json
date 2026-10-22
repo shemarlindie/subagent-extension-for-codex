@@ -10,6 +10,7 @@
     "dev/panel/host/field-error-demo.tsx",
     "dev/panel/fixture-service/service.ts",
     "dev/service/demo-service.ts",
+    "tests/contracts/**/*.typecheck.ts",
     "scripts/*.mjs"
   ],
   "ignoreBinaries": ["where"],
