@@ -240,6 +240,14 @@ platform is unsupported. Claude Code sandbox list settings, such as excluded
 commands and allowed domains, add to the extension sandbox. `extension_locked`
 blocks this for network domains only.
 
+On Linux, the sandbox uses bubblewrap, which needs unprivileged user
+namespaces. Ubuntu 24.04 blocks them by default. A sandboxed task then fails to
+start or every Bash command in it fails, and nothing runs unsandboxed. To use
+the extension sandbox there, install `bubblewrap` and `socat`, then allow user
+namespaces, for example with an AppArmor profile for `bwrap` or by setting
+`kernel.apparmor_restrict_unprivileged_userns=0`. The second option applies to
+every program on the computer.
+
 Worktrees separate checkouts but do not restrict commands. With default
 settings, a task with a write profile has your full Claude Code capabilities.
 The model and API harness run outside the Bash sandbox, and containment of the
