@@ -345,7 +345,10 @@ pbcopy < ~/.local/share/codex-subagent-extension/admin-token
 ```
 
 Update the URL if you changed the service port. Keep the token and configuration
-private, and never paste them into chats or commit them.
+private, and never paste them into chats or commit them. Unlike the stdio proxy,
+an HTTP client sends the token without checking that the
+[service holds it](configuration.md#admin-token). On a computer shared with
+other users, prefer the stdio proxy.
 
 ### Verify either connection
 

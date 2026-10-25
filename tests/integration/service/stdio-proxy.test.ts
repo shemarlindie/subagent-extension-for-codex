@@ -8,6 +8,10 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { test } from "vitest";
 
+import {
+  challengeHeader,
+  healthProof,
+} from "../../../src/service/platform/service/health-proof.js";
 import { waitForListening } from "../../support/helpers.js";
 import { serviceEnv } from "../../support/service.js";
 
@@ -51,6 +55,10 @@ test("the proxy completes the MCP handshake while the service is still starting"
         JSON.stringify({
           service: "codex-subagent-extension",
           status: ready ? "ok" : "starting",
+          proof: healthProof(
+            "test-token",
+            String(req.headers[challengeHeader]),
+          ),
         }),
       );
 

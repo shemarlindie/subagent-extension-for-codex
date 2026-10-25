@@ -16,6 +16,11 @@ import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
+import {
+  challengeHeader,
+  healthProof,
+  provesToken,
+} from "../../../src/service/platform/service/health-proof.js";
 import { PARENT_DELEGATION_PROTOCOL } from "../../../src/shared/tasks/conversation/parent-protocol.js";
 import { startSchema } from "../../../src/shared/tasks/model.js";
 import { now } from "../../../src/shared/time.js";
@@ -65,6 +70,25 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         )
       ).status,
       200,
+    );
+  });
+
+  test("health proves the admin token for a valid challenge only", async () => {
+    const { base } = fixture;
+    const challenge = "c".repeat(43);
+
+    const health = (headers: Record<string, string> = {}) =>
+      fetch(`${base}/health`, { headers }).then((r) => r.json());
+
+    const proven = await health({ [challengeHeader]: challenge });
+    assert.equal(proven.proof, healthProof("private-token", challenge));
+    assert.ok(provesToken("private-token", challenge, proven.proof));
+    assert.ok(!provesToken("other-token", challenge, proven.proof));
+    assert.equal((await health()).proof, undefined);
+
+    assert.equal(
+      (await health({ [challengeHeader]: "short" })).proof,
+      undefined,
     );
   });
 

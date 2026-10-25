@@ -53,8 +53,12 @@ the data directory and token file on each start.
 
 - Console login exchanges the token for an HttpOnly session cookie that lasts
   one hour. A service restart ends browser sessions.
-- The stdio proxy reads the token and adds it to forwarded requests.
-- The panel dev host adds the token server-side through the Vite proxy.
+- The stdio proxy reads the token and adds it to forwarded requests. When it
+  connects, it sends `/health` a random challenge, and the service answers with
+  an HMAC of it keyed by the token. The proxy sends the token only after
+  checking that answer, so another process holding the port can't collect it.
+- The panel dev host adds the token server-side through the Vite proxy without
+  that check. Don't run it on a computer shared with other users.
 
 Do not paste the token into a chat or commit it. Treat any authenticated raw
 service client as a trusted administrator.

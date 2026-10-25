@@ -7,6 +7,11 @@ import { SendRejectedError } from "../../../shared/tasks/conversation/send-error
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { logError, logEvent } from "../logging/logger.js";
 import { preloadPanelHtml, readPanelHtml } from "../panel/panel-html.js";
+import {
+  challengeHeader,
+  healthProof,
+  validChallenge,
+} from "../service/health-proof.js";
 import { serviceIdentity } from "../service/identity.js";
 import { Auth } from "./auth.js";
 import { mcp } from "./mcp.js";
@@ -112,7 +117,8 @@ export function application(
   // The install root stays in service.json: /health may be reachable from the network.
   const { version, apiVersion, launcher } = serviceIdentity();
 
-  app.get("/health", (_req, res) => {
+  app.get("/health", (req, res) => {
+    const challenge = req.headers[challengeHeader];
     let status = "ok";
 
     if (app.locals.stopping) {
@@ -132,6 +138,9 @@ export function application(
         apiVersion,
         launcher,
         providers: c.workers().map((w) => w.provider),
+        ...(validChallenge(challenge)
+          ? { proof: healthProof(auth.token, challenge) }
+          : {}),
       });
   });
 

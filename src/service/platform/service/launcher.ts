@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { challengeHeader, newChallenge, provesToken } from "./health-proof.js";
 import {
   handoff,
   launcherEnv,
@@ -76,7 +77,11 @@ export async function connectService() {
     readFileSync(join(data, "admin-token"), "utf8").trim();
 
   const probe = async () => {
+    // The service must prove it holds the token before a request carries it.
+    const challenge = newChallenge();
+
     const response = await fetch(`${origin}/health`, {
+      headers: { [challengeHeader]: challenge },
       signal: AbortSignal.timeout(1000),
       redirect: "error",
     });
@@ -94,6 +99,12 @@ export async function connectService() {
     if (!response.ok || health.service !== "codex-subagent-extension") {
       throw new Error(
         "Port is occupied by an incompatible service; stop or upgrade it explicitly",
+      );
+    }
+
+    if (!provesToken(token(), challenge, health.proof)) {
+      throw new Error(
+        `The service at ${origin} did not prove it holds this data directory's admin token, so the token was not sent. Another program may be using the port, or the data or URL overrides differ.`,
       );
     }
 

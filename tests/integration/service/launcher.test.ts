@@ -1,13 +1,22 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { createServer, type RequestListener, type Server } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type RequestListener,
+  type Server,
+} from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 import { test } from "vitest";
 
+import {
+  challengeHeader,
+  healthProof,
+} from "../../../src/service/platform/service/health-proof.js";
 import { waitForListening } from "../../support/helpers.js";
 import { freePort, stopService } from "../../support/service.js";
 
@@ -41,6 +50,18 @@ async function connect(env: NodeJS.ProcessEnv) {
     ],
     { env: { ...clean, ...env }, timeout: 20000 },
   );
+}
+
+/** A health body proving `token` for the request's challenge, as a real service's does. */
+function health(
+  req: IncomingMessage,
+  token: string,
+  body: Record<string, unknown>,
+) {
+  return JSON.stringify({
+    ...body,
+    proof: healthProof(token, String(req.headers[challengeHeader])),
+  });
 }
 
 async function data(t: import("vitest").TestContext) {
@@ -82,7 +103,7 @@ async function identified(
 
     if (req.url === "/health") {
       res.end(
-        JSON.stringify({
+        health(req, "handoff-token", {
           service: "codex-subagent-extension",
           status: "ok",
           ...identity,
@@ -266,7 +287,10 @@ test("launcher discovers service metadata and token without starting another ser
 
     if (req.url === "/health") {
       res.end(
-        JSON.stringify({ service: "codex-subagent-extension", apiVersion: 1 }),
+        health(req, "persisted-token", {
+          service: "codex-subagent-extension",
+          apiVersion: 1,
+        }),
       );
     } else {
       auth = req.headers.authorization ?? "";
@@ -304,9 +328,10 @@ test("incompatible live service and authentication failure never authorize auto-
     /incompatible service/,
   );
 
+  // A service that proves the token but rejects it speaks another protocol.
   const denied = await fake(t, (req, res) => {
     if (req.url === "/health") {
-      res.end(JSON.stringify({ service: "codex-subagent-extension" }));
+      res.end(health(req, "wrong", { service: "codex-subagent-extension" }));
     } else {
       res.statusCode = 401;
       res.end("{}");
@@ -328,6 +353,41 @@ test("incompatible live service and authentication failure never authorize auto-
   await assert.rejects(access(join(dir, "service.log")));
 });
 
+test("launcher never sends the token to a listener that can't prove it holds it", async (t) => {
+  const dir = await data(t);
+  const sent: string[] = [];
+
+  // Another user's process on the port, imitating the service.
+  const impostor = await fake(t, (req, res) => {
+    if (req.headers.authorization) sent.push(req.headers.authorization);
+
+    res.end(
+      req.url === "/health"
+        ? health(req, "guessed-token", {
+            service: "codex-subagent-extension",
+            status: "ok",
+            apiVersion: 1,
+          })
+        : "{}",
+    );
+  });
+
+  await writeFile(
+    join(dir, "service.json"),
+    JSON.stringify({ origin: impostor }),
+  );
+
+  await writeFile(join(dir, "admin-token"), "secret-token");
+
+  await assert.rejects(
+    connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
+    /did not prove it holds this data directory's admin token/,
+  );
+
+  assert.deepEqual(sent, []);
+  await assert.rejects(access(join(dir, "service.log")));
+});
+
 test("launcher waits for an existing service to finish recovery without spawning", async (t) => {
   const dir = await data(t);
   let probes = 0;
@@ -341,7 +401,7 @@ test("launcher waits for an existing service to finish recovery without spawning
       res.statusCode = probes < 3 ? 503 : 200;
 
       res.end(
-        JSON.stringify({
+        health(req, "recovery-token", {
           service: "codex-subagent-extension",
           status: probes < 3 ? "starting" : "ready",
           apiVersion: 1,
