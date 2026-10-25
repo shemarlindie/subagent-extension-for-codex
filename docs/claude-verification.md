@@ -16,7 +16,10 @@ these checks. Run them when you update the SDK or change the minimum:
 
 1. Run `npm run typecheck` and `npm test`. Recorded fixtures cover the SDK
    message mapping. The packed-artifact suite checks model discovery when a
-   supported CLI is installed and skips that check otherwise.
+   supported CLI is installed and skips that check otherwise. Typecheck fails
+   when the SDK adds a message type, system subtype or assistant error. Check
+   how `src/service/features/providers/claude/events/activity.ts` presents it,
+   then list it in `sdk-message-coverage.ts` beside that file.
 2. Select the version through `PATH` or `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`
    and run the [live Claude checks](#live-claude-checks).
 3. In a live task from the panel, steer, interrupt and answer a question.

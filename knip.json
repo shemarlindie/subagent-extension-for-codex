@@ -6,11 +6,12 @@
     "src/service/platform/service/node-version.ts",
     "src/panel/app/app.ts",
     "src/**/schema-generation.mjs",
+    "src/**/*-contract.ts",
     "dev/panel/host/panel.ts",
     "dev/panel/host/field-error-demo.tsx",
     "dev/panel/fixture-service/service.ts",
     "dev/service/demo-service.ts",
-    "tests/contracts/**/*.typecheck.ts",
+    "src/service/features/providers/claude/events/sdk-message-coverage.ts",
     "scripts/*.mjs"
   ],
   "ignoreBinaries": ["where"],

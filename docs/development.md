@@ -571,9 +571,6 @@ seconds. Integration and browser tests allow 60 seconds for process and worktree
 setup. Put shared colocated test setup in a `<module>-test-harness.ts` file,
 which lint, type checks and builds treat as test code.
 
-Keep compile-time contract assertions in `tests/contracts/*.typecheck.ts`.
-`npm run typecheck` checks these files without running a Vitest suite.
-
 Compare DOM nodes with Vitest's `expect`, never Node's assertion equality
 methods. Formatting a failed Node assertion can hang on jsdom's document graph.
 Use `toBe` for identity, `toEqual` for structure and `toBeNull` for absence.

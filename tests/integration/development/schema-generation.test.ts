@@ -41,7 +41,6 @@ function fixture(t: TestContext) {
     ...contracts.map((contract) => `${contract}.ts`),
     "src/shared/providers/claude/permissions.ts",
     "src/shared/providers/claude/schema-generation.mjs",
-    "tests/contracts/shared-contracts.typecheck.ts",
   ]) {
     const destination = join(directory, file);
 
@@ -115,6 +114,13 @@ test.concurrent(
   "generates validators and checks fresh or stale outputs without rewriting files",
   async (t) => {
     const directory = fixture(t);
+
+    // An importer keeps a helper schema public.
+    writeFileSync(
+      join(directory, "src/shared/settings/row-consumer.ts"),
+      'import { settingRowSchema } from "./document-contract.generated.js";\n',
+    );
+
     const generated = await generate(directory);
 
     assert.equal(generated.status, 0, generated.stderr);
@@ -126,8 +132,8 @@ test.concurrent(
       "tsx",
       "--input-type=module",
       "--eval",
-      `import { helpPartSchema } from "./src/shared/settings/document-contract.generated.ts";
-helpPartSchema.parse("Compile-time consumers keep helper schemas public");
+      `import { settingRowSchema } from "./src/shared/settings/document-contract.generated.ts";
+settingRowSchema.safeParse({});
 `,
     ]);
 

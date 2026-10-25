@@ -1,10 +1,11 @@
-// Checked by tsconfig.test.json without running a Vitest suite.
+// Nothing imports this module. Its exhaustive records make an SDK upgrade that
+// adds a message type, system subtype or assistant error fail typechecking, so
+// someone reviews how activity.ts presents it before adding it here.
 import type {
   SDKAssistantMessageError,
   SDKMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
-// Exhaustive records make SDK additions fail typechecking and require review.
 type SdkSystemSubtype = Exclude<
   Extract<SDKMessage, { type: "system" }>["subtype"],
   "init"
