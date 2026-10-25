@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -271,6 +272,8 @@ describe("canonical edit paths", () => {
     await mkdir(join(directory, "outside"));
     await symlink(join(directory, "outside"), join(workspace, "escape"), "dir");
     await symlink(join(workspace, ".git"), join(workspace, "metadata"), "dir");
+    // Another letter case names the same directory on case-insensitive file systems.
+    const caseInsensitive = existsSync(join(workspace, ".GIT"));
 
     for (const path of [
       "../outside/file.txt",
@@ -279,6 +282,7 @@ describe("canonical edit paths", () => {
       "escape/file.txt",
       "metadata/config",
       ".",
+      ...(caseInsensitive ? [".GIT/config"] : []),
     ]) {
       changes.record(task, edit(path));
       changes.unrecorded(task, path);

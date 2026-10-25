@@ -13,16 +13,15 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import type { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
-import { linkKind, loadableImage } from "./markdown-urls";
+import { linkKind } from "./markdown-urls";
 import { MarkdownView } from "./markdown-view";
 
 afterEach(cleanup);
 
-test("URL policy supports mail and inline images while empty targets stay text", () => {
+test("URL policy supports mail while empty targets stay text", () => {
   assert.equal(linkKind("mailto:a@example.com"), "external");
   assert.equal(linkKind("#"), "text");
   assert.equal(linkKind(""), "text");
-  assert.equal(loadableImage("data:image/png;base64,AA"), true);
 });
 
 test("relative and unsafe links render as text, not broken links", () => {
@@ -126,17 +125,20 @@ test("HTML shows as literal text, never as elements", () => {
   expect(container.querySelector("details, script, img")).toBeNull();
 });
 
-test("images that cannot load show their alt text", () => {
+test("images show their alt text and never load", () => {
   const { container } = render(
-    <MarkdownView content="![Diagram](diagram.png) ![Logo](https://x.dev/a.png)" />,
+    <MarkdownView content="![Diagram](diagram.png) ![Remote](https://x.dev/a.png) ![](data:image/png;base64,AAAA)" />,
   );
 
   expect(screen.getByText("Diagram")).toBeTruthy();
-  const image = container.querySelector("img")!;
 
-  fireEvent.error(image);
+  // A remote image's URL could carry data out of the panel.
+  expect(screen.getByText("Remote").getAttribute("title")).toBe(
+    "https://x.dev/a.png",
+  );
+
+  expect(screen.getByText("Image")).toBeTruthy();
   expect(container.querySelector("img")).toBeNull();
-  expect(screen.getByText("Logo")).toBeTruthy();
 });
 
 test("embedded hosts open external links themselves", () => {

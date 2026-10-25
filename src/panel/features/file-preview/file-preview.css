@@ -334,9 +334,6 @@
   padding: 4px 10px;
   border: 1px solid var(--line);
 }
-.markdown-body img {
-  max-width: 100%;
-}
 .markdown-body .contains-task-list {
   list-style: none;
   padding-left: 0.25em;

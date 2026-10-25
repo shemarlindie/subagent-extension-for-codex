@@ -484,6 +484,18 @@ test("project removal is idempotent even after its directory disappears", async 
   assert.deepEqual(f.workspaces.allowedRoots, [retained]);
 });
 
+test("removing a saved root by another spelling revokes it", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("linked/repo");
+  await f.projects.register(repository);
+  const alias = join(f.dir, "alias");
+  await symlink(repository, alias);
+  f.projects.remove(alias);
+
+  assert.deepEqual(f.projects.list(), []);
+  await assert.rejects(f.projects.resolve(repository), /outside allowed roots/);
+});
+
 test("removing a listed child preserves its explicit parent grant", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("parent/repo");

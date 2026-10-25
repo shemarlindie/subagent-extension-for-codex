@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import { basename, isAbsolute, relative } from "node:path";
 
@@ -88,12 +89,24 @@ export class Projects {
     return { repository, name: trimmed };
   }
 
-  /** Registry identity is used directly so missing directories can still be removed. */
+  /**
+   * Registry identity is used directly so missing directories can still be
+   * removed. Another spelling of a saved root, such as a symlink, removes the
+   * root it resolves to, so a removal never leaves the approval in place.
+   * Removing a root that is already gone succeeds.
+   */
   remove(repository: string) {
-    this.database.orm
-      .delete(projectRoots)
-      .where(eq(projectRoots.path, repository))
-      .run();
+    const deleted = (path: string) =>
+      this.database.orm
+        .delete(projectRoots)
+        .where(eq(projectRoots.path, path))
+        .run().changes;
+
+    if (!deleted(repository)) {
+      try {
+        deleted(realpathSync(repository));
+      } catch {}
+    }
 
     this.refresh();
     this.onChange();

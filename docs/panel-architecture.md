@@ -12,6 +12,11 @@ Bootstrap (`app/bootstrap.tsx`) picks the host bridge or HTTP transport, and
 rendering and forms use the same controller for both. The production build
 embeds the application in `dist/app.html` without development fixtures.
 
+The page loads nothing beyond itself and the service API. The embedded panel
+declares no external domains in its MCP App metadata, and the service sends the
+standalone console a matching Content Security Policy. Keep scripts, styles,
+fonts and images inline, and don't load remote content that a worker could name.
+
 ## Module boundaries
 
 Paths in this guide are relative to `src/panel/` unless they start with `src/`

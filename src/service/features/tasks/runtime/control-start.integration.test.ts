@@ -5,6 +5,7 @@ import { test } from "vitest";
 import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import { claudeMetadata } from "../../../../shared/providers/metadata.js";
 import type { ModelChoice } from "../../../../shared/providers/types.js";
+import { Projects } from "../../projects/projects.js";
 import { claudeTaskPolicy } from "../../providers/claude/configuration/task-policy.js";
 import type { Provider } from "../../providers/types.js";
 import { input, setup, until } from "./control-test-harness.js";
@@ -405,4 +406,45 @@ test("a task whose first event can't be written is never created", async () => {
   } finally {
     await c.close();
   }
+});
+
+test("removing a project refuses follow-ups and new tasks in its repository", async () => {
+  const { c, repo, store } = await setup(undefined, 1);
+  c.workspaces.allowedRoots = [];
+  c.projects = new Projects(store.database, c.workspaces);
+  const { repository } = await c.projects.register(repo);
+
+  const done = await c.start("owner", input(repo));
+  await until(() => store.get(done.id, "owner").status === "completed");
+
+  await c.removeProject("owner", repository);
+
+  await assert.rejects(
+    c.send("owner", done.id, "Keep going", "parent"),
+    /outside allowed roots/,
+  );
+
+  await assert.rejects(c.start("owner", input(repo)), /outside allowed roots/);
+});
+
+test("a turn queued before its project is removed fails instead of running", async () => {
+  // No concurrency, so the task waits in the queue.
+  const { c, repo, store } = await setup(undefined, 0);
+  c.workspaces.allowedRoots = [];
+  c.projects = new Projects(store.database, c.workspaces);
+  const { repository } = await c.projects.register(repo);
+
+  const queued = await c.start("owner", input(repo));
+  await c.removeProject("owner", repository);
+  c.concurrency = 1;
+  void c.schedule();
+
+  await until(() => store.get(queued.id, "owner").status === "failed");
+
+  assert.match(
+    store.get(queued.id, "owner").error ?? "",
+    /outside allowed roots/,
+  );
+
+  assert.equal(store.get(queued.id, "owner").workspace, undefined);
 });

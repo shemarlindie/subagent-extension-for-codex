@@ -42,8 +42,9 @@ SVG content is markup.
   unique ids so each link resolves within its own message. Other targets,
   such as relative file paths, cannot resolve from the panel. They appear as
   dotted text with the target in a tooltip.
-- **Images.** Only web and `data:image/` sources load. A relative path or an
-  image that fails to load shows its alt text.
+- **Images.** Markdown images never load. Each shows its alt text with the
+  source in a tooltip. A worker could otherwise send data out through a remote
+  image URL, and relative paths cannot resolve.
 - **Code.** Fenced blocks highlight with the languages registered in
   `highlight.ts`. Unknown languages render as plain code.
 

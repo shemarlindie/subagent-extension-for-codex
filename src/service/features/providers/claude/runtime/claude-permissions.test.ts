@@ -15,6 +15,7 @@ import {
   resolveClaudePolicy,
 } from "../../../../../shared/providers/claude/permissions.js";
 import * as logging from "../../../../platform/logging/logger.js";
+import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import {
   captureOptions,
   context,
@@ -404,4 +405,49 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
     assert.deepEqual((allowed as any).updatedInput, input);
     c.input = async () => ({ approved: false });
   }
+});
+
+test("only Claude's own question tool takes answers; other requests stay permissions", async () => {
+  for (const tool of [
+    "Bash",
+    "Edit",
+    "mcp__server__AskUserQuestion",
+    "Skill",
+  ]) {
+    assert.equal(claudeTaskPolicy.inputKind(tool), "permission");
+  }
+
+  assert.equal(claudeTaskPolicy.inputKind("AskUserQuestion"), "question");
+
+  const { c } = await context();
+  let options: Options | undefined;
+
+  const provider = new ClaudeAgentProvider(
+    captureOptions((value) => {
+      options = value;
+    }),
+    undefined,
+    readyClaudeCli,
+  );
+
+  await provider.run(c, "Ask");
+  const question = { questions: [{ question: "Which approach?" }] };
+
+  c.input = async () => ({
+    approved: true,
+    input: { answers: { "Which approach?": "The first" } },
+  });
+
+  const answered = await options!.canUseTool!("AskUserQuestion", question, {
+    signal: c.signal,
+    toolUseID: "question",
+    requestId: "request",
+  });
+
+  assert.equal(answered!.behavior, "allow");
+
+  assert.deepEqual((answered as any).updatedInput, {
+    ...question,
+    answers: { "Which approach?": "The first" },
+  });
 });

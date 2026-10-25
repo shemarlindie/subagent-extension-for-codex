@@ -6,6 +6,7 @@ import type { SandboxSettings } from "@anthropic-ai/claude-agent-sdk";
 
 import type { ClaudePolicy } from "../../../../../shared/providers/claude/permissions.js";
 import type { Task } from "../../../../../shared/tasks/model.js";
+import { dataDirectory } from "../../../../platform/service/runtime.js";
 import { git } from "../../../workspaces/git.js";
 
 // The extension's own credentials never reach delegated sessions. Claude
@@ -55,6 +56,8 @@ export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
   if (!task.workspace) throw new Error("Task workspace unavailable");
   const workspace = await realpath(task.workspace);
   const repository = await realpath(task.repository);
+  // The service creates it before any task runs; tests may not.
+  const data = await realpath(dataDirectory()).catch(() => dataDirectory());
 
   const gitDirectory = await realpath(
     resolve(
@@ -78,9 +81,11 @@ export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
       allowLocalBinding: false,
     },
     filesystem: {
+      // The data directory holds the admin token and may sit outside home.
       denyRead: [
         ...new Set([
           homedir(),
+          data,
           repository,
           dirname(workspace),
           process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"),

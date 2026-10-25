@@ -1,39 +1,20 @@
-import { type ComponentProps, useState } from "react";
-
-import { loadableImage } from "./markdown-urls";
+import type { ComponentProps } from "react";
 
 type MarkdownImageProps = ComponentProps<"img"> & { node?: unknown };
 
-/** An image, or its alt text when it cannot or did not load. */
-export function MarkdownImage({
-  node: _node,
-  src,
-  alt,
-  ...rest
-}: MarkdownImageProps) {
-  // The source that failed, so a new source gets its own attempt.
-  const [failed, setFailed] = useState<string>();
-  const source = typeof src === "string" ? src : undefined;
-
-  if (!loadableImage(source) || failed === source) {
-    return (
-      // A data URI is too long to be a useful tooltip.
-      <span
-        className="markdown-image-missing"
-        title={source?.startsWith("data:") ? undefined : source}
-      >
-        {alt || "Image"}
-      </span>
-    );
-  }
-
+/**
+ * An image's alt text, with its source in a tooltip. Images never load: a
+ * relative path cannot resolve, and a remote URL written by a worker could
+ * carry data out when the image loads. The renderer already empties `data:`
+ * sources as unsafe.
+ */
+export function MarkdownImage({ src, alt }: MarkdownImageProps) {
   return (
-    <img
-      {...rest}
-      src={source}
-      alt={alt}
-      loading="lazy"
-      onError={() => setFailed(source)}
-    />
+    <span
+      className="markdown-image-missing"
+      title={typeof src === "string" && src ? src : undefined}
+    >
+      {alt || "Image"}
+    </span>
   );
 }

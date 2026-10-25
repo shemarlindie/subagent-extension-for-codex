@@ -12,8 +12,3 @@ export function linkKind(href: string | undefined): LinkKind {
 
   return /^(https?:|mailto:)/i.test(href) ? "external" : "text";
 }
-
-/** Images load only from the web or inline data; relative paths cannot resolve. */
-export function loadableImage(src: string | undefined) {
-  return Boolean(src && /^(https?:|data:image\/)/i.test(src));
-}

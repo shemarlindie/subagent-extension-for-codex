@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { realpath } from "node:fs/promises";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -61,6 +61,19 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
 
   assert.ok(settings.sandbox.filesystem.allowRead.includes(canonicalWorkspace));
   assert.ok(settings.sandbox.filesystem.denyRead.includes(canonicalWorkspace));
+});
+
+test("The extension sandbox denies reads of a data directory outside home by its real path", async (t) => {
+  const data = await mkdtemp(join(tmpdir(), "codex-subagent-extension-data-"));
+  t.onTestFinished(() => rm(data, { recursive: true, force: true }));
+  vi.stubEnv("CODEX_SUBAGENT_EXTENSION_DATA", data);
+  const { c } = await context();
+
+  assert.ok(
+    (await claudeSandbox(c.task)).filesystem!.denyRead!.includes(
+      await realpath(data),
+    ),
+  );
 });
 
 test("Claude parity policy leaves sandbox, tools and paths to the user's configuration and routes prompts to the approver", async () => {

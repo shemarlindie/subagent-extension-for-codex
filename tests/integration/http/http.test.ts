@@ -260,6 +260,10 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     assert.match(uiContent.text, /<title>Delegated Work<\/title>/);
     const standalone = await fetch(base + "/");
     assert.equal(standalone.status, 200);
+    const csp = standalone.headers.get("content-security-policy") ?? "";
+    assert.match(csp, /img-src data:;/);
+    assert.match(csp, /connect-src 'self' http:\/\/127\.0\.0\.1:17317;/);
+    assert.match(csp, /frame-ancestors 'none'/);
 
     const standaloneHtml = await standalone.text();
     assert.match(standaloneHtml, /<title>Delegated Work<\/title>/);

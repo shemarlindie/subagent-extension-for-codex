@@ -145,10 +145,20 @@ export function application(
   });
 
   app.get("/", async (req, res) => {
+    const apiOrigin = consoleOrigin(req);
+
+    // The page is self-contained. Worker Markdown can't load remote images,
+    // which could carry data out in their URLs, and other sites can't frame it.
+    res.setHeader(
+      "Content-Security-Policy",
+      `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self' ${apiOrigin}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
+    );
+
     res.type("html").send(
       // Inject the template's origin once; preserve the bundled runtime sentinel.
-      (await readPanelHtml(htmlPath)).replace("__API_ORIGIN__", () =>
-        consoleOrigin(req),
+      (await readPanelHtml(htmlPath)).replace(
+        "__API_ORIGIN__",
+        () => apiOrigin,
       ),
     );
   });

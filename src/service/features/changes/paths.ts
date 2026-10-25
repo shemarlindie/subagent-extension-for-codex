@@ -9,10 +9,14 @@ import {
   sep,
 } from "node:path";
 
-/** Resolve missing targets through their nearest existing parent, including deleted files. */
+/**
+ * Resolve missing targets through their nearest existing parent, including
+ * deleted files. The native call returns stored letter case on
+ * case-insensitive file systems, so `.GIT` resolves to `.git`.
+ */
 function canonical(path: string): string {
   try {
-    return realpathSync(path);
+    return realpathSync.native(path);
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code !== "ENOENT" && code !== "ENOTDIR") throw error;
@@ -25,7 +29,7 @@ function canonical(path: string): string {
 
 /** Tool paths are canonical workspace-relative paths, excluding Git metadata. */
 export function changePath(workspace: string, path: string) {
-  const root = realpathSync(workspace);
+  const root = realpathSync.native(workspace);
   const target = canonical(resolve(workspace, path));
   const rel = relative(root, target);
 
