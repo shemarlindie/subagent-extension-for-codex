@@ -62,6 +62,7 @@ The browser flows verify:
 | E26 | Keep a task whose agent session can't be deleted, then delete it locally.                                                   |
 | E27 | Switch between the list and a task in a narrow console without horizontal overflow.                                         |
 | E28 | Search, open a task and move between its tabs by keyboard.                                                                  |
+| E29 | Announce a new task, preserve the open task, draft, focus and reading position, then open it with View.                     |
 
 Accepted limits:
 

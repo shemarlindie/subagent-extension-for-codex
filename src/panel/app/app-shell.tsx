@@ -8,6 +8,7 @@ import { DialogHost } from "../shared/dialogs/dialog-host";
 import { trackIdleScrollbars } from "../shared/utils/idle-scrollbars";
 import { PageOutlet } from "./navigation/page-outlet";
 import { useController, useSnapshot } from "./state/controller-context";
+import { TaskArrivalToast } from "./task-arrival-toast";
 
 export function AppShell() {
   const controller = useController(),
@@ -42,6 +43,7 @@ export function AppShell() {
               </div>
             )}
           </Presence>
+          <TaskArrivalToast />
           <PageOutlet />
           <LoginForm />
         </>

@@ -88,9 +88,12 @@ the profile icon for the worker's name. Under **All projects**, tasks group
 under a header for each project. Each group appears at the position of its
 newest task, and its header stays visible while its rows scroll.
 
-When a task starts elsewhere, for example when Codex delegates one, the panel
-opens it. It stays where it is while you compose a task, have a dialog open, or
-went back to the list on a narrow panel.
+While you view a task, a toast announces new tasks in the current scope.
+**View** opens the task. The current task, draft, reading position and focus
+stay in place until you navigate. If several other tasks arrive together, the
+toast shows the newest one. Notifications stay quiet while you compose a task,
+have a dialog open, wait for a submitted request or browse the list or another
+page.
 
 Wide panels show the task list and inspector side by side, with a resizable
 divider. Narrow panels switch between them. Runtime accumulates across turns

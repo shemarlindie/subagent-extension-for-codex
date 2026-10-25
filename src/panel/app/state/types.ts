@@ -175,6 +175,7 @@ export type Snapshot = {
   draft?: DraftState;
   /** Where Chat's "New" divider moved when the user marked the task unread from a message. */
   newMark?: NewMark;
+  taskArrival?: Pick<Task, "id" | "title">;
   selected?: string;
   /** Set while the inspector shows the new-task composer instead of a task. */
   newTask?: NewTaskState;

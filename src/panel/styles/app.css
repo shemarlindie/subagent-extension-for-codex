@@ -3,6 +3,7 @@
 @import "./base.css";
 @import "../app/styles/panel.css";
 @import "../app/styles/navigation.css";
+@import "../app/styles/task-arrival-toast.css";
 @import "../app/styles/panel-expanded.css";
 @import "../app/styles/panel-narrow.css";
 @import "./primitives.css";

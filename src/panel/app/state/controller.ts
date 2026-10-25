@@ -47,7 +47,7 @@ import { projectRemovalReset } from "./scope-reconciliation";
 import { defaultSelection, selectionPatch } from "./selection";
 import { filterCounts, selectedTask } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
-import { TaskArrivals } from "./task-arrivals";
+import { TaskArrivals, taskArrivalTarget } from "./task-arrivals";
 import type {
   DialogState,
   Filter,
@@ -671,24 +671,10 @@ export class Controller {
         return;
       }
 
-      // Open a task that started elsewhere, unless the user is composing, in a
-      // dialog, waiting on a request or browsing the list.
-      const { newTask, dialog, busy, selected: current } = this.state;
-      const away = this.browsing || this.restoredView || newTask || dialog;
-      const arrived = this.arrivals.next(tasks, version);
-
-      // A choice made while this read was pending takes priority over arrivals.
-      if (
-        arrived &&
-        arrived.id !== current &&
-        !away &&
-        !busy &&
-        selectionAtReadStart === this.generation
-      ) {
-        this.choose();
-        this.reconcileShare = true;
-        this.patch(selectionPatch(arrived.id, this.tabOf(arrived.id)));
-      }
+      const taskArrival = this.arrivals.update(tasks, this.state, {
+        browsing: this.browsing || Boolean(this.restoredView),
+        changedSelection: selectionAtReadStart !== this.generation,
+      });
 
       const previousSelected = this.state.selected;
 
@@ -702,6 +688,7 @@ export class Controller {
       this.viewStateReady = Boolean(this.viewState);
 
       this.patch({
+        taskArrival: taskArrival?.id === selected ? undefined : taskArrival,
         tasks: this.taskActions.unread.settle(tasks),
         taskListLoading: false,
         selected,
@@ -899,8 +886,14 @@ export class Controller {
     await this.share();
   }
 
-  /** The tab a task last showed. */
   private tabOf = (id: string) => this.session.get("task", id).tab;
+
+  dismissTaskArrival = () => this.patch({ taskArrival: undefined });
+
+  async viewTaskArrival() {
+    const arrival = taskArrivalTarget(this.state);
+    if (arrival) await this.select(arrival.id);
+  }
 
   back() {
     this.leaveSelection(true);
@@ -1275,7 +1268,7 @@ export class Controller {
       }
     }
 
-    this.patch({ page, formError: "" });
+    this.patch({ page, formError: "", taskArrival: undefined });
   }
 
   manageProjects() {

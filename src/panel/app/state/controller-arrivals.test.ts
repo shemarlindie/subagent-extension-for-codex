@@ -1,81 +1,153 @@
-import assert from "node:assert/strict";
-
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import { deferred, flush, setup, task } from "./controller-test-harness";
 
-const later = (id: string) => ({
-  ...task(id),
-  created_at: "2026-10-21T01:00:00.000Z",
-});
-
-test("the panel opens a task that starts elsewhere, but not ones it already listed", async (t) => {
+test("a fallback selection does not announce the task it opens", async (t) => {
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("old")];
   await controller.start();
-  assert.equal(controller.getSnapshot().selected, "old");
-
-  await controller.select("old");
-  transport.tasks = [later("new"), task("old")];
+  transport.tasks = [task("new")];
   await controller.refresh();
-  assert.equal(controller.getSnapshot().selected, "new");
-
-  // A later read with nothing new keeps the user's choice.
-  await controller.select("old");
-  await controller.refresh();
-  assert.equal(controller.getSnapshot().selected, "old");
+  expect(controller.getSnapshot().selected).toBe("new");
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
 });
 
-test("the panel stays put while composing a task or after going back to the list", async (t) => {
-  for (const leave of ["compose", "back"] as const) {
+test("a selected arrival does not hide another newly listed task", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("old")];
+  await controller.start();
+  await controller.select("selected-new");
+  transport.tasks = [task("selected-new"), task("new-other"), task("old")];
+  await controller.refresh();
+  expect(controller.getSnapshot().selected).toBe("selected-new");
+  expect(controller.getSnapshot().taskArrival?.id).toBe("new-other");
+});
+
+test("initial and changed scopes establish a baseline without announcing existing tasks", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("old")];
+  await controller.start();
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
+
+  transport.tasks = [task("new"), task("old")];
+  await controller.refresh();
+  expect(controller.getSnapshot().taskArrival?.id).toBe("new");
+
+  controller.applyScope(
+    { panel_scope: { conversation_id: "another-chat" } },
+    false,
+  );
+
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
+  transport.tasks = [task("scoped", "/repo/a", "another-chat")];
+  await controller.refresh();
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
+});
+
+test("previously seen, archived and out-of-scope tasks do not produce arrivals", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+
+  controller.applyScope({ panel_scope: { conversation_id: "chat" } }, false);
+
+  const old = task("old", "/repo/a", "chat");
+  const seen = task("seen", "/repo/a", "chat");
+  transport.tasks = [old, seen];
+  await controller.start();
+  transport.tasks = [old];
+  await controller.refresh();
+
+  transport.tasks = [
+    { ...task("archived", "/repo/a", "chat"), archived_at: "2026-10-21" },
+    task("other-chat", "/repo/a", "elsewhere"),
+    seen,
+    old,
+  ];
+
+  await controller.refresh();
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
+
+  transport.tasks = [seen, old];
+  await controller.refresh();
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
+});
+
+for (const guard of ["compose", "back", "dialog", "page", "busy"] as const) {
+  test(`arrivals stay silent while ${guard} and do not surface after returning`, async (t) => {
     const { controller, transport } = setup(true);
     t.onTestFinished(() => controller.dispose());
     transport.tasks = [task("old")];
     await controller.start();
+    const pending = deferred<void>();
+    let action: Promise<unknown> | undefined;
 
-    if (leave === "compose") controller.newTasks.open();
-    else controller.back();
+    if (guard === "compose") controller.newTasks.open();
+    if (guard === "back") controller.back();
+    if (guard === "dialog") controller.addProject();
+    if (guard === "page") controller.navigate("projects");
 
-    transport.tasks = [later("new"), task("old")];
+    if (guard === "busy") {
+      transport.handler = (name) =>
+        name === "app_raise_budget" ? pending.promise : undefined;
+
+      action = controller.taskActions.applyBudget(task("old"), {
+        max_runtime_minutes: 30,
+      });
+    }
+
+    const selected = controller.getSnapshot().selected;
+    transport.tasks = [task("new"), task("old")];
     await controller.refresh();
+    expect(controller.getSnapshot().selected).toBe(selected);
+    expect(controller.getSnapshot().taskArrival).toBeUndefined();
 
-    // Composing shows the composer in place of a task, so neither selects one.
-    assert.equal(controller.getSnapshot().selected, undefined, leave);
+    if (guard === "dialog") controller.dismiss();
+    if (guard === "page") controller.backToTasks();
+    pending.resolve();
+    await action;
+    await controller.select("old");
+    await controller.refresh();
+    expect(controller.getSnapshot().taskArrival).toBeUndefined();
+  });
+}
 
-    assert.equal(
-      Boolean(controller.getSnapshot().newTask),
-      leave === "compose",
-    );
-  }
-});
-
-test("a delayed task arrival preserves a selection made after the refresh started", async (t) => {
+test("a delayed arrival preserves a selection made after its read started", async (t) => {
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("old"), task("other")];
   await controller.start();
-
-  const pendingTasks = deferred<ReturnType<typeof task>[]>();
+  const pending = deferred<ReturnType<typeof task>[]>();
 
   transport.handler = (name) =>
-    name === "list_tasks" ? pendingTasks.promise : undefined;
+    name === "list_tasks" ? pending.promise : undefined;
 
   const refresh = controller.refresh();
   await flush();
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "list_tasks").length,
-    2,
-  );
-
   await controller.select("other");
-  transport.tasks = [later("new"), task("old"), task("other")];
-  pendingTasks.resolve(transport.tasks);
+  transport.tasks = [task("new"), task("old"), task("other")];
+  pending.resolve(transport.tasks);
   await refresh;
-  assert.equal(controller.getSnapshot().selected, "other");
+  expect(controller.getSnapshot().selected).toBe("other");
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
 
   transport.handler = undefined;
   await controller.refresh();
-  assert.equal(controller.getSnapshot().selected, "other");
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
+});
+
+test("View cannot leave a dialog opened after an arrival", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("old")];
+  await controller.start();
+  transport.tasks = [task("new"), task("old")];
+  await controller.refresh();
+  controller.addProject();
+  const dialog = controller.getSnapshot().dialog;
+  await controller.viewTaskArrival();
+  expect(controller.getSnapshot().selected).toBe("old");
+  expect(controller.getSnapshot().dialog).toBe(dialog);
 });
