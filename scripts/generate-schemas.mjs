@@ -1,6 +1,5 @@
 import { glob, readFile, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 
 import { ESLint } from "eslint";
 import { format, resolveConfig } from "prettier";
@@ -35,56 +34,7 @@ if (!contracts.length) {
   );
 }
 
-const schemaMappings = [...contracts];
-const inputs = new Set(contracts.map(({ input }) => input));
 const outputs = new Set(contracts.map(({ output }) => output));
-
-if (inputs.size !== contracts.length || outputs.size !== contracts.length) {
-  throw new Error("Duplicate discovered schema input or output");
-}
-
-// Resolve every feature mapping before any generated files are written.
-for (const file of await discover("src/**/schema-generation.mjs")) {
-  const { default: config } = await import(pathToFileURL(file).href);
-
-  if (!config || !Array.isArray(config.mappings)) {
-    throw new Error(
-      `Invalid schema mappings in ${relative(process.cwd(), file)}`,
-    );
-  }
-
-  for (const mapping of config.mappings) {
-    if (
-      !mapping ||
-      typeof mapping.input !== "string" ||
-      typeof mapping.output !== "string" ||
-      (mapping.getSchemaName !== undefined &&
-        typeof mapping.getSchemaName !== "function")
-    ) {
-      throw new Error(
-        `Invalid schema mapping in ${relative(process.cwd(), file)}`,
-      );
-    }
-
-    const input = resolve(dirname(file), mapping.input);
-    const output = resolve(dirname(file), mapping.output);
-
-    if (inputs.has(input)) {
-      throw new Error(
-        `Duplicate schema mapping for ${relative(process.cwd(), input)}`,
-      );
-    }
-
-    if (outputs.has(output)) {
-      throw new Error(
-        `Schema mapping conflicts with generated output ${relative(process.cwd(), output)}`,
-      );
-    }
-
-    inputs.add(input);
-    schemaMappings.push({ ...mapping, input, output });
-  }
-}
 
 // ts-to-zod exports schemas for every exported type, including helper types
 // used only inside another generated schema. Keep those helpers private unless
@@ -174,7 +124,7 @@ function modulePath(from, to) {
 for (const { input, output } of contracts) {
   const result = generate({
     sourceText: await readFile(input, "utf8"),
-    inputOutputMappings: schemaMappings.map((mapping) => ({
+    inputOutputMappings: contracts.map((mapping) => ({
       ...mapping,
       input: modulePath(input, mapping.input),
       output: modulePath(output, mapping.output),
@@ -221,10 +171,10 @@ for (const { input, output } of contracts) {
         : declaration.replace(/^export /, ""),
   );
 
-  // Unconfigured imported types fall back to any; never silently lose validation.
+  // Types imported from outside a contract fall back to any; never silently lose validation.
   if (/\bz\.any\(\)/.test(source)) {
     throw new Error(
-      `Permissive validator in ${input}; configure its type references.`,
+      `Permissive validator in ${input}; import its types from a discovered contract.`,
     );
   }
 

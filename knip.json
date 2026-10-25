@@ -5,7 +5,6 @@
     "src/service/projects-cli.ts",
     "src/service/platform/service/node-version.ts",
     "src/panel/app/app.ts",
-    "src/**/schema-generation.mjs",
     "src/**/*-contract.ts",
     "dev/panel/host/panel.ts",
     "dev/panel/host/field-error-demo.tsx",

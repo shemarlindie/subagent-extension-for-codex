@@ -23,7 +23,6 @@ const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const contracts = [
   "src/shared/settings/document-contract",
   "src/shared/panel/panel-contract",
-  "src/shared/providers/claude/task-options-contract",
 ];
 
 const panelContract = "src/shared/panel/panel-contract.ts";
@@ -39,8 +38,6 @@ function fixture(t: TestContext) {
     "scripts/lint/source-boundaries.mjs",
     "package.json",
     ...contracts.map((contract) => `${contract}.ts`),
-    "src/shared/providers/claude/permissions.ts",
-    "src/shared/providers/claude/schema-generation.mjs",
   ]) {
     const destination = join(directory, file);
 
@@ -163,7 +160,7 @@ settingRowSchema.safeParse({});
 );
 
 test.concurrent(
-  "rejects an unmapped imported type before writing a permissive validator",
+  "rejects a type imported from outside a contract before writing a permissive validator",
   async (t) => {
     const directory = fixture(t);
     const generated = await generate(directory);
@@ -309,194 +306,5 @@ test.concurrent(
       result.stderr,
       /No schema contracts found under src\. Run this command from the project root\./,
     );
-  },
-);
-
-test.concurrent(
-  "uses feature-owned custom schema names for handwritten validators",
-  async (t) => {
-    const directory = fixture(t);
-    const feature = join(directory, "src/service/features/custom");
-
-    mkdirSync(feature, { recursive: true });
-
-    writeFileSync(
-      join(feature, "message-contract.ts"),
-      `import type { External } from "./external.js";
-export interface Message { value: External; }
-`,
-    );
-
-    writeFileSync(
-      join(feature, "external.ts"),
-      `import { z } from "zod";
-export type External = string;
-export const externalValidator = z.string().min(1);
-`,
-    );
-
-    writeFileSync(
-      join(feature, "schema-generation.mjs"),
-      `export default {
-  mappings: [{
-    input: "./external.ts",
-    output: "./external.ts",
-    getSchemaName: (name) => name === "External" ? "externalValidator" : name,
-  }],
-};
-`,
-    );
-
-    const result = await generate(directory);
-
-    assert.equal(result.status, 0, result.stderr);
-
-    const output = readFileSync(
-      join(feature, "message-contract.generated.ts"),
-      "utf8",
-    );
-
-    assert.match(
-      output,
-      /import \{ externalValidator \} from "\.\/external\.js"/,
-    );
-
-    assert.match(output, /value: externalValidator/);
-
-    const parsed = await run(directory, [
-      "--import",
-      "tsx",
-      "--input-type=module",
-      "--eval",
-      `import assert from "node:assert/strict";
-import { messageSchema } from "./src/service/features/custom/message-contract.generated.ts";
-assert.deepEqual(messageSchema.parse({ value: "valid" }), { value: "valid" });
-assert.equal(messageSchema.safeParse({ value: "" }).success, false);
-`,
-    ]);
-
-    assert.equal(parsed.status, 0, parsed.stderr);
-
-    const checked = await generate(directory, true);
-
-    assert.equal(checked.status, 0, checked.stderr);
-  },
-);
-
-test.concurrent(
-  "resolves feature-owned handwritten validator mappings without overwriting them",
-  async (t) => {
-    const directory = fixture(t);
-
-    const permissions = join(
-      directory,
-      "src/shared/providers/claude/permissions.ts",
-    );
-
-    const before = readFileSync(permissions, "utf8");
-    const result = await generate(directory);
-
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(readFileSync(permissions, "utf8"), before);
-
-    const output = readFileSync(
-      join(directory, `${contracts[2]}.generated.ts`),
-      "utf8",
-    );
-
-    assert.match(
-      output,
-      /import \{\s*approvalDeciderSchema,\s*claudePermissionModeSchema,\s*claudePolicySchema,\s*permissionModeSchema,?\s*\} from "\.\/permissions\.js"/,
-    );
-
-    assert.match(output, /permission_mode: permissionModeSchema\.optional\(\)/);
-
-    assert.match(
-      output,
-      /approval_decider: approvalDeciderSchema\.optional\(\)/,
-    );
-
-    assert.match(output, /claude_policy: claudePolicySchema[,\n]/);
-  },
-);
-
-test.concurrent(
-  "rejects duplicate mapping inputs through relative aliases before writing outputs",
-  async (t) => {
-    const directory = fixture(t);
-
-    const config = join(
-      directory,
-      "src/shared/duplicate/schema-generation.mjs",
-    );
-
-    mkdirSync(dirname(config), { recursive: true });
-
-    writeFileSync(
-      config,
-      `export default {
-  mappings: [{
-    input: "../providers/claude/nested/../permissions.ts",
-    output: "../providers/claude/permissions.ts",
-  }],
-};\n`,
-    );
-
-    const result = await generate(directory);
-
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Duplicate.*mapping.*permissions\.ts/i);
-
-    for (const contract of contracts) {
-      assert.equal(
-        existsSync(join(directory, `${contract}.generated.ts`)),
-        false,
-      );
-    }
-  },
-);
-
-test.concurrent(
-  "rejects handwritten mappings to generated outputs before writing outputs",
-  async (t) => {
-    const directory = fixture(t);
-
-    const config = join(
-      directory,
-      "src/shared/duplicate/schema-generation.mjs",
-    );
-
-    mkdirSync(dirname(config), { recursive: true });
-
-    writeFileSync(
-      config,
-      `export default {
-  mappings: [{
-    input: "./handwritten.ts",
-    output: "../panel/panel-contract.generated.ts",
-  }],
-};\n`,
-    );
-
-    writeFileSync(
-      join(dirname(config), "handwritten.ts"),
-      "export interface Handwritten { value: string; }\n",
-    );
-
-    const result = await generate(directory);
-
-    assert.notEqual(result.status, 0);
-
-    assert.match(
-      result.stderr,
-      /conflicts with generated output.*panel-contract/i,
-    );
-
-    for (const contract of contracts) {
-      assert.equal(
-        existsSync(join(directory, `${contract}.generated.ts`)),
-        false,
-      );
-    }
   },
 );

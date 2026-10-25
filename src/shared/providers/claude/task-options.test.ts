@@ -1,16 +1,15 @@
 import { expect, test } from "vitest";
-import { z } from "zod";
 
 import {
   approvalDeciderSchema,
   claudePermissionModeSchema,
   permissionModeSchema,
 } from "./permissions.js";
-import { readClaudeTaskOptions } from "./task-options.js";
 import {
   claudeStartOptionsSchema,
   claudeTaskOptionsSchema,
-} from "./task-options-contract.generated.js";
+  readClaudeTaskOptions,
+} from "./task-options.js";
 
 const policy = {
   sandbox: "extension_locked",
@@ -84,24 +83,6 @@ test.each(optionSchemas)(
   },
 );
 
-test("retains handwritten permission enum metadata in generated JSON Schema", () => {
-  for (const [schema, modes] of optionSchemas) {
-    const json = z.toJSONSchema(schema);
-
-    expect(json.properties?.permission_mode).toMatchObject({
-      type: "string",
-      enum: modes.options,
-    });
-
-    expect(json.properties?.approval_decider).toMatchObject({
-      type: "string",
-      enum: approvalDeciderSchema.options,
-    });
-
-    expect(json.additionalProperties).toBe(false);
-  }
-});
-
 test("keeps policy validation and nested unknown-field stripping", () => {
   expect(
     claudeTaskOptionsSchema.parse({
@@ -126,7 +107,7 @@ test("keeps policy validation and nested unknown-field stripping", () => {
   ).toBe(false);
 });
 
-test("reads only the Claude provider's options through the generated validator", () => {
+test("reads and validates only the Claude provider's options", () => {
   const options = { ...stored, approval_decider: "parent_agent" };
 
   expect(

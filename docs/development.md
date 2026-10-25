@@ -74,7 +74,7 @@ Pick the validation source by what the contract owns:
 
 | Contract                                                                                                                                        | Source                                                                                                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Plain boundary data, such as settings documents, panel output and Claude task options                                                           | TypeScript types with generated Zod schemas. Edit the source types and regenerate.                                                                       |
+| Plain boundary data, such as settings documents, panel output and event payloads                                                                | TypeScript types with generated Zod schemas. Edit the source types and regenerate.                                                                       |
 | Inputs with transformations, defaults or substantial validation, such as task start, tool inputs, settings updates, stored tasks and SDK inputs | Handwritten Zod with inferred TypeScript types.                                                                                                          |
 | Database rows                                                                                                                                   | Validators derived from Drizzle tables at deserialization. Serialized JSON needs its own payload validation. See [Database and migrations](database.md). |
 | Internal data that needs no runtime validation                                                                                                  | Plain TypeScript.                                                                                                                                        |
@@ -120,22 +120,11 @@ To add a contract:
 
 Commit the source, generated file and tests together.
 
-A handwritten validator that imports source types needs a feature-owned
-`schema-generation.mjs`, with paths relative to that file. Claude's
-configuration, for example, keeps its permission policy in `permissions.ts`:
-
-```js
-export default {
-  mappings: [{ input: "./permissions.ts", output: "./permissions.ts" }],
-};
-```
-
-These files run only during schema generation. Each imported type maps to its
-camel-case schema name, so `PermissionMode` maps to `permissionModeSchema`. A
-mapping can supply `getSchemaName` for another convention. The generator rejects
-duplicate mappings, conflicts with generated outputs and permissive `z.any()`
-fallbacks. See [Troubleshooting](#troubleshooting). Do not feed Drizzle inferred
-types into this generator.
+A contract can import types only from other contracts. A type from anywhere
+else would generate a permissive `z.any()`, so the generator rejects it. Data
+built from handwritten schemas belongs in handwritten Zod, as Claude task
+options do in `src/shared/providers/claude/task-options.ts`. Do not feed Drizzle
+inferred types into this generator.
 
 ## Run the service
 
@@ -647,14 +636,13 @@ message latency and scheduler work before changing performance behavior.
 
 ## Troubleshooting
 
-| Symptom                                        | Cause and fix                                                                                       |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Dev host live mode logs 502                    | The service is not running, or not on the port Vite resolved at startup                             |
-| Dev host live mode logs 401                    | Vite and the service use different data directories, so the token does not match                    |
-| Codex shows different tasks than the dev host  | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                                         |
-| Service exits on start                         | Another service owns the data directory, or the port is taken, for example by the demo              |
-| `npm test` fails before running tests          | A schema, formatting, lint, unused code or build check failed. Run the checks individually          |
-| Missing or stale generated schema              | Run `npm run schemas:generate`, then `npm run schemas:check`                                        |
-| No schema contracts found under `src`          | Run the command from the project root, and check that source files use `*-contract.ts`              |
-| Permissive validator rejected                  | Put imported types in a discovered `*-contract.ts` file, or add a feature-owned handwritten mapping |
-| Duplicate mapping or generated-output conflict | Remove the duplicate mapping. Discovered contracts already map to their generated validators        |
+| Symptom                                       | Cause and fix                                                                              |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Dev host live mode logs 502                   | The service is not running, or not on the port Vite resolved at startup                    |
+| Dev host live mode logs 401                   | Vite and the service use different data directories, so the token does not match           |
+| Codex shows different tasks than the dev host | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                                |
+| Service exits on start                        | Another service owns the data directory, or the port is taken, for example by the demo     |
+| `npm test` fails before running tests         | A schema, formatting, lint, unused code or build check failed. Run the checks individually |
+| Missing or stale generated schema             | Run `npm run schemas:generate`, then `npm run schemas:check`                               |
+| No schema contracts found under `src`         | Run the command from the project root, and check that source files use `*-contract.ts`     |
+| Permissive validator rejected                 | Import the type from a discovered `*-contract.ts` file, or write the schema by hand        |
