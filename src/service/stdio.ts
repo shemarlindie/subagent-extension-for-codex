@@ -4,7 +4,6 @@ import { parseEnv } from "node:util";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 
 import { PARENT_DELEGATION_PROTOCOL } from "../shared/tasks/conversation/parent-protocol.js";
 import { hostDirectoryFromMeta } from "./features/projects/chat-project.js";
@@ -14,7 +13,6 @@ import { delegationPanel } from "./platform/panel/panel.js";
 import {
   claudeMentionResource,
   claudeMentionUri,
-  mentionSearchSchema,
   mentionSearchToolConfig,
   mentionSearchToolName,
   mentionTestModeEnv,
@@ -126,13 +124,7 @@ async function serviceTool(name: string, args: Record<string, unknown>) {
 
 server.registerTool(
   mentionSearchToolName,
-  {
-    ...mentionSearchToolConfig,
-    // The extension schemas use a separate Zod version with compatible runtime parsing.
-    inputSchema:
-      mentionSearchToolConfig.inputSchema as unknown as typeof mentionSearchSchema,
-    outputSchema: mentionSearchToolConfig.outputSchema as unknown as z.ZodType,
-  },
+  mentionSearchToolConfig,
   async ({ query }) => ({
     content: [],
     structuredContent:
