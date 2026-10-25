@@ -135,6 +135,7 @@ test(
           error.stderr,
           new RegExp(`Port ${port} is already in use`),
         );
+
         assert.doesNotMatch(error.stderr, /\n\s+at /);
 
         return true;

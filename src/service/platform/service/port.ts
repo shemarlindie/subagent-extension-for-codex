@@ -15,7 +15,7 @@ export class PortInUseError extends Error {
   }
 }
 
-/** How many ports after the default the launcher tries before asking the system for one. */
+/** How many ports starting at the default the launcher tries before asking the system for one. */
 const nearbyPorts = 10;
 
 /** Whether a loopback listener can bind `port` right now. */
@@ -28,8 +28,8 @@ function available(port: number) {
 }
 
 /**
- * A loopback port that was free a moment ago: the first free one after
- * `start`, so a relocated service keeps a predictable address, or one the
+ * A loopback port that was free a moment ago: the first free one starting
+ * at `start`, so a relocated service keeps a predictable address, or one the
  * system picks when those are all taken.
  */
 export async function freeLoopbackPort(start: number, skip: number) {

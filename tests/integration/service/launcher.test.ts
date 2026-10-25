@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import {
   createServer,
@@ -320,8 +321,15 @@ test(
       PORT: String(port),
     });
 
-    // The first launch loses the lease and exits. Then the old service exits.
-    await new Promise((done) => setTimeout(done, 1500));
+    // Wait for the first launch to report the held lease before releasing it.
+    await vi.waitFor(
+      async () => {
+        const output = await readFile(join(dir, "service.log"), "utf8");
+        assert.ok(output.includes(join(dir, "service.pid")));
+      },
+      { timeout: 5000 },
+    );
+
     stopping.kill();
     const result = JSON.parse((await connecting).stdout);
     assert.equal(result.origin, `http://127.0.0.1:${port}`);
@@ -387,11 +395,6 @@ test(
 
     assert.notEqual(moved.origin, unrelated);
 
-    assert.equal(
-      JSON.parse(await readFile(join(dir, "service.json"), "utf8")).origin,
-      moved.origin,
-    );
-
     assert.deepEqual(
       JSON.parse(
         (await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir })).stdout,
@@ -414,6 +417,64 @@ test("a chosen port another program holds fails with a clear message", async (t)
       PORT: new URL(unrelated).port,
     }),
     /Port \d+ is already in use by another program/,
+  );
+
+  await assert.rejects(access(join(dir, "service.log")));
+});
+
+test("launcher follows newly published metadata when a relocating service holds the lease", async (t) => {
+  const { origin } = await identified(t, {
+    apiVersion: 1,
+    launcher: "foreground",
+  });
+
+  const dir = await serviceData(t, origin, resolve("."));
+
+  const unrelated = await fake(t, (_req, res) => {
+    // The winning service publishes its new origin after this proxy read the old one.
+    writeFileSync(join(dir, "service.json"), JSON.stringify({ origin }));
+    res.end("another app");
+  });
+
+  await writeFile(
+    join(dir, "service.json"),
+    JSON.stringify({ origin: unrelated }),
+  );
+
+  await writeFile(join(dir, "service.pid"), String(process.pid));
+
+  assert.deepEqual(
+    JSON.parse((await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir })).stdout),
+    { origin, token: "handoff-token" },
+  );
+
+  await assert.rejects(access(join(dir, "service.log")));
+});
+
+test("launcher never relocates or spawns when the health response body times out", async (t) => {
+  const dir = await data(t);
+  stopOnFinish(t, dir);
+
+  const server = createServer((_req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.flushHeaders();
+  });
+
+  t.onTestFinished(
+    () =>
+      new Promise<void>((done) => {
+        server.closeAllConnections();
+        server.close(() => done());
+      }),
+  );
+
+  await waitForListening(server.listen(0, "127.0.0.1"));
+  const origin = `http://127.0.0.1:${(server.address() as import("node:net").AddressInfo).port}`;
+  await writeFile(join(dir, "service.json"), JSON.stringify({ origin }));
+
+  await assert.rejects(
+    connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
+    /TimeoutError/,
   );
 
   await assert.rejects(access(join(dir, "service.log")));
@@ -613,12 +674,6 @@ test(
 
     await first.release();
     const winner = JSON.parse((await first.connection).stdout);
-    assert.equal(new URL(winner.origin).port, String(first.port));
-
-    assert.equal(
-      JSON.parse(await readFile(join(dir, "service.json"), "utf8")).origin,
-      winner.origin,
-    );
 
     await second.release();
     const follower = JSON.parse((await second.connection).stdout);

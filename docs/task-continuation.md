@@ -130,7 +130,7 @@ git for-each-ref --format='%(refname)' refs/agent-tasks | xargs -n1 git update-r
 
 | Symptom                                      | Check                                                                                                                                      |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Service port is in use                       | Identify the service on that port and confirm its data directory before starting another.                                                  |
+| Service port is in use                       | Check [Service address](configuration.md#service-address) for port selection and overrides.                                                |
 | MCP proxy cannot authenticate                | Use the same absolute data directory for the service and MCP client, or matching token and URL overrides.                                  |
 | Claude tasks cannot start                    | Read the worker's readiness message. [Claude Code CLI](claude-cli.md) explains executable selection and fixes.                             |
 | A turn starts a new session                  | Confirm the original service host and Claude state are available. See [Continue a task](#continue-a-task).                                 |

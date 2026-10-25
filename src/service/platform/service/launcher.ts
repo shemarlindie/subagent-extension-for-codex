@@ -75,11 +75,7 @@ export async function connectService() {
     process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN ??
     `http://127.0.0.1:${process.env.PORT ?? defaultPort}`;
 
-  if (
-    !explicit &&
-    !process.env.PORT &&
-    !process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN
-  ) {
+  if (!pinned) {
     try {
       origin = JSON.parse(
         readFileSync(join(data, "service.json"), "utf8"),
@@ -103,12 +99,13 @@ export async function connectService() {
   const probe = async () => {
     // The service must prove it holds the token before a request carries it.
     const challenge = newChallenge();
+    const signal = AbortSignal.timeout(1000);
     let response: Response;
 
     try {
       response = await fetch(`${origin}/health`, {
         headers: { [challengeHeader]: challenge },
-        signal: AbortSignal.timeout(1000),
+        signal,
         redirect: "error",
       });
     } catch (error) {
@@ -117,6 +114,8 @@ export async function connectService() {
     }
 
     const health = await response.json().catch((error: unknown) => {
+      // A slow body is no more evidence of a foreign listener than slow headers.
+      signal.throwIfAborted();
       throw foreign(error);
     });
 
@@ -275,8 +274,10 @@ export async function connectService() {
     // Only a refused connection, or a port another program holds, authorizes
     // starting a process. Never replace a live service. The loop below waits
     // for one starting or stopping.
-    if (await relocate(error)) {
-      needsLaunch = true;
+    if (!pinned && error instanceof PortInUseError) {
+      // A concurrent service can hold the lease before publishing its new
+      // origin. Wait for discovery below when another process owns the lease.
+      needsLaunch = await relocate(error);
     } else if (!(error instanceof ServiceTransitionError)) {
       if (explicit || !refused(error)) {
         throw error;
