@@ -71,14 +71,8 @@ export function ProjectsPage() {
       }
     >
       <div className="project-manager">
-        <p className="form-note">
-          Manage saved projects on the service host. Names help you identify
-          projects; repository paths stay the same.
-        </p>
         {state.projectsLoaded && !state.projects.length ? (
-          <p className="muted">
-            No saved projects. Add a Git repository to get started.
-          </p>
+          <p className="muted">No saved projects.</p>
         ) : null}
         <LoadingSwap
           className="managed-projects-loading-swap"

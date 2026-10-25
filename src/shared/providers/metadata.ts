@@ -29,7 +29,7 @@ export const claudeMetadata: ProviderMetadata = {
     (level) => level !== "none" && level !== "minimal",
   ),
   costBudgetHelp:
-    "Claude checks cost after a response. The budget may be exceeded; interrupted usage may be missing.",
+    "Claude checks cost after a response. Usage may exceed the budget, and interrupted usage may be missing.",
   nativePermissions: {
     permissionOption: "permission_mode",
     permissionSetting: "claude_permission_mode",
@@ -37,7 +37,7 @@ export const claudeMetadata: ProviderMetadata = {
     approvalDeciderSetting: "default_approval_decider",
     formTitle: "Claude permission mode",
     formHelp:
-      "Claude Code's permission mode for this task. Use extension setting follows your saved default.",
+      'Claude Code\'s permission mode. "Use extension setting" uses your saved default.',
     options: [
       { value: "inherit", label: permissionLabel("inherit") },
       ...claudePermissionModes.map((value) => ({
@@ -45,7 +45,7 @@ export const claudeMetadata: ProviderMetadata = {
         label: permissionLabel(value),
       })),
     ],
-    help: "Claude Code's permission mode for this task. Use extension setting follows your saved default.",
+    help: 'Claude Code\'s permission mode. "Use extension setting" uses your saved default.',
     approvalDecider: true,
     approvalDeciderHelp:
       "Who answers permission requests that Claude Code doesn't decide itself.",

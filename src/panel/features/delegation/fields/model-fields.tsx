@@ -55,8 +55,8 @@ export function ModelFields({
           />
         </AsyncControl>
         <p id="model-help" className="help">
-          Leave blank to use {model || "the worker's default"}. Choose a
-          discovered model or enter a model ID or provider alias.
+          Leave blank to use {model || "the worker's default"}. Choose a model
+          from the list or enter a model ID or alias.
           {workerInfo?.model_discovery_error &&
             ` ${workerInfo.model_discovery_error}`}
           {(!metadata ||

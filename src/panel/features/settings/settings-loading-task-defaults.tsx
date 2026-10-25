@@ -29,12 +29,6 @@ export function SettingsLoadingTaskDefaults() {
 
   return (
     <>
-      <div className="settings-section-intro">
-        <Help
-          id="settings-loading-task-help"
-          parts={["Used when a task doesn't choose its own."]}
-        />
-      </div>
       <div className="settings-loading-rows">
         {selectRows.map(({ label, key, options }) => (
           <div className="setting-row" key={key}>

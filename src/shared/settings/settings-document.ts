@@ -190,33 +190,32 @@ export function settingsSections(input: SectionInput): SettingSection[] {
 
   const defaultsHelp = withHelp(
     [
-      "These apply unless a task's ",
+      "The task's ",
       { text: "worker profile", setting: profileModel },
-      " sets its own model. A provider set to Inherit uses ",
+      " defaults override these. Inherit uses ",
       { text: "Global", setting: "default_model" },
-      "; if Global also inherits, the provider uses its own default. Reasoning effort works the same way. A model chosen for a task overrides all of these.",
+      ", then the worker's own default. This applies to model and reasoning effort. Task choices override all defaults.",
     ],
     shown,
   );
 
   const profilesHelp = withHelp(
     [
-      "A profile set to Inherit uses the task's ",
+      "Inherit uses the task's ",
       { text: "provider", setting: providerModel },
-      " model, such as Claude, then ",
+      " default, then ",
       { text: "Global", setting: "default_model" },
-      ". If those also inherit, the provider uses its own default. Reasoning effort works the same way. A model chosen for a task overrides these.",
+      ", then the worker's own default. This applies to model and reasoning effort. Task choices override profile defaults.",
     ],
     shown,
   );
 
-  const userOnly = "Only you can change these; agents can't.";
+  const userOnly = "Only you can change these settings.";
 
   return [
     {
       id: "task",
       title: "Task defaults",
-      help: ["Used when a task doesn't choose its own."],
       rows: [
         {
           kind: "select",

@@ -19,7 +19,7 @@ import {
 
 export const claudeSettingHelp = {
   claude_permission_mode:
-    "The extension passes this mode by default; task-level permission selections can override it. Claude Code's other user, project and local settings still apply.",
+    "Tasks use this mode unless you choose another. Claude Code's other user, project and local settings still apply.",
   claude_sandbox:
     "Your Claude Code settings decide the sandbox by default. The extension sandbox allows writes only in the workspace and blocks home and sibling reads and the network. Locking its network also ignores domains your Claude Code settings allow.",
   claude_environment:
@@ -35,7 +35,7 @@ export const claudeSettingHelp = {
 };
 
 const settingHelp = claudeSettingHelp;
-const userOnly = "Only you can change these; agents can't.";
+const userOnly = "Only you can change these settings.";
 
 const options = (labels: Record<string, string>) =>
   Object.entries(labels).map(([value, label]) => ({ value, label }));

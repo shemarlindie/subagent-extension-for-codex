@@ -613,9 +613,6 @@ footer {
   font-size: 12px;
   color: var(--muted);
 }
-.form-note--first {
-  margin-top: 0;
-}
 /* Project dropdown default; the context bar and narrow rules override it. */
 .select-trigger {
   width: 100%;

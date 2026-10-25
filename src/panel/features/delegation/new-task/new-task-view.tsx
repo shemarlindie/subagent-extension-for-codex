@@ -45,9 +45,7 @@ export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
                 style={glyphStyle}
                 aria-hidden="true"
               />
-              <p className="new-task-prompt">
-                What would you like to work on next?
-              </p>
+              <p className="new-task-prompt">What would you like to work on?</p>
             </div>
             <div className="chat-footer">
               <NewTaskComposer newTask={newTask} />

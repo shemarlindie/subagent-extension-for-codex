@@ -247,9 +247,14 @@ export function SettingsForm({
                 form,
               }}
             >
-              <div className="settings-section-intro">
-                <Help id={`settings-${section.id}-help`} parts={section.help} />
-              </div>
+              {section.help?.length ? (
+                <div className="settings-section-intro">
+                  <Help
+                    id={`settings-${section.id}-help`}
+                    parts={section.help}
+                  />
+                </div>
+              ) : null}
               {section.rows.map((row) =>
                 row.kind === "models" ? (
                   <ModelTable

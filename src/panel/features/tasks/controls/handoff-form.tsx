@@ -50,11 +50,9 @@ function HandoffForm({ task, target }: HandoffFormProps) {
         ),
       )}
     >
-      <p className="form-note">
-        {canSend
-          ? "Review or edit the message before sending it to this conversation."
-          : "Select and copy this message into Codex."}
-      </p>
+      {!canSend && !canCopy && (
+        <p className="form-note">Select and copy this message into Codex.</p>
+      )}
       <Field id="handoff-message" label="Message">
         <textarea
           id="handoff-message"

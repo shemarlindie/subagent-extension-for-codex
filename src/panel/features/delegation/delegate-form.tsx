@@ -129,9 +129,6 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   return (
     <FormProvider {...form}>
       <form noValidate onSubmit={handleSubmit}>
-        <p className="form-note form-note--first">
-          Describe what you want done and include any important details.
-        </p>
         <Presence show={failedReads.length > 0}>
           <div className="form-error form-field-error" role="alert">
             <span>

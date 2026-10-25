@@ -73,6 +73,6 @@ export function validateReasoning(
   return (
     !resolved ||
     supported.some((level) => level === resolved) ||
-    `Choose a reasoning effort supported by ${provider}${metadata ? ` model ${metadata.value}` : ""}: ${supported.length ? supported.join(", ") : "use the provider runtime default"}.`
+    `Choose a reasoning effort supported by ${provider}${metadata ? ` model ${metadata.value}` : ""}: ${supported.length ? supported.join(", ") : "use the worker's default"}.`
   );
 }
