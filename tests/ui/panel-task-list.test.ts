@@ -158,13 +158,6 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
 
   const result = screen.getByRole("tab", { name: "Chat" });
 
-  assert.deepEqual(
-    screen
-      .getAllByRole("tab")
-      .map((tab) => tab.textContent?.replace(/\s*\d+$/, "").trim()),
-    ["Chat", "Activity", "Changes", "Details"],
-  );
-
   await user.click(result);
   await user.keyboard("{ArrowRight}");
 

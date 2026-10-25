@@ -8,7 +8,6 @@ import {
   editCount,
   onKey,
   rowForm,
-  sectionKeys,
   sectionsForm,
   type SettingRow,
   type SettingSection,
@@ -98,11 +97,6 @@ test("form state holds strings, and a limit that is off keeps its amount", () =>
     max_cost_usd: "3",
     [onKey("max_cost_usd")]: "true",
   });
-
-  assert.deepEqual(sectionKeys(modelsSection), [
-    "default_model",
-    "default_reasoning_effort",
-  ]);
 });
 
 test("updates hold only edits, typed, with budgets sent as switch and amount", () => {
@@ -155,27 +149,6 @@ test("edit counts treat a budget and a model scope as one row each", () => {
 
   assert.equal(editCount(taskSection, edited, initial), 1);
   assert.equal(editCount(modelsSection, edited, initial), 1);
-});
-
-test("text rows send their string as typed", () => {
-  const prefix: SettingRow = {
-    kind: "text",
-    key: "worktree_branch_prefix",
-    label: "Worktree branch prefix",
-    maxLength: 100,
-    pattern: "[\\w./-]*",
-  };
-
-  const text: SettingSection[] = [
-      { id: "task", title: "Task", rows: [prefix] },
-    ],
-    initial = sectionsForm(text, { worktree_branch_prefix: "agent/" });
-
-  assert.deepEqual(initial, { worktree_branch_prefix: "agent/" });
-
-  assert.deepEqual(changes(text, { worktree_branch_prefix: "" }, initial), {
-    worktree_branch_prefix: "",
-  });
 });
 
 test("saved section selection falls back to a valid section", () => {

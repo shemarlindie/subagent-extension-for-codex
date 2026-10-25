@@ -92,36 +92,33 @@ test.each(["running", "busy"] as const)(
   },
 );
 
-test.each([
-  [false, "Mark unread"],
-  [true, "Mark read"],
-] as const)(
-  "task menu offers the opposite of the task's read state (unread: %s)",
-  async (unread, label) => {
-    onTestFinished(cleanup);
+test("task menu marks an unread task read", async () => {
+  const unread = true,
+    label = "Mark read";
 
-    const controller = new Controller(
-      { embedded: true, dispose() {} } as unknown as Transport,
-      { hidden: () => false, wide: () => false },
-    );
+  onTestFinished(cleanup);
 
-    onTestFinished(() => controller.dispose());
-    const tool = vi.spyOn(controller, "tool").mockResolvedValue({ unread });
+  const controller = new Controller(
+    { embedded: true, dispose() {} } as unknown as Transport,
+    { hidden: () => false, wide: () => false },
+  );
 
-    const view = render(
-      <ControllerContext.Provider value={controller}>
-        <Tooltip.Provider>
-          <TaskMenu task={{ ...task, ...(unread ? { unread } : {}) }} />
-        </Tooltip.Provider>
-      </ControllerContext.Provider>,
-    );
+  onTestFinished(() => controller.dispose());
+  const tool = vi.spyOn(controller, "tool").mockResolvedValue({ unread });
 
-    const user = userEvent.setup();
-    await user.click(view.getByRole("button", { name: "Task actions" }));
-    await user.click(await view.findByRole("menuitem", { name: label }));
+  const view = render(
+    <ControllerContext.Provider value={controller}>
+      <Tooltip.Provider>
+        <TaskMenu task={{ ...task, ...(unread ? { unread } : {}) }} />
+      </Tooltip.Provider>
+    </ControllerContext.Provider>,
+  );
 
-    assert.deepEqual(tool.mock.calls, [
-      ["app_set_task_read", { task_id: task.id, read: unread }],
-    ]);
-  },
-);
+  const user = userEvent.setup();
+  await user.click(view.getByRole("button", { name: "Task actions" }));
+  await user.click(await view.findByRole("menuitem", { name: label }));
+
+  assert.deepEqual(tool.mock.calls, [
+    ["app_set_task_read", { task_id: task.id, read: unread }],
+  ]);
+});

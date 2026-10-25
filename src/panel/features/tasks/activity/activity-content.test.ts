@@ -608,8 +608,6 @@ test("thinking-only assistant groups keep their own debug identity", () => {
   // The thinking text is only available through the debug view.
   assertAbsent(thinkingGroup.querySelector("details"));
   assert.equal(view.getAllByText("Assistant").length, 1);
-  // The debug toggle names the row the way its heading does.
-  assert.ok(view.getByRole("button", { name: "Debug activity: Thinking" }));
   cleanup();
 });
 

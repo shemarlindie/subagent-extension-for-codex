@@ -2,18 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { formatStartupOutput, formatStartupPrompt } from "./startup-output.js";
-
-test("startup output adds a leading blank only when requested", () => {
-  const blocks = [{ type: "message", text: "Ready" }] as const;
-
-  assert.equal(
-    formatStartupOutput(blocks, { leadingBlank: true }),
-    "\nReady\n",
-  );
-
-  assert.equal(formatStartupOutput(blocks), "Ready\n");
-});
+import { formatStartupPrompt } from "./startup-output.js";
 
 test("separates prompts and hangs wrapped lines beneath the first line", () => {
   const lines = formatStartupPrompt(

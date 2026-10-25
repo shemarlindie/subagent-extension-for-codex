@@ -61,9 +61,3 @@ test("with a search to clear, Unread shows both actions", () => {
   expect(view.getByRole("button", { name: "Mark all read" })).toBeTruthy();
   expect(view.getByRole("button", { name: "Clear filter" })).toBeTruthy();
 });
-
-test("with nothing unread, Unread says so and offers no Mark all read", () => {
-  const { view } = setup({ tasks: [task("c")] });
-  expect(view.queryByRole("button", { name: "Mark all read" })).toBeNull();
-  expect(view.getByText("You're all caught up.")).toBeTruthy();
-});

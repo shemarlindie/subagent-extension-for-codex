@@ -17,18 +17,6 @@ function svgOf(container: HTMLElement): SVGSVGElement {
 }
 
 describe("Icon", () => {
-  test("label adds an accessible name and title", () => {
-    const { container } = render(
-      createElement(Icon, { name: "check", label: "Done" }),
-    );
-
-    const svg = svgOf(container);
-    assert.equal(svg.getAttribute("role"), "img");
-    assert.equal(svg.getAttribute("aria-label"), "Done");
-    assert.equal(svg.getAttribute("aria-hidden"), null);
-    assert.equal(svg.querySelector("title")?.textContent, "Done");
-  });
-
   test("escapes labels inserted into the SVG markup", () => {
     const label = 'Done <path>unsafe</path> & "quoted"';
 

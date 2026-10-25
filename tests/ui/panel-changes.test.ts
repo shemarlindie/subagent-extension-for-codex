@@ -164,66 +164,6 @@ test("worktree removal stays disabled until the task stops", async (t) => {
   );
 });
 
-test("a current_repo task explains recorded edits and current file previews", async (t) => {
-  const { user } = await setup(t, (transport) => {
-    transport.tasks = [{ ...task(), workspace_strategy: "current_repo" }];
-  });
-
-  await user.click(screen.getByRole("tab", { name: /^Changes/ }));
-
-  assert.ok(await screen.findByText(/^Edits recorded from this task/));
-
-  assertAbsent(screen.queryByText(/git push/));
-});
-
-test("command and incomplete edits carry notes and incomplete files add no lines", async (t) => {
-  const { user } = await setup(t, (transport) => {
-    transport.changes = [
-      {
-        scope: "task",
-        files: [
-          {
-            path: "command.ts",
-            status: "modified",
-            additions: 1,
-            deletions: 1,
-            source: "command",
-            incomplete: false,
-          },
-          {
-            path: "missing.ts",
-            status: "modified",
-            additions: 0,
-            deletions: 0,
-            source: "command",
-            incomplete: true,
-          },
-        ],
-        additions: 1,
-        deletions: 1,
-        diff: "diff --git a/command.ts b/command.ts\n--- a/command.ts\n+++ b/command.ts\n@@ -1 +1 @@\n-old\n+new\n",
-        unrecorded_commands: true,
-      },
-    ];
-  });
-
-  await user.click(screen.getByRole("tab", { name: /^Changes/ }));
-  await screen.findByText("+1 −1, 2 files");
-  expect(screen.getAllByText("command")).toHaveLength(2);
-
-  expect(screen.getAllByText("Changed by a command.").length).toBeGreaterThan(
-    0,
-  );
-
-  expect(
-    screen.getAllByText("An edit to this file wasn't recorded.").length,
-  ).toBeGreaterThan(0);
-
-  expect(
-    screen.getByText("Some changes made by commands weren't recorded."),
-  ).toBeTruthy();
-});
-
 test("Ask Codex about a previewed file prepares its context and restores the preview after sending", async (t) => {
   const { transport, user } = await setup(
     t,

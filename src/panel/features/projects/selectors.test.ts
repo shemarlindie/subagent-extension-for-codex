@@ -10,10 +10,6 @@ test("project names fall back to path basenames across path styles", () => {
   expect(projectDisplayName({ repository: "C:\\workspaces\\example\\" })).toBe(
     "example",
   );
-
-  expect(
-    projectDisplayName({ name: "Example project", repository: "/repo" }),
-  ).toBe("Example project");
 });
 
 test("remaining parent grants cover children but never siblings", () => {

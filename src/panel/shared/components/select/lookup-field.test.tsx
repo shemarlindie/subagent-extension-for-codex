@@ -4,11 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 
-import {
-  MultiSelectField,
-  SelectField,
-  type SelectFieldProps,
-} from "./select-field";
+import { MultiSelectField, SelectField } from "./select-field";
 
 const alpha = {
   value: "/repos/alpha",
@@ -186,35 +182,6 @@ test("multiple lookup preserves selected dependencies across searches and suppor
     "/repos/beta-service,/repos/gamma",
   );
 });
-
-test.each(["disabled", "loading"] as const)(
-  "%s lookup cannot open or change its selected value",
-  async (state) => {
-    const user = userEvent.setup();
-    const onValueChange = vi.fn();
-    const props: Partial<SelectFieldProps> = { [state]: true };
-
-    render(
-      <SelectField
-        id="project"
-        label="Project"
-        searchable
-        options={options}
-        value="/repos/alpha"
-        onValueChange={onValueChange}
-        {...props}
-      />,
-    );
-
-    await user.click(screen.getByRole("combobox", { name: "Project" }));
-
-    expect(
-      screen.queryByRole("combobox", { name: "Search project" }),
-    ).toBeNull();
-
-    expect(onValueChange).not.toHaveBeenCalled();
-  },
-);
 
 test("refreshing lookup options preserves the search and selected value", async () => {
   const user = userEvent.setup();

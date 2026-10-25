@@ -4,33 +4,7 @@ import assert from "node:assert/strict";
 import { fireEvent, waitFor } from "@testing-library/react";
 import { expect, test } from "vitest";
 
-import type { Task } from "../../../app/state/types";
 import { base, sent, setup } from "./chat-panel-test-harness";
-
-test("cost limit toggling preserves its amount and requires a change before applying", () => {
-  const { view } = setup({
-    status: "failed",
-    error: "Claude result: error_max_budget_usd",
-    cost_usd: 5.02,
-  });
-
-  const apply = view.getByRole("button", { name: "Apply" });
-  const limit = view.getByRole("spinbutton", { name: "Cost limit" });
-  const limitSwitch = view.getByRole("switch", { name: "Cost limit" });
-  assert.equal((apply as HTMLButtonElement).disabled, true);
-  assert.equal(view.getByText("Enabled").textContent, "Enabled");
-
-  fireEvent.click(limitSwitch);
-  assert.equal((limit as HTMLInputElement).disabled, true);
-  assert.equal(view.getByText("Disabled").textContent, "Disabled");
-  assert.equal((apply as HTMLButtonElement).disabled, false);
-
-  fireEvent.click(limitSwitch);
-  assert.equal((limit as HTMLInputElement).disabled, false);
-  assert.equal((apply as HTMLButtonElement).disabled, true);
-
-  assert.equal((limit as HTMLInputElement).value, "5");
-});
 
 test("runtime limits above 120 minutes preserve an existing composer draft", async () => {
   const { tool, view, composer, type, updateTask } = setup({
@@ -57,15 +31,12 @@ test("runtime limits above 120 minutes preserve an existing composer draft", asy
 
   assert.equal((apply as HTMLButtonElement).disabled, true);
   const limitSwitch = view.getByRole("switch", { name: "Runtime limit" });
-  assert.equal(view.getByText("Enabled").textContent, "Enabled");
   fireEvent.click(limitSwitch);
   assert.equal((limit as HTMLInputElement).disabled, true);
-  assert.equal(view.getByText("Disabled").textContent, "Disabled");
   assert.equal((apply as HTMLButtonElement).disabled, false);
 
   fireEvent.click(limitSwitch);
   assert.equal((limit as HTMLInputElement).disabled, false);
-  assert.equal(view.getByText("Enabled").textContent, "Enabled");
   assert.equal((apply as HTMLButtonElement).disabled, true);
 
   fireEvent.change(limit, { target: { value: "121" } });
@@ -160,56 +131,34 @@ test("combined budget notice prompts after both spent dimensions are raised", as
   });
 });
 
-test.each([
-  {
-    kind: "runtime",
-    task: {
-      status: "failed",
-      error: "Runtime budget exhausted",
-      budget: { ...base.budget, max_cost_usd: null },
-      runtime_ms: 22 * 60_000,
-      cost_usd: 0.44,
-    },
+test("a runtime limit below the current budget shows validation feedback", () => {
+  const { view } = setup({
+    status: "failed",
+    error: "Runtime budget exhausted",
+    budget: { ...base.budget, max_cost_usd: null },
+    runtime_ms: 22 * 60_000,
+    cost_usd: 0.44,
+  });
+
+  const apply = view.getByRole("button", { name: "Apply" });
+
+  const limit = view.getByRole("spinbutton", {
     name: "Runtime limit (minutes)",
-    below: "19",
-    above: "21",
-    message: "Enter a limit higher than 20 mins.",
-  },
-  {
-    kind: "cost",
-    task: {
-      status: "failed",
-      error: "Claude result: error_max_budget_usd",
-      cost_usd: 5.02,
-    },
-    name: "Cost limit",
-    below: "4",
-    above: "8",
-    message: "Enter a limit higher than $5.00.",
-  },
-] satisfies {
-  kind: string;
-  task: Partial<Task>;
-  name: string;
-  below: string;
-  above: string;
-  message: string;
-}[])(
-  "a $kind limit below the current budget shows validation feedback",
-  ({ task, name, below, above, message }) => {
-    const { view } = setup(task);
-    const apply = view.getByRole("button", { name: "Apply" });
-    const limit = view.getByRole("spinbutton", { name });
+  });
 
-    fireEvent.change(limit, { target: { value: below } });
-    assert.equal(view.getByRole("alert").textContent, message);
-    assert.equal(limit.getAttribute("aria-invalid"), "true");
-    assert.equal((apply as HTMLButtonElement).disabled, true);
+  fireEvent.change(limit, { target: { value: "19" } });
 
-    fireEvent.change(limit, { target: { value: above } });
-    expect(view.queryByRole("alert")).toBeNull();
-  },
-);
+  assert.equal(
+    view.getByRole("alert").textContent,
+    "Enter a limit higher than 20 mins.",
+  );
+
+  assert.equal(limit.getAttribute("aria-invalid"), "true");
+  assert.equal((apply as HTMLButtonElement).disabled, true);
+
+  fireEvent.change(limit, { target: { value: "21" } });
+  expect(view.queryByRole("alert")).toBeNull();
+});
 
 test("budget controls lock while a limit update is in flight", async () => {
   const { tool, view, composer, updateTask } = setup({

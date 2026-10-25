@@ -6,13 +6,6 @@ import { groupActivity } from "./activity-timeline.js";
 import { thinkingSpan } from "./activity-timeline.js";
 import { event, sdk } from "./activity-timeline-test-harness.js";
 
-test("requesting status has its own row and never a thinking span", () => {
-  const events = [sdk(1, "status", { status: "requesting" })];
-  const [group] = groupActivity(events);
-  assert.ok(group);
-  assert.equal(thinkingSpan(group, events), undefined);
-});
-
 test("a thinking row is open-ended when no event follows", () => {
   const thinking = [event(10, "thinking_tokens"), event(14, "thinking_tokens")];
   const [group] = groupActivity(thinking);

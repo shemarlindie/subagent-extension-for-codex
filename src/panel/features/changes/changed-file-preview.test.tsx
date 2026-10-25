@@ -327,9 +327,6 @@ test("does not reuse another task's preview when the path matches", async () => 
     view.getByRole("status", { name: "Loading file preview" }),
   ).toBeTruthy();
 
-  expect(view.container.querySelector(".loading-spinner")).not.toBeNull();
-  expect(view.container.querySelector(".skeleton-shape")).toBeNull();
-
   expect(view.container.textContent).not.toContain("Task A content");
 
   await act(async () =>

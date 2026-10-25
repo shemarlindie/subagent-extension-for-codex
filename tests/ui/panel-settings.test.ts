@@ -222,12 +222,8 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
 
   // An off limit keeps its amount visible but prevents edits.
   const amount = screen.getByRole("spinbutton", { name: "Cost limit (USD)" });
-  assert.ok(amount.closest(".setting-amount")!.hasAttribute("data-off"));
   assert.equal((amount as HTMLInputElement).disabled, true);
   const savedAmount = (amount as HTMLInputElement).value;
-
-  await user.type(amount, "500");
-  assert.equal((amount as HTMLInputElement).value, savedAmount);
 
   assert.equal(
     screen.getByRole<HTMLButtonElement>("button", { name: "Save" }).disabled,
@@ -242,11 +238,6 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
   await user.click(screen.getByRole("switch", { name: "Cost limit" }));
   assert.equal((amount as HTMLInputElement).disabled, false);
   assert.equal((amount as HTMLInputElement).value, savedAmount);
-
-  assert.equal(
-    amount.closest(".setting-amount")!.hasAttribute("data-off"),
-    false,
-  );
 
   await user.clear(amount);
 

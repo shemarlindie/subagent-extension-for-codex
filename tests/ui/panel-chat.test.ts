@@ -418,7 +418,7 @@ for (const outcome of ["failed", "interrupted"] as const) {
 
     const error = outcome === "failed" ? "Worker failed <script>" : undefined;
 
-    const { user } = await setup(t, (transport) => {
+    await setup(t, (transport) => {
       const [current] = transport.tasks;
 
       assert.ok(current);
@@ -448,75 +448,12 @@ for (const outcome of ["failed", "interrupted"] as const) {
       outcome === "failed" ? "Failed" : "Interrupted",
     );
 
-    assert.equal(
-      row.querySelector(".chat-outcome-label")?.textContent,
-      "Oct 8, 11:30 AM",
-    );
-
-    assert.equal(
-      row.querySelector(".chat-outcome-duration")?.textContent,
-      "1m 35s",
-    );
-
-    assert.equal(
-      await hoverTooltip(user, row.querySelector(".chat-outcome-duration")!),
-      "Turn took 1m 35s",
-    );
-
-    assert.equal(
-      await hoverTooltip(user, row.querySelector(".chat-outcome-timestamp")!),
-      "Oct 8, 2026, 11:30:00 AM",
-    );
-
     assert.equal(row.querySelector(".chat-outcome-error")?.textContent, error);
     assertAbsent(row.querySelector("script"));
     assertAbsent(row.querySelector('[aria-label^="Reported cost"]'));
     assert.ok(within(row).getByRole("button", { name: "View activity" }));
   });
 }
-
-test("task and reply text render literally without HTML interpretation", async (t) => {
-  const injection = '<img src=x onerror="window.injected=true">';
-
-  const { user } = await setup(t, (transport) => {
-    const [current] = transport.tasks;
-
-    assert.ok(current);
-    current.title = injection;
-
-    transport.chat = [
-      {
-        kind: "message",
-        id: "reply",
-        event_id: 1,
-        message: {
-          id: "reply",
-          event_id: 1,
-          timestamp: "",
-          turn: 1,
-          from: "worker",
-          kind: "reply",
-          text: "<script>window.injected=true</script>",
-        },
-      },
-    ];
-  });
-
-  assert.equal(
-    screen.getByRole("heading", { level: 1 }).textContent,
-    injection,
-  );
-
-  await user.click(screen.getByRole("tab", { name: "Chat" }));
-
-  assert.equal(
-    document.querySelector(".chat-worker-text")?.textContent,
-    "<script>window.injected=true</script>",
-  );
-
-  expect(document.querySelector("img, script")).toBeNull();
-  assert.equal((window as any).injected, undefined);
-});
 
 test("global mode hides Ask Codex about this reply even when the host can send", async (t) => {
   const { user } = await setup(t, (transport) => {

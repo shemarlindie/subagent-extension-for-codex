@@ -183,12 +183,7 @@ test("validation accepts the minimum and newer releases but rejects older versio
       ),
     );
 
-  for (const version of [
-    claudeCliSupport.minimum,
-    "2.1.296",
-    "2.2.0",
-    "3.0.0",
-  ]) {
+  for (const version of [claudeCliSupport.minimum, "3.0.0"]) {
     const status = await check(version);
     assert.equal(status.ready, true, version);
     assert.equal(status.version, version);

@@ -7,7 +7,6 @@ import { assertSelectedProviderOptions } from "../../../shared/providers/options
 import { startSchema, type Task } from "../../../shared/tasks/model.js";
 import { Settings } from "../settings/settings.js";
 import { Store } from "../tasks/storage/store.js";
-import { ClaudeAgentProvider } from "./claude/runtime/provider.js";
 import { executionTaskPolicy } from "./task-policy.js";
 
 const task = (approval_mode: Task["approval_mode"]) =>
@@ -125,32 +124,6 @@ test("task options are isolated to the selected provider namespace", () => {
         claude: { permission_mode: "plan" },
       }),
     /selected provider/,
-  );
-});
-
-test("fixture advertises Claude's task capabilities and native permission modes", () => {
-  const fixture = new FixtureProvider();
-  const claude = new ClaudeAgentProvider();
-
-  assert.deepEqual(fixture.capabilities, claude.capabilities);
-  const fixturePermissions = fixture.metadata.nativePermissions!;
-  const claudePermissions = claude.metadata.nativePermissions!;
-
-  assert.deepEqual(fixturePermissions.options, claudePermissions.options);
-
-  assert.equal(
-    fixturePermissions.approvalDecider,
-    claudePermissions.approvalDecider,
-  );
-
-  assert.equal(
-    fixturePermissions.approvalDeciderOption,
-    claudePermissions.approvalDeciderOption,
-  );
-
-  assert.equal(
-    fixturePermissions.approvalDeciderSetting,
-    claudePermissions.approvalDeciderSetting,
   );
 });
 

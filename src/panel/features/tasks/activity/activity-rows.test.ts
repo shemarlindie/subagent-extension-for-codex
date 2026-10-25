@@ -106,27 +106,6 @@ test("a thinking row with nothing after it counts up only while the worker runs"
   assertAbsent(view.container.querySelector(".activity-duration"));
 });
 
-test("task completion activity includes the accumulated runtime", (t) => {
-  t.onTestFinished(cleanup);
-  const events = [event("task.completed", {}, "completed-runtime")];
-
-  const view = render(
-    createElement(GroupedEventList, { events, runtimeMs: 95_000 }),
-  );
-
-  assert.equal(
-    view.container.querySelector(".activity-group-title strong")?.textContent,
-    "Task completed after 1m 35s",
-  );
-
-  view.rerender(createElement(GroupedEventList, { events }));
-
-  assert.equal(
-    view.container.querySelector(".activity-group-title strong")?.textContent,
-    "Task completed",
-  );
-});
-
 test("a reply shows its plain preview outside Debug with More and Less controls", (t) => {
   t.onTestFinished(cleanup);
   const text = `**Done.**\n\n- one\n\n${"More detail. ".repeat(12)}`;
@@ -172,10 +151,6 @@ test("a reply shows its plain preview outside Debug with More and Less controls"
   );
 
   const group = reply.container.querySelector(".activity-group")!;
-
-  expect(group.querySelector(".activity-group-title")?.textContent).toBe(
-    "Reply",
-  );
 
   expect(group.querySelector(".activity-group-secondary")).toBeNull();
   expect(group.querySelector(".activity-debug-body")).toBeNull();

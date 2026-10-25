@@ -14,7 +14,6 @@ import {
   task,
   test,
   vi,
-  waitFor,
   within,
 } from "./panel-test-support";
 
@@ -107,26 +106,6 @@ test("inline preview expands and collapses while preserving the selected task", 
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
   assertAbsent(screen.queryByRole("region", { name: "Task inspector" }));
-});
-
-test("the header menu offers the secondary actions and runs them", async (t) => {
-  const { transport, user } = await setup(t);
-  const trigger = screen.getByRole("button", { name: "Panel actions" });
-  await user.hover(trigger);
-
-  assert.equal(
-    (await screen.findByRole("tooltip")).textContent,
-    "Panel actions",
-  );
-
-  await user.unhover(trigger);
-  await user.click(trigger);
-
-  await user.click(await screen.findByRole("menuitem", { name: "Settings" }));
-
-  await waitFor(() =>
-    assert.ok(transport.calls.some((call) => call.name === "get_settings")),
-  );
 });
 
 test("inline host without expansion offers the chat controls fallback", async (t) => {

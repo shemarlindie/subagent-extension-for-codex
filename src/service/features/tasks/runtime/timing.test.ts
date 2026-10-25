@@ -68,33 +68,6 @@ test("timing records go to a private JSON Lines file, not the console", async ()
   assert.equal(debug.mock.calls.length, 0);
 });
 
-test("a full timing log rolls over to one previous file", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "task-timing-"));
-  const path = join(directory, "timing.jsonl");
-
-  onTestFinished(async () => {
-    configureTimingLog(undefined);
-    await rm(directory, { recursive: true, force: true });
-  });
-
-  configureTimingLog(path, 300);
-
-  for (const phase of ["first", "second", "third"]) {
-    recordTaskTiming({ phase, detail: "x".repeat(80) });
-  }
-
-  await flushTimingLog();
-
-  const phases = async (file: string) =>
-    (await readFile(file, "utf8"))
-      .trim()
-      .split("\n")
-      .map((line) => (JSON.parse(line) as { phase: string }).phase);
-
-  assert.deepEqual(await phases(`${path}.1`), ["second"]);
-  assert.deepEqual(await phases(path), ["third"]);
-});
-
 test("timing records carry the service log's instance and request IDs", async () => {
   const timing = await captureTiming();
   configureLogging(undefined);

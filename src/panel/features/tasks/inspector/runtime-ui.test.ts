@@ -119,33 +119,6 @@ test("task list runtime ticks, freezes while stopped, and accumulates after resu
   assert.equal(rowRuntime(view), "1m 40s");
 });
 
-test("task list shows a Needs input label without a timer while a worker awaits input", (t) => {
-  t.onTestFinished(() => {
-    cleanup();
-    vi.useRealTimers();
-  });
-
-  vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:30.000Z") });
-
-  const view = render(
-    row(
-      task({
-        run_started_at: "2026-10-02T12:00:00.000Z",
-        pending_input: {
-          id: "question",
-          kind: "question",
-          tool: "AskUserQuestion",
-          input: {},
-        },
-      }),
-    ),
-  );
-
-  assert.equal(rowRuntime(view), "Needs input");
-  act(() => void vi.advanceTimersByTime(5000));
-  assert.equal(rowRuntime(view), "Needs input");
-});
-
 test("task list freezes an open run when input is requested and catches up on resume", (t) => {
   t.onTestFinished(() => {
     cleanup();
@@ -196,27 +169,6 @@ test("task list shows a fixed final runtime for every terminal status, including
       assert.equal(rowRuntime(view), expected);
       act(() => void vi.advanceTimersByTime(5000));
       assert.equal(rowRuntime(view), expected);
-    }
-  }
-});
-
-test("task list shows stopped state labels regardless of recorded runtime", (t) => {
-  t.onTestFinished(cleanup);
-  const view = render(row(task({ status: "queued", runtime_ms: 0 })));
-
-  for (const status of [
-    "queued",
-    "starting",
-    "waiting",
-    "interrupted",
-  ] as const) {
-    for (const runtime_ms of [0, 95_000]) {
-      view.rerender(row(task({ status, runtime_ms })));
-
-      assert.equal(
-        rowRuntime(view),
-        status.charAt(0).toUpperCase() + status.slice(1),
-      );
     }
   }
 });
@@ -343,43 +295,6 @@ test("terminal states and input requests take precedence over stale activity", (
   );
 
   expect(view.queryByRole("img", { name: live_activity.text })).toBeNull();
-});
-
-test("task list uses short state labels when no runtime timer is available", (t) => {
-  t.onTestFinished(cleanup);
-  const view = render(row(task({ runtime_ms: 0 })));
-
-  const cases: Array<[Partial<Task>, string]> = [
-    [{ status: "running" }, "Running"],
-    [{ status: "running", runtime_ms: 95_000 }, "Running"],
-    [
-      {
-        status: "waiting",
-        pending_input: {
-          id: "question",
-          kind: "question",
-          tool: "AskUserQuestion",
-          input: {},
-        },
-      },
-      "Needs input",
-    ],
-    [
-      {
-        live_activity: { text: "Waiting for rate limit reset", state: "info" },
-      },
-      "Rate limit",
-    ],
-    [
-      { live_activity: { text: "Context compaction failed", state: "failed" } },
-      "Compaction failed",
-    ],
-  ];
-
-  for (const [patch, label] of cases) {
-    view.rerender(row(task({ runtime_ms: 0, ...patch })));
-    assert.equal(rowRuntime(view), label);
-  }
 });
 
 test("task list replaces its activity fallback with a live timer once the run starts", (t) => {

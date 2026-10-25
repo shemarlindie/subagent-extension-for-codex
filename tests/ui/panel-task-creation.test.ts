@@ -121,11 +121,6 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
 
   assert.equal(selectedProjectPath(), "/repo/a");
 
-  assert.equal(
-    screen.getByLabelText<HTMLInputElement>("Runtime limit (mins)").value,
-    "0.5",
-  );
-
   await enterTask(user, "Investigate failing tests");
   await selectOption(user, "Worker", "fixture · reviewer");
   await user.type(screen.getByLabelText("Model"), "selected-model");

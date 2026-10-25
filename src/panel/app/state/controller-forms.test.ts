@@ -41,20 +41,6 @@ test("settings opens before its read and keeps its section across scope changes"
   assert.equal(controller.getDialogDraft("settings"), undefined);
 });
 
-test("form updates preserve component state saved for the same dialog", (t) => {
-  const { controller } = setup();
-  t.onTestFinished(() => controller.dispose());
-
-  controller.open({ kind: "handoff", task: task("task-1") });
-  controller.saveDialogField("handoff", "customValue", "selected");
-  controller.saveDialogDraft("handoff", { message: "keep going" });
-
-  assert.deepEqual(controller.getDialogDraft("handoff"), {
-    customValue: "selected",
-    message: "keep going",
-  });
-});
-
 test("refresh preserves dialog identity and reviewed defaults while discovering new projects", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());

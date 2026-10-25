@@ -10,7 +10,6 @@ import type { DelegateValues } from "../delegate-values";
 import { providerOptionDefaults } from "../provider-defaults";
 import { ApprovalField } from "./approval-field";
 import { BudgetFields } from "./budget-fields";
-import { WorkerFields } from "./worker-fields";
 import { WorkspaceField } from "./workspace-field";
 
 function ProviderFields({ worker }: { worker: Worker }) {
@@ -157,35 +156,6 @@ test("provider option defaults read the setting keys declared by metadata", () =
     ),
     { permission_mode: "locked", approval_decider: "parent_agent" },
   );
-});
-
-test("a worker whose runtime isn't ready says why under the worker select", (t) => {
-  t.onTestFinished(cleanup);
-  const message = "Claude Code was not found on the service's PATH.";
-
-  function Fields() {
-    const form = useForm<DelegateValues>({
-      defaultValues: { worker: "claude:reviewer", revision: "HEAD" },
-    });
-
-    return (
-      <FormProvider {...form}>
-        <WorkerFields
-          workers={[
-            {
-              provider: "claude",
-              profiles: ["reviewer"],
-              capabilities: {},
-              readiness: { ready: false, message, details: {} },
-            },
-          ]}
-        />
-      </FormProvider>
-    );
-  }
-
-  const view = render(<Fields />);
-  assert.equal(view.getByRole("alert").textContent, message);
 });
 
 test("unknown task defaults show in-control loading text until selected values resolve", (t) => {

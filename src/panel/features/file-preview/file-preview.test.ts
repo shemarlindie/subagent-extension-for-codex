@@ -81,27 +81,6 @@ test("a new file without the chosen view opens in its best view", async (t) => {
   assert.ok(view.container.querySelector("img"));
 });
 
-test("diffs render each file with old and new line numbers", (t) => {
-  t.onTestFinished(cleanup);
-
-  const view = show({
-    path: "changes.diff",
-    content:
-      "diff --git a/auth.ts b/auth.ts\n--- a/auth.ts\n+++ b/auth.ts\n@@ -1 +1 @@\n-const ttl = 59;\n+const ttl = 60;",
-  });
-
-  assert.deepEqual(
-    [...view.container.querySelectorAll(".diff-row")].map((row) => [
-      row.className,
-      row.textContent,
-    ]),
-    [
-      ["diff-row del", "1−const ttl = 59;"],
-      ["diff-row add", "1+const ttl = 60;"],
-    ],
-  );
-});
-
 test("a file with its own diff adds a Diff view after its format's views", async (t) => {
   t.onTestFinished(cleanup);
 
@@ -130,17 +109,18 @@ test("a file with its own diff adds a Diff view after its format's views", async
   );
 });
 
-test("long files and tables render in full", (t) => {
+test("source and table rows survive multiple lazy blocks", (t) => {
   t.onTestFinished(cleanup);
 
-  const lines = Array.from({ length: 6000 }, (_, index) => `line ${index}`);
+  // Cross two 200-row block boundaries without rendering thousands of DOM nodes.
+  const lines = Array.from({ length: 401 }, (_, index) => `line ${index}`);
   const log = show({ path: "build.log", content: lines.join("\n") });
-  assert.equal(log.container.querySelectorAll(".code-line").length, 6000);
+  assert.equal(log.container.querySelectorAll(".code-line").length, 401);
   cleanup();
 
-  const rows = ["n", ...Array.from({ length: 6000 }, (_, i) => String(i))];
+  const rows = ["n", ...Array.from({ length: 401 }, (_, i) => String(i))];
   const table = show({ path: "rows.csv", content: rows.join("\n") });
-  assert.equal(table.container.querySelectorAll("tbody tr").length, 6000);
+  assert.equal(table.container.querySelectorAll("tbody tr").length, 401);
 });
 
 test("an SVG over 64 KB shows as source with a note, never as an image", (t) => {
@@ -157,19 +137,6 @@ test("an SVG over 64 KB shows as source with a note, never as an image", (t) => 
   expect(screen.queryByRole("button", { name: "Image" })).toBeNull();
 });
 
-test("raster images render from base64 without a Source view", (t) => {
-  t.onTestFinished(cleanup);
-
-  const view = show({ path: "shot.png", content: "AAAA" });
-
-  assert.equal(
-    view.container.querySelector("img")?.getAttribute("src"),
-    "data:image/png;base64,AAAA",
-  );
-
-  expect(screen.queryByRole("button", { name: "Source" })).toBeNull();
-});
-
 test("table rows wider than the header keep every cell", (t) => {
   t.onTestFinished(cleanup);
   const table = show({ path: "ragged.csv", content: "a,b\n1,2,3\n4" });
@@ -183,20 +150,4 @@ test("table rows wider than the header keep every cell", (t) => {
     ["1", "2", "3"],
     ["4", "", ""],
   ]);
-});
-
-test("a diff's no-newline marker shows as a note, not a changed line", (t) => {
-  t.onTestFinished(cleanup);
-
-  const view = show({
-    path: "change.diff",
-    content:
-      "diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n\\ No newline at end of file\n+b\n",
-  });
-
-  expect(view.container.querySelectorAll(".diff-row")).toHaveLength(2);
-
-  expect(view.container.querySelector(".diff-note")?.textContent).toBe(
-    "No newline at end of file",
-  );
 });

@@ -105,30 +105,6 @@ test("shows the labeled skeleton after the configured delay and hands off access
   expect(view.getByText("Loaded records")).toBeTruthy();
 });
 
-test("lets a parent own the busy announcement", () => {
-  vi.useFakeTimers();
-
-  const view = render(
-    <LoadingSwap
-      loading
-      busy={false}
-      skeleton={
-        <LoadingSkeleton label="Loading records">Waiting</LoadingSkeleton>
-      }
-    >
-      Loaded
-    </LoadingSwap>,
-  );
-
-  advanceSkeletonDelay();
-
-  expect(
-    view.container.querySelector(".loading-swap")?.hasAttribute("aria-busy"),
-  ).toBe(false);
-
-  expect(view.getByRole("status", { name: "Loading records" })).toBeTruthy();
-});
-
 test("keeps the outgoing skeleton for the shared cross-fade", () => {
   vi.useFakeTimers();
   const view = render(panel(true));

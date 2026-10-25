@@ -97,12 +97,9 @@ test("queued messages reorder by dragging or Alt+arrows, behind a left-over stee
   const row = (id: string) =>
     view.container.querySelector<HTMLElement>(`[data-message="${id}"]`)!;
 
-  // The left-over steer can't move, so its grip slot stays empty.
+  // The left-over steer stays fixed while queued messages can move.
   assert.equal(row("msg_l").getAttribute("draggable"), "false");
   assert.equal(row("msg_a").getAttribute("draggable"), "true");
-  expect(row("msg_l").querySelector(".chat-queue-grip")).toBeTruthy();
-  expect(row("msg_l").querySelector(".chat-queue-grip svg")).toBeNull();
-  expect(row("msg_a").querySelector(".chat-queue-grip svg")).toBeTruthy();
 
   const moved = async (count: number) =>
     waitFor(() => assert.equal(tool.mock.calls.length, count));

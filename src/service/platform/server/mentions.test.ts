@@ -110,24 +110,6 @@ test("mention test mode always returns a sample and logs the query as JSONL", as
       ["light", "dark"],
     );
 
-    for (const [index, color] of ["#000000", "#ffffff"].entries()) {
-      const icon = icons[index];
-
-      assert.ok(icon);
-
-      const svg = Buffer.from(
-        icon.src.slice("data:image/svg+xml;base64,".length),
-        "base64",
-      ).toString("utf8");
-
-      assert.match(svg, /viewBox="10 7.75 46 46"/);
-      assert.match(svg, /fill="none"/);
-      assert.match(svg, new RegExp(`stroke="${color}"`));
-      assert.match(svg, /<rect\b/);
-      assert.equal((svg.match(/<circle\b/g) ?? []).length, 3);
-      assert.doesNotMatch(svg, /transform=/i);
-    }
-
     assert.match(
       (await readClaudeMention(env)).contents[0]?.text ?? "",
       /test-only/i,

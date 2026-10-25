@@ -10,7 +10,7 @@ export type StartupOutputOptions = {
   width?: number;
 };
 
-export function formatStartupOutput(
+function formatStartupOutput(
   blocks: readonly StartupOutputBlock[],
   options: StartupOutputOptions = {},
 ) {

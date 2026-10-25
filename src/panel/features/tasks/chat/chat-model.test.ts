@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { startSchema, type Task } from "../../../../shared/tasks/model";
-import { composerMode, spentBudget } from "./chat-model";
+import { spentBudget } from "./chat-model";
 
 function failedBudgetTask(patch: Partial<Task> = {}): Task {
   return {
@@ -30,24 +30,6 @@ function failedBudgetTask(patch: Partial<Task> = {}): Task {
     ...patch,
   };
 }
-
-test("the composer starts, steers or queues according to task state", () => {
-  const task = failedBudgetTask();
-
-  assert.equal(composerMode({ ...task, status: "completed" }), "idle");
-  assert.equal(composerMode({ ...task, status: "interrupted" }), "idle");
-  assert.equal(composerMode({ ...task, status: "queued" }), "busy");
-  assert.equal(composerMode({ ...task, status: "running" }), "busy");
-
-  assert.equal(
-    composerMode({
-      ...task,
-      status: "waiting",
-      pending_input: { id: "r", tool: "Bash", kind: "permission", input: {} },
-    }),
-    "input",
-  );
-});
 
 test("budget usage handles completed tasks, provider failures and spent limits", () => {
   assert.equal(

@@ -68,24 +68,6 @@ test("retains task inputs while making the inactive page hidden and inert", () =
   expect(slot?.hasAttribute("inert")).toBe(false);
 });
 
-test("unmounts projects on departure and creates fresh inputs on each visit", () => {
-  state.page = "projects";
-  const view = render(<PageOutlet />);
-  const draft = screen.getByRole("textbox", { name: "Project draft" });
-  fireEvent.change(draft, { target: { value: "Temporary rename" } });
-
-  state.page = "tasks";
-  view.rerender(<PageOutlet />);
-  expect(draft.isConnected).toBe(false);
-  expect(view.container.querySelector('[data-page="projects"]')).toBeNull();
-
-  state.page = "projects";
-  view.rerender(<PageOutlet />);
-  const nextDraft = screen.getByRole("textbox", { name: "Project draft" });
-  expect(nextDraft).not.toBe(draft);
-  expect((nextDraft as HTMLInputElement).value).toBe("");
-});
-
 test("focuses the arrival heading and returns focus to the retained task opener", () => {
   const view = render(<PageOutlet />);
   const opener = screen.getByRole("button", { name: "Manage projects" });

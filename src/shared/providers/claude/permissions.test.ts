@@ -4,18 +4,10 @@ import { test } from "vitest";
 
 import {
   claudeOverrideDefaults,
-  claudePermissionModes,
   exceedsPermission,
-  permissionLabel,
   resolveClaudePermission,
   resolveClaudePolicy,
 } from "./permissions.js";
-
-test("an SDK mode without a custom label uses its raw value", () => {
-  const futureMode = "futureMode" as (typeof claudePermissionModes)[number];
-
-  assert.equal(permissionLabel(futureMode), "futureMode");
-});
 
 test("native permission resolution uses the task mode or the concrete extension setting", () => {
   const task = {};

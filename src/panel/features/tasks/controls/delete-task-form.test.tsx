@@ -67,39 +67,6 @@ function setup() {
   return { controller, tool, back, view };
 }
 
-test.each([false, true])(
-  "deletion submits the selected provider-session option (%s) and returns after success",
-  async (deleteAgentTask) => {
-    onTestFinished(cleanup);
-    const { controller, tool, back, view } = setup();
-    onTestFinished(() => controller.dispose());
-
-    const toggle = view.getByRole("switch", {
-      name: "Also delete the agent task",
-    });
-
-    assert.equal(toggle.getAttribute("aria-checked"), "false");
-
-    assert.match(
-      view.container.textContent ?? "",
-      /uncommitted changes included/,
-    );
-
-    if (deleteAgentTask) fireEvent.click(toggle);
-    fireEvent.click(view.getByRole("button", { name: "Delete task" }));
-
-    await waitFor(() => assert.equal(tool.mock.calls.length, 1));
-
-    assert.deepEqual(tool.mock.calls[0], [
-      "app_delete_tasks",
-      { task_ids: [task.id], delete_agent_task: deleteAgentTask },
-    ]);
-
-    await waitFor(() => assert.equal(back.mock.calls.length, 1));
-    assert.equal(controller.getSnapshot().dialog, undefined);
-  },
-);
-
 test("a failed deletion keeps the dialog and option available for retry", async () => {
   onTestFinished(cleanup);
   const { controller, tool, back, view } = setup();

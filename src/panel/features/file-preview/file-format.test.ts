@@ -9,7 +9,6 @@ import {
   fileSource,
   fileViews,
   imageSource,
-  prettyJson,
   type PreviewFile,
 } from "./file-format";
 
@@ -67,9 +66,5 @@ test("the source view formats minified JSON and preserves existing formatting", 
   });
 
   assert.equal(fileSource(file("a.json", '{\n"a":1}')).code, '{\n"a":1}');
-});
-
-test("JSON is pretty-printed only when it parses", () => {
-  assert.equal(prettyJson('{"a":1}'), '{\n  "a": 1\n}');
-  assert.equal(prettyJson("{oops"), "{oops");
+  assert.equal(fileSource(file("a.json", "{oops")).code, "{oops");
 });

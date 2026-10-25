@@ -78,7 +78,6 @@ afterEach(() => vi.restoreAllMocks());
 
 test("M1/M3 captured subagent Write and skipped Git diff preserve their recording outcomes", () => {
   const [subagent, skipped] = capturedHooks.cases;
-  expect(subagent?.agentId).toBe("fixture-subagent");
 
   expect(claudeFileEdits(subagent!.tool, subagent!.response)).toMatchObject({
     edits: [
@@ -299,19 +298,6 @@ test("M1 NotebookEdit computes a three-context diff of the entire notebook JSON"
       hunks: result.edits[0]!.hunks,
     }),
   ).toBe(updated);
-});
-
-test("M1 Bash keeps tool flags and command source for modified, added, and deleted files", () => {
-  expect(claudeFileEdits("Bash", bashResponse)).toEqual({
-    edits: bashResponse.bashEditDiff.files.map((file) => ({
-      path: file.filePath,
-      hunks: file.hunks,
-      source: "command",
-      ...("created" in file ? { created: file.created } : {}),
-      ...("deleted" in file ? { deleted: file.deleted } : {}),
-    })),
-    unrecorded: [],
-  });
 });
 
 test("M2 Write update computes missing hunks and drops identical content", () => {

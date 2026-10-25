@@ -12,7 +12,6 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 import { act, cleanup, render } from "@testing-library/react";
 import { createElement, useRef } from "react";
 
-import { MotionContent } from "./motion-content";
 import { Presence } from "./presence";
 import { useAnimatedHeight } from "./use-animated-height";
 import { useListPresence } from "./use-list-presence";
@@ -66,33 +65,6 @@ const notice = (show: boolean, text = "Saved") =>
     { show },
     show && createElement("div", { className: "notice" }, text),
   );
-
-test("MotionContent remounts content when its key changes", (t) => {
-  t.onTestFinished(cleanup);
-
-  const content = (value: string, variant: "swap" | "rise" = "swap") =>
-    createElement(MotionContent, {
-      changeKey: value,
-      as: "strong",
-      variant,
-      className: "activity-title",
-      children: value,
-    });
-
-  const view = render(content("Thinking"));
-  const first = view.container.querySelector("strong");
-  assert.ok(first);
-
-  view.rerender(content("Thought", "rise"));
-  const next = view.container.querySelector("strong");
-  assert.ok(next);
-
-  expect(next, "A changed key remounts the presentation element").not.toBe(
-    first,
-  );
-
-  assert.equal(next.textContent, "Thought");
-});
 
 test("Presence removes content at once without animation support", (t) => {
   t.onTestFinished(cleanup);

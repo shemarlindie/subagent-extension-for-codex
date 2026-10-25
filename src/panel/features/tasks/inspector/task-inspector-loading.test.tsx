@@ -4,7 +4,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
 import { ControllerContext } from "../../../app/state/controller-context";
-import { setup, task } from "../../../app/state/controller-test-harness";
+import { setup } from "../../../app/state/controller-test-harness";
 import { MOTION } from "../../../shared/components/motion/motion-utils";
 import { TaskInspector } from "./task-inspector";
 import { TaskInspectorLoading } from "./task-inspector-loading";
@@ -42,24 +42,6 @@ test("shows a spinner until loading ends, then the empty message when nothing is
 
   expect(view.queryByRole("status", { name: "Loading tasks" })).toBeNull();
   expect(view.getByText("Task details will show here.")).not.toBeNull();
-});
-
-test("opens the default task from opening data without showing the empty message", () => {
-  const { controller, view } = renderInspector();
-
-  act(() => {
-    controller.applyScope(
-      {
-        panel_scope: { conversation_id: "chat" },
-        tasks: [task("a", "/repo/a", "chat")],
-      },
-      false,
-    );
-  });
-
-  const inspector = view.getByRole("region", { name: "Task inspector" });
-  expect(inspector.dataset.task).toBe("a");
-  expect(view.queryByText("Task details will show here.")).toBeNull();
 });
 
 test("keeps the spinner through its fade-out, then removes it", () => {

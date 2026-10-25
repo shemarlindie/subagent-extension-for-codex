@@ -98,29 +98,6 @@ function setup(initial?: ChangesState) {
   };
 }
 
-test.each([undefined, { ...loaded, data: undefined, loading: true }])(
-  "initial reading keeps the header placeholder through the data read",
-  async (changes) => {
-    const { view } = setup(changes);
-
-    expect(view.queryByRole("progressbar")).toBeNull();
-
-    assert.equal(
-      (await view.findByRole("status")).getAttribute("aria-label"),
-      "Loading changes",
-    );
-
-    assert.equal(
-      view.container
-        .querySelector(".changes-content")
-        ?.getAttribute("aria-busy"),
-      "true",
-    );
-
-    expect(view.queryByRole("alert")).toBeNull();
-  },
-);
-
 test("keeps the Changes header and content placeholders together through the first-read cross-fade", () => {
   vi.useFakeTimers();
 

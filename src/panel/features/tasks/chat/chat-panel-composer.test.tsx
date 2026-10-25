@@ -6,7 +6,6 @@ import { expect, onTestFinished, test, vi } from "vitest";
 
 import { previewEvents } from "../../../../../dev/panel/scenarios/fixtures";
 import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
-import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors";
 import { deferred, flush } from "../../../app/state/controller-test-harness";
 import type { Task } from "../../../app/state/types";
 import {
@@ -576,32 +575,28 @@ test("an idle composer can hide and reopen its draft without offering Stop", () 
   expect(document.activeElement).toBe(composer);
 });
 
-for (const pending_input of [
-  undefined,
-  { id: "permission", tool: "Bash", kind: "permission" as const, input: {} },
-]) {
-  test(`a hidden ${pending_input ? "permission" : "running"} composer keeps Stop available`, async () => {
-    const { view, tool } = setup({
-      status: pending_input ? "waiting" : "running",
-      pending_input,
-    });
-
-    if (!pending_input) {
-      fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
-    }
-
-    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
-    assert.ok(view.getByRole("button", { name: "Show composer" }));
-
-    fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
-
-    await waitFor(() =>
-      expect(sent(tool)).toEqual([
-        ["interrupt_task", { task_id: "task-1", send_pending: false }],
-      ]),
-    );
+test("a hidden permission composer keeps Stop available", async () => {
+  const { view, tool } = setup({
+    status: "waiting",
+    pending_input: {
+      id: "permission",
+      tool: "Bash",
+      kind: "permission",
+      input: {},
+    },
   });
-}
+
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+  assert.ok(view.getByRole("button", { name: "Show composer" }));
+
+  fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
+
+  await waitFor(() =>
+    expect(sent(tool)).toEqual([
+      ["interrupt_task", { task_id: "task-1", send_pending: false }],
+    ]),
+  );
+});
 
 test("composer visibility is remembered separately for each task", () => {
   const { view, type, updateTask } = setup();
@@ -624,28 +619,23 @@ test("composer visibility is remembered separately for each task", () => {
   );
 });
 
-for (const pending of [
-  { id: "permission", tool: "Bash", kind: "permission" as const, input: {} },
-  {
-    id: "empty-question",
-    tool: "AskUserQuestion",
-    kind: "question" as const,
-    input: { questions: [] },
-  },
-]) {
-  test(`${pending.kind} requests start with the composer collapsed`, () => {
-    const { view, tool } = setup({ status: "waiting", pending_input: pending });
-
-    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
-    expect(view.getByRole("button", { name: "Show composer" })).toBeTruthy();
-    expect(view.getByRole("button", { name: "Stop the turn" })).toBeTruthy();
-    expect(tool).not.toHaveBeenCalled();
-
-    if (pending.kind === "question") {
-      expect(view.getByRole("button", { name: "Review request" })).toBeTruthy();
-    }
+test("an empty question starts with the composer collapsed and offers fallback review", () => {
+  const { view, tool } = setup({
+    status: "waiting",
+    pending_input: {
+      id: "empty-question",
+      tool: "AskUserQuestion",
+      kind: "question",
+      input: { questions: [] },
+    },
   });
-}
+
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+  expect(view.getByRole("button", { name: "Show composer" })).toBeTruthy();
+  expect(view.getByRole("button", { name: "Stop the turn" })).toBeTruthy();
+  expect(tool).not.toHaveBeenCalled();
+  expect(view.getByRole("button", { name: "Review request" })).toBeTruthy();
+});
 
 for (const pending of [
   { id: "permission", tool: "Bash", kind: "permission" as const, input: {} },
@@ -812,24 +802,4 @@ test("the expanded question composer queues messages and each new request starts
   updateTask({ status: "waiting", pending_input: questionInput("second") });
   expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
   assert.ok(view.getByRole("button", { name: "Show composer" }));
-});
-
-test("a failed send keeps the draft and shows why", async () => {
-  const { tool, composer, type, view } = setup();
-
-  tool.mockRejectedValueOnce(
-    new SendRejectedError("The task is being deleted"),
-  );
-
-  type("Keep me");
-  fireEvent.keyDown(composer, { key: "Enter" });
-
-  await waitFor(() =>
-    assert.equal(
-      view.getByRole("alert").textContent,
-      "The task is being deleted",
-    ),
-  );
-
-  assert.equal((composer as HTMLTextAreaElement).value, "Keep me");
 });

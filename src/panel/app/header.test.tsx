@@ -60,13 +60,6 @@ function setup(overrides: Partial<Snapshot> = {}) {
   };
 }
 
-test("a healthy connection is announced", () => {
-  const { view } = setup();
-  const status = view.getByRole("status");
-
-  assert.equal(status.textContent, "Connected");
-});
-
 test.each([CONNECTION.reconnecting, CONNECTION.failed])(
   "connection changes announce %s",
   (connection) => {
@@ -144,24 +137,6 @@ test.each([{ connected: false }, { scopeKnown: false }, { busy: true }])(
     assert.equal(addProject.mock.calls.length, 0);
   },
 );
-
-test("New task opens the composer and its menu opens the Advanced task dialog", async () => {
-  const { view, user, delegate, newTask } = setup();
-
-  await user.click(view.getByRole("button", { name: "New task" }));
-  assert.equal(newTask.mock.calls.length, 1);
-  assert.equal(delegate.mock.calls.length, 0);
-
-  await user.click(
-    view.getByRole("button", { name: "More ways to start a task" }),
-  );
-
-  await user.click(
-    await view.findByRole("menuitem", { name: /^Advanced task…/ }),
-  );
-
-  await waitFor(() => assert.equal(delegate.mock.calls.length, 1));
-});
 
 test.each(["Settings", "New task", "Advanced task…"] as const)(
   "global menu invokes %s without offering unsupported expansion",

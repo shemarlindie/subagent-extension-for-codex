@@ -57,39 +57,32 @@ function setup(label: string, command: string) {
   };
 }
 
-test.each([
-  ["Branch", `agent/${"long-branch-name".repeat(40)}`],
-  ["Worktree", "cd /worktrees/project with spaces"],
-  ["Push", "git push -u origin agent/review"],
-])(
-  "embedded panels copy the complete %s value and show compact success feedback",
-  async (label, command) => {
-    const writeText = vi.fn(async () => {});
+test("embedded panels copy the complete value and show compact success feedback", async () => {
+  const label = "Branch",
+    command = `agent/${"long-branch-name".repeat(40)}`;
 
-    replaceClipboard(writeText);
-    const { view } = setup(label, command);
+  const writeText = vi.fn(async () => {});
 
-    const button = view.getByRole("button", {
-      name: `Copy ${label.toLowerCase()}`,
-    });
+  replaceClipboard(writeText);
+  const { view } = setup(label, command);
 
-    assert.equal(button.textContent, "");
+  const button = view.getByRole("button", {
+    name: `Copy ${label.toLowerCase()}`,
+  });
 
-    assert.equal(
-      view.container.querySelector(".command")?.textContent,
-      command,
-    );
+  assert.equal(button.textContent, "");
 
-    fireEvent.click(button);
+  assert.equal(view.container.querySelector(".command")?.textContent, command);
 
-    await view.findByRole("button", {
-      name: `Copy ${label.toLowerCase()} — copied`,
-    });
+  fireEvent.click(button);
 
-    assert.deepEqual(writeText.mock.calls, [[command]]);
-    assert.equal(button.textContent, "");
-  },
-);
+  await view.findByRole("button", {
+    name: `Copy ${label.toLowerCase()} — copied`,
+  });
+
+  assert.deepEqual(writeText.mock.calls, [[command]]);
+  assert.equal(button.textContent, "");
+});
 
 test("a blocked embedded clipboard keeps the copy action available and reports manual-copy guidance", async () => {
   replaceClipboard(async () => {

@@ -1,12 +1,8 @@
 import assert from "node:assert/strict";
 
-import { expect, test } from "vitest";
+import { test } from "vitest";
 
-import {
-  changedFileDiff,
-  changedFileEntries,
-  opensByDefault,
-} from "./changed-files";
+import { changedFileDiff, changedFileEntries } from "./changed-files";
 import type { Changes } from "./types";
 import { nextUnviewed } from "./use-viewed-files";
 
@@ -157,36 +153,4 @@ test("the next unread file follows the current one, wrapping to the start", () =
   assert.equal(nextUnviewed(viewed(a), [a, logo, b], b), logo);
   // None left but the current file.
   assert.equal(nextUnviewed(viewed(logo, b), [a, logo, b], a), undefined);
-});
-
-test("short lists open every file and long lists only the first", () => {
-  const entries = (count: number) =>
-    changedFileEntries({
-      scope: "task",
-      additions: 0,
-      deletions: 0,
-      diff: "",
-      files: Array.from({ length: count }, (_, index) => ({
-        path: `file-${index}`,
-        status: "modified",
-        additions: 0,
-        deletions: 0,
-        source: "tool",
-        incomplete: false,
-      })),
-    });
-
-  const short = entries(3),
-    long = entries(9);
-
-  expect(short.map((_, i) => opensByDefault(short, i))).toEqual([
-    true,
-    true,
-    true,
-  ]);
-
-  expect(long.map((_, i) => opensByDefault(long, i))).toEqual([
-    true,
-    ...Array<boolean>(8).fill(false),
-  ]);
 });

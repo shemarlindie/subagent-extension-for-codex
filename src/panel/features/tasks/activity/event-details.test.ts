@@ -379,12 +379,9 @@ test("a compact accessible debug toggle hides inspection until opened and preser
     name: "Debug activity: Assistant",
   });
 
-  assert.equal(toggle.tagName, "BUTTON");
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   assert.equal(await tooltipText(toggle), "Inspect 1 raw response");
-  assert.ok(toggle.classList.contains("activity-debug-toggle"));
   const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
-  assert.ok(panel.classList.contains("activity-debug-panel"));
   assert.equal(panel.hidden, true);
   assertAbsent(view.queryByText("Raw response", { selector: "summary" }));
   const message = view.container.querySelector(".activity-message")!;

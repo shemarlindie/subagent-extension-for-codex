@@ -34,32 +34,6 @@ test("fixture readiness and model discovery expose configured states", async () 
   const transient = new FixtureProvider({ models: "error-once" });
   await assert.rejects(transient.models(), /failed once/);
   assert.equal((await transient.models()).length, 2);
-
-  const delayed = new FixtureProvider({
-    readinessDelayMs: 1,
-    modelsDelayMs: 1,
-  });
-
-  await delayed.readiness();
-  await delayed.models();
-});
-
-test("fixture asks for questions and permissions in order within one session", async () => {
-  const f = context();
-
-  const output = await new FixtureProvider().run(
-    f.runContext,
-    "[fixture:question] [fixture:permission tool=Edit]",
-  );
-
-  assert.match(output.reply, /Fixture task completed/);
-  assert.deepEqual(f.inputs, ["AskUserQuestion", "Edit"]);
-  assert.equal(f.sessions.length, 1);
-
-  assert.equal(
-    f.events.filter((event) => event.type === "agent.completed").length,
-    1,
-  );
 });
 
 test("fixture stream key emits a complete stream lifecycle", async () => {

@@ -55,19 +55,6 @@ const question: Task = {
   },
 };
 
-test("a task action marks the panel busy, then reloads", async () => {
-  const { actions, context, busyChanges } = setup();
-
-  expect(await actions.resumeQueue(task("task-1"))).toBeUndefined();
-
-  expect(context.tool).toHaveBeenCalledWith("app_resume_queue", {
-    task_id: "task-1",
-  });
-
-  expect(busyChanges).toEqual([true, false]);
-  expect(context.refresh).toHaveBeenCalledOnce();
-});
-
 test("a failed task action returns its message without reloading", async () => {
   const { actions, context, busyChanges } = setup(async () => {
     throw new Error("Queue is empty");

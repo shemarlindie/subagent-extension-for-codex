@@ -82,6 +82,8 @@ test("draft and tab updates preserve stable scroll cells without scroll notifica
   assert.equal(session.get("task", "a").reading, reading);
   assert.deepEqual(reading.chat.position, { top: 120, pinned: false });
   assert.deepEqual(reading.activity, {});
+  assert.deepEqual(session.get("task", "b").reading.chat, {});
+  assert.deepEqual(new SessionStateStore().get("task", "a").reading.chat, {});
 });
 
 type DraftEditorProps = { id: string; rendered: () => void };

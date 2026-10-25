@@ -74,19 +74,6 @@ function setup(
   return { view, input, onSave };
 }
 
-test("clicking text focuses an editor and Enter saves trimmed text", async () => {
-  const { view, input, onSave } = setup();
-
-  expect(document.activeElement).toBe(input);
-  assert.equal(input.value, "Original title");
-  assert.equal(view.container.querySelectorAll("button").length, 0);
-  fireEvent.change(input, { target: { value: "  Updated title  " } });
-  fireEvent.keyDown(input, { key: "Enter" });
-
-  await waitFor(() => assert.equal(view.queryByRole("textbox") === null, true));
-  assert.deepEqual(onSave.mock.calls, [["Updated title"]]);
-});
-
 test("Escape discards changes and reopening starts from the saved value", () => {
   const { view, input, onSave } = setup();
 

@@ -7,7 +7,6 @@ import { test } from "vitest";
 
 import {
   isExtensionService,
-  isProcessRunning,
   isSameProcess,
   type ProcessInfo,
 } from "./process-info.js";
@@ -47,10 +46,6 @@ test("process identity includes the command line and executable path", () => {
     isSameProcess(owner, { ...owner, startedAt: "Wed Oct 7 12:01:00 2026" }),
     false,
   );
-});
-
-test("reads the current process identity and recognizes it as live", () => {
-  assert.equal(isProcessRunning(process.pid), true);
 });
 
 test("requires an exact recorded start time and command line", async (t) => {

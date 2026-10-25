@@ -241,7 +241,7 @@ export function fileBytes(file: PreviewFile) {
 }
 
 /** Pretty-printed JSON, or the content unchanged when it does not parse. */
-export function prettyJson(content: string) {
+function prettyJson(content: string) {
   try {
     return JSON.stringify(JSON.parse(content), null, 2);
   } catch {
