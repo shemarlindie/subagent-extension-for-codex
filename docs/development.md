@@ -581,8 +581,9 @@ tests that make model calls.
 
 ### Choosing test coverage
 
-Give each behavior one primary test layer, starting from the broadest that can
-reach it.
+Inspect existing coverage before adding tests. Give each behavior one primary
+test layer, starting from the broadest that can reliably exercise it. Extend
+the owning suite when possible.
 
 | Layer             | Location                                                                       | Covers                                                                                                                      |
 | ----------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
@@ -610,8 +611,8 @@ unique rules and edge cases. Name retained tests for the behavior they protect.
 Test behavior and documented contracts. Skip assertions that only copy constant
 tables, property projections, CSS declarations, SVG artwork or placeholder
 markup. Derive expected results independently of the production helper being
-tested. Avoid repeating cases that differ only in labels or pass-through
-values, and leave framework and standard-library behavior to their own tests.
+tested. Keep parameterized cases only when they protect distinct rules or
+boundaries. Leave framework and standard-library behavior to their own tests.
 Use the smallest fixtures that cross the relevant boundary, such as one row
 past a rendering block, unless the test checks scale itself.
 

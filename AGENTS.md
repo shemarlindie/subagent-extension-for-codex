@@ -24,7 +24,7 @@ Read the matching guide's relevant sections before working in an area. Unrelated
 ## Validation
 
 - Validate the resulting behavior and relevant architectural boundaries. Match checks to the change and prefer focused checks during iteration. You may skip or defer expensive checks when their runtime outweighs the confidence they add. Report what was skipped and why.
-- Before adding, changing or removing tests, follow [Choosing test coverage](docs/development.md#choosing-test-coverage).
+- Before adding, changing or removing tests, inspect existing coverage and follow [Choosing test coverage](docs/development.md#choosing-test-coverage).
 - Before committing, run the relevant formatting, lint, type, test, build and browser checks against the final changes being committed. Unrelated checks do not need to run.
 - Follow the repository's ESLint rules when editing code.
 - Format changed files with `npx eslint --fix <files> && npx prettier --write <files>`.
