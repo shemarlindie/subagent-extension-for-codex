@@ -144,3 +144,36 @@
   background: var(--codex-bg);
   content: "";
 }
+/* Codex's inline app card: the app's row as a header, then the app at the
+   thread's width. The app stays collapsed until it has loaded. */
+.codex-embed {
+  display: grid;
+  grid-template-rows: auto 0fr;
+  transition: grid-template-rows 300ms ease;
+}
+.codex-embed.loaded {
+  grid-template-rows: auto 1fr;
+}
+.codex-embed.loaded > .codex-row {
+  padding: 6px 0 4px 12px;
+}
+.codex-embed-chevron {
+  margin-left: auto;
+}
+.codex-embed-app {
+  min-height: 0;
+  overflow: hidden;
+}
+.codex-embed-app iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+}
+.codex-row .codex-spinner {
+  animation: codex-spin 800ms linear infinite;
+}
+@keyframes codex-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}

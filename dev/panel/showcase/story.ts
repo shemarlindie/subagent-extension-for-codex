@@ -15,7 +15,9 @@ type CodexRowIcon = "files" | "mcp" | "extension" | "edit" | "terminal";
 export type CodexItem =
   | { kind: "user"; text: string }
   | { kind: "prose"; text: string }
-  | { kind: "row"; icon: CodexRowIcon; text: string; opens?: boolean }
+  | { kind: "row"; icon: CodexRowIcon; text: string }
+  /** An app Codex opens from a tool result, inline first. */
+  | { kind: "app"; name: string }
   | { kind: "list"; items: string[] };
 
 /** The story at one time: a step, and how much of its reply has streamed. */
@@ -83,12 +85,7 @@ export const story: StoryStep[] = [
         icon: "mcp",
         text: "MCP start_task on codex_subagent_extension",
       },
-      {
-        kind: "row",
-        icon: "extension",
-        text: "Opened Codex Subagent Extension",
-        opens: true,
-      },
+      { kind: "app", name: "Codex Subagent Extension" },
       {
         kind: "prose",
         text: "Claude is reviewing the design. I'll keep mapping call sites in the meantime.",

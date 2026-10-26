@@ -1,11 +1,16 @@
 import type { CodexItem } from "../story";
+import { CodexAppItem, type CodexEmbed } from "./codex-app-item";
 import { CodexIcon } from "./codex-icon";
 import { CodexText } from "./codex-text";
 
-type CodexThreadItemProps = { item: CodexItem };
+type CodexThreadItemProps = {
+  item: CodexItem;
+  /** Shown inline when the item is an app. */
+  embed?: CodexEmbed;
+};
 
-/** One message, activity row or list in Codex's thread. */
-export function CodexThreadItem({ item }: CodexThreadItemProps) {
+/** One message, activity row, app or list in Codex's thread. */
+export function CodexThreadItem({ item, embed }: CodexThreadItemProps) {
   switch (item.kind) {
     case "user":
       return (
@@ -27,9 +32,10 @@ export function CodexThreadItem({ item }: CodexThreadItemProps) {
             className={`codex-row-icon ${item.icon}`}
           />
           {item.text}
-          {item.opens && <CodexIcon name="expand" />}
         </div>
       );
+    case "app":
+      return <CodexAppItem name={item.name} embed={embed} />;
     case "list":
       return (
         <ul className="codex-list">

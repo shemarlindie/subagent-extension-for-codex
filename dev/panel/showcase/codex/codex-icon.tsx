@@ -13,6 +13,7 @@ const paths = {
   mic: "M8 2a2 2 0 0 1 2 2v4a2 2 0 0 1-4 0V4a2 2 0 0 1 2-2zM4.5 7.5a3.5 3.5 0 0 0 7 0M8 11v3",
   expand: "M9.5 3H13v3.5M13 3 9 7M6.5 13H3V9.5M3 13l4-4",
   send: "M8 12.5v-9M4.5 7 8 3.5 11.5 7",
+  chevron: "M4.5 6.5 8 10l3.5-3.5",
 };
 
 type CodexIconProps = {

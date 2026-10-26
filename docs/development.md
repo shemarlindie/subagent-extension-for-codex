@@ -292,7 +292,8 @@ URL picks the frame:
 - `theme` is `dark` (default) or `light`.
 - `capture` hides the controls.
 - `play` loops the whole story instead of showing one step. Codex's items
-  appear one at a time, Claude's replies stream, and the panel stays open and
+  appear one at a time, and Codex opens the panel inline in its thread before
+  expanding it into the side pane. Claude's replies stream, and the panel
   updates in place, as in a live run. The Play button toggles it.
 
 Export every step in both themes at 1600×1000 and 2x scale:

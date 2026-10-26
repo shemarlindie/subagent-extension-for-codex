@@ -1,6 +1,7 @@
 // Plays the story as one loop: Codex's items appear one at a time, the panel
 // follows Codex's tool rows, and Claude's replies stream before Codex reads
-// them.
+// them. The panel first opens inline in Codex's thread, then expands into the
+// side pane.
 import { story, type StoryMoment, type StoryStep } from "./story";
 
 /** What a playing showcase shows at one time. */
@@ -8,8 +9,10 @@ export type Scene = {
   /** The step Codex is on, and how many of its items show. */
   step: number;
   items: number;
-  /** The panel's moment, or none while its pane is closed. */
+  /** The panel's moment, or none before Codex opens it. */
   panel?: StoryMoment;
+  /** Codex is opening the panel inline, and its side pane stays closed. */
+  embed?: "loading" | "inline";
 };
 
 type Cue = { duration: number; scene: (progress: number) => Scene };
@@ -17,6 +20,8 @@ type Cue = { duration: number; scene: (progress: number) => Scene };
 const ITEM_MS = 800;
 const STREAM_MS = 3500;
 const HOLD_MS = 2200;
+const LOADING_MS = 1000;
+const INLINE_MS = 2800;
 const FINAL_HOLD_MS = 6000;
 
 function storyCues() {
@@ -36,12 +41,22 @@ function storyCues() {
       panel = { step };
     }
 
-    // Codex's last tool row in a step is the call that changes Claude's task.
+    // Codex's last tool row or app in a step is the call that changes Claude's
+    // task.
     const call = s.reply
       ? -1
-      : s.codex.findLastIndex((item) => item.kind === "row");
+      : s.codex.findLastIndex(
+          (item) => item.kind === "row" || item.kind === "app",
+        );
 
-    s.codex.forEach((_, i) => {
+    s.codex.forEach((item, i) => {
+      // An app opens inline on the step's task before its side pane opens.
+      if (item.kind === "app" && s.panel) {
+        panel = { step };
+        at(LOADING_MS, { step, items: i + 1, panel, embed: "loading" });
+        at(INLINE_MS, { step, items: i + 1, panel, embed: "inline" });
+      }
+
       at(ITEM_MS, { step, items: i + 1, panel });
       if (i === call && s.panel) panel = { step };
     });
