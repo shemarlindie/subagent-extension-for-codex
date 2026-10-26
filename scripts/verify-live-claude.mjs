@@ -14,6 +14,7 @@ import {
   prepareEditsFixture,
   runEditsScenario,
 } from "./live-claude-edits.mjs";
+import { runIsolatedScenario } from "./live-claude-isolated.mjs";
 
 /** A task's latest reply text, or "" before it has replied. */
 const latestReply = (store, id) =>
@@ -37,10 +38,11 @@ assert.ok(
     "mcp",
     "budget",
     "parity",
+    "isolated",
     "parent",
     "edits",
   ].includes(scenario),
-  "Choose read, resume, sandbox, mcp, budget, parity, parent, or edits",
+  "Choose read, resume, sandbox, mcp, budget, parity, isolated, parent, or edits",
 );
 
 // Every task runs on this model and effort; an empty value inherits the CLI default.
@@ -90,7 +92,7 @@ if (scenario === "edits") {
   execFileSync("git", ["-C", repo, "add", "."]);
 }
 
-if (scenario === "parity") {
+if (["parity", "isolated"].includes(scenario)) {
   // Project-scoped Claude Code configuration, loaded the same way the CLI does.
   const { fileURLToPath } = await import("node:url");
 
@@ -104,7 +106,9 @@ if (scenario === "parity") {
 
   await writeFile(
     join(root, "fixture-mcp.mjs"),
-    `import { McpServer } from ${JSON.stringify(sdk("mcp.js"))};
+    `import { writeFile } from "node:fs/promises";
+await writeFile(${JSON.stringify(join(root, "mcp-started"))}, "started");
+import { McpServer } from ${JSON.stringify(sdk("mcp.js"))};
 import { StdioServerTransport } from ${JSON.stringify(sdk("stdio.js"))};
 const server = new McpServer({ name: "fixture", version: "1" });
 server.registerTool("fixture_marker", { description: "Return the fixture MCP marker" }, async () => ({
@@ -183,7 +187,9 @@ const control = new Control(
   new Map([["claude", provider()]]),
 );
 
-if (scenario === "edits") {
+if (scenario === "isolated") {
+  await runIsolatedScenario({ control, store, repo, root, taskBase });
+} else if (scenario === "edits") {
   await runEditsScenario({
     control,
     store,
