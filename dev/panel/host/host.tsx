@@ -1,14 +1,13 @@
 // Mock MCP Apps host for panel development. It embeds the panel the way Codex
-// does (iframe + AppBridge), so the panel runs its real HostTransport, and
-// answers tool calls from fixtures or the running service over MCP.
+// does (panel-bridge.ts) and answers tool calls from fixtures or the running
+// service over MCP.
 import "./host.css";
 
-import {
+import type {
   AppBridge,
-  type McpUiDisplayMode,
-  type McpUiHostCapabilities,
-  type McpUiHostContext,
-  PostMessageTransport,
+  McpUiDisplayMode,
+  McpUiHostCapabilities,
+  McpUiHostContext,
 } from "@modelcontextprotocol/ext-apps/app-bridge";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -41,6 +40,7 @@ import {
   threadLabel,
   threadsOf,
 } from "./host-helpers";
+import { connectPanel } from "./panel-bridge";
 
 type LogEntry = { id: number; time: string; kind: string; detail: unknown };
 
@@ -265,7 +265,6 @@ export function Host() {
 
   useEffect(() => {
     const iframe = frame.current!;
-    const view = iframe.contentWindow!;
     const current = { ...settings };
 
     const capabilities: McpUiHostCapabilities = {
@@ -275,13 +274,6 @@ export function Host() {
       ...(canSend ? { message: { text: {} } } : {}),
       ...(canShare ? { updateModelContext: { structuredContent: {} } } : {}),
     };
-
-    const next = new AppBridge(
-      null,
-      { name: "Panel dev host", version: "0.0.0" },
-      capabilities,
-      { hostContext: hostContext(current) },
-    );
 
     let client: Promise<Client> | undefined;
 
@@ -421,75 +413,22 @@ export function Host() {
       return result;
     };
 
-    next.oncalltool = async ({ name, arguments: args }) => {
-      try {
-        return await call(name, args);
-      } catch (error) {
-        record("tool error", { name, arguments: args, error: String(error) });
-        throw error;
-      }
-    };
-
-    // Codex renders the panel as the result of its launch tool.
-    const openPanel = async () => {
-      record("initialized");
-
-      const name =
-        launch === "global"
-          ? "app_open_codex_subagent_extension_global"
-          : "open_codex_subagent_extension";
-
-      try {
-        const result = await call(
-          name,
+    const next = connectPanel(iframe, "./panel.html", {
+      name: "Panel dev host",
+      capabilities,
+      hostContext: hostContext(current),
+      callTool: call,
+      // Codex renders the panel as the result of its launch tool.
+      launch: () =>
+        call(
+          launch === "global"
+            ? "app_open_codex_subagent_extension_global"
+            : "open_codex_subagent_extension",
           source === "live" ? {} : fixtureLaunchArgs(current),
-        );
-
-        await next.sendToolInput({ arguments: {} });
-        await next.sendToolResult(result);
-      } catch (error) {
-        record("launch error", String(error));
-      }
-    };
-
-    // openPanel records its own failures.
-    next.addEventListener("initialized", () => void openPanel());
-
-    next.onrequestdisplaymode = async ({ mode }) => {
-      record("display mode", mode);
-      update({ displayMode: mode });
-
-      return { mode };
-    };
-
-    next.addEventListener("sizechange", (size) => {
-      if (size.height) setHeight(size.height);
-    });
-
-    next.onmessage = async (params) => {
-      record("message", params);
-
-      return {};
-    };
-
-    next.onupdatemodelcontext = async (params) => {
-      record("model context", params);
-
-      return {};
-    };
-
-    next.onopenlink = async ({ url }) => {
-      record("open link", url);
-      window.open(url, "_blank", "noopener");
-
-      return {};
-    };
-
-    next.addEventListener("loggingmessage", (params) => record("log", params));
-
-    // Listen before the document loads: the panel sends initialize at startup.
-    void next.connect(new PostMessageTransport(view, view)).then(() => {
-      iframe.src = "./panel.html";
+        ),
+      record,
+      onDisplayMode: (mode) => update({ displayMode: mode }),
+      onHeight: setHeight,
     });
 
     setBridge(next);

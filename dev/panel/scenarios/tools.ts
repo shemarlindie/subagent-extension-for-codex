@@ -18,7 +18,7 @@ import {
   previewArchiveTool,
 } from "./archive-tools";
 import { previewProjects, previewTasks } from "./fixtures";
-import { livePreview } from "./live-preview";
+import { livePreview, type PreviewData } from "./live-preview";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
 import {
   PREVIEW_UNREAD_TOOLS,
@@ -77,9 +77,8 @@ const previewSettingsDefaults = {
   ),
 };
 
-const newestFirst = [...previewTasks].sort((a, b) =>
-  b.created_at.localeCompare(a.created_at),
-);
+const newestFirst = (tasks: Task[]) =>
+  [...tasks].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
 const inScope = (
   task: Task,
@@ -122,11 +121,16 @@ export type PreviewOptions = {
   successfulBudgetUpdates?: boolean;
   /** Leaves launch task data to the delayed list read when inspecting loading. */
   deferTaskList?: boolean;
+  /** Replaces the preview tasks and their reads, as the showcase does with its story. */
+  data?: PreviewData;
   /** Repositories registered during the preview; the dev host keeps them. */
   addedProjects?: string[];
   removedProjects?: string[];
   projectNames?: Record<string, string>;
 };
+
+const tasksOf = (options: PreviewOptions) =>
+  options.data?.tasks ?? previewTasks;
 
 const projectsWith = ({
   addedProjects = [],
@@ -209,9 +213,11 @@ const registeredProject = (
  * run git, so an unregistered directory is offered as the candidate as is.
  */
 function panelContext(args: Record<string, unknown>, options: PreviewOptions) {
+  const tasks = tasksOf(options);
+
   const target =
     typeof args.task_id === "string"
-      ? previewTasks.find((task) => task.id === args.task_id)
+      ? tasks.find((task) => task.id === args.task_id)
       : undefined;
 
   const directory =
@@ -229,7 +235,7 @@ function panelContext(args: Record<string, unknown>, options: PreviewOptions) {
   const source =
     target ??
     (conversation
-      ? newestFirst.find((task) => task.conversation_id === conversation)
+      ? newestFirst(tasks).find((task) => task.conversation_id === conversation)
       : undefined);
 
   const repository =
@@ -281,7 +287,7 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
     ...context,
     ...(!options.deferTaskList
       ? {
-          tasks: newestFirst
+          tasks: newestFirst(tasksOf(options))
             .filter((task) => inScope(task, context.panel_scope))
             .map((task) => ({
               ...task,
@@ -439,7 +445,10 @@ export function previewTool(
     return task;
   }
 
-  const { taskFor, eventsFor, draftFor, revision } = livePreview();
+  const tasks = tasksOf(options);
+
+  const { taskFor, eventsFor, draftFor, revision } =
+    options.data ?? livePreview();
 
   const fixtures: Record<string, unknown> = {
     open_codex_subagent_extension: openPanel(args, options),
@@ -450,7 +459,7 @@ export function previewTool(
     app_claim_parent_message: null,
     get_panel_context: panelContext(args, options),
     list_projects: projectsWith(options),
-    list_tasks: newestFirst
+    list_tasks: newestFirst(tasks)
       .filter((task) => inScope(task, args))
       .map((task) => {
         const events = eventsFor(task.id);
@@ -465,7 +474,7 @@ export function previewTool(
         );
       }),
     app_get_chat: (() => {
-      const task = previewTasks.find((task) => task.id === args.task_id);
+      const task = tasks.find((task) => task.id === args.task_id);
       if (!task) return { items: [], next_cursor: 0 };
       const after = Number(args.after ?? 0);
       const events = eventsFor(task.id);
@@ -487,7 +496,7 @@ export function previewTool(
         ...(target
           ? {
               draft: draftFor(target.task_id) ?? null,
-              running: previewTasks.some(
+              running: tasks.some(
                 (task) =>
                   task.id === target.task_id &&
                   taskFor(task).status === "running",

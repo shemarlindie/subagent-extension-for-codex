@@ -43,3 +43,6 @@ export function livePreview() {
 
   return { taskFor, eventsFor, draftFor, revision: live.revision };
 }
+
+/** Tasks and one clock sample of their reads. The showcase supplies its own. */
+export type PreviewData = ReturnType<typeof livePreview> & { tasks: Task[] };
