@@ -1,4 +1,4 @@
-import type { Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { send } from "./console-actions";
 import { expect, test } from "./fixtures";
@@ -43,6 +43,67 @@ const paragraphOffset = (history: Locator, index: number) =>
     );
   }, index);
 
+/** Records how each Chat row animation ends: `finish` or `cancel`. */
+const recordRowMotion = (page: Page) =>
+  page.evaluate(() => {
+    const endings: string[] = [];
+    const animate = Element.prototype.animate;
+
+    Element.prototype.animate = function (...args) {
+      const animation = animate.apply(this, args);
+
+      if (this.hasAttribute("data-chat-item")) {
+        for (const type of ["finish", "cancel"]) {
+          animation.addEventListener(type, () => endings.push(type));
+        }
+      }
+
+      return animation;
+    };
+
+    Object.assign(window, { rowMotion: endings });
+  });
+
+const rowMotion = (page: Page) =>
+  page.evaluate(() => (window as unknown as { rowMotion: string[] }).rowMotion);
+
+/**
+ * Samples the first Chat row's offset each frame and records its largest
+ * downward step. Every earlier message moves with it.
+ */
+const recordRowShift = (history: Locator) =>
+  history.evaluate((element) => {
+    const row = element.querySelector("[data-chat-item]")!;
+
+    const offset = () =>
+      row.getBoundingClientRect().top - element.getBoundingClientRect().top;
+
+    const shift = { down: 0, done: false };
+    let last = offset();
+
+    const sample = () => {
+      const next = offset();
+      shift.down = Math.max(shift.down, next - last);
+      last = next;
+      if (!shift.done) requestAnimationFrame(sample);
+    };
+
+    requestAnimationFrame(sample);
+    Object.assign(window, { rowShift: shift });
+  });
+
+/** Stops sampling and returns the largest downward step, in pixels. */
+const rowShift = (page: Page) =>
+  page.evaluate(() => {
+    const { rowShift } = window as unknown as {
+      rowShift: { down: number; done: boolean };
+    };
+
+    rowShift.done = true;
+
+    return rowShift.down;
+  });
+
 test("streamed replies follow the end, hold a reading position in history and return to latest", async ({
   consolePage: page,
 }) => {
@@ -63,8 +124,11 @@ test("streamed replies follow the end, hold a reading position in history and re
     exact: true,
   });
 
-  // At the end, Chat follows a reply as it streams. The slow pace keeps the
-  // reply streaming long enough for slow CI runners to observe it.
+  // At the end, Chat follows a reply as it streams. It glides, so it can trail
+  // the end until the reply settles. The slow pace keeps the reply streaming
+  // long enough for slow CI runners to observe it.
+  await recordRowMotion(page);
+  await recordRowShift(history);
   await send(page, "Stream at the end [fixture:reply lines=30 pace=30]");
   await expect(streaming).toBeVisible();
   const partial = (await streaming.textContent())?.length ?? 0;
@@ -73,11 +137,18 @@ test("streamed replies follow the end, hold a reading position in history and re
     .poll(async () => (await streaming.textContent())?.length)
     .toBeGreaterThan(partial);
 
-  expect(await distanceFromEnd(history)).toBeLessThanOrEqual(2);
+  await expect(latest).toBeHidden();
   await expect(history).toContainText("Fixture session turn: 2.");
   await expect(streaming).toHaveCount(0);
   await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
   await expect(latest).toBeHidden();
+
+  // New messages fade in fully, even while the reply re-renders Chat.
+  await expect.poll(() => rowMotion(page)).toContain("finish");
+  expect(await rowMotion(page)).not.toContain("cancel");
+
+  // Earlier messages only move up as new ones arrive, without jitter.
+  expect(await rowShift(page)).toBeLessThanOrEqual(1);
 
   // In history, the paragraph being read stays put while the reply grows.
   await send(page, "Stream while reading [fixture:reply lines=30 pace=30]");

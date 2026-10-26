@@ -20,6 +20,7 @@ interface ChatProps {
   active?: boolean;
   ready?: boolean;
   stacked?: boolean;
+  follow?: boolean;
 }
 
 function Chat({
@@ -28,12 +29,14 @@ function Chat({
   active = true,
   ready = true,
   stacked = false,
+  follow = false,
 }: ChatProps) {
   const { viewportRef, pinned, scrollToLatest } = useReadingScroll({
     reading,
     active,
     ready,
     itemAttribute: "data-chat-item",
+    followSmoothly: follow,
   });
 
   const timeline = createElement(
@@ -488,6 +491,62 @@ test("a smooth return that arrives ends pinned and follows later replies", () =>
   assert.equal(reading.position?.pinned, true);
   view.rerender(createElement(Chat, { reading, items: [...items, "g"] }));
   assert.equal(viewport.scrollTop, 500);
+});
+
+test("following smoothly glides to new replies and survives a retarget", () => {
+  const reading: ReadingState = {};
+  const props = { reading, follow: true };
+  const view = render(createElement(Chat, { ...props, items }));
+  const viewport = view.getByTestId("chat");
+  const scrollTo = vi.fn();
+
+  Object.defineProperty(viewport, "scrollTo", {
+    configurable: true,
+    value: scrollTo,
+  });
+
+  const button = () =>
+    view.queryByRole("button", { name: "Scroll to latest message" });
+
+  const scrollAt = (top: number) => {
+    viewport.scrollTop = top;
+    fireEvent.scroll(viewport);
+  };
+
+  assert.equal(viewport.scrollTop, 400, "The first layout jumps");
+  view.rerender(createElement(Chat, { ...props, items: [...items, "g"] }));
+
+  assert.deepEqual(scrollTo.mock.calls.at(-1), [
+    { top: 500, behavior: "smooth" },
+  ]);
+
+  assert.equal(viewport.scrollTop, 400, "The browser owns the glide");
+  scrollAt(450);
+  const more = [...items, "g", "h"];
+  view.rerender(createElement(Chat, { ...props, items: more }));
+
+  assert.deepEqual(scrollTo.mock.calls.at(-1), [
+    { top: 600, behavior: "smooth" },
+  ]);
+
+  // The browser can end the interrupted glide short of the new end.
+  fireEvent(viewport, new Event("scrollend"));
+  expect(button()).toBeNull();
+
+  assert.deepEqual(scrollTo.mock.calls.at(-1), [
+    { top: 600, behavior: "smooth" },
+  ]);
+
+  scrollAt(600);
+  view.rerender(createElement(Chat, { ...props, items: more, active: false }));
+  const calls = scrollTo.mock.calls.length;
+
+  view.rerender(
+    createElement(Chat, { ...props, items: [...more, "i"], active: true }),
+  );
+
+  assert.equal(viewport.scrollTop, 700, "A revealed view jumps to its end");
+  assert.equal(scrollTo.mock.calls.length, calls);
 });
 
 test("a smooth return that never moves is judged where it stopped", (t) => {

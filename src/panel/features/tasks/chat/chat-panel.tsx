@@ -72,6 +72,10 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
     blockScrollWhileLoading: true,
     reportPositionRestored: true,
     itemAttribute: "data-chat-item",
+    // A streaming reply moves the rows above it on every delta, so only new
+    // messages fade in, while the view glides to follow them.
+    animateRows: "arrivals",
+    followSmoothly: true,
     focus:
       newFrom === undefined
         ? undefined

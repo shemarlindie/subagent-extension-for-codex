@@ -108,8 +108,11 @@ in sync. Loading timing has its own configuration.
 - Make controls inert while they leave.
 
 Animations must preserve reading position. In measured timelines, animate
-opacity so row geometry stays stable. Respect reduced-motion preferences. Skip
-animation when the Web Animations API is unavailable, including in tests.
+opacity so row geometry stays stable. Transformed rows near the end can also
+grow the scroll area. To ease shifts while following streamed content, glide
+the scroll to the new end, as Chat's `followSmoothly` reading scroll does.
+Respect reduced-motion preferences. Skip animation when the Web Animations API
+is unavailable, including in tests.
 
 ## Loading and pending UI
 

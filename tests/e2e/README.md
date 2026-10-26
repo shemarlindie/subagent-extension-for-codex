@@ -50,7 +50,7 @@ The browser flows verify:
 | E14 | Keep tasks unread until read, mark them read or unread by menu, reply or bulk action, and reload the results.               |
 | E15 | Lose a send's response, keep the draft with retry guidance and deliver the retried message once.                            |
 | E16 | Lose the event stream, show reconnection and display work finished while disconnected.                                      |
-| E17 | Follow a streaming reply at the end, hold the reading position in history and restore it when Chat returns.                 |
+| E17 | Glide after a reply at the end, fade new messages in without moving others back, hold and restore the reading position.     |
 | E18 | Steer a running turn, promote a queued message, interrupt to send it now and clear a paused queue.                          |
 | E19 | Reject a lower cost limit, raise a spent cost budget and continue.                                                          |
 | E20 | Fail a dependent with its failed prerequisite, then resume both with follow-ups.                                            |

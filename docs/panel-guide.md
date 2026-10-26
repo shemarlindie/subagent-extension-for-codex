@@ -251,9 +251,10 @@ default to deny.
 
 ### Reading position
 
-Chat and Activity follow new content while you are at the end. When you scroll
-into history, your position holds as content streams or loads, and a button
-returns to the latest content. Each tab remembers its own position.
+Chat and Activity follow new content while you are at the end. Chat glides to
+new content and fades new messages in. When you scroll into history, your
+position holds as content streams or loads, and a button returns to the latest
+content. Each tab remembers its own position.
 
 ## Activity timeline
 
