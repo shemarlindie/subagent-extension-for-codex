@@ -64,6 +64,7 @@ The browser flows verify:
 | E28 | Search, open a task and move between its tabs by keyboard.                                                                  |
 | E29 | Announce a new task, preserve the open task, draft, focus and reading position, then open it with View.                     |
 | E30 | Add a project from the new-task composer, select it there without changing the list scope and start a task in it.           |
+| E31 | Keep reply geometry stable through streamed handoffs and preserve reading position through changing activity.               |
 
 Accepted limits:
 

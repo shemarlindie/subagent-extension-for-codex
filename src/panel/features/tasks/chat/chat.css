@@ -217,14 +217,22 @@ body[data-expanded-panel="true"]
   .markdown-body {
   color: var(--muted);
 }
-/* The caret trails the last line of a message still being written. */
-.chat-message[data-streaming] .markdown-body > :last-child::after {
+/* The caret follows the text without wrapping or changing the message's height. */
+.chat-message[data-streaming] .markdown-body {
+  position: relative;
+}
+.chat-message[data-streaming]
+  .markdown-body
+  > :last-child:not(:is(ul, ol))::after,
+.chat-message[data-streaming]
+  .markdown-body
+  > :is(ul, ol):last-child
+  > li:last-child::after {
   content: "";
-  display: inline-block;
+  position: absolute;
   width: 7px;
   height: 1.1em;
-  margin-left: 2px;
-  vertical-align: text-bottom;
+  margin-inline-start: 2px;
   background: var(--text);
   animation: chat-caret 1s steps(1) infinite;
 }
@@ -234,7 +242,11 @@ body[data-expanded-panel="true"]
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chat-message[data-streaming] .markdown-body > :last-child::after {
+  .chat-message[data-streaming] .markdown-body > :last-child::after,
+  .chat-message[data-streaming]
+    .markdown-body
+    > :is(ul, ol):last-child
+    > li:last-child::after {
     animation: none;
   }
 }
