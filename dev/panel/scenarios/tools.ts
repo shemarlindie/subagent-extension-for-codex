@@ -16,34 +16,14 @@ import {
   previewArchivedAt,
   previewArchiveTool,
 } from "./archive-tools";
-import {
-  previewEvents,
-  previewProjects,
-  previewStreamingDraft,
-  previewTasks,
-} from "./fixtures";
+import { previewProjects, previewTasks } from "./fixtures";
+import { livePreview } from "./live-preview";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
 import {
   PREVIEW_UNREAD_TOOLS,
   previewReadState,
   previewUnreadTool,
 } from "./unread-tools";
-
-const streamStart = Date.now();
-
-/**
- * The streaming fixture's draft so far: it grows about 60 characters a
- * second from when the preview loaded, then starts over after a pause.
- */
-function streamingDraft() {
-  const { messageId, text } = previewStreamingDraft;
-  const length = ((Date.now() - streamStart) / 1000) * 60;
-
-  return {
-    message_id: messageId,
-    text: text.slice(0, Math.max(1, Math.round(length % (text.length + 300)))),
-  };
-}
 
 const previewModels: ModelChoice[] = [
   {
@@ -462,6 +442,8 @@ export function previewTool(
     return task;
   }
 
+  const { taskFor, eventsFor, draftFor, revision } = livePreview();
+
   const fixtures: Record<string, unknown> = {
     open_codex_subagent_extension: openPanel(args, options),
     app_open_codex_subagent_extension_global: openPanel(
@@ -474,17 +456,13 @@ export function previewTool(
     list_tasks: newestFirst
       .filter((task) => inScope(task, args))
       .map((task) => {
-        const events = previewEvents.filter(
-          (event) => event.task_id === task.id,
-        );
+        const events = eventsFor(task.id);
 
         return listedTask(
-          task,
+          taskFor(task),
           events.slice(-200),
           events.findLast((event) => event.type === "agent.reply"),
-          task.id === previewStreamingDraft.taskId
-            ? streamingDraft()
-            : undefined,
+          draftFor(task.id),
           previewReadState(task.id),
           previewArchivedAt(task.id),
         );
@@ -493,31 +471,29 @@ export function previewTool(
       const task = previewTasks.find((task) => task.id === args.task_id);
       if (!task) return { items: [], next_cursor: 0 };
       const after = Number(args.after ?? 0);
-      const events = previewEvents.filter((event) => event.task_id === task.id);
+      const events = eventsFor(task.id);
 
       return {
-        items: chatItems(task, events).filter(
+        items: chatItems(taskFor(task), events).filter(
           (item) =>
             item.event_id > after || (after === 0 && item.event_id === 0),
         ),
         next_cursor: Math.max(after, events.at(-1)?.id ?? 0),
       };
     })(),
-    // Fixtures don't change on their own, so the revision stays the same.
+    // Activity boundaries refresh persisted reads; draft deltas update between them.
     app_wait_for_updates: (() => {
       const target = args.draft as { task_id?: unknown } | undefined;
 
       return {
-        revision: "preview:0",
+        revision,
         ...(target
           ? {
-              draft:
-                target.task_id === previewStreamingDraft.taskId
-                  ? streamingDraft()
-                  : null,
+              draft: draftFor(target.task_id) ?? null,
               running: previewTasks.some(
                 (task) =>
-                  task.id === target.task_id && task.status === "running",
+                  task.id === target.task_id &&
+                  taskFor(task).status === "running",
               ),
             }
           : {}),
@@ -525,11 +501,11 @@ export function previewTool(
     })(),
     app_record_timing: {},
     app_get_activity: windowActivity(
-      previewEvents.filter((event) => event.task_id === args.task_id),
+      eventsFor(args.task_id),
       Number(args.after ?? 0),
     ),
     app_get_turn_activity: windowTurnActivity(
-      previewEvents.filter((event) => event.task_id === args.task_id),
+      eventsFor(args.task_id),
       Number(args.turn),
     ),
     list_workers: [

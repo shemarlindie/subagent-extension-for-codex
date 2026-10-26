@@ -15,6 +15,10 @@ import {
 import { editLogTask, editLogTimeline } from "./edit-log-scenarios";
 import { inputTasks, inputTimelines } from "./input-scenarios";
 import { lifecycleTasks, lifecycleTimelines } from "./lifecycle-scenarios";
+import {
+  liveConversationEvents,
+  liveConversationTask,
+} from "./live-conversation";
 import { liveTasks, liveTimelines, statusTasks } from "./live-scenarios";
 
 export { previewLiveStatus, previewStreamingDraft } from "./live-scenarios";
@@ -72,6 +76,7 @@ export const previewTasks: Task[] = [
   .map((id) => tasksById.get(id)!)
   .concat(
     editLogTask,
+    liveConversationTask,
     statusTasks,
     recordedFixtures.map((recorded) => recorded.task),
   );
@@ -88,6 +93,7 @@ const timelinesById = new Map(
 
 export const previewEvents: Event[] = [
   ...editLogTimeline.events,
+  ...liveConversationEvents,
   ...[
     "preview-audit",
     "preview-failed",

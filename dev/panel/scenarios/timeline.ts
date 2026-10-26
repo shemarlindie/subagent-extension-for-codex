@@ -364,9 +364,7 @@ export class Timeline {
   }
 
   /** A streamed text response, optionally left unfinished (still running). */
-  streamed(chunks: string[], finish = true) {
-    const id = this.messageId();
-
+  streamed(chunks: string[], finish = true, id = this.messageId()) {
     this.stream({
       type: "message_start",
       message: {
