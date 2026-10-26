@@ -27,7 +27,7 @@ test("worker discovery exposes SDK metadata and falls back when discovery fails"
   const { c } = await setup(provider);
 
   try {
-    const [worker] = await c.availableWorkers();
+    const [worker] = await c.availableWorkers("alice");
     assert.ok(worker);
     assert.deepEqual((worker as any).models, models);
     assert.equal(worker.provider, "fixture");
@@ -36,11 +36,61 @@ test("worker discovery exposes SDK metadata and falls back when discovery fails"
       throw new Error("unavailable");
     };
 
-    const fallback = (await c.availableWorkers())[0] as any;
+    const fallback = (await c.availableWorkers("alice"))[0] as any;
     assert.equal(fallback.models, undefined);
     assert.match(fallback.model_discovery_error, /Model discovery unavailable/);
     assert.deepEqual(fallback.profiles, worker.profiles);
     assert.deepEqual(fallback.capabilities, worker.capabilities);
+  } finally {
+    await c.close();
+  }
+});
+
+test("discovery and effort validation use each owner's current settings", async () => {
+  const provider: Provider = new FixtureProvider();
+
+  provider.models = async (settings) => [
+    {
+      value: "configured-model",
+      displayName: "Configured model",
+      description: "",
+      supportsEffort: settings?.claude_settings_files === false,
+    },
+  ];
+
+  const { c, repo, store } = await setup(provider);
+
+  try {
+    c.settings.update("alice", { set: { claude_settings_files: false } });
+    const alice = (await c.availableWorkers("alice"))[0];
+    const bob = (await c.availableWorkers("bob"))[0];
+    assert.ok(alice && "models" in alice);
+    assert.ok(bob && "models" in bob);
+    assert.equal(alice.models?.[0]?.supportsEffort, true);
+    assert.equal(bob.models?.[0]?.supportsEffort, false);
+
+    const request = {
+      ...input(repo),
+      model: "configured-model",
+      reasoning_effort: "high",
+    };
+
+    const task = await c.start("alice", request);
+    await until(() => store.get(task.id, "alice").status === "completed");
+
+    await assert.rejects(
+      c.start("bob", request),
+      /does not support reasoning effort high/,
+    );
+
+    c.settings.update("alice", { set: { claude_settings_files: true } });
+
+    await assert.rejects(
+      c.start("alice", request),
+      /does not support reasoning effort high/,
+    );
+
+    assert.equal(store.all().length, 1);
   } finally {
     await c.close();
   }
@@ -65,7 +115,7 @@ test("an unready provider blocks task starts and model discovery but stays liste
   const { c, store, repo } = await setup(provider);
 
   try {
-    const [worker] = (await c.availableWorkers()) as any[];
+    const [worker] = (await c.availableWorkers("alice")) as any[];
     assert.equal(worker.readiness.ready, false);
     assert.equal(worker.models, undefined);
     assert.equal(worker.model_discovery_error, undefined);
@@ -81,7 +131,7 @@ test("an unready provider blocks task starts and model discovery but stays liste
     provider.readiness = async () => ({ ready: true, details: {} });
 
     assert.equal(
-      ((await c.availableWorkers())[0] as any).readiness.ready,
+      ((await c.availableWorkers("alice"))[0] as any).readiness.ready,
       true,
     );
 

@@ -1,6 +1,9 @@
 import { query, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import { claudeOverrideDefaults } from "../../../../../shared/providers/claude/permissions.js";
+import {
+  claudeOverrideDefaults,
+  type ClaudeOverrides,
+} from "../../../../../shared/providers/claude/permissions.js";
 import type { ModelChoice } from "../../../../../shared/providers/types.js";
 import type { ClaudeCli } from "../configuration/executable.js";
 import { claudeEnvironment } from "../configuration/execution-environment.js";
@@ -18,6 +21,10 @@ export class ModelCatalog {
   constructor(
     private launch: typeof query,
     private cli: Pick<ClaudeCli, "executable">,
+    private configuration: Pick<
+      ClaudeOverrides,
+      "claude_settings_files" | "claude_environment"
+    > = claudeOverrideDefaults,
   ) {}
 
   /** The models the CLI offers, cached briefly; a failed discovery is not retried at once. */
@@ -63,14 +70,16 @@ export class ModelCatalog {
       prompt,
       options: {
         pathToClaudeCodeExecutable,
-        // Match the default task environment so discovery sees the same provider configuration.
+        // Match the user's task environment and settings-file policy.
         env: claudeEnvironment(
           process.env,
-          claudeOverrideDefaults.claude_environment,
+          this.configuration.claude_environment,
         ),
         abortController,
         persistSession: false,
-        settingSources: ["user", "project", "local"],
+        settingSources: this.configuration.claude_settings_files
+          ? ["user", "project", "local"]
+          : [],
         // Model listing must not run the user's settings-file hooks on every refresh.
         settings: { disableAllHooks: true },
         strictMcpConfig: true,

@@ -11,6 +11,7 @@ import {
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
+import { claudeOverrideDefaults } from "../../../../../shared/providers/claude/permissions.js";
 import { claudeMetadata } from "../../../../../shared/providers/metadata.js";
 import {
   type ModelChoice,
@@ -18,6 +19,7 @@ import {
 } from "../../../../../shared/providers/types.js";
 import { type Task } from "../../../../../shared/tasks/model.js";
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
+import type { SettingsValues } from "../../../settings/settings-values.js";
 import {
   type Provider,
   type RunContext,
@@ -72,15 +74,13 @@ export class ClaudeAgentProvider implements Provider {
     dynamic_subagents: false,
   };
 
-  private catalog: ModelCatalog;
+  private catalogs = new Map<string, ModelCatalog>();
 
   constructor(
     private launch: typeof query = query,
     private removeSession: typeof deleteSession = deleteSession,
     private cli: Pick<ClaudeCli, "status" | "executable"> = new ClaudeCli(),
-  ) {
-    this.catalog = new ModelCatalog(launch, cli);
-  }
+  ) {}
 
   async readiness(): Promise<ProviderReadiness> {
     const status = await this.cli.status();
@@ -114,8 +114,25 @@ export class ClaudeAgentProvider implements Provider {
     }
   }
 
-  models(): Promise<ModelChoice[]> {
-    return this.catalog.models();
+  models(settings?: SettingsValues): Promise<ModelChoice[]> {
+    const configuration = {
+      claude_settings_files:
+        settings?.claude_settings_files ??
+        claudeOverrideDefaults.claude_settings_files,
+      claude_environment:
+        settings?.claude_environment ??
+        claudeOverrideDefaults.claude_environment,
+    };
+
+    const key = JSON.stringify(configuration);
+    let catalog = this.catalogs.get(key);
+
+    if (!catalog) {
+      catalog = new ModelCatalog(this.launch, this.cli, configuration);
+      this.catalogs.set(key, catalog);
+    }
+
+    return catalog.models();
   }
 
   async run(c: RunContext, prompt: string): Promise<TurnOutput> {

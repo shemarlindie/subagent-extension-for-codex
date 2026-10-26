@@ -182,6 +182,9 @@ fail the task when it runs.
 
 Claude model suggestions come from the installed CLI. Discovery submits no
 user turn and turns off tools, settings-file hooks and external MCP servers.
+It follows your settings-file loading and environment choices. Discovery runs
+in the service directory, so project-specific model configuration can still
+differ from a task workspace.
 Custom model IDs work when discovery is unavailable, but effort support may
 then be unknown.
 

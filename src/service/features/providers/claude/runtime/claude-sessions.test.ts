@@ -7,7 +7,9 @@ import {
   fakeClaudePath,
   readyClaudeCli,
 } from "../../../../../../tests/support/claude-cli.js";
+import type { ModelChoice } from "../../../../../shared/providers/types.js";
 import { startSchema, type Task } from "../../../../../shared/tasks/model.js";
+import { initialValuesSchema } from "../../../settings/settings-values.js";
 import { ClaudeAgentProvider } from "./provider.js";
 
 test("Claude session deletion skips absent ids and forwards existing sessions", async () => {
@@ -219,4 +221,75 @@ test("failed Claude model discovery closes the query and retries after a short c
   assert.equal(retried.value, "retried-model");
   assert.equal(attempts, 2);
   assert.equal(closes, 2);
+});
+
+test("Claude discovery keeps concurrent requests, results and failures separate by settings and environment", async () => {
+  vi.stubEnv("CLAUDE_CODE_USE_BEDROCK", "1");
+
+  const defaults = initialValuesSchema.parse({
+    default_provider: "claude",
+    default_worker_profile: "reviewer",
+    default_workspace_strategy: "current_repo",
+    max_runtime_minutes: null,
+    max_cost_usd: null,
+  });
+
+  const isolated = { ...defaults, claude_settings_files: false };
+  const filtered = { ...isolated, claude_environment: "filtered" as const };
+  const launches: Options[] = [];
+  const releases: ((models: ModelChoice[]) => void)[] = [];
+  const failures: ((error: Error) => void)[] = [];
+
+  const provider = new ClaudeAgentProvider(
+    ({ options }) => {
+      launches.push(options!);
+
+      const result = new Promise<ModelChoice[]>((resolve, reject) => {
+        releases.push(resolve);
+        failures.push(reject);
+      });
+
+      return { supportedModels: () => result, close() {} } as unknown as Query;
+    },
+    undefined,
+    readyClaudeCli,
+  );
+
+  const loaded = provider.models(defaults);
+  const unloaded = provider.models(isolated);
+  const restricted = provider.models(filtered);
+  assert.equal(provider.models({ ...isolated }), unloaded);
+  assert.notEqual(loaded, unloaded);
+  assert.notEqual(unloaded, restricted);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(launches.length, 3);
+
+  assert.deepEqual(
+    launches.map((options) => options.settingSources),
+    [["user", "project", "local"], [], []],
+  );
+
+  assert.deepEqual(
+    launches.map((options) => options.env!.CLAUDE_CODE_USE_BEDROCK),
+    ["1", "1", undefined],
+  );
+
+  const loadedFailure = assert.rejects(loaded, /settings discovery failed/);
+  failures[0]!(new Error("settings discovery failed"));
+
+  releases[1]!([
+    { value: "isolated-model", displayName: "Isolated", description: "" },
+  ]);
+
+  releases[2]!([
+    { value: "filtered-model", displayName: "Filtered", description: "" },
+  ]);
+
+  await loadedFailure;
+  assert.equal((await unloaded)[0]!.value, "isolated-model");
+  assert.equal((await restricted)[0]!.value, "filtered-model");
+  assert.equal((await provider.models(isolated))[0]!.value, "isolated-model");
+  assert.equal((await provider.models(filtered))[0]!.value, "filtered-model");
+  await assert.rejects(provider.models(defaults), /settings discovery failed/);
+  assert.equal(launches.length, 3);
 });

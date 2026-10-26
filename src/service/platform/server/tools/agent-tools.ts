@@ -66,7 +66,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       description: "Read persistent user defaults for delegation and budgets.",
       schema: z.strictObject({}),
       outputSchema: settingsReadOutputSchema,
-      run: async () => c.settings.read(owner, await c.availableWorkers()),
+      run: async () => c.settings.read(owner, await c.availableWorkers(owner)),
     }),
     update_settings: tool({
       description:
@@ -166,7 +166,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       description:
         "Discover installed providers, profiles, supported capabilities, and whether each provider's runtime is ready to start tasks.",
       schema: z.object({}),
-      run: () => c.availableWorkers(),
+      run: () => c.availableWorkers(owner),
     }),
     interrupt_task: tool({
       description:

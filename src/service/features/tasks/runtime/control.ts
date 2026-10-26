@@ -153,7 +153,7 @@ export class Control {
     }));
   }
 
-  async availableWorkers() {
+  async availableWorkers(owner: string) {
     return Promise.all(
       this.workers().map(async (worker) => {
         const provider = this.providers.get(worker.provider)!;
@@ -163,7 +163,10 @@ export class Control {
         if (!provider.models || readiness?.ready === false) return known;
 
         try {
-          return { ...known, models: await provider.models() };
+          return {
+            ...known,
+            models: await provider.models(this.settings.values(owner)),
+          };
         } catch {
           return {
             ...known,
@@ -187,10 +190,11 @@ export class Control {
     const readiness = await provider.readiness?.();
     if (readiness?.ready === false) throw new Error(readiness.message);
     const policy = provider.taskPolicy;
+    const defaults = this.settings.values(owner);
 
     const options = policy.prepareStart({
       input: parsed,
-      defaults: this.settings.values(owner),
+      defaults,
       authority,
     });
 
@@ -204,7 +208,7 @@ export class Control {
     if (!req.title) throw new Error("Task title is required");
     if (!req.description) throw new Error("Task description is required");
 
-    await assertModelEffort(provider, req.model, req.reasoning_effort);
+    await assertModelEffort(provider, req, defaults);
     validateBudgets(provider, req);
 
     if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD") {

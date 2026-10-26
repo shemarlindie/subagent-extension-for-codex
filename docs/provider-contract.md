@@ -161,7 +161,7 @@ change Claude's native defaults.
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `capabilities`        | Declares supported task features and limits. The control plane rejects unsupported budgets before execution.                                    |
 | `readiness()`         | Optional. Checks the local runtime and can block new tasks while the worker stays visible. Authentication and network failures can still occur. |
-| `models()`            | Optional. Supplies model and effort suggestions. Custom model IDs are still accepted.                                                           |
+| `models(settings)`    | Optional. Supplies model and effort suggestions using the requesting user's settings. Custom model IDs are still accepted.                      |
 | `deleteSession(task)` | Optional. Deletes provider state only when task deletion asks for it.                                                                           |
 | `close()`             | Optional. Releases provider resources during service shutdown.                                                                                  |
 

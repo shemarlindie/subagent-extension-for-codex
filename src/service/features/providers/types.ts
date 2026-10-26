@@ -11,6 +11,7 @@ import type {
   ProviderReadiness,
 } from "../../../shared/providers/types.js";
 import type { InputPresentation, Task } from "../../../shared/tasks/model.js";
+import type { SettingsValues } from "../settings/settings-values.js";
 import type { ProviderTaskPolicy } from "./task-policy.js";
 
 /** A message sent into a running turn. */
@@ -79,7 +80,7 @@ export interface Provider {
   taskPolicy: ProviderTaskPolicy;
   /** Checks the local runtime the provider launches; auth and network failures surface later. */
   readiness?(): Promise<ProviderReadiness>;
-  models?(): Promise<ModelChoice[]>;
+  models?(settings?: SettingsValues): Promise<ModelChoice[]>;
   run(context: RunContext, prompt: string): Promise<TurnOutput>;
   /** Deletes the provider-side session a task ran in; one already gone is not an error. */
   deleteSession?(task: Task): Promise<void>;

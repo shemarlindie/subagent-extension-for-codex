@@ -1,5 +1,6 @@
 import type { Task } from "../../../../shared/tasks/model.js";
 import type { Provider } from "../../providers/types.js";
+import type { SettingsValues } from "../../settings/settings-values.js";
 
 /**
  * Rejects a reasoning effort the chosen model is known not to support.
@@ -7,11 +8,11 @@ import type { Provider } from "../../providers/types.js";
  */
 export async function assertModelEffort(
   provider: Provider,
-  model: Task["model"],
-  effort: Task["reasoning_effort"],
+  { model, reasoning_effort: effort }: Pick<Task, "model" | "reasoning_effort">,
+  settings: SettingsValues,
 ) {
   if (!provider.models || !effort || effort === "default") return;
-  const models = await provider.models().catch(() => []);
+  const models = await provider.models(settings).catch(() => []);
   const known = models.find((item) => item.value === (model || "default"));
 
   if (
