@@ -1,4 +1,5 @@
 import { DEFAULT_PAGE, parsePage } from "./navigation/pages";
+import { browserComposerDrafts } from "./state/persistence/browser-composer-drafts";
 import {
   parsePersistedDialogs,
   type PersistedDialogId,
@@ -193,7 +194,9 @@ function dialogStackIdentity(dialogs: PersistedDialog[]) {
 
 /** Keeps shareable view choices in the URL and private dialog drafts in local storage. */
 export function browserUiState(win: Window = window): UiStatePersistence {
-  const storage = dialogStorage(win);
+  const storage = dialogStorage(win),
+    composerDrafts = browserComposerDrafts(storage);
+
   let persistedDialogs = readDialogs(storage),
     persistedSettingsSection = readLastSettingsSection(storage),
     pendingDialogs: PersistedDialog[] | undefined,
@@ -231,9 +234,11 @@ export function browserUiState(win: Window = window): UiStatePersistence {
   const flush = () => {
     flushSearch();
     flushDialogs();
+    composerDrafts.flush();
   };
 
   return {
+    composerDrafts,
     get initial() {
       const url = new URL(win.location.href),
         openIds = new Set(

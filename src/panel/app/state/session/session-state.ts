@@ -48,6 +48,11 @@ type SessionStates = {
 export type SessionScope = keyof SessionStates;
 export type SessionState<S extends SessionScope> = SessionStates[S];
 
+export interface ComposerDraftPersistence {
+  read(scope: "task" | "newTask", id: string): string;
+  write(scope: "task" | "newTask", id: string, text: string): void;
+}
+
 type SessionEntry<T> = { value: T; listeners: Set<() => void> };
 
 type SessionEntries = {
@@ -74,6 +79,24 @@ export class SessionStateStore {
     newTask: new Map(),
   };
 
+  constructor(private drafts?: ComposerDraftPersistence) {}
+
+  private saveDraft<S extends SessionScope>(
+    scope: S,
+    id: string,
+    value: SessionState<S>,
+  ) {
+    if (scope === "task") {
+      this.drafts?.write("task", id, (value as TaskSessionState).composerDraft);
+    } else if (scope === "newTask") {
+      this.drafts?.write(
+        "newTask",
+        id,
+        (value as NewTaskSessionState).draft.description ?? "",
+      );
+    }
+  }
+
   private entry<S extends SessionScope>(scope: S, id: string) {
     const entries = this.entries[scope] as Map<
       string,
@@ -87,6 +110,14 @@ export class SessionStateStore {
         value: defaults[scope]() as SessionState<S>,
         listeners: new Set(),
       };
+
+      const text = scope === "question" ? "" : this.drafts?.read(scope, id);
+
+      if (text && scope === "task") {
+        (entry.value as TaskSessionState).composerDraft = text;
+      } else if (text && scope === "newTask") {
+        (entry.value as NewTaskSessionState).draft.description = text;
+      }
 
       entries.set(id, entry);
     }
@@ -116,6 +147,11 @@ export class SessionStateStore {
     }
 
     entry.value = { ...entry.value, ...patch };
+
+    if ("composerDraft" in patch || "draft" in patch) {
+      this.saveDraft(scope, id, entry.value);
+    }
+
     entry.listeners.forEach((listener) => listener());
   }
 
@@ -133,6 +169,8 @@ export class SessionStateStore {
   remove<S extends SessionScope>(scope: S, id: string) {
     if (!this.entries[scope].has(id)) return;
     const entry = this.entry(scope, id);
+
+    this.saveDraft(scope, id, defaults[scope]() as SessionState<S>);
 
     // Keep subscriptions attached when a request is cleared before unmounting.
     if (entry.listeners.size) {

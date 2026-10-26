@@ -77,6 +77,49 @@ test("reload keeps New task open until an existing task is selected", async ({
   );
 });
 
+test("reload restores composer messages and successful submissions clear them", async ({
+  consolePage: page,
+}) => {
+  const title = "Task with an unsent reply";
+  await startTask(page, title);
+  const history = page.getByRole("region", { name: "Chat history" });
+  await expect(history).toContainText("Fixture session turn: 1.");
+
+  const reply = page.getByRole("textbox", { name: "Message", exact: true });
+  const unsentReply = "Keep this reply across refresh";
+  await reply.fill(unsentReply);
+  await page.reload();
+  await expect(reply).toHaveValue(unsentReply);
+
+  await page.getByRole("button", { name: "New task", exact: true }).click();
+  const taskMessage = page.getByRole("textbox", { name: "Task message" });
+  const newMessage = "Keep this new task across refresh";
+  await taskMessage.fill(newMessage);
+  await page.reload();
+  await expect(taskMessage).toHaveValue(newMessage);
+
+  await page.getByRole("button", { name: "Start task", exact: true }).click();
+  await expect(history).toContainText(newMessage);
+  await expect(history).toContainText("Fixture session turn: 1.");
+  await expect(reply).toHaveValue("");
+  await page.getByRole("button", { name: "New task", exact: true }).click();
+  await page.reload();
+  await expect(taskMessage).toHaveValue("");
+
+  await page
+    .getByRole("complementary", { name: "Delegated tasks" })
+    .getByRole("button", { name: new RegExp(title) })
+    .click();
+
+  await expect(reply).toHaveValue(unsentReply);
+  await reply.press("Enter");
+  await expect(history).toContainText("Fixture session turn: 2.");
+  await expect(reply).toHaveValue("");
+  await page.reload();
+  await expect(history).toContainText(unsentReply);
+  await expect(reply).toHaveValue("");
+});
+
 test("create a task, answer input, approve a tool, and continue after reload", async ({
   consolePage: page,
 }) => {

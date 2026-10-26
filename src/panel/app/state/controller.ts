@@ -123,7 +123,7 @@ export class Controller {
   private transportStatus = false;
 
   private listeners = new Set<() => void>();
-  readonly session = new SessionStateStore();
+  readonly session: SessionStateStore;
   private disposed = false;
   private started = false;
   private refreshing = false;
@@ -217,6 +217,7 @@ export class Controller {
         : this.state.conversation,
     );
 
+    this.session = new SessionStateStore(viewState?.composerDrafts);
     this.restoredView = viewState?.initial.view ?? {};
 
     this.dialogs = new PersistedDialogs(

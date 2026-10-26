@@ -232,14 +232,15 @@ The controller keeps session memory apart from view state that can survive a
 reload.
 
 - **Session memory:** `controller.session` (`app/state/session/`) holds
-  per-task tabs, composer drafts and visibility, reading positions, opened and
-  viewed files in Changes, question answers and the new-task draft. It lasts
-  until the controller is replaced and never survives a reload.
+  per-task tabs, composer visibility, reading positions, opened and viewed files
+  in Changes, question answers and new-task options. It lasts until the controller
+  is replaced.
 - **Reload state:** the standalone console and the development host keep view
   choices (page, project, task, new-task view, filter, search and tab) in the
   browser URL.
   They keep open dialog descriptors, form drafts and the last Settings section
-  in browser storage.
+  in browser storage. Unsent task and new-task composer text also stays in
+  browser storage until sent or cleared.
 - **Task list width:** saved in browser storage wherever it is available.
 - **Composer model and reasoning:** saved on the service as profile settings.
   See [New-task composer](#new-task-composer).

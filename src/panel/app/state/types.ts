@@ -1,5 +1,4 @@
 /* eslint-disable simple-import-sort/exports */
-
 import type { Event } from "../../../shared/events/types.js";
 import type {
   ChangeCountsState,
@@ -22,6 +21,7 @@ import type { Filter, Tab, Task } from "../../features/tasks/types.js";
 import type { HostState } from "../../transports/types.js";
 import type { PageId } from "../navigation/pages";
 import type { ConnectionLabel } from "./connection.js";
+import type { ComposerDraftPersistence } from "./session/session-state";
 
 export type PanelData = {
   // Host data arrives unchecked; applyScope validates these before use.
@@ -236,6 +236,7 @@ type PersistedUiState = {
 
 export type UiStatePersistence = {
   initial: PersistedUiState;
+  composerDrafts?: ComposerDraftPersistence;
   save(state: PersistedUiState): void;
   flush?(): void;
 };
