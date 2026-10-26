@@ -393,7 +393,7 @@ h3 {
   border-radius: var(--radius);
   padding: 12px 14px;
   margin: 16px 0;
-  background: var(--surface);
+  background: var(--notice-bg);
 }
 .notice[data-tone="error"] {
   --notice-accent: var(--danger);

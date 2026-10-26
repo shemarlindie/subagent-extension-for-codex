@@ -1,3 +1,6 @@
+.task-header .notice {
+  margin-inline: var(--detail-pad);
+}
 /* Desktop keeps the title on the content edge while the task list is visible. */
 .task-topline {
   display: flex;

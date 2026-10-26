@@ -91,9 +91,8 @@ export function TaskInspector() {
                   {state.projectsLoaded &&
                     !projectApproved(state.projects, task.repository) && (
                       <Notice>
-                        This repository is no longer approved. Add it again
-                        before starting another turn. Saved task history remains
-                        available.
+                        Add this project again before starting another turn. You
+                        can still view its task history.
                       </Notice>
                     )}
                 </>

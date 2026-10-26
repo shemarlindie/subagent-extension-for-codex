@@ -97,6 +97,43 @@ test("rename a project and remove its approval while retaining task history and 
     page.getByRole("region", { name: "Chat history" }),
   ).toContainText("Fixture session turn: 1.");
 
+  const approvalNotice = page.locator(".task-header .notice");
+
+  for (const width of [1280, 420]) {
+    await page.setViewportSize({ width, height: 800 });
+
+    await expect(approvalNotice).toHaveText(
+      "Add this project again before starting another turn. You can still view its task history.",
+    );
+
+    const bounds = await approvalNotice.evaluate((notice) => {
+      const inspector = notice.closest("#detail")!;
+      const tabs = inspector.querySelector('[role="tablist"]')!;
+      const tabBox = tabs.getBoundingClientRect();
+      const tabStyle = getComputedStyle(tabs);
+      const box = notice.getBoundingClientRect();
+      const detailBox = inspector.getBoundingClientRect();
+
+      return {
+        left: box.left,
+        right: box.right,
+        contentLeft: tabBox.left + parseFloat(tabStyle.paddingLeft),
+        contentRight: tabBox.right - parseFloat(tabStyle.paddingRight),
+        detailLeft: detailBox.left,
+        detailRight: detailBox.right,
+        overflows:
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+      };
+    });
+
+    expect(Math.abs(bounds.left - bounds.contentLeft)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bounds.right - bounds.contentRight)).toBeLessThanOrEqual(1);
+    expect(bounds.left).toBeGreaterThan(bounds.detailLeft);
+    expect(bounds.right).toBeLessThan(bounds.detailRight);
+    expect(bounds.overflows).toBe(false);
+  }
+
   await page.getByRole("tab", { name: "Changes" }).click();
 
   await expect(page.getByRole("tabpanel", { name: "Changes" })).toContainText(

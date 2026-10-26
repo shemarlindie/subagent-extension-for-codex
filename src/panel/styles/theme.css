@@ -100,6 +100,11 @@
   /* Panel tokens: aliases of the host variables, so a host override reaches every surface. */
   --bg: var(--color-background-primary);
   --surface: var(--color-background-tertiary);
+  --notice-bg: color-mix(
+    in srgb,
+    var(--color-text-primary) 5%,
+    var(--color-background-primary)
+  );
   --text: var(--color-text-primary);
   --muted: var(--color-text-secondary);
   --line: var(--color-border-primary);
