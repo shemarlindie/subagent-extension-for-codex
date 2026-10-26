@@ -42,6 +42,7 @@ import { DialogLoader } from "./dialog-loader";
 import { initialState } from "./initial-state";
 import { browserEnvironment, type PanelEnvironment } from "./panel-environment";
 import { PersistedDialogs } from "./persistence/persisted-dialogs";
+import { persistView } from "./persistence/persisted-view";
 import { RevisionTrigger } from "./revision-trigger";
 import { projectRemovalReset } from "./scope-reconciliation";
 import { defaultSelection, selectionPatch } from "./selection";
@@ -236,6 +237,7 @@ export class Controller {
     );
 
     const initial = initialState();
+
     this.browsing = this.restoredView.browsing === true;
 
     const restoredSelection = this.browsing
@@ -286,15 +288,7 @@ export class Controller {
 
   private saveViewState() {
     this.viewState?.save({
-      view: {
-        ...(this.state.page !== DEFAULT_PAGE ? { page: this.state.page } : {}),
-        ...(this.state.repository ? { repository: this.state.repository } : {}),
-        ...(this.state.selected ? { selected: this.state.selected } : {}),
-        ...(this.state.filter ? { filter: this.state.filter } : {}),
-        ...(this.state.search ? { search: this.state.search } : {}),
-        ...(this.state.selected ? { tab: this.state.tab } : {}),
-        ...(this.browsing && !this.state.selected ? { browsing: true } : {}),
-      },
+      view: persistView(this.state, this.browsing),
       ...this.dialogs.saved(),
     });
   }
@@ -684,6 +678,7 @@ export class Controller {
       );
 
       // Don't replace URL choices with defaults until their project and task resolve.
+      const composing = this.restoredView?.composing;
       this.restoredView = undefined;
       this.viewStateReady = Boolean(this.viewState);
 
@@ -705,6 +700,8 @@ export class Controller {
         search,
         tab,
       });
+
+      this.newTasks.restore(composing);
 
       // Share after fallback selection so the host sees the same task as the panel.
       if (this.reconcileShare) {

@@ -236,7 +236,8 @@ reload.
   viewed files in Changes, question answers and the new-task draft. It lasts
   until the controller is replaced and never survives a reload.
 - **Reload state:** the standalone console and the development host keep view
-  choices (page, project, task, filter, search and tab) in the browser URL.
+  choices (page, project, task, new-task view, filter, search and tab) in the
+  browser URL.
   They keep open dialog descriptors, form drafts and the last Settings section
   in browser storage.
 - **Task list width:** saved in browser storage wherever it is available.

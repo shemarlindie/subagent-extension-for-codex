@@ -1,3 +1,4 @@
+import { startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 import { CONSOLE_TOKEN } from "./server";
 
@@ -34,6 +35,46 @@ test("sign in and explicitly register a project through the console", async ({
   await expect(
     page.getByRole("button", { name: "New task", exact: true }),
   ).toBeEnabled();
+});
+
+test("reload keeps New task open until an existing task is selected", async ({
+  consolePage: page,
+}) => {
+  const title = "Existing task before composing";
+  await startTask(page, title);
+  const history = page.getByRole("region", { name: "Chat history" });
+  await expect(history).toContainText("Fixture session turn: 1.");
+
+  await page.getByRole("button", { name: "New task", exact: true }).click();
+
+  await expect(
+    page.getByRole("textbox", { name: "Task message" }),
+  ).toBeVisible();
+
+  await page.reload();
+
+  const taskList = page.getByRole("complementary", { name: "Delegated tasks" });
+
+  const existingTask = taskList.getByRole("button", {
+    name: new RegExp(title),
+  });
+
+  await expect(existingTask).toBeVisible();
+
+  await expect(page.getByRole("textbox", { name: "Task message" })).toHaveValue(
+    "",
+  );
+
+  await expect(history).toHaveCount(0);
+
+  await existingTask.click();
+  await expect(history).toContainText("Fixture session turn: 1.");
+  await page.reload();
+  await expect(history).toContainText("Fixture session turn: 1.");
+
+  await expect(page.getByRole("textbox", { name: "Task message" })).toHaveCount(
+    0,
+  );
 });
 
 test("create a task, answer input, approve a tool, and continue after reload", async ({

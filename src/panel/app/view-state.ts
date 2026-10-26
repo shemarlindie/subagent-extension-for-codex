@@ -18,6 +18,7 @@ const keys = {
   project: "dw_project",
   task: "dw_task",
   browsing: "dw_browse",
+  composing: "dw_compose",
   filter: "dw_filter",
   search: "dw_search",
   tab: "dw_tab",
@@ -73,6 +74,11 @@ function read(url: URL): PersistedViewState {
   const tab = params.get(keys.tab);
   if (tab && tabs.includes(tab as Tab)) state.tab = tab as Tab;
 
+  if (!state.selected && params.get(keys.composing) === "1") {
+    state.composing = true;
+    state.browsing = true;
+  }
+
   if (!state.selected && params.get(keys.browsing) === "1") {
     state.browsing = true;
   }
@@ -96,6 +102,7 @@ function write(
 
   if (state.repository) params.set(keys.project, state.repository);
   if (state.selected) params.set(keys.task, state.selected);
+  else if (state.composing) params.set(keys.composing, "1");
   else if (state.browsing) params.set(keys.browsing, "1");
   if (state.filter) params.set(keys.filter, state.filter);
   if (search) params.set(keys.search, search);

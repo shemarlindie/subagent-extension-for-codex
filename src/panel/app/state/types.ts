@@ -222,6 +222,7 @@ export type PersistedViewState = Partial<
 > & {
   /** The user explicitly returned to the task list instead of selecting a task. */
   browsing?: boolean;
+  composing?: boolean;
 };
 
 /** Browser-local UI state that should survive reloads but not appear in copied URLs. */

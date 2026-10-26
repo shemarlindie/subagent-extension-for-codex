@@ -77,6 +77,11 @@ export class NewTaskLoader {
     this.load(newTask);
   }
 
+  /** Reopens a URL-restored composer after its initial scope has resolved. */
+  restore(composing?: boolean) {
+    if (composing) this.open();
+  }
+
   retry() {
     const newTask = this.context.snapshot().newTask;
     if (!newTask) return;
