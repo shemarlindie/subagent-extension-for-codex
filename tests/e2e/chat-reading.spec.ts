@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 
-import { send } from "./console-actions";
+import type { Task } from "../../src/shared/tasks/model";
+import { send, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 
 /** How far Chat's scroll position is from its end, in pixels. */
@@ -103,6 +104,102 @@ const rowShift = (page: Page) =>
 
     return rowShift.down;
   });
+
+test("activity labels reserve one line without moving the conversation", async ({
+  consolePage: page,
+}) => {
+  await page.setViewportSize({ width: 760, height: 800 });
+  await startTask(page, "Keep the conversation still");
+  const history = page.getByRole("region", { name: "Chat history" });
+  await expect(history).toContainText("Fixture session turn: 1.");
+
+  // Vary only activity, keeping the real fixture conversation unchanged.
+  let activity: string | undefined;
+
+  await page.route("**/api/tools/list_tasks", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { result: Task[] };
+
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        result: body.result.map((task) => ({
+          ...task,
+          status: activity ? "running" : "completed",
+          live_activity: activity
+            ? { text: activity, state: "running" }
+            : undefined,
+        })),
+      },
+    });
+  });
+
+  await page.route("**/api/tools/app_get_activity", (route) =>
+    route.fulfill({ json: { result: { events: [] } } }),
+  );
+
+  await page.reload();
+  await expect(history).toContainText("Fixture session turn: 1.");
+  await expect(history).not.toHaveAttribute("aria-busy", "true");
+  await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
+  const working = history.locator(".chat-working");
+  await expect(working).toBeEmpty();
+
+  const geometry = () =>
+    history.evaluate((element) => {
+      const status = element.querySelector(".chat-working")!;
+      const lastMessage = element.querySelectorAll("article");
+
+      return {
+        statusHeight: status.getBoundingClientRect().height,
+        messageTop:
+          lastMessage[lastMessage.length - 1]!.getBoundingClientRect().top,
+        scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop,
+      };
+    });
+
+  const idle = await geometry();
+  expect(idle.statusHeight).toBeGreaterThan(0);
+  const longLabel = `Running npm run verify -- ${"packages/deeply-nested-project/".repeat(3)}`;
+
+  for (const label of ["Thinking", longLabel, undefined]) {
+    activity = label;
+
+    await page
+      .getByRole("button", { name: "Refresh tasks", exact: true })
+      .click();
+
+    if (label) await expect(working).toHaveText(label);
+    else await expect(working).toBeEmpty();
+
+    await expect
+      .poll(async () => {
+        const current = await geometry();
+
+        return Math.max(
+          ...Object.keys(idle).map((key) => {
+            const field = key as keyof typeof idle;
+
+            return Math.abs(current[field] - idle[field]);
+          }),
+        );
+      })
+      .toBeLessThanOrEqual(1);
+
+    if (label === longLabel) {
+      const text = working.locator("span[title]");
+      await expect(text).toHaveAttribute("title", longLabel);
+
+      expect(
+        await text.evaluate(
+          (element) => element.scrollWidth > element.clientWidth,
+        ),
+      ).toBe(true);
+    }
+  }
+});
 
 test("streamed replies follow the end, hold a reading position in history and return to latest", async ({
   consolePage: page,

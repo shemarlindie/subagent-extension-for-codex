@@ -336,11 +336,25 @@ body[data-expanded-panel="true"]
   color: var(--danger);
 }
 .chat-working {
+  /* Reserve one line even when idle so activity never shifts the conversation. */
+  flex: none;
+  height: 18px;
+  min-width: 0;
+  line-height: 18px;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12px;
   color: var(--muted);
+}
+.chat-working > .row-status-icon {
+  flex: none;
+}
+.chat-working > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .chat-timeline .notice {
   margin: 0;

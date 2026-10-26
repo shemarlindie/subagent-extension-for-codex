@@ -106,6 +106,7 @@ export function ChatTimeline({
 
   const latest = items?.at(-1);
   const workingShownInNote = latest?.kind === "note" && latest.text === working;
+  const workingLabel = workingShownInNote ? undefined : working;
   const spent = task ? spentBudget(task) : undefined;
   const loading = !task || !items || !positionRestored;
 
@@ -193,10 +194,22 @@ export function ChatTimeline({
           streaming
         />
       )}
-      {task && working && !workingShownInNote && presentation && (
-        <div className="chat-working" role="status">
-          <TaskStatusIcon kind={presentation.kind} label={working} decorative />
-          <span>{working}</span>
+      {task && (
+        <div
+          className="chat-working"
+          role={workingLabel ? "status" : undefined}
+          aria-atomic="true"
+        >
+          {workingLabel && presentation && (
+            <>
+              <TaskStatusIcon
+                kind={presentation.kind}
+                label={workingLabel}
+                decorative
+              />
+              <span title={workingLabel}>{workingLabel}</span>
+            </>
+          )}
         </div>
       )}
       {task && spent && (

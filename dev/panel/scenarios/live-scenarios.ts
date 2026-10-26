@@ -9,6 +9,9 @@ import { begin, rateLimit, Timeline } from "./timeline";
 const liveStart = Date.now() - 40000;
 const liveClock = () => new Date(liveStart).toISOString();
 
+const liveToolCommand =
+  "npm test -- --runInBand src/service/features/tasks/continuation/recovery.integration.test.ts";
+
 const liveTimeline = (name: string, firstId: number) => {
   const timeline = new Timeline(`preview-live-${name}`, liveClock(), firstId);
   begin(timeline, ["Read", "Edit", "Bash"]);
@@ -32,12 +35,12 @@ const liveStates: {
   {
     name: "tool",
     title: "Live: running a tool",
-    status: "Running Bash · npm test -- --runInBand",
+    status: `Running Bash · ${liveToolCommand}`,
     timeline: (() => {
       const timeline = liveTimeline("tool", 1100);
 
       const id = timeline.toolStart("Bash", {
-        command: "npm test -- --runInBand",
+        command: liveToolCommand,
         description: "Run the test suite",
       });
 
