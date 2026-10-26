@@ -278,6 +278,37 @@ that check cannot prove the recording is safe to share. Add literal
 replacements with repeatable `--replace <from>=<to>` arguments, quoting values
 with spaces or shell characters, such as `--replace 'internal-name=/demo/name'`.
 
+## Showcase screenshots
+
+The showcase plays a short, curated collaboration for promotional images. A
+Codex-like thread sits beside the real panel, which runs from the dev server
+through the same bridge as the dev host, so panel changes appear without extra
+work.
+
+With `npm run dev:ui` running, open `http://127.0.0.1:5317/showcase.html`. The
+URL picks the frame:
+
+- `step` is the 0-based story step. The default is the second-to-last.
+- `theme` is `dark` (default) or `light`.
+- `capture` hides the step controls.
+
+Export every step in both themes at 1600×1000 and 2x scale:
+
+```sh
+npm run showcase:capture
+```
+
+It writes to `showcase-captures/`. Use `--out <dir>` for another folder and
+`--scale <n>` for another pixel ratio. The command reuses a running dev server
+or starts one.
+
+The story lives in `dev/panel/showcase/story.ts`. Each step lists the items
+Codex adds and builds Claude's events with the fixture `Timeline`. The Codex
+look lives in `dev/panel/showcase/codex/`. Update it there when Codex changes.
+
+The showcase loads `dev/panel/host/panel.html?now=<ms>`, which freezes the
+panel's clock, so elapsed times are the same in every capture.
+
 ## Connect Codex from a checkout
 
 Installed users get the plugin from the marketplace

@@ -1,0 +1,146 @@
+/* Approximates Codex desktop's thread and composer. The backgrounds match the
+   captured host styles in dev/panel/host/host-styles-*.json. */
+.codex-thread {
+  --codex-bg: rgb(17, 17, 17);
+  --codex-text: rgb(236, 236, 236);
+  --codex-muted: rgb(140, 140, 140);
+  --codex-bubble: rgb(37, 37, 37);
+  --codex-composer: rgb(40, 40, 40);
+  --codex-border: rgba(255, 255, 255, 0.08);
+  --codex-code: rgba(255, 255, 255, 0.08);
+  --codex-mcp: rgb(232, 98, 72);
+
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  background: var(--codex-bg);
+  color: var(--codex-text);
+  font:
+    14px/1.65 -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    system-ui,
+    sans-serif;
+}
+:root[data-theme="light"] .codex-thread {
+  --codex-bg: rgb(255, 255, 255);
+  --codex-text: rgb(13, 13, 13);
+  --codex-muted: rgb(120, 120, 120);
+  --codex-bubble: rgb(243, 243, 243);
+  --codex-composer: rgb(255, 255, 255);
+  --codex-border: rgba(0, 0, 0, 0.1);
+  --codex-code: rgba(0, 0, 0, 0.06);
+}
+.codex-scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+  overflow: hidden;
+}
+.codex-items,
+.codex-composer {
+  width: min(720px, calc(100% - 64px));
+  margin: 0 auto;
+}
+.codex-items {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px 0 20px;
+}
+.codex-user {
+  align-self: flex-end;
+  max-width: 78%;
+  margin: 8px 0;
+  padding: 10px 16px;
+  border-radius: 18px;
+  background: var(--codex-bubble);
+}
+.codex-prose {
+  margin: 0;
+}
+.codex-thread code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--codex-code);
+  font:
+    0.9em ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+}
+.codex-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--codex-muted);
+}
+.codex-row-icon.mcp {
+  color: var(--codex-mcp);
+}
+.codex-list {
+  margin: -6px 0 0;
+  padding-left: 22px;
+}
+.codex-working {
+  color: var(--codex-muted);
+}
+.codex-composer {
+  margin-bottom: 24px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--codex-border);
+  border-radius: 24px;
+  background: var(--codex-composer);
+}
+.codex-composer-input {
+  margin-bottom: 18px;
+  color: var(--codex-muted);
+}
+.codex-composer-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--codex-muted);
+  font-size: 13px;
+}
+.codex-composer-approve {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.codex-composer-spacer {
+  flex: 1;
+}
+.codex-composer-model {
+  color: var(--codex-text);
+}
+.codex-composer-model span {
+  color: var(--codex-muted);
+}
+.codex-spinner {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--codex-border);
+  border-top-color: var(--codex-muted);
+  border-radius: 50%;
+}
+.codex-composer-send {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--codex-bg);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--codex-text);
+}
+.codex-composer-send.stop::after {
+  position: absolute;
+  inset: 9px;
+  border-radius: 2px;
+  background: var(--codex-bg);
+  content: "";
+}

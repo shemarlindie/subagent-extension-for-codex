@@ -1,0 +1,62 @@
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+:root {
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+.showcase {
+  height: 100%;
+}
+.window {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+}
+.window.split {
+  /* At 640px or less the panel shows only the selected task, as in Codex's
+     side pane. */
+  grid-template-columns: minmax(0, 1fr) 600px;
+}
+.side-pane {
+  min-width: 0;
+  border-left: 1px solid rgba(127, 127, 127, 0.2);
+}
+.side-pane iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.controls {
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(60, 60, 60, 0.92);
+  color: #fff;
+  font:
+    12px system-ui,
+    sans-serif;
+}
+.controls button {
+  min-width: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  font: inherit;
+  padding: 3px 8px;
+}

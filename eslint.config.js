@@ -39,6 +39,7 @@ export default defineConfig(
       "node_modules/",
       "test-results/",
       "playwright-report/",
+      "showcase-captures/",
     ],
   },
   {
@@ -183,7 +184,13 @@ export default defineConfig(
     },
   },
   {
-    files: ["src/panel/**/*.{ts,tsx}", "dev/panel/host/**/*.{ts,tsx}"],
+    files: [
+      "src/panel/**/*.{ts,tsx}",
+      "dev/panel/host/**/*.{ts,tsx}",
+      "dev/panel/showcase/**/*.{ts,tsx}",
+    ],
+    // A Node script beside the showcase it captures.
+    ignores: ["dev/panel/showcase/capture.ts"],
     languageOptions: { globals: { ...globals.browser } },
     // Classic hook rules only: the React Compiler rules misread
     // react-hook-form's field objects as refs, and the compiler is not used.

@@ -37,6 +37,7 @@
     "lint": "eslint .",
     "knip": "knip",
     "fixture:record": "tsx dev/panel/recording/record-fixture.ts",
+    "showcase:capture": "tsx dev/panel/showcase/capture.ts",
     "db:generate": "drizzle-kit generate",
     "schemas:generate": "node scripts/generate-schemas.mjs",
     "schemas:check": "node scripts/generate-schemas.mjs --check",

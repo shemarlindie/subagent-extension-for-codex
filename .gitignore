@@ -12,4 +12,5 @@ dist/
 .ruff_cache/
 
 product-icon-candidates/
+showcase-captures/
 release/
