@@ -855,6 +855,8 @@ export class Controller {
       });
     });
 
+    const read = this.draftFollower.reading();
+
     const chatRead = this.tool<ChatRead>("app_get_chat", {
       task_id: id,
       after: previousChat?.task === id ? previousChat.cursor : 0,
@@ -869,7 +871,7 @@ export class Controller {
             : this.state.chatHistoryLoading,
       });
 
-      this.draftFollower.show();
+      this.draftFollower.show(read);
     });
 
     await Promise.all([activityRead, chatRead]);

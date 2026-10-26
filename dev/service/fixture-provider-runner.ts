@@ -294,7 +294,9 @@ async function emitFixtureReply(
     await setTimeout(paceMs, undefined, { signal: c.signal });
   }
 
+  // Like Claude's normalized messages, the reply shares its draft's id.
   c.emit("agent.message", {
+    message_id: messageId,
     role: "assistant",
     text: reply,
     raw_response: { message: { id: messageId }, parent_tool_use_id: null },

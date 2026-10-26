@@ -257,7 +257,9 @@ restores saved dialogs.
 - **Chat:** browser-safe conversation functions in
   `src/shared/tasks/conversation/` serve both the service and the preview. Task
   actions own send, queue and interrupt. Transports deliver streamed drafts
-  separately from stored messages.
+  separately from stored messages. `DraftFollower` keeps a completed draft
+  shown until Chat holds its stored message, or until a Chat read that started
+  later finds none, so a finished reply never disappears in between.
 - **Settings:** the service supplies typed sections and rows. Save only changed
   fields, preserve disabled budget amounts, and keep section drafts during
   navigation and validation.

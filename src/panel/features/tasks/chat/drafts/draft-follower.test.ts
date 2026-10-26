@@ -87,9 +87,15 @@ test("a wait's draft is applied, and a cleared draft reads the stored message", 
   assert.equal(follower.receive(grown, { draft, running: true }), false);
   assert.equal(refreshes(), 0);
 
+  // The draft stays until a Chat read that started afterwards finds none.
+  const before = follower.reading();
   assert.equal(follower.receive(grown, { draft: null, running: false }), true);
-  assert.equal(state().draft, undefined);
+  assert.deepEqual(state().draft, { task: "a", ...draft });
   assert.equal(refreshes(), 1);
+  follower.show(before);
+  assert.deepEqual(state().draft, { task: "a", ...draft });
+  follower.show(follower.reading());
+  assert.equal(state().draft, undefined);
 
   // A wait for a task no longer selected changes nothing.
   assert.equal(
@@ -97,5 +103,38 @@ test("a wait's draft is applied, and a cleared draft reads the stored message", 
     false,
   );
 
+  assert.equal(state().draft, undefined);
+});
+
+test("a streamed draft stays shown until Chat holds its stored message", () => {
+  const { follower, state, refreshes, set } = fixture();
+  follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "Hi" });
+  const inFlight = follower.reading();
+  follower.apply({ task_id: "a", message_id: "m", cleared: true });
+  assert.equal(refreshes(), 1);
+
+  // A read already in flight predates the stored message.
+  follower.show(inFlight);
+  assert.equal(state().draft?.text, "Hi");
+
+  const message = {
+    id: "m",
+    event_id: 3,
+    timestamp: "",
+    turn: 1,
+    from: "worker" as const,
+    kind: "reply" as const,
+    text: "Hi",
+  };
+
+  set({
+    chat: {
+      task: "a",
+      items: [{ kind: "message", id: "m", event_id: 3, message }],
+      cursor: 3,
+    },
+  });
+
+  follower.show();
   assert.equal(state().draft, undefined);
 });
