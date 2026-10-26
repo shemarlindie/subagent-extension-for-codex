@@ -290,7 +290,10 @@ URL picks the frame:
 
 - `step` is the 0-based story step. The default is the second-to-last.
 - `theme` is `dark` (default) or `light`.
-- `capture` hides the step controls.
+- `capture` hides the controls.
+- `play` loops the whole story instead of showing one step. Codex's items
+  appear one at a time, Claude's replies stream, and the panel stays open and
+  updates in place, as in a live run. The Play button toggles it.
 
 Export every step in both themes at 1600×1000 and 2x scale:
 
@@ -299,15 +302,20 @@ npm run showcase:capture
 ```
 
 It writes to `showcase-captures/`. Use `--out <dir>` for another folder and
-`--scale <n>` for another pixel ratio. The command reuses a running dev server
-or starts one.
+`--scale <n>` for another pixel ratio. Add `--video` to record one playback loop
+per theme as WebM instead. Playwright records at 1x and a modest bitrate, so for
+a sharper video, screen record `showcase.html?play&capture` in a browser. The
+command reuses a running dev server or starts one.
 
 The story lives in `dev/panel/showcase/story.ts`. Each step lists the items
-Codex adds and builds Claude's events with the fixture `Timeline`. The Codex
-look lives in `dev/panel/showcase/codex/`. Update it there when Codex changes.
+Codex adds and builds Claude's events with the fixture `Timeline`. A step's
+`reply` holds the message that ends Claude's turn, which playback streams.
+Playback timing lives in `dev/panel/showcase/playback.ts`. The Codex look lives
+in `dev/panel/showcase/codex/`. Update it there when Codex changes.
 
 The showcase loads `dev/panel/host/panel.html?now=<ms>`, which freezes the
-panel's clock, so elapsed times are the same in every capture.
+panel's clock, so elapsed times are the same in every capture. During playback
+`&tick` lets the clock run, and the showcase moves it forward as events arrive.
 
 ## Connect Codex from a checkout
 

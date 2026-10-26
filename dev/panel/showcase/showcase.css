@@ -18,21 +18,28 @@ body,
 }
 .window {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 0;
   height: 100%;
+  transition: grid-template-columns 450ms ease;
 }
 .window.split {
-  /* At 640px or less the panel shows only the selected task, as in Codex's
-     side pane. */
   grid-template-columns: minmax(0, 1fr) 600px;
 }
+/* The panel loads behind the closed pane, at its open width, so it appears
+   ready. At 640px or less it shows only the selected task, as in Codex's
+   side pane. */
 .side-pane {
   min-width: 0;
+  overflow: hidden;
+  visibility: hidden;
   border-left: 1px solid rgba(127, 127, 127, 0.2);
+}
+.split .side-pane {
+  visibility: visible;
 }
 .side-pane iframe {
   display: block;
-  width: 100%;
+  width: 600px;
   height: 100%;
   border: 0;
 }

@@ -1,5 +1,6 @@
 // The showcase's curated collaboration: what Codex shows in its thread and
 // what the panel shows for Claude at each step. Steps are cumulative.
+import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
 import type { Task } from "../../../src/shared/tasks/model";
 import { settingOptions, taskBase } from "../scenarios/scenario-context";
 import { begin, Timeline } from "../scenarios/timeline";
@@ -17,6 +18,9 @@ export type CodexItem =
   | { kind: "row"; icon: CodexRowIcon; text: string; opens?: boolean }
   | { kind: "list"; items: string[] };
 
+/** The story at one time: a step, and how much of its reply has streamed. */
+export type StoryMoment = { step: number; streamed?: number };
+
 export type StoryStep = {
   label: string;
   /** Items Codex adds to its thread in this step. */
@@ -28,6 +32,8 @@ export type StoryStep = {
    * `state.running` carries a tool call a step leaves running to the next.
    */
   panel?: (t: Timeline, state: { running: string }) => void;
+  /** Claude's reply that ends the step's turn, streamed during playback. */
+  reply?: { text: string; duration_ms: number; total_cost_usd: number };
   /** The task's status and turn after this step's events. Set with `panel`. */
   status?: Task["status"];
   turn?: number;
@@ -130,9 +136,8 @@ export const story: StoryStep[] = [
       t.toolDone(state.running, "1\texport function authenticate(req) {");
 
       t.ticks(160).think("Rank the gaps by risk.");
-      t.say(guidance);
-      t.finish(guidance, 1, { duration_ms: 48_000, total_cost_usd: 0.31 });
     },
+    reply: { text: guidance, duration_ms: 48_000, total_cost_usd: 0.31 },
   },
   {
     label: "Codex asks for review",
@@ -198,10 +203,8 @@ export const story: StoryStep[] = [
         state.running,
         "42\t  log.debug('auth header', req.headers.authorization);",
       );
-
-      t.say(review);
-      t.finish(review, 2, { duration_ms: 36_000, total_cost_usd: 0.22 });
     },
+    reply: { text: review, duration_ms: 36_000, total_cost_usd: 0.22 },
   },
 ];
 
@@ -223,22 +226,60 @@ const storyTask: Task = {
   updated_at: startedAt,
 };
 
-/** The task and its events as of a step, or none before Codex delegates. */
-export function storyAt(step: number) {
+/**
+ * Adds a step's reply: the start of its stream, then, unless `streamed` holds
+ * the part shown so far, the stored message and the turn's end. Frames share
+ * the stream events so a playing panel's event ids only ever grow.
+ */
+function addReply(t: Timeline, step: StoryStep, streamed?: string) {
+  const { text, ...result } = step.reply!;
+  const id = `msg_showcase_${step.turn}`;
+
+  t.streamed([text.slice(0, 1)], false, id);
+  if (streamed !== undefined) return { message_id: id, text: streamed };
+
+  t.stream({ type: "content_block_stop", index: 0 })
+    .stream({ type: "message_stop" })
+    .say(text, id)
+    .finish(text, step.turn, result);
+
+  return undefined;
+}
+
+/**
+ * The task, events and clock at a moment, or none before Codex delegates.
+ * `streamed`, from 0 to 1, shows the step's reply part way through streaming.
+ */
+export function storyAt({ step, streamed }: StoryMoment) {
   const steps = story.slice(0, step + 1);
   const last = steps.findLast((s) => s.panel);
   if (!last) return undefined;
 
   const timeline = new Timeline(taskId, startedAt, 1);
   const state = { running: "" };
-  for (const s of steps) s.panel?.(timeline, state);
-  const { events } = timeline;
+  let draft: Draft | undefined;
 
+  for (const s of steps) {
+    s.panel?.(timeline, state);
+    if (!s.reply) continue;
+
+    const partial =
+      s === steps.at(-1) && streamed !== undefined && streamed < 1
+        ? s.reply.text.slice(
+            0,
+            Math.max(1, Math.ceil(s.reply.text.length * streamed)),
+          )
+        : undefined;
+
+    draft = addReply(timeline, s, partial);
+  }
+
+  const { events } = timeline;
   const turnStarted = events.findLast((e) => e.type === "task.started");
 
   const task: Task = {
     ...storyTask,
-    status: last.status ?? "running",
+    status: draft ? "running" : (last.status ?? "running"),
     turn: last.turn ?? 1,
     run_started_at: turnStarted?.timestamp ?? startedAt,
     updated_at: timeline.end,
@@ -247,5 +288,5 @@ export function storyAt(step: number) {
   // The frame's clock: a few seconds after the latest event.
   const now = Date.parse(timeline.end) + 4000;
 
-  return { task, events, now };
+  return { task, events, draft, now };
 }

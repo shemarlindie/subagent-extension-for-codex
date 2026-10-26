@@ -6,21 +6,31 @@
     <title>Delegated Work</title>
     <script>
       // ?now=<ms> freezes the clock before the panel loads, so the showcase's
-      // elapsed times read the same in every capture.
+      // elapsed times read the same in every capture. With &tick the clock
+      // runs on from there, and setShowcaseNow(ms) moves it.
       (() => {
-        const now = Number(new URLSearchParams(location.search).get("now"));
-        if (!now) return;
+        const params = new URLSearchParams(location.search);
+        let base = Number(params.get("now"));
+        if (!base) return;
+        const tick = params.has("tick");
         const RealDate = Date;
+        let setAt = RealDate.now();
+        const current = () => (tick ? base + RealDate.now() - setAt : base);
 
         window.Date = class extends RealDate {
           constructor(...args) {
             if (args.length) super(...args);
-            else super(now);
+            else super(current());
           }
 
           static now() {
-            return now;
+            return current();
           }
+        };
+
+        window.setShowcaseNow = (now) => {
+          base = now;
+          setAt = RealDate.now();
         };
       })();
     </script>
