@@ -1,9 +1,15 @@
 import { Select } from "@base-ui/react/select";
+import { useRef } from "react";
 
 import { Chevron } from "../chevron";
 import { Icon } from "../icons/icons";
 import { LoadingSpinner } from "../loading-spinner/loading-spinner";
-import { type SelectOption, SelectOptions } from "./select-field";
+import {
+  SELECT_ACTION_VALUE,
+  type SelectAction,
+  type SelectOption,
+  SelectOptions,
+} from "./select-field";
 
 type ChipOption = SelectOption & {
   /** Shorter text for the chip itself; the menu shows `label`. */
@@ -23,6 +29,8 @@ type ChipSelectProps = {
   placeholder?: string;
   /** Explains a disabled chip, or adds detail to an enabled one. */
   title?: string;
+  /** A command listed after the options, such as "Add project…". It runs once the menu closes. */
+  action?: SelectAction;
 };
 
 /**
@@ -40,16 +48,33 @@ export function ChipSelect({
   loading = false,
   placeholder = label,
   title,
+  action,
 }: ChipSelectProps) {
   const selected = options.find((option) => option.value === value),
     text = selected ? (selected.chipLabel ?? selected.label) : placeholder;
+
+  // The action waits for the menu to close and return focus to the chip, so
+  // a dialog it opens restores focus there.
+  const actionChosen = useRef(false);
+
+  const choose = (next: string | null) => {
+    if (next === SELECT_ACTION_VALUE) actionChosen.current = true;
+    else onValueChange(next ?? "");
+  };
+
+  const closed = (open: boolean) => {
+    if (open || !actionChosen.current) return;
+    actionChosen.current = false;
+    action?.onSelect();
+  };
 
   return (
     <Select.Root
       items={options}
       value={selected ? value : null}
       disabled={disabled || loading}
-      onValueChange={(next) => onValueChange(next ?? "")}
+      onValueChange={choose}
+      onOpenChangeComplete={closed}
     >
       <Select.Trigger
         id={id}
@@ -67,7 +92,7 @@ export function ChipSelect({
           {loading ? <LoadingSpinner /> : <Chevron />}
         </span>
       </Select.Trigger>
-      <SelectOptions options={options} />
+      <SelectOptions options={options} action={action} />
     </Select.Root>
   );
 }

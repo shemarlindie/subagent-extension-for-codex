@@ -127,6 +127,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
       {!state.repository && (
         <ProjectChip
           projects={newTaskProjects(state)}
+          added={newTask.addedProject}
           loading={
             statuses.projects === "loading" || statuses.context === "loading"
           }

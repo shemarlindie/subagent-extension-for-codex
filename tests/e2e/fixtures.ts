@@ -18,6 +18,25 @@ type ConsoleFixtures = {
   consolePage: Page;
 };
 
+/** Creates a Git repository with one commit, as project registration requires. */
+export async function createRepository(repository: string) {
+  await mkdir(repository);
+  execFileSync("git", ["init", "-q", repository]);
+
+  execFileSync("git", [
+    "-C",
+    repository,
+    "-c",
+    "user.name=Test",
+    "-c",
+    "user.email=test@example.invalid",
+    "commit",
+    "--allow-empty",
+    "-qm",
+    "initial",
+  ]);
+}
+
 export const test = base.extend<ConsoleFixtures>({
   fixtureProvider: [{}, { option: true }],
   inProcessService: async ({ fixtureProvider }, use) => {
@@ -37,22 +56,7 @@ export const test = base.extend<ConsoleFixtures>({
   },
   repository: async ({ consoleService }, use) => {
     const repository = join(consoleService.directory, "repository");
-    await mkdir(repository);
-    execFileSync("git", ["init", "-q", repository]);
-
-    execFileSync("git", [
-      "-C",
-      repository,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@example.invalid",
-      "commit",
-      "--allow-empty",
-      "-qm",
-      "initial",
-    ]);
-
+    await createRepository(repository);
     await use(repository);
   },
   consolePage: async ({ page, repository, consoleService }, use) => {

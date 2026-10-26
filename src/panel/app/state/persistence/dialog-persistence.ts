@@ -54,7 +54,11 @@ export function persistDialog(dialog: DialogState): PersistedDialog {
     case "remove-project":
       return { kind: dialog.kind, repository: dialog.project.repository };
     case "project":
-      return { kind: dialog.kind, repository: dialog.repository };
+      return {
+        kind: dialog.kind,
+        repository: dialog.repository,
+        ...(dialog.forNewTask ? { forNewTask: true } : {}),
+      };
     case "settings":
     case "settings-loading":
       return { kind: "settings" };
@@ -115,6 +119,7 @@ export function parsePersistedDialog(
       return {
         kind: value.kind,
         ...(isString(value.repository) ? { repository: value.repository } : {}),
+        ...(value.forNewTask === true ? { forNewTask: true } : {}),
         ...(draft ? { draft } : {}),
       };
     case "settings":

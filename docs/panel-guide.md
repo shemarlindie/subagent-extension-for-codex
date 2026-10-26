@@ -153,6 +153,10 @@ profile resets model and reasoning to the profile's settings, and read-only
 profiles keep read-only permissions. Expand the profile summary to change
 individual choices.
 
+**Add project…** at the end of the project menu opens **Add project**. The
+added project becomes the composer's choice, and the task list keeps its
+project filter.
+
 The model and reasoning chips edit the selected profile's settings, so the
 profile starts with your last choice next time. **Default** clears the
 profile's setting and names the provider or global default it then inherits. A

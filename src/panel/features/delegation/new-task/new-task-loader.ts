@@ -107,6 +107,15 @@ export class NewTaskLoader {
     });
   }
 
+  /** Hands a project added from the project chip to the open composer. */
+  projectAdded(repository: string) {
+    const newTask = this.context.snapshot().newTask;
+
+    if (newTask) {
+      this.context.patch({ newTask: { ...newTask, addedProject: repository } });
+    }
+  }
+
   /** Records the panel context read, which the controller's refresh owns. */
   contextRead(status: DialogReadStatus, error?: unknown) {
     const current = this.context.snapshot().newTask;

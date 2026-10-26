@@ -47,6 +47,7 @@ export function restoreDialog(
       dialog = {
         kind: "project",
         repository: saved.repository,
+        ...(saved.forNewTask ? { forNewTask: true } : {}),
         scope,
       };
 

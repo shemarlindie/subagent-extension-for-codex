@@ -30,6 +30,25 @@ test("delete dialogs round-trip their task reference and reject missing targets"
   assert.equal(parsePersistedDialog({ kind: "delete" }), undefined);
 });
 
+test("Add project keeps its new-task origin across a reload", () => {
+  const persisted = persistDialog({
+    kind: "project",
+    repository: "/repo",
+    forNewTask: true,
+    scope: 1,
+  });
+
+  assert.deepEqual(parsePersistedDialog(persisted), {
+    kind: "project",
+    repository: "/repo",
+    forNewTask: true,
+  });
+
+  assert.deepEqual(parsePersistedDialog({ kind: "project", forNewTask: 1 }), {
+    kind: "project",
+  });
+});
+
 test("parses only valid dialog descriptors and keeps the newest eight", () => {
   const entries = Array.from({ length: 10 }, (_, index) => ({
     kind: "project",

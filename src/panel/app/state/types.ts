@@ -47,11 +47,19 @@ export type NewTaskState = {
   statuses: Record<DelegateDialogRead, DialogReadStatus>;
   errors?: Partial<Record<DelegateDialogRead, string>>;
   defaults?: Defaults;
+  /** A project added from the composer's project chip, for the chip to select. */
+  addedProject?: string;
 };
 
 export type DialogState =
   | { kind: "remove-project"; project: Project; scope: number }
-  | { kind: "project"; repository?: string; scope: number }
+  | {
+      kind: "project";
+      repository?: string;
+      /** Opened from the new-task composer, which selects the added project. */
+      forNewTask?: boolean;
+      scope: number;
+    }
   // Settings use dialog persistence for their page form, not DialogHost.
   | { kind: "settings"; settings: SettingsDocument; scope: number }
   | {
@@ -105,6 +113,7 @@ export type PersistedDialog =
   | {
       kind: "project";
       repository?: string;
+      forNewTask?: boolean;
       draft?: PersistedDialogDraft;
     }
   | { kind: "settings"; draft?: PersistedDialogDraft }

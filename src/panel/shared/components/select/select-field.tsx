@@ -17,6 +17,16 @@ export type SelectOption = {
   icon?: IconName;
 };
 
+/** A command listed after a select's options, such as "Add project…". */
+export type SelectAction = {
+  label: string;
+  icon?: IconName;
+  onSelect: () => void;
+};
+
+/** The list value that stands for a `SelectAction`. No option may use it. */
+export const SELECT_ACTION_VALUE = "\u0000action";
+
 export type SelectFieldProps = {
   id: string;
   label: string;
@@ -111,8 +121,14 @@ function SelectTrigger({
   );
 }
 
+type SelectOptionsProps = {
+  options: SelectOption[];
+  /** Listed last. The owning select runs it when `SELECT_ACTION_VALUE` is chosen. */
+  action?: SelectAction;
+};
+
 /** The shared dropdown list, reused by compact selects such as `ChipSelect`. */
-export function SelectOptions({ options }: { options: SelectOption[] }) {
+export function SelectOptions({ options, action }: SelectOptionsProps) {
   return (
     <Select.Portal>
       <Select.Positioner
@@ -123,40 +139,61 @@ export function SelectOptions({ options }: { options: SelectOption[] }) {
       >
         <Select.Popup className="select-popup">
           <Select.List>
-            {options.length ? (
-              options.map((option) => (
+            {options.map((option) => (
+              <Select.Item
+                key={option.value}
+                value={option.value}
+                className="select-item"
+              >
+                <span className="select-item-content">
+                  {option.icon && (
+                    <Icon
+                      name={option.icon}
+                      size={10}
+                      className="select-worker-icon"
+                    />
+                  )}
+                  <span className="select-item-text">
+                    <Select.ItemText>{option.label}</Select.ItemText>
+                    {option.description && (
+                      <span className="select-item-description">
+                        {option.description}
+                      </span>
+                    )}
+                  </span>
+                </span>
+                <Select.ItemIndicator
+                  className="select-check"
+                  aria-hidden="true"
+                >
+                  ✓
+                </Select.ItemIndicator>
+              </Select.Item>
+            ))}
+            {!options.length && !action && (
+              <div className="select-empty">No options available</div>
+            )}
+            {action && (
+              <>
+                {options.length > 0 && (
+                  <Select.Separator className="select-separator" />
+                )}
                 <Select.Item
-                  key={option.value}
-                  value={option.value}
-                  className="select-item"
+                  value={SELECT_ACTION_VALUE}
+                  className="select-item select-action"
                 >
                   <span className="select-item-content">
-                    {option.icon && (
+                    {action.icon && (
                       <Icon
-                        name={option.icon}
+                        name={action.icon}
                         size={10}
                         className="select-worker-icon"
                       />
                     )}
-                    <span className="select-item-text">
-                      <Select.ItemText>{option.label}</Select.ItemText>
-                      {option.description && (
-                        <span className="select-item-description">
-                          {option.description}
-                        </span>
-                      )}
-                    </span>
+                    <Select.ItemText>{action.label}</Select.ItemText>
                   </span>
-                  <Select.ItemIndicator
-                    className="select-check"
-                    aria-hidden="true"
-                  >
-                    ✓
-                  </Select.ItemIndicator>
                 </Select.Item>
-              ))
-            ) : (
-              <div className="select-empty">No options available</div>
+              </>
             )}
           </Select.List>
         </Select.Popup>

@@ -93,6 +93,11 @@ unless a later choice replaced it, and shows as the form's `root.settings`
 error. The permission mode stays per task. See
 [Configuration](configuration.md#task-defaults) for the profile settings.
 
+The project chip's **Add project…** opens the Add project dialog marked
+`forNewTask`. After registration, the controller passes the project to
+`controller.newTasks.projectAdded`, and the chip selects it, so the task list
+keeps its scope.
+
 ## Motion
 
 Motion shows what changed and eases layout shifts. Reuse the primitives in

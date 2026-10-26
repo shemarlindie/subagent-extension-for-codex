@@ -1243,13 +1243,18 @@ export class Controller {
     await this.share();
   }
 
-  addProject() {
+  /**
+   * Opened from the new-task composer, the added project becomes the
+   * composer's choice and the task list keeps its scope.
+   */
+  addProject(forNewTask = false) {
     if (this.state.dialog || this.state.busy || !this.state.connected) return;
 
     this.patch({
       dialog: {
         kind: "project",
         repository: this.state.projectCandidate,
+        forNewTask,
         scope: this.state.scopeVersion,
       },
       formError: "",
@@ -1487,7 +1492,9 @@ export class Controller {
   }
 
   async registerProject(repository: string) {
-    const scope = this.state.scopeVersion;
+    const { scopeVersion: scope, dialog } = this.state,
+      forNewTask = dialog?.kind === "project" && dialog.forNewTask;
+
     let registered: string | undefined;
 
     await this.submit(async () => {
@@ -1507,7 +1514,9 @@ export class Controller {
     ) {
       this.patch({ projectCandidate: undefined, projectCandidateAuto: false });
 
-      if (this.state.page === "tasks") {
+      if (forNewTask && this.state.newTask) {
+        this.newTasks.projectAdded(registered);
+      } else if (this.state.page === "tasks") {
         await this.changeProject(registered);
       }
     }

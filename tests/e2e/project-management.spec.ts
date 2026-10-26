@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import type { Page } from "@playwright/test";
 
-import { expect, test } from "./fixtures";
+import { createRepository, expect, test } from "./fixtures";
 
 async function createProjectWorktree(page: Page, title: string) {
   await page.getByRole("button", { name: "More ways to start a task" }).click();
@@ -194,4 +194,48 @@ test("remove project task data and worktrees while preserving checkout files acr
       .getByRole("complementary", { name: "Delegated tasks" })
       .getByRole("button", { name: new RegExp(title) }),
   ).toHaveCount(0);
+});
+
+test("add a project from the new-task composer, keeping the list scope, and start a task there", async ({
+  consolePage: page,
+  consoleService,
+}) => {
+  const added = join(consoleService.directory, "added");
+  await createRepository(added);
+
+  const scope = page.getByRole("combobox", {
+    name: "Project scope",
+    exact: true,
+  });
+
+  await scope.click();
+  await page.getByRole("option", { name: "All projects" }).click();
+  await page.getByRole("button", { name: "New task", exact: true }).click();
+  const chip = page.getByRole("combobox", { name: /^Project: / });
+  await chip.click();
+  await page.getByRole("option", { name: "Add project…" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add project" });
+  await dialog.getByLabel("Repository path").fill(added);
+
+  await dialog
+    .getByRole("button", { name: "Add project", exact: true })
+    .click();
+
+  await expect(dialog).toBeHidden();
+  await expect(chip).toHaveAccessibleName("Project: added");
+  await expect(chip).toBeFocused();
+  await expect(scope).toContainText("All projects");
+
+  const message = page.getByRole("textbox", { name: "Task message" });
+  await message.fill("Work in the added project");
+  await message.press("Enter");
+
+  // Opening the started task scopes the list to its project.
+  await expect(scope).toContainText("added");
+
+  await expect(
+    page
+      .getByRole("complementary", { name: "Delegated tasks" })
+      .getByRole("button", { name: /Work in the added project/ }),
+  ).toBeVisible();
 });

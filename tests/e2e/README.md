@@ -63,6 +63,7 @@ The browser flows verify:
 | E27 | Switch between the list and a task in a narrow console without horizontal overflow.                                         |
 | E28 | Search, open a task and move between its tabs by keyboard.                                                                  |
 | E29 | Announce a new task, preserve the open task, draft, focus and reading position, then open it with View.                     |
+| E30 | Add a project from the new-task composer, select it there without changing the list scope and start a task in it.           |
 
 Accepted limits:
 
