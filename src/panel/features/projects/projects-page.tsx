@@ -72,7 +72,7 @@ export function ProjectsPage() {
     >
       <div className="project-manager">
         {state.projectsLoaded && !state.projects.length ? (
-          <p className="muted">No saved projects.</p>
+          <p className="muted managed-projects-empty">No saved projects.</p>
         ) : null}
         <LoadingSwap
           className="managed-projects-loading-swap"

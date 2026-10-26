@@ -5,6 +5,9 @@
 .project-manager > .form-note {
   margin: 0;
 }
+.managed-projects-empty {
+  text-align: center;
+}
 .managed-projects {
   list-style: none;
   padding: 0;
