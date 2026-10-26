@@ -27,7 +27,7 @@ const SOURCE_FILE_LINE_CEILINGS = [
   ["dev/panel/scenarios/conversation-scenarios.ts", 450],
   ["dev/panel/scenarios/lifecycle-scenarios.ts", 575],
   ["dev/panel/scenarios/timeline.ts", 450],
-  ["dev/panel/scenarios/tools.ts", 475],
+  ["dev/panel/scenarios/tools.ts", 460],
 ];
 
 export default defineConfig(

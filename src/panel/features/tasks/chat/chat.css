@@ -217,24 +217,24 @@ body[data-expanded-panel="true"]
   .markdown-body {
   color: var(--muted);
 }
-/* The caret follows the text without wrapping or changing the message's height. */
+/* Only the final text block gets a caret, including inside nested lists or quotes.
+   Exclude earlier branches and containers whose last child owns the text. */
 .chat-message[data-streaming] .markdown-body {
   position: relative;
+  --chat-caret-animation: chat-caret 1s steps(1) infinite;
 }
 .chat-message[data-streaming]
   .markdown-body
-  > :last-child:not(:is(ul, ol))::after,
-.chat-message[data-streaming]
-  .markdown-body
-  > :is(ul, ol):last-child
-  > li:last-child::after {
+  :is(p, li, pre, h1, h2, h3, h4, h5, h6, td, th):last-child:not(
+    :has(> :is(p, ul, ol, blockquote, pre))
+  ):not(.markdown-body :not(:last-child) *)::after {
   content: "";
   position: absolute;
   width: 7px;
   height: 1.1em;
   margin-inline-start: 2px;
   background: var(--text);
-  animation: chat-caret 1s steps(1) infinite;
+  animation: var(--chat-caret-animation);
 }
 @keyframes chat-caret {
   50% {
@@ -242,12 +242,8 @@ body[data-expanded-panel="true"]
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chat-message[data-streaming] .markdown-body > :last-child::after,
-  .chat-message[data-streaming]
-    .markdown-body
-    > :is(ul, ol):last-child
-    > li:last-child::after {
-    animation: none;
+  .chat-message[data-streaming] .markdown-body {
+    --chat-caret-animation: none;
   }
 }
 .chat-handoff {
