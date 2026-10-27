@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
+import { approvalDeciderSchema } from "../../tasks/model.js";
 import {
-  approvalDeciderSchema,
   claudePermissionModeSchema,
   permissionModeSchema,
 } from "./permissions.js";

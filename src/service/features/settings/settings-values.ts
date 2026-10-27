@@ -16,6 +16,7 @@ import {
   titleCase,
 } from "../../../shared/settings/settings-document.js";
 import {
+  approvalDeciderSchema,
   approvalModeSchema,
   modelNameSchema,
   reasoningSchema,
@@ -65,6 +66,10 @@ export const valuesSchema = z.strictObject({
     description: settingHelp.auto_register_chat_project,
   }),
   ...providerSettingsShape,
+  default_approval_decider: approvalDeciderSchema.meta({
+    title: "Approval decision maker",
+    description: settingHelp.default_approval_decider,
+  }),
   default_approval_mode: approvalModeSchema.meta({
     title: "Execution approval mode",
     description:
@@ -128,6 +133,7 @@ export const panelValuesSchema = valuesSchema
 export const initialValuesSchema = valuesSchema.extend({
   auto_register_chat_project: z.boolean().default(true),
   ...providerStoredSettingsShape,
+  default_approval_decider: approvalDeciderSchema.default("user"),
   default_approval_mode: approvalModeSchema.default("ask_user"),
   worktree_branch_prefix:
     valuesSchema.shape.worktree_branch_prefix.default("agent/"),

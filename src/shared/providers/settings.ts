@@ -27,10 +27,7 @@ export function validateProviderSettingsUpdate(
 ) {
   if (authority === "user") return;
 
-  if (
-    set.claude_permission_mode !== undefined ||
-    set.default_approval_decider !== undefined
-  ) {
+  if (set.claude_permission_mode !== undefined) {
     throw new Error("Approval settings require a user decision in settings");
   }
 

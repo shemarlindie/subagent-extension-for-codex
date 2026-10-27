@@ -13,7 +13,6 @@ export interface ProviderMetadata {
     permissionOption: string;
     permissionSetting: string;
     approvalDeciderOption?: string;
-    approvalDeciderSetting?: string;
     options: { value: string; label: string }[];
     formTitle?: string;
     formHelp?: string;
@@ -34,7 +33,6 @@ export const claudeMetadata: ProviderMetadata = {
     permissionOption: "permission_mode",
     permissionSetting: "claude_permission_mode",
     approvalDeciderOption: "approval_decider",
-    approvalDeciderSetting: "default_approval_decider",
     formTitle: "Claude permission mode",
     formHelp:
       'Claude Code\'s permission mode. "Use extension setting" uses your saved default.',

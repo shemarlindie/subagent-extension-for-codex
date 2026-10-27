@@ -5,7 +5,6 @@ import type {
   SettingSection,
 } from "../../settings/settings-document.js";
 import {
-  approvalDeciderSchema,
   claudeEnvironmentSchema,
   claudeOverrideDefaults,
   claudeOverrideLabels,
@@ -34,8 +33,6 @@ export const claudeSettingHelp = {
     "Sessions load your user, project and local Claude Code settings, including instructions, skills, hooks, permission rules, sandbox settings and MCP servers. Off ignores all of them, including your deny rules and sandbox.",
   claude_user_mcp:
     "Sessions may use MCP servers from your Claude Code configuration, such as project, user and plugin servers. This also requires Load Claude Code settings. Off leaves only the extension's own server.",
-  default_approval_decider:
-    "Who answers permission prompts that Claude Code doesn't decide itself.",
 };
 
 const settingHelp = claudeSettingHelp;
@@ -78,15 +75,10 @@ export const claudeSettingsShape = {
     title: "Your MCP servers",
     description: settingHelp.claude_user_mcp,
   }),
-  default_approval_decider: approvalDeciderSchema.meta({
-    title: "Approval decision maker",
-    description: settingHelp.default_approval_decider,
-  }),
 };
 
 export const claudeStoredSettingsShape = {
   claude_permission_mode: claudePermissionModeSchema.default("default"),
-  default_approval_decider: approvalDeciderSchema.default("user"),
   claude_sandbox: claudeSandboxSchema.default(
     claudeOverrideDefaults.claude_sandbox,
   ),
@@ -116,13 +108,6 @@ export const claudeApprovalRows: SettingRow[] = [
       value: mode,
       label: permissionLabel(mode),
     })),
-  },
-  {
-    kind: "select",
-    key: "default_approval_decider",
-    label: "Approval decision maker",
-    help: [settingHelp.default_approval_decider],
-    options: options({ user: "User", parent_agent: "Parent agent" }),
   },
 ];
 

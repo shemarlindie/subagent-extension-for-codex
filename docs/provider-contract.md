@@ -137,6 +137,11 @@ Worker discovery exposes serializable `Provider.metadata` for delegation forms,
 including native permission controls, effort choices and budget help. Providers
 also define their settings schemas and sections.
 
+The approval decision maker is shared by every provider. A provider whose
+native checks leave permission requests open sets
+`nativePermissions.approvalDecider`, and its task policy defaults the task's
+decider to the `default_approval_decider` setting.
+
 Use the typed `RunContext.emit` for known project events and `emitOpaque` for
 provider-owned or future event names. Keep native decoding in the provider and
 normalize activity and rate-limit windows for consumers. Preserve raw payloads

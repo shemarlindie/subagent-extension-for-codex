@@ -32,6 +32,8 @@ export type {
 export const settingHelp = {
   auto_register_chat_project:
     "When a chat starts a task, register the chat's local Git root from host directory metadata, never from task paths. Turning this off keeps projects already registered.",
+  default_approval_decider:
+    "Who answers permission requests that a provider's own checks don't decide.",
   ...providerSettingHelp,
   worktree_branch_prefix:
     "Each worktree task works on its own branch, named this prefix followed by the task ID.",
@@ -278,6 +280,13 @@ export function settingsSections(input: SectionInput): SettingSection[] {
       help: [userOnly],
       rows: [
         ...providerApprovalRows,
+        {
+          kind: "select",
+          key: "default_approval_decider",
+          label: "Approval decision maker",
+          help: [settingHelp.default_approval_decider],
+          options: options({ user: "User", parent_agent: "Parent agent" }),
+        },
         {
           kind: "switch",
           key: "auto_register_chat_project",

@@ -26,6 +26,9 @@ export const approvalModes = [
 export type ApprovalMode = (typeof approvalModes)[number];
 export const approvalModeSchema = z.enum(approvalModes);
 
+/** Who answers permission requests a provider's native checks leave open. */
+export const approvalDeciderSchema = z.enum(["user", "parent_agent"]);
+
 export const providerOptionsSchema = z.record(
   z.string(),
   z.record(z.string(), z.unknown()),

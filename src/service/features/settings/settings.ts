@@ -259,7 +259,11 @@ export class Settings {
       );
     }
 
-    if (authority !== "user" && set.default_approval_mode !== undefined) {
+    if (
+      authority !== "user" &&
+      (set.default_approval_decider !== undefined ||
+        set.default_approval_mode !== undefined)
+    ) {
       throw new Error("Approval settings require a user decision in settings");
     }
 

@@ -13,8 +13,9 @@ export function providerOptionDefaults(
     permission_mode: permissions
       ? scalarText(settings[permissions.permissionSetting], "inherit")
       : "inherit",
-    approval_decider: permissions?.approvalDeciderSetting
-      ? scalarText(settings[permissions.approvalDeciderSetting], "user")
+    // One shared setting answers for every provider with native permissions.
+    approval_decider: permissions?.approvalDecider
+      ? scalarText(settings.default_approval_decider, "user")
       : "user",
   };
 }

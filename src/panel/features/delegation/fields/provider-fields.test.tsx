@@ -47,7 +47,6 @@ test("an unfamiliar worker supplies its native permissions and budget presentati
             permissionOption: "mode",
             permissionSetting: "new_mode",
             approvalDeciderOption: "decider",
-            approvalDeciderSetting: "new_decider",
             options: [{ value: "inherit", label: "Runtime policy" }],
             help: "Use the provider's own native policy.",
             approvalDecider: true,
@@ -136,25 +135,41 @@ test("permission fields stay unresolved until worker metadata arrives", (t) => {
   assert.doesNotMatch(view.container.textContent ?? "", /Inherit|Parent agent/);
 });
 
-test("provider option defaults read the setting keys declared by metadata", () => {
+test("provider option defaults read the provider's permission setting and the shared decider", () => {
+  const nativePermissions = {
+    permissionOption: "mode",
+    permissionSetting: "new_mode",
+    approvalDeciderOption: "decider",
+    options: [{ value: "locked", label: "Locked" }],
+    help: "Provider permissions.",
+    approvalDecider: true,
+  };
+
+  const settings = {
+    new_mode: "locked",
+    default_approval_decider: "parent_agent",
+  };
+
+  assert.deepEqual(
+    providerOptionDefaults(
+      "new-built-in",
+      { displayName: "New built-in", nativePermissions },
+      settings,
+    ),
+    { permission_mode: "locked", approval_decider: "parent_agent" },
+  );
+
+  // Providers without approval delegation keep the user as decider.
   assert.deepEqual(
     providerOptionDefaults(
       "new-built-in",
       {
         displayName: "New built-in",
-        nativePermissions: {
-          permissionOption: "mode",
-          permissionSetting: "new_mode",
-          approvalDeciderOption: "decider",
-          approvalDeciderSetting: "new_decider",
-          options: [{ value: "locked", label: "Locked" }],
-          help: "Provider permissions.",
-          approvalDecider: true,
-        },
+        nativePermissions: { ...nativePermissions, approvalDecider: false },
       },
-      { new_mode: "locked", new_decider: "parent_agent" },
+      settings,
     ),
-    { permission_mode: "locked", approval_decider: "parent_agent" },
+    { permission_mode: "locked", approval_decider: "user" },
   );
 });
 

@@ -21,8 +21,6 @@ export const permissionModeSchema = z.enum([
 
 export type PermissionMode = z.infer<typeof permissionModeSchema>;
 
-export const approvalDeciderSchema = z.enum(["user", "parent_agent"]);
-
 // Optional restrictions on delegated Claude sessions. "profile" applies the
 // worker profile's bundle: read-only profiles restrict, write profiles don't.
 export const claudeSandboxSchema = z.enum([
