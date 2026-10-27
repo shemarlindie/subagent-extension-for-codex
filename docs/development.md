@@ -319,6 +319,17 @@ defaults to 60 fps at 3200×2000. Use `--fps <n>` for another frame rate and
 resources and produce larger files. The command reuses a running dev server or
 starts one.
 
+For an MP4, convert each WebM with ffmpeg. These settings keep text sharp,
+within about 60 dB PSNR of the WebM, at about 10 MB per theme:
+
+```sh
+for t in dark light; do
+  ffmpeg -i showcase-captures/showcase-$t.webm -c:v libx264 -preset slow \
+    -tune animation -crf 12 -pix_fmt yuv420p -movflags +faststart -an \
+    showcase-captures/showcase-$t.mp4
+done
+```
+
 Playback opens with a 400 ms blank hold, then a 400 ms fade in with the first
 prompt in the composer. One second after the blank hold, the composer clears
 and the message enters the thread. The final hold ends with a 400 ms fade out
