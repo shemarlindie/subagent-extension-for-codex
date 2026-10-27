@@ -18,6 +18,7 @@ import { useListPresence } from "./use-list-presence";
 
 type Call = {
   element: HTMLElement;
+  frames: Keyframe[];
   animation: { onfinish: (() => void) | null; cancel(): void };
 };
 
@@ -28,14 +29,14 @@ function mockMotion(t: { onTestFinished(fn: () => void): void }) {
 
   Object.defineProperty(HTMLElement.prototype, "animate", {
     configurable: true,
-    value(this: HTMLElement) {
+    value(this: HTMLElement, frames: Keyframe[]) {
       const animation = {
         onfinish: null,
         playState: "running",
         cancel() {},
       };
 
-      calls.push({ element: this, animation });
+      calls.push({ element: this, frames, animation });
 
       return animation;
     },
@@ -119,9 +120,9 @@ test("Presence pop variant respects reduced motion", (t) => {
   expect(view.container.querySelector("button")).toBeNull();
 });
 
-function Grow({ open }: { open: boolean }) {
+function Grow({ open, appear }: { open: boolean; appear?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
-  useAnimatedHeight(ref, open);
+  useAnimatedHeight(ref, open, appear);
 
   return createElement("div", { ref, "data-open": open || undefined });
 }
@@ -149,6 +150,32 @@ test("useAnimatedHeight skips mounting and animates subsequent size changes", (t
   act(() => grow.animation.onfinish!());
   view.rerender(createElement(Grow, { open: false }));
   assert.equal(motion.calls.length, 2);
+});
+
+test("useAnimatedHeight eases appearing content from zero unless motion is reduced", (t) => {
+  t.onTestFinished(cleanup);
+  const motion = mockMotion(t);
+
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+    configurable: true,
+    get: () => 120,
+  });
+
+  t.onTestFinished(() => {
+    delete (HTMLElement.prototype as any).offsetHeight;
+  });
+
+  render(createElement(Grow, { open: true, appear: true }));
+  assert.equal(motion.calls.length, 1);
+
+  expect(motion.calls[0]!.frames.map((frame) => frame.height)).toEqual([
+    "0px",
+    "120px",
+  ]);
+
+  motion.reduce();
+  render(createElement(Grow, { open: true, appear: true }));
+  assert.equal(motion.calls.length, 1, "Reduced motion shows it at full size");
 });
 
 test("useListPresence keeps removed items in place and folds new ones in", (t) => {

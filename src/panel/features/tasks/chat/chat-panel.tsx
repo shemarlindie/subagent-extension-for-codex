@@ -96,7 +96,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
         task={task}
         viewportRef={viewportRef}
         positionRestored={positionRestored}
-        onLoadingSettled={reconcileAfterContentChange}
+        onContentChange={reconcileAfterContentChange}
         budgetRaise={budgetRaise}
         onBudgetRaiseChange={changeBudgetRaise}
         onBudgetApply={applyBudgetRaise}

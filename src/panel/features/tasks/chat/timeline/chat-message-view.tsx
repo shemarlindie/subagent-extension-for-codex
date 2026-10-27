@@ -1,6 +1,9 @@
+import { useRef } from "react";
+
 import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
 import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
 import type { Task } from "../../../../app/state/types";
+import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
 import { AskReplyButton } from "./ask-reply-button";
 import { MarkUnreadButton } from "./mark-unread-button";
@@ -13,6 +16,8 @@ type ChatMessageViewProps = {
   worker: string;
   /** Still being written: it shows a caret until the stored message replaces it. */
   streaming?: boolean;
+  /** Expands a new message into a conversation that is already showing. */
+  arriving?: boolean;
   outcome?: TurnOutcome;
 };
 
@@ -25,8 +30,13 @@ export function ChatMessageView({
   message,
   worker,
   streaming,
+  arriving,
   outcome,
 }: ChatMessageViewProps) {
+  const ref = useRef<HTMLElement>(null);
+  const contentKey = `${message.text}\0${streaming ?? false}\0${outcome?.id ?? ""}`;
+  useAnimatedHeight(ref, contentKey, arriving);
+
   const askButton =
     task && message.kind === "reply" && !streaming ? (
       <AskReplyButton task={task} message={message} inline={Boolean(outcome)} />
@@ -39,6 +49,7 @@ export function ChatMessageView({
 
   return (
     <article
+      ref={ref}
       className="chat-message"
       data-from={message.from}
       data-kind={message.kind}

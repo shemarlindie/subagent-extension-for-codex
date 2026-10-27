@@ -9,6 +9,8 @@ import { canAnimate, MOTION } from "./motion-utils";
 export function useAnimatedHeight(
   ref: RefObject<HTMLElement | null>,
   key: unknown,
+  /** Starts newly arriving content at zero height. Initial history omits this. */
+  appear = false,
 ) {
   const height = useRef<number | undefined>(undefined);
   const animating = useRef(false);
@@ -24,9 +26,10 @@ export function useAnimatedHeight(
     if (element === observed.current?.element) return;
     observed.current?.observer?.disconnect();
     observed.current = undefined;
-    // A new element starts from its own height, never a predecessor's.
-    height.current = element?.offsetHeight;
+    // A new element gets its own baseline, never a predecessor's height.
+    height.current = undefined;
     if (!element) return;
+    height.current = appear ? 0 : element.offsetHeight;
 
     const observer =
       typeof ResizeObserver === "undefined"

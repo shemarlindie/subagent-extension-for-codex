@@ -13,19 +13,25 @@ import { newMessagesIndex } from "../../unread/new-messages";
 import { NewMessagesDivider } from "../../unread/new-messages-divider";
 import { useLeavingDivider } from "../../unread/use-leaving-divider";
 import type { NewMessages } from "../../unread/use-new-messages-from";
-import { composerMode, responseOutcome, spentBudget } from "../chat-model";
+import {
+  composerMode,
+  draftRow,
+  responseOutcome,
+  spentBudget,
+} from "../chat-model";
 import { PendingInput } from "../composer/pending-input";
 import { BudgetLimitNotice } from "./budget-limit-notice";
 import { ChatMessageView } from "./chat-message-view";
 import { ChatNoteRow } from "./chat-note-row";
 import { ChatSkeleton } from "./chat-skeleton";
 import { TurnOutcomeRow } from "./turn-outcome-row";
+import { useHistoryMotion } from "./use-history-motion";
 
 type ChatTimelineProps = {
   task?: Task;
   viewportRef: RefObject<HTMLDivElement | null>;
   positionRestored: boolean;
-  onLoadingSettled: () => void;
+  onContentChange: () => void;
   budgetRaise: BudgetRaise;
   onBudgetRaiseChange: (value: BudgetRaise) => void;
   onBudgetApply: (value: BudgetRaise) => Promise<string | undefined>;
@@ -42,7 +48,7 @@ export function ChatTimeline({
   task,
   viewportRef,
   positionRestored,
-  onLoadingSettled,
+  onContentChange,
   budgetRaise,
   onBudgetRaiseChange,
   onBudgetApply,
@@ -66,17 +72,8 @@ export function ChatTimeline({
     (item) => !(item.kind === "message" && waiting.has(item.id)),
   );
 
-  // The message being written, until the stored one with its id arrives.
-  const draft =
-    task &&
-    (state.draft?.task === task.id
-      ? state.draft
-      : task.draft && { task: task.id, ...task.draft });
-
-  const streaming =
-    draft && !chat?.items.some((item) => item.id === draft.message_id)
-      ? draft
-      : undefined;
+  const draftItem = task && draftRow(task, state.draft, chat?.items);
+  const visibleItems = items && (draftItem ? [...items, draftItem] : items);
 
   const activity =
     task?.status === "running" && state.events.length
@@ -89,7 +86,7 @@ export function ChatTimeline({
 
   let working: string | undefined;
 
-  if (task && composerMode(task) === "busy" && !streaming) {
+  if (task && composerMode(task) === "busy" && !draftItem) {
     working =
       task.status === "running" && activity ? activity.text : statusLabel(task);
   }
@@ -110,7 +107,13 @@ export function ChatTimeline({
   const spent = task ? spentBudget(task) : undefined;
   const loading = !task || !items || !positionRestored;
 
-  const loadingSwapClass = items?.length
+  const { historyRef, animateArrivals } = useHistoryMotion(
+    task?.id,
+    loading,
+    onContentChange,
+  );
+
+  const loadingSwapClass = visibleItems?.length
     ? "chat-loading-swap chat-loading-swap-has-history"
     : "chat-loading-swap";
 
@@ -128,12 +131,12 @@ export function ChatTimeline({
         loading={loading}
         busy={false}
         skeleton={<ChatSkeleton />}
-        onSettled={onLoadingSettled}
+        onSettled={onContentChange}
       >
         {task && (
-          <div className="chat-history">
-            {items?.length
-              ? items.map((item, index) => {
+          <div className="chat-history" ref={historyRef}>
+            {visibleItems?.length
+              ? visibleItems.map((item, index) => {
                   let row: ReactNode;
 
                   if (item.kind === "message") {
@@ -142,11 +145,16 @@ export function ChatTimeline({
                         task={task}
                         message={item.message}
                         worker={worker}
-                        outcome={responseOutcome(item, items[index + 1])}
+                        outcome={responseOutcome(item, visibleItems[index + 1])}
+                        streaming={item.id === draftItem?.id}
+                        arriving={animateArrivals}
                       />
                     );
                   } else if (item.kind === "outcome") {
-                    row = responseOutcome(items[index - 1], item) ? null : (
+                    row = responseOutcome(
+                      visibleItems[index - 1],
+                      item,
+                    ) ? null : (
                       <TurnOutcomeRow outcome={item} />
                     );
                   } else {
@@ -172,24 +180,14 @@ export function ChatTimeline({
                     </Fragment>
                   );
                 })
-              : items &&
-                !streaming && (
-                  <p className="help chat-empty">No messages yet.</p>
-                )}
+              : items && <p className="help chat-empty">No messages yet.</p>}
           </div>
         )}
       </LoadingSwap>
-      {task && streaming && (
+      {!items && draftItem && (
         <ChatMessageView
-          message={{
-            id: streaming.message_id,
-            event_id: Infinity,
-            timestamp: "",
-            turn: task.turn,
-            from: "worker",
-            kind: "message",
-            text: streaming.text,
-          }}
+          key={draftItem.id}
+          message={draftItem.message}
           worker={worker}
           streaming
         />

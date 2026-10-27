@@ -1,5 +1,9 @@
-import type { ChatItem } from "../../../../shared/tasks/conversation/chat.js";
+import type {
+  ChatItem,
+  ChatMessage,
+} from "../../../../shared/tasks/conversation/chat.js";
 import type { Task } from "../../../app/state/types";
+import type { DraftState } from "./drafts/draft-state";
 
 /** Statuses in which a turn is running, starting or about to. */
 const BUSY = ["queued", "starting", "running", "waiting"];
@@ -71,4 +75,32 @@ export function responseOutcome(message?: ChatItem, outcome?: ChatItem) {
     message.message.turn === outcome.turn
     ? outcome
     : undefined;
+}
+
+/**
+ * The message being written as a Chat row, until Chat stores the message with
+ * its id. The row shares that id, so the stored message replaces it in place.
+ */
+export function draftRow(
+  task: Task,
+  draft: DraftState | undefined,
+  stored: ChatItem[] = [],
+): ChatMessage | undefined {
+  const shown = draft?.task === task.id ? draft : task.draft;
+  if (!shown || stored.some((item) => item.id === shown.message_id)) return;
+
+  return {
+    kind: "message",
+    id: shown.message_id,
+    event_id: Infinity,
+    message: {
+      id: shown.message_id,
+      event_id: Infinity,
+      timestamp: "",
+      turn: task.turn,
+      from: "worker",
+      kind: "message",
+      text: shown.text,
+    },
+  };
 }

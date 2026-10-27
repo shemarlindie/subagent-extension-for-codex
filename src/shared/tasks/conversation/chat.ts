@@ -45,7 +45,7 @@ export type ChatNote = {
 };
 
 /** A message in Chat, with the id and event it keeps from the conversation. */
-type ChatMessage = {
+export type ChatMessage = {
   kind: "message";
   id: string;
   event_id: number;

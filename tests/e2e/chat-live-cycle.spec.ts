@@ -36,6 +36,25 @@ for (const width of [1280, 420]) {
         await expect(message).toHaveCount(1);
         await expect(message).toHaveAttribute("aria-busy", "true");
 
+        // The fixture supplies the final text before the row finishes opening.
+        // Measure its settled height before checking the draft-to-saved handoff.
+        await expect
+          .poll(() =>
+            message.evaluate((element) =>
+              element
+                .getAnimations()
+                .some(
+                  (animation) =>
+                    animation.playState === "running" &&
+                    animation.effect instanceof KeyframeEffect &&
+                    animation.effect
+                      .getKeyframes()
+                      .some((frame) => frame.height !== undefined),
+                ),
+            ),
+          )
+          .toBe(false);
+
         await expect
           .poll(() =>
             history.evaluate(
@@ -47,9 +66,20 @@ for (const width of [1280, 420]) {
 
         const before = await message.boundingBox();
         expect(before).not.toBeNull();
+        const streamed = await message.elementHandle();
+        expect(streamed).not.toBeNull();
         await cycle.refresh(storedAt);
         await expect(message).toHaveCount(1);
         await expect(message).not.toHaveAttribute("aria-busy", "true");
+
+        expect(
+          await message.evaluate(
+            (element, original) => element === original,
+            streamed,
+          ),
+        ).toBe(true);
+
+        await streamed.dispose();
 
         await expect
           .poll(

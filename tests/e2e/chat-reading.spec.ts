@@ -11,20 +11,32 @@ const distanceFromEnd = (history: Locator) =>
       element.scrollHeight - element.scrollTop - element.clientHeight,
   );
 
-/** The paragraph at the middle of Chat, by its index, with its offset from Chat's top. */
+/**
+ * The paragraph nearest the middle of Chat, by its index, with its offset from
+ * Chat's top. Streamed rows ease their height, so the middle can fall between
+ * paragraphs.
+ */
 const middleParagraph = (history: Locator) =>
   history.evaluate((element) => {
     const frame = element.getBoundingClientRect();
     const paragraphs = [...element.querySelectorAll("p")];
     const middle = frame.top + frame.height / 2;
 
-    const index = paragraphs.findIndex((paragraph) => {
+    const distance = (paragraph: Element) => {
       const box = paragraph.getBoundingClientRect();
 
-      return box.top <= middle && box.bottom >= middle;
-    });
+      return Math.max(box.top - middle, middle - box.bottom, 0);
+    };
 
-    if (index < 0) throw new Error("No paragraph at Chat's middle");
+    const index = paragraphs.reduce(
+      (nearest, paragraph, i) =>
+        nearest < 0 || distance(paragraph) < distance(paragraphs[nearest]!)
+          ? i
+          : nearest,
+      -1,
+    );
+
+    if (index < 0) throw new Error("No paragraph in Chat");
 
     return {
       index,
@@ -44,7 +56,7 @@ const paragraphOffset = (history: Locator, index: number) =>
     );
   }, index);
 
-/** Records how each Chat row animation ends: `finish` or `cancel`. */
+/** Records opacity-only arrival fades, excluding height transitions that can retarget. */
 const recordRowMotion = (page: Page) =>
   page.evaluate(() => {
     const endings: string[] = [];
@@ -53,7 +65,21 @@ const recordRowMotion = (page: Page) =>
     Element.prototype.animate = function (...args) {
       const animation = animate.apply(this, args);
 
-      if (this.hasAttribute("data-chat-item")) {
+      const frames =
+        animation.effect instanceof KeyframeEffect
+          ? animation.effect.getKeyframes()
+          : [];
+
+      if (
+        this.hasAttribute("data-chat-item") &&
+        frames.length &&
+        frames.every(
+          (frame) =>
+            frame.opacity !== undefined &&
+            frame.height === undefined &&
+            frame.transform === undefined,
+        )
+      ) {
         for (const type of ["finish", "cancel"]) {
           animation.addEventListener(type, () => endings.push(type));
         }

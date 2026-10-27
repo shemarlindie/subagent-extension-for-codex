@@ -103,6 +103,12 @@ function setup(
   const updateTask = (patch: Partial<Task>) =>
     view.rerender(panel({ ...task, ...patch }));
 
+  const updateChat = (items: ChatItem[]) => {
+    snapshot.chat = { task: task.id, items, cursor: items.length };
+    visibleSnapshot = { ...snapshot };
+    view.rerender(panel(task));
+  };
+
   const reopen = (patch: Partial<Task>) => {
     opening++;
     updateTask(patch);
@@ -124,6 +130,7 @@ function setup(
     },
     type,
     updateTask,
+    updateChat,
   };
 }
 

@@ -112,10 +112,11 @@ in sync. Loading timing has its own configuration.
   `Presence` wrappers.
 - Make controls inert while they leave.
 
-Animations must preserve reading position. In measured timelines, animate
-opacity so row geometry stays stable. Transformed rows near the end can also
-grow the scroll area. To ease shifts while following streamed content, glide
-the scroll to the new end, as Chat's `followSmoothly` reading scroll does.
+Animations must preserve reading position. Use opacity for arrival fades in
+measured timelines. Avoid row transforms, which can distort measurements and
+grow the scroll area. Chat eases message height changes and reports intermediate
+sizes to `useReadingScroll`, which glides to the new end while following
+overflowing content.
 Respect reduced-motion preferences. Skip animation when the Web Animations API
 is unavailable, including in tests.
 
