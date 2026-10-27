@@ -1,10 +1,10 @@
 {
-  "id": "795084f5-b8b5-4787-ac97-25e9a7ce9292",
-  "prevIds": [
-    "b05afd4c-41b7-4252-b49e-59a413471fb9"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "c767ac79-6e84-4c9b-933f-c3452e64e2b8",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
   "ddl": [
     {
       "name": "file_changes",
