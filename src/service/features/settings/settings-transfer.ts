@@ -9,7 +9,7 @@ import {
 import { scalarText } from "../../../shared/text.js";
 import { packageVersion } from "../../platform/service/runtime.js";
 import { type Settings } from "./settings.js";
-import { settingsUpdateOutputSchema } from "./settings-values.js";
+import { settingsUpdateOutputSchema } from "./settings-tool-schemas.js";
 
 /**
  * Settings export and import. An export holds one owner's saved defaults with

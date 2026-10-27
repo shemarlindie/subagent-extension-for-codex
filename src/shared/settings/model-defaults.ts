@@ -18,7 +18,7 @@ type ModelDefaultsScope = { provider?: string; profile?: string };
 
 /**
  * The saved model and effort defaults for a task. Each resolves separately
- * through the profile, provider and global scopes; a blank model or `default`
+ * through the profile, provider and global scopes. A blank model or `default`
  * effort inherits the next one. Undefined leaves the provider runtime's
  * default. The provider results skip the profile scope.
  */

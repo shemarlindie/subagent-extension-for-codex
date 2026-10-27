@@ -41,7 +41,7 @@ import { userSettings } from "./schema.js";
 import {
   settingsReadOutputSchema,
   settingsUpdateSchema,
-} from "./settings-values.js";
+} from "./settings-tool-schemas.js";
 
 type JsonSchema = Record<string, unknown> & {
   properties?: Record<string, JsonSchema>;
@@ -254,7 +254,7 @@ export class Settings {
     const defaults = this.values(owner),
       { task } = defaults;
 
-    // Task choices win; inheritance sentinels leave the saved defaults in control.
+    // Task choices win. Inheritance sentinels leave the saved defaults in control.
     const saved = resolveModelDefaults(defaults, {
       provider: scalarText(args.provider ?? task.provider),
       profile: scalarText(args.worker_profile ?? task.worker_profile),

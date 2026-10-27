@@ -13,7 +13,7 @@ const valuesSchema = z.looseObject({});
 // The panel's settings document: field schemas, values, and the groups the
 // settings dialog shows, each with a stable ID.
 export const settingsReadOutputSchema = z.object({
-  // Field types, choices, and bounds; agents read this to update settings.
+  // Field types, choices and bounds, which agents read to update settings.
   schema: z.looseObject({
     type: z.literal("object"),
     properties: z.record(z.string(), z.looseObject({})).optional(),

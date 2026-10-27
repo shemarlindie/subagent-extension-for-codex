@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import { resolveModelDefaults } from "./model-defaults.js";
 
 // Task resolution through every scope is covered by the settings integration
-// tests; these cover the results only the panel and settings sections use.
+// tests. These cover the results only the panel and settings sections use.
 const values = {
   models: {
     global: { model: "global-model", reasoning_effort: "low" },

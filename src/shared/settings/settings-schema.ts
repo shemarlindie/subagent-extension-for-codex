@@ -17,7 +17,7 @@ import {
   roles,
 } from "../tasks/model.js";
 import { titleCase } from "../text.js";
-import { settingMeta } from "./setting-text.js";
+import { settingMeta, unwrapped } from "./setting-text.js";
 
 /** Characters a branch prefix may use; Git checks the whole branch name. */
 export const branchPrefixPattern = "[\\w./-]*";
@@ -164,21 +164,6 @@ export function settingAt(values: unknown, path: string): unknown {
           : undefined,
       values,
     );
-}
-
-// Looks through default, prefault and optional wrappers.
-function unwrapped(schema: z.ZodType): z.ZodType {
-  let current = schema;
-
-  while (
-    current instanceof z.ZodDefault ||
-    current instanceof z.ZodPrefault ||
-    current instanceof z.ZodOptional
-  ) {
-    current = current.unwrap() as z.ZodType;
-  }
-
-  return current;
 }
 
 /** The schema at a dotted path, or undefined when the path isn't a setting. */

@@ -18,7 +18,7 @@ import { Settings } from "./settings.js";
 import {
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
-} from "./settings-values.js";
+} from "./settings-tool-schemas.js";
 
 type Read = ReturnType<Settings["read"]>;
 
