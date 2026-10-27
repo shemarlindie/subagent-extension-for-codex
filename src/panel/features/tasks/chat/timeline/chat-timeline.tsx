@@ -1,12 +1,12 @@
 import { Fragment, type ReactNode, type RefObject } from "react";
 
-import { providerMetadata } from "../../../../../shared/providers/metadata.js";
 import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status";
 import type { BudgetRaise } from "../../../../../shared/tasks/model";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import { statusLabel } from "../../../../app/state/selectors";
 import type { Task } from "../../../../app/state/types";
 import { LoadingSwap } from "../../../../shared/components/loading-skeleton/loading-swap";
+import { providerName } from "../../../providers/provider-name";
 import { rowStatus } from "../../list/task-status";
 import { TaskStatusIcon } from "../../list/task-status-icon";
 import { newMessagesIndex } from "../../unread/new-messages";
@@ -56,12 +56,7 @@ export function ChatTimeline({
 }: ChatTimelineProps) {
   const state = useSnapshot(),
     chat = task && state.chat?.task === task.id ? state.chat : undefined,
-    worker = task
-      ? (providerMetadata(
-          task.provider,
-          state.workers.find((w) => w.provider === task.provider)?.metadata,
-        )?.displayName ?? task.provider)
-      : "";
+    worker = task ? providerName(task.provider, state.workers) : "";
 
   // Pending steers and queued messages show above the composer until sent.
   const waiting = new Set(

@@ -17,14 +17,9 @@ import { useListMotion } from "../../../../shared/components/motion/use-list-mot
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { FormFieldError } from "../../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
+import { providerName } from "../../../providers/provider-name";
 import { composerMode, type SpentBudget, spentBudget } from "../chat-model";
 import { TaskRunSettings } from "./task-run-settings";
-
-const PLACEHOLDERS = {
-  idle: "What's next?",
-  busy: "Queue",
-  input: "Queue",
-};
 
 const STEER_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent)
   ? "⌘ + Enter"
@@ -62,7 +57,8 @@ export function Composer({
   disabled = false,
 }: ComposerProps) {
   const controller = useController(),
-    busy = useSnapshot().busy,
+    { busy, workers } = useSnapshot(),
+    provider = task ? providerName(task.provider, workers) : "agent",
     sessionTaskId = task?.id ?? taskId ?? "loading",
     mode = task ? composerMode(task) : "idle",
     inputHint =
@@ -351,7 +347,7 @@ export function Composer({
                 }
                 rows={1}
                 maxLength={20000}
-                placeholder={PLACEHOLDERS[mode]}
+                placeholder={`Work with ${provider}`}
                 value={text}
                 onChange={(event) => edit(event.target.value)}
                 onKeyDown={keys}
