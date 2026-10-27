@@ -19,11 +19,32 @@ body,
 .window {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 0;
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
   transition: grid-template-columns 450ms ease;
 }
 .window.split {
   grid-template-columns: minmax(0, 1fr) 600px;
+}
+.window[data-fade="in"] {
+  /* Matches OPENING_DELAY_MS in playback.ts. */
+  animation: showcase-opening 400ms ease-out 400ms both;
+}
+.window[data-fade="out"] {
+  animation: showcase-opening 400ms ease-in reverse both;
+}
+@keyframes showcase-opening {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .window[data-fade] {
+    animation: none;
+  }
 }
 /* The panel loads behind the closed pane, at its open width, so it appears
    ready. At 640px or less it shows only the selected task, as in Codex's

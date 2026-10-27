@@ -4,6 +4,9 @@
   --codex-bg: rgb(17, 17, 17);
   --codex-text: rgb(236, 236, 236);
   --codex-muted: rgb(140, 140, 140);
+  /* Measured from a Codex screenshot, where the empty composer is dimmer than
+     muted text. */
+  --codex-placeholder: rgb(95, 95, 95);
   --codex-bubble: rgb(37, 37, 37);
   --codex-composer: rgb(40, 40, 40);
   --codex-border: rgba(255, 255, 255, 0.08);
@@ -27,6 +30,7 @@
   --codex-bg: rgb(255, 255, 255);
   --codex-text: rgb(13, 13, 13);
   --codex-muted: rgb(120, 120, 120);
+  --codex-placeholder: rgb(120, 120, 120);
   --codex-bubble: rgb(243, 243, 243);
   --codex-composer: rgb(255, 255, 255);
   --codex-border: rgba(0, 0, 0, 0.1);
@@ -97,7 +101,10 @@
 }
 .codex-composer-input {
   margin-bottom: 18px;
-  color: var(--codex-muted);
+  color: var(--codex-placeholder);
+}
+.codex-composer-input.has-draft {
+  color: var(--codex-text);
 }
 .codex-composer-bar {
   display: flex;

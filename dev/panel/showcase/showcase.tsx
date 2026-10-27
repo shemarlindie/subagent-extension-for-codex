@@ -70,8 +70,13 @@ export function Showcase() {
 
   return (
     <div className="showcase">
-      <main className={`window${split ? " split" : ""}`}>
+      <main
+        className={`window${split ? " split" : ""}`}
+        data-fade={scene?.fade}
+      >
         <CodexThread
+          key={launch}
+          opening={scene?.fade === "in"}
           steps={scene ? threadAt(scene) : story.slice(0, step + 1)}
           embed={
             scene?.embed && {

@@ -6,6 +6,8 @@ import { story, type StoryMoment, type StoryStep } from "./story";
 
 /** What a playing showcase shows at one time. */
 export type Scene = {
+  /** Opening and closing fades bracket the story within its playback cues. */
+  fade?: "in" | "out";
   /** The step Codex is on, and how many of its items show. */
   step: number;
   items: number;
@@ -22,10 +24,18 @@ const STREAM_MS = 3500;
 const HOLD_MS = 2200;
 const LOADING_MS = 1000;
 const INLINE_MS = 2800;
-const FINAL_HOLD_MS = 6000;
+// The opening's blank delay comes out of the final hold, so the loop keeps its
+// length. showcase.css delays the fade in by the same amount.
+const OPENING_DELAY_MS = 400;
+const OPENING_MS = OPENING_DELAY_MS + 1000;
+const FINAL_HOLD_MS = 4000 - OPENING_DELAY_MS;
+const CLOSING_MS = 800;
 
 function storyCues() {
-  const cues: Cue[] = [];
+  const cues: Cue[] = [
+    { duration: OPENING_MS, scene: () => ({ step: 0, items: 0, fade: "in" }) },
+  ];
+
   let panel: StoryMoment | undefined;
 
   const at = (duration: number, scene: Scene) =>
@@ -61,11 +71,16 @@ function storyCues() {
       if (i === call && s.panel) panel = { step };
     });
 
-    at(step === story.length - 1 ? FINAL_HOLD_MS : HOLD_MS, {
+    const final = step === story.length - 1;
+
+    const held: Scene = {
       step,
       items: s.codex.length,
       panel,
-    });
+    };
+
+    at(final ? FINAL_HOLD_MS - CLOSING_MS : HOLD_MS, held);
+    if (final) at(CLOSING_MS, { ...held, fade: "out" });
   });
 
   return cues;

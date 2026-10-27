@@ -3,13 +3,15 @@ import { CodexIcon } from "./codex-icon";
 const MODEL = "GPT-6.1 Sol";
 const EFFORT = "Medium";
 
-type CodexComposerProps = { working: boolean };
+type CodexComposerProps = { working: boolean; draft?: string };
 
 /** Codex's composer, showing its stop button while Codex works. */
-export function CodexComposer({ working }: CodexComposerProps) {
+export function CodexComposer({ working, draft }: CodexComposerProps) {
   return (
     <div className="codex-composer">
-      <div className="codex-composer-input">Work with Codex</div>
+      <div className={`codex-composer-input${draft ? " has-draft" : ""}`}>
+        {draft ?? "Work with Codex"}
+      </div>
       <div className="codex-composer-bar">
         <CodexIcon name="plus" />
         <span className="codex-composer-approve">

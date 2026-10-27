@@ -319,6 +319,12 @@ defaults to 60 fps at 3200×2000. Use `--fps <n>` for another frame rate and
 resources and produce larger files. The command reuses a running dev server or
 starts one.
 
+Playback opens with a 400 ms blank hold, then a 400 ms fade in with the first
+prompt in the composer. One second after the blank hold, the composer clears
+and the message enters the thread. The final hold ends with a 400 ms fade out
+and a 400 ms blank hold. The opening delay comes out of the final hold, so the
+loop keeps its length. Reduced motion skips the fades and message animations.
+
 The story lives in `dev/panel/showcase/story.ts`. Each step lists the items
 Codex adds and builds Claude's events with the fixture `Timeline`. A step's
 `reply` holds the message that ends Claude's turn, which playback streams.
