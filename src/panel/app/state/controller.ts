@@ -686,6 +686,9 @@ export class Controller {
       this.patch({
         taskArrival: taskArrival?.id === selected ? undefined : taskArrival,
         tasks: this.taskActions.unread.settle(tasks),
+        draft: this.draftFollower.retainListed(
+          tasks.find((task) => task.id === selected),
+        ),
         taskListLoading: false,
         selected,
         // Keep each first history read pending across polls until it succeeds.

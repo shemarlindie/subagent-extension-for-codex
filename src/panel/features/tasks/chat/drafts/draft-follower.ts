@@ -3,7 +3,7 @@ import type {
   DraftUpdate,
 } from "../../../../../shared/tasks/conversation/drafts";
 import { selectedTask } from "../../../../app/state/selectors";
-import type { Snapshot } from "../../../../app/state/types";
+import type { Snapshot, Task } from "../../../../app/state/types";
 import { composerMode } from "../chat-model";
 import { applyDraftUpdate } from "./draft-state";
 
@@ -28,8 +28,8 @@ export type DraftTarget = {
 export type DraftRead = { draft: Draft | null; running: boolean };
 
 /**
- * Reconciles streamed drafts, and on transports without streaming, names the
- * draft to wait for and applies what the wait returns.
+ * Reconciles streamed and task-list drafts through their stored handoff. On
+ * transports without streaming, names the draft to wait for and applies it.
  */
 export class DraftFollower {
   constructor(private context: DraftContext) {}
@@ -62,6 +62,31 @@ export class DraftFollower {
   /** Notes that a Chat read starts, returning its number for `show`. */
   reading() {
     return ++this.reads;
+  }
+
+  /** Holds a disappearing listed-task draft until the next Chat read settles. */
+  retainListed(task?: Task): Snapshot["draft"] {
+    const snapshot = this.context.snapshot();
+    if (task && snapshot.draft?.task === task.id) return snapshot.draft;
+    const previous = selectedTask(snapshot);
+
+    if (
+      !task ||
+      previous?.id !== task.id ||
+      !previous.draft ||
+      previous.draft.message_id === task.draft?.message_id
+    ) {
+      return undefined;
+    }
+
+    // The list updates before Chat is fetched. Use the same handoff boundary
+    // as a streamed clear, while the refresh already in progress reads Chat.
+    this.completed = {
+      message_id: previous.draft.message_id,
+      reads: this.reads,
+    };
+
+    return { task: task.id, ...previous.draft };
   }
 
   /**

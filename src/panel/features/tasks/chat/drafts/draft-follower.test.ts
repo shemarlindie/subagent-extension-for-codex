@@ -138,3 +138,100 @@ test("a streamed draft stays shown until Chat holds its stored message", () => {
   follower.show();
   assert.equal(state().draft, undefined);
 });
+
+test.each(["a later read", "the stored message"] as const)(
+  "a listed draft survives an older Chat read and releases after %s",
+  (release) => {
+    const { follower, state, set, refreshes } = fixture();
+    const draft = { message_id: "listed", text: "Complete reply" };
+    set({ tasks: [{ ...task("a"), draft }] });
+    const inFlight = follower.reading();
+    const next = { ...task("a"), status: "completed" as const };
+
+    set({ draft: follower.retainListed(next), tasks: [next] });
+    follower.show(inFlight);
+
+    assert.deepEqual(state().draft, { task: "a", ...draft });
+    assert.equal(refreshes(), 0);
+
+    if (release === "the stored message") {
+      set({
+        chat: {
+          task: "a",
+          items: [
+            {
+              kind: "message",
+              id: "listed",
+              event_id: 3,
+              message: {
+                id: "listed",
+                event_id: 3,
+                timestamp: "",
+                turn: 1,
+                from: "worker",
+                kind: "reply",
+                text: draft.text,
+              },
+            },
+          ],
+          cursor: 3,
+        },
+      });
+
+      follower.show(inFlight);
+    } else {
+      follower.show(follower.reading());
+    }
+
+    assert.equal(state().draft, undefined);
+  },
+);
+
+test("a canonical streamed draft wins when an older listed fallback clears", () => {
+  const { follower, state, set } = fixture();
+
+  set({
+    tasks: [
+      {
+        ...task("a"),
+        draft: { message_id: "listed", text: "Older fallback" },
+      },
+    ],
+  });
+
+  follower.apply({
+    task_id: "a",
+    message_id: "canonical",
+    offset: 0,
+    text: "Current streamed reply",
+  });
+
+  const canonical = state().draft;
+  const next = task("a");
+  set({ draft: follower.retainListed(next), tasks: [next] });
+  follower.show(follower.reading());
+
+  assert.equal(state().draft, canonical);
+  assert.equal(state().draft?.text, "Current streamed reply");
+});
+
+test("changing the selected task cannot retain the previous task's draft", () => {
+  const { follower, set } = fixture();
+
+  set({
+    tasks: [
+      { ...task("a"), draft: { message_id: "listed", text: "Previous reply" } },
+    ],
+  });
+
+  assert.equal(follower.retainListed(task("b")), undefined);
+
+  follower.apply({
+    task_id: "a",
+    message_id: "canonical",
+    offset: 0,
+    text: "Previous streamed reply",
+  });
+
+  assert.equal(follower.retainListed(task("b")), undefined);
+});
