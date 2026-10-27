@@ -188,7 +188,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
                 aria-describedby="new-task-hint"
                 rows={2}
                 maxLength={20000}
-                placeholder="Describe the task. Include files, constraints and what done looks like."
+                placeholder="Describe the task."
                 disabled={state.busy}
                 {...messageField}
                 ref={setInput}
