@@ -1,4 +1,5 @@
 import { providerMetadata } from "../../../shared/providers/metadata";
+import { resolveModelDefaults } from "../../../shared/settings/model-defaults";
 import { reasoningLevels } from "../../../shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../app/state/types";
 import { workerChoice } from "./delegation";
@@ -15,23 +16,14 @@ export function modelDefaults(
   worker: string,
   selectedModel: string,
 ) {
-  const { provider, profile: role } = workerChoice(worker);
+  const { provider, profile } = workerChoice(worker);
 
-  const providerModel =
-    defaults[`${provider}_default_model`] || defaults.default_model;
-
-  const model = defaults[`${role}_default_model`] || providerModel;
-
-  const effort = (...levels: (string | undefined)[]) =>
-    levels.find((value) => value && value !== "default");
-
-  const providerReasoning = effort(
-    defaults[`${provider}_default_reasoning_effort`],
-    defaults.default_reasoning_effort,
-  );
-
-  const reasoning =
-    effort(defaults[`${role}_default_reasoning_effort`]) ?? providerReasoning;
+  const {
+    model,
+    reasoning_effort: reasoning,
+    providerModel,
+    providerReasoning,
+  } = resolveModelDefaults(defaults, { provider, profile });
 
   const workerInfo = workers.find((item) => item.provider === provider);
 

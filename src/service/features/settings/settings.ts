@@ -12,6 +12,10 @@ import {
 } from "../../../shared/providers/settings.js";
 import { type ModelChoice } from "../../../shared/providers/types.js";
 import {
+  modelScopeKeys,
+  resolveModelDefaults,
+} from "../../../shared/settings/model-defaults.js";
+import {
   modelScope,
   settingsSections,
   unsupportedEffortWarning,
@@ -193,7 +197,7 @@ export class Settings {
       providers,
       catalogs,
       modelProviders: providers.filter(
-        (provider) => `${provider}_default_model` in properties,
+        (provider) => modelScopeKeys(provider).modelKey in properties,
       ),
     };
 
@@ -336,30 +340,19 @@ export class Settings {
       args.worker_profile ?? defaults.default_worker_profile,
     );
 
-    const fields = defaults as Record<string, unknown>;
+    // Task choices win; inheritance sentinels leave the saved defaults in control.
+    const saved = resolveModelDefaults(defaults, { provider, profile: role });
 
-    // Resolve each choice independently; inheritance sentinels leave the next scope in control.
-    const model = [
-      args.model,
-      fields[`${role}_default_model`],
-      fields[`${provider}_default_model`],
-      defaults.default_model,
-    ].find((value) => typeof value === "string" && value.trim());
-
-    const reasoning = [
-      args.reasoning_effort,
-      fields[`${role}_default_reasoning_effort`],
-      fields[`${provider}_default_reasoning_effort`],
-      defaults.default_reasoning_effort,
-    ].find((value) => value !== undefined && value !== "default");
+    const reasoning =
+      args.reasoning_effort === "default" ? undefined : args.reasoning_effort;
 
     return {
       ...args,
       ...(args.provider_options
         ? { provider_options: args.provider_options }
         : {}),
-      model: typeof model === "string" ? model.trim() : undefined,
-      reasoning_effort: reasoning,
+      model: scalarText(args.model) || saved.model,
+      reasoning_effort: reasoning ?? saved.reasoning_effort,
       ...(args.approval_mode !== undefined
         ? { approval_mode: args.approval_mode }
         : {}),

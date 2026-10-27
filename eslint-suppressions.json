@@ -149,11 +149,6 @@
       "count": 1
     }
   },
-  "src/shared/settings/settings-document.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/shared/tasks/activity/activity-status.ts": {
     "complexity": {
       "count": 1

@@ -14,6 +14,7 @@ import type {
   SettingOption,
   SettingSection,
 } from "./document-contract.js";
+import { modelScopeKeys, resolveModelDefaults } from "./model-defaults.js";
 
 export const sectionSchema = settingSectionSchema;
 
@@ -74,9 +75,7 @@ export function modelScope(
   scope: string,
   { values, providers, catalogs }: ScopeInput,
 ) {
-  const prefix = scope === "global" ? "default" : `${scope}_default`,
-    modelKey = `${prefix}_model`,
-    effortKey = `${prefix}_reasoning_effort`,
+  const { modelKey, effortKey } = modelScopeKeys(scope),
     providerScope = providers.includes(scope),
     provider = providerScope ? scope : String(values.default_provider);
 
@@ -88,13 +87,13 @@ export function modelScope(
   const saved = scalarText(values[modelKey]),
     savedEffort = scalarText(values[effortKey], "default");
 
-  const effectiveModel =
-    saved ||
-    (scope !== "global" && !providerScope
-      ? scalarText(values[`${provider}_default_model`])
-      : "") ||
-    (scope !== "global" ? scalarText(values.default_model) : "") ||
-    "default";
+  // The model this scope's tasks run: its own, then the scopes it inherits.
+  const chain =
+    scope === "global"
+      ? {}
+      : { provider, profile: providerScope ? undefined : scope };
+
+  const effectiveModel = resolveModelDefaults(values, chain).model ?? "default";
 
   const metadata = catalogs
     .find((catalog) => catalog.provider === provider)
@@ -185,8 +184,12 @@ export function settingsSections(input: SectionInput): SettingSection[] {
   // Each model section explains inheritance from its own rows' side and links
   // to the other section's exact setting; the defaults stand in for "the
   // task's" profile and provider.
-  const profileModel = `${scalarText(values.default_worker_profile)}_default_model`,
-    providerModel = `${scalarText(values.default_provider)}_default_model`;
+  const profileModel = modelScopeKeys(
+      scalarText(values.default_worker_profile),
+    ).modelKey,
+    providerModel = modelScopeKeys(
+      scalarText(values.default_provider),
+    ).modelKey;
 
   const defaultsHelp = withHelp(
     [
