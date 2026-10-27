@@ -304,8 +304,8 @@ npm run showcase:capture
 
 It writes to `showcase-captures/`. Use `--out <dir>` for another folder, for
 example to compare a version without replacing the standard captures, and
-`--scale <n>` for another pixel ratio. Captures default to `--zoom 1.15`, which
-enlarges the page by 15% within the same export size. Use `--zoom 1` for the
+`--scale <n>` for another pixel ratio. Captures default to `--zoom 1.4`, which
+enlarges the page by 40% within the same export size. Use `--zoom 1` for the
 original page size, or another positive multiplier to tune readability.
 
 Chromium records video in CSS pixels and ignores the device scale, so both

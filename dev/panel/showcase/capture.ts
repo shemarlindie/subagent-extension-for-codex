@@ -22,7 +22,7 @@ const { values } = parseArgs({
     scale: { type: "string", default: "2" },
     video: { type: "boolean", default: false },
     fps: { type: "string", default: "60" },
-    zoom: { type: "string", default: "1.15" },
+    zoom: { type: "string", default: "1.4" },
   },
 });
 
