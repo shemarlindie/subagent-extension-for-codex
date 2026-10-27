@@ -157,6 +157,11 @@ test("settings copy as JSON and import from pasted text", async ({
     exact: true,
   });
 
+  const saveFileButton = page.getByRole("button", {
+    name: "Export file",
+    exact: true,
+  });
+
   const paste = page.getByRole("textbox", {
     name: "Paste copied settings",
     exact: true,
@@ -168,12 +173,14 @@ test("settings copy as JSON and import from pasted text", async ({
   });
 
   await expect(copyButton).not.toBeVisible();
+  await expect(saveFileButton).not.toBeVisible();
 
   // Transfer cannot drop an unsaved draft or copy older saved values.
   await prefix.fill("draft/");
   await transferTab.click();
   await paste.fill("{}");
   await expect(copyButton).toBeDisabled();
+  await expect(saveFileButton).toBeDisabled();
   await expect(importButton).toBeDisabled();
   await taskTab.click();
   await expect(copyButton).not.toBeVisible();
@@ -181,6 +188,7 @@ test("settings copy as JSON and import from pasted text", async ({
   await transferTab.click();
   await expect(paste).toHaveValue("{}");
   await expect(copyButton).toBeEnabled();
+  await expect(saveFileButton).toBeEnabled();
   await expect(importButton).toBeEnabled();
 
   // Copy writes the saved defaults as a versioned export.
@@ -347,4 +355,89 @@ test("pending imports protect settings edits and failures restore editing", asyn
     first.resolve();
     retry.resolve();
   }
+});
+
+test("saving settings reports failures and the service computer's full path", async ({
+  consolePage: page,
+}) => {
+  const pending = Promise.withResolvers<void>();
+  let saves = 0;
+  const path = String.raw`C:\Users\Renée Example\Téléchargements\delegated-work-settings-${"long-name-".repeat(12)}.json`;
+
+  // Keep file writes inside the service integration tests, away from real Downloads.
+  await page.route("**/api/tools/app_save_settings_file", async (route) => {
+    saves++;
+
+    if (saves === 1) {
+      await pending.promise;
+
+      await route.fulfill({
+        status: 400,
+        json: { error: "Downloads isn't writable." },
+      });
+    } else {
+      await route.fulfill({ json: { result: { path } } });
+    }
+  });
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.setViewportSize({ width: 360, height: 1000 });
+
+  await page
+    .getByRole("tab", { name: "Import and export", exact: true })
+    .click();
+
+  const saveFile = page.getByRole("button", {
+    name: "Export file",
+    exact: true,
+  });
+
+  const copy = page.getByRole("button", { name: "Copy JSON", exact: true });
+
+  const paste = page.getByRole("textbox", {
+    name: "Paste copied settings",
+    exact: true,
+  });
+
+  const importButton = page.getByRole("button", {
+    name: "Import settings",
+    exact: true,
+  });
+
+  await paste.fill("{}");
+  await saveFile.click();
+
+  await expect(
+    page.getByRole("button", { name: "Saving…", exact: true }),
+  ).toBeDisabled();
+
+  await expect(copy).toBeDisabled();
+  await expect(importButton).toBeDisabled();
+  expect(saves).toBe(1);
+  pending.resolve();
+
+  await expect(page.getByRole("alert")).toContainText(
+    "Downloads isn't writable.",
+  );
+
+  await expect(page.getByRole("alert")).toContainText("Use Copy JSON instead.");
+
+  await expect(copy).toBeEnabled();
+  await expect(importButton).toBeEnabled();
+  await expect(paste).toHaveValue("{}");
+
+  await saveFile.click();
+
+  await expect(
+    page.getByRole("status").filter({ hasText: "Saved to" }),
+  ).toHaveText(`Saved to ${path}`);
+
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  expect(saves).toBe(2);
+
+  expect(
+    await page
+      .locator(".settings-transfer-status")
+      .evaluate((element) => element.scrollWidth <= element.clientWidth),
+  ).toBe(true);
 });

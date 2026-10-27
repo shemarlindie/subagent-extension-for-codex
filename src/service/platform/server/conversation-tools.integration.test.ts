@@ -136,6 +136,10 @@ test("tool names mark app-only tools and fit the host name budget", async () => 
   await expect(
     callTool({} as Control, "alice", "app_steer_queued_message", {}),
   ).rejects.toThrow(/User tools require a user interface/);
+
+  await expect(
+    callTool({} as Control, "alice", "app_save_settings_file", {}),
+  ).rejects.toThrow(/User tools require a user interface/);
 });
 
 test("tools declare their read-only and destructive annotations", () => {

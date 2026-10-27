@@ -579,8 +579,9 @@ The workflow relies on repository settings made by hand:
   without credentials.
 
 `.github/workflows/ci.yml` runs the checks on Linux and macOS for pushes to
-`main` and pull requests. Windows runs only the build and package tests,
-because parts of the suite use POSIX shell fakes.
+`main` and pull requests. Windows runs the build, package tests and focused
+settings file tests, including its native Downloads lookup. Other parts of
+the suite use POSIX shell fakes.
 
 ## Checks
 

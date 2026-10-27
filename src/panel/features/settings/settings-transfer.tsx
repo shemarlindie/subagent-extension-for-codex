@@ -10,11 +10,14 @@ type SettingsExport = { document: string };
 
 type SettingsImport = { ignored: string[] };
 
+type ExportAction = "copy" | "save";
+
 type SettingsTransferForm = { document: string };
 
 type TransferStatus =
   | { kind: "idle" }
   | { kind: "copied" }
+  | { kind: "saved"; path: string }
   // The host blocked the clipboard, so the export is shown for manual copy.
   | { kind: "manual"; document: string }
   | { kind: "imported"; ignored: string[] };
@@ -27,7 +30,7 @@ type SettingsTransferProps = {
   onImportingChange: (importing: boolean) => void;
 };
 
-/** Copies saved settings as JSON, and imports a copy pasted from elsewhere. */
+/** Saves or copies settings as JSON, and imports a copy pasted from elsewhere. */
 export function SettingsTransfer({
   ready,
   edited,
@@ -43,16 +46,26 @@ export function SettingsTransfer({
     { busy } = useSnapshot(),
     pasteId = useId(),
     [status, setStatus] = useState<TransferStatus>({ kind: "idle" }),
-    [copyError, setCopyError] = useState(""),
-    [copying, setCopying] = useState(false),
-    disabled = !ready || edited || busy || copying;
+    [exportError, setExportError] = useState(""),
+    [exporting, setExporting] = useState<ExportAction>(),
+    disabled = !ready || edited || busy || Boolean(exporting);
 
-  async function copy() {
-    setCopyError("");
+  async function exportSaved(action: ExportAction) {
+    setExportError("");
     setStatus({ kind: "idle" });
-    setCopying(true);
+    setExporting(action);
 
     try {
+      if (action === "save") {
+        const { path } = await controller.tool<{ path: string }>(
+          "app_save_settings_file",
+        );
+
+        setStatus({ kind: "saved", path });
+
+        return;
+      }
+
       const { document } = await controller.tool<SettingsExport>(
         "app_export_settings",
       );
@@ -64,9 +77,13 @@ export function SettingsTransfer({
         setStatus({ kind: "manual", document });
       }
     } catch (error) {
-      setCopyError(errorMessage(error));
+      setExportError(
+        action === "save"
+          ? `Couldn't save settings. ${errorMessage(error)} Use Copy JSON instead.`
+          : errorMessage(error),
+      );
     } finally {
-      setCopying(false);
+      setExporting(undefined);
     }
   }
 
@@ -78,7 +95,7 @@ export function SettingsTransfer({
     void controller
       .submit(
         async () => {
-          setCopyError("");
+          setExportError("");
           setStatus({ kind: "idle" });
 
           ({ ignored } = await controller.tool<SettingsImport>(
@@ -98,22 +115,35 @@ export function SettingsTransfer({
   return (
     <div className="settings-transfer">
       <p className="settings-transfer-note">
-        Copy your settings as JSON. Save your changes first.
+        Save or copy your settings as JSON. Save your changes first.
+      </p>
+      <p className="settings-transfer-note">
+        Exported files are saved to Downloads.
       </p>
       <div className="settings-transfer-actions">
-        <Button disabled={disabled} onClick={() => void copy()}>
-          {copying ? "Copying…" : "Copy JSON"}
+        <Button disabled={disabled} onClick={() => void exportSaved("save")}>
+          {exporting === "save" ? "Saving…" : "Export file"}
         </Button>
+        <Button disabled={disabled} onClick={() => void exportSaved("copy")}>
+          {exporting === "copy" ? "Copying…" : "Copy JSON"}
+        </Button>
+      </div>
+      <div className="settings-transfer-status">
         <span role="status">
           {status.kind === "copied" ? "Copied" : null}
+          {status.kind === "saved" ? (
+            <>
+              Saved to <code>{status.path}</code>
+            </>
+          ) : null}
           {status.kind === "imported"
             ? `Imported${status.ignored.length ? `. Skipped: ${status.ignored.join(", ")}` : ""}`
             : null}
         </span>
       </div>
-      {copyError ? (
+      {exportError ? (
         <p className="form-error" role="alert">
-          {copyError}
+          {exportError}
         </p>
       ) : null}
       {status.kind === "manual" ? (

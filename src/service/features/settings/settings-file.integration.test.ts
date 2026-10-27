@@ -1,0 +1,87 @@
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { expect, test, type TestContext } from "vitest";
+
+import { Store } from "../tasks/storage/store.js";
+import { Settings } from "./settings.js";
+import { saveSettingsFile } from "./settings-file.js";
+
+async function fixture(t: TestContext) {
+  const directory = await mkdtemp(join(tmpdir(), "settings-file-"));
+  const store = new Store(join(directory, "settings.sqlite"));
+
+  t.onTestFinished(async () => {
+    store.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  return {
+    directory,
+    settings: new Settings(store.database, () => ["claude"]),
+  };
+}
+
+test("parallel exports create private distinct files containing the saved defaults", async (t) => {
+  const { directory, settings } = await fixture(t);
+  const downloads = join(directory, "Downloads");
+
+  settings.update("source", {
+    set: {
+      worktree_branch_prefix: "exported/",
+      claude_settings_files: false,
+      claude_user_mcp: false,
+      max_cost_usd: 17,
+      use_cost_budget: false,
+    },
+  });
+
+  const [first, second] = await Promise.all([
+    saveSettingsFile(settings, "source", async () => downloads),
+    saveSettingsFile(settings, "source", async () => downloads),
+  ]);
+
+  expect(first.path).not.toBe(second.path);
+  const document = await readFile(first.path, "utf8");
+  expect(await readFile(second.path, "utf8")).toBe(document);
+
+  expect(JSON.parse(document)).toMatchObject({
+    format: 1,
+    settings: {
+      worktree_branch_prefix: "exported/",
+      claude_settings_files: false,
+      claude_user_mcp: false,
+      max_cost_usd: 17,
+      use_cost_budget: false,
+    },
+  });
+
+  if (process.platform !== "win32") {
+    expect((await stat(first.path)).mode & 0o777).toBe(0o600);
+  }
+
+  // A subsequent export leaves the earlier file exactly as the user saved it.
+  await writeFile(first.path, "earlier export");
+
+  const third = await saveSettingsFile(
+    settings,
+    "source",
+    async () => downloads,
+  );
+
+  expect(third.path).not.toBe(first.path);
+  expect(await readFile(first.path, "utf8")).toBe("earlier export");
+});
+
+test("a destination that cannot hold files reports failure", async (t) => {
+  const { directory, settings } = await fixture(t);
+  const blocked = join(directory, "not-a-directory");
+  await writeFile(blocked, "keep this file");
+
+  await expect(
+    saveSettingsFile(settings, "source", async () => blocked),
+  ).rejects.toThrow();
+
+  expect(await readFile(blocked, "utf8")).toBe("keep this file");
+});

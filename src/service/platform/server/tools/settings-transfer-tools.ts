@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { type Settings } from "../../../features/settings/settings.js";
 import {
+  saveSettingsFile,
+  settingsFileOutputSchema,
+} from "../../../features/settings/settings-file.js";
+import {
   exportSettings,
   importSettings,
   settingsExportOutputSchema,
@@ -10,7 +14,7 @@ import {
 } from "../../../features/settings/settings-transfer.js";
 import { tool } from "./definition.js";
 
-/** App-only settings transfer. */
+/** App-only settings transfer. File destinations and contents belong to the service. */
 export function settingsTransferTools(settings: Settings, owner: string) {
   return {
     app_export_settings: tool({
@@ -27,6 +31,13 @@ export function settingsTransferTools(settings: Settings, owner: string) {
       schema: settingsTransferInputSchema,
       outputSchema: settingsImportOutputSchema,
       run: (a) => importSettings(settings, owner, a),
+    }),
+    app_save_settings_file: tool({
+      description:
+        "User interface only: save the user's defaults as a new JSON file in Downloads on the service computer and return its path.",
+      schema: z.strictObject({}),
+      outputSchema: settingsFileOutputSchema,
+      run: () => saveSettingsFile(settings, owner),
     }),
   };
 }

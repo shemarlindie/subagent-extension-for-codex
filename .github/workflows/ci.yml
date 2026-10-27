@@ -39,7 +39,7 @@ jobs:
           if-no-files-found: ignore
 
   # Parts of the suite use POSIX shell fakes, so Windows runs the build and
-  # the packaging tests until the rest is shown to run there.
+  # packaging and settings-file tests until the rest is shown to run there.
   windows:
     name: Packaging (windows-latest)
     runs-on: windows-latest
@@ -53,3 +53,4 @@ jobs:
       - run: npm install --global @openai/codex@0.162.1
       - run: npm run build
       - run: npx vitest run tests/integration/package
+      - run: npx vitest run src/service/features/settings/downloads-directory.test.ts src/service/features/settings/downloads-directory.integration.test.ts src/service/features/settings/settings-file.integration.test.ts

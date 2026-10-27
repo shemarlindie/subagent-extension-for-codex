@@ -24,7 +24,8 @@ You need:
   CI installs the plugin with 0.162.1, and older builds are untested.
 
 macOS is the primary platform. CI runs the full test suite on macOS and Linux.
-Windows CI covers builds, plugin installation and packaged-service checks.
+Windows CI covers builds, plugin installation, packaged-service checks and
+settings file exports.
 
 Add the marketplace, then install the plugin:
 

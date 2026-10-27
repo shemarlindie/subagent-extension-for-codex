@@ -165,7 +165,20 @@ Exports include your saved defaults and remembered amounts for disabled
 budgets. Approved projects aren't included. Add them separately on each
 computer.
 
-**Copy JSON** copies the export for pasting on another computer.
+**Export file** creates a new JSON file in Downloads on the computer
+running the service and shows the full path. If you use the panel from another
+device, the service still saves the file on its own computer. **Copy JSON**
+copies the same export for pasting elsewhere, including when saving a file fails.
+
+The service resolves the Downloads location through the operating system:
+
+- macOS uses AppleScript's [Downloads folder lookup](https://developer.apple.com/library/archive/documentation/AppleScript/Conceptual/AppleScriptLangGuide/reference/ASLR_cmds.html).
+- Windows uses [the Downloads known folder](https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid), including redirected locations.
+- Linux reads `XDG_DOWNLOAD_DIR` from [the user-directory configuration](https://www.freedesktop.org/wiki/Software/xdg-user-dirs/) in `$XDG_CONFIG_HOME/user-dirs.dirs`, or `~/.config/user-dirs.dirs`. Without a configured location, it uses `~/Downloads`.
+
+The service uses these locations regardless of your browser's download
+preferences. To import a saved file, open it and paste its JSON into **Paste
+copied settings**.
 
 **Import settings** replaces matching defaults with valid values from the
 export. It can also change permissions and other user-only settings. Import

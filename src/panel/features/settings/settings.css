@@ -85,6 +85,9 @@
   flex-direction: column;
   gap: 4px;
 }
+.settings-transfer-status {
+  overflow-wrap: anywhere;
+}
 .settings-section-tabs {
   display: grid;
   grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);

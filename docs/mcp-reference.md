@@ -130,6 +130,11 @@ a `format` number, the extension `version` and the user's saved `settings`.
 newer formats it doesn't support. The format number controls compatibility
 independently of the extension version.
 
+`app_save_settings_file` writes the user's settings export to a new file in the
+service computer's Downloads folder. It accepts no destination or file contents
+from the caller and returns the saved path. See
+[Copy settings between computers](configuration.md#copy-settings-between-computers).
+
 For Claude permissions routed to `parent_agent`, model-visible `submit_input`
 can approve or deny the exact pending request. Permissions routed to the user
 need the panel's **Approve** or **Deny** buttons. Questions accept model-visible
