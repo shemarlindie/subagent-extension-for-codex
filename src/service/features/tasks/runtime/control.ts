@@ -36,7 +36,6 @@ import {
   validateBudgets,
 } from "./budget.js";
 import { observeExecution } from "./execution-logging.js";
-import { assertModelEffort } from "./model-effort.js";
 import {
   clearQueuedMessages,
   commitQueue,
@@ -59,8 +58,8 @@ import {
   SendRequests,
   type SentMessage,
 } from "./send-requests.js";
+import { resolveStart } from "./start-request.js";
 import { deletionBatch, deletionOrder } from "./task-deletion.js";
-import { generateTaskTitle } from "./task-title.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import { type Active, recordStatusEvent } from "./turn-outcome.js";
 import {
@@ -187,33 +186,13 @@ export class Control {
     assertSelectedProviderOptions(parsed.provider, parsed.provider_options);
     const provider = this.providers.get(parsed.provider);
     if (!provider) throw new Error("Provider is not enabled");
-    const readiness = await provider.readiness?.();
-    if (readiness?.ready === false) throw new Error(readiness.message);
-    const policy = provider.taskPolicy;
-    const defaults = this.settings.values(owner);
 
-    const options = policy.prepareStart({
-      input: parsed,
-      defaults,
+    const req = await resolveStart(
+      provider,
+      parsed,
+      this.settings.values(owner),
       authority,
-    });
-
-    const req = {
-      ...parsed,
-      ...options,
-      title: generateTaskTitle(parsed.description),
-      description: parsed.description.trim(),
-    };
-
-    if (!req.title) throw new Error("Task title is required");
-    if (!req.description) throw new Error("Task description is required");
-
-    await assertModelEffort(provider, req, defaults);
-    validateBudgets(provider, req);
-
-    if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD") {
-      throw new Error("Current repository workspace requires revision HEAD");
-    }
+    );
 
     for (const id of req.depends_on) this.store.get(id, owner);
 
