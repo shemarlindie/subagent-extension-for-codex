@@ -559,7 +559,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.ok(!settingsRead.isError);
 
       assert.equal(
-        (settingsRead.structuredContent as any).values.default_model,
+        (settingsRead.structuredContent as any).values.models.global.model,
         "",
       );
 
@@ -567,8 +567,10 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         name: "update_settings",
         arguments: {
           set: {
-            default_model: "native-proxy-model",
-            reviewer_default_reasoning_effort: "high",
+            models: {
+              global: { model: "native-proxy-model" },
+              profiles: { reviewer: { reasoning_effort: "high" } },
+            },
           },
         },
       });
@@ -576,13 +578,13 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.ok(!nativeUpdated.isError);
 
       assert.equal(
-        (nativeUpdated.structuredContent as any).values.default_model,
+        (nativeUpdated.structuredContent as any).values.models.global.model,
         "native-proxy-model",
       );
 
       assert.equal(
-        (nativeUpdated.structuredContent as any).values
-          .reviewer_default_reasoning_effort,
+        (nativeUpdated.structuredContent as any).values.models.profiles.reviewer
+          .reasoning_effort,
         "high",
       );
 
@@ -592,7 +594,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       });
 
       assert.equal(
-        (nativeReadback.structuredContent as any).values.default_model,
+        (nativeReadback.structuredContent as any).values.models.global.model,
         "native-proxy-model",
       );
 
@@ -1104,20 +1106,29 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
     });
 
     assert.equal(
-      settings.json.result.structuredContent.values.default_provider,
+      settings.json.result.structuredContent.values.task.provider,
       "fixture",
     );
 
     const updated = await rpc("tools/call", {
       name: "update_settings",
-      arguments: { set: { max_cost_usd: 2, use_cost_budget: true } },
+      arguments: {
+        set: {
+          task: { budget: { max_cost_usd: { enabled: true, amount: 2 } } },
+        },
+      },
     });
 
-    assert.equal(updated.json.result.structuredContent.values.max_cost_usd, 2);
+    assert.deepEqual(
+      updated.json.result.structuredContent.values.task.budget.max_cost_usd,
+      { enabled: true, amount: 2 },
+    );
 
     const invalid = await rpc("tools/call", {
       name: "update_settings",
-      arguments: { set: { max_cost_usd: -1 } },
+      arguments: {
+        set: { task: { budget: { max_cost_usd: { amount: -1 } } } },
+      },
     });
 
     assert.ok(invalid.json.result?.isError || invalid.json.error);

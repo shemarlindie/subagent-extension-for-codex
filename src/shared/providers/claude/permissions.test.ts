@@ -49,8 +49,8 @@ test("model-selected modes cannot exceed the concrete extension setting", () => 
 test("profile restriction values restrict read-only profiles and explicit values apply to all", () => {
   const profile = {
     ...claudeOverrideDefaults,
-    claude_tools: "profile",
-    claude_path_guard: "profile",
+    tools: "profile",
+    path_guard: "profile",
   } as const;
 
   for (const role of ["researcher", "reviewer", "security_reviewer"]) {
@@ -80,7 +80,7 @@ test("profile restriction values restrict read-only profiles and explicit values
   }
 
   const loosened = resolveClaudePolicy(
-    { ...profile, claude_tools: "all", claude_path_guard: "off" },
+    { ...profile, tools: "all", path_guard: "off" },
     "reviewer",
   );
 

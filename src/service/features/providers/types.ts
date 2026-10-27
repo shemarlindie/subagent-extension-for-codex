@@ -10,8 +10,8 @@ import type {
   ModelChoice,
   ProviderReadiness,
 } from "../../../shared/providers/types.js";
+import type { SettingsValues } from "../../../shared/settings/settings-schema.js";
 import type { InputPresentation, Task } from "../../../shared/tasks/model.js";
-import type { SettingsValues } from "../settings/settings-values.js";
 import type { ProviderTaskPolicy } from "./task-policy.js";
 
 /** A message sent into a running turn. */

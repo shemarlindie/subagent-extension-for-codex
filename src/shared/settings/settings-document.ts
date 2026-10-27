@@ -1,12 +1,11 @@
 import {
   providerApprovalRows,
   providerRestrictionSections,
-  providerSettingHelp,
 } from "../providers/settings.js";
 import { type ModelChoice } from "../providers/types.js";
 import { roles } from "../tasks/model.js";
 import { reasoningLevels } from "../tasks/reasoning.js";
-import { scalarText } from "../text.js";
+import { scalarText, titleCase } from "../text.js";
 import { settingSectionSchema } from "./document-contract.generated.js";
 import type {
   HelpPart,
@@ -14,7 +13,13 @@ import type {
   SettingOption,
   SettingSection,
 } from "./document-contract.js";
-import { modelScopeKeys, resolveModelDefaults } from "./model-defaults.js";
+import { modelScopePath, resolveModelDefaults } from "./model-defaults.js";
+import { settingText } from "./setting-text.js";
+import {
+  branchPrefixPattern,
+  settingAt,
+  settingSchemaAt,
+} from "./settings-schema.js";
 
 export const sectionSchema = settingSectionSchema;
 
@@ -25,37 +30,26 @@ export type {
   SettingSection,
 } from "./document-contract.js";
 
-/**
- * Plain help shared by a setting's row and its schema description, so agents
- * and the panel read the same text. Options are named by their display labels.
- */
-export const settingHelp = {
-  auto_register_chat_project:
-    "When a chat starts a task, register the chat's local Git root from host directory metadata, never from task paths. Turning this off keeps projects already registered.",
-  default_approval_decider:
-    "Who answers permission requests that a provider's own checks don't decide.",
-  ...providerSettingHelp,
-  worktree_branch_prefix:
-    "Each worktree task works on its own branch, named this prefix followed by the task ID.",
-};
-
-/** Characters a branch prefix may use; Git checks the whole branch name. */
-export const branchPrefixPattern = "[\\w./-]*";
-
 // Agents read this in an effort field's description; the panel shows it
 // beside a scope flagged `unsupported`.
 export const unsupportedEffortWarning =
   "The saved effort is not supported by this model.";
 
 /** Help parts, with a link to a setting the panel doesn't show as plain text. */
-export const withHelp = (parts: HelpPart[], shown: Record<string, unknown>) =>
+export const withHelp = (parts: HelpPart[], shown: unknown) =>
   parts.map((part) =>
-    typeof part === "string" || part.setting in shown ? part : part.text,
+    typeof part === "string" || settingAt(shown, part.setting) !== undefined
+      ? part
+      : part.text,
   );
 
-/** A setting key or scope as a label: `worker_profile` reads "Worker profile". */
-export const titleCase = (value: string) =>
-  value.charAt(0).toUpperCase() + value.slice(1).replaceAll("_", " ");
+/** A row's path with the label and help its schema defines. */
+function described(path: string) {
+  const schema = settingSchemaAt(path);
+  if (!schema) throw new Error(`Unknown setting ${path}`);
+
+  return { path, ...settingText(schema) };
+}
 
 const options = (labels: Record<string, string>): SettingOption[] =>
   Object.entries(labels).map(([value, label]) => ({ value, label }));
@@ -63,7 +57,7 @@ const options = (labels: Record<string, string>): SettingOption[] =>
 type Catalog = { provider: string; models?: ModelChoice[] };
 
 export interface ScopeInput {
-  values: Record<string, unknown>;
+  values: unknown;
   providers: string[];
   catalogs: Catalog[];
   modelProviders?: string[];
@@ -77,17 +71,21 @@ export function modelScope(
   scope: string,
   { values, providers, catalogs }: ScopeInput,
 ) {
-  const { modelKey, effortKey } = modelScopeKeys(scope),
+  const scopePath = modelScopePath(scope),
+    modelPath = `${scopePath}.model`,
+    effortPath = `${scopePath}.reasoning_effort`,
     providerScope = providers.includes(scope),
-    provider = providerScope ? scope : String(values.default_provider);
+    provider = providerScope
+      ? scope
+      : scalarText(settingAt(values, "task.provider"));
 
   // Global and role choices apply across providers; provider scopes use their own catalog.
   const choices = catalogs
     .filter((catalog) => !providerScope || catalog.provider === scope)
     .flatMap((catalog) => catalog.models ?? []);
 
-  const saved = scalarText(values[modelKey]),
-    savedEffort = scalarText(values[effortKey], "default");
+  const saved = scalarText(settingAt(values, modelPath)),
+    savedEffort = scalarText(settingAt(values, effortPath), "default");
 
   // The model this scope's tasks run: its own, then the scopes it inherits.
   const chain =
@@ -135,8 +133,8 @@ export function modelScope(
       : [...reasoningLevels];
 
   return {
-    modelKey,
-    effortKey,
+    modelPath,
+    effortPath,
     provider,
     providerScope,
     effectiveModel,
@@ -153,29 +151,23 @@ export function modelScope(
   };
 }
 
-export interface SectionInput extends ScopeInput {
-  /** Every setting the panel shows, for link checks. */
-  shown: Record<string, unknown>;
-  /** Amounts to show for limits that are off. */
-  remembered: { max_cost_usd: number; max_runtime_minutes: number };
-}
-
 /** The dialog's sections, in display order. */
-export function settingsSections(input: SectionInput): SettingSection[] {
-  const { values, providers, shown, remembered } = input;
+export function settingsSections(input: ScopeInput): SettingSection[] {
+  const { values, providers } = input;
 
   const scopeRow = (scope: string, label: string): ModelScope => {
     const info = modelScope(scope, input);
 
     return {
+      id: scope,
       label,
       model: {
-        key: info.modelKey,
+        path: info.modelPath,
         label: `${label} model`,
         options: info.modelChoices,
       },
       effort: {
-        key: info.effortKey,
+        path: info.effortPath,
         label: `${label} reasoning effort`,
         options: info.effortChoices,
         unsupported: info.unsupported,
@@ -186,22 +178,20 @@ export function settingsSections(input: SectionInput): SettingSection[] {
   // Each model section explains inheritance from its own rows' side and links
   // to the other section's exact setting; the defaults stand in for "the
   // task's" profile and provider.
-  const profileModel = modelScopeKeys(
-      scalarText(values.default_worker_profile),
-    ).modelKey,
-    providerModel = modelScopeKeys(
-      scalarText(values.default_provider),
-    ).modelKey;
+  const modelPath = (scope: unknown) =>
+      `${modelScopePath(scalarText(scope))}.model`,
+    profileModel = modelPath(settingAt(values, "task.worker_profile")),
+    providerModel = modelPath(settingAt(values, "task.provider"));
 
   const defaultsHelp = withHelp(
     [
       "The task's ",
       { text: "worker profile", setting: profileModel },
       " defaults override these. Inherit uses ",
-      { text: "Global", setting: "default_model" },
+      { text: "Global", setting: "models.global.model" },
       ", then the worker's own default. This applies to model and reasoning effort. Task choices override all defaults.",
     ],
-    shown,
+    values,
   );
 
   const profilesHelp = withHelp(
@@ -209,10 +199,10 @@ export function settingsSections(input: SectionInput): SettingSection[] {
       "Inherit uses the task's ",
       { text: "provider", setting: providerModel },
       " default, then ",
-      { text: "Global", setting: "default_model" },
+      { text: "Global", setting: "models.global.model" },
       ", then the worker's own default. This applies to model and reasoning effort. Task choices override profile defaults.",
     ],
-    shown,
+    values,
   );
 
   const userOnly = "Only you can change these settings.";
@@ -224,8 +214,7 @@ export function settingsSections(input: SectionInput): SettingSection[] {
       rows: [
         {
           kind: "select",
-          key: "default_provider",
-          label: "Provider",
+          ...described("task.provider"),
           options: providers.map((value) => ({
             value,
             label: titleCase(value),
@@ -233,14 +222,12 @@ export function settingsSections(input: SectionInput): SettingSection[] {
         },
         {
           kind: "select",
-          key: "default_worker_profile",
-          label: "Worker profile",
+          ...described("task.worker_profile"),
           options: roles.map((value) => ({ value, label: titleCase(value) })),
         },
         {
           kind: "select",
-          key: "default_workspace_strategy",
-          label: "Workspace",
+          ...described("task.workspace_strategy"),
           options: options({
             current_repo: "Current repository",
             worktree: "Isolated worktree",
@@ -248,29 +235,21 @@ export function settingsSections(input: SectionInput): SettingSection[] {
         },
         {
           kind: "text",
-          key: "worktree_branch_prefix",
-          label: "Worktree branch prefix",
-          help: [settingHelp.worktree_branch_prefix],
+          ...described("task.worktree_branch_prefix"),
           maxLength: 100,
           pattern: branchPrefixPattern,
         },
         {
           kind: "budget",
-          key: "max_cost_usd",
-          toggle: "use_cost_budget",
-          label: "Cost limit",
+          ...described("task.budget.max_cost_usd"),
           unit: "USD",
           min: 0.01,
-          amount: remembered.max_cost_usd,
         },
         {
           kind: "budget",
-          key: "max_runtime_minutes",
-          toggle: "use_runtime_budget",
-          label: "Runtime limit",
+          ...described("task.budget.max_runtime_minutes"),
           unit: "mins",
           min: 0.01,
-          amount: remembered.max_runtime_minutes,
         },
       ],
     },
@@ -282,17 +261,10 @@ export function settingsSections(input: SectionInput): SettingSection[] {
         ...providerApprovalRows,
         {
           kind: "select",
-          key: "default_approval_decider",
-          label: "Approval decision maker",
-          help: [settingHelp.default_approval_decider],
+          ...described("approvals.decider"),
           options: options({ user: "User", parent_agent: "Parent agent" }),
         },
-        {
-          kind: "switch",
-          key: "auto_register_chat_project",
-          label: "Automatically add chat projects",
-          help: [settingHelp.auto_register_chat_project],
-        },
+        { kind: "switch", ...described("projects.auto_register_chat") },
       ],
     },
     ...providerRestrictionSections,

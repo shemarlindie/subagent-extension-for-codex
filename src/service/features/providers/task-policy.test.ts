@@ -53,7 +53,7 @@ test("execution policy prevents parent escalation but lets users choose approval
       "alice",
     );
 
-    defaults.default_approval_mode = "ask_user";
+    defaults.approvals.execution_mode = "ask_user";
 
     const input = startSchema.parse({
       repository: "/repo",
@@ -85,7 +85,7 @@ test("execution policy prevents parent escalation but lets users choose approval
       { approval_mode: "deny" },
     );
 
-    defaults.default_approval_mode = "parent_agent";
+    defaults.approvals.execution_mode = "parent_agent";
 
     assert.deepEqual(
       executionTaskPolicy.prepareStart({

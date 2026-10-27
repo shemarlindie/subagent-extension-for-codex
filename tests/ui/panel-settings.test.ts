@@ -26,11 +26,12 @@ test("settings saves only changed fields across sections", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: {
-        default_workspace_strategy: "current_repo",
-        claude_subagents: true,
-        max_cost_usd: null,
-        default_model: "",
-        default_reasoning_effort: "default",
+        task: {
+          workspace_strategy: "current_repo",
+          budget: { max_cost_usd: { enabled: false, amount: 5 } },
+        },
+        providers: { claude: { subagents: true } },
+        models: { global: { model: "", reasoning_effort: "default" } },
       },
       sections: [
         {
@@ -39,7 +40,7 @@ test("settings saves only changed fields across sections", async (t) => {
           rows: [
             {
               kind: "select",
-              key: "default_workspace_strategy",
+              path: "task.workspace_strategy",
               label: "Workspace",
               options: [
                 { value: "current_repo", label: "Current repository" },
@@ -48,7 +49,7 @@ test("settings saves only changed fields across sections", async (t) => {
             },
             {
               kind: "switch",
-              key: "claude_subagents",
+              path: "providers.claude.subagents",
               label: "Allow subagents",
             },
             budgetRow,
@@ -61,7 +62,7 @@ test("settings saves only changed fields across sections", async (t) => {
             {
               kind: "models",
               scopes: [
-                scope("default", "Global", [
+                scope("models.global", "Global", [
                   { value: "", label: "Inherit" },
                   {
                     value: "model-a",
@@ -113,10 +114,9 @@ test("settings saves only changed fields across sections", async (t) => {
     transport.calls.find((call) => call.name === "update_settings")!.args,
     {
       set: {
-        claude_subagents: false,
-        use_cost_budget: true,
-        max_cost_usd: 5,
-        default_model: "model-a",
+        providers: { claude: { subagents: false } },
+        task: { budget: { max_cost_usd: { enabled: true } } },
+        models: { global: { model: "model-a" } },
       },
     },
   );
@@ -125,7 +125,10 @@ test("settings saves only changed fields across sections", async (t) => {
 test("settings edits made during a save remain as unsaved changes", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     serveSettings(transport, {
-      values: { claude_subagents: true, max_cost_usd: null },
+      values: {
+        providers: { claude: { subagents: true } },
+        task: { budget: { max_cost_usd: { enabled: false, amount: 5 } } },
+      },
       sections: [
         {
           id: "task",
@@ -133,7 +136,7 @@ test("settings edits made during a save remain as unsaved changes", async (t) =>
           rows: [
             {
               kind: "switch",
-              key: "claude_subagents",
+              path: "providers.claude.subagents",
               label: "Allow subagents",
             },
             budgetRow,
@@ -179,7 +182,7 @@ test("settings edits made during a save remain as unsaved changes", async (t) =>
 
   assert.deepEqual(
     transport.calls.find((call) => call.name === "update_settings")?.args,
-    { set: { claude_subagents: false } },
+    { set: { providers: { claude: { subagents: false } } } },
   );
 });
 
@@ -187,11 +190,11 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
   const { transport, user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: {
-        max_cost_usd: null,
-        default_model: "",
-        default_reasoning_effort: "high",
-        researcher_default_model: "",
-        researcher_default_reasoning_effort: "default",
+        task: { budget: { max_cost_usd: { enabled: false, amount: 5 } } },
+        models: {
+          global: { model: "", reasoning_effort: "high" },
+          profiles: { researcher: { model: "", reasoning_effort: "default" } },
+        },
       },
       sections: [
         { id: "budgets", title: "Budgets", rows: [budgetRow] },
@@ -203,12 +206,12 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
               kind: "models",
               scopes: [
                 scope(
-                  "default",
+                  "models.global",
                   "Global",
                   [{ value: "", label: "Inherit" }],
                   true,
                 ),
-                scope("researcher_default", "Researcher"),
+                scope("models.profiles.researcher", "Researcher"),
               ],
             },
           ],
@@ -275,9 +278,8 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
     transport.calls.find((call) => call.name === "update_settings")!.args,
     {
       set: {
-        use_cost_budget: true,
-        max_cost_usd: 8,
-        researcher_default_model: "custom-id",
+        task: { budget: { max_cost_usd: { enabled: true, amount: 8 } } },
+        models: { profiles: { researcher: { model: "custom-id" } } },
       },
     },
   );
@@ -286,7 +288,9 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
 test("settings explains invalid disabled budgets and lets the user restore editing", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     serveSettings(transport, {
-      values: { max_cost_usd: 5 },
+      values: {
+        task: { budget: { max_cost_usd: { enabled: true, amount: 5 } } },
+      },
       sections: [{ id: "task", title: "Task", rows: [budgetRow] }],
     }),
   );
@@ -319,39 +323,43 @@ test("settings explains invalid disabled budgets and lets the user restore editi
 
   assert.deepEqual(
     transport.calls.find((call) => call.name === "update_settings")!.args,
-    { set: { use_cost_budget: false, max_cost_usd: 8 } },
+    {
+      set: {
+        task: { budget: { max_cost_usd: { enabled: false, amount: 8 } } },
+      },
+    },
   );
 });
 
 test("settings help links show the setting they name, except within their own section", async (t) => {
-  // Section help links by setting key; the trailing "profiles" is plain text,
+  // Section help links by setting path. The trailing "profiles" is plain text,
   // so the link lookups below would fail on a second match.
   const help = [
     "Falls back to ",
-    { text: "profiles", setting: "reviewer_default_model" },
+    { text: "profiles", setting: "models.profiles.reviewer.model" },
     ", then ",
-    { text: "defaults", setting: "default_model" },
+    { text: "defaults", setting: "models.global.model" },
     ". Not profiles.",
   ];
 
-  const sections: [id: string, title: string, key: string][] = [
-    ["defaults", "Defaults", "default"],
-    ["profiles", "Profiles", "reviewer_default"],
+  const sections: [id: string, title: string, path: string, label: string][] = [
+    ["defaults", "Defaults", "models.global", "Global"],
+    ["profiles", "Profiles", "models.profiles.reviewer", "Reviewer"],
   ];
 
   const { user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: {
-        default_model: "",
-        default_reasoning_effort: "default",
-        reviewer_default_model: "",
-        reviewer_default_reasoning_effort: "default",
+        models: {
+          global: { model: "", reasoning_effort: "default" },
+          profiles: { reviewer: { model: "", reasoning_effort: "default" } },
+        },
       },
-      sections: sections.map(([id, title, key]) => ({
+      sections: sections.map(([id, title, path, label]) => ({
         id,
         title,
         help,
-        rows: [{ kind: "models" as const, scopes: [scope(key, `${key}`)] }],
+        rows: [{ kind: "models" as const, scopes: [scope(path, label)] }],
       })),
     }),
   );
@@ -373,7 +381,7 @@ test("settings help links show the setting they name, except within their own se
   assert.equal(selected("Defaults"), "false");
 
   expect(document.activeElement).toBe(
-    screen.getByRole("textbox", { name: "reviewer_default model" }),
+    screen.getByRole("textbox", { name: "Reviewer model" }),
   );
 
   assertAbsent(screen.queryByRole("button", { name: "profiles" }));
@@ -381,7 +389,7 @@ test("settings help links show the setting they name, except within their own se
   assert.equal(selected("Defaults"), "true");
 
   expect(document.activeElement).toBe(
-    screen.getByRole("textbox", { name: "default model" }),
+    screen.getByRole("textbox", { name: "Global model" }),
   );
 });
 
@@ -389,16 +397,14 @@ test("settings resets preserve another section's draft and saved override", asyn
   const { user } = await setup(t, (transport) =>
     serveSettings(transport, {
       values: {
-        claude_subagents: false,
-        max_cost_usd: null,
-        default_model: "saved-model",
-        default_reasoning_effort: "high",
+        providers: { claude: { subagents: false } },
+        task: { budget: { max_cost_usd: { enabled: false, amount: 5 } } },
+        models: { global: { model: "saved-model", reasoning_effort: "high" } },
       },
       defaults: {
-        claude_subagents: true,
-        max_cost_usd: 5,
-        default_model: "",
-        default_reasoning_effort: "default",
+        providers: { claude: { subagents: true } },
+        task: { budget: { max_cost_usd: { enabled: true, amount: 5 } } },
+        models: { global: { model: "", reasoning_effort: "default" } },
       },
       sections: [
         {
@@ -407,7 +413,7 @@ test("settings resets preserve another section's draft and saved override", asyn
           rows: [
             {
               kind: "switch",
-              key: "claude_subagents",
+              path: "providers.claude.subagents",
               label: "Allow subagents",
             },
             budgetRow,
@@ -416,7 +422,9 @@ test("settings resets preserve another section's draft and saved override", asyn
         {
           id: "models",
           title: "Models",
-          rows: [{ kind: "models", scopes: [scope("default", "Global")] }],
+          rows: [
+            { kind: "models", scopes: [scope("models.global", "Global")] },
+          ],
         },
       ],
     }),
@@ -520,7 +528,7 @@ test("leaving settings with unsaved edits asks before discarding them", async (t
 
   const { transport, user } = await setup(t, (transport) =>
     serveSettings(transport, {
-      values: { claude_subagents: true },
+      values: { providers: { claude: { subagents: true } } },
       sections: [
         {
           id: "task",
@@ -528,7 +536,7 @@ test("leaving settings with unsaved edits asks before discarding them", async (t
           rows: [
             {
               kind: "switch",
-              key: "claude_subagents",
+              path: "providers.claude.subagents",
               label: "Allow subagents",
             },
           ],

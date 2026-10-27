@@ -1,5 +1,5 @@
 import type { ModelChoice } from "../../../shared/providers/types";
-import { titleCase } from "../../../shared/settings/settings-document";
+import { titleCase } from "../../../shared/text";
 
 /** A model's display name, falling back to its ID for undiscovered models. */
 export function modelName(models: readonly ModelChoice[], value: string) {

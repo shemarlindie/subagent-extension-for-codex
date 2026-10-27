@@ -8,8 +8,11 @@ import {
   readyClaudeCli,
 } from "../../../../../../tests/support/claude-cli.js";
 import type { ModelChoice } from "../../../../../shared/providers/types.js";
+import {
+  settingsDefaults,
+  withSetting,
+} from "../../../../../shared/settings/settings-schema.js";
 import { startSchema, type Task } from "../../../../../shared/tasks/model.js";
-import { initialValuesSchema } from "../../../settings/settings-values.js";
 import { ClaudeAgentProvider } from "./provider.js";
 
 test("Claude session deletion skips absent ids and forwards existing sessions", async () => {
@@ -226,16 +229,20 @@ test("failed Claude model discovery closes the query and retries after a short c
 test("Claude discovery keeps concurrent requests, results and failures separate by settings and environment", async () => {
   vi.stubEnv("CLAUDE_CODE_USE_BEDROCK", "1");
 
-  const defaults = initialValuesSchema.parse({
-    default_provider: "claude",
-    default_worker_profile: "reviewer",
-    default_workspace_strategy: "current_repo",
-    max_runtime_minutes: null,
-    max_cost_usd: null,
-  });
+  const defaults = settingsDefaults("claude");
 
-  const isolated = { ...defaults, claude_settings_files: false };
-  const filtered = { ...isolated, claude_environment: "filtered" as const };
+  const isolated = withSetting(
+    defaults,
+    "providers.claude.settings_files",
+    false,
+  );
+
+  const filtered = withSetting(
+    isolated,
+    "providers.claude.environment",
+    "filtered",
+  );
+
   const launches: Options[] = [];
   const releases: ((models: ModelChoice[]) => void)[] = [];
   const failures: ((error: Error) => void)[] = [];

@@ -140,7 +140,11 @@ async function setup(t: TestContext) {
 
 test("HTTP MCP resolves the extension permission setting regardless of host or argument permission metadata", async (t) => {
   const { c, rpc, request } = await setup(t);
-  c.settings.update("local", { set: { claude_permission_mode: "auto" } });
+
+  c.settings.update("local", {
+    set: { providers: { claude: { permission_mode: "auto" } } },
+  });
+
   const started = await rpc("start_task", request, parentMeta);
   assert.equal(started.result.isError, undefined, JSON.stringify(started));
   const task = started.result.structuredContent.result;
@@ -178,7 +182,11 @@ test("HTTP MCP resolves the extension permission setting regardless of host or a
 
 test("cookie-authenticated user tasks use the extension permission setting", async (t) => {
   const { c, post, request } = await setup(t);
-  c.settings.update("local", { set: { claude_permission_mode: "auto" } });
+
+  c.settings.update("local", {
+    set: { providers: { claude: { permission_mode: "auto" } } },
+  });
+
   const login = await post("/api/login", { token: "test-token" });
   const [cookie] = login.headers.get("set-cookie")!.split(";");
 

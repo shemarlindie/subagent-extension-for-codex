@@ -11,6 +11,7 @@ export interface ProviderMetadata {
   costBudgetHelp?: string;
   nativePermissions?: {
     permissionOption: string;
+    /** The settings path of the saved native permission mode. */
     permissionSetting: string;
     approvalDeciderOption?: string;
     options: { value: string; label: string }[];
@@ -31,7 +32,7 @@ export const claudeMetadata: ProviderMetadata = {
     "Claude checks cost after a response. Usage may exceed the budget, and interrupted usage may be missing.",
   nativePermissions: {
     permissionOption: "permission_mode",
-    permissionSetting: "claude_permission_mode",
+    permissionSetting: "providers.claude.permission_mode",
     approvalDeciderOption: "approval_decider",
     formTitle: "Claude permission mode",
     formHelp:

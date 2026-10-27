@@ -54,14 +54,17 @@ test("discovery and effort validation use each owner's current settings", async 
       value: "configured-model",
       displayName: "Configured model",
       description: "",
-      supportsEffort: settings?.claude_settings_files === false,
+      supportsEffort: settings?.providers.claude.settings_files === false,
     },
   ];
 
   const { c, repo, store } = await setup(provider);
 
   try {
-    c.settings.update("alice", { set: { claude_settings_files: false } });
+    c.settings.update("alice", {
+      set: { providers: { claude: { settings_files: false } } },
+    });
+
     const alice = (await c.availableWorkers("alice"))[0];
     const bob = (await c.availableWorkers("bob"))[0];
     assert.ok(alice && "models" in alice);
@@ -83,7 +86,9 @@ test("discovery and effort validation use each owner's current settings", async 
       /does not support reasoning effort high/,
     );
 
-    c.settings.update("alice", { set: { claude_settings_files: true } });
+    c.settings.update("alice", {
+      set: { providers: { claude: { settings_files: true } } },
+    });
 
     await assert.rejects(
       c.start("alice", request),
@@ -250,7 +255,7 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
       );
 
       c.settings.update("alice", {
-        set: { default_reasoning_effort: reasoning_effort },
+        set: { models: { global: { reasoning_effort } } },
       });
 
       await assert.rejects(
@@ -347,11 +352,13 @@ test("task tools honor defaults and explicit overrides without changing existing
 
   c.settings.update("alice", {
     set: {
-      max_runtime_minutes: 9,
-      use_runtime_budget: true,
-      max_cost_usd: 3,
-      use_cost_budget: true,
-      default_worker_profile: "implementer",
+      task: {
+        worker_profile: "implementer",
+        budget: {
+          max_runtime_minutes: { enabled: true, amount: 9 },
+          max_cost_usd: { enabled: true, amount: 3 },
+        },
+      },
     },
   });
 
@@ -365,7 +372,11 @@ test("task tools honor defaults and explicit overrides without changing existing
   assert.equal(task.worker_profile, "implementer");
   assert.equal(task.budget.max_runtime_minutes, 9);
   assert.equal(task.budget.max_cost_usd, 1);
-  c.settings.update("alice", { set: { max_runtime_minutes: 7 } });
+
+  c.settings.update("alice", {
+    set: { task: { budget: { max_runtime_minutes: { amount: 7 } } } },
+  });
+
   assert.equal(c.store.get(task.id, "alice").budget.max_runtime_minutes, 9);
 
   const other: any = await callTool(c, "bob", "start_task", {

@@ -1,3 +1,5 @@
+import { settingAt } from "../../../../shared/settings/settings-schema";
+import { scalarText } from "../../../../shared/text";
 import type { NewTaskState, Snapshot } from "../../../app/state/types";
 import type { Defaults } from "../../settings/types";
 import { delegateInitialValues } from "../delegate-initial-values";
@@ -28,12 +30,12 @@ export function profileValues(
   worker: string,
   defaults?: Defaults,
 ): Pick<DelegateValues, "model" | "reasoning_effort"> {
-  const { profile } = workerChoice(worker);
+  const scope = `models.profiles.${workerChoice(worker).profile}`,
+    saved = (key: string) => scalarText(settingAt(defaults, `${scope}.${key}`));
 
   return {
-    model: defaults?.[`${profile}_default_model`] || "",
-    reasoning_effort:
-      defaults?.[`${profile}_default_reasoning_effort`] || "default",
+    model: saved("model"),
+    reasoning_effort: saved("reasoning_effort") || "default",
   };
 }
 
@@ -49,7 +51,7 @@ export function newTaskInitialValues(
 ): DelegateValues {
   const projects = newTaskProjects(state),
     provider =
-      newTask.defaults?.default_provider || state.workers[0]?.provider || "",
+      newTask.defaults?.task.provider || state.workers[0]?.provider || "",
     repository =
       state.repository ??
       (projects.length === 1 ? projects[0]?.repository : undefined);

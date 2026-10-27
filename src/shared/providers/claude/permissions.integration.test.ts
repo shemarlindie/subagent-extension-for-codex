@@ -16,6 +16,7 @@ import { Settings } from "../../../service/features/settings/settings.js";
 import { Control } from "../../../service/features/tasks/runtime/control.js";
 import { Store } from "../../../service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../service/features/workspaces/workspace.js";
+import { settingPaths } from "../../settings/settings-schema.js";
 import { startSchema, type Task } from "../../tasks/model.js";
 import { claudeMetadata } from "../metadata.js";
 import {
@@ -89,48 +90,68 @@ const taskOptions = (task: Task) => readClaudeTaskOptions(task);
 test("settings default to Default, expose only SDK permission modes, persist overrides, and require user authority", async (t) => {
   const { c, store } = await setup(t);
   const settings = c.settings;
-  assert.equal(settings.values("alice").claude_permission_mode, "default");
-  const properties = settings.read("alice").schema.properties!;
-  const permissionMode = properties.claude_permission_mode;
-  assert.ok(permissionMode);
 
-  assert.deepEqual(permissionMode.enum, claudePermissionModes);
+  assert.equal(
+    settings.values("alice").providers.claude.permission_mode,
+    "default",
+  );
 
-  assert.equal(Object.hasOwn(properties, "default_approval_mode"), false);
+  const { schema, values } = settings.read("alice");
 
-  for (const key of Object.keys(settings.read("alice").values)) {
-    assert.ok(
-      Object.hasOwn(properties, key),
-      `${key} needs a host schema property`,
-    );
+  const property = (path: string) =>
+    path
+      .split(".")
+      .reduce<Record<string, unknown> | undefined>(
+        (node, key) =>
+          (node?.properties as Record<string, Record<string, unknown>>)?.[key],
+        schema,
+      );
+
+  assert.deepEqual(
+    property("providers.claude.permission_mode")?.enum,
+    claudePermissionModes,
+  );
+
+  assert.equal(property("providers")?.userOnly, true);
+
+  for (const path of settingPaths(values)) {
+    assert.ok(property(path), `${path} needs a host schema property`);
   }
 
   assert.throws(
     () =>
       settings.update(
         "alice",
-        { set: { claude_permission_mode: "bypassPermissions" } },
+        {
+          set: {
+            providers: { claude: { permission_mode: "bypassPermissions" } },
+          },
+        },
         "parent",
       ),
-    /user decision/,
+    /Claude permission mode requires a user decision/,
   );
 
   settings.update("alice", {
     set: {
-      claude_permission_mode: "dontAsk",
-      default_approval_decider: "parent_agent",
+      providers: { claude: { permission_mode: "dontAsk" } },
+      approvals: { decider: "parent_agent" },
     },
   });
 
   const reloaded = new Settings(store.database, () => ["claude"]);
-  assert.equal(reloaded.values("alice").claude_permission_mode, "dontAsk");
 
   assert.equal(
-    reloaded.values("alice").default_approval_decider,
-    "parent_agent",
+    reloaded.values("alice").providers.claude.permission_mode,
+    "dontAsk",
   );
 
-  assert.equal(reloaded.values("bob").claude_permission_mode, "default");
+  assert.equal(reloaded.values("alice").approvals.decider, "parent_agent");
+
+  assert.equal(
+    reloaded.values("bob").providers.claude.permission_mode,
+    "default",
+  );
 });
 
 test("task arguments cannot spoof parent permissions and resolved source is stored", async (t) => {
@@ -169,7 +190,10 @@ test("task arguments cannot spoof parent permissions and resolved source is stor
 
 test("task-level inherit uses the extension's configured Auto mode", async (t) => {
   const { c, request } = await setup(t);
-  c.settings.update("alice", { set: { claude_permission_mode: "auto" } });
+
+  c.settings.update("alice", {
+    set: { providers: { claude: { permission_mode: "auto" } } },
+  });
 
   const task = await c.start(
     "alice",
@@ -244,8 +268,8 @@ test("parent cannot increase native permissions or grant itself decision authori
 
   c.settings.update("alice", {
     set: {
-      claude_permission_mode: "bypassPermissions",
-      default_approval_decider: "parent_agent",
+      providers: { claude: { permission_mode: "bypassPermissions" } },
+      approvals: { decider: "parent_agent" },
     },
   });
 
@@ -377,9 +401,8 @@ test("native unresolved approvals honor their decision setting independently of 
 
   c.settings.update("alice", {
     set: {
-      default_approval_mode: "auto_approve",
-      claude_permission_mode: "default",
-      default_approval_decider: "user",
+      approvals: { execution_mode: "auto_approve", decider: "user" },
+      providers: { claude: { permission_mode: "default" } },
     },
   });
 
@@ -406,7 +429,7 @@ test("native unresolved approvals honor their decision setting independently of 
   await until(() => store.get(task.id, "alice").status === "completed");
 
   c.settings.update("alice", {
-    set: { default_approval_decider: "parent_agent" },
+    set: { approvals: { decider: "parent_agent" } },
   });
 
   const delegated = await c.start("alice", request, "parent");
@@ -438,11 +461,15 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
 
   c.settings.update("alice", {
     set: {
-      claude_sandbox: "extension_locked",
-      claude_environment: "filtered",
-      claude_subagents: false,
-      claude_settings_files: false,
-      claude_user_mcp: false,
+      providers: {
+        claude: {
+          sandbox: "extension_locked",
+          environment: "filtered",
+          subagents: false,
+          settings_files: false,
+          user_mcp: false,
+        },
+      },
     },
   });
 
@@ -489,9 +516,9 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
   // A later settings change does not alter started tasks.
   c.settings.update("alice", {
     set: {
-      claude_tools: "restricted",
-      claude_settings_files: true,
-      claude_user_mcp: true,
+      providers: {
+        claude: { tools: "restricted", settings_files: true, user_mcp: true },
+      },
     },
   });
 

@@ -13,11 +13,14 @@ export async function runIsolatedScenario({
 }) {
   try {
     for (const settings of [
-      { claude_settings_files: false, claude_user_mcp: true },
-      { claude_settings_files: true, claude_user_mcp: false },
+      { settings_files: false, user_mcp: true },
+      { settings_files: true, user_mcp: false },
     ]) {
       await rm(join(root, "hook-fired"), { force: true });
-      control.settings.update("verification", { set: settings });
+
+      control.settings.update("verification", {
+        set: { providers: { claude: settings } },
+      });
 
       const task = await control.start("verification", {
         ...taskBase,
@@ -74,7 +77,7 @@ export async function runIsolatedScenario({
 
       assert.equal(
         native.skills.includes("marker-skill"),
-        settings.claude_settings_files,
+        settings.settings_files,
         "Project skill loading differs from settings policy",
       );
 
@@ -101,7 +104,7 @@ export async function runIsolatedScenario({
 
       assert.equal(
         hookFired,
-        settings.claude_settings_files,
+        settings.settings_files,
         "Project hook loading differs from settings policy",
       );
 

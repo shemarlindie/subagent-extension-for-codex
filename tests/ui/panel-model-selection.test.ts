@@ -39,8 +39,8 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
     configureModelDefaults(
       transport,
       {
-        default_model: "limited-model",
-        default_reasoning_effort: "high",
+        "models.global.model": "limited-model",
+        "models.global.reasoning_effort": "high",
       },
       [
         {
@@ -162,7 +162,9 @@ test("model selection retains unsupported effort on Claude and blocks submission
 
 test("model selection rejects unsupported inherited Claude effort and accepts an explicit supported override", async (t) => {
   const panel = await setup(t, (transport) =>
-    configureModelDefaults(transport, { default_reasoning_effort: "none" }),
+    configureModelDefaults(transport, {
+      "models.global.reasoning_effort": "none",
+    }),
   );
 
   const { user } = panel;
@@ -189,12 +191,12 @@ test("model selection rejects unsupported inherited Claude effort and accepts an
 test("model selection updates role and provider defaults while preserving explicit drafts", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     configureModelDefaults(transport, {
-      default_model: "global-model",
-      default_reasoning_effort: "low",
-      claude_default_model: "claude-model",
-      claude_default_reasoning_effort: "medium",
-      reviewer_default_model: "review-model",
-      reviewer_default_reasoning_effort: "max",
+      "models.global.model": "global-model",
+      "models.global.reasoning_effort": "low",
+      "models.providers.claude.model": "claude-model",
+      "models.providers.claude.reasoning_effort": "medium",
+      "models.profiles.reviewer.model": "review-model",
+      "models.profiles.reviewer.reasoning_effort": "max",
     }),
   );
 

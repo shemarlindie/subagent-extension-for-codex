@@ -45,7 +45,7 @@ test("an unfamiliar worker supplies its native permissions and budget presentati
           costBudgetHelp: "Costs are metered before each request.",
           nativePermissions: {
             permissionOption: "mode",
-            permissionSetting: "new_mode",
+            permissionSetting: "providers.new_built_in.mode",
             approvalDeciderOption: "decider",
             options: [{ value: "inherit", label: "Runtime policy" }],
             help: "Use the provider's own native policy.",
@@ -138,7 +138,7 @@ test("permission fields stay unresolved until worker metadata arrives", (t) => {
 test("provider option defaults read the provider's permission setting and the shared decider", () => {
   const nativePermissions = {
     permissionOption: "mode",
-    permissionSetting: "new_mode",
+    permissionSetting: "providers.new_built_in.mode",
     approvalDeciderOption: "decider",
     options: [{ value: "locked", label: "Locked" }],
     help: "Provider permissions.",
@@ -146,8 +146,8 @@ test("provider option defaults read the provider's permission setting and the sh
   };
 
   const settings = {
-    new_mode: "locked",
-    default_approval_decider: "parent_agent",
+    providers: { new_built_in: { mode: "locked" } },
+    approvals: { decider: "parent_agent" },
   };
 
   assert.deepEqual(

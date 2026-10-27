@@ -113,7 +113,7 @@ directly. Worktree commits live on `task.branch`.
 
 ## Permissions and input
 
-Claude tasks resolve `inherit` to the saved `claude_permission_mode`, which
+Claude tasks resolve `inherit` to the saved `providers.claude.permission_mode`, which
 defaults to `default`. The service stores the resolved mode and its source in
 `task.provider_options.claude`. Your own permission mode is not passed on.
 Model-selected overrides cannot increase permission or approval authority beyond
@@ -122,23 +122,24 @@ the user-approved inherited baseline. See
 modes and override rules.
 
 `provider_options.claude.approval_decider` controls who answers permission
-requests. It is `user` or `parent_agent` and inherits `default_approval_decider`
+requests. It is `user` or `parent_agent` and inherits the `approvals.decider` setting
 (`user` by default). Native SDK checks can allow or deny an action before it
 reaches the permission callback.
 
 With default session settings, write-profile Claude tasks use the host's native
 tools, subagents, Claude Code settings, MCP servers, sandbox settings and
 environment. Read-only profiles restrict tools and paths. The user can configure
-session restrictions through `claude_sandbox`, `claude_environment`,
-`claude_tools`, `claude_path_guard`, `claude_subagents`,
-`claude_settings_files` and `claude_user_mcp` in settings.
+session restrictions under `providers.claude` in settings: `sandbox`,
+`environment`, `tools`, `path_guard`, `subagents`, `settings_files` and
+`user_mcp`.
 Read-only profiles get restricted tools and the path guard unless the user
 loosens them. Enabled restrictions and repository checks apply in every native
 mode. Model-visible `update_settings` cannot change session restrictions.
 
 Trusted panel submissions can authorize task overrides. Model-visible
-`update_settings` rejects permission, approval-authority and automatic
-project registration defaults. User changes use app-only
+`update_settings` changes `task` and `models` defaults. It rejects settings
+under `approvals`, `projects` and `providers`, which `get_settings` marks
+`userOnly`. User changes use app-only
 `app_update_settings`. The embedded panel starts tasks through app-only
 `app_start_task`. The standalone console authenticates user actions
 through its session cookie.

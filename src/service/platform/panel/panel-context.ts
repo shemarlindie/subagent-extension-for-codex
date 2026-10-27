@@ -95,7 +95,7 @@ export async function resolvePanelContext(
             // New task may offer it; starting that task adds it with the user's choice.
             auto_register:
               !!c.projects &&
-              c.settings.values(owner).auto_register_chat_project,
+              c.settings.values(owner).projects.auto_register_chat,
           },
         }
       : {}),

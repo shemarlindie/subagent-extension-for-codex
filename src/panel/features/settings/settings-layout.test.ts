@@ -6,7 +6,6 @@ import {
   activeSection,
   changes,
   editCount,
-  onKey,
   rowForm,
   sectionsForm,
   type SettingRow,
@@ -15,21 +14,20 @@ import {
 
 const budget: SettingRow = {
   kind: "budget",
-  key: "max_cost_usd",
-  toggle: "use_cost_budget",
+  path: "task.budget.max_cost_usd",
   label: "Cost limit",
   unit: "USD",
   min: 0.01,
-  amount: 7,
 };
 
 const models: SettingRow = {
   kind: "models",
   scopes: [
     {
+      id: "global",
       label: "Global",
       model: {
-        key: "default_model",
+        path: "models.global.model",
         label: "Global model",
         options: [
           { value: "", label: "Inherit" },
@@ -37,7 +35,7 @@ const models: SettingRow = {
         ],
       },
       effort: {
-        key: "default_reasoning_effort",
+        path: "models.global.reasoning_effort",
         label: "Global reasoning effort",
         options: [
           { value: "default", label: "Inherit" },
@@ -55,14 +53,18 @@ const taskSection: SettingSection = {
   rows: [
     {
       kind: "select",
-      key: "default_workspace_strategy",
+      path: "task.workspace_strategy",
       label: "Workspace",
       options: [
         { value: "current_repo", label: "Current repository" },
         { value: "worktree", label: "Isolated worktree" },
       ],
     },
-    { kind: "switch", key: "claude_subagents", label: "Allow subagents" },
+    {
+      kind: "switch",
+      path: "providers.claude.subagents",
+      label: "Allow subagents",
+    },
     budget,
   ],
 };
@@ -76,62 +78,74 @@ const modelsSection: SettingSection = {
 const sections = [taskSection, modelsSection];
 
 const saved = {
-  default_workspace_strategy: "current_repo",
-  claude_subagents: true,
-  max_cost_usd: null,
-  default_model: "",
-  default_reasoning_effort: "default",
+  task: {
+    workspace_strategy: "current_repo",
+    budget: { max_cost_usd: { enabled: false, amount: 7 } },
+  },
+  providers: { claude: { subagents: true } },
+  models: { global: { model: "", reasoning_effort: "default" } },
+};
+
+// Form fields are flat. Each name is its path with dots replaced.
+const field = {
+  workspace: "task-workspace_strategy",
+  subagents: "providers-claude-subagents",
+  costOn: "task-budget-max_cost_usd-enabled",
+  cost: "task-budget-max_cost_usd-amount",
+  model: "models-global-model",
+  effort: "models-global-reasoning_effort",
 };
 
 test("form state holds strings, and a limit that is off keeps its amount", () => {
   assert.deepEqual(sectionsForm(sections, saved), {
-    default_workspace_strategy: "current_repo",
-    claude_subagents: "true",
-    max_cost_usd: "7",
-    [onKey("max_cost_usd")]: "false",
-    default_model: "",
-    default_reasoning_effort: "default",
+    [field.workspace]: "current_repo",
+    [field.subagents]: "true",
+    [field.costOn]: "false",
+    [field.cost]: "7",
+    [field.model]: "",
+    [field.effort]: "default",
   });
 
-  assert.deepEqual(rowForm(budget, { max_cost_usd: 3 }), {
-    max_cost_usd: "3",
-    [onKey("max_cost_usd")]: "true",
-  });
+  assert.deepEqual(
+    rowForm(budget, {
+      task: { budget: { max_cost_usd: { enabled: true, amount: 3 } } },
+    }),
+    { [field.costOn]: "true", [field.cost]: "3" },
+  );
 });
 
-test("updates hold only edits, typed, with budgets sent as switch and amount", () => {
+test("updates hold only edits, typed and nested, with budgets as switch and amount", () => {
   const initial = sectionsForm(sections, saved);
   assert.deepEqual(changes(sections, initial, initial), {});
 
-  // Turning a limit on sends its amount too, even when the amount is unchanged.
+  // Turning a limit on keeps its saved amount.
   assert.deepEqual(
     changes(
       sections,
       {
         ...initial,
-        claude_subagents: "false",
-        [onKey("max_cost_usd")]: "true",
-        default_model: "sonnet",
+        [field.subagents]: "false",
+        [field.costOn]: "true",
+        [field.model]: "sonnet",
       },
       initial,
     ),
     {
-      claude_subagents: false,
-      use_cost_budget: true,
-      max_cost_usd: 7,
-      default_model: "sonnet",
+      providers: { claude: { subagents: false } },
+      task: { budget: { max_cost_usd: { enabled: true } } },
+      models: { global: { model: "sonnet" } },
     },
   );
 
   // Changing only the amount while off keeps the limit off.
   assert.deepEqual(
-    changes(sections, { ...initial, max_cost_usd: "9" }, initial),
-    { max_cost_usd: 9 },
+    changes(sections, { ...initial, [field.cost]: "9" }, initial),
+    { task: { budget: { max_cost_usd: { amount: 9 } } } },
   );
 
-  // Clearing the amount while off keeps the saved one.
+  // Clearing the amount keeps the saved one.
   assert.deepEqual(
-    changes(sections, { ...initial, max_cost_usd: "" }, initial),
+    changes(sections, { ...initial, [field.cost]: "" }, initial),
     {},
   );
 });
@@ -141,10 +155,10 @@ test("edit counts treat a budget and a model scope as one row each", () => {
 
   const edited = {
     ...initial,
-    max_cost_usd: "9",
-    [onKey("max_cost_usd")]: "true",
-    default_model: "sonnet",
-    default_reasoning_effort: "high",
+    [field.cost]: "9",
+    [field.costOn]: "true",
+    [field.model]: "sonnet",
+    [field.effort]: "high",
   };
 
   assert.equal(editCount(taskSection, edited, initial), 1);

@@ -1,4 +1,8 @@
-import { titleCase } from "../../../../shared/settings/settings-document";
+import {
+  settingAt,
+  withSetting,
+} from "../../../../shared/settings/settings-schema";
+import { titleCase } from "../../../../shared/text";
 import {
   applyDelegateRead,
   type DelegateReadContext,
@@ -16,7 +20,6 @@ import type {
   Task,
 } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
-import type { Defaults } from "../../settings/types";
 import type { DelegateValues } from "../delegate-values";
 import { workerChoice } from "../delegation";
 import { startTaskArguments } from "../start-task";
@@ -188,23 +191,30 @@ export class NewTaskLoader {
     const { profile } = workerChoice(worker);
     if (!profile) return undefined;
 
-    const key = `${profile}_default_${field}` as const;
+    const path = `models.profiles.${profile}.${field}`;
 
     // Keeps the composer's loaded defaults in step, while it stays open.
-    const setDefault = (next: string | undefined, replacing?: string) => {
+    const setDefault = (next: unknown, replacing: unknown) => {
       const newTask = this.context.snapshot().newTask;
-      if (!newTask?.defaults || newTask.defaults[key] !== replacing) return;
 
-      const defaults: Defaults = { ...newTask.defaults };
-      defaults[key] = next;
+      if (
+        !newTask?.defaults ||
+        settingAt(newTask.defaults, path) !== replacing
+      ) {
+        return;
+      }
+
+      const defaults = withSetting(newTask.defaults, path, next);
       this.context.patch({ newTask: { ...newTask, defaults } });
     };
 
-    const previous = this.context.snapshot().newTask?.defaults?.[key];
+    const previous = settingAt(this.context.snapshot().newTask?.defaults, path);
     setDefault(value, previous);
 
     try {
-      await this.context.tool("update_settings", { set: { [key]: value } });
+      await this.context.tool("update_settings", {
+        set: withSetting({}, path, value),
+      });
     } catch (error) {
       // Restore the loaded default unless a later choice replaced it.
       setDefault(previous, value);

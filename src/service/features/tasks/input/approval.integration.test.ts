@@ -136,7 +136,7 @@ test("parent_agent permits parent decisions only after user configuration", asyn
   try {
     c.settings.update(
       "alice",
-      { set: { default_approval_mode: "parent_agent" } },
+      { set: { approvals: { execution_mode: "parent_agent" } } },
       "user",
     );
 
@@ -178,20 +178,24 @@ test("parent cannot raise approval authority or mutate approval settings", async
 
       await assert.rejects(
         callTool(c, "alice", "update_settings", {
-          set: { default_approval_mode: mode },
+          set: { approvals: { execution_mode: mode } },
         }),
-        /require a user decision/,
+        /Execution approval mode requires a user decision/,
       );
     }
 
     assert.equal(store.all().length, 0);
-    assert.equal(c.settings.values("alice").default_approval_mode, "ask_user");
+
+    assert.equal(
+      c.settings.values("alice").approvals.execution_mode,
+      "ask_user",
+    );
 
     await callTool(c, "alice", "update_settings", {
-      set: { default_model: "Updated" },
+      set: { models: { global: { model: "Updated" } } },
     });
 
-    assert.equal(c.settings.values("alice").default_model, "Updated");
+    assert.equal(c.settings.values("alice").models.global.model, "Updated");
   } finally {
     await cleanup();
   }
@@ -205,12 +209,12 @@ test("user calls can update the approval setting", async () => {
       c,
       "alice",
       "app_update_settings",
-      { set: { default_approval_mode: "auto_approve" } },
+      { set: { approvals: { execution_mode: "auto_approve" } } },
       "user",
     );
 
     assert.equal(
-      c.settings.values("alice").default_approval_mode,
+      c.settings.values("alice").approvals.execution_mode,
       "auto_approve",
     );
   } finally {
@@ -225,7 +229,7 @@ for (const mode of approvalModes) {
     try {
       c.settings.update(
         "alice",
-        { set: { default_approval_mode: mode } },
+        { set: { approvals: { execution_mode: mode } } },
         "user",
       );
 
@@ -345,7 +349,7 @@ test("parents can restrict approval authority but cannot escalate any saved mode
     for (let defaultIndex = 0; defaultIndex < ordered.length; defaultIndex++) {
       c.settings.update(
         "alice",
-        { set: { default_approval_mode: ordered[defaultIndex] } },
+        { set: { approvals: { execution_mode: ordered[defaultIndex] } } },
         "user",
       );
 

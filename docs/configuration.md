@@ -103,7 +103,7 @@ service start approves it again. See
 [Manage projects](panel-guide.md#manage-projects) for renaming, removal and
 task data cleanup.
 
-**Automatically add chat projects** (`auto_register_chat_project`, default
+**Automatically add chat projects** (`projects.auto_register_chat`, default
 `true`) is a user-only setting. When a task starts from a chat whose Git root
 is unapproved, it registers that root using the host's sandbox metadata.
 
@@ -126,30 +126,42 @@ Existing tasks keep their original repository and workspace. See
 Open **Settings** in the panel header. Values persist per user and apply to new
 tasks. Existing tasks keep their resolved settings.
 
-| Setting                 | Initial value                                        |
-| ----------------------- | ---------------------------------------------------- |
-| Provider                | Claude when enabled, otherwise the first enabled one |
-| Worker profile          | `reviewer`                                           |
-| Workspace strategy      | `current_repo`                                       |
-| Worktree branch prefix  | `agent/`                                             |
-| Runtime limit           | No limit                                             |
-| Cost limit              | No limit                                             |
-| Claude permission mode  | `default`                                            |
-| Approval decision maker | `user`                                               |
+Settings are grouped by what they control:
+
+| Group            | Contents                                                                                   | Who can change it |
+| ---------------- | ------------------------------------------------------------------------------------------ | ----------------- |
+| `task`           | Defaults for `start_task`, under its field names, plus `worktree_branch_prefix`            | Agents and you    |
+| `models`         | Model and reasoning defaults for `global`, each provider and each worker profile           | Agents and you    |
+| `approvals`      | The approval decision maker for every provider, and the execution approval mode            | You only          |
+| `projects`       | `auto_register_chat`                                                                       | You only          |
+| `providers.<id>` | Settings native to one provider, such as Claude's permission mode and session restrictions | You only          |
+
+| Setting                 | Path                               | Initial value                                        |
+| ----------------------- | ---------------------------------- | ---------------------------------------------------- |
+| Provider                | `task.provider`                    | Claude when enabled, otherwise the first enabled one |
+| Worker profile          | `task.worker_profile`              | `reviewer`                                           |
+| Workspace strategy      | `task.workspace_strategy`          | `current_repo`                                       |
+| Worktree branch prefix  | `task.worktree_branch_prefix`      | `agent/`                                             |
+| Runtime limit           | `task.budget.max_runtime_minutes`  | Off, 20 minutes                                      |
+| Cost limit              | `task.budget.max_cost_usd`         | Off, 5 USD                                           |
+| Claude permission mode  | `providers.claude.permission_mode` | `default`                                            |
+| Approval decision maker | `approvals.decider`                | `user`                                               |
 
 The worker profile setting applies to agent calls and the Advanced task dialog.
 The panel's **New task** composer starts with the General profile instead. Its
 model and reasoning choices save to the selected profile's
-`<profile>_default_model` and `<profile>_default_reasoning_effort` settings.
+`models.profiles.<profile>` settings.
 See [Create and rename tasks](panel-guide.md#create-and-rename-tasks).
 
 Agents use `get_settings` to discover fields and `update_settings` to change
-ordinary defaults. User-only settings need the app-only `app_update_settings`
-tool or an authenticated console. See
-[App and user authority](mcp-reference.md#app-and-user-authority).
+`task` and `models` defaults. An update is a nested partial of the values:
+groups merge and values replace. The other groups are marked `userOnly` in the
+schema and need the app-only `app_update_settings` tool or an authenticated
+console. See [App and user authority](mcp-reference.md#app-and-user-authority).
 
-A budget limit can be turned off while its amount stays saved. Editing the
-amount leaves the limit off until you turn it on. The app sets no upper bound
+Each budget limit has `enabled` and `amount`, so turning a limit off keeps its
+amount. Editing the amount leaves the limit off until you turn it on. New tasks
+get the amount as their limit when it's on, and no limit when it's off. The app sets no upper bound
 on runtime or cost, and a provider rejects limits it cannot support before the
 task runs. See [Raise a task budget](task-continuation.md#raise-a-task-budget)
 for existing tasks.
@@ -161,8 +173,8 @@ provider becomes unavailable, new tasks use the first enabled provider.
 
 Open **Settings** and choose **Import and export**.
 
-Exports include your saved defaults and remembered amounts for disabled
-budgets. Approved projects aren't included. Add them separately on each
+Exports include your saved defaults, including the amounts of budget limits
+that are off. Approved projects aren't included. Add them separately on each
 computer.
 
 **Export file** creates a new JSON file in Downloads on the computer
@@ -185,6 +197,7 @@ export. It can also change permissions and other user-only settings. Import
 skips unknown settings, invalid values and an unavailable default provider, then
 lists what it skipped. Omitted and skipped settings keep their current values.
 If the export uses a newer format, update the extension before importing it.
+Exports from before settings were grouped can't be imported. Export them again.
 
 Tool integrators should see
 [App and user authority](mcp-reference.md#app-and-user-authority).
@@ -194,12 +207,12 @@ Tool integrators should see
 The service resolves the model and the reasoning effort separately. Each takes
 the first value set in this order:
 
-| Scope    | Model                     | Reasoning effort                     |
-| -------- | ------------------------- | ------------------------------------ |
-| Task     | `model`                   | `reasoning_effort`                   |
-| Profile  | `<profile>_default_model` | `<profile>_default_reasoning_effort` |
-| Provider | `claude_default_model`    | `claude_default_reasoning_effort`    |
-| Global   | `default_model`           | `default_reasoning_effort`           |
+| Scope    | Model                             | Reasoning effort                             |
+| -------- | --------------------------------- | -------------------------------------------- |
+| Task     | `model`                           | `reasoning_effort`                           |
+| Profile  | `models.profiles.<profile>.model` | `models.profiles.<profile>.reasoning_effort` |
+| Provider | `models.providers.claude.model`   | `models.providers.claude.reasoning_effort`   |
+| Global   | `models.global.model`             | `models.global.reasoning_effort`             |
 
 A blank model and `default` reasoning inherit from the next scope. When every
 scope inherits, the provider runtime's default applies. Task values come from
@@ -227,7 +240,7 @@ Code's own `permissions.defaultMode` does not apply, so choosing `auto` here
 selects Auto whatever that setting says. The parent agent's mode is not
 inherited either.
 
-- `claude_permission_mode` sets the default for new tasks.
+- `providers.claude.permission_mode` sets the default for new tasks.
 - `provider_options.claude.permission_mode` overrides it for one task.
   `inherit` uses the saved setting.
 - Each task stores its resolved mode and whether it came from the task or the
@@ -249,7 +262,7 @@ panel can.
 
 `provider_options.claude.approval_decider` chooses who answers permission
 requests that native checks leave unresolved. It accepts `user` or
-`parent_agent` and defaults to the `default_approval_decider` setting. An agent
+`parent_agent` and defaults to the `approvals.decider` setting. An agent
 can choose `parent_agent` only when that setting already allows it.
 
 - It never makes every action prompt.
@@ -268,18 +281,19 @@ settings. These include `CLAUDE.md`, rules, skills, hooks, permission allow and
 deny rules, MCP servers, connectors, sandbox settings and environment settings.
 A native allow or deny rule may decide a call before the extension sees it.
 
-These user-only settings restrict delegated sessions. Each task stores its
-resolved restrictions, so later changes never broaden an existing task.
+These user-only settings under `providers.claude` restrict delegated sessions.
+Each task stores its resolved restrictions, so later changes never broaden an
+existing task.
 
-| Setting                 | Default       | Choices                                                                                                                                                                                                                                                                                                                 |
-| ----------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `claude_sandbox`        | `user_config` | `user_config` uses your Claude Code sandbox settings. `extension` limits Bash writes to the workspace, protects Git metadata, blocks reads of home, the data directory and sibling worktrees, blocks the network, and never runs Bash unsandboxed. `extension_locked` also ignores network domains your settings allow. |
-| `claude_environment`    | `inherit`     | `inherit` passes the service environment except `CODEX_SUBAGENT_EXTENSION_*`, `OPENAI_*` and `CLAUDE_CODE_OAUTH_TOKEN`. `filtered` passes basic process variables plus `CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`. Settings-file `env` applies in both while settings files load.              |
-| `claude_tools`          | `profile`     | `all` offers every native tool. `restricted` offers file, search, Bash, question, skill and MCP tools, and gives read-only work only read, question and skill tools plus the parent report tool. `profile` restricts read-only profiles only.                                                                           |
-| `claude_path_guard`     | `profile`     | `on` keeps file tools inside the workspace and out of Git metadata. `off` relies on native rules. `profile` turns the guard on for read-only profiles.                                                                                                                                                                  |
-| `claude_subagents`      | `true`        | `false` blocks the Agent tool and its legacy Task name.                                                                                                                                                                                                                                                                 |
-| `claude_settings_files` | `true`        | `false` loads no user, project or local settings files, so their instructions, skills, hooks, permission rules, sandbox settings and MCP servers don't apply. With `claude_sandbox: user_config`, the sandbox then follows Claude Code's defaults.                                                                      |
-| `claude_user_mcp`       | `true`        | `false` ignores MCP servers from your Claude Code configuration, including `.mcp.json`, user-scope and plugin servers. `claude_settings_files: false` does the same. Sessions keep the extension's own parent report server.                                                                                            |
+| Setting          | Default       | Choices                                                                                                                                                                                                                                                                                                                 |
+| ---------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sandbox`        | `user_config` | `user_config` uses your Claude Code sandbox settings. `extension` limits Bash writes to the workspace, protects Git metadata, blocks reads of home, the data directory and sibling worktrees, blocks the network, and never runs Bash unsandboxed. `extension_locked` also ignores network domains your settings allow. |
+| `environment`    | `inherit`     | `inherit` passes the service environment except `CODEX_SUBAGENT_EXTENSION_*`, `OPENAI_*` and `CLAUDE_CODE_OAUTH_TOKEN`. `filtered` passes basic process variables plus `CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`. Settings-file `env` applies in both while settings files load.              |
+| `tools`          | `profile`     | `all` offers every native tool. `restricted` offers file, search, Bash, question, skill and MCP tools, and gives read-only work only read, question and skill tools plus the parent report tool. `profile` restricts read-only profiles only.                                                                           |
+| `path_guard`     | `profile`     | `on` keeps file tools inside the workspace and out of Git metadata. `off` relies on native rules. `profile` turns the guard on for read-only profiles.                                                                                                                                                                  |
+| `subagents`      | `true`        | `false` blocks the Agent tool and its legacy Task name.                                                                                                                                                                                                                                                                 |
+| `settings_files` | `true`        | `false` loads no user, project or local settings files, so their instructions, skills, hooks, permission rules, sandbox settings and MCP servers don't apply. With `sandbox: user_config`, the sandbox then follows Claude Code's defaults.                                                                             |
+| `user_mcp`       | `true`        | `false` ignores MCP servers from your Claude Code configuration, including `.mcp.json`, user-scope and plugin servers. `settings_files: false` does the same. Sessions keep the extension's own parent report server.                                                                                                   |
 
 The read-only profiles are `researcher`, `reviewer` and `security_reviewer`.
 

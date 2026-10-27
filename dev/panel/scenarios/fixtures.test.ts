@@ -198,11 +198,11 @@ test("the chat project candidate follows the auto-add setting", () => {
     });
 
     const settings = previewTool("get_settings", {}, options) as {
-      values: Record<string, unknown>;
+      values: { projects: { auto_register_chat: boolean } };
     };
 
     assert.equal(
-      settings.values.auto_register_chat_project,
+      settings.values.projects.auto_register_chat,
       autoRegisterChatProject,
     );
   }

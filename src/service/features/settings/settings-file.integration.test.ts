@@ -29,11 +29,11 @@ test("parallel exports create private distinct files containing the saved defaul
 
   settings.update("source", {
     set: {
-      worktree_branch_prefix: "exported/",
-      claude_settings_files: false,
-      claude_user_mcp: false,
-      max_cost_usd: 17,
-      use_cost_budget: false,
+      task: {
+        worktree_branch_prefix: "exported/",
+        budget: { max_cost_usd: { enabled: false, amount: 17 } },
+      },
+      providers: { claude: { settings_files: false, user_mcp: false } },
     },
   });
 
@@ -47,13 +47,13 @@ test("parallel exports create private distinct files containing the saved defaul
   expect(await readFile(second.path, "utf8")).toBe(document);
 
   expect(JSON.parse(document)).toMatchObject({
-    format: 1,
+    format: 2,
     settings: {
-      worktree_branch_prefix: "exported/",
-      claude_settings_files: false,
-      claude_user_mcp: false,
-      max_cost_usd: 17,
-      use_cost_budget: false,
+      task: {
+        worktree_branch_prefix: "exported/",
+        budget: { max_cost_usd: { enabled: false, amount: 17 } },
+      },
+      providers: { claude: { settings_files: false, user_mcp: false } },
     },
   });
 

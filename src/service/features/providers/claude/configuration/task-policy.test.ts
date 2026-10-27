@@ -73,7 +73,10 @@ test("Claude task-level inherit resolves to the configured extension Auto mode",
 
   try {
     const settings = new Settings(store.database, () => ["claude"]);
-    settings.update("alice", { set: { claude_permission_mode: "auto" } });
+
+    settings.update("alice", {
+      set: { providers: { claude: { permission_mode: "auto" } } },
+    });
 
     const input = startSchema.parse({
       repository: "/repo",
@@ -148,7 +151,7 @@ test("Claude preparation checks native permission, approval decider, and effort 
       );
     }
 
-    defaults.default_approval_decider = "parent_agent";
+    defaults.approvals.decider = "parent_agent";
 
     assert.doesNotThrow(() =>
       prepare({

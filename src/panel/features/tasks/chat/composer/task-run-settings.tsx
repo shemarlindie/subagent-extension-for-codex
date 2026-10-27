@@ -1,7 +1,7 @@
 import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions";
 import { providerTaskFacts } from "../../../../../shared/providers/presentation";
 import type { ModelChoice } from "../../../../../shared/providers/types";
-import { titleCase } from "../../../../../shared/settings/settings-document";
+import { titleCase } from "../../../../../shared/text";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
 import { Icon } from "../../../../shared/components/icons/icons";

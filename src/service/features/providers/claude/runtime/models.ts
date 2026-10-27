@@ -23,7 +23,7 @@ export class ModelCatalog {
     private cli: Pick<ClaudeCli, "executable">,
     private configuration: Pick<
       ClaudeOverrides,
-      "claude_settings_files" | "claude_environment"
+      "settings_files" | "environment"
     > = claudeOverrideDefaults,
   ) {}
 
@@ -71,13 +71,10 @@ export class ModelCatalog {
       options: {
         pathToClaudeCodeExecutable,
         // Match the user's task environment and settings-file policy.
-        env: claudeEnvironment(
-          process.env,
-          this.configuration.claude_environment,
-        ),
+        env: claudeEnvironment(process.env, this.configuration.environment),
         abortController,
         persistSession: false,
-        settingSources: this.configuration.claude_settings_files
+        settingSources: this.configuration.settings_files
           ? ["user", "project", "local"]
           : [],
         // Model listing must not run the user's settings-file hooks on every refresh.

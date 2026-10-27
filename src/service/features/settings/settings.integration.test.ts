@@ -5,10 +5,14 @@ import { join } from "node:path";
 
 import { test, type TestContext } from "vitest";
 
-import { sectionKeys } from "../../../panel/features/settings/settings-layout.js";
+import { sectionPaths } from "../../../panel/features/settings/settings-layout.js";
 import { claudeOverrideDefaults } from "../../../shared/providers/claude/permissions.js";
 import type { ModelChoice } from "../../../shared/providers/types.js";
 import { withHelp } from "../../../shared/settings/settings-document.js";
+import {
+  settingAt,
+  settingPaths,
+} from "../../../shared/settings/settings-schema.js";
 import { Store } from "../tasks/storage/store.js";
 import { Settings } from "./settings.js";
 import {
@@ -16,25 +20,47 @@ import {
   settingsUpdateOutputSchema,
 } from "./settings-values.js";
 
-// A budget as the panel shows it: whether it applies, and its amount
-// (remembered while off).
-function budget(result: ReturnType<Settings["read"]>, key: string) {
-  const row = result.sections
-    .flatMap((section) => section.rows)
-    .find((r) => r.kind === "budget" && r.key === key);
+type Read = ReturnType<Settings["read"]>;
 
-  const value = (result.values as Record<string, unknown>)[key];
+type SchemaNode = Record<string, unknown> & {
+  properties?: Record<string, SchemaNode>;
+  enum?: unknown[];
+  description?: string;
+};
 
-  return [value !== null, value ?? (row?.kind === "budget" && row.amount)];
+// The JSON Schema node for a dotted settings path.
+function schemaNode(result: Read, path: string) {
+  return path
+    .split(".")
+    .reduce<SchemaNode | undefined>(
+      (node, key) => node?.properties?.[key],
+      result.schema as SchemaNode,
+    );
 }
 
 // A schema property the test expects the settings document to expose.
-function schemaField(result: ReturnType<Settings["read"]>, key: string) {
-  const field = result.schema.properties?.[key];
-  assert.ok(field, `${key} is in the settings schema`);
+function schemaField(result: Read, path: string) {
+  const field = schemaNode(result, path);
+  assert.ok(field, `${path} is in the settings schema`);
 
   return field;
 }
+
+// Every schema node below the root, by dotted path.
+function schemaNodes(node: SchemaNode, prefix = ""): [string, SchemaNode][] {
+  return Object.entries(node.properties ?? {}).flatMap(([key, child]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+
+    return [[path, child] as [string, SchemaNode], ...schemaNodes(child, path)];
+  });
+}
+
+const listed = (result: Read) => result.sections.flatMap(sectionPaths);
+
+const budgets = (
+  cost: { enabled?: boolean; amount?: number },
+  runtime: { enabled?: boolean; amount?: number } = {},
+) => ({ max_cost_usd: cost, max_runtime_minutes: runtime });
 
 async function fixture(t: TestContext) {
   const dir = await mkdtemp(join(tmpdir(), "settings-test-"));
@@ -52,6 +78,9 @@ async function fixture(t: TestContext) {
     get settings() {
       return settings;
     },
+    get store() {
+      return store;
+    },
     setProviders(available: string[]) {
       providers = available;
     },
@@ -68,35 +97,36 @@ async function fixture(t: TestContext) {
   };
 }
 
-test("settings expose only enabled providers, nullable budgets, and a default per value", async (t) => {
+test("settings expose only enabled providers, off budgets with amounts, and a default per value", async (t) => {
   const { settings } = await fixture(t);
   const result = settings.read("alice");
   assert.deepEqual(settingsReadOutputSchema.parse(result), result);
   assert.equal(result.schema.type, "object");
-  const properties = result.schema.properties!;
-  assert.deepEqual(schemaField(result, "default_provider").enum, ["fixture"]);
+  assert.deepEqual(schemaField(result, "task.provider").enum, ["fixture"]);
 
-  for (const [name, field] of Object.entries(properties)) {
-    assert.equal("default" in field, false, `${name} has no schema default`);
+  for (const [path, field] of schemaNodes(result.schema)) {
+    assert.equal("default" in field, false, `${path} has no schema default`);
   }
 
-  // Budgets read as a number or null; the on/off switches are update-only.
-  assert.equal("use_cost_budget" in result.values, false);
-  assert.equal(result.values.max_cost_usd, null);
-  assert.equal(result.values.max_runtime_minutes, null);
-  assert.equal(result.defaults.max_cost_usd, null);
-  assert.equal(result.defaults.max_runtime_minutes, null);
+  // A budget is off by default and keeps the amount it restores when on.
+  const initialBudgets = {
+    max_cost_usd: { enabled: false, amount: 5 },
+    max_runtime_minutes: { enabled: false, amount: 20 },
+  };
+
+  assert.deepEqual(settingAt(result.values, "task.budget"), initialBudgets);
+  assert.deepEqual(settingAt(result.defaults, "task.budget"), initialBudgets);
 
   assert.deepEqual(
-    Object.keys(result.defaults).sort(),
-    Object.keys(result.values).sort(),
+    settingPaths(result.defaults).sort(),
+    settingPaths(result.values).sort(),
   );
 
   const [firstSection] = result.sections;
   assert.ok(firstSection);
 
   const select = firstSection.rows.find(
-    (row) => row.kind === "select" && row.key === "default_provider",
+    (row) => row.kind === "select" && row.path === "task.provider",
   );
 
   // The panel gets labels, not just IDs.
@@ -108,34 +138,43 @@ test("settings expose only enabled providers, nullable budgets, and a default pe
 test("automatic chat project registration is an on-by-default, persistent user setting", async (t) => {
   const f = await fixture(t);
   const result = f.settings.read("alice");
-  const field = schemaField(result, "auto_register_chat_project");
+  const field = schemaField(result, "projects.auto_register_chat");
   assert.equal(field.type, "boolean");
   assert.equal(field.title, "Automatically add chat projects");
   assert.match(String(field.description), /host directory metadata/);
   assert.match(String(field.description), /keeps projects already registered/);
   assert.equal("default" in field, false);
-  assert.equal(result.values.auto_register_chat_project, true);
+  assert.equal(schemaField(result, "projects").userOnly, true);
+  assert.equal(settingAt(result.values, "projects.auto_register_chat"), true);
+  assert.ok(listed(result).includes("projects.auto_register_chat"));
 
-  assert.ok(
-    result.sections.some((section) =>
-      sectionKeys(section).includes("auto_register_chat_project"),
-    ),
-  );
+  const autoRegister = (value: boolean) =>
+    f.settings.update("alice", {
+      set: { projects: { auto_register_chat: value } },
+    });
 
-  f.settings.update("alice", { set: { auto_register_chat_project: false } });
+  autoRegister(false);
   f.reopen();
-  assert.equal(f.settings.values("alice").auto_register_chat_project, false);
-  assert.equal(f.settings.values("bob").auto_register_chat_project, true);
-  f.settings.update("alice", { set: { max_runtime_minutes: 9 } });
-  assert.equal(f.settings.values("alice").auto_register_chat_project, false);
-  f.settings.update("alice", { set: { auto_register_chat_project: true } });
+  assert.equal(f.settings.values("alice").projects.auto_register_chat, false);
+  assert.equal(f.settings.values("bob").projects.auto_register_chat, true);
+
+  f.settings.update("alice", {
+    set: { task: { budget: budgets({}, { amount: 9 }) } },
+  });
+
+  assert.equal(f.settings.values("alice").projects.auto_register_chat, false);
+  autoRegister(true);
   f.reopen();
-  assert.equal(f.settings.values("alice").auto_register_chat_project, true);
+  assert.equal(f.settings.values("alice").projects.auto_register_chat, true);
 });
 
 test("automatic chat project registration cannot be changed by parent authority", async (t) => {
   const f = await fixture(t);
-  f.settings.update("alice", { set: { auto_register_chat_project: true } });
+
+  f.settings.update("alice", {
+    set: { projects: { auto_register_chat: true } },
+  });
+
   const persisted = f.stored();
 
   for (const enabled of [false, true]) {
@@ -145,13 +184,13 @@ test("automatic chat project registration cannot be changed by parent authority"
           "alice",
           {
             set: {
-              auto_register_chat_project: enabled,
-              max_runtime_minutes: 9,
+              projects: { auto_register_chat: enabled },
+              task: { budget: budgets({}, { amount: 9 }) },
             },
           },
           "parent",
         ),
-      /requires a user decision/,
+      /Automatically add chat projects requires a user decision in settings/,
     );
 
     assert.deepEqual(f.stored(), persisted);
@@ -161,42 +200,47 @@ test("automatic chat project registration cannot be changed by parent authority"
 test("settings sections have unique IDs and cover every shown value once", async (t) => {
   const { settings } = await fixture(t);
   const result = settings.read("alice");
-
-  const ids = result.sections.map((section) => section.id),
-    listed = result.sections.flatMap(sectionKeys);
+  const ids = result.sections.map((section) => section.id);
 
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(new Set(listed).size, listed.length);
-  assert.deepEqual([...listed].sort(), Object.keys(result.values).sort());
+  assert.equal(new Set(listed(result)).size, listed(result).length);
 
-  // Budget rows carry their input minimum and the amount to show when off.
+  // The execution approval mode is for agents and execution providers. The
+  // panel presents native permission settings instead.
+  assert.deepEqual(
+    [...listed(result)].sort(),
+    settingPaths(result.values)
+      .filter((path) => path !== "approvals.execution_mode")
+      .sort(),
+  );
+
+  // Budget rows carry their input minimum. Their settings sit under the path.
   const [firstSection] = result.sections;
   assert.ok(firstSection);
 
   const budget = firstSection.rows.find(
-    (row) => row.kind === "budget" && row.key === "max_cost_usd",
+    (row) => row.kind === "budget" && row.path === "task.budget.max_cost_usd",
   );
 
-  assert.deepEqual(
-    budget?.kind === "budget" && [
-      budget.toggle,
-      budget.unit,
-      budget.min,
-      budget.amount,
-    ],
-    ["use_cost_budget", "USD", 0.01, 5],
-  );
+  assert.deepEqual(budget?.kind === "budget" && [budget.unit, budget.min], [
+    "USD",
+    0.01,
+  ]);
+
+  assert.deepEqual(sectionPaths({ ...firstSection, rows: [budget!] }), [
+    "task.budget.max_cost_usd.enabled",
+    "task.budget.max_cost_usd.amount",
+  ]);
 
   // Agents read the same help in each field's schema description.
   for (const row of result.sections.flatMap((section) => section.rows)) {
     if (row.kind !== "models" && row.help) {
       assert.equal(
-        (result.schema.properties![row.key] as { description?: string })
-          .description,
+        schemaField(result, row.path).description,
         row.help
           .map((part) => (typeof part === "string" ? part : part.text))
           .join(""),
-        row.key,
+        row.path,
       );
     }
   }
@@ -207,16 +251,16 @@ test("help links to settings the panel doesn't show become plain text", () => {
     withHelp(
       [
         "Use ",
-        { text: "Global", setting: "default_model" },
+        { text: "Global", setting: "models.global.model" },
         " or ",
-        { text: "Claude", setting: "claude_default_model" },
+        { text: "Claude", setting: "models.providers.claude.model" },
         ".",
       ],
-      { default_model: {} },
+      { models: { global: { model: "" } } },
     ),
     [
       "Use ",
-      { text: "Global", setting: "default_model" },
+      { text: "Global", setting: "models.global.model" },
       " or ",
       "Claude",
       ".",
@@ -229,7 +273,7 @@ test("each model section's intro links only to the other section's exact setting
   const result = settings.read("alice");
 
   const sectionOf = (setting: string) =>
-    result.sections.find((s) => sectionKeys(s).includes(setting))?.id;
+    result.sections.find((s) => sectionPaths(s).includes(setting))?.id;
 
   const links = (id: string) =>
     (result.sections.find((s) => s.id === id)!.help ?? [])
@@ -238,18 +282,18 @@ test("each model section's intro links only to the other section's exact setting
 
   // Each section explains inheritance from its own rows' side.
   assert.deepEqual(links("models"), [
-    ["worker profile", "reviewer_default_model", "profile-models"],
-    ["Global", "default_model", "models"],
+    ["worker profile", "models.profiles.reviewer.model", "profile-models"],
+    ["Global", "models.global.model", "models"],
   ]);
 
   assert.deepEqual(links("profile-models"), [
-    ["provider", "fixture_default_model", "models"],
-    ["Global", "default_model", "models"],
+    ["provider", "models.providers.fixture.model", "models"],
+    ["Global", "models.global.model", "models"],
   ]);
 
   // Agents get the whole chain in the schema.
   assert.match(
-    String(schemaField(result, "default_model").description),
+    String(schemaField(result, "models.global.model").description),
     /worker profile, then its provider, then the global default/,
   );
 });
@@ -257,38 +301,56 @@ test("each model section's intro links only to the other section's exact setting
 test("disabled providers' model defaults are hidden but kept, and listed models share one note", async (t) => {
   const f = await fixture(t);
   f.setProviders(["fixture", "claude"]);
-  f.settings.update("alice", { set: { claude_default_model: "kept" } });
+
+  f.settings.update("alice", {
+    set: { models: { providers: { claude: { model: "kept" } } } },
+  });
 
   // Only the fixture provider is enabled now.
   f.setProviders(["fixture"]);
   const hidden = f.settings.read("alice");
 
-  const listed = (result: typeof hidden) =>
-    result.sections.flatMap(sectionKeys);
+  assert.equal(schemaNode(hidden, "models.providers.claude"), undefined);
 
-  for (const key of [
-    "claude_default_model",
-    "claude_default_reasoning_effort",
+  assert.equal(
+    (
+      schemaField(hidden, "models.providers").required as string[] | undefined
+    )?.includes("claude") ?? false,
+    false,
+  );
+
+  assert.equal(settingAt(hidden.values, "models.providers.claude"), undefined);
+
+  assert.equal(
+    settingAt(hidden.defaults, "models.providers.claude"),
+    undefined,
+  );
+
+  for (const path of [
+    "models.providers.claude.model",
+    "models.providers.claude.reasoning_effort",
   ]) {
-    assert.equal(key in hidden.schema.properties!, false, key);
-    assert.equal(listed(hidden).includes(key), false, key);
-    assert.equal(key in hidden.values, false, key);
-    assert.equal(hidden.schema.required?.includes(key) ?? false, false, key);
+    assert.equal(listed(hidden).includes(path), false, path);
   }
 
-  const models = listed(hidden).filter((key) => key.endsWith("_model"));
-  assert.ok(schemaField(hidden, "default_model").description);
+  const models = listed(hidden).filter((path) => path.endsWith(".model"));
+  const note = schemaField(hidden, "models.global.model").description;
+  assert.ok(note);
 
   assert.deepEqual(
-    new Set(models.map((key) => schemaField(hidden, key).description)),
-    new Set([schemaField(hidden, "default_model").description]),
+    new Set(models.map((path) => schemaField(hidden, path).description)),
+    new Set([note]),
   );
 
   // Enabling the provider again shows the saved value.
   f.setProviders(["fixture", "claude"]);
   const shown = f.settings.read("alice");
-  assert.ok(listed(shown).includes("claude_default_model"));
-  assert.equal(shown.values.claude_default_model, "kept");
+  assert.ok(listed(shown).includes("models.providers.claude.model"));
+
+  assert.equal(
+    settingAt(shown.values, "models.providers.claude.model"),
+    "kept",
+  );
 });
 
 test("native model controls scope discovered models and derive reasoning choices from effective SDK metadata", async (t) => {
@@ -297,10 +359,12 @@ test("native model controls scope discovered models and derive reasoning choices
 
   f.settings.update("alice", {
     set: {
-      default_provider: "claude",
-      default_model: "claude-model",
-      reviewer_default_model: "custom-saved-model",
-      claude_default_reasoning_effort: "max",
+      task: { provider: "claude" },
+      models: {
+        global: { model: "claude-model" },
+        profiles: { reviewer: { model: "custom-saved-model" } },
+        providers: { claude: { reasoning_effort: "max" } },
+      },
     },
   });
 
@@ -327,78 +391,68 @@ test("native model controls scope discovered models and derive reasoning choices
   ];
 
   const result = f.settings.read("alice", catalogs);
-  const fields = result.schema.properties!;
+  const field = (path: string) => schemaField(result, path);
 
-  assert.deepEqual(schemaField(result, "claude_default_model").enum, [
+  assert.deepEqual(field("models.providers.claude.model").enum, [
     "",
     "claude-model",
     "default",
   ]);
 
-  assert.deepEqual(schemaField(result, "default_model").enum, [
+  assert.deepEqual(field("models.global.model").enum, [
     "",
     "claude-model",
     "default",
   ]);
 
-  assert.deepEqual(schemaField(result, "reviewer_default_model").enum, [
+  assert.deepEqual(field("models.profiles.reviewer.model").enum, [
     "",
     "claude-model",
     "default",
     "custom-saved-model",
   ]);
 
-  assert.ok(
-    (
-      schemaField(result, "default_reasoning_effort").enum as unknown[]
-    ).includes("none"),
-  );
+  const globalEfforts = field("models.global.reasoning_effort").enum!;
+  assert.ok(globalEfforts.includes("none"));
+  assert.ok(globalEfforts.includes("max"));
 
   assert.ok(
-    (
-      schemaField(result, "default_reasoning_effort").enum as unknown[]
-    ).includes("max"),
+    field("models.profiles.reviewer.reasoning_effort").enum!.includes("none"),
   );
 
-  assert.ok(
-    (
-      schemaField(result, "reviewer_default_reasoning_effort").enum as unknown[]
-    ).includes("none"),
-  );
-
-  assert.deepEqual(
-    schemaField(result, "claude_default_reasoning_effort").enum,
-    ["default", "low", "high", "max"],
-  );
+  assert.deepEqual(field("models.providers.claude.reasoning_effort").enum, [
+    "default",
+    "low",
+    "high",
+    "max",
+  ]);
 
   assert.match(
-    String(schemaField(result, "claude_default_reasoning_effort").description),
+    String(field("models.providers.claude.reasoning_effort").description),
     /Supported efforts for claude model claude-model/,
   );
 
   assert.match(
-    String(
-      schemaField(result, "reviewer_default_reasoning_effort").description,
-    ),
+    String(field("models.profiles.reviewer.reasoning_effort").description),
     /support is unknown/,
   );
 
-  for (const [key, field] of Object.entries(fields)) {
-    if (Array.isArray(field.enum)) {
+  for (const [path, node] of schemaNodes(result.schema)) {
+    if (Array.isArray(node.enum)) {
       assert.ok(
-        field.enum.includes((result.values as Record<string, unknown>)[key]),
-        `${key} must accept its saved value`,
+        node.enum.includes(settingAt(result.values, path)),
+        `${path} must accept its saved value`,
       );
     }
 
-    assert.equal("default" in field, false);
+    assert.equal("default" in node, false);
   }
 
   const models = result.sections.find((s) => s.id === "models")!,
     profiles = result.sections.find((s) => s.id === "profile-models")!;
 
   assert.equal(models.title, "Model defaults");
-  assert.ok(sectionKeys(profiles).includes("reviewer_default_model"));
+  assert.ok(sectionPaths(profiles).includes("models.profiles.reviewer.model"));
 
   // Model options carry display names and keep a saved custom ID.
   const scopes = profiles.rows.flatMap((row) =>
@@ -408,6 +462,7 @@ test("native model controls scope discovered models and derive reasoning choices
 
   assert.equal(scopes[0]?.label, "General");
   assert.ok(reviewer);
+  assert.equal(reviewer.id, "reviewer");
 
   assert.deepEqual(
     reviewer.model.options?.map((option) => option.label),
@@ -419,11 +474,14 @@ test("native model controls scope discovered models and derive reasoning choices
 
 test("settings preserve custom models and unknown metadata while disabling effort only when explicitly unsupported", async (t) => {
   const f = await fixture(t);
+  const fixtureEffort = "models.providers.fixture.reasoning_effort";
 
   f.settings.update("alice", {
     set: {
-      default_model: "custom-model",
-      fixture_default_reasoning_effort: "high",
+      models: {
+        global: { model: "custom-model" },
+        providers: { fixture: { reasoning_effort: "high" } },
+      },
     },
   });
 
@@ -437,26 +495,20 @@ test("settings preserve custom models and unknown metadata while disabling effor
   ]);
 
   assert.ok(
-    (schemaField(unknown, "default_model").enum as unknown[]).includes(
-      "custom-model",
-    ),
+    schemaField(unknown, "models.global.model").enum!.includes("custom-model"),
   );
 
   assert.match(
-    String(
-      schemaField(unknown, "fixture_default_reasoning_effort").description,
-    ),
+    String(schemaField(unknown, fixtureEffort).description),
     /support is unknown/,
   );
 
-  assert.ok(
-    (
-      schemaField(unknown, "fixture_default_reasoning_effort").enum as unknown[]
-    ).includes("none"),
-  );
+  assert.ok(schemaField(unknown, fixtureEffort).enum!.includes("none"));
 
   f.settings.update("alice", {
-    set: { default_model: "", fixture_default_model: "" },
+    set: {
+      models: { global: { model: "" }, providers: { fixture: { model: "" } } },
+    },
   });
 
   const persisted = f.stored();
@@ -476,47 +528,45 @@ test("settings preserve custom models and unknown metadata while disabling effor
   ]);
 
   assert.ok(
-    (
-      schemaField(disabled, "default_reasoning_effort").enum as unknown[]
-    ).includes("high"),
+    schemaField(disabled, "models.global.reasoning_effort").enum!.includes(
+      "high",
+    ),
   );
 
-  assert.deepEqual(
-    schemaField(disabled, "fixture_default_reasoning_effort").enum,
-    ["default", "high"],
-  );
+  assert.deepEqual(schemaField(disabled, fixtureEffort).enum, [
+    "default",
+    "high",
+  ]);
 
   assert.match(
-    String(
-      schemaField(disabled, "fixture_default_reasoning_effort").description,
-    ),
+    String(schemaField(disabled, fixtureEffort).description),
     /provider runtime default only/,
   );
 
   // The saved "high" effort is now unsupported: agents read it in the
   // description, and the panel gets a flag.
   assert.match(
-    String(
-      schemaField(disabled, "fixture_default_reasoning_effort").description,
-    ),
+    String(schemaField(disabled, fixtureEffort).description),
     /saved effort is not supported/,
   );
 
   const fixtureScope = disabled.sections
     .flatMap((s) => s.rows)
     .flatMap((row) => (row.kind === "models" ? row.scopes : []))
-    .find((scope) => scope.effort.key === "fixture_default_reasoning_effort");
+    .find((scope) => scope.effort.path === fixtureEffort);
 
+  assert.equal(fixtureScope?.id, "fixture");
   assert.equal(fixtureScope?.effort.unsupported, true);
 
   const missing = f.settings.read("alice", [{ provider: "fixture" }]);
 
-  assert.equal(schemaField(missing, "fixture_default_model").enum, undefined);
+  assert.equal(
+    schemaField(missing, "models.providers.fixture.model").enum,
+    undefined,
+  );
 
   assert.match(
-    String(
-      schemaField(missing, "fixture_default_reasoning_effort").description,
-    ),
+    String(schemaField(missing, fixtureEffort).description),
     /support is unknown/,
   );
 
@@ -528,12 +578,15 @@ test("model and reasoning defaults resolve independently from task through role,
 
   settings.update("alice", {
     set: {
-      default_model: "global-model",
-      default_reasoning_effort: "low",
-      fixture_default_model: "provider-model",
-      fixture_default_reasoning_effort: "medium",
-      reviewer_default_model: "role-model",
-      reviewer_default_reasoning_effort: "high",
+      models: {
+        global: { model: "global-model", reasoning_effort: "low" },
+        providers: {
+          fixture: { model: "provider-model", reasoning_effort: "medium" },
+        },
+        profiles: {
+          reviewer: { model: "role-model", reasoning_effort: "high" },
+        },
+      },
     },
   });
 
@@ -567,8 +620,10 @@ test("model and reasoning defaults resolve independently from task through role,
 
   settings.update("alice", {
     set: {
-      reviewer_default_model: "",
-      fixture_default_reasoning_effort: "default",
+      models: {
+        profiles: { reviewer: { model: "" } },
+        providers: { fixture: { reasoning_effort: "default" } },
+      },
     },
   });
 
@@ -579,7 +634,9 @@ test("model and reasoning defaults resolve independently from task through role,
     "low",
   ]);
 
-  settings.update("alice", { set: { fixture_default_model: "" } });
+  settings.update("alice", {
+    set: { models: { providers: { fixture: { model: "" } } } },
+  });
 
   assert.deepEqual(resolve({ worker_profile: "researcher" }), [
     "global-model",
@@ -587,7 +644,7 @@ test("model and reasoning defaults resolve independently from task through role,
   ]);
 
   settings.update("alice", {
-    set: { default_model: "", default_reasoning_effort: "default" },
+    set: { models: { global: { model: "", reasoning_effort: "default" } } },
   });
 
   assert.deepEqual(resolve({ worker_profile: "researcher" }), [
@@ -602,12 +659,17 @@ test("effective provider and role select the matching defaults and isolate owner
 
   f.settings.update("alice", {
     set: {
-      default_provider: "claude",
-      default_worker_profile: "researcher",
-      claude_default_model: "claude-model",
-      fixture_default_model: "fixture-model",
-      researcher_default_reasoning_effort: "high",
-      reviewer_default_model: "review-model",
+      task: { provider: "claude", worker_profile: "researcher" },
+      models: {
+        providers: {
+          claude: { model: "claude-model" },
+          fixture: { model: "fixture-model" },
+        },
+        profiles: {
+          researcher: { reasoning_effort: "high" },
+          reviewer: { model: "review-model" },
+        },
+      },
     },
   });
 
@@ -632,9 +694,38 @@ test("effective provider and role select the matching defaults and isolate owner
   assert.equal(f.settings.taskInput("alice", {}).reasoning_effort, "high");
 
   assert.equal(
-    f.settings.values("bob").researcher_default_reasoning_effort,
+    f.settings.values("bob").models.profiles.researcher.reasoning_effort,
     "default",
   );
+});
+
+test("partial updates merge into nested groups and keep sibling values", async (t) => {
+  const f = await fixture(t);
+
+  f.settings.update("alice", {
+    set: { models: { global: { model: "kept-model" } } },
+  });
+
+  f.settings.update("alice", {
+    set: { task: { budget: budgets({ enabled: true }) } },
+  });
+
+  f.settings.update("alice", {
+    set: { task: { budget: budgets({ amount: 8 }) } },
+  });
+
+  f.reopen();
+  const values = f.settings.values("alice");
+
+  assert.deepEqual(values.task.budget, {
+    max_cost_usd: { enabled: true, amount: 8 },
+    max_runtime_minutes: { enabled: false, amount: 20 },
+  });
+
+  assert.deepEqual(values.models.global, {
+    model: "kept-model",
+    reasoning_effort: "default",
+  });
 });
 
 test("invalid settings updates cannot partially persist other settings", async (t) => {
@@ -642,32 +733,48 @@ test("invalid settings updates cannot partially persist other settings", async (
 
   f.settings.update("alice", {
     set: {
-      default_model: "saved-model",
-      default_reasoning_effort: "medium",
-      max_runtime_minutes: 121,
-      use_runtime_budget: true,
+      models: { global: { model: "saved-model", reasoning_effort: "medium" } },
+      task: { budget: budgets({}, { enabled: true, amount: 121 }) },
     },
   });
 
   const original = f.stored();
+  const runtime = (amount: number) => budgets({}, { amount });
 
-  for (const set of [
-    { default_provider: "claude", max_runtime_minutes: 10 },
-    { max_runtime_minutes: 0 },
-    { use_cost_budget: true, max_cost_usd: 0 },
-    { use_cost_budget: "yes" },
-    { approval_policy: "allow_all" },
-    { unknown: true },
-    {},
-    ...[
-      { default_model: 123 },
-      { default_model: "x".repeat(201) },
-      { default_reasoning_effort: "unsupported" },
-      { reviewer_default_reasoning_effort: 1 },
-      { unknown_default_model: "unknown" },
-    ].map((invalid) => ({ max_runtime_minutes: 11, ...invalid })),
-  ]) {
-    assert.throws(() => f.settings.update("alice", { set }));
+  const invalid: [set: unknown, error?: RegExp][] = [
+    [{ task: { provider: "claude", budget: runtime(10) } }, /not enabled/],
+    [{ task: { budget: runtime(0) } }],
+    [{ task: { budget: budgets({ enabled: true, amount: 0 }) } }],
+    [{ task: { budget: budgets({ enabled: "yes" as unknown as boolean }) } }],
+    // Budgets are groups, so an old number or null no longer stands for one.
+    [{ task: { budget: { max_cost_usd: 7 } } }],
+    [{ task: { budget: { max_cost_usd: null } } }],
+    [{ approval_policy: "allow_all" }],
+    [{ unknown: true }],
+    [{ task: { unknown: true } }],
+    [{ default_provider: "fixture" }],
+    [{}, /Set at least one setting/],
+    [{ task: { budget: {} } }, /Set at least one setting/],
+    ...(
+      [
+        { models: { global: { model: 123 } } },
+        { models: { global: { model: "x".repeat(201) } } },
+        { models: { global: { reasoning_effort: "unsupported" } } },
+        { models: { profiles: { reviewer: { reasoning_effort: 1 } } } },
+        { models: { providers: { unknown: { model: "unknown" } } } },
+      ] as Record<string, unknown>[]
+    ).map(
+      (set) => [{ task: { budget: runtime(11) }, ...set }] as [set: unknown],
+    ),
+  ];
+
+  for (const [set, error] of invalid) {
+    assert.throws(
+      () => f.settings.update("alice", { set }),
+      error ?? Error,
+      JSON.stringify(set),
+    );
+
     assert.deepEqual(f.stored(), original);
   }
 });
@@ -676,7 +783,9 @@ test("invalid task selections fail before inherited defaults can hide them", asy
   const { settings } = await fixture(t);
 
   settings.update("alice", {
-    set: { default_model: "fallback-model", default_reasoning_effort: "high" },
+    set: {
+      models: { global: { model: "fallback-model", reasoning_effort: "high" } },
+    },
   });
 
   for (const args of [
@@ -690,77 +799,95 @@ test("invalid task selections fail before inherited defaults can hide them", asy
   }
 });
 
-test("native budget toggles preserve the numeric amount across edits and restart", async (t) => {
+test("budget switches keep the amount across edits and restart", async (t) => {
   const f = await fixture(t);
 
   f.settings.update("alice", {
     set: {
-      max_cost_usd: 7,
-      use_cost_budget: true,
-      max_runtime_minutes: 9,
-      use_runtime_budget: true,
+      task: {
+        budget: budgets(
+          { enabled: true, amount: 7 },
+          { enabled: true, amount: 9 },
+        ),
+      },
     },
   });
 
   const disabled = f.settings.update("alice", {
-    set: { use_cost_budget: false },
+    set: { task: { budget: budgets({ enabled: false }) } },
   });
 
   assert.deepEqual(settingsUpdateOutputSchema.parse(disabled), disabled);
-  assert.equal(disabled.values.max_cost_usd, null);
 
-  assert.deepEqual(budget(f.settings.read("alice"), "max_cost_usd"), [
-    false,
-    7,
-  ]);
+  assert.deepEqual(settingAt(disabled.values, "task.budget.max_cost_usd"), {
+    enabled: false,
+    amount: 7,
+  });
 
-  assert.equal(f.settings.values("alice").max_cost_usd, null);
-
-  assert.equal(
-    f.settings.taskInput("alice", { description: "Review" }).budget
-      .max_cost_usd,
-    null,
+  assert.deepEqual(
+    settingAt(f.settings.read("alice").values, "task.budget.max_cost_usd"),
+    {
+      enabled: false,
+      amount: 7,
+    },
   );
 
-  // A host resubmits the amount when another setting changes; the disabled toggle must win.
+  const taskBudget = () =>
+    f.settings.taskInput("alice", { description: "Review" }).budget;
+
+  assert.equal(taskBudget().max_cost_usd, null);
+
+  // A host resubmits the amount when another setting changes. The off switch wins.
   f.settings.update("alice", {
     set: {
-      max_cost_usd: 11,
-      use_cost_budget: false,
-      default_worker_profile: "implementer",
+      task: {
+        worker_profile: "implementer",
+        budget: budgets({ enabled: false, amount: 11 }),
+      },
     },
   });
 
   f.reopen();
 
-  assert.deepEqual(budget(f.settings.read("alice"), "max_cost_usd"), [
-    false,
-    11,
-  ]);
-
-  f.settings.update("alice", { set: { max_cost_usd: 12 } });
-
-  assert.deepEqual(budget(f.settings.read("alice"), "max_cost_usd"), [
-    false,
-    12,
-  ]);
-
-  assert.equal(f.settings.values("alice").max_cost_usd, null);
-
-  const enabled = f.settings.update("alice", {
-    set: { use_cost_budget: true },
-  });
-
-  assert.equal(enabled.values.max_cost_usd, 12);
-  assert.equal(f.settings.values("alice").max_cost_usd, 12);
-  assert.equal(f.settings.values("alice").max_runtime_minutes, 9);
-
-  assert.equal(
-    f.settings.values("alice").default_worker_profile,
-    "implementer",
+  assert.deepEqual(
+    settingAt(f.settings.read("alice").values, "task.budget.max_cost_usd"),
+    {
+      enabled: false,
+      amount: 11,
+    },
   );
 
-  assert.equal(f.settings.read("bob").values.max_cost_usd, null);
+  // Editing the amount leaves the limit off.
+  f.settings.update("alice", {
+    set: { task: { budget: budgets({ amount: 12 }) } },
+  });
+
+  assert.deepEqual(f.settings.values("alice").task.budget.max_cost_usd, {
+    enabled: false,
+    amount: 12,
+  });
+
+  assert.equal(taskBudget().max_cost_usd, null);
+
+  const enabled = f.settings.update("alice", {
+    set: { task: { budget: budgets({ enabled: true }) } },
+  });
+
+  assert.deepEqual(settingAt(enabled.values, "task.budget.max_cost_usd"), {
+    enabled: true,
+    amount: 12,
+  });
+
+  assert.deepEqual(taskBudget(), { max_runtime_minutes: 9, max_cost_usd: 12 });
+  assert.equal(f.settings.values("alice").task.worker_profile, "implementer");
+
+  assert.deepEqual(
+    settingAt(f.settings.read("bob").values, "task.budget.max_cost_usd"),
+    {
+      enabled: false,
+      amount: 5,
+    },
+  );
 });
 
 test("removed providers fall back on effective reads without rewriting saved defaults", async (t) => {
@@ -769,16 +896,21 @@ test("removed providers fall back on effective reads without rewriting saved def
 
   f.settings.update("alice", {
     set: {
-      default_provider: "claude",
-      max_runtime_minutes: 7,
-      use_runtime_budget: true,
+      task: {
+        provider: "claude",
+        budget: budgets({}, { enabled: true, amount: 7 }),
+      },
     },
   });
 
   const persisted = f.stored();
   f.setProviders(["fixture"]);
   f.reopen();
-  assert.equal(f.settings.read("alice").values.default_provider, "fixture");
+
+  assert.equal(
+    settingAt(f.settings.read("alice").values, "task.provider"),
+    "fixture",
+  );
 
   assert.equal(
     f.settings.taskInput("alice", { description: "Review" }).provider,
@@ -786,86 +918,83 @@ test("removed providers fall back on effective reads without rewriting saved def
   );
 
   assert.deepEqual(
-    schemaField(f.settings.read("alice"), "default_provider").enum,
+    schemaField(f.settings.read("alice"), "task.provider").enum,
     ["fixture"],
   );
 
   assert.deepEqual(f.stored(), persisted);
   f.setProviders(["claude", "fixture"]);
-  assert.equal(f.settings.read("alice").values.default_provider, "claude");
-  assert.equal(f.settings.values("alice").max_runtime_minutes, 7);
-  assert.deepEqual(f.stored(), persisted);
-});
 
-test("null budget updates retain their amount", async (t) => {
-  const f = await fixture(t);
+  assert.equal(
+    settingAt(f.settings.read("alice").values, "task.provider"),
+    "claude",
+  );
 
-  f.settings.update("alice", {
-    set: { max_cost_usd: 101, use_cost_budget: true },
+  assert.deepEqual(f.settings.values("alice").task.budget.max_runtime_minutes, {
+    enabled: true,
+    amount: 7,
   });
 
-  assert.equal(f.settings.values("alice").max_cost_usd, 101);
-
-  f.settings.update("alice", { set: { max_cost_usd: 13 } });
-  f.settings.update("alice", { set: { max_cost_usd: null } });
-
-  assert.deepEqual(budget(f.settings.read("alice"), "max_cost_usd"), [
-    false,
-    13,
-  ]);
-
-  f.reopen();
-  f.settings.update("alice", { set: { use_cost_budget: true } });
-  assert.equal(f.settings.values("alice").max_cost_usd, 13);
+  assert.deepEqual(f.stored(), persisted);
 });
 
 test("Claude session restrictions are scalar user-only settings with stored defaults", async (t) => {
   const f = await fixture(t);
 
-  const keys = [
-    "claude_sandbox",
-    "claude_environment",
-    "claude_tools",
-    "claude_path_guard",
-    "claude_subagents",
-    "claude_settings_files",
-    "claude_user_mcp",
-  ] as const;
+  // Each restriction's key and the title its authority error names.
+  const restrictions = {
+    sandbox: "Bash sandbox",
+    environment: "Environment",
+    tools: "Tools",
+    path_guard: "Workspace path guard",
+    subagents: "Allow subagents",
+    settings_files: "Load Claude Code settings",
+    user_mcp: "Your MCP servers",
+  };
 
+  const keys = Object.keys(restrictions) as (keyof typeof restrictions)[];
   const before = f.settings.values("alice");
 
   assert.deepEqual(
-    Object.fromEntries(keys.map((key) => [key, before[key]])),
+    Object.fromEntries(keys.map((key) => [key, before.providers.claude[key]])),
     claudeOverrideDefaults,
   );
 
   const read = f.settings.read("alice");
+  assert.equal(schemaField(read, "providers").userOnly, true);
 
   for (const key of keys) {
-    const field = schemaField(read, key);
+    const field = schemaField(read, `providers.claude.${key}`);
     assert.ok(["string", "boolean"].includes(String(field.type)), key);
     assert.equal(Object.hasOwn(field, "default"), false, key);
   }
 
   assert.deepEqual(
-    sectionKeys(
+    sectionPaths(
       read.sections.find((section) => section.id === "restrictions")!,
     ),
-    keys,
+    keys.map((key) => `providers.claude.${key}`),
   );
 
-  for (const set of [
-    { claude_sandbox: "user_config" },
-    { claude_environment: "inherit" },
-    { claude_tools: "all" },
-    { claude_path_guard: "off" },
-    { claude_subagents: true },
-    { claude_settings_files: true },
-    { claude_user_mcp: true },
-  ]) {
+  for (const [key, value] of [
+    ["sandbox", "user_config"],
+    ["environment", "inherit"],
+    ["tools", "all"],
+    ["path_guard", "off"],
+    ["subagents", true],
+    ["settings_files", true],
+    ["user_mcp", true],
+  ] as const) {
     assert.throws(
-      () => f.settings.update("alice", { set }, "parent"),
-      /user decision/,
+      () =>
+        f.settings.update(
+          "alice",
+          { set: { providers: { claude: { [key]: value } } } },
+          "parent",
+        ),
+      {
+        message: `${restrictions[key]} requires a user decision in settings`,
+      },
     );
   }
 
@@ -873,25 +1002,31 @@ test("Claude session restrictions are scalar user-only settings with stored defa
 
   f.settings.update("alice", {
     set: {
-      claude_sandbox: "extension_locked",
-      claude_tools: "profile",
-      claude_subagents: true,
-      claude_settings_files: false,
-      claude_user_mcp: false,
+      providers: {
+        claude: {
+          sandbox: "extension_locked",
+          tools: "all",
+          subagents: true,
+          settings_files: false,
+          user_mcp: false,
+        },
+      },
     },
   });
 
   f.reopen();
   const after = f.settings.values("alice");
-  assert.equal(after.claude_sandbox, "extension_locked");
-  assert.equal(after.claude_tools, "profile");
-  assert.equal(after.claude_subagents, true);
-  assert.equal(after.claude_settings_files, false);
-  assert.equal(after.claude_user_mcp, false);
-  assert.equal(after.max_runtime_minutes, null);
+  assert.equal(after.providers.claude.sandbox, "extension_locked");
+  assert.equal(after.providers.claude.tools, "all");
+  assert.equal(after.providers.claude.subagents, true);
+  assert.equal(after.providers.claude.settings_files, false);
+  assert.equal(after.providers.claude.user_mcp, false);
+  assert.equal(after.task.budget.max_runtime_minutes.enabled, false);
 
   assert.throws(() =>
-    f.settings.update("alice", { set: { claude_tools: "none" } }),
+    f.settings.update("alice", {
+      set: { providers: { claude: { tools: "none" } } },
+    }),
   );
 });
 
@@ -913,14 +1048,14 @@ test("settings accept a new built-in's metadata without provider-ID handling", a
   );
 
   const result = settings.read("alice");
-  assert.equal(result.values.default_provider, "new-built-in");
-
-  assert.deepEqual(schemaField(result, "default_provider").enum, [
-    "new-built-in",
-  ]);
+  assert.equal(settingAt(result.values, "task.provider"), "new-built-in");
+  assert.deepEqual(schemaField(result, "task.provider").enum, ["new-built-in"]);
 
   settings.update("alice", {
-    set: { default_provider: "new-built-in", default_model: "new-model" },
+    set: {
+      task: { provider: "new-built-in" },
+      models: { global: { model: "new-model" } },
+    },
   });
 
   assert.equal(settings.taskInput("alice", {}).model, "new-model");
@@ -932,19 +1067,19 @@ test("execution approval defaults do not change native Claude settings", async (
 
   f.settings.update("alice", {
     set: {
-      claude_permission_mode: "plan",
-      default_approval_decider: "parent_agent",
+      providers: { claude: { permission_mode: "plan" } },
+      approvals: { decider: "parent_agent" },
     },
   });
 
   f.settings.update("alice", {
-    set: { default_approval_mode: "auto_approve" },
+    set: { approvals: { execution_mode: "auto_approve" } },
   });
 
   const values = f.settings.values("alice");
-  assert.equal(values.claude_permission_mode, "plan");
-  assert.equal(values.default_approval_decider, "parent_agent");
-  assert.equal(values.default_approval_mode, "auto_approve");
+  assert.equal(values.providers.claude.permission_mode, "plan");
+  assert.equal(values.approvals.decider, "parent_agent");
+  assert.equal(values.approvals.execution_mode, "auto_approve");
 
   const claudeInput = f.settings.taskInput("alice", { provider: "claude" });
   assert.equal("approval_mode" in claudeInput, false);
@@ -962,26 +1097,64 @@ test("execution approval defaults do not change native Claude settings", async (
   );
 });
 
-test("malformed stored settings fail with their owner instead of resetting to defaults", async (t) => {
-  const dir = await mkdtemp(join(tmpdir(), "settings-malformed-"));
-  const store = new Store(join(dir, "settings.sqlite"));
+test("approval and native permission updates need user authority", async (t) => {
+  const f = await fixture(t);
+  f.setProviders(["claude", "fixture"]);
+  const before = f.stored();
 
-  t.onTestFinished(async () => {
-    store.close();
-    await rm(dir, { recursive: true, force: true });
-  });
+  for (const [set, title] of [
+    [{ approvals: { decider: "parent_agent" } }, "Approval decision maker"],
+    [{ approvals: { execution_mode: "deny" } }, "Execution approval mode"],
+    [
+      { providers: { claude: { permission_mode: "bypassPermissions" } } },
+      "Claude permission mode",
+    ],
+  ] as const) {
+    assert.throws(() => f.settings.update("alice", { set }, "parent"), {
+      message: `${title} requires a user decision in settings`,
+    });
+  }
 
-  store.database.client
-    .prepare("INSERT INTO user_settings(owner,body) VALUES(?,?)")
-    .run(
-      "alice",
-      JSON.stringify({ default_provider: "fixture", max_cost_usd: "lots" }),
-    );
+  assert.deepEqual(f.stored(), before);
 
-  const settings = new Settings(store.database, () => ["fixture"]);
-
-  assert.throws(
-    () => settings.values("alice"),
-    /Stored settings for alice is malformed/,
+  // Task and model defaults stay open to agents.
+  f.settings.update(
+    "alice",
+    {
+      set: {
+        task: { worker_profile: "implementer" },
+        models: { global: { model: "agent-model" } },
+      },
+    },
+    "parent",
   );
+
+  assert.equal(f.settings.values("alice").task.worker_profile, "implementer");
+});
+
+test("malformed or pre-grouping stored settings fail with their owner instead of resetting to defaults", async (t) => {
+  const f = await fixture(t);
+
+  const insert = f.store.database.client.prepare(
+    "INSERT INTO user_settings(owner,body) VALUES(?,?)",
+  );
+
+  insert.run(
+    "alice",
+    JSON.stringify({
+      task: {
+        provider: "fixture",
+        budget: { max_cost_usd: { amount: "lots" } },
+      },
+    }),
+  );
+
+  // A body saved with the flat keys used before settings were grouped.
+  insert.run("bob", JSON.stringify({ default_provider: "fixture" }));
+
+  for (const owner of ["alice", "bob"]) {
+    const malformed = new RegExp(`Stored settings for ${owner} is malformed`);
+    assert.throws(() => f.settings.values(owner), malformed);
+    assert.throws(() => f.settings.read(owner), malformed);
+  }
 });

@@ -140,7 +140,12 @@ also define their settings schemas and sections.
 The approval decision maker is shared by every provider. A provider whose
 native checks leave permission requests open sets
 `nativePermissions.approvalDecider`, and its task policy defaults the task's
-decider to the `default_approval_decider` setting.
+decider to the `approvals.decider` setting.
+
+A provider's own settings form one block under `providers.<id>`, registered in
+`src/shared/providers/settings.ts`. Settings there are user-only. Metadata
+names the block's permission mode by path in
+`nativePermissions.permissionSetting`.
 
 Use the typed `RunContext.emit` for known project events and `emitOpaque` for
 provider-owned or future event names. Keep native decoding in the provider and

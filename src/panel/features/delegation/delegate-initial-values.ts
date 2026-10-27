@@ -1,3 +1,4 @@
+import { settingsDefaults } from "../../../shared/settings/settings-schema";
 import type {
   Defaults,
   DialogReadStatus,
@@ -19,10 +20,8 @@ type DelegateScope = Pick<
   "workers" | "scopeKnown" | "repository" | "revision"
 >;
 
-const FALLBACK_DEFAULTS: Defaults = {
-  max_runtime_minutes: null,
-  max_cost_usd: null,
-};
+// Fields wait for the settings read, so these only fill the form's shape.
+const FALLBACK_DEFAULTS: Defaults = settingsDefaults("");
 
 const READY = {
   context: "ready",
@@ -128,20 +127,19 @@ export function delegateInitialValues({
   const { statuses, defaults } = delegateReads(dialog),
     settingsReady = statuses.settings === "ready",
     contextReady = statuses.context === "ready",
-    target = delegateTarget(dialog, scope);
+    target = delegateTarget(dialog, scope),
+    { budget } = defaults.task;
 
   const preferred =
     dialog.preferredWorker ??
-    `${defaults.default_provider ?? ""}:${defaults.default_worker_profile ?? ""}`;
+    `${defaults.task.provider}:${defaults.task.worker_profile}`;
 
   const { provider: preferredProvider } = workerChoice(preferred),
     preferredWorker = scope.workers.find(
       (worker) => worker.provider === preferredProvider,
     );
 
-  const strategy = settingsReady
-    ? (defaults.default_workspace_strategy ?? "current_repo")
-    : "";
+  const strategy = settingsReady ? defaults.task.workspace_strategy : "";
 
   return {
     ...providerOptionDefaults(
@@ -166,18 +164,14 @@ export function delegateInitialValues({
     ),
     runtimeMode: startingBudgetMode(
       settingsReady,
-      defaults.use_runtime_budget === false ||
-        defaults.max_runtime_minutes === null,
+      !budget.max_runtime_minutes.enabled,
     ),
     runtime: settingsReady
-      ? (defaults.max_runtime_minutes ?? 20)
+      ? budget.max_runtime_minutes.amount
       : draftAmount(draft, "runtime"),
-    costMode: startingBudgetMode(
-      settingsReady,
-      defaults.use_cost_budget === false || defaults.max_cost_usd === null,
-    ),
+    costMode: startingBudgetMode(settingsReady, !budget.max_cost_usd.enabled),
     cost: settingsReady
-      ? (defaults.max_cost_usd ?? 5)
+      ? budget.max_cost_usd.amount
       : draftAmount(draft, "cost"),
     reasoning_effort: settingsReady ? "default" : "",
     context: "",

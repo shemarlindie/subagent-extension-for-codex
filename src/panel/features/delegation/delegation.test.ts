@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { settingsDefaults } from "../../../shared/settings/settings-schema";
 import { Controller } from "../../app/state/controller";
 import type { Transport } from "../../app/state/types";
 import { delegationDialog } from "./delegation";
@@ -24,12 +25,7 @@ test("New task does not reuse a revoked scoped repository", () => {
     const dialog = delegationDialog(
       state,
       [{ repository: "/remaining", kind: "repository" }],
-      {
-        default_provider: "claude",
-        default_worker_profile: "reviewer",
-        max_runtime_minutes: 20,
-        max_cost_usd: null,
-      },
+      settingsDefaults("claude"),
       false,
     );
 

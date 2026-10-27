@@ -21,25 +21,42 @@ async function fixture(t: TestContext) {
   return new Settings(store.database, () => ["claude"]);
 }
 
-const exported = (settings: Record<string, unknown>, format = 1) =>
+const exported = (settings: Record<string, unknown>, format = 2) =>
   JSON.stringify({ format, version: "0.0.0", settings });
+
+const limits = (
+  cost: { enabled?: boolean; amount?: number },
+  runtime: { enabled?: boolean; amount?: number },
+) => ({
+  set: {
+    task: { budget: { max_cost_usd: cost, max_runtime_minutes: runtime } },
+  },
+});
 
 test("an export restores every saved default on another owner", async (t) => {
   const settings = await fixture(t);
 
   settings.update("source", {
     set: {
-      default_worker_profile: "researcher",
-      claude_permission_mode: "acceptEdits",
-      claude_settings_files: false,
-      claude_user_mcp: false,
-      max_cost_usd: 12,
-      use_runtime_budget: false,
+      task: {
+        worker_profile: "researcher",
+        budget: {
+          max_cost_usd: { enabled: true, amount: 12 },
+          max_runtime_minutes: { enabled: false },
+        },
+      },
+      providers: {
+        claude: {
+          permission_mode: "acceptEdits",
+          settings_files: false,
+          user_mcp: false,
+        },
+      },
     },
   });
 
   const { document } = exportSettings(settings, "source");
-  assert.equal(JSON.parse(document).format, 1);
+  assert.equal(JSON.parse(document).format, 2);
 
   const result = importSettings(settings, "target", { document });
 
@@ -49,29 +66,42 @@ test("an export restores every saved default on another owner", async (t) => {
 
 test("an import turns limits on or off as the export had them", async (t) => {
   const settings = await fixture(t);
-  settings.update("owner", { set: { use_cost_budget: false } });
+  settings.update("owner", limits({ enabled: false }, { enabled: true }));
 
   importSettings(settings, "owner", {
-    document: exported({ max_cost_usd: 7, max_runtime_minutes: null }),
+    document: exported({
+      task: {
+        budget: {
+          max_cost_usd: { enabled: true, amount: 7 },
+          max_runtime_minutes: { enabled: false },
+        },
+      },
+    }),
   });
 
-  const values = settings.values("owner");
-  assert.equal(values.max_cost_usd, 7);
-  assert.equal(values.max_runtime_minutes, null);
+  const { budget } = settings.values("owner").task;
+  assert.deepEqual(budget.max_cost_usd, { enabled: true, amount: 7 });
+  assert.equal(budget.max_runtime_minutes.enabled, false);
 });
 
 test("an import skips unsupported values and preserves omitted settings", async (t) => {
   const settings = await fixture(t);
 
   settings.update("owner", {
-    set: { worktree_branch_prefix: "kept/", default_model: "saved-model" },
+    set: {
+      task: { worktree_branch_prefix: "kept/" },
+      models: { global: { model: "saved-model" } },
+    },
   });
 
   const result = importSettings(settings, "owner", {
     document: exported({
-      default_worker_profile: "researcher",
-      default_provider: "elsewhere",
-      worktree_branch_prefix: "invalid prefix!",
+      task: {
+        worker_profile: "researcher",
+        provider: "elsewhere",
+        worktree_branch_prefix: "invalid prefix!",
+        later: 1,
+      },
       later_setting: true,
       toString: true,
       constructor: false,
@@ -79,17 +109,19 @@ test("an import skips unsupported values and preserves omitted settings", async 
   });
 
   assert.deepEqual(result.ignored, [
-    "default_provider",
-    "worktree_branch_prefix",
+    "task.provider",
+    "task.worktree_branch_prefix",
+    "task.later",
     "later_setting",
     "toString",
     "constructor",
   ]);
 
-  assert.equal(settings.values("owner").default_worker_profile, "researcher");
-  assert.equal(settings.values("owner").default_provider, "claude");
-  assert.equal(settings.values("owner").worktree_branch_prefix, "kept/");
-  assert.equal(settings.values("owner").default_model, "saved-model");
+  const values = settings.values("owner");
+  assert.equal(values.task.worker_profile, "researcher");
+  assert.equal(values.task.provider, "claude");
+  assert.equal(values.task.worktree_branch_prefix, "kept/");
+  assert.equal(values.models.global.model, "saved-model");
 });
 
 test("an import rejects text that isn't a usable export", async (t) => {
@@ -100,49 +132,48 @@ test("an import rejects text that isn't a usable export", async (t) => {
 
   assert.throws(attempt("{"), /aren't valid JSON/);
   assert.throws(attempt('{"settings": 1}'), /isn't a settings export/);
-  assert.throws(attempt(exported({}, 2)), /Update the extension/);
+  assert.throws(attempt(exported({}, 3)), /Update the extension/);
   assert.throws(attempt(exported({ later: 1 })), /No valid settings/);
 });
 
-test("a transfer preserves amounts remembered while both budgets are off", async (t) => {
+test("an import refuses a format 1 export from before settings were grouped", async (t) => {
   const settings = await fixture(t);
 
-  settings.update("source", {
-    set: {
-      max_cost_usd: 17,
-      max_runtime_minutes: 43,
-      use_cost_budget: false,
-      use_runtime_budget: false,
-    },
-  });
+  assert.throws(
+    () =>
+      importSettings(settings, "owner", {
+        document: exported({ default_worker_profile: "researcher" }, 1),
+      }),
+    /These settings come from an older version\. Export them again\./,
+  );
+
+  assert.equal(settings.values("owner").task.worker_profile, "reviewer");
+});
+
+test("a transfer preserves amounts kept while both budgets are off", async (t) => {
+  const settings = await fixture(t);
+
+  settings.update(
+    "source",
+    limits({ enabled: false, amount: 17 }, { enabled: false, amount: 43 }),
+  );
 
   importSettings(settings, "target", exportSettings(settings, "source"));
-  assert.equal(settings.values("target").max_cost_usd, null);
-  assert.equal(settings.values("target").max_runtime_minutes, null);
-
-  settings.update("target", {
-    set: { use_cost_budget: true, use_runtime_budget: true },
-  });
-
-  assert.equal(settings.values("target").max_cost_usd, 17);
-  assert.equal(settings.values("target").max_runtime_minutes, 43);
+  const { budget } = settings.values("target").task;
+  assert.deepEqual(budget.max_cost_usd, { enabled: false, amount: 17 });
+  assert.deepEqual(budget.max_runtime_minutes, { enabled: false, amount: 43 });
 });
 
 test("a fresh source restores default budget amounts over the target's saved amounts", async (t) => {
   const settings = await fixture(t);
 
-  settings.update("target", {
-    set: { max_cost_usd: 99, max_runtime_minutes: 99 },
-  });
+  settings.update(
+    "target",
+    limits({ enabled: true, amount: 99 }, { enabled: true, amount: 99 }),
+  );
 
   importSettings(settings, "target", exportSettings(settings, "source"));
-  assert.equal(settings.values("target").max_cost_usd, null);
-  assert.equal(settings.values("target").max_runtime_minutes, null);
-
-  settings.update("target", {
-    set: { use_cost_budget: true, use_runtime_budget: true },
-  });
-
-  assert.equal(settings.values("target").max_cost_usd, 5);
-  assert.equal(settings.values("target").max_runtime_minutes, 20);
+  const { budget } = settings.values("target").task;
+  assert.deepEqual(budget.max_cost_usd, { enabled: false, amount: 5 });
+  assert.deepEqual(budget.max_runtime_minutes, { enabled: false, amount: 20 });
 });

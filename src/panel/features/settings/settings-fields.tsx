@@ -15,7 +15,7 @@ import { workerProfileIconName } from "../tasks/list/worker-profile-icon";
 import {
   helpId,
   type HelpPart,
-  onKey,
+  rowFieldNames,
   type SettingRow,
   type Values,
 } from "./settings-layout";
@@ -28,11 +28,11 @@ export interface SettingsControls {
 
 /** What rows need from the dialog around them. */
 export const SettingsContext = createContext<{
-  /** Opens the section holding a setting and focuses its field. */
+  /** Opens the section holding a setting path and focuses its field. */
   show(setting: string): void;
-  /** The title of the section holding a setting, for a link's tooltip. */
+  /** The title of the section holding a setting path, for a link's tooltip. */
   sectionOf(setting: string): string | undefined;
-  /** The keys of the section rendering a row; links into it stay plain. */
+  /** The paths of the section rendering a row. Links into it stay plain. */
   current: string[];
   /** The current form values. */
   form: Values;
@@ -124,17 +124,18 @@ export function SettingRowView({
   loading = false,
 }: SettingRowProps) {
   const { form } = useContext(SettingsContext),
-    id = `setting-${row.key}`,
-    describedBy = row.help?.length ? helpId(row.key) : undefined;
+    { name, enabledName } = rowFieldNames(row),
+    id = `setting-${name}`,
+    describedBy = row.help?.length ? helpId(row.path) : undefined;
 
-  const { errors } = useFormState({ control, name: row.key }),
-    error = errors[row.key],
+  const { errors } = useFormState({ control, name }),
+    error = errors[name],
     errorId = `${id}-error`;
 
   const text = (labelElement: React.ReactNode) => (
     <div className="setting-text">
       {labelElement}
-      <Help id={helpId(row.key)} parts={row.help} />
+      <Help id={helpId(row.path)} parts={row.help} />
     </div>
   );
 
@@ -158,13 +159,13 @@ export function SettingRowView({
         <div className="setting-control">
           <FormSelect
             control={control}
-            name={row.key}
+            name={name}
             id={id}
             label={row.label}
             options={row.options.map((option) => ({
               ...option,
               icon:
-                row.key === "default_worker_profile"
+                row.path === "task.worker_profile"
                   ? workerProfileIconName(option.value)
                   : undefined,
             }))}
@@ -202,7 +203,7 @@ export function SettingRowView({
                 undefined
               }
               // Checked by the form, like budgets: inactive panels are hidden.
-              {...register(row.key, {
+              {...register(name, {
                 validate: (value) =>
                   new RegExp(`^(?:${row.pattern})$`).test(value) ||
                   `${row.label} has characters a branch name can't use.`,
@@ -220,7 +221,7 @@ export function SettingRowView({
     );
   }
 
-  const on = row.kind === "budget" && form[onKey(row.key)] === "true";
+  const on = enabledName !== undefined && form[enabledName] === "true";
 
   return (
     <div className="setting-row setting-row-inline">
@@ -252,10 +253,10 @@ export function SettingRowView({
                 // The form checks this itself: inactive panels are hidden,
                 // where the browser cannot point to the field. A limit that is
                 // off may be blank, but an amount it would restore must fit.
-                {...register(row.key, {
+                {...register(name, {
                   validate: (value, all) =>
                     (value === ""
-                      ? all[onKey(row.key)] !== "true"
+                      ? all[enabledName ?? ""] !== "true"
                       : Number.isFinite(Number(value)) &&
                         Number(value) >= row.min &&
                         (row.max === undefined || Number(value) <= row.max)) ||
@@ -270,7 +271,7 @@ export function SettingRowView({
           </span>
         )}
         <SettingSwitch
-          name={row.kind === "budget" ? onKey(row.key) : row.key}
+          name={enabledName ?? name}
           labelId={`${id}-label`}
           describedBy={
             [describedBy, error && errorId].filter(Boolean).join(" ") ||

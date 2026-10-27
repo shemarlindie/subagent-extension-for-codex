@@ -17,9 +17,9 @@ import {
   type ModelChoice,
   type ProviderReadiness,
 } from "../../../../../shared/providers/types.js";
+import type { SettingsValues } from "../../../../../shared/settings/settings-schema.js";
 import { type Task } from "../../../../../shared/tasks/model.js";
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
-import type { SettingsValues } from "../../../settings/settings-values.js";
 import {
   type Provider,
   type RunContext,
@@ -115,13 +115,12 @@ export class ClaudeAgentProvider implements Provider {
   }
 
   models(settings?: SettingsValues): Promise<ModelChoice[]> {
+    const claude = settings?.providers.claude;
+
     const configuration = {
-      claude_settings_files:
-        settings?.claude_settings_files ??
-        claudeOverrideDefaults.claude_settings_files,
-      claude_environment:
-        settings?.claude_environment ??
-        claudeOverrideDefaults.claude_environment,
+      settings_files:
+        claude?.settings_files ?? claudeOverrideDefaults.settings_files,
+      environment: claude?.environment ?? claudeOverrideDefaults.environment,
     };
 
     const key = JSON.stringify(configuration);

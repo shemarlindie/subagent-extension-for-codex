@@ -1,4 +1,4 @@
-/** Help text in order: plain text, or a link naming the setting it opens. */
+/** Help text in order: plain text, or a link naming the setting path it opens. */
 export type HelpPart = string | { text: string; setting: string };
 
 export interface SettingOption {
@@ -8,15 +8,17 @@ export interface SettingOption {
 }
 
 export interface ModelScope {
+  /** `global`, a provider or a worker profile. */
+  id: string;
   label: string;
   model: {
-    key: string;
+    path: string;
     label: string;
     /** Without a discovered catalog the model ID is typed instead. */
     options?: SettingOption[];
   };
   effort: {
-    key: string;
+    path: string;
     label: string;
     options: SettingOption[];
     /** The saved effort is not supported by the scope's effective model. */
@@ -25,7 +27,8 @@ export interface ModelScope {
 }
 
 interface SettingRowBase {
-  key: string;
+  /** The setting's dotted path, such as `task.worker_profile`. */
+  path: string;
   label: string;
   help?: HelpPart[];
 }
@@ -46,15 +49,12 @@ export interface TextSettingRow extends SettingRowBase {
   pattern: string;
 }
 
+/** A limit whose `enabled` and `amount` settings sit under its path. */
 export interface BudgetSettingRow extends SettingRowBase {
   kind: "budget";
-  /** The update tool's on/off key for this limit. */
-  toggle: string;
   unit: string;
   min: number;
   max?: number;
-  /** The amount shown while the limit is off, restored when it turns on. */
-  amount: number;
 }
 
 export interface ModelsSettingRow {

@@ -10,3 +10,7 @@ export function scalarText(value: unknown, fallback = ""): string {
     ? String(value)
     : fallback;
 }
+
+/** A setting key or scope as a label: `worker_profile` reads "Worker profile". */
+export const titleCase = (value: string) =>
+  value.charAt(0).toUpperCase() + value.slice(1).replaceAll("_", " ");

@@ -8,18 +8,26 @@ import {
 import {
   preferredSettingsProvider,
   providerModelSettingScopes,
-  validateProviderSettingsUpdate,
 } from "../../../shared/providers/settings.js";
 import { type ModelChoice } from "../../../shared/providers/types.js";
-import {
-  modelScopeKeys,
-  resolveModelDefaults,
-} from "../../../shared/settings/model-defaults.js";
+import { resolveModelDefaults } from "../../../shared/settings/model-defaults.js";
+import { settingText } from "../../../shared/settings/setting-text.js";
 import {
   modelScope,
   settingsSections,
   unsupportedEffortWarning,
 } from "../../../shared/settings/settings-document.js";
+import {
+  mergeSettings,
+  settingAt,
+  settingPaths,
+  settingSchemaAt,
+  settingsDefaults,
+  settingsPatchSchema,
+  settingsSchema,
+  type SettingsValues,
+  userOnlySetting,
+} from "../../../shared/settings/settings-schema.js";
 import {
   type InputAuthority,
   modelNameSchema,
@@ -31,35 +39,27 @@ import { type Database } from "../../platform/database/database.js";
 import { checkStored, decodeStored } from "../../platform/database/decode.js";
 import { userSettings } from "./schema.js";
 import {
-  initialValuesSchema,
-  panelValuesSchema,
-  persistedValuesSchema,
-  providerModelKeys,
   settingsReadOutputSchema,
   settingsUpdateSchema,
-  type SettingsValues,
-  valuesSchema,
 } from "./settings-values.js";
 
-/**
- * Resolves a budget limit. An explicit toggle turns it on at the amount or
- * off. Without a toggle, a sent field replaces the saved value, and null on
- * either side turns the limit off.
- */
-function budgetLimit(
-  enabled: boolean | undefined,
-  amount: number,
-  field: number | null | undefined,
-  saved: number | null | undefined,
-) {
-  if (enabled === undefined) {
-    if (field === undefined) return saved;
+type JsonSchema = Record<string, unknown> & {
+  properties?: Record<string, JsonSchema>;
+};
 
-    return field === null || saved === null ? null : field;
-  }
-
-  return enabled ? amount : null;
+/** A JSON Schema's node for a dotted settings path. */
+function jsonSchemaAt(schema: JsonSchema, path: string) {
+  return path
+    .split(".")
+    .reduce<JsonSchema | undefined>(
+      (node, key) => node?.properties?.[key],
+      schema,
+    );
 }
+
+/** A task budget from a saved limit: its amount when on, otherwise no limit. */
+const limit = ({ enabled, amount }: { enabled: boolean; amount: number }) =>
+  enabled ? amount : null;
 
 export class Settings {
   readonly providers: () => string[];
@@ -80,146 +80,96 @@ export class Settings {
     };
   }
 
-  // A new user's settings; schema defaults fill in the rest.
-  private initialBody() {
-    return {
-      default_provider: preferredSettingsProvider(this.providers()),
-      default_worker_profile: "reviewer",
-      default_workspace_strategy: "current_repo",
-      max_runtime_minutes: null,
-      max_cost_usd: null,
-    };
+  /** The values a new user starts with, which resets restore. */
+  defaults(): SettingsValues {
+    return settingsDefaults(preferredSettingsProvider(this.providers())!);
   }
 
-  private saved(owner: string) {
+  /** The owner's saved settings, with a provider that's still enabled. */
+  values(owner: string): SettingsValues {
     const row = this.database.orm
       .select({ body: userSettings.body })
       .from(userSettings)
       .where(eq(userSettings.owner, owner))
       .get();
 
-    if (!row) return initialValuesSchema.parse(this.initialBody());
+    if (!row) return this.defaults();
 
     const record = `settings for ${owner}`;
-    const body = decodeStored(z.looseObject({}), row.body, record);
 
-    if (!this.providers().includes(body.default_provider as string)) {
-      body.default_provider = this.providers()[0];
-    }
-
-    return checkStored(persistedValuesSchema, body, record);
-  }
-
-  values(owner: string): SettingsValues {
-    const { cost_budget_amount, runtime_budget_amount, ...values } =
-      this.saved(owner);
-
-    const available = this.providers();
+    const values = checkStored(
+      settingsSchema,
+      decodeStored(z.looseObject({}), row.body, record),
+      record,
+    );
 
     // A saved provider can disappear when the service configuration changes.
-    if (!available.includes(values.default_provider)) {
-      values.default_provider = valuesSchema.shape.default_provider.parse(
-        available[0],
-      );
+    if (!this.providers().includes(values.task.provider)) {
+      values.task.provider = this.providers()[0]!;
     }
 
     return values;
   }
 
-  /** Saved defaults for transfer, including amounts remembered while limits are off. */
-  exportValues(owner: string) {
-    const saved = this.saved(owner);
+  // Enabled providers with model defaults. The others stay saved but hidden.
+  private modelProviders(): string[] {
+    return providerModelSettingScopes.filter((provider) =>
+      this.providers().includes(provider),
+    );
+  }
+
+  private shown(values: SettingsValues) {
+    const shown = this.modelProviders();
 
     return {
-      ...this.values(owner),
-      max_cost_usd: saved.max_cost_usd ?? saved.cost_budget_amount ?? 5,
-      use_cost_budget: saved.max_cost_usd !== null,
-      max_runtime_minutes:
-        saved.max_runtime_minutes ?? saved.runtime_budget_amount ?? 20,
-      use_runtime_budget: saved.max_runtime_minutes !== null,
+      ...values,
+      models: {
+        ...values.models,
+        providers: Object.fromEntries(
+          Object.entries(values.models.providers).filter(([provider]) =>
+            shown.includes(provider),
+          ),
+        ),
+      },
     };
-  }
-
-  // The panel presents native permission settings; execution approval defaults
-  // remain available to execution providers and direct settings callers.
-  private panelValues(values: SettingsValues) {
-    const { default_approval_mode, ...visible } = values;
-    const panel: z.infer<typeof panelValuesSchema> = visible;
-
-    for (const key of this.hiddenModelKeys()) delete panel[key];
-
-    return panel;
-  }
-
-  /** The values a new user starts with, which resets restore. */
-  defaults() {
-    const { cost_budget_amount, runtime_budget_amount, ...values } =
-      initialValuesSchema.parse(this.initialBody());
-
-    return values;
-  }
-
-  // A disabled provider's model defaults stay saved but hidden from the panel
-  // until the provider is enabled again.
-  private hiddenModelKeys() {
-    return providerModelKeys.filter(
-      (key) =>
-        !this.providers().some((provider) => key.startsWith(`${provider}_`)),
-    );
   }
 
   read(
     owner: string,
     catalogs: { provider: string; models?: ModelChoice[] }[] = [],
   ) {
-    const providers = this.providers();
-
-    const schema = z.toJSONSchema(
-      panelValuesSchema.extend({
-        default_provider: z
-          .enum(providers as [string, ...string[]])
-          .meta({ title: "Provider" }),
-      }),
-    );
+    const providers = this.providers(),
+      modelProviders = this.modelProviders();
 
     catalogs = catalogs.filter((catalog) =>
       providers.includes(catalog.provider),
     );
 
-    const saved = this.saved(owner),
-      values = this.panelValues(this.values(owner)),
-      properties = schema.properties!;
+    // Agents update through this schema, so it lists what an update accepts.
+    const schema = z.toJSONSchema(settingsPatchSchema) as JsonSchema;
+    jsonSchemaAt(schema, "task.provider")!.enum = providers;
+    const providerModels = jsonSchemaAt(schema, "models.providers")!;
 
-    for (const key of this.hiddenModelKeys()) delete properties[key];
+    for (const provider of providerModelSettingScopes) {
+      if (!modelProviders.includes(provider)) {
+        delete providerModels.properties?.[provider];
+      }
+    }
 
-    const scopes = {
-      values,
-      providers,
-      catalogs,
-      modelProviders: providers.filter(
-        (provider) => modelScopeKeys(provider).modelKey in properties,
-      ),
-    };
+    const values = this.shown(this.values(owner)),
+      scopes = { values, providers, catalogs, modelProviders };
 
-    const sections = settingsSections({
-      ...scopes,
-      shown: properties,
-      remembered: {
-        max_cost_usd: saved.max_cost_usd ?? saved.cost_budget_amount ?? 5,
-        max_runtime_minutes:
-          saved.max_runtime_minutes ?? saved.runtime_budget_amount ?? 20,
-      },
-    });
+    const sections = settingsSections(scopes);
 
     // Agents read choices and notes from the schema; the panel reads sections,
     // whose intros explain the same chain from each section's side.
     const modelNote =
       "Blank inherits the next default: the task's worker profile, then its provider, then the global default, then the provider's own default. A model chosen for a task overrides these.";
 
-    for (const scope of ["global", ...scopes.modelProviders, ...roles]) {
+    for (const scope of ["global", ...modelProviders, ...roles]) {
       const info = modelScope(scope, scopes),
-        modelField = properties[info.modelKey] as Record<string, unknown>,
-        effortField = properties[info.effortKey] as Record<string, unknown>;
+        modelField = jsonSchemaAt(schema, info.modelPath)!,
+        effortField = jsonSchemaAt(schema, info.effortPath)!;
 
       modelField.description = modelNote;
 
@@ -241,11 +191,10 @@ export class Settings {
         .join(" ");
     }
 
-    // Defaults are effective values, never JSON Schema defaults.
     return settingsReadOutputSchema.parse({
       schema,
       values,
-      defaults: this.panelValues(this.defaults()),
+      defaults: this.shown(this.defaults()),
       sections,
     });
   }
@@ -253,69 +202,34 @@ export class Settings {
   update(owner: string, input: unknown, authority: InputAuthority = "user") {
     const { set } = settingsUpdateSchema.parse(input);
 
-    if (authority !== "user" && set.auto_register_chat_project !== undefined) {
-      throw new Error(
-        "Automatic project registration requires a user decision in settings",
-      );
+    const userOnly =
+      authority === "user"
+        ? undefined
+        : settingPaths(set).find((path) => userOnlySetting(path));
+
+    if (userOnly) {
+      const { label } = settingText(settingSchemaAt(userOnly)!);
+      throw new Error(`${label} requires a user decision in settings`);
     }
 
-    if (
-      authority !== "user" &&
-      (set.default_approval_decider !== undefined ||
-        set.default_approval_mode !== undefined)
-    ) {
-      throw new Error("Approval settings require a user decision in settings");
-    }
-
-    validateProviderSettingsUpdate(set, authority);
+    const provider = settingAt(set, "task.provider");
 
     if (
-      set.default_provider &&
-      !this.providers().includes(set.default_provider)
+      provider !== undefined &&
+      !this.providers().includes(scalarText(provider))
     ) {
       throw new Error("Provider is not enabled");
     }
 
     // Synchronous read/merge/write preserves omitted fields across concurrent requests.
-    const previous = this.saved(owner);
-    const { use_cost_budget, use_runtime_budget, ...fields } = set;
-
-    const amount =
-      fields.max_cost_usd ??
-      previous.max_cost_usd ??
-      previous.cost_budget_amount ??
-      5;
-
-    const max_cost_usd = budgetLimit(
-      use_cost_budget,
-      amount,
-      fields.max_cost_usd,
-      previous.max_cost_usd,
+    const body = JSON.stringify(
+      settingsSchema.parse(
+        mergeSettings(
+          this.values(owner),
+          z.record(z.string(), z.unknown()).parse(set),
+        ),
+      ),
     );
-
-    const runtimeAmountValue =
-      fields.max_runtime_minutes ??
-      previous.max_runtime_minutes ??
-      previous.runtime_budget_amount ??
-      20;
-
-    const max_runtime_minutes = budgetLimit(
-      use_runtime_budget,
-      runtimeAmountValue,
-      fields.max_runtime_minutes,
-      previous.max_runtime_minutes,
-    );
-
-    const values = persistedValuesSchema.parse({
-      ...previous,
-      ...fields,
-      max_cost_usd,
-      cost_budget_amount: amount,
-      max_runtime_minutes,
-      runtime_budget_amount: runtimeAmountValue,
-    });
-
-    const body = JSON.stringify(values);
 
     this.database.orm
       .insert(userSettings)
@@ -323,7 +237,7 @@ export class Settings {
       .onConflictDoUpdate({ target: userSettings.owner, set: { body } })
       .run();
 
-    return { values: this.panelValues(this.values(owner)) };
+    return { values: this.shown(this.values(owner)) };
   }
 
   taskInput(owner: string, input: unknown) {
@@ -337,15 +251,14 @@ export class Settings {
       args.reasoning_effort = reasoningSchema.parse(args.reasoning_effort);
     }
 
-    const defaults = this.values(owner);
-    const provider = scalarText(args.provider ?? defaults.default_provider);
-
-    const role = scalarText(
-      args.worker_profile ?? defaults.default_worker_profile,
-    );
+    const defaults = this.values(owner),
+      { task } = defaults;
 
     // Task choices win; inheritance sentinels leave the saved defaults in control.
-    const saved = resolveModelDefaults(defaults, { provider, profile: role });
+    const saved = resolveModelDefaults(defaults, {
+      provider: scalarText(args.provider ?? task.provider),
+      profile: scalarText(args.worker_profile ?? task.worker_profile),
+    });
 
     const reasoning =
       args.reasoning_effort === "default" ? undefined : args.reasoning_effort;
@@ -360,13 +273,12 @@ export class Settings {
       ...(args.approval_mode !== undefined
         ? { approval_mode: args.approval_mode }
         : {}),
-      provider: args.provider ?? defaults.default_provider,
-      worker_profile: args.worker_profile ?? defaults.default_worker_profile,
-      workspace_strategy:
-        args.workspace_strategy ?? defaults.default_workspace_strategy,
+      provider: args.provider ?? task.provider,
+      worker_profile: args.worker_profile ?? task.worker_profile,
+      workspace_strategy: args.workspace_strategy ?? task.workspace_strategy,
       budget: {
-        max_runtime_minutes: defaults.max_runtime_minutes,
-        max_cost_usd: defaults.max_cost_usd,
+        max_runtime_minutes: limit(task.budget.max_runtime_minutes),
+        max_cost_usd: limit(task.budget.max_cost_usd),
         ...z.record(z.string(), z.unknown()).parse(args.budget ?? {}),
       },
     };

@@ -107,8 +107,9 @@ files return their size.
 Tools starting with `app_` are app-only. MCP hosts must hide them from the
 model. Authenticated raw service clients are trusted administrators.
 
-Model-visible tools may read settings and change ordinary defaults. App-only
-tools carry user authority:
+Model-visible tools may read settings and change ordinary defaults.
+`get_settings` marks user-only setting groups with `userOnly: true` in its
+schema. App-only tools carry user authority:
 
 | Tool                                                                    | User authority                                       |
 | ----------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -125,9 +126,9 @@ tools carry user authority:
 Other `app_` tools serve panel reads and controls.
 
 `app_export_settings` returns a JSON string in `document`. The export contains
-a `format` number, the extension `version` and the user's saved `settings`.
-`app_import_settings` accepts this document with user authority and rejects
-newer formats it doesn't support. The format number controls compatibility
+a `format` number, currently `2`, the extension `version` and the user's saved
+nested `settings`. `app_import_settings` accepts this document with user
+authority, lists skipped dotted paths and rejects other formats. The format number controls compatibility
 independently of the extension version.
 
 `app_save_settings_file` writes the user's settings export to a new file in the

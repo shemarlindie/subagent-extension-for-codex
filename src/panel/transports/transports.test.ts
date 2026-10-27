@@ -627,10 +627,12 @@ test("host routes user actions through app-only aliases and preserves settings e
       status: "running",
     });
 
-    const settingsArgs = { set: { default_approval_mode: "parent_agent" } };
+    const settingsArgs = {
+      set: { approvals: { execution_mode: "parent_agent" } },
+    };
 
     const settings = {
-      values: { default_approval_mode: "parent_agent" },
+      values: { approvals: { execution_mode: "parent_agent" } },
       schema: { type: "object" },
       sections: [],
     };

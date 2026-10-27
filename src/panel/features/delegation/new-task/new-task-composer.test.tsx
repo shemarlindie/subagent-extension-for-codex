@@ -6,6 +6,7 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
+import { withSetting } from "../../../../shared/settings/settings-schema";
 import { roles } from "../../../../shared/tasks/model";
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
@@ -26,7 +27,11 @@ const ready: NewTaskState = {
     projects: "ready",
     workers: "ready",
   },
-  defaults: { ...defaults, claude_permission_mode: "acceptEdits" },
+  defaults: withSetting(
+    defaults,
+    "providers.claude.permission_mode",
+    "acceptEdits",
+  ),
 };
 
 function setup(
@@ -136,11 +141,15 @@ test("the profile's settings collapse into a summary that expands for editing", 
 test("reasoning choices save to the profile, and choosing a profile restores its saved settings", async () => {
   const { view, user, start, saveProfileSetting } = setup({
     ...ready,
-    defaults: {
-      ...defaults,
-      claude_default_reasoning_effort: "medium",
-      implementer_default_reasoning_effort: "low",
-    },
+    defaults: withSetting(
+      withSetting(
+        defaults,
+        "models.providers.claude.reasoning_effort",
+        "medium",
+      ),
+      "models.profiles.implementer.reasoning_effort",
+      "low",
+    ),
   });
 
   await user.click(view.getByRole("button", { name: /^Edit / }));

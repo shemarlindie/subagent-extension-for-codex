@@ -2,6 +2,7 @@
 // build reject production imports of `*-test-harness` modules.
 import assert from "node:assert/strict";
 
+import { settingsDefaults } from "../../../shared/settings/settings-schema";
 import { decodePanelToolResult } from "../../transports/event-decoding";
 import { Controller } from "./controller";
 import type {
@@ -29,11 +30,17 @@ export const flush = async () => {
   for (let i = 0; i < 30; i++) await Promise.resolve();
 };
 
+const initialDefaults = settingsDefaults("claude");
+
 export const defaults: Defaults = {
-  default_provider: "claude",
-  default_worker_profile: "reviewer",
-  max_runtime_minutes: 0.5,
-  max_cost_usd: null,
+  ...initialDefaults,
+  task: {
+    ...initialDefaults.task,
+    budget: {
+      ...initialDefaults.task.budget,
+      max_runtime_minutes: { enabled: true, amount: 0.5 },
+    },
+  },
 };
 
 export function task(

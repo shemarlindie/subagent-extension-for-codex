@@ -139,10 +139,14 @@ test("console cookie can configure modes and approve while generic bearer API ca
   const { c, post, cookie, start, pending, cleanup } = await setup();
 
   try {
-    const change = { set: { default_approval_mode: "parent_agent" } };
+    const change = { set: { approvals: { execution_mode: "parent_agent" } } };
     const blocked = await post("/api/tools/update_settings", change);
     assert.equal(blocked.status, 400);
-    assert.match((await blocked.json()).error, /require a user decision/);
+
+    assert.match(
+      (await blocked.json()).error,
+      /Execution approval mode requires a user decision/,
+    );
 
     assert.equal(
       (await post("/api/tools/update_settings", change, cookie)).status,
@@ -150,7 +154,7 @@ test("console cookie can configure modes and approve while generic bearer API ca
     );
 
     assert.equal(
-      c.settings.values("local").default_approval_mode,
+      c.settings.values("local").approvals.execution_mode,
       "parent_agent",
     );
 
@@ -158,7 +162,7 @@ test("console cookie can configure modes and approve while generic bearer API ca
       (
         await post(
           "/api/tools/update_settings",
-          { set: { default_approval_mode: "ask_user" } },
+          { set: { approvals: { execution_mode: "ask_user" } } },
           cookie,
         )
       ).status,
@@ -210,13 +214,13 @@ test("authenticated admin user-tools route supports user settings, starts, and d
     assert.equal(
       (
         await post("/api/user-tools/app_update_settings", {
-          set: { default_approval_mode: "deny" },
+          set: { approvals: { execution_mode: "deny" } },
         })
       ).status,
       200,
     );
 
-    assert.equal(c.settings.values("local").default_approval_mode, "deny");
+    assert.equal(c.settings.values("local").approvals.execution_mode, "deny");
 
     const restricted = await post("/api/tools/start_task", {
       ...start,
@@ -255,7 +259,7 @@ test("authenticated admin user-tools route supports user settings, starts, and d
     assert.equal(
       (
         await post("/api/user-tools/update_settings", {
-          set: { default_approval_mode: "auto_approve" },
+          set: { approvals: { execution_mode: "auto_approve" } },
         })
       ).status,
       400,
@@ -323,7 +327,7 @@ test("MCP advertises app-only aliases and lets the parent agent answer delegated
       (
         await post(
           "/api/tools/update_settings",
-          { set: { default_approval_mode: "parent_agent" } },
+          { set: { approvals: { execution_mode: "parent_agent" } } },
           cookie,
         )
       ).status,

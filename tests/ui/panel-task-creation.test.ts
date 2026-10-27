@@ -470,14 +470,15 @@ test("current repository selection locks revision to HEAD and submits the checko
   assert.equal(call.args.repository, "/repo/a");
 });
 
-test("delegation uses the extension permission setting by default and separately selects the approval decision maker", async (t) => {
+test("delegation starts from the saved permission setting and separately selects the approval decision maker", async (t) => {
   const { user, transport } = await setup(t);
   await openAdvancedTask(user);
   await screen.findByRole("dialog");
 
+  // The fake service saves Claude's initial Default permission mode.
   assert.equal(
     screen.getByRole("combobox", { name: "Permission mode" }).textContent,
-    "Use extension setting",
+    "Default — ask for approval",
   );
 
   await selectOption(user, "Permission mode", "Accept edits");
@@ -576,8 +577,17 @@ test("More options preserves a pending composer draft and fills Advanced task de
     settings.resolve({
       values: {
         ...defaults,
-        claude_permission_mode: "acceptEdits",
-        default_reasoning_effort: "high",
+        providers: {
+          ...defaults.providers,
+          claude: {
+            ...defaults.providers.claude,
+            permission_mode: "acceptEdits",
+          },
+        },
+        models: {
+          ...defaults.models,
+          global: { ...defaults.models.global, reasoning_effort: "high" },
+        },
       },
     });
   });

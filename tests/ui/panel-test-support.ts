@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { describe, expect, test, type TestContext, vi } from "vitest";
 
+import { defaults } from "../../src/panel/app/state/controller-test-harness";
 import type {
   HostState,
   Project,
@@ -18,6 +19,7 @@ import type {
 import { decodePanelToolResult } from "../../src/panel/transports/event-decoding.js";
 import { changeCounts } from "../../src/shared/changes/changes.js";
 import type { Event } from "../../src/shared/events/types.js";
+import { withSetting } from "../../src/shared/settings/settings-schema.js";
 import {
   windowActivity,
   windowTurnActivity,
@@ -229,14 +231,7 @@ export class FakeTransport implements Transport {
       app_get_change_counts: changeCounts(this.changes[0]),
       get_changes: this.changes[Number(args.cursor ?? 0)],
       get_changed_file: this.changedFiles[String(args.path)],
-      get_settings: {
-        values: {
-          default_provider: "claude",
-          default_worker_profile: "reviewer",
-          max_runtime_minutes: 0.5,
-          max_cost_usd: null,
-        },
-      },
+      get_settings: { values: defaults },
       start_task: this.tasks[0],
       submit_input: {},
     };
@@ -448,9 +443,10 @@ export async function enterTask(user: any, description: string) {
   await user.type(screen.getByLabelText("Description"), description);
 }
 
+/** Serves saved settings with the given values, keyed by dotted path. */
 export function configureModelDefaults(
   transport: FakeTransport,
-  defaults: Record<string, string>,
+  saved: Record<string, string>,
   models?: {
     value: string;
     displayName: string;
@@ -465,7 +461,12 @@ export function configureModelDefaults(
     const result = await original<any>(name, args);
 
     if (name === "get_settings") {
-      return { ...result, values: { ...result.values, ...defaults } } as T;
+      const values = Object.entries(saved).reduce(
+        (merged, [path, value]) => withSetting(merged, path, value),
+        result.values,
+      );
+
+      return { ...result, values } as T;
     }
 
     if (name === "list_workers") {
@@ -481,10 +482,13 @@ export function configureModelDefaults(
 }
 
 // Serves a settings document and records updates without applying them.
+// Values and defaults hold only the settings the sections show.
 export function serveSettings(
   transport: FakeTransport,
-  document: Pick<SettingsDocument, "sections"> &
-    Partial<Pick<SettingsDocument, "values" | "defaults">>,
+  document: Pick<SettingsDocument, "sections"> & {
+    values?: Record<string, unknown>;
+    defaults?: Record<string, unknown>;
+  },
 ) {
   const original = transport.tool.bind(transport);
 
@@ -513,17 +517,19 @@ const effortOptions = [
   { value: "high", label: "high" },
 ];
 
-// A model scope row; without `options` the model is typed.
+// A model scope row at a settings path such as `models.global`. Without
+// `options`, the model is typed.
 export const scope = (
-  key: string,
+  path: string,
   label: string,
   options?: { value: string; label: string; description?: string }[],
   unsupported = false,
 ) => ({
+  id: path.split(".").at(-1)!,
   label,
-  model: { key: `${key}_model`, label: `${label} model`, options },
+  model: { path: `${path}.model`, label: `${label} model`, options },
   effort: {
-    key: `${key}_reasoning_effort`,
+    path: `${path}.reasoning_effort`,
     label: `${label} effort`,
     options: effortOptions,
     unsupported,
@@ -532,13 +538,11 @@ export const scope = (
 
 export const budgetRow = {
   kind: "budget" as const,
-  key: "max_cost_usd",
-  toggle: "use_cost_budget",
+  path: "task.budget.max_cost_usd",
   label: "Cost limit",
   unit: "USD",
   min: 0.01,
   max: 100,
-  amount: 5,
 };
 
 export {

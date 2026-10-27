@@ -1,6 +1,9 @@
-import { claudeOverrideDefaults } from "../../../src/shared/providers/claude/permissions";
 import { type ModelChoice } from "../../../src/shared/providers/types";
 import { settingsSections } from "../../../src/shared/settings/settings-document";
+import {
+  settingsDefaults,
+  withSetting,
+} from "../../../src/shared/settings/settings-schema";
 import {
   windowActivity,
   windowTurnActivity,
@@ -54,28 +57,12 @@ const previewModels: ModelChoice[] = [
 ];
 
 // A new user's settings with only Claude enabled, as the service reports them.
-const previewSettingsDefaults = {
-  default_provider: "claude",
-  default_worker_profile: "reviewer",
-  default_workspace_strategy: "current_repo",
-  worktree_branch_prefix: "agent/",
-  auto_register_chat_project: true,
-  claude_permission_mode: "default",
-  default_approval_decider: "user",
-  ...claudeOverrideDefaults,
-  max_cost_usd: null,
-  max_runtime_minutes: null,
-  ...Object.fromEntries(
-    [
-      "default",
-      "claude_default",
-      ...roles.map((role) => `${role}_default`),
-    ].flatMap((prefix) => [
-      [`${prefix}_model`, ""],
-      [`${prefix}_reasoning_effort`, "default"],
-    ]),
-  ),
-};
+const previewSettingsDefaults = (() => {
+  const defaults = settingsDefaults("claude");
+  const { claude } = defaults.models.providers;
+
+  return { ...defaults, models: { ...defaults.models, providers: { claude } } };
+})();
 
 const newestFirst = (tasks: Task[]) =>
   [...tasks].sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -532,11 +519,15 @@ export function previewTool(
     ],
     // Built with the service's own section builder, so the preview matches it.
     get_settings: (() => {
-      const values = {
-        ...previewSettingsDefaults,
-        auto_register_chat_project: options.autoRegisterChatProject ?? true,
-        claude_default_model: "sonnet",
-      };
+      const values = withSetting(
+        withSetting(
+          previewSettingsDefaults,
+          "projects.auto_register_chat",
+          options.autoRegisterChatProject ?? true,
+        ),
+        "models.providers.claude.model",
+        "sonnet",
+      );
 
       return {
         schema: { type: "object", properties: {} },
@@ -546,8 +537,6 @@ export function previewTool(
           values,
           providers: ["claude"],
           catalogs: [{ provider: "claude", models: previewModels }],
-          shown: values,
-          remembered: { max_cost_usd: 5, max_runtime_minutes: 20 },
         }),
       };
     })(),

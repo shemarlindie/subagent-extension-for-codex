@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { settingsDefaults } from "../../../shared/settings/settings-schema";
 import type { Worker } from "../../app/state/types";
 import {
   type DelegateFormDialog,
@@ -36,17 +37,24 @@ const loading: DelegateFormDialog = {
   },
 };
 
+const initial = settingsDefaults("claude");
+
 const loaded: DelegateFormDialog = {
   kind: "delegate",
   scope: 1,
   repository: "/repo",
   revision: "main",
   defaults: {
-    default_provider: "claude",
-    default_worker_profile: "implementer",
-    default_workspace_strategy: "worktree",
-    max_runtime_minutes: 30,
-    max_cost_usd: null,
+    ...initial,
+    task: {
+      ...initial.task,
+      worker_profile: "implementer",
+      workspace_strategy: "worktree",
+      budget: {
+        ...initial.task.budget,
+        max_runtime_minutes: { enabled: true, amount: 30 },
+      },
+    },
   },
 };
 
@@ -74,7 +82,10 @@ test("the dialog's preferred worker wins, and the current repo uses HEAD", () =>
     dialog: {
       ...loaded,
       preferredWorker: "claude:reviewer",
-      defaults: { ...loaded.defaults, default_workspace_strategy: undefined },
+      defaults: {
+        ...loaded.defaults,
+        task: { ...loaded.defaults.task, workspace_strategy: "current_repo" },
+      },
     },
     scope,
     draft: {},

@@ -36,7 +36,7 @@ async function fixture(t: TestContext) {
   const enable = (owner = "alice", value = true) =>
     control.settings.update(
       owner,
-      { set: { auto_register_chat_project: value } },
+      { set: { projects: { auto_register_chat: value } } },
       "user",
     );
 
@@ -52,7 +52,7 @@ test("chat project registration is enabled by default and opt-out is owner scope
   const repository = await f.repo("project");
 
   assert.equal(
-    f.control.settings.values("alice").auto_register_chat_project,
+    f.control.settings.values("alice").projects.auto_register_chat,
     true,
   );
 

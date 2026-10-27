@@ -34,25 +34,25 @@ export const claudeToolsSchema = z.enum(["profile", "all", "restricted"]);
 export const claudePathGuardSchema = z.enum(["profile", "on", "off"]);
 
 export type ClaudeOverrides = {
-  claude_sandbox: z.infer<typeof claudeSandboxSchema>;
-  claude_environment: z.infer<typeof claudeEnvironmentSchema>;
-  claude_tools: z.infer<typeof claudeToolsSchema>;
-  claude_path_guard: z.infer<typeof claudePathGuardSchema>;
-  claude_subagents: boolean;
-  claude_settings_files: boolean;
-  claude_user_mcp: boolean;
+  sandbox: z.infer<typeof claudeSandboxSchema>;
+  environment: z.infer<typeof claudeEnvironmentSchema>;
+  tools: z.infer<typeof claudeToolsSchema>;
+  path_guard: z.infer<typeof claudePathGuardSchema>;
+  subagents: boolean;
+  settings_files: boolean;
+  user_mcp: boolean;
 };
 
 // Other Claude Code configuration loads by default; the extension owns the
 // session's native permission mode.
 export const claudeOverrideDefaults: ClaudeOverrides = {
-  claude_sandbox: "user_config",
-  claude_environment: "inherit",
-  claude_tools: "profile",
-  claude_path_guard: "profile",
-  claude_subagents: true,
-  claude_settings_files: true,
-  claude_user_mcp: true,
+  sandbox: "user_config",
+  environment: "inherit",
+  tools: "profile",
+  path_guard: "profile",
+  subagents: true,
+  settings_files: true,
+  user_mcp: true,
 };
 
 /** Labels for each choice of the non-switch overrides. */
@@ -63,21 +63,21 @@ type ClaudeOverrideLabels = {
 };
 
 export const claudeOverrideLabels: ClaudeOverrideLabels = {
-  claude_sandbox: {
+  sandbox: {
     user_config: "Your Claude Code settings",
     extension: "Extension sandbox",
     extension_locked: "Extension sandbox with locked network",
   },
-  claude_environment: {
+  environment: {
     inherit: "Full environment",
     filtered: "Filtered allowlist",
   },
-  claude_tools: {
+  tools: {
     profile: "By worker profile",
     all: "All tools",
     restricted: "Restricted set",
   },
-  claude_path_guard: {
+  path_guard: {
     profile: "By worker profile",
     on: "On",
     off: "Off",
@@ -155,7 +155,7 @@ export const claudePolicySchema = z.object({
 export type ClaudePolicy = z.infer<typeof claudePolicySchema>;
 
 function resolveTools(
-  setting: ClaudeOverrides["claude_tools"],
+  setting: ClaudeOverrides["tools"],
   readOnly: boolean,
 ): ClaudePolicy["tools"] {
   if (setting !== "profile") return setting;
@@ -171,15 +171,15 @@ export function resolveClaudePolicy(
   const readOnly = readOnlyProfile(workerProfile);
 
   return {
-    sandbox: overrides.claude_sandbox,
-    environment: overrides.claude_environment,
-    tools: resolveTools(overrides.claude_tools, readOnly),
+    sandbox: overrides.sandbox,
+    environment: overrides.environment,
+    tools: resolveTools(overrides.tools, readOnly),
     path_guard:
-      overrides.claude_path_guard === "profile"
+      overrides.path_guard === "profile"
         ? readOnly
-        : overrides.claude_path_guard === "on",
-    subagents: overrides.claude_subagents,
-    settings_files: overrides.claude_settings_files,
-    user_mcp: overrides.claude_user_mcp,
+        : overrides.path_guard === "on",
+    subagents: overrides.subagents,
+    settings_files: overrides.settings_files,
+    user_mcp: overrides.user_mcp,
   };
 }

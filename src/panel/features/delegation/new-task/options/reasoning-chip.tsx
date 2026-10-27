@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { titleCase } from "../../../../../shared/settings/settings-document";
+import { titleCase } from "../../../../../shared/text";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import { useProfileChoice } from "./use-profile-choice";
 

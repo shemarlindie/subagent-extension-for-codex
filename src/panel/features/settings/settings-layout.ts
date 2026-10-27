@@ -4,60 +4,93 @@ import type {
   SettingRow,
   SettingSection,
 } from "../../../shared/settings/settings-document";
-import type { SettingValue } from "../../app/state/types";
+import {
+  settingAt,
+  withSetting,
+} from "../../../shared/settings/settings-schema";
+import { scalarText } from "../../../shared/text";
 
 /** Form logic for the settings dialog: values in and out, summaries, resets. */
 
 export type { HelpPart, ModelScope, SettingRow, SettingSection };
 
-/** Form state keeps every value as a string. */
+/** Form state keeps every value as a string, keyed by `fieldName`. */
 export type Values = Record<string, string>;
 
-type Settings = Partial<Record<string, SettingValue>>;
+/**
+ * A setting's form field and DOM ID part. Keys never contain `-`, so the form
+ * stays flat and IDs need no CSS escaping: `task.worker_profile` is
+ * `task-worker_profile`.
+ */
+export const fieldName = (path: string) => path.replaceAll(".", "-");
 
-/** A budget row's on/off state lives beside its amount in the form. */
-export const onKey = (key: string) => `${key}:on`;
+/** A budget row's on/off state and amount are settings under its path. */
+const budgetPaths = (path: string) => ({
+  enabled: `${path}.enabled`,
+  amount: `${path}.amount`,
+});
 
-/** The setting keys a row edits. */
-function rowKeys(row: SettingRow): string[] {
-  return row.kind === "models"
-    ? row.scopes.flatMap((scope) => [scope.model.key, scope.effort.key])
-    : [row.key];
+/**
+ * A row's form field, and a budget's on/off switch. A budget's amount is its
+ * field, and its switch sits beside it.
+ */
+export function rowFieldNames(row: Exclude<SettingRow, { kind: "models" }>) {
+  if (row.kind !== "budget") return { name: fieldName(row.path) };
+
+  const { enabled, amount } = budgetPaths(row.path);
+
+  return { name: fieldName(amount), enabledName: fieldName(enabled) };
 }
 
-export const sectionKeys = (section: SettingSection) =>
-  section.rows.flatMap(rowKeys);
+/** The setting paths a row edits. */
+function rowPaths(row: SettingRow): string[] {
+  if (row.kind === "models") {
+    return row.scopes.flatMap((scope) => [scope.model.path, scope.effort.path]);
+  }
 
-/** A row's form entries for the given setting values. */
-export function rowForm(row: SettingRow, values: Settings): Values {
+  if (row.kind === "budget") {
+    const { enabled, amount } = budgetPaths(row.path);
+
+    return [enabled, amount];
+  }
+
+  return [row.path];
+}
+
+/** The settings a section edits, by path. */
+export const sectionPaths = (section: SettingSection) =>
+  section.rows.flatMap(rowPaths);
+
+/** A row's form entries for the given nested setting values. */
+export function rowForm(row: SettingRow, values: unknown): Values {
+  const text = (path: string, fallback = "") =>
+    scalarText(settingAt(values, path), fallback);
+
   switch (row.kind) {
     case "models":
       return Object.fromEntries(
         row.scopes.flatMap((scope) => [
-          [scope.model.key, String(values[scope.model.key] ?? "")],
-          [scope.effort.key, String(values[scope.effort.key] ?? "default")],
+          [fieldName(scope.model.path), text(scope.model.path)],
+          [fieldName(scope.effort.path), text(scope.effort.path, "default")],
         ]),
       );
 
-    // A limit that is off still shows the amount it would restore.
-    case "budget": {
-      const value = values[row.key];
-
-      return {
-        [row.key]: String(value ?? row.amount),
-        [onKey(row.key)]: String(value !== null && value !== undefined),
-      };
-    }
+    case "budget":
+      return Object.fromEntries(
+        rowPaths(row).map((path) => [fieldName(path), text(path)]),
+      );
 
     case "switch":
-      return { [row.key]: String(values[row.key] === true) };
+      return {
+        [fieldName(row.path)]: String(settingAt(values, row.path) === true),
+      };
     case "select":
     case "text":
-      return { [row.key]: String(values[row.key] ?? "") };
+      return { [fieldName(row.path)]: text(row.path) };
   }
 }
 
-export const sectionsForm = (sections: SettingSection[], values: Settings) =>
+export const sectionsForm = (sections: SettingSection[], values: unknown) =>
   Object.assign(
     {},
     ...sections.flatMap((section) =>
@@ -70,34 +103,35 @@ export const differs = (entries: Values, form: Values) =>
   Object.entries(entries).some(([key, value]) => form[key] !== value);
 
 /**
- * The update for edited rows only. Budgets send their on/off switch and
- * amount, so turning a limit off keeps its amount for later.
+ * The nested update for edited settings only. A blank budget amount keeps the
+ * saved one, so turning a limit off or on never loses it.
  */
 export function changes(
   sections: SettingSection[],
   form: Values,
   initial: Values,
 ) {
-  const set: Record<string, unknown> = {};
-  const edited = (key: string) => form[key] !== initial[key];
+  let set: Record<string, unknown> = {};
 
   for (const row of sections.flatMap((section) => section.rows)) {
-    if (row.kind === "budget") {
-      const on = onKey(row.key);
-      if (edited(on)) set[row.toggle] = form[on] === "true";
+    for (const path of rowPaths(row)) {
+      const name = fieldName(path),
+        value = form[name];
 
-      // A blank amount while off keeps the saved one.
-      if (
-        form[row.key] !== "" &&
-        (edited(row.key) || (edited(on) && form[on] === "true"))
-      ) {
-        set[row.key] = Number(form[row.key]);
-      }
-    } else {
-      for (const key of rowKeys(row)) {
-        if (edited(key)) {
-          set[key] = row.kind === "switch" ? form[key] === "true" : form[key];
+      if (value === undefined || value === initial[name]) continue;
+
+      if (row.kind === "budget") {
+        if (path.endsWith(".amount")) {
+          if (value !== "") set = withSetting(set, path, Number(value));
+        } else {
+          set = withSetting(set, path, value === "true");
         }
+      } else {
+        set = withSetting(
+          set,
+          path,
+          row.kind === "switch" ? value === "true" : value,
+        );
       }
     }
   }
@@ -114,10 +148,12 @@ export function editCount(
   return section.rows
     .flatMap((row) =>
       row.kind === "models"
-        ? row.scopes.map((scope) => [scope.model.key, scope.effort.key])
-        : [Object.keys(rowForm(row, {}))],
+        ? row.scopes.map((scope) => [scope.model.path, scope.effort.path])
+        : [rowPaths(row)],
     )
-    .filter((keys) => keys.some((key) => form[key] !== initial[key])).length;
+    .filter((paths) =>
+      paths.some((path) => form[fieldName(path)] !== initial[fieldName(path)]),
+    ).length;
 }
 
 /** The selected section, or the first section when the saved choice is stale. */
@@ -130,4 +166,4 @@ export function activeSection(
   return (ids.has(selection) ? selection : undefined) ?? sections[0]?.id;
 }
 
-export const helpId = (key: string) => `setting-${key}-help`;
+export const helpId = (path: string) => `setting-${fieldName(path)}-help`;

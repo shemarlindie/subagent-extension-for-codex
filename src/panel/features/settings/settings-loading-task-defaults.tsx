@@ -1,8 +1,6 @@
-import {
-  settingHelp,
-  titleCase,
-} from "../../../shared/settings/settings-document";
+import { settingHelp } from "../../../shared/settings/settings-schema";
 import { roles } from "../../../shared/tasks/model";
+import { titleCase } from "../../../shared/text";
 import { SelectField } from "../../shared/components/select/select-field";
 import { AsyncControl } from "../../shared/forms/async-control";
 import { FormSwitch } from "../../shared/forms/form-switch";

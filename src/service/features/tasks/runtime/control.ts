@@ -446,7 +446,7 @@ export class Control {
       projects: this.projects,
       ownerWorker: this.ownerWorker,
       branchPrefix: (owner) =>
-        this.settings.values(owner).worktree_branch_prefix,
+        this.settings.values(owner).task.worktree_branch_prefix,
     };
   }
 

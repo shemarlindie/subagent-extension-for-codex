@@ -141,7 +141,7 @@ test("settings copy as JSON and import from pasted text", async ({
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
 
-  const prefix = page.locator("#setting-worktree_branch_prefix");
+  const prefix = page.locator("#setting-task-worktree_branch_prefix");
 
   const taskTab = page.getByRole("tab", { name: /^Task defaults/ });
 
@@ -200,10 +200,15 @@ test("settings copy as JSON and import from pasted text", async ({
 
   const copied = JSON.parse(
     await page.evaluate(() => navigator.clipboard.readText()),
-  ) as { format: number; settings: Record<string, unknown> };
+  ) as {
+    format: number;
+    settings: Record<string, unknown> & {
+      task: Record<string, unknown>;
+    };
+  };
 
-  expect(copied.format).toBe(1);
-  expect(copied.settings.worktree_branch_prefix).toBe("agent/");
+  expect(copied.format).toBe(2);
+  expect(copied.settings.task.worktree_branch_prefix).toBe("agent/");
 
   // Text that isn't an export changes nothing and says why.
   await paste.fill("{");
@@ -212,7 +217,7 @@ test("settings copy as JSON and import from pasted text", async ({
   await expect(prefix).toHaveValue("agent/");
 
   // Import saves what this version knows and lists what it skipped.
-  copied.settings.worktree_branch_prefix = "moved/";
+  copied.settings.task.worktree_branch_prefix = "moved/";
   copied.settings.later_setting = true;
 
   await paste.fill(JSON.stringify(copied));
@@ -249,7 +254,8 @@ test("settings copy as JSON and import from pasted text", async ({
   await expect(manualCopy).toBeVisible();
 
   expect(
-    JSON.parse(await manualCopy.inputValue()).settings.worktree_branch_prefix,
+    JSON.parse(await manualCopy.inputValue()).settings.task
+      .worktree_branch_prefix,
   ).toBe("moved/");
 
   await manualCopy.focus();
@@ -292,9 +298,9 @@ test("pending imports protect settings edits and failures restore editing", asyn
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
 
-  const prefix = page.locator("#setting-worktree_branch_prefix");
+  const prefix = page.locator("#setting-task-worktree_branch_prefix");
 
-  const workspace = page.locator("#setting-default_workspace_strategy");
+  const workspace = page.locator("#setting-task-workspace_strategy");
 
   const taskTab = page.getByRole("tab", { name: /^Task defaults/ });
 
@@ -314,8 +320,8 @@ test("pending imports protect settings edits and failures restore editing", asyn
   });
 
   const document = JSON.stringify({
-    format: 1,
-    settings: { worktree_branch_prefix: "imported/" },
+    format: 2,
+    settings: { task: { worktree_branch_prefix: "imported/" } },
   });
 
   await expect(prefix).toHaveValue("agent/");

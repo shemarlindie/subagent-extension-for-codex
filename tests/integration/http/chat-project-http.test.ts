@@ -88,7 +88,7 @@ async function fixture(t: TestContext) {
       (
         await post(
           "/api/user-tools/app_update_settings",
-          { set: { auto_register_chat_project: value } },
+          { set: { projects: { auto_register_chat: value } } },
           cookie,
         )
       ).status,
@@ -147,11 +147,11 @@ test("HTTP auto-registration rejects model opt-out, body and cookie spoofing, an
   const repository = await f.repo("trusted");
 
   const modelChange = await f.post("/api/tools/update_settings", {
-    set: { auto_register_chat_project: false },
+    set: { projects: { auto_register_chat: false } },
   });
 
   assert.equal(modelChange.status, 400);
-  assert.equal(f.c.settings.values("local").auto_register_chat_project, true);
+  assert.equal(f.c.settings.values("local").projects.auto_register_chat, true);
 
   assert.equal(
     (

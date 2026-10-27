@@ -738,7 +738,7 @@ if (scenario === "isolated") {
 
   // The sandbox is opt-in; default parity leaves Bash to the user's settings.
   control.settings.update("verification", {
-    set: { claude_sandbox: "extension", claude_path_guard: "on" },
+    set: { providers: { claude: { sandbox: "extension", path_guard: "on" } } },
   });
 
   const task = await control.start("verification", {

@@ -8,7 +8,7 @@ import {
   workerProfileIconName,
 } from "../tasks/list/worker-profile-icon";
 import type { SettingsControls } from "./settings-fields";
-import type { ModelScope } from "./settings-layout";
+import { fieldName, type ModelScope } from "./settings-layout";
 
 interface ModelTableProps extends SettingsControls {
   scopes: ModelScope[];
@@ -32,9 +32,10 @@ export function ModelTable({
         <span>Reasoning effort</span>
       </div>
       {scopes.map((scope) => {
-        const warningId = `setting-${scope.effort.key}-warning`,
-          profile = scope.model.key.replace(/_default_model$/, ""),
-          hasProfileIcon = Boolean(workerProfileIconName(profile));
+        const modelName = fieldName(scope.model.path),
+          effortName = fieldName(scope.effort.path),
+          warningId = `setting-${effortName}-warning`,
+          hasProfileIcon = Boolean(workerProfileIconName(scope.id));
 
         // Without a discovered catalog the model ID is typed instead.
         let modelControl: ReactNode;
@@ -43,8 +44,8 @@ export function ModelTable({
           modelControl = (
             <FormSelect
               control={control}
-              name={scope.model.key}
-              id={`setting-${scope.model.key}`}
+              name={modelName}
+              id={`setting-${modelName}`}
               label={scope.model.label}
               options={scope.model.options ?? []}
               loading
@@ -56,8 +57,8 @@ export function ModelTable({
           modelControl = (
             <FormSelect
               control={control}
-              name={scope.model.key}
-              id={`setting-${scope.model.key}`}
+              name={modelName}
+              id={`setting-${modelName}`}
               label={scope.model.label}
               options={scope.model.options}
             />
@@ -65,24 +66,24 @@ export function ModelTable({
         } else {
           modelControl = (
             <input
-              id={`setting-${scope.model.key}`}
+              id={`setting-${modelName}`}
               type="text"
               placeholder="Inherit"
               maxLength={200}
               aria-label={scope.model.label}
-              {...register(scope.model.key)}
+              {...register(modelName)}
             />
           );
         }
 
         return (
-          <div key={scope.model.key} className="model-table-row">
+          <div key={scope.id} className="model-table-row">
             <span
               className={`setting-label${hasProfileIcon ? " setting-profile-label" : ""}`}
             >
               {hasProfileIcon && (
                 <WorkerProfileIcon
-                  profile={profile}
+                  profile={scope.id}
                   size={10}
                   className="setting-profile-icon"
                 />
@@ -92,8 +93,8 @@ export function ModelTable({
             {modelControl}
             <FormSelect
               control={control}
-              name={scope.effort.key}
-              id={`setting-${scope.effort.key}`}
+              name={effortName}
+              id={`setting-${effortName}`}
               label={scope.effort.label}
               options={scope.effort.options}
               describedBy={scope.effort.unsupported ? warningId : undefined}

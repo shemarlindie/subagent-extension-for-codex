@@ -50,8 +50,11 @@ test("refresh preserves dialog identity and reviewed defaults while discovering 
   const dialog = controller.getSnapshot().dialog;
   assert.equal(dialog?.kind, "delegate");
   if (dialog?.kind !== "delegate") throw new Error("Expected delegate dialog");
-  assert.equal(dialog.defaults.max_runtime_minutes, 0.5);
-  assert.equal(dialog.defaults.max_cost_usd, null);
+
+  assert.deepEqual(dialog.defaults.task.budget, {
+    max_runtime_minutes: { enabled: true, amount: 0.5 },
+    max_cost_usd: { enabled: false, amount: 5 },
+  });
 
   transport.projects = [
     ...transport.projects,

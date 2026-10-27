@@ -5,7 +5,7 @@ import {
   SettingsContext,
   type SettingsControls,
 } from "./settings-fields";
-import { sectionKeys, type SettingSection } from "./settings-layout";
+import { sectionPaths, type SettingSection } from "./settings-layout";
 import { ModelTable } from "./settings-model-table";
 
 interface LoadingSettingsSectionProps extends SettingsControls {
@@ -18,7 +18,7 @@ export function LoadingSettingsSection({
   control,
   register,
 }: LoadingSettingsSectionProps) {
-  const keys = sectionKeys(section);
+  const keys = sectionPaths(section);
 
   return (
     <SettingsContext.Provider
@@ -46,7 +46,7 @@ export function LoadingSettingsSection({
           />
         ) : (
           <SettingRowView
-            key={row.key}
+            key={row.path}
             row={row}
             control={control}
             register={register}
@@ -65,6 +65,4 @@ export const loadingSections = buildSettingsSections({
   providers: [],
   catalogs: [],
   modelProviders: [],
-  shown: {},
-  remembered: { max_cost_usd: 5, max_runtime_minutes: 20 },
 });

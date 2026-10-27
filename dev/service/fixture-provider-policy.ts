@@ -31,15 +31,10 @@ export const fixtureTaskPolicy: ProviderTaskPolicy = {
       optionsForProvider(input.provider_options, "fixture"),
     );
 
-    const baseline = resolveClaudePermission(
-      {},
-      defaults.claude_permission_mode,
-    );
-
-    const resolved = resolveClaudePermission(
-      requested,
-      defaults.claude_permission_mode,
-    );
+    // The fixture has no settings block of its own and reuses Claude's.
+    const claude = defaults.providers.claude,
+      baseline = resolveClaudePermission({}, claude.permission_mode),
+      resolved = resolveClaudePermission(requested, claude.permission_mode);
 
     if (
       authority !== "user" &&
@@ -53,7 +48,7 @@ export const fixtureTaskPolicy: ProviderTaskPolicy = {
     if (
       authority !== "user" &&
       requested.approval_decider === "parent_agent" &&
-      defaults.default_approval_decider !== "parent_agent"
+      defaults.approvals.decider !== "parent_agent"
     ) {
       throw new Error(
         "Parent approval requires user authorization in settings",
@@ -66,7 +61,7 @@ export const fixtureTaskPolicy: ProviderTaskPolicy = {
     });
 
     const approval_decider =
-      requested.approval_decider ?? defaults.default_approval_decider;
+      requested.approval_decider ?? defaults.approvals.decider;
 
     return {
       ...execution,
@@ -75,7 +70,7 @@ export const fixtureTaskPolicy: ProviderTaskPolicy = {
         approval_decider,
         permission_mode: resolved.mode,
         permission_source: resolved.source,
-        claude_policy: resolveClaudePolicy(defaults, input.worker_profile),
+        claude_policy: resolveClaudePolicy(claude, input.worker_profile),
       }),
     };
   },

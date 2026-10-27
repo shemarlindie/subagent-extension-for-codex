@@ -1,6 +1,6 @@
+import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
 import type { Task } from "../../../../shared/tasks/model.js";
 import type { Provider } from "../../providers/types.js";
-import type { SettingsValues } from "../../settings/settings-values.js";
 
 /**
  * Rejects a reasoning effort the chosen model is known not to support.

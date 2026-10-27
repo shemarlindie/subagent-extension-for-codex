@@ -50,7 +50,7 @@ export async function autoRegisterChatProject(
   repository?: string,
 ) {
   try {
-    if (!c.projects || !c.settings.values(owner).auto_register_chat_project) {
+    if (!c.projects || !c.settings.values(owner).projects.auto_register_chat) {
       return undefined;
     }
 
@@ -90,7 +90,7 @@ export async function currentChatProject(
   const registered = await isApproved(c, root);
 
   const auto =
-    !!c.projects && c.settings.values(owner).auto_register_chat_project;
+    !!c.projects && c.settings.values(owner).projects.auto_register_chat;
 
   return {
     repository: root,

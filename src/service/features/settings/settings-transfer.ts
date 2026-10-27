@@ -1,11 +1,15 @@
 import { z } from "zod";
 
+import {
+  settingAt,
+  settingPaths,
+  settingSchemaAt,
+  withSetting,
+} from "../../../shared/settings/settings-schema.js";
+import { scalarText } from "../../../shared/text.js";
 import { packageVersion } from "../../platform/service/runtime.js";
 import { type Settings } from "./settings.js";
-import {
-  settingsUpdateOutputSchema,
-  settingsUpdateSchema,
-} from "./settings-values.js";
+import { settingsUpdateOutputSchema } from "./settings-values.js";
 
 /**
  * Settings export and import. An export holds one owner's saved defaults with
@@ -13,7 +17,7 @@ import {
  * projects stay out: their paths are machine specific, and approving one
  * stays an explicit act.
  */
-const SETTINGS_FORMAT = 1;
+const SETTINGS_FORMAT = 2;
 
 export const settingsTransferInputSchema = z.strictObject({
   document: z.string().min(1).meta({
@@ -32,14 +36,14 @@ export const settingsImportOutputSchema = settingsUpdateOutputSchema.extend({
 const documentSchema = z.object({
   format: z.number().int().positive(),
   version: z.string().optional(),
-  settings: z.record(z.string(), z.unknown()),
+  settings: z.looseObject({}),
 });
 
 export function exportSettings(settings: Settings, owner: string) {
   const document = {
     format: SETTINGS_FORMAT,
     version: packageVersion,
-    settings: settings.exportValues(owner),
+    settings: settings.values(owner),
   };
 
   return { document: JSON.stringify(document, null, 2) };
@@ -64,13 +68,20 @@ function parseDocument(text: string) {
     throw new Error("Update the extension to import these settings.");
   }
 
+  // Format 1 used flat keys from before the settings were grouped.
+  if (parsed.data.format < SETTINGS_FORMAT) {
+    throw new Error(
+      "These settings come from an older version. Export them again.",
+    );
+  }
+
   return parsed.data.settings;
 }
 
 /**
- * Applies an export through the settings update, with user authority. Keys
- * this version doesn't know, and a provider that isn't enabled here, are
- * skipped and reported so one difference doesn't block the rest.
+ * Applies an export through the settings update, with user authority. Paths
+ * this version doesn't know, invalid values and a provider that isn't enabled
+ * here are skipped and reported, so one difference doesn't block the rest.
  */
 export function importSettings(
   settings: Settings,
@@ -78,38 +89,23 @@ export function importSettings(
   input: unknown,
 ) {
   const { document } = settingsTransferInputSchema.parse(input);
-  const set: Record<string, unknown> = {};
+  const exported = parseDocument(document);
+  let set: Record<string, unknown> = {};
   const ignored: string[] = [];
 
-  for (const [key, value] of Object.entries(parseDocument(document))) {
-    const shape: Partial<Record<string, z.ZodType>> =
-      settingsUpdateSchema.shape.set.shape;
+  for (const path of settingPaths(exported)) {
+    const value = settingAt(exported, path);
 
-    const known =
-      Object.hasOwn(shape, key) && shape[key]?.safeParse(value).success;
+    const valid =
+      settingSchemaAt(path)?.safeParse(value).success === true &&
+      (path !== "task.provider" ||
+        settings.providers().includes(scalarText(value)));
 
-    if (
-      !known ||
-      (key === "default_provider" &&
-        !settings.providers().includes(value as string))
-    ) {
-      ignored.push(key);
-    } else {
-      set[key] = value;
-    }
+    if (valid) set = withSetting(set, path, value);
+    else ignored.push(path);
   }
 
-  // An update keeps a turned-off limit off, so an import sets the toggles.
-  for (const [limit, toggle] of [
-    ["max_cost_usd", "use_cost_budget"],
-    ["max_runtime_minutes", "use_runtime_budget"],
-  ] as const) {
-    if (!(limit in set)) continue;
-    set[toggle] ??= set[limit] !== null;
-    if (set[limit] === null) delete set[limit];
-  }
-
-  if (!Object.keys(set).length) {
+  if (!settingPaths(set).length) {
     throw new Error("No valid settings to import.");
   }
 

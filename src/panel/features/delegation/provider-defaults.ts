@@ -1,21 +1,25 @@
 import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
 import { providerMetadata } from "../../../shared/providers/metadata.js";
+import { settingAt } from "../../../shared/settings/settings-schema.js";
 import { scalarText } from "../../../shared/text.js";
 
 export function providerOptionDefaults(
   provider: string,
   metadata: ProviderMetadata | undefined,
-  settings: Record<string, unknown>,
+  settings: unknown,
 ) {
   const permissions = providerMetadata(provider, metadata)?.nativePermissions;
 
   return {
     permission_mode: permissions
-      ? scalarText(settings[permissions.permissionSetting], "inherit")
+      ? scalarText(
+          settingAt(settings, permissions.permissionSetting),
+          "inherit",
+        )
       : "inherit",
     // One shared setting answers for every provider with native permissions.
     approval_decider: permissions?.approvalDecider
-      ? scalarText(settings.default_approval_decider, "user")
+      ? scalarText(settingAt(settings, "approvals.decider"), "user")
       : "user",
   };
 }

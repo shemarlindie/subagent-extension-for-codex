@@ -1,4 +1,4 @@
-import { titleCase } from "../../../shared/settings/settings-document";
+import { titleCase } from "../../../shared/text";
 
 /**
  * A permission mode's label shortened for a chip: "Plan — read only" reads

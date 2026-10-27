@@ -97,10 +97,15 @@ test("worktree branches use the owner's prefix, and Git rejects invalid names", 
 
   try {
     assert.throws(() =>
-      c.settings.update("alice", { set: { worktree_branch_prefix: "a b/" } }),
+      c.settings.update("alice", {
+        set: { task: { worktree_branch_prefix: "a b/" } },
+      }),
     );
 
-    c.settings.update("alice", { set: { worktree_branch_prefix: "work/" } });
+    c.settings.update("alice", {
+      set: { task: { worktree_branch_prefix: "work/" } },
+    });
+
     const t = await c.start("alice", input(repo));
     await until(() => store.get(t.id, "alice").status === "completed");
     assert.equal(store.get(t.id, "alice").branch, `work/${t.id}`);
@@ -114,7 +119,10 @@ test("worktree branches use the owner's prefix, and Git rejects invalid names", 
     ]);
 
     // Allowed characters can still form an invalid ref.
-    c.settings.update("alice", { set: { worktree_branch_prefix: "a..b/" } });
+    c.settings.update("alice", {
+      set: { task: { worktree_branch_prefix: "a..b/" } },
+    });
+
     const bad = await c.start("alice", input(repo));
     await until(() => store.get(bad.id, "alice").status === "failed");
     assert.match(store.get(bad.id, "alice").error!, /Invalid worktree branch/);

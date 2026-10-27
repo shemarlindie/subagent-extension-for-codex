@@ -1,13 +1,17 @@
+import { roles } from "../tasks/model.js";
 import { scalarText } from "../text.js";
+import { settingAt } from "./settings-schema.js";
 
-/** The model and effort setting keys of a scope: `global`, a provider or a profile. */
-export function modelScopeKeys(scope: string) {
-  const prefix = scope === "global" ? "default" : `${scope}_default`;
+/**
+ * A model scope's settings path: `global`, a provider (`models.providers.<id>`)
+ * or a worker profile (`models.profiles.<id>`).
+ */
+export function modelScopePath(scope: string) {
+  if (scope === "global") return "models.global";
 
-  return {
-    modelKey: `${prefix}_model`,
-    effortKey: `${prefix}_reasoning_effort`,
-  };
+  return (roles as readonly string[]).includes(scope)
+    ? `models.profiles.${scope}`
+    : `models.providers.${scope}`;
 }
 
 type ModelDefaultsScope = { provider?: string; profile?: string };
@@ -19,18 +23,20 @@ type ModelDefaultsScope = { provider?: string; profile?: string };
  * default. The provider results skip the profile scope.
  */
 export function resolveModelDefaults(
-  values: Record<string, unknown>,
+  values: unknown,
   { provider, profile }: ModelDefaultsScope,
 ) {
-  const saved = (scope: string | undefined, key: "modelKey" | "effortKey") =>
-    scope === undefined ? "" : scalarText(values[modelScopeKeys(scope)[key]]);
+  const saved = (scope: string | undefined, key: string) =>
+    scope === undefined
+      ? ""
+      : scalarText(settingAt(values, `${modelScopePath(scope)}.${key}`));
 
   const model = (...scopes: (string | undefined)[]) =>
-    scopes.map((scope) => saved(scope, "modelKey")).find(Boolean);
+    scopes.map((scope) => saved(scope, "model")).find(Boolean);
 
   const effort = (...scopes: (string | undefined)[]) =>
     scopes
-      .map((scope) => saved(scope, "effortKey"))
+      .map((scope) => saved(scope, "reasoning_effort"))
       .find((value) => value && value !== "default");
 
   return {

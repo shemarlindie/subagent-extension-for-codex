@@ -37,11 +37,12 @@ export const executionTaskPolicy: ProviderTaskPolicy = {
       throw new Error("Provider does not accept task options");
     }
 
-    const approval_mode = input.approval_mode ?? defaults.default_approval_mode;
+    const saved = defaults.approvals.execution_mode,
+      approval_mode = input.approval_mode ?? saved;
 
     if (
       authority !== "user" &&
-      approvalRank[approval_mode] > approvalRank[defaults.default_approval_mode]
+      approvalRank[approval_mode] > approvalRank[saved]
     ) {
       throw new Error("Task approval mode exceeds the user-approved default");
     }

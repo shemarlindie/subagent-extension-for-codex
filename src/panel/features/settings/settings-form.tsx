@@ -17,8 +17,9 @@ import {
   changes,
   differs,
   editCount,
+  fieldName,
   rowForm,
-  sectionKeys,
+  sectionPaths,
   sectionsForm,
   type Values,
 } from "./settings-layout";
@@ -184,8 +185,8 @@ export function SettingsForm({
     return () => controller.guardDismiss(undefined);
   }, [controller]);
 
-  const sectionOf = (key: string) =>
-    sections.find((section) => sectionKeys(section).includes(key));
+  const sectionOf = (path: string) =>
+    sections.find((section) => sectionPaths(section).includes(path));
 
   const selectSection = (section: string) => {
     setSelectedSection(section);
@@ -193,13 +194,13 @@ export function SettingsForm({
   };
 
   // Opens the section holding a setting and focuses its field.
-  const reveal = (key: string) => {
-    const section = sectionOf(key);
+  const reveal = (path: string) => {
+    const section = sectionOf(path);
     if (!section) return;
     flushSync(() => selectSection(section.id));
 
     const field = element.current?.querySelector<HTMLInputElement>(
-      `#setting-${key}`,
+      `#setting-${fieldName(path)}`,
     );
 
     // Disabled amounts cannot take focus; their switch restores editing.
@@ -217,9 +218,11 @@ export function SettingsForm({
 
   // An invalid field may sit in an inactive tab: reveal it and show why.
   const showInvalid = (errors: FieldErrors<Values>) => {
-    const key = sections.flatMap(sectionKeys).find((name) => name in errors);
+    const path = sections
+      .flatMap(sectionPaths)
+      .find((setting) => fieldName(setting) in errors);
 
-    if (key) reveal(key)?.reportValidity();
+    if (path) reveal(path)?.reportValidity();
   };
 
   const apply = (entries: Values) => {
@@ -230,7 +233,7 @@ export function SettingsForm({
 
   const sectionViews: SettingsSectionView[] = settings
     ? sections.map((section, index) => {
-        const keys = sectionKeys(section),
+        const paths = sectionPaths(section),
           resets = Object.assign(
             {},
             ...section.rows.map((row) => rowForm(row, settings.defaults)),
@@ -244,8 +247,8 @@ export function SettingsForm({
             <SettingsContext.Provider
               value={{
                 show: reveal,
-                sectionOf: (key) => sectionOf(key)?.title,
-                current: keys,
+                sectionOf: (path) => sectionOf(path)?.title,
+                current: paths,
                 form,
               }}
             >
@@ -267,7 +270,7 @@ export function SettingsForm({
                   />
                 ) : (
                   <SettingRowView
-                    key={row.key}
+                    key={row.path}
                     row={row}
                     control={control}
                     register={register}

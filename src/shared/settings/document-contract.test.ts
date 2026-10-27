@@ -10,14 +10,16 @@ import type {
   SettingSection,
 } from "./document-contract.js";
 import { settingsSections } from "./settings-document.js";
+import { settingsDefaults } from "./settings-schema.js";
 
 const option = { value: "default", label: "Inherit" };
 
 const scope: ModelScope = {
+  id: "global",
   label: "Global",
-  model: { key: "default_model", label: "Global model" },
+  model: { path: "models.global.model", label: "Global model" },
   effort: {
-    key: "default_reasoning_effort",
+    path: "models.global.reasoning_effort",
     label: "Global reasoning effort",
     options: [option],
     unsupported: false,
@@ -25,23 +27,26 @@ const scope: ModelScope = {
 };
 
 const rows: SettingRow[] = [
-  { kind: "select", key: "provider", label: "Provider", options: [option] },
-  { kind: "switch", key: "enabled", label: "Enabled" },
+  {
+    kind: "select",
+    path: "task.provider",
+    label: "Provider",
+    options: [option],
+  },
+  { kind: "switch", path: "projects.auto_register_chat", label: "Enabled" },
   {
     kind: "text",
-    key: "prefix",
+    path: "task.worktree_branch_prefix",
     label: "Prefix",
     maxLength: 100,
     pattern: "[\\w./-]*",
   },
   {
     kind: "budget",
-    key: "max_cost_usd",
+    path: "task.budget.max_cost_usd",
     label: "Cost limit",
-    toggle: "use_cost_budget",
     unit: "USD",
     min: 0.01,
-    amount: 5,
   },
   { kind: "models", scopes: [scope] },
 ];
@@ -54,7 +59,7 @@ test("accepts each kind of setting row", () => {
 
 test("rejects malformed setting rows", () => {
   for (const row of [
-    { kind: "select", key: "provider", label: "Provider" },
+    { kind: "select", path: "task.provider", label: "Provider" },
     { kind: "models" },
     {
       kind: "models",
@@ -62,22 +67,20 @@ test("rejects malformed setting rows", () => {
     },
     {
       kind: "text",
-      key: "prefix",
+      path: "task.worktree_branch_prefix",
       label: "Prefix",
       maxLength: "100",
       pattern: "",
     },
     {
       kind: "budget",
-      key: "cost",
+      path: "task.budget.max_cost_usd",
       label: "Cost",
-      toggle: "enabled",
       unit: "USD",
-      min: 0,
-      amount: false,
+      min: false,
     },
-    { kind: "switch", key: 1, label: "Enabled" },
-    { kind: "unknown", key: "unknown", label: "Unknown" },
+    { kind: "switch", path: 1, label: "Enabled" },
+    { kind: "unknown", path: "unknown", label: "Unknown" },
   ]) {
     expect(settingRowSchema.safeParse(row).success, JSON.stringify(row)).toBe(
       false,
@@ -86,7 +89,7 @@ test("rejects malformed setting rows", () => {
 });
 
 test("strips unknown fields throughout the settings document", () => {
-  const help = { text: "Global", setting: "default_model" };
+  const help = { text: "Global", setting: "models.global.model" };
 
   const section: SettingSection = {
     id: "models",
@@ -95,7 +98,7 @@ test("strips unknown fields throughout the settings document", () => {
     rows: [
       {
         kind: "select",
-        key: "provider",
+        path: "task.provider",
         label: "Provider",
         help: [help],
         options: [{ ...option, description: "Use the inherited value" }],
@@ -147,12 +150,12 @@ test("strips unknown fields throughout the settings document", () => {
 });
 
 test("validates sections produced for the settings dialog", () => {
+  const values = settingsDefaults("claude");
+
   const sections = settingsSections({
-    values: { default_provider: "claude", default_worker_profile: "worker" },
+    values,
     providers: ["claude"],
     catalogs: [],
-    shown: {},
-    remembered: { max_cost_usd: 5, max_runtime_minutes: 15 },
   });
 
   expect(sections.length).toBeGreaterThan(0);

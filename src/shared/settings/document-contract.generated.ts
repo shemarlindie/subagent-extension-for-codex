@@ -16,14 +16,15 @@ const settingOptionSchema = z.object({
 });
 
 const modelScopeSchema = z.object({
+  id: z.string(),
   label: z.string(),
   model: z.object({
-    key: z.string(),
+    path: z.string(),
     label: z.string(),
     options: z.array(settingOptionSchema).optional(),
   }),
   effort: z.object({
-    key: z.string(),
+    path: z.string(),
     label: z.string(),
     options: z.array(settingOptionSchema),
     unsupported: z.boolean(),
@@ -31,7 +32,7 @@ const modelScopeSchema = z.object({
 });
 
 const settingRowBaseSchema = z.object({
-  key: z.string(),
+  path: z.string(),
   label: z.string(),
   help: z.array(helpPartSchema).optional(),
 });
@@ -53,11 +54,9 @@ const textSettingRowSchema = settingRowBaseSchema.extend({
 
 const budgetSettingRowSchema = settingRowBaseSchema.extend({
   kind: z.literal("budget"),
-  toggle: z.string(),
   unit: z.string(),
   min: z.number(),
   max: z.number().optional(),
-  amount: z.number(),
 });
 
 const modelsSettingRowSchema = z.object({

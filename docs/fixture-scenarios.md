@@ -80,13 +80,13 @@ ordinary task form, then use `[fixture:permission]`:
 
 | Mode                        | Simulated behavior                                            |
 | --------------------------- | ------------------------------------------------------------- |
-| `inherit`                   | Resolve the saved `claude_permission_mode`.                   |
+| `inherit`                   | Resolve the saved `providers.claude.permission_mode`.         |
 | `default`                   | Follow the fixture execution approval mode.                   |
 | `plan`, `dontAsk`           | Deny.                                                         |
 | `acceptEdits`               | Allow edit tools. Use the execution approval mode for others. |
 | `auto`, `bypassPermissions` | Allow.                                                        |
 
-Set `claude_subagents` to `false` to check the blocked subagent path. Select a
+Set `providers.claude.subagents` to `false` to check the blocked subagent path. Select a
 read-only worker profile to check its policy. These checks cover routing and
 presentation only. Use the
 [live Claude checks](claude-verification.md#live-claude-checks) for native

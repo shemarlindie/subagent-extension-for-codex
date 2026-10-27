@@ -5,12 +5,15 @@ import { resolveModelDefaults } from "./model-defaults.js";
 // Task resolution through every scope is covered by the settings integration
 // tests; these cover the results only the panel and settings sections use.
 const values = {
-  default_model: "global-model",
-  default_reasoning_effort: "low",
-  claude_default_model: "provider-model",
-  claude_default_reasoning_effort: "default",
-  reviewer_default_model: "profile-model",
-  reviewer_default_reasoning_effort: "high",
+  models: {
+    global: { model: "global-model", reasoning_effort: "low" },
+    providers: {
+      claude: { model: "provider-model", reasoning_effort: "default" },
+    },
+    profiles: {
+      reviewer: { model: "profile-model", reasoning_effort: "high" },
+    },
+  },
 };
 
 test("provider results skip the profile scope", () => {

@@ -256,7 +256,6 @@ export type { Worker } from "../../features/providers/types.js";
 export type {
   Defaults,
   SettingsDocument,
-  SettingValue,
 } from "../../features/settings/types.js";
 
 export type {

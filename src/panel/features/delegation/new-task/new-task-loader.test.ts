@@ -53,7 +53,7 @@ test("New task replaces the selected task with the composer and reads its option
   const newTask = controller.getSnapshot().newTask;
   assert.ok(newTask);
   assert.ok(Object.values(newTask.statuses).every((s) => s === "ready"));
-  assert.equal(newTask.defaults?.default_provider, "claude");
+  assert.equal(newTask.defaults?.task.provider, "claude");
 
   // A wide panel would otherwise reselect its default task on refresh.
   await controller.refresh();
@@ -141,7 +141,7 @@ test("a profile choice saves as its default and rolls back when saving fails", a
   await flush();
 
   const saved = () =>
-    controller.getSnapshot().newTask?.defaults?.general_default_model;
+    controller.getSnapshot().newTask?.defaults?.models.profiles.general.model;
 
   transport.handler = (name) => (name === "update_settings" ? {} : undefined);
 
@@ -156,7 +156,7 @@ test("a profile choice saves as its default and rolls back when saving fails", a
 
   assert.deepEqual(transport.calls.at(-1), {
     name: "update_settings",
-    args: { set: { general_default_model: "opus" } },
+    args: { set: { models: { profiles: { general: { model: "opus" } } } } },
   });
 
   assert.equal(saved(), "opus");

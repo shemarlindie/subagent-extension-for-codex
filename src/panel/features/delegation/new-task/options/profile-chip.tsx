@@ -3,7 +3,7 @@ import {
   useFormContext,
 } from "react-hook-form";
 
-import { titleCase } from "../../../../../shared/settings/settings-document";
+import { titleCase } from "../../../../../shared/text";
 import type { Worker } from "../../../../app/state/types";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import type { Defaults } from "../../../settings/types";

@@ -28,15 +28,9 @@ export const claudeTaskPolicy: ProviderTaskPolicy = {
       optionsForProvider(input.provider_options, "claude"),
     );
 
-    const baseline = resolveClaudePermission(
-      {},
-      defaults.claude_permission_mode,
-    );
-
-    const resolved = resolveClaudePermission(
-      requested,
-      defaults.claude_permission_mode,
-    );
+    const claude = defaults.providers.claude,
+      baseline = resolveClaudePermission({}, claude.permission_mode),
+      resolved = resolveClaudePermission(requested, claude.permission_mode);
 
     if (
       authority !== "user" &&
@@ -50,7 +44,7 @@ export const claudeTaskPolicy: ProviderTaskPolicy = {
     if (
       authority !== "user" &&
       requested.approval_decider === "parent_agent" &&
-      defaults.default_approval_decider !== "parent_agent"
+      defaults.approvals.decider !== "parent_agent"
     ) {
       throw new Error(
         "Parent approval requires user authorization in settings",
@@ -70,10 +64,10 @@ export const claudeTaskPolicy: ProviderTaskPolicy = {
       provider_options: withProviderOptions(input.provider_options, "claude", {
         ...requested,
         approval_decider:
-          requested.approval_decider ?? defaults.default_approval_decider,
+          requested.approval_decider ?? defaults.approvals.decider,
         permission_mode: resolved.mode,
         permission_source: resolved.source,
-        claude_policy: resolveClaudePolicy(defaults, input.worker_profile),
+        claude_policy: resolveClaudePolicy(claude, input.worker_profile),
       }),
     };
   },

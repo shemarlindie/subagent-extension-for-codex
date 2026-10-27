@@ -225,7 +225,7 @@ test("current repository settings persist, are owner-scoped, and allow task over
 
   try {
     assert.equal(
-      s.c.settings.values("alice").default_workspace_strategy,
+      s.c.settings.values("alice").task.workspace_strategy,
       "current_repo",
     );
 
@@ -247,16 +247,16 @@ test("current repository settings persist, are owner-scoped, and allow task over
     );
 
     s.c.settings.update("alice", {
-      set: { default_workspace_strategy: "worktree" },
+      set: { task: { workspace_strategy: "worktree" } },
     });
 
     assert.equal(
-      s.c.settings.values("alice").default_workspace_strategy,
+      s.c.settings.values("alice").task.workspace_strategy,
       "worktree",
     );
 
     assert.equal(
-      s.c.settings.values("bob").default_workspace_strategy,
+      s.c.settings.values("bob").task.workspace_strategy,
       "current_repo",
     );
 
@@ -280,8 +280,8 @@ test("current repository settings persist, are owner-scoped, and allow task over
       await import("../../../src/service/features/settings/settings.js");
 
     assert.equal(
-      new Settings(s.c.store.database, () => ["fixture"]).values("alice")
-        .default_workspace_strategy,
+      new Settings(s.c.store.database, () => ["fixture"]).values("alice").task
+        .workspace_strategy,
       "worktree",
     );
   } finally {
