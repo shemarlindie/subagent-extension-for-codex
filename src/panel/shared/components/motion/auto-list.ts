@@ -9,6 +9,18 @@ import { MOTION, reducedMotion } from "./motion-utils";
 const timing = { duration: MOTION.base, easing: MOTION.easing };
 const exitInert = new WeakMap<Element, boolean>();
 
+type ListCoordinates = Parameters<typeof getTransitionSizes>[1];
+
+/** Measurements include CSS zoom, while keyframe lengths use unzoomed units. */
+function cssCoordinates(box: ListCoordinates, zoom: number): ListCoordinates {
+  return {
+    top: box.top / zoom,
+    left: box.left / zoom,
+    width: box.width / zoom,
+    height: box.height / zoom,
+  };
+}
+
 /**
  * AutoAnimate effects with the panel's tokens: rows fade in, fade out while
  * neighbours close the gap, and slide to new positions. A plugin turns off
@@ -50,8 +62,9 @@ export const autoListEffects: AutoAnimationPlugin = (
     });
   }
 
-  const from = previous!,
-    to = next!,
+  const zoom = el.currentCSSZoom || 1,
+    from = cssCoordinates(previous!, zoom),
+    to = cssCoordinates(next!, zoom),
     [widthFrom, widthTo, heightFrom, heightTo] = getTransitionSizes(
       el,
       from,

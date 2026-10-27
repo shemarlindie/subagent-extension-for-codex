@@ -96,6 +96,32 @@ test("autoListEffects applies changes at once under reduced motion", (t) => {
   }
 });
 
+test("autoListEffects converts zoomed measurements to CSS animation units", (t) => {
+  mockEffects(t);
+  const list = document.createElement("ul");
+  Object.defineProperty(list, "currentCSSZoom", { value: 2 });
+  list.style.boxSizing = "content-box";
+  list.style.padding = "6px 8px";
+  list.style.border = "0px solid";
+  document.body.append(list);
+  t.onTestFinished(() => list.remove());
+
+  const moved = effect(list, "remain", box(0, 52, 0, 400), box(52, 52, 0, 400));
+  expect(moved.frames[0]?.transform).toBe("translate(0px, -26px)");
+
+  const grown = effect(
+    list,
+    "remain",
+    box(440, 120, 0, 400),
+    box(400, 160, 0, 440),
+  );
+
+  expect(grown.frames).toEqual([
+    { transform: "translate(0px, 0px)", width: "184px", height: "48px" },
+    { transform: "none", width: "204px", height: "68px" },
+  ]);
+});
+
 test("exiting controls are inert and reused nodes recover their original state", (t) => {
   mockEffects(t);
 
