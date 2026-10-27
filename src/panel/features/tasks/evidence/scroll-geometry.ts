@@ -1,5 +1,6 @@
 /** Scroll measurements and glide rules for `useReadingScroll`. */
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
+import type { ReadingPosition } from "./reading-state";
 import type { RowPosition } from "./row-motion";
 
 export const END_SLACK_PX = 48;
@@ -33,6 +34,37 @@ export function anchorable(position: RowPosition) {
     position.bottom > 0 &&
     getComputedStyle(position.element).overflowAnchor !== "none"
   );
+}
+
+/** Restores the saved row, or another visible row when history was trimmed. */
+export function restoreReadingAnchor(
+  viewport: HTMLElement,
+  container: HTMLElement,
+  attribute: string,
+  saved: ReadingPosition,
+  previous: Map<string, RowPosition>,
+  scrolled: number,
+) {
+  container.scrollTop = saved.top + scrolled;
+
+  const element =
+    saved.anchor &&
+    Array.from(viewport.querySelectorAll<HTMLElement>(`[${attribute}]`)).find(
+      (element) => element.getAttribute(attribute) === saved.anchor!.id,
+    );
+
+  const anchor = element
+    ? { element, top: saved.anchor!.top }
+    : [...previous.values()].find(
+        (position) => anchorable(position) && position.element.isConnected,
+      );
+
+  if (anchor) {
+    container.scrollTop +=
+      anchor.element.getBoundingClientRect().top -
+      container.getBoundingClientRect().top -
+      (anchor.top - scrolled);
+  }
 }
 
 export function canGlide(container: HTMLElement) {

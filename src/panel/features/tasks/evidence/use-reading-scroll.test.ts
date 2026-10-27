@@ -549,6 +549,49 @@ test("following smoothly glides to new replies and survives a retarget", () => {
   assert.equal(scrollTo.mock.calls.length, calls);
 });
 
+test.each(["wheel", "touch", "keyboard"] as const)(
+  "%s reading intent releases following before a content resize",
+  (gesture) => {
+    const reading: ReadingState = {};
+    const props = { reading, follow: true };
+    const view = render(createElement(Chat, { ...props, items }));
+    const viewport = view.getByTestId("chat");
+    const scrollTo = vi.fn();
+    Object.defineProperty(viewport, "scrollTo", { value: scrollTo });
+    view.rerender(createElement(Chat, { ...props, items: [...items, "g"] }));
+    expect(scrollTo).toHaveBeenCalledWith({ top: 500, behavior: "smooth" });
+
+    const button = () =>
+      view.queryByRole("button", { name: "Scroll to latest message" });
+
+    if (gesture === "wheel") {
+      fireEvent.wheel(viewport, { deltaY: -100, ctrlKey: true });
+      expect(button()).toBeNull();
+      fireEvent.wheel(viewport, { deltaY: -100 });
+    } else if (gesture === "touch") {
+      fireEvent.touchStart(viewport, { touches: [{ clientY: 100 }] });
+      fireEvent.touchMove(viewport, { touches: [{ clientY: 200 }] });
+    } else {
+      fireEvent.keyDown(viewport, { key: "ArrowUp" });
+    }
+
+    expect(button()).not.toBeNull();
+    act(() => notifyResize!());
+    expect(viewport.scrollTop).toBe(400);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+
+    viewport.scrollTop = 300;
+    fireEvent.scroll(viewport);
+
+    view.rerender(
+      createElement(Chat, { ...props, items: [...items, "g", "h"] }),
+    );
+
+    expect(viewport.scrollTop).toBe(300);
+    expect(button()).not.toBeNull();
+  },
+);
+
 test("a smooth return that never moves is judged where it stopped", (t) => {
   vi.useFakeTimers();
 

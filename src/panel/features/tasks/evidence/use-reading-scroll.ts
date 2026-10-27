@@ -16,6 +16,7 @@ import {
   glideAhead,
   glideProgress,
   glideTarget,
+  restoreReadingAnchor,
 } from "./scroll-geometry";
 
 // How long a smooth return may go without progress before it counts as stopped.
@@ -128,31 +129,14 @@ export function useReadingScroll({
       if (pinnedRef.current) {
         container.scrollTop = end(container);
       } else if (saved) {
-        container.scrollTop = saved.top + scrolled;
-
-        const element =
-          saved.anchor &&
-          Array.from(
-            viewport.querySelectorAll<HTMLElement>(`[${itemAttribute}]`),
-          ).find(
-            (element) =>
-              element.getAttribute(itemAttribute) === saved.anchor!.id,
-          );
-
-        // Fall back to another visible row when a trimmed history drops the anchor.
-        const anchor = element
-          ? { element, top: saved.anchor!.top }
-          : [...rows.current.values()].find(
-              (position) =>
-                anchorable(position) && position.element.isConnected,
-            );
-
-        if (anchor) {
-          container.scrollTop +=
-            anchor.element.getBoundingClientRect().top -
-            container.getBoundingClientRect().top -
-            (anchor.top - scrolled);
-        }
+        restoreReadingAnchor(
+          viewport,
+          container,
+          itemAttribute,
+          saved,
+          rows.current,
+          scrolled,
+        );
       }
 
       // Ignore the scroll event this correction causes, so it cannot unpin
@@ -445,54 +429,75 @@ export function useReadingScroll({
     return () => observer.disconnect();
   }, [reconcileAfterContentChange, blockScrollWhileLoading]);
 
-  useContainerScroll(viewportRef, (event) => {
+  const stopFollowing = () => {
     const viewport = viewportRef.current;
-
-    if (event.type === "scrollend") {
-      if (!glide.current?.moved) return;
-      const following = !glide.current.row;
-      glide.current = undefined;
-
-      // A retarget can end a glide to the end early. A reader scroll would
-      // already have stopped it, so keep following.
-      if (
-        following &&
-        viewport &&
-        activeRef.current &&
-        followLatest(viewport, scrollContainer(viewport), true)
-      ) {
-        return;
-      }
-    }
-
     if (!viewport || !activeRef.current || !restored.current) return;
+    if (!pinnedRef.current && !glide.current) return;
     const container = scrollContainer(viewport);
+    if (end(container) === 0) return;
     const top = container.scrollTop;
-    const corrected = correctedScrollTop.current;
-    correctedScrollTop.current = undefined;
+    // Cancel the native glide before a resize can restart it over the gesture.
+    if (glide.current) container.scrollTop = top;
+    window.clearTimeout(glideTimer.current);
+    glide.current = undefined;
+    correctedScrollTop.current = top;
+    pinnedRef.current = false;
+    setPinned(false);
+    remember(viewport, container);
+  };
 
-    // The browser also emits scroll after our own anchor correction.
-    if (corrected !== undefined && Math.abs(top - corrected) < 1) return;
+  useContainerScroll(
+    viewportRef,
+    (event) => {
+      const viewport = viewportRef.current;
 
-    // A smooth return stays pinned while it closes in. Moving away means the
-    // reader took over, so restore ordinary reading-position behavior.
-    if (glide.current) {
-      const progress = glideProgress(glide.current, top);
-
-      if (progress === "arrived") {
+      if (event.type === "scrollend") {
+        if (!glide.current?.moved) return;
+        const following = !glide.current.row;
         glide.current = undefined;
-        remember(viewport, container);
 
-        return;
+        // A retarget can end a glide to the end early. A reader scroll would
+        // already have stopped it, so keep following.
+        if (
+          following &&
+          viewport &&
+          activeRef.current &&
+          followLatest(viewport, scrollContainer(viewport), true)
+        ) {
+          return;
+        }
       }
 
-      if (progress === "closer") awaitGlide();
-      if (progress !== "left") return;
-      glide.current = undefined;
-    }
+      if (!viewport || !activeRef.current || !restored.current) return;
+      const container = scrollContainer(viewport);
+      const top = container.scrollTop;
+      const corrected = correctedScrollTop.current;
+      correctedScrollTop.current = undefined;
 
-    judge(viewport, container);
-  });
+      // The browser also emits scroll after our own anchor correction.
+      if (corrected !== undefined && Math.abs(top - corrected) < 1) return;
+
+      // A smooth return stays pinned while it closes in. Moving away means the
+      // reader took over, so restore ordinary reading-position behavior.
+      if (glide.current) {
+        const progress = glideProgress(glide.current, top);
+
+        if (progress === "arrived") {
+          glide.current = undefined;
+          remember(viewport, container);
+
+          return;
+        }
+
+        if (progress === "closer") awaitGlide();
+        if (progress !== "left") return;
+        glide.current = undefined;
+      }
+
+      judge(viewport, container);
+    },
+    stopFollowing,
+  );
 
   const scrollToLatest = useCallback(() => {
     window.clearTimeout(glideTimer.current);
