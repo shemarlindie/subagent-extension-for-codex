@@ -37,7 +37,7 @@ function useSettingsTabOrientation(): Orientation {
   return orientation;
 }
 
-/** Server-defined settings sections with a persistent panel per tab. */
+/** Settings sections with a persistent panel per tab. */
 export function SettingsSectionTabs({
   sections,
   value,

@@ -25,6 +25,7 @@ import {
 } from "../mentions.js";
 import type { agentTools } from "./agent-tools.js";
 import { queuedMessage, taskId, tool, type ToolContext } from "./definition.js";
+import { settingsTransferTools } from "./settings-transfer-tools.js";
 
 /**
  * App-only tools, named with an `app_` prefix. The panel calls them on the
@@ -265,6 +266,7 @@ export function userTools(
         "User interface only: save delegation defaults, including native permission mode and approval decision maker.",
       run: (a) => c.settings.update(owner, a, "user"),
     }),
+    ...settingsTransferTools(c.settings, owner),
     app_get_change_counts: tool({
       readOnly: true,
       description:

@@ -189,6 +189,11 @@ per-section resets, validates budgets and asks before discarding unsaved edits.
 sections, and failed reads offer a retry. See
 [Configuration](configuration.md) for permission and approval defaults.
 
+Use **Import and export** to copy or import your defaults as JSON. Save your
+settings changes first. If copying fails, select and copy the text shown in
+the panel. For exported settings, see
+[Copy settings between computers](configuration.md#copy-settings-between-computers).
+
 Tabs, drafts, answers, reading positions and viewed files last for the panel
 session. The standalone console and development host also keep view state and
 dialog drafts across reloads. See

@@ -114,7 +114,7 @@ tools carry user authority:
 | ----------------------------------------------------------------------- | ---------------------------------------------------- |
 | `app_start_task`                                                        | Task overrides                                       |
 | `app_submit_input`                                                      | Answers to permissions routed to the user            |
-| `app_update_settings`                                                   | Sensitive settings                                   |
+| `app_update_settings`, `app_import_settings`                            | Sensitive settings                                   |
 | `app_raise_budget`                                                      | Budget increases on existing tasks                   |
 | `app_register_project`, `app_browse_project`                            | Direct registration and folder browsing              |
 | `app_rename_project`, `app_remove_project`                              | [Project management](panel-guide.md#manage-projects) |
@@ -123,6 +123,12 @@ tools carry user authority:
 | `app_steer_queued_message`                                              | Moving a queued message into the running turn        |
 
 Other `app_` tools serve panel reads and controls.
+
+`app_export_settings` returns a JSON string in `document`. The export contains
+a `format` number, the extension `version` and the user's saved `settings`.
+`app_import_settings` accepts this document with user authority and rejects
+newer formats it doesn't support. The format number controls compatibility
+independently of the extension version.
 
 For Claude permissions routed to `parent_agent`, model-visible `submit_input`
 can approve or deny the exact pending request. Permissions routed to the user

@@ -147,6 +147,7 @@ test("tools declare their read-only and destructive annotations", () => {
       .sort();
 
   expect(flagged("readOnly")).toEqual([
+    "app_export_settings",
     "app_get_activity",
     "app_get_change_counts",
     "app_get_chat",

@@ -32,6 +32,7 @@ import {
   SettingsSectionTabs,
   type SettingsSectionView,
 } from "./settings-section-tabs";
+import { SettingsTransfer } from "./settings-transfer";
 
 export type SettingsFormDialog =
   | Extract<DialogState, { kind: "settings" }>
@@ -94,6 +95,7 @@ export function SettingsForm({
       controller.getLastSettingsSection(),
     ),
     [discarding, setDiscarding] = useState(false),
+    [importing, setImporting] = useState(false),
     element = useRef<HTMLFormElement>(null),
     discardPrompt = useRef<HTMLDivElement>(null);
 
@@ -304,6 +306,18 @@ export function SettingsForm({
           ),
       }));
 
+  sectionViews.push({
+    id: "transfer",
+    title: "Import and export",
+    content: (
+      <SettingsTransfer
+        ready={!loading}
+        edited={total > 0}
+        onImportingChange={setImporting}
+      />
+    ),
+  });
+
   const activeSectionId = activeSection(selectedSection, sectionViews);
 
   const submit = handleSubmit((submitted) => {
@@ -337,7 +351,7 @@ export function SettingsForm({
       id="settings-form"
       className="settings-form"
       noValidate
-      aria-busy={isLoading || undefined}
+      aria-busy={isLoading || state.busy || undefined}
       onSubmit={loading ? (event) => event.preventDefault() : submit}
     >
       <Collapsible.Root open={showDiscard}>
@@ -356,8 +370,10 @@ export function SettingsForm({
           </Notice>
         </Collapsible.Panel>
       </Collapsible.Root>
-      <div
+      <fieldset
         className={`settings-form-body${loading ? " settings-loading-body" : ""}`}
+        disabled={importing}
+        aria-label="Settings values"
       >
         <Presence show={!isError}>
           <div
@@ -389,7 +405,7 @@ export function SettingsForm({
             </Button>
           </div>
         </Presence>
-      </div>
+      </fieldset>
       <Presence show={Boolean(state.formError)}>
         <div id="form-error" className="form-error error" role="alert">
           {state.formError}

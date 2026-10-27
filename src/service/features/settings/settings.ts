@@ -58,7 +58,7 @@ function budgetLimit(
 }
 
 export class Settings {
-  private providers: () => string[];
+  readonly providers: () => string[];
   constructor(
     private database: Database,
     providers: () => string[],
@@ -120,6 +120,20 @@ export class Settings {
     }
 
     return values;
+  }
+
+  /** Saved defaults for transfer, including amounts remembered while limits are off. */
+  exportValues(owner: string) {
+    const saved = this.saved(owner);
+
+    return {
+      ...this.values(owner),
+      max_cost_usd: saved.max_cost_usd ?? saved.cost_budget_amount ?? 5,
+      use_cost_budget: saved.max_cost_usd !== null,
+      max_runtime_minutes:
+        saved.max_runtime_minutes ?? saved.runtime_budget_amount ?? 20,
+      use_runtime_budget: saved.max_runtime_minutes !== null,
+    };
   }
 
   // The panel presents native permission settings; execution approval defaults

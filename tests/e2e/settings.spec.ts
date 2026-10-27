@@ -133,3 +133,218 @@ test("advanced task options set the task's model and permission policy", async (
   // Only Claude reports a permission mode for this list. The denial shows the fixture's.
   await expect(settings).toContainText("Fixture Fast");
 });
+
+test("settings copy as JSON and import from pasted text", async ({
+  consolePage: page,
+}) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+  const prefix = page.locator("#setting-worktree_branch_prefix");
+
+  const taskTab = page.getByRole("tab", { name: /^Task defaults/ });
+
+  const transferTab = page.getByRole("tab", {
+    name: "Import and export",
+    exact: true,
+  });
+
+  await expect(prefix).toHaveValue("agent/");
+
+  const copyButton = page.getByRole("button", {
+    name: "Copy JSON",
+    exact: true,
+  });
+
+  const paste = page.getByRole("textbox", {
+    name: "Paste copied settings",
+    exact: true,
+  });
+
+  const importButton = page.getByRole("button", {
+    name: "Import settings",
+    exact: true,
+  });
+
+  await expect(copyButton).not.toBeVisible();
+
+  // Transfer cannot drop an unsaved draft or copy older saved values.
+  await prefix.fill("draft/");
+  await transferTab.click();
+  await paste.fill("{}");
+  await expect(copyButton).toBeDisabled();
+  await expect(importButton).toBeDisabled();
+  await taskTab.click();
+  await expect(copyButton).not.toBeVisible();
+  await prefix.fill("agent/");
+  await transferTab.click();
+  await expect(paste).toHaveValue("{}");
+  await expect(copyButton).toBeEnabled();
+  await expect(importButton).toBeEnabled();
+
+  // Copy writes the saved defaults as a versioned export.
+  await copyButton.click();
+
+  await expect(
+    page.getByRole("status").filter({ hasText: "Copied" }),
+  ).toBeVisible();
+
+  const copied = JSON.parse(
+    await page.evaluate(() => navigator.clipboard.readText()),
+  ) as { format: number; settings: Record<string, unknown> };
+
+  expect(copied.format).toBe(1);
+  expect(copied.settings.worktree_branch_prefix).toBe("agent/");
+
+  // Text that isn't an export changes nothing and says why.
+  await paste.fill("{");
+  await importButton.click();
+  await expect(page.getByRole("alert")).toContainText("aren't valid JSON");
+  await expect(prefix).toHaveValue("agent/");
+
+  // Import saves what this version knows and lists what it skipped.
+  copied.settings.worktree_branch_prefix = "moved/";
+  copied.settings.later_setting = true;
+
+  await paste.fill(JSON.stringify(copied));
+  await importButton.click();
+
+  await expect(
+    page.getByRole("status").filter({ hasText: "Skipped: later_setting" }),
+  ).toBeVisible();
+
+  await taskTab.click();
+  await expect(prefix).toHaveValue("moved/");
+  await transferTab.click();
+
+  // Hosts can block both clipboard APIs. The export stays available by hand.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator.clipboard, "writeText", {
+      configurable: true,
+      value: () => Promise.reject(new Error("Clipboard blocked")),
+    });
+
+    Object.defineProperty(document, "execCommand", {
+      configurable: true,
+      value: () => false,
+    });
+  });
+
+  await copyButton.click();
+
+  const manualCopy = page.getByRole("textbox", {
+    name: "Couldn't copy automatically. Select and copy these settings.",
+    exact: true,
+  });
+
+  await expect(manualCopy).toBeVisible();
+
+  expect(
+    JSON.parse(await manualCopy.inputValue()).settings.worktree_branch_prefix,
+  ).toBe("moved/");
+
+  await manualCopy.focus();
+
+  expect(
+    await manualCopy.evaluate(
+      (field: HTMLTextAreaElement) =>
+        field.selectionStart === 0 && field.selectionEnd === field.value.length,
+    ),
+  ).toBe(true);
+
+  await page.reload();
+  await taskTab.click();
+  await expect(prefix).toHaveValue("moved/");
+});
+
+test("pending imports protect settings edits and failures restore editing", async ({
+  consolePage: page,
+}) => {
+  const first = Promise.withResolvers<void>(),
+    retry = Promise.withResolvers<void>();
+
+  let imports = 0;
+
+  await page.route("**/api/tools/app_import_settings", async (route) => {
+    imports++;
+
+    if (imports === 1) {
+      await first.promise;
+
+      await route.fulfill({
+        status: 400,
+        json: { error: "Import temporarily unavailable." },
+      });
+    } else {
+      await retry.promise;
+      await route.continue();
+    }
+  });
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+  const prefix = page.locator("#setting-worktree_branch_prefix");
+
+  const workspace = page.locator("#setting-default_workspace_strategy");
+
+  const taskTab = page.getByRole("tab", { name: /^Task defaults/ });
+
+  const transferTab = page.getByRole("tab", {
+    name: "Import and export",
+    exact: true,
+  });
+
+  const paste = page.getByRole("textbox", {
+    name: "Paste copied settings",
+    exact: true,
+  });
+
+  const importButton = page.getByRole("button", {
+    name: "Import settings",
+    exact: true,
+  });
+
+  const document = JSON.stringify({
+    format: 1,
+    settings: { worktree_branch_prefix: "imported/" },
+  });
+
+  await expect(prefix).toHaveValue("agent/");
+  await transferTab.click();
+  await paste.fill(document);
+
+  try {
+    await importButton.click();
+    await expect(importButton).toBeDisabled();
+    await expect(prefix).toBeDisabled();
+    await expect(workspace).toBeDisabled();
+    await expect(paste).toHaveValue(document);
+    first.resolve();
+
+    await expect(page.getByRole("alert")).toContainText(
+      "Import temporarily unavailable.",
+    );
+
+    await expect(paste).toHaveValue(document);
+    await taskTab.click();
+    await expect(prefix).toBeEnabled();
+    await expect(workspace).toBeEnabled();
+    await expect(prefix).toHaveValue("agent/");
+
+    await transferTab.click();
+    await importButton.click();
+    await expect(prefix).toBeDisabled();
+    retry.resolve();
+
+    await expect(paste).toHaveValue("");
+    await taskTab.click();
+    await expect(prefix).toHaveValue("imported/");
+    await expect(prefix).toBeEnabled();
+    await page.reload();
+    await expect(prefix).toHaveValue("imported/");
+  } finally {
+    first.resolve();
+    retry.resolve();
+  }
+});

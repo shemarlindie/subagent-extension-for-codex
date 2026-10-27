@@ -157,6 +157,25 @@ for existing tasks.
 Model defaults for a disabled provider stay saved but hidden. If the saved
 provider becomes unavailable, new tasks use the first enabled provider.
 
+### Copy settings between computers
+
+Open **Settings** and choose **Import and export**.
+
+Exports include your saved defaults and remembered amounts for disabled
+budgets. Approved projects aren't included. Add them separately on each
+computer.
+
+**Copy JSON** copies the export for pasting on another computer.
+
+**Import settings** replaces matching defaults with valid values from the
+export. It can also change permissions and other user-only settings. Import
+skips unknown settings, invalid values and an unavailable default provider, then
+lists what it skipped. Omitted and skipped settings keep their current values.
+If the export uses a newer format, update the extension before importing it.
+
+Tool integrators should see
+[App and user authority](mcp-reference.md#app-and-user-authority).
+
 ## Model and reasoning defaults
 
 The service resolves the model and the reasoning effort separately. Each takes
