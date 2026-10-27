@@ -209,7 +209,7 @@ export class Settings {
 
     if (userOnly) {
       const { label } = settingText(settingSchemaAt(userOnly)!);
-      throw new Error(`${label} requires a user decision in settings`);
+      throw new Error(`Changing ${label} requires a user decision in settings`);
     }
 
     const provider = settingAt(set, "task.provider");

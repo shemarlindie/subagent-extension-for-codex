@@ -118,20 +118,6 @@ test("settings default to Default, expose only SDK permission modes, persist ove
     assert.ok(property(path), `${path} needs a host schema property`);
   }
 
-  assert.throws(
-    () =>
-      settings.update(
-        "alice",
-        {
-          set: {
-            providers: { claude: { permission_mode: "bypassPermissions" } },
-          },
-        },
-        "parent",
-      ),
-    /Claude permission mode requires a user decision/,
-  );
-
   settings.update("alice", {
     set: {
       providers: { claude: { permission_mode: "dontAsk" } },

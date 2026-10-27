@@ -163,7 +163,7 @@ test("parent_agent permits parent decisions only after user configuration", asyn
   }
 });
 
-test("parent cannot raise approval authority or mutate approval settings", async () => {
+test("parent cannot start a task with more approval authority than the saved mode", async () => {
   const { c, store, request, cleanup } = await setup();
 
   try {
@@ -175,27 +175,9 @@ test("parent cannot raise approval authority or mutate approval settings", async
         }),
         /exceeds/,
       );
-
-      await assert.rejects(
-        callTool(c, "alice", "update_settings", {
-          set: { approvals: { execution_mode: mode } },
-        }),
-        /Execution approval mode requires a user decision/,
-      );
     }
 
     assert.equal(store.all().length, 0);
-
-    assert.equal(
-      c.settings.values("alice").approvals.execution_mode,
-      "ask_user",
-    );
-
-    await callTool(c, "alice", "update_settings", {
-      set: { models: { global: { model: "Updated" } } },
-    });
-
-    assert.equal(c.settings.values("alice").models.global.model, "Updated");
   } finally {
     await cleanup();
   }

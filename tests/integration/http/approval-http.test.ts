@@ -143,10 +143,7 @@ test("console cookie can configure modes and approve while generic bearer API ca
     const blocked = await post("/api/tools/update_settings", change);
     assert.equal(blocked.status, 400);
 
-    assert.match(
-      (await blocked.json()).error,
-      /Execution approval mode requires a user decision/,
-    );
+    assert.match((await blocked.json()).error, /requires a user decision/);
 
     assert.equal(
       (await post("/api/tools/update_settings", change, cookie)).status,

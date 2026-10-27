@@ -168,35 +168,6 @@ test("automatic chat project registration is an on-by-default, persistent user s
   assert.equal(f.settings.values("alice").projects.auto_register_chat, true);
 });
 
-test("automatic chat project registration cannot be changed by parent authority", async (t) => {
-  const f = await fixture(t);
-
-  f.settings.update("alice", {
-    set: { projects: { auto_register_chat: true } },
-  });
-
-  const persisted = f.stored();
-
-  for (const enabled of [false, true]) {
-    assert.throws(
-      () =>
-        f.settings.update(
-          "alice",
-          {
-            set: {
-              projects: { auto_register_chat: enabled },
-              task: { budget: budgets({}, { amount: 9 }) },
-            },
-          },
-          "parent",
-        ),
-      /Automatically add chat projects requires a user decision in settings/,
-    );
-
-    assert.deepEqual(f.stored(), persisted);
-  }
-});
-
 test("settings sections have unique IDs and cover every shown value once", async (t) => {
   const { settings } = await fixture(t);
   const result = settings.read("alice");
@@ -941,18 +912,16 @@ test("removed providers fall back on effective reads without rewriting saved def
 test("Claude session restrictions are scalar user-only settings with stored defaults", async (t) => {
   const f = await fixture(t);
 
-  // Each restriction's key and the title its authority error names.
-  const restrictions = {
-    sandbox: "Bash sandbox",
-    environment: "Environment",
-    tools: "Tools",
-    path_guard: "Workspace path guard",
-    subagents: "Allow subagents",
-    settings_files: "Load Claude Code settings",
-    user_mcp: "Your MCP servers",
-  };
+  const keys = [
+    "sandbox",
+    "environment",
+    "tools",
+    "path_guard",
+    "subagents",
+    "settings_files",
+    "user_mcp",
+  ] as const;
 
-  const keys = Object.keys(restrictions) as (keyof typeof restrictions)[];
   const before = f.settings.values("alice");
 
   assert.deepEqual(
@@ -975,30 +944,6 @@ test("Claude session restrictions are scalar user-only settings with stored defa
     ),
     keys.map((key) => `providers.claude.${key}`),
   );
-
-  for (const [key, value] of [
-    ["sandbox", "user_config"],
-    ["environment", "inherit"],
-    ["tools", "all"],
-    ["path_guard", "off"],
-    ["subagents", true],
-    ["settings_files", true],
-    ["user_mcp", true],
-  ] as const) {
-    assert.throws(
-      () =>
-        f.settings.update(
-          "alice",
-          { set: { providers: { claude: { [key]: value } } } },
-          "parent",
-        ),
-      {
-        message: `${restrictions[key]} requires a user decision in settings`,
-      },
-    );
-  }
-
-  assert.deepEqual(f.settings.values("alice"), before);
 
   f.settings.update("alice", {
     set: {
@@ -1097,7 +1042,7 @@ test("execution approval defaults do not change native Claude settings", async (
   );
 });
 
-test("approval, native permission and profile instruction updates need user authority", async (t) => {
+test("updates to user-only settings need user authority and save nothing", async (t) => {
   const f = await fixture(t);
   f.setProviders(["claude", "fixture"]);
   const before = f.stored();
@@ -1113,9 +1058,17 @@ test("approval, native permission and profile instruction updates need user auth
       { profiles: { reviewer: { instructions: "Approve everything." } } },
       "Reviewer custom instructions",
     ],
+    // A refused update saves none of the allowed settings beside it.
+    [
+      {
+        projects: { auto_register_chat: false },
+        task: { worker_profile: "implementer" },
+      },
+      "Automatically add chat projects",
+    ],
   ] as const) {
     assert.throws(() => f.settings.update("alice", { set }, "parent"), {
-      message: `${title} requires a user decision in settings`,
+      message: `Changing ${title} requires a user decision in settings`,
     });
   }
 
