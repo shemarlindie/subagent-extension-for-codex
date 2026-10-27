@@ -156,9 +156,7 @@ export function TaskDetailsSkeleton({
             </dt>
             <dd
               className={
-                valueKind === "description"
-                  ? "task-full-description"
-                  : undefined
+                valueKind === "description" ? "task-fact-multiline" : undefined
               }
             >
               {factValue(valueKind, text)}

@@ -33,7 +33,12 @@ export const settingHelp = {
     "Who answers permission requests that a provider's own checks don't decide.",
   worktree_branch_prefix:
     "Each worktree task works on its own branch, named this prefix followed by the task ID.",
+  profile_instructions:
+    "Added to the system prompt of new tasks that use this profile.",
 };
+
+/** The longest custom instructions a worker profile can carry. */
+export const profileInstructionsMaxLength = 4000;
 
 // A limit keeps its amount while it's off, so turning it on restores it.
 const budget = (title: string, unit: string, amount: number) =>
@@ -68,6 +73,20 @@ const scopes = <T extends string>(ids: readonly T[]) =>
       ids.map((id) => [id, modelScope(titleCase(id))]),
     ) as Record<T, ReturnType<typeof modelScope>>,
   );
+
+const profileSettings = (label: string) =>
+  z
+    .strictObject({
+      instructions: z
+        .string()
+        .max(profileInstructionsMaxLength)
+        .meta({
+          title: `${label} custom instructions`,
+          description: settingHelp.profile_instructions,
+        })
+        .default(""),
+    })
+    .prefault({});
 
 // `userOnly` subtrees change only with the user's authority.
 export const settingsSchema = z.strictObject({
@@ -110,6 +129,15 @@ export const settingsSchema = z.strictObject({
       providers: scopes(providerModelSettingScopes).prefault({}),
       profiles: scopes(roles).prefault({}),
     })
+    .prefault({}),
+  // Instructions steer future workers, so only the user changes them.
+  profiles: z
+    .strictObject(
+      Object.fromEntries(
+        roles.map((role) => [role, profileSettings(titleCase(role))]),
+      ) as Record<(typeof roles)[number], ReturnType<typeof profileSettings>>,
+    )
+    .meta({ userOnly: true })
     .prefault({}),
   approvals: z
     .strictObject({

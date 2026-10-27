@@ -67,6 +67,7 @@ The browser flows verify:
 | E31 | Keep reply and caret geometry stable through streamed handoffs and preserve reading position through changing activity.     |
 | E32 | Save or copy settings, recover from a failed save, reject invalid pasted exports and import settings, listing skipped keys. |
 | E33 | Lock settings fields while an import runs, keep the pasted export after a failed import and restore editing.                |
+| E34 | Save multi-line custom instructions under a collapsed worker profile, reload them and see a new task keep them in Details.  |
 
 Accepted limits:
 

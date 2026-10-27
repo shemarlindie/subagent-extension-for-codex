@@ -17,6 +17,7 @@ import { modelScopePath, resolveModelDefaults } from "./model-defaults.js";
 import { settingText } from "./setting-text.js";
 import {
   branchPrefixPattern,
+  profileInstructionsMaxLength,
   settingAt,
   settingSchemaAt,
 } from "./settings-schema.js";
@@ -26,6 +27,7 @@ export const sectionSchema = settingSectionSchema;
 export type {
   HelpPart,
   ModelScope,
+  ProseSetting,
   SettingRow,
   SettingSection,
 } from "./document-contract.js";
@@ -287,12 +289,18 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
     },
     {
       id: "profile-models",
-      title: "Worker profile models",
+      title: "Worker profiles",
       help: profilesHelp,
       rows: [
         {
           kind: "models",
-          scopes: roles.map((role) => scopeRow(role, titleCase(role))),
+          scopes: roles.map((role) => ({
+            ...scopeRow(role, titleCase(role)),
+            instructions: {
+              ...described(`profiles.${role}.instructions`),
+              maxLength: profileInstructionsMaxLength,
+            },
+          })),
         },
       ],
     },

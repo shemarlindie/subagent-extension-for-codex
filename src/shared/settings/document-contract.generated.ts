@@ -15,22 +15,6 @@ const settingOptionSchema = z.object({
   description: z.string().optional(),
 });
 
-const modelScopeSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  model: z.object({
-    path: z.string(),
-    label: z.string(),
-    options: z.array(settingOptionSchema).optional(),
-  }),
-  effort: z.object({
-    path: z.string(),
-    label: z.string(),
-    options: z.array(settingOptionSchema),
-    unsupported: z.boolean(),
-  }),
-});
-
 const settingRowBaseSchema = z.object({
   path: z.string(),
   label: z.string(),
@@ -57,6 +41,27 @@ const budgetSettingRowSchema = settingRowBaseSchema.extend({
   unit: z.string(),
   min: z.number(),
   max: z.number().optional(),
+});
+
+const proseSettingSchema = settingRowBaseSchema.extend({
+  maxLength: z.number(),
+});
+
+const modelScopeSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  model: z.object({
+    path: z.string(),
+    label: z.string(),
+    options: z.array(settingOptionSchema).optional(),
+  }),
+  effort: z.object({
+    path: z.string(),
+    label: z.string(),
+    options: z.array(settingOptionSchema),
+    unsupported: z.boolean(),
+  }),
+  instructions: proseSettingSchema.optional(),
 });
 
 const modelsSettingRowSchema = z.object({

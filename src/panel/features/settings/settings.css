@@ -414,6 +414,34 @@ input[type="number"]::-webkit-inner-spin-button {
 .help.warn {
   color: var(--warn);
 }
+/* A profile's name opens its instructions, which span the row below. */
+.model-table-row > .profile-instructions {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+/* The name fills its cell, and the hover pad sits outside it so names align. */
+.profile-instructions-trigger {
+  justify-self: stretch;
+  min-height: 32px;
+  margin-inline-start: -8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  text-align: left;
+}
+.profile-instructions-trigger[data-panel-open] {
+  background: var(--hover);
+}
+/* The panel clips while it animates, so the inset keeps the focus ring whole. */
+.profile-instructions-content {
+  display: grid;
+  gap: 4px;
+  padding: 4px 2px 8px;
+}
+.profile-instructions-set {
+  margin-inline-start: auto;
+  color: var(--muted);
+}
+
 @container (max-width: 380px) {
   .model-table {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

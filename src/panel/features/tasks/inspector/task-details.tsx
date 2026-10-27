@@ -52,6 +52,9 @@ function DetailsValue({
   );
 }
 
+// Facts that keep the user's line breaks.
+const multilineFacts = new Set(["Description", "Custom instructions"]);
+
 /** The changes fact: a live summary, or why there is none. */
 function changesFact(counts?: ChangeCountsState) {
   if (counts?.error) return counts.error;
@@ -92,6 +95,9 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
         ...providerTaskFacts(task),
         Model: task.model || "Worker default",
         "Reasoning effort": task.reasoning_effort || "Worker default",
+        ...(task.profile_instructions
+          ? { "Custom instructions": task.profile_instructions }
+          : {}),
         Workspace: task.workspace ?? "Preparing",
         ...(task.branch ? { Branch: task.branch } : {}),
         Changes: changesFact(counts),
@@ -158,8 +164,8 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
                 <dt>{label}</dt>
                 <dd
                   className={
-                    label === "Description"
-                      ? "task-full-description"
+                    multilineFacts.has(label)
+                      ? "task-fact-multiline"
                       : undefined
                   }
                 >

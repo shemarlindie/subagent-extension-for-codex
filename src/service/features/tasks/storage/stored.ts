@@ -69,6 +69,7 @@ const storedTaskSchema = z.looseObject({
       input: z.record(z.string(), z.unknown()),
     })
     .optional(),
+  profile_instructions: z.string().optional(),
   instructions: z.array(message),
   instructions_sent: z.number().int().nonnegative(),
   pending_steers: z.array(message),

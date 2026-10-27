@@ -134,6 +134,60 @@ test("advanced task options set the task's model and permission policy", async (
   await expect(settings).toContainText("Fixture Fast");
 });
 
+test("custom instructions save under a worker profile and stay with the tasks it starts", async ({
+  consolePage: page,
+}) => {
+  const text = "Cite file paths.\nKeep it short.";
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+  await page.getByRole("tab", { name: "Worker profiles", exact: true }).click();
+
+  // Each profile's name opens its custom instructions under its models.
+  const open = page.getByRole("button", {
+    name: "Reviewer custom instructions",
+    exact: true,
+  });
+
+  await expect(open).toHaveAttribute("aria-expanded", "false");
+  await open.click();
+
+  const reviewer = page.getByRole("textbox", {
+    name: "Reviewer custom instructions",
+    exact: true,
+  });
+
+  await reviewer.fill(text);
+
+  await page
+    .getByRole("button", { name: "Save 1 change", exact: true })
+    .click();
+
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toBeDisabled();
+
+  await page.reload();
+  await expect(open).toHaveAttribute("aria-expanded", "false");
+  await open.click();
+  await expect(reviewer).toHaveValue(text);
+  await page.getByRole("button", { name: "Tasks", exact: true }).click();
+
+  // Advanced tasks start with the default Reviewer profile.
+  await page.getByRole("button", { name: "More ways to start a task" }).click();
+  await page.getByRole("menuitem", { name: /Advanced task/ }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Description", { exact: true }).fill("Review");
+  await dialog.getByRole("button", { name: "Start task", exact: true }).click();
+
+  await page.getByRole("tab", { name: "Details" }).click();
+
+  const fact = page
+    .locator(".fact")
+    .filter({ has: page.getByText("Custom instructions", { exact: true }) });
+
+  await expect(fact.locator("dd")).toHaveText(text);
+});
+
 test("settings copy as JSON and import from pasted text", async ({
   consolePage: page,
 }) => {

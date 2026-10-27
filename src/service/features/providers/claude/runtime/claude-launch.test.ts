@@ -257,8 +257,9 @@ test("filtered Claude environment excludes service and other-provider credential
   }
 });
 
-test("Claude asks for a plain reply, with no structured output tool", async () => {
+test("Claude asks for a plain reply before the custom instructions, with no structured output tool", async () => {
   const { c } = await context();
+  c.task.profile_instructions = "Cite file paths.";
   let options: Options | undefined;
 
   const provider = new ClaudeAgentProvider(
@@ -290,7 +291,7 @@ test("Claude asks for a plain reply, with no structured output tool", async () =
 
   assert.match(
     (options!.systemPrompt as { append: string }).append,
-    /End each turn with a plain reply/,
+    /End each turn with a plain reply[\s\S]*custom instructions for the reviewer profile:\nCite file paths\.$/,
   );
 
   const permission = (name: string, input: object) =>

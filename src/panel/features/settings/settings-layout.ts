@@ -1,6 +1,7 @@
 import type {
   HelpPart,
   ModelScope,
+  ProseSetting,
   SettingRow,
   SettingSection,
 } from "../../../shared/settings/settings-document";
@@ -12,7 +13,7 @@ import { scalarText } from "../../../shared/text";
 
 /** Form logic for the settings dialog: values in and out, summaries, resets. */
 
-export type { HelpPart, ModelScope, SettingRow, SettingSection };
+export type { HelpPart, ModelScope, ProseSetting, SettingRow, SettingSection };
 
 /** Form state keeps every value as a string, keyed by `fieldName`. */
 export type Values = Record<string, string>;
@@ -42,11 +43,16 @@ export function rowFieldNames(row: Exclude<SettingRow, { kind: "models" }>) {
   return { name: fieldName(amount), enabledName: fieldName(enabled) };
 }
 
+/** The setting paths a model scope edits. */
+const scopePaths = (scope: ModelScope) => [
+  scope.model.path,
+  scope.effort.path,
+  ...(scope.instructions ? [scope.instructions.path] : []),
+];
+
 /** The setting paths a row edits. */
 function rowPaths(row: SettingRow): string[] {
-  if (row.kind === "models") {
-    return row.scopes.flatMap((scope) => [scope.model.path, scope.effort.path]);
-  }
+  if (row.kind === "models") return row.scopes.flatMap(scopePaths);
 
   if (row.kind === "budget") {
     const { enabled, amount } = budgetPaths(row.path);
@@ -69,10 +75,12 @@ export function rowForm(row: SettingRow, values: unknown): Values {
   switch (row.kind) {
     case "models":
       return Object.fromEntries(
-        row.scopes.flatMap((scope) => [
-          [fieldName(scope.model.path), text(scope.model.path)],
-          [fieldName(scope.effort.path), text(scope.effort.path, "default")],
-        ]),
+        row.scopes.flatMap((scope) =>
+          scopePaths(scope).map((path) => [
+            fieldName(path),
+            text(path, path === scope.effort.path ? "default" : ""),
+          ]),
+        ),
       );
 
     case "budget":
@@ -147,9 +155,7 @@ export function editCount(
 ) {
   return section.rows
     .flatMap((row) =>
-      row.kind === "models"
-        ? row.scopes.map((scope) => [scope.model.path, scope.effort.path])
-        : [rowPaths(row)],
+      row.kind === "models" ? row.scopes.map(scopePaths) : [rowPaths(row)],
     )
     .filter((paths) =>
       paths.some((path) => form[fieldName(path)] !== initial[fieldName(path)]),

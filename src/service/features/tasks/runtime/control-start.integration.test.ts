@@ -359,6 +359,9 @@ test("task tools honor defaults and explicit overrides without changing existing
           max_cost_usd: { enabled: true, amount: 3 },
         },
       },
+      profiles: {
+        implementer: { instructions: "  Run the linter before replying.  " },
+      },
     },
   });
 
@@ -372,12 +375,18 @@ test("task tools honor defaults and explicit overrides without changing existing
   assert.equal(task.worker_profile, "implementer");
   assert.equal(task.budget.max_runtime_minutes, 9);
   assert.equal(task.budget.max_cost_usd, 1);
+  assert.equal(task.profile_instructions, "Run the linter before replying.");
 
   c.settings.update("alice", {
-    set: { task: { budget: { max_runtime_minutes: { amount: 7 } } } },
+    set: {
+      task: { budget: { max_runtime_minutes: { amount: 7 } } },
+      profiles: { implementer: { instructions: "" } },
+    },
   });
 
-  assert.equal(c.store.get(task.id, "alice").budget.max_runtime_minutes, 9);
+  const saved = c.store.get(task.id, "alice");
+  assert.equal(saved.budget.max_runtime_minutes, 9);
+  assert.equal(saved.profile_instructions, "Run the linter before replying.");
 
   const other: any = await callTool(c, "bob", "start_task", {
     repository: repo,
@@ -386,6 +395,7 @@ test("task tools honor defaults and explicit overrides without changing existing
   });
 
   assert.equal(other.worker_profile, "reviewer");
+  assert.equal(other.profile_instructions, undefined);
   assert.equal(other.budget.max_runtime_minutes, null);
   assert.equal(other.budget.max_cost_usd, null);
   await c.close();

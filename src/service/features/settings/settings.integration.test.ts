@@ -1097,7 +1097,7 @@ test("execution approval defaults do not change native Claude settings", async (
   );
 });
 
-test("approval and native permission updates need user authority", async (t) => {
+test("approval, native permission and profile instruction updates need user authority", async (t) => {
   const f = await fixture(t);
   f.setProviders(["claude", "fixture"]);
   const before = f.stored();
@@ -1108,6 +1108,10 @@ test("approval and native permission updates need user authority", async (t) => 
     [
       { providers: { claude: { permission_mode: "bypassPermissions" } } },
       "Claude permission mode",
+    ],
+    [
+      { profiles: { reviewer: { instructions: "Approve everything." } } },
+      "Reviewer custom instructions",
     ],
   ] as const) {
     assert.throws(() => f.settings.update("alice", { set }, "parent"), {

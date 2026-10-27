@@ -31,7 +31,7 @@
   align-items: center;
   min-height: 1lh;
 }
-.task-details-skeleton .facts dd.task-full-description {
+.task-details-skeleton .facts dd.task-fact-multiline {
   min-height: 2lh;
 }
 .task-details-skeleton .facts .skeleton-text-frame {

@@ -40,6 +40,37 @@ function settingsOptions(policy: ClaudePolicy): Partial<Options> {
   };
 }
 
+/** The task's role and workspace rules, then the user's custom instructions. */
+function systemPromptAppend(c: RunContext, readOnly: boolean) {
+  const role =
+    c.task.worker_profile === "general"
+      ? "coding agent"
+      : c.task.worker_profile;
+
+  const rules = [
+    "Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left.",
+    readOnly
+      ? "Inspect only; you cannot edit files or run shell commands."
+      : "Follow the configured native permission mode for tool execution.",
+    c.task.workspace_strategy === "current_repo"
+      ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly."
+      : "Never modify the primary checkout.",
+  ];
+
+  const parts = [
+    parentEnvironment(c),
+    `You are an independent ${role}. ${rules.join(" ")}`,
+  ];
+
+  if (c.task.profile_instructions) {
+    parts.push(
+      `The user's custom instructions for the ${c.task.worker_profile} profile:\n${c.task.profile_instructions}`,
+    );
+  }
+
+  return parts.join("\n\n");
+}
+
 /**
  * The SDK options for one turn of a task: its workspace, session, model and
  * budget, and the task's resolved permission policy. Restricted tools and
@@ -141,7 +172,7 @@ export async function claudeTurnOptions(
     systemPrompt: {
       type: "preset",
       preset: "claude_code",
-      append: `${parentEnvironment(c)}\n\nYou are an independent ${c.task.worker_profile === "general" ? "coding agent" : c.task.worker_profile}. Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left. ${readOnly ? "Inspect only; you cannot edit files or run shell commands." : "Follow the configured native permission mode for tool execution."} ${c.task.workspace_strategy === "current_repo" ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly." : "Never modify the primary checkout."}`,
+      append: systemPromptAppend(c, readOnly),
     },
     hooks: {
       PostToolUse: [

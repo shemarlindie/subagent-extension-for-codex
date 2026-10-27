@@ -1,14 +1,18 @@
-import type { ReactNode } from "react";
+import { Collapsible } from "@base-ui/react/collapsible";
+import { type ReactNode, useContext } from "react";
 
 import { unsupportedEffortWarning } from "../../../shared/settings/settings-document";
+import { buttonClass } from "../../shared/components/button/button";
+import { Icon } from "../../shared/components/icons/icons";
 import { SkeletonShape } from "../../shared/components/loading-skeleton/loading-skeleton";
 import { FormSelect } from "../../shared/forms/form-select";
 import {
   WorkerProfileIcon,
   workerProfileIconName,
 } from "../tasks/list/worker-profile-icon";
-import type { SettingsControls } from "./settings-fields";
+import { SettingsContext, type SettingsControls } from "./settings-fields";
 import { fieldName, type ModelScope } from "./settings-layout";
+import { ProfileInstructions } from "./settings-profile-instructions";
 
 interface ModelTableProps extends SettingsControls {
   scopes: ModelScope[];
@@ -16,7 +20,11 @@ interface ModelTableProps extends SettingsControls {
   reserveProviderScope?: boolean;
 }
 
-/** Model and reasoning-effort defaults, one row per scope. */
+/**
+ * Model and reasoning-effort defaults, one row per scope. A worker profile's
+ * instructions sit collapsed under its row until its name opens them. A dot
+ * at the far end of the name marks instructions that are set.
+ */
 export function ModelTable({
   scopes,
   control,
@@ -24,6 +32,8 @@ export function ModelTable({
   loading = false,
   reserveProviderScope = false,
 }: ModelTableProps) {
+  const { form } = useContext(SettingsContext);
+
   return (
     <div className="model-table">
       <div className="model-table-head" aria-hidden="true">
@@ -76,20 +86,23 @@ export function ModelTable({
           );
         }
 
-        return (
-          <div key={scope.id} className="model-table-row">
-            <span
-              className={`setting-label${hasProfileIcon ? " setting-profile-label" : ""}`}
-            >
-              {hasProfileIcon && (
-                <WorkerProfileIcon
-                  profile={scope.id}
-                  size={10}
-                  className="setting-profile-icon"
-                />
-              )}
-              {scope.label}
-            </span>
+        const name = (
+          <>
+            {hasProfileIcon && (
+              <WorkerProfileIcon
+                profile={scope.id}
+                size={10}
+                className="setting-profile-icon"
+              />
+            )}
+            {scope.label}
+          </>
+        );
+
+        const labelClass = `setting-label${hasProfileIcon ? " setting-profile-label" : ""}`;
+
+        const controls = (
+          <>
             {modelControl}
             <FormSelect
               control={control}
@@ -108,6 +121,41 @@ export function ModelTable({
                 {unsupportedEffortWarning}
               </p>
             )}
+          </>
+        );
+
+        return scope.instructions ? (
+          <Collapsible.Root
+            key={scope.id}
+            className="model-table-row"
+            disabled={loading}
+          >
+            <Collapsible.Trigger
+              className={buttonClass("ghost", {
+                className: `${labelClass} profile-instructions-trigger`,
+              })}
+              aria-label={scope.instructions.label}
+            >
+              {name}
+              {form[fieldName(scope.instructions.path)]?.trim() && (
+                <Icon
+                  name="dot"
+                  size={10}
+                  className="profile-instructions-set"
+                  label="Has custom instructions"
+                />
+              )}
+            </Collapsible.Trigger>
+            {controls}
+            <ProfileInstructions
+              setting={scope.instructions}
+              register={register}
+            />
+          </Collapsible.Root>
+        ) : (
+          <div key={scope.id} className="model-table-row">
+            <span className={labelClass}>{name}</span>
+            {controls}
           </div>
         );
       })}

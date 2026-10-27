@@ -24,6 +24,13 @@ export interface ModelScope {
     /** The saved effort is not supported by the scope's effective model. */
     unsupported: boolean;
   };
+  /** A worker profile's custom instructions, shown collapsed under its models. */
+  instructions?: ProseSetting;
+}
+
+/** Several lines of free text, such as instructions. */
+export interface ProseSetting extends SettingRowBase {
+  maxLength: number;
 }
 
 interface SettingRowBase {

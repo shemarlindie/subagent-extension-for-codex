@@ -565,7 +565,7 @@ pre {
   margin: 0;
   color: var(--text);
 }
-.task-full-description {
+.task-fact-multiline {
   white-space: pre-wrap;
 }
 #error {

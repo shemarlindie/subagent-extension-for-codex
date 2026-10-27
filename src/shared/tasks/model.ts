@@ -234,6 +234,8 @@ export interface Task extends Start {
     presentation?: InputPresentation;
     input: Record<string, unknown>;
   };
+  /** A copy of its profile's custom instructions when the task started. */
+  profile_instructions?: string;
   /** Messages delivered or about to be, in the order the worker gets them. */
   instructions: TaskMessage[];
   /**

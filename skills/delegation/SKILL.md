@@ -138,8 +138,8 @@ mode. Model-visible `update_settings` cannot change session restrictions.
 
 Trusted panel submissions can authorize task overrides. Model-visible
 `update_settings` changes `task` and `models` defaults. It rejects settings
-under `approvals`, `projects` and `providers`, which `get_settings` marks
-`userOnly`. User changes use app-only
+under `profiles`, `approvals`, `projects` and `providers`, which
+`get_settings` marks `userOnly`. User changes use app-only
 `app_update_settings`. The embedded panel starts tasks through app-only
 `app_start_task`. The standalone console authenticates user actions
 through its session cookie.

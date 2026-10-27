@@ -7,8 +7,8 @@ import { generateTaskTitle } from "./task-title.js";
 
 /**
  * A start request resolved for its provider and the owner's settings: the
- * provider's options and a generated title. Rejects requests that can't
- * start.
+ * provider's options, a generated title and a copy of the profile's
+ * instructions. Rejects requests that can't start.
  */
 export async function resolveStart(
   provider: Provider,
@@ -25,11 +25,16 @@ export async function resolveStart(
     authority,
   });
 
+  // Later edits to the profile apply to new tasks only.
+  const instructions =
+    defaults.profiles[input.worker_profile].instructions.trim();
+
   const req = {
     ...input,
     ...options,
     title: generateTaskTitle(input.description),
     description: input.description.trim(),
+    ...(instructions ? { profile_instructions: instructions } : {}),
   };
 
   if (!req.title) throw new Error("Task title is required");

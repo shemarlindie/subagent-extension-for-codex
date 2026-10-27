@@ -132,6 +132,7 @@ Settings are grouped by what they control:
 | ---------------- | ------------------------------------------------------------------------------------------ | ----------------- |
 | `task`           | Defaults for `start_task`, under its field names, plus `worktree_branch_prefix`            | Agents and you    |
 | `models`         | Model and reasoning defaults for `global`, each provider and each worker profile           | Agents and you    |
+| `profiles`       | Custom instructions for each worker profile                                                | You only          |
 | `approvals`      | The approval decision maker for every provider, and the execution approval mode            | You only          |
 | `projects`       | `auto_register_chat`                                                                       | You only          |
 | `providers.<id>` | Settings native to one provider, such as Claude's permission mode and session restrictions | You only          |
@@ -232,6 +233,18 @@ in the service directory, so project-specific model configuration can still
 differ from a task workspace.
 Custom model IDs work when discovery is unavailable, but effort support may
 then be unknown.
+
+## Custom instructions for worker profiles
+
+In **Settings > Worker profiles**, select a profile's name to edit its custom
+instructions, saved at `profiles.<profile>.instructions`. Each holds up to
+4,000 characters.
+
+A new task keeps a copy of its profile's instructions and shows it in Details.
+Later edits apply only to new tasks. Claude receives the instructions at the
+end of its system prompt, after the extension's own rules. They can't lift
+permission, sandbox or read-only limits, which are enforced outside the
+prompt.
 
 ## Claude permissions
 

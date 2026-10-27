@@ -70,7 +70,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     }),
     update_settings: tool({
       description:
-        "Update task and model defaults with a nested partial of get_settings values. Settings under approvals, projects and providers are marked userOnly and need the user settings interface. Omitted settings and existing tasks stay unchanged.",
+        "Update task and model defaults with a nested partial of get_settings values. Settings under profiles, approvals, projects and providers are marked userOnly and need the user settings interface. Omitted settings and existing tasks stay unchanged.",
       schema: settingsUpdateSchema,
       outputSchema: settingsUpdateOutputSchema,
       run: (a) => c.settings.update(owner, a, authority),
