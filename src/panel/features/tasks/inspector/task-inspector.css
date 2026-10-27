@@ -11,6 +11,8 @@
 }
 .task-topline .task-inspector-back {
   display: none;
+  /* Center the 32px control on the title's first line and editor padding. */
+  margin-block-start: -2px;
 }
 .task-heading {
   display: flex;
