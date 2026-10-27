@@ -1,12 +1,12 @@
 // Captures every showcase step in both themes as PNGs, or with --video, one
 // playback loop per theme as WebM:
-// npm run showcase:capture [-- --out dir --scale 2 --video]
+// npm run showcase:capture [-- --out dir --scale 2 --video --fps 60]
 // Reuses a running panel-dev server, or starts one for the capture.
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-import { type Browser, chromium } from "@playwright/test";
+import { type Browser, chromium, type Page } from "@playwright/test";
 import { createServer } from "vite";
 
 import { PLAYBACK_MS } from "./playback";
@@ -21,8 +21,45 @@ const { values } = parseArgs({
     out: { type: "string", default: "showcase-captures" },
     scale: { type: "string", default: "2" },
     video: { type: "boolean", default: false },
+    fps: { type: "string", default: "60" },
+    zoom: { type: "string", default: "1.15" },
   },
 });
+
+function positive(name: "scale" | "fps" | "zoom", integer = false) {
+  const value = Number(values[name]);
+
+  if (
+    !(value > 0 && Number.isFinite(value)) ||
+    (integer && !Number.isInteger(value))
+  ) {
+    throw new Error(
+      `--${name} must be a positive ${integer ? "integer" : "number"}`,
+    );
+  }
+
+  return value;
+}
+
+const scale = positive("scale");
+const fps = positive("fps", true);
+const pageZoom = positive("zoom");
+
+// Chromium's screencast frames use CSS viewport pixels, whatever the device
+// scale. Both captures open a viewport at the export size and zoom the page
+// back to the showcase layout, so stills match video frames.
+const size = {
+  width: Math.round(VIEWPORT.width * scale),
+  height: Math.round(VIEWPORT.height * scale),
+};
+
+async function openShowcase(page: Page, query: string) {
+  await page.goto(`${ORIGIN}/showcase.html?${query}`);
+
+  await page.evaluate((zoom) => {
+    document.documentElement.style.zoom = String(zoom);
+  }, scale * pageZoom);
+}
 
 const reachable = await fetch(`${ORIGIN}/showcase.html`).then(
   (response) => response.ok,
@@ -38,16 +75,11 @@ const server = reachable
 const out = resolve(values.out);
 
 async function captureSteps(browser: Browser) {
-  const page = await browser.newPage({
-    viewport: VIEWPORT,
-    deviceScaleFactor: Number(values.scale),
-  });
+  const page = await browser.newPage({ viewport: size });
 
   for (const theme of THEMES) {
     for (const [step, { label, panel }] of story.entries()) {
-      await page.goto(
-        `${ORIGIN}/showcase.html?step=${step}&theme=${theme}&capture`,
-      );
+      await openShowcase(page, `step=${step}&theme=${theme}&capture`);
 
       // The panel opens once Codex delegates.
       if (storyAt({ step })) {
@@ -68,23 +100,53 @@ async function captureSteps(browser: Browser) {
   }
 }
 
-// Playwright records at the viewport's size, whatever the scale.
 async function captureVideo(browser: Browser) {
   for (const theme of THEMES) {
-    const context = await browser.newContext({
-      viewport: VIEWPORT,
-      recordVideo: { dir: out, size: VIEWPORT },
-    });
+    const page = await browser.newPage({ viewport: size });
+    await openShowcase(page, `step=0&theme=${theme}`);
+    await page.addStyleTag({ content: ".controls { display: none; }" });
 
-    const page = await context.newPage();
-    await page.goto(`${ORIGIN}/showcase.html?play&theme=${theme}&capture`);
-    await page.waitForTimeout(PLAYBACK_MS);
-    await context.close();
+    // Start from the prepared page so neither startup nor resizing is recorded.
+    const started = await page
+      .getByText("Play", { exact: true })
+      .evaluate((button) => {
+        if (!(button instanceof HTMLButtonElement)) {
+          throw new Error("Play button not found");
+        }
+
+        button.click();
+
+        return performance.now();
+      });
 
     const name = `showcase-${theme}.webm`;
-    await page.video()!.saveAs(join(out, name));
-    await page.video()!.delete();
-    console.log(join(values.out, name));
+    let frames = 0;
+    const frameBuckets = new Map<number, number>();
+
+    await page.screencast.start({
+      path: join(out, name),
+      size,
+      fps,
+      quality: 100,
+      onFrame: ({ timestamp }) => {
+        frames++;
+        const second = Math.floor(timestamp / 1000);
+        frameBuckets.set(second, (frameBuckets.get(second) ?? 0) + 1);
+      },
+    });
+
+    const elapsed = await page.evaluate(
+      (start) => performance.now() - start,
+      started,
+    );
+
+    await page.waitForTimeout(Math.max(0, PLAYBACK_MS - elapsed));
+    await page.screencast.stop();
+    await page.close();
+
+    console.log(
+      `${join(values.out, name)} (${frames} captured frames, peak ${Math.max(...frameBuckets.values())} frames/s)`,
+    );
   }
 }
 

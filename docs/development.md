@@ -302,11 +302,22 @@ Export every step in both themes at 1600×1000 and 2x scale:
 npm run showcase:capture
 ```
 
-It writes to `showcase-captures/`. Use `--out <dir>` for another folder and
-`--scale <n>` for another pixel ratio. Add `--video` to record one playback loop
-per theme as WebM instead. Playwright records at 1x and a modest bitrate, so for
-a sharper video, screen record `showcase.html?play&capture` in a browser. The
-command reuses a running dev server or starts one.
+It writes to `showcase-captures/`. Use `--out <dir>` for another folder, for
+example to compare a version without replacing the standard captures, and
+`--scale <n>` for another pixel ratio. Captures default to `--zoom 1.15`, which
+enlarges the page by 15% within the same export size. Use `--zoom 1` for the
+original page size, or another positive multiplier to tune readability.
+
+Chromium records video in CSS pixels and ignores the device scale, so both
+screenshots and video open a viewport at the export size and apply CSS `zoom`
+of scale × zoom. Stills then match video frames. Panel animations that measure
+elements must divide by `currentCSSZoom`, as `autoListEffects` does.
+
+Add `--video` to record one playback loop per theme as WebM instead. Video
+defaults to 60 fps at 3200×2000. Use `--fps <n>` for another frame rate and
+`--scale 1` for a 1600×1000 export. Higher scales and frame rates take more
+resources and produce larger files. The command reuses a running dev server or
+starts one.
 
 The story lives in `dev/panel/showcase/story.ts`. Each step lists the items
 Codex adds and builds Claude's events with the fixture `Timeline`. A step's
